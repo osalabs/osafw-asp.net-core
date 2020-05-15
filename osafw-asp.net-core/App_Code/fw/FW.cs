@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Security.Policy;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
@@ -17,8 +18,6 @@ namespace osafw_asp_net_core.fw
 {
     public class FW// : IDisposable
     {
-
-        public static IConfiguration settings;
         public DB db;
 
         public static Hashtable METHOD_ALLOWED = Utils.qh("GET POST PUT DELETE");
@@ -45,13 +44,12 @@ namespace osafw_asp_net_core.fw
 
         private readonly Hashtable models = new Hashtable();
 
-        public FW(HttpContext context, IConfiguration settings)
+        public FW(HttpContext context, IConfiguration conf_settings)
         {
-            FW.settings = settings;
             this.context = context;
             req = context.Request;
             resp = context.Response;
-            FwConfig.init(req);
+            FwConfig.init(req, conf_settings);
 
             db = new DB(this);
             DB.SQL_QUERY_CTR = 0; // reset query counter
@@ -132,11 +130,11 @@ namespace osafw_asp_net_core.fw
             {
                 f[s] = SQ[s];
             }
-            
+
             // also parse json in request body if any
-            if (req.ContentLength != null && 
+            if (req.ContentLength != null &&
                 req.ContentLength.Value > 0 &&
-                req.ContentType != null && 
+                req.ContentType != null &&
                 req.ContentType.Substring(0, new string("application/json").Length) == "application/json")
             {
                 try
@@ -195,26 +193,30 @@ namespace osafw_asp_net_core.fw
             return Me.context.Session
         }*/
 
-        public IConfiguration config()
-        {
-            return FW.settings;
-        }
-        // return just particular setting
-        public String config(string name)
-        {
-            return FW.settings[name];
-        }
-
         public async void rw(string str)
         {
             await this.resp.WriteAsync(str);
             await this.resp.WriteAsync(System.Environment.NewLine);
         }
 
+        // return all the settings
+        public static Hashtable config() {
+            return FwConfig.settings;
+        }
+
+        // return just particular setting
+        public static Object config(String name) {
+            if (FwConfig.settings.ContainsKey(name))
+            {
+                return FwConfig.settings[name];
+            }
+            return null;
+        }
+
         public void call_controller(Type calledType, MethodInfo mInfo, Object[] args = null) {
             // check if method assept agrs and not pass it if no args expected
             ParameterInfo[] parameters = mInfo.GetParameters();
-            if (parameters.Length == 0) 
+            if (parameters.Length == 0)
             {
                 args = null;
             }
@@ -234,6 +236,54 @@ namespace osafw_asp_net_core.fw
                 //Throw ex.InnerException
             }
             //if (ps != null) parser(ps);
+        }
+
+        public static String dumper(Object dmp_obj, int level = 0) // TODO better type detection(suitable for all collection types)
+        {
+            StringBuilder str = new StringBuilder();
+            if (dmp_obj == null) return "[Nothing]";
+            if (level > 10) return "[Too Much Recursion]";
+
+            try
+            {
+                Type type = dmp_obj.GetType();
+                TypeCode typeCode = Type.GetTypeCode(type);
+                String intend = new StringBuilder().Insert(0, "    ", level).Append(" ").ToString();
+
+                level += 1;
+                if (typeCode.ToString() == "Object") {
+                    str.Append(System.Environment.NewLine);
+                    if (dmp_obj is ArrayList) 
+                    {   // ArrayList
+                        str.Append(intend + "[" + System.Environment.NewLine);
+                        ArrayList _dmp_obj = (ArrayList)dmp_obj;
+                        foreach (Object v in _dmp_obj)
+                        {
+                            str.Append(intend + " " + dumper(v, level) + System.Environment.NewLine);
+                        }
+                        str.Append(intend + "]" + System.Environment.NewLine);
+                    }
+                    else if (dmp_obj is Hashtable) 
+                    {   // Hashtable
+                        str.Append(intend + "{" + System.Environment.NewLine);
+                        Hashtable _dmp_obj = (Hashtable)dmp_obj;
+                        foreach (Object k in _dmp_obj.Keys)
+                        {
+                            str.Append(intend + " " + k.ToString() + " => " + dumper(_dmp_obj[k], level) + System.Environment.NewLine);
+                        }
+                        str.Append(intend + "}" + System.Environment.NewLine);
+                    } else {
+                        str.Append(intend + type.ToString() + "==" + typeCode.ToString() + System.Environment.NewLine);
+                    }
+                } else {
+                    str.Append(dmp_obj.ToString());
+                }
+            }
+            catch (Exception ex) {
+                str.Append("***cannot dump object***");
+            }
+
+            return str.ToString();
         }
 
         public async void dispatch()

@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30011.22
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "osafw-asp-net-core", "osafw-asp-net-core\osafw-asp-net-core.csproj", "{84393BF3-0B2D-4B36-B8B4-8D4D7D03DA2D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "osafw-asp.net-core", "osafw-asp.net-core\osafw-asp.net-core.csproj", "{133B6565-4929-4974-A6F1-AB487215EF79}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -11,15 +11,15 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{84393BF3-0B2D-4B36-B8B4-8D4D7D03DA2D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{84393BF3-0B2D-4B36-B8B4-8D4D7D03DA2D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{84393BF3-0B2D-4B36-B8B4-8D4D7D03DA2D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{84393BF3-0B2D-4B36-B8B4-8D4D7D03DA2D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{133B6565-4929-4974-A6F1-AB487215EF79}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{133B6565-4929-4974-A6F1-AB487215EF79}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{133B6565-4929-4974-A6F1-AB487215EF79}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{133B6565-4929-4974-A6F1-AB487215EF79}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {BA26A1FB-7A3B-4E7D-8BD6-52F8B8F3039E}
+		SolutionGuid = {FDCBFA6F-45BA-4FD4-B879-B3D574A4CD33}
 	EndGlobalSection
 EndGlobal

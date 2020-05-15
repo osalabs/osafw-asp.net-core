@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -12,12 +13,12 @@ namespace osafw_asp_net_core.fw
     public class FwConfig
     {
         public static string hostname;
-        public static Hashtable settings;
+        public static Hashtable settings = null;
         public static string route_prefixes_rx;
 
         private static readonly object locker = new object();
 
-        public static void init(HttpRequest req, string hostname = "") {
+        public static void init(HttpRequest req, IConfiguration conf_settings, string hostname = "") {
             // appSettings is static, so it's lifetime same as application lifetime 
             // if (appSettings already initialized no need to read web.config again
             lock (locker) {
@@ -26,7 +27,7 @@ namespace osafw_asp_net_core.fw
                 }
                 FwConfig.hostname = hostname;
                 initDefaults(req, hostname);
-                readSettings();
+                readSettings(conf_settings);
                 //specialSettings();
 
                 settings["_SETTINGS_OK"] = true; // just a marker to ensure we have all settings set
@@ -36,7 +37,7 @@ namespace osafw_asp_net_core.fw
         // reload settings
         public static void reload() {
             //initDefaults(HttpContext.Current.Request, FwConfig.hostname);
-            readSettings();
+            //readSettings();
             //specialSettings();
         }
 
@@ -49,13 +50,17 @@ namespace osafw_asp_net_core.fw
             }
             settings["hostname"] = hostname;
 
-            //settings["ROOT_URL"] = Regex.Replace(req.ApplicationPath, "\\/$", ""); // removed last / if (any
-            //settings["site_root"] = Regex.Replace(req.PhysicalApplicationPath, "\\$", ""); // removed last \ if (any
+            settings["ROOT_URL"] = Regex.Replace(req.Path, "\\/$", ""); // removed last / if (any
+            string physicalApplicationPath = AppDomain.CurrentDomain.BaseDirectory.Substring(0, AppDomain.CurrentDomain.BaseDirectory.IndexOf("\\bin"));
+            settings["site_root"] = Regex.Replace(physicalApplicationPath, "\\$", ""); // removed last \ if (any
+
+
 
             settings["template"] = settings["site_root"] + "\\App_Data\template";
             settings["log"] = settings["site_root"] + "\\App_Data\\logs\\main.log";
             settings["log_max_size"] = 100 * 1024 * 1024; // 100 MB is max log size
             settings["tmp"] = Path.GetTempPath();
+            settings["log_level"] = "ALL";
 
             string http = "http://";
             if (req.IsHttps) { http = "https://"; }
@@ -66,7 +71,16 @@ namespace osafw_asp_net_core.fw
         }
 
         // read setting into appSettings
-        private static void readSettings() {
+        private static void readSettings(IConfiguration conf_settings) {
+            if (settings == null) 
+            {
+                settings = new Hashtable();
+            }
+            var valuesSection = conf_settings.GetSection("appSettings");
+            foreach (IConfigurationSection section in valuesSection.GetChildren())
+            {
+                settings[section.Key] = section.Value;
+            }
             /*NameValueCollection appSettings = ConfigurationManager.AppSettings();
 
                 Dim keys() As String = appSettings.AllKeys

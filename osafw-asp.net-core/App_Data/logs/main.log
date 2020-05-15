@@ -1,0 +1,16 @@
+2020-05-15 20:13:17.135 DEBUG 20876 \controllers\Test.cs:IndexAction 15 # log
+2020-05-15 20:29:28.386 DEBUG 30036 \controllers\Test.cs:IndexAction 17 # 
+ {
+  test => 1
+ }
+
+2020-05-15 20:30:25.385 DEBUG 20292 \controllers\Test.cs:IndexAction 17 # 
+ [
+  asdad
+ ]
+
+2020-05-15 20:48:17.172 DEBUG 7716 \controllers\Test.cs:IndexAction 17 # 
+ [
+  Test log
+ ]
+
