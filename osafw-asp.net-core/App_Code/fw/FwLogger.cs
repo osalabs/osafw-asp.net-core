@@ -27,18 +27,8 @@ namespace osafw_asp_net_core.fw
             TRACE = 6,           // very detailed dumps (in-module details like fw core, despatcher, parse page, ...)
             ALL = 7              // just log everything
         }
-        public void logger(params Object[] args) 
-        {
-            if (args.Length == 0) return;
-            _logger(LogLevel.DEBUG, ref args);
-        }
-        public void logger(LogLevel level, params Object[] args) 
-        {
-            if (args.Length == 0) return;
-            _logger(level, ref args);
-        }
         // internal logger routine, just to avoid pass args by value 2 times
-        public void _logger(LogLevel level, ref Object[] args) {
+        public void logger(LogLevel level, ref Object[] args) {
             // skip logging if requested level more than config's debug level
             if (level > (LogLevel)Enum.Parse(typeof(LogLevel), (String)FW.config("log_level"))) return;
 

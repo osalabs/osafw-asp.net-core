@@ -11,10 +11,9 @@ namespace osafw_asp_net_core.controllers
     {
         public override Hashtable IndexAction() {
             rw("hello world from controller");
-            FwLogger ll = new FwLogger();
             ArrayList test = new ArrayList();
             test.Add("Test log");
-            ll.logger(test);
+            fw.logger(test);
             return new Hashtable();
         }
     }

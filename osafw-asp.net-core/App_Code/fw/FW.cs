@@ -39,36 +39,109 @@ namespace osafw_asp_net_core.fw
         public string cur_action_more;
         public string cur_format;
         public ArrayList cur_params;
+        public FwLogger fwLogger;
 
         public static FW Current;
 
         private readonly Hashtable models = new Hashtable();
 
-        public FW(HttpContext context, IConfiguration conf_settings)
+        public FW(HttpContext _context, IConfiguration conf_settings)
         {
-            this.context = context;
+            context = _context;
             req = context.Request;
             resp = context.Response;
+            fwLogger = new FwLogger();
             FwConfig.init(req, conf_settings);
 
             db = new DB(this);
             DB.SQL_QUERY_CTR = 0; // reset query counter
-            /*
-                    G = config().Clone() 'by default G contains conf
 
-                    'override default lang with user's lang
-                    If SESSION("lang") > "" Then
-                        G("lang") = SESSION("lang")
-                    End If
-                    */
+            G = (Hashtable)config().Clone(); // by default G contains conf
+
+            // override default lang with user's lang
+            if (getSessionString("lang") != "") {
+                G["lang"] = getSessionString("lang");
+            }
+                   
             FERR = new Hashtable(); // reset errors
             parse_form();
-            /*
-                'save flash to current var and update session as flash is used only for nearest request
-                If context.Session("_flash") IsNot Nothing Then
-                    G("_flash") = context.Session("_flash").Clone()
-                End If
-                context.Session("_flash") = New Hashtable*/
+
+            // save flash to current var and update session as flash is used only for nearest request
+            if (getSessionHashtable("_flash") != null)
+            {
+                G["_flash"] = getSessionHashtable("_flash").Clone();
+            }
+            setSessionHashtable("_flash", new Hashtable());
+        }
+
+
+        public int? getSessionInt(String name) {
+            if (context.Session == null) {
+                logger(FwLogger.LogLevel.ERROR, "CONTEXT SESSION IS NULL");
+                return null;
+            }
+            return context.Session.GetInt32(name);
+        }
+        public String? getSessionString(String name)
+        {
+            if (context.Session == null)
+            {
+                logger(FwLogger.LogLevel.ERROR, "CONTEXT SESSION IS NULL");
+                return null;
+            }
+            return context.Session.GetString(name);
+        }
+        public Hashtable? getSessionHashtable(String name)
+        {
+            if (context.Session == null)
+            {
+                logger(FwLogger.LogLevel.ERROR, "CONTEXT SESSION IS NULL");
+                return null;
+            }
+            String data = context.Session.GetString(name);
+            return data == null ? null : JsonConvert.DeserializeObject<Hashtable>(data);
+        }
+
+        public void setSessionInt(String name, int value)
+        {
+            if (context.Session == null)
+            {
+                logger(FwLogger.LogLevel.ERROR, "CONTEXT SESSION IS NULL");
+                return;
+            }
+            context.Session.SetInt32(name, value);
+        }
+
+        public void setSessionString(String name, String value)
+        {
+            if (context.Session == null)
+            {
+                logger(FwLogger.LogLevel.ERROR, "CONTEXT SESSION IS NULL");
+                return;
+            }
+            context.Session.SetString(name, value);
+        }
+
+        public void setSessionHashtable(String name, Hashtable value)
+        {
+            if (context.Session == null)
+            {
+                logger(FwLogger.LogLevel.ERROR, "CONTEXT SESSION IS NULL");
+                return;
+            }
+            String data = JsonConvert.SerializeObject(value);
+            context.Session.SetString(name, data);
+        }
+
+        public void logger(params Object[] args)
+        {
+            if (args.Length == 0) return;
+            fwLogger.logger(FwLogger.LogLevel.DEBUG, ref args);
+        }
+        public void logger(FwLogger.LogLevel level, params Object[] args)
+        {
+            if (args.Length == 0) return;
+            fwLogger.logger(level, ref args);
         }
 
         // parse query string, form and json in request body into fw.FORM
@@ -188,10 +261,6 @@ namespace osafw_asp_net_core.fw
             }
             return (FwModel)models[model_name];
         }
-
-        /*public override HttpSessionState SESSION() {
-            return Me.context.Session
-        }*/
 
         public async void rw(string str)
         {
