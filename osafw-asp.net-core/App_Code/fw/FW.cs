@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace osafw_asp.net_core.fw
 {
-    public class FW// : IDisposable
+    public class FW : IDisposable
     {
         public DB db;
 
@@ -39,6 +39,9 @@ namespace osafw_asp.net_core.fw
         public ArrayList cur_params;
         public FwLogger fwLogger;
 
+        private System.IO.FileStream floggerFS;
+        private System.IO.StreamWriter floggerSW;
+
         public static FW Current;
         public FwCache cache = new FwCache(); // request level cache
 
@@ -61,7 +64,7 @@ namespace osafw_asp.net_core.fw
             if (getSessionString("lang") != "") {
                 G["lang"] = getSessionString("lang");
             }
-                   
+
             FERR = new Hashtable(); // reset errors
             parse_form();
 
@@ -327,7 +330,7 @@ namespace osafw_asp.net_core.fw
                 level += 1;
                 if (typeCode.ToString() == "Object") {
                     str.Append(System.Environment.NewLine);
-                    if (dmp_obj is ArrayList) 
+                    if (dmp_obj is ArrayList)
                     {   // ArrayList
                         str.Append(intend + "[" + System.Environment.NewLine);
                         ArrayList _dmp_obj = (ArrayList)dmp_obj;
@@ -337,7 +340,7 @@ namespace osafw_asp.net_core.fw
                         }
                         str.Append(intend + "]" + System.Environment.NewLine);
                     }
-                    else if (dmp_obj is Hashtable) 
+                    else if (dmp_obj is Hashtable)
                     {   // Hashtable
                         str.Append(intend + "{" + System.Environment.NewLine);
                         Hashtable _dmp_obj = (Hashtable)dmp_obj;
@@ -590,7 +593,7 @@ namespace osafw_asp.net_core.fw
                     cur_controller = "Home";
                     cur_action = "NotFound";
                 }
-                else 
+                else
                 {
                     // controller found
                     /*If auth_check_controller = 1 Then
@@ -657,21 +660,21 @@ namespace osafw_asp.net_core.fw
 
                 // logger(LogLevel.INFO, "REQUEST START [", cur_method, " ", url, "] => ", cur_controller, ".", cur_action)
 
-                if (mInfo == null) 
+                if (mInfo == null)
                 {
                     // if no method - just call FW.parser(hf) - show template from /cur_controller/cur_action dir
                     // logger(LogLevel.DEBUG, "DEFAULT PARSER")
                     // parser(New Hashtable)
                 }
-                else 
+                else
                 {
                     call_controller(calledType, mInfo, args);
                 }
                 //logger(LogLevel.INFO, "NO EXCEPTION IN dispatch")
-            } 
+            }
             catch (Exception ex)
             {
-                
+
             }
 
             /*
@@ -745,5 +748,70 @@ namespace osafw_asp.net_core.fw
             // logger(LogLevel.INFO, "REQUEST END   [", cur_method, " ", url, "] in ", end_timespan.TotalSeconds, "s, ", String.Format("{0:0.000}", 1 / end_timespan.TotalSeconds), "/s, ", DB.SQL_QUERY_CTR, " SQL")*/
 
         }
+
+
+        #region "IDisposable Support"
+        private bool disposedValue; // To detect redundant calls
+
+        // IDisposable
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    //dispose managed state (managed objects).
+                }
+
+                // free unmanaged resources (unmanaged objects) and override Finalize() below.
+                try
+                {
+                    db.Dispose(); //this will return db connections to pool
+
+                    long log_length = 0;
+                    if (floggerFS != null) log_length = floggerFS.Length;
+
+                    if (floggerSW != null) floggerSW.Close(); //no need to close floggerFS as StreamWriter closes it
+                    if (floggerFS != null)
+                    {
+                        floggerFS.Close();
+
+                        // check if log file too large and need to be rotated
+                        int max_log_size = Utils.f2int(config("log_max_size"));
+                        if (max_log_size > 0 && log_length > max_log_size)
+                        {
+                            String to_path = config("log") + ".1";
+                            File.Delete(to_path);
+                            File.Move((String)config("log"), to_path);
+                        }
+                    }
+                    // TODO: set large fields to null.
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine("exception in Dispose:" + ex.Message);
+                }
+            }
+            disposedValue = true;
+        }
+
+        // override Finalize() only if Dispose(disposing As Boolean) above has code to free unmanaged resources.
+        protected void Finalize()
+        {
+            // Do not change this code.  Put cleanup code in Dispose(disposing As Boolean) above.
+            Dispose(false);
+            this.Finalize();
+        }
+
+        // This code added by Visual Basic to correctly implement the disposable pattern.
+        public void Dispose()
+        {
+            // Do not change this code.  Put cleanup code in Dispose(disposing As Boolean) above.
+            Dispose(true);
+            // uncomment the following line if Finalize() is overridden above.
+            GC.SuppressFinalize(this);
+        }
+        #endregion
+
     }
 }

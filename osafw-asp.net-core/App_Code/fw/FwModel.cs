@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace osafw_asp.net_core.fw
 {
-    public class FwModel
+    public class FwModel : IDisposable
     {
         const int STATUS_ACTIVE = 0;
         const int STATUS_DELETED = 127;
@@ -365,13 +365,10 @@ Dim rows = db.array(table_name, where, "", aselect_fields)
 Return Utils.getCSVExport(csv_export_headers, csv_export_fields, rows)
 
 End Function
-
-Public Sub Dispose() Implements IDisposable.Dispose
-DirectCast(fw, IDisposable).Dispose()
-End Sub
-
-
- */
-
+*/
+        public void Dispose()
+        {
+            fw.Dispose();
+        }
     }
 }

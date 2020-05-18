@@ -83,7 +83,7 @@ namespace osafw_asp.net_core.fw
             }
         }
     }
-    public class DB
+    public class DB : IDisposable
     {
         private static Hashtable schemafull_cache;  // cache for the full schema, lifetime = app lifetime
         private static Hashtable schema_cache; // cache for the schema, lifetime = app lifetime
@@ -448,5 +448,26 @@ namespace osafw_asp.net_core.fw
 
             return fieldsq;
         }*/
+
+        #region "IDisposable Support"
+        private bool disposedValue; // To detect redundant calls
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    disconnect();
+                }
+            }
+            disposedValue = true;
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+        }
+        #endregion
     }
 }
