@@ -1,11 +1,10 @@
-﻿using osafw_asp_net_core.fw;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace osafw_asp_net_core.controllers
+namespace osafw_asp.net_core.fw
 {
     public class TestController : FwController
     {

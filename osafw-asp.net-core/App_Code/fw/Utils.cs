@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace osafw_asp_net_core.fw
+namespace osafw_asp.net_core.fw
 {
     public class Utils
     {
@@ -32,7 +32,7 @@ namespace osafw_asp_net_core.fw
                     result.Add(asub[0], val);
                 }
             }
-            return result;
+            return result; ;
         }
 
         /* <summary>
@@ -54,6 +54,94 @@ namespace osafw_asp_net_core.fw
         // leave just allowed chars in string - for routers: controller, action or for route ID
         public static string routeFixChars(string str) {
             return Regex.Replace(str, @"[^A-Za-z0-9_-]+", "");
+        }
+
+
+        public static bool f2bool(Object AField)
+        {
+            bool result = false;
+            if (AField == null) return false;
+            Boolean.TryParse(AField.ToString(), out result);
+            return result;
+        }
+
+        // TODO parse without Try/Catch
+        public static Object f2date(String AField)
+        {
+            Object result = null;
+            try
+            {
+                if (AField == null || AField == "Null" || AField == "")
+                {
+                    result = null;
+                }
+                else
+                {
+                    result = Convert.ToDateTime(AField.ToString().Trim());
+                }
+            }
+            catch (Exception ex)
+            {
+                result = null;
+            }
+            return result;
+        }
+
+
+        public static bool isDate(Object AField)
+        {
+            Object result = f2date(AField.ToString());
+            return result != null;
+        }
+
+        // guarantee to return string (if cannot convert to string - just return empty string)
+        public static String f2str(Object AField)
+        {
+            if (AField == null)return "";
+            String result = Convert.ToString(AField);
+            return result;
+        }
+
+        public static int f2int(Object AField)
+        {
+            if (AField == null) return 0;
+            int result = 0;
+            Int32.TryParse(AField.ToString(), out result);
+            return result;
+        }
+
+        // convert to double, optionally throw error
+        public static double f2float(Object AField, bool is_error = false)
+        {
+            double result = 0.0;
+            if (AField == null || !Double.TryParse(AField.ToString(), out result) && is_error)
+            {
+                throw new FormatException();
+            }
+            return result;
+        }
+
+        // just return false if input cannot be converted to float
+        public static bool isFloat(Object AField)
+        {
+            double result = 0.0;
+            return Double.TryParse(AField.ToString(), out result);
+        }
+
+        // convert/normalize external table/field name to fw standard name
+        // "SomeCrazy/Name" => "some_crazy_name"
+        public static String name2fw(String str)
+        {
+            String result = str;
+            result = Regex.Replace(result, @"^tbl|dbo", "", RegexOptions.IgnoreCase); // remove tbl,dbo prefixes if any
+            result = Regex.Replace(result, @"([A-Z]+)", "_$1"); // split CamelCase to underscore, but keep abbrs together ZIP/Code -> zip_code
+
+            result = Regex.Replace(result, @"\W+", "_"); // replace all non-alphanum to underscore
+            result = Regex.Replace(result, @"_+", "_"); // deduplicate underscore
+            result = Regex.Replace(result, @"^_+|_+$", ""); // remove first and last _ if any
+            result = result.ToLower(); // and finally to lowercase
+            result = result.Trim();
+            return result;;
         }
     }
 }

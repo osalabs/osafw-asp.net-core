@@ -9,7 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace osafw_asp_net_core.fw
+namespace osafw_asp.net_core.fw
 {
     public enum DBOps : int {
         EQ,            // =
@@ -139,14 +139,14 @@ namespace osafw_asp_net_core.fw
 
             //first, try to get connection from request cache (so we will use only one connection per db server - TBD make configurable?)
             if (conn == null) {
-                //conn = fw.cache.getRequestValue(cache_key)
+                conn = (DbConnection)fw.cache.getRequestValue(cache_key);
             }
 
             // if still no connection - re-make it
             if (conn == null) {
                 schema = new Hashtable(); // reset schema cache
                 conn = createConnection(connstr, dbtype);
-                //fw.cache.setRequestValue(cache_key, conn)
+                fw.cache.setRequestValue(cache_key, conn);
             }
 
             // if it's disconnected - re-connect

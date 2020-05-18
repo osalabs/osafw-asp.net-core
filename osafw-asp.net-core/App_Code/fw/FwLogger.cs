@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace osafw_asp_net_core.fw
+namespace osafw_asp.net_core.fw
 {
     public class FwLogger
     {

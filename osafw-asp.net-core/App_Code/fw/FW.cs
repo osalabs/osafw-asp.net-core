@@ -1,8 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
-using osafw_asp_net_core.controllers;
-using osafw_asp_net_core.models;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -14,7 +12,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace osafw_asp_net_core.fw
+namespace osafw_asp.net_core.fw
 {
     public class FW// : IDisposable
     {
@@ -42,6 +40,7 @@ namespace osafw_asp_net_core.fw
         public FwLogger fwLogger;
 
         public static FW Current;
+        public FwCache cache = new FwCache(); // request level cache
 
         private readonly Hashtable models = new Hashtable();
 
