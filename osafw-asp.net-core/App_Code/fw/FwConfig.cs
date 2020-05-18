@@ -69,7 +69,22 @@ namespace osafw_asp_net_core.fw
             settings["ROOT_DOMAIN"] = http + req.Host.Host + port;
 
         }
-
+        private static void readSettingsSeaction(IConfigurationSection section, ref Hashtable settings)
+        {
+            if (section.Value != null)
+            {
+                settings[section.Key] = section.Value;
+            }
+            else if (section.Key != null)
+            {
+                settings[section.Key] = new Hashtable();
+                foreach (IConfigurationSection sub_section in section.GetChildren())
+                {
+                    Hashtable s = (Hashtable)settings[section.Key];
+                    readSettingsSeaction(sub_section, ref s);
+                }
+            }
+        }
         // read setting into appSettings
         private static void readSettings(IConfiguration conf_settings) {
             if (settings == null) 
@@ -79,71 +94,16 @@ namespace osafw_asp_net_core.fw
             var valuesSection = conf_settings.GetSection("appSettings");
             foreach (IConfigurationSection section in valuesSection.GetChildren())
             {
-                settings[section.Key] = section.Value;
+                readSettingsSeaction(section, ref settings);
             }
-            /*NameValueCollection appSettings = ConfigurationManager.AppSettings();
-
-                Dim keys() As String = appSettings.AllKeys
-                For Each key As String In keys
-                    parseSetting(key, appSettings(key))
-                Next*/
         }
-        private static void parseSetting(string key, ref string value) {
-            /*Dim delim As String = "|"
-            if (InStr(key, delim) = 0 Then
-                settings(key) = parseSettingValue(value)
-            Else
-                Dim keys() As String = Split(key, delim)
 
-                'build up all hashtables tree
-                Dim ptr As Hashtable = settings
-                For i As Integer = 0 To keys.Length - 2
-                    Dim hkey As String = keys(i)
-                    if (ptr.ContainsKey(hkey) AndAlso TypeOf (ptr) Is Hashtable Then
-                        ptr = ptr(hkey) 'going deep into
-                    Else
-                        ptr(hkey) = New Hashtable 'this will overwrite any value, i.e. settings names must be different on same level
-                        ptr = ptr(hkey)
-                    End If
-                Next
-                'assign value to key element in deepest hashtree
-                ptr(keys(keys.Length - 1)) = parseSettingValue(value)
-            End If*/
-        }
-        /*'parse value to type, supported:
-        'boolean
-        'int
-        'qh - using Utils.qh()
-        Private static Function parseSettingValue(ByRef value As String) As Object
-            Dim result As Object
-            Dim m As Match = Regex.Match(value, "^~(.*?)~")
-            if (m.Success) {'if (value contains type = "~int~25" -) {cast value to the type
-                Dim value2 As String = Regex.Replace(value, "^~.*?~", "")
-                Select Case m.Groups(1).Value
-                    Case "int"
-                        Dim ival As Integer
-                        if (Not Integer.TryParse(value2, ival)) {ival = 0
-                        result = ival
-                    Case "boolean"
-                        Dim ibool As Boolean
-                        if (Not Boolean.TryParse(value2, ibool)) {ibool = False
-                        result = ibool
-                    Case "qh"
-                        result = Utils.qh(value2)
-                    Case Else
-                        result = value2
-                End Select
-            Else
-                result = String.Copy(value)
-            End If
+        // set special settings after we read config
+        private static void specialSettings() 
+        {
+            String hostname = (String)settings["hostname"];
 
-            Return result
-        End Function
-
-        'set special settings after we read config
-        Private static Sub specialSettings()
-            Dim hostname As String = settings("hostname")
-
+                        /*
             Dim overs As Hashtable = settings("override")
             For Each over_name As String In overs.Keys
                 if (Regex.IsMatch(hostname, overs(over_name) ("hostname_match")) Then
@@ -159,29 +119,29 @@ namespace osafw_asp_net_core.fw
                 [Enum].TryParse(Of LogLevel)(settings("log_level"), True, log_level)
             End If
             settings("log_level") = log_level
+        */
 
-            'default settings that depend on other settings
-            if (Not settings.ContainsKey("ASSETS_URL") Then
-                settings("ASSETS_URL") = settings("ROOT_URL") & "/assets"
-            End If
+            // default settings that depend on other settings
+            if (settings.ContainsKey("ASSETS_URL"))
+            {
+                settings["ASSETS_URL"] = settings["ROOT_URL"] + "/assets";
+            }
+        }
 
-        End Sub
+        // prefixes used so Dispatcher will know that url starts not with a full controller name, but with a prefix, need to be added to controller name
+        // return regexp str that cut the prefix from the url, second capturing group captures rest of url after the prefix
+        public static String getRoutePrefixesRX() {
+            if (String.IsNullOrEmpty(route_prefixes_rx)) {
+                // prepare regexp - escape all prefixes
+                ArrayList r = new ArrayList();
+                Hashtable route_prefixes = (Hashtable)settings["route_prefixes"];
+                foreach (String url in route_prefixes.Keys) {
+                    r.Add(Regex.Escape(url));
+                }
 
-
-        'prefixes used so Dispatcher will know that url starts not with a full controller name, but with a prefix, need to be added to controller name
-        'return regexp str that cut the prefix from the url, second capturing group captures rest of url after the prefix
-        public static Function getRoutePrefixesRX() As String
-            if (String.IsNullOrEmpty(route_prefixes_rx) Then
-                'prepare regexp - escape all prefixes
-                Dim r As New ArrayList()
-                For Each url As String In settings("route_prefixes").Keys
-                    r.Add(Regex.Escape(url))
-                Next
-
-                route_prefixes_rx = "^(" & String.Join("|", CType(r.ToArray(GetType(String)), String())) & ")(/.*)?$"
-            End If
-
-            Return route_prefixes_rx
-        End Function*/
+                route_prefixes_rx = "^(" + String.Join("|", r.ToArray()) + ")(/.*)?$";
+            }
+            return route_prefixes_rx;
+        }
     }
 }
