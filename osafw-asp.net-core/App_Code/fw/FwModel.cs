@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -43,5 +44,25 @@ namespace osafw_asp_net_core.fw
                 db = fw.db;
             }
         }
+
+        public virtual DB getDB()
+        {
+            return db;
+        }
+
+        /*public virtual Hashtable one(id As Integer)
+        {
+            Hashtable item = fw.cache.getRequestValue("fwmodel_one_" & table_name & "#" & id);
+            if (item == null)
+            {
+                Hashtable where = new Hashtable();
+                where[field_id] = id;
+                item = db.row(table_name, where);
+                normalizeNames(item);
+                fw.cache.setRequestValue("fwmodel_one_" & table_name & "#" & id, item);
+            }
+            return item;
+        }*/
+
     }
 }

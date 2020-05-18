@@ -249,6 +249,12 @@ namespace osafw_asp_net_core.fw
             //fw.Finalize()
         }
 
+        // return model object by model ty[e
+        public FwModel model(Type model)
+        {
+            return this.model((String)model.Name);
+        }
+
         // return model object by model name
         public FwModel model(string model_name)
         {
