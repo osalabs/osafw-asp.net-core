@@ -29,11 +29,11 @@ namespace osafw_asp.net_core.fw
     // describes DB operation
     public class DBOperation {
         public DBOps op;
-        public string opstr; // string value for op
+        public String opstr; // String value for op
         public bool is_value = true; // if false - operation is unary (no value)
-        public object value; // can be array for IN, NOT IN, OR
-        public string quoted_value;
-        public DBOperation(DBOps op, object value = null) {
+        public Object value; // can be array for IN, NOT IN, OR
+        public String quoted_value;
+        public DBOperation(DBOps op, Object value = null) {
             op = op;
             setOpStr();
             value = value;
@@ -93,10 +93,10 @@ namespace osafw_asp.net_core.fw
 
         private FW fw; // for now only used for: fw.logger and fw.cache (for request-level cacheing of multi-db connections)
 
-        public string db_name = "";
-        public string dbtype = "SQL";
-        private readonly Hashtable conf = new Hashtable(); // config contains: connection_string, type
-        private readonly string connstr = "";
+        public String db_name = "";
+        public String dbtype = "SQL";
+        private readonly Hashtable conf = new Hashtable(); // config contains: connection_String, type
+        private readonly String connstr = "";
 
         private Hashtable schema = null; // schema for currently connected db
         private DbConnection conn = null; // actual db connection - SqlConnection or OleDbConnection
@@ -104,12 +104,12 @@ namespace osafw_asp.net_core.fw
         private bool is_check_ole_types = false; // if true - checks for unsupported OLE types during readRow
         private Hashtable UNSUPPORTED_OLE_TYPES = null;
         // <summary>
-        // construct new DB object with
+        // construct new DB Object with
         // </summary>
         // <param name="fw">framework reference</param>
-        // <param name="conf">config hashtable with "connection_string" and "type" keys. If none - fw.config("db")("main") used</param>
+        // <param name="conf">config hashtable with "connection_String" and "type" keys. If none - fw.config("db")("main") used</param>
         // <param name="db_name">database human name, only used for logger</param>
-        public DB(FW fw, Hashtable _conf = null, string db_name = "main") {
+        public DB(FW fw, Hashtable _conf = null, String db_name = "main") {
             this.fw = fw;
             if (_conf != null) {
                 this.conf = _conf;
@@ -126,17 +126,17 @@ namespace osafw_asp.net_core.fw
 
         }
 
-        public void logger(FwLogger.LogLevel level, params object[] args) {
+        public void logger(FwLogger.LogLevel level, params Object[] args) {
             if (args.Length == 0) return;
             fw.logger(level, args);
         }
 
         // <summary>
-        // connect to DB server using connection string defined in appsettings.json appSettings, key db:main:connection_string (by default)
+        // connect to DB server using connection String defined in appsettings.json appSettings, key db:main:connection_String (by default)
         // </summary>
         // <returns></returns>
         public DbConnection connect() {
-            string cache_key = "DB#" + connstr;
+            String cache_key = "DB#" + connstr;
 
             //first, try to get connection from request cache (so we will use only one connection per db server - TBD make configurable?)
             if (conn == null) {
@@ -170,7 +170,7 @@ namespace osafw_asp.net_core.fw
             }
         }
 
-        public DbConnection createConnection(string connstr, string dbtype = "SQL") {
+        public DbConnection createConnection(String connstr, String dbtype = "SQL") {
             if (dbtype == "SQL")
             {
                 DbConnection result = new SqlConnection(connstr);
@@ -242,7 +242,7 @@ namespace osafw_asp.net_core.fw
         private Hashtable readRow(DbDataReader dbread)
         {
             Hashtable result = new Hashtable();
-            for (int i = 0; i < dbread.FieldCount - 1; i++)
+            for (int i = 0; i < dbread.FieldCount; i++)
             {
                 try
                 {
@@ -359,9 +359,9 @@ namespace osafw_asp.net_core.fw
         // <param name="field_name">optional field name, if empty - first field returned</param>
         // <param name="order_by">optional order by (MUST be quoted)</param>
         // <returns></returns>
-        public virtual ArrayList col(string table, Hashtable where, string field_name = "", string order_by = "")
+        public virtual ArrayList col(String table, Hashtable where, String field_name = "", String order_by = "")
         {
-            if (string.IsNullOrEmpty(field_name))
+            if (String.IsNullOrEmpty(field_name))
             {
                 field_name = "*";
             }
@@ -373,7 +373,7 @@ namespace osafw_asp.net_core.fw
         }
 
         // return just first value from column
-        public virtual Object value(string sql)
+        public virtual Object value(String sql)
         {
             DbDataReader dbread = query(sql);
             Object result = null;
@@ -400,9 +400,9 @@ namespace osafw_asp.net_core.fw
         // <param name="field_name">field name, special cases: "1", "count(*)"</param>
         // <param name="order_by"></param>
         // <returns></returns>
-        public virtual Object value(string table, Hashtable where, string field_name = "", string order_by = "")
+        public virtual Object value(String table, Hashtable where, String field_name = "", String order_by = "")
         {
-            if (string.IsNullOrEmpty(field_name))
+            if (String.IsNullOrEmpty(field_name))
             {
                 field_name = "*";
             }
@@ -417,30 +417,30 @@ namespace osafw_asp.net_core.fw
             return value(hash2sql_select(table, where, order_by, field_name));
         }
 
-        // string will be Left(RTrim(str),length)
-        public string left(string str, int length)
+        // String will be Left(RTrim(str),length)
+        public String left(String str, int length)
         {
-            if (string.IsNullOrEmpty(str)) return "";
+            if (String.IsNullOrEmpty(str)) return "";
             return new String(str).TrimEnd().Substring(0, length);
         }
 
         // create "IN (1,2,3)" sql or IN (NULL) if empty params passed
         // examples:
         //  where = " field "& db.insql("a,b,c,d")
-        //  where = " field "& db.insql(string())
+        //  where = " field "& db.insql(String())
         //  where = " field "& db.insql(ArrayList)
-        public string insql(string parameters)
+        public String insql(String parameters)
         {
             return insql(new String(parameters).Split(","));
         }
-        public string insql(IList parameters)
+        public String insql(IList parameters)
         {
             ArrayList result = new ArrayList();
-            foreach (string param in parameters)
+            foreach (String param in parameters)
             {
                 result.Add(q(param));
             }
-            return " IN (" + (result.Count > 0 ? string.Join(", ", result.ToArray()) : "NULL") + ")";
+            return " IN (" + (result.Count > 0 ? String.Join(", ", result.ToArray()) : "NULL") + ")";
         }
 
         // quote identifier: table => [table]
@@ -453,37 +453,37 @@ namespace osafw_asp.net_core.fw
         }
 
 
-        // if length defined - string will be Left(Trim(str),length) before quoted
-        public string q(string str, int length = 0)
+        // if length defined - String will be Left(Trim(str),length) before quoted
+        public String q(String str, int length = 0)
         {
             if (str == null) str = "";
             if (length > 0) str = this.left(str, length);
-            return "'" + new string(str).Replace("'", "''") + "'";
+            return "'" + new String(str).Replace("'", "''") + "'";
         }
 
         // simple just replace quotes, don't add start/end single quote - for example, for use with LIKE
-        public string qq(string str)
+        public String qq(String str)
         {
             if (str == null) str = "";
             return new String(str).Replace("'", "''");
         }
 
         // simple quote as Integer Value
-        public int qi(string str)
+        public int qi(String str)
         {
             return Utils.f2int(str);
         }
 
         // simple quote as Float Value
-        public double qf(string str)
+        public double qf(String str)
         {
             return Utils.f2float(str);
         }
 
         // simple quote as Date Value
-        public string qd(string str)
+        public String qd(String str)
         {
-            string result = "";
+            String result = "";
             if (dbtype == "SQL") {
                 DateTime tmpdate;
                 if (DateTime.TryParse(str, out tmpdate))
@@ -521,7 +521,7 @@ namespace osafw_asp.net_core.fw
 
             Hashtable fieldsq = new Hashtable();
 
-            foreach (string k in fields.Keys)
+            foreach (String k in fields.Keys)
             {
                 var q = qone(table, k, fields[k]);
                 // quote field name too
@@ -535,7 +535,7 @@ namespace osafw_asp.net_core.fw
         }
 
         // can return String or DBOperation class
-        public object qone(string table, string field_name, object field_value_or_op)
+        public Object qone(String table, String field_name, Object field_value_or_op)
         {
             connect();
             load_table_schema(table);
@@ -545,7 +545,7 @@ namespace osafw_asp.net_core.fw
                 throw new ApplicationException("field " + table + "." + field_name + " does not defined in FW.config(\"schema\") ");
             }
 
-            object field_value;
+            Object field_value;
             DBOperation dbop = null;
             if (field_value_or_op is DBOperation)
             {
@@ -557,8 +557,8 @@ namespace osafw_asp.net_core.fw
                 field_value = field_value_or_op;
             }
 
-            string field_type = (this.schema[table] as Hashtable)[field_name] as string;
-            string quoted;
+            String field_type = (this.schema[table] as Hashtable)[field_name] as String;
+            String quoted;
             if (dbop != null)
             {
                 if (dbop.op == DBOps.IN || dbop.op == DBOps.NOTIN)
@@ -570,7 +570,7 @@ namespace osafw_asp.net_core.fw
                         {
                             result.Add(qone_by_type(field_type, param));
                         }
-                        quoted = "(" + (result.Count > 0 ? string.Join(", ", result.ToArray()) : "NULL") + ")";
+                        quoted = "(" + (result.Count > 0 ? String.Join(", ", result.ToArray()) : "NULL") + ")";
                     }
                     else
                     {
@@ -598,9 +598,9 @@ namespace osafw_asp.net_core.fw
             }
         }
 
-        public string qone_by_type(string field_type, object field_value)
+        public String qone_by_type(String field_type, Object field_value)
         {
-            string quoted;
+            String quoted;
 
             // if value set to Nothing or DBNull - assume it's NULL in db
             if (field_value == null || System.Convert.IsDBNull(field_value))
@@ -612,17 +612,17 @@ namespace osafw_asp.net_core.fw
                 // fw.logger(table & "." & field_name & " => " & field_type & ", value=[" & field_value & "]")
                 if (Regex.IsMatch(field_type, "int"))
                 {
-                    if (field_value != null && Regex.IsMatch(field_value as string, "true", RegexOptions.IgnoreCase))
+                    if (field_value != null && Regex.IsMatch(field_value as String, "true", RegexOptions.IgnoreCase))
                     {
                         quoted = "1";
                     }
-                    else if (field_value != null && Regex.IsMatch(field_value as string, "false", RegexOptions.IgnoreCase))
+                    else if (field_value != null && Regex.IsMatch(field_value as String, "false", RegexOptions.IgnoreCase))
                     {
                         quoted = "0";
                     }
-                    else if (field_value != null && field_value is string && field_value == "")
+                    else if (field_value != null && field_value is String && field_value == "")
                     {
-                        // if empty string for numerical field - assume NULL
+                        // if empty String for numerical field - assume NULL
                         quoted = "NULL";
                     }
                     else
@@ -807,8 +807,6 @@ namespace osafw_asp.net_core.fw
             return new DBOperation(DBOps.NOTIN, values);
         }
 
-
-
         // join key/values with quoting values according to table
         // h - already quoted! values
         // kv_delim = pass "" to autodetect " = " or " IS " (for NULL values)
@@ -861,24 +859,24 @@ namespace osafw_asp.net_core.fw
         }
 
         // <summary>
-        // build SELECT sql string
+        // build SELECT sql String
         // </summary>
         // <param name="table">table name</param>
         // <param name="where">where conditions</param>
-        // <param name="order_by">optional order by string</param>
+        // <param name="order_by">optional order by String</param>
         // <param name="select_fields">MUST already be quoted!</param>
         // <returns></returns>
-        private String hash2sql_select (string table, Hashtable where, string order_by = "", string select_fields = "*")
+        private String hash2sql_select (String table, Hashtable where, String order_by = "", String select_fields = "*")
         {
             where = quote(table, where);
             // FW.logger(where)
-            String where_string = _join_hash(where, "", " AND ");
-            if (where_string.Length > 0)
+            String where_String = _join_hash(where, "", " AND ");
+            if (where_String.Length > 0)
             {
-                where_string = " WHERE " + where_string;
+                where_String = " WHERE " + where_String;
             }
 
-            String sql = "SELECT " + select_fields + " FROM " + q_ident(table) + " " + where_string;
+            String sql = "SELECT " + select_fields + " FROM " + q_ident(table) + " " + where_String;
             if (order_by.Length > 0)
             {
                 sql = sql + " ORDER BY " + order_by;
@@ -886,7 +884,7 @@ namespace osafw_asp.net_core.fw
             return sql;
         }
 
-        public ArrayList load_table_schema_full(string table)
+        public ArrayList load_table_schema_full(String table)
         {
             // check if full schema already there
             if (schemafull_cache == null)
@@ -912,7 +910,7 @@ namespace osafw_asp.net_core.fw
                 // get information about all columns in the table
                 // default = ((0)) ('') (getdate())
                 // maxlen = -1 for nvarchar(MAX)
-                string sql = "SELECT c.column_name as 'name'," +
+                String sql = "SELECT c.column_name as 'name'," +
                     " c.data_type as 'type'," +
                     " CASE c.is_nullable WHEN 'YES' THEN 1 ELSE 0 END AS 'is_nullable'," +
                     " c.column_default as 'default'," +
@@ -922,7 +920,7 @@ namespace osafw_asp.net_core.fw
                     " c.character_set_name as 'charset'," +
                     " c.collation_name as 'collation'," +
                     " c.ORDINAL_POSITION as 'pos'," +
-                    " COLUMNPROPERTY(object_id(c.table_name), c.column_name, 'IsIdentity') as is_identity" +
+                    " COLUMNPROPERTY(Object_id(c.table_name), c.column_name, 'IsIdentity') as is_identity" +
                     " FROM INFORMATION_SCHEMA.TABLES t," +
                     "   INFORMATION_SCHEMA.COLUMNS c" +
                     " WHERE t.table_name = c.table_name" +
@@ -931,7 +929,7 @@ namespace osafw_asp.net_core.fw
                 result = array(sql);
                 foreach (Hashtable row in result)
                 {
-                    row["fw_type"] = map_mssqltype2fwtype(row["type"] as string); //meta type
+                    row["fw_type"] = map_mssqltype2fwtype(row["type"] as String); //meta type
                     row["fw_subtype"] = row["type"].ToString().ToLower();
                 }
             }
@@ -953,7 +951,7 @@ namespace osafw_asp.net_core.fw
                     h("name") = row("COLUMN_NAME").ToString()
                     h("type") = row("DATA_TYPE")
                     h("fw_type") = map_oletype2fwtype(row("DATA_TYPE")) 'meta type
-                    h("fw_subtype") = LCase([Enum].GetName(GetType(OleDbType), row("DATA_TYPE"))) 'exact type as string
+                    h("fw_subtype") = LCase([Enum].GetName(GetType(OleDbType), row("DATA_TYPE"))) 'exact type as String
                     h("is_nullable") = IIf(row("IS_NULLABLE"), 1, 0)
                     h("default") = row("COLUMN_DEFAULT") '"=Now()" "0" "No"
                     h("maxlen") = row("CHARACTER_MAXIMUM_LENGTH")
@@ -987,7 +985,7 @@ namespace osafw_asp.net_core.fw
         }
 
         // load table schema from db
-        public Hashtable load_table_schema(string table)
+        public Hashtable load_table_schema(String table)
         {
             // for non-MSSQL schemas - just use config schema for now - TODO
             if (dbtype != "SQL" && dbtype != "OLE")
@@ -1033,9 +1031,9 @@ namespace osafw_asp.net_core.fw
             if (schema != null) schema.Clear();
         }
 
-        private string map_mssqltype2fwtype(string mstype)
+        private String map_mssqltype2fwtype(String mstype)
         {
-            string result = "";
+            String result = "";
             switch (mstype.ToLower())
             {
                 // TODO - unsupported: image, varbinary, timestamp
@@ -1076,9 +1074,9 @@ namespace osafw_asp.net_core.fw
             return result;
         }
 
-        private string map_oletype2fwtype(int mstype)
+        private String map_oletype2fwtype(int mstype)
         {
-            string result = "";
+            String result = "";
             switch (mstype)
             {
                 // TODO - unsupported: image, varbinary, longvarbinary, dbtime, timestamp

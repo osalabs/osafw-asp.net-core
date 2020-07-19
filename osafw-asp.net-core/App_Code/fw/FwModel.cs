@@ -31,7 +31,7 @@ namespace osafw_asp.net_core.fw
         public bool is_normalize_names = false; // if true - Utils.name2fw() will be called for all fetched rows to normalize names (no spaces or special chars)
 
         protected FwModel(FW fw = null) {
-            if (fw == null) {
+            if (fw != null) {
                 this.fw = fw;
                 this.db = fw.db;
             }

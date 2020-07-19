@@ -252,7 +252,7 @@ namespace osafw_asp.net_core.fw
         }
 
         // return model object by model ty[e
-        public FwModel model(Type model)
+        public FwModel modelOf(Type model)
         {
             return this.model((String)model.Name);
         }
@@ -262,7 +262,7 @@ namespace osafw_asp.net_core.fw
         {
             if (!models.ContainsKey(model_name))
             {
-                FwModel m = (FwModel)Activator.CreateInstance(Type.GetType(model_name));
+                FwModel m = (FwModel)Activator.CreateInstance(Type.GetType("osafw_asp.net_core.fw." + model_name, false, true));
                 // initialize
                 m.init(this);
                 models[model_name] = m;
@@ -583,7 +583,7 @@ namespace osafw_asp.net_core.fw
             try
             {
                 //Dim auth_check_controller = _auth(cur_controller, cur_action)
-                Type calledType = Type.GetType("osafw_asp.net_core.fw.controllers." + cur_controller + "Controller", false, true); // case ignored
+                Type calledType = Type.GetType("osafw_asp.net_core.fw." + cur_controller + "Controller", false, true); // case ignored
                 if (calledType == null)
                 {
                     // logger(LogLevel.DEBUG, "No controller found for controller=[", cur_controller, "], using default Home")
