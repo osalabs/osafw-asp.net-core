@@ -7,6 +7,7 @@ using System.Data.OleDb;
 using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace osafw_asp.net_core.fw
@@ -85,8 +86,8 @@ namespace osafw_asp.net_core.fw
     }
     public class DB : IDisposable
     {
-        private static Hashtable schemafull_cache;  // cache for the full schema, lifetime = app lifetime
-        private static Hashtable schema_cache; // cache for the schema, lifetime = app lifetime
+        private Hashtable schemafull_cache;  // cache for the full schema, lifetime = app lifetime
+        private Hashtable schema_cache; // cache for the schema, lifetime = app lifetime
 
         public static int SQL_QUERY_CTR = 0; // counter for SQL queries during request
 
@@ -337,6 +338,110 @@ namespace osafw_asp.net_core.fw
             return array(hash2sql_select(table, where, order_by, select_fields));
         }
 
+        // return just first column values as arraylist
+        public virtual ArrayList col(String sql)
+        {
+            DbDataReader dbread = query(sql);
+            ArrayList a = new ArrayList();
+            while (dbread.Read())
+            {
+                a.Add(dbread[0].ToString());
+            }
+            dbread.Close();
+            return a;
+        }
+
+        // <summary>
+        // return just one column values as arraylist
+        // </summary>
+        // <param name="table">table name</param>
+        // <param name="where">where conditions</param>
+        // <param name="field_name">optional field name, if empty - first field returned</param>
+        // <param name="order_by">optional order by (MUST be quoted)</param>
+        // <returns></returns>
+        public virtual ArrayList col(string table, Hashtable where, string field_name = "", string order_by = "")
+        {
+            if (string.IsNullOrEmpty(field_name))
+            {
+                field_name = "*";
+            }
+            else
+            {
+                field_name = q_ident(field_name);
+            }
+            return col(hash2sql_select(table, where, order_by, field_name));
+        }
+
+        // return just first value from column
+        public virtual Object value(string sql)
+        {
+            DbDataReader dbread = query(sql);
+            Object result = null;
+
+            while (dbread.Read())
+            {
+                result = dbread[0];
+                break; // just return first row
+            }
+
+            dbread.Close();
+            return result;
+        }
+
+        // <summary>
+        // return just one field value:
+        // value("table", where)
+        // value("table", where, "field1")
+        // value("table", where, "1") 'just return 1, useful for exists queries
+        // value("table", where, "count(*)", "id asc")
+        // </summary>
+        // <param name="table"></param>
+        // <param name="where"></param>
+        // <param name="field_name">field name, special cases: "1", "count(*)"</param>
+        // <param name="order_by"></param>
+        // <returns></returns>
+        public virtual Object value(string table, Hashtable where, string field_name = "", string order_by = "")
+        {
+            if (string.IsNullOrEmpty(field_name))
+            {
+                field_name = "*";
+            }
+            else if (field_name == "count(*)" || field_name == "1")
+            {
+                // no changes
+            }
+            else
+            {
+                field_name = q_ident(field_name);
+            }
+            return value(hash2sql_select(table, where, order_by, field_name));
+        }
+
+        // string will be Left(RTrim(str),length)
+        public string left(string str, int length)
+        {
+            if (string.IsNullOrEmpty(str)) return "";
+            return new String(str).TrimEnd().Substring(0, length);
+        }
+
+        // create "IN (1,2,3)" sql or IN (NULL) if empty params passed
+        // examples:
+        //  where = " field "& db.insql("a,b,c,d")
+        //  where = " field "& db.insql(string())
+        //  where = " field "& db.insql(ArrayList)
+        public string insql(string parameters)
+        {
+            return insql(new String(parameters).Split(","));
+        }
+        public string insql(IList parameters)
+        {
+            ArrayList result = new ArrayList();
+            foreach (string param in parameters)
+            {
+                result.Add(q(param));
+            }
+            return " IN (" + (result.Count > 0 ? string.Join(", ", result.ToArray()) : "NULL") + ")";
+        }
 
         // quote identifier: table => [table]
         public String q_ident(String str)
@@ -348,10 +453,366 @@ namespace osafw_asp.net_core.fw
         }
 
 
+        // if length defined - string will be Left(Trim(str),length) before quoted
+        public string q(string str, int length = 0)
+        {
+            if (str == null) str = "";
+            if (length > 0) str = this.left(str, length);
+            return "'" + new string(str).Replace("'", "''") + "'";
+        }
+
+        // simple just replace quotes, don't add start/end single quote - for example, for use with LIKE
+        public string qq(string str)
+        {
+            if (str == null) str = "";
+            return new String(str).Replace("'", "''");
+        }
+
+        // simple quote as Integer Value
+        public int qi(string str)
+        {
+            return Utils.f2int(str);
+        }
+
+        // simple quote as Float Value
+        public double qf(string str)
+        {
+            return Utils.f2float(str);
+        }
+
+        // simple quote as Date Value
+        public string qd(string str)
+        {
+            string result = "";
+            if (dbtype == "SQL") {
+                DateTime tmpdate;
+                if (DateTime.TryParse(str, out tmpdate))
+                {
+                    result = "convert(DATETIME2, '" + tmpdate.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.DateTimeFormatInfo.InvariantInfo) + "', 120)";
+                }
+                else
+                {
+                    result = "NULL";
+                }
+            }
+            else
+            {
+                result = Regex.Replace(str, @"['""\]\[]", "");
+                if (Regex.IsMatch(result, @"\D"))
+                {
+                    result = "'" + str + "'";
+                }
+                else
+                {
+                    result = "NULL";
+                }
+            }
+            return result;
+        }
+
+        public Hashtable quote(String table, Hashtable fields)
+        {
+            connect();
+            load_table_schema(table);
+            if (!schema.ContainsKey(table))
+            {
+                throw new ApplicationException("table [" + table + "] does not defined in FW.config(\"schema\")");
+            }
+
+            Hashtable fieldsq = new Hashtable();
+
+            foreach (string k in fields.Keys)
+            {
+                var q = qone(table, k, fields[k]);
+                // quote field name too
+                if (q != null)
+                {
+                    fieldsq[q_ident(k)] = q;
+                }
+            }
+
+            return fieldsq;
+        }
+
+        // can return String or DBOperation class
+        public object qone(string table, string field_name, object field_value_or_op)
+        {
+            connect();
+            load_table_schema(table);
+            field_name = field_name.ToLower();
+            if (!(schema[table] as Hashtable).ContainsKey(field_name))
+            {
+                throw new ApplicationException("field " + table + "." + field_name + " does not defined in FW.config(\"schema\") ");
+            }
+
+            object field_value;
+            DBOperation dbop = null;
+            if (field_value_or_op is DBOperation)
+            {
+                dbop = (DBOperation)field_value_or_op;
+                field_value = dbop.value;
+            }
+            else
+            {
+                field_value = field_value_or_op;
+            }
+
+            string field_type = (this.schema[table] as Hashtable)[field_name] as string;
+            string quoted;
+            if (dbop != null)
+            {
+                if (dbop.op == DBOps.IN || dbop.op == DBOps.NOTIN)
+                {
+                    if (dbop.value != null && dbop.value is IList)
+                    {
+                        ArrayList result = new ArrayList();
+                        foreach (var param in dbop.value as IEnumerable)
+                        {
+                            result.Add(qone_by_type(field_type, param));
+                        }
+                        quoted = "(" + (result.Count > 0 ? string.Join(", ", result.ToArray()) : "NULL") + ")";
+                    }
+                    else
+                    {
+                        quoted = qone_by_type(field_type, field_value);
+                    }
+                }
+                else
+                {
+                    quoted = qone_by_type(field_type, field_value);
+                }
+            }
+            else
+            {
+                quoted = qone_by_type(field_type, field_value);
+            }
+
+            if (dbop != null)
+            {
+                dbop.quoted_value = quoted;
+                return field_value_or_op;
+            }
+            else
+            {
+                return quoted;
+            }
+        }
+
+        public string qone_by_type(string field_type, object field_value)
+        {
+            string quoted;
+
+            // if value set to Nothing or DBNull - assume it's NULL in db
+            if (field_value == null || System.Convert.IsDBNull(field_value))
+            {
+                quoted = "NULL";
+            }
+            else
+            {
+                // fw.logger(table & "." & field_name & " => " & field_type & ", value=[" & field_value & "]")
+                if (Regex.IsMatch(field_type, "int"))
+                {
+                    if (field_value != null && Regex.IsMatch(field_value as string, "true", RegexOptions.IgnoreCase))
+                    {
+                        quoted = "1";
+                    }
+                    else if (field_value != null && Regex.IsMatch(field_value as string, "false", RegexOptions.IgnoreCase))
+                    {
+                        quoted = "0";
+                    }
+                    else if (field_value != null && field_value is string && field_value == "")
+                    {
+                        // if empty string for numerical field - assume NULL
+                        quoted = "NULL";
+                    }
+                    else
+                    {
+                        quoted = Utils.f2int(field_value).ToString();
+                    }
+                }
+                else if (field_type == "datetime")
+                {
+                    quoted = qd(field_value.ToString());
+                }
+                else if (field_type == "float")
+                {
+                    quoted = Utils.f2float(field_value).ToString();
+                }
+                else
+                {
+                    // fieldsq(k) = "'" & Regex.Replace(fields(k), "(['""])", "\\$1") & "'"
+                    if (field_value == null) 
+                    {
+                        quoted = "''";
+                    }
+                    else 
+                    {
+                        // escape backslash following by carriage return char(13) with doubling backslash and carriage return
+                        // because of https://msdn.microsoft.com/en-us/library/dd207007.aspx
+                        quoted = Regex.Replace(field_value.ToString(), "\\(\r\n?)", "\\$1$1");
+                        quoted = Regex.Replace(quoted, "'", "''"); // escape single quotes
+                        quoted = "'" + quoted + "'";
+                    }
+                }
+            }
+            return quoted;
+        }
+
+        // operations support for non-raw sql methods
+
+        /// <summary>
+        /// NOT EQUAL operation 
+        /// Example: Dim rows = db.array("users", New Hashtable From {{"status", db.opNOT(127)}})
+        /// <![CDATA[ select * from users where status<>127 ]]>
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        public DBOperation opNOT(Object value)
+        {
+            return new DBOperation(DBOps.NOT, value);
+        }
+
+        /// <summary>
+        /// LESS or EQUAL than operation
+        /// Example: Dim rows = db.array("users", New Hashtable From {{"access_level", db.opLE(50)}})
+        /// <![CDATA[ select * from users where access_level<=50 ]]>
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        public DBOperation opLE(Object value)
+        {
+            return new DBOperation(DBOps.LE, value);
+        }
+
+        /// <summary>
+        /// LESS THAN operation
+        /// Example: Dim rows = db.array("users", New Hashtable From {{"access_level", db.opLT(50)}})
+        /// <![CDATA[ select * from users where access_level<50 ]]>
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        public DBOperation opLT(Object value)
+        { 
+            return new DBOperation(DBOps.LT, value);
+        }
+
+        /// <summary>
+        /// GREATER or EQUAL than operation
+        /// Example: Dim rows = db.array("users", New Hashtable From {{"access_level", db.opGE(50)}})
+        /// <![CDATA[ select * from users where access_level>=50 ]]>
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        public DBOperation opGE(Object value)
+        {
+            return new DBOperation(DBOps.GE, value);
+        }
+
+        /// <summary>
+        /// GREATER THAN operation
+        /// Example: Dim rows = db.array("users", New Hashtable From {{"access_level", db.opGT(50)}})
+        /// <![CDATA[ select * from users where access_level>50 ]]>
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        public DBOperation opGT(Object value)
+        {
+            return new DBOperation(DBOps.GT, value);
+        }
+
+        /// <summary>
+        /// Example: Dim rows = db.array("users", New Hashtable From {{"field", db.opISNULL()}})
+        /// select * from users where field IS NULL
+        /// </summary>
+        /// <returns></returns>
+        public DBOperation opISNULL()
+        {
+            return new DBOperation(DBOps.ISNULL);
+        }
+        /// <summary>
+        /// Example: Dim rows = db.array("users", New Hashtable From {{"field", db.opISNOTNULL()}})
+        /// select * from users where field IS NOT NULL
+        /// </summary>
+        /// <returns></returns>
+        public DBOperation opISNOTNULL()
+        {
+            return new DBOperation(DBOps.ISNOTNULL);
+        }
+        /// <summary>
+        /// Example: Dim rows = DB.array("users", New Hashtable From {{"address1", db.opLIKE("%Orlean%")}})
+        /// select * from users where address1 LIKE '%Orlean%'
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        public DBOperation opLIKE(Object value)
+        {
+            return new DBOperation(DBOps.LIKE, value);
+        }
+        /// <summary>
+        /// Example: Dim rows = DB.array("users", New Hashtable From {{"address1", db.opNOTLIKE("%Orlean%")}})
+        /// select * from users where address1 NOT LIKE '%Orlean%'
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        public DBOperation opNOTLIKE(Object value)
+        {
+            return new DBOperation(DBOps.NOTLIKE, value);
+        }
+
+        /// <summary>
+        /// 2 ways to call:
+        /// opIN(1,2,4) - as multiple arguments
+        /// opIN(array) - as one array of values
+        /// 
+        /// Example: Dim rows = db.array("users", New Hashtable From {{"id", db.opIN(1, 2)}})
+        /// select * from users where id IN (1,2)
+        /// </summary>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        public DBOperation opIN(params Object[] args)
+        {
+            Object values;
+            if (args.Length == 1 && args[0].GetType().IsArray)
+            {
+                values = args[0];
+            }
+            else 
+            {
+                    values = args;
+            }
+            return new DBOperation(DBOps.IN, values);
+        }
+
+        /// <summary>
+        /// 2 ways to call:
+        /// opIN(1,2,4) - as multiple arguments
+        /// opIN(array) - as one array of values
+        /// 
+        /// Example: Dim rows = db.array("users", New Hashtable From {{"id", db.opNOTIN(1, 2)}})
+        /// select * from users where id NOT IN (1,2)
+        /// </summary>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        public DBOperation opNOTIN(params Object[] args)
+        {
+            Object values;
+            if (args.Length == 1 && args[0].GetType().IsArray)
+            {
+                values = args[0];
+            }
+            else
+            {
+                values = args;
+            }
+            return new DBOperation(DBOps.NOTIN, values);
+        }
+
+
+
         // join key/values with quoting values according to table
         // h - already quoted! values
         // kv_delim = pass "" to autodetect " = " or " IS " (for NULL values)
-        public String _join_hash(Hashtable h, String kv_delim, String pairs_delim)
+        private String _join_hash(Hashtable h, String kv_delim, String pairs_delim)
         {
             String res = "";
             if (h.Count < 1) return res;
@@ -407,9 +868,9 @@ namespace osafw_asp.net_core.fw
         // <param name="order_by">optional order by string</param>
         // <param name="select_fields">MUST already be quoted!</param>
         // <returns></returns>
-        private String hash2sql_select(String table, Hashtable where, String order_by = "", String select_fields = "*")
+        private String hash2sql_select (string table, Hashtable where, string order_by = "", string select_fields = "*")
         {
-            // where = quote(table, where); !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            where = quote(table, where);
             // FW.logger(where)
             String where_string = _join_hash(where, "", " AND ");
             if (where_string.Length > 0)
@@ -425,29 +886,235 @@ namespace osafw_asp.net_core.fw
             return sql;
         }
 
-        /*public Hashtable quote(String table, Hashtable fields)
+        public ArrayList load_table_schema_full(string table)
         {
-            connect();
-            load_table_schema(table);
-            if (!schema.ContainsKey(table))
+            // check if full schema already there
+            if (schemafull_cache == null)
             {
-                throw new ApplicationException("table [" + table + "] does not defined in FW.config(\"schema\")");
+                schemafull_cache = new Hashtable();
             }
 
-            Hashtable fieldsq = new Hashtable();
-            String k;
-
-            foreach (String k In fields.Keys)
+            if (!schemafull_cache.ContainsKey(connstr))
             {
-                Dim q = qone(table, k, fields(k));
-                // quote field name too
-                if (q != null) {
-                    fieldsq(q_ident(k)) = q;
+                schemafull_cache[connstr] = new Hashtable();
+            }
+
+            if ((schemafull_cache[connstr] as Hashtable).ContainsKey(table))
+            {
+                return (schemafull_cache[connstr] as Hashtable)[table] as ArrayList;
+            }
+
+            // cache miss
+            ArrayList result = new ArrayList();
+            if (dbtype == "SQL")
+            {
+                // fw.logger("cache MISS " & current_db & "." & table)
+                // get information about all columns in the table
+                // default = ((0)) ('') (getdate())
+                // maxlen = -1 for nvarchar(MAX)
+                string sql = "SELECT c.column_name as 'name'," +
+                    " c.data_type as 'type'," +
+                    " CASE c.is_nullable WHEN 'YES' THEN 1 ELSE 0 END AS 'is_nullable'," +
+                    " c.column_default as 'default'," +
+                    " c.character_maximum_length as 'maxlen'," +
+                    " c.numeric_precision," +
+                    " c.numeric_scale," +
+                    " c.character_set_name as 'charset'," +
+                    " c.collation_name as 'collation'," +
+                    " c.ORDINAL_POSITION as 'pos'," +
+                    " COLUMNPROPERTY(object_id(c.table_name), c.column_name, 'IsIdentity') as is_identity" +
+                    " FROM INFORMATION_SCHEMA.TABLES t," +
+                    "   INFORMATION_SCHEMA.COLUMNS c" +
+                    " WHERE t.table_name = c.table_name" +
+                    "   AND t.table_name = " + q(table) +
+                    " order by c.ORDINAL_POSITION";
+                result = array(sql);
+                foreach (Hashtable row in result)
+                {
+                    row["fw_type"] = map_mssqltype2fwtype(row["type"] as string); //meta type
+                    row["fw_subtype"] = row["type"].ToString().ToLower();
                 }
             }
+            else
+            {
+               /* // OLE DB (Access)
+                DataTable schemaTable =
+                    DirectCast(conn, OleDbConnection).GetOleDbSchemaTable(OleDb.OleDbSchemaGuid.Columns, New Object() { Nothing, Nothing, table, Nothing})
 
-            return fieldsq;
-        }*/
+                Dim fieldslist = New List(Of Hashtable)
+                For Each row As DataRow In schemaTable.Rows
+                    'unused:
+                    'COLUMN_HASDEFAULT True False
+                    'COLUMN_FLAGS   74 86 90(auto) 102 106 114 122(date) 130 226 230 234
+                    'CHARACTER_OCTET_LENGTH
+                    'DATETIME_PRECISION=0
+                    'DESCRIPTION
+                    Dim h = New Hashtable
+                    h("name") = row("COLUMN_NAME").ToString()
+                    h("type") = row("DATA_TYPE")
+                    h("fw_type") = map_oletype2fwtype(row("DATA_TYPE")) 'meta type
+                    h("fw_subtype") = LCase([Enum].GetName(GetType(OleDbType), row("DATA_TYPE"))) 'exact type as string
+                    h("is_nullable") = IIf(row("IS_NULLABLE"), 1, 0)
+                    h("default") = row("COLUMN_DEFAULT") '"=Now()" "0" "No"
+                    h("maxlen") = row("CHARACTER_MAXIMUM_LENGTH")
+                    h("numeric_precision") = row("NUMERIC_PRECISION")
+                    h("numeric_scale") = row("NUMERIC_SCALE")
+                    h("charset") = row("CHARACTER_SET_NAME")
+                    h("collation") = row("COLLATION_NAME")
+                    h("pos") = row("ORDINAL_POSITION")
+                    h("is_identity") = 0
+                    h("desc") = row("DESCRIPTION")
+                    h("column_flags") = row("COLUMN_FLAGS")
+                    fieldslist.Add(h)
+                Next
+                'order by ORDINAL_POSITION
+                result.AddRange(fieldslist.OrderBy(Function(h) h("pos")).ToList())
+
+                'now detect identity (because order is important)
+                For Each h As Hashtable In result
+                    'actually this also triggers for Long Integers, so for now - only first field that match conditions will be an identity
+                    If h("type") = OleDbType.Integer AndAlso h("column_flags") = 90 Then
+                        h("is_identity") = 1
+                        Exit For
+                    End If
+                Next*/
+            }
+
+            // save to cache
+            (this.schemafull_cache[connstr] as Hashtable)[table] = result;
+
+            return result;
+        }
+
+        // load table schema from db
+        public Hashtable load_table_schema(string table)
+        {
+            // for non-MSSQL schemas - just use config schema for now - TODO
+            if (dbtype != "SQL" && dbtype != "OLE")
+            {
+                if (this.schema.Count == 0)
+                {
+                    this.schema = this.conf["schema"] as Hashtable;
+                }
+                return null;
+            }
+
+            // check if schema already there
+            if (this.schema.ContainsKey(table)) return this.schema[table] as Hashtable;
+
+            if (this.schema_cache == null) this.schema_cache = new Hashtable();
+            if (!this.schema_cache.ContainsKey(connstr)) this.schema_cache[connstr] = new Hashtable();
+            if (!(this.schema_cache[connstr] as Hashtable).ContainsKey(table))
+            {
+                Hashtable h = new Hashtable();
+
+                ArrayList fields = load_table_schema_full(table);
+                foreach (Hashtable row in fields)
+                {
+                    h[row["name"].ToString().ToLower()] = row["fw_type"];
+                }
+
+                this.schema[table] = h;
+                (this.schema_cache[connstr] as Hashtable)[table] = h;
+            }
+            else
+            {
+                // fw.logger("schema_cache HIT " & current_db & "." & table)
+                this.schema[table] = (this.schema_cache[connstr] as Hashtable)[table];
+            }
+
+            return this.schema[table] as Hashtable;
+        }
+
+        public void clear_schema_cache() 
+        {
+            if (schemafull_cache != null) schemafull_cache.Clear();
+            if (schema_cache != null) schema_cache.Clear();
+            if (schema != null) schema.Clear();
+        }
+
+        private string map_mssqltype2fwtype(string mstype)
+        {
+            string result = "";
+            switch (mstype.ToLower())
+            {
+                // TODO - unsupported: image, varbinary, timestamp
+                case "tinyint":
+                case "smallint":
+                case "int":
+                case "bigint":
+                case "bit":
+                    result = "int";
+                    break;
+                case "real":
+                case "numeric":
+                case "decimal":
+                case "money":
+                case "smallmoney":
+                case "float":
+                    result = "float";
+                    break;
+                case "datetime":
+                case "datetime2":
+                case "date":
+                case "smalldatetime":
+                    result = "datetime";
+                    break;
+                case "text":
+                case "ntext":
+                case "varchar":
+                case "nvarchar":
+                case "char":
+                case "nchar":
+                    result = "varchar";
+                    break;
+                default:
+                    result = "varchar";
+                    break;
+            }
+
+            return result;
+        }
+
+        private string map_oletype2fwtype(int mstype)
+        {
+            string result = "";
+            switch (mstype)
+            {
+                // TODO - unsupported: image, varbinary, longvarbinary, dbtime, timestamp
+                // NOTE: Boolean here is: True=-1 (vbTrue), False=0 (vbFalse)
+                case (int)OleDbType.Boolean:
+                case (int)OleDbType.TinyInt:
+                case (int)OleDbType.UnsignedTinyInt:
+                case (int)OleDbType.SmallInt:
+                case (int)OleDbType.UnsignedSmallInt:
+                case (int)OleDbType.Integer:
+                case (int)OleDbType.UnsignedInt:
+                case (int)OleDbType.BigInt:
+                case (int)OleDbType.UnsignedBigInt:
+                    result = "int";
+                    break;
+                case (int)OleDbType.Double:
+                case (int)OleDbType.Numeric:
+                case (int)OleDbType.VarNumeric:
+                case (int)OleDbType.Single:
+                case (int)OleDbType.Decimal:
+                case (int)OleDbType.Currency:
+                    result = "float";
+                    break;
+                case (int)OleDbType.Date:
+                case (int)OleDbType.DBDate:
+                case (int)OleDbType.DBTimeStamp:
+                    result = "datetime";
+                    break;
+                default:
+                    result = "varchar";
+                    break;
+            }
+
+            return result;
+        }
+
 
         #region "IDisposable Support"
         private bool disposedValue; // To detect redundant calls

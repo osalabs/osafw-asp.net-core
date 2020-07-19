@@ -7,7 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace osafw_asp_net_core
+namespace osafw_asp.net_core
 {
     public class Program
     {
