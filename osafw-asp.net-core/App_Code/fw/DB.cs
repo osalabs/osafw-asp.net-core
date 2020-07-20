@@ -641,11 +641,11 @@ namespace osafw_asp.net_core.fw
                 else
                 {
                     // fieldsq(k) = "'" & Regex.Replace(fields(k), "(['""])", "\\$1") & "'"
-                    if (field_value == null) 
+                    if (field_value == null)
                     {
                         quoted = "''";
                     }
-                    else 
+                    else
                     {
                         // escape backslash following by carriage return char(13) with doubling backslash and carriage return
                         // because of https://msdn.microsoft.com/en-us/library/dd207007.aspx
@@ -692,7 +692,7 @@ namespace osafw_asp.net_core.fw
         /// <param name="value"></param>
         /// <returns></returns>
         public DBOperation opLT(Object value)
-        { 
+        {
             return new DBOperation(DBOps.LT, value);
         }
 
@@ -776,9 +776,9 @@ namespace osafw_asp.net_core.fw
             {
                 values = args[0];
             }
-            else 
+            else
             {
-                    values = args;
+                values = args;
             }
             return new DBOperation(DBOps.IN, values);
         }
@@ -805,6 +805,73 @@ namespace osafw_asp.net_core.fw
                 values = args;
             }
             return new DBOperation(DBOps.NOTIN, values);
+        }
+
+        // return last inserted id
+        public int insert(String table, Hashtable fields)
+        {
+            int insert_id = -1;
+
+            if (fields.Count < 1) return insert_id;
+
+            exec(hash2sql_i(table, fields));
+
+            if (dbtype == "SQL")
+            {
+                insert_id = (int)value("SELECT SCOPE_IDENTITY() AS [SCOPE_IDENTITY] ");
+            }
+            else if (dbtype == "OLE")
+            {
+                insert_id = (int)value("SELECT @@identity");
+            }
+            else
+            {
+                throw new ApplicationException("Get last insert ID for DB type [" + dbtype + "] not implemented");
+            }
+
+            // if table doesn't have identity insert_id would be DBNull
+            if (System.Convert.IsDBNull(insert_id)) insert_id = 0;
+
+            return insert_id;
+        }
+
+        public int update(String sql) 
+        {
+            return exec(sql);
+        }
+
+        public int update(String table, Hashtable fields, Hashtable where)
+        {
+            return exec(hash2sql_u(table, fields, where));
+        }
+
+        // retrun number of affected rows
+        public int update_or_insert(String table, Hashtable fields, Hashtable where)
+        {
+            // merge fields and where
+            Hashtable allfields = new Hashtable();
+            
+            foreach (String k in fields.Keys)
+            {
+                allfields[k] = fields[k];
+            }
+
+            foreach (String k in where.Keys)
+            {
+                allfields[k] = where[k];
+            }
+
+            String update_sql = hash2sql_u(table, fields, where);
+            String insert_sql = hash2sql_i(table, allfields);
+            String full_sql = update_sql + "  IF @@ROWCOUNT = 0 " + insert_sql;
+
+            return exec(full_sql);
+        }
+
+        // retrun number of affected rows
+        public int del(String table, Hashtable where) 
+        {
+            return exec(hash2sql_d(table, where));
         }
 
         // join key/values with quoting values according to table
@@ -881,6 +948,46 @@ namespace osafw_asp.net_core.fw
             {
                 sql = sql + " ORDER BY " + order_by;
             }
+            return sql;
+        }
+
+        public String hash2sql_u(String table, Hashtable fields, Hashtable where)
+        {
+            fields = quote(table, fields);
+            where = quote(table, where);
+
+            String update_string = _join_hash(fields, "=", ", ");
+            String where_string = _join_hash(where, "", " AND ");
+
+            if (where_string.Length > 0) where_string = " WHERE " + where_string;
+
+            String sql = "UPDATE " + q_ident(table) + " " + " SET " + update_string + where_string;
+
+            return sql;
+        }
+
+        private String hash2sql_i(String table, Hashtable fields)
+        {
+            fields = quote(table, fields);
+
+            String[] ar = new String[fields.Count];
+
+            fields.Keys.CopyTo(ar, 0);
+            String names_string = String.Join(", ", ar);
+
+            fields.Values.CopyTo(ar, 0);
+            String values_string = String.Join(", ", ar);
+            String sql = "INSERT INTO " + q_ident(table) + " (" + names_string + ") VALUES (" + values_string + ")";
+            return sql;
+        }
+
+        private String hash2sql_d(String table, Hashtable where)
+        {
+            where = quote(table, where);
+            String where_string = _join_hash(where, "", " AND ");
+            if (where_string.Length > 0) where_string = " WHERE " + where_string;
+
+            String sql = "DELETE FROM " + q_ident(table) + " " + where_string;
             return sql;
         }
 

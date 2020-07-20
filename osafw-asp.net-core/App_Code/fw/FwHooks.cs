@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -9,13 +10,14 @@ namespace osafw_asp.net_core.fw
     {
         // called from FW.run before request dispatch
         public static void initRequest(FW fw) {
-            //Dim main_menu As ArrayList = FwCache.get_value("main_menu")
+            ArrayList main_menu = FwCache.getValue("main_menu") as ArrayList;
 
-            //If IsNothing(main_menu) OrElse main_menu.Count = 0 Then
-            //    'create main menu if not yet
-            //    main_menu = fw.model(Of Settings).get_main_menu()
-            //    FwCache.set_value("main_menu", main_menu)
-            //End If
+            /*if (main_menu == null || main_menu.Count == 0)
+            {
+                // create main menu if not yet
+                main_menu = (fw.modelOf(typeof(FwS)) as FwSettings).get_main_menu();
+                FwCache.setValue("main_menu", main_menu);
+            }*/
 
             //fw.G("main_menu") = main_menu
 

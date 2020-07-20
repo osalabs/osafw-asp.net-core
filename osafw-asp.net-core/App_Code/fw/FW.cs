@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
+using osafw_asp.net_core.App_Code.fw;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -14,6 +15,20 @@ using System.Threading.Tasks;
 
 namespace osafw_asp.net_core.fw
 {
+    /// <summary>
+    /// Logger levels, ex: logger(LogLevel.ERROR, "Something happened")
+    /// </summary>
+    public enum LogLevel : int
+    {
+        OFF,             // no logging occurs
+        FATAL,           // severe error, current request (or even whole application) aborted (notify admin)
+        ERROR,           // error happened, but current request might still continue (notify admin)
+        WARN,            // potentially harmful situations for further investigation, request processing continues
+        INFO,            // default for production (easier maintenance/support), progress of the application at coarse-grained level (fw request processing: request start/end, sql, route/external redirects, sql, fileaccess, third-party API)
+        DEBUG,           // default for development (default for logger("msg") call), fine-grained level
+        TRACE,           // very detailed dumps (in-module details like fw core, despatcher, parse page, ...)
+        ALL              // just log everything
+    }
     public class FW : IDisposable
     {
         public DB db;
@@ -38,6 +53,9 @@ namespace osafw_asp.net_core.fw
         public string cur_format;
         public ArrayList cur_params;
         public FwLogger fwLogger;
+
+        public String cache_control = "no-cache"; // cache control header to add to pages, controllers can change per request
+        public bool is_log_events = true; // can be set temporarly to false to prevent event logging (for batch process for ex)
 
         private System.IO.FileStream floggerFS;
         private System.IO.StreamWriter floggerSW;
@@ -77,23 +95,23 @@ namespace osafw_asp.net_core.fw
         }
 
 
-        public int? getSessionInt(String name) {
+        public int getSessionInt(String name) {
             if (context.Session == null) {
                 logger(FwLogger.LogLevel.ERROR, "CONTEXT SESSION IS NULL");
-                return null;
+                return 0;
             }
-            return context.Session.GetInt32(name);
+            return (int)context.Session.GetInt32(name);
         }
-        public String? getSessionString(String name)
+        public String getSessionString(String name)
         {
             if (context.Session == null)
             {
                 logger(FwLogger.LogLevel.ERROR, "CONTEXT SESSION IS NULL");
-                return null;
+                return "";
             }
-            return context.Session.GetString(name);
+            return (String)context.Session.GetString(name);
         }
-        public Hashtable? getSessionHashtable(String name)
+        public Hashtable getSessionHashtable(String name)
         {
             if (context.Session == null)
             {
@@ -268,6 +286,12 @@ namespace osafw_asp.net_core.fw
                 models[model_name] = m;
             }
             return (FwModel)models[model_name];
+        }
+
+        public void logEvent(String ev_icode, int item_id = 0, int item_id2 = 0, String iname = "", int records_affected = 0)
+        {
+            if (!is_log_events) return;
+            (modelOf(typeof(FwEvents)) as FwEvents).log(ev_icode, item_id, item_id2, iname, records_affected);
         }
 
         public async void rw(string str)

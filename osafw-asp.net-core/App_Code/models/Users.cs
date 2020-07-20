@@ -23,6 +23,11 @@ namespace osafw_asp.net_core.fw
             csv_export_headers = "id,First Name,Last Name,Email,Registered";
         }
 
+        public int meId()
+        {
+            return fw.getSessionInt("user_id");
+        }
+
         // return standard list of id,iname where status=0 order by iname
         public override ArrayList list()
         {

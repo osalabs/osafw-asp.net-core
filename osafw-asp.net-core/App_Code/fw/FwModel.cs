@@ -143,49 +143,62 @@ namespace osafw_asp.net_core.fw
             where[field_iname] = iname;
             return db.row(table_name, where);
         }
-/*
-'check if item exists for a given field
-public virtual Function isExistsByField(uniq_key As Object, not_id As Integer, field As String) As Boolean
-Dim where As New Hashtable
-where(field) = uniq_key
-where(field_id) = db.opNOT(not_id)
-Dim val As String = db.value(table_name, where, "1")
-If val = "1" Then
-    Return True
-Else
-    Return False
-End If
-}
 
-'check if item exists for a given iname
-public virtual Function isExists(uniq_key As Object, not_id As Integer) As Boolean
-Return isExistsByField(uniq_key, not_id, field_iname)
-}
+        // check if item exists for a given field
+        public virtual bool isExistsByField(Object uniq_key, int not_id, String field)
+        {
+            Hashtable where = new Hashtable();
+            where[field] = uniq_key;
+            where[field_id] = db.opNOT(not_id);
+            String val = (String)db.value(table_name, where, "1");
+            if (val == "1")
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+    
+        // check if item exists for a given iname
+        public virtual bool isExists(Object uniq_key, int not_id)
+        {
+            return isExistsByField(uniq_key, not_id, field_iname);
+        }
 
-'add new record and return new record id
-public virtual Function add(item As Hashtable) As Integer
-'item("add_time") = Now() 'not necessary because add_time field in db should have default value now() or getdate()
-If field_add_users_id > "" AndAlso Not item.ContainsKey(field_add_users_id) AndAlso fw.SESSION("is_logged") Then item(field_add_users_id) = fw.SESSION("user_id")
-Dim id As Integer = db.insert(table_name, item)
-fw.logEvent(table_name & "_add", id)
-Return id
-}
+        // add new record and return new record id
+        public virtual int add(Hashtable item)
+        {
+            // item("add_time") = Now() // not necessary because add_time field in db should have default value now() or getdate()
+            if (field_add_users_id != "" && !item.ContainsKey(field_add_users_id) && fw.getSessionInt("is_logged") == 1)
+            {
+                item[field_add_users_id] = fw.getSessionInt("user_id");
+            }
+            int id = db.insert(table_name, item);
+            fw.logEvent(table_name + "_add", id);
+            return id;
+        }
 
-'update exising record
-public virtual Function update(id As Integer, item As Hashtable) As Boolean
-If field_upd_time > "" Then item(field_upd_time) = Now()
-If field_upd_users_id > "" AndAlso Not item.ContainsKey(field_upd_users_id) AndAlso fw.SESSION("is_logged") Then item(field_upd_users_id) = fw.SESSION("user_id")
+        // update exising record
+        public virtual bool update(int id, Hashtable item)
+        {
+            if (field_upd_time != String.Empty) item[field_upd_time] = DateTime.Now;
+            if (field_upd_users_id != String.Empty && !item.ContainsKey(field_upd_users_id) && fw.getSessionInt("is_logged") == 1)
+            {
+                item[field_upd_users_id] = fw.getSessionInt("user_id");
+            }
 
-Dim where As New Hashtable
-where(Me.field_id) = id
-db.update(table_name, item, where)
+            Hashtable where = new Hashtable();
+            where[field_id] = id;
+            db.update(table_name, item, where);
 
-fw.logEvent(table_name & "_upd", id)
+            fw.logEvent(table_name + "_upd", id);
 
-fw.cache.requestRemove("fwmodel_one_" & table_name & "#" & id) 'cleanup cache, so next one read will read new value
-Return True
-}
-
+            fw.cache.requestRemove("fwmodel_one_" + table_name + "#" + id); // cleanup cache, so next one read will read new value
+            return true;
+        }
+    /*
 'mark record as deleted (status=127) OR actually delete from db (if is_perm or status field not defined for this model table)
 public virtual Sub delete(id As Integer, Optional is_perm As Boolean = False)
 Dim where As New Hashtable
@@ -373,7 +386,7 @@ Return Utils.getCSVExport(csv_export_headers, csv_export_fields, rows)
 
 }
 */
-public void Dispose()
+    public void Dispose()
         {
             fw.Dispose();
         }
