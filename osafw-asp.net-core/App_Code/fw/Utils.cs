@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
@@ -9,6 +10,20 @@ namespace osafw_asp.net_core.fw
 {
     public class Utils
     {
+        // convert "space" delimited string to an array
+        // WARN! replaces all "&nbsp;" to spaces (after convert)
+        public static String[] qw(String str)
+        {
+            String[] arr = str.Trim().Split(" ");
+
+            foreach (int i in Enumerable.Range(arr.GetLowerBound(0), arr.GetLowerBound(0)))
+            {
+                if (arr[i] == null) arr[i] = "";
+                arr[i] = arr[i].Replace("&nbsp;", " ");
+            }
+
+            return arr;
+        }
         /*
         * convert string like "AAA|1 BBB|2 CCC|3 DDD" to hash
         * AAA => 1
@@ -97,7 +112,7 @@ namespace osafw_asp.net_core.fw
         // guarantee to return string (if cannot convert to string - just return empty string)
         public static String f2str(Object AField)
         {
-            if (AField == null)return "";
+            if (AField == null) return "";
             String result = Convert.ToString(AField);
             return result;
         }
@@ -141,7 +156,41 @@ namespace osafw_asp.net_core.fw
             result = Regex.Replace(result, @"^_+|_+$", ""); // remove first and last _ if any
             result = result.ToLower(); // and finally to lowercase
             result = result.Trim();
-            return result;;
+            return result; ;
+        }
+
+        /// <summary>
+        /// standard function for exporting to csv
+        /// </summary>
+        /// <param name="csv_export_headers">CSV headers row, comma-separated format</param>
+        /// <param name="csv_export_fields">empty, * or Utils.qw format</param>
+        /// <param name="rows">DB array</param>
+        /// <returns></returns>
+        public static StringBuilder getCSVExport(String csv_export_headers, String csv_export_fields, ArrayList rows)
+        {
+            String headers_str = csv_export_headers;
+            StringBuilder csv = new StringBuilder();
+            /*string[] fields = null;
+            if (String.IsNullOrEmpty(csv_export_fields) || String.IsNullOrEmpty(csv_export_fields))
+            {
+                //just read field names from first row
+                if (rows.Count > 0)
+                {
+                    fields = new ArrayList((rows[0] as Hashtable).Keys).ToArray();
+                    headers_str = String.Join(",", fields);
+                }
+            }
+            else
+            {
+                fields = Utils.qw(csv_export_fields);
+            }
+
+            csv.Append(headers_str & vbLf);
+            foreach (Hashtable row in rows)
+            {
+                csv.Append(Utils.toCSVRow(row, fields) & vbLf);
+            }*/
+            return csv;
         }
     }
 }
