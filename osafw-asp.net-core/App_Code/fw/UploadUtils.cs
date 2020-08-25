@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
+using System.Text;
 
 namespace osafw_asp.net_core.fw
 {
@@ -31,7 +33,7 @@ namespace osafw_asp.net_core.fw
         public String full_path; // full path to saved file
         public String filename; // saved filename with ext
         public String ext; // saved ext
-        public String filesize; // saved file size
+        public ulong filesize; // saved file size
 
         // example: Dim up As New UploadParams("file1", ".doc .pdf")
         public UploadParams(FW fw, String field_name, String save_path, String save_filename_noext = "", String allowed_ext_str = "")
@@ -48,15 +50,16 @@ namespace osafw_asp.net_core.fw
         // simple upload from posted field name to destination directory with different options
         public static bool uploadSimple(UploadParams up)
         {
+            //bool result = false;
             bool result = false;
 
-            /*HttpPostedFileBase file = up.fw.req.Files(up.field_name);
+            IFormFile file = up.fw.req.Form.Files[up.field_name];
             if (file != null)
             {
                 up.orig_filename = file.FileName;
                 // check for allowed filesize 
-                up.filesize = file.ContentLength;
-                if (up.max_filesize > 0 && file.ContentLength > up.max_filesize)
+                up.filesize = (ulong)file.Length;
+                if (up.max_filesize > 0 && (ulong)file.Length > up.max_filesize)
                 {
                     if (up.is_required)
                     {
@@ -91,7 +94,7 @@ namespace osafw_asp.net_core.fw
                 {
                     up.filename = System.IO.Path.GetFileNameWithoutExtension(up.orig_filename) + up.ext;
                 }
-                up.full_path = up.full_path + "\\" + up.filename;
+                up.full_path = up.full_path + up.filename;
 
                 if (up.is_overwrite && up.is_cleanup)
                 {
@@ -108,11 +111,15 @@ namespace osafw_asp.net_core.fw
                 }
 
                 up.fw.logger(LogLevel.DEBUG, "saving to ", up.full_path);
-                file.SaveAs(up.full_path);
+                using (var fileStream = new FileStream(up.full_path, FileMode.Create))
+                {
+                    file.CopyTo(fileStream);
+                }
 
                 if (up.is_resize && UploadUtils.isUploadImgExtAllowed(up.ext))
                 {
-                    Utils.resizeImage(up.full_path, up.full_path, up.max_w, up.max_h);
+                    // TODO port resize function
+                    // Utils.resizeImage(up.full_path, up.full_path, up.max_w, up.max_h);
                 }
                 result = true;
             }
@@ -122,7 +129,7 @@ namespace osafw_asp.net_core.fw
                 {
                     throw new ApplicationException("No required file uploaded");
                 }
-            }*/
+            }
             return result;
         }
 
@@ -130,9 +137,9 @@ namespace osafw_asp.net_core.fw
         public static bool uploadFile(FW fw, String module_name, int id, ref String filepath, String input_name = "file1", bool is_skip_check = false)
         {
             bool result = false;
-            /*HttpPostedFile file = fw.req.Files(input_name);
+            IFormFile file = fw.req.Form.Files[input_name];
 
-            if (file == null && file.ContentLength)
+            if (file == null && file.Length > 0)
             {
                 String ext = getUploadFileExt(file.FileName);
                 if (is_skip_check || UploadUtils.isUploadImgExtAllowed(ext))
@@ -143,7 +150,11 @@ namespace osafw_asp.net_core.fw
                     // save original file
                     String part = getUploadDir(fw, module_name, id) + "\\" + id;
                     filepath = part + ext;
-                    file.SaveAs(filepath);
+
+                    using (var fileStream = new FileStream(filepath, FileMode.Create))
+                    {
+                        file.CopyTo(fileStream);
+                    }
 
                     result = true;
                 }
@@ -151,7 +162,7 @@ namespace osafw_asp.net_core.fw
                 {
                     // throw new ApplicationException("Image type is not supported");
                 }
-            }*/
+            }
 
             return result;
         }

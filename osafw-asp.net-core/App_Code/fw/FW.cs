@@ -39,9 +39,9 @@ namespace osafw_asp.net_core.fw
         public Hashtable G;    // for storing global vars - used in template engine, also stores "_flash"
         public Hashtable FERR; // for storing form id's with error messages, put to hf("ERR") for parser
 
-        private HttpContext context;
-        private HttpRequest req;
-        private HttpResponse resp;
+        public HttpContext context;
+        public HttpRequest req;
+        public HttpResponse resp;
 
         public string request_url; // current request url (relative to application url)
         public string cur_controller_path; // store /Prefix/Controller - to use in parser a default path for templates
@@ -175,7 +175,7 @@ namespace osafw_asp.net_core.fw
                 s = key;
                 if (s != null)
                 {
-                    f[s] = req.Query[s];
+                    f[s] = (string)req.Query[s];
                 }
             }
 
@@ -186,7 +186,7 @@ namespace osafw_asp.net_core.fw
                     s = key;
                     if (s != null)
                     {
-                        f[s] = req.Form[s];
+                        f[s] = (string)req.Form[s];
                     }
                 }
             }
@@ -226,7 +226,7 @@ namespace osafw_asp.net_core.fw
 
             // also parse json in request body if any
             if (req.ContentLength != null &&
-                req.ContentLength.Value > 0 &&
+                req.ContentLength > 0 &&
                 req.ContentType != null &&
                 req.ContentType.Substring(0, new string("application/json").Length) == "application/json")
             {
@@ -293,6 +293,7 @@ namespace osafw_asp.net_core.fw
             if (!is_log_events) return;
             (modelOf(typeof(FwEvents)) as FwEvents).log(ev_icode, item_id, item_id2, iname, records_affected);
         }
+
 
         public async void rw(string str)
         {
@@ -391,7 +392,7 @@ namespace osafw_asp.net_core.fw
         {
             DateTime start_time = DateTime.Now;
 
-            string url = req.Path;
+            string url = req.Path.ToString();
             // cut the App path from the begin
             if (req.PathBase.Value.Length > 0 && req.PathBase.Value != "/")
             {
@@ -583,7 +584,7 @@ namespace osafw_asp.net_core.fw
                     // logger(LogLevel.TRACE, "REST controller.action=", cur_controller, ".", cur_action_raw)
 
                 }
-                else
+                else if (url.Length > 0)
                 {
                     // otherwise detect controller/action/id.format/more_action
                     string[] parts = url.Split("/");

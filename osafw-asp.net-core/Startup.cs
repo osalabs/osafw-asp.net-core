@@ -26,6 +26,10 @@ namespace osafw_asp.net_core
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddDistributedMemoryCache();
+            services.Configure<IISServerOptions>(options =>
+            {
+                options.AllowSynchronousIO = false;
+            });
             services.AddSession(options =>
             {
                 if ((int)Startup.Configuration.GetValue(typeof(int), "sessionIdleTimeout") > 0)

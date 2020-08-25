@@ -192,5 +192,11 @@ namespace osafw_asp.net_core.fw
             }*/
             return csv;
         }
+
+        // return unique file name in form UUID (without extension)
+        public static String uuid()
+        {
+            return System.Guid.NewGuid().ToString();
+        }
     }
 }
