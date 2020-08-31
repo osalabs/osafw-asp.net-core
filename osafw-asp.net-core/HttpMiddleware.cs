@@ -33,10 +33,10 @@ namespace osafw_asp.net_core
 
                 // allow any custom headers
                 Microsoft.Extensions.Primitives.StringValues access_control_request_headers = new Microsoft.Extensions.Primitives.StringValues("");
-                bool is_access_control_request_headers = 
+                bool is_access_control_request_headers =
                     request.Headers.TryGetValue("Access-Control-Request-Headers", out access_control_request_headers);
-                
-                if (is_access_control_request_headers) 
+
+                if (is_access_control_request_headers)
                 {
                     response.Headers.Append("Access-Control-Allow-Headers", access_control_request_headers.ToString());
                 }
@@ -57,8 +57,9 @@ namespace osafw_asp.net_core
                 // end request
                 //context.RequestServices.CompleteRequest()
             }
-
-            FW.run(context, Startup.Configuration);
+            await Task.Run(() => {
+                FW.run(context, Startup.Configuration);
+            });
         }
     }
 

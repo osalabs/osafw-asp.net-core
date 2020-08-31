@@ -259,14 +259,14 @@ namespace osafw_asp.net_core.fw
         }
 
         // begin processing one request
-        public static void run(HttpContext context, IConfiguration settings)
+        public static async void run(HttpContext context, IConfiguration settings)
         {
             FW fw = new FW(context, settings);
             FW.Current = fw;
 
             FwHooks.initRequest(fw);
             fw.dispatch();
-            //fw.Finalize()
+            fw.Finalize();
         }
 
         // return model object by model ty[e
@@ -388,7 +388,7 @@ namespace osafw_asp.net_core.fw
             return str.ToString();
         }
 
-        public async void dispatch()
+        public void dispatch()
         {
             DateTime start_time = DateTime.Now;
 
@@ -433,32 +433,40 @@ namespace osafw_asp.net_core.fw
             Hashtable routes = new Hashtable(); // As Hashtable = Me.config("routes")
             bool is_routes_found = false;
 
-            /*
 
-            For Each route As String In routes.Keys
-                If url = route Then
-                    Dim rdest As String = routes(route)
-                    Dim m1 As Match = Regex.Match(rdest, "^(?:(GET|POST|PUT|DELETE) )?(.+)")
-                    If m1.Success Then
-                        'override method
-                        If m1.Groups(1).Value > "" Then cur_method = m1.Groups(1).Value
-                        If m1.Groups(2).Value.Substring(0, 1) = "/" Then
-                            'if started from / - this is redirect url
-                            url = m1.Groups(2).Value
-                        Else
-                            'it's a direct class-method to call, no further REST processing required
-                            is_routes_found = True
-                            Dim sroute As String() = Split(m1.Groups(2).Value, "::", 2)
-                            cur_controller = Utils.routeFixChars(sroute(0))
-                            If UBound(sroute) > 0 Then cur_action_raw = sroute(1)
-                            Exit For
-                        End If
-                    Else
-                        logger(LogLevel.WARN, "Wrong route destination: " & rdest)
-                    End If
-                End If
-            Next
-            */
+
+            foreach (String route in routes.Keys) {
+                if (url == route) {
+                    String rdest = routes[route].ToString();
+                    Match m1 = Regex.Match(rdest, "^(?:(GET|POST|PUT|DELETE) )?(.+)");
+                    if (m1.Success) {
+                        // override method
+                        if (m1.Groups[1].Value.Length > 0) {
+                            cur_method = m1.Groups[1].Value;
+                        }
+
+                        if (m1.Groups[2].Value.Substring(0, 1) == "/") {
+                            // if started from / - this is redirect url
+                            url = m1.Groups[2].Value;
+                        } 
+                        else {
+                            // it's a direct class-method to call, no further REST processing required
+                            is_routes_found = true;
+                            String[] sroute = m1.Groups[2].Value.Split("::", 2);
+                            cur_controller = Utils.routeFixChars(sroute[0]);
+                            
+                            if (sroute.GetUpperBound(1) > 0) {
+                                cur_action_raw = sroute[1];
+                            }
+                            break;
+                        }
+                    }
+                    else {
+                        logger(LogLevel.WARN, "Wrong route destination: " + rdest);
+                    }
+                }
+            }
+            
 
             if (!is_routes_found)
             {
@@ -771,7 +779,6 @@ namespace osafw_asp.net_core.fw
                 */
             TimeSpan end_timespan = DateTime.Now - start_time;
             // logger(LogLevel.INFO, "REQUEST END   [", cur_method, " ", url, "] in ", end_timespan.TotalSeconds, "s, ", String.Format("{0:0.000}", 1 / end_timespan.TotalSeconds), "/s, ", DB.SQL_QUERY_CTR, " SQL")*/
-
         }
 
 
@@ -824,8 +831,7 @@ namespace osafw_asp.net_core.fw
         protected void Finalize()
         {
             // Do not change this code.  Put cleanup code in Dispose(disposing As Boolean) above.
-            Dispose(false);
-            this.Finalize();
+            this.Dispose(false);
         }
 
         // This code added by Visual Basic to correctly implement the disposable pattern.

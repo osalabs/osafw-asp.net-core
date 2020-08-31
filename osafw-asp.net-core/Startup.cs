@@ -56,21 +56,6 @@ namespace osafw_asp.net_core
             app.MapWhen(context => context.Request != null,appBranch => {
                 appBranch.UseMyHandler();
             });
-
-            
-
-            /*
-            app.UseRouting();
-            app.UseEndpoints(endpoints =>
-            {
-                endpoints.MapGet("/{*slug}", async context =>
-                {
-                    //string asd = Configuration["AllowedHosts"];
-                    //await context.Response.WriteAsync(asd);
-                    FW.run(context, Configuration);
-                });
-            });
-            */
         }
     }
 }
