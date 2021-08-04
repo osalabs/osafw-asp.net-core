@@ -167,8 +167,37 @@ namespace osafw_asp.net_core.fw
             return result;
         }
 
+        public static String uploadFileSave(FW fw, String module_name, int id, IFormFile file, bool is_skip_check = false)
+        {
+            String result = "";
+
+            if (file != null && file.Length > 0)
+            {
+                String ext = getUploadFileExt(file.FileName);
+                if (is_skip_check || isUploadImgExtAllowed(ext))
+                {
+                    // remove any old files if necessary
+                    removeUploadImg(fw, module_name, id);
+
+                    // save original file
+                    String part = getUploadDir(fw, module_name, id) + "\\" + id;
+                    result = part + ext;
+                    using (Stream fileStream = new FileStream(result, FileMode.Create))
+                    {
+                        file.CopyTo(fileStream);
+                    }
+                }
+            }
+            else
+            {
+                throw new ApplicationException("Image type is not supported");
+            }
+
+            return result;
+        }
+
         // return extension, lowercased, .jpeg=>.jpg
-        // Usage: Dim ext As String = Utils.get_upload_file_ext(file.FileName) // file As HttpPostedFile
+        // Usage: String ext = Utils.get_upload_file_ext(file.FileName); // file As IFile
         public static String getUploadFileExt(String filename)
         {
             String ext = System.IO.Path.GetExtension(filename).ToLower();
