@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30011.22
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "osafw-asp.net-core", "osafw-asp.net-core\osafw-asp.net-core.csproj", "{133B6565-4929-4974-A6F1-AB487215EF79}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "osafw-asp.net-core", "www\www.csproj", "{133B6565-4929-4974-A6F1-AB487215EF79}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
