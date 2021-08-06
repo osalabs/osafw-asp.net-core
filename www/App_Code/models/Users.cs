@@ -33,5 +33,6 @@ namespace osafw
             String sql = "select id, CONCAT(fname,' ',lname) as iname from " + table_name + " where status=0 order by fname, lname";
             return db.array(sql);
         }
+
     }
 }

@@ -44,7 +44,13 @@ namespace osafw
             if (env.IsDevelopment()) {
                 app.UseDeveloperExceptionPage();
             }
+            else
+            {
+                app.UseHttpsRedirection();
+            }
+            app.UseStaticFiles();
             app.UseSession();
+            // TODO MIGRATE app.UseCookiePolicy(); if not use standard auth identity
 
             // Create branch to the MyHandlerMiddleware. 
             // All requests will follow this branch.
