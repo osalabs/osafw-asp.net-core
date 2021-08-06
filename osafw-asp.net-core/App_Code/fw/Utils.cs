@@ -1,10 +1,15 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Http;
+using System;
 using System.Collections;
+using System.Data.Common;
+using System.Data.OleDb;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
+using System.Runtime.Serialization.Formatters.Binary;
 
 namespace osafw_asp.net_core.fw
 {
@@ -125,7 +130,7 @@ namespace osafw_asp.net_core.fw
                 dest2 = arr[1];
             }
         }
-        
+
         // IN: email addresses delimited with ; space or newline
         // OUT: arraylist of email addresses
         public static ArrayList splitEmails(String emails)
@@ -253,345 +258,374 @@ namespace osafw_asp.net_core.fw
             return result.ToString();
         }
 
-        //''' <summary>
-        //''' helper for importing csv files. Example:
-        //'''    Utils.importCSV(fw, AddressOf importer, "c:\import.csv")
-        //'''    void importer(row as Hashtable)
-        //'''       ...your custom import code
-        //'''    End void
-        //''' </summary>
-        //''' <param name="fw">fw instance</param>
-        //''' <param name="callback">callback to custom code, accept one row of fields(as Hashtable)</param>
-        //''' <param name="filepath">.csv file name to import</param>
-        //public static void importCSV(fw As FW, callback As Action(Of Hashtable), filepath As String, Optional is_header As Boolean = True)
-        //    Dim dir = Path.GetDirectoryName(filepath)
-        //    Dim filename = Path.GetFileName(filepath)
+        /* <summary>
+        * helper for importing csv files. Example:
+        *    Utils.importCSV(fw, AddressOf importer, "c:\import.csv")
+        *    void importer(row as Hashtable)
+        *       ...your custom import code
+        *    End void
+        * </summary>
+        * <param name="fw">fw instance</param>
+        * <param name="callback">callback to custom code, accept one row of fields(as Hashtable)</param>
+        * <param name="filepath">.csv file name to import</param>
+        */
+        public static void importCSV(FW fw, Action<Hashtable> callback, String filepath, bool is_header = true)
+        {
+            String dir = Path.GetDirectoryName(filepath);
+            String filename = Path.GetFileName(filepath);
 
-        //    Dim ConnectionString As String = "Provider=" & OLEDB_PROVIDER & ";" +
-        //                            "Data Source=" & dir & ";" &
-        //                            "Extended Properties=""Text;HDR=" & IIf(is_header, "Yes", "No") & ";IMEX=1;FORMAT=Delimited"";"
+            String ConnectionString = "Provider=" + OLEDB_PROVIDER + ";" +
+                                      "Data Source=" + dir + ";" +
+                                      "Extended Properties=\"Text;HDR=" + (is_header ? "Yes" : "No") + ";IMEX=1;FORMAT=Delimited\";";
 
-        //    Using cn As New Data.OleDb.OleDbConnection(ConnectionString)
-        //        cn.Open()
+            using (OleDbConnection cn = new OleDbConnection(ConnectionString))
+            {
+                cn.Open();
 
-        //        Dim WorkSheetName = filename
-        //        'quote as table name
-        //        WorkSheetName = Replace(WorkSheetName, "[", "")
-        //        WorkSheetName = Replace(WorkSheetName, "]", "")
+                String WorkSheetName = filename;
+                // quote as table name
+                WorkSheetName = WorkSheetName.Replace("[", "");
+                WorkSheetName = WorkSheetName.Replace("]", "");
 
-        //        Dim sql = "select * from [" & WorkSheetName & "]"
-        //        Dim dbcomm = New Data.OleDb.OleDbCommand(sql, cn)
-        //        Dim dbread As Data.Common.DbDataReader = dbcomm.ExecuteReader()
+                String sql = "select * from [" + WorkSheetName + "]";
+                OleDbCommand dbcomm = new OleDbCommand(sql, cn);
+                DbDataReader dbread = dbcomm.ExecuteReader();
 
-        //        While dbread.Read()
-        //            Dim row As New Hashtable
-        //            For i = 0 To dbread.FieldCount - 1
-        //                Dim value As String = dbread(i).ToString()
-        //                Dim name As String = dbread.GetName(i).ToString()
-        //                row.Add(name, value)
-        //            Next
+                while (dbread.Read())
+                {
+                    Hashtable row = new Hashtable();
+                    for (int i = 0; i < dbread.FieldCount; i++)
+                    {
+                        String value = dbread[i].ToString();
+                        String name = dbread.GetName(i).ToString();
+                        row.Add(name, value);
+                    }
 
-        //            'logger(h)
-        //            callback(row)
-        //        End While
-        //    End Using
-        //End void
+                    // logger(h)
+                    callback(row);
+                }
+            }
+        }
 
-        //''' <summary>
-        //''' helper for importing Excel files. Example:
-        //'''    Utils.importExcel(fw, AddressOf importer, "c:\import.xlsx")
-        //'''    void importer(sheet_name as String, rows as ArrayList)
-        //'''       ...your custom import code
-        //'''    End void
-        //''' </summary>
-        //''' <param name="fw">fw instance</param>
-        //''' <param name="callback">callback to custom code, accept worksheet name and all rows(as ArrayList of Hashtables)</param>
-        //''' <param name="filepath">.xlsx file name to import</param>
-        //''' <param name="is_header"></param>
-        //''' <returns></returns>
-        //public static Function importExcel(fw As FW, callback As Action(Of String, ArrayList), filepath As String, Optional is_header As Boolean = True) As Hashtable
-        //    Dim result As New Hashtable()
-        //    Dim conf As New Hashtable From
-        //    {
-        //            { "type", "OLE"},
-        //            { "connection_string", "Provider=" & OLEDB_PROVIDER & ";Data Source=" & filepath & ";Extended Properties=""Excel 12.0 Xml;HDR=" & IIf(is_header, "Yes", "No") & ";ReadOnly=True;IMEX=1"""}
-        //    }
-        //    Dim accdb = New DB(fw, conf)
-        //    Dim conn As System.Data.OleDb.OleDbConnection = accdb.connect()
-        //    Dim schema = conn.GetOleDbSchemaTable(Data.OleDb.OleDbSchemaGuid.Tables, Nothing)
-        //    If schema Is Nothing OrElse schema.Rows.Count< 1 Then
-        //        Throw New ApplicationException("No worksheets found in the Excel file")
-        //    End If
+        /* <summary>
+        * helper for importing Excel files. Example:
+        *    Utils.importExcel(fw, AddressOf importer, "c:\import.xlsx")
+        *    void importer(sheet_name as String, rows as ArrayList)
+        *       ...your custom import code
+        *    End void
+        * </summary>
+        * <param name="fw">fw instance</param>
+        * <param name="callback">callback to custom code, accept worksheet name and all rows(as ArrayList of Hashtables)</param>
+        * <param name="filepath">.xlsx file name to import</param>
+        * <param name="is_header"></param>
+        * <returns></returns>
+        */
+        public static Hashtable importExcel(FW fw, Action<String, ArrayList> callback, String filepath, bool is_header = true)
+        {
+            Hashtable result = new Hashtable();
+            Hashtable conf = new Hashtable();
+            conf["type"] = "OLE";
+            conf["connection_string"] = "Provider=" + OLEDB_PROVIDER + ";Data Source=" + filepath + ";Extended Properties=\"Excel 12.0 Xml;HDR=" + (is_header ? "Yes", "No") + ";ReadOnly=True;IMEX=1\"";
+            DB accdb = new DB(fw, conf);
+            OleDbConnection conn = (OleDbConnection)accdb.connect();
+            var schema = conn.GetOleDbSchemaTable(OleDbSchemaGuid.Tables, null);
 
-        //    Dim where As New Hashtable
-        //    For i As Integer = 0 To schema.Rows.Count - 1
-        //        Dim sheet_name_full = schema.Rows(i)("TABLE_NAME").ToString()
-        //        Dim sheet_name = sheet_name_full.Replace("""", "")
-        //        sheet_name = sheet_name.Replace("'", "")
-        //        sheet_name = sheet_name.voidstring(0, sheet_name.Length - 1)
-        //        Try
-        //            Dim rows = accdb.array(sheet_name_full, where)
-        //            callback(sheet_name, rows)
-        //        Catch ex As Exception
-        //            Throw New ApplicationException("Error while reading data from [" & sheet_name & "] sheet: " & ex.Message())
-        //        End Try
-        //    Next
-        //    ' close connection to release the file
-        //    accdb.disconnect()
+            if (schema == null || schema.Rows.Count < 1) {
+                throw new ApplicationException("No worksheets found in the Excel file");
+            }
 
-        //    Return result
-        //}
+            Hashtable where = new Hashtable();
+            for (int i = 0; i < schema.Rows.Count; i++) {
+                String sheet_name_full = schema.Rows[i]["TABLE_NAME"].ToString();
+                String sheet_name = sheet_name_full.Replace("\"", "");
+                sheet_name = sheet_name.Replace("'", "");
+                sheet_name = sheet_name.Substring(0, sheet_name.Length - 1);
+                try
+                {
+                    ArrayList rows = accdb.array(sheet_name_full, where);
+                    callback(sheet_name, rows);
+                }
+                catch (Exception ex)
+                {
+                    throw new ApplicationException("Error while reading data from [" + sheet_name + "] sheet: " + ex.Message);
+                }
+            }
+            // close connection to release the file
+            accdb.disconnect();
+            return result;
+        }
 
+        public static String toCSVRow(Hashtable row, Array fields)
+        {
+            StringBuilder result = new StringBuilder();
+            bool is_first = true;
+            foreach (String fld in fields)
+            {
+                if (!is_first) result.Append(",");
 
-        //public static Function toCSVRow(row As Hashtable, fields As Array) As String
-        //    Dim result As New StringBuilder
-        //    Dim is_first = True
-        //    For Each fld As String In fields
-        //        If Not is_first Then result.Append(",")
+                String str = Regex.Replace(row[fld] + "", "[\n\r]+", " ");
+                str = str.Replace("\"", "\\\"");
+                // check if string need to be quoted (if it contains " or ,)
+                if (str.IndexOf("\"") > 0 || str.IndexOf(",") > 0) {
+                    str = "\"" + str + "\"";
+                }
+                result.Append(str);
+                is_first = false;
+            }
+            return result.ToString();
+        }
 
-        //        Dim str As String = Regex.Replace(row(fld) & "", "[\n\r]+", " ")
-        //        str = Replace(str, """", """""")
-        //        'check if string need to be quoted (if it contains " or ,)
-        //        If InStr(str, """") > 0 OrElse InStr(str, ",") > 0 Then
-        //            str = """" & str & """"
-        //        End If
-        //        result.Append(str)
-        //        is_first = False
-        //    Next
-        //    Return result.ToString()
-        //}
+        /* <summary>
+        * standard function for exporting to csv
+        * </summary>
+        * <param name="csv_export_headers">CSV headers row, comma-separated format</param>
+        * <param name="csv_export_fields">empty, * or Utils.qw format</param>
+        * <param name="rows">DB array</param>
+        * <returns></returns>
+        */
+        public static StringBuilder getCSVExport(String csv_export_headers, String csv_export_fields, ArrayList rows)
+        {
+            String headers_str = csv_export_headers;
+            StringBuilder csv = new StringBuilder();
+            String[] fields = null;
+            if (csv_export_fields == "" || csv_export_fields == "*") {
+                // just read field names from first row
+                if (rows.Count > 0) {
+                    fields = (rows[0] as Hashtable).Keys.Cast<String>().ToArray();
+                    headers_str = String.Join(",", fields);
+                }
+            }
+            else {
+                fields = Utils.qw(csv_export_fields)
+            }
 
-        //''' <summary>
-        //''' standard function for exporting to csv
-        //''' </summary>
-        //''' <param name="csv_export_headers">CSV headers row, comma-separated format</param>
-        //''' <param name="csv_export_fields">empty, * or Utils.qw format</param>
-        //''' <param name="rows">DB array</param>
-        //''' <returns></returns>
-        //public static Function getCSVExport(csv_export_headers As String, csv_export_fields As String, rows As ArrayList) As StringBuilder
-        //    Dim headers_str As String = csv_export_headers
-        //    Dim csv As New StringBuilder
-        //    Dim fields() As String = Nothing
-        //    If csv_export_fields = "" Or csv_export_fields = "*" Then
-        //        'just read field names from first row
-        //        If rows.Count > "" Then
-        //            fields = New ArrayList(DirectCast(rows(0).Keys(), ICollection)).ToArray()
-        //            headers_str = Join(fields, ",")
-        //        End If
-        //    Else
-        //        fields = Utils.qw(csv_export_fields)
-        //    End If
+            csv.Append(headers_str + "\n");
+            foreach (Hashtable row in rows) {
+                csv.Append(Utils.toCSVRow(row, fields) + "\n");
+            }
+            return csv;
+        }
 
-        //    csv.Append(headers_str & vbLf)
-        //    For Each row As Hashtable In rows
-        //        csv.Append(Utils.toCSVRow(row, fields) & vbLf)
-        //    Next
-        //    Return csv
-        //}
+        public static bool writeCSVExport(HttpResponse response, String filename, String csv_export_headers, String csv_export_fields, ArrayList rows)
+        {
+            filename = filename.Replace("\"", "'"); // quote doublequotes
 
-        //public static Function writeCSVExport(response As HttpResponse, filename As String, csv_export_headers As String, csv_export_fields As String, rows As ArrayList) As Boolean
-        //    filename = Replace(filename, """", "'") 'quote doublequotes
+            response.AAppendHeader("Content-type", "text/csv");
+            response.AppendHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"");
 
-        //    response.AppendHeader("Content-type", "text/csv")
-        //    response.AppendHeader("Content-Disposition", "attachment; filename=""" & filename & """")
+            response.Write(Utils.getCSVExport(csv_export_headers, csv_export_fields, rows));
+        }
 
-        //    response.Write(Utils.getCSVExport(csv_export_headers, csv_export_fields, rows))
-        //    Return True
-        //}
+        public static bool writeXLSExport(FW fw, String filename, String csv_export_headers, String csv_export_fields, ArrayList rows)
+        {
+            Hashtable ps = new Hashtable();
+            ps["rows"] = rows;
 
-        //public static Function writeXLSExport(fw As FW, filename As String, csv_export_headers As String, csv_export_fields As String, rows As ArrayList) As Boolean
-        //    Dim ps As New Hashtable
-        //    ps("rows") = rows
+            ArrayList headers = new ArrayList();
+            foreach (String str in csv_export_headers.Split(","))
+            {
+                Hashtable h = new Hashtable();
+                h["iname"] = str;
+                headers.Add(h);
+            }
+            ps["headers"] = headers;
 
-        //    Dim headers As New ArrayList
-        //    For Each str As String In csv_export_headers.Split(",")
-        //        Dim h As New Hashtable
-        //        h("iname") = str
-        //        headers.Add(h)
-        //    Next
-        //    ps("headers") = headers
+            String[] fields = Utils.qw(csv_export_fields);
+            foreach (Hashtable row in rows)
+            {
+                ArrayList cell = new ArrayList();
+                foreach (String f in fields)
+                {
+                    Hashtable h = new Hashtable();
+                    h["value"] = row[f];
+                    cell.Add(h);
+                }
+                row["cell"] = cell;
+            }
 
-        //    Dim fields() As String = Utils.qw(csv_export_fields)
-        //    For Each row As Hashtable In rows
-        //        Dim cell As New ArrayList
-        //        For Each f As String In fields
-        //            Dim h As New Hashtable
-        //            h("value") = row(f)
-        //            cell.Add(h)
-        //        Next
-        //        row("cell") = cell
-        //    Next
+            // parse and out document
+            // TODO ConvUtils.parse_page_xls(fw, LCase(fw.cur_controller_path & "/index/export"), "xls.html", hf, "filename")
 
-        //    'parse and out document
-        //    'TODO ConvUtils.parse_page_xls(fw, LCase(fw.cur_controller_path & "/index/export"), "xls.html", hf, "filename")
+            ParsePage parser = new ParsePage(fw);
+            // Dim tpl_dir = LCase(fw.cur_controller_path & "/index/export")
+            String tpl_dir = "/common/list/export";
+            String page = parser.parse_page(tpl_dir, "xls.html", ps);
 
-        //    Dim parser As ParsePage = New ParsePage(fw)
-        //    'Dim tpl_dir = LCase(fw.cur_controller_path & "/index/export")
-        //    Dim tpl_dir = "/common/list/export"
-        //    Dim page As String = parser.parse_page(tpl_dir, "xls.html", ps)
+            filename = filename.Replace("\"", "_");
 
-        //    filename = filename.Replace("""", "_")
+            fw.resp.AddHeader("Content-type", "application/vnd.ms-excel");
+            fw.resp.AddHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+            fw.resp.Write(page);
+        }
 
-        //    fw.resp.AddHeader("Content-type", "application/vnd.ms-excel")
-        //    fw.resp.AddHeader("Content-Disposition", "attachment; filename=""" & filename & """")
-        //    fw.resp.Write(page)
-        //}
+        // Detect orientation and auto-rotate correctly
+        public static bool rotateImage(Image Image)
+        {
+            bool result = false;
+            var rot = RotateFlipType.RotateNoneFlipNone;
+            var props = Image.PropertyItems();
 
-        //'Detect orientation and auto-rotate correctly
-        //public static Function rotateImage(Image As Image) As Boolean
-        //    Dim result = False
-        //    Dim rot = RotateFlipType.RotateNoneFlipNone
-        //    Dim props = Image.PropertyItems()
+            foreach (var p in props)
+            {
+                if (p.Id == 274) {
+                    switch (BitConverter.ToInt16(p.Value, 0))
+                    {
+                        case 1:
+                            rot = RotateFlipType.RotateNoneFlipNone;
+                            break;
+                        case 3:
+                            rot = RotateFlipType.Rotate180FlipNone;
+                            break;
+                        case 6:
+                            rot = RotateFlipType.Rotate90FlipNone;
+                            break;
+                        case 8:
+                            rot = RotateFlipType.Rotate270FlipNone;
+                            break;
+                    }
+                }
+            }
 
-        //    For Each p In props
-        //        If p.Id = 274 Then
-        //            Select Case BitConverter.ToInt16(p.Value, 0)
-        //                Case 1
-        //                    rot = RotateFlipType.RotateNoneFlipNone
-        //                Case 3
-        //                    rot = RotateFlipType.Rotate180FlipNone
-        //                Case 6
-        //                    rot = RotateFlipType.Rotate90FlipNone
-        //                Case 8
-        //                    rot = RotateFlipType.Rotate270FlipNone
-        //            End Select
-        //        End If
-        //    Next
-        //    If rot<> RotateFlipType.RotateNoneFlipNone Then
-        //        Image.RotateFlip(rot)
-        //        result = True
-        //    End If
-        //    Return result
-        //}
+            if (rot != RotateFlipType.RotateNoneFlipNone)
+            {
+                Image.RotateFlip(rot);
+                result = true;
+            }
+            return result;
+        }
 
-        //'resize image in from_file to w/h and save to to_file
-        //'(optional)w and h - mean max weight and max height (i.e. image will not be upsized if it's smaller than max w/h)
-        //'if no w/h passed - then no resizing occurs, just conversion (based on destination extension)
-        //'return false if no resize performed (if image already smaller than necessary). Note if to_file is not same as from_file - to_file will have a copy of the from_file
-        //public static Function resizeImage(ByVal from_file As String, ByVal to_file As String, Optional ByVal w As Long = -1, Optional ByVal h As Long = -1) As Boolean
-        //    Dim stream As New FileStream(from_file, FileMode.Open, FileAccess.Read)
+        // resize image in from_file to w/h and save to to_file
+        // (optional)w and h - mean max weight and max height (i.e. image will not be upsized if it's smaller than max w/h)
+        // if no w/h passed - then no resizing occurs, just conversion (based on destination extension)
+        // return false if no resize performed (if image already smaller than necessary). Note if to_file is not same as from_file - to_file will have a copy of the from_file
+        public static bool resizeImage(String from_file, String to_file, long w = -1, long h = -1)
+        {
+            //    Dim stream As New FileStream(from_file, FileMode.Open, FileAccess.Read)
 
-        //    ' Create new image.
-        //    Dim image As System.Drawing.Image = System.Drawing.Image.FromStream(stream)
+            // Create new image.
+            //    Dim image As System.Drawing.Image = System.Drawing.Image.FromStream(stream)
 
-        //    'Detect orientation and auto-rotate correctly
-        //    Dim is_rotated = rotateImage(image)
+            //    'Detect orientation and auto-rotate correctly
+            //    Dim is_rotated = rotateImage(image)
 
-        //    ' Calculate proportional max width and height.
-        //    Dim oldWidth As Integer = image.Width
-        //    Dim oldHeight As Integer = image.Height
+            //    ' Calculate proportional max width and height.
+            //    Dim oldWidth As Integer = image.Width
+            //    Dim oldHeight As Integer = image.Height
 
-        //    If w = -1 Then w = oldWidth
-        //    If h = -1 Then h = oldHeight
+            //    If w = -1 Then w = oldWidth
+            //    If h = -1 Then h = oldHeight
 
-        //    If oldWidth / w >= 1 Or oldHeight / h >= 1 Then
-        //        'downsizing
-        //    Else
-        //        'image already smaller no resize required - keep sizes same
-        //        image.Dispose()
-        //        stream.Close()
-        //        If to_file<> from_file Then
-        //            'but if destination file is different - make a copy
-        //            File.Copy(from_file, to_file)
-        //        End If
-        //        Return False
-        //    End If
+            //    If oldWidth / w >= 1 Or oldHeight / h >= 1 Then
+            //        'downsizing
+            //    Else
+            //        'image already smaller no resize required - keep sizes same
+            //        image.Dispose()
+            //        stream.Close()
+            //        If to_file<> from_file Then
+            //            'but if destination file is different - make a copy
+            //            File.Copy(from_file, to_file)
+            //        End If
+            //        Return False
+            //    End If
 
-        //    If (CDec(oldWidth) / CDec(oldHeight)) > (CDec(w) / CDec(h)) Then
-        //        Dim ratio As Decimal = CDec(w) / oldWidth
-        //        h = CInt(oldHeight * ratio)
-        //    Else
-        //        Dim ratio As Decimal = CDec(h) / oldHeight
-        //        w = CInt(oldWidth * ratio)
-        //    End If
+            //    If (CDec(oldWidth) / CDec(oldHeight)) > (CDec(w) / CDec(h)) Then
+            //        Dim ratio As Decimal = CDec(w) / oldWidth
+            //        h = CInt(oldHeight * ratio)
+            //    Else
+            //        Dim ratio As Decimal = CDec(h) / oldHeight
+            //        w = CInt(oldWidth * ratio)
+            //    End If
 
-        //    ' Create a new bitmap with the same resolution as the original image.
-        //    Dim bitmap As New Bitmap(w, h, PixelFormat.Format24bppRgb)
-        //    bitmap.SetResolution(image.HorizontalResolution, image.VerticalResolution)
+            //    ' Create a new bitmap with the same resolution as the original image.
+            //    Dim bitmap As New Bitmap(w, h, PixelFormat.Format24bppRgb)
+            //    bitmap.SetResolution(image.HorizontalResolution, image.VerticalResolution)
 
-        //    ' Create a new graphic.
-        //    Dim gr As Graphics = Graphics.FromImage(bitmap)
-        //    gr.Clear(Color.White)
-        //    gr.InterpolationMode = InterpolationMode.HighQualityBicubic
-        //    gr.SmoothingMode = SmoothingMode.HighQuality
-        //    gr.PixelOffsetMode = PixelOffsetMode.HighQuality
-        //    gr.CompositingQuality = CompositingQuality.HighQuality
+            //    ' Create a new graphic.
+            //    Dim gr As Graphics = Graphics.FromImage(bitmap)
+            //    gr.Clear(Color.White)
+            //    gr.InterpolationMode = InterpolationMode.HighQualityBicubic
+            //    gr.SmoothingMode = SmoothingMode.HighQuality
+            //    gr.PixelOffsetMode = PixelOffsetMode.HighQuality
+            //    gr.CompositingQuality = CompositingQuality.HighQuality
 
-        //    ' Create a scaled image based on the original.
-        //    gr.DrawImage(image, New Rectangle(0, 0, w, h), New Rectangle(0, 0, oldWidth, oldHeight), GraphicsUnit.Pixel)
-        //    gr.Dispose()
+            //    ' Create a scaled image based on the original.
+            //    gr.DrawImage(image, New Rectangle(0, 0, w, h), New Rectangle(0, 0, oldWidth, oldHeight), GraphicsUnit.Pixel)
+            //    gr.Dispose()
 
-        //    ' Save the scaled image.
-        //    Dim ext As String = UploadUtils.getUploadFileExt(to_file)
-        //    Dim out_format As ImageFormat = image.RawFormat
-        //    Dim EncoderParameters As EncoderParameters = Nothing
-        //    Dim ImageCodecInfo As ImageCodecInfo = Nothing
+            //    ' Save the scaled image.
+            //    Dim ext As String = UploadUtils.getUploadFileExt(to_file)
+            //    Dim out_format As ImageFormat = image.RawFormat
+            //    Dim EncoderParameters As EncoderParameters = Nothing
+            //    Dim ImageCodecInfo As ImageCodecInfo = Nothing
 
-        //    If ext = ".gif" Then
-        //        out_format = ImageFormat.Gif
-        //    ElseIf ext = ".jpg" Then
-        //        out_format = ImageFormat.Jpeg
-        //        'set jpeg quality to 80
-        //        ImageCodecInfo = GetEncoderInfo(out_format)
-        //        Dim Encoder As Encoder = Encoder.Quality
-        //        EncoderParameters = New EncoderParameters(1)
-        //        EncoderParameters.Param(0) = New EncoderParameter(Encoder, CType(80L, Int32))
-        //    ElseIf ext = ".png" Then
-        //        out_format = ImageFormat.Png
-        //    End If
+            //    If ext = ".gif" Then
+            //        out_format = ImageFormat.Gif
+            //    ElseIf ext = ".jpg" Then
+            //        out_format = ImageFormat.Jpeg
+            //        'set jpeg quality to 80
+            //        ImageCodecInfo = GetEncoderInfo(out_format)
+            //        Dim Encoder As Encoder = Encoder.Quality
+            //        EncoderParameters = New EncoderParameters(1)
+            //        EncoderParameters.Param(0) = New EncoderParameter(Encoder, CType(80L, Int32))
+            //    ElseIf ext = ".png" Then
+            //        out_format = ImageFormat.Png
+            //    End If
 
-        //    'close read stream before writing as to_file might be same as from_file
-        //    image.Dispose()
-        //    stream.Close()
+            //    'close read stream before writing as to_file might be same as from_file
+            //    image.Dispose()
+            //    stream.Close()
 
-        //    If EncoderParameters Is Nothing Then
-        //        bitmap.Save(to_file, out_format) 'image.RawFormat
-        //    Else
-        //        bitmap.Save(to_file, ImageCodecInfo, EncoderParameters)
-        //    End If
-        //    bitmap.Dispose()
+            //    If EncoderParameters Is Nothing Then
+            //        bitmap.Save(to_file, out_format) 'image.RawFormat
+            //    Else
+            //        bitmap.Save(to_file, ImageCodecInfo, EncoderParameters)
+            //    End If
+            //    bitmap.Dispose()
 
-        //    'if( contentType == "image/gif" )
-        //    '{
-        //    '            Using (thumbnail)
-        //    '    {
-        //    '        OctreeQuantizer quantizer = new OctreeQuantizer ( 255 , 8 ) ;
-        //    '        using ( Bitmap quantized = quantizer.Quantize ( bitmap ) )
-        //    '        {
-        //    '            Response.ContentType = "image/gif";
-        //    '            quantized.Save ( Response.OutputStream , ImageFormat.Gif ) ;
-        //    '        }
-        //    '    }
-        //    '}
+            //    'if( contentType == "image/gif" )
+            //    '{
+            //    '            Using (thumbnail)
+            //    '    {
+            //    '        OctreeQuantizer quantizer = new OctreeQuantizer ( 255 , 8 ) ;
+            //    '        using ( Bitmap quantized = quantizer.Quantize ( bitmap ) )
+            //    '        {
+            //    '            Response.ContentType = "image/gif";
+            //    '            quantized.Save ( Response.OutputStream , ImageFormat.Gif ) ;
+            //    '        }
+            //    '    }
+            //    '}
 
-        //    Return True
-        //}
+            return true;
+        }
 
-        //Private Shared Function GetEncoderInfo(ByVal format As ImageFormat) As ImageCodecInfo
-        //    Dim j As Integer
-        //    Dim encoders() As ImageCodecInfo
-        //    encoders = ImageCodecInfo.GetImageEncoders()
+        private static ImageCodecInfo GetEncoderInfo(ImageFormat format)
+        {
+            //    Dim j As Integer
+            //    Dim encoders() As ImageCodecInfo
+            //    encoders = ImageCodecInfo.GetImageEncoders()
 
-        //    j = 0
-        //    While j<encoders.Length
-        //        If encoders(j).FormatID = format.Guid Then
-        //            Return encoders(j)
-        //        End If
-        //        j += 1
-        //    End While
-        //    Return Nothing
+            //    j = 0
+            //    While j<encoders.Length
+            //        If encoders(j).FormatID = format.Guid Then
+            //            Return encoders(j)
+            //        End If
+            //        j += 1
+            //    End While
+            //    Return Nothing
 
-        //} 'GetEncoderInfo
+        } // GetEncoderInfo
 
-        //public static Function fileSize(filepath As String) As Long
-        //    Dim fi As FileInfo = New FileInfo(filepath)
-        //    Return fi.Length
-        //}
+        public static long fileSize(String filepath)
+        {
+            FileInfo fi = new FileInfo(filepath);
+            return fi.Length;
+        }
 
-        //'extract just file name (with ext) from file path
-        //public static Function fileName(filepath As String) As String
-        //    Return System.IO.Path.GetFileName(filepath)
-        //}
+        // extract just file name (with ext) from file path
+        public static String fileName(String filepath)
+        {
+            return System.IO.Path.GetFileName(filepath);
+        }
 
 
         /* <summary>
@@ -613,152 +647,185 @@ namespace osafw_asp.net_core.fw
             }
         }
 
-        //'deep hash merge, i.e. if hash2 contains values that is hash value - go in it and copy such values to hash2 at same place accordingly
-        //'recursive
-        //public static void mergeHashDeep(ByRef hash1 As Hashtable, ByRef hash2 As Hashtable)
-        //    If hash2 IsNot Nothing Then
-        //        Dim keys As New ArrayList(hash2.Keys)
-        //        For Each key As String In keys
-        //            If TypeOf hash2(key) Is Hashtable Then
-        //                If Not(TypeOf hash1(key) Is Hashtable) Then
-        //                   hash1(key) = New Hashtable
-        //                End If
-        //                mergeHashDeep(hash1(key), hash2(key))
-        //            Else
-        //                hash1(key) = hash2(key)
-        //            End If
-        //        Next
-        //    End If
-        //End void
+        // deep hash merge, i.e. if hash2 contains values that is hash value - go in it and copy such values to hash2 at same place accordingly
+        // recursive
+        public static void mergeHashDeep(ref Hashtable hash1, ref Hashtable hash2)
+        {
+            if (hash2 != null) {
+                foreach (String key in hash2.Keys) {
+                    if (hash2[key].GetType() == typeof(Hashtable))
+                    {
+                        if (hash1[key].GetType() != typeof(Hashtable))
+                        {
+                            hash1[key] = new Hashtable();
+                        }
+                        mergeHashDeep(ref hash1[key], ref hash2[key]);
+                    }
+                    else
+                    {
+                        hash1[key] = hash2[key];
+                    }
+                }
+            }
+        }
 
-        //public static Function bytes2str(b As Integer) As String
-        //    Dim result As String = b
+        public static String bytes2str(long b)
+        {
+            String result = b.ToString();
 
-        //    If b< 1024 Then
-        //        result &= " B"
-        //    ElseIf b < 1048576 Then
-        //        result = (Math.Floor(b / 1024 * 100) / 100) & " KiB"
-        //    ElseIf b < 1073741824 Then
-        //        result = (Math.Floor(b / 1048576 * 100) / 100) & " MiB"
-        //    Else
-        //        result = (Math.Floor(b / 1073741824 * 100) / 100) & " GiB"
-        //    End If
-        //    Return result
-        //}
+            if (b < 1024)
+            {
+                result += " B";
+            }
+            else if (b < 1048576)
+            {
+                result = (Math.Floor((double)b / 1024 * 100) / 100) + " KiB";
+            }
+            else if (b < 1073741824)
+            {
+                result = (Math.Floor((double)b / 1048576 * 100) / 100) + " MiB";
+            }
+            else
+            {
+                result = (Math.Floor((double)b / 1073741824 * 100) / 100) + " GiB";
+            }
+            return result;
+        }
 
-        //''' <summary>
-        //''' convert data structure to JSON string
-        //''' </summary>
-        //''' <param name="data">any data like single value, arraylist, hashtable, etc..</param>
-        //''' <returns></returns>
-        //public static Function jsonEncode(data As Object) As String
-        //    Return New Script.Serialization.JavaScriptSerializer().Serialize(data)
-        //}
+        /* <summary>
+        * convert data structure to JSON string
+        * </summary>
+        * <param name="data">any data like single value, arraylist, hashtable, etc..</param>
+        * <returns></returns>
+        */
+        public static String jsonEncode(Object data)
+        {
+            return JsonConvert.SerializeObject(data, Formatting.Indented);
+        }
 
-        //''' <summary>
-        //''' convert JSON string into data structure
-        //''' </summary>
-        //''' <param name="str">JSON string</param>
-        //''' <returns>single value, arraylist, hashtable, etc.. or Nothing if cannot be converted</returns>
-        //''' <remarks>Note, JavaScriptSerializer.MaxJsonLength is about 4MB unicode</remarks>
-        //public static Function jsonDecode(str As String) As Object
-        //    Dim result As Object
-        //    Try
-        //        Dim des = New Script.Serialization.JavaScriptSerializer()
-        //        result = des.DeserializeObject(str)
-        //        result = cast2std(result)
+        /* <summary>
+        * convert JSON string into data structure
+        * </summary>
+        * <param name="str">JSON string</param>
+        * <returns>single value, arraylist, hashtable, etc.. or Nothing if cannot be converted</returns>
+        * <remarks>Note, JavaScriptSerializer.MaxJsonLength is about 4MB unicode</remarks>
+        */
+        public static Object jsonDecode(String str)
+        {
+            object result;
+            try
+            {
+                result = JsonConvert.DeserializeObject(str);
+                result = cast2std(result);
+            }
+            catch (Exception ex)
+            {
+                // if error during conversion - return Nothing
+                FW.Current.logger(ex.Message);
+                result = null;
+            }
 
-        //    Catch ex As Exception
-        //        'if error during conversion - return Nothing
-        //        FW.Current.logger(ex.Message)
-        //        result = Nothing
-        //    End Try
+            return result;
+        }
 
-        //    Return result
-        //}
+        /* <summary>
+        * depp convert data structure to standard framework's Hashtable/Arraylist
+        * </summary>
+        * <param name="data"></param>
+        * <remarks>RECURSIVE!</remarks>
+        */
+        public static object cast2std(object data)
+        {
+            object result = data;
 
-        //''' <summary>
-        //''' depp convert data structure to standard framework's Hashtable/Arraylist
-        //''' </summary>
-        //''' <param name="data"></param>
-        //''' <remarks>RECURSIVE!</remarks>
-        //public static Function cast2std(data As Object) As Object
-        //    Dim result As Object = data
+            if (result.GetType() == typeof(IDictionary)) {
+                // convert dictionary to Hashtable
+                Hashtable result2 = new Hashtable(); // because we can't iterate hashtable and change it
+                foreach (String key in (result as IDictionary).Keys)
+                {
+                    Hashtable _data = (Hashtable)result;
+                    result2[key] = cast2std(_data[key]);
+                }
+                result = result2;
+            }
+            else if (result.GetType() == typeof(IList))
+            {
+                // convert arrays to ArrayList
+                result = new ArrayList((IList)result);
+                for (int i = 0; i < result.Count; i++)
+                {
+                    result[i] = cast2std(result[i]);
+                }
+            }
 
-        //    If TypeOf result Is IDictionary Then
-        //        'convert dictionary to Hashtable
-        //        Dim result2 = New Hashtable 'because we can't iterate hashtable and change it
-        //        For Each key In CType(result, IDictionary).Keys
-        //            result2(key) = cast2std(result(key))
-        //        Next
-        //        result = result2
+            return result;
+        }
 
-        //    ElseIf TypeOf result Is IList Then
-        //        'convert arrays to ArrayList
-        //        result = New ArrayList(CType(result, IList))
-        //        For i = 0 To result.Count - 1
-        //            result(i) = cast2std(result(i))
-        //        Next
-        //    End If
+        // serialize using BinaryFormatter.Serialize
+        // return as base64 string
+        public static String serialize(object data)
+        {
+            var xstream = new System.IO.MemoryStream(); ;
+            var xformatter = new BinaryFormatter();
 
-        //    Return result
-        //}
+            xformatter.Serialize(xstream, data);
 
-        //'serialize using BinaryFormatter.Serialize
-        //'return as base64 string
-        //public static Function serialize(data As Object) As String
-        //    Dim xstream As New IO.MemoryStream
-        //    Dim xformatter As New BinaryFormatter
+            return Convert.ToBase64String(xstream.ToArray());
+        }
 
-        //    xformatter.Serialize(xstream, data)
+        // deserialize base64 string serialized with Utils.serialize
+        // return object or Nothing (if error)
+        public static object deserialize(ref String str)
+        { 
+            object data;
+            try
+            {
+                MemoryStream xstream = new MemoryStream(Convert.FromBase64String(str));
+                var xformatter = new BinaryFormatter();
+                data = xformatter.Deserialize(xstream);
+            } 
+            catch (Exception ex)
+            {
+                data = null;
+            }
+            return data;
+        }
 
-        //    Return Convert.ToBase64String(xstream.ToArray())
-        //}
+        // return Hashtable keys as an array
+        public static String[] hashKeys(Hashtable h)
+        {
+            return h.Keys.Cast<String>().ToArray();
+        }
 
-        //'deserialize base64 string serialized with Utils.serialize
-        //'return object or Nothing (if error)
-        //public static Function deserialize(ByRef str As String) As Object
-        //    Dim data As Object
-        //    Try
-        //        Dim xstream As MemoryStream
-        //        xstream = New MemoryStream(Convert.FromBase64String(str))
-        //        Dim xformatter As New BinaryFormatter
-        //        data = xformatter.Deserialize(xstream)
-        //    Catch ex As Exception
-        //        data = Nothing
-        //    End Try
+        // capitalize first word in string
+        // if mode='all' - capitalize all words
+        // EXAMPLE: mode="" : sample string => Sample string
+        // mode="all" : sample STRING => Sample String
+        public static object capitalize(String str, String mode = "")
+        {
+            if (mode == "all")
+            {
+                str = str.ToLower();
+                str = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(str);
+            }
+            else
+            {
+                str = str.voidstring(0, 1).ToUpper() + str.voidstring(1);
+            }
 
-        //    Return data
-        //}
+            return str;
+        }
 
-        //'return Hashtable keys as an array
-        //public static Function hashKeys(h As Hashtable) As String()
-        //    Return New ArrayList(h.Keys).ToArray(GetType(String))
-        //}
-
-        //'capitalize first word in string
-        //'if mode='all' - capitalize all words
-        //'EXAMPLE: mode="" : sample string => Sample string
-        //'mode="all" : sample STRING => Sample String
-        //Shared Function capitalize(str As String, Optional mode As String = "") As Object
-        //    If mode = "all" Then
-        //        str = LCase(str)
-        //        str = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(str)
-        //    Else
-        //        str = str.voidstring(0, 1).ToUpper() & str.voidstring(1)
-        //    End If
-
-        //    Return str
-        //}
-
-        //'repeat string num times
-        //Shared Function strRepeat(str As String, num As Integer) As String
-        //    Dim result As New StringBuilder
-        //    For i As Integer = 1 To num
-        //        result.Append(str)
-        //    Next
-        //    Return result.ToString
-        //}
+        // repeat string num times
+        public static String strRepeat(String str, int num)
+        {
+            StringBuilder result = new StringBuilder();
+            for (int i = 0; i < num; i++)
+            {
+                result.Append(str);
+            }
+            return result.ToString();
+        }
 
         // return unique file name in form UUID (without extension)
         public static String uuid()
