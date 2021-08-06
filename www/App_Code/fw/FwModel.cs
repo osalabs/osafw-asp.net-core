@@ -7,7 +7,7 @@ using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace osafw_asp.net_core.fw
+namespace osafw
 {
     public class FwModel : IDisposable
     {

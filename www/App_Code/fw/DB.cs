@@ -1,16 +1,12 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Data.OleDb;
 using System.Data.SqlClient;
-using System.IO;
-using System.Linq;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
-namespace osafw_asp.net_core.fw
+namespace osafw
 {
     public enum DBOps : int {
         EQ,            // =
@@ -34,9 +30,9 @@ namespace osafw_asp.net_core.fw
         public Object value; // can be array for IN, NOT IN, OR
         public String quoted_value;
         public DBOperation(DBOps op, Object value = null) {
-            op = op;
+            this.op = op;
             setOpStr();
-            value = value;
+            this.value = value;
         }
         public void setOpStr() {
             switch (op) {
@@ -115,15 +111,14 @@ namespace osafw_asp.net_core.fw
                 this.conf = _conf;
             } else {
                 Hashtable db = (Hashtable)FW.config("db");
-                conf = (Hashtable)db["main"];
+                this.conf = (Hashtable)db["main"];
             }
-            dbtype = (String)conf["type"];
-            connstr = (String)conf["connection_string"];
+            this.dbtype = (String)conf["type"];
+            this.connstr = (String)conf["connection_string"];
 
             this.db_name = db_name;
 
             //UNSUPPORTED_OLE_TYPES = Utils.qh("DBTYPE_IDISPATCH DBTYPE_IUNKNOWN") 'also? DBTYPE_ARRAY DBTYPE_VECTOR DBTYPE_BYTES
-
         }
 
         public void logger(FwLogger.LogLevel level, params Object[] args) {

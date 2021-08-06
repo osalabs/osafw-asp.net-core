@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using System.Text;
 
-namespace osafw_asp.net_core.fw
+namespace osafw
 {
     public class UploadParams
     {

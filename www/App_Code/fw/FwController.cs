@@ -5,7 +5,7 @@ using System.Linq;
 using System.Security.Policy;
 using System.Threading.Tasks;
 
-namespace osafw_asp.net_core.fw
+namespace osafw
 {
     public class FwController
     {

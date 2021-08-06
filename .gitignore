@@ -1,4 +1,4 @@
 .vs
-/osafw-asp.net-core/obj
-/osafw-asp.net-core/bin
-/osafw-asp.net-core/App_Data/logs
+/www/obj
+/www/bin
+/www/App_Data/logs

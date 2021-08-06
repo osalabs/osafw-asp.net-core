@@ -1,11 +1,10 @@
-﻿using osafw_asp.net_core.fw;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace osafw_asp.net_cor.fw
+namespace osafw
 {
     public class FwSettings : FwModel
     {

@@ -6,9 +6,8 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using System.Text;
-using osafw_asp.net_core.fw;
 
-namespace osafw_asp.net_core
+namespace osafw
 {
     public class MyHandlerMiddleware
     {

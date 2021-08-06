@@ -10,8 +10,9 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Web;
 
-namespace osafw_asp.net_core.fw
+namespace osafw
 {
     public class Utils
     {
@@ -156,7 +157,7 @@ namespace osafw_asp.net_core.fw
 
         public static String str2url(String str)
         {
-            if (!Regex.IsMatch(str, "^\w+://")) {
+            if (!Regex.IsMatch(str, @"^\w+://")) {
                 str = "http://" + str;
             }
             return str;
@@ -325,7 +326,7 @@ namespace osafw_asp.net_core.fw
             Hashtable result = new Hashtable();
             Hashtable conf = new Hashtable();
             conf["type"] = "OLE";
-            conf["connection_string"] = "Provider=" + OLEDB_PROVIDER + ";Data Source=" + filepath + ";Extended Properties=\"Excel 12.0 Xml;HDR=" + (is_header ? "Yes", "No") + ";ReadOnly=True;IMEX=1\"";
+            conf["connection_string"] = "Provider=" + OLEDB_PROVIDER + ";Data Source=" + filepath + ";Extended Properties=\"Excel 12.0 Xml;HDR=" + (is_header ? "Yes": "No") + ";ReadOnly=True;IMEX=1\"";
             DB accdb = new DB(fw, conf);
             OleDbConnection conn = (OleDbConnection)accdb.connect();
             var schema = conn.GetOleDbSchemaTable(OleDbSchemaGuid.Tables, null);
@@ -396,7 +397,7 @@ namespace osafw_asp.net_core.fw
                 }
             }
             else {
-                fields = Utils.qw(csv_export_fields)
+                fields = Utils.qw(csv_export_fields);
             }
 
             csv.Append(headers_str + "\n");
@@ -406,17 +407,17 @@ namespace osafw_asp.net_core.fw
             return csv;
         }
 
-        public static bool writeCSVExport(HttpResponse response, String filename, String csv_export_headers, String csv_export_fields, ArrayList rows)
+        public static async void writeCSVExport(HttpResponse response, String filename, String csv_export_headers, String csv_export_fields, ArrayList rows)
         {
             filename = filename.Replace("\"", "'"); // quote doublequotes
 
-            response.AAppendHeader("Content-type", "text/csv");
-            response.AppendHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+            response.Headers.Add("Content-type", "text/csv");
+            response.Headers.Add("Content-Disposition", "attachment; filename=\"" + filename + "\"");
 
-            response.Write(Utils.getCSVExport(csv_export_headers, csv_export_fields, rows));
+            await HttpResponseWritingExtensions.WriteAsync(response, Utils.getCSVExport(csv_export_headers, csv_export_fields, rows).ToString());
         }
 
-        public static bool writeXLSExport(FW fw, String filename, String csv_export_headers, String csv_export_fields, ArrayList rows)
+        public static async void writeXLSExport(FW fw, String filename, String csv_export_headers, String csv_export_fields, ArrayList rows)
         {
             Hashtable ps = new Hashtable();
             ps["rows"] = rows;
@@ -453,46 +454,47 @@ namespace osafw_asp.net_core.fw
 
             filename = filename.Replace("\"", "_");
 
-            fw.resp.AddHeader("Content-type", "application/vnd.ms-excel");
-            fw.resp.AddHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"");
-            fw.resp.Write(page);
+            fw.resp.Headers.Add("Content-type", "application/vnd.ms-excel");
+            fw.resp.Headers.Add("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+            await HttpResponseWritingExtensions.WriteAsync(fw.resp, page);
         }
 
-        // Detect orientation and auto-rotate correctly
-        public static bool rotateImage(Image Image)
-        {
-            bool result = false;
-            var rot = RotateFlipType.RotateNoneFlipNone;
-            var props = Image.PropertyItems();
+        //TODO migrate
+        //// Detect orientation and auto-rotate correctly
+        //public static bool rotateImage(Image Image)
+        //{
+        //    bool result = false;
+        //    var rot = RotateFlipType.RotateNoneFlipNone;
+        //    var props = Image.PropertyItems();
 
-            foreach (var p in props)
-            {
-                if (p.Id == 274) {
-                    switch (BitConverter.ToInt16(p.Value, 0))
-                    {
-                        case 1:
-                            rot = RotateFlipType.RotateNoneFlipNone;
-                            break;
-                        case 3:
-                            rot = RotateFlipType.Rotate180FlipNone;
-                            break;
-                        case 6:
-                            rot = RotateFlipType.Rotate90FlipNone;
-                            break;
-                        case 8:
-                            rot = RotateFlipType.Rotate270FlipNone;
-                            break;
-                    }
-                }
-            }
+        //    foreach (var p in props)
+        //    {
+        //        if (p.Id == 274) {
+        //            switch (BitConverter.ToInt16(p.Value, 0))
+        //            {
+        //                case 1:
+        //                    rot = RotateFlipType.RotateNoneFlipNone;
+        //                    break;
+        //                case 3:
+        //                    rot = RotateFlipType.Rotate180FlipNone;
+        //                    break;
+        //                case 6:
+        //                    rot = RotateFlipType.Rotate90FlipNone;
+        //                    break;
+        //                case 8:
+        //                    rot = RotateFlipType.Rotate270FlipNone;
+        //                    break;
+        //            }
+        //        }
+        //    }
 
-            if (rot != RotateFlipType.RotateNoneFlipNone)
-            {
-                Image.RotateFlip(rot);
-                result = true;
-            }
-            return result;
-        }
+        //    if (rot != RotateFlipType.RotateNoneFlipNone)
+        //    {
+        //        Image.RotateFlip(rot);
+        //        result = true;
+        //    }
+        //    return result;
+        //}
 
         // resize image in from_file to w/h and save to to_file
         // (optional)w and h - mean max weight and max height (i.e. image will not be upsized if it's smaller than max w/h)
@@ -598,22 +600,23 @@ namespace osafw_asp.net_core.fw
             return true;
         }
 
-        private static ImageCodecInfo GetEncoderInfo(ImageFormat format)
-        {
-            //    Dim j As Integer
-            //    Dim encoders() As ImageCodecInfo
-            //    encoders = ImageCodecInfo.GetImageEncoders()
+        //TODO MIGRATE
+        //private static ImageCodecInfo GetEncoderInfo(ImageFormat format)
+        //{
+        //    //    Dim j As Integer
+        //    //    Dim encoders() As ImageCodecInfo
+        //    //    encoders = ImageCodecInfo.GetImageEncoders()
 
-            //    j = 0
-            //    While j<encoders.Length
-            //        If encoders(j).FormatID = format.Guid Then
-            //            Return encoders(j)
-            //        End If
-            //        j += 1
-            //    End While
-            //    Return Nothing
+        //    //    j = 0
+        //    //    While j<encoders.Length
+        //    //        If encoders(j).FormatID = format.Guid Then
+        //    //            Return encoders(j)
+        //    //        End If
+        //    //        j += 1
+        //    //    End While
+        //    //    Return Nothing
 
-        } // GetEncoderInfo
+        //} // GetEncoderInfo
 
         public static long fileSize(String filepath)
         {
@@ -647,27 +650,28 @@ namespace osafw_asp.net_core.fw
             }
         }
 
-        // deep hash merge, i.e. if hash2 contains values that is hash value - go in it and copy such values to hash2 at same place accordingly
-        // recursive
-        public static void mergeHashDeep(ref Hashtable hash1, ref Hashtable hash2)
-        {
-            if (hash2 != null) {
-                foreach (String key in hash2.Keys) {
-                    if (hash2[key].GetType() == typeof(Hashtable))
-                    {
-                        if (hash1[key].GetType() != typeof(Hashtable))
-                        {
-                            hash1[key] = new Hashtable();
-                        }
-                        mergeHashDeep(ref hash1[key], ref hash2[key]);
-                    }
-                    else
-                    {
-                        hash1[key] = hash2[key];
-                    }
-                }
-            }
-        }
+        //TODO migrate
+        //// deep hash merge, i.e. if hash2 contains values that is hash value - go in it and copy such values to hash2 at same place accordingly
+        //// recursive
+        //public static void mergeHashDeep(ref Hashtable hash1, ref Hashtable hash2)
+        //{
+        //    if (hash2 != null) {
+        //        foreach (String key in hash2.Keys) {
+        //            if (hash2[key].GetType() == typeof(Hashtable))
+        //            {
+        //                if (hash1[key].GetType() != typeof(Hashtable))
+        //                {
+        //                    hash1[key] = new Hashtable();
+        //                }
+        //                mergeHashDeep(ref hash1[key], ref hash2[key]);
+        //            }
+        //            else
+        //            {
+        //                hash1[key] = hash2[key];
+        //            }
+        //        }
+        //    }
+        //}
 
         public static String bytes2str(long b)
         {
@@ -752,9 +756,9 @@ namespace osafw_asp.net_core.fw
             {
                 // convert arrays to ArrayList
                 result = new ArrayList((IList)result);
-                for (int i = 0; i < result.Count; i++)
+                for (int i = 0; i < (result as ArrayList).Count; i++)
                 {
-                    result[i] = cast2std(result[i]);
+                    ((ArrayList)result)[i] = cast2std(((ArrayList)result)[i]);
                 }
             }
 
@@ -810,7 +814,7 @@ namespace osafw_asp.net_core.fw
             }
             else
             {
-                str = str.voidstring(0, 1).ToUpper() + str.voidstring(1);
+                str = str.Substring(0, 1).ToUpper() + str.Substring(1);
             }
 
             return str;
@@ -1112,39 +1116,39 @@ namespace osafw_asp.net_core.fw
 
         
        
+        //TODO MIGRATE
+        ///// <summary>
+        ///// standard function for exporting to csv
+        ///// </summary>
+        ///// <param name="csv_export_headers">CSV headers row, comma-separated format</param>
+        ///// <param name="csv_export_fields">empty, * or Utils.qw format</param>
+        ///// <param name="rows">DB array</param>
+        ///// <returns></returns>
+        //public static StringBuilder getCSVExport(String csv_export_headers, String csv_export_fields, ArrayList rows)
+        //{
+        //    String headers_str = csv_export_headers;
+        //    StringBuilder csv = new StringBuilder();
+        //    /*string[] fields = null;
+        //    if (String.IsNullOrEmpty(csv_export_fields) || String.IsNullOrEmpty(csv_export_fields))
+        //    {
+        //        //just read field names from first row
+        //        if (rows.Count > 0)
+        //        {
+        //            fields = new ArrayList((rows[0] as Hashtable).Keys).ToArray();
+        //            headers_str = String.Join(",", fields);
+        //        }
+        //    }
+        //    else
+        //    {
+        //        fields = Utils.qw(csv_export_fields);
+        //    }
 
-        /// <summary>
-        /// standard function for exporting to csv
-        /// </summary>
-        /// <param name="csv_export_headers">CSV headers row, comma-separated format</param>
-        /// <param name="csv_export_fields">empty, * or Utils.qw format</param>
-        /// <param name="rows">DB array</param>
-        /// <returns></returns>
-        public static StringBuilder getCSVExport(String csv_export_headers, String csv_export_fields, ArrayList rows)
-        {
-            String headers_str = csv_export_headers;
-            StringBuilder csv = new StringBuilder();
-            /*string[] fields = null;
-            if (String.IsNullOrEmpty(csv_export_fields) || String.IsNullOrEmpty(csv_export_fields))
-            {
-                //just read field names from first row
-                if (rows.Count > 0)
-                {
-                    fields = new ArrayList((rows[0] as Hashtable).Keys).ToArray();
-                    headers_str = String.Join(",", fields);
-                }
-            }
-            else
-            {
-                fields = Utils.qw(csv_export_fields);
-            }
-
-            csv.Append(headers_str & vbLf);
-            foreach (Hashtable row in rows)
-            {
-                csv.Append(Utils.toCSVRow(row, fields) & vbLf);
-            }*/
-            return csv;
-        }
+        //    csv.Append(headers_str & vbLf);
+        //    foreach (Hashtable row in rows)
+        //    {
+        //        csv.Append(Utils.toCSVRow(row, fields) & vbLf);
+        //    }*/
+        //    return csv;
+        //}
     }
 }

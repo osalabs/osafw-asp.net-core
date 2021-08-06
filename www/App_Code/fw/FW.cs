@@ -1,19 +1,14 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
-using osafw_asp.net_core.App_Code.fw;
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Reflection;
-using System.Security.Policy;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
-namespace osafw_asp.net_core.fw
+namespace osafw
 {
     /// <summary>
     /// Logger levels, ex: logger(LogLevel.ERROR, "Something happened")
@@ -280,7 +275,7 @@ namespace osafw_asp.net_core.fw
         {
             if (!models.ContainsKey(model_name))
             {
-                FwModel m = (FwModel)Activator.CreateInstance(Type.GetType("osafw_asp.net_core.fw." + model_name, false, true));
+                FwModel m = (FwModel)Activator.CreateInstance(Type.GetType("osafw." + model_name, false, true));
                 // initialize
                 m.init(this);
                 models[model_name] = m;
@@ -616,7 +611,7 @@ namespace osafw_asp.net_core.fw
             try
             {
                 //Dim auth_check_controller = _auth(cur_controller, cur_action)
-                Type calledType = Type.GetType("osafw_asp.net_core.fw." + cur_controller + "Controller", false, true); // case ignored
+                Type calledType = Type.GetType("osafw." + cur_controller + "Controller", false, true); // case ignored
                 if (calledType == null)
                 {
                     // logger(LogLevel.DEBUG, "No controller found for controller=[", cur_controller, "], using default Home")

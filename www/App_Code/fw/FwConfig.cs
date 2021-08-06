@@ -8,7 +8,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace osafw_asp.net_core.fw
+namespace osafw
 {
     public class FwConfig
     {
