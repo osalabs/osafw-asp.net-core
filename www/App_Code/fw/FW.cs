@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections;
+using System.Collections.Specialized;
 using System.IO;
+using System.Net.Mail;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
@@ -822,20 +824,18 @@ namespace osafw
                 if (typeCode.ToString() == "Object")
                 {
                     str.Append(System.Environment.NewLine);
-                    if ((dmp_obj) is IList)
+                    if (dmp_obj is IList)
                     {
                         str.Append(intend + "[" + System.Environment.NewLine);
-                        object v;
-                        foreach (var v in dmp_obj)
+                        foreach (object v in (IList)dmp_obj)
                             str.Append(intend + " " + dumper(v, level) + System.Environment.NewLine);
                         str.Append(intend + "]" + System.Environment.NewLine);
                     }
-                    else if ((dmp_obj) is ICollection)
+                    else if (dmp_obj is IDictionary)
                     {
                         str.Append(intend + "{" + System.Environment.NewLine);
-                        object k;
-                        foreach (var k in dmp_obj.keys)
-                            str.Append(intend + " " + k + " => " + dumper(dmp_obj(k), level) + System.Environment.NewLine);
+                        foreach (object k in ((IDictionary)dmp_obj).Keys)
+                            str.Append(intend + " " + k + " => " + dumper(((IDictionary)dmp_obj)[k], level) + System.Environment.NewLine);
                         str.Append(intend + "}" + System.Environment.NewLine);
                     }
                     else
@@ -846,7 +846,7 @@ namespace osafw
             }
             catch (Exception ex)
             {
-                str.Append("***cannot dump object***");
+                str.Append("***cannot dump object***" + ex.Message);
             }
 
             return str.ToString();
@@ -854,12 +854,11 @@ namespace osafw
 
         // return file content OR "" if no file exists or some other error happened (see errorInfo)
         /// <summary>
-        ///     ''' return file content OR ""
-        ///     ''' </summary>
-        ///     ''' <param name="filename"></param>
-        ///     ''' <param name="errInfo"></param>
-        ///     ''' <returns></returns>
-        public static string get_file_content(ref string filename, ref string errInfo = "")
+        /// return file content OR ""
+        /// </summary>
+        /// <param name="filename"></param>
+        /// <returns></returns>
+        public static string get_file_content(ref string filename)
         {
             string result = "";
             filename = Regex.Replace(filename, "/", @"\");
@@ -873,18 +872,18 @@ namespace osafw
             catch (Exception Ex)
             {
                 // TODO logger("ERROR", "Error getting file content [" & file_name & "]")
-                errInfo = Ex.Message;
+                //TODO MIGRATE set fw.last_file_error ?
+                //errInfo = Ex.Message;
             }
             return result;
         }
 
         /// <summary>
-        ///     ''' return array of file lines OR empty array if no file exists or some other error happened (see errorInfo)
-        ///     ''' </summary>
-        ///     ''' <param name="filename"></param>
-        ///     ''' <param name="errInfo"></param>
-        ///     ''' <returns></returns>
-        public static string[] get_file_lines(ref string filename, ref string errInfo = "")
+        /// return array of file lines OR empty array if no file exists or some other error happened (see errorInfo)
+        /// </summary>
+        /// <param name="filename"></param>
+        /// <returns></returns>
+        public static string[] get_file_lines(ref string filename)
         {
             string[] result = Array.Empty<string>();
             try
@@ -894,18 +893,19 @@ namespace osafw
             catch (Exception ex)
             {
                 // TODO logger("ERROR", "Error getting file content [" & file_name & "]")
-                errInfo = ex.Message;
+                //TODO MIGRATE set fw.last_file_error ?
+                //errInfo = ex.Message;
             }
             return result;
         }
 
         /// <summary>
-        ///     ''' replace or append file content
-        ///     ''' </summary>
-        ///     ''' <param name="filename"></param>
-        ///     ''' <param name="fileData"></param>
-        ///     ''' <param name="isAppend">False by default </param>
-        public static void set_file_content(ref string filename, ref string fileData, ref bool isAppend = false)
+        /// replace or append file content
+        /// </summary>
+        /// <param name="filename"></param>
+        /// <param name="fileData"></param>
+        /// <param name="isAppend">False by default </param>
+        public static void set_file_content(string filename, ref string fileData, bool isAppend = false)
         {
             filename = Regex.Replace(filename, "/", @"\");
 
@@ -915,10 +915,15 @@ namespace osafw
             }
         }
 
-        // show page from template  /route.controller/route.action = parser('/route.controller/route.action/', $ps)
-        public new void parser(Hashtable hf)
+        public async void responseWrite(string str)
         {
-            this.parser(LCase(route.controller_path + "/" + route.action), hf);
+            await HttpResponseWritingExtensions.WriteAsync(this.resp, str);
+        }
+
+        // show page from template  /route.controller/route.action = parser('/route.controller/route.action/', $ps)
+        public void parser(Hashtable hf)
+        {
+            this.parser((route.controller_path + "/" + route.action).ToLower(), hf);
         }
 
         // same as parsert(hf), but with base dir param
@@ -928,73 +933,71 @@ namespace osafw
         // (not for json) to perform route_redirect - set hf("_route_redirect")("method"), hf("_route_redirect")("controller"), hf("_route_redirect")("args")
         // (not for json) to perform redirect - set hf("_redirect")="url"
         // TODO - create another func and call it from call_controller for processing _redirect, ... (non-parsepage) instead of calling parser?
-        public new void parser(string bdir, Hashtable hf)
+        public void parser(string bdir, Hashtable ps)
         {
-            this.resp.CacheControl = cache_control;
+            //TODO MIGRATE this.resp.CacheControl = cache_control;
 
             string format = this.get_response_expected_format();
             if (format == "json")
             {
-                if (hf.ContainsKey("_json"))
+                if (ps.ContainsKey("_json"))
                 {
-                    if (hf("_json") is bool && hf("_json") == true)
+                    if (ps["_json"] is bool && (bool)ps["_json"] == true)
                     {
-                        hf.Remove("_json"); // remove internal flag
-                        this.parser_json(hf);
+                        ps.Remove("_json"); // remove internal flag
+                        this.parser_json(ps);
                     }
                     else
-                        this.parser_json(hf("_json"));// if _json exists - return only this element content
+                        this.parser_json(ps["_json"]);// if _json exists - return only this element content
                 }
                 else
                 {
-                    Hashtable ps = new Hashtable()
-                {
+                    ps = new Hashtable()
                     {
-                        "success",
-                        false
-                    },
-                    {
-                        "message",
-                        "JSON response is not enabled for this Controller.Action (set ps(\"_json\")=True or ps(\"_json\")=data... to enable)."
-                    }
-                };
+                        {
+                            "success", false
+                        },
+                        {
+                            "message", @"JSON response is not enabled for this Controller.Action (set ps[""_json""])=True or ps[""_json""])=data... to enable)."
+                        }
+                    };
                     this.parser_json(ps);
                 }
                 return; // no further processing for json
             }
 
-            if (hf.ContainsKey("_route_redirect"))
+            if (ps.ContainsKey("_route_redirect"))
             {
-                var rr = hf("_route_redirect");
-                this.routeRedirect(rr("method"), rr("controller"), rr("args"));
+                Hashtable rr = (Hashtable)ps["_route_redirect"];
+                this.routeRedirect((string)rr["method"], (string)rr["controller"], (object[])rr["args"]);
                 return; // no further processing
             }
 
-            if (hf.ContainsKey("_redirect"))
+            if (ps.ContainsKey("_redirect"))
             {
-                this.redirect(hf("_redirect"));
+                this.redirect((string)ps["_redirect"]);
                 return; // no further processing
             }
 
-            if (this.FERR.Count > 0 && !hf.ContainsKey("ERR"))
-                hf("ERR") = this.FERR; // add errors if any
+            if (this.FERR.Count > 0 && !ps.ContainsKey("ERR"))
+                ps["ERR"] = this.FERR; // add errors if any
 
             string layout;
             if (format == "pjax")
-                layout = G["PAGE_LAYOUT_PJAX"];
+                layout = (string)G["PAGE_LAYOUT_PJAX"];
             else
-                layout = G["PAGE_LAYOUT"];
+                layout = (string)G["PAGE_LAYOUT"];
 
-            if (hf.ContainsKey("_layout"))
-                layout = hf("_layout");
-            _parser(bdir, layout, hf);
+            if (ps.ContainsKey("_layout"))
+                layout = (string)ps["_layout"];
+            _parser(bdir, layout, ps);
         }
 
         // - show page from template  /controller/action = parser('/controller/action/', $layout, $ps)
-        public new void parser(string bdir, string tpl_name, Hashtable hf)
+        public void parser(string bdir, string tpl_name, Hashtable ps)
         {
-            hf("_layout") = tpl_name;
-            parser(bdir, hf);
+            ps["_layout"] = tpl_name;
+            parser(bdir, ps);
         }
 
         // actually uses ParsePage
@@ -1003,15 +1006,15 @@ namespace osafw
             logger(LogLevel.DEBUG, "parsing page bdir=", bdir, ", tpl=", tpl_name);
             ParsePage parser_obj = new ParsePage(this);
             string page = parser_obj.parse_page(bdir, tpl_name, hf);
-            resp.Write(page);
+            responseWrite(page);
         }
 
-        public void parser_json(object hf)
+        public void parser_json(object ps)
         {
             ParsePage parser_obj = new ParsePage(this);
-            string page = parser_obj.parse_json(hf);
-            resp.AddHeader("Content-type", "application/json; charset=utf-8");
-            resp.Write(page);
+            string page = parser_obj.parse_json(ps);
+            resp.Headers.Add("Content-type", "application/json; charset=utf-8");
+            responseWrite(page);
         }
 
         // perform redirect
@@ -1025,13 +1028,13 @@ namespace osafw
                 throw new RedirectException();
         }
 
-        public new void routeRedirect(string action, string controller, object args = null)
+        public void routeRedirect(string action, string controller, object[] args = null)
         {
-            setController(IIf(controller > "", controller, route.controller), action);
+            setController((!string.IsNullOrEmpty(controller) ? controller : route.controller), action);
 
             Type calledType = Type.GetType(route.controller + "Controller", true);
             MethodInfo mInfo = calledType.GetMethod(route.action + "Action");
-            if (Information.IsNothing(mInfo))
+            if (mInfo == null)
             {
                 logger(LogLevel.INFO, "No method found for controller.action=[", route.controller, ".", route.action, "], displaying static page from related templates");
                 // no method found - set to default Index method
@@ -1039,27 +1042,27 @@ namespace osafw
                 // mInfo = calledType.GetMethod(route.action & "Action")
 
                 // if no method - show template from /route.controller/route.action dir
-                parser("/" + LCase(route.controller) + "/" + LCase(route.action), new Hashtable());
+                parser("/" + route.controller.ToLower() + "/" + route.action.ToLower(), new Hashtable());
             }
 
             if (mInfo != null)
                 call_controller(calledType, mInfo, args);
         }
         // same as above just with default controller
-        public new void routeRedirect(string action, object args = null)
+        public void routeRedirect(string action, object[] args = null)
         {
             routeRedirect(action, route.controller, args);
         }
 
         /// <summary>
-        ///     ''' set route.controller and optionally route.action, updates G too
-        ///     ''' </summary>
-        ///     ''' <param name="controller"></param>
-        ///     ''' <param name="action"></param>
+        /// set route.controller and optionally route.action, updates G too
+        /// </summary>
+        /// <param name="controller"></param>
+        /// <param name="action"></param>
         public void setController(string controller, string action = "")
         {
             route.controller = controller;
-            if (action > "")
+            if (!string.IsNullOrEmpty(action))
                 route.action = action;
 
             G["controller"] = route.controller;
@@ -1068,19 +1071,19 @@ namespace osafw
         }
 
         // Call controller
-        public void call_controller(Type calledType, MethodInfo mInfo, object args = null)
+        public void call_controller(Type calledType, MethodInfo mInfo, object[] args = null)
         {
             // check if method accept agrs and don't pass args if no args expected
             System.Reflection.ParameterInfo[] @params = mInfo.GetParameters();
             if (@params.Length == 0)
                 args = null;
 
-            FwController new_controller = Activator.CreateInstance(calledType);
+            FwController new_controller = (FwController)Activator.CreateInstance(calledType);
             new_controller.init(this);
-            Hashtable ps = null/* TODO Change to default(_) if this is not a reference type */;
+            Hashtable ps = null;
             try
             {
-                ps = mInfo.Invoke(new_controller, args);
+                ps = (Hashtable)mInfo.Invoke(new_controller, args);
             }
             catch (TargetInvocationException ex)
             {
@@ -1097,11 +1100,11 @@ namespace osafw
         {
             logger(LogLevel.DEBUG, "sending file response  = ", filepath, " as ", attname);
             attname = Regex.Replace(attname, @"[^\w. \-]+", "_");
-            resp.AppendHeader("Content-type", ContentType);
-            resp.AppendHeader("Content-Length", Utils.fileSize(filepath));
-            resp.AppendHeader("Content-Disposition", ContentDisposition + "; filename=\"" + attname + "\"");
-            resp.TransmitFile(filepath);
-            resp.OutputStream.Close();
+            resp.Headers.Add("Content-type", ContentType);
+            resp.Headers.Add("Content-Length", Utils.fileSize(filepath).ToString());
+            resp.Headers.Add("Content-Disposition", ContentDisposition + "; filename=\"" + attname + "\"");
+            resp.SendFileAsync(filepath);
+            //TODO MIGRATE test if necessary resp.OutputStream.Close();
         }
 
         // SEND EMAIL
@@ -1114,7 +1117,7 @@ namespace osafw
         // RETURN:
         // true if sent successfully
         // false if some problem occured (see log)
-        public bool send_email(string mail_from, string mail_to, string mail_subject, string mail_body, Hashtable filenames = null/* TODO Change to default(_) if this is not a reference type */, ArrayList aCC = null/* TODO Change to default(_) if this is not a reference type */, string reply_to = "", Hashtable options = null/* TODO Change to default(_) if this is not a reference type */)
+        public bool send_email(string mail_from, string mail_to, string mail_subject, string mail_body, Hashtable filenames = null, ArrayList aCC = null, string reply_to = "", Hashtable options = null)
         {
             bool result = true;
             MailMessage message = null/* TODO Change to default(_) if this is not a reference type */;
@@ -1123,22 +1126,22 @@ namespace osafw
 
             try
             {
-                if (Strings.Len(mail_from) == 0)
-                    mail_from = this.config("mail_from"); // default mail from
+                if (mail_from.Length == 0)
+                    mail_from = (string)this.config("mail_from"); // default mail from
                 mail_subject = Regex.Replace(mail_subject, @"[\r\n]+", " ");
 
-                if (this.config("is_test"))
+                if ((bool)this.config("is_test"))
                 {
-                    string test_email = this.config("test_email");
+                    string test_email = (string)this.config("test_email");
                     mail_body = "TEST SEND. PASSED MAIL_TO=[" + mail_to + "]" + System.Environment.NewLine + mail_body;
-                    mail_to = this.config("test_email");
+                    mail_to = (string)this.config("test_email");
                     logger(LogLevel.INFO, "EMAIL SENT TO TEST EMAIL [", mail_to, "] - TEST ENABLED IN web.config");
                 }
 
                 logger(LogLevel.INFO, "Sending email. From=[", mail_from, "], ReplyTo=[", reply_to, "], To=[", mail_to, "], Subj=[", mail_subject, "]");
                 logger(LogLevel.DEBUG, mail_body);
 
-                if (mail_to > "")
+                if (!string.IsNullOrEmpty(mail_to))
                 {
                     message = new MailMessage();
                     if (options.ContainsKey("read-receipt"))
@@ -1152,23 +1155,23 @@ namespace osafw
                     message.Subject = mail_subject;
                     message.Body = mail_body;
                     // If reply_to > "" Then message.ReplyTo = New MailAddress(reply_to) '.net<4
-                    if (reply_to > "")
+                    if (!string.IsNullOrEmpty(reply_to))
                         message.ReplyToList.Add(reply_to); // .net>=4
 
                     // mail_to may contain several emails delimited by ;
                     ArrayList amail_to = Utils.splitEmails(mail_to);
-                    foreach (string email in amail_to)
+                    foreach (string email1 in amail_to)
                     {
-                        email = Strings.Trim(email);
+                        string email = email1.Trim();
                         if (string.IsNullOrEmpty(email))
                             continue;
                         message.To.Add(new MailAddress(email));
                     }
 
                     // add CC if any
-                    if (!IsNothing(aCC))
+                    if (aCC != null)
                     {
-                        if (this.config("is_test"))
+                        if ((bool)this.config("is_test"))
                         {
                             foreach (string cc in aCC)
                             {
@@ -1177,9 +1180,9 @@ namespace osafw
                             }
                         }
                         else
-                            foreach (string cc in aCC)
+                            foreach (string cc1 in aCC)
                             {
-                                cc = Strings.Trim(cc);
+                                string cc = cc1.Trim();
                                 if (string.IsNullOrEmpty(cc))
                                     continue;
                                 message.CC.Add(new MailAddress(cc));
@@ -1187,14 +1190,14 @@ namespace osafw
                     }
 
                     // attach attachments if any
-                    if (!IsNothing(filenames))
+                    if (filenames != null)
                     {
                         // sort by human name
                         ArrayList fkeys = new ArrayList(filenames.Keys);
                         fkeys.Sort();
                         foreach (string human_filename in fkeys)
                         {
-                            string filename = filenames(human_filename);
+                            string filename = (string)filenames[human_filename];
                             System.Net.Mail.Attachment att = new System.Net.Mail.Attachment(filename, System.Net.Mime.MediaTypeNames.Application.Octet)
                             {
                                 Name = human_filename,
@@ -1231,7 +1234,7 @@ namespace osafw
         // shortcut for send_email from template from the /emails template dir
         public bool send_email_tpl(string mail_to, string tpl, Hashtable hf, Hashtable filenames = null/* TODO Change to default(_) if this is not a reference type */, ArrayList aCC = null/* TODO Change to default(_) if this is not a reference type */, string reply_to = "")
         {
-            ParsePage parser_obj = new ParsePage(this);
+            ParsePage parser_obj = new(this);
             Regex r = new Regex(@"[\n\r]+");
             string subj_body = parser_obj.parse_page("/emails", tpl, hf);
             if (subj_body.Length == 0)
@@ -1243,10 +1246,10 @@ namespace osafw
         // send email message to site admin (usually used in case of errors)
         public void send_email_admin(string msg)
         {
-            this.send_email("", this.config("admin_email"), Strings.Left(msg, 512), msg);
+            this.send_email("", (string)this.config("admin_email"), msg.Substring(0, 512), msg);
         }
 
-        public string load_url(string url, Hashtable @params = null/* TODO Change to default(_) if this is not a reference type */)
+        public string load_url(string url, Hashtable @params = null)
         {
             System.Net.WebClient client = new System.Net.WebClient();
             string content;
@@ -1254,8 +1257,8 @@ namespace osafw
             {
                 // POST
                 NameValueCollection nv = new NameValueCollection();
-                foreach (var key in @params.Keys)
-                    nv.Add(key, @params(key));
+                foreach (string key in @params.Keys)
+                    nv.Add(key, (string)@params[key]);
                 content = (new System.Text.UTF8Encoding()).GetString(client.UploadValues(url, "POST", nv));
             }
             else
@@ -1267,61 +1270,61 @@ namespace osafw
 
         public void err_msg(string msg, Exception Ex = null)
         {
-            Hashtable hf = new Hashtable();
+            Hashtable ps = new Hashtable();
             var tpl_dir = "/error";
 
             /* TODO ERROR: Skipped IfDirectiveTrivia *//* TODO ERROR: Skipped DisabledTextTrivia *//* TODO ERROR: Skipped EndIfDirectiveTrivia */
-            hf("err_time") = DateTime.Now();
-            hf("err_msg") = msg;
+            ps["err_time"] = DateTime.Now;
+            ps["err_msg"] = msg;
             if (Utils.f2bool(this.config("IS_DEV")))
             {
-                hf("is_dump") = true;
+                ps["is_dump"] = true;
                 if (Ex != null)
-                    hf("DUMP_STACK") = Ex.ToString();
-                hf("DUMP_FORM") = dumper(FORM);
-                hf("DUMP_SESSION") = dumper(SESSION);
+                    ps["DUMP_STACK"] = Ex.ToString();
+                ps["DUMP_FORM"] = dumper(FORM);
+                ps["DUMP_SESSION"] = dumper(context.Session);
             }
 
-            hf("success") = false;
-            hf("message") = msg;
-            hf("_json") = true;
+            ps["success"] = false;
+            ps["message"] = msg;
+            ps["_json"] = true;
 
             if (Ex is ApplicationException)
                 this.resp.StatusCode = 500;
             else if (Ex is UserException)
                 this.resp.StatusCode = 403;
 
-            parser(tpl_dir, hf);
+            parser(tpl_dir, ps);
         }
 
         // return model object by type
         // CACHED in fw.models, so it's singletones
-        public new T model<T>() where T : new()
+        public T model<T>() where T : new()
         {
             Type tt = typeof(T);
             if (!models.ContainsKey(tt.Name))
             {
-                T m = new T();
+                T m = new();
 
                 // initialize
                 typeof(T).GetMethod("init").Invoke(m, new object[] { this });
 
-                models(tt.Name) = m;
+                models[tt.Name] = m;
             }
-            return models(tt.Name);
+            return (T)models[tt.Name];
         }
 
         // return model object by model name
-        public new FwModel model(string model_name)
+        public FwModel model(string model_name)
         {
             if (!models.ContainsKey(model_name))
             {
-                FwModel m = Activator.CreateInstance(Type.GetType(model_name));
+                FwModel m = (FwModel)Activator.CreateInstance(Type.GetType(model_name));
                 // initialize
                 m.init(this);
-                models(model_name) = m;
+                models[model_name] = m;
             }
-            return models(model_name);
+            return (FwModel)models[model_name];
         }
 
         public void logEvent(string ev_icode, int item_id = 0, int item_id2 = 0, string iname = "", int records_affected = 0, Hashtable changed_fields = null/* TODO Change to default(_) if this is not a reference type */)
@@ -1333,9 +1336,8 @@ namespace osafw
 
         public void rw(string str)
         {
-            this.resp.Write(str);
-            this.resp.Write("<br>" + System.Environment.NewLine);
-            this.resp.FlushAsync();
+            this.responseWrite(str + "<br>" + System.Environment.NewLine);
+            this.resp.Body.FlushAsync();
         }
 
 
@@ -1358,7 +1360,7 @@ namespace osafw
                 {
                     db.Dispose(); // this will return db connections to pool
 
-                    var log_length = 0;
+                    long log_length = 0;
                     if (floggerFS != null)
                         log_length = floggerFS.Length;
 
@@ -1374,14 +1376,14 @@ namespace osafw
                         {
                             var to_path = config("log") + ".1";
                             File.Delete(to_path);
-                            File.Move(config("log"), to_path);
+                            File.Move((string)config("log"), to_path);
                         }
                     }
                 }
                 // TODO: set large fields to null.
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine("exception in Dispose:" + ex.Message());
+                    System.Diagnostics.Debug.WriteLine("exception in Dispose:" + ex.Message);
                 }
             }
             disposedValue = true;
@@ -1392,7 +1394,6 @@ namespace osafw
         {
             // Do not change this code.  Put cleanup code in Dispose(disposing As Boolean) above.
             Dispose(false);
-            base.Finalize();
         }
 
         // This code added by Visual Basic to correctly implement the disposable pattern.
@@ -1404,3 +1405,4 @@ namespace osafw
             GC.SuppressFinalize(this);
         }
     }
+}

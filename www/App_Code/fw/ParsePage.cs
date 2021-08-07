@@ -16,6 +16,11 @@ namespace osafw
         {
             return "";
         }
+
+        public string parse_json(object ps)
+        {
+            return "";
+        }
     }
 }
 

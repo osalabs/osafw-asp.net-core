@@ -51,6 +51,7 @@ namespace osafw
             app.UseStaticFiles();
             app.UseSession();
             // TODO MIGRATE app.UseCookiePolicy(); if not use standard auth identity
+            // TODO MIGRATE reponse cacheing https://docs.microsoft.com/en-us/aspnet/core/performance/caching/middleware?view=aspnetcore-5.0
 
             // Create branch to the MyHandlerMiddleware. 
             // All requests will follow this branch.
