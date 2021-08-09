@@ -11,6 +11,8 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Web;
+using System.Net;
+using System.Security.Cryptography;
 
 namespace osafw
 {
@@ -326,7 +328,7 @@ namespace osafw
             Hashtable result = new Hashtable();
             Hashtable conf = new Hashtable();
             conf["type"] = "OLE";
-            conf["connection_string"] = "Provider=" + OLEDB_PROVIDER + ";Data Source=" + filepath + ";Extended Properties=\"Excel 12.0 Xml;HDR=" + (is_header ? "Yes": "No") + ";ReadOnly=True;IMEX=1\"";
+            conf["connection_string"] = "Provider=" + OLEDB_PROVIDER + ";Data Source=" + filepath + ";Extended Properties=\"Excel 12.0 Xml;HDR=" + (is_header ? "Yes" : "No") + ";ReadOnly=True;IMEX=1\"";
             DB accdb = new DB(fw, conf);
             OleDbConnection conn = (OleDbConnection)accdb.connect();
             var schema = conn.GetOleDbSchemaTable(OleDbSchemaGuid.Tables, null);
@@ -780,14 +782,14 @@ namespace osafw
         // deserialize base64 string serialized with Utils.serialize
         // return object or Nothing (if error)
         public static object deserialize(ref String str)
-        { 
+        {
             object data;
             try
             {
                 MemoryStream xstream = new MemoryStream(Convert.FromBase64String(str));
                 var xformatter = new BinaryFormatter();
                 data = xformatter.Deserialize(xstream);
-            } 
+            }
             catch (Exception ex)
             {
                 data = null;
@@ -805,7 +807,7 @@ namespace osafw
         // if mode='all' - capitalize all words
         // EXAMPLE: mode="" : sample string => Sample string
         // mode="all" : sample STRING => Sample String
-        public static object capitalize(String str, String mode = "")
+        public static String capitalize(String str, String mode = "")
         {
             if (mode == "all")
             {
@@ -837,164 +839,198 @@ namespace osafw
             return System.Guid.NewGuid().ToString();
         }
 
-        //'return path to tmp filename WITHOUT extension
-        //public static Function getTmpFilename(Optional prefix As String = "osafw") As String
-        //    Return Path.GetTempPath & "\" & prefix & Utils.uuid()
-        //}
+        // return path to tmp filename WITHOUT extension
+        public static String getTmpFilename(String prefix = "osafw")
+        {
+            return Path.GetTempPath() + "\\" + prefix + Utils.uuid();
+        }
 
-        //'scan tmp directory, find all tmp files created by website and delete older than 1 hour
-        //public static void cleanupTmpFiles(Optional prefix As String = "osafw")
-        //    Dim files As String() = Directory.GetFiles(Path.GetTempPath(), prefix & "*")
-        //    For Each file As String In files
-        //        Dim fi As FileInfo = New FileInfo(file)
-        //        If DateDiff(DateInterval.Minute, fi.CreationTime, Now()) > 60 Then
-        //            fi.Delete()
-        //        End If
-        //    Next
-        //End void
+        // scan tmp directory, find all tmp files created by website and delete older than 1 hour
+        public static void cleanupTmpFiles(String prefix = "osafw")
+        {
+            String[] files = Directory.GetFiles(Path.GetTempPath(), prefix + "*");
+            foreach (String file in files)
+            {
+                FileInfo fi = new FileInfo(file);
+                TimeSpan ts = DateTime.Now - fi.CreationTime;
+                if (ts.TotalMinutes > 60)
+                {
+                    fi.Delete();
+                }
+            }
+        }
 
-        //'return md5 hash (hexadecimals) for a string
-        //public static Function md5(str As String) As String
-        //    'convert string to bytes
-        //    Dim ustr As New UTF8Encoding
-        //    Dim bstr() As Byte = ustr.GetBytes(str)
+        // return md5 hash (hexadecimals) for a string
+        public static String md5(String str)
+        {
+            // convert string to bytes
+            UTF8Encoding ustr = new UTF8Encoding();
+            Byte[] bstr = ustr.GetBytes(str);
 
-        //    Dim md5hasher As MD5 = MD5CryptoServiceProvider.Create()
-        //    Dim bhash() As Byte = md5hasher.ComputeHash(bstr)
+            MD5 md5hasher = MD5CryptoServiceProvider.Create();
+            Byte[] bhash = md5hasher.ComputeHash(bstr);
 
-        //    'convert hash value to hex string
-        //    Dim sb As New System.Text.StringBuilder
-        //    For Each one_byte As Byte In bhash
-        //        sb.Append(one_byte.ToString("x2").ToUpper)
-        //    Next
+            // convert hash value to hex string
+            StringBuilder sb = new StringBuilder();
+            foreach (Byte one_byte in bhash)
+            {
+                sb.Append(one_byte.ToString("x2").ToUpper());
+            }
 
-        //    Return sb.ToString().ToLower()
-        //}
+            return sb.ToString().ToLower();
+        }
 
-        //'1 => 01
-        //'10 => 10
-        //Shared Function toXX(str As String) As String
-        //    If Len(str) < 2 Then str = "0" & str
-        //    Return str
-        //}
+        // 1 => 01
+        // 10 => 10
+        public static String toXX(String str)
+        {
+            if (str.Length < 2) str = "0" + str;
+            return str;
+        }
 
-        //Shared Function num2ordinal(num As Integer) As String
-        //    If num <= 0 Then Return num.ToString()
+        public static String num2ordinal(int num)
+        {
+            if (num <= 0) return num.ToString();
 
-        //    Select Case num Mod 100
-        //        Case 11
-        //        Case 12
-        //        Case 13
-        //            Return num & "th"
-        //    End Select
+            switch (num % 100)
+            {
+                case 11:
+                case 12:
+                case 13:
+                    return num + "th";
+            }
 
-        //    Select Case num Mod 10
-        //        Case 1
-        //            Return num & "st"
-        //        Case 2
-        //            Return num & "nd"
-        //        Case 3
-        //            Return num & "rd"
-        //        Case Else
-        //            Return num & "th"
-        //    End Select
-        //}
+            switch (num % 10)
+            {
+                case 1:
+                    return num + "st";
+                case 2:
+                    return num + "nd";
+                case 3:
+                    return num + "rd";
+                default:
+                    return num + "th";
+            }
+        }
 
-        //' truncate  - This truncates a variable to a character length, the default is 80.
-        //' trchar    - As an optional second parameter, you can specify a string of text to display at the end if the variable was truncated.
-        //' The characters in the string are included with the original truncation length.
-        //' trword    - 0/1. By default, truncate will attempt to cut off at a word boundary =1.
-        //' trend     - 0/1. If you want to cut off at the exact character length, pass the optional third parameter of 1.
-        //'<~tag truncate="80" trchar="..." trword="1" trend="1">
-        //Shared Function str2truncate(str As String, hattrs As Hashtable) As Object
-        //    Dim trlen As Integer = 80
-        //    Dim trchar As String = "..."
-        //    Dim trword As Integer = 1
-        //    Dim trend As Integer = 1  'if trend=0 trword - ignored
+        // truncate  - This truncates a variable to a character length, the default is 80.
+        // trchar    - As an optional second parameter, you can specify a string of text to display at the end if the variable was truncated.
+        // The characters in the string are included with the original truncation length.
+        // trword    - 0/1. By default, truncate will attempt to cut off at a word boundary =1.
+        // trend     - 0/1. If you want to cut off at the exact character length, pass the optional third parameter of 1.
+        //<~tag truncate="80" trchar="..." trword="1" trend="1">
+        public static object str2truncate(String str, Hashtable hattrs)
+        {
+            int trlen = 80;
+            String trchar = "...";
+            int trword = 1;
+            int trend = 1;  // if trend=0 trword - ignored
 
-        //    If hattrs("truncate") > "" Then
-        //        Dim trlen1 As Integer = f2int(hattrs("truncate"))
-        //        If trlen1 > 0 Then trlen = trlen1
-        //    End If
-        //    If hattrs.ContainsKey("trchar") Then trchar = hattrs("trchar")
-        //    If hattrs.ContainsKey("trend") Then trend = hattrs("trend")
-        //    If hattrs.ContainsKey("trword") Then trword = hattrs("trword")
+            if (hattrs["truncate"].ToString().Length > 0) {
+                int trlen1 = f2int(hattrs["truncate"]);
+                if (trlen1 > 0) trlen = trlen1;
+            }
+            if (hattrs.ContainsKey("trchar")) trchar = (String)hattrs["trchar"];
+            if (hattrs.ContainsKey("trend")) trend = (int)hattrs["trend"];
+            if (hattrs.ContainsKey("trword")) trword = (int)hattrs["trword"];
 
-        //    Dim orig_len As Integer = Len(str)
-        //    If orig_len<trlen Then Return str 'no need truncate
+            int orig_len = str.Length;
+            if (orig_len < trlen) return str; // no need truncate
 
-        //    If trend = 1 Then
-        //        If trword = 1 Then
-        //            str = Regex.Replace(str, "^(.{" & trlen & ",}?)[\n \t\.\,\!\?]+(.*)$", "$1", RegexOptions.Singleline)
-        //            If Len(str) < orig_len Then str &= trchar
-        //        Else
-        //            str = Left(str, trlen) & trchar
-        //        End If
-        //    Else
-        //        str = Left(str, trlen / 2) & trchar & Mid(str, trlen / 2 + 1)
-        //    End If
-        //    Return str
-        //}
+            if (trend == 1)
+            {
+                if (trword == 1) {
+                    str = Regex.Replace(str, @"^(.{" + trlen + @",}?)[\n \t\.\,\!\?]+(.*)$", "$1", RegexOptions.Singleline);
+                    if (str.Length < orig_len) str += trchar;
+                } else {
+                    str = str.Substring(0, trlen) + trchar;
+                }
+            } else {
+                str = str.Substring(0, trlen / 2) + trchar + str.Substring(trlen / 2 + 1);
+            }
+            return str;
+        }
 
-        //'IN: orderby string for default asc sorting, ex: "id", "id desc", "prio desc, id"
-        //'OUT: orderby or inversed orderby (if sortdir="desc"), ex: "id desc", "id asc", "prio asc, id desc"
-        //Shared Function orderbyApplySortdir(orderby As String, sortdir As String) As String
-        //    Dim result As String = orderby
+        // IN: orderby string for default asc sorting, ex: "id", "id desc", "prio desc, id"
+        // OUT: orderby or inversed orderby (if sortdir="desc"), ex: "id desc", "id asc", "prio asc, id desc"
+        public static String orderbyApplySortdir(String orderby, String sortdir)
+        {
+            String result = orderby;
 
-        //    If sortdir = "desc" Then
-        //        'TODO - move this to fw utils
-        //        Dim order_fields As New ArrayList
-        //        For Each fld As String In orderby.Split(",")
-        //            'if fld contains asc or desc - change to opposite
-        //            If InStr(fld, " asc") Then
-        //                fld = Replace(fld, " asc", " desc")
-        //            ElseIf InStr(fld, "desc") Then
-        //                fld = Replace(fld, " desc", " asc")
-        //            Else
-        //                'if no asc/desc - just add desc at the end
-        //                fld &= " desc"
-        //            End If
-        //            order_fields.Add(fld)
-        //        Next
-        //        'result = String.Join(", ", order_fields.ToArray(GetType(String))) 'net 2
-        //        result = Join(New ArrayList(order_fields).ToArray(), ", ") 'net 4
-        //    End If
+            if (sortdir == "desc")
+            {
+                // TODO - move this to fw utils
+                ArrayList order_fields = new ArrayList();
+                foreach (String fld in orderby.Split(","))
+                {
+                    String _fld = fld;
+                    // if fld contains asc or desc - change to opposite
+                    if (_fld.IndexOf(" asc") >= 0)
+                    {
+                        _fld = _fld.Replace(" asc", " desc");
+                    } 
+                    else if (_fld.IndexOf("desc") >= 0) {
+                        _fld = _fld.Replace(" desc", " asc");
+                    }
+                    else {
+                        // if no asc/desc - just add desc at the end
+                        _fld += " desc";
+                    }
+                    order_fields.Add(_fld);
+                }
+                // result = String.Join(", ", order_fields.ToArray(GetType(String))) // net 2
+                result = String.Join(", ", order_fields.ToArray());  // net 4
+            }
 
-        //    Return result
-        //}
+            return result;
+        }
 
-        //Shared Function html2text(str As String) As String
-        //    str = Regex.Replace(str, "\n+", " ")
-        //    str = Regex.Replace(str, "<br\s*\/?>", vbLf)
-        //    str = Regex.Replace(str, "(?:<[^>]*>)+", " ")
-        //    Return str
-        //}
+        public static String html2text(String str)
+        {
+            str = Regex.Replace(str, @"\n+", " ");
+            str = Regex.Replace(str, @"<br\s*\/?>", "\n");
+            str = Regex.Replace(str, @"(?:<[^>]*>)+", " ");
+            return str;
+        }
 
-        //'sel_ids - comma-separated ids
-        //'value:
-        //'     nothing - use id value from input
-        //'     "123..."  - use index (by order)
-        //'     "other value" - use this value
-        //'return hash: id => id
-        //Shared Function commastr2hash(sel_ids As String, Optional value As String = Nothing) As Hashtable
-        //    Dim ids As New ArrayList(Split(sel_ids, ","))
-        //    Dim result As New Hashtable
-        //    For i = 0 To ids.Count - 1
-        //        Dim v As String = ids(i)
-        //        result(v) = IIf(IsNothing(value), v, IIf(value = "123...", i, value))
-        //    Next
-        //    Return result
-        //}
+        // sel_ids - comma-separated ids
+        // value:
+        //      nothing - use id value from input
+        //      "123..."  - use index (by order)
+        //      "other value" - use this value
+        // return hash: id => id
+        public static Hashtable commastr2hash(String sel_ids, String value = null)
+        {
+            Hashtable result = new Hashtable();
+            ArrayList ids = new ArrayList(sel_ids.Split(","));
+            for (int i = 0; i < ids.Count; i++)
+            {
+                String v = (String)ids[i];
+                if (value == null)
+                {
+                    result[v] = v;
+                }
+                else if (value == "123...")
+                {
+                    result[v] = i;
+                }
+                else {
+                    result[v] = value;
+                }
+            }
+            return result;
+        }
 
-        //'comma-delimited str to newline-delimited str
-        //public static Function commastr2nlstr(str As String) As String
-        //    Return Replace(str, ",", vbCrLf)
-        //}
+        // comma-delimited str to newline-delimited str
+        public static String commastr2nlstr(String str)
+        {
+            return str.Replace(",", "\r\n");
+        }
 
-        //'newline-delimited str to comma-delimited str
-        //public static Function nlstr2commastr(str As String) As String
-        //    Return Regex.Replace(str & "", "[\n\r]+", ",")
-        //}
+        // newline-delimited str to comma-delimited str
+        static string nlstr2commastr(String str) {
+            return Regex.Replace(str, @"[\n\r]+", ",");
+        }
 
         /* <summary>
         * for each row in rows add keys/values to this row (by ref)
@@ -1013,86 +1049,93 @@ namespace osafw
             }
         }
 
-        //''' <summary>
-        //''' escapes/encodes string so it can be passed as part of the url
-        //''' </summary>
-        //''' <param name="str"></param>
-        //''' <returns></returns>
-        //public static Function urlescape(str As String) As String
-        //    Return HttpUtility.UrlEncode(str)
-        //}
+        /* <summary>
+        *  escapes/encodes string so it can be passed as part of the url
+        *  </summary>
+        *  <param name="str"></param>
+        *  <returns></returns>
+        */
+        public static String urlescape(String str) {
+            return HttpUtility.UrlEncode(str);
+        }
 
-        //'sent multipart/form-data POST request to remote URL with files (key=fieldname, value=filepath) and formFields
-        //Shared Function UploadFilesToRemoteUrl(ByVal url As String, ByVal files As Hashtable, ByVal Optional formFields As NameValueCollection = Nothing, Optional cert As X509Certificates.X509Certificate2 = Nothing) As String
-        //    Dim boundary As String = "----------------------------" & DateTime.Now.Ticks.ToString("x")
-        //    Dim request As HttpWebRequest = CType(WebRequest.Create(url), HttpWebRequest)
-        //    request.ContentType = "multipart/form-data; boundary=" & boundary
-        //    request.Method = "POST"
-        //    request.KeepAlive = True
-        //    If cert IsNot Nothing Then request.ClientCertificates.Add(cert)
+        // sent multipart/form-data POST request to remote URL with files (key=fieldname, value=filepath) and formFields
+        public static String UploadFilesToRemoteUrl(
+            String url, 
+            Hashtable files, 
+            System.Collections.Specialized.NameValueCollection formFields = null, 
+            System.Security.Cryptography.X509Certificates.X509Certificate2 cert = null)
+        {
+            String boundary = "----------------------------" + DateTime.Now.Ticks.ToString("x");
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+            request.ContentType = "multipart/form-data; boundary=" + boundary;
+            request.Method = "POST";
+            request.KeepAlive = true;
+            if (cert != null) request.ClientCertificates.Add(cert);
 
-        //    Dim memStream As New System.IO.MemoryStream()
-        //    Dim boundarybytes = System.Text.Encoding.ASCII.GetBytes(vbCrLf & "--" & boundary & vbCrLf)
-        //    Dim endBoundaryBytes = System.Text.Encoding.ASCII.GetBytes(vbCrLf & "--" & boundary & "--")
+            var memStream = new MemoryStream();
+            var boundarybytes = Encoding.ASCII.GetBytes("\r\n--" + boundary + "\r\n");
+            var endBoundaryBytes = Encoding.ASCII.GetBytes("\r\n--" + boundary + "--");
 
-        //    'Dim formdataTemplate As String = vbCrLf & "--" & boundary & vbCrLf & "Content-Disposition: form-data; name=""{0}"";" & vbCrLf & vbCrLf & "{1}"
-        //    Dim formdataTemplate As String = "--" & boundary & vbCrLf & "Content-Disposition: form-data; name=""{0}"";" & vbCrLf & vbCrLf & "{1}" & vbCrLf
-        //    If formFields IsNot Nothing Then
-        //        For Each key As String In formFields.Keys
-        //            Dim formitem As String = String.Format(formdataTemplate, key, formFields(key))
+            // String formdataTemplate = "\r\n--" & boundary + "\r\nContent-Disposition: form-data; name=\"{0}\";\r\n\r\n{1}";
+            String formdataTemplate = "--" + boundary + "\r\n" + "Content-Disposition: form-data; name=\"{0}\";\r\n{1}\r\n";
+            if (formFields != null) {
+                foreach (String key in formFields.Keys) {
+                    String formitem = String.Format(formdataTemplate, key, formFields[key]);
+                    if (memStream.Length > 0) {
+                        formitem = "\r\n" + formitem; // add crlf before the string only for second and further lines
+                    }
 
-        //            If memStream.Length > 0 Then formitem = vbCrLf & formitem 'add crlf before the string only for second and further lines
+                    Byte[] formitembytes = Encoding.UTF8.GetBytes(formitem);
+                    memStream.Write(formitembytes, 0, formitembytes.Length);
+                }
+            }
 
-        //            Dim formitembytes As Byte() = System.Text.Encoding.UTF8.GetBytes(formitem)
-        //            memStream.Write(formitembytes, 0, formitembytes.Length)
-        //        Next
-        //    End If
+            String headerTemplate = "Content-Disposition: form-data; name=\"{0}\"; filename=\"{1}\"\r\nContent-Type: {2}\r\n\r\n";
+            foreach (String fileField in files.Keys) {
+                memStream.Write(boundarybytes, 0, boundarybytes.Length);
 
-        //    Dim headerTemplate As String = "Content-Disposition: form-data; name=""{0}""; filename=""{1}""" & vbCrLf & "Content-Type: {2}" & vbCrLf & vbCrLf
-        //    For Each fileField As String In files.Keys
-        //        memStream.Write(boundarybytes, 0, boundarybytes.Length)
+                // mime (TODO use System.Web.MimeMapping.GetMimeMapping() for .net 4.5+)
+                String mimeType = "application/octet-stream";
+                if (Path.GetExtension((String)files[fileField]) == ".xml") mimeType = "text/xml";
 
-        //        'mime (TODO use System.Web.MimeMapping.GetMimeMapping() for .net 4.5+)
-        //        Dim mimeType = "application/octet-stream"
-        //        If System.IO.Path.GetExtension(files(fileField)) = ".xml" Then mimeType = "text/xml"
+                String header = String.Format(headerTemplate, fileField, System.IO.Path.GetFileName((String)files[fileField]), mimeType);
+                var headerbytes = Encoding.UTF8.GetBytes(header);
+                memStream.Write(headerbytes, 0, headerbytes.Length);
 
-        //        Dim header = String.Format(headerTemplate, fileField, System.IO.Path.GetFileName(files(fileField)), mimeType)
-        //        Dim headerbytes = System.Text.Encoding.UTF8.GetBytes(header)
-        //        memStream.Write(headerbytes, 0, headerbytes.Length)
+                using (var fileStream = new FileStream((String)files[fileField], FileMode.Open, FileAccess.Read)) {
+                    Byte[] buffer = new Byte[1023];
+                    int bytesRead = fileStream.Read(buffer, 0, buffer.Length);
+                    while (bytesRead != 0)
+                    {
+                        memStream.Write(buffer, 0, bytesRead);
+                        bytesRead = fileStream.Read(buffer, 0, buffer.Length);
+                    }
+                }
+            }
 
-        //        Using fileStream = New FileStream(files(fileField), FileMode.Open, FileAccess.Read)
-        //            Dim buffer = New Byte(1023) { }
-        //    Dim bytesRead = fileStream.Read(buffer, 0, buffer.Length)
-        //            While bytesRead<> 0
-        //                memStream.Write(buffer, 0, bytesRead)
-        //                bytesRead = fileStream.Read(buffer, 0, buffer.Length)
-        //            End While
-        //        End Using
-        //    Next
+            memStream.Write(endBoundaryBytes, 0, endBoundaryBytes.Length);
+            // Diagnostics.Debug.WriteLine("***")
+            // Diagnostics.Debug.WriteLine(Encoding.ASCII.GetString(memStream.ToArray()))
+            // Diagnostics.Debug.WriteLine("***")
 
-        //    memStream.Write(endBoundaryBytes, 0, endBoundaryBytes.Length)
-        //    'Diagnostics.Debug.WriteLine("***")
-        //    'Diagnostics.Debug.WriteLine(Encoding.ASCII.GetString(memStream.ToArray()))
-        //    'Diagnostics.Debug.WriteLine("***")
+            request.ContentLength = memStream.Length;
+            using (var requestStream = request.GetRequestStream())
+            {
+                memStream.Position = 0;
+                Byte[] tempBuffer = new Byte[memStream.Length - 1];
+                memStream.Read(tempBuffer, 0, tempBuffer.Length);
+                memStream.Close();
+                requestStream.Write(tempBuffer, 0, tempBuffer.Length);
+            }
 
-        //    request.ContentLength = memStream.Length
-        //    Using requestStream = request.GetRequestStream()
-        //        memStream.Position = 0
-
-        //        Dim tempBuffer As Byte() = New Byte(memStream.Length - 1)
-        //    { }
-        //    memStream.Read(tempBuffer, 0, tempBuffer.Length)
-        //        memStream.Close()
-        //        requestStream.Write(tempBuffer, 0, tempBuffer.Length)
-        //    End Using
-
-        //    Using response = request.GetResponse()
-        //        Dim stream2 = response.GetResponseStream()
-        //        Dim reader2 As New StreamReader(stream2)
-        //        Return reader2.ReadToEnd()
-        //    End Using
-
-        //}
+            using (var response = request.GetResponse())
+            {
+                var stream2 = response.GetResponseStream();
+                var reader2 = new StreamReader(stream2);
+                return reader2.ReadToEnd();
+            }
+        }
 
 
         // convert/normalize external table/field name to fw standard name
@@ -1112,43 +1155,45 @@ namespace osafw
         }
 
 
-        
+        // convert some system name to human-friendly name'
+        // "system_name_id" => "System Name ID"
+        public static String name2human(String str)
+        {
+            String str_lc = str.ToLower();
+            if (str_lc == "icode") return "Code";
+            if (str_lc == "iname") return "Name";
+            if (str_lc == "idesc") return "Description";
+            if (str_lc == "id") return "ID";
+            if (str_lc == "fname") return "First Name";
+            if (str_lc == "lname") return "Last Name";
+            if (str_lc == "midname") return "Middle Name";
 
-        
-       
-        //TODO MIGRATE
-        ///// <summary>
-        ///// standard function for exporting to csv
-        ///// </summary>
-        ///// <param name="csv_export_headers">CSV headers row, comma-separated format</param>
-        ///// <param name="csv_export_fields">empty, * or Utils.qw format</param>
-        ///// <param name="rows">DB array</param>
-        ///// <returns></returns>
-        //public static StringBuilder getCSVExport(String csv_export_headers, String csv_export_fields, ArrayList rows)
-        //{
-        //    String headers_str = csv_export_headers;
-        //    StringBuilder csv = new StringBuilder();
-        //    /*string[] fields = null;
-        //    if (String.IsNullOrEmpty(csv_export_fields) || String.IsNullOrEmpty(csv_export_fields))
-        //    {
-        //        //just read field names from first row
-        //        if (rows.Count > 0)
-        //        {
-        //            fields = new ArrayList((rows[0] as Hashtable).Keys).ToArray();
-        //            headers_str = String.Join(",", fields);
-        //        }
-        //    }
-        //    else
-        //    {
-        //        fields = Utils.qw(csv_export_fields);
-        //    }
+            String result = str;
+            result = Regex.Replace(result, @"^tbl|dbo", "", RegexOptions.IgnoreCase); // remove tbl prefix if any
+            result = Regex.Replace(result, @"_+", " "); // underscores to spaces
+            result = Regex.Replace(result, @"([a-z ])([A-Z]+)", "$1 $2"); // split CamelCase words
+            result = Regex.Replace(result, @" +", " "); // deduplicate spaces
+            result = Utils.capitalize(result, "all"); // Title Case
 
-        //    csv.Append(headers_str & vbLf);
-        //    foreach (Hashtable row in rows)
-        //    {
-        //        csv.Append(Utils.toCSVRow(row, fields) & vbLf);
-        //    }*/
-        //    return csv;
-        //}
+            if (Regex.IsMatch(result, "\bid\b", RegexOptions.IgnoreCase))
+            {
+                // if contains id/ID - remove it and make singular
+                result = Regex.Replace(result, @"\bid\b", "", RegexOptions.IgnoreCase);
+                result = Regex.Replace(result, @"(?:es|s)\s*$", "", RegexOptions.IgnoreCase); // remove -es or -s at the end
+            }
+
+            result = result.Trim();
+            return result;
+        }
+
+        // convert c/snake style name to CamelCase
+        // system_name => SystemName
+        public static String nameCamelCase(String str) {
+            String result = str;
+            result = Regex.Replace(result, @"\W+", " "); // non-alphanum chars to spaces
+            result = Utils.capitalize(result);
+            result = Regex.Replace(result, " +", ""); // remove spaces
+        return str;
+    }
     }
 }

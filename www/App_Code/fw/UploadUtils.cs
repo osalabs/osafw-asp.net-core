@@ -222,7 +222,7 @@ namespace osafw
         // id splitted to 1000
         public static String getUploadDir(FW fw, String module_name, long id)
         {
-            String dir = (String)FW.config()["site_root"] + (String)FW.config()["UPLOAD_DIR"] + "\\" + module_name + "\\" + (id % 1000);
+            String dir = (String)fw.config()["site_root"] + (String)fw.config()["UPLOAD_DIR"] + "\\" + module_name + "\\" + (id % 1000);
 
             if (!Directory.Exists(dir))
             {
@@ -235,7 +235,7 @@ namespace osafw
         // similar to get_upload_dir, but return - DOESN// T check for file existance
         public static String getUploadUrl(FW fw, String module_name, long id, String ext, String size = "")
         {
-            String url = (String)FW.config()["ROOT_URL"] + "/upload/" + module_name + "/" + (id % 1000) + "/" + id;
+            String url = (String)fw.config()["ROOT_URL"] + "/upload/" + module_name + "/" + (id % 1000) + "/" + id;
             if (!String.IsNullOrEmpty(size)) url += "_" + size;
             url += ext;
 
