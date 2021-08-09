@@ -173,9 +173,9 @@ namespace osafw
         public virtual int add(Hashtable item)
         {
             // item("add_time") = Now() // not necessary because add_time field in db should have default value now() or getdate()
-            if (field_add_users_id != "" && !item.ContainsKey(field_add_users_id) && fw.getSessionInt("is_logged") == 1)
+            if (field_add_users_id != "" && !item.ContainsKey(field_add_users_id) && fw.SessionInt("is_logged") == 1)
             {
-                item[field_add_users_id] = fw.getSessionInt("user_id");
+                item[field_add_users_id] = fw.SessionInt("user_id");
             }
             int id = db.insert(table_name, item);
             fw.logEvent(table_name + "_add", id);
@@ -186,9 +186,9 @@ namespace osafw
         public virtual bool update(int id, Hashtable item)
         {
             if (field_upd_time != String.Empty) item[field_upd_time] = DateTime.Now;
-            if (field_upd_users_id != String.Empty && !item.ContainsKey(field_upd_users_id) && fw.getSessionInt("is_logged") == 1)
+            if (field_upd_users_id != String.Empty && !item.ContainsKey(field_upd_users_id) && fw.SessionInt("is_logged") == 1)
             {
-                item[field_upd_users_id] = fw.getSessionInt("user_id");
+                item[field_upd_users_id] = fw.SessionInt("user_id");
             }
 
             Hashtable where = new Hashtable();
@@ -218,9 +218,9 @@ namespace osafw
                 Hashtable vars = new Hashtable();
                 vars[field_status] = STATUS_DELETED;
                 if (field_upd_time != String.Empty) vars[field_upd_time] = DateTime.Now;
-                if (field_add_users_id != String.Empty && fw.getSessionInt("is_logged") == 1)
+                if (field_add_users_id != String.Empty && fw.SessionInt("is_logged") == 1)
                 {
-                    vars[field_add_users_id] = fw.getSessionInt("user_id");
+                    vars[field_add_users_id] = fw.SessionInt("user_id");
                 }
 
                 db.update(table_name, vars, where);

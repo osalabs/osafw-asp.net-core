@@ -110,7 +110,7 @@ namespace osafw
             if (_conf != null) {
                 this.conf = _conf;
             } else {
-                Hashtable db = (Hashtable)FW.config("db");
+                Hashtable db = (Hashtable)fw.config("db");
                 this.conf = (Hashtable)db["main"];
             }
             this.dbtype = (String)conf["type"];

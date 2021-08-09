@@ -1,4 +1,6 @@
-﻿using System;
+﻿// TODO rework logger into this separate class properly
+
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -7,8 +9,15 @@ namespace osafw
 {
     public class FwLogger
     {
+        public LogLevel log_level;
+        public string log_file;
+        public string site_root;
+
         private System.IO.FileStream floggerFS;
         private System.IO.StreamWriter floggerSW;
+
+        //TODO constructor setting log_level, site_root, log_file
+        // this.log_level = (LogLevel)Enum.Parse(typeof(LogLevel), log_level)
         /*
          *<summary>
          * Logger levels, ex: logger(LogLevel.ERROR, "Something happened")
@@ -27,7 +36,7 @@ namespace osafw
         // internal logger routine, just to avoid pass args by value 2 times
         public void logger(LogLevel level, ref Object[] args) {
             // skip logging if requested level more than config's debug level
-            if (level > (LogLevel)Enum.Parse(typeof(LogLevel), (String)FW.config("log_level"))) return;
+            if (level > log_level) return;
 
             StringBuilder str = new StringBuilder(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"));
             str.Append(" ").Append(level.ToString()).Append(" ");
@@ -49,11 +58,11 @@ namespace osafw
                 }
                 fname = sf.GetFileName();
                 if (fname != null) { // nothing in Release configuration
-                    fname = fname.Replace((String)FW.config("site_root"), "");
+                    fname = fname.Replace(this.site_root, "");
                     fname = fname.Replace("\\App_Code", "");
                     str.Append(fname);
                 }
-                str.Append(":").Append(method_name).Append(" ").Append(sf.GetFileLineNumber().ToString()).Append(" # ");
+                str.Append(':').Append(method_name).Append(' ').Append(sf.GetFileLineNumber().ToString()).Append(" # ");
             }
             catch (Exception ex)
             {
@@ -69,23 +78,28 @@ namespace osafw
             System.Diagnostics.Debug.WriteLine(str);
 
             // write to log file
-            String log_file = (String)FW.config("log");
-            try {
-                // keep log file open to avoid overhead
-                if (floggerFS == null) {
-                    // open log with shared read/write so loggers from other processes can still write to it
-                    floggerFS = new FileStream(log_file, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
-                    floggerSW = new System.IO.StreamWriter(floggerFS);
-                    floggerSW.AutoFlush = true;
-                }
-                // force seek to end just in case other process added to file
-                floggerFS.Seek(0, SeekOrigin.End);
-                floggerSW.WriteLine(str.ToString());
-            } 
-            catch (Exception ex) 
+            if (!string.IsNullOrEmpty(this.log_file))
             {
-                System.Diagnostics.Debug.WriteLine("WARN logger can't write to log file. Reason:" + ex.Message);
+                try
+                {
+                    // keep log file open to avoid overhead
+                    if (floggerFS == null)
+                    {
+                        // open log with shared read/write so loggers from other processes can still write to it
+                        floggerFS = new FileStream(log_file, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
+                        floggerSW = new System.IO.StreamWriter(floggerFS);
+                        floggerSW.AutoFlush = true;
+                    }
+                    // force seek to end just in case other process added to file
+                    floggerFS.Seek(0, SeekOrigin.End);
+                    floggerSW.WriteLine(str.ToString());
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine("WARN logger can't write to log file. Reason:" + ex.Message);
+                }
             }
+
         }
     }
 }

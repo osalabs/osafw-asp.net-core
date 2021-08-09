@@ -675,10 +675,13 @@ namespace osafw
                     input[s] = req.Query[s];
             }
 
-            foreach (string s in req.Form.Keys)
+            if (req.HasFormContentType)
             {
-                if (s != null)
-                    input[s] = req.Form[s];
+                foreach (string s in req.Form.Keys)
+                {
+                    if (s != null)
+                        input[s] = req.Form[s];
+                }
             }
 
             // after perpare_FORM - grouping for names like XXX[YYYY] -> FORM{XXX}=@{YYYY1, YYYY2, ...}
@@ -707,7 +710,7 @@ namespace osafw
                 f[s] = SQ[s];
 
             // also parse json in request body if any
-            if (req.Body.Length > 0 && req.ContentType.Substring(0, "application/json".Length) == "application/json")
+            if (req.ContentType!=null && req.ContentType.Substring(0, "application/json".Length) == "application/json")
             {
                 try
                 {

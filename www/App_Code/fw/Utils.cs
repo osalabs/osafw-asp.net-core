@@ -6,9 +6,9 @@ using System.Data.OleDb;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Web;
 using System.Net;
@@ -181,7 +181,7 @@ namespace osafw
         }
 
         // TODO parse without Try/Catch
-        public static Object f2date(String AField)
+        public static Object f2date(Object AField)
         {
             Object result = null;
             try
@@ -771,12 +771,15 @@ namespace osafw
         // return as base64 string
         public static String serialize(object data)
         {
-            var xstream = new System.IO.MemoryStream(); ;
-            var xformatter = new BinaryFormatter();
+            return JsonSerializer.Serialize(data);
 
-            xformatter.Serialize(xstream, data);
+            //bindry fomatter is not secure
+            //var xstream = new System.IO.MemoryStream(); ;
+            //var xformatter = new BinaryFormatter();
 
-            return Convert.ToBase64String(xstream.ToArray());
+            //xformatter.Serialize(xstream, data);
+
+            //return Convert.ToBase64String(xstream.ToArray());
         }
 
         // deserialize base64 string serialized with Utils.serialize

@@ -24,7 +24,7 @@ namespace osafw
 
         public int meId()
         {
-            return fw.getSessionInt("user_id");
+            return fw.SessionInt("user_id");
         }
 
         // return standard list of id,iname where status=0 order by iname
