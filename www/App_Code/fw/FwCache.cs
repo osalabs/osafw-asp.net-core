@@ -58,6 +58,21 @@ namespace osafw
         {
             request_cache.Remove(key);
         }
+
+        /// <summary>
+        /// remove all keys with prefix from the request cache
+        /// </summary>
+        /// <param name="prefix">prefix key</param>
+        public void requestRemoveWithPrefix(string prefix)
+        {
+            var plen = prefix.Length;
+            foreach (string key in new ArrayList(request_cache.Keys))
+            {
+                if (key.Substring(0, plen) == prefix)
+                    request_cache.Remove(key);
+            }
+        }
+
         // clear whole request cache
         public void requestClear()
         {
