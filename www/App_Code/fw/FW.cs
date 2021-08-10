@@ -59,6 +59,7 @@ namespace osafw
 
     public class FW : IDisposable
     {
+        public const string FW_NAMESPACE_PREFIX = "osafw.";
         public static Hashtable METHOD_ALLOWED = Utils.qh("GET POST PUT DELETE");
 
 
@@ -273,34 +274,37 @@ namespace osafw
             // process config special routes (redirects, rewrites)
             Hashtable routes = (Hashtable)this.config("routes");
             bool is_routes_found = false;
-            foreach (string route_key in routes.Keys)
+            if (routes != null)
             {
-                if (url == route_key)
+                foreach (string route_key in routes.Keys)
                 {
-                    string rdest = (string)routes[route_key];
-                    Match m1 = Regex.Match(rdest, "^(?:(GET|POST|PUT|DELETE) )?(.+)");
-                    if (m1.Success)
+                    if (url == route_key)
                     {
-                        // override method
-                        if (!string.IsNullOrEmpty(m1.Groups[1].Value)) route.method = m1.Groups[1].Value;
-                        if (m1.Groups[2].Value.Substring(0, 1) == "/")
+                        string rdest = (string)routes[route_key];
+                        Match m1 = Regex.Match(rdest, "^(?:(GET|POST|PUT|DELETE) )?(.+)");
+                        if (m1.Success)
                         {
-                            // if started from / - this is redirect url
-                            url = m1.Groups[2].Value;
+                            // override method
+                            if (!string.IsNullOrEmpty(m1.Groups[1].Value)) route.method = m1.Groups[1].Value;
+                            if (m1.Groups[2].Value.Substring(0, 1) == "/")
+                            {
+                                // if started from / - this is redirect url
+                                url = m1.Groups[2].Value;
+                            }
+                            else
+                            {
+                                // it's a direct class-method to call, no further REST processing required
+                                is_routes_found = true;
+                                string[] sroute = m1.Groups[2].Value.Split("::", 2);
+                                route.controller = Utils.routeFixChars(sroute[0]);
+                                if (sroute.GetUpperBound(1) > 0)
+                                    route.action_raw = sroute[1];
+                                break;
+                            }
                         }
                         else
-                        {
-                            // it's a direct class-method to call, no further REST processing required
-                            is_routes_found = true;
-                            string[] sroute = m1.Groups[2].Value.Split("::", 2);
-                            route.controller = Utils.routeFixChars(sroute[0]);
-                            if (sroute.GetUpperBound(1) > 0)
-                                route.action_raw = sroute[1];
-                            break;
-                        }
+                            logger(LogLevel.WARN, "Wrong route destination: " + rdest);
                     }
-                    else
-                        logger(LogLevel.WARN, "Wrong route destination: " + rdest);
                 }
             }
 
@@ -401,7 +405,7 @@ namespace osafw
                     // otherwise detect controller/action/id.format/more_action
                     string[] parts = url.Split("/");
                     // logger(parts)
-                    int ub = parts.Length;
+                    int ub = parts.Length - 1;
                     if (ub >= 1)
                         route.controller = Utils.routeFixChars(parts[1]);
                     if (ub >= 2)
@@ -433,7 +437,7 @@ namespace osafw
             {
                 var auth_check_controller = _auth(route.controller, route.action);
 
-                Type calledType = Type.GetType(route.controller + "Controller", false, true); // case ignored
+                Type calledType = Type.GetType(FW_NAMESPACE_PREFIX + route.controller + "Controller", false, true); // case ignored
                 if (calledType == null)
                 {
                     logger(LogLevel.DEBUG, "No controller found for controller=[", route.controller, "], using default Home");
@@ -585,12 +589,12 @@ namespace osafw
                 logger(LogLevel.ERROR, "REQUEST FORM:", FORM);
                 logger(LogLevel.ERROR, "SESSION:", context.Session);
 
-                send_email_admin("Exception: " + Ex.ToString() + System.Environment.NewLine + System.Environment.NewLine
-                    + "Request: " + req.Path + System.Environment.NewLine + System.Environment.NewLine
-                    + "Form: " + dumper(FORM) + System.Environment.NewLine + System.Environment.NewLine
-                    + "Session:" + dumper(context.Session));
+                //send_email_admin("Exception: " + Ex.ToString() + System.Environment.NewLine + System.Environment.NewLine
+                //    + "Request: " + req.Path + System.Environment.NewLine + System.Environment.NewLine
+                //    + "Form: " + dumper(FORM) + System.Environment.NewLine + System.Environment.NewLine
+                //    + "Session:" + dumper(context.Session));
 
-                if ((int)this.config("log_level") >= (int)LogLevel.DEBUG)
+                if (Utils.f2int(this.config("log_level")) >= (int)LogLevel.DEBUG)
                     throw;
                 else
                     err_msg("Server Error. Please, contact site administrator!", Ex);
@@ -643,12 +647,12 @@ namespace osafw
 
             int rule_level;
             Hashtable rules = (Hashtable)config("access_levels");
-            if (rules.ContainsKey(path))
+            if (rules != null && rules.ContainsKey(path))
             {
                 if (current_level >= (int)rules[path])
                     result = 2;
             }
-            else if (rules.ContainsKey(path2))
+            else if (rules != null && rules.ContainsKey(path2))
             {
                 if (current_level >= (int)rules[path2])
                     result = 2;
@@ -710,7 +714,7 @@ namespace osafw
                 f[s] = SQ[s];
 
             // also parse json in request body if any
-            if (req.ContentType!=null && req.ContentType.Substring(0, "application/json".Length) == "application/json")
+            if (req.ContentType != null && req.ContentType.Substring(0, "application/json".Length) == "application/json")
             {
                 try
                 {
@@ -748,7 +752,7 @@ namespace osafw
         public void _logger(LogLevel level, ref object[] args)
         {
             // skip logging if requested level more than config's debug level
-            if (level > (LogLevel)this.config("log_level"))
+            if (level > (LogLevel)Enum.Parse(typeof(LogLevel), (string)this.config("log_level")))
                 return;
 
             StringBuilder str = new StringBuilder(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"));
@@ -841,8 +845,15 @@ namespace osafw
                             str.Append(intend + " " + k + " => " + dumper(((IDictionary)dmp_obj)[k], level) + System.Environment.NewLine);
                         str.Append(intend + "}" + System.Environment.NewLine);
                     }
+                    else if (dmp_obj is ISession)
+                    {
+                        str.Append(intend + "{" + System.Environment.NewLine);
+                        foreach (string k in ((ISession)dmp_obj).Keys)
+                            str.Append(intend + " " + k + " => " + dumper(((ISession)dmp_obj).GetString(k), level) + System.Environment.NewLine);
+                        str.Append(intend + "}" + System.Environment.NewLine);
+                    }
                     else
-                        str.Append(intend + type.ToString() + "==" + typeCode.ToString() + System.Environment.NewLine);
+                        str.Append(intend + Utils.jsonEncode(dmp_obj, true) + System.Environment.NewLine);
                 }
                 else
                     str.Append(dmp_obj.ToString());
@@ -1133,7 +1144,8 @@ namespace osafw
                     mail_from = (string)this.config("mail_from"); // default mail from
                 mail_subject = Regex.Replace(mail_subject, @"[\r\n]+", " ");
 
-                if ((bool)this.config("is_test"))
+                bool is_test = Utils.f2bool(this.config("is_test"));
+                if (is_test)
                 {
                     string test_email = (string)this.config("test_email");
                     mail_body = "TEST SEND. PASSED MAIL_TO=[" + mail_to + "]" + System.Environment.NewLine + mail_body;
@@ -1174,7 +1186,7 @@ namespace osafw
                     // add CC if any
                     if (aCC != null)
                     {
-                        if ((bool)this.config("is_test"))
+                        if (is_test)
                         {
                             foreach (string cc in aCC)
                             {
@@ -1322,7 +1334,7 @@ namespace osafw
         {
             if (!models.ContainsKey(model_name))
             {
-                FwModel m = (FwModel)Activator.CreateInstance(Type.GetType(model_name));
+                FwModel m = (FwModel)Activator.CreateInstance(Type.GetType(FW_NAMESPACE_PREFIX + model_name));
                 // initialize
                 m.init(this);
                 models[model_name] = m;

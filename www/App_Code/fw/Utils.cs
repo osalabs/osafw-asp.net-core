@@ -704,9 +704,11 @@ namespace osafw
         * <param name="data">any data like single value, arraylist, hashtable, etc..</param>
         * <returns></returns>
         */
-        public static String jsonEncode(Object data)
+        public static string jsonEncode(object data, bool is_pretty = false)
         {
-            return JsonConvert.SerializeObject(data, Formatting.Indented);
+            JsonSerializerOptions options = new();
+            if (is_pretty) options.WriteIndented = true;
+            return JsonSerializer.Serialize(data, data.GetType(), options); //TODO MIGRATE test if GetType() is enough or we need explicitly have Hashtable/ArrayList as overloads
         }
 
         /* <summary>
@@ -721,12 +723,24 @@ namespace osafw
             object result;
             try
             {
-                result = JsonConvert.DeserializeObject(str);
+                //detect if json contains array or hashtable or something else
+                if (Regex.IsMatch(str, @"^\s*{"))
+                {
+                    result = JsonSerializer.Deserialize(str, typeof(Hashtable));
+                }
+                else if (Regex.IsMatch(str, @"^\s*\["))
+                {
+                    result = JsonSerializer.Deserialize(str, typeof(ArrayList));
+                }
+                else
+                {
+                    result = JsonSerializer.Deserialize(str, typeof(Object));
+                }
                 result = cast2std(result);
             }
             catch (Exception ex)
             {
-                // if error during conversion - return Nothing
+                // if error during conversion - return null
                 FW.Current.logger(ex.Message);
                 result = null;
             }
@@ -771,9 +785,9 @@ namespace osafw
         // return as base64 string
         public static String serialize(object data)
         {
-            return JsonSerializer.Serialize(data);
+            return jsonEncode(data);
 
-            //bindry fomatter is not secure
+            //binary fomatter is not secure TODO MIGRATE cleanup
             //var xstream = new System.IO.MemoryStream(); ;
             //var xformatter = new BinaryFormatter();
 
@@ -786,18 +800,20 @@ namespace osafw
         // return object or Nothing (if error)
         public static object deserialize(ref String str)
         {
-            object data;
-            try
-            {
-                MemoryStream xstream = new MemoryStream(Convert.FromBase64String(str));
-                var xformatter = new BinaryFormatter();
-                data = xformatter.Deserialize(xstream);
-            }
-            catch (Exception ex)
-            {
-                data = null;
-            }
-            return data;
+            return jsonDecode(str);
+            //binary fomatter is not secure TODO MIGRATE cleanup
+            //object data;
+            //try
+            //{
+            //    MemoryStream xstream = new MemoryStream(Convert.FromBase64String(str));
+            //    var xformatter = new BinaryFormatter();
+            //    data = xformatter.Deserialize(xstream);
+            //}
+            //catch (Exception ex)
+            //{
+            //    data = null;
+            //}
+            //return data;
         }
 
         // return Hashtable keys as an array
