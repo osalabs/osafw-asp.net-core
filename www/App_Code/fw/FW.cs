@@ -218,7 +218,7 @@ namespace osafw
         /// returns format expected by client browser
         /// </summary>
         /// <returns>"pjax", "json" or empty (usual html page)</returns>
-        public string get_response_expected_format()
+        public string getResponseExpectedFormat()
         {
             string result = "";
             if (this.route.format == "json" || ((string)this.req.Headers["Accept"]).Contains("application/json"))
@@ -234,7 +234,7 @@ namespace osafw
         /// <returns></returns>
         public bool isJsonExpected()
         {
-            return get_response_expected_format() == "json";
+            return getResponseExpectedFormat() == "json";
         }
 
         public void getRoute()
@@ -872,7 +872,7 @@ namespace osafw
         /// </summary>
         /// <param name="filename"></param>
         /// <returns></returns>
-        public static string getFileContent(ref string filename)
+        public static string getFileContent(string filename)
         {
             string result = "";
             filename = Regex.Replace(filename, "/", @"\");
@@ -897,7 +897,7 @@ namespace osafw
         /// </summary>
         /// <param name="filename"></param>
         /// <returns></returns>
-        public static string[] getFileLines(ref string filename)
+        public static string[] getFileLines(string filename)
         {
             string[] result = Array.Empty<string>();
             try
@@ -951,7 +951,7 @@ namespace osafw
         {
             //TODO MIGRATE this.resp.CacheControl = cache_control;
 
-            string format = this.get_response_expected_format();
+            string format = this.getResponseExpectedFormat();
             if (format == "json")
             {
                 if (ps.ContainsKey("_json"))

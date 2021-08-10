@@ -711,6 +711,11 @@ namespace osafw
             return JsonSerializer.Serialize(data, data.GetType(), options); //TODO MIGRATE test if GetType() is enough or we need explicitly have Hashtable/ArrayList as overloads
         }
 
+        //overload alias for jsonDecode(string)
+        public static Object jsonDecode(object str) {
+            return jsonDecode((string)str);
+        }
+
         /* <summary>
         * convert JSON string into data structure
         * </summary>

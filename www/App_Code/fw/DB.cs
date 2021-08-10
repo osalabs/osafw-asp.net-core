@@ -8,7 +8,8 @@ using System.Text.RegularExpressions;
 
 namespace osafw
 {
-    public enum DBOps : int {
+    public enum DBOps : int
+    {
         EQ,            // =
         NOT,           // <>
         LE,            // <=
@@ -23,19 +24,23 @@ namespace osafw
         NOTLIKE        // NOT LIKE
     }
     // describes DB operation
-    public class DBOperation {
+    public class DBOperation
+    {
         public DBOps op;
         public String opstr; // String value for op
         public bool is_value = true; // if false - operation is unary (no value)
         public Object value; // can be array for IN, NOT IN, OR
         public String quoted_value;
-        public DBOperation(DBOps op, Object value = null) {
+        public DBOperation(DBOps op, Object value = null)
+        {
             this.op = op;
             setOpStr();
             this.value = value;
         }
-        public void setOpStr() {
-            switch (op) {
+        public void setOpStr()
+        {
+            switch (op)
+            {
                 case DBOps.ISNULL:
                     opstr = "IS NULL";
                     is_value = false;
@@ -99,17 +104,38 @@ namespace osafw
 
         private bool is_check_ole_types = false; // if true - checks for unsupported OLE types during readRow
         private Hashtable UNSUPPORTED_OLE_TYPES = null;
+
+        /// <summary>
+        /// "synax sugar" helper to build Hashtable from list of arguments instead more complex New Hashtable from {...}
+        /// Example: db.row("table", h("id", 123)) => "select * from table where id=123"
+        /// </summary>
+        /// <param name="args">even number of args required</param>
+        /// <returns></returns>
+        public static Hashtable h(params object[] args)
+        {
+            if (args.Length == 0 || args.Length % 2 != 0)
+                throw new ArgumentException("h() accepts even number of arguments");
+            Hashtable result = new Hashtable();
+            for (var i = 0; i <= args.Length - 1; i += 2)
+                result[args[i]] = args[i + 1];
+            return result;
+        }
+
         // <summary>
         // construct new DB Object with
         // </summary>
         // <param name="fw">framework reference</param>
         // <param name="conf">config hashtable with "connection_String" and "type" keys. If none - fw.config("db")("main") used</param>
         // <param name="db_name">database human name, only used for logger</param>
-        public DB(FW fw, Hashtable _conf = null, String db_name = "main") {
+        public DB(FW fw, Hashtable _conf = null, String db_name = "main")
+        {
             this.fw = fw;
-            if (_conf != null) {
+            if (_conf != null)
+            {
                 this.conf = _conf;
-            } else {
+            }
+            else
+            {
                 Hashtable db = (Hashtable)fw.config("db");
                 this.conf = (Hashtable)db["main"];
             }
@@ -121,7 +147,8 @@ namespace osafw
             //UNSUPPORTED_OLE_TYPES = Utils.qh("DBTYPE_IDISPATCH DBTYPE_IUNKNOWN") 'also? DBTYPE_ARRAY DBTYPE_VECTOR DBTYPE_BYTES
         }
 
-        public void logger(FwLogger.LogLevel level, params Object[] args) {
+        public void logger(FwLogger.LogLevel level, params Object[] args)
+        {
             if (args.Length == 0) return;
             fw.logger(level, args);
         }
@@ -130,42 +157,52 @@ namespace osafw
         // connect to DB server using connection String defined in appsettings.json appSettings, key db:main:connection_String (by default)
         // </summary>
         // <returns></returns>
-        public DbConnection connect() {
+        public DbConnection connect()
+        {
             String cache_key = "DB#" + connstr;
 
             //first, try to get connection from request cache (so we will use only one connection per db server - TBD make configurable?)
-            if (conn == null) {
+            if (conn == null)
+            {
                 conn = (DbConnection)fw.cache.getRequestValue(cache_key);
             }
 
             // if still no connection - re-make it
-            if (conn == null) {
+            if (conn == null)
+            {
                 schema = new Hashtable(); // reset schema cache
                 conn = createConnection(connstr, dbtype);
                 fw.cache.setRequestValue(cache_key, conn);
             }
 
             // if it's disconnected - re-connect
-            if (conn.State != ConnectionState.Open) {
+            if (conn.State != ConnectionState.Open)
+            {
                 conn.Open();
             }
 
-            if (dbtype == "OLE") {
+            if (dbtype == "OLE")
+            {
                 is_check_ole_types = true;
-            } else {
+            }
+            else
+            {
                 is_check_ole_types = false;
             }
 
             return conn;
         }
 
-        public void disconnect() {
-            if (conn != null) {
+        public void disconnect()
+        {
+            if (conn != null)
+            {
                 conn.Close();
             }
         }
 
-        public DbConnection createConnection(String connstr, String dbtype = "SQL") {
+        public DbConnection createConnection(String connstr, String dbtype = "SQL")
+        {
             if (dbtype == "SQL")
             {
                 DbConnection result = new SqlConnection(connstr);
@@ -187,7 +224,8 @@ namespace osafw
         }
 
 
-        public void check_create_mdb(String filepath) {
+        public void check_create_mdb(String filepath)
+        {
             /*if (File.Exists(filepath)) return;
             String connstr = "Provider=Microsoft.Jet.OLEDB.4.0;Data Source=" + filepath;
             Object cat = CreateObject("ADOX.Catalog");
@@ -195,7 +233,8 @@ namespace osafw
         }
 
         //<Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2100:Review SQL queries for security vulnerabilities")>
-        public DbDataReader query(String sql) {
+        public DbDataReader query(String sql)
+        {
             connect();
             logger(FwLogger.LogLevel.INFO, "DB:", db_name, " ", sql);
 
@@ -224,7 +263,8 @@ namespace osafw
             SQL_QUERY_CTR += 1;
 
             DbCommand dbcomm = null;
-            if (dbtype == "SQL" && conn is SqlConnection) {
+            if (dbtype == "SQL" && conn is SqlConnection)
+            {
                 dbcomm = new SqlCommand(sql, conn as SqlConnection);
             }
             else if (dbtype == "OLE" && conn is OleDbConnection)
@@ -281,7 +321,8 @@ namespace osafw
             DbDataReader dbread = query(sql);
             ArrayList a = new ArrayList();
 
-            while (dbread.Read()) {
+            while (dbread.Read())
+            {
                 a.Add(readRow(dbread));
             }
 
@@ -457,20 +498,20 @@ namespace osafw
         }
 
         // simple just replace quotes, don't add start/end single quote - for example, for use with LIKE
-        public String qq(String str)
+        public String qq(object str)
         {
             if (str == null) str = "";
-            return new String(str).Replace("'", "''");
+            return new String((string)str).Replace("'", "''");
         }
 
         // simple quote as Integer Value
-        public int qi(String str)
+        public int qi(object str)
         {
             return Utils.f2int(str);
         }
 
         // simple quote as Float Value
-        public double qf(String str)
+        public double qf(object str)
         {
             return Utils.f2float(str);
         }
@@ -479,7 +520,8 @@ namespace osafw
         public String qd(String str)
         {
             String result = "";
-            if (dbtype == "SQL") {
+            if (dbtype == "SQL")
+            {
                 DateTime tmpdate;
                 if (DateTime.TryParse(str, out tmpdate))
                 {
@@ -830,7 +872,7 @@ namespace osafw
             return insert_id;
         }
 
-        public int update(String sql) 
+        public int update(String sql)
         {
             return exec(sql);
         }
@@ -845,7 +887,7 @@ namespace osafw
         {
             // merge fields and where
             Hashtable allfields = new Hashtable();
-            
+
             foreach (String k in fields.Keys)
             {
                 allfields[k] = fields[k];
@@ -864,7 +906,7 @@ namespace osafw
         }
 
         // retrun number of affected rows
-        public int del(String table, Hashtable where) 
+        public int del(String table, Hashtable where)
         {
             return exec(hash2sql_d(table, where));
         }
@@ -928,7 +970,7 @@ namespace osafw
         // <param name="order_by">optional order by String</param>
         // <param name="select_fields">MUST already be quoted!</param>
         // <returns></returns>
-        private String hash2sql_select (String table, Hashtable where, String order_by = "", String select_fields = "*")
+        private String hash2sql_select(String table, Hashtable where, String order_by = "", String select_fields = "*")
         {
             where = quote(table, where);
             // FW.logger(where)
@@ -1037,47 +1079,47 @@ namespace osafw
             }
             else
             {
-               /* // OLE DB (Access)
-                DataTable schemaTable =
-                    DirectCast(conn, OleDbConnection).GetOleDbSchemaTable(OleDb.OleDbSchemaGuid.Columns, New Object() { Nothing, Nothing, table, Nothing})
+                /* // OLE DB (Access)
+                 DataTable schemaTable =
+                     DirectCast(conn, OleDbConnection).GetOleDbSchemaTable(OleDb.OleDbSchemaGuid.Columns, New Object() { Nothing, Nothing, table, Nothing})
 
-                Dim fieldslist = New List(Of Hashtable)
-                For Each row As DataRow In schemaTable.Rows
-                    'unused:
-                    'COLUMN_HASDEFAULT True False
-                    'COLUMN_FLAGS   74 86 90(auto) 102 106 114 122(date) 130 226 230 234
-                    'CHARACTER_OCTET_LENGTH
-                    'DATETIME_PRECISION=0
-                    'DESCRIPTION
-                    Dim h = New Hashtable
-                    h("name") = row("COLUMN_NAME").ToString()
-                    h("type") = row("DATA_TYPE")
-                    h("fw_type") = map_oletype2fwtype(row("DATA_TYPE")) 'meta type
-                    h("fw_subtype") = LCase([Enum].GetName(GetType(OleDbType), row("DATA_TYPE"))) 'exact type as String
-                    h("is_nullable") = IIf(row("IS_NULLABLE"), 1, 0)
-                    h("default") = row("COLUMN_DEFAULT") '"=Now()" "0" "No"
-                    h("maxlen") = row("CHARACTER_MAXIMUM_LENGTH")
-                    h("numeric_precision") = row("NUMERIC_PRECISION")
-                    h("numeric_scale") = row("NUMERIC_SCALE")
-                    h("charset") = row("CHARACTER_SET_NAME")
-                    h("collation") = row("COLLATION_NAME")
-                    h("pos") = row("ORDINAL_POSITION")
-                    h("is_identity") = 0
-                    h("desc") = row("DESCRIPTION")
-                    h("column_flags") = row("COLUMN_FLAGS")
-                    fieldslist.Add(h)
-                Next
-                'order by ORDINAL_POSITION
-                result.AddRange(fieldslist.OrderBy(Function(h) h("pos")).ToList())
+                 Dim fieldslist = New List(Of Hashtable)
+                 For Each row As DataRow In schemaTable.Rows
+                     'unused:
+                     'COLUMN_HASDEFAULT True False
+                     'COLUMN_FLAGS   74 86 90(auto) 102 106 114 122(date) 130 226 230 234
+                     'CHARACTER_OCTET_LENGTH
+                     'DATETIME_PRECISION=0
+                     'DESCRIPTION
+                     Dim h = New Hashtable
+                     h("name") = row("COLUMN_NAME").ToString()
+                     h("type") = row("DATA_TYPE")
+                     h("fw_type") = map_oletype2fwtype(row("DATA_TYPE")) 'meta type
+                     h("fw_subtype") = LCase([Enum].GetName(GetType(OleDbType), row("DATA_TYPE"))) 'exact type as String
+                     h("is_nullable") = IIf(row("IS_NULLABLE"), 1, 0)
+                     h("default") = row("COLUMN_DEFAULT") '"=Now()" "0" "No"
+                     h("maxlen") = row("CHARACTER_MAXIMUM_LENGTH")
+                     h("numeric_precision") = row("NUMERIC_PRECISION")
+                     h("numeric_scale") = row("NUMERIC_SCALE")
+                     h("charset") = row("CHARACTER_SET_NAME")
+                     h("collation") = row("COLLATION_NAME")
+                     h("pos") = row("ORDINAL_POSITION")
+                     h("is_identity") = 0
+                     h("desc") = row("DESCRIPTION")
+                     h("column_flags") = row("COLUMN_FLAGS")
+                     fieldslist.Add(h)
+                 Next
+                 'order by ORDINAL_POSITION
+                 result.AddRange(fieldslist.OrderBy(Function(h) h("pos")).ToList())
 
-                'now detect identity (because order is important)
-                For Each h As Hashtable In result
-                    'actually this also triggers for Long Integers, so for now - only first field that match conditions will be an identity
-                    If h("type") = OleDbType.Integer AndAlso h("column_flags") = 90 Then
-                        h("is_identity") = 1
-                        Exit For
-                    End If
-                Next*/
+                 'now detect identity (because order is important)
+                 For Each h As Hashtable In result
+                     'actually this also triggers for Long Integers, so for now - only first field that match conditions will be an identity
+                     If h("type") = OleDbType.Integer AndAlso h("column_flags") = 90 Then
+                         h("is_identity") = 1
+                         Exit For
+                     End If
+                 Next*/
             }
 
             // save to cache
@@ -1126,7 +1168,7 @@ namespace osafw
             return this.schema[table] as Hashtable;
         }
 
-        public void clear_schema_cache() 
+        public void clear_schema_cache()
         {
             if (schemafull_cache != null) schemafull_cache.Clear();
             if (schema_cache != null) schema_cache.Clear();

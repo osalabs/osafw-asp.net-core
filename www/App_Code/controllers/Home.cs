@@ -10,7 +10,7 @@ namespace osafw
 {
     public class HomeController : FwController
     {
-        public override Hashtable IndexAction() {
+        public Hashtable IndexAction() {
             rw("<html><form method=\"POST\" enctype=\"multipart/form-data\" action=\"/Home/Save\"><input type=\"hidden\" name=\"name1\" value=\"testdatatestdatt\"/><input type=\"file\" name=\"file1\"/><input type=\"submit\"/></form></html>");
             //ArrayList users = fw.modelOf(typeof(Users)).list();
 

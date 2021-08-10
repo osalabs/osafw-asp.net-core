@@ -1,20 +1,13 @@
- // Fw Model base class
+// Fw Model base class
 
- // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
- // (c) 2009-2021 Oleg Savchuk www.osalabs.com
+// Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
+// (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
 using System;
 using System.Collections;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Security;
 using System.Text;
-using System.Threading.Tasks;
 using Microsoft.VisualBasic;
 
 namespace osafw

@@ -10,7 +10,7 @@ namespace osafw
 {
     public class TestController : FwController
     {
-        public override Hashtable IndexAction() {
+        public Hashtable IndexAction() {
             rw("<html><form method=\"POST\" action=\"/Test/(Upload)\"><input type=\"file\" name=\"file1\"/><input type=\"submit\"/></form></html>");
             //ArrayList users = fw.modelOf(typeof(Users)).list();
             
