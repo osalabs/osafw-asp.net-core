@@ -130,7 +130,7 @@ namespace osafw
             if (!string.IsNullOrEmpty(SessionStr("lang"))) G["lang"] = SessionStr("lang");
 
             FERR = new Hashtable(); // reset errors
-            parse_form();
+            parseForm();
 
             // save flash to current var and update session as flash is used only for nearest request
             Hashtable _flash = SessionHashtable("_flash");
@@ -394,7 +394,7 @@ namespace osafw
                         logger(LogLevel.WARN, "Wrong Route Params");
                         logger(LogLevel.WARN, route.method);
                         logger(LogLevel.WARN, url);
-                        err_msg("Wrong Route Params");
+                        errMsg("Wrong Route Params");
                         return;
                     }
 
@@ -521,7 +521,7 @@ namespace osafw
                     parser(new Hashtable());
                 }
                 else
-                    call_controller(calledType, mInfo, args);
+                    callController(calledType, mInfo, args);
             }
             // logger(LogLevel.INFO, "NO EXCEPTION IN dispatch")
 
@@ -538,7 +538,7 @@ namespace osafw
                 if (SessionBool("is_logged") != true)
                     redirect((string)config("UNLOGGED_DEFAULT_URL"), false);
                 else
-                    err_msg(Ex.Message);
+                    errMsg(Ex.Message);
             }
 
             catch (ApplicationException Ex)
@@ -560,7 +560,7 @@ namespace osafw
                 {
                     // no need to log/report detailed user exception
                     logger(LogLevel.INFO, "UserException: " + msg);
-                    err_msg(msg, iex);
+                    errMsg(msg, iex);
                 }
                 else
                 {
@@ -576,7 +576,7 @@ namespace osafw
                     // "Form: " & dumper(FORM) & vbCrLf & vbCrLf & _
                     // "Session:" & dumper(SESSION))
 
-                    err_msg(msg, Ex);
+                    errMsg(msg, Ex);
                 }
             }
 
@@ -597,7 +597,7 @@ namespace osafw
                 if (Utils.f2int(this.config("log_level")) >= (int)LogLevel.DEBUG)
                     throw;
                 else
-                    err_msg("Server Error. Please, contact site administrator!", Ex);
+                    errMsg("Server Error. Please, contact site administrator!", Ex);
             }
 
             TimeSpan end_timespan = DateTime.Now - start_time;
@@ -669,7 +669,7 @@ namespace osafw
         }
 
         // parse query string, form and json in request body into fw.FORM
-        private void parse_form()
+        private void parseForm()
         {
             Hashtable input = new Hashtable();
 
@@ -872,7 +872,7 @@ namespace osafw
         /// </summary>
         /// <param name="filename"></param>
         /// <returns></returns>
-        public static string get_file_content(ref string filename)
+        public static string getFileContent(ref string filename)
         {
             string result = "";
             filename = Regex.Replace(filename, "/", @"\");
@@ -897,7 +897,7 @@ namespace osafw
         /// </summary>
         /// <param name="filename"></param>
         /// <returns></returns>
-        public static string[] get_file_lines(ref string filename)
+        public static string[] getFileLines(ref string filename)
         {
             string[] result = Array.Empty<string>();
             try
@@ -919,7 +919,7 @@ namespace osafw
         /// <param name="filename"></param>
         /// <param name="fileData"></param>
         /// <param name="isAppend">False by default </param>
-        public static void set_file_content(string filename, ref string fileData, bool isAppend = false)
+        public static void setFileContent(string filename, ref string fileData, bool isAppend = false)
         {
             filename = Regex.Replace(filename, "/", @"\");
 
@@ -959,10 +959,10 @@ namespace osafw
                     if (ps["_json"] is bool && (bool)ps["_json"] == true)
                     {
                         ps.Remove("_json"); // remove internal flag
-                        this.parser_json(ps);
+                        this.parserJson(ps);
                     }
                     else
-                        this.parser_json(ps["_json"]);// if _json exists - return only this element content
+                        this.parserJson(ps["_json"]);// if _json exists - return only this element content
                 }
                 else
                 {
@@ -975,7 +975,7 @@ namespace osafw
                             "message", @"JSON response is not enabled for this Controller.Action (set ps[""_json""])=True or ps[""_json""])=data... to enable)."
                         }
                     };
-                    this.parser_json(ps);
+                    this.parserJson(ps);
                 }
                 return; // no further processing for json
             }
@@ -1023,7 +1023,7 @@ namespace osafw
             responseWrite(page);
         }
 
-        public void parser_json(object ps)
+        public void parserJson(object ps)
         {
             ParsePage parser_obj = new ParsePage(this);
             string page = parser_obj.parse_json(ps);
@@ -1060,7 +1060,7 @@ namespace osafw
             }
 
             if (mInfo != null)
-                call_controller(calledType, mInfo, args);
+                callController(calledType, mInfo, args);
         }
         // same as above just with default controller
         public void routeRedirect(string action, object[] args = null)
@@ -1085,7 +1085,7 @@ namespace osafw
         }
 
         // Call controller
-        public void call_controller(Type calledType, MethodInfo mInfo, object[] args = null)
+        public void callController(Type calledType, MethodInfo mInfo, object[] args = null)
         {
             // check if method accept agrs and don't pass args if no args expected
             System.Reflection.ParameterInfo[] @params = mInfo.GetParameters();
@@ -1110,7 +1110,7 @@ namespace osafw
         }
 
 
-        public void file_response(string filepath, string attname, string ContentType = "application/octet-stream", string ContentDisposition = "attachment")
+        public void fileResponse(string filepath, string attname, string ContentType = "application/octet-stream", string ContentDisposition = "attachment")
         {
             logger(LogLevel.DEBUG, "sending file response  = ", filepath, " as ", attname);
             attname = Regex.Replace(attname, @"[^\w. \-]+", "_");
@@ -1131,7 +1131,7 @@ namespace osafw
         // RETURN:
         // true if sent successfully
         // false if some problem occured (see log)
-        public bool send_email(string mail_from, string mail_to, string mail_subject, string mail_body, Hashtable filenames = null, ArrayList aCC = null, string reply_to = "", Hashtable options = null)
+        public bool sendEmail(string mail_from, string mail_to, string mail_subject, string mail_body, Hashtable filenames = null, ArrayList aCC = null, string reply_to = "", Hashtable options = null)
         {
             bool result = true;
             MailMessage message = null/* TODO Change to default(_) if this is not a reference type */;
@@ -1247,7 +1247,7 @@ namespace osafw
         }
 
         // shortcut for send_email from template from the /emails template dir
-        public bool send_email_tpl(string mail_to, string tpl, Hashtable hf, Hashtable filenames = null/* TODO Change to default(_) if this is not a reference type */, ArrayList aCC = null/* TODO Change to default(_) if this is not a reference type */, string reply_to = "")
+        public bool sendEmailTpl(string mail_to, string tpl, Hashtable hf, Hashtable filenames = null/* TODO Change to default(_) if this is not a reference type */, ArrayList aCC = null/* TODO Change to default(_) if this is not a reference type */, string reply_to = "")
         {
             ParsePage parser_obj = new(this);
             Regex r = new Regex(@"[\n\r]+");
@@ -1255,16 +1255,16 @@ namespace osafw
             if (subj_body.Length == 0)
                 throw new ApplicationException("No email template defined [" + tpl + "]");
             string[] arr = r.Split(subj_body, 2);
-            return send_email("", mail_to, arr[0], arr[1], filenames, aCC, reply_to);
+            return sendEmail("", mail_to, arr[0], arr[1], filenames, aCC, reply_to);
         }
 
         // send email message to site admin (usually used in case of errors)
-        public void send_email_admin(string msg)
+        public void sendEmailAdmin(string msg)
         {
-            this.send_email("", (string)this.config("admin_email"), msg.Substring(0, 512), msg);
+            this.sendEmail("", (string)this.config("admin_email"), msg.Substring(0, 512), msg);
         }
 
-        public string load_url(string url, Hashtable @params = null)
+        public string loadUrl(string url, Hashtable @params = null)
         {
             System.Net.WebClient client = new System.Net.WebClient();
             string content;
@@ -1283,7 +1283,7 @@ namespace osafw
             return content;
         }
 
-        public void err_msg(string msg, Exception Ex = null)
+        public void errMsg(string msg, Exception Ex = null)
         {
             Hashtable ps = new Hashtable();
             var tpl_dir = "/error";
