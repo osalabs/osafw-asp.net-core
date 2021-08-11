@@ -963,7 +963,7 @@ namespace osafw
         // trword    - 0/1. By default, truncate will attempt to cut off at a word boundary =1.
         // trend     - 0/1. If you want to cut off at the exact character length, pass the optional third parameter of 1.
         //<~tag truncate="80" trchar="..." trword="1" trend="1">
-        public static object str2truncate(String str, Hashtable hattrs)
+        public static string str2truncate(String str, Hashtable hattrs)
         {
             int trlen = 80;
             String trchar = "...";

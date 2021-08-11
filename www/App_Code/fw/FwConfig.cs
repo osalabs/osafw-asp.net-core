@@ -50,14 +50,14 @@ namespace osafw
             }
             settings["hostname"] = hostname;
 
-            settings["ROOT_URL"] = Regex.Replace(req.Path, "\\/$", ""); // removed last / if (any
-            string physicalApplicationPath = AppDomain.CurrentDomain.BaseDirectory.Substring(0, AppDomain.CurrentDomain.BaseDirectory.IndexOf("\\bin"));
-            settings["site_root"] = Regex.Replace(physicalApplicationPath, "\\$", ""); // removed last \ if (any
+            settings["ROOT_URL"] = Regex.Replace(req.Path, @"/$", ""); // removed last / if (any
+            string physicalApplicationPath = AppDomain.CurrentDomain.BaseDirectory.Substring(0, AppDomain.CurrentDomain.BaseDirectory.IndexOf(@"\bin"));
+            settings["site_root"] = Regex.Replace(physicalApplicationPath, @"\\$", ""); // removed last \ if (any
 
 
 
-            settings["template"] = settings["site_root"] + "\\App_Data\template";
-            settings["log"] = settings["site_root"] + "\\App_Data\\logs\\main.log";
+            settings["template"] = settings["site_root"] + @"\App_Data\template";
+            settings["log"] = settings["site_root"] + @"\App_Data\logs\main.log";
             settings["log_max_size"] = 100 * 1024 * 1024; // 100 MB is max log size
             settings["tmp"] = Path.GetTempPath();
             settings["log_level"] = "ALL";
