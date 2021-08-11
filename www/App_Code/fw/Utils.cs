@@ -8,11 +8,12 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using System.Runtime.Serialization.Formatters.Binary;
 using System.Web;
 using System.Net;
 using System.Security.Cryptography;
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.Drawing.Drawing2D;
 
 namespace osafw
 {
@@ -461,164 +462,175 @@ namespace osafw
             await HttpResponseWritingExtensions.WriteAsync(fw.resp, page);
         }
 
-        //TODO migrate
-        //// Detect orientation and auto-rotate correctly
-        //public static bool rotateImage(Image Image)
-        //{
-        //    bool result = false;
-        //    var rot = RotateFlipType.RotateNoneFlipNone;
-        //    var props = Image.PropertyItems();
+        // Detect orientation and auto-rotate correctly
+        public static bool rotateImage(System.Drawing.Image image)
+        {
+            bool result = false;
+            var rot = RotateFlipType.RotateNoneFlipNone;
+            PropertyItem[] props = image.PropertyItems;
 
-        //    foreach (var p in props)
-        //    {
-        //        if (p.Id == 274) {
-        //            switch (BitConverter.ToInt16(p.Value, 0))
-        //            {
-        //                case 1:
-        //                    rot = RotateFlipType.RotateNoneFlipNone;
-        //                    break;
-        //                case 3:
-        //                    rot = RotateFlipType.Rotate180FlipNone;
-        //                    break;
-        //                case 6:
-        //                    rot = RotateFlipType.Rotate90FlipNone;
-        //                    break;
-        //                case 8:
-        //                    rot = RotateFlipType.Rotate270FlipNone;
-        //                    break;
-        //            }
-        //        }
-        //    }
+            foreach (PropertyItem p in props)
+            {
+                if (p.Id == 274)
+                {
+                    switch (BitConverter.ToInt16(p.Value, 0))
+                    {
+                        case 1:
+                            rot = RotateFlipType.RotateNoneFlipNone;
+                            break;
+                        case 3:
+                            rot = RotateFlipType.Rotate180FlipNone;
+                            break;
+                        case 6:
+                            rot = RotateFlipType.Rotate90FlipNone;
+                            break;
+                        case 8:
+                            rot = RotateFlipType.Rotate270FlipNone;
+                            break;
+                    }
+                }
+            }
 
-        //    if (rot != RotateFlipType.RotateNoneFlipNone)
-        //    {
-        //        Image.RotateFlip(rot);
-        //        result = true;
-        //    }
-        //    return result;
-        //}
+            if (rot != RotateFlipType.RotateNoneFlipNone)
+            {
+                image.RotateFlip(rot);
+                result = true;
+            }
+            return result;
+        }
 
         // resize image in from_file to w/h and save to to_file
         // (optional)w and h - mean max weight and max height (i.e. image will not be upsized if it's smaller than max w/h)
         // if no w/h passed - then no resizing occurs, just conversion (based on destination extension)
         // return false if no resize performed (if image already smaller than necessary). Note if to_file is not same as from_file - to_file will have a copy of the from_file
-        public static bool resizeImage(String from_file, String to_file, long w = -1, long h = -1)
+        public static bool resizeImage(string from_file, string to_file, int w = -1, int h = -1)
         {
-            //    Dim stream As New FileStream(from_file, FileMode.Open, FileAccess.Read)
+            FileStream stream = new FileStream(from_file, FileMode.Open, FileAccess.Read);
 
             // Create new image.
-            //    Dim image As System.Drawing.Image = System.Drawing.Image.FromStream(stream)
+            System.Drawing.Image image = System.Drawing.Image.FromStream(stream);
 
-            //    'Detect orientation and auto-rotate correctly
-            //    Dim is_rotated = rotateImage(image)
+            // Detect orientation and auto-rotate correctly
+            var is_rotated = rotateImage(image);
 
-            //    ' Calculate proportional max width and height.
-            //    Dim oldWidth As Integer = image.Width
-            //    Dim oldHeight As Integer = image.Height
+            // Calculate proportional max width and height.
+            int oldWidth = image.Width;
+            int oldHeight = image.Height;
 
-            //    If w = -1 Then w = oldWidth
-            //    If h = -1 Then h = oldHeight
+            if (w == -1)
+                w = oldWidth;
+            if (h == -1)
+                h = oldHeight;
 
-            //    If oldWidth / w >= 1 Or oldHeight / h >= 1 Then
-            //        'downsizing
-            //    Else
-            //        'image already smaller no resize required - keep sizes same
-            //        image.Dispose()
-            //        stream.Close()
-            //        If to_file<> from_file Then
-            //            'but if destination file is different - make a copy
-            //            File.Copy(from_file, to_file)
-            //        End If
-            //        Return False
-            //    End If
+            if (oldWidth / (double)w >= 1 | oldHeight / (double)h >= 1)
+            {
+            }
+            else
+            {
+                // image already smaller no resize required - keep sizes same
+                image.Dispose();
+                stream.Close();
+                if (to_file != from_file)
+                    // but if destination file is different - make a copy
+                    File.Copy(from_file, to_file);
+                return false;
+            }
 
-            //    If (CDec(oldWidth) / CDec(oldHeight)) > (CDec(w) / CDec(h)) Then
-            //        Dim ratio As Decimal = CDec(w) / oldWidth
-            //        h = CInt(oldHeight * ratio)
-            //    Else
-            //        Dim ratio As Decimal = CDec(h) / oldHeight
-            //        w = CInt(oldWidth * ratio)
-            //    End If
+            if (((double)oldWidth / (double)oldHeight) > ((double)w / (double)h))
+            {
+                double ratio = (double)w / (double)oldWidth;
+                h = (int)(oldHeight * ratio);
+            }
+            else
+            {
+                double ratio = (double)h / (double)oldHeight;
+                w = (int)(oldWidth * ratio);
+            }
 
-            //    ' Create a new bitmap with the same resolution as the original image.
-            //    Dim bitmap As New Bitmap(w, h, PixelFormat.Format24bppRgb)
-            //    bitmap.SetResolution(image.HorizontalResolution, image.VerticalResolution)
+            // Create a new bitmap with the same resolution as the original image.
+            Bitmap bitmap = new Bitmap(w, h, PixelFormat.Format24bppRgb);
+            bitmap.SetResolution(image.HorizontalResolution, image.VerticalResolution);
 
-            //    ' Create a new graphic.
-            //    Dim gr As Graphics = Graphics.FromImage(bitmap)
-            //    gr.Clear(Color.White)
-            //    gr.InterpolationMode = InterpolationMode.HighQualityBicubic
-            //    gr.SmoothingMode = SmoothingMode.HighQuality
-            //    gr.PixelOffsetMode = PixelOffsetMode.HighQuality
-            //    gr.CompositingQuality = CompositingQuality.HighQuality
+            // Create a new graphic.
+            Graphics gr = Graphics.FromImage(bitmap);
+            gr.Clear(Color.White);
+            gr.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            gr.SmoothingMode = SmoothingMode.HighQuality;
+            gr.PixelOffsetMode = PixelOffsetMode.HighQuality;
+            gr.CompositingQuality = CompositingQuality.HighQuality;
 
-            //    ' Create a scaled image based on the original.
-            //    gr.DrawImage(image, New Rectangle(0, 0, w, h), New Rectangle(0, 0, oldWidth, oldHeight), GraphicsUnit.Pixel)
-            //    gr.Dispose()
+            // Create a scaled image based on the original.
+            gr.DrawImage(image, new Rectangle(0, 0, w, h), new Rectangle(0, 0, oldWidth, oldHeight), GraphicsUnit.Pixel);
+            gr.Dispose();
 
-            //    ' Save the scaled image.
-            //    Dim ext As String = UploadUtils.getUploadFileExt(to_file)
-            //    Dim out_format As ImageFormat = image.RawFormat
-            //    Dim EncoderParameters As EncoderParameters = Nothing
-            //    Dim ImageCodecInfo As ImageCodecInfo = Nothing
+            // Save the scaled image.
+            string ext = UploadUtils.getUploadFileExt(to_file);
+            ImageFormat out_format = image.RawFormat;
+            EncoderParameters EncoderParameters = null/* TODO Change to default(_) if this is not a reference type */;
+            ImageCodecInfo ImageCodecInfo = null/* TODO Change to default(_) if this is not a reference type */;
 
-            //    If ext = ".gif" Then
-            //        out_format = ImageFormat.Gif
-            //    ElseIf ext = ".jpg" Then
-            //        out_format = ImageFormat.Jpeg
-            //        'set jpeg quality to 80
-            //        ImageCodecInfo = GetEncoderInfo(out_format)
-            //        Dim Encoder As Encoder = Encoder.Quality
-            //        EncoderParameters = New EncoderParameters(1)
-            //        EncoderParameters.Param(0) = New EncoderParameter(Encoder, CType(80L, Int32))
-            //    ElseIf ext = ".png" Then
-            //        out_format = ImageFormat.Png
-            //    End If
+            if (ext == ".gif")
+            {
+                out_format = ImageFormat.Gif;
+            }
+            else if (ext == ".jpg")
+            {
+                out_format = ImageFormat.Jpeg;
+                // set jpeg quality to 80
+                ImageCodecInfo = GetEncoderInfo(out_format);
+                System.Drawing.Imaging.Encoder encoder = System.Drawing.Imaging.Encoder.Quality;
+                EncoderParameters = new EncoderParameters(1);
+                EncoderParameters.Param[0] = new EncoderParameter(encoder, System.Convert.ToInt32(80L));
+            }
+            else if (ext == ".png")
+            {
+                out_format = ImageFormat.Png;
+            }
 
-            //    'close read stream before writing as to_file might be same as from_file
-            //    image.Dispose()
-            //    stream.Close()
+            // close read stream before writing as to_file might be same as from_file
+            image.Dispose();
+            stream.Close();
 
-            //    If EncoderParameters Is Nothing Then
-            //        bitmap.Save(to_file, out_format) 'image.RawFormat
-            //    Else
-            //        bitmap.Save(to_file, ImageCodecInfo, EncoderParameters)
-            //    End If
-            //    bitmap.Dispose()
+            if (EncoderParameters == null)
+            {
+                bitmap.Save(to_file, out_format); // image.RawFormat
+            }
+            else
+            {
+                bitmap.Save(to_file, ImageCodecInfo, EncoderParameters);
+            }
+            bitmap.Dispose();
 
-            //    'if( contentType == "image/gif" )
-            //    '{
-            //    '            Using (thumbnail)
-            //    '    {
-            //    '        OctreeQuantizer quantizer = new OctreeQuantizer ( 255 , 8 ) ;
-            //    '        using ( Bitmap quantized = quantizer.Quantize ( bitmap ) )
-            //    '        {
-            //    '            Response.ContentType = "image/gif";
-            //    '            quantized.Save ( Response.OutputStream , ImageFormat.Gif ) ;
-            //    '        }
-            //    '    }
-            //    '}
+            // if( contentType == "image/gif" )
+            // {
+            // Using (thumbnail)
+            // {
+            // OctreeQuantizer quantizer = new OctreeQuantizer ( 255 , 8 ) ;
+            // using ( Bitmap quantized = quantizer.Quantize ( bitmap ) )
+            // {
+            // Response.ContentType = "image/gif";
+            // quantized.Save ( Response.OutputStream , ImageFormat.Gif ) ;
+            // }
+            // }
+            // }
 
             return true;
         }
+        
+        private static ImageCodecInfo GetEncoderInfo(ImageFormat format)
+        {
+            int j = 0;
+            ImageCodecInfo[] encoders;
+            encoders = ImageCodecInfo.GetImageEncoders();
 
-        //TODO MIGRATE
-        //private static ImageCodecInfo GetEncoderInfo(ImageFormat format)
-        //{
-        //    //    Dim j As Integer
-        //    //    Dim encoders() As ImageCodecInfo
-        //    //    encoders = ImageCodecInfo.GetImageEncoders()
+            j = 0;
+            while (j < encoders.Length) {
+                if (encoders[j].FormatID == format.Guid) return encoders[j];
+                j += 1;
+            }
+            return null;
 
-        //    //    j = 0
-        //    //    While j<encoders.Length
-        //    //        If encoders(j).FormatID = format.Guid Then
-        //    //            Return encoders(j)
-        //    //        End If
-        //    //        j += 1
-        //    //    End While
-        //    //    Return Nothing
-
-        //} // GetEncoderInfo
+        } // GetEncoderInfo
 
         public static long fileSize(String filepath)
         {
@@ -652,28 +664,36 @@ namespace osafw
             }
         }
 
-        //TODO migrate
-        //// deep hash merge, i.e. if hash2 contains values that is hash value - go in it and copy such values to hash2 at same place accordingly
-        //// recursive
-        //public static void mergeHashDeep(ref Hashtable hash1, ref Hashtable hash2)
-        //{
-        //    if (hash2 != null) {
-        //        foreach (String key in hash2.Keys) {
-        //            if (hash2[key].GetType() == typeof(Hashtable))
-        //            {
-        //                if (hash1[key].GetType() != typeof(Hashtable))
-        //                {
-        //                    hash1[key] = new Hashtable();
-        //                }
-        //                mergeHashDeep(ref hash1[key], ref hash2[key]);
-        //            }
-        //            else
-        //            {
-        //                hash1[key] = hash2[key];
-        //            }
-        //        }
-        //    }
-        //}
+        // deep hash merge, i.e. if hash2 contains values that is hash value - go in it and copy such values to hash2 at same place accordingly
+        // recursive
+        public static void mergeHashDeep(ref Hashtable hash1, ref Hashtable hash2)
+        {
+            if (hash2 != null)
+            {
+                ArrayList keys = new ArrayList(hash2.Keys);
+                foreach (string key in keys)
+                {
+                    if (hash2[key] is Hashtable)
+                    {
+                        if (!(hash1[key] is Hashtable))
+                        {
+                            hash1[key] = new Hashtable();
+                        }
+                        Hashtable _hash1 = new Hashtable();
+                        Hashtable _hash2 = new Hashtable();
+
+                        mergeHashDeep(ref _hash1, ref _hash2);
+
+                        hash1[key] = _hash1;
+                        hash2[key] = _hash2;
+                    }
+                    else
+                    {
+                        hash1[key] = hash2[key];
+                    }
+                }
+            }
+        }
 
         public static String bytes2str(long b)
         {
