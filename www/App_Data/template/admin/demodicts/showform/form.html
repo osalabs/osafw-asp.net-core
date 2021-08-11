@@ -1,0 +1,34 @@
+<form id="FEdit" method="post" data-check-changes <~das if="id" inline>data-autosave</~das> action="<~../url><~uu1 if="id" inline>/<~id></~uu1>" data-errors="<~ERR json>">
+ <input type="hidden" name="XSS" value="<~session[XSS]>">
+ <input type="hidden" name="return_url" value="<~return_url>">
+
+  <fieldset>
+    <~/common/form/msg>
+
+    <div class="row">
+      <div class="col-lg-6">
+
+        <div class="form-row">
+          <label class="col-form-label col-md-3 required" for="iname">`Title`</label>
+          <div class="col">
+            <input id="iname" name="item[iname]" maxlength="64" value="<~i[iname]>" type="text" class="form-control" required>
+            <p class="err-EXISTS">`Such title already exists in our database`</p>
+          </div>
+        </div>
+        <div class="form-row">
+          <label class="col-form-label col-md-3" for="idesc">`Description`</label>
+          <div class="col">
+            <textarea id="idesc" name="item[idesc]" rows="5" class="form-control" data-noautosave><~i[idesc]></textarea>
+          </div>
+        </div>
+
+      </div>
+      <div class="col-lg-6">
+        <~/common/form/group_id>
+        <~/common/form/group_status>
+      </div>
+    </div>
+    <~/common/form/actions_std_responsive>
+
+  </fieldset>
+</form>

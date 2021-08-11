@@ -1,0 +1,21 @@
+<form id="FEdit" method="post" data-check-changes <~das if="id" inline>data-autosave</~das> action="<~../url><~uu1 if="id" inline>/<~id></~uu1>" data-errors="<~ERR json>">
+ <input type="hidden" name="XSS" value="<~session[XSS]>">
+ <input type="hidden" name="return_url" value="<~return_url>">
+ <input type="hidden" name="refresh" value="">
+ <~/common/form/relid>
+
+  <fieldset class="mb-3">
+    <~/common/form/msg>
+
+  <div class="row">
+    <div class="col-lg-6">
+      <~form_left>
+    </div>
+    <div class="col-lg-6">
+      <~form_right>
+    </div>
+  </div>
+  <~/common/form/actions_std_responsive>
+
+  </fieldset>
+</form>

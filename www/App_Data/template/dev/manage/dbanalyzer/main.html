@@ -1,0 +1,15 @@
+<~/common/form/msg>
+
+<h4><a href="<~/dev/manage/url>" class="btn btn-light btn-sm px-3"><~/common/icons/arrow-left-circle></a> <~title></h4>
+
+<h5 class="mt-4">Select database to analyze tables and create db.json</h5>
+
+<form method="post" action="<~../url>/(DBAnalyzerSave)" class="form-inline">
+    <input type="hidden" name="XSS" value="<~session[XSS]>">
+    DB from config:
+    <select name="item[db]" class="form-control ml-2">
+        <option>- select-</option>
+        <~dbsources select="i[db]">
+    </select>
+    <button class="btn btn-primary ml-2">Analyse and Create db.json</button>
+</form>

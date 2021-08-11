@@ -1,0 +1,190 @@
+<div class="form-row">
+  <label class="col-form-label col-md-3" for="parent_id">`Parent`</label>
+  <div class="col-md-3">
+    <select id="parent_id" name="item[parent_id]" class="form-control">
+      <option value="0"></option>
+      <~select_options_parent_id select="i[parent_id]">
+    </select>
+  </div>
+</div>
+<div class="form-row">
+  <label class="col-form-label col-md-3" for="demo_dicts_id">`DemoDicts`</label>
+  <div class="col-md-3">
+    <select id="demo_dicts_id" name="item[demo_dicts_id]" class="form-control on-refresh">
+      <option value=""></option>
+      <~select_options_demo_dicts_id select="i[demo_dicts_id]">
+    </select>
+  </div>
+  <div class="col-md-6">
+    <p class="form-control-plaintext text-muted">add .on-refresh class if field change need to reload the form</p>
+  </div>
+</div>
+
+<div class="form-row">
+  <label class="col-form-label col-md-3 required" for="iname">`Title`</label>
+  <div class="col">
+    <input id="iname" name="item[iname]" maxlength="64" value="<~i[iname]>" type="text" class="form-control" required>
+    <p class="err-EXISTS">`Such title already exists in our database`</p>
+  </div>
+</div>
+<div class="form-row">
+  <label class="col-form-label col-md-3" for="idesc">`Description`
+        <span class="nobold"><a href="https://guides.github.com/features/mastering-markdown/" target="_blank">markdown&nbsp;syntax</a> supported</span>
+  </label>
+  <div class="col">
+    <textarea id="idesc" name="item[idesc]" rows="5" class="form-control markdown autoresize"><~i[idesc]></textarea>
+  </div>
+</div>
+
+<div class="form-row">
+  <label class="col-form-label col-md-3" for="idesc2">`Wysiwyg editor`</label>
+  <div class="col">
+    <textarea id="idesc2" name="item[idesc2]" rows="10" class="form-control fw-html-editor"><~i[idesc2]></textarea>
+  </div>
+</div>
+
+<div class="form-row">
+  <label class="col-form-label col-md-3" for="idesc3">`Wysiwyg editor short`</label>
+  <div class="col">
+    <textarea id="idesc3" name="item[idesc3]" rows="10" class="form-control fw-html-editor-short"><~i[idesc3]></textarea>
+  </div>
+</div>
+
+<div class="form-row">
+  <label class="col-form-label col-md-3 required" for="email">`Email` (unique field)</label>
+  <div class="col">
+    <input id="email" name="item[email]" maxlength="128" value="<~i[email]>" type="email" class="form-control" required>
+    <p class="err-EXISTS">`Such email already exists in our database`</p>
+    <p class="err-WRONG">`Invalid Email`</p>
+  </div>
+</div>
+
+<div class="form-row">
+  <label class="col-form-label col-md-3" for="fint">`fint`</label>
+  <div class="col-md-2">
+    <input id="fint" name="item[fint]" maxlength="13" value="<~i[fint]>" type="number" class="form-control" min="0" max="999999">
+  </div>
+</div>
+<div class="form-row">
+  <label class="col-form-label col-md-3" for="ffloat">`ffloat`</label>
+  <div class="col-md-3">
+    <input id="ffloat" name="item[ffloat]" maxlength="13" value="<~i[ffloat]>" type="number" class="form-control" step="0.1">
+  </div>
+</div>
+
+<div class="form-row">
+  <label class="col-form-label col-md-3" for="dict_link_auto_id">DemoDicts Autocomplete</label>
+  <div class="col">
+      <input id="dict_link_auto_id" name="item[dict_link_auto_id_iname]" maxlength="255" value="<~dict_link_auto_id_iname>" type="text" class="form-control" autocomplete="off" placeholder="start typing to select..." data-autocomplete="<~../url>/(Autocomplete)?q=%QUERY">
+      <small class="form-text text-muted">will add new items to DemoDicts</small>
+  </div>
+</div>
+
+<div class="form-row">
+  <label class="col-form-label col-md-3" for="dict_link_multi">DemoDicts Multi</label>
+  <div class="col">
+    <div class="field-multi-value">
+      <input type="input" class="form-control form-control-sm on-multi-search mb-1" value="" placeholder="`type to filter...`" data-noautosave>
+      <~multi_datarow repeat inline>
+        <div class="custom-control custom-checkbox" data-s="<~id upper> - <~iname upper>">
+          <input type="checkbox" class="custom-control-input" id="dict_link_multi$<~id>" name="dict_link_multi[<~id>]" value="1" <~/common/checked if="is_checked">>
+          <label class="custom-control-label" for="dict_link_multi$<~id>"><~iname></label>
+        </div>
+      </~multi_datarow>
+    </div>
+  </div>
+</div>
+
+<div class="form-row">
+  <label class="col-form-label col-md-3" for="demo_dicts_link">DemoDicts via Link Table</label>
+  <div class="col">
+    <div class="field-multi-value">
+      <input type="input" class="form-control form-control-sm on-multi-search mb-1" value="" placeholder="`type to filter...`" data-noautosave>
+      <~multi_datarow_link repeat inline>
+        <div class="custom-control custom-checkbox" data-s="<~id upper> - <~iname upper>">
+          <input type="checkbox" class="custom-control-input" id="demo_dicts_link$<~id>" name="demo_dicts_link[<~id>]" value="1" <~/common/checked if="is_checked">>
+          <label class="custom-control-label" for="demo_dicts_link$<~id>"><~iname></label>
+        </div>
+      </~multi_datarow_link>
+    </div>
+  </div>
+</div>
+
+<div class="form-row">
+  <label class="col-form-label col-md-3" for="fcombo">Combo</label>
+  <div class="col-md-3">
+    <select id="fcombo" name="item[fcombo]" class="form-control">
+      <option value="0">- select -</option>
+      <~/common/sel/fcombo.sel select="i[fcombo]">
+    </select>
+  </div>
+</div>
+<div class="form-row">
+  <label class="col-form-label col-md-3" for="fradio">Radio</label>
+  <div class="col d-flex align-items-center">
+    <~/common/sel/fcombo.sel radio="i[fradio]" name="item[fradio]" delim="custom-control-inline">
+  </div>
+</div>
+<div class="form-row">
+  <label class="col-form-label col-md-3" for="fyesno">Yes or No</label>
+  <div class="col d-flex align-items-center">
+    <~/common/sel/yn_bool.sel radio="i[fyesno]" name="item[fyesno]" delim="custom-control-inline">
+  </div>
+</div>
+
+<div class="form-row">
+  <label class="col-form-label col-md-3" for="is_checkbox">Checkbox</label>
+  <div class="col d-flex align-items-center">
+    <div class="custom-control custom-checkbox custom-control-inline">
+      <input class="custom-control-input" type="checkbox" id="is_checkbox" name="item[is_checkbox]" value="1" <~/common/checked if="i[is_checkbox]">>
+      <label class="custom-control-label" for="is_checkbox">Yes</label>
+    </div>
+  </div>
+</div>
+
+<div class="form-row">
+  <label class="col-form-label col-md-3" for="fdate_combo">Date combo</label>
+  <div class="col-md-9 fdate-combo">
+    <select id="fdate_combo" name="item[fdate_combo_day]" class="form-control">
+      <option value="">- day -</option>
+      <~/common/sel/date_day.sel select="fdate_combo_day">
+    </select>
+    <select name="item[fdate_combo_mon]" class="form-control">
+      <option value="">- month -</option>
+      <~/common/sel/date_mon.sel select="fdate_combo_mon">
+    </select>
+    <select name="item[fdate_combo_year]" class="form-control">
+      <option value="">- year -</option>
+      <~/common/sel/date_year.sel select="fdate_combo_year">
+    </select>
+  </div>
+</div>
+
+<div class="form-row">
+  <label class="col-form-label col-md-3" for="fdate_pop">Date popup</label>
+  <div class="col-md-3">
+    <div class="input-group date">
+      <input id="fdate_pop" name="item[fdate_pop]" maxlength="10" value="<~i[fdate_pop] date>" type="text" class="form-control">
+      <div class="input-group-append"><button class="btn btn-outline-secondary" type="button"><~/common/icons/calendar3></button></div>
+    </div>
+  </div>
+</div>
+
+<div class="form-row">
+  <label class="col-form-label col-md-3" for="fdatetime">Date and Time</label>
+  <div class="col-md-4">
+    <input id="fdatetime" name="item[fdatetime]" maxlength="32" value="<~i[fdatetime]>" type="text" placeholder="M/D/YYYY HH:MM:SS" class="form-control">
+  </div>
+  <div class="col-md-4">
+    <small class="form-text text-muted">M/D/YYYY HH:MM:SS [AM|PM]</small>
+  </div>
+</div>
+<div class="form-row">
+  <label class="col-form-label col-md-3" for="ftime">Time</label>
+  <div class="col-md-2">
+    <input id="ftime" name="item[ftime_str]" maxlength="5" value="<~i[ftime_str]>" type="text" placeholder="HH:MM" class="form-control">
+  </div>
+  <div class="col-md-2">
+    <small class="form-text text-muted">HH:MM</small>
+  </div>
+</div>

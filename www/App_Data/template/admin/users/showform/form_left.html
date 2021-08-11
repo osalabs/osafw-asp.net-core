@@ -1,0 +1,107 @@
+<div class="form-row">
+  <label class="col-form-label required col-md-3" for="ehack">Em<span style="display:none">hack: disable autofill for Chrome</span>ail</label>
+  <div class="col">
+    <input id="ehack" name="item[ehack]" maxlength="128" value="<~i[email]>" type="text" class="form-control" autocomplete="off">
+    <p class="err-EXISTS">`Such email already exists in our database`</p>
+    <p class="err-WRONG">`Invalid email address`</p>
+  </div>
+</div>
+<div class="form-row">
+  <label class="col-form-label col-md-3" for="pwd">`Password`</label>
+  <div class="col-6 col-md-5">
+    <input id="pwd" type="password" name="item[pwd]" maxlength="32" value="<~i[pwd] unless="id">" class="form-control d-none" autocomplete="new-password">
+    <~chpwd_block if="i[id]" inline>
+        <button type="button" class="btn btn-default on-change-pwd">`Change password`</button>
+    </~chpwd_block>
+    <p class="err-BAD">`Password too weak`</p>
+  </div>
+  <~pwd_block if="i[id]" inline>
+    <div class="col-6 col-md">
+        <button type="button" class="btn btn-default on-send-pwd">`Send reset link`</button>
+    </div>
+    </~pwd_block>
+</div>
+
+<div class="form-row">
+  <label class="col-form-label required col-md-3" for="access_level">`Access level`</label>
+  <div class="col-md-6 col-xl-4">
+        <select id="access_level" name="item[access_level]" class="form-control" autocomplete="off">
+            <option value=""> - `select` -
+            <~/common/sel/access_level.sel select="i[access_level]">
+        </select>
+  </div>
+</div>
+
+<div class="form-row">
+  <label class="col-form-label col-md-3" for="fname">`First Name`</label>
+  <div class="col col-xl-6">
+    <input id="fname" name="item[fname]" maxlength="64" value="<~i[fname]>" type="text" class="form-control" autocomplete="off">
+  </div>
+</div>
+<div class="form-row">
+  <label class="col-form-label col-md-3" for="lname">`Last Name`</label>
+  <div class="col col-xl-6">
+    <input id="lname" name="item[lname]" maxlength="64" value="<~i[lname]>" type="text" class="form-control" autocomplete="off">
+  </div>
+</div>
+<div class="form-row">
+  <label class="col-form-label col-md-3" for="title">`Title`</label>
+  <div class="col">
+    <input id="title" name="item[title]" maxlength="255" value="<~i[title]>" type="text" class="form-control" autocomplete="off">
+  </div>
+</div>
+
+<div class="form-row">
+  <label class="col-form-label col-md-3" for="address1">`Address 1`</label>
+  <div class="col">
+    <input id="address1" name="item[address1]" maxlength="64" value="<~i[address1]>" type="text" class="form-control">
+  </div>
+</div>
+<div class="form-row">
+  <label class="col-form-label col-md-3" for="address2">`Address 2`</label>
+  <div class="col">
+    <input id="address2" name="item[address2]" maxlength="64" value="<~i[address2]>" type="text" class="form-control">
+  </div>
+</div>
+<div class="form-row">
+  <label class="col-form-label col-md-3" for="city">`City`</label>
+  <div class="col-md-3">
+    <input id="city" name="item[city]" maxlength="64" value="<~i[city]>" type="text" class="form-control">
+  </div>
+  <label class="col-form-label col-md-1" for="state">`State`</label>
+  <div class="col-md-2">
+    <select id="state" name="item[state]" class="form-control">
+      <option value=""></option>
+      <~/common/sel/state.sel select="i[state]">
+    </select>
+  </div>
+  <label class="col-form-label col-md-1" for="zip">`Zip`</label>
+  <div class="col-md-2">
+    <input id="zip" name="item[zip]" maxlength="16" value="<~i[zip]>" type="text" class="form-control">
+  </div>
+</div>
+
+<div class="form-row">
+  <label class="col-form-label col-md-3" for="phone">`Phone`</label>
+  <div class="col-md-3">
+    <input id="phone" name="item[phone]" maxlength="16" value="<~i[phone]>" type="text" class="form-control" autocomplete="off">
+  </div>
+</div>
+
+<div class="form-row">
+  <label class="col-form-label col-md-3" for="att_id">`Picture`</label>
+  <div class="col">
+    <p><button id="att_id" type="button" class="btn btn-default on-select-att" data-att-category="users">`Select/Upload`</button></p>
+  </div>
+  <div class="col-6 col-sm-4 col-md-3 col-lg-4 col-xl-3">
+    <div class="card text-center att-info" <~/common/display_none unless="att">>
+      <input name="item[att_id]" value="<~i[att_id]>" type="hidden">
+      <img class="card-img-top" src="<~/att/url>/<~att[id]>?preview=1&size=s" alt="">
+      <div class="card-body text-nooverflow">
+        <p class="card-text att-iname"><~att[iname]></p>
+        <a href="<~/att/url>/<~att[id]>" target="_blank" class="btn btn-default btn-sm" title="`Download`"><~/common/icons/cloud-download-fill></a>
+        <button type="button" class="btn btn-default btn-sm on-remove-att text-danger" title="`Remove`"><~/common/icons/x-circle-fill></button>
+      </div>
+    </div>
+  </div>
+</div>

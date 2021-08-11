@@ -1,0 +1,20 @@
+<~bsubtitle2 if="title" inline><h5 class="card-title"><~title var></h5></~bsubtitle2>
+<div class="chart-container">
+    <canvas id="chart_<~id>"></canvas>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function(){
+        var myChart = new Chart("chart_<~id>", {
+            type: 'line',
+            data: {
+                labels: [<~rows repeat inline>"<~ilabel>",</~rows>], //zzz
+                datasets: [{
+                    data: [<~rows repeat inline ivalues><~ivalue>,</~rows>] //zzz
+                }]
+            },
+            options: {
+            }
+        });
+    });
+</script>

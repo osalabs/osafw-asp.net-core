@@ -93,9 +93,9 @@ namespace osafw
         private IDisposable sentryClient;
 
         // begin processing one request
-        public static void run(HttpContext context, IConfiguration settings)
+        public static void run(HttpContext context, IConfiguration configuration)
         {
-            FW fw = new FW(context, settings);
+            FW fw = new FW(context, configuration);
             FW.Current = fw;
 
             FwHooks.initRequest(fw);
@@ -103,13 +103,13 @@ namespace osafw
             FwHooks.finalizeRequest(fw);
         }
 
-        public FW(HttpContext context, IConfiguration settings)
+        public FW(HttpContext context, IConfiguration configuration)
         {
             this.context = context;
             this.req = context.Request;
             this.resp = context.Response;
 
-            FwConfig.init(req, settings);
+            FwConfig.init(context, configuration);
 
             //TODO MIGRATE
             //# If isSentry Then
@@ -752,7 +752,7 @@ namespace osafw
         public void _logger(LogLevel level, ref object[] args)
         {
             // skip logging if requested level more than config's debug level
-            if (level > (LogLevel)Enum.Parse(typeof(LogLevel), (string)this.config("log_level")))
+            if (level > (LogLevel)this.config("log_level"))
                 return;
 
             StringBuilder str = new StringBuilder(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"));

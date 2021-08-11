@@ -1,0 +1,94 @@
+<form id="DataF" action="<~../url>/(SaveMulti)" method="post" data-check-changes="true">
+<input type="hidden" name="XSS" value="<~SESSION[XSS]>">
+<input type="hidden" name="d" value="<~d>">
+<input type="hidden" name="mode" value="edit">
+
+<p>
+<input type="submit" value="`Submit changes`" class="btn btn-primary disabled" >
+<input type="button" value="`Cancel`" class="btn btn-default on-cancel" >
+</p>
+
+<table class="table table-sm table-bordered table-edit">
+    <thead>
+        <~group_headers_block if="is_group_headers" inline>
+            <tr class="list-header">
+                <th></th>
+                <~group_headers repeat inline xyz>
+                    <th colspan="<~colspan>"><~iname></th>
+                </~group_headers>
+                <th></th>
+            </tr>
+        </~group_headers_block>
+        <tr data-sortby="<~f[sortby]>" data-sortdir="<~f[sortdir]>">
+            <th></th>
+            <~fields_headers repeat inline>
+                <th data-sort="<~colname>">`<~iname>`</th>
+            </~fields_headers>
+        </tr>
+    </thead>
+    <tbody>
+<~list_rows repeat inline>
+        <tr data-id="<~id>">
+            <input type="hidden" name="row[<~id>]" value="<~row_md5>" class="rowid">
+            <td class="text-nowrap pad">
+                <a href="#" class="on-row-del text-danger"><~/common/icons/x-circle></a>
+            </td>
+            <~fields_values repeat inline>
+                <td>
+                <~type_input unless="type" inline><input name="f<~id>[<~colname>]" type="text" value="<~value>" maxlength="<~maxlen>" class="form-control">
+                </~type_input>
+                <~type_readonly ifeq="type" value="readonly" inline><input value="<~value>" type="text" readonly class="form-control-plaintext ml-1">
+                </~type_readonly>
+                <~type_checkbox ifeq="type" value="checkbox" inline><div class="checkbox"><label><input name="f<~id>[<~colname>]" value="1" type="checkbox" <~/common/checked ifeq="value"> ></label></div>
+                </~type_checkbox>
+                <~type_lookup ifeq="type" value="lookup" inline>
+                    <select name="f<~id>[<~colname>]" class="form-control">
+                        <option value="">`- select -`</option>
+                        <~select_options noescape>
+                    </select>
+                </~type_lookup>
+                </td>
+            </~fields_values>
+        </tr>
+</~list_rows>
+        <tr data-id="0" class="tpl hide">
+            <input type="hidden" name="new[0]" value="" class="rowid">
+            <td class="text-nowrap pad">
+                <a href="#" class="on-row-del text-danger"><~/common/icons/x-circle></a>
+            </td>
+            <~fields_headers repeat inline xxx>
+                <td>
+                <~type_input unless="type" inline><input name="fnew0[<~colname>]" type="text" value="" maxlength="<~maxlen>" class="form-control">
+                </~type_input>
+                <~type_readonly ifeq="type" value="readonly" inline><input value="" type="text" readonly class="form-control-plaintext">
+                </~type_readonly>
+                <~type_checkbox ifeq="type" value="checkbox" inline><div class="checkbox"><label><input name="fnew0[<~colname>]" value="1" type="checkbox" ></label></div>
+                </~type_checkbox>
+                <~type_lookup ifeq="type" value="lookup" inline>
+                    <select name="fnew0[<~colname>]" class="form-control">
+                        <option value="">`- select -`</option>
+                        <~select_options noescape>
+                    </select>
+                </~type_lookup>
+                </td>
+            </~fields_headers>
+        </tr>
+    </tbody>
+</table>
+
+<p>
+    <a class="btn btn-default on-add-new" href="<~../url>/new?d=<~d>"><~/common/icons/plusb> `Add New`</a>
+</p>
+
+<~footer_text if="defs[footer_text]" inline>
+<p class="well well-sm">
+    <~defs[footer_text] nl2br>
+</p>
+</~footer_text>
+
+<input type="submit" value="`Submit changes`" class="btn btn-primary disabled">
+<input type="button" value="`Cancel`" class="btn btn-default on-cancel" >
+
+</form>
+
+<~/common/pagination>

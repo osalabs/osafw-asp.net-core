@@ -1,0 +1,41 @@
+<form action="<~../url>" method="post">
+<input type="hidden" name="XSS" value="<~SESSION[XSS]>">
+<input type="hidden" name="_method" value="PUT">
+
+<table class="table table-striped table-sm table-hover list">
+    <thead>
+        <tr data-sortby="<~f[sortby]>" data-sortdir="<~f[sortdir]>">
+            <th><input type="checkbox" name="all" value="1" class="on-list-chkall"></th>
+            <th data-sort="icode">`Screen`</th>
+            <th data-sort="iname">`Title`</th>
+            <th data-sort="sys">`Is System`</th>
+            <th data-sort="add_time">`Added on`</th>
+            <th data-sort="status">`Status`</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+<~list_rows repeat inline>
+        <tr data-url="<~row_click_url>">
+            <td><input class="multicb" type="checkbox" name="cb[<~id>]" value="1"></td>
+            <td><~icode></td>
+            <td><~iname></td>
+            <td><~/common/sel/yn.sel selvalue="is_system"></td>
+            <td><~add_time></td>
+            <td><~/common/sel/status.sel selvalue="status"></td>
+            <td nowrap="nowrap">
+                <a href="<~row_click_url>">`Edit`</a>
+                <~/common/dot><a href="<~../url>/<~id>/delete" class="on-delete-list-row">`Del`</a>
+            </td>
+        </tr>
+</~list_rows>
+    </tbody>
+</table>
+
+<~/common/list/btn_multidel>
+
+</form>
+<form id="FOneDelete" action="<~../url>/%id%?XSS=<~SESSION[XSS]>" method="post">
+</form>
+
+<~/common/pagination>

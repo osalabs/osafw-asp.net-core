@@ -1,0 +1,25 @@
+<form method="post" action="<~../url>" data-errors="<~ERR json>">
+  <input type="hidden" name="XSS" value="<~session[XSS]>">
+
+  <fieldset>
+    <legend><~title></legend>
+
+<~/common/form/msg>
+
+    <div class="form-group row">
+      <label class="col-form-label col-md-3" for="login">`Your Email`</label>
+      <div class="col">
+        <input id="login" name="item[login]" maxlength="128" value="<~i[login]>" type="text" class="form-control">
+        <p class="err-WRONG">`Not a valid Email`</p>
+      </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col offset-md-3">
+            <button type="submit" class="btn btn-primary">`Get Password`</button>
+            <button type="button" class="btn btn-default" onclick="window.location='<~/login/url>'">`Cancel`</button>
+        </div>
+    </div>
+
+  </fieldset>
+</form>

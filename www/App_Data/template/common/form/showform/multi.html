@@ -1,0 +1,10 @@
+<div class="field-multi-value">
+  <input type="input" id="<~field>$search" name="<~field>$search" class="form-control form-control-sm on-multi-search mb-1" value="" placeholder="`type to filter...`" data-noautosave>
+  <~multi_datarow repeat inline>
+    <div class="custom-control custom-checkbox" data-s="<~id upper> - <~iname upper>">
+      <input type="checkbox" class="custom-control-input" id="<~field>$<~id>" name="<~field>_multi[<~id>]" value="1" <~/common/checked if="is_checked">>
+      <label class="custom-control-label" for="<~field>$<~id>"><~iname></label>
+    </div>
+  </~multi_datarow>
+</div>
+<~./help_block if="help_text">

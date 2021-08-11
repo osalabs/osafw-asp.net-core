@@ -1,0 +1,17 @@
+<~bsubtitle2 if="title" inline><h5 class="card-title"><~title var></h5></~bsubtitle2>
+<table class="table table-striped table-sm table-hover">
+    <thead>
+        <tr>
+            <~headers repeat inline>
+                <th><~field_name></th>
+            </~headers>
+        </tr>
+    </thead>
+    <tbody>
+        <~rows repeat inline>
+        <tr>
+            <~cols repeat inline><td><~data var></td></~cols>
+        </tr>
+        </~rows>
+    </tbody>
+</table>

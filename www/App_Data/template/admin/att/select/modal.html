@@ -1,0 +1,55 @@
+<div class="modal fade" id="modal-att" data-load-url="<~/admin/att/url>/(Select)">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+    </div>
+  </div>
+</div>
+
+<script>
+function modal_att_open($att_category, on_select_callback){
+    var $modal = $('#modal-att').modal('show');
+    var url = $modal.data('load-url')+'?category='+$att_category;
+    $modal.find('.modal-content').html(fw.HTML_LOADING).load( url );
+
+    if ($.isFunction(on_select_callback)){
+        $modal.off('select.modal-att').on('select.modal-att', on_select_callback);
+    }
+}
+
+//setup standard handlers for att selection
+ $(document).ready(function() {
+
+    $(document).on('click', '.on-select-att', function (e) {
+        var $this = $(this);
+        var $fg = $this.closest('.form-group, .form-row');
+        var $att_list = $fg.find('.att-list');
+        var att_preview_size = $this.data('att-preview-size') || 's';
+
+        modal_att_open($this.data('att-category'), function (e, id, iname, url, is_image) {
+            var $attinfo;
+            if ($att_list.length){//multi att
+                $attinfo = $att_list.find('.tpl').clone().removeClass('tpl d-none').appendTo($att_list);
+                $attinfo.find(':input:hidden').prop('name', 'att['+id+']');
+            }else{
+                $attinfo = $fg.find('.att-info').show();
+                $attinfo.find(':input:hidden').val(id);
+            }
+            
+            $attinfo.find('img').show().prop('src', '/Att/'+id+'?preview=1&size='+att_preview_size);
+            $attinfo.find('a').prop('href', '/Att/'+id);
+            $attinfo.find('.att-iname').text(iname);
+        });
+    });
+    $(document).on('click', '.on-remove-att', function (e) {
+        var $this = $(this);
+        var $attinfo = $this.closest('.att-info');
+        if ($this.closest('.att-list').length){
+            $attinfo.remove(); //multi att - just remove
+        }else{
+            $attinfo.hide().find(':input:hidden').val('');
+        }
+    });
+
+ });
+
+</script>

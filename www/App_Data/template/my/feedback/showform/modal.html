@@ -1,0 +1,35 @@
+<div class="modal" tabindex="-1" role="dialog" id="modal-my-feedback">
+  <div class="modal-dialog">
+    <div class="modal-content">
+
+      <form method="post" data-check-changes action="<~./../url>">
+       <input type="hidden" name="XSS" value="<~session[XSS]>">
+       <input type="hidden" name="return_url" value="<~GLOBAL[request_url]>">
+
+      <div class="modal-header">
+        <h5 class="modal-title"><~./title></h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+
+        <div class="form-row">
+          <label class="required" for="iname">`Issue Summary`</label>
+          <input id="iname" name="item[iname]" maxlength="64" value="<~i[iname]>" type="text" class="form-control" required>
+        </div>
+        <div class="form-row">
+          <label class="required" for="idesc">`Issue Description`</label>
+          <textarea id="idesc" name="item[idesc]" rows="5" class="form-control" required></textarea>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-primary">`Submit`</button>
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">`Cancel`</button>
+      </div>
+
+      </form>
+    </div>
+  </div>
+</div>

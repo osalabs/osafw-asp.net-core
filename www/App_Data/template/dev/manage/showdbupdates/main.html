@@ -1,0 +1,28 @@
+<~/common/form/msg>
+
+<h4><a href="<~/dev/manage/url>" class="btn btn-light btn-sm px-3"><~/common/icons/arrow-left-circle></a> <~title></h4>
+
+<form method="post" action="<~../url>/(SaveDBUpdates)">
+    <input type="hidden" name="XSS" value="<~session[XSS]>">
+
+
+    <div class="form-row">
+      <label class="col-form-label col-md-1">Select Files</label>
+      <div class="col">
+        <~rows repeat inline>
+        <div class="custom-control custom-checkbox">
+          <input class="custom-control-input" type="checkbox" id="file_<~filename>" name="item[<~filename>]" value="1">
+          <label class="custom-control-label" for="file_<~filename>"><~filename></label>
+        </div>
+        </~rows>
+      </div>
+    </div>
+
+    <~nodir if="is_nodir" inline>
+    <div class="alert alert-warning"><b>Warning!</b> Updates directory <code>App_Data/sql/updates</code> not found</div>
+    </~nodir>
+
+
+    <button class="btn btn-primary ml-2">Apply DB Updates and Refresh Views</button>
+    <button class="btn btn-info ml-2" name="ViewsOnly" value="1">Refresh Views only</button>
+</form>

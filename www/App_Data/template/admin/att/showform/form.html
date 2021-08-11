@@ -1,0 +1,63 @@
+<form method="post" data-check-changes action="<~../url><~uu1 if="id" inline>/<~id></~uu1>" enctype="multipart/form-data" data-errors="<~ERR json>">
+ <input type="hidden" name="XSS" value="<~session[XSS]>">
+
+  <fieldset>
+    <~/common/form/msg>
+
+    <~/common/form/group_id>
+
+    <div class="form-row">
+      <label class="col-form-label col-md-3" for="att_categories_id">`Category`</label>
+      <div class="col-md-3">
+        <select id="att_categories_id" name="item[att_categories_id]" class="form-control">
+          <option value="">- no category -</option>
+          <~select_options_att_categories_id select="i[att_categories_id]">
+        </select>
+      </div>
+      <~linked_table_info if="table_name">
+      <label class="col-form-label col-md-2">`Linked Table`</label>
+      <div class="col">
+        <p class="form-control-plaintext"><~i[table_name]><~/common/dot><~i[item_id]></p>
+      </div>
+      </~linked_table_info>
+    </div>
+
+    <div class="form-row">
+      <label class="col-form-label col-md-3 required" for="iname">`File name`</label>
+      <div class="col-md-9">
+        <input id="iname" name="item[iname]" maxlength="128" value="<~i[iname]>" type="text" class="form-control">
+        <~stats_block if="id" inline>
+          <small class="form-text text-muted">File size: <~fsize_human>. Original file name: <~i[fname]></small>
+        </~stats_block>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <label class="col-form-label col-md-3 required" for="file1">`File`</label>
+      <div class="col-md-9">
+        <~not_uploaded unless="i[fsize]" inline>
+          <input id="file1" name="file1" type="file">
+        </~not_uploaded>
+            <~uploaded if="i[fsize]" inline>
+                 <~uploaded_img if="i[is_image]" inline>
+                   <div>
+                      <a href="<~url>" target="_blank"><img src="<~url_m>"></a>
+                   </div>
+                 </~uploaded_img>
+                 <~uploaded_file unless="i[is_image]" inline>
+                   <div class="form-control-plaintext">
+                      <a href="<~url>" target="_blank">open file <~i[fname]></a>
+                   </div>
+                 </~uploaded_file>
+            </~uploaded>
+          <p class="err-NOFILE">`You have to select file for upload`</p>
+      </div>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <~/common/form/group_status>
+    <~/common/form/actions_std>
+
+  </fieldset>
+</form>

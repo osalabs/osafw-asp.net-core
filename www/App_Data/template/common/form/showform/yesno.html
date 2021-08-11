@@ -1,0 +1,8 @@
+<div class="custom-control custom-radio <~./cc_inline if="is_inline">">
+  <input type="radio" id="<~field>$0" name="item[<~field>]" class="custom-control-input" value="0" <~/common/checked unless="value" >>
+  <label class="custom-control-label" for="<~field>$0">`No`</label>
+</div>
+<div class="custom-control custom-radio <~./cc_inline if="is_inline">">
+  <input type="radio" id="<~field>$1" name="item[<~field>]" class="custom-control-input" value="1" <~/common/checked if="value">>
+  <label class="custom-control-label" for="<~field>$1">`Yes`</label>
+</div>

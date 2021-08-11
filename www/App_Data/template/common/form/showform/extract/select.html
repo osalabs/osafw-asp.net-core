@@ -1,0 +1,6 @@
+<select id="<~field>" name="item[<~field>]" class="form-control <~class_control>" <~attrs_control noescape>>
+  <~option0 if="is_option0" inline><option value="0"><~option0_title default="- select -"></option></~option0>
+  <~option_empty if="is_option_empty" inline><option value=""><~option0_title default="- select -"></option></~option_empty>
+  <~./select_np noparse>
+</select>
+<~/common/form/showform/help_block if="help_text">

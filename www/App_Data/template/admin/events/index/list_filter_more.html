@@ -1,0 +1,29 @@
+  <div class="form-row">
+    <label class="col-form-label col-md-2 col-xl-1" for="fusers_id">`Date`</label>
+    <div class="col-sm-3">
+      <div class="input-group date">
+        <input id="fdate_pop" name="f[date]" maxlength="10" value="<~f[date] date>" type="text" class="form-control">
+        <div class="input-group-append"><button class="btn btn-outline-secondary" type="button"><~/common/icons/calendar3></button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-row">
+    <label class="col-form-label col-md-2 col-xl-1" for="fevents_id">`Event`</label>
+    <div class="col-sm-6">
+      <select name="f[events_id]" class="form-control">
+        <option value=""> - `all` - </option>
+        <~filter_select_events select="f[events_id]">
+      </select>
+    </div>
+  </div>
+
+  <div class="form-row">
+    <label class="col-form-label col-md-2 col-xl-1" for="fusers_id">`User`</label>
+    <div class="col-sm-6">
+      <select name="f[users_id]" class="form-control">
+        <option value=""> - `all` - </option>
+        <~filter_select_users select="f[users_id]">
+      </select>
+    </div>
+  </div>

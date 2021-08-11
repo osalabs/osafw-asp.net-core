@@ -1,0 +1,87 @@
+<div class="modal fade" tabindex="-1" role="dialog" id="modal-custom-cols" data-load-url="<~../url>/(UserViews)">
+  <div class="modal-dialog modal-lg" role="document">
+  <form method="post" action="<~../url>/(SaveUserViews)">
+    <input type="hidden" name="XSS" value="<~session[XSS]>">
+    <input type="hidden" name="return_url" value="<~../url>">
+    <input type="hidden" name="load_id" value="">
+    <input type="hidden" name="item[iname]" value="">
+
+    <div class="modal-content">
+        <p>
+            <span class="spinner-border spinner-border" role="status" aria-hidden="true"></span> `Loading...`
+        </p>
+    </div>
+
+  </form>
+  </div>
+</div>
+
+<div class="modal fade" id="modal-create-userview">
+  <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+          <div class="modal-header">
+              <h5 class="modal-title">Save New View</h5>
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+          </div>
+          <div class="modal-body modal-overflowed">
+              <div class="row">
+                <label class="control-label col-sm-3" for="view_iname">`New View Title`</label>
+                <div class="col">
+                  <input id="view_iname" name="item[iname]" maxlength="255" value="" type="text" class="form-control">
+                </div>
+              </div>
+          </div>
+          <div class="modal-footer">
+              <button type="button" class="btn btn-primary on-save-userviews">`Save`</button>
+              <button type="button" class="btn btn-secondary" data-dismiss="modal">`Close`</button>
+          </div>
+      </div>
+  </div>
+</div>
+
+
+<script>
+  $(document).ready(function(){
+      $(document).on('click', '.on-custom-cols', function (e) {
+          e.preventDefault();
+          var $modal = $('#modal-custom-cols').modal('show');
+          $modal.find('.modal-content').load($modal.data('load-url'), function (data){
+//              console.log('loaded');
+          });
+      });
+
+    $(document).on('click', '.on-create-userviews', function(e){
+      e.preventDefault();
+      $modal = $('#modal-create-userview').modal('show');
+      $modal.on('shown.bs.modal', function (e) {
+         $modal.find("#view_iname").focus();
+      });
+    });
+
+    $(document).on('click', '.on-save-userviews', function (e) {
+      var iname = $('#modal-create-userview').find("#view_iname").val();
+      var $cols_modal = $('#modal-custom-cols');
+      $cols_modal.find('input[name="item[iname]"]').val(iname);
+      $cols_modal.find('form').submit();
+    });
+
+    $(document).on('click', '.on-set-userviews', function (e) {
+      var id = $(this).data('id');
+      var $cols_modal = $('#modal-custom-cols');
+      $cols_modal.find('input[name="load_id"]').val(id);
+      $cols_modal.find('form').submit();
+    });
+
+    $(document).on('click', '.on-del-userviews', function (e) {
+      e.preventDefault();
+      var id = $(this).data('id');
+      fw.confirm('Are you sure to delete current view?', function (e) {
+        var $f = $('<form action="<~/my/views/url>/'+id+'?XSS=<~session[XSS]>&return_url=<~../url>" method="post"></form>')
+          .appendTo(document.body)
+          .submit();
+      });
+    })
+
+  });
+</script>
+<script src="<~GLOBAL[ASSETS_URL]>/js/jquery-ui.min.js"></script>

@@ -1,0 +1,52 @@
+<~/common/form/group_id>
+
+<div class="form-row">
+  <label class="col-form-label col-md-3" for="att_id">`Attachment`</label>
+  <div class="col-md-3">
+    <p><button id="att_id" type="button" class="btn btn-default on-select-att" data-att-category="general">`Select/Upload`</button></p>
+  </div>
+  <div class="col-lg-4 col-md-6">
+    <div class="card text-center att-info" <~/common/display_none unless="att">>
+      <input name="item[att_id]" value="<~i[att_id]>" type="hidden">
+      <img class="card-img-top" src="<~/att/url>/<~att[id]>?preview=1&size=s" alt="">
+      <div class="card-body text-nooverflow">
+        <p class="card-text att-iname"><~att[iname]></p>
+        <a href="<~/att/url>/<~att[id]>" target="_blank" class="btn btn-default"><~/common/icons/cloud-download> `Download`</a>
+        <button type="button" class="btn btn-default on-remove-att"><~/common/icons/x-circle> `Remove`</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="form-row">
+  <label class="col-form-label col-md-3" for="att_links">`Multiple Attachments`</label>
+  <div class="col">
+    <p><button id="att_links" type="button" class="btn btn-default on-select-att" data-att-category="general"><~/common/icons/plus-circle> `Select/Upload`</button></p>
+
+    <div class="card-columns att-list mt-5">
+      <~att_links repeat inline>
+          <div class="card text-center att-info">
+            <input type="hidden" name="att[<~id>]" value="1">
+            <img class="card-img-top" src="<~/att/url>/<~id>?preview=1&size=s" alt="">
+            <div class="card-body text-nooverflow">
+              <p class="card-text att-iname"><~iname></p>
+              <a href="<~/att/url>/<~id>" target="_blank" class="btn btn-default"><~/common/icons/cloud-download> `Download`</a>
+              <button type="button" class="btn btn-default on-remove-att"><~/common/icons/x-circle> `Remove`</button>
+            </div>
+          </div>
+      </~att_links>
+      <div class="card text-center tpl d-none att-info">
+        <input type="hidden" name="" value="1">
+        <img class="card-img-top" src="" alt="">
+        <div class="card-body text-nooverflow">
+          <p class="card-text att-iname"></p>
+          <a href="" target="_blank" class="btn btn-default"><~/common/icons/cloud-download> `Download`</a>
+          <button type="button" class="btn btn-default on-remove-att"><~/common/icons/x-circle> `Remove`</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<~/common/form/group_status>

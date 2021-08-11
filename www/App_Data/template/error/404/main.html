@@ -1,0 +1,25 @@
+<h1><~title></h1>
+
+<div align="center">
+<div style="margin:auto;width:400px">
+    <p>
+    Try the following:<br>
+    <ol style="text-align:left">
+        <~links unless="_IS_PJAX" inline>
+        <li>
+            <a href="#" onclick="window.history.go(-1)">`Return to previous page and try last action again`</a>
+        </li>
+        </~links>
+        <li>
+            <a href="<~ROOT_URL>/sitemap">`Find necessary page via Site Map`</a>
+        </li>
+        <li>
+            <a href="<~ROOT_URL>/">`Go to site Home page`</a>
+        </li>
+        <li>
+            Or <a href="<~/contact/url>">contact site support</a> to inform about missing page
+        </li>
+    </ol>
+    </p>
+</div>
+</div>

@@ -1,0 +1,79 @@
+<fieldset>
+    <div class="form-row">
+      <div class="col-md-12">
+        <input id="iname" name="item[iname]" maxlength="64" value="<~i[iname]>" type="text" class="form-control form-control-lg" placeholder="`Page Title`" required>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="col-md-12">
+        <label class="col-form-label" for="idesc">`Page Content`:
+            <span class="nobold"><a href="https://guides.github.com/features/mastering-markdown/" target="_blank">markdown syntax</a> supported</span>
+        </label>
+        <textarea id="idesc" name="item[idesc]" rows="5" class="form-control markdown autoresize"><~i[idesc]></textarea>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="col-lg-6">
+        <p>
+          `Left column`
+        </p>
+        <textarea id="idesc_left" name="item[idesc_left]" rows="5" class="form-control markdown autoresize"><~i[idesc_left]></textarea>
+      </div>
+      <div class="col-lg-6">
+        <p>
+          `Right column`
+        </p>
+        <textarea id="idesc_right" name="item[idesc_right]" rows="5" class="form-control markdown autoresize"><~i[idesc_right]></textarea>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <label class="col-form-label col-md-3 col-lg-2" for="head_att_id">`Page Image`
+        <small class="form-text text-muted">`best`: 1110x300 px</small>
+      </label>
+      <div class="col-md-3 col-lg-2">
+        <p><button type="button" class="btn btn-default on-select-att" data-att-preview-size="l" data-att-category="spage_banner">`Select/Upload`</button></p>
+      </div>
+      <div class="col-md-6 col-lg-8">
+        <div class="att-info" <~/common/display_none unless="att">>
+          <input id="head_att_id" name="item[head_att_id]" value="<~i[head_att_id]>" type="hidden">
+          <img src="<~/att/url>/<~att[id]>?preview=1&size=l" class="img-fluid">
+          <p class="mt-3"><button type="button" class="btn btn-default on-remove-att text-danger"><~/common/icons/x-circle-fill> `Remove image`</button></p>
+        </div>
+      </div>
+    </div>
+
+</fieldset>
+
+<fieldset>
+  <legend>Customize</legend>
+
+  <div class="form-row">
+    <label class="col-form-label col-md-3 col-lg-2" for="meta_keywords">`Meta Keywords`</label>
+    <div class="col-md-9 col-lg-10">
+      <input id="meta_keywords" name="item[meta_keywords]" maxlength="255" value="<~i[meta_keywords]>" type="text" class="form-control">
+    </div>
+  </div>
+  <div class="form-row">
+    <label class="col-form-label col-md-3 col-lg-2" for="meta_description">`Meta Description`</label>
+    <div class="col-md-9 col-lg-10">
+      <input id="meta_description" name="item[meta_description]" maxlength="255" value="<~i[meta_description]>" type="text" class="form-control">
+    </div>
+  </div>
+
+  <div class="form-row">
+    <label class="col-form-label col-md-3 col-lg-2" for="custom_css">`Custom CSS`</label>
+    <div class="col-md-9 col-lg-10">
+      <textarea id="custom_css" name="item[custom_css]" rows="3" class="form-control autoresize"><~i[custom_css]></textarea>
+    </div>
+  </div>
+  <div class="form-row">
+    <label class="col-form-label col-md-3 col-lg-2" for="custom_js">`Custom JS`</label>
+    <div class="col-md-9 col-lg-10">
+      <textarea id="custom_js" name="item[custom_js]" rows="3" class="form-control autoresize"><~i[custom_js]></textarea>
+    </div>
+  </div>
+
+</fieldset>

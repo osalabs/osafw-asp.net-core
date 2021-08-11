@@ -174,7 +174,7 @@ namespace osafw
         {
             this.fw = fw;
             TMPL_PATH = (string)fw.config("template");
-            is_check_file_modifications = (LogLevel)Enum.Parse(typeof(LogLevel), (string)fw.config("log_level")) >= LogLevel.DEBUG;
+            is_check_file_modifications = (LogLevel)fw.config("log_level") >= LogLevel.DEBUG;
             lang = (string)fw.G["lang"];
             if (string.IsNullOrEmpty(lang))
                 lang = (string)fw.config("lang");

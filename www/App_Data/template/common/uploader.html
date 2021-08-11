@@ -1,0 +1,121 @@
+<style>
+    .upload-area {
+        background-color: #cdcc00 !important;
+    }
+</style>
+<script>
+    $(document).ready(function() {
+        var $files = $('#files'); //div with data-uploadurl, data-deleteurl, data-XSS
+        var $filesBg = $($files.data('bg')); //element that should change background on drag
+        var $filesInput = $('#files-input');
+        var filesCode = $('#files-code').val();
+        var $uploadProgress = $('#files-progress');
+        var $filesTpl = $('#files-tpl');
+        var XSS = $files.data('xss');
+
+        function upload_progress(e) {
+            if (e.lengthComputable){
+                $uploadProgress.find('.progress-bar').width((e.loaded/e.total)*100+'%');
+            }
+        }
+
+        function upload_files(files) {
+            var formData = new FormData();
+            formData.append('XSS', XSS);
+            formData.append('files_code', filesCode);
+
+            for (var i = files.length - 1; i >= 0; i--) {
+                formData.append('files[]', files[i]);
+            }
+
+            $uploadProgress.show().find('.progress-bar').width(0);
+
+            $.ajax({
+                url: $files.data('uploadurl'),
+                data: formData,
+                dataType: 'json',  // what to expect back from the PHP script, if anything
+                processData: false,
+                contentType: false,
+                type: 'POST',
+                //for progress
+                xhr: function () {
+                    var xhr = $.ajaxSettings.xhr();
+                    xhr.upload.onprogress = upload_progress;
+                    return xhr;
+                }
+            }).done(function (data) {
+                if (data.success){
+                    fw.ok('File(s) added successfully');
+
+                    //render added files from data.files
+                    //console.log(data.files)
+                    for (var i = 0; i < data.files.length; i++) {
+                        var item = data.files[i];
+                        var $ftpl = $filesTpl.clone().prop('id', '').removeClass('d-none');
+                        var href=$ftpl.find('.field-fname').prop('href')+item.id;
+                        $ftpl.find('.field-fname').prop('href', href).text(item.fname);
+                        $ftpl.find('.field-fsize').text(item.fsize);
+                        $ftpl.find('.field-id').data('id',item.id);
+                        $files.append($ftpl);
+                    }
+
+                }else{
+                    fw.error(data.err_msg ? data.err_msg : 'Server error');
+                }
+            }).fail(function(jqXHR, textStatus, errorThrown){
+                fw.error('Error uploading file:+'+ textStatus);
+            }).always(function () {
+                $uploadProgress.hide().find('.progress-bar').width(0);
+            });
+        }
+
+        //on files changed - upload them via ajax
+        $filesInput.on('change', function(e){
+            upload_files($filesInput[0].files);
+            $filesInput[0].value=''; //remove files from input so they won't be submitted with form submit
+        });
+
+        $(document).on('click', '.on-del-file', function (e) {
+            var $this = $(this);
+            var id = $this.data('id');
+            var filename = $this.closest('.form-row').find('.field-fname').text();
+
+
+            fw.confirm('Are you sure to delete '+filename+' ?', 'Delete File', function(){
+                $.ajax({
+                    url: $files.data('deleteurl')+id,
+                    dataType: 'json',  // what to expect back from the PHP script, if anything
+                    processData: false,
+                    contentType: false,
+                    type: 'POST',
+                }).done(function (data) {
+                    if (data.success){
+                        $this.closest('.form-row').remove();
+                    }else{
+                        fw.error(data.err_msg ? data.err_msg : 'Server error');
+                    }
+                }).fail(function(jqXHR, textStatus, errorThrown){
+                    fw.error('Error deleting file:+'+ textStatus);
+                });
+            });
+        });
+
+        //drag & drop
+        $(document).on('drop dragover', function (e) {
+            e.preventDefault();
+            e.originalEvent.dataTransfer.dropEffect = 'copy';
+            $filesBg.addClass('upload-area');
+        })
+        .on('drop', function (e) {
+            $filesBg.removeClass('upload-area');
+            e.preventDefault();
+            var files = e.originalEvent.dataTransfer.files;
+            if (!files.length) return;
+
+            upload_files(files);
+        })
+        .on('dragleave', function (e) {
+            $filesBg.removeClass('upload-area');
+        });
+    });
+</script>

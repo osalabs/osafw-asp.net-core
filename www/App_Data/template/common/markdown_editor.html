@@ -1,0 +1,139 @@
+<link href="<~GLOBAL[ASSETS_URL]>/css/glyphicons.css" rel="stylesheet">
+<link href="<~GLOBAL[ASSETS_URL]>/css/bootstrap-markdown.min.css" rel="stylesheet">
+<style>
+.md-editor > textarea {
+ padding:10px;
+ background-color: #fff;
+ overflow: hidden;
+}
+.md-editor > .md-preview {
+  padding:10px;
+  height: auto !important;
+}
+.md-editor .hidden {
+  display: none;
+}
+.md-editor .btn-primary {
+  display: none;
+}
+</style>
+
+<script src="<~GLOBAL[ASSETS_URL]>/js/markdown-it.min.js"></script>
+<script src="<~GLOBAL[ASSETS_URL]>/js/turndown.min.js"></script>
+<script src="<~GLOBAL[ASSETS_URL]>/js/bootstrap-markdown.min.js"></script>
+<script src="<~GLOBAL[ASSETS_URL]>/js/jquery.hotkeys.js"></script>
+<script>
+  $(document).ready(function() {
+
+    var turndownService = new TurndownService({
+      headingStyle: 'atx',
+      hr: '---',
+      bulletListMarker: '-',
+      codeBlockStyle: 'fenced',
+      blankReplacement : function (content, node) {
+        return node.isBlock ? '\n\n' : content;
+      }
+    });
+    // turndownService.addRule('fromWord', {
+    //   filter: ['u','span','sup'], //filter out excessive Word tags
+    //   replacement: function (content, node) {
+    //     return content;
+    //   }
+    // });
+
+    var mdOptions={
+      html:       true,
+      breaks:     true,
+      linkify:    true
+    };
+    var md = window.markdownit(mdOptions);
+
+    $("textarea.markdown")
+    .on('paste', function (e){
+      var cd = e.originalEvent.clipboardData;
+      if (!cd) return; //IE doesn't support paste as html, so just pass it as is
+
+      if (cd.types.contains && cd.types.contains('text/html') || cd.types.indexOf && cd.types.indexOf('text/html')>-1 ){
+        var data = cd.getData('text/html');
+        var bodyHtml = /<body.*?>([\s\S]*)<\/body>/.exec(data)[1];
+
+        //console.log('data before:', bodyHtml)
+        data = turndownService.turndown(bodyHtml);
+        //console.log('data after:', data)
+
+        //data = toMarkdown(data, { gfm: true });
+        //data = toMarkdown(data, { converters: aconverters });
+
+        fw.field_insert_at_cursor(this, data);
+        e.preventDefault();
+      }
+    })
+    .markdown({
+      //hide&disable default add image btn
+      hiddenButtons: 'cmdImage',
+      disabledButtons: 'cmdImage',
+      //iconlibrary: 'glyph',
+      parser: function (v) {
+        return md.render(v);
+      },
+      additionalButtons: [
+        [{
+          name: "groupCustom",
+          data: [{
+            name: "cmdAddImage",
+            toggle: false,
+            title: "Add Image",
+            hotkey: 'Ctrl+G',
+            icon: {
+              glyph: 'glyphicon glyphicon-picture',
+              fa: 'fa fa-picture-o',
+              'fa-3': 'icon-picture',
+              octicons: 'octicon octicon-file-media'
+            },
+            callback: function(e){
+              // Replace selection with some drinks
+              var chunk, cursor, selected = e.getSelection(), content = e.getContent();
+
+              modal_att_open('general', function (e2, id, iname, url) {
+                chunk="![]("+url+")";
+
+                // transform selection and set the cursor into chunked text
+                e.replaceSelection(chunk);
+                cursor = selected.start;
+
+                // Set the cursor
+                e.setSelection(cursor,cursor+chunk.length);
+              });
+            }//end callback
+          },{
+            name: 'cmdPreviewCustom',
+            toggle: true,
+            hotkey: 'Ctrl+P',
+            title: 'Preview',
+            btnText: 'Preview',
+            btnClass: 'btn btn-secondary btn-sm',
+            icon: {
+              glyph: 'glyphicon glyphicon-search',
+              fa: 'fa fa-search',
+              'fa-3': 'icon-search',
+              'fa-5': 'fas fa-search',
+              octicons: 'octicon octicon-search'
+            },
+            callback: function(e) {
+              // Check the preview mode and toggle based on this flag
+              if (e.$isPreview === false) {
+                // Give flag that tells the editor to enter preview mode
+                e.showPreview();
+              } else {
+                e.hidePreview();
+              }
+            }
+          }]
+        }]
+      ]
+      // ,onPreview: function(e) {
+      // }
+    });
+
+  });
+</script>

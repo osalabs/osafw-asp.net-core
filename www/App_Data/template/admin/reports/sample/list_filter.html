@@ -1,0 +1,19 @@
+<form method="GET" id="FFilter" name="FFilter" class="form-horizontal d-print-none" data-list-filter data-autosubmit>
+  <input type="hidden" name="dofilter" value="1">
+  <input type="hidden" name="f[pagesize]" value="<~f[pagesize]>">
+
+    <div class="form-row">
+        <~/admin/reports/common/filter_dates>
+    </div>
+    <div class="form-row">
+        <label class="col-form-label col-md-3 col-lg-2" for="fevents_id">`Event`</label>
+        <div class="col col-lg-4">
+            <select name="f[events_id]" id="fevents_id" class="form-control">
+                <option value="">- all -</option>
+                <~filter[select_events] select="f[events_id]">
+            </select>
+        </div>
+    </div>
+
+    <~/admin/reports/common/filter_format>
+</form>

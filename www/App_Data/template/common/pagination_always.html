@@ -1,0 +1,22 @@
+<ul class="pagination mt-3">
+  <li class="page-item disabled"><a class="page-link" href="#" tabindex="-1" aria-disabled="true">Pages:</a></li>
+  <~pager repeat inline>
+    <~pager_prev if="is_show_first" inline>
+      <li><a class="page-link" href="?f[pagenum]=0<~pager_url>" data-pagenum="0">`First`</a></li>
+    </~pager_prev>
+    <~pager_prev if="is_show_prev" inline>
+      <li><a class="page-link" href="?f[pagenum]=<~pagenum_prev><~pager_url>" data-pagenum="<~pagenum_prev>" style="width:80px;text-align:center">&laquo;</a></li>
+    </~pager_prev>
+  <li class="page-item <~/common/active ifeq="is_cur_page" value="1">">
+    <a class="page-link" href="?f[pagenum]=<~pagenum><~pager_url>" data-pagenum="<~pagenum>"><~pagenum_show></a>
+  </li>
+    <~pager_next if="is_show_next" inline>
+      <li><a class="page-link" href="?f[pagenum]=<~pagenum_next><~pager_url>" data-pagenum="<~pagenum_next>" style="width:80px;text-align:center">&raquo;</a></li>
+    </~pager_next>
+  </~pager>
+  <li>&nbsp;
+      <select name="f[pagesize]" class="form-control on-pagesize-change">
+      <~/common/sel/pagesize.sel select="f[pagesize]">
+      </select>
+  </li>
+</ul>

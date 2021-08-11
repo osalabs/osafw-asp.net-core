@@ -1,0 +1,22 @@
+<script type="text/javascript" src="<~GLOBAL[ASSETS_URL]>/js/tinymce/tinymce.min.js"></script>
+<script>
+    $(document).ready(function() {
+        tinymce.init({
+            selector:'.fw-html-editor',
+            plugins: [
+                "advlist autolink lists link image charmap print preview anchor",
+                "searchreplace visualblocks code fullscreen",
+                "insertdatetime media table contextmenu paste"
+            ],
+            toolbar: "undo | styleselect | bold italic | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent link image"
+        });
+        tinymce.init({
+            selector:'.fw-html-editor-short',
+            menubar : false,
+            plugins: [
+                "autolink lists link image code media table contextmenu paste"
+            ],
+            toolbar: "bold italic underline removeformat | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image code"
+        });
+    });
+</script>

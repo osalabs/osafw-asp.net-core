@@ -23,7 +23,7 @@ namespace osafw
             HttpRequest request = context.Request;
             HttpResponse response = context.Response;
             // preflight request
-            if (context.Request.Method.ToUpper() == "OPTIONS")
+            if (request.Method.ToUpper() == "OPTIONS")
             {
                 response.Clear();
 

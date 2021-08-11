@@ -1,0 +1,46 @@
+<form action="<~../url>" method="post">
+<input type="hidden" name="XSS" value="<~SESSION[XSS]>">
+<input type="hidden" name="_method" value="PUT">
+<~/common/form/relid>
+
+<table class="table table-striped table-sm table-hover list">
+    <thead>
+        <tr data-sortby="<~f[sortby]>" data-sortdir="<~f[sortdir]>">
+            <th><input type="checkbox" name="all" value="1" class="on-list-chkall"></th>
+            <~headers repeat inline>
+                <th <~dsort if="is_sortable" inline>data-sort="<~field_name>"</~dsort>><~field_name_visible></th>
+            </~headers>
+            <th class="nobold text-right"><a href="#" class="px-2 mr-2 on-toggle-search" title="`Filter Columns`"><~/common/icons/funnel-fill></a><a href="#" class="on-custom-cols" title="Customize Columns"><~/common/icons/table></a></th>
+        </tr>
+        <tr class="search" <~search_show ifeq="f[is_search]" value="1" inline>style="display:table-row"</~search_show>>
+            <th></th>
+            <~headers_search repeat inline>
+                <th><input type="text" name="search[<~field_name>]" value="<~search_value>" class="form-control form-control-sm"></th>
+            </~headers_search>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+<~list_rows repeat inline>
+        <tr data-url="<~row_click_url>" data-id="<~id>">
+            <td><input class="multicb" type="checkbox" name="cb[<~id>]" value="1"></td>
+            <~cols repeat inline><td><~data var unless="is_custom"><~col_custom if="is_custom"></td></~cols>
+            <td class="text-nowrap text-right">
+                <a href="<~../url>/<~id><~/common/list/relid>">`View`</a>
+                <~/common/dot><a href="<~row_click_url>">`Edit`</a>
+                <~#/common/list/btn_del>
+            </td>
+        </tr>
+</~list_rows>
+<!-- <td><~/common/sel/status.sel selvalue="status"></td> -->
+
+    </tbody>
+</table>
+
+<~/common/list/btn_multidel>
+
+</form>
+<form id="FOneDelete" action="<~../url>/%id%?XSS=<~SESSION[XSS]>" method="post">
+</form>
+
+<~/common/pagination>

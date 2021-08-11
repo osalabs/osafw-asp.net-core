@@ -1,0 +1,18 @@
+<table class="table table-striped table-bordered table-sm table-hover list">
+    <thead>
+        <tr class="list-header">
+        <~head_fields repeat inline>
+            <th><~field_name></th>
+        </~head_fields>
+        </tr>
+    </thead>
+    <tbody>
+<~rows repeat inline>
+        <tr>
+        <~fields repeat inline>
+            <td><~select_link if="is_select_link"><~value><~a_end if="is_select_link"></td>
+        </~fields>
+        </tr>
+</~rows>
+    </tbody>
+</table>

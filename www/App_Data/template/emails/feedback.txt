@@ -1,0 +1,9 @@
+[<~GLOBAL[hostname]>][Feedback] <~i[iname]>
+User #<~user[id]> <~user[email]> <~user[fname]> <~user[lname]> provided the following feedback:
+
+Summary: <~i[iname]>
+Description:
+<~[idesc]>
+
+Sent from URL: <~url>
+

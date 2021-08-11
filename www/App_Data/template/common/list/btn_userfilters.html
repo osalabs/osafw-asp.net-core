@@ -1,0 +1,16 @@
+<div class="dropdown">
+  <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+    `Saved Filters`
+  </button>
+  <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownMenuButton">
+    <a class="dropdown-item on-create-userfilter" href="#">`Save as New Filter`</a>
+    <~userfilter_selected if="f[userfilters_id]" inline>
+      <a class="dropdown-item on-save-userfilter" data-id="<~f[userfilters_id]>" href="#">`Save to` "<~f[userfilter][iname]>"</a>
+      <a class="dropdown-item on-del-userfilter" data-id="<~f[userfilters_id]>" href="#">`Delete` "<~f[userfilter][iname]>"</a>
+    </~userfilter_selected>
+    <div class="dropdown-divider"></div>
+    <~select_userfilters repeat inline>
+        <a class="dropdown-item" href="?dofilter=1&userfilters_id=<~id>"><~iname></a>
+    </~select_userfilters>
+  </div>
+</div>

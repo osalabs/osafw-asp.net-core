@@ -1,0 +1,9 @@
+<~status_normal ifne="i[status]" value="127" inline>
+ <a class="btn btn-default float-right ml-1" href="<~../url>/<~id>/delete?return_url=<~GLOBAL[request_url] urlencode><~/common/list/relid>"><span class="text-danger"><~/common/icons/x-circle-fill></span> `Delete`</a>
+</~status_normal>
+<~status_deleted ifeq="i[status]" value="127" inline>
+ <~perm_delete ifge="SESSION[access_level]" value="100" inline>
+   <a class="btn btn-danger float-right ml-1" href="<~../url>/<~id>/delete?return_url=<~GLOBAL[request_url] urlencode><~/common/list/relid>"><~/common/icons/x-square-fill> `Permanent Delete`</a>
+ </~perm_delete>
+ <a class="btn btn-default float-right ml-1" href="<~../url>/(RestoreDeleted)/<~id><~/common/list/relid>"><span class="text-success"><~/common/icons/check-circle-fill></span> `Restore Deleted`</a>
+</~status_deleted>

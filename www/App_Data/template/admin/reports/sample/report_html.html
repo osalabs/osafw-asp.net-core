@@ -1,0 +1,33 @@
+<~date1 if="f[is_dates]" inline>
+<div class="d-none d-print-block">
+Dates: <strong><~f[from_date]>-<~f[to_date]></strong>
+</div>
+</~date1>
+
+<table class="table table-sm table-bordered table-striped table-hover list">
+    <thead>
+        <tr>
+            <th>Date/Time</th>
+            <th>Event</th>
+            <th class="text-right">Related ID</th>
+            <th class="text-right">Related ID 2</th>
+            <th>Note</th>
+            <th>Fields</th>
+            <th>User</th>
+        </tr>
+    </thead>
+    <tbody>
+        <~rep[rows] repeat inline>
+            <tr>
+                <td><~add_time date="sql"></td>
+                <td><~event_name></td>
+                <td class="text-right"><~item_id></td>
+                <td class="text-right"><~item_id2></td>
+                <td><~iname></td>
+                <td><~fields truncate></td>
+                <td><~fname> <~lname></td>
+            </tr>
+        </~rep[rows]>
+
+    </tbody>
+</table>

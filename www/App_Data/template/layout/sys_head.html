@@ -1,0 +1,39 @@
+<meta http-equiv="Content-Security-Policy" content="<~./content_security_policy>">
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title><~title><~tdot ifne="GLOBAL[controller.action]" value="Home.Index" inline> - </~tdot><~/site_name></title>
+<meta name="keywords" content="<~meta_keywords> <~/site_name> <~/keywords>" />
+<meta name="description" content="<~meta_description> <~/site_name>" />
+
+<link href="<~GLOBAL[ASSETS_URL]>/css/bootstrap.min.css" rel="stylesheet">
+<link href="<~GLOBAL[ASSETS_URL]>/css/jgrowl.min.css" rel="stylesheet">
+<~./theme_link if="SESSION[theme]">
+<link href="<~GLOBAL[ASSETS_URL]>/css/site.css?v<~GLOBAL[SITE_VERSION]>" rel="stylesheet">
+
+<!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+<!--[if lt IE 9]>
+    <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+    <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+<![endif]-->
+
+<!-- Le fav and touch icons -->
+<link rel="shortcut icon" href="<~ROOT_URL>/favicon.ico">
+<!--link rel="apple-touch-icon" href="<~GLOBAL[ASSETS_URL]>/img/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="72x72" href="<~GLOBAL[ASSETS_URL]>/img/apple-touch-icon-72x72.png">
+<link rel="apple-touch-icon" sizes="114x114" href="<~GLOBAL[ASSETS_URL]>/img/apple-touch-icon-114x114.png"-->
+
+<style type="text/css">
+<!--
+<~head.css>
+-->
+</style>
+
+<script type="text/javascript">
+ var ROOT_URL="<~ROOT_URL>";
+ var me_id=<~SESSION[user_id]>+0;
+ var lng;
+</script>
+
+<~head_script>

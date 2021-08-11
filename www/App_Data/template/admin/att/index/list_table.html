@@ -1,0 +1,48 @@
+<form action="<~../url>" method="post">
+<input type="hidden" name="XSS" value="<~SESSION[XSS]>">
+<input type="hidden" name="_method" value="PUT">
+
+<table class="table table-striped table-sm table-hover list">
+    <thead>
+        <tr data-sortby="<~f[sortby]>" data-sortdir="<~f[sortdir]>">
+            <th><input type="checkbox" name="all" value="1" class="on-list-chkall"></th>
+            <th data-sort="category">`Category`</th>
+            <th data-sort="iname">`Title`</th>
+            <th data-sort="fsize">`File size`</th>
+            <th data-sort="ext">`File type`</th>
+            <th data-sort="add_time">`Added on`</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+<~list_rows repeat inline>
+        <tr data-url="<~row_click_url>">
+            <td><input class="multicb" type="checkbox" name="cb[<~id>]" value="1"></td>
+            <td><~cat[iname]></td>
+            <td <~uploaded_img if="is_image" inline>style="background: transparent url('<~url_s>') no-repeat top right;background-size:contain"</~uploaded_img>>
+                <~iname>
+                <div class="form-text text-muted">
+                    Original file name: <~fname>
+                </div>
+            </td>
+            <td><~fsize_human></td>
+            <td><~ext></td>
+            <td><~add_time></td>
+            <td class="text-nowrap text-right">
+                <a href="<~ROOT_URL>/Att/Download/<~id>">`Download`</a>
+                <~/common/dot><a href="<~ROOT_URL>/Att/<~id>" target="_blank">`Open`</a>
+                <~/common/dot><a href="<~row_click_url>">`Edit`</a>
+                <~/common/list/btn_del>
+            </td>
+        </tr>
+</~list_rows>
+    </tbody>
+</table>
+
+<~/common/list/btn_multidel>
+
+</form>
+<form id="FOneDelete" action="<~../url>/%id%?XSS=<~SESSION[XSS]>" method="post">
+</form>
+
+<~/common/pagination>

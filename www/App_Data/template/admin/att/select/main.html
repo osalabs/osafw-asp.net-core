@@ -1,0 +1,69 @@
+<style>
+.thumbnail {
+    display: block;
+    margin-bottom: 20px;
+    line-height: 1.42857143;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    position: relative;
+}
+.thumbnail a > img, .thumbnail > img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin-right: auto;
+    margin-left: auto;
+}
+
+.thumbnail .title {
+    display: block;
+    padding: 4px;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+}
+
+a.thumbnail:hover {
+    border: 1px solid #666;
+}
+
+.thumbs .thumbnail {
+    width: 138px;
+    height: 140px;
+    margin-right: 10px;
+}
+</style>
+
+<div class="modal-header">
+    <h5 class="modal-title"><~./title></h5>
+    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+</div>
+<div class="modal-body modal-overflowed">
+    <form class="form-inline mb-3" method="post" action="<~../url>" enctype="multipart/form-data">
+        <input type="hidden" name="XSS" value="<~session[XSS]>">
+        <input type="hidden" name="mode" value="select">
+
+        <span class="btn btn-success btn-fileinput mr-3">
+            <span class="msg-button"><~/common/icons/cloud-upload-fill><span> Upload new file...</span></span>
+            <span class="msg-uploading d-none"><span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> uploading...</span>
+            <input name="file1" type="file">
+        </span>
+        <div class="form-group">
+            <label class="mr-3">`or choose from existing uploads, category`:</label>
+            <select name="item[att_categories_id]" class="form-control">
+                <option value="">- `show all` -</option>
+                <~select_att_categories_id select="att_categories_id">
+            </select>
+        </div>
+    </form>
+
+    <div class="thumbs clearfix">
+        <~att_dr repeat inline>
+            <a class="float-left thumbnail text-nooverflow" href="#" data-id="<~id>" title="<~iname>">
+                <img src="<~/att/url>/<~id>?preview=1&size=s" alt="<~iname>" data-url="<~direct_url>" data-is_image="<~is_image>">
+                <span class="title"><~iname></span>
+            </a>
+        </~att_dr>
+    </div>
+</div>

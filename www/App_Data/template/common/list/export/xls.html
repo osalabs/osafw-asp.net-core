@@ -1,0 +1,44 @@
+<html>
+<head>
+    <title>Export</title>
+    <style type="text/css">
+        table   {
+            border: 0.5pt solid #000;
+            border-collapse: collapse;
+        }
+        table thead th {
+            font-weight: bold;
+            text-align: center;
+            background-color: #cccccc;
+            color: #000;
+            border: 0.5pt solid #000;
+        }
+        table th, table td {
+            padding:2px;
+            vertical-align: top;
+            border: 0.5pt solid #000;
+        }
+    </style>
+</head>
+<body>
+<table>
+    <thead>
+        <tr>
+            <~headers repeat inline>
+            <th><~iname></th>
+            </~headers>
+        </tr>
+    </thead>
+    <tbody>
+        <~rows repeat inline>
+            <tr>
+                <~cell repeat inline>
+                <td><~value></td>
+                </~cell>
+            </tr>
+        </~rows>
+    </tbody>
+</table>
+
+</body>
+</html>

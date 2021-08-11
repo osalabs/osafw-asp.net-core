@@ -1,0 +1,17 @@
+<div class="field-multi-value">
+  <input type="input" id="<~field>$search" name="<~field>$search" class="form-control form-control-sm on-multi-search mb-1" value="" placeholder="`type to filter...`" data-noautosave>
+  <~multi_datarow repeat inline>
+    <div class="row mr-1" data-s="<~id upper> - <~iname upper>">
+        <div class="col">
+            <div class="custom-control custom-checkbox">
+              <input type="checkbox" class="custom-control-input" id="<~field>$<~id>" name="<~field>_multi[<~id>]" value="1" <~/common/checked if="is_checked">>
+              <label class="custom-control-label" for="<~field>$<~id>"><~iname></label>
+            </div>
+        </div>
+        <div class="col-2">
+            <input type="text" name="<~field>_multi[prio_<~id>]" value="<~_link[prio]>" placeholder="`Prio`" class="form-control form-control-sm">
+        </div>
+    </div>
+  </~multi_datarow>
+</div>
+<~./help_block if="help_text">

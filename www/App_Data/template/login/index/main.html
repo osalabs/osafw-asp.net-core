@@ -1,0 +1,50 @@
+<div id="fb-root"></div>
+
+<form class="form-login" method="post" action="<~ROOT_URL>/Login">
+  <input type="hidden" name="err_ctr" value="<~GLOBAL[err_ctr]>" >
+
+  <div class="text-center mb-4">
+    <h1 class="display-4"><~/site_name></h1>
+    <h4><~title></h4>
+  </div>
+
+  <fieldset>
+<~/common/form/msg>
+    <~err_REGISTER if="ERR[REGISTER]" inline>
+    <div class="alert alert-warning">
+      Please enter your Email and Password.
+      <~msg_signup if="GLOBAL[IS_SIGNUP]" inline>
+      If you don't have them yet - <a href='<~/signup/url>?item[email]=<~i[login]>'>Sign Up here</a>
+      </~msg_signup>
+    </div>
+    </~err_REGISTER>
+
+    <div class="form-label-group">
+      <input type="email" id="login" class="form-control form-control-lg filled" autofocusX name="item[login]" value="<~i[login]>">
+      <label for="login">`Your Email`</label>
+    </div>
+
+    <div class="form-label-group">
+      <input type="text" id="pwd" class="form-control form-control-lg filled" style="display:none" name="item[pwd]" maxlength="64" value="">
+      <input type="password" id="pwdh" class="form-control form-control-lg filled" name="item[pwdh]" maxlength="64" value="">
+      <label for="pwdh">Password</label>
+    </div>
+
+    <div class="checkbox mb-3">
+      <div class="custom-control custom-checkbox custom-control-inline">
+        <input class="custom-control-input on-pwd-hideshow" type="checkbox" id="chpwd" name="item[chpwd]" value="1" <~/common/checked if="i[chpwd]">>
+        <label class="custom-control-label" for="chpwd">`show characters`</label>
+      </div>
+    </div>
+
+    <button class="btn btn-lg btn-primary btn-block" type="submit">`Log Me In`</button>
+
+    <p class="text-center mt-3">
+      <a class="btn btn-link" href="<~/password/url>">`Forgotten Password`</a>
+      <~btn_signup if="GLOBAL[IS_SIGNUP]" inline>
+        <a class="btn btn-link" href="<~/signup/url>">`Sign Up`</a>
+      </~btn_signup>
+    </p>
+
+  </fieldset>
+</form>

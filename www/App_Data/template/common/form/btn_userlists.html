@@ -1,0 +1,16 @@
+<div class="btn-group">
+  <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+    <~/common/icons/flag> `Add to List`
+  </button>
+  <div class="dropdown-menu">
+    <a class="dropdown-item on-create-userlist" href="#">`Create New List`</a>
+    <div class="dropdown-divider"></div>
+    <~my_userlists repeat inline>
+      <a class="dropdown-item on-toggle-userlist" href="<~/my/lists/url>/(ToggleList)/<~id>?item_id=<~item_id>">
+        <span class="flag-yes <~/common/hide unless="is_checked">"><~/common/icons/flag-fill></span>
+        <span class="flag-no <~/common/hide if="is_checked">"><~/common/icons/flag></span>
+        <~iname>
+      </a>
+    </~my_userlists>
+  </div>
+</div>

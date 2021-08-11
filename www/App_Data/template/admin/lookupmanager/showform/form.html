@@ -1,0 +1,42 @@
+<form method="post" data-check-changes <~das if="id" inline>data-autosaveX</~das> action="<~../url><~uu1 if="id" inline>/<~id></~uu1>">
+ <input type="hidden" name="XSS" value="<~session[XSS]>">
+ <input type="hidden" name="d" value="<~d>">
+
+  <fieldset>
+    <~/common/form/msg>
+
+
+    <~fields repeat inline>
+        <~group_block if="is_group" inline>
+            <div class="form-row">
+                <div class="col col-md-offset-3">
+                    <h4><~igroup></h4>
+                </div>
+            </div>
+        </~group_block>
+        <div class="form-row <~/common/error if="is_error">">
+          <label class="col-form-label col-md-3" for="<~colname>"><~iname></label>
+          <div class="col">
+            <~type_input unless="type">
+            <~type_readonly ifeq="type" value="readonly">
+            <~type_checkbox ifeq="type" value="checkbox">
+            <~type_textarea ifeq="type" value="textarea">
+            <~type_lookup ifeq="type" value="lookup">
+          </div>
+        </div>
+    </~fields>
+
+    <~/common/form/group_status if="is_fwtable">
+
+    <div class="form-row">
+      <div class="col-md-3 text-right">
+        <p class="form-control-plaintext"><span class="form-saved-status"></span></p>
+      </div>
+      <div class="col-md-offset-3 col">
+        <button type="submit" class="btn btn-primary">`Submit`</button>
+        <button type="button" class="btn btn-default on-cancel" data-href="<~../url>?d=<~d>">`Cancel`</button>
+      </div>
+    </div>
+
+  </fieldset>
+</form>

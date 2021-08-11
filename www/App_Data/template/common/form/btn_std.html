@@ -1,0 +1,13 @@
+<div class="btn-std">
+ <div class="btn-group">
+     <~no_return_url unless="return_url" inline>
+       <a class="btn btn-default" href="<~../url>/new<~/common/list/relid>"><~/common/icons/plusb> `Add New`</a>
+     </~no_return_url>
+     <~yes_return_url if="return_url" inline>
+       <a class="btn btn-default" href="<~return_url>"><~/common/icons/arrow-left-circle> `Return back`</a>
+       <a class="btn btn-default" href="<~../url>/new?<~addret if="return_url" inline>return_url=<~return_url></~addret><~relid if="related_id" inline>&related_id=<~related_id></~relid>"><~/common/icons/plusb> `Add New`</a>
+     </~yes_return_url>
+ </div>
+ <~./btn_userlists if="is_userlists">
+ <~btn_std_more>
+</div>

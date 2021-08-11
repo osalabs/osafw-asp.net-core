@@ -1,0 +1,37 @@
+<~/common/form/msg>
+
+<h4><a href="<~/dev/manage/url>" class="btn btn-light btn-sm px-3"><~/common/icons/arrow-left-circle></a> <~title></h4>
+
+<h5 class="mt-4">Tables from db.json to be created</h5>
+<form method="post" action="<~../url>/(DBInitializerSave)">
+    <input type="hidden" name="XSS" value="<~session[XSS]>">
+
+  <fieldset>
+    <div class="form-row">
+      <div class="col-2">Table</div>
+      <div class="col">Fields</div>
+    </div>
+
+    <~tables repeat inline>
+      <div class="form-row mb-1">
+        <label class="col-form-label col-2"><~table></label>
+        <div class="col small">
+          <p class="form-control-plaintext">
+            <~fields repeat inline><~name><~/common/comma unless="repeat.last"> </~fields>
+          </p>
+        </div>
+      </div>
+    </~tables>
+
+  </fieldset>
+
+  <div class="row">
+    <div class="col-2"></div>
+    <div class="col">
+      <button class="btn btn-primary">(Re-) Create Tables</button>
+      <button class="btn btn-outline-secondary" name="DoSQL" value="1">Generate database.sql</button>
+    </div>
+  </div>
+</form>
+
+<p></p>

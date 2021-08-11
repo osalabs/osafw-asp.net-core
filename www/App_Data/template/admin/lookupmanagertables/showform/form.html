@@ -1,0 +1,120 @@
+<form method="post" data-check-changes <~das if="id" inline>data-autosave</~das> action="<~../url><~uu1 if="id" inline>/<~id></~uu1>">
+ <input type="hidden" name="XSS" value="<~session[XSS]>">
+
+  <fieldset>
+    <~/common/form/msg>
+
+    <~/common/form/group_id>
+
+    <div class="form-row <~/common/error if="ERR[tname]">">
+      <label class="col-form-label col-md-3 required" for="tname">`Table Name`</label>
+      <div class="col">
+        <input id="tname" name="item[tname]" maxlength="255" value="<~i[tname]>" type="text" class="form-control">
+        <~err_tname_EXISTS ifeq="ERR[tname]" value="EXISTS" inline><p class="form-text text-muted">`Such table already exists in definitions`</p></~err_tname_EXISTS>
+      </div>
+    </div>
+
+    <div class="form-row <~/common/error if="ERR[iname]">">
+      <label class="col-form-label col-md-3 required" for="iname">`Title`</label>
+      <div class="col">
+        <input id="iname" name="item[iname]" maxlength="255" value="<~i[iname]>" type="text" class="form-control">
+      </div>
+    </div>
+    <div class="form-row <~/common/error if="ERR[idesc]">">
+      <label class="col-form-label col-md-3" for="idesc">`Description`</label>
+      <div class="col">
+        <textarea id="idesc" name="item[idesc]" rows="3" class="form-control"><~i[idesc]></textarea>
+      </div>
+    </div>
+
+    <div class="form-row <~/common/error if="ERR[url]">">
+      <label class="col-form-label col-md-3" for="url">`External URL`</label>
+      <div class="col">
+        <input id="url" name="item[url]" maxlength="255" value="<~i[url]>" type="text" class="form-control">
+      </div>
+    </div>
+    <div class="form-row <~/common/error if="ERR[is_one_form]">">
+      <label class="col-form-label col-md-3" for="is_one_form">`Is one form?`</label>
+      <div class="col">
+        <div class="checkbox">
+          <label>
+            <input type="checkbox" name="item[is_one_form]" value="1" <~/common/checked ifeq="i[is_one_form]">>
+            yes, lookup table contains one row, display it as a form
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-row <~/common/error if="ERR[is_custom_form]">">
+      <label class="col-form-label col-md-3" for="is_custom_form">`Use custom form template?`</label>
+      <div class="col">
+        <div class="checkbox">
+          <label>
+            <input type="checkbox" name="item[is_custom_form]" value="1" <~/common/checked ifeq="i[is_custom_form]">>
+            yes
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-row <~/common/error if="ERR[header_text]">">
+      <label class="col-form-label col-md-3" for="header_text">`Header text`</label>
+      <div class="col">
+        <textarea id="header_text" name="item[header_text]" rows="3" class="form-control"><~i[header_text]></textarea>
+      </div>
+    </div>
+    <div class="form-row <~/common/error if="ERR[footer_text]">">
+      <label class="col-form-label col-md-3" for="footer_text">`Footer text`</label>
+      <div class="col">
+        <textarea id="footer_text" name="item[footer_text]" rows="3" class="form-control"><~i[footer_text]></textarea>
+      </div>
+    </div>
+
+    <div class="form-row <~/common/error if="ERR[column_id]">">
+      <label class="col-form-label col-md-3" for="column_id">`ID column name`</label>
+      <div class="col-md-3">
+        <input id="column_id" name="item[column_id]" maxlength="255" value="<~i[column_id]>" type="text" class="form-control">
+      </div>
+      <div class="col-md-6">
+        <p class="form-text text-muted">optional, default is "id"</p>
+      </div>
+    </div>
+
+    <div class="form-row <~/common/error if="ERR[list_columns]">">
+      <label class="col-form-label col-md-3" for="list_columns">`Columns for list view`</label>
+      <div class="col">
+        <textarea id="list_columns" name="item[list_columns]" class="form-control" rows="5"><~i[list_columns]></textarea>
+        <p class="form-text text-muted">optional, comma-separated column list of columns, if defined - Table Edit mode will not be available</p>
+      </div>
+    </div>
+
+    <div class="form-row <~/common/error if="ERR[columns]">">
+      <label class="col-form-label col-md-12" for="columns">`Customize Columns/Fields`</label>
+      <div class="col-md-3">
+        <strong>Fields to show/order:</strong>
+        <textarea id="columns" name="item[columns]" class="form-control" rows="7"><~i[columns]></textarea>
+        <p class="form-text text-muted">optional, one per line, if empty - all fields available</p>
+      </div>
+      <div class="col-md-3">
+        <strong>Override field names:</strong>
+        <textarea id="column_names" name="item[column_names]" class="form-control" rows="7"><~i[column_names]></textarea>
+        <p class="form-text text-muted">optional, one per line, if empty - db field names used</p>
+      </div>
+      <div class="col-md-3">
+        <strong>Field types/lookups:</strong>
+        <textarea id="column_types" name="item[column_types]" class="form-control" rows="7"><~i[column_types]></textarea>
+        <p class="form-text text-muted">optional, one per line, if empty - displayed as standard input text</p>
+      </div>
+      <div class="col-md-3">
+        <strong>Include in groups:</strong>
+        <textarea id="column_groups" name="item[column_groups]" class="form-control" rows="7"><~i[column_groups]></textarea>
+        <p class="form-text text-muted">optional, one group name per line, if empty - columns not grouped</p>
+      </div>
+    </div>
+
+    <~/common/form/group_status>
+
+    <~/common/form/actions_std>
+
+  </fieldset>
+</form>

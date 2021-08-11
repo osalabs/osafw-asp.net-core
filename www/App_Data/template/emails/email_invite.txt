@@ -1,0 +1,11 @@
+Membership for <~GLOBAL[ROOT_DOMAIN]><~ROOT_URL>
+Hello <~nick>,
+
+you invited to be a member on the <~GLOBAL[ROOT_DOMAIN]><~ROOT_URL> :
+
+login: <~email>
+password: <~pwd>
+
+
+Have a nice day,
+Admin

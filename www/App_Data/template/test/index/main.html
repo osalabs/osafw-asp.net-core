@@ -1,0 +1,92 @@
+<div class="page-header">
+    <h1><~title></h1>
+</div>
+
+<ul>
+    <li>
+        var: <b class="true"><~memory_var var></b><br>
+        file template: <b class="true"><~true_value></b><br>
+        inline template: <b class="true"><~true_inline inline>TRUE INLINE</~true_inline></b><br>
+    </li>
+    <li>
+        hashtable: key1=<~hashtable[key1]>, key2=<~hashtable[key2]><br>
+        hashtable just name: #<~hashtable>#><br>
+    </li>
+    <li>
+        ifeq="one" value="1": <b class="true"><~true_value ifeq="one" value="1"></b>
+    </li>
+    <li>
+        ifne="one" value="1": <b class="empty"><~true_value ifne="one" value="1"></b>
+    </li>
+    <li>
+        ifne="two" value="1": <b class="true"><~true_value ifne="two" value="1"></b>
+    </li>
+    <li>
+        ifgt="two" value="1": <b class="true"><~true_value ifgt="two" value="1"></b><br>
+        ifge="one" value="1": <b class="true"><~true_value ifge="one" value="1"></b><br>
+        ifge="one" value="2": <b class="empty"><~true_value ifge="one" value="2"></b>
+    </li>
+    <li>
+        iflt="one" value="2": <b class="true"><~true_value iflt="one" value="2"></b><br>
+        ifle="two" value="1": <b class="empty"><~true_value ifle="two" value="1"></b><br>
+        ifle="two" value="2": <b class="true"><~true_value ifle="two" value="2"></b>
+    </li>
+    <li>
+        if="one": <b class="true"><~true_value if="one"></b><br>
+        if="zero": <b class="empty"><~true_value if="zero"></b><br>
+        if="onestr": <b class="true"><~true_value if="onestr"></b><br>
+        if="minusone": <b class="true"><~true_value if="minusone"></b><br>
+        if="booltrue": <b class="true"><~true_value if="booltrue"></b><br>
+        if="truestr": <b class="true"><~true_value if="truestr"></b><br>
+        if="falsestr": <b class="true"><~true_value if="falsestr"></b><br>
+    </li>
+    <li>
+        unless="zero": <b class="true"><~true_value unless="zero"></b><br>
+        unless="one": <b class="empty"><~true_value unless="one"></b><br>
+        unless="zerostr": <b class="true"><~true_value unless="zerostr"></b><br>
+        unless="boolfalse": <b class="true"><~true_value unless="boolfalse"></b><br>
+        unless="emptystr": <b class="true"><~true_value unless="emptystr"></b><br>
+        unless="nonexisting": <b class="true"><~true_value unless="nonexisting"></b><br>
+        unless="truestr": <b class="empty"><~true_value unless="truestr"></b><br>
+        unless="falsestr": <b class="empty"><~true_value unless="falsestr"></b> (should be empty because "false" string is not FALSE boolean)<br>
+    </li>
+    <li>
+        ifeq="zero" vvalue="zero": <b class="true"><~true_value ifeq="zero" vvalue="zero"></b><br>
+        ifeq="one" vvalue="one": <b class="true"><~true_value ifeq="one" vvalue="one"></b><br>
+        ifeq="one" vvalue="two": <b class="empty"><~true_value ifeq="one" vvalue="two"></b><br>
+    </li>
+    <li>
+        repeat3_dr inline:<br>
+        <~repeat3_dr repeat inline>
+            iname: <b class="true"><~iname></b><br>
+            .first=<b><~repeat.first></b><br>
+            .last=<b><~repeat.last></b><br>
+            .total=<b><~repeat.total></b><br>
+            .index=<b><~repeat.index></b><br>
+            .iteration=<b><~repeat.iteration></b><br>
+            PARSEPAGE.TOP[one]=<~PARSEPAGE.TOP[one]><br>
+            PARSEPAGE.PARENT[two]=<~PARSEPAGE.PARENT[two]><br>
+        </~repeat3_dr>
+    </li>
+    <li>
+        repeat100_dr inline:<br>
+        <~repeat100_dr repeat inline><~iname> </~repeat100_dr>
+    </li>
+    <li>
+        markdown var:<br>
+       <~markdown_var markdown>
+    </li>
+    <li>
+        date var:<br>
+       <~now date> - mm/dd/yyyy<br>
+       <~now date="short"> - mm/dd/yyyy hh:mm<br>
+       <~now date="long"> - mm/dd/yyyy hh:mm:ss<br>
+       <~now date="sql"> - yyyy-mm-dd hh:mm:ss<br>
+    </li>
+    <li>
+       json dump of parse data: 
+       <div>
+       <~myself json>
+       </div>
+    </li>
+</ul>

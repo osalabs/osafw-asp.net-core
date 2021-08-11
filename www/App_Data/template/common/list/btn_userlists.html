@@ -1,0 +1,13 @@
+<div class="btn-group">
+  <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+    <~/common/icons/flag> `Add to List`
+  </button>
+  <div class="dropdown-menu">
+    <a class="dropdown-item on-create-userlist" href="#">`Create New List`</a>
+    <div class="dropdown-divider"></div>
+    <~my_userlists repeat inline>
+      <button type="submit" class="dropdown-item" name="addtolist" value="<~id>"><~iname></button>
+    </~my_userlists>
+  </div>
+  <button type="submit" class="btn btn-default <~/common/disabledcl unless="f[userlist]">" name="removefromlist" value="<~f[userlist]>">`Remove from List`</button>
+</div>

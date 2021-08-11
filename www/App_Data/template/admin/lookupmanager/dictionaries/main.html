@@ -1,0 +1,13 @@
+<h1><~title></h1>
+
+<~admin100_menu ifeq="SESSION[access_level]" value="100" inline>
+<div class="clearfix btn-std">
+<div class="btn-group pull-right">
+    <a class="btn btn-default" href="<~/admin/lookupmanagertables/url>"><~/common/icons/gear> `Definitions`</a>
+</div>
+</div>
+</~admin100_menu>
+
+<~/common/form/msg>
+
+<~list_table>

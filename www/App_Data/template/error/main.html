@@ -1,0 +1,53 @@
+<div align="center">
+
+<img src="<~GLOBAL[ASSETS_URL]>/img/error.png">
+<h2>`Server Error Occured`</h2>
+As of <~err_time date="sql"> we know the following:
+<div class="alert alert-danger">
+    <~err_msg nl2br>
+</div>
+
+<~dump if="is_dump" inline>
+<div class="text-left">
+    <h3>Debug info</h3>
+    <div class="dropinfo">
+        <a href="#" class="on-dropinfo"><strong>Stack trace:</strong> <~/common/icons/caret-up><~/common/icons/caret-down></a>
+        <pre class="alert alert-info"><~DUMP_STACK></pre>
+    </div>
+
+    <div class="dropinfo">
+        <a href="#" class="on-dropinfo"><strong>Form:</strong> <~/common/icons/caret-up><~/common/icons/caret-down></a>
+        <pre class="alert alert-info"><~DUMP_FORM></pre>
+    </div>
+
+    <div class="dropinfo">
+        <a href="#" class="on-dropinfo"><strong>Session:</strong> <~/common/icons/caret-up><~/common/icons/caret-down></a>
+        <pre class="alert alert-info"><~DUMP_SESSION></pre>
+    </div>
+</div>
+</~dump>
+
+<div style="margin:auto;width:400px">
+    <p>
+    Try the following:<br>
+    <ol style="text-align:left">
+        <~links unless="_IS_PJAX" inline>
+        <!--li>
+            <a href="#" onclick="window.locaiton.reload()">`Reload or re-submit the page`</a><br>
+        </li-->
+        <li>
+            <a href="#" onclick="window.history.go(-1)">`Return to previous page and try last action again`</a>
+        </li>
+        </~links>
+        <li>
+            <a href="<~ROOT_URL>/Logoff">`Logoff and Re-login to the site`</a>
+        </li>
+        <li>
+            If nothing helps - contact site support
+        </li>
+    </ol>
+    </p>
+</div>
+
+
+</div>

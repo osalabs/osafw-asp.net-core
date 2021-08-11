@@ -1,0 +1,60 @@
+<~/common/form/msg>
+
+<h4><a href="<~/dev/manage/url>" class="btn btn-light btn-sm px-3"><~/common/icons/arrow-left-circle></a> <~title></h4>
+
+<h5 class="mt-4">Describe your entities with fields and create db.json</h5>
+
+<form method="post" action="<~../url>/(EntityBuilderSave)">
+    <input type="hidden" name="XSS" value="<~session[XSS]>">
+
+    <div class="form-group">
+        <label for="ta">Entities</label>
+        <textarea class="form-control" id="ta" name="item[entities]" rows="15" style="font-family: monospace;"><~i[entities]></textarea>
+    </div>
+    <button class="btn btn-primary ml-2">Create db.json</button>
+    <button class="btn btn-dark ml-2" name="DoMagic" value="1">Just do the magic and create App</button>
+</form>
+
+<div class="text-muted mt-5">
+    Notes:<br>
+    - use 2 spaces indent and "-" for fields<br>
+    - every entity will already contain standard fields: <em>id, icode, iname, idesc, status, add_time, add_users_id, upd_time, upd_users_id</em><br>
+    - *Address = creates several fields address, address2, city, state, zip, country<br>
+    - *Date = date type applied<br>
+    - NULL means no default applied and field can be null<br>
+    - everything after "#" is a comment<br>
+    <br>
+    Sample for CRM:<br>
+<pre class="text-muted">
+- customers
+  - Address
+  - Phone
+  - Fax
+  - ContactName
+  - Email
+  - BillAddress
+  - FollowUpDate NULL
+- customers_notes
+  - customers.id required
+- vendors
+  - Address
+  - Phone
+  - Fax
+  - ContactName
+  - Email
+- products
+  - vendors.id required #dot-name means foreign key, required means required, otherwise - NOT NULL default ''
+  - price float
+- orders_stages lookup #lookup means - don't create controller, add to Lookup Manager
+- orders #"quote" is just one of order's stage
+  - customers.id
+  - orders_stages.id
+  - OrderDate
+- order_items
+  - orders.id
+  - products.id
+  - uom varchar(3)
+  - quantity int
+  - price float
+</pre>
+</div>

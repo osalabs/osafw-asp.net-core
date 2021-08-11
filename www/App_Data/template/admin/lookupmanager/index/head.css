@@ -1,0 +1,16 @@
+.table-edit {
+
+}
+
+    .table-edit > tbody > tr > td {
+        padding: 0;
+    }
+    .table-edit > tbody > tr > td.pad {
+        padding: 5px;
+    }
+    .table-edit .form-control {
+        border: none;
+    }
+    .table-edit .checkbox {
+        margin: 5px 0 0 10px;
+    }

@@ -1,0 +1,78 @@
+<div class="modal fade" id="modal-create-userlist">
+  <div class="modal-dialog modal-lg">
+    <form method="post" action="<~/my/lists/url>">
+     <input type="hidden" name="XSS" value="<~session[XSS]>">
+     <input type="hidden" name="return_url" value="<~GLOBAL[request_url]>">
+     <input type="hidden" name="item[entity]" value="<~userlist_entity>">
+     <input type="hidden" name="item[item_id]" value="<~id>">
+
+    <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title"><~./title></h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        </div>
+        <div class="modal-body modal-overflowed">
+            <div class="row">
+              <label class="control-label col-sm-2" for="list_iname">New List Title</label>
+              <div class="col-sm-10">
+                <input id="list_iname" name="item[iname]" maxlength="255" value="" type="text" class="form-control">
+              </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="submit" class="btn btn-primary">Submit</button>
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        </div>
+    </div>
+
+    </form>
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function(){
+
+    $(document).on('click', '.on-create-userlist', function(e){
+      e.preventDefault();
+      $modal = $('#modal-create-userlist').modal('show');
+      $modal.on('shown.bs.modal', function (e) {
+         $modal.find("#list_iname").focus();
+
+         //also fill item_id with comma-separated checked ids
+         var ids=[];
+         $('.multicb:checked').each(function (i,el) {
+            var name = el.name.replace('cb[', '');
+            name = name.replace(']', '');
+            ids.push(name); //leave just id
+         });
+         if (ids.length) $modal.find('input[name="item[item_id]"]').val(ids.join(','));
+      });
+    });
+
+    $(document).on('click', '.on-toggle-userlist', function(e){
+      e.preventDefault();
+      var $this = $(this);
+      $.getJSON($this.prop('href'))
+      .done(function (data, textStatus, jqXHR) {
+        if (data.success){
+          if (data.action=='added'){
+            $this.find('.flag-yes').removeClass('d-none');
+            $this.find('.flag-no').addClass('d-none');
+            fw.ok('Record added to list "'+data.iname+'"');
+          }else if (data.action=='removed'){
+            $this.find('.flag-yes').addClass('d-none');
+            $this.find('.flag-no').removeClass('d-none');
+            fw.ok('Record removed from list "'+data.iname+'"');
+          }
+        }else{
+          fw.error(data.err_msg);
+        }
+      })
+      .fail(function(jqXHR, textStatus, errorThrown) {
+        fw.error( errorThrown || 'Server error');
+      });
+
+    });
+
+  });
+</script>

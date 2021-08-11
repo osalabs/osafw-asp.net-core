@@ -1,0 +1,35 @@
+<nav class="d-print-none">
+  <a href="<~../url>">`Lookup Manager`</a> <span class="text-muted">/</span>
+</nav>
+<h1><~title> (<~count>)</h1>
+
+<div class="clearfix btn-std">
+<~mode_switch if="is_two_modes" inline>
+<div class="btn-group btn-group-toggle pull-right on-mode-switch" data-toggle="buttons">
+  <label class="btn btn-default <~/common/active unless="f[mode]">">
+    <input type="radio" name="f[mode]" value="" id="option1" autocomplete="off" <~/common/checked unless="f[mode]">> <~/common/icons/card-list> Browse
+  </label>
+  <label class="btn btn-default <~/common/active if="f[mode]">">
+    <input type="radio" name="f[mode]" value="edit" id="option2" autocomplete="off" <~/common/checked if="f[mode]">> <~/common/icons/pencil-square> Table Edit
+  </label>
+</div>
+</~mode_switch>
+
+<~readonly_block unless="is_readonly" inline>
+<div class="btn-group">
+    <a class="btn btn-default on-add-new" href="<~../url>/new?d=<~d>"><~/common/icons/plusb> `Add New`</a>
+</div>
+</~readonly_block>
+</div>
+
+<~header_text if="defs[header_text]" inline>
+<p class="well well-sm">
+    <~defs[header_text] nl2br>
+</p>
+</~header_text>
+
+<~/common/form/msg>
+
+<~/common/list/filter_std>
+<~list_table unless="f[mode]">
+<~list_table_edit if="f[mode]">

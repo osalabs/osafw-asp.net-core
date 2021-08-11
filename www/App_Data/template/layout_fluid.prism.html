@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <~/layout/sys_head>
+  </head>
+  <body class="fwlayout-fluid <~body_class>">
+    <div class="container-fluid main-container">
+        <~pre_main>
+        <div class="row" id="topnav-row">
+          <div class="col d-md-none" style="background-color: #000;">
+            <a href="#" style="color:#fff" data-toggle="collapse" data-target="#sidebarToggler" class="btn float-right"><~/common/icons/grid-3x2-gap-fill>
+            </a>
+            <a href="<~/main/url>" class="d-inline mb-0 text-white" style="line-height: 2.2em"><~/site_name><!--img src="<~ROOT_URL>/assets/img/logo_transparent.png" style="height: 1.4em"--></a>
+            <button class="btn btn-link on-sidebar-toggler"><~/common/icons/three-dots-vertical></button>
+          </div>
+        </div>
+        <div class="row" id="main-row">
+          <nav class="col-md-3 col-lg-2 d-md-block sidebar d-print-none collapse" id="sidebarToggler">
+            <div class="sidebar-nav">
+              <~/layout/sidebar unless="hide_std_sidebar">
+              <~sidebar>
+            </div>
+            <footer class="site-footer">
+              <~/layout/footer>
+            </footer>
+          </nav>
+          <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-4 main">
+            <~main>
+          </main>
+        </div>
+    </div><!--/.fluid-container-->
+
+    <~/layout/sys_footer>
+  </body>
+</html>

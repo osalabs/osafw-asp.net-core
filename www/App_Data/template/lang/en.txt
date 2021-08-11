@@ -1,0 +1,127 @@
+Demo Site Name === 
+list === 
+Add New === 
+item === 
+Search (name, description, email) === 
+No text matching "<~search_str>" was found. Please try again. === 
+Email === 
+Name === 
+Edit === 
+Del === 
+Double click to edit === 
+Demo === 
+There are unsaved changes. Do you really want to Cancel editing the Form? === 
+ARE YOU SURE to delete this item? === 
+Add === 
+Return to <~../screen_name> List === 
+Description === 
+click on it for full review === 
+Delete image === 
+Status === 
+Added on === 
+Updated on === 
+Update === 
+Insert === 
+and Add New === 
+Cancel === 
+Logoff === 
+WebSite maintenance === 
+Demo table/scripts/templates === 
+Manage Users === 
+Site Settings === 
+Database Access === 
+Main Menu === 
+Members === 
+Add New Member === 
+Member Search (fname, lname, email) === 
+First Last name === 
+Approve === 
+Edit Member === 
+Member ID === 
+Nick === 
+First name === 
+Last name === 
+Password === 
+To change - type in new password === 
+Access level === 
+normal === 
+deleted === 
+Added === 
+Send Password to User === 
+Settings === 
+Add New Setting === 
+Value === 
+Welcome to the site home page === 
+To login as a member === 
+click here === 
+User ID === 
+Log Me In === 
+Register an account === 
+Forgotten Password === 
+Member Login === 
+Send Broadcast Email === 
+Export === 
+Import === 
+Edit Broadcast Email === 
+Return One level Up === 
+Subject === 
+Body === 
+There are several pre-set variables you may use in Body or Subject of the email === 
+will print your member's First Name === 
+will print your member's Last Name === 
+will print your member's Email === 
+will print your member's Password === 
+will print your site domain === 
+will print URL for login to member system, usually used with === 
+Preview & Send === 
+Preview Broadcast Email === 
+Changes were saved === 
+Message Subject === 
+Message Body: (sample Member details used) === 
+Back === 
+Are You Sure to send this email to All Members? === 
+Import Members === 
+CSV Filename === 
+Send invitation Emails? === 
+Do Import === 
+Notes about CSV file format === 
+First line should contain 4 field names (any order, but exact name as here): <nobr>First Name,Last Name,Email</nobr> === 
+Passwords will be automatically generated and then can be retrieved via 'Forgotten password' === 
+Please select file to upload === 
+Record has been modified === 
+Field === 
+is Required === 
+New Record has been added === 
+Category === 
+No === 
+Yes === 
+ID === 
+select === 
+none === 
+or type === 
+Updated === 
+Next === 
+Previous === 
+Email Address === 
+Search (name, description) === 
+Sort by === 
+Show === 
+records on page === 
+Delete === 
+checked rows === 
+My Profile === 
+Site Name === 
+Such email already exists in our database === 
+Invalid Email === 
+Address 1 === 
+Address 2 === 
+City === 
+State === 
+Zip === 
+Phone === 
+Language === 
+Submit === 
+Please fill in all required fields === 
+Please correct the errors === 
+Record has been deleted === 
+records has been deleted === 

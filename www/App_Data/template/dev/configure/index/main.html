@@ -1,0 +1,85 @@
+<h1><~title></h1>
+
+<table class="table table-striped table-hovered">
+    <thead>
+        <tr>
+            <th>Check</th>
+            <th>Result</th>
+            <th>Action/Info</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>Config file</td>
+            <td><~ok></td>
+            <td><~config_file_name></td>
+        </tr>
+        <tr>
+            <td>DB configured</td>
+            <td><~ok if="is_db_config"><~fail unless="is_db_config"></td>
+            <td>
+                <~failmsg1 unless="is_db_config" inline>
+                    Set DBNAME, USER, PWD, HOST, PORT in the Config file. Create empty database if not yet done.
+                </~failmsg1>
+            </td>
+        </tr>
+        <tr>
+            <td>DB connected</td>
+            <td><~ok if="is_db_conn"><~fail unless="is_db_conn"></td>
+            <td>
+                <~failmsg2 unless="is_db_conn" inline>
+                    1. check DBNAME, USER, PWD, HOST, PORT in the Config file.<br>
+                    2. check db server on host <i><~GLOBAL[DB][HOST] default="HOST NOT SET"></i> is up and running<br>
+                    3. read error message carefully:<br>
+                    <pre class="text-danger"><~db_conn_err></pre>
+                </~failmsg2>
+            </td>
+        </tr>
+        <tr>
+            <td>DB tables exists</td>
+            <td><~ok if="is_db_tables"><~fail unless="is_db_tables"></td>
+            <td>
+                <~failmsg3 unless="is_db_tables" inline>
+                    Looks like your database is empty. Run <i>db/database.sql</i> against it with a command like:<br>
+                    <code>mysql -u root -p &lt; db/database.sql</code>
+                    <br>
+                    or using <a href="http://phpminiadmin.sourceforge.net/" target="_blank">phpMiniAdmin</a>
+                </~failmsg3>
+            </td>
+        </tr>
+        <tr>
+            <td>Writable directories</td>
+            <td><~ok if="is_write_dirs"><~fail unless="is_write_dirs"></td>
+            <td>
+                <~failmsg4 unless="is_write_dirs" inline>
+                    Check <~GLOBAL[PUBLIC_UPLOAD_DIR]> is writable by web server
+                </~failmsg4>
+            </td>
+        </tr>
+        <tr>
+            <td>Error log</td>
+            <td><~ok if="is_error_log"><~fail unless="is_error_log"></td>
+            <td><~GLOBAL[site_error_log]> <~error_log_size>
+                <~failmsg5 unless="is_error_log" inline>
+                    Ensure webserver can write to this file, so you can see debug/error info
+                </~failmsg5>
+            </td>
+        </tr>
+        <tr>
+            <td>Dev mode</td>
+            <td><~devon if="GLOBAL[IS_DEV]" inline>ON</~devon>
+                <~devoff unless="GLOBAL[IS_DEV]" inline>OFF</~devoff>
+            </td>
+            <td>Ensure dev mode is not enabled on production environment</td>
+        </tr>
+        <tr>
+            <td>Writable /template/lang</td>
+            <td><~ok if="is_write_langok"><~warn unless="is_write_langok"></td>
+            <td>
+                <~failmsg4 unless="is_write_langok" inline>
+                    Ensure that /template/lang is only writable for development and not writable by web server
+                </~failmsg4>
+            </td>
+        </tr>
+    </tbody>
+</table>

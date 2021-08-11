@@ -1,0 +1,30 @@
+<form method="post" data-check-changes action="<~../url><~uu1 if="id" inline>/<~id></~uu1>">
+ <input type="hidden" name="XSS" value="<~session[XSS]>">
+ <input type="hidden" name="return_url" value="<~return_url>">
+
+  <fieldset>
+    <~/common/form/msg>
+
+    <div class="form-row <~/common/error if="ERR[iname]">">
+      <label class="col-form-label col-md-3" for="iname">`Setting name`</label>
+      <div class="col">
+        <p class="form-control-plaintext"><~i[iname]></p>
+        <small class="form-text text-muted">
+            <~i[idesc] nl2br>
+        </small>
+      </div>
+    </div>
+
+    <~input_input ifeq="i[input]" value="0">
+    <~input_textarea ifeq="i[input]" value="10">
+    <~input_select ifeq="i[input]" value="20">
+    <~input_selectmulti ifeq="i[input]" value="21">
+    <~input_checkbox ifeq="i[input]" value="30">
+    <~input_radio ifeq="i[input]" value="40">
+    <~input_date ifeq="i[input]" value="50">
+
+    <~/common/form/updated if="i[upd_users_id]">
+    <~/common/form/actions_std>
+
+  </fieldset>
+</form>

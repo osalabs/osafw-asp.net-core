@@ -1,0 +1,12 @@
+<div class="card-columns att-list">
+  <~att_links repeat inline>
+      <div class="card att-info text-center">
+        <input type="hidden" name="att[<~id>]" value="1">
+        <img class="card-img-top" src="<~/att/url>/<~id>?preview=1&size=s" alt="">
+        <div class="card-body text-nooverflow">
+          <p class="card-text att-iname"><~iname></p>
+          <a href="<~/att/url>/<~id>" target="_blank" class="btn btn-default"><~/common/icons/cloud-download-fill> `Download`</a>
+        </div>
+      </div>
+  </~att_links>
+</div>

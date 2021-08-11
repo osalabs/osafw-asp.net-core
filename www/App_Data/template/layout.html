@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <~/layout/sys_head>
+  </head>
+  <body class="fwlayout-std <~body_class>">
+    <~/layout/header>
+
+    <~sub_header>
+
+    <div class="container main-container">
+        <~pre_main>
+        <div class="row">
+            <~/layout/main_with_sidebar unless="hide_sidebar">
+            <~/layout/main_no_sidebar if="hide_sidebar">
+        </div>
+    </div><!--/.fluid-container-->
+    <footer class="site-footer d-print-none">
+        <~/layout/footer>
+    </footer>
+
+    <~/layout/sys_footer>
+  </body>
+</html>

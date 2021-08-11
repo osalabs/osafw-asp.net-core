@@ -1,0 +1,8 @@
+  <label class="col-form-label col-md-2 col-xl-1" for="fstatus">`Status`</label>
+  <div class="col-md-3 col-lg-2">
+    <select id="fstatus" name="f[status]" class="form-control">
+      <option value="">`- all -`</option>
+      <~/common/sel/statusf.sel select="f[status]" iflt="SESSION[access_level]" value="100">
+      <~/common/sel/statusf_admin.sel select="f[status]" ifeq="SESSION[access_level]" value="100">
+    </select>
+  </div>
