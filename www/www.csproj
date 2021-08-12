@@ -8,6 +8,7 @@
   <ItemGroup>
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.2" />
     <PackageReference Include="Microsoft.AspNetCore.Session" Version="2.2.0" />
+    <PackageReference Include="System.Data.Odbc" Version="5.0.0" />
     <PackageReference Include="System.Data.OleDb" Version="5.0.0" />
     <PackageReference Include="System.Data.SqlClient" Version="4.8.2" />
   </ItemGroup>

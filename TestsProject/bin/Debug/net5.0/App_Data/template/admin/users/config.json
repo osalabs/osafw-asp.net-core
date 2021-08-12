@@ -1,0 +1,141 @@
+{
+  "1": "1",
+  "list_view": "users",
+  "view_list_defaults": "id email fname lname access_level status",
+  "save_fields_checkboxes": "",
+  "list_sortdef": "id",
+  "related_field_name": "",
+  "search_fields": "!id email fname lname",
+  "view_list_custom": "access_level status",
+  "view_list_map": {
+    "id": "ID",
+    "email": "Email",
+    "access_level": "Access Level",
+    "fname": "Fist Name",
+    "lname": "Last Name",
+    "title": "Title",
+    "address1": "Address1",
+    "address2": "Address2",
+    "city": "City",
+    "state": "State",
+    "zip": "Zip",
+    "phone": "Phone",
+    "idesc": "Notes",
+    "status": "Status",
+    "login_time": "Last Login Time",
+    "add_time": "Added On",
+    "upd_time": "Updated On"
+  },
+  "model": "Users",
+  "save_fields_nullable": "att_id",
+  "show_fields": [
+    {
+      "type": "plaintext",
+      "field": "id",
+      "label": "ID"
+    },
+    {
+      "type": "plaintext",
+      "field": "email",
+      "label": "Email"
+    },
+    {
+      "type": "plaintext",
+      "lookup_tpl": "/common/sel/access_level.sel",
+      "field": "access_level",
+      "label": "Access Level"
+    },
+    {
+      "type": "plaintext",
+      "field": "fname",
+      "label": "First Name"
+    },
+    {
+      "type": "plaintext",
+      "field": "lname",
+      "label": "Last Name"
+    },
+    {
+      "type": "plaintext",
+      "field": "title",
+      "label": "Title"
+    },
+    {
+      "type": "plaintext",
+      "field": "address1",
+      "label": "Address1"
+    },
+    {
+      "type": "plaintext",
+      "field": "address2",
+      "label": "Address2"
+    },
+    {
+      "type": "plaintext",
+      "field": "city",
+      "label": "City"
+    },
+    {
+      "type": "plaintext",
+      "lookup_tpl": "/common/sel/state.sel",
+      "field": "state",
+      "label": "State"
+    },
+    {
+      "type": "plaintext",
+      "field": "zip",
+      "label": "Zip"
+    },
+    {
+      "type": "plaintext",
+      "field": "phone",
+      "label": "Phone"
+    },
+    {
+      "type": "plaintext",
+      "field": "idesc",
+      "label": "Notes"
+    },
+    {
+      "type": "date_long",
+      "field": "login_time",
+      "label": "Last Login Time"
+    },
+    {
+      "type": "plaintext",
+      "lookup_tpl": "/common/sel/status.sel",
+      "field": "status",
+      "label": "Status"
+    },
+    {
+      "type": "added",
+      "field": "add_time",
+      "label": "Added on"
+    },
+    {
+      "type": "updated",
+      "field": "upd_time",
+      "label": "Updated on"
+    }
+  ],
+  "is_dynamic_show": true,
+  "is_dynamic_showform": false,
+  "is_dynamic_index": true,
+  "save_fields": [
+    "email",
+    "pwd",
+    "access_level",
+    "fname",
+    "lname",
+    "address1",
+    "address2",
+    "city",
+    "state",
+    "zip",
+    "phone",
+    "idesc",
+    "status",
+    "title",
+    "att_id"
+  ]
+}
