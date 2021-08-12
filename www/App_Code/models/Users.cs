@@ -270,7 +270,7 @@ namespace osafw
         /// <param name="acl">minimum required access level</param>
         public bool checkAccess(int acl, bool is_die = true)
         {
-            int users_acl = Utils.f2int(fw.SessionInt("access_level"));
+            int users_acl = Utils.f2int(fw.SessionInt("access_level")??-1);
 
             // check access
             if (users_acl < acl)
@@ -295,7 +295,7 @@ namespace osafw
             }
 
             // only Menu items user can see per ACL
-            var users_acl = Utils.f2int(fw.SessionInt("access_level"));
+            var users_acl = fw.SessionInt("access_level");
             ArrayList result = new ArrayList();
             foreach (Hashtable item in menu_items)
             {

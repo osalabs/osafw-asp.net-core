@@ -388,7 +388,7 @@ namespace osafw
             if ((string)this.list_filter["sortdir"] != "desc" && (string)this.list_filter["sortdir"] != "asc")
                 this.list_filter["sortdir"] = sortdef_dir;
 
-            string orderby = ((string)this.list_sortmap[this.list_filter["sortby"]]).Trim();
+            string orderby = ((string)this.list_sortmap[this.list_filter["sortby"]??""]).Trim();
             if (string.IsNullOrEmpty(orderby))
                 throw new Exception("No orderby defined for [" + this.list_filter["sortby"] + "], define in list_sortmap");
 

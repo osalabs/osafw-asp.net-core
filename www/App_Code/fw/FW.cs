@@ -141,9 +141,9 @@ namespace osafw
         }
 
         // ***************** work with SESSION
-        public int SessionInt(String name)
+        public int? SessionInt(String name)
         {
-            return (int)context.Session.GetInt32(name);
+            return context.Session.GetInt32(name);
         }
         public void SessionInt(String name, int value)
         {
@@ -458,9 +458,9 @@ namespace osafw
                     if (field != null)
                     {
                         int current_level = -1;
-                        string session_level = SessionStr("access_level");
-                        if (!string.IsNullOrEmpty(session_level))
-                            current_level = Utils.f2int(session_level);
+                        int? session_level = SessionInt("access_level");
+                        if (session_level!=null)
+                            current_level = (int)session_level;
 
                         if (current_level < Utils.f2int(field.GetValue(null)))
                             throw new AuthException("Bad access - Not authorized (2)");
