@@ -299,6 +299,8 @@ namespace osafw
         // default value = "0"
         public static bool filterCheckboxes(Hashtable itemdb, Hashtable item, string fields)
         {
+            if (string.IsNullOrEmpty(fields)) return false;
+
             if (item != null)
             {
                 Hashtable hfields = Utils.qh(fields, "0");
@@ -315,9 +317,11 @@ namespace osafw
 
         // fore each name in $name - check if value is empty '' and make it null
         // not necessary in this framework As DB knows field types, it's here just for compatibility with php framework
-        public static void filterNullable(Hashtable itemdb, string name)
+        public static void filterNullable(Hashtable itemdb, string names)
         {
-            var anames = Utils.qw(name);
+            if (string.IsNullOrEmpty(names)) return;
+
+            var anames = Utils.qw(names);
             foreach (string fld in anames)
             {
                 if (itemdb.ContainsKey(fld) && (string)itemdb[fld] == "")

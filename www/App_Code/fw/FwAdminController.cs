@@ -130,7 +130,7 @@ namespace osafw
 
             if (reqi("refresh") == 1)
             {
-                fw.routeRedirect("ShowForm", new[] {form_id});
+                fw.routeRedirect("ShowForm", new[] { form_id });
                 return null;
             }
 
@@ -146,10 +146,8 @@ namespace osafw
                 // Dim item_old As Hashtable = model0.one(id)
 
                 Hashtable itemdb = FormUtils.filter(item, this.save_fields);
-                if (!string.IsNullOrEmpty(this.save_fields_checkboxes)) 
-                    FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes);
-                if (!string.IsNullOrEmpty(this.save_fields_nullable))
-                    FormUtils.filterNullable(itemdb, save_fields_nullable);
+                FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes);
+                FormUtils.filterNullable(itemdb, save_fields_nullable);
 
                 id = this.modelAddOrUpdate(id, itemdb);
             }
@@ -182,24 +180,12 @@ namespace osafw
             int id = Utils.f2int(form_id);
 
             var ps = new Hashtable()
-        {
             {
-                "i",
-                model0.one(id)
-            },
-            {
-                "related_id",
-                this.related_id
-            },
-            {
-                "return_url",
-                this.return_url
-            },
-            {
-                "base_url",
-                this.base_url
-            }
-        };
+                ["i"] = model0.one(id),
+                ["related_id"] = this.related_id,
+                ["return_url"] = this.return_url,
+                ["base_url"] = this.base_url,
+            };
 
             fw.parser("/common/form/showdelete", ps);
         }
