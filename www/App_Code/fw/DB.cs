@@ -31,10 +31,10 @@ namespace osafw
     public class DBOperation
     {
         public DBOps op;
-        public String opstr; // String value for op
+        public string opstr; // string value for op
         public bool is_value = true; // if false - operation is unary (no value)
         public object value; // can be array for IN, NOT IN, OR
-        public String quoted_value;
+        public string quoted_value;
         public DBOperation(DBOps op, object value = null)
         {
             this.op = op;
@@ -99,10 +99,10 @@ namespace osafw
 
         private FW fw; // for now only used for: fw.logger and fw.cache (for request-level cacheing of multi-db connections)
 
-        public String db_name = "";
-        public String dbtype = "SQL";
-        private Hashtable conf = new Hashtable();  // config contains: connection_String, type
-        private String connstr = "";
+        public string db_name = "";
+        public string dbtype = "SQL";
+        private Hashtable conf = new Hashtable();  // config contains: connection_string, type
+        private string connstr = "";
 
         private Hashtable schema = new Hashtable(); // schema for currently connected db
         private DbConnection conn; // actual db connection - SqlConnection or OleDbConnection
@@ -134,9 +134,9 @@ namespace osafw
         ///  construct new DB object with
         ///  </summary>
         ///  <param name="fw">framework reference</param>
-        ///  <param name="conf">config hashtable with "connection_String" and "type" keys. If none - fw.config("db")("main") used</param>
+        ///  <param name="conf">config hashtable with "connection_string" and "type" keys. If none - fw.config("db")("main") used</param>
         ///  <param name="db_name">database human name, only used for logger</param>
-        public DB(FW fw, Hashtable conf = null/* TODO Change to default(_) if this is not a reference type */, String db_name = "main")
+        public DB(FW fw, Hashtable conf = null/* TODO Change to default(_) if this is not a reference type */, string db_name = "main")
         {
             this.fw = fw;
             if (conf != null)
@@ -147,8 +147,8 @@ namespace osafw
             {
                 this.conf = (Hashtable)((Hashtable)fw.config("db"))["main"];
             }
-            this.dbtype = (String)this.conf["type"];
-            this.connstr = (String)this.conf["connection_String"];
+            this.dbtype = (string)this.conf["type"];
+            this.connstr = (string)this.conf["connection_string"];
 
             this.db_name = db_name;
 
@@ -163,7 +163,7 @@ namespace osafw
         }
 
         /// <summary>
-        /// connect to DB server using connection String defined in web.config appSettings, key db|main|connection_String (by default)
+        /// connect to DB server using connection string defined in web.config appSettings, key db|main|connection_string (by default)
         /// </summary>
         /// <returns></returns>
         public DbConnection connect()
@@ -180,7 +180,7 @@ namespace osafw
             if (conn == null)
             {
                 schema = new Hashtable(); // reset schema cache
-                conn = createConnection(connstr, (String)conf["type"]);
+                conn = createConnection(connstr, (string)conf["type"]);
                 fw.cache.setRequestValue(cache_key, conn);
             }
 
@@ -219,7 +219,7 @@ namespace osafw
             return conn;
         }
 
-        public DbConnection createConnection(String connstr, String dbtype = "SQL")
+        public DbConnection createConnection(string connstr, string dbtype = "SQL")
         {
             DbConnection result;
 
@@ -237,7 +237,7 @@ namespace osafw
             }
             else
             {
-                String msg = "Unknown type [" + dbtype + "]";
+                string msg = "Unknown type [" + dbtype + "]";
                 logger(LogLevel.FATAL, msg);
                 throw new ApplicationException(msg);
             }
@@ -246,11 +246,11 @@ namespace osafw
             return result;
         }
 
-        public void check_create_mdb(String filepath)
+        public void check_create_mdb(string filepath)
         {
             if (File.Exists(filepath))return;
 
-            String connstr = "Provider=Microsoft.Jet.OLEDB.4.0;Data Source=" + filepath;
+            string connstr = "Provider=Microsoft.Jet.OLEDB.4.0;Data Source=" + filepath;
 
             // TODO migrate
             /*object cat = Interaction.CreateObject("ADOX.Catalog");
@@ -258,7 +258,7 @@ namespace osafw
             cat.ActiveConnection.Close();*/
         }
 
-        public DbDataReader query(String sql)
+        public DbDataReader query(string sql)
         {
             connect();
             logger(LogLevel.INFO, "DB:", db_name, " ", sql);
@@ -280,7 +280,7 @@ namespace osafw
         }
 
         // exectute without results (so db reader will be closed), return number of rows affected.
-        public int exec(String sql)
+        public int exec(string sql)
         {
             connect();
             logger(LogLevel.INFO, "DB:", db_name, ", SQL QUERY: ", sql);
@@ -310,8 +310,8 @@ namespace osafw
                 {
                     if (is_check_ole_types && UNSUPPORTED_OLE_TYPES.ContainsKey(dbread.GetDataTypeName(i)))continue;
 
-                    String value = dbread[i].ToString();
-                    String name = dbread.GetName(i).ToString();
+                    string value = dbread[i].ToString();
+                    string name = dbread.GetName(i).ToString();
                     result.Add(name, value);
                 }
                 catch (Exception Ex)
@@ -323,7 +323,7 @@ namespace osafw
             return result;
         }
 
-        public Hashtable row(String sql)
+        public Hashtable row(string sql)
         {
             DbDataReader dbread = query(sql);
             dbread.Read();
@@ -336,12 +336,12 @@ namespace osafw
             return h;
         }
 
-        public Hashtable row(String table, Hashtable where, String order_by = "")
+        public Hashtable row(string table, Hashtable where, string order_by = "")
         {
-            return row(hash2sql_select(table, where, ref order_by));
+            return row(hash2sql_select(table, where, order_by));
         }
 
-        public ArrayList array(String sql)
+        public ArrayList array(string sql)
         {
             DbDataReader dbread = query(sql);
             ArrayList a = new ArrayList();
@@ -362,11 +362,9 @@ namespace osafw
         /// <param name="order_by">optional order by, MUST BE QUOTED</param>
         /// <param name="aselect_fields">optional select fields array or hashtable(for aliases) or arraylist of hashtable("field"=>,"alias"=> for cases if there could be several same fields with diff aliases), if not set * returned</param>
         /// <returns></returns>
-        public ArrayList array(String table, Hashtable where, ref String order_by, ICollection aselect_fields = null/* TODO Change to default(_) if this is not a reference type */)
+        public ArrayList array(string table, Hashtable where, string order_by = "", ICollection aselect_fields = null/* TODO Change to default(_) if this is not a reference type */)
         {
-            if (order_by == null) order_by = "";
-
-            String select_fields = "*";
+            string select_fields = "*";
             if (aselect_fields != null)
             {
                 ArrayList quoted = new ArrayList();
@@ -375,31 +373,31 @@ namespace osafw
                     // arraylist of hashtables with "field","alias" keys - usable for the case when we need same field to be selected more than once with different aliases
                     foreach (Hashtable asf in aselect_fields)
                     {
-                        quoted.Add(this.q_ident((String)asf["field"]) + " as " + this.q_ident((String)asf["alias"]));
+                        quoted.Add(this.q_ident((string)asf["field"]) + " as " + this.q_ident((string)asf["alias"]));
                     }
                 }
                 else if (aselect_fields is IDictionary)
                 {
-                    foreach (String field in (aselect_fields as IDictionary).Keys)
+                    foreach (string field in (aselect_fields as IDictionary).Keys)
                     {
-                        quoted.Add(this.q_ident(field) + " as " + this.q_ident((String)(aselect_fields as IDictionary)[field]));// field as alias
+                        quoted.Add(this.q_ident(field) + " as " + this.q_ident((string)(aselect_fields as IDictionary)[field]));// field as alias
                     }
                 }
                 else
                 {
-                    foreach (String field in aselect_fields)
+                    foreach (string field in aselect_fields)
                     {
                         quoted.Add(this.q_ident(field));
                     }
-                    select_fields = quoted.Count > 0 ? String.Join(", ", quoted.ToArray()) : "*";
+                    select_fields = quoted.Count > 0 ? string.Join(", ", quoted.ToArray()) : "*";
                 }
             }
 
-            return array(hash2sql_select(table, where, ref order_by, select_fields));
+            return array(hash2sql_select(table, where, order_by, select_fields));
         }
 
         // return just first column values as arraylist
-        public ArrayList col(String sql)
+        public ArrayList col(string sql)
         {
             DbDataReader dbread = query(sql);
             ArrayList a = new ArrayList();
@@ -420,12 +418,11 @@ namespace osafw
         /// <param name="field_name">optional field name, if empty - first field returned</param>
         /// <param name="order_by">optional order by (MUST be quoted)</param>
         /// <returns></returns>
-        public ArrayList col(String table, Hashtable where, String field_name, ref String order_by)
+        public ArrayList col(string table, Hashtable where, string field_name, string order_by = "")
         {
             if (field_name == null) field_name = "";
-            if (order_by == null) order_by = "";
 
-            if (String.IsNullOrEmpty(field_name))
+            if (string.IsNullOrEmpty(field_name))
             {
                 field_name = "*";
             }
@@ -433,11 +430,11 @@ namespace osafw
             {
                 field_name = q_ident(field_name);
             }
-            return col(hash2sql_select(table, where, ref order_by, field_name));
+            return col(hash2sql_select(table, where, order_by, field_name));
         }
 
         // return just first value from column
-        public object value(String sql)
+        public object value(string sql)
         {
             DbDataReader dbread = query(sql);
             object result = null;
@@ -464,12 +461,11 @@ namespace osafw
         /// <param name="field_name">field name, special cases: "1", "count(*)"</param>
         /// <param name="order_by"></param>
         /// <returns></returns>
-        public object value(String table, Hashtable where, String field_name, ref String order_by)
+        public object value(string table, Hashtable where, string field_name, string order_by = "")
         {
             if (field_name == null) field_name = "";
-            if (order_by == null) order_by = "";
 
-            if (String.IsNullOrEmpty(field_name))
+            if (string.IsNullOrEmpty(field_name))
             {
                 field_name = "*";
             }
@@ -480,53 +476,53 @@ namespace osafw
             {
                 field_name = q_ident(field_name);
             }
-            return value(hash2sql_select(table, where, ref order_by, field_name));
+            return value(hash2sql_select(table, where, order_by, field_name));
         }
 
-        // String will be Left(RTrim(str),length)
-        public String left(String str, int length)
+        // string will be Left(RTrim(str),length)
+        public string left(string str, int length)
         {
-            if (String.IsNullOrEmpty(str)) return "";
+            if (string.IsNullOrEmpty(str)) return "";
             return str.TrimStart().Substring(0, length);
         }
 
         // create "IN (1,2,3)" sql or IN (NULL) if empty params passed
         // examples:
         // where = " field "& db.insql("a,b,c,d")
-        // where = " field "& db.insql(String())
+        // where = " field "& db.insql(string())
         // where = " field "& db.insql(ArrayList)
-        public String insql(String parameters)
+        public string insql(string parameters)
         {
             return insql(parameters.Split(","));
         }
-        public String insql(IList parameters)
+        public string insql(IList parameters)
         {
             ArrayList result = new ArrayList();
-            foreach (String param in parameters)
+            foreach (string param in parameters)
             {
                 result.Add(this.q(param));
             }
-            return " IN (" + (result.Count > 0 ? String.Join(", ", result.ToArray()) : "NULL") + ")";
+            return " IN (" + (result.Count > 0 ? string.Join(", ", result.ToArray()) : "NULL") + ")";
         }
 
         // same as insql, but for quoting numbers - uses qi() 
-        public String insqli(String parameters)
+        public string insqli(string parameters)
         {
             return insqli(parameters.Split(","));
         }
 
-        public String insqli(IList parameters)
+        public string insqli(IList parameters)
         {
             ArrayList result = new ArrayList();
-            foreach (String param in parameters)
+            foreach (string param in parameters)
             {
                 result.Add(this.qi(param));
             }
-            return " IN (" + (result.Count > 0 ? String.Join(", ", result.ToArray()) : "NULL") + ")";
+            return " IN (" + (result.Count > 0 ? string.Join(", ", result.ToArray()) : "NULL") + ")";
         }
 
         // quote identifier: table => [table]
-        public String q_ident(String str)
+        public string q_ident(string str)
         {
             if (str == null) str = "";
             
@@ -535,8 +531,8 @@ namespace osafw
             return "[" + str + "]";
         }
 
-        // if length defined - String will be Left(Trim(str),length) before quoted
-        public String q(String str, int length = 0)
+        // if length defined - string will be Left(Trim(str),length) before quoted
+        public string q(string str, int length = 0)
         {
             if (str == null) str = "";
 
@@ -548,7 +544,7 @@ namespace osafw
         }
 
         // simple just replace quotes, don't add start/end single quote - for example, for use with LIKE
-        public String qq(String str)
+        public string qq(string str)
         {
             if (str == null) str = "";
 
@@ -556,21 +552,21 @@ namespace osafw
         }
 
         // simple quote as Integer Value
-        public int qi(String str)
+        public int qi(string str)
         {
             return Utils.f2int(str);
         }
 
         // simple quote as Float Value
-        public double qf(String str)
+        public double qf(string str)
         {
             return Utils.f2float(str);
         }
 
         // simple quote as Date Value
-        public String qd(String str)
+        public string qd(string str)
         {
-            String result;
+            string result;
             if (dbtype == "SQL")
             {
                 DateTime tmpdate;
@@ -598,7 +594,7 @@ namespace osafw
             return result;
         }
 
-        public Hashtable quote(String table, Hashtable fields)
+        public Hashtable quote(string table, Hashtable fields)
         {
             connect();
             load_table_schema(table);
@@ -609,7 +605,7 @@ namespace osafw
 
             Hashtable fieldsq = new Hashtable();
 
-            foreach (String k in fields.Keys)
+            foreach (string k in fields.Keys)
             {
                 var q = qone(table, k, fields[k]);
                 // quote field name too
@@ -622,8 +618,8 @@ namespace osafw
             return fieldsq;
         }
 
-        // can return String or DBOperation class
-        public object qone(String table, String field_name, object field_value_or_op)
+        // can return string or DBOperation class
+        public object qone(string table, string field_name, object field_value_or_op)
         {
             connect();
             load_table_schema(table);
@@ -646,8 +642,8 @@ namespace osafw
                 field_value = field_value_or_op;
             }
 
-            String field_type = (String)schema_table[field_name];
-            String quoted;
+            string field_type = (string)schema_table[field_name];
+            string quoted;
             if (dbop != null)
             {
                 if (dbop.op == DBOps.IN || dbop.op == DBOps.NOTIN)
@@ -659,7 +655,7 @@ namespace osafw
                         {
                             result.Add(qone_by_type(field_type, param));
                         }
-                        quoted = "(" + (result.Count > 0 ? String.Join(", ", result.ToArray()) : "NULL") + ")";
+                        quoted = "(" + (result.Count > 0 ? string.Join(", ", result.ToArray()) : "NULL") + ")";
                     }
                     else
                     {
@@ -669,7 +665,7 @@ namespace osafw
                 else if (dbop.op == DBOps.BETWEEN)
                 {
                     ArrayList values = (ArrayList)dbop.value;
-                    quoted = qone_by_type(field_type, (String)values[0]) + " AND " + qone_by_type(field_type, (String)values[1]);
+                    quoted = qone_by_type(field_type, (string)values[0]) + " AND " + qone_by_type(field_type, (string)values[1]);
                 }
                 else
                 {
@@ -692,9 +688,9 @@ namespace osafw
             }
         }
 
-        public String qone_by_type(String field_type, object field_value)
+        public string qone_by_type(string field_type, object field_value)
         {
-            String quoted;
+            string quoted;
 
             // if value set to Nothing or DBNull - assume it's NULL in db
             if (field_value == null || field_value == DBNull.Value)
@@ -706,17 +702,17 @@ namespace osafw
                 // fw.logger(table & "." & field_name & " => " & field_type & ", value=[" & field_value & "]")
                 if (Regex.IsMatch(field_type, "int"))
                 {
-                    if (field_value != null && Regex.IsMatch((String)field_value, "true", RegexOptions.IgnoreCase))
+                    if (field_value != null && Regex.IsMatch((string)field_value, "true", RegexOptions.IgnoreCase))
                     {
                         quoted = "1";
                     }
-                    else if (field_value != null && Regex.IsMatch((String)field_value, "false", RegexOptions.IgnoreCase))
+                    else if (field_value != null && Regex.IsMatch((string)field_value, "false", RegexOptions.IgnoreCase))
                     {
                         quoted = "0";
                     }
-                    else if (field_value != null && field_value is String && field_value == "")
+                    else if (field_value != null && field_value is string && field_value == "")
                     {
-                        // if empty String for numerical field - assume NULL
+                        // if empty string for numerical field - assume NULL
                         quoted = "NULL";
                     }
                     else
@@ -726,7 +722,7 @@ namespace osafw
                 }
                 else if (field_type == "datetime")
                 {
-                    quoted = this.qd((String)field_value);
+                    quoted = this.qd((string)field_value);
                 }
                 else if (field_type == "float")
                 {
@@ -743,7 +739,7 @@ namespace osafw
                     {
                         // escape backslash following by carriage return char(13) with doubling backslash and carriage return
                         // because of https://msdn.microsoft.com/en-us/library/dd207007.aspx
-                        quoted = Regex.Replace((String)field_value, @"\\(\r\n?)", @"\\$1$1");
+                        quoted = Regex.Replace((string)field_value, @"\\(\r\n?)", @"\\$1$1");
                         quoted = Regex.Replace(quoted, "'", "''"); // escape single quotes
                         quoted = "'" + quoted + "'";
                     }
@@ -912,7 +908,7 @@ namespace osafw
         }
 
         // return last inserted id
-        public int insert(String table, Hashtable fields)
+        public int insert(string table, Hashtable fields)
         {
             if (fields.Count < 1) return 0;
 
@@ -942,40 +938,40 @@ namespace osafw
             return (int)insert_id;
         }
 
-        public int update(String sql)
+        public int update(string sql)
         {
             return exec(sql);
         }
 
-        public int update(String table, Hashtable fields, Hashtable where)
+        public int update(string table, Hashtable fields, Hashtable where)
         {
             return exec(hash2sql_u(table, fields, where));
         }
 
         // retrun number of affected rows
-        public int update_or_insert(String table, Hashtable fields, Hashtable where)
+        public int update_or_insert(string table, Hashtable fields, Hashtable where)
         {
             // merge fields and where
             Hashtable allfields = new Hashtable();
-            foreach (String k in fields.Keys)
+            foreach (string k in fields.Keys)
             {
                 allfields[k] = fields[k];
             }
 
-            foreach (String k in where.Keys)
+            foreach (string k in where.Keys)
             {
                 allfields[k] = where[k];
             }
 
-            String update_sql = hash2sql_u(table, fields, where);
-            String insert_sql = hash2sql_i(table, allfields);
-            String full_sql = update_sql + "  IF @@ROWCOUNT = 0 " + insert_sql;
+            string update_sql = hash2sql_u(table, fields, where);
+            string insert_sql = hash2sql_i(table, allfields);
+            string full_sql = update_sql + "  IF @@ROWCOUNT = 0 " + insert_sql;
 
             return exec(full_sql);
         }
 
         // retrun number of affected rows
-        public int del(String table, Hashtable where)
+        public int del(string table, Hashtable where)
         {
             return exec(hash2sql_d(table, where));
         }
@@ -983,20 +979,20 @@ namespace osafw
         // join key/values with quoting values according to table
         // h - already quoted! values
         // kv_delim = pass "" to autodetect " = " or " IS " (for NULL values)
-        public String _join_hash(Hashtable h, String kv_delim, String pairs_delim)
+        public string _join_hash(Hashtable h, string kv_delim, string pairs_delim)
         {
-            String res = "";
+            string res = "";
             if (h.Count < 1) return res;
 
-            String[] ar = new String[h.Count - 1 + 1];
+            string[] ar = new string[h.Count - 1 + 1];
 
             int i = 0;
-            foreach (String k in h.Keys)
+            foreach (string k in h.Keys)
             {
                 var vv = h[k];
-                String v = "";
+                string v = "";
                 var delim = kv_delim;
-                if (String.IsNullOrEmpty(delim))
+                if (string.IsNullOrEmpty(delim))
                 {
                     if (vv is DBOperation)
                     {
@@ -1009,8 +1005,8 @@ namespace osafw
                     }
                     else
                     {
-                        v = (String)vv;
-                        if ((String)vv == "NULL")
+                        v = (string)vv;
+                        if ((string)vv == "NULL")
                         {
                             delim = " IS ";
                         }
@@ -1022,78 +1018,80 @@ namespace osafw
                 }
                 else
                 {
-                    v = (String)vv;
+                    v = (string)vv;
                 }
                 ar[i] = k + delim + v;
                 i += 1;
             }
-            res = String.Join(pairs_delim, ar);
+            res = string.Join(pairs_delim, ar);
             return res;
         }
 
         /// <summary>
-        ///  build SELECT sql String
+        ///  build SELECT sql string
         ///  </summary>
         ///  <param name="table">table name</param>
         ///  <param name="where">where conditions</param>
-        ///  <param name="order_by">optional order by String</param>
+        ///  <param name="order_by">optional order by string</param>
         ///  <param name="select_fields">MUST already be quoted!</param>
         ///  <returns></returns>
-        private String hash2sql_select(String table, Hashtable where, ref String order_by, String select_fields = "*")
+        private string hash2sql_select(string table, Hashtable where, string order_by = "", string select_fields = "*")
         {
-            if (order_by == null) order_by = "";
-
             where = quote(table, where);
             // FW.logger(where)
-            String where_String = _join_hash(where, "", " AND ");
-            if (where_String.Length > 0)
-                where_String = " WHERE " + where_String;
+            string where_string = _join_hash(where, "", " AND ");
+            if (where_string.Length > 0)
+            {
+                where_string = " WHERE " + where_string;
+            }
 
-            String sql = "SELECT " + select_fields + " FROM " + q_ident(table) + " " + where_String;
+            string sql = "SELECT " + select_fields + " FROM " + q_ident(table) + " " + where_string;
             if (order_by.Length > 0)
+            {
                 sql = sql + " ORDER BY " + order_by;
+            }
             return sql;
         }
 
-        public String hash2sql_u(String table, Hashtable fields, Hashtable where)
+        public string hash2sql_u(string table, Hashtable fields, Hashtable where)
         {
             fields = quote(table, fields);
             where = quote(table, where);
 
-            String update_String = _join_hash(fields, "=", ", ");
-            String where_String = _join_hash(where, "", " AND ");
+            string update_string = _join_hash(fields, "=", ", ");
+            string where_string = _join_hash(where, "", " AND ");
 
-            if (where_String.Length > 0)
-                where_String = " WHERE " + where_String;
+            if (where_string.Length > 0)
+                where_string = " WHERE " + where_string;
 
-            String sql = "UPDATE " + q_ident(table) + " " + " SET " + update_String + where_String;
+            string sql = "UPDATE " + q_ident(table) + " " + " SET " + update_string + where_string;
 
             return sql;
         }
 
-        private String hash2sql_i(String table, Hashtable fields)
+        private string hash2sql_i(string table, Hashtable fields)
         {
             fields = quote(table, fields);
 
-            String[] ar = new String[fields.Count - 1 + 1];
+            string[] ar = new string[fields.Count - 1 + 1];
 
             fields.Keys.CopyTo(ar, 0);
-            String names_String = String.Join(", ", ar);
+            string names_string = string.Join(", ", ar);
 
             fields.Values.CopyTo(ar, 0);
-            String values_String = String.Join(", ", ar);
-            String sql = "INSERT INTO " + q_ident(table) + " (" + names_String + ") VALUES (" + values_String + ")";
+            string values_string = string.Join(", ", ar);
+            string sql = "INSERT INTO " + q_ident(table) + " (" + names_string + ") VALUES (" + values_string + ")";
             return sql;
         }
 
-        private String hash2sql_d(String table, Hashtable where)
+        private string hash2sql_d(string table, Hashtable where)
         {
             where = quote(table, where);
-            String where_String = _join_hash(where, "", " AND ");
-            if (where_String.Length > 0)
-                where_String = " WHERE " + where_String;
+            string where_string = _join_hash(where, "", " AND ");
+            if (where_string.Length > 0)
+                where_string = " WHERE " + where_string;
 
-            String sql = "DELETE FROM " + q_ident(table) + " " + where_String;
+            string sql = "DELETE FROM " + q_ident(table) + " " + where_string;
             return sql;
         }
 
@@ -1108,13 +1106,13 @@ namespace osafw
             {
                 // fw.logger("************ TABLE" & row("TABLE_NAME"))
                 // For Each cl As DataColumn In dataTable.Columns
-                // fw.logger(cl.ToString & " = " & row(cl))
+                // fw.logger(cl.Tostring & " = " & row(cl))
                 // Next
 
                 // skip any system tables or views (VIEW, ACCESS TABLE, SYSTEM TABLE)
-                if ((String)row["TABLE_TYPE"] != "TABLE" && (String)row["TABLE_TYPE"] != "BASE TABLE" && (String)row["TABLE_TYPE"] != "PASS-THROUGH")
+                if ((string)row["TABLE_TYPE"] != "TABLE" && (string)row["TABLE_TYPE"] != "BASE TABLE" && (string)row["TABLE_TYPE"] != "PASS-THROUGH")
                     continue;
-                String tblname = row["TABLE_NAME"].ToString();
+                string tblname = row["TABLE_NAME"].ToString();
                 result.Add(tblname);
             }
 
@@ -1133,14 +1131,14 @@ namespace osafw
                 // skip non-views
                 if (row["TABLE_TYPE"] != "VIEW") continue;
 
-                String tblname = row["TABLE_NAME"].ToString();
+                string tblname = row["TABLE_NAME"].ToString();
                 result.Add(tblname);
             }
 
             return result;
         }
 
-        public ArrayList load_table_schema_full(String table)
+        public ArrayList load_table_schema_full(string table)
         {
             // check if full schema already there
             if (schemafull_cache == null)
@@ -1165,12 +1163,12 @@ namespace osafw
                 // get information about all columns in the table
                 // default = ((0)) ('') (getdate())
                 // maxlen = -1 for nvarchar(MAX)
-                String sql = "SELECT c.column_name as 'name'," + " c.data_type as 'type'," + " CASE c.is_nullable WHEN 'YES' THEN 1 ELSE 0 END AS 'is_nullable'," + " c.column_default as 'default'," + " c.character_maximum_length as 'maxlen'," + " c.numeric_precision," + " c.numeric_scale," + " c.character_set_name as 'charset'," + " c.collation_name as 'collation'," + " c.ORDINAL_POSITION as 'pos'," + " COLUMNPROPERTY(object_id(c.table_name), c.column_name, 'IsIdentity') as is_identity" + " FROM INFORMATION_SCHEMA.TABLES t," + "   INFORMATION_SCHEMA.COLUMNS c" + " WHERE t.table_name = c.table_name" + "   AND t.table_name = " + q(table) + " order by c.ORDINAL_POSITION";
+                string sql = "SELECT c.column_name as 'name'," + " c.data_type as 'type'," + " CASE c.is_nullable WHEN 'YES' THEN 1 ELSE 0 END AS 'is_nullable'," + " c.column_default as 'default'," + " c.character_maximum_length as 'maxlen'," + " c.numeric_precision," + " c.numeric_scale," + " c.character_set_name as 'charset'," + " c.collation_name as 'collation'," + " c.ORDINAL_POSITION as 'pos'," + " COLUMNPROPERTY(object_id(c.table_name), c.column_name, 'IsIdentity') as is_identity" + " FROM INFORMATION_SCHEMA.TABLES t," + "   INFORMATION_SCHEMA.COLUMNS c" + " WHERE t.table_name = c.table_name" + "   AND t.table_name = " + q(table) + " order by c.ORDINAL_POSITION";
                 result = array(sql);
                 foreach (Hashtable row in result)
                 {
-                    row["fw_type"] = map_mssqltype2fwtype((String)row["type"]); // meta type
-                    row["fw_subtype"] = ((String)row["type"]).ToLower();
+                    row["fw_type"] = map_mssqltype2fwtype((string)row["type"]); // meta type
+                    row["fw_subtype"] = ((string)row["type"]).ToLower();
                 }
             }
             else
@@ -1191,7 +1189,7 @@ namespace osafw
                     h["name"] = row["COLUMN_NAME"].ToString();
                     h["type"] = row["DATA_TYPE"];
                     h["fw_type"] = map_oletype2fwtype((int)row["DATA_TYPE"]); // meta type
-                    h["fw_subtype"] = ((String)Enum.GetName(typeof(OleDbType), row["DATA_TYPE"])).ToLower(); // exact type as String
+                    h["fw_subtype"] = ((string)Enum.GetName(typeof(OleDbType), row["DATA_TYPE"])).ToLower(); // exact type as string
                     h["is_nullable"] = (bool)row["IS_NULLABLE"] ? 1 : 0;
                     h["default"] = row["COLUMN_DEFAULT"]; // "=Now()" "0" "No"
                     h["maxlen"] = row["CHARACTER_MAXIMUM_LENGTH"];
@@ -1231,7 +1229,7 @@ namespace osafw
         }
 
         // return database foreign keys, optionally filtered by table (that contains foreign keys)
-        public ArrayList get_foreign_keys(String table = "")
+        public ArrayList get_foreign_keys(string table = "")
         {
             ArrayList result = new ArrayList();
             if (dbtype == "SQL")
@@ -1248,7 +1246,7 @@ namespace osafw
                 var dt = ((OleDbConnection)conn).GetOleDbSchemaTable(System.Data.OleDb.OleDbSchemaGuid.Foreign_Keys, new object[] { null });
                 foreach (DataRow row in dt.Rows)
                 {
-                    if (table != "" && (String)row["FK_TABLE_NAME"] != table)
+                    if (table != "" && (string)row["FK_TABLE_NAME"] != table)
                     {
                         continue;
                     }
@@ -1284,7 +1282,7 @@ namespace osafw
         }
 
         // load table schema from db
-        public Hashtable load_table_schema(String table)
+        public Hashtable load_table_schema(string table)
         {
             // for non-MSSQL schemas - just use config schema for now - TODO
             if (dbtype != "SQL" && dbtype != "OLE")
@@ -1340,9 +1338,9 @@ namespace osafw
                 schema.Clear();
         }
 
-        private String map_mssqltype2fwtype(String mstype)
+        private string map_mssqltype2fwtype(string mstype)
         {
-            String result;
+            string result;
             switch (mstype.ToLower())
             {
                 case "tinyint":
@@ -1385,9 +1383,9 @@ namespace osafw
             return result;
         }
 
-        private String map_oletype2fwtype(int mstype)
+        private string map_oletype2fwtype(int mstype)
         {
-            String result = "";
+            string result = "";
             switch (mstype)
             {
                 // TODO - unsupported: image, varbinary, longvarbinary, dbtime, timestamp
