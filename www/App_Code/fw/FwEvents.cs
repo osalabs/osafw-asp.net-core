@@ -38,19 +38,23 @@ namespace osafw
             if (!hEV.ContainsKey("id"))
             {
                 fw.logger(LogLevel.WARN, "No event defined for icode=[", ev_icode, "], auto-creating");
-                hEV = new Hashtable();
-                hEV["icode"] = ev_icode;
-                hEV["iname"] = ev_icode;
-                hEV["idesc"] = "auto-created";
+                hEV = new Hashtable
+                {
+                    ["icode"] = ev_icode,
+                    ["iname"] = ev_icode,
+                    ["idesc"] = "auto-created"
+                };
                 hEV["id"] = this.add(hEV);
             }
 
-            Hashtable fields = new Hashtable();
-            fields["events_id"] = hEV["id"];
-            fields["item_id"] = item_id;
-            fields["item_id2"] = item_id2;
-            fields["iname"] = iname;
-            fields["records_affected"] = records_affected;
+            Hashtable fields = new()
+            {
+                ["events_id"] = hEV["id"],
+                ["item_id"] = item_id,
+                ["item_id2"] = item_id2,
+                ["iname"] = iname,
+                ["records_affected"] = records_affected
+            };
             if (changed_fields != null)
                 fields["fields"] = Utils.jsonEncode(changed_fields);
             fields["add_users_id"] = fw.model<Users>().meId();

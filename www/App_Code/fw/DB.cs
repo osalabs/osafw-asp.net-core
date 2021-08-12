@@ -122,7 +122,7 @@ namespace osafw
                 throw new ArgumentException("h() accepts even number of arguments");
             }
             Hashtable result = new Hashtable();
-            for (var i = 0; i <= args.Length - 1; i += 2) 
+            for (var i = 0; i <= args.Length - 1; i += 2)
             {
                 result[args[i]] = args[i + 1];
             }
@@ -248,7 +248,7 @@ namespace osafw
 
         public void check_create_mdb(string filepath)
         {
-            if (File.Exists(filepath))return;
+            if (File.Exists(filepath)) return;
 
             string connstr = "Provider=Microsoft.Jet.OLEDB.4.0;Data Source=" + filepath;
 
@@ -302,13 +302,13 @@ namespace osafw
 
         private Hashtable readRow(DbDataReader dbread)
         {
-            Hashtable result = new Hashtable();
+            Hashtable result = new();
 
             for (int i = 0; i <= dbread.FieldCount - 1; i++)
             {
                 try
                 {
-                    if (is_check_ole_types && UNSUPPORTED_OLE_TYPES.ContainsKey(dbread.GetDataTypeName(i)))continue;
+                    if (is_check_ole_types && UNSUPPORTED_OLE_TYPES.ContainsKey(dbread.GetDataTypeName(i))) continue;
 
                     string value = dbread[i].ToString();
                     string name = dbread.GetName(i).ToString();
@@ -525,7 +525,7 @@ namespace osafw
         public string q_ident(string str)
         {
             if (str == null) str = "";
-            
+
             str = str.Replace("[", "");
             str = str.Replace("]", "");
             return "[" + str + "]";
@@ -564,13 +564,13 @@ namespace osafw
         }
 
         // simple quote as Date Value
-        public string qd(string str)
+        public string qd(object str)
         {
             string result;
             if (dbtype == "SQL")
             {
                 DateTime tmpdate;
-                if (DateTime.TryParse(str, out tmpdate))
+                if (DateTime.TryParse(str.ToString(), out tmpdate))
                 {
                     result = "convert(DATETIME2, '" + tmpdate.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.DateTimeFormatInfo.InvariantInfo) + "', 120)";
                 }
@@ -702,18 +702,25 @@ namespace osafw
                 // fw.logger(table & "." & field_name & " => " & field_type & ", value=[" & field_value & "]")
                 if (Regex.IsMatch(field_type, "int"))
                 {
-                    if (field_value != null && Regex.IsMatch((string)field_value, "true", RegexOptions.IgnoreCase))
+                    if (field_value != null && field_value is string @string)
                     {
-                        quoted = "1";
-                    }
-                    else if (field_value != null && Regex.IsMatch((string)field_value, "false", RegexOptions.IgnoreCase))
-                    {
-                        quoted = "0";
-                    }
-                    else if (field_value != null && field_value is string && field_value == "")
-                    {
-                        // if empty string for numerical field - assume NULL
-                        quoted = "NULL";
+                        if (Regex.IsMatch(@string, "true", RegexOptions.IgnoreCase))
+                        {
+                            quoted = "1";
+                        }
+                        else if (Regex.IsMatch(@string, "false", RegexOptions.IgnoreCase))
+                        {
+                            quoted = "0";
+                        }
+                        else if (@string == "")
+                        {
+                            // if empty string for numerical field - assume NULL
+                            quoted = "NULL";
+                        }
+                        else
+                        {
+                            quoted = Utils.f2int(field_value).ToString();
+                        }
                     }
                     else
                     {
@@ -722,7 +729,7 @@ namespace osafw
                 }
                 else if (field_type == "datetime")
                 {
-                    quoted = this.qd((string)field_value);
+                    quoted = this.qd(field_value);
                 }
                 else if (field_type == "float")
                 {
@@ -935,7 +942,7 @@ namespace osafw
                 insert_id = 0;
             }
 
-            return (int)insert_id;
+            return Utils.f2int(insert_id);
         }
 
         public int update(string sql)
@@ -1208,7 +1215,7 @@ namespace osafw
                 // TODO migrate sorting
                 // fieldslist = fieldslist.Sort(h => (int)h["pos"]);
 
-                result.AddRange(fieldslist); 
+                result.AddRange(fieldslist);
 
                 // now detect identity (because order is important)
                 foreach (Hashtable h in result)
@@ -1399,7 +1406,7 @@ namespace osafw
                 case (int)OleDbType.UnsignedInt:
                 case (int)OleDbType.BigInt:
                 case (int)OleDbType.UnsignedBigInt:
-                result = "int";
+                    result = "int";
                     break;
                 case (int)OleDbType.Double:
                 case (int)OleDbType.Numeric:
@@ -1407,15 +1414,15 @@ namespace osafw
                 case (int)OleDbType.Single:
                 case (int)OleDbType.Decimal:
                 case (int)OleDbType.Currency:
-                result = "float";
+                    result = "float";
                     break;
                 case (int)OleDbType.Date:
                 case (int)OleDbType.DBDate:
                 case (int)OleDbType.DBTimeStamp:
-                result = "datetime";
+                    result = "datetime";
                     break;
                 default: // "text", "ntext", "varchar", "longvarchar" "nvarchar", "char", "nchar", "wchar", "varwchar", "longvarwchar", "dbtime":
-                result = "varchar";
+                    result = "varchar";
                     break;
             }
 

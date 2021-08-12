@@ -104,12 +104,14 @@ namespace osafw
         }
 
         public FW(HttpContext context, IConfiguration configuration)
-        {
+        {            
             this.context = context;
             this.req = context.Request;
             this.resp = context.Response;
 
             FwConfig.init(context, configuration);
+
+            logger("NEW FW INSTANCE - TODO MIGRATE test it's once per request, test parallel requests **************");
 
             //TODO MIGRATE
             //# If isSentry Then
@@ -442,7 +444,7 @@ namespace osafw
                 {
                     logger(LogLevel.DEBUG, "No controller found for controller=[", route.controller, "], using default Home");
                     // no controller found - call default controller with default action
-                    calledType = Type.GetType("HomeController", true);
+                    calledType = Type.GetType(FW_NAMESPACE_PREFIX + "HomeController", true);
                     route.controller_path = "/Home";
                     route.controller = "Home";
                     route.action = "NotFound";
@@ -671,12 +673,12 @@ namespace osafw
         // parse query string, form and json in request body into fw.FORM
         private void parseForm()
         {
-            Hashtable input = new Hashtable();
+            Hashtable input = new();
 
             foreach (string s in req.Query.Keys)
             {
                 if (s != null)
-                    input[s] = req.Query[s];
+                    input[s] = req.Query[s].ToString();
             }
 
             if (req.HasFormContentType)
@@ -684,16 +686,16 @@ namespace osafw
                 foreach (string s in req.Form.Keys)
                 {
                     if (s != null)
-                        input[s] = req.Form[s];
+                        input[s] = req.Form[s].ToString();
                 }
             }
 
             // after perpare_FORM - grouping for names like XXX[YYYY] -> FORM{XXX}=@{YYYY1, YYYY2, ...}
-            Hashtable SQ = new Hashtable();
+            Hashtable SQ = new();
             string k;
             string sk;
 
-            Hashtable f = new Hashtable();
+            Hashtable f = new();
             foreach (string s in input.Keys)
             {
                 Match m = Regex.Match(s, @"^([^\]]+)\[([^\]]+)\]$");
@@ -725,7 +727,7 @@ namespace osafw
                     logger(LogLevel.TRACE, "REQUESTED JSON:", h);
                     Utils.mergeHash(ref f, ref h);
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     logger(LogLevel.WARN, "Request JSON parse error");
                 }
@@ -1046,7 +1048,7 @@ namespace osafw
         {
             setController((!string.IsNullOrEmpty(controller) ? controller : route.controller), action);
 
-            Type calledType = Type.GetType(route.controller + "Controller", true);
+            Type calledType = Type.GetType(FW_NAMESPACE_PREFIX + route.controller + "Controller", true);
             MethodInfo mInfo = calledType.GetMethod(route.action + "Action");
             if (mInfo == null)
             {

@@ -676,21 +676,13 @@ namespace osafw
                     if (hash2[key] is Hashtable)
                     {
                         if (!(hash1[key] is Hashtable))
-                        {
                             hash1[key] = new Hashtable();
-                        }
-                        Hashtable _hash1 = new Hashtable();
-                        Hashtable _hash2 = new Hashtable();
-
+                        Hashtable _hash1 = (Hashtable)hash1[key];
+                        Hashtable _hash2 = (Hashtable)hash2[key];
                         mergeHashDeep(ref _hash1, ref _hash2);
-
-                        hash1[key] = _hash1;
-                        hash2[key] = _hash2;
                     }
                     else
-                    {
                         hash1[key] = hash2[key];
-                    }
                 }
             }
         }

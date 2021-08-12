@@ -44,7 +44,7 @@ namespace osafw
         // called if fw.dispatch can't find controller
         public void NotFoundAction()
         {
-            //TODO MIGRATE fw.model<Spages>().showPageByFullUrl(fw.request_url);
+            fw.model<Spages>().showPageByFullUrl(fw.request_url);
         }
 
         public void TestAction(string id = "")
