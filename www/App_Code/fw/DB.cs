@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
-using System.Data.Odbc;
 using System.Data.OleDb;
 using System.Data.SqlClient;
 using System.IO;
@@ -231,10 +230,11 @@ namespace osafw
             {
                 result = new OleDbConnection(connstr);
             }
-            else if (dbtype == "ODBC")
-            {
-                result = new OdbcConnection(connstr);
-            }
+            // TODO MIGRATE proper way of using OdbcConnection
+            //else if (dbtype == "ODBC")
+            //{
+            //    result = new OdbcConnection(connstr);
+            //}
             else
             {
                 string msg = "Unknown type [" + dbtype + "]";
@@ -552,13 +552,13 @@ namespace osafw
         }
 
         // simple quote as Integer Value
-        public int qi(string str)
+        public int qi(object str)
         {
             return Utils.f2int(str);
         }
 
         // simple quote as Float Value
-        public double qf(string str)
+        public double qf(object str)
         {
             return Utils.f2float(str);
         }

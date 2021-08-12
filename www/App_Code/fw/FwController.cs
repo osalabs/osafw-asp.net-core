@@ -320,7 +320,7 @@ namespace osafw
         /// <param name="fields">field names required to be non-empty (trim used)</param>
         /// <returns>true if all required field names non-empty</returns>
         /// <remarks>also set global fw.ERR[REQUIRED]=true in case of validation error</remarks>
-        public virtual new bool validateRequired(Hashtable item, Array fields)
+        public virtual bool validateRequired(Hashtable item, Array fields)
         {
             bool result = true;
             if (item != null && Information.IsArray(fields) && fields.Length > 0)

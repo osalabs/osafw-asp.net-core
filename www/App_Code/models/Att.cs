@@ -351,7 +351,10 @@ namespace osafw
             string where = "";
             if (is_image > -1)
                 where += " and a.is_image=" + is_image;
-            return db.array("select a.* " + " from " + att_table_link + " atl, att a " + " where atl.table_name=" + db.q(table_name) + " and atl.item_id=" + db.qi(id) + " and a.id=atl.att_id" + where + " order by a.id ");
+            return db.array("select a.* " + " from " + att_table_link + " atl, att a " 
+                + " where atl.table_name=" + db.q(table_name) 
+                + " and atl.item_id=" + db.qi(id) 
+                + " and a.id=atl.att_id" + where + " order by a.id ");
         }
 
 
