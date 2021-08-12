@@ -1236,11 +1236,11 @@ namespace osafw
 
         // 
         /// <summary>
-        ///     ''' map input string (with optional context) into output accoring to the current lang
-        ///     ''' </summary>
-        ///     ''' <param name="str">input string in default language</param>
-        ///     ''' <param name="context">optional context, for example "screename". Useful when same original string need to be translated differenly in different contexts</param>
-        ///     ''' <returns>string in output languge</returns>
+        /// map input string (with optional context) into output accoring to the current lang
+        /// </summary>
+        /// <param name="str">input string in default language</param>
+        /// <param name="context">optional context, for example "screename". Useful when same original string need to be translated differenly in different contexts</param>
+        /// <returns>string in output languge</returns>
         public string langMap(string str, string context = "")
         {
             var input = str;

@@ -119,13 +119,13 @@ namespace osafw
         }
 
         /// <summary>
-        ///     ''' get name for the value fromt the select template
-        ///     ''' ex: selectTplName('/common/sel/status.sel', 127) => 'Deleted'
-        ///     ''' TODO: refactor to make common code with ParsePage?
-        ///     ''' </summary>
-        ///     ''' <param name="tpl_path"></param>
-        ///     ''' <param name="sel_id"></param>
-        ///     ''' <returns></returns>
+        /// get name for the value fromt the select template
+        /// ex: selectTplName('/common/sel/status.sel', 127) => 'Deleted'
+        /// TODO: refactor to make common code with ParsePage?
+        /// </summary>
+        /// <param name="tpl_path"></param>
+        /// <param name="sel_id"></param>
+        /// <returns></returns>
         public static string selectTplName(string tpl_path, string sel_id)
         {
             string result = "";

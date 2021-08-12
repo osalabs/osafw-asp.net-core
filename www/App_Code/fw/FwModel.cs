@@ -527,13 +527,13 @@ namespace osafw
         }
 
         /// <summary>
-        ///     '''     return array of ids of linked elements
-        ///     ''' </summary>
-        ///     ''' <param name="link_table_name">link table name that contains id_name and link_id_name fields</param>
-        ///     ''' <param name="id">main id</param>
-        ///     ''' <param name="id_name">field name for main id</param>
-        ///     ''' <param name="link_id_name">field name for linked id</param>
-        ///     ''' <returns></returns>
+        ///     return array of ids of linked elements
+        /// </summary>
+        /// <param name="link_table_name">link table name that contains id_name and link_id_name fields</param>
+        /// <param name="id">main id</param>
+        /// <param name="id_name">field name for main id</param>
+        /// <param name="link_id_name">field name for linked id</param>
+        /// <returns></returns>
         public virtual ArrayList getLinkedIds(string link_table_name, int id, string id_name, string link_id_name)
         {
             Hashtable where = new();
@@ -553,13 +553,13 @@ namespace osafw
         }
 
         /// <summary>
-        ///     '''  update (and add/del) linked table
-        ///     ''' </summary>
-        ///     ''' <param name="link_table_name">link table name that contains id_name and link_id_name fields</param>
-        ///     ''' <param name="id">main id</param>
-        ///     ''' <param name="id_name">field name for main id</param>
-        ///     ''' <param name="link_id_name">field name for linked id</param>
-        ///     ''' <param name="linked_keys">hashtable with keys as link id (as passed from web)</param>
+        ///  update (and add/del) linked table
+        /// </summary>
+        /// <param name="link_table_name">link table name that contains id_name and link_id_name fields</param>
+        /// <param name="id">main id</param>
+        /// <param name="id_name">field name for main id</param>
+        /// <param name="link_id_name">field name for linked id</param>
+        /// <param name="linked_keys">hashtable with keys as link id (as passed from web)</param>
         public virtual void updateLinked(string link_table_name, int id, string id_name, string link_id_name, Hashtable linked_keys)
         {
             Hashtable fields = new();

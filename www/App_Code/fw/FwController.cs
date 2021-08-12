@@ -727,10 +727,10 @@ namespace osafw
         /// <param name="location">redirect to this location if success</param>
         /// <param name="more_json">added to json response</param>
         /// <returns></returns>
-        public virtual Hashtable afterSave(bool success, string id = "", bool is_new = false, string action = "ShowForm", string location = "", Hashtable more_json = null)
+        public virtual Hashtable afterSave(bool success, object id = null, bool is_new = false, string action = "ShowForm", string location = "", Hashtable more_json = null)
         {
             if (string.IsNullOrEmpty(location))
-                location = this.getReturnLocation(id);
+                location = this.getReturnLocation((string)id);
 
             if (fw.isJsonExpected())
             {
@@ -769,7 +769,7 @@ namespace osafw
                 if (success)
                 fw.redirect(location);
             else
-                fw.routeRedirect(action, new string[] { id });
+                fw.routeRedirect(action, new[] { id });
             return null;
         }
 

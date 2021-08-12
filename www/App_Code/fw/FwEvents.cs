@@ -67,10 +67,10 @@ namespace osafw
         // End Sub
 
         /// <summary>
-        ///     ''' leave in only those item keys, which are apsent/different from itemold
-        ///     ''' </summary>
-        ///     ''' <param name="item"></param>
-        ///     ''' <param name="itemold"></param>
+        /// leave in only those item keys, which are apsent/different from itemold
+        /// </summary>
+        /// <param name="item"></param>
+        /// <param name="itemold"></param>
         public Hashtable changes_only(Hashtable item, Hashtable itemold)
         {
             Hashtable result = new();
@@ -108,12 +108,12 @@ namespace osafw
         }
 
         /// <summary>
-        ///     ''' return true if any of passed fields changed
-        ///     ''' </summary>
-        ///     ''' <param name="item1"></param>
-        ///     ''' <param name="item2"></param>
-        ///     ''' <param name="fields">qw-list of fields</param>
-        ///     ''' <returns>false if no chagnes in passed fields or fields are empty</returns>
+        /// return true if any of passed fields changed
+        /// </summary>
+        /// <param name="item1"></param>
+        /// <param name="item2"></param>
+        /// <param name="fields">qw-list of fields</param>
+        /// <returns>false if no chagnes in passed fields or fields are empty</returns>
         public bool is_changed(Hashtable item1, Hashtable item2, string fields)
         {
             var result = false;

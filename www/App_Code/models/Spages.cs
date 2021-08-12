@@ -94,12 +94,12 @@ namespace osafw
         }
 
         /// <summary>
-        ///     ''' Read ALL rows from db according to where, then apply getPagesTree to return tree structure 
-        ///     ''' </summary>
-        ///     ''' <param name="where">where to apply in sql</param>
-        ///     ''' <param name="orderby">order by fields to apply in sql</param>
-        ///     ''' <returns>parsepage AL with hierarcy (via "children" key)</returns>
-        ///     ''' <remarks></remarks>
+        /// Read ALL rows from db according to where, then apply getPagesTree to return tree structure 
+        /// </summary>
+        /// <param name="where">where to apply in sql</param>
+        /// <param name="orderby">order by fields to apply in sql</param>
+        /// <returns>parsepage AL with hierarcy (via "children" key)</returns>
+        /// <remarks></remarks>
         public ArrayList tree(string where, string orderby)
         {
             ArrayList rows = db.array("select * from " + table_name + " where " + where + " order by " + orderby);
@@ -130,12 +130,12 @@ namespace osafw
         }
 
         /// <summary>
-        ///     ''' Generate parsepage AL of plain list with levelers based on tree structure from getPagesTree()
-        ///     ''' </summary>
-        ///     ''' <param name="pages_tree">result of get_pages_tree()</param>
-        ///     ''' <param name="level">optional, used in recursive calls</param>
-        ///     ''' <returns>parsepage AL with "leveler" array added to each row with level>0</returns>
-        ///     ''' <remarks>RECURSIVE</remarks>
+        /// Generate parsepage AL of plain list with levelers based on tree structure from getPagesTree()
+        /// </summary>
+        /// <param name="pages_tree">result of get_pages_tree()</param>
+        /// <param name="level">optional, used in recursive calls</param>
+        /// <returns>parsepage AL with "leveler" array added to each row with level>0</returns>
+        /// <remarks>RECURSIVE</remarks>
         public ArrayList getPagesTreeList(ArrayList pages_tree, int level = 0)
         {
             ArrayList result = new ArrayList();
@@ -162,13 +162,13 @@ namespace osafw
         }
 
         /// <summary>
-        ///     ''' Generate HTML with options for select with indents for hierarcy
-        ///     ''' </summary>
-        ///     ''' <param name="selected_id">selected id</param>
-        ///     ''' <param name="pages_tree">result of getPagesTree()</param>
-        ///     ''' <param name="level">optional, used in recursive calls</param>
-        ///     ''' <returns>HTML with options</returns>
-        ///     ''' <remarks>RECURSIVE</remarks>
+        /// Generate HTML with options for select with indents for hierarcy
+        /// </summary>
+        /// <param name="selected_id">selected id</param>
+        /// <param name="pages_tree">result of getPagesTree()</param>
+        /// <param name="level">optional, used in recursive calls</param>
+        /// <returns>HTML with options</returns>
+        /// <remarks>RECURSIVE</remarks>
         public string getPagesTreeSelectHtml(string selected_id, ArrayList pages_tree, int level = 0)
         {
             StringBuilder result = new StringBuilder();
@@ -186,11 +186,11 @@ namespace osafw
         }
 
         /// <summary>
-        ///     ''' Return full url (without domain) for the page item, including url of the page
-        ///     ''' </summary>
-        ///     ''' <param name="id">record id</param>
-        ///     ''' <returns>URL like /page/subpage/subsubpage</returns>
-        ///     ''' <remarks>RECURSIVE!</remarks>
+        /// Return full url (without domain) for the page item, including url of the page
+        /// </summary>
+        /// <param name="id">record id</param>
+        /// <returns>URL like /page/subpage/subsubpage</returns>
+        /// <remarks>RECURSIVE!</remarks>
         public string getFullUrl(int id)
         {
             if (id == 0)
