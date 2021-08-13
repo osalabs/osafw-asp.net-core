@@ -23,7 +23,7 @@ namespace osafw
             // fw.G("main_menu") = main_menu
 
             // also force set XSS
-            if (string.IsNullOrEmpty(fw.SessionStr("XSS"))) fw.SessionStr("XSS", Utils.getRandStr(16));
+            if (string.IsNullOrEmpty(fw.Session("XSS"))) fw.Session("XSS", Utils.getRandStr(16));
             //TODO MIGRATE if (fw.model<Users>().meId() > 0) fw.model<Users>().loadMenuItems();
         }
 

@@ -705,13 +705,13 @@ namespace osafw
                 result = true;
             else if (oper == "ifne" && eqvalue != ravalue)
                 result = true;
-            else if (oper == "iflt" && (is_numeric_comparison && (int)eqvalue < (int)ravalue || !is_numeric_comparison && String.Compare((string)eqvalue, (string)ravalue) < 0))
+            else if (oper == "iflt" && (is_numeric_comparison && Utils.f2int(eqvalue) < Utils.f2int(ravalue) || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) < 0))
                 result = true;
-            else if (oper == "ifgt" && (is_numeric_comparison && (int)eqvalue > (int)ravalue || !is_numeric_comparison && String.Compare((string)eqvalue, (string)ravalue) > 0))
+            else if (oper == "ifgt" && (is_numeric_comparison && Utils.f2int(eqvalue) > Utils.f2int(ravalue) || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) > 0))
                 result = true;
-            else if (oper == "ifge" && (is_numeric_comparison && (int)eqvalue >= (int)ravalue || !is_numeric_comparison && String.Compare((string)eqvalue, (string)ravalue) >= 0))
+            else if (oper == "ifge" && (is_numeric_comparison && Utils.f2int(eqvalue) >= Utils.f2int(ravalue) || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) >= 0))
                 result = true;
-            else if (oper == "ifle" && (is_numeric_comparison && (int)eqvalue <= (int)ravalue || !is_numeric_comparison && String.Compare((string)eqvalue, (string)ravalue) <= 0))
+            else if (oper == "ifle" && (is_numeric_comparison && Utils.f2int(eqvalue) <= Utils.f2int(ravalue) || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) <= 0))
                 result = true;
 
             return result;
@@ -989,9 +989,7 @@ namespace osafw
         {
             StringBuilder result = new();
 
-            string sel_value = (string)hfvalue((string)attrs["select"], hf);
-            if (sel_value == null)
-                sel_value = "";
+            string sel_value = Utils.f2str(hfvalue((string)attrs["select"]??"", hf));
 
             var multi_delim = ""; // by default no multiple select
             if (attrs.ContainsKey("multi"))

@@ -23,7 +23,7 @@ namespace osafw
 
     public abstract class FwController
     {
-        public static int access_level = -1; // access level for the controller. fw.config("access_levels") overrides this. -1 (public access), 0(min logged level), 100(max admin level)
+        public static int access_level = Users.ACL_VISITOR; // access level for the controller. fw.config("access_levels") overrides this. -1 (public access), 0(min logged level), 100(max admin level)
 
         public static string route_default_action = ""; // supported values - "" (use Default Parser for unknown actions), index (use IndexAction for unknown actions), show (assume action is id and use ShowAction)
         public string base_url; // base url for the controller
@@ -195,9 +195,7 @@ namespace osafw
 
         public string reqs(string iname)
         {
-            string value = (string)fw.FORM[iname];
-            if (Information.IsNothing(value))
-                value = "";
+            string value = (string)fw.FORM[iname] ?? "";
             return value;
         }
         public int reqi(string iname)
@@ -230,7 +228,7 @@ namespace osafw
 
         public virtual void checkXSS()
         {
-            if (fw.SessionStr("XSS") != (string)fw.FORM["XSS"])
+            if (fw.Session("XSS") != (string)fw.FORM["XSS"])
                 throw new AuthException("XSS Error. Reload the page or try to re-login");
         }
 
@@ -240,11 +238,9 @@ namespace osafw
         // sample in IndexAction: me.get_filter()
         public virtual Hashtable initFilter(string session_key = null)
         {
-            Hashtable f = (Hashtable)fw.FORM["f"];
-            if (f == null)
-                f = new Hashtable();
+            Hashtable f = (Hashtable)fw.FORM["f"] ?? new();
 
-            if (Information.IsNothing(session_key))
+            if (session_key == null)
                 session_key = "_filter_" + fw.G["controller.action"];
 
             Hashtable sfilter = fw.SessionHashtable(session_key);
@@ -288,10 +284,8 @@ namespace osafw
             }
 
             // paging
-            if (!f.ContainsKey("pagenum") || !Regex.IsMatch((string)f["pagenum"], @"^\d+$"))
-                f["pagenum"] = 0;
-            if (!f.ContainsKey("pagesize") || !Regex.IsMatch((string)f["pagesize"], @"^\d+$"))
-                f["pagesize"] = fw.config("MAX_PAGE_ITEMS");
+            f["pagenum"] = Utils.f2int(f["pagenum"]); //sets default to 0 if no value or non-numeric
+            f["pagesize"] = Utils.f2int(f["pagesize"] ?? fw.config("MAX_PAGE_ITEMS"));
 
             // save in session for later use
             fw.SessionHashtable(session_key, f);
@@ -306,8 +300,8 @@ namespace osafw
         /// <param name="session_key"></param>
         public virtual void clearFilter(string session_key = null)
         {
-            Hashtable f = new Hashtable();
-            if (Information.IsNothing(session_key))
+            Hashtable f = new();
+            if (session_key == null)
                 session_key = "_filter_" + fw.G["controller.action"];
             fw.SessionHashtable(session_key, f);
             this.list_filter = f;
@@ -323,7 +317,7 @@ namespace osafw
         public virtual bool validateRequired(Hashtable item, Array fields)
         {
             bool result = true;
-            if (item != null && Information.IsArray(fields) && fields.Length > 0)
+            if (item != null && fields.Length > 0)
             {
                 foreach (string fld in fields)
                 {
@@ -379,20 +373,27 @@ namespace osafw
             if (this.list_sortmap == null)
                 throw new Exception("No sort order mapping defined, define in list_sortmap ");
 
+            string sortby = (string)this.list_filter["sortby"] ?? "";
+            string sortdir = (string)this.list_filter["sortdir"] ?? "";
+
             string sortdef_field = null;
             string sortdef_dir = null;
             Utils.split2(" ", this.list_sortdef, ref sortdef_field, ref sortdef_dir);
 
-            if ((string)this.list_filter["sortby"] == "")
-                this.list_filter["sortby"] = sortdef_field;
-            if ((string)this.list_filter["sortdir"] != "desc" && (string)this.list_filter["sortdir"] != "asc")
-                this.list_filter["sortdir"] = sortdef_dir;
+            // validation/mapping
+            if (string.IsNullOrEmpty(sortby))
+                sortby = sortdef_field;
+            if (sortdir != "desc" && sortdir != "asc")
+                sortdir = sortdef_dir;
 
-            string orderby = ((string)this.list_sortmap[this.list_filter["sortby"]??""]).Trim();
+            string orderby = ((string)this.list_sortmap[sortby] ?? "").Trim();
             if (string.IsNullOrEmpty(orderby))
-                throw new Exception("No orderby defined for [" + this.list_filter["sortby"] + "], define in list_sortmap");
+                throw new Exception("No orderby defined for [" + sortby + "], define in list_sortmap");
 
-            if ((string)this.list_filter["sortdir"] == "desc")
+            this.list_filter["sortby"] = sortby;
+            this.list_filter["sortdir"] = sortdir;
+
+            if (sortdir == "desc")
             {
                 // if sortdir is desc, i.e. opposite to default - invert order for orderby fields
                 // go thru each order field
@@ -433,7 +434,7 @@ namespace osafw
         /// <remarks>Sample: Me.search_fields="field1 field2,!field3 field4" => field1 LIKE '%$s%' or (field2 LIKE '%$s%' and field3='$s') or field4 LIKE '%$s%'</remarks>
         public virtual void setListSearch()
         {
-            string s = ((string)this.list_filter["s"]).Trim();
+            string s = ((string)this.list_filter["s"] ?? "").Trim();
             if (!string.IsNullOrEmpty(s) && !string.IsNullOrEmpty(this.search_fields))
             {
                 var is_subquery = false;
@@ -730,7 +731,7 @@ namespace osafw
         public virtual Hashtable afterSave(bool success, object id = null, bool is_new = false, string action = "ShowForm", string location = "", Hashtable more_json = null)
         {
             if (string.IsNullOrEmpty(location))
-                location = this.getReturnLocation((string)id);
+                location = this.getReturnLocation(Utils.f2str(id));
 
             if (fw.isJsonExpected())
             {

@@ -104,7 +104,7 @@ namespace osafw
         }
 
         public FW(HttpContext context, IConfiguration configuration)
-        {            
+        {
             this.context = context;
             this.req = context.Request;
             this.resp = context.Response;
@@ -129,7 +129,7 @@ namespace osafw
             G["request_url"] = UriHelper.GetDisplayUrl(req);
 
             // override default lang with user's lang
-            if (!string.IsNullOrEmpty(SessionStr("lang"))) G["lang"] = SessionStr("lang");
+            if (!string.IsNullOrEmpty(Session("lang"))) G["lang"] = Session("lang");
 
             FERR = new Hashtable(); // reset errors
             parseForm();
@@ -141,25 +141,27 @@ namespace osafw
         }
 
         // ***************** work with SESSION
-        public int? SessionInt(String name)
-        {
-            return context.Session.GetInt32(name);
-        }
-        public void SessionInt(String name, int value)
-        {
-            context.Session.SetInt32(name, value);
-        }
-
-        public string SessionStr(String name)
+        //by default Session is for strings
+        public string Session(string name)
         {
             return context.Session.GetString(name);
         }
-        public void SessionStr(String name, string value)
+        public void Session(string name, string value)
         {
             context.Session.SetString(name, value);
         }
 
-        public bool SessionBool(String name)
+        public int? SessionInt(string name)
+        {
+            return context.Session.GetInt32(name);
+        }
+        public void SessionInt(string name, int value)
+        {
+            context.Session.SetInt32(name, value);
+        }
+
+
+        public bool SessionBool(string name)
         {
             var data = context.Session.Get(name);
             if (data == null)
@@ -168,17 +170,17 @@ namespace osafw
             }
             return BitConverter.ToBoolean(data, 0);
         }
-        public void SessionBool(String name, bool value)
+        public void SessionBool(string name, bool value)
         {
             context.Session.Set(name, BitConverter.GetBytes(value));
         }
 
-        public Hashtable SessionHashtable(String name)
+        public Hashtable SessionHashtable(string name)
         {
-            String data = context.Session.GetString(name);
+            string data = context.Session.GetString(name);
             return data == null ? null : (Hashtable)Utils.deserialize(ref data);
         }
-        public void SessionHashtable(String name, Hashtable value)
+        public void SessionHashtable(string name, Hashtable value)
         {
             context.Session.SetString(name, Utils.serialize(value));
         }
@@ -197,8 +199,7 @@ namespace osafw
             else
             {
                 // write for the next request
-                Hashtable _flash = SessionHashtable("_flash");
-                if (_flash == null) _flash = new Hashtable();
+                Hashtable _flash = SessionHashtable("_flash") ?? new();
                 _flash[name] = value;
                 SessionHashtable("_flash", _flash);
                 return this; // for chaining
@@ -433,7 +434,7 @@ namespace osafw
 
             this.getRoute();
 
-            String[] args = new[] { route.id }; // TODO - add rest of possible params from parts
+            string[] args = new[] { route.id }; // TODO - add rest of possible params from parts
 
             try
             {
@@ -457,11 +458,7 @@ namespace osafw
                     var field = calledType.GetField("access_level", BindingFlags.Public | BindingFlags.Static);
                     if (field != null)
                     {
-                        int current_level = -1;
-                        int? session_level = SessionInt("access_level");
-                        if (session_level!=null)
-                            current_level = (int)session_level;
-
+                        int current_level = Utils.f2int(Session("access_level")); //will be 0 for visitors
                         if (current_level < Utils.f2int(field.GetValue(null)))
                             throw new AuthException("Bad access - Not authorized (2)");
                     }
@@ -504,7 +501,7 @@ namespace osafw
                 // save to globals so it can be used in templates
                 G["controller"] = route.controller;
                 G["action"] = route.action;
-                G["controller.ction"] = route.controller + "." + route.action;
+                G["controller.action"] = route.controller + "." + route.action;
 
                 logger(LogLevel.TRACE, "FINAL controller.action=", route.controller, ".", route.action);
                 // logger(LogLevel.TRACE, "route.method=" , route.method)
@@ -626,7 +623,7 @@ namespace osafw
                 || action == "Save"
                 || action == "Delete"
                 || action == "SaveMulti")
-                && !string.IsNullOrEmpty(SessionStr("XSS")) && SessionStr("XSS") != (string)FORM["XSS"])
+                && !string.IsNullOrEmpty(Session("XSS")) && Session("XSS") != (string)FORM["XSS"])
             {
                 // XSS validation failed - check if we are under xss-excluded controller
                 Hashtable no_xss = (Hashtable)this.config("no_xss");
@@ -642,26 +639,21 @@ namespace osafw
             string path2 = "/" + controller;
 
             // pre-check controller's access level by url
-            int current_level = -1;
-            string session_level = SessionStr("access_level");
-            if (!string.IsNullOrEmpty(session_level))
-                current_level = Utils.f2int(session_level);
+            int current_level = Utils.f2int(Session("access_level"));
 
-            int rule_level;
             Hashtable rules = (Hashtable)config("access_levels");
             if (rules != null && rules.ContainsKey(path))
             {
-                if (current_level >= (int)rules[path])
+                if (current_level >= Utils.f2int(rules[path]))
                     result = 2;
             }
             else if (rules != null && rules.ContainsKey(path2))
             {
-                if (current_level >= (int)rules[path2])
+                if (current_level >= Utils.f2int(rules[path2]))
                     result = 2;
             }
             else
             {
-                rule_level = -1; // no restrictions defined for this url in config
                 result = 1; // need to check Controller.access_level after _auth
             }
 

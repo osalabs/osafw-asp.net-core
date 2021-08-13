@@ -9,7 +9,7 @@ namespace osafw
 {
     public class MainController : FwController
     {
-        public static new int access_level = 0;
+        public static new int access_level = Users.ACL_MEMBER;
 
         public override void init(FW fw)
         {

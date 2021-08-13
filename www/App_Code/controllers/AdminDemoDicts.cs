@@ -7,7 +7,7 @@ namespace osafw
 {
     public class AdminDemoDictsController : FwAdminController
     {
-        public static new int access_level = 80;
+        public static new int access_level = Users.ACL_MANAGER;
 
         protected DemoDicts model;
 

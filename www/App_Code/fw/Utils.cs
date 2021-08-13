@@ -58,15 +58,19 @@ namespace osafw
         * or "AAA BBB CCC DDD" => AAA=1, BBB=1, CCC=1, DDD=1
         * WARN! replaces all "&nbsp;" to spaces (after convert)
         */
-        public static Hashtable qh(string str, object default_value = null) {
+        public static Hashtable qh(string str, object default_value = null)
+        {
             Hashtable result = new Hashtable();
-            if (str != null && str != "") {
+            if (str != null && str != "")
+            {
                 string[] arr = Regex.Split(str, @"\s+");
-                foreach (string value in arr) {
+                foreach (string value in arr)
+                {
                     string v = value.Replace("&nbsp;", " ");
                     string[] avoid = v.Split("|", 2);
                     string val = (string)default_value;
-                    if (avoid.Length > 1) {
+                    if (avoid.Length > 1)
+                    {
                         val = avoid[1];
                     }
                     result.Add(avoid[0], val);
@@ -160,13 +164,15 @@ namespace osafw
 
         public static String str2url(String str)
         {
-            if (!Regex.IsMatch(str, @"^\w+://")) {
+            if (!Regex.IsMatch(str, @"^\w+://"))
+            {
                 str = "http://" + str;
             }
             return str;
         }
 
-        public static String ConvertStreamToBase64(Stream fs) {
+        public static String ConvertStreamToBase64(Stream fs)
+        {
             BinaryReader BinRead = new BinaryReader(fs);
             Byte[] BinBytes = BinRead.ReadBytes((int)fs.Length);
             return Convert.ToBase64String(BinBytes);
@@ -244,12 +250,14 @@ namespace osafw
             return Double.TryParse(AField.ToString(), out result);
         }
 
-        public static String sTrim(String str, int size) {
+        public static String sTrim(String str, int size)
+        {
             if (str.Length > size) str = str.Substring(0, size) + "...";
             return str;
         }
 
-        public static String getRandStr(int size) {
+        public static String getRandStr(int size)
+        {
             StringBuilder result = new StringBuilder();
             String[] chars = qw("A B C D E F a b c d e f 0 1 2 3 4 5 6 7 8 9");
 
@@ -334,12 +342,14 @@ namespace osafw
             OleDbConnection conn = (OleDbConnection)accdb.connect();
             var schema = conn.GetOleDbSchemaTable(OleDbSchemaGuid.Tables, null);
 
-            if (schema == null || schema.Rows.Count < 1) {
+            if (schema == null || schema.Rows.Count < 1)
+            {
                 throw new ApplicationException("No worksheets found in the Excel file");
             }
 
             Hashtable where = new Hashtable();
-            for (int i = 0; i < schema.Rows.Count; i++) {
+            for (int i = 0; i < schema.Rows.Count; i++)
+            {
                 String sheet_name_full = schema.Rows[i]["TABLE_NAME"].ToString();
                 String sheet_name = sheet_name_full.Replace("\"", "");
                 sheet_name = sheet_name.Replace("'", "");
@@ -370,7 +380,8 @@ namespace osafw
                 String str = Regex.Replace(row[fld] + "", "[\n\r]+", " ");
                 str = str.Replace("\"", "\\\"");
                 // check if string need to be quoted (if it contains " or ,)
-                if (str.IndexOf("\"") > 0 || str.IndexOf(",") > 0) {
+                if (str.IndexOf("\"") > 0 || str.IndexOf(",") > 0)
+                {
                     str = "\"" + str + "\"";
                 }
                 result.Append(str);
@@ -392,19 +403,23 @@ namespace osafw
             String headers_str = csv_export_headers;
             StringBuilder csv = new StringBuilder();
             String[] fields = null;
-            if (csv_export_fields == "" || csv_export_fields == "*") {
+            if (csv_export_fields == "" || csv_export_fields == "*")
+            {
                 // just read field names from first row
-                if (rows.Count > 0) {
+                if (rows.Count > 0)
+                {
                     fields = (rows[0] as Hashtable).Keys.Cast<String>().ToArray();
                     headers_str = String.Join(",", fields);
                 }
             }
-            else {
+            else
+            {
                 fields = Utils.qw(csv_export_fields);
             }
 
             csv.Append(headers_str + "\n");
-            foreach (Hashtable row in rows) {
+            foreach (Hashtable row in rows)
+            {
                 csv.Append(Utils.toCSVRow(row, fields) + "\n");
             }
             return csv;
@@ -616,7 +631,7 @@ namespace osafw
 
             return true;
         }
-        
+
         private static ImageCodecInfo GetEncoderInfo(ImageFormat format)
         {
             int j = 0;
@@ -624,7 +639,8 @@ namespace osafw
             encoders = ImageCodecInfo.GetImageEncoders();
 
             j = 0;
-            while (j < encoders.Length) {
+            while (j < encoders.Length)
+            {
                 if (encoders[j].FormatID == format.Guid) return encoders[j];
                 j += 1;
             }
@@ -724,7 +740,8 @@ namespace osafw
         }
 
         //overload alias for jsonDecode(string)
-        public static Object jsonDecode(object str) {
+        public static Object jsonDecode(object str)
+        {
             return jsonDecode((string)str);
         }
 
@@ -775,24 +792,36 @@ namespace osafw
         {
             object result = data;
 
-            if (result.GetType() == typeof(IDictionary)) {
+            if (result is IDictionary dictionary)
+            {
                 // convert dictionary to Hashtable
-                Hashtable result2 = new Hashtable(); // because we can't iterate hashtable and change it
-                foreach (String key in (result as IDictionary).Keys)
+                Hashtable result2 = new(); // because we can't iterate hashtable and change it
+                foreach (string key in dictionary.Keys)
                 {
-                    Hashtable _data = (Hashtable)result;
+                    Hashtable _data = (Hashtable)dictionary;
                     result2[key] = cast2std(_data[key]);
                 }
                 result = result2;
             }
-            else if (result.GetType() == typeof(IList))
+            else if (result is IList list)
             {
                 // convert arrays to ArrayList
-                result = new ArrayList((IList)result);
-                for (int i = 0; i < (result as ArrayList).Count; i++)
+                result = new ArrayList(list);
+                for (int i = 0; i < list.Count; i++)
                 {
                     ((ArrayList)result)[i] = cast2std(((ArrayList)result)[i]);
                 }
+            }
+            else if (result is System.Text.Json.JsonElement el)
+            {
+                if (el.ValueKind == JsonValueKind.Number)
+                    result = el.GetInt32();
+                else if (el.ValueKind == JsonValueKind.String)
+                    result = el.GetString();
+                else if (el.ValueKind == JsonValueKind.True || el.ValueKind == JsonValueKind.False)
+                    result = el.GetBoolean();
+                else if (el.ValueKind == JsonValueKind.Null)
+                    result = null;
             }
 
             return result;
@@ -962,7 +991,8 @@ namespace osafw
             int trword = 1;
             int trend = 1;  // if trend=0 trword - ignored
 
-            if (hattrs["truncate"].ToString().Length > 0) {
+            if (hattrs["truncate"].ToString().Length > 0)
+            {
                 int trlen1 = f2int(hattrs["truncate"]);
                 if (trlen1 > 0) trlen = trlen1;
             }
@@ -975,13 +1005,18 @@ namespace osafw
 
             if (trend == 1)
             {
-                if (trword == 1) {
+                if (trword == 1)
+                {
                     str = Regex.Replace(str, @"^(.{" + trlen + @",}?)[\n \t\.\,\!\?]+(.*)$", "$1", RegexOptions.Singleline);
                     if (str.Length < orig_len) str += trchar;
-                } else {
+                }
+                else
+                {
                     str = str.Substring(0, trlen) + trchar;
                 }
-            } else {
+            }
+            else
+            {
                 str = str.Substring(0, trlen / 2) + trchar + str.Substring(trlen / 2 + 1);
             }
             return str;
@@ -1004,11 +1039,13 @@ namespace osafw
                     if (_fld.IndexOf(" asc") >= 0)
                     {
                         _fld = _fld.Replace(" asc", " desc");
-                    } 
-                    else if (_fld.IndexOf("desc") >= 0) {
+                    }
+                    else if (_fld.IndexOf("desc") >= 0)
+                    {
                         _fld = _fld.Replace(" desc", " asc");
                     }
-                    else {
+                    else
+                    {
                         // if no asc/desc - just add desc at the end
                         _fld += " desc";
                     }
@@ -1050,7 +1087,8 @@ namespace osafw
                 {
                     result[v] = i;
                 }
-                else {
+                else
+                {
                     result[v] = value;
                 }
             }
@@ -1064,7 +1102,8 @@ namespace osafw
         }
 
         // newline-delimited str to comma-delimited str
-        static string nlstr2commastr(String str) {
+        static string nlstr2commastr(String str)
+        {
             return Regex.Replace(str, @"[\n\r]+", ",");
         }
 
@@ -1074,7 +1113,8 @@ namespace osafw
         * <param name="rows">db array</param>
         * <param name="fields">keys/values to add</param>
         */
-        public static void arrayInject(ArrayList rows, Hashtable fields) {
+        public static void arrayInject(ArrayList rows, Hashtable fields)
+        {
             foreach (Hashtable row in rows)
             {
                 // array merge
@@ -1091,15 +1131,16 @@ namespace osafw
         *  <param name="str"></param>
         *  <returns></returns>
         */
-        public static String urlescape(String str) {
+        public static String urlescape(String str)
+        {
             return HttpUtility.UrlEncode(str);
         }
 
         // sent multipart/form-data POST request to remote URL with files (key=fieldname, value=filepath) and formFields
         public static String UploadFilesToRemoteUrl(
-            String url, 
-            Hashtable files, 
-            System.Collections.Specialized.NameValueCollection formFields = null, 
+            String url,
+            Hashtable files,
+            System.Collections.Specialized.NameValueCollection formFields = null,
             System.Security.Cryptography.X509Certificates.X509Certificate2 cert = null)
         {
             String boundary = "----------------------------" + DateTime.Now.Ticks.ToString("x");
@@ -1115,10 +1156,13 @@ namespace osafw
 
             // String formdataTemplate = "\r\n--" & boundary + "\r\nContent-Disposition: form-data; name=\"{0}\";\r\n\r\n{1}";
             String formdataTemplate = "--" + boundary + "\r\n" + "Content-Disposition: form-data; name=\"{0}\";\r\n{1}\r\n";
-            if (formFields != null) {
-                foreach (String key in formFields.Keys) {
+            if (formFields != null)
+            {
+                foreach (String key in formFields.Keys)
+                {
                     String formitem = String.Format(formdataTemplate, key, formFields[key]);
-                    if (memStream.Length > 0) {
+                    if (memStream.Length > 0)
+                    {
                         formitem = "\r\n" + formitem; // add crlf before the string only for second and further lines
                     }
 
@@ -1128,7 +1172,8 @@ namespace osafw
             }
 
             String headerTemplate = "Content-Disposition: form-data; name=\"{0}\"; filename=\"{1}\"\r\nContent-Type: {2}\r\n\r\n";
-            foreach (String fileField in files.Keys) {
+            foreach (String fileField in files.Keys)
+            {
                 memStream.Write(boundarybytes, 0, boundarybytes.Length);
 
                 // mime (TODO use System.Web.MimeMapping.GetMimeMapping() for .net 4.5+)
@@ -1139,7 +1184,8 @@ namespace osafw
                 var headerbytes = Encoding.UTF8.GetBytes(header);
                 memStream.Write(headerbytes, 0, headerbytes.Length);
 
-                using (var fileStream = new FileStream((String)files[fileField], FileMode.Open, FileAccess.Read)) {
+                using (var fileStream = new FileStream((String)files[fileField], FileMode.Open, FileAccess.Read))
+                {
                     Byte[] buffer = new Byte[1023];
                     int bytesRead = fileStream.Read(buffer, 0, buffer.Length);
                     while (bytesRead != 0)
@@ -1224,12 +1270,13 @@ namespace osafw
 
         // convert c/snake style name to CamelCase
         // system_name => SystemName
-        public static String nameCamelCase(String str) {
+        public static String nameCamelCase(String str)
+        {
             String result = str;
             result = Regex.Replace(result, @"\W+", " "); // non-alphanum chars to spaces
             result = Utils.capitalize(result);
             result = Regex.Replace(result, " +", ""); // remove spaces
-        return str;
-    }
+            return str;
+        }
     }
 }

@@ -13,7 +13,7 @@ namespace osafw
 {
     public class FwDynamicController : FwController
     {
-        public static new int access_level = 100;
+        public static new int access_level = Users.ACL_SITEADMIN;
 
         protected FwModel model_related;
 

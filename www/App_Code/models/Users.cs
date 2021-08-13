@@ -14,8 +14,8 @@ namespace osafw
     public class Users : FwModel
     {
         // ACL constants
-        public const int ACL_VISITOR = -1;
-        public const int ACL_MEMBER = 0;
+        public const int ACL_VISITOR = 0; //non-logged visitor
+        public const int ACL_MEMBER = 1; //min access level for users
         public const int ACL_EMPLOYEE = 50;
         public const int ACL_MANAGER = 80;
         public const int ACL_ADMIN = 90;
@@ -213,7 +213,7 @@ namespace osafw
         {
             fw.context.Session.Clear();
             fw.SessionBool("is_logged", true);
-            fw.SessionStr("XSS", Utils.getRandStr(16));
+            fw.Session("XSS", Utils.getRandStr(16));
 
             reloadSession(id);
 
@@ -231,23 +231,22 @@ namespace osafw
                 id = meId();
             Hashtable user = one(id);
 
-            var access_level = Utils.f2int(user["access_level"]);
             fw.SessionInt("user_id", id);
-            fw.SessionStr("login", (string)user["email"]);
-            fw.SessionInt("access_level", access_level);
-            fw.SessionStr("lang", (string)user["lang"]);
+            fw.Session("login", (string)user["email"]);
+            fw.Session("access_level", (string)user["access_level"]); //note, set as string
+            fw.Session("lang", (string)user["lang"]);
             // fw.SESSION("user", hU)
             var fname = ((string)user["fname"]).Trim();
             var lname = ((string)user["lname"]).Trim();
             if (!string.IsNullOrEmpty(fname) || !string.IsNullOrEmpty(lname))
-                fw.SessionStr("user_name", fname + Interaction.IIf(!string.IsNullOrEmpty(fname), " ", "") + lname);
+                fw.Session("user_name", fname + Interaction.IIf(!string.IsNullOrEmpty(fname), " ", "") + lname);
             else
-                fw.SessionStr("user_name", (string)user["email"]);
+                fw.Session("user_name", (string)user["email"]);
 
             var avatar_link = "";
             if (Utils.f2int(user["att_id"]) > 0)
                 avatar_link = fw.model<Att>().getUrl(Utils.f2int(user["att_id"]), "s");
-            fw.SessionStr("user_avatar_link", avatar_link);
+            fw.Session("user_avatar_link", avatar_link);
 
             return true;
         }
@@ -270,7 +269,7 @@ namespace osafw
         /// <param name="acl">minimum required access level</param>
         public bool checkAccess(int acl, bool is_die = true)
         {
-            int users_acl = Utils.f2int(fw.SessionInt("access_level")??-1);
+            int users_acl = Utils.f2int(fw.Session("access_level"));
 
             // check access
             if (users_acl < acl)
@@ -295,8 +294,8 @@ namespace osafw
             }
 
             // only Menu items user can see per ACL
-            var users_acl = fw.SessionInt("access_level");
-            ArrayList result = new ArrayList();
+            var users_acl = Utils.f2int(fw.Session("access_level"));
+            ArrayList result = new();
             foreach (Hashtable item in menu_items)
             {
                 if (Utils.f2int(item["access_level"]) <= users_acl)

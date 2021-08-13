@@ -282,7 +282,7 @@ namespace osafw
             bool result = true;
             Hashtable item = one(id);
 
-            int user_access_level = Utils.f2int(fw.SessionInt("access_level"));
+            int user_access_level = Utils.f2int(fw.Session("access_level"));
 
             // If item("access_level") > user_access_level Then
             // result = False
