@@ -13,22 +13,47 @@ namespace osafw
 
         public Hashtable request_cache = new Hashtable(); // request level cache
 
-        public static Object getValue(String key)
+        public static object getValue(string key)
         {
-            return cache[key];
+            var result = cache[key];
+            if (result != null)
+            {
+                var t = result.GetType();
+                if (t.IsSerializable)
+                {
+
+                    result = Utils.deserialize((string)result);
+                }
+            }
+            return result;
         }
 
-        public static void setValue(String key, Object value) {
+        public static void setValue(string key, object value)
+        {
             lock (locker)
             {
-                cache[key] = value;
+                if (value == null)
+                    cache[key] = value;
+                else
+                {
+                    var t = value.GetType();
+                    if (t.IsSerializable)
+                    {
+                        // serialize in cache because when read - need object clone, not original object
+                        cache[key] = Utils.serialize(value);
+                    }
+                    else
+                    {
+                        cache[key] = value;
+                    }
+                }
             }
         }
 
         // remove one key from cache
-        public static void remove(String key)
+        public static void remove(string key)
         {
-            lock (locker)
+            lock (locker) 
             {
                 cache.Remove(key);
             }
@@ -43,21 +68,45 @@ namespace osafw
             }
         }
 
-        /******** request-level cache ***********/
+        // ******** request-level cache ***********
 
-        public Object getRequestValue(String key)
+        public object getRequestValue(string key)
         {
-            return request_cache[key];
+            var result = request_cache[key];
+            if (result != null)
+            {
+                var t = result.GetType();
+                if (t.IsSerializable)
+                {
+                    result = Utils.deserialize((string)result);
+                }
+            }
+            return result;
         }
-        public void setRequestValue(String key, Object value)
+        public void setRequestValue(string key, object value)
         {
-            request_cache[key] = value;
+            if (value == null)
+                request_cache[key] = value;
+            else
+            {
+                var t = value.GetType();
+                if (t.IsSerializable)
+                {
+                    // serialize in cache because when read - need object clone, not original object
+                    request_cache[key] = Utils.serialize(value);
+                }
+                else
+                {
+                    request_cache[key] = value;
+                }
+            }
         }
         // remove one key from request cache
-        public void requestRemove(String key)
+        public void requestRemove(string key)
         {
             request_cache.Remove(key);
         }
+
 
         /// <summary>
         /// remove all keys with prefix from the request cache
@@ -69,7 +118,9 @@ namespace osafw
             foreach (string key in new ArrayList(request_cache.Keys))
             {
                 if (key.Substring(0, plen) == prefix)
+                {
                     request_cache.Remove(key);
+                }
             }
         }
 

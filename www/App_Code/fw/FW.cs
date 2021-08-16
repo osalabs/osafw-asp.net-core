@@ -178,7 +178,7 @@ namespace osafw
         public Hashtable SessionHashtable(string name)
         {
             string data = context.Session.GetString(name);
-            return data == null ? null : (Hashtable)Utils.deserialize(ref data);
+            return data == null ? null : (Hashtable)Utils.deserialize(data);
         }
         public void SessionHashtable(string name, Hashtable value)
         {
