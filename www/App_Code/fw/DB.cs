@@ -531,6 +531,11 @@ namespace osafw
             return "[" + str + "]";
         }
 
+        public string q(object str, int length = 0)
+        {
+            return q((string)str, length);
+        }
+
         // if length defined - string will be Left(Trim(str),length) before quoted
         public string q(string str, int length = 0)
         {
