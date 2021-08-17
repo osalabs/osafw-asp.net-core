@@ -699,7 +699,7 @@ namespace osafw
             Hashtable item = this.oneByIname(iname);
             if (item.ContainsKey(this.field_id))
                 // exists
-                result = (int)item[this.field_id];
+                result = Utils.f2int(item[this.field_id]);
             else
             {
                 // not exists - add new

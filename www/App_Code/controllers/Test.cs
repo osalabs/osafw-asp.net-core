@@ -4,16 +4,19 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace osafw
 {
     public class TestController : FwController
     {
-        public Hashtable IndexAction() {
+        public Hashtable IndexAction()
+        {
             rw("<html><form method=\"POST\" action=\"/Test/(Upload)\"><input type=\"file\" name=\"file1\"/><input type=\"submit\"/></form></html>");
             //ArrayList users = fw.modelOf(typeof(Users)).list();
-            
+
             //fw.logger(users);
 
 
@@ -32,5 +35,6 @@ namespace osafw
             ArrayList users = fw.model<Users>().list();
             return new Hashtable();
         }
+
     }
 }

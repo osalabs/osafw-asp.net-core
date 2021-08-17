@@ -940,7 +940,7 @@ namespace osafw
             if (is_cols)
             {
                 // dynamic cols
-                foreach (Hashtable row in (Hashtable)ps["list_rows"])
+                foreach (Hashtable row in (ArrayList)ps["list_rows"])
                 {
                     ArrayList cols = new ArrayList();
                     foreach (var fieldname in Utils.qw(fields))
