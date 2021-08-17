@@ -23,10 +23,11 @@ namespace osafw
             services.AddDistributedMemoryCache();
             services.Configure<IISServerOptions>(options =>
             {
-                options.AllowSynchronousIO = false;
+                options.AllowSynchronousIO = false; 
             });
             services.AddSession(options =>
             {
+                options.Cookie.IsEssential = true; 
                 if ((int)Startup.Configuration.GetValue(typeof(int), "sessionIdleTimeout") > 0)
                 {
                     options.IdleTimeout = TimeSpan.FromSeconds((int)Startup.Configuration.GetValue(typeof(int), "sessionIdleTimeout"));

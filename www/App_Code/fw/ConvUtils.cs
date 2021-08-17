@@ -18,7 +18,7 @@ namespace osafw
         // if out_filename cotains "\" or "/" - save pdf file to this path
         // options:
         // landscape = True - will produce landscape output
-        public static string parsePagePdf(FW fw, ref string bdir, ref string tpl_name, ref Hashtable ps, string out_filename = "", Hashtable options = null/* TODO Change to default(_) if this is not a reference type */)
+        public static string parsePagePdf(FW fw, string bdir, string tpl_name, Hashtable ps, string out_filename = "", Hashtable options = null)
         {
             if (options == null)
             {
@@ -204,7 +204,7 @@ namespace osafw
         }
 
         // simple version of parse_page_xls - i.e. it's usual html file, just output as xls (Excel opens it successfully, however displays a warning)
-        public static string parsePageExcelSimple(FW fw, ref string bdir, ref string tpl_name, ref Hashtable ps, string out_filename = "")
+        public static string parsePageExcelSimple(FW fw,  string bdir, string tpl_name, Hashtable ps, string out_filename = "")
         {
             ParsePage parser = new ParsePage(fw);
             ps["IS_PRINT_MODE"] = true;
