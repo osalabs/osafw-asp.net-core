@@ -218,7 +218,7 @@ namespace osafw
 
         private string _parse_page(string tpl_name, Hashtable hf, string page, ref Hashtable parent_hf)
         {
-            if (tpl_name.Substring(0, 1) != "/")
+            if (tpl_name.Length>0 && tpl_name.Substring(0, 1) != "/")
                 tpl_name = basedir + "/" + tpl_name;
 
             // fw.logger("DEBUG", "ParsePage - Parsing template = " + tpl_name + ", pagelen=" & page.Length)
