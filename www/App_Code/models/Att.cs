@@ -264,7 +264,7 @@ namespace osafw
             if (!string.IsNullOrEmpty(filepath))
                 File.Delete(filepath);
             // for images - also delete s/m thumbnails
-            if ((int)item["is_image"] == 1)
+            if (Utils.f2int(item["is_image"]) == 1)
             {
                 foreach (string size in Utils.qw("s m l"))
                 {
@@ -289,7 +289,7 @@ namespace osafw
             // End If
 
             // file must have Active status
-            if ((int)item["status"] != 0)
+            if (Utils.f2int(item["status"]) != 0)
                 result = false;
 
             if (!result)
@@ -305,9 +305,9 @@ namespace osafw
             if (size != "s" && size != "m")
                 size = "";
 
-            if ((int)item["id"] > 0)
+            if (Utils.f2int(item["id"]) > 0)
             {
-                checkAccessRights((int)item["id"]);
+                checkAccessRights(Utils.f2int(item["id"]));
 
                 //TODO MIGRATE
                 //fw.resp.Cache.SetCacheability(HttpCacheability.Private); // use public only if all uploads are public

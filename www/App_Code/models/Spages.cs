@@ -57,7 +57,7 @@ namespace osafw
                 item = oneByUrl(url_parts[i], parent_id);
                 if (item.Count == 0)
                     return item;// empty hashtable
-                parent_id = (int)item["id"];
+                parent_id = Utils.f2int(item["id"]);
             }
             // item now contains page data for the url
             if (item.Count > 0)
@@ -65,7 +65,7 @@ namespace osafw
                 if (!string.IsNullOrEmpty((string)item["head_att_id"]))
                     // item["head_att_id_url_s") ] fw.model(Of Att).get_url_direct(item["head_att_id"), ]s")
                     // item["head_att_id_url_m") ] fw.model(Of Att).get_url_direct(item["head_att_id"), ]m")
-                    item["head_att_id_url"] = fw.model<Att>().getUrlDirect((int)item["head_att_id"]);
+                    item["head_att_id_url"] = fw.model<Att>().getUrlDirect(Utils.f2int(item["head_att_id"]));
             }
 
             // page[top_url] used in templates navigation
@@ -211,7 +211,7 @@ namespace osafw
             ps["pages"] = getPagesTreeList(pages_tree, 0);
 
             Hashtable item = oneByFullUrl(full_url);
-            if (item.Count == 0 || (int)item["status"] == 127 && !fw.model<Users>().checkAccess(100, false))
+            if (item.Count == 0 || Utils.f2int(item["status"]) == 127 && !fw.model<Users>().checkAccess(100, false))
             {
                 ps["hide_std_sidebar"] = true;
                 fw.parser("/error/404", ps);

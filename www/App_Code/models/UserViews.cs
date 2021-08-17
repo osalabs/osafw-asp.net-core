@@ -29,8 +29,8 @@ namespace osafw
             if (item.Count > 0)
             {
                 // exists
-                result = (int)item[field_id];
-                update((int)item[field_id], new Hashtable() { { "fields", fields } });
+                result = Utils.f2int(item[field_id]);
+                update(Utils.f2int(item[field_id]), new Hashtable() { { "fields", fields } });
             }
             else
                 // new
