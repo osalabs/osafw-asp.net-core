@@ -82,7 +82,7 @@ namespace osafw
         public static String qhRevert(IDictionary sh)
         {
             ArrayList result = new ArrayList();
-            foreach (String key in sh)
+            foreach (String key in sh.Keys)
             {
                 result.Add(key.Replace(" ", "&nbsp;") + "|" + sh[key]);
             }
@@ -844,7 +844,7 @@ namespace osafw
 
         // deserialize base64 string serialized with Utils.serialize
         // return object or Nothing (if error)
-        public static object deserialize(ref String str)
+        public static object deserialize(String str)
         {
             return jsonDecode(str);
             //binary fomatter is not secure TODO MIGRATE cleanup
