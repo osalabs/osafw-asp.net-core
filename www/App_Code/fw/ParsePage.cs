@@ -120,9 +120,9 @@
 */
 
 using Microsoft.AspNetCore.Http;
-using Microsoft.VisualBasic; //TODO MIGRATE remove dependency
 using System;
 using System.Collections;
+using System.Globalization;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -525,7 +525,9 @@ namespace osafw
                             }
                         }
                         else if (ptr is IList list)
+                        {
                             ptr = list[Utils.f2int(k)];
+                        }
                         else if (ptr is ISession session)
                         {
                             //TODO MIGRATE - get arbitrary object from session, not just string
@@ -816,7 +818,9 @@ namespace osafw
             string tag_full = tag_full_ref;
             string value = "";
             if (value_ref.Length > 0)
+            {
                 value = value_ref;
+            }
 
             int attr_count = hattrs.Count;
             if (attr_count > 0)
@@ -843,8 +847,14 @@ namespace osafw
                     if (attr_count > 0 && hattrs.ContainsKey("number_format"))
                     {
                         var precision = (!string.IsNullOrEmpty((string)hattrs["number_format"]) ? Utils.f2int(hattrs["number_format"]) : 2);
-                        var groupdigits = (hattrs.ContainsKey("nfthousands") && string.IsNullOrEmpty((string)hattrs["nfthousands"]) ? TriState.False : TriState.True); // default - group digits, but if nfthousands empty - don't
-                        value = Strings.FormatNumber(Utils.f2float(value), precision, TriState.UseDefault, TriState.False, groupdigits);
+                        bool groupdigits = !hattrs.ContainsKey("nfthousands") || !string.IsNullOrEmpty((string)hattrs["nfthousands"]); // default - group digits, but if nfthousands empty - don't
+
+                        value = Utils.f2float(value).ToString("N"+precision, CultureInfo.InvariantCulture);
+                        if (!groupdigits)
+                        {
+                            value = value.Replace(NumberFormatInfo.InvariantInfo.NumberGroupSeparator, "");
+                        }
+
                         attr_count -= 1;
                     }
                     if (attr_count > 0 && hattrs.ContainsKey("date"))
@@ -882,7 +892,7 @@ namespace osafw
                     }
                     if (attr_count > 0 && hattrs.ContainsKey("trim"))
                     {
-                        value = Strings.Trim(value);
+                        value = value.Trim();
                         attr_count -= 1;
                     }
                     if (attr_count > 0 && hattrs.ContainsKey("nl2br"))
@@ -928,9 +938,10 @@ namespace osafw
                     {
                         value = Regex.Replace(value, "<[^>]*(>|$)", " ");
                         value = Regex.Replace(value, @"[\s\r\n]+", " ");
-                        value = Strings.Trim(value);
+                        value = value.Trim();
                         attr_count -= 1;
                     }
+
                     if (attr_count > 0 && hattrs.ContainsKey("markdown"))
                     {
                         try
@@ -981,7 +992,7 @@ namespace osafw
                 }
             }
 
-            hpage_ref = Strings.Replace(hpage_ref, "<~" + tag_full + ">", value);
+            hpage_ref = hpage_ref.Replace("<~" + tag_full + ">", value);
         }
 
         // if attrs["multi") ]efined - attrs["select") ]an contain strings with separator in attrs["multi") ]default ",") for multiple select
@@ -1003,10 +1014,12 @@ namespace osafw
             string[] asel;
             if (!string.IsNullOrEmpty(multi_delim))
             {
-                asel = Strings.Split(sel_value, multi_delim);
+                asel = sel_value.Split(multi_delim);
                 // trim all elements, so it would be simplier to compare
-                for (int i = Information.LBound(asel); i <= Information.UBound(asel); i++)
-                    asel[i] = Strings.Trim(asel[i]);
+                for (int i = asel.GetLowerBound(0); i <= asel.GetUpperBound(0); i++)
+                {
+                    asel[i] = asel[i].Trim();
+                }
             }
             else
             {
@@ -1025,29 +1038,39 @@ namespace osafw
                 {
                     desc = Utils.htmlescape((string)item["iname"]);
                     if (item.ContainsKey("id"))
-                        value = Strings.Trim((string)item["id"]);
+                    {
+                        value = ((string)item["id"]).Trim();
+                    }
                     else
-                        value = Strings.Trim((string)item["iname"]);
+                    {
+                        value = ((string)item["iname"]).Trim();
+                    }
 
                     // check for selected value before escaping
                     string selected;
                     if (Array.IndexOf(asel, value) != -1)
+                    {
                         selected = " selected";
+                    }
                     else
+                    {
                         selected = "";
+                    }
 
                     value = Utils.htmlescape(value);
                     _replace_commons(ref desc);
 
-                    result.Append("<option value=\"").Append(value).Append('"').Append(selected).Append('>').Append(desc).Append("</option>" + Constants.vbCrLf);
+                    result.Append("<option value=\"").Append(value).Append('"').Append(selected).Append('>').Append(desc).Append("</option>" + System.Environment.NewLine);
                 }
             }
             else
             {
                 // just read from the plain text file
                 var tpl_path = tag_tplpath(tag, tpl_name);
-                if (Strings.Left(tpl_path, 1) != "/")
+                if (tpl_path.Substring(0, 1) != "/")
+                {
                     tpl_path = basedir + "/" + tpl_path;
+                }
 
                 if (!File.Exists(TMPL_PATH + "/" + tpl_path))
                 {
@@ -1061,8 +1084,8 @@ namespace osafw
                     if (line.Length < 2)
                         continue;
                     // line.chomp()
-                    string[] arr = Strings.Split(line, "|", 2);
-                    string value = Strings.Trim(arr[0]);
+                    string[] arr = line.Split("|", 2);
+                    string value = arr[0].Trim();
                     string desc = arr[1];
 
                     if (desc.Length < 1)
@@ -1099,8 +1122,10 @@ namespace osafw
             string name = (string)attrs["name"];
             string delim = (string)attrs["delim"]; // delimiter class
 
-            if (Strings.Left(tpl_path, 1) != "/")
+            if (tpl_path.Substring(0, 1) != "/")
+            {
                 tpl_path = basedir + "/" + tpl_path;
+            }
 
             string[] lines = FW.getFileLines(TMPL_PATH + "/" + tpl_path);
 
@@ -1111,7 +1136,7 @@ namespace osafw
                 if (line.Length < 2)
                     continue;
 
-                string[] arr = Strings.Split(line, "|", 2);
+                string[] arr = line.Split("|", 2);
                 string value = arr[0];
                 string desc = arr[1];
 
@@ -1131,7 +1156,9 @@ namespace osafw
                 string str_checked = "";
 
                 if (value == sel_value)
+                {
                     str_checked = " checked='checked' ";
+                }
 
                 // 'Bootstrap 3 style
                 // If delim = "inline" Then
@@ -1152,7 +1179,9 @@ namespace osafw
             string result = "";
             string sel_value = (string)hfvalue((string)attrs["selvalue"], hf);
             if (sel_value == null)
+            {
                 sel_value = "";
+            }
 
             if (hfvalue(tag, hf) is ICollection seloptions)
             {
@@ -1164,13 +1193,17 @@ namespace osafw
                 foreach (Hashtable item in seloptions)
                 {
                     if (item.ContainsKey("id"))
-                        value = Strings.Trim((string)item["id"]);
+                    {
+                        value = ((string)item["id"]).Trim();
+                    }
                     else
-                        value = Strings.Trim((string)item["iname"]);
+                    {
+                        value = ((string)item["iname"]).Trim();
+                    }
                     desc = (string)item["iname"];
 
-                    if (desc.Length < 1 | value != sel_value)
-                        continue;
+                    if (desc.Length < 1 | value != sel_value) continue;
+
                     _replace_commons(ref desc);
 
                     result = desc;
@@ -1180,8 +1213,10 @@ namespace osafw
             else
             {
                 var tpl_path = tag_tplpath(tag, tpl_name);
-                if (Strings.Left(tpl_path, 1) != "/")
+                if (tpl_path.Substring(0, 1) != "/")
+                {
                     tpl_path = basedir + "/" + tpl_path;
+                }
 
                 if (!File.Exists(TMPL_PATH + "/" + tpl_path))
                 {
@@ -1195,7 +1230,7 @@ namespace osafw
                     if (line.Length < 2)
                         continue;
                     // line.chomp()
-                    string[] arr = Strings.Split(line, "|", 2);
+                    string[] arr = line.Split("|", 2);
                     string value = arr[0];
                     string desc = arr[1];
 
@@ -1282,10 +1317,12 @@ namespace osafw
             {
                 string line = line1.Trim();
                 if (string.IsNullOrEmpty(line) || !line.Contains("==="))
+                {
                     continue;
-                var pair = Strings.Split(line, "===", 2);
+                }
+                string[] pair = line.Split("===", 2);
                 // fw.logger("added to cache:", Trim(pair(0)))
-                ((Hashtable)LANG_CACHE[lang])[Strings.Trim(pair[0])] = Strings.LTrim(pair[1]);
+                ((Hashtable)LANG_CACHE[lang])[pair[0].Trim()] = pair[1].TrimStart();
             }
         }
 
@@ -1293,11 +1330,11 @@ namespace osafw
         private void add_lang(string str)
         {
             fw.logger(LogLevel.DEBUG, "ParsePage notice - updating lang [" + lang + "] with: " + str);
-            string filedata = str + " === " + Constants.vbCrLf;
+            string filedata = str + " === " + System.Environment.NewLine;
             FW.setFileContent(TMPL_PATH + @"\lang\" + lang + ".txt", ref filedata, true);
 
             // also add to lang cache
-            ((Hashtable)LANG_CACHE[lang])[Strings.Trim(str)] = "";
+            ((Hashtable)LANG_CACHE[lang])[str.Trim()] = "";
         }
     }
 }
