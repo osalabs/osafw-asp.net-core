@@ -11,6 +11,10 @@ using System.Text.RegularExpressions;
 
 namespace osafw
 {
+
+    public class DBRow : Dictionary<string, string> { }
+    public class DBList : List<DBRow> { }
+
     public enum DBOps : int
     {
         EQ,            // =
@@ -324,6 +328,29 @@ namespace osafw
             return result;
         }
 
+        private DBRow readRow2(DbDataReader dbread)
+        {
+            DBRow result = new();
+
+            for (int i = 0; i <= dbread.FieldCount - 1; i++)
+            {
+                try
+                {
+                    if (is_check_ole_types && UNSUPPORTED_OLE_TYPES.ContainsKey(dbread.GetDataTypeName(i))) continue;
+
+                    string value = dbread[i].ToString();
+                    string name = dbread.GetName(i).ToString();
+                    result.Add(name, value);
+                }
+                catch (Exception Ex)
+                {
+                    break;
+                }
+            }
+
+            return result;
+        }
+
         public Hashtable row(string sql)
         {
             DbDataReader dbread = query(sql);
@@ -349,6 +376,18 @@ namespace osafw
 
             while (dbread.Read())
                 a.Add(readRow(dbread));
+
+            dbread.Close();
+            return a;
+        }
+
+        public DBList array2(string sql)
+        {
+            DbDataReader dbread = query(sql);
+            DBList a = new();
+
+            while (dbread.Read())
+                a.Add(readRow2(dbread));
 
             dbread.Close();
             return a;

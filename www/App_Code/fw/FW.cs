@@ -189,7 +189,7 @@ namespace osafw
         // FLASH - used to pass something to the next request (and only on this request)        
         // get flash value by name
         // set flash value by name - return fw in this case
-        public object flash(string name, object value = null)
+        public object flash(string name, object value = null) 
         {
             if (value == null)
             {

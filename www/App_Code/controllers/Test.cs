@@ -36,5 +36,35 @@ namespace osafw
             return new Hashtable();
         }
 
+        public void TestAction()
+        {
+            DateTime start_time = DateTime.Now;
+            for (int i = 0; i < 1000; i++)
+            {
+                var rows = db.array("select * from event_log");
+                foreach (Hashtable row in rows)
+                {
+                    row["id_str"] = row["id"] + "ok";
+                }
+            }
+            TimeSpan end_timespan = DateTime.Now - start_time;
+            rw("benchmark1: " + end_timespan.TotalSeconds);
+
+            start_time = DateTime.Now; 
+            for (int i = 0; i < 1000; i++)
+            {
+                var rows = db.array2("select * from event_log");
+                foreach (var row in rows)
+                {
+                    row["id_str"] = row["id"] + "ok";
+                }
+            }
+            end_timespan = DateTime.Now - start_time;
+            rw("benchmark2: " + end_timespan.TotalSeconds);
+
+            //rw(FW.dumper(rows));
+
+            rw("done");
+        }
     }
 }

@@ -758,8 +758,7 @@ namespace osafw
             var options = new JsonReaderOptions
             {
                 AllowTrailingCommas = true,
-                CommentHandling = JsonCommentHandling.Skip,
-                MaxDepth = 16
+                CommentHandling = JsonCommentHandling.Skip
             };
             var reader = new Utf8JsonReader(jsonUtf8, options);
             reader.Read(); //initial read
