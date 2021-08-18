@@ -23,6 +23,22 @@ namespace osafw
 
         private readonly string table_menu_items = "menu_items";
 
+        /// <summary>
+        /// return current user id or 0 for non-logged users
+        /// </summary>
+        public static int id
+        {
+            get { return Utils.f2int(FW.Current.SessionInt("user_id")); }
+        }
+        
+        /// <summary>
+        /// return true if current user is logged
+        /// </summary>
+        public static bool isLogged
+        {
+            get { return FW.Current.SessionBool("is_logged"); }
+        }
+
         public Users() : base()
         {
             table_name = "users";

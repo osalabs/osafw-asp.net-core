@@ -50,7 +50,7 @@ namespace osafw
             TimeSpan end_timespan = DateTime.Now - start_time;
             rw("benchmark1: " + end_timespan.TotalSeconds);
 
-            start_time = DateTime.Now; 
+            start_time = DateTime.Now;
             for (int i = 0; i < 1000; i++)
             {
                 var rows = db.array2("select * from event_log");
@@ -65,6 +65,14 @@ namespace osafw
             //rw(FW.dumper(rows));
 
             rw("done");
+        }
+
+        public void UserAction()
+        {
+            //var id = fw.model<Users>().meId();
+            //var id = Users.me;
+            var ctr = fw.model<Users>().getCount();
+            rw("user ctr:" + ctr);
         }
     }
 }
