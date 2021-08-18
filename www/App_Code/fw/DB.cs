@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Data.Odbc;
 using System.Data.OleDb;
 using System.Data.SqlClient;
 using System.IO;
@@ -230,11 +231,10 @@ namespace osafw
             {
                 result = new OleDbConnection(connstr);
             }
-            // TODO MIGRATE proper way of using OdbcConnection
-            //else if (dbtype == "ODBC")
-            //{
-            //    result = new OdbcConnection(connstr);
-            //}
+            else if (dbtype == "ODBC")
+            {
+                result = new OdbcConnection(connstr);
+            }
             else
             {
                 string msg = "Unknown type [" + dbtype + "]";
@@ -252,10 +252,11 @@ namespace osafw
 
             string connstr = "Provider=Microsoft.Jet.OLEDB.4.0;Data Source=" + filepath;
 
-            // TODO migrate
-            /*object cat = Interaction.CreateObject("ADOX.Catalog");
-            cat.Create(connstr);
-            cat.ActiveConnection.Close();*/
+            OleDbConnection conn = new OleDbConnection();
+            conn.ConnectionString = connstr;
+            // Exception must be checked in method there check_create_mdb is called.
+            conn.Open();
+            conn.Close();
         }
 
         public DbDataReader query(string sql)
