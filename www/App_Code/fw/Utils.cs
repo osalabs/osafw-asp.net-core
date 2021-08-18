@@ -262,7 +262,7 @@ namespace osafw
             string[] chars = qw("A B C D E F a b c d e f 0 1 2 3 4 5 6 7 8 9");
 
             Random _random = new Random();
-            for (int i = 1; i < size; i++)
+            for (int i = 1; i < size + 1; i++)
             {
                 result.Append(chars[_random.Next(0, chars.Length - 1)]);
             }
