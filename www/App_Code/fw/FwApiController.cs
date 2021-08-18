@@ -35,14 +35,14 @@ namespace osafw
             // logger(fw.req.Headers)
 
             var origin = "";
-            if (!string.IsNullOrEmpty(fw.req.Headers["Origin"].ToString()))
-                origin = fw.req.Headers["Origin"];
+            if (!string.IsNullOrEmpty(fw.request.Headers["Origin"].ToString()))
+                origin = fw.request.Headers["Origin"];
             else
             {
                 // try referrer
-                if (!string.IsNullOrEmpty(fw.req.Headers["Referer"].ToString()))
+                if (!string.IsNullOrEmpty(fw.request.Headers["Referer"].ToString()))
                 {
-                    var uri = new Uri(fw.req.Headers["Referer"]);
+                    var uri = new Uri(fw.request.Headers["Referer"]);
                     origin = uri.GetLeftPart(UriPartial.Authority);
                 }
             }
@@ -56,14 +56,14 @@ namespace osafw
                 throw new ApplicationException("Invalid origin " + origin);
 
             // create headers
-            fw.resp.Headers.Remove("Access-Control-Allow-Origin");
-            fw.resp.Headers.Add("Access-Control-Allow-Origin", origin);
+            fw.response.Headers.Remove("Access-Control-Allow-Origin");
+            fw.response.Headers.Add("Access-Control-Allow-Origin", origin);
 
-            fw.resp.Headers.Remove("Access-Control-Allow-Credentials");
-            fw.resp.Headers.Add("Access-Control-Allow-Credentials", "true");
+            fw.response.Headers.Remove("Access-Control-Allow-Credentials");
+            fw.response.Headers.Add("Access-Control-Allow-Credentials", "true");
 
-            fw.resp.Headers.Remove("Access-Control-Allow-Methods");
-            fw.resp.Headers.Add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+            fw.response.Headers.Remove("Access-Control-Allow-Methods");
+            fw.response.Headers.Add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
 
             // check auth
             if (isAuth)

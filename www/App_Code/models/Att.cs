@@ -46,7 +46,7 @@ namespace osafw
                 string ext = UploadUtils.getUploadFileExt(filepath);
 
                 // TODO refactor in better way
-                IFormFile file = fw.req.Form.Files[file_index];
+                IFormFile file = fw.request.Form.Files[file_index];
 
                 // update db with file information
                 Hashtable fields = new();
@@ -85,9 +85,9 @@ namespace osafw
         {
             ArrayList result = new();
 
-            for (var i = 0; i <= fw.req.Form.Files.Count - 1; i++)
+            for (var i = 0; i <= fw.request.Form.Files.Count - 1; i++)
             {
-                var file = fw.req.Form.Files[i];
+                var file = fw.request.Form.Files[i];
                 if (file.Length > 0)
                 {
                     // add att db record
@@ -321,10 +321,10 @@ namespace osafw
                 //TODO MIGRATE
                 //fw.resp.Cache.SetLastModified(filetime); // this allows browser to send If-Modified-Since request headers (unless Ctrl+F5)
 
-                string ifmodhead = fw.req.Headers["If-Modified-Since"];
+                string ifmodhead = fw.request.Headers["If-Modified-Since"];
                 if (ifmodhead != null && DateTime.TryParse(ifmodhead, out DateTime ifmod) && ifmod.ToLocalTime() >= filetime)
                 {
-                    fw.resp.StatusCode = 304; // not modified
+                    fw.response.StatusCode = 304; // not modified
                     //TODO MIGRATE fw.resp.SuppressContent = true;
                 }
                 else
@@ -333,10 +333,10 @@ namespace osafw
                     string filename = ((string)item["fname"]).Replace("\"", "'");
                     string ext = UploadUtils.getUploadFileExt(filename);
 
-                    fw.resp.Headers.Add("Content-type", getMimeForExt(ext));
-                    fw.resp.Headers.Add("Content-Disposition", disposition + "; filename=\"" + filename + "\"");
+                    fw.response.Headers.Add("Content-type", getMimeForExt(ext));
+                    fw.response.Headers.Add("Content-Disposition", disposition + "; filename=\"" + filename + "\"");
 
-                    HttpResponseWritingExtensions.WriteAsync(fw.resp, FW.getFileContent(filepath));
+                    HttpResponseWritingExtensions.WriteAsync(fw.response, FW.getFileContent(filepath));
                     //TODO MIGRATE fw.resp.TransmitFile(filepath);
                 }
             }

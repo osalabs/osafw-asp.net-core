@@ -219,8 +219,8 @@ namespace osafw
                     out_filename = "output";
                 }
                 // out to browser
-                fw.resp.Headers.Add("Content-type", "application/vnd.ms-excel");
-                fw.resp.Headers.Add("Content-Disposition", "attachment; filename=\"" + out_filename + ".xls\"");
+                fw.response.Headers.Add("Content-type", "application/vnd.ms-excel");
+                fw.response.Headers.Add("Content-Disposition", "attachment; filename=\"" + out_filename + ".xls\"");
                 fw.responseWrite(html_data);
             }
             else

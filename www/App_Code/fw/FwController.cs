@@ -825,7 +825,7 @@ namespace osafw
             if (reqs("export") == "xls")
                 Utils.writeXLSExport(fw, "export.xls", csv_export_headers, fields, list_rows);
             else
-                Utils.writeCSVExport(fw.resp, "export.csv", csv_export_headers, fields, list_rows);
+                Utils.writeCSVExport(fw.response, "export.csv", csv_export_headers, fields, list_rows);
         }
 
         public virtual void setAddUpdUser(Hashtable ps, Hashtable item)

@@ -55,7 +55,7 @@ namespace osafw
         {
             bool result = false;
 
-            IFormFile file = up.fw.req.Form.Files[up.field_name];
+            IFormFile file = up.fw.request.Form.Files[up.field_name];
             if (file != null)
             {
                 up.orig_filename = file.FileName;
@@ -119,7 +119,7 @@ namespace osafw
         public static bool uploadFile(FW fw, string module_name, int id, out string filepath, string input_name = "file1", bool is_skip_check = false)
         {
             bool result = false;
-            IFormFile file = fw.req.Form.Files[input_name];
+            IFormFile file = fw.request.Form.Files[input_name];
 
             filepath = uploadFileSave(fw, module_name, id, file, is_skip_check);
 
@@ -129,7 +129,7 @@ namespace osafw
         // this one based on file index, not input name
         public static bool uploadFile(FW fw, string module_name, int id, out string filepath, int file_index = 0, bool is_skip_check = false)
         {
-            IFormFile file = fw.req.Form.Files[file_index];
+            IFormFile file = fw.request.Form.Files[file_index];
 
             filepath = uploadFileSave(fw, module_name, id, file, is_skip_check);
 

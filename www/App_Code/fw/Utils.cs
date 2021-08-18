@@ -472,9 +472,9 @@ namespace osafw
 
             filename = filename.Replace("\"", "_");
 
-            fw.resp.Headers.Add("Content-type", "application/vnd.ms-excel");
-            fw.resp.Headers.Add("Content-Disposition", "attachment; filename=\"" + filename + "\"");
-            await HttpResponseWritingExtensions.WriteAsync(fw.resp, page);
+            fw.response.Headers.Add("Content-type", "application/vnd.ms-excel");
+            fw.response.Headers.Add("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+            await HttpResponseWritingExtensions.WriteAsync(fw.response, page);
         }
 
         // Detect orientation and auto-rotate correctly

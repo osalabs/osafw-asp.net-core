@@ -77,8 +77,8 @@ namespace osafw
         public DB db;
 
         public HttpContext context;
-        public HttpRequest req;
-        public HttpResponse resp;
+        public HttpRequest request;
+        public HttpResponse response;
 
         public string request_url; // current request url (relative to application url)
         public FwRoute route = new FwRoute();
@@ -106,8 +106,8 @@ namespace osafw
         public FW(HttpContext context, IConfiguration configuration)
         {
             this.context = context;
-            this.req = context.Request;
-            this.resp = context.Response;
+            this.request = context.Request;
+            this.response = context.Response;
 
             FwConfig.init(context, configuration);
 
@@ -126,7 +126,7 @@ namespace osafw
             G = (Hashtable)config().Clone(); // by default G contains conf
 
             // per request settings
-            G["request_url"] = UriHelper.GetDisplayUrl(req);
+            G["request_url"] = UriHelper.GetDisplayUrl(request);
 
             // override default lang with user's lang
             if (!string.IsNullOrEmpty(Session("lang"))) G["lang"] = Session("lang");
@@ -224,9 +224,9 @@ namespace osafw
         public string getResponseExpectedFormat()
         {
             string result = "";
-            if (this.route.format == "json" || ((string)this.req.Headers["Accept"]).Contains("application/json"))
+            if (this.route.format == "json" || ((string)this.request.Headers["Accept"]).Contains("application/json"))
                 result = "json";
-            else if (this.route.format == "pjax" || !string.IsNullOrEmpty(this.req.Headers["X-Requested-With"]))
+            else if (this.route.format == "pjax" || !string.IsNullOrEmpty(this.request.Headers["X-Requested-With"]))
                 result = "pjax";
             return result;
         }
@@ -242,10 +242,10 @@ namespace osafw
 
         public void getRoute()
         {
-            string url = req.Path;
+            string url = request.Path;
             //TODO MIGRATE test
             // cut the App path from the begin
-            if (req.PathBase.Value.Length > 1) url = url.Replace(req.PathBase, "");
+            if (request.PathBase.Value.Length > 1) url = url.Replace(request.PathBase, "");
             url = Regex.Replace(url, @"\/$", ""); // cut last / if any
             this.request_url = url;
 
@@ -260,7 +260,7 @@ namespace osafw
                 id = "",
                 action_more = "",
                 format = "html",
-                method = req.Method,
+                method = request.Method,
                 @params = new ArrayList()
             };
 
@@ -375,7 +375,7 @@ namespace osafw
                     {
                         if (!string.IsNullOrEmpty(route.id))
                         {
-                            if (req.Form.Count > 0 || req.Body.Length > 0)
+                            if (request.Form.Count > 0 || request.Body.Length > 0)
                                 route.action_raw = "Save";
                             else
                                 route.action_raw = "Delete";
@@ -667,18 +667,18 @@ namespace osafw
         {
             Hashtable input = new();
 
-            foreach (string s in req.Query.Keys)
+            foreach (string s in request.Query.Keys)
             {
                 if (s != null)
-                    input[s] = req.Query[s].ToString();
+                    input[s] = request.Query[s].ToString();
             }
 
-            if (req.HasFormContentType)
+            if (request.HasFormContentType)
             {
-                foreach (string s in req.Form.Keys)
+                foreach (string s in request.Form.Keys)
                 {
                     if (s != null)
-                        input[s] = req.Form[s].ToString();
+                        input[s] = request.Form[s].ToString();
                 }
             }
 
@@ -708,13 +708,13 @@ namespace osafw
                 f[s] = SQ[s];
 
             // also parse json in request body if any
-            if (req.ContentType != null && req.ContentType.Substring(0, "application/json".Length) == "application/json")
+            if (request.ContentType != null && request.ContentType.Substring(0, "application/json".Length) == "application/json")
             {
                 try
                 {
                     // also could try this with Utils.json_decode
-                    req.Body.Position = 0;
-                    var json = new System.IO.StreamReader(req.Body).ReadToEnd();
+                    request.Body.Position = 0;
+                    var json = new System.IO.StreamReader(request.Body).ReadToEnd();
                     Hashtable h = JsonSerializer.Deserialize<Hashtable>(json);
                     logger(LogLevel.TRACE, "REQUESTED JSON:", h);
                     Utils.mergeHash(ref f, ref h);
@@ -925,7 +925,7 @@ namespace osafw
 
         public async void responseWrite(string str)
         {
-            await HttpResponseWritingExtensions.WriteAsync(this.resp, str);
+            await HttpResponseWritingExtensions.WriteAsync(this.response, str);
         }
 
         // show page from template  /route.controller/route.action = parser('/route.controller/route.action/', $ps)
@@ -1021,7 +1021,7 @@ namespace osafw
         {
             ParsePage parser_obj = new ParsePage(this);
             string page = parser_obj.parse_json(ps);
-            resp.Headers.Add("Content-type", "application/json; charset=utf-8");
+            response.Headers.Add("Content-type", "application/json; charset=utf-8");
             responseWrite(page);
         }
 
@@ -1031,7 +1031,7 @@ namespace osafw
         {
             if (Regex.IsMatch(url, "^/"))
                 url = this.config("ROOT_URL") + url;
-            resp.Redirect(url, false);
+            response.Redirect(url, false);
             if (is_exception)
                 throw new RedirectException();
         }
@@ -1108,10 +1108,10 @@ namespace osafw
         {
             logger(LogLevel.DEBUG, "sending file response  = ", filepath, " as ", attname);
             attname = Regex.Replace(attname, @"[^\w. \-]+", "_");
-            resp.Headers.Add("Content-type", ContentType);
-            resp.Headers.Add("Content-Length", Utils.fileSize(filepath).ToString());
-            resp.Headers.Add("Content-Disposition", ContentDisposition + "; filename=\"" + attname + "\"");
-            resp.SendFileAsync(filepath);
+            response.Headers.Add("Content-type", ContentType);
+            response.Headers.Add("Content-Length", Utils.fileSize(filepath).ToString());
+            response.Headers.Add("Content-Disposition", ContentDisposition + "; filename=\"" + attname + "\"");
+            response.SendFileAsync(filepath);
             //TODO MIGRATE test if necessary resp.OutputStream.Close();
         }
 
@@ -1299,9 +1299,9 @@ namespace osafw
             ps["_json"] = true;
 
             if (Ex is ApplicationException)
-                this.resp.StatusCode = 500;
+                this.response.StatusCode = 500;
             else if (Ex is UserException)
-                this.resp.StatusCode = 403;
+                this.response.StatusCode = 403;
 
             parser(tpl_dir, ps);
         }
@@ -1346,7 +1346,7 @@ namespace osafw
         public void rw(string str)
         {
             this.responseWrite(str + "<br>" + System.Environment.NewLine);
-            this.resp.Body.FlushAsync();
+            this.response.Body.FlushAsync();
         }
 
 
