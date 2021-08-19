@@ -67,12 +67,5 @@ namespace osafw
             rw("done");
         }
 
-        public void UserAction()
-        {
-            //var id = fw.model<Users>().meId();
-            //var id = Users.me;
-            var ctr = fw.model<Users>().getCount();
-            rw("user ctr:" + ctr);
-        }
     }
 }

@@ -80,12 +80,11 @@ namespace osafw
                 Hashtable item_old = model0.one(id);
 
                 // also check that this filter is user's filter (cannot override system filter)
-                if (item_old.Count>0 && Utils.f2int(item_old["is_system"]) == 1)
+                if (item_old.Count > 0 && Utils.f2int(item_old["is_system"]) == 1)
                     throw new ApplicationException("Cannot overwrite system filter");
 
                 Hashtable itemdb = FormUtils.filter(item, this.save_fields);
-                if (!string.IsNullOrEmpty(this.save_fields_checkboxes))
-                    FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes);
+                FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes);
 
                 if (is_new || is_overwrite)
                     // read new filter data from session

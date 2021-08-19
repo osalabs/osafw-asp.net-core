@@ -251,7 +251,7 @@ namespace osafw
             bool is_dofilter = fw.FORM.ContainsKey("dofilter");
             if (!is_dofilter)
             {
-                Utils.mergeHash(ref sfilter, ref f);
+                Utils.mergeHash(sfilter, f);
                 f = sfilter;
             }
             else
@@ -759,7 +759,7 @@ namespace osafw
                     _json["ERR"] = fw.FERR;
 
                 if (more_json != null)
-                    Utils.mergeHash(ref _json, ref more_json);
+                    Utils.mergeHash(_json, more_json);
 
                 ps["_json"] = _json;
                 return ps;
