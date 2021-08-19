@@ -7,6 +7,7 @@ using System.Data.Odbc;
 using System.Data.OleDb;
 using System.Data.SqlClient;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace osafw
@@ -1257,10 +1258,7 @@ namespace osafw
                 }
                 // order by ORDINAL_POSITION
 
-                // TODO migrate sorting
-                // fieldslist = fieldslist.Sort(h => (int)h["pos"]);
-
-                result.AddRange(fieldslist);
+                result.AddRange((from Hashtable h in fieldslist orderby ((Hashtable)h["pos"]) ascending select h).ToList());
 
                 // now detect identity (because order is important)
                 foreach (Hashtable h in result)
