@@ -97,8 +97,7 @@ namespace osafw
                 else
                 {
                     // override any defaults here
-                    if (this.form_new_defaults != null)
-                        Utils.mergeHash(ref item, ref this.form_new_defaults);
+                    Utils.mergeHash(item, this.form_new_defaults);
                 }
             }
             else
@@ -106,7 +105,7 @@ namespace osafw
                 // read from db
                 var itemdb = model0.one(id);
                 // and merge new values from the form
-                Utils.mergeHash(ref itemdb, ref item);
+                Utils.mergeHash(itemdb, item);
                 item = itemdb;
             }
 

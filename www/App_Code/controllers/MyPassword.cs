@@ -47,7 +47,7 @@ namespace osafw
                 // read from db
                 var itemdb = model.one(id);
                 // and merge new values from the form
-                Utils.mergeHash(ref itemdb, ref item);
+                Utils.mergeHash(itemdb, item);
                 item = itemdb;
             }
 

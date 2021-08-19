@@ -40,7 +40,7 @@ namespace osafw
         // spaces converted to "&nbsp;"
         public static string qwRevert(IList slist)
         {
-            StringBuilder result = new StringBuilder();
+            StringBuilder result = new();
             foreach (string el in slist)
             {
                 result.Append(el.Replace(" ", "&nbsp;") + " ");
@@ -60,7 +60,7 @@ namespace osafw
         */
         public static Hashtable qh(string str, object default_value = null)
         {
-            Hashtable result = new Hashtable();
+            Hashtable result = new();
             if (str != null && str != "")
             {
                 string[] arr = Regex.Split(str, @"\s+");
@@ -81,7 +81,7 @@ namespace osafw
 
         public static string qhRevert(IDictionary sh)
         {
-            ArrayList result = new ArrayList();
+            ArrayList result = new();
             foreach (string key in sh.Keys)
             {
                 result.Add(key.Replace(" ", "&nbsp;") + "|" + sh[key]);
@@ -93,8 +93,8 @@ namespace osafw
         // remove elements from hash, leave only those which keys passed
         public static void hashFilter(Hashtable hash, string[] keys)
         {
-            ArrayList all_keys = new ArrayList(keys);
-            ArrayList to_remove = new ArrayList();
+            ArrayList all_keys = new(keys);
+            ArrayList to_remove = new();
             foreach (string key in hash.Keys)
             {
                 if (all_keys.IndexOf(key) < 0)
@@ -143,7 +143,7 @@ namespace osafw
         // OUT: arraylist of email addresses
         public static ArrayList splitEmails(string emails)
         {
-            ArrayList result = new ArrayList();
+            ArrayList result = new();
             string[] arr = Regex.Split(emails, "[; \n\r]+");
             foreach (string email in arr)
             {
@@ -173,7 +173,7 @@ namespace osafw
 
         public static string ConvertStreamToBase64(Stream fs)
         {
-            BinaryReader BinRead = new BinaryReader(fs);
+            BinaryReader BinRead = new(fs);
             byte[] BinBytes = BinRead.ReadBytes((int)fs.Length);
             return Convert.ToBase64String(BinBytes);
             // Convert.ToBase64CharArray();
@@ -258,10 +258,10 @@ namespace osafw
 
         public static string getRandStr(int size)
         {
-            StringBuilder result = new StringBuilder();
+            StringBuilder result = new();
             string[] chars = qw("A B C D E F a b c d e f 0 1 2 3 4 5 6 7 8 9");
 
-            Random _random = new Random();
+            Random _random = new();
             for (int i = 1; i < size + 1; i++)
             {
                 result.Append(chars[_random.Next(0, chars.Length - 1)]);
@@ -290,7 +290,7 @@ namespace osafw
                                       "Data Source=" + dir + ";" +
                                       "Extended Properties=\"Text;HDR=" + (is_header ? "Yes" : "No") + ";IMEX=1;FORMAT=Delimited\";";
 
-            using (OleDbConnection cn = new OleDbConnection(ConnectionString))
+            using (OleDbConnection cn = new(ConnectionString))
             {
                 cn.Open();
 
@@ -300,12 +300,12 @@ namespace osafw
                 WorkSheetName = WorkSheetName.Replace("]", "");
 
                 string sql = "select * from [" + WorkSheetName + "]";
-                OleDbCommand dbcomm = new OleDbCommand(sql, cn);
+                OleDbCommand dbcomm = new(sql, cn);
                 DbDataReader dbread = dbcomm.ExecuteReader();
 
                 while (dbread.Read())
                 {
-                    Hashtable row = new Hashtable();
+                    Hashtable row = new();
                     for (int i = 0; i < dbread.FieldCount; i++)
                     {
                         string value = dbread[i].ToString();
@@ -334,11 +334,11 @@ namespace osafw
         */
         public static Hashtable importExcel(FW fw, Action<string, ArrayList> callback, string filepath, bool is_header = true)
         {
-            Hashtable result = new Hashtable();
-            Hashtable conf = new Hashtable();
+            Hashtable result = new();
+            Hashtable conf = new();
             conf["type"] = "OLE";
             conf["connection_string"] = "Provider=" + OLEDB_PROVIDER + ";Data Source=" + filepath + ";Extended Properties=\"Excel 12.0 Xml;HDR=" + (is_header ? "Yes" : "No") + ";ReadOnly=True;IMEX=1\"";
-            DB accdb = new DB(fw, conf);
+            DB accdb = new(fw, conf);
             OleDbConnection conn = (OleDbConnection)accdb.connect();
             var schema = conn.GetOleDbSchemaTable(OleDbSchemaGuid.Tables, null);
 
@@ -347,7 +347,7 @@ namespace osafw
                 throw new ApplicationException("No worksheets found in the Excel file");
             }
 
-            Hashtable where = new Hashtable();
+            Hashtable where = new();
             for (int i = 0; i < schema.Rows.Count; i++)
             {
                 string sheet_name_full = schema.Rows[i]["TABLE_NAME"].ToString();
@@ -371,7 +371,7 @@ namespace osafw
 
         public static string toCSVRow(Hashtable row, Array fields)
         {
-            StringBuilder result = new StringBuilder();
+            StringBuilder result = new();
             bool is_first = true;
             foreach (string fld in fields)
             {
@@ -401,7 +401,7 @@ namespace osafw
         public static StringBuilder getCSVExport(string csv_export_headers, string csv_export_fields, ArrayList rows)
         {
             string headers_str = csv_export_headers;
-            StringBuilder csv = new StringBuilder();
+            StringBuilder csv = new();
             string[] fields = null;
             if (csv_export_fields == "" || csv_export_fields == "*")
             {
@@ -437,13 +437,13 @@ namespace osafw
 
         public static async void writeXLSExport(FW fw, string filename, string csv_export_headers, string csv_export_fields, ArrayList rows)
         {
-            Hashtable ps = new Hashtable();
+            Hashtable ps = new();
             ps["rows"] = rows;
 
-            ArrayList headers = new ArrayList();
+            ArrayList headers = new();
             foreach (string str in csv_export_headers.Split(","))
             {
-                Hashtable h = new Hashtable();
+                Hashtable h = new();
                 h["iname"] = str;
                 headers.Add(h);
             }
@@ -452,10 +452,10 @@ namespace osafw
             string[] fields = Utils.qw(csv_export_fields);
             foreach (Hashtable row in rows)
             {
-                ArrayList cell = new ArrayList();
+                ArrayList cell = new();
                 foreach (string f in fields)
                 {
-                    Hashtable h = new Hashtable();
+                    Hashtable h = new();
                     h["value"] = row[f];
                     cell.Add(h);
                 }
@@ -465,7 +465,7 @@ namespace osafw
             // parse and out document
             // TODO ConvUtils.parse_page_xls(fw, LCase(fw.cur_controller_path & "/index/export"), "xls.html", hf, "filename")
 
-            ParsePage parser = new ParsePage(fw);
+            ParsePage parser = new(fw);
             // Dim tpl_dir = LCase(fw.cur_controller_path & "/index/export")
             string tpl_dir = "/common/list/export";
             string page = parser.parse_page(tpl_dir, "xls.html", ps);
@@ -520,7 +520,7 @@ namespace osafw
         // return false if no resize performed (if image already smaller than necessary). Note if to_file is not same as from_file - to_file will have a copy of the from_file
         public static bool resizeImage(string from_file, string to_file, int w = -1, int h = -1)
         {
-            FileStream stream = new FileStream(from_file, FileMode.Open, FileAccess.Read);
+            FileStream stream = new(from_file, FileMode.Open, FileAccess.Read);
 
             // Create new image.
             System.Drawing.Image image = System.Drawing.Image.FromStream(stream);
@@ -563,7 +563,7 @@ namespace osafw
             }
 
             // Create a new bitmap with the same resolution as the original image.
-            Bitmap bitmap = new Bitmap(w, h, PixelFormat.Format24bppRgb);
+            Bitmap bitmap = new(w, h, PixelFormat.Format24bppRgb);
             bitmap.SetResolution(image.HorizontalResolution, image.VerticalResolution);
 
             // Create a new graphic.
@@ -650,7 +650,7 @@ namespace osafw
 
         public static long fileSize(string filepath)
         {
-            FileInfo fi = new FileInfo(filepath);
+            FileInfo fi = new(filepath);
             return fi.Length;
         }
 
@@ -668,12 +668,12 @@ namespace osafw
         * <param name="hash2"></param>
         * <remarks></remarks>
         */
-        public static void mergeHash(ref Hashtable hash1, ref Hashtable hash2)
+        public static void mergeHash(Hashtable hash1, Hashtable hash2)
         {
             if (hash2 != null)
             {
-                ArrayList keys = new ArrayList(hash2.Keys); // make static copy of hash2.keys, so even if hash2.keys changing (ex: hash1 is same as hash2) it will not affect the loop
-                foreach (string key in keys)
+                // make static copy of hash2.keys, so even if hash2.keys changing (ex: hash1 is same as hash2) it will not affect the loop
+                foreach (string key in new ArrayList(hash2.Keys))
                 {
                     hash1[key] = hash2[key];
                 }
@@ -686,7 +686,7 @@ namespace osafw
         {
             if (hash2 != null)
             {
-                ArrayList keys = new ArrayList(hash2.Keys);
+                ArrayList keys = new(hash2.Keys);
                 foreach (string key in keys)
                 {
                     if (hash2[key] is Hashtable)
@@ -912,7 +912,7 @@ namespace osafw
         // repeat string num times
         public static string strRepeat(string str, int num)
         {
-            StringBuilder result = new StringBuilder();
+            StringBuilder result = new();
             for (int i = 0; i < num; i++)
             {
                 result.Append(str);
@@ -938,7 +938,7 @@ namespace osafw
             string[] files = Directory.GetFiles(Path.GetTempPath(), prefix + "*");
             foreach (string file in files)
             {
-                FileInfo fi = new FileInfo(file);
+                FileInfo fi = new(file);
                 TimeSpan ts = DateTime.Now - fi.CreationTime;
                 if (ts.TotalMinutes > 60)
                 {
@@ -951,14 +951,14 @@ namespace osafw
         public static string md5(string str)
         {
             // convert string to bytes
-            UTF8Encoding ustr = new UTF8Encoding();
+            UTF8Encoding ustr = new();
             byte[] bstr = ustr.GetBytes(str);
 
             MD5 md5hasher = MD5CryptoServiceProvider.Create();
             byte[] bhash = md5hasher.ComputeHash(bstr);
 
             // convert hash value to hex string
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
             foreach (byte one_byte in bhash)
             {
                 sb.Append(one_byte.ToString("x2").ToUpper());
@@ -1053,7 +1053,7 @@ namespace osafw
             if (sortdir == "desc")
             {
                 // TODO - move this to fw utils
-                ArrayList order_fields = new ArrayList();
+                ArrayList order_fields = new();
                 foreach (string fld in orderby.Split(","))
                 {
                     string _fld = fld;
@@ -1096,8 +1096,8 @@ namespace osafw
         // return hash: id => id
         public static Hashtable commastr2hash(string sel_ids, string value = null)
         {
-            Hashtable result = new Hashtable();
-            ArrayList ids = new ArrayList(sel_ids.Split(","));
+            Hashtable result = new();
+            ArrayList ids = new(sel_ids.Split(","));
             for (int i = 0; i < ids.Count; i++)
             {
                 string v = (string)ids[i];
@@ -1124,9 +1124,9 @@ namespace osafw
         }
 
         // newline-delimited str to comma-delimited str
-        static string nlstr2commastr(string str)
+        public static string nlstr2commastr(string str)
         {
-            return Regex.Replace(str, @"[\n\r]+", ",");
+            return Regex.Replace(str??"", @"[\n\r]+", ",");
         }
 
         /* <summary>

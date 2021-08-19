@@ -56,7 +56,7 @@ namespace osafw
                     if (this.list_count > pagesize)
                     {
                         ArrayList subset = new ArrayList();
-                        int start_offset = pagenum  * pagesize;
+                        int start_offset = pagenum * pagesize;
 
                         for (int i = start_offset; i <= Math.Min(start_offset + pagesize, this.list_rows.Count) - 1; i++)
                             subset.Add(this.list_rows[i]);
@@ -152,8 +152,7 @@ namespace osafw
                 // load old record if necessary
 
                 Hashtable itemdb = FormUtils.filter(item, save_fields2);
-                if (!string.IsNullOrEmpty(this.save_fields_checkboxes))
-                    FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes);
+                FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes);
                 itemdb["prio"] = Utils.f2int(itemdb["prio"]);
 
                 // if no publish time defined - publish it now

@@ -336,7 +336,7 @@ namespace osafw.Tests
             h2["CCC"] = 3;
             h2["DDD"] = 4;
 
-            Utils.mergeHash(ref h1, ref h2);
+            Utils.mergeHash(h1, h2);
 
             Assert.IsTrue(h1.ContainsKey("AAA"));
             Assert.IsTrue(h1.ContainsKey("BBB"));

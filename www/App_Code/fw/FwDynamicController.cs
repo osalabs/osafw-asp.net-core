@@ -111,8 +111,7 @@ namespace osafw
                 else
                 {
                     // override any defaults here
-                    if (this.form_new_defaults != null)
-                        Utils.mergeHash(ref item, ref this.form_new_defaults);
+                    Utils.mergeHash(item, this.form_new_defaults);
                 }
             }
             else
@@ -120,7 +119,7 @@ namespace osafw
                 // read from db
                 var itemdb = model0.one(id);
                 // and merge new values from the form
-                Utils.mergeHash(ref itemdb, ref item);
+                Utils.mergeHash(itemdb, item);
                 item = itemdb;
             }
 
@@ -193,11 +192,11 @@ namespace osafw
         }
 
         /// <summary>
-        ///     ''' Performs submitted form validation for required field and simple validations: exits, isemail, isphone, isdate, isfloat.
-        ///     ''' If more complex validation required - just override this and call just necessary validation
-        ///     ''' </summary>
-        ///     ''' <param name="id"></param>
-        ///     ''' <param name="item"></param>
+        /// Performs submitted form validation for required field and simple validations: exits, isemail, isphone, isdate, isfloat.
+        /// If more complex validation required - just override this and call just necessary validation
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="item"></param>
         public virtual void Validate(int id, Hashtable item)
         {
             bool result = validateRequiredDynamic(item);
@@ -419,11 +418,11 @@ namespace osafw
         // ''''' HELPERS for dynamic fields
 
         /// <summary>
-        ///     ''' prepare data for fields repeat in ShowAction based on config.json show_fields parameter
-        ///     ''' </summary>
-        ///     ''' <param name="item"></param>
-        ///     ''' <param name="ps"></param>
-        ///     ''' <returns></returns>
+        /// prepare data for fields repeat in ShowAction based on config.json show_fields parameter
+        /// </summary>
+        /// <param name="item"></param>
+        /// <param name="ps"></param>
+        /// <returns></returns>
         public virtual ArrayList prepareShowFields(Hashtable item, Hashtable ps)
         {
             var id = Utils.f2int(item["id"]);

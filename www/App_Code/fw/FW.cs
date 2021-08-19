@@ -717,7 +717,7 @@ namespace osafw
                     var json = new System.IO.StreamReader(request.Body).ReadToEnd();
                     Hashtable h = JsonSerializer.Deserialize<Hashtable>(json);
                     logger(LogLevel.TRACE, "REQUESTED JSON:", h);
-                    Utils.mergeHash(ref f, ref h);
+                    Utils.mergeHash(f, h);
                 }
                 catch (Exception)
                 {
