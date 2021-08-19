@@ -790,7 +790,7 @@ namespace osafw
                     if (floggerFS == null)
                     {
                         // open log with shared read/write so loggers from other processes can still write to it
-                        floggerFS = new FileStream(log_file, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
+                        floggerFS = new FileStream(log_file, FileMode.OpenOrCreate|FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
                         floggerSW = new System.IO.StreamWriter(floggerFS)
                         {
                             AutoFlush = true
@@ -799,6 +799,7 @@ namespace osafw
                     // force seek to end just in case other process added to file
                     floggerFS.Seek(0, SeekOrigin.End);
                     floggerSW.WriteLine(str.ToString());
+                    floggerSW.Close();
                 }
                 catch (Exception ex)
                 {
