@@ -173,20 +173,23 @@ namespace osafw
         public ParsePage(FW fw)
         {
             this.fw = fw;
-            TMPL_PATH = (string)fw.config("template");
-            is_check_file_modifications = (LogLevel)fw.config("log_level") >= LogLevel.DEBUG;
-            lang = (string)fw.G["lang"];
-            if (string.IsNullOrEmpty(lang))
-                lang = (string)fw.config("lang");
-            if (string.IsNullOrEmpty(lang))
-                lang = "en";
+            if (fw != null)
+            {
+                TMPL_PATH = (string)fw.config("template");
+                is_check_file_modifications = (LogLevel)fw.config("log_level") >= LogLevel.DEBUG;
+                lang = (string)fw.G["lang"];
+                if (string.IsNullOrEmpty(lang))
+                    lang = (string)fw.config("lang");
+                if (string.IsNullOrEmpty(lang))
+                    lang = "en";
 
-            // load cache for all current lang matches 
-            if (LANG_CACHE[lang] == null)
-                load_lang();
+                // load cache for all current lang matches 
+                if (LANG_CACHE[lang] == null)
+                    load_lang();
+
+                lang_update = Utils.f2bool(fw.config("is_lang_update"));
+            }
             lang_evaluator = new MatchEvaluator(this.lang_replacer);
-
-            lang_update = Utils.f2bool(fw.config("is_lang_update"));
         }
 
         public string parse_json(object hf)
