@@ -62,10 +62,6 @@ namespace osafw
         public const string FW_NAMESPACE_PREFIX = "osafw.";
         public static Hashtable METHOD_ALLOWED = Utils.qh("GET POST PUT DELETE");
 
-
-        private System.IO.FileStream floggerFS;
-        private System.IO.StreamWriter floggerSW;
-
         private readonly Hashtable models = new ();
         public static FW Current; // store FW current "singleton", set in run WARNING - avoid to use as if 2 parallel requests come, a bit later one will overwrite this
         public FwCache cache = new(); // request level cache
@@ -88,6 +84,7 @@ namespace osafw
         public bool is_log_events = true; // can be set temporarly to false to prevent event logging (for batch process for ex)
 
         public string last_error_send_email = "";
+        private long max_log_size = 1024 * 1024 * 1024;
 
         //TODO MIGRATE #Const isSentry = False 'if you use Sentry set to True here, install SentrySDK, in web.config fill endpoint URL to "log_sentry" 
         private IDisposable sentryClient;
@@ -138,6 +135,8 @@ namespace osafw
             Hashtable _flash = SessionHashtable("_flash");
             if (_flash != null) G["_flash"] = _flash;
             SessionHashtable("_flash", new Hashtable());
+
+            max_log_size = Utils.f2long(config("log_max_size"));
         }
 
         // ***************** work with SESSION
@@ -786,20 +785,22 @@ namespace osafw
             {
                 try
                 {
-                    // keep log file open to avoid overhead
-                    if (floggerFS == null)
-                    {
-                        // open log with shared read/write so loggers from other processes can still write to it
-                        floggerFS = new FileStream(log_file, FileMode.OpenOrCreate|FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
-                        floggerSW = new System.IO.StreamWriter(floggerFS)
-                        {
-                            AutoFlush = true
-                        };
-                    }
                     // force seek to end just in case other process added to file
-                    floggerFS.Seek(0, SeekOrigin.End);
-                    floggerSW.WriteLine(str.ToString());
+                    using (System.IO.StreamWriter floggerSW = File.AppendText(log_file))
+                    {
+                        floggerSW.WriteLine(str.ToString());
+                        // check if log file too large and need to be rotated
+                        if (max_log_size > 0 && floggerSW.BaseStream.Length > max_log_size)
+                        {
+                            floggerSW.Close();
+                            var to_path = config("log") + ".1";
+                            File.Delete(to_path);
+                            File.Move((string)config("log"), to_path);
+                        }
+                    }
                     //do not close writer here as there will be more output in request
+
+                    
                 }
                 catch (Exception ex)
                 {
@@ -1369,26 +1370,6 @@ namespace osafw
                 try
                 {
                     db.Dispose(); // this will return db connections to pool
-
-                    long log_length = 0;
-                    if (floggerFS != null)
-                        log_length = floggerFS.Length;
-
-                    if (floggerSW != null)
-                        floggerSW.Close(); // no need to close floggerFS as StreamWriter closes it
-                    if (floggerFS != null)
-                    {
-                        floggerFS.Close();
-
-                        // check if log file too large and need to be rotated
-                        var max_log_size = Utils.f2int(config("log_max_size"));
-                        if (max_log_size > 0 && log_length > max_log_size)
-                        {
-                            var to_path = config("log") + ".1";
-                            File.Delete(to_path);
-                            File.Move((string)config("log"), to_path);
-                        }
-                    }
                 }
                 // TODO: set large fields to null.
                 catch (Exception ex)
