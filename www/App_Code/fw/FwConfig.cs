@@ -21,7 +21,7 @@ namespace osafw
         public static string route_prefixes_rx = "";
         public static IConfiguration configuration;
 
-        private static readonly object locker = new object();
+        private static readonly object locker = new();
 
         public static void init(HttpContext context, IConfiguration configuration, string hostname = "")
         {
@@ -228,7 +228,7 @@ namespace osafw
             if (string.IsNullOrEmpty(route_prefixes_rx))
             {
                 // prepare regexp - escape all prefixes
-                ArrayList r = new ArrayList();
+                ArrayList r = new();
                 var route_prefixes = (Hashtable)settings["route_prefixes"];
                 if (route_prefixes != null)
                 {

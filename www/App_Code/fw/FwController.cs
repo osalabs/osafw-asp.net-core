@@ -816,7 +816,7 @@ namespace osafw
 
             var fields = getViewListUserFields();
             // header names
-            ArrayList headers = new ArrayList();
+            ArrayList headers = new();
             foreach (var fld in Utils.qw(fields))
                 headers.Add(view_list_map[fld]);
 
@@ -842,10 +842,10 @@ namespace osafw
         // if is_all true - then show all fields (not only from fields param)
         public virtual ArrayList getViewListArr(string fields = "", bool is_all = false)
         {
-            ArrayList result = new ArrayList();
+            ArrayList result = new();
 
             // if fields defined - first show these fields, then the rest
-            Hashtable fields_added = new Hashtable();
+            Hashtable fields_added = new();
             if (!string.IsNullOrEmpty(fields))
             {
                 foreach (var fieldname in Utils.qw(fields))
@@ -904,7 +904,7 @@ namespace osafw
 
         public virtual Hashtable getViewListSortmap()
         {
-            Hashtable result = new Hashtable();
+            Hashtable result = new();
             foreach (var fieldname in view_list_map.Keys)
                 result[fieldname] = fieldname;
             return result;
@@ -942,7 +942,7 @@ namespace osafw
                 // dynamic cols
                 foreach (Hashtable row in (ArrayList)ps["list_rows"])
                 {
-                    ArrayList cols = new ArrayList();
+                    ArrayList cols = new();
                     foreach (var fieldname in Utils.qw(fields))
                         cols.Add(new Hashtable()
                     {

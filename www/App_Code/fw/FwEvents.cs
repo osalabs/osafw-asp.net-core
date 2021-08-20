@@ -25,7 +25,7 @@ namespace osafw
         }
 
         // just return first row by icode field (you may want to make it unique)
-        public Hashtable oneByIcode(string icode)
+        public override Hashtable oneByIcode(string icode)
         {
             Hashtable where = new();
             where["icode"] = icode;

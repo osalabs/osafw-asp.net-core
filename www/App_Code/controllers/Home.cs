@@ -36,7 +36,7 @@ namespace osafw
 
         public void ShowAction(string id = "")
         {
-            Hashtable ps = new Hashtable();
+            Hashtable ps = new ();
             ps["hide_sidebar"] = true; // TODO control via pages
             fw.parser("/home/" + Utils.routeFixChars(Strings.LCase(id)), (string)fw.config("PAGE_LAYOUT_PUBLIC"), ps);
         }
@@ -49,7 +49,7 @@ namespace osafw
 
         public void TestAction(string id = "")
         {
-            Hashtable hf = new Hashtable();
+            Hashtable hf = new ();
             logger("in the TestAction");
             rw("here it is Test");
             rw("id=" + id);

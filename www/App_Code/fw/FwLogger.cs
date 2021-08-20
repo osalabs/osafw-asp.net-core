@@ -38,10 +38,10 @@ namespace osafw
             // skip logging if requested level more than config's debug level
             if (level > log_level) return;
 
-            StringBuilder str = new StringBuilder(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            StringBuilder str = new(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"));
             str.Append(" ").Append(level.ToString()).Append(" ");
             str.Append(System.Diagnostics.Process.GetCurrentProcess().Id).Append(" ");
-            StackTrace st = new System.Diagnostics.StackTrace(true);
+            StackTrace st = new(true);
 
             try
             {
@@ -87,7 +87,7 @@ namespace osafw
                     {
                         // open log with shared read/write so loggers from other processes can still write to it
                         floggerFS = new FileStream(log_file, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
-                        floggerSW = new System.IO.StreamWriter(floggerFS);
+                        floggerSW = new (floggerFS);
                         floggerSW.AutoFlush = true;
                     }
                     // force seek to end just in case other process added to file

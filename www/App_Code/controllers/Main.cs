@@ -19,10 +19,10 @@ namespace osafw
 
         public Hashtable IndexAction()
         {
-            Hashtable ps = new Hashtable();
+            Hashtable ps = new();
 
             Hashtable one;
-            Hashtable panes = new Hashtable();
+            Hashtable panes = new();
             ps["panes"] = panes;
 
             one = new Hashtable();
@@ -90,7 +90,7 @@ namespace osafw
                     headers.Add(new Hashtable() { { "field_name", key } });
                 foreach (Hashtable row in rows)
                 {
-                    ArrayList cols = new ArrayList();
+                    ArrayList cols = new();
                     foreach (var fieldname in fields)
                         cols.Add(new Hashtable()
                     {

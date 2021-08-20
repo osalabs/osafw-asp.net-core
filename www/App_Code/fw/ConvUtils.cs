@@ -29,7 +29,7 @@ namespace osafw
                 options["disposition"] = "attachment";
             }
 
-            ParsePage parser = new ParsePage(fw);
+            ParsePage parser = new(fw);
             ps["IS_PRINT_MODE"] = true;
             string html_data = parser.parse_page(bdir, tpl_name, ps);
 
@@ -73,8 +73,8 @@ namespace osafw
         {
             if (htmlfile.Length < 1 | filename.Length < 1)
                 throw new ApplicationException("Wrong filename");
-            System.Diagnostics.ProcessStartInfo info = new System.Diagnostics.ProcessStartInfo();
-            System.Diagnostics.Process process = new System.Diagnostics.Process();
+            System.Diagnostics.ProcessStartInfo info = new ();
+            System.Diagnostics.Process process = new ();
 
             string cmdline = (string)FwConfig.settings["pdf_converter_args"];
             cmdline = cmdline.Replace("%IN", "\"" + htmlfile + "\"");
@@ -107,7 +107,7 @@ namespace osafw
         // if out_filename cotains "\" or "/" - save pdf file to this path
         public static string parsePageDoc(FW fw, ref string bdir, ref string tpl_name, ref Hashtable ps, string out_filename = "")
         {
-            ParsePage parser = new ParsePage(fw);
+            ParsePage parser = new (fw);
             string html_data = parser.parse_page(bdir, tpl_name, ps);
 
             html_data = _replace_specials(html_data);
@@ -151,8 +151,8 @@ namespace osafw
         {
             if (htmlfile.Length < 1 | xlsfile.Length < 1)
                 throw new ApplicationException("Wrong filename");
-            System.Diagnostics.ProcessStartInfo info = new System.Diagnostics.ProcessStartInfo();
-            System.Diagnostics.Process process = new System.Diagnostics.Process();
+            System.Diagnostics.ProcessStartInfo info = new ();
+            System.Diagnostics.Process process = new ();
 
             info.FileName = (string)fw.config()["html_converter"];
             info.Arguments = "\"" + htmlfile + "\" \"" + xlsfile + "\" -c xls -AutoSize";
@@ -168,7 +168,7 @@ namespace osafw
         // if out_filename cotains "\" or "/" - save pdf file to this path
         public static string parsePageExcel(FW fw, ref string bdir, ref string tpl_name, ref Hashtable ps, string out_filename = "")
         {
-            ParsePage parser = new ParsePage(fw);
+            ParsePage parser = new (fw);
             ps["IS_PRINT_MODE"] = true;
             string html_data = parser.parse_page(bdir, tpl_name, ps);
 
@@ -206,7 +206,7 @@ namespace osafw
         // simple version of parse_page_xls - i.e. it's usual html file, just output as xls (Excel opens it successfully, however displays a warning)
         public static string parsePageExcelSimple(FW fw,  string bdir, string tpl_name, Hashtable ps, string out_filename = "")
         {
-            ParsePage parser = new ParsePage(fw);
+            ParsePage parser = new (fw);
             ps["IS_PRINT_MODE"] = true;
             string html_data = parser.parse_page(bdir, tpl_name, ps);
 

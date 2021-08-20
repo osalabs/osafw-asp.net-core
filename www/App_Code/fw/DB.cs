@@ -8,6 +8,8 @@ using System.Data.OleDb;
 using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using System.Text.RegularExpressions;
 
 namespace osafw
@@ -106,14 +108,14 @@ namespace osafw
 
         public string db_name = "";
         public string dbtype = "SQL";
-        private Hashtable conf = new Hashtable();  // config contains: connection_string, type
+        private Hashtable conf = new ();  // config contains: connection_string, type
         private string connstr = "";
 
-        private Hashtable schema = new Hashtable(); // schema for currently connected db
+        private Hashtable schema = new (); // schema for currently connected db
         private DbConnection conn; // actual db connection - SqlConnection or OleDbConnection
 
         private bool is_check_ole_types = false; // if true - checks for unsupported OLE types during readRow
-        private Hashtable UNSUPPORTED_OLE_TYPES = new Hashtable();
+        private Hashtable UNSUPPORTED_OLE_TYPES = new ();
 
         /// <summary>
         ///  "synax sugar" helper to build Hashtable from list of arguments instead more complex New Hashtable from {...}
@@ -127,7 +129,7 @@ namespace osafw
             {
                 throw new ArgumentException("h() accepts even number of arguments");
             }
-            Hashtable result = new Hashtable();
+            Hashtable result = new ();
             for (var i = 0; i <= args.Length - 1; i += 2)
             {
                 result[args[i]] = args[i + 1];
@@ -232,7 +234,7 @@ namespace osafw
             {
                 result = new SqlConnection(connstr);
             }
-            else if (dbtype == "OLE")
+            else if (dbtype == "OLE" && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 result = new OleDbConnection(connstr);
             }
@@ -251,13 +253,14 @@ namespace osafw
             return result;
         }
 
+        [SupportedOSPlatform("windows")]
         public void check_create_mdb(string filepath)
         {
             if (File.Exists(filepath)) return;
 
             string connstr = "Provider=Microsoft.Jet.OLEDB.4.0;Data Source=" + filepath;
 
-            OleDbConnection conn = new OleDbConnection();
+            OleDbConnection conn = new ();
             conn.ConnectionString = connstr;
             // Exception must be checked in method there check_create_mdb is called.
             conn.Open();
@@ -276,7 +279,7 @@ namespace osafw
             {
                 dbcomm = new SqlCommand(sql, (SqlConnection)conn);
             }
-            else if (dbtype == "OLE")
+            else if (dbtype == "OLE" && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 dbcomm = new OleDbCommand(sql, (OleDbConnection)conn);
             }
@@ -298,7 +301,7 @@ namespace osafw
             {
                 dbcomm = new SqlCommand(sql, (SqlConnection)conn);
             }
-            else if (dbtype == "OLE")
+            else if (dbtype == "OLE" && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 dbcomm = new OleDbCommand(sql, (OleDbConnection)conn);
             }
@@ -357,7 +360,7 @@ namespace osafw
             DbDataReader dbread = query(sql);
             dbread.Read();
 
-            Hashtable h = new Hashtable();
+            Hashtable h = new ();
             if (dbread.HasRows)
                 h = readRow(dbread);
 
@@ -373,7 +376,7 @@ namespace osafw
         public ArrayList array(string sql)
         {
             DbDataReader dbread = query(sql);
-            ArrayList a = new ArrayList();
+            ArrayList a = new ();
 
             while (dbread.Read())
                 a.Add(readRow(dbread));
@@ -408,7 +411,7 @@ namespace osafw
             string select_fields = "*";
             if (aselect_fields != null)
             {
-                ArrayList quoted = new ArrayList();
+                ArrayList quoted = new ();
                 if (aselect_fields is ArrayList)
                 {
                     // arraylist of hashtables with "field","alias" keys - usable for the case when we need same field to be selected more than once with different aliases
@@ -441,7 +444,7 @@ namespace osafw
         public ArrayList col(string sql)
         {
             DbDataReader dbread = query(sql);
-            ArrayList a = new ArrayList();
+            ArrayList a = new ();
             while (dbread.Read())
             {
                 a.Add(dbread[0].ToString());
@@ -538,7 +541,7 @@ namespace osafw
         }
         public string insql(IList parameters)
         {
-            ArrayList result = new ArrayList();
+            ArrayList result = new();
             foreach (string param in parameters)
             {
                 result.Add(this.q(param));
@@ -554,7 +557,7 @@ namespace osafw
 
         public string insqli(IList parameters)
         {
-            ArrayList result = new ArrayList();
+            ArrayList result = new();
             foreach (string param in parameters)
             {
                 result.Add(this.qi(param));
@@ -649,7 +652,7 @@ namespace osafw
                 throw new ApplicationException("table [" + table + "] does not defined in FW.config(\"schema\")");
             }
 
-            Hashtable fieldsq = new Hashtable();
+            Hashtable fieldsq = new();
 
             foreach (string k in fields.Keys)
             {
@@ -696,7 +699,7 @@ namespace osafw
                 {
                     if (dbop.value != null && (dbop.value) is IList)
                     {
-                        ArrayList result = new ArrayList();
+                        ArrayList result = new ();
                         foreach (object param in (ArrayList)dbop.value)
                         {
                             result.Add(qone_by_type(field_type, param));
@@ -1005,7 +1008,7 @@ namespace osafw
         public int update_or_insert(string table, Hashtable fields, Hashtable where)
         {
             // merge fields and where
-            Hashtable allfields = new Hashtable();
+            Hashtable allfields = new();
             foreach (string k in fields.Keys)
             {
                 allfields[k] = fields[k];
@@ -1151,7 +1154,7 @@ namespace osafw
         // return array of table names in current db
         public ArrayList tables()
         {
-            ArrayList result = new ArrayList();
+            ArrayList result = new ();
 
             DbConnection conn = this.connect();
             DataTable dataTable = conn.GetSchema("Tables");
@@ -1175,14 +1178,14 @@ namespace osafw
         // return array of view names in current db
         public ArrayList views()
         {
-            ArrayList result = new ArrayList();
+            ArrayList result = new();
 
             DbConnection conn = this.connect();
             DataTable dataTable = conn.GetSchema("Tables");
             foreach (DataRow row in dataTable.Rows)
             {
                 // skip non-views
-                if (row["TABLE_TYPE"] != "VIEW") continue;
+                if (row["TABLE_TYPE"].ToString() != "VIEW") continue;
 
                 string tblname = row["TABLE_NAME"].ToString();
                 result.Add(tblname);
@@ -1209,7 +1212,7 @@ namespace osafw
             }
 
             // cache miss
-            ArrayList result = new ArrayList();
+            ArrayList result = new ();
             if (dbtype == "SQL")
             {
                 // fw.logger("cache MISS " & current_db & "." & table)
@@ -1224,12 +1227,12 @@ namespace osafw
                     row["fw_subtype"] = ((string)row["type"]).ToLower();
                 }
             }
-            else
+            else if(RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 // OLE DB (Access)
                 DataTable schemaTable = ((OleDbConnection)conn).GetOleDbSchemaTable(OleDbSchemaGuid.Columns, new object[] { null, null, table, null });
 
-                List<Hashtable> fieldslist = new List<Hashtable>();
+                List<Hashtable> fieldslist = new();
                 foreach (DataRow row in schemaTable.Rows)
                 {
                     // unused:
@@ -1281,7 +1284,7 @@ namespace osafw
         // return database foreign keys, optionally filtered by table (that contains foreign keys)
         public ArrayList get_foreign_keys(string table = "")
         {
-            ArrayList result = new ArrayList();
+            ArrayList result = new();
             if (dbtype == "SQL")
             {
                 var where = "";
@@ -1291,7 +1294,7 @@ namespace osafw
                 }
                 result = this.array("SELECT " + " col1.CONSTRAINT_NAME as [name]" + ", col1.TABLE_NAME As [table]" + ", col1.COLUMN_NAME as [column]" + ", col2.TABLE_NAME as [pk_table]" + ", col2.COLUMN_NAME as [pk_column]" + ", rc.UPDATE_RULE as [on_update]" + ", rc.DELETE_RULE as [on_delete]" + " FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS rc " + " INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE col1 " + "   ON (col1.CONSTRAINT_CATALOG = rc.CONSTRAINT_CATALOG  " + "       AND col1.CONSTRAINT_SCHEMA = rc.CONSTRAINT_SCHEMA " + "       AND col1.CONSTRAINT_NAME = rc.CONSTRAINT_NAME)" + " INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE col2 " + "   ON (col2.CONSTRAINT_CATALOG = rc.UNIQUE_CONSTRAINT_CATALOG  " + "       AND col2.CONSTRAINT_SCHEMA = rc.UNIQUE_CONSTRAINT_SCHEMA " + "       AND col2.CONSTRAINT_NAME = rc.UNIQUE_CONSTRAINT_NAME " + "       AND col2.ORDINAL_POSITION = col1.ORDINAL_POSITION)" + where);
             }
-            else
+            else if(RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 var dt = ((OleDbConnection)conn).GetOleDbSchemaTable(System.Data.OleDb.OleDbSchemaGuid.Foreign_Keys, new object[] { null });
                 foreach (DataRow row in dt.Rows)
@@ -1352,15 +1355,15 @@ namespace osafw
 
             if (schema_cache == null)
             {
-                schema_cache = new Hashtable();
+                schema_cache = new ();
             }
             if (!schema_cache.ContainsKey(connstr))
             {
-                schema_cache[connstr] = new Hashtable();
+                schema_cache[connstr] = new ();
             }
             if (!((Hashtable)schema_cache[connstr]).ContainsKey(table))
             {
-                Hashtable h = new Hashtable();
+                Hashtable h = new ();
 
                 ArrayList fields = load_table_schema_full(table);
                 foreach (Hashtable row in fields)
@@ -1433,6 +1436,7 @@ namespace osafw
             return result;
         }
 
+        [SupportedOSPlatform("windows")]
         private string map_oletype2fwtype(int mstype)
         {
             string result = "";

@@ -8,10 +8,10 @@ namespace osafw
 {
     public class FwCache
     {
-        public static Hashtable cache = new Hashtable();  // app level cache
-        private static readonly Object locker = new Object();
+        public static Hashtable cache = new();  // app level cache
+        private static readonly Object locker = new();
 
-        public Hashtable request_cache = new Hashtable(); // request level cache
+        public Hashtable request_cache = new(); // request level cache
 
         public static object getValue(string key)
         {

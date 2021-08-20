@@ -50,7 +50,7 @@ namespace osafw.Tests
         [TestMethod()]
         public void qhRevertTest()
         {
-            Hashtable h = new Hashtable();
+            Hashtable h = new();
             h["AAA"] = "1";
             h["BBB"] = "2";
             h["CCC"] = 3;
@@ -58,22 +58,22 @@ namespace osafw.Tests
 
             string r = Utils.qhRevert((IDictionary)h);
 
-            Assert.IsTrue(r.IndexOf("AAA|1") >= 0);
-            Assert.IsTrue(r.IndexOf("BBB|2") >= 0);
-            Assert.IsTrue(r.IndexOf("CCC|3") >= 0);
+            Assert.IsTrue(r.Contains("AAA|1"));
+            Assert.IsTrue(r.Contains("BBB|2"));
+            Assert.IsTrue(r.Contains("CCC|3"));
             int p = r.IndexOf("DDD");
             // chekc is DDD not have value in string
             Assert.IsTrue(p >= 0);
             if (p < r.Length - 1)
             {
-                Assert.IsTrue(r.IndexOf("DDD| ") >= 0);
+                Assert.IsTrue(r.Contains("DDD| "));
             }
         }
 
         [TestMethod()]
         public void hashFilterTest()
         {
-            Hashtable h = new Hashtable();
+            Hashtable h = new();
             h["AAA"] = "1";
             h["BBB"] = "2";
             h["CCC"] = 3;
@@ -329,10 +329,10 @@ namespace osafw.Tests
         [TestMethod()]
         public void mergeHashTest()
         {
-            Hashtable h1 = new Hashtable();
+            Hashtable h1 = new();
             h1["AAA"] = 1;
             h1["BBB"] = 2;
-            Hashtable h2 = new Hashtable();
+            Hashtable h2 = new();
             h2["CCC"] = 3;
             h2["DDD"] = 4;
 
@@ -352,10 +352,10 @@ namespace osafw.Tests
         [TestMethod()]
         public void mergeHashDeepTest()
         {
-            Hashtable h1 = new Hashtable();
+            Hashtable h1 = new();
             h1["AAA"] = 1;
             h1["BBB"] = 2;
-            Hashtable h2 = new Hashtable();
+            Hashtable h2 = new();
             h2["CCC"] = 3;
             h2["DDD"] = new Hashtable() { { "EEE", 5 } };
 
@@ -398,7 +398,7 @@ namespace osafw.Tests
         [TestMethod()]
         public void jsonEncodeTest()
         {
-            Hashtable h1 = new Hashtable();
+            Hashtable h1 = new();
             h1["AAA"] = 1;
             h1["BBB"] = 2;
             h1["CCC"] = 3;
@@ -406,10 +406,10 @@ namespace osafw.Tests
 
             string r = Utils.jsonEncode(h1);
             Assert.AreEqual(r.IndexOf("{"), 0);
-            Assert.IsTrue(r.IndexOf("\"AAA\":1") >= 0);
-            Assert.IsTrue(r.IndexOf("\"BBB\":2") >= 0);
-            Assert.IsTrue(r.IndexOf("\"CCC\":3") >= 0);
-            Assert.IsTrue(r.IndexOf("\"DDD\":4") >= 0);
+            Assert.IsTrue(r.Contains("\"AAA\":1"));
+            Assert.IsTrue(r.Contains("\"BBB\":2"));
+            Assert.IsTrue(r.Contains("\"CCC\":3"));
+            Assert.IsTrue(r.Contains("\"DDD\":4"));
         }
 
         [TestMethod()]
@@ -435,7 +435,7 @@ namespace osafw.Tests
         [TestMethod()]
         public void hashKeysTest()
         {
-            Hashtable h1 = new Hashtable();
+            Hashtable h1 = new();
             h1["AAA"] = 1;
             h1["BBB"] = 2;
             h1["CCC"] = 3;
@@ -483,7 +483,7 @@ namespace osafw.Tests
             string r = Utils.getTmpFilename(prefix);
 
             Assert.IsTrue(r.IndexOf(tmp_path) == 0);
-            Assert.IsTrue(r.IndexOf(prefix) >= 0);
+            Assert.IsTrue(r.Contains(prefix));
             Assert.AreEqual(r.Length, tmp_path.Length + prefix.Length + 1 + 36);
         }
 

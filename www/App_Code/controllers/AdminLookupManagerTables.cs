@@ -32,7 +32,7 @@ namespace osafw
 
         public override Hashtable ShowFormAction(string form_id = "")
         {
-            Hashtable ps = new Hashtable();
+            Hashtable ps = new();
             Hashtable item;
             int id = Utils.f2int(form_id);
 
