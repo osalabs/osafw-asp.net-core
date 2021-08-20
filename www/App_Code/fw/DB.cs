@@ -143,7 +143,7 @@ namespace osafw
         ///  <param name="fw">framework reference</param>
         ///  <param name="conf">config hashtable with "connection_string" and "type" keys. If none - fw.config("db")("main") used</param>
         ///  <param name="db_name">database human name, only used for logger</param>
-        public DB(FW fw, Hashtable conf = null/* TODO Change to default(_) if this is not a reference type */, string db_name = "main")
+        public DB(FW fw, Hashtable conf = null, string db_name = "main")
         {
             this.fw = fw;
             if (conf != null)
@@ -274,7 +274,7 @@ namespace osafw
 
             SQL_QUERY_CTR += 1;
 
-            DbCommand dbcomm = null/* TODO Change to default(_) if this is not a reference type */;
+            DbCommand dbcomm = null;
             if (dbtype == "SQL")
             {
                 dbcomm = new SqlCommand(sql, (SqlConnection)conn);
@@ -296,7 +296,7 @@ namespace osafw
 
             SQL_QUERY_CTR += 1;
 
-            DbCommand dbcomm = null/* TODO Change to default(_) if this is not a reference type */;
+            DbCommand dbcomm = null;
             if (dbtype == "SQL")
             {
                 dbcomm = new SqlCommand(sql, (SqlConnection)conn);
@@ -406,7 +406,7 @@ namespace osafw
         /// <param name="order_by">optional order by, MUST BE QUOTED</param>
         /// <param name="aselect_fields">optional select fields array or hashtable(for aliases) or arraylist of hashtable("field"=>,"alias"=> for cases if there could be several same fields with diff aliases), if not set * returned</param>
         /// <returns></returns>
-        public ArrayList array(string table, Hashtable where, string order_by = "", ICollection aselect_fields = null/* TODO Change to default(_) if this is not a reference type */)
+        public ArrayList array(string table, Hashtable where, string order_by = "", ICollection aselect_fields = null)
         {
             string select_fields = "*";
             if (aselect_fields != null)
@@ -680,7 +680,7 @@ namespace osafw
             }
 
             object field_value;
-            DBOperation dbop = null; /* TODO Change to default(_) if this is not a reference type */;
+            DBOperation dbop = null;
             if (field_value_or_op is DBOperation)
             {
                 dbop = (DBOperation)field_value_or_op;
@@ -1344,7 +1344,7 @@ namespace osafw
                 {
                     schema = (Hashtable)conf["schema"];
                 }
-                return null; /* TODO Change to default(_) if this is not a reference type */;
+                return null;
             }
 
             // check if schema already there
