@@ -7,19 +7,10 @@ using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections;
 using System.IO;
-using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace osafw
 {
-
-//TODO MIGRATE
-//# Const is_S3 = False 'if you use Amazon.S3 set to True here and in S3 model
-
-//# If is_S3 Then
-//    Imports Amazon
-//#End If
-
     public class Att : FwModel
     {
         const int MAX_THUMB_W_S = 180;
@@ -39,7 +30,7 @@ namespace osafw
 
         public Hashtable uploadOne(int id, int file_index, bool is_new = false)
         {
-            Hashtable result = null/* TODO Change to default(_) if this is not a reference type */;
+            Hashtable result = null;
             if (uploadFile(id, out string filepath, file_index, true))
             {
                 logger("uploaded to [" + filepath + "]");
@@ -157,7 +148,7 @@ namespace osafw
                 where["att_id"] = att_id;
                 Hashtable row = db.row(att_table_link, where);
 
-                if (Utils.f2int(row["id"])>0)
+                if (Utils.f2int(row["id"]) > 0)
                 {
                     // existing link
                     fields = new();
@@ -247,8 +238,8 @@ namespace osafw
             // remove files first
             Hashtable item = one(id);
             if ((string)item["is_s3"] == "1")
-                /* TODO ERROR: Skipped IfDirectiveTrivia *//* TODO ERROR: Skipped DisabledTextTrivia *//* TODO ERROR: Skipped ElseDirectiveTrivia */
-                fw.logger(LogLevel.WARN, "Att record has S3 flag, but S3 storage is not enabled");
+                fw.model<S3>().deleteObject(table_name + "/" + item["id"]);
+                //fw.logger(LogLevel.WARN, "Att record has S3 flag, but S3 storage is not enabled");
             else
                 // local storage
                 deleteLocalFiles(id);
@@ -349,9 +340,9 @@ namespace osafw
             string where = "";
             if (is_image > -1)
                 where += " and a.is_image=" + is_image;
-            return db.array("select a.* " + " from " + att_table_link + " atl, att a " 
-                + " where atl.table_name=" + db.q(table_name) 
-                + " and atl.item_id=" + db.qi(id) 
+            return db.array("select a.* " + " from " + att_table_link + " atl, att a "
+                + " where atl.table_name=" + db.q(table_name)
+                + " and atl.item_id=" + db.qi(id)
                 + " and a.id=atl.att_id" + where + " order by a.id ");
         }
 
@@ -428,131 +419,149 @@ namespace osafw
             return this.table_name + "/" + id + "/" + id + sizestr;
         }
 
-        // generate signed url and redirect to it, so user download directly from S3
+        //////////////////// S3 related functions - only works with S3 model if Amazon.S3 installed
+
+        // generate signed url and redirect to it, so user download directly from S3      
         public void redirectS3(Hashtable item, string size = "")
         {
+            if (Users.id == 0)
+                throw new ApplicationException("Access Denied"); // denied for non-logged
+
+            //#If is_S3 Then
+            var url = fw.model<S3>().getSignedUrl(getS3KeyByID((string)item["id"], size));
+            fw.redirect(url);
+            //#Else
             logger(LogLevel.WARN, "redirectS3 - S3 not enabled");
+            //#End If
         }
- 
-//TODO MIGRATE    
-//    'generate signed url and redirect to it, so user download directly from S3
-//    Public Sub redirectS3(item As Hashtable, Optional size As String = "")
-//#If is_S3 Then
-//        If fw.model(Of Users).meId() = 0 Then Throw New ApplicationException("Access Denied") 'denied for non-logged
 
-//        Dim url = fw.model(Of S3).getSignedUrl(getS3KeyByID(item("id"), size))
+        //#If is_S3 Then
 
-//        fw.redirect(url)
-//#Else
-//        logger(LogLevel.WARN, "redirectS3 - S3 not enabled")
-//#End If
-//    End Sub
+        /// <summary>
+        /// move file from local file storage to S3
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        public bool moveToS3(int id)
+        {
+            var result = true;
+            var item = one(id);
+            if (Utils.f2int(item["is_s3"]) == 1)
+                return true; // already in S3
 
-//#If is_S3 Then
+            var model_s3 = fw.model<S3>();
+            // model_s3.createFolder(Me.table_name)
+            // upload all sizes if exists
+            // id=47 -> /47/47 /47/47_s /47/47_m /47/47_l
+            foreach (string size1 in Utils.qw("&nbsp; s m l"))
+            {
+                var size = size1.Trim();
+                string filepath = getUploadImgPath(id, size, (string)item["ext"]);
+                if (!System.IO.File.Exists(filepath))
+                    continue;
 
-//    Public Function moveToS3(id As Integer) As Boolean
-//        Dim result = True
-//        Dim item = one(id)
-//        If item("is_s3") = 1 Then Return True 'already in S3
+                var res = model_s3.uploadFilepath(getS3KeyByID(id.ToString(), size), filepath, "inline");
+                if (res.HttpStatusCode != System.Net.HttpStatusCode.OK)
+                {
+                    result = false;
+                    break;
+                }
+            }
 
-//        Dim model_s3 = fw.model(Of S3)
-//        'model_s3.createFolder(Me.table_name)
-//        'upload all sizes if exists
-//        'id=47 -> /47/47 /47/47_s /47/47_m /47/47_l
-//        For Each size As String In Utils.qw("&nbsp; s m l")
-//            size = Trim(size)
-//            Dim filepath As String = getUploadImgPath(id, size, item("ext"))
-//            If Not System.IO.File.Exists(filepath) Then Continue For
+            if (result)
+            {
+                // mark as uploaded
+                this.update(id, new Hashtable() { { "is_s3", 1 } });
+                // remove local files
+                deleteLocalFiles(id);
+            }
 
-//            Dim res = model_s3.uploadFilepath(getS3KeyByID(id, size), filepath, "inline")
-//            If res.HttpStatusCode<> Net.HttpStatusCode.OK Then
-//                result = False
-//                Exit For
-//            End If
-//        Next
+            return true;
+        }
 
-//        If result Then
-//            'mark as uploaded
-//            Me.update(id, New Hashtable From { { "is_s3", 1} })
-//            'remove local files
-//            deleteLocalFiles(id)
-//        End If
 
-//        Return True
-//    End Function
+        /// <summary>
+        /// upload all posted files (fw.request.Form.Files) to S3 for the table
+        /// </summary>
+        /// <param name="item_table_name"></param>
+        /// <param name="item_id"></param>
+        /// <param name="att_categories_id"></param>
+        /// <param name="fieldnames">qw string of ONLY field names to upload</param>
+        /// <returns>number of successuflly uploaded files</returns>
+        /// <remarks>also set FLASH error if some files not uploaded</remarks>
+        public int uploadPostedFilesS3(string item_table_name, int item_id, string att_categories_id = null, string fieldnames = "")
+        {
+            var result = 0;
 
-//    ''' <summary>
-//    ''' upload all posted files (fw.req.Files) to S3 for the table
-//    ''' </summary>
-//    ''' <param name="item_table_name"></param>
-//    ''' <param name="item_id"></param>
-//    ''' <param name="att_categories_id"></param>
-//    ''' <param name="fieldnames">qw string of ONLY field names to upload</param>
-//    ''' <returns>number of successuflly uploaded files</returns>
-//    ''' <remarks>also set FLASH error if some files not uploaded</remarks>
-//    Public Function uploadPostedFilesS3(item_table_name As String, item_id As Integer, Optional att_categories_id As String = Nothing, Optional fieldnames As String = "") As Integer
-//        Dim result = 0
+            var honlynames = Utils.qh(fieldnames);
 
-//        Dim honlynames = Utils.qh(fieldnames)
+            // create list of eligible file uploads, check for the ContentLength as any 'input type = "file"' creates a System.Web.HttpPostedFile object even if the file was not attached to the input
+            ArrayList afiles = new();
+            if (honlynames.Count > 0)
+            {
+                // if we only need some fields - skip if not requested field
+                for (var i = 0; i <= fw.request.Form.Files.Count - 1; i++)
+                {
+                    if (!honlynames.ContainsKey(fw.request.Form.Files[i].FileName))
+                        continue;
+                    if (fw.request.Form.Files[i].Length > 0)
+                        afiles.Add(fw.request.Form.Files[i]);
+                }
+            }
+            else
+                // just add all files
+                for (var i = 0; i <= fw.request.Form.Files.Count - 1; i++)
+                {
+                    if (fw.request.Form.Files[i].Length > 0)
+                        afiles.Add(fw.request.Form.Files[i]);
+                }
 
-//        'create list of eligible file uploads, check for the ContentLength as any 'input type = "file"' creates a System.Web.HttpPostedFile object even if the file was not attached to the input
-//        Dim afiles As New ArrayList
-//        If honlynames.Count > 0 Then
-//            'if we only need some fields - skip if not requested field
-//            For i = 0 To fw.req.Files.Count - 1
-//                If Not honlynames.ContainsKey(fw.req.Files.GetKey(i)) Then Continue For
-//                If fw.req.Files(i).ContentLength > 0 Then afiles.Add(fw.req.Files(i))
-//            Next
-//        Else
-//            'just add all files
-//            For i = 0 To fw.req.Files.Count - 1
-//                If fw.req.Files(i).ContentLength > 0 Then afiles.Add(fw.req.Files(i))
-//            Next
-//        End If
+            // do nothing if empty file list
+            if (afiles.Count == 0)
+                return 0;
 
-//        'do nothing if empty file list
-//        If afiles.Count = 0 Then Return 0
+            // upload files to the S3
+            var model_s3 = fw.model<S3>();
 
-//        'upload files to the S3
-//        Dim model_s3 = fw.model(Of S3)
+            // create /att folder
+            model_s3.createFolder(this.table_name);
 
-//        'create /att folder
-//        model_s3.createFolder(Me.table_name)
+            // upload files to S3
+            foreach (IFormFile file in afiles)
+            {
+                // first - save to db so we can get att_id
+                Hashtable attitem = new Hashtable();
+                attitem["att_categories_id"] = att_categories_id;
+                attitem["table_name"] = item_table_name;
+                attitem["item_id"] = item_id;
+                attitem["is_s3"] = 1;
+                attitem["status"] = 1;
+                attitem["fname"] = file.FileName;
+                attitem["fsize"] = file.Length;
+                attitem["ext"] = UploadUtils.getUploadFileExt(file.FileName);
+                var att_id = fw.model<Att>().add(attitem);
 
-//        'upload files to S3
-//        For Each file In afiles
-//            'first - save to db so we can get att_id
-//            Dim attitem As New Hashtable
-//            attitem("att_categories_id") = att_categories_id
-//            attitem("table_name") = item_table_name
-//            attitem("item_id") = item_id
-//            attitem("is_s3") = 1
-//            attitem("status") = 1
-//            attitem("fname") = file.FileName
-//            attitem("fsize") = file.ContentLength
-//            attitem("ext") = UploadUtils.getUploadFileExt(file.FileName)
-//            Dim att_id = fw.model(Of Att).add(attitem)
+                try
+                {
+                    var response = model_s3.uploadPostedFile(getS3KeyByID(att_id.ToString()), file, "inline");
 
-//            Try
-//                Dim response = model_s3.uploadPostedFile(getS3KeyByID(att_id), file, "inline")
+                    // TODO check response for 200 and if not - error/delete?
+                    // once uploaded - mark in db as uploaded
+                    fw.model<Att>().update(att_id, new Hashtable() { { "status", 0 } });
 
-//                'TODO check response for 200 and if not - error/delete?
-//                'once uploaded - mark in db as uploaded
-//                fw.model(Of Att).update(att_id, New Hashtable From { { "status", 0} })
+                    result += 1;
+                }
+                catch (Amazon.S3.AmazonS3Exception ex)
+                {
+                    logger(ex.Message);
+                    logger(ex);
+                    fw.flash("error", "Some files were not uploaded due to error. Please re-try.");
+                    // TODO if error - don't set status to 0 but remove att record?
+                    fw.model<Att>().delete(att_id, true);
+                }
+            }
 
-//                result += 1
-
-//            Catch ex As Amazon.S3.AmazonS3Exception
-//                logger(ex.Message)
-//                logger(ex)
-//                fw.FLASH("error", "Some files were not uploaded due to error. Please re-try.")
-//                'TODO if error - don't set status to 0 but remove att record?
-//                fw.model(Of Att).delete(att_id, True)
-//            End Try
-//        Next
-
-//        Return result
-//    End Function
-//#End If    
+            return result;
+        }
     }
 }
