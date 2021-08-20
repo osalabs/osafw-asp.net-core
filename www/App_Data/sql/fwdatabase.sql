@@ -101,7 +101,7 @@ CREATE TABLE users (
 
   email                 NVARCHAR(128) NOT NULL DEFAULT '',
   pwd                   NVARCHAR(255) NOT NULL DEFAULT '', -- hashed password
-  access_level          TINYINT NOT NULL,  /*0 - usual user, 80 - moderator, 100 - admin*/
+  access_level          TINYINT NOT NULL,  /*0 - visitor, 1 - usual user, 80 - moderator, 100 - admin*/
 
   fname                 NVARCHAR(32) NOT NULL DEFAULT '',
   lname                 NVARCHAR(32) NOT NULL DEFAULT '',

@@ -81,7 +81,10 @@ namespace osafw
 
         public override int add(Hashtable item)
         {
-            if (!item.ContainsKey("pwd"))
+            if (!item.ContainsKey("access_level"))
+                item["access_level"] = Users.ACL_MEMBER;
+
+                if (!item.ContainsKey("pwd"))
                 item["pwd"] = Utils.getRandStr(8); // generate password
             item["pwd"] = this.hashPwd((string)item["pwd"]);
             return base.add(item);

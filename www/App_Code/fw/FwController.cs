@@ -913,7 +913,8 @@ namespace osafw
         public virtual string getViewListUserFields()
         {
             var item = fw.model<UserViews>().oneByIcode(base_url); // base_url is screen identifier
-            return (string)(((string)item["fields"]).Length > 0 ? item["fields"] : view_list_defaults);
+            var fields = (string)item["fields"]??"";
+            return (fields.Length > 0 ? fields : view_list_defaults);
         }
 
         // add to ps:
