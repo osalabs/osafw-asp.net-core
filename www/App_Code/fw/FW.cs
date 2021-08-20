@@ -534,7 +534,7 @@ namespace osafw
             {
                 logger(LogLevel.DEBUG, Ex.Message);
                 // if not logged - just redirect to login 
-                if (SessionBool("is_logged") != true)
+                if (!Users.isLogged)
                     redirect((string)config("UNLOGGED_DEFAULT_URL"), false);
                 else
                     errMsg(Ex.Message);
