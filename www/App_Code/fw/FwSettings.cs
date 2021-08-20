@@ -57,9 +57,9 @@ namespace osafw
         }
 
         // just return first row by icode field
-        public Hashtable oneByIcode(String icode)
+        public override Hashtable oneByIcode(String icode)
         {
-            Hashtable where = new Hashtable();
+            Hashtable where = new();
             where["icode"] = icode;
             return db.row(table_name, where);
         }
@@ -71,7 +71,7 @@ namespace osafw
         public void setValue(String icode, String ivalue)
         {
             Hashtable item = oneByIcode(icode);
-            Hashtable fields = new Hashtable();
+            Hashtable fields = new();
             if (item.ContainsKey("id"))
             {
                 int id = Utils.f2int(item["id"]);

@@ -24,14 +24,14 @@ namespace osafw
 
         public Hashtable IndexAction()
         {
-            Hashtable ps = new Hashtable();
+            Hashtable ps = new();
 
             return ps;
         }
 
         public void ShowAction(string repcode)
         {
-            Hashtable ps = new Hashtable();
+            Hashtable ps = new();
             repcode = model.cleanupRepcode(repcode);
 
             var is_run = reqs("dofilter").Length > 0 || reqs("is_run").Length > 0;

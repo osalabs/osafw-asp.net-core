@@ -31,7 +31,7 @@ namespace osafw
         // filter defaults can be Set here
         public override Hashtable getReportFilters()
         {
-            Hashtable result = new Hashtable();
+            Hashtable result = new();
             if (!f.ContainsKey("from_date") && !f.ContainsKey("to_date"))
                 // set default filters
                 f["from_date"] = DateUtils.Date2Str(DateTime.Now.AddDays(-30));// last 30 days

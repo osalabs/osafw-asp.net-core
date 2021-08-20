@@ -84,7 +84,7 @@ namespace osafw
             Hashtable item = (Hashtable)fw.cache.getRequestValue(cache_key);
             if (item == null)
             {
-                Hashtable where = new Hashtable();
+                Hashtable where = new();
                 where[this.field_id] = id;
                 item = db.row(table_name, where);
                 normalizeNames(item);
@@ -149,7 +149,7 @@ namespace osafw
         // return standard list of id,iname where status=0 order by iname
         public virtual ArrayList list()
         {
-            Hashtable where = new Hashtable();
+            Hashtable where = new();
             if (!string.IsNullOrEmpty(field_status))
                 where[field_status] = db.opNOT(STATUS_DELETED);
             return db.array(table_name, where, getOrderBy());
@@ -159,11 +159,11 @@ namespace osafw
         // def - in dynamic controller - field definition (also contains "i" and "ps", "lookup_params", ...) or you could use it to pass additional params
         public virtual ArrayList listSelectOptions(Hashtable def = null)
         {
-            Hashtable where = new Hashtable();
+            Hashtable where = new();
             if (!string.IsNullOrEmpty(field_status))
                 where[field_status] = db.opNOT(STATUS_DELETED);
 
-            ArrayList select_fields = new ArrayList()
+            ArrayList select_fields = new()
         {
             new Hashtable() { { "field", field_id }, { "alias", "id" } },
             new Hashtable() { { "field", field_iname }, { "alias", "iname" } }
@@ -174,11 +174,11 @@ namespace osafw
         // similar to listSelectOptions but returns iname/iname
         public virtual ArrayList listSelectOptionsName(Hashtable def = null)
         {
-            Hashtable where = new Hashtable();
+            Hashtable where = new();
             if (!string.IsNullOrEmpty(field_status))
                 where[field_status] = db.opNOT(STATUS_DELETED);
 
-            ArrayList select_fields = new ArrayList()
+            ArrayList select_fields = new()
         {
             new Hashtable() { { "field", field_iname }, { "alias", "id" } },
             new Hashtable() { { "field", field_iname }, { "alias", "iname" } }
@@ -189,7 +189,7 @@ namespace osafw
         // return count of all non-deleted
         public int getCount()
         {
-            Hashtable where = new Hashtable();
+            Hashtable where = new();
             if (!string.IsNullOrEmpty(field_status))
                 where[field_status] = db.opNOT(STATUS_DELETED);
             return (int)db.value(table_name, where, "count(*)");
@@ -260,7 +260,7 @@ namespace osafw
         // update exising record
         public virtual bool update(int id, Hashtable item)
         {
-            Hashtable item_changes = new Hashtable();
+            Hashtable item_changes = new();
             if (is_log_changes)
             {
                 var item_old = this.one(id);
@@ -603,8 +603,8 @@ namespace osafw
         // called from withing link model like UsersCompanies that links 2 tables
         public virtual void updateLinkedRows(int main_id, Hashtable linked_keys)
         {
-            Hashtable fields = new Hashtable();
-            Hashtable where = new Hashtable();
+            Hashtable fields = new();
+            Hashtable where = new();
             var link_table_field_status = this.field_status;
 
             // set all fields as under update
@@ -650,8 +650,8 @@ namespace osafw
         // called from withing link model like UsersCompanies that links 2 tables
         public virtual void updateLinkedRowsByLinkedId(int linked_id, Hashtable linked_keys)
         {
-            Hashtable fields = new Hashtable();
-            Hashtable where = new Hashtable();
+            Hashtable fields = new();
+            Hashtable where = new();
             var link_table_field_status = this.field_status;
 
             // set all fields as under update
@@ -713,7 +713,7 @@ namespace osafw
 
         public virtual StringBuilder getCSVExport()
         {
-            Hashtable where = new Hashtable();
+            Hashtable where = new();
             if (!string.IsNullOrEmpty(field_status))
                 where[field_status] = STATUS_ACTIVE;
 

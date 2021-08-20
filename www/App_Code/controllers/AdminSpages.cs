@@ -55,7 +55,7 @@ namespace osafw
                     var pagenum = Utils.f2int(this.list_filter["pagenum"]);
                     if (this.list_count > pagesize)
                     {
-                        ArrayList subset = new ArrayList();
+                        ArrayList subset = new();
                         int start_offset = pagenum * pagesize;
 
                         for (int i = start_offset; i <= Math.Min(start_offset + pagesize, this.list_rows.Count) - 1; i++)

@@ -31,7 +31,7 @@ namespace osafw
                 response.Headers.Add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
 
                 // allow any custom headers
-                Microsoft.Extensions.Primitives.StringValues access_control_request_headers = new Microsoft.Extensions.Primitives.StringValues("");
+                Microsoft.Extensions.Primitives.StringValues access_control_request_headers = new("");
                 bool is_access_control_request_headers =
                     request.Headers.TryGetValue("Access-Control-Request-Headers", out access_control_request_headers);
 

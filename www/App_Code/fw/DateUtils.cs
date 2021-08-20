@@ -88,7 +88,7 @@ namespace osafw
 
         public static DateTime Unix2Date(double unixTimeStamp)
         {
-            DateTime result = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
+            DateTime result = new (1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
             result = result.AddSeconds(unixTimeStamp).ToLocalTime();
             return result;
         }
@@ -96,7 +96,7 @@ namespace osafw
         // convert .net date to javascript timestamp
         public static long Date2JsTimestamp(DateTime dt)
         {
-            TimeSpan span = new TimeSpan(DateTime.Parse("1/1/1970").Ticks);
+            TimeSpan span = new (DateTime.Parse("1/1/1970").Ticks);
             DateTime time = dt.Subtract(span);
             return System.Convert.ToInt64(time.Ticks / (double)10000);
         }

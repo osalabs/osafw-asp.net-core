@@ -373,7 +373,7 @@ namespace osafw
         // ********************* support for customizable list screen
         public virtual void UserViewsAction(string form_id = "")
         {
-            Hashtable ps = new Hashtable();
+            Hashtable ps = new();
 
             var rows = getViewListArr(getViewListUserFields(), true); // list all fields
 
@@ -669,7 +669,7 @@ namespace osafw
         // if there are more than one field - just first field added to the hash
         protected Hashtable _fieldsToHash(ArrayList fields)
         {
-            Hashtable result = new Hashtable();
+            Hashtable result = new();
             foreach (Hashtable fldinfo in fields)
             {
                 if (fldinfo.ContainsKey("field") && !result.ContainsKey((string)fldinfo["field"]))

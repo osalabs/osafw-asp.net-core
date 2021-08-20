@@ -44,7 +44,7 @@ namespace osafw
         // separator - what to put after each radio (for ex - "<br>")
         public static string radioOptions(string iname, Array arr, string isel, string separator = "")
         {
-            StringBuilder result = new StringBuilder();
+            StringBuilder result = new();
 
             isel = Strings.Trim(isel);
             int i=0;
@@ -98,7 +98,7 @@ namespace osafw
                 asel[i] = Strings.Trim(asel[i]);
             string val;
             string text;
-            StringBuilder result = new StringBuilder();
+            StringBuilder result = new();
             foreach (Hashtable item in arr)
             {
                 text = Utils.htmlescape((string)item["iname"]);
@@ -156,7 +156,7 @@ namespace osafw
 
         public static ArrayList selectTplOptions(string tpl_path)
         {
-            ArrayList result = new ArrayList();
+            ArrayList result = new ();
 
             string[] lines = FW.getFileLines((string)FwConfig.settings["template"] + tpl_path);
 

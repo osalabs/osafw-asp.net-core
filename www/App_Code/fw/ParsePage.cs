@@ -132,16 +132,16 @@ namespace osafw
 {
     public class ParsePage
     {
-        private static readonly Regex RX_NOTS = new Regex(@"^(\S+)", RegexOptions.Compiled);
-        private static readonly Regex RX_LANG = new Regex("`(.+?)`", RegexOptions.Compiled);
-        private static readonly Regex RX_FULL_TAGS = new Regex("<~([^>]+)>", RegexOptions.Compiled);
+        private static readonly Regex RX_NOTS = new(@"^(\S+)", RegexOptions.Compiled);
+        private static readonly Regex RX_LANG = new("`(.+?)`", RegexOptions.Compiled);
+        private static readonly Regex RX_FULL_TAGS = new("<~([^>]+)>", RegexOptions.Compiled);
 
-        private static readonly Regex RX_ATTRS1 = new Regex(@"((?:\S+\=" + (char)34 + "[^" + (char)34 + "]*" + (char)34 + @")|(?:\S+\='[^']*')|(?:[^'" + (char)34 + @"\s]+)|(?:\S+\=\S*))", RegexOptions.Compiled);
-        private static readonly Regex RX_ATTRS2 = new Regex(@"^([^\s\=]+)=(['" + (char)34 + @"]?)(.*?)\2$", RegexOptions.Compiled);
+        private static readonly Regex RX_ATTRS1 = new(@"((?:\S+\=" + (char)34 + "[^" + (char)34 + "]*" + (char)34 + @")|(?:\S+\='[^']*')|(?:[^'" + (char)34 + @"\s]+)|(?:\S+\=\S*))", RegexOptions.Compiled);
+        private static readonly Regex RX_ATTRS2 = new(@"^([^\s\=]+)=(['" + (char)34 + @"]?)(.*?)\2$", RegexOptions.Compiled);
 
-        private static readonly Regex RX_ALL_DIGITS = new Regex(@"^\d+$", RegexOptions.Compiled);
-        private static readonly Regex RX_LAST_SLASH = new Regex(@"[^\/]+$", RegexOptions.Compiled);
-        private static readonly Regex RX_EXT = new Regex(@"\.[^\/]+$", RegexOptions.Compiled);
+        private static readonly Regex RX_ALL_DIGITS = new(@"^\d+$", RegexOptions.Compiled);
+        private static readonly Regex RX_LAST_SLASH = new(@"[^\/]+$", RegexOptions.Compiled);
+        private static readonly Regex RX_EXT = new(@"\.[^\/]+$", RegexOptions.Compiled);
 
         private static readonly Hashtable FILE_CACHE = new();
         private static readonly Hashtable LANG_CACHE = new();
@@ -745,7 +745,7 @@ namespace osafw
                 return "";
             }
 
-            StringBuilder value = new StringBuilder();
+            StringBuilder value = new();
             if (parent_hf == null)
                 parent_hf = new();
 
@@ -1117,7 +1117,7 @@ namespace osafw
 
         private string _attr_radio(string tpl_path, ref Hashtable hf, Hashtable attrs)
         {
-            StringBuilder result = new StringBuilder();
+            StringBuilder result = new();
             string sel_value = (string)hfvalue((string)attrs["radio"], hf);
             if (sel_value == null)
                 sel_value = "";

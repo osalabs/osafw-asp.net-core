@@ -84,7 +84,7 @@ namespace osafw
             foldername = Regex.Replace(foldername, @"^\/|\/$", ""); // remove / from begin and end
 
             // create /att folder
-            PutObjectRequest request = new PutObjectRequest()
+            PutObjectRequest request = new()
             {
                 BucketName = this.bucket,
                 Key = this.root + foldername + "/",
@@ -198,7 +198,7 @@ namespace osafw
             {
                 // it's subfolder - delete all content first
 
-                ListObjectsRequest listrequest = new ListObjectsRequest()
+                ListObjectsRequest listrequest = new()
                 {
                     BucketName = this.bucket,
                     Prefix = key
@@ -210,7 +210,7 @@ namespace osafw
                     deleteObject(entry.Key);
             }
 
-            DeleteObjectRequest request = new DeleteObjectRequest()
+            DeleteObjectRequest request = new()
             {
                 BucketName = this.bucket,
                 Key = this.root + key

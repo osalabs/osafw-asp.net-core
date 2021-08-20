@@ -51,7 +51,7 @@ namespace osafw
         {
             string[] url_parts = Strings.Split(full_url, "/");
             int parent_id = 0;
-            Hashtable item = new Hashtable();
+            Hashtable item = new();
             for (int i = 1; i <= url_parts.GetUpperBound(0); i++)
             {
                 item = oneByUrl(url_parts[i], parent_id);
@@ -111,7 +111,7 @@ namespace osafw
         // RECURSIVE!
         public ArrayList getPagesTree(ArrayList rows, int parent_id, int level = 0, string parent_url = "")
         {
-            ArrayList result = new ArrayList();
+            ArrayList result = new();
 
             foreach (Hashtable row in rows)
             {
@@ -138,7 +138,7 @@ namespace osafw
         /// <remarks>RECURSIVE</remarks>
         public ArrayList getPagesTreeList(ArrayList pages_tree, int level = 0)
         {
-            ArrayList result = new ArrayList();
+            ArrayList result = new();
 
             if (pages_tree != null)
             {
@@ -148,7 +148,7 @@ namespace osafw
                     // add leveler
                     if (level > 0)
                     {
-                        ArrayList leveler = new ArrayList();
+                        ArrayList leveler = new();
                         for (int i = 1; i <= level; i++)
                             leveler.Add(new Hashtable());
                         row["leveler"] = leveler;
@@ -171,7 +171,7 @@ namespace osafw
         /// <remarks>RECURSIVE</remarks>
         public string getPagesTreeSelectHtml(string selected_id, ArrayList pages_tree, int level = 0)
         {
-            StringBuilder result = new StringBuilder();
+            StringBuilder result = new();
             if (pages_tree != null)
             {
                 foreach (Hashtable row in pages_tree)
@@ -204,7 +204,7 @@ namespace osafw
         // render page by full url
         public void showPageByFullUrl(string full_url)
         {
-            Hashtable ps = new Hashtable();
+            Hashtable ps = new();
 
             // for navigation
             var pages_tree = tree("status=0", "parent_id, prio desc, iname"); // published only

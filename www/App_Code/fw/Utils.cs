@@ -14,6 +14,7 @@ using System.Security.Cryptography;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Drawing.Drawing2D;
+using System.Runtime.Versioning;
 
 namespace osafw
 {
@@ -181,10 +182,11 @@ namespace osafw
 
         public static bool f2bool(object AField)
         {
-            bool result = false;
             if (AField == null) return false;
-            bool.TryParse(AField.ToString(), out result);
-            return result;
+            if (!bool.TryParse(AField.ToString(), out bool result))
+                return result;
+
+            return false;
         }
 
         // TODO parse without Try/Catch
@@ -193,7 +195,7 @@ namespace osafw
             object result = null;
             try
             {
-                if (AField == null || AField == "Null" || AField == "")
+                if (AField == null || AField.ToString() == "Null" || AField.ToString() == "")
                 {
                     result = null;
                 }
@@ -227,9 +229,10 @@ namespace osafw
         public static int f2int(object AField)
         {
             if (AField == null) return 0;
-            int result = 0;
-            int.TryParse(AField.ToString(), out result);
-            return result;
+            if (int.TryParse(AField.ToString(), out int result))
+                return result;
+
+            return 0;
         }
 
         // convert to double, optionally throw error
@@ -246,8 +249,7 @@ namespace osafw
         // just return false if input cannot be converted to float
         public static bool isFloat(object AField)
         {
-            double result = 0.0;
-            return double.TryParse(AField.ToString(), out result);
+            return double.TryParse(AField.ToString(), out double _);
         }
 
         public static string sTrim(string str, int size)
@@ -281,6 +283,7 @@ namespace osafw
         * <param name="callback">callback to custom code, accept one row of fields(as Hashtable)</param>
         * <param name="filepath">.csv file name to import</param>
         */
+        [SupportedOSPlatform("windows")]
         public static void importCSV(FW fw, Action<Hashtable> callback, string filepath, bool is_header = true)
         {
             string dir = Path.GetDirectoryName(filepath);
@@ -332,6 +335,7 @@ namespace osafw
         * <param name="is_header"></param>
         * <returns></returns>
         */
+        [SupportedOSPlatform("windows")]
         public static Hashtable importExcel(FW fw, Action<string, ArrayList> callback, string filepath, bool is_header = true)
         {
             Hashtable result = new();

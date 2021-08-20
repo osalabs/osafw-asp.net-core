@@ -87,7 +87,7 @@ namespace osafw.Tests
         public void Date2JsTimestampTest()
         {
             DateTime d = DateTime.Now;
-            TimeSpan span = new TimeSpan(DateTime.Parse("1/1/1970").Ticks);
+            TimeSpan span = new(DateTime.Parse("1/1/1970").Ticks);
             DateTime time = d.Subtract(span);
 
             long r = DateUtils.Date2JsTimestamp(d);

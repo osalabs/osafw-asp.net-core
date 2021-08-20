@@ -28,7 +28,7 @@ namespace osafw
 
             String uuid = Utils.uuid();
             bool is_uploaded = false;
-            UploadParams up = new UploadParams(fw, "file1", Path.GetTempPath(), uuid, ".xls .xlsm .xlsx");
+            UploadParams up = new (fw, "file1", Path.GetTempPath(), uuid, ".xls .xlsm .xlsx");
             //is_uploaded = UploadUtils.uploadSimple(up);
 
             rw("!@!@!!@!@!@");

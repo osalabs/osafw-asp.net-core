@@ -12,7 +12,7 @@ namespace osafw
 {
     public class LoginController : FwController
     {
-        protected Users model = new Users();
+        protected Users model = new();
 
         public override void init(FW fw)
         {

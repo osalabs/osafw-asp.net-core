@@ -12,7 +12,7 @@ namespace osafw
     {
         public static new int access_level = Users.ACL_MEMBER;
 
-        protected Users model = new Users();
+        protected Users model = new();
 
         public override void init(FW fw)
         {

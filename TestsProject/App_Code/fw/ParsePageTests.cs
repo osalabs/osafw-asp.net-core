@@ -24,7 +24,7 @@ namespace osafw.Tests
         [TestMethod()]
         public void parse_jsonTest()
         {
-            Hashtable h1 = new Hashtable();
+            Hashtable h1 = new();
             h1["AAA"] = 1;
             h1["BBB"] = 2;
             h1["CCC"] = 3;
@@ -80,7 +80,7 @@ namespace osafw.Tests
         public void parse_stringTest()
         {
             string tpl = "<~AAA><br/><~BBB><br/><~CCC><br/><~DDD><br/>";
-            Hashtable h1 = new Hashtable();
+            Hashtable h1 = new();
             h1["AAA"] = 1;
             h1["BBB"] = 2;
             h1["CCC"] = 3;
@@ -94,16 +94,16 @@ namespace osafw.Tests
         public void parse_string_repeatTest()
         {
             string tpl = "<~arr repeat inline><~AAA><br/><~BBB><br/><~CCC><br/><~DDD><br/></~arr>";
-            Hashtable h1 = new Hashtable();
+            Hashtable h1 = new();
             h1["AAA"] = 1;
             h1["BBB"] = 2;
             h1["CCC"] = 3;
             h1["DDD"] = 4;
-            ArrayList arr = new ArrayList();
+            ArrayList arr = new();
             arr.Add(h1);
             arr.Add(h1);
             arr.Add(h1);
-            Hashtable ps = new Hashtable() { { "arr", arr } };
+            Hashtable ps = new() { { "arr", arr } };
 
             string r = new ParsePage(null).parse_string(tpl, ps);
             Assert.AreEqual("1<br/>2<br/>3<br/>4<br/>1<br/>2<br/>3<br/>4<br/>1<br/>2<br/>3<br/>4<br/>", r);
@@ -114,7 +114,7 @@ namespace osafw.Tests
         {
             string r = "";
             string tpl = "<~if_block if=\"AAA\" inline>Text</~if_block>";
-            Hashtable ps = new Hashtable();
+            Hashtable ps = new();
 
             ps["AAA"] = 1;
             r = new ParsePage(null).parse_string(tpl, ps);
@@ -146,7 +146,7 @@ namespace osafw.Tests
         {
             string r = "";
             string tpl = "<~if_block unless=\"AAA\" inline>Text</~if_block>";
-            Hashtable ps = new Hashtable();
+            Hashtable ps = new();
             
             ps["AAA"] = 0;
             r = new ParsePage(null).parse_string(tpl, ps);
@@ -174,7 +174,7 @@ namespace osafw.Tests
         {
             string r = "";
             string tpl = "<~if_block ifeq=\"AAA\" vvalue=\"value\" inline>Text</~if_block>";
-            Hashtable ps = new Hashtable();
+            Hashtable ps = new();
             
             ps["AAA"] = "test";
             ps["value"] = "test";
@@ -209,7 +209,7 @@ namespace osafw.Tests
         {
             string r = "";
             string tpl = "<~if_block ifne=\"AAA\" vvalue=\"value\" inline>Text</~if_block>";
-            Hashtable ps = new Hashtable();
+            Hashtable ps = new();
 
             ps["AAA"] = "test1";
             ps["value"] = "test";
@@ -244,7 +244,7 @@ namespace osafw.Tests
         {
             string r = "";
             string tpl = "<~if_block ifgt=\"AAA\" vvalue=\"value\" inline>Text</~if_block>";
-            Hashtable ps = new Hashtable();
+            Hashtable ps = new();
 
             ps["AAA"] = 100;
             ps["value"] = 10;
@@ -267,7 +267,7 @@ namespace osafw.Tests
         {
             string r = "";
             string tpl = "<~if_block ifge=\"AAA\" vvalue=\"value\" inline>Text</~if_block>";
-            Hashtable ps = new Hashtable();
+            Hashtable ps = new();
 
             ps["AAA"] = 100;
             ps["value"] = 10;
@@ -291,7 +291,7 @@ namespace osafw.Tests
         {
             string r = "";
             string tpl = "<~if_block iflt=\"AAA\" vvalue=\"value\" inline>Text</~if_block>";
-            Hashtable ps = new Hashtable();
+            Hashtable ps = new();
 
             ps["AAA"] = 10;
             ps["value"] = 100;
@@ -314,7 +314,7 @@ namespace osafw.Tests
         {
             string r = "";
             string tpl = "<~if_block ifle=\"AAA\" vvalue=\"value\" inline>Text</~if_block>";
-            Hashtable ps = new Hashtable();
+            Hashtable ps = new();
 
             ps["AAA"] = 10;
             ps["value"] = 100;
@@ -347,7 +347,7 @@ namespace osafw.Tests
                 "<option value=\"2\">Plum</option>\r\n" +
                 "<option value=\"3\" selected>Banana</option>\r\n" +
                 "</select>";
-            Hashtable ps = new Hashtable();
+            Hashtable ps = new();
             ps["fruits_select"] = new ArrayList() {
                 new Hashtable() { { "id", "1" }, { "iname", "Apple" } },
                 new Hashtable() { { "id", "2" }, { "iname", "Plum" } },
@@ -370,7 +370,7 @@ namespace osafw.Tests
                 "<option value=\"2\">Plum</option>\r\n" +
                 "<option value=\"3\" selected>Banana</option>\r\n" +
                 "</select>";
-            Hashtable ps = new Hashtable();
+            Hashtable ps = new();
             ps["fradio"] = new ArrayList() { "Apple", "Plum", "Banana" };
             r = new ParsePage(null).parse_string(tpl, ps);
             Assert.AreEqual("", r);
@@ -381,7 +381,7 @@ namespace osafw.Tests
         {
             string r = "";
             string tpl = "<~AAA htmlescape>";
-            Hashtable ps = new Hashtable();
+            Hashtable ps = new();
             ps["AAA"] = "<p>tag</p>";
             r = new ParsePage(null).parse_string(tpl, ps);
             Assert.AreEqual("&amp;lt;p&amp;gt;tag&amp;lt;/p&amp;gt;", r);
@@ -397,7 +397,7 @@ namespace osafw.Tests
         {
             string r = "";
             string tpl = "<~AAA noescape>";
-            Hashtable ps = new Hashtable();
+            Hashtable ps = new();
             ps["AAA"] = "<p>tag</p>";
             r = new ParsePage(null).parse_string(tpl, ps);
             Assert.AreEqual("<p>tag</p>", r);
@@ -413,7 +413,7 @@ namespace osafw.Tests
         {
             string r = "";
             string tpl = "<~AAA url>";
-            Hashtable ps = new Hashtable();
+            Hashtable ps = new();
             ps["AAA"] = "test.com";
             r = new ParsePage(null).parse_string(tpl, ps);
             Assert.AreEqual("http://test.com", r);
@@ -429,7 +429,7 @@ namespace osafw.Tests
         {
             string r = "";
             string tpl = "<~AAA>";
-            Hashtable ps = new Hashtable();
+            Hashtable ps = new();
             ps["AAA"] = "123456.789";
             r = new ParsePage(null).parse_string(tpl, ps);
             Assert.AreEqual("123456.789", r);
@@ -451,7 +451,7 @@ namespace osafw.Tests
             DateTime d = DateTime.Now;
             string r = "";
             string tpl = "<~AAA>";
-            Hashtable ps = new Hashtable();
+            Hashtable ps = new();
             ps["AAA"] = d;
             r = new ParsePage(null).parse_string(tpl, ps);
             Assert.AreEqual(d.ToString("M/dd/yyyy h:m:ss tt"), r);
@@ -484,7 +484,7 @@ namespace osafw.Tests
         {
             string r = "";
             string tpl = "<~AAA truncate>";
-            Hashtable ps = new Hashtable();
+            Hashtable ps = new();
             ps["AAA"] = "test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test ";
             r = new ParsePage(null).parse_string(tpl, ps);
             Assert.AreEqual(ps["AAA"].ToString().Substring(0, 80).Trim() + " test...", r);
@@ -499,7 +499,7 @@ namespace osafw.Tests
         {
             string r = "";
             string tpl = "<~AAA noescape strip_tags>";
-            Hashtable ps = new Hashtable();
+            Hashtable ps = new();
             ps["AAA"] = "<p>tag</p>";
             r = new ParsePage(null).parse_string(tpl, ps);
             Assert.AreEqual("tag", r);
@@ -512,44 +512,40 @@ namespace osafw.Tests
         [TestMethod()]
         public void parse_string_trimTest()
         {
-            string r = "";
             string tpl = "<~AAA trim>";
-            Hashtable ps = new Hashtable();
+            Hashtable ps = new();
             ps["AAA"] = " tag ";
-            r = new ParsePage(null).parse_string(tpl, ps);
+            string r = new ParsePage(null).parse_string(tpl, ps);
             Assert.AreEqual("tag", r);
         }
 
         [TestMethod()]
         public void parse_string_nl2brTest()
         {
-            string r = "";
             string tpl = "<~AAA nl2br>";
-            Hashtable ps = new Hashtable();
+            Hashtable ps = new();
             ps["AAA"] = "tag\ntag2";
-            r = new ParsePage(null).parse_string(tpl, ps);
+            string r = new ParsePage(null).parse_string(tpl, ps);
             Assert.AreEqual("tag<br>tag2", r);
         }
 
         [TestMethod()]
         public void parse_string_countTest()
         {
-            string r = "";
             string tpl = "<~AAA count>";
-            Hashtable ps = new Hashtable();
+            Hashtable ps = new();
             ps["AAA"] = new string[] { "AAA", "BBB", "CCC", "DDD"};
-            r = new ParsePage(null).parse_string(tpl, ps);
+            string r = new ParsePage(null).parse_string(tpl, ps);
             Assert.AreEqual("4", r);
         }
 
         [TestMethod()]
         public void parse_string_lowerTest()
         {
-            string r = "";
             string tpl = "<~AAA lower>";
-            Hashtable ps = new Hashtable();
+            Hashtable ps = new();
             ps["AAA"] = "TAG";
-            r = new ParsePage(null).parse_string(tpl, ps);
+            string r = new ParsePage(null).parse_string(tpl, ps);
             Assert.AreEqual("tag", r);
             Assert.AreNotEqual(ps["AAA"], r);
         }
@@ -557,11 +553,10 @@ namespace osafw.Tests
         [TestMethod()]
         public void parse_string_upperTest()
         {
-            string r = "";
             string tpl = "<~AAA upper>";
-            Hashtable ps = new Hashtable();
+            Hashtable ps = new();
             ps["AAA"] = "tag";
-            r = new ParsePage(null).parse_string(tpl, ps);
+            string r  = new ParsePage(null).parse_string(tpl, ps);
             Assert.AreEqual("TAG", r);
             Assert.AreNotEqual(ps["AAA"], r);
         }
@@ -570,11 +565,10 @@ namespace osafw.Tests
         [TestMethod()]
         public void parse_string_capitalizeTest()
         {
-            string r = "";
             string tpl = "<~AAA capitalize>";
-            Hashtable ps = new Hashtable();
+            Hashtable ps = new();
             ps["AAA"] = "test test1 test2";
-            r = new ParsePage(null).parse_string(tpl, ps);
+            string r = new ParsePage(null).parse_string(tpl, ps);
             Assert.AreEqual("Test test1 test2", r);
 
             tpl = "<~AAA capitalize=\"all\">";
@@ -587,11 +581,10 @@ namespace osafw.Tests
         [TestMethod()]
         public void parse_string_defaultTest()
         {
-            string r = "";
             string tpl = "<~AAA default=\"default value\">";
-            Hashtable ps = new Hashtable();
+            Hashtable ps = new();
             ps["AAA"] = "tag";
-            r = new ParsePage(null).parse_string(tpl, ps);
+            string r = new ParsePage(null).parse_string(tpl, ps);
             Assert.AreEqual("tag", r);
 
             ps["AAA"] = "";
@@ -603,11 +596,10 @@ namespace osafw.Tests
         [TestMethod()]
         public void parse_string_urlencodeTest()
         {
-            string r = "";
             string tpl = "<~AAA urlencode>";
-            Hashtable ps = new Hashtable();
+            Hashtable ps = new();
             ps["AAA"] = "item[tag]=1&item[tag2]=2";
-            r = new ParsePage(null).parse_string(tpl, ps);
+            string r = new ParsePage(null).parse_string(tpl, ps);
             Assert.AreEqual("item%5btag%5d%3d1%26amp%3bitem%5btag2%5d%3d2", r);
         }
 
@@ -615,16 +607,15 @@ namespace osafw.Tests
         [TestMethod()]
         public void parse_string_jsonTest()
         {
-            string r = "";
             string tpl = "<~AAA json>";
-            Hashtable ps = new Hashtable();
-            Hashtable h1 = new Hashtable();
+            Hashtable ps = new();
+            Hashtable h1 = new();
             h1["AAA"] = 1;
             h1["BBB"] = 2;
             h1["CCC"] = 3;
             h1["DDD"] = 4;
             ps["AAA"] = h1;
-            r = new ParsePage(null).parse_string(tpl, ps);
+            string r = new ParsePage(null).parse_string(tpl, ps);
             Assert.IsTrue(r.IndexOf("{") == 0);
             Assert.IsTrue(r.IndexOf("&quot;AAA&quot;:1") >= 0);
             Assert.IsTrue(r.IndexOf("&quot;BBB&quot;:2") >= 0);

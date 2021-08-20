@@ -66,9 +66,9 @@ namespace osafw
         private System.IO.FileStream floggerFS;
         private System.IO.StreamWriter floggerSW;
 
-        private readonly Hashtable models = new Hashtable();
+        private readonly Hashtable models = new ();
         public static FW Current; // store FW current "singleton", set in run WARNING - avoid to use as if 2 parallel requests come, a bit later one will overwrite this
-        public FwCache cache = new FwCache(); // request level cache
+        public FwCache cache = new(); // request level cache
 
         public Hashtable FORM;
         public Hashtable G; // for storing global vars - used in template engine, also stores "_flash"
@@ -81,7 +81,7 @@ namespace osafw
         public HttpResponse response;
 
         public string request_url; // current request url (relative to application url)
-        public FwRoute route = new FwRoute();
+        public FwRoute route = new ();
         public TimeSpan request_time; // after dispatch() - total request processing time
 
         public string cache_control = "no-cache"; // cache control header to add to pages, controllers can change per request
@@ -95,7 +95,7 @@ namespace osafw
         // begin processing one request
         public static void run(HttpContext context, IConfiguration configuration)
         {
-            FW fw = new FW(context, configuration);
+            FW fw = new (context, configuration);
             FW.Current = fw;
 
             FwHooks.initRequest(fw);
@@ -749,10 +749,10 @@ namespace osafw
             if (level > (LogLevel)this.config("log_level"))
                 return;
 
-            StringBuilder str = new StringBuilder(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            StringBuilder str = new (DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"));
             str.Append(" ").Append(level.ToString()).Append(" ");
             str.Append(System.Diagnostics.Process.GetCurrentProcess().Id).Append(" ");
-            System.Diagnostics.StackTrace st = new System.Diagnostics.StackTrace(true);
+            System.Diagnostics.StackTrace st = new (true);
 
             try
             {
@@ -810,7 +810,7 @@ namespace osafw
 
         public static string dumper(object dmp_obj, int level = 0) // TODO better type detection(suitable for all collection types)
         {
-            StringBuilder str = new StringBuilder();
+            StringBuilder str = new ();
             if (dmp_obj == null)
                 return "[Nothing]";
             if (level > 10)
@@ -918,7 +918,7 @@ namespace osafw
         {
             filename = Regex.Replace(filename, "/", @"\");
 
-            using (StreamWriter sw = new StreamWriter(filename, isAppend))
+            using (StreamWriter sw = new (filename, isAppend))
             {
                 sw.Write(fileData);
             }
@@ -1013,14 +1013,14 @@ namespace osafw
         public void _parser(string bdir, string tpl_name, Hashtable hf)
         {
             logger(LogLevel.DEBUG, "parsing page bdir=", bdir, ", tpl=", tpl_name);
-            ParsePage parser_obj = new ParsePage(this);
+            ParsePage parser_obj = new(this);
             string page = parser_obj.parse_page(bdir, tpl_name, hf);
             responseWrite(page);
         }
 
         public void parserJson(object ps)
         {
-            ParsePage parser_obj = new ParsePage(this);
+            ParsePage parser_obj = new (this);
             string page = parser_obj.parse_json(ps);
             response.Headers.Add("Content-type", "application/json; charset=utf-8");
             responseWrite(page);
@@ -1203,12 +1203,12 @@ namespace osafw
                     if (filenames != null)
                     {
                         // sort by human name
-                        ArrayList fkeys = new ArrayList(filenames.Keys);
+                        ArrayList fkeys = new(filenames.Keys);
                         fkeys.Sort();
                         foreach (string human_filename in fkeys)
                         {
                             string filename = (string)filenames[human_filename];
-                            System.Net.Mail.Attachment att = new System.Net.Mail.Attachment(filename, System.Net.Mime.MediaTypeNames.Application.Octet)
+                            System.Net.Mail.Attachment att = new(filename, System.Net.Mime.MediaTypeNames.Application.Octet)
                             {
                                 Name = human_filename,
                                 NameEncoding = System.Text.Encoding.UTF8
@@ -1219,7 +1219,7 @@ namespace osafw
                         }
                     }
 
-                    using (SmtpClient client = new SmtpClient())
+                    using (SmtpClient client = new())
                     {
                         client.Send(message);
                     }
@@ -1245,7 +1245,7 @@ namespace osafw
         public bool sendEmailTpl(string mail_to, string tpl, Hashtable hf, Hashtable filenames = null/* TODO Change to default(_) if this is not a reference type */, ArrayList aCC = null/* TODO Change to default(_) if this is not a reference type */, string reply_to = "")
         {
             ParsePage parser_obj = new(this);
-            Regex r = new Regex(@"[\n\r]+");
+            Regex r = new(@"[\n\r]+");
             string subj_body = parser_obj.parse_page("/emails", tpl, hf);
             if (subj_body.Length == 0)
                 throw new ApplicationException("No email template defined [" + tpl + "]");
@@ -1261,12 +1261,12 @@ namespace osafw
 
         public string loadUrl(string url, Hashtable @params = null)
         {
-            System.Net.WebClient client = new System.Net.WebClient();
+            System.Net.WebClient client = new ();
             string content;
             if (@params != null)
             {
                 // POST
-                NameValueCollection nv = new NameValueCollection();
+                NameValueCollection nv = new();
                 foreach (string key in @params.Keys)
                     nv.Add(key, (string)@params[key]);
                 content = (new System.Text.UTF8Encoding()).GetString(client.UploadValues(url, "POST", nv));
@@ -1280,7 +1280,7 @@ namespace osafw
 
         public void errMsg(string msg, Exception Ex = null)
         {
-            Hashtable ps = new Hashtable();
+            Hashtable ps = new();
             var tpl_dir = "/error";
 
             /* TODO ERROR: Skipped IfDirectiveTrivia *//* TODO ERROR: Skipped DisabledTextTrivia *//* TODO ERROR: Skipped EndIfDirectiveTrivia */
