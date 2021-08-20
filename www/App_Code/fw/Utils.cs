@@ -234,6 +234,14 @@ namespace osafw
 
             return 0;
         }
+        public static long f2long(object AField)
+        {
+            if (AField == null) return 0;
+            if (long.TryParse(AField.ToString(), out long result))
+                return result;
+
+            return 0;
+        }
 
         // convert to double, optionally throw error
         public static double f2float(object AField, bool is_error = false)

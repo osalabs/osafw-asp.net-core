@@ -2,6 +2,7 @@
 /www/obj
 /www/bin
 /www/App_Data/logs
+/www/upload
 /TestsProject/obj
 /TestsProject/bin
 

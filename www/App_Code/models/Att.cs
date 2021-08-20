@@ -206,7 +206,7 @@ namespace osafw
         // if you already have item, must contain: item("id"), item("ext")
         public string getUrlDirect(Hashtable item, string size = "")
         {
-            return getUploadUrl((long)item["id"], (string)item["ext"], size);
+            return getUploadUrl(Utils.f2long(item["id"]), (string)item["ext"], size);
         }
 
         // IN: extension - doc, jpg, ... (dot is optional)
