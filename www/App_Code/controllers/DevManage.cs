@@ -230,7 +230,7 @@ namespace osafw
             };
             createModel(entity);
 
-            fw.flash("success", model_name + ".vb model created");
+            fw.flash("success", model_name + ".cs model created");
             fw.redirect(base_url);
         }
 
@@ -1019,11 +1019,11 @@ namespace osafw
                 throw new ApplicationException("No table name or no model name");
             // If _models().Contains(model_name) Then Throw New ApplicationException("Such model already exists")
 
-            // copy DemoDicts.vb to model_name.vb
+            // copy DemoDicts.cs to model_name.cs
             var path = fw.config("site_root") + @"\App_Code\models";
-            var mdemo = FW.getFileContent(path + @"\DemoDicts.vb");
+            var mdemo = FW.getFileContent(path + @"\DemoDicts.cs");
             if (mdemo == "")
-                throw new ApplicationException("Can't open DemoDicts.vb");
+                throw new ApplicationException("Can't open DemoDicts.cs");
 
             // replace: DemoDicts => ModelName, demo_dicts => table_name
             mdemo = mdemo.Replace("DemoDicts", (string)model_name);
@@ -1097,7 +1097,7 @@ namespace osafw
 
             mdemo = mdemo.Replace("'###CODEGEN", codegen);
 
-            FW.setFileContent(path + @"\" + model_name + ".vb", ref mdemo);
+            FW.setFileContent(path + @"\" + model_name + ".cs", ref mdemo);
         }
 
         private void createLookup(Hashtable entity)
@@ -1172,11 +1172,11 @@ namespace osafw
                 return;
             }
 
-            // copy DemoDicts.vb to model_name.vb
+            // copy DemoDicts.cs to model_name.cs
             var path = fw.config("site_root") + @"\App_Code\controllers";
-            var mdemo = FW.getFileContent(path + @"\AdminDemosDynamic.vb");
+            var mdemo = FW.getFileContent(path + @"\AdminDemosDynamic.cs");
             if (mdemo == "")
-                throw new ApplicationException("Can't open AdminDemosDynamic.vb");
+                throw new ApplicationException("Can't open AdminDemosDynamic.cs");
 
             // replace: DemoDicts => ModelName, demo_dicts => table_name
             mdemo = mdemo.Replace("AdminDemosDynamic", controller_name);
@@ -1184,7 +1184,7 @@ namespace osafw
             mdemo = mdemo.Replace("DemoDicts", model_name);
             mdemo = mdemo.Replace("Demos", model_name);
 
-            FW.setFileContent(path + @"\" + controller_name + ".vb", ref mdemo);
+            FW.setFileContent(path + @"\" + controller_name + ".cs", ref mdemo);
 
             // copy templates from /admin/demosdynamic to /controller/url
             var tpl_from = fw.config("template") + "/admin/demosdynamic";
