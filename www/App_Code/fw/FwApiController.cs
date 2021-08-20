@@ -20,7 +20,7 @@ namespace osafw
         {
             var result = false;
 
-            if (fw.SessionBool("is_logged"))
+            if (Users.isLogged)
                 result = true;
             if (!result)
                 throw new ApplicationException("API auth error");

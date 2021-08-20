@@ -10,7 +10,7 @@
         <li class="nav-item <~/common/active ifeq="GLOBAL[controller.action]" value="Home.Index">"><a class="nav-link" href="<~ROOT_URL>/">Home</a></li>
         <li class="nav-item <~/common/active ifeq="GLOBAL[controller.action.id]" value="Home.Show.About">"><a class="nav-link" href="<~/home/url>/About">About</a></li>
         <li class="nav-item <~/common/active ifeq="GLOBAL[controller]" value="Contact">"><a class="nav-link" href="<~/contact/url>">Contact</a></li>
-        <~logged_login unless="SESSION[is_logged]" inline>
+        <~logged_login unless="SESSION[user_id]" inline>
           <li class="nav-item <~/common/active ifeq="GLOBAL[controller]" value="Login">"><a class="nav-link" href="<~/login/url>">Login</a></li>
         </~logged_login>
 
@@ -19,7 +19,7 @@
         <input class="form-control" type="text" placeholder="Search" aria-label="Search" name="s">
       </form>
 
-      <~logged_name if="SESSION[is_logged]" inline>
+      <~logged_name if="SESSION[user_id]" inline>
       <ul class="navbar-nav">
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle" href="#" id="dd-login" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><~/layout/user_avatar if="SESSION[user_avatar_link]"><~SESSION[user_name]></a>

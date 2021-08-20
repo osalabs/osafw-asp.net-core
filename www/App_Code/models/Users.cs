@@ -36,7 +36,7 @@ namespace osafw
         /// </summary>
         public static bool isLogged
         {
-            get { return FW.Current.SessionBool("is_logged"); }
+            get { return Users.id > 0; }
         }
 
         public Users() : base()
@@ -226,7 +226,6 @@ namespace osafw
         public bool doLogin(int id)
         {
             fw.context.Session.Clear();
-            fw.SessionBool("is_logged", true);
             fw.Session("XSS", Utils.getRandStr(16));
 
             reloadSession(id);

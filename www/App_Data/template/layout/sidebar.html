@@ -3,7 +3,7 @@
  <h3><a href="<~ROOT_URL>/" class="text-dark"><~/site_name></a><~./beta if="GLOBAL[is_test]"></h3>
 </div>
 <ul class="nav flex-column">
-  <~logged_menu if="SESSION[is_logged]" inline>
+  <~logged_menu if="SESSION[user_id]" inline>
      <li class="nav-item <~/common/active ifeq="GLOBAL[controller]" value="Main">" ><a class="nav-link" href="<~/main/url>"><~/common/icons/grid-fill> <~/main/index/title></a></li>
 
      <~GLOBAL[menu_items] repeat inline>

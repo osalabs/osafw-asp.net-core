@@ -25,7 +25,7 @@ namespace osafw
         public Hashtable IndexAction()
         {
             Hashtable ps = new();
-            if (fw.SessionBool("is_logged"))
+            if (Users.isLogged)
                 fw.redirect((string)fw.config("LOGGED_DEFAULT_URL"));
 
             Hashtable item = reqh("item");
