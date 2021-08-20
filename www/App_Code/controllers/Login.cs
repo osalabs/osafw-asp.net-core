@@ -108,7 +108,7 @@ namespace osafw
 
         public void DeleteAction()
         {
-            fw.logEvent("logoff", fw.model<Users>().meId());
+            fw.logEvent("logoff", Users.id);
 
             fw.context.Session.Clear();
             fw.redirect((string)fw.config("UNLOGGED_DEFAULT_URL"));

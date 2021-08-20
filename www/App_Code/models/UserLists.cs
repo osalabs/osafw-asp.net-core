@@ -24,7 +24,7 @@ namespace osafw
         // list for select by entity and for only logged user
         public ArrayList listSelectByEntity(string entity)
         {
-            return db.array("select id, iname from " + table_name + " where status=0 and entity=" + db.q(entity) + " and add_users_id=" + fw.model<Users>().meId() + " order by iname");
+            return db.array("select id, iname from " + table_name + " where status=0 and entity=" + db.q(entity) + " and add_users_id=" + db.qi(Users.id) + " order by iname");
         }
 
         public ArrayList listItemsById(int id)
@@ -34,7 +34,7 @@ namespace osafw
 
         public ArrayList listForItem(string entity, int item_id)
         {
-            return db.array("select t.id, t.iname, " + item_id + " as item_id, ti.id as is_checked from " + table_name + " t" + " LEFT OUTER JOIN " + table_items + " ti ON (ti.user_lists_id=t.id and ti.item_id=" + item_id + " )" + " where t.status=0 and t.entity=" + db.q(entity) + " and t.add_users_id=" + fw.model<Users>().meId() + " order by t.iname");
+            return db.array("select t.id, t.iname, " + item_id + " as item_id, ti.id as is_checked from " + table_name + " t" + " LEFT OUTER JOIN " + table_items + " ti ON (ti.user_lists_id=t.id and ti.item_id=" + item_id + " )" + " where t.status=0 and t.entity=" + db.q(entity) + " and t.add_users_id=" + db.qi(Users.id) + " order by t.iname");
         }
 
         public override void delete(int id, bool is_perm = false)
@@ -69,7 +69,7 @@ namespace osafw
             Hashtable item = new();
             item["user_lists_id"] = user_lists_id;
             item["item_id"] = item_id;
-            item["add_users_id"] = fw.model<Users>().meId();
+            item["add_users_id"] = Users.id;
 
             int id = db.insert(table_items, item);
             fw.logEvent(table_items + "_add", id);

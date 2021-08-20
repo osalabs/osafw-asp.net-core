@@ -34,7 +34,7 @@ namespace osafw
         public void SaveAction()
         {
             var item = reqh("item");
-            var id = model.meId();
+            var id = Users.id;
 
             try
             {

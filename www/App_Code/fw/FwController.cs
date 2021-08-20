@@ -475,7 +475,7 @@ namespace osafw
             }
 
             if (!string.IsNullOrEmpty((string)list_filter["userlist"]))
-                this.list_where += " and id IN (select ti.item_id from " + fw.model<UserLists>().table_items + " ti where ti.user_lists_id=" + db.qi(list_filter["userlist"]) + " and ti.add_users_id=" + fw.model<Users>().meId() + " ) ";
+                this.list_where += " and id IN (select ti.item_id from " + fw.model<UserLists>().table_items + " ti where ti.user_lists_id=" + db.qi(list_filter["userlist"]) + " and ti.add_users_id=" + db.qi(Users.id) + " ) ";
 
             if (!string.IsNullOrEmpty(related_id) && !string.IsNullOrEmpty(related_field_name))
                 list_where += " and " + db.q_ident(related_field_name) + "=" + db.q(related_id);

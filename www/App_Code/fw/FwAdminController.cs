@@ -209,7 +209,7 @@ namespace osafw
             if (user_lists_id > 0)
             {
                 var user_lists = fw.model<UserLists>().one(user_lists_id);
-                if (user_lists.Count == 0 || Utils.f2int(user_lists["add_users_id"]) != fw.model<Users>().meId())
+                if (user_lists.Count == 0 || Utils.f2int(user_lists["add_users_id"]) != Users.id)
                     throw new ApplicationException("Wrong Request");
             }
 

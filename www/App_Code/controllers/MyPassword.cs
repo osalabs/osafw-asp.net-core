@@ -32,7 +32,7 @@ namespace osafw
 
             Hashtable ps = new();
             Hashtable item = reqh("item");
-            int id = fw.model<Users>().meId();
+            int id = Users.id;
 
             if (isGet())
             {
@@ -59,7 +59,7 @@ namespace osafw
 
         public void SaveAction()
         {
-            int id = fw.model<Users>().meId();
+            int id = Users.id;
             try
             {
                 Validate(id, reqh("item"));

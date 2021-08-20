@@ -34,7 +34,7 @@ namespace osafw
         {
             Hashtable ps = new();
             Hashtable item = reqh("item");
-            var id = model.meId();
+            var id = Users.id;
 
             if (isGet())
                 item = model.one(id);
@@ -56,7 +56,7 @@ namespace osafw
         public void SaveAction()
         {
             var item = reqh("item");
-            var id = model.meId();
+            var id = Users.id;
 
             try
             {

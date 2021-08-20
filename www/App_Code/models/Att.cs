@@ -134,7 +134,7 @@ namespace osafw
             if (form_att == null)
                 return;
 
-            int me_id = fw.model<Users>().meId();
+            int me_id = Users.id;
 
             // 1. set status=1 (under update)
             Hashtable fields = new();

@@ -43,7 +43,7 @@ namespace osafw
 
         public override void setListSearch()
         {
-            list_where = " status<>127 and add_users_id = " + db.qi(fw.model<Users>().meId()); // only logged user lists
+            list_where = " status<>127 and add_users_id = " + db.qi(Users.id); // only logged user lists
 
             base.setListSearch();
 

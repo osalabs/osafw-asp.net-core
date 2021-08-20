@@ -57,7 +57,7 @@ namespace osafw
             };
             if (changed_fields != null)
                 fields["fields"] = Utils.jsonEncode(changed_fields);
-            fields["add_users_id"] = fw.model<Users>().meId();
+            fields["add_users_id"] = Users.id;
             db.insert(log_table_name, fields);
         }
 

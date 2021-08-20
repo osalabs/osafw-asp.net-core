@@ -46,11 +46,6 @@ namespace osafw
             csv_export_headers = "id,First Name,Last Name,Email,Registered";
         }
 
-        public int meId()
-        {
-            return Utils.f2int(fw.SessionInt("user_id")); //TODO MIGRATE check if f2int still required for cases session empty
-        }
-
         public Hashtable oneByEmail(string email)
         {
             Hashtable where = new();
@@ -244,7 +239,7 @@ namespace osafw
         public bool reloadSession(int id = 0)
         {
             if (id == 0)
-                id = meId();
+                id = Users.id;
             Hashtable user = one(id);
 
             fw.SessionInt("user_id", id);
