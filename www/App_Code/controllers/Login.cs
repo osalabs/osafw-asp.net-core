@@ -74,7 +74,7 @@ namespace osafw
                     System.Threading.Thread.Sleep(delay);
                 }
 
-                if (login.Length == 0 | pwd.Length == 0)
+                if (login.Length == 0 || pwd.Length == 0)
                 {
                     fw.FERR["REGISTER"] = true;
                     throw new ApplicationException("");

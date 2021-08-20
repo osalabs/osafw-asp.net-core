@@ -799,7 +799,7 @@ namespace osafw
                     // force seek to end just in case other process added to file
                     floggerFS.Seek(0, SeekOrigin.End);
                     floggerSW.WriteLine(str.ToString());
-                    floggerSW.Close();
+                    //do not close writer here as there will be more output in request
                 }
                 catch (Exception ex)
                 {

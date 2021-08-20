@@ -36,7 +36,7 @@ namespace osafw
             return new Hashtable();
         }
 
-        public void TestAction()
+        public void BenchmarkAction()
         {
             DateTime start_time = DateTime.Now;
             for (int i = 0; i < 1000; i++)
@@ -65,6 +65,24 @@ namespace osafw
             //rw(FW.dumper(rows));
 
             rw("done");
+        }
+
+        public void BooleanAction()
+        {
+            string[] values = { null, String.Empty, "True", "False",
+                          "true", "false", "    true    ", "0",
+                          "1", "-1", "string" };
+            foreach (var value in values)
+            {
+                bool flag;
+                //if (Boolean.TryParse(value, out flag
+                flag = Utils.f2bool(value);
+                rw(value + " --> " + flag);
+                //if (flag)
+                //    rw(value + " --> "+ flag);
+                //else
+                //    rw("Unable to parse '"+value??"<null>"+"'.");
+            }
         }
 
     }

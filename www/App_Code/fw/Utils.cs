@@ -183,7 +183,7 @@ namespace osafw
         public static bool f2bool(object AField)
         {
             if (AField == null) return false;
-            if (!bool.TryParse(AField.ToString(), out bool result))
+            if (bool.TryParse(AField.ToString(), out bool result))
                 return result;
 
             return false;

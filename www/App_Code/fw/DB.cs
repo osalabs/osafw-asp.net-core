@@ -108,14 +108,14 @@ namespace osafw
 
         public string db_name = "";
         public string dbtype = "SQL";
-        private Hashtable conf = new ();  // config contains: connection_string, type
+        private Hashtable conf = new();  // config contains: connection_string, type
         private string connstr = "";
 
-        private Hashtable schema = new (); // schema for currently connected db
+        private Hashtable schema = new(); // schema for currently connected db
         private DbConnection conn; // actual db connection - SqlConnection or OleDbConnection
 
         private bool is_check_ole_types = false; // if true - checks for unsupported OLE types during readRow
-        private Hashtable UNSUPPORTED_OLE_TYPES = new ();
+        private Hashtable UNSUPPORTED_OLE_TYPES = new();
 
         /// <summary>
         ///  "synax sugar" helper to build Hashtable from list of arguments instead more complex New Hashtable from {...}
@@ -129,7 +129,7 @@ namespace osafw
             {
                 throw new ArgumentException("h() accepts even number of arguments");
             }
-            Hashtable result = new ();
+            Hashtable result = new();
             for (var i = 0; i <= args.Length - 1; i += 2)
             {
                 result[args[i]] = args[i + 1];
@@ -260,7 +260,7 @@ namespace osafw
 
             string connstr = "Provider=Microsoft.Jet.OLEDB.4.0;Data Source=" + filepath;
 
-            OleDbConnection conn = new ();
+            OleDbConnection conn = new();
             conn.ConnectionString = connstr;
             // Exception must be checked in method there check_create_mdb is called.
             conn.Open();
@@ -360,7 +360,7 @@ namespace osafw
             DbDataReader dbread = query(sql);
             dbread.Read();
 
-            Hashtable h = new ();
+            Hashtable h = new();
             if (dbread.HasRows)
                 h = readRow(dbread);
 
@@ -376,7 +376,7 @@ namespace osafw
         public ArrayList array(string sql)
         {
             DbDataReader dbread = query(sql);
-            ArrayList a = new ();
+            ArrayList a = new();
 
             while (dbread.Read())
                 a.Add(readRow(dbread));
@@ -411,7 +411,7 @@ namespace osafw
             string select_fields = "*";
             if (aselect_fields != null)
             {
-                ArrayList quoted = new ();
+                ArrayList quoted = new();
                 if (aselect_fields is ArrayList)
                 {
                     // arraylist of hashtables with "field","alias" keys - usable for the case when we need same field to be selected more than once with different aliases
@@ -444,7 +444,7 @@ namespace osafw
         public ArrayList col(string sql)
         {
             DbDataReader dbread = query(sql);
-            ArrayList a = new ();
+            ArrayList a = new();
             while (dbread.Read())
             {
                 a.Add(dbread[0].ToString());
@@ -699,7 +699,7 @@ namespace osafw
                 {
                     if (dbop.value != null && (dbop.value) is IList)
                     {
-                        ArrayList result = new ();
+                        ArrayList result = new();
                         foreach (object param in (ArrayList)dbop.value)
                         {
                             result.Add(qone_by_type(field_type, param));
@@ -1154,7 +1154,7 @@ namespace osafw
         // return array of table names in current db
         public ArrayList tables()
         {
-            ArrayList result = new ();
+            ArrayList result = new();
 
             DbConnection conn = this.connect();
             DataTable dataTable = conn.GetSchema("Tables");
@@ -1212,7 +1212,7 @@ namespace osafw
             }
 
             // cache miss
-            ArrayList result = new ();
+            ArrayList result = new();
             if (dbtype == "SQL")
             {
                 // fw.logger("cache MISS " & current_db & "." & table)
@@ -1355,15 +1355,15 @@ namespace osafw
 
             if (schema_cache == null)
             {
-                schema_cache = new ();
+                schema_cache = new();
             }
             if (!schema_cache.ContainsKey(connstr))
             {
-                schema_cache[connstr] = new ();
+                schema_cache[connstr] = new Hashtable();
             }
             if (!((Hashtable)schema_cache[connstr]).ContainsKey(table))
             {
-                Hashtable h = new ();
+                Hashtable h = new();
 
                 ArrayList fields = load_table_schema_full(table);
                 foreach (Hashtable row in fields)
