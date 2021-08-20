@@ -1130,7 +1130,7 @@ namespace osafw
         // newline-delimited str to comma-delimited str
         public static string nlstr2commastr(string str)
         {
-            return Regex.Replace(str??"", @"[\n\r]+", ",");
+            return Regex.Replace(str ?? "", @"[\n\r]+", ",");
         }
 
         /* <summary>
@@ -1303,6 +1303,49 @@ namespace osafw
             result = Utils.capitalize(result);
             result = Regex.Replace(result, " +", ""); // remove spaces
             return str;
+        }
+
+        public static string Right(string str, int len)
+        {
+            if (string.IsNullOrEmpty(str)) return "";
+            if (str.Length <= len)
+                return str;
+            else
+                return str.Substring(str.Length - len);
+        }
+
+        //from https://docs.microsoft.com/en-us/dotnet/standard/io/how-to-copy-directories
+        public static void CopyDirectory(string sourceDirName, string destDirName, bool isCopyRecursive)
+        {
+            // Get the subdirectories for the specified directory.
+            DirectoryInfo dir = new(sourceDirName);
+
+            if (!dir.Exists)
+            {
+                throw new DirectoryNotFoundException(
+                    "Source directory does not exist or could not be found: "
+                    + sourceDirName);
+            }
+
+            // If the destination directory doesn't exist, create it.       
+            Directory.CreateDirectory(destDirName);
+
+            // Get the files in the directory and copy them to the new location.
+            foreach (FileInfo file in dir.GetFiles())
+            {
+                string tempPath = Path.Combine(destDirName, file.Name);
+                file.CopyTo(tempPath, false);
+            }
+
+            // If copying subdirectories, copy them and their contents to new location.
+            if (isCopyRecursive)
+            {
+                foreach (DirectoryInfo subdir in dir.GetDirectories())
+                {
+                    string tempPath = Path.Combine(destDirName, subdir.Name);
+                    CopyDirectory(subdir.FullName, tempPath, isCopyRecursive);
+                }
+            }
         }
     }
 }
