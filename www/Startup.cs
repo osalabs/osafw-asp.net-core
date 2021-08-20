@@ -20,7 +20,14 @@ namespace osafw
         // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddDistributedMemoryCache();
+            services.AddDistributedSqlServerCache(options =>
+            {
+                //TODO MIGRATE - remove sessions_connection_string and use appSettings->db->main->connection_string AND override->XXX->db->main->connection_string
+                options.ConnectionString = Startup.Configuration.GetValue<string>("sessions_connection_string");
+                options.SchemaName = "dbo";
+                options.TableName = "fwsessions";
+            });
+
             services.Configure<IISServerOptions>(options =>
             {
                 options.AllowSynchronousIO = false; 
