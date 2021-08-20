@@ -86,6 +86,7 @@ namespace osafw
             }
 
             is_false("is_test", Utils.f2bool(fw.config("is_test")), "Turned ON");
+            is_false("IS_DEV", Utils.f2bool(fw.config("IS_DEV")), "Turned ON");
 
             // template directory should exists - TODO test parser to actually see templates work?
             is_true("template", Directory.Exists((string)fw.config("template")), (string)fw.config("template"));
@@ -181,7 +182,7 @@ namespace osafw
 
                 fw.logger("Testing Controller:" + controller_name);
 
-                Type calledType = Type.GetType(t.Name, false, true);
+                Type calledType = Type.GetType(FW.FW_NAMESPACE_PREFIX + t.Name, false, true);
                 if (calledType == null)
                 {
                     plus_err();
@@ -457,7 +458,6 @@ namespace osafw
             else
                 fw.rw(label);
 
-            fw.rw("<br>" + Constants.vbCrLf);
             //TODO flush response
         }
 
