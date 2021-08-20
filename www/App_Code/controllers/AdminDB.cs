@@ -1,0 +1,207 @@
+﻿// Direct DB Access Controller
+//
+// Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
+// (c) 2009-2021 Oleg Savchuk www.osalabs.com
+
+using System;
+using Microsoft.VisualBasic;
+using System.Data.Common;
+using System.Data;
+using System.Text.RegularExpressions;
+using System.Collections;
+
+namespace osafw
+{
+    public class AdminDBController : FwController
+    {
+        public static new int access_level = Users.ACL_SITEADMIN;
+
+        private const string dbpwd = "db321";
+
+        public Hashtable IndexAction()
+        {
+            Hashtable ps = new Hashtable();
+            var selected_db = reqs("db");
+            if (selected_db == "")
+                selected_db = "main";
+
+            string sql = reqs("sql");
+            ArrayList tablehead = null/* TODO Change to default(_) if this is not a reference type */;
+            ArrayList tablerows = null/* TODO Change to default(_) if this is not a reference type */;
+            int sql_ctr = 0;
+            long sql_time = DateTime.Now.Ticks;
+
+            try
+            {
+                if (selected_db.Length > 0)
+                {
+                    logger("CONNECT TO", selected_db);
+                    db = new DB(fw, (Hashtable)((Hashtable)fw.config("db"))[selected_db], selected_db);
+                }
+
+                if (fw.SessionBool("admindb_pwd_checked") || reqs("pwd") == dbpwd)
+                    fw.SessionBool("admindb_pwd_checked", true);
+                else if (sql.Length > 0)
+                    fw.G["err_msg"] = "Wrong password";
+                if (sql.Length > 0 && fw.SessionBool("admindb_pwd_checked"))
+                {
+                    if (sql == "show tables")
+                        // special case - show tables
+                        show_tables(ref tablehead, ref tablerows);
+                    else
+                    {
+                        // launch the query
+                        string sql1 = strip_comments(sql);
+                        String[] asql = split_multi_sql(sql);
+                        foreach (string sqlone1 in asql)
+                        {
+                            var sqlone = sqlone1.Trim();
+                            if (sqlone.Length > 0)
+                            {
+                                DbDataReader sth = db.query(sqlone);
+                                tablehead = sth2head(sth);
+                                tablerows = sth2table(sth);
+                                sth.Close();
+                                sql_ctr += 1;
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                fw.G["err_msg"] = "Error occured: " + ex.Message;
+            }
+
+            ArrayList dbsources = new ArrayList();
+            foreach (string dbname in ((Hashtable)fw.config("db")).Keys)
+                dbsources.Add(new Hashtable()
+                {
+                    {"id",dbname},
+                    {"iname",dbname},
+                    {"is_checked",dbname == selected_db}
+                });
+
+            ps["dbsources"] = dbsources;
+            ps["selected_db"] = selected_db;
+            ps["sql"] = sql;
+            ps["sql_ctr"] = sql_ctr;
+            ps["sql_time"] = (DateTime.Now.Ticks - sql_time) / (double)10 / 1000 / 1000; // 100nano/micro/milliseconds/seconds
+            ps["head_fields"] = tablehead;
+            ps["rows"] = tablerows;
+            if (tablerows != null | tablehead != null)
+                ps["is_results"] = true;
+            return ps;
+        }
+
+        public void SaveAction()
+        {
+            fw.routeRedirect("Index");
+        }
+
+        private ArrayList sth2table(DbDataReader sth)
+        {
+            if (sth == null || !sth.HasRows)
+                return null/* TODO Change to default(_) if this is not a reference type */;
+            ArrayList result = new();
+
+            while (sth.Read())
+            {
+                Hashtable tblrow = new();
+                var fields = new ArrayList();
+                tblrow["fields"] = fields;
+
+                for (int i = 0; i <= sth.FieldCount - 1; i++)
+                {
+                    Hashtable tblfld = new();
+                    tblfld["value"] = sth[i].ToString();
+
+                    fields.Add(tblfld);
+                }
+                result.Add(tblrow);
+            }
+
+            return result;
+        }
+
+        private ArrayList sth2head(DbDataReader sth)
+        {
+            if (sth == null)
+                return null;
+            ArrayList result = new();
+
+            for (int i = 0; i <= sth.FieldCount - 1; i++)
+            {
+                Hashtable tblfld = new();
+                tblfld["field_name"] = sth.GetName(i);
+
+                result.Add(tblfld);
+            }
+
+            return result;
+        }
+
+        private void show_tables(ref ArrayList tablehead, ref ArrayList tablerows)
+        {
+            tablehead = new ArrayList();
+            Hashtable h = new();
+            h["field_name"] = "Table";
+            tablehead.Add(h);
+            h = new();
+            h["field_name"] = "Row Count";
+            tablehead.Add(h);
+
+            tablerows = new ArrayList();
+
+            DbConnection conn = db.connect();
+            DataTable dataTable = conn.GetSchema("Tables");
+            foreach (DataRow row in dataTable.Rows)
+            {
+                string tblname = row["TABLE_NAME"].ToString();
+                if (Strings.InStr(tblname, "MSys", CompareMethod.Binary) == 0)
+                {
+                    Hashtable tblrow = new();
+                    var fields = new ArrayList();
+                    tblrow["fields"] = fields;
+
+                    Hashtable tblfld = new();
+                    tblfld["db"] = db.db_name;
+                    tblfld["value"] = tblname;
+                    tblfld["is_select_link"] = true;
+                    fields.Add(tblfld);
+
+                    tblfld = new();
+                    tblfld["value"] = get_tbl_count(tblname);
+                    fields.Add(tblfld);
+
+                    tblrow["db"] = db.db_name;
+                    tablerows.Add(tblrow);
+                }
+            }
+        }
+
+        private int get_tbl_count(string tblname)
+        {
+            int result = -1;
+            try
+            {
+                result = (int)db.value("select count(*) from [" + tblname + "]");
+            }
+            catch (Exception ex)
+            {
+            }
+
+            return result;
+        }
+
+        private string strip_comments(string sql)
+        {
+            return Regex.Replace(sql, @"/\*.+?\*/", " ", RegexOptions.Singleline);
+        }
+
+        private string[] split_multi_sql(string sql)
+        {
+            return Regex.Split(sql, @";[\n\r]+");
+        }
+    }
+}
