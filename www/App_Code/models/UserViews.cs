@@ -17,7 +17,7 @@ namespace osafw
         // return screen record for logged user
         public override Hashtable oneByIcode(string screen)
         {
-            return db.row(table_name, new Hashtable() { { field_add_users_id, Users.id }, { field_icode, screen } });
+            return db.row(table_name, DB.h(field_add_users_id, Users.id, field_icode, screen));
         }
 
         // update screen fields for logged user
@@ -52,7 +52,10 @@ namespace osafw
         // list for select by entity and only for logged user OR active system views
         public ArrayList listSelectByIcode(string entity)
         {
-            return db.array("select id, iname from " + table_name + " where status=0 and icode=" + db.q(entity) + " and (is_system=1 OR add_users_id=" + db.qi(Users.id) + ") order by is_system desc, iname");
+            return db.arrayp("select id, iname from " + db.q_ident(table_name) +
+                " where status=0 and entity=@entity" +
+                "   and (is_system=1 OR add_users_id=@users_id)" +
+                " order by is_system desc, iname", DB.h("@entity", entity, "@users_id", Users.id));
         }
     }
 

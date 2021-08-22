@@ -467,7 +467,7 @@ namespace osafw
                         if (lookup_field == "")
                             lookup_field = "iname";
 
-                        var lookup_row = db.row((string)def["lookup_table"], new Hashtable() { { lookup_key, item[field] } });
+                        var lookup_row = db.row((string)def["lookup_table"], DB.h(lookup_key, item[field]));
                         def["lookup_row"] = lookup_row;
                         def["value"] = lookup_row[lookup_field];
                     }
@@ -564,7 +564,7 @@ namespace osafw
                         if (lookup_field == "")
                             lookup_field = "iname";
 
-                        var lookup_row = db.row((string)def["lookup_table"], new Hashtable() { { lookup_key, item[field] } });
+                        var lookup_row = db.row((string)def["lookup_table"], DB.h(lookup_key, item[field]));
                         def["lookup_row"] = lookup_row;
                         def["value"] = lookup_row[lookup_field];
                     }

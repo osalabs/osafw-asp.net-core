@@ -24,7 +24,10 @@ namespace osafw
 
         public virtual ArrayList listSelectOptionsParent()
         {
-            return db.array("select id, iname from " + this.table_name + " where parent_id=0 and status<>127 order by iname");
+            Hashtable where = new();
+            where["parent_id"] = 0;
+            where["status"] = db.opNOT(STATUS_DELETED);
+            return db.array(table_name, where, "iname", Utils.qw("id iname"));
         }
     }
 }

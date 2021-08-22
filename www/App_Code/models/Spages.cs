@@ -28,8 +28,13 @@ namespace osafw
 
         public bool isExistsByUrl(string url, int parent_id, int not_id)
         {
-            string val = (string)db.value("select 1 from " + table_name + " where parent_id = " + db.qi(parent_id) + "   and url = " + db.q(url) + "   and id <>" + db.qi(not_id));
-            if (val == "1")
+            Hashtable where = new();
+            where["parent_id"] = parent_id;
+            where["url"] = url;
+            where["id"] = db.opNOT(not_id);
+
+            int val = Utils.f2int(db.value(table_name, where, "id"));
+            if (val>0)
                 return true;
             else
                 return false;
@@ -90,7 +95,7 @@ namespace osafw
 
         public ArrayList listChildren(int parent_id)
         {
-            return db.array("select * from " + db.q_ident(table_name) + " where status<>127 and parent_id=@parent_id order by iname", DB.h("@parent_id", parent_id));
+            return db.arrayp("select * from " + db.q_ident(table_name) + " where status<>127 and parent_id=@parent_id order by iname", DB.h("@parent_id", parent_id));
         }
 
         /// <summary>

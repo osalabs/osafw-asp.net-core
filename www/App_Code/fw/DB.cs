@@ -125,11 +125,13 @@ namespace osafw
         ///  <returns></returns>
         public static Hashtable h(params object[] args)
         {
-            if (args.Length == 0 || args.Length % 2 != 0)
+            Hashtable result = new();
+            if (args.Length == 0) return result;
+            if (args.Length % 2 != 0)
             {
                 throw new ArgumentException("h() accepts even number of arguments");
             }
-            Hashtable result = new();
+            
             for (var i = 0; i <= args.Length - 1; i += 2)
             {
                 result[args[i]] = args[i + 1];
@@ -1337,8 +1339,23 @@ namespace osafw
                 // get information about all columns in the table
                 // default = ((0)) ('') (getdate())
                 // maxlen = -1 for nvarchar(MAX)
-                string sql = "SELECT c.column_name as 'name'," + " c.data_type as 'type'," + " CASE c.is_nullable WHEN 'YES' THEN 1 ELSE 0 END AS 'is_nullable'," + " c.column_default as 'default'," + " c.character_maximum_length as 'maxlen'," + " c.numeric_precision," + " c.numeric_scale," + " c.character_set_name as 'charset'," + " c.collation_name as 'collation'," + " c.ORDINAL_POSITION as 'pos'," + " COLUMNPROPERTY(object_id(c.table_name), c.column_name, 'IsIdentity') as is_identity" + " FROM INFORMATION_SCHEMA.TABLES t," + "   INFORMATION_SCHEMA.COLUMNS c" + " WHERE t.table_name = c.table_name" + "   AND t.table_name = " + q(table) + " order by c.ORDINAL_POSITION";
-                result = array(sql);
+                string sql = "SELECT c.column_name as 'name'," + 
+                    " c.data_type as 'type'," + 
+                    " CASE c.is_nullable WHEN 'YES' THEN 1 ELSE 0 END AS 'is_nullable'," + 
+                    " c.column_default as 'default'," + 
+                    " c.character_maximum_length as 'maxlen'," + 
+                    " c.numeric_precision," + 
+                    " c.numeric_scale," + 
+                    " c.character_set_name as 'charset'," + 
+                    " c.collation_name as 'collation'," + 
+                    " c.ORDINAL_POSITION as 'pos'," + 
+                    " COLUMNPROPERTY(object_id(c.table_name), c.column_name, 'IsIdentity') as is_identity" + 
+                    " FROM INFORMATION_SCHEMA.TABLES t," + 
+                    "   INFORMATION_SCHEMA.COLUMNS c" + 
+                    " WHERE t.table_name = c.table_name" +
+                    "   AND t.table_name = @table_name"+ 
+                    " order by c.ORDINAL_POSITION";
+                result = arrayp(sql, DB.h("@table_name", table));
                 foreach (Hashtable row in result)
                 {
                     row["fw_type"] = map_mssqltype2fwtype((string)row["type"]); // meta type
@@ -1406,11 +1423,31 @@ namespace osafw
             if (dbtype == "SQL")
             {
                 var where = "";
+                var where_params = new Hashtable();
                 if (table != "")
                 {
-                    where = " WHERE col1.TABLE_NAME=" + this.q(table);
+                    where = " WHERE col1.TABLE_NAME=@table_name";
+                    where_params["@table_name"] = table;
                 }
-                result = this.array("SELECT " + " col1.CONSTRAINT_NAME as [name]" + ", col1.TABLE_NAME As [table]" + ", col1.COLUMN_NAME as [column]" + ", col2.TABLE_NAME as [pk_table]" + ", col2.COLUMN_NAME as [pk_column]" + ", rc.UPDATE_RULE as [on_update]" + ", rc.DELETE_RULE as [on_delete]" + " FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS rc " + " INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE col1 " + "   ON (col1.CONSTRAINT_CATALOG = rc.CONSTRAINT_CATALOG  " + "       AND col1.CONSTRAINT_SCHEMA = rc.CONSTRAINT_SCHEMA " + "       AND col1.CONSTRAINT_NAME = rc.CONSTRAINT_NAME)" + " INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE col2 " + "   ON (col2.CONSTRAINT_CATALOG = rc.UNIQUE_CONSTRAINT_CATALOG  " + "       AND col2.CONSTRAINT_SCHEMA = rc.UNIQUE_CONSTRAINT_SCHEMA " + "       AND col2.CONSTRAINT_NAME = rc.UNIQUE_CONSTRAINT_NAME " + "       AND col2.ORDINAL_POSITION = col1.ORDINAL_POSITION)" + where);
+                result = this.arrayp("SELECT " + 
+                    " col1.CONSTRAINT_NAME as [name]" + 
+                    ", col1.TABLE_NAME As [table]" + 
+                    ", col1.COLUMN_NAME as [column]" + 
+                    ", col2.TABLE_NAME as [pk_table]" + 
+                    ", col2.COLUMN_NAME as [pk_column]" + 
+                    ", rc.UPDATE_RULE as [on_update]" + 
+                    ", rc.DELETE_RULE as [on_delete]" + 
+                    " FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS rc " + 
+                    " INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE col1 " + 
+                    "   ON (col1.CONSTRAINT_CATALOG = rc.CONSTRAINT_CATALOG  " + 
+                    "       AND col1.CONSTRAINT_SCHEMA = rc.CONSTRAINT_SCHEMA " + 
+                    "       AND col1.CONSTRAINT_NAME = rc.CONSTRAINT_NAME)" + 
+                    " INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE col2 " + 
+                    "   ON (col2.CONSTRAINT_CATALOG = rc.UNIQUE_CONSTRAINT_CATALOG  " + 
+                    "       AND col2.CONSTRAINT_SCHEMA = rc.UNIQUE_CONSTRAINT_SCHEMA " + 
+                    "       AND col2.CONSTRAINT_NAME = rc.UNIQUE_CONSTRAINT_NAME " + 
+                    "       AND col2.ORDINAL_POSITION = col1.ORDINAL_POSITION)" + 
+                    where, where_params);
             }
             else if(RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
@@ -1418,33 +1455,17 @@ namespace osafw
                 foreach (DataRow row in dt.Rows)
                 {
                     if (table != "" && (string)row["FK_TABLE_NAME"] != table)
-                    {
                         continue;
-                    }
 
                     result.Add(new Hashtable()
                     {
-                        {
-                            "table", row["FK_TABLE_NAME"]
-                        },
-                        {
-                            "column", row["FK_COLUMN_NAME"]
-                        },
-                        {
-                            "name", row["FK_NAME"]
-                        },
-                        {
-                            "pk_table", row["PK_TABLE_NAME"]
-                        },
-                        {
-                            "pk_column", row["PK_COLUMN_NAME"]
-                        },
-                        {
-                            "on_update", row["UPDATE_RULE"]
-                        },
-                        {
-                            "on_delete", row["DELETE_RULE"]
-                        }
+                        {"table", row["FK_TABLE_NAME"]},
+                        {"column", row["FK_COLUMN_NAME"]},
+                        {"name", row["FK_NAME"]},
+                        {"pk_table", row["PK_TABLE_NAME"]},
+                        {"pk_column", row["PK_COLUMN_NAME"]},
+                        {"on_update", row["UPDATE_RULE"]},
+                        {"on_delete", row["DELETE_RULE"]}
                     });
                 }
             }

@@ -184,8 +184,8 @@ namespace osafw
         {
             int result = -1;
             try
-            {
-                result = (int)db.value("select count(*) from [" + tblname + "]");
+            {                
+                result = (int)db.value(tblname, new Hashtable(), "count(*)");
             }
             catch (Exception ex)
             {

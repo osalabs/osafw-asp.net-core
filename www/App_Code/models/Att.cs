@@ -113,7 +113,7 @@ namespace osafw
         /// <returns>number of uploads deleted</returns>
         public int cleanupTmpUploads()
         {
-            var rows = db.array("select * from " + db.q_ident(table_name) + " where add_time<DATEADD(hour, -48, getdate()) and (status=1 or table_name like 'tmp[_]%')");
+            var rows = db.arrayp("select * from " + db.q_ident(table_name) + " where add_time<DATEADD(hour, -48, getdate()) and (status=1 or table_name like 'tmp[_]%')", DB.h());
             foreach (Hashtable row in rows)
                 this.delete((int)row["id"], true);
             return rows.Count;
@@ -335,17 +335,25 @@ namespace osafw
 
         // return all att files linked via att_table_link
         // is_image = -1 (all - files and images), 0 (files only), 1 (images only)
-        public ArrayList getAllLinked(string table_name, int id, int is_image = -1)
+        public ArrayList getAllLinked(string link_table_name, int id, int is_image = -1)
         {
             string where = "";
-            if (is_image > -1)
-                where += " and a.is_image=" + is_image;
-            return db.array("select a.* " + " from " + att_table_link + " atl, att a "
-                + " where atl.table_name=" + db.q(table_name)
-                + " and atl.item_id=" + db.qi(id)
-                + " and a.id=atl.att_id" + where + " order by a.id ");
-        }
+            Hashtable @params = new();
+            @params["@link_table_name"] = link_table_name;
+            @params["@item_id"] = id;
 
+            if (is_image > -1)
+            {
+                where += " and a.is_image=@is_image";
+                @params["@is_image"] = is_image;
+            }
+                
+            return db.arrayp("select a.* " + " from " + db.q_ident(att_table_link) + " atl, "+ db.q_ident(this.table_name)+" a "
+                + " where atl.table_name=@link_table_name"
+                + " and atl.item_id=@item_id"
+                + " and a.id=atl.att_id" + where 
+                + " order by a.id ", @params);
+        }
 
         // return first att image linked via att_table_link
         public Hashtable getFirstLinkedImage(string linked_table_name, int id)

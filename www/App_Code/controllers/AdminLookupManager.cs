@@ -173,18 +173,19 @@ namespace osafw
                     is_group_headers = true;
             }
 
-            string where = " 1=1";
+            list_where = " 1=1";
             if (!string.IsNullOrEmpty((string)f["s"]))
             {
-                string slike = db.q("%" + f["s"] + "%");
+                list_where_params["@slike"] = "%" + f["s"] + "%";
                 string swhere = "";
                 foreach (Hashtable col in cols)
-                    swhere += "or " + db.q_ident((string)col["name"]) + " like " + slike;
+                    swhere += " or " + db.q_ident((string)col["name"]) + " like @slike";
+                    
                 if (!string.IsNullOrEmpty(swhere))
-                    where += " and (0=1 " + swhere + ")";
+                    list_where += " and (0=1 " + swhere + ")";
             }
 
-            ps["count"] = db.value("select count(*) from " + db.q_ident(list_table_name) + " where " + where);
+            ps["count"] = db.valuep("select count(*) from " + db.q_ident(list_table_name) + " where " + list_where, list_where_params);
             if ((int)ps["count"] > 0)
             {
                 int offset = (int)f["pagenum"] * (int)f["pagesize"];
@@ -200,10 +201,10 @@ namespace osafw
                 }
 
                 var sql = "SELECT * FROM " + db.q_ident(list_table_name) +
-                          " WHERE " + where +
+                          " WHERE " + list_where +
                           " ORDER BY " + orderby + " OFFSET " + offset + " ROWS " + " FETCH NEXT " + limit + " ROWS ONLY";
 
-                ps["list_rows"] = db.array(sql);
+                ps["list_rows"] = db.arrayp(sql, list_where_params);
                 ps["pager"] = FormUtils.getPager((int)ps["count"], (int)f["pagenum"], f["pagesize"]);
                 if (ps["pager"] != null)
                 {

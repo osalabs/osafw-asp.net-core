@@ -954,7 +954,7 @@ namespace osafw
             var entities = loadJson<ArrayList>(config_file);
 
             // drop all FKs we created before, so we'll be able to drop tables later
-            var fks = db.array("SELECT fk.name, o.name as table_name FROM sys.foreign_keys fk, sys.objects o where fk.is_system_named=0 and o.object_id=fk.parent_object_id");
+            var fks = db.arrayp("SELECT fk.name, o.name as table_name FROM sys.foreign_keys fk, sys.objects o where fk.is_system_named=0 and o.object_id=fk.parent_object_id", DB.h());
             foreach (Hashtable fk in fks)
                 db.exec("ALTER TABLE " + db.q_ident((string)fk["table_name"]) + " DROP CONSTRAINT " + db.q_ident((string)fk["name"]));
 
@@ -2056,9 +2056,9 @@ namespace osafw
                 {"controller",Strings.Replace(controller_url, "/", "")}
             };
 
-            var mitem = db.row("menu_items", new Hashtable() { { "url", controller_url } });
+            var mitem = db.row("menu_items", DB.h("url", controller_url));
             if (mitem.Count > 0)
-                db.update("menu_items", fields, new Hashtable() { { "id", mitem["id"] } });
+                db.update("menu_items", fields, DB.h("id", mitem["id"]));
             else
                 // add to menu_items
                 db.insert("menu_items", fields);

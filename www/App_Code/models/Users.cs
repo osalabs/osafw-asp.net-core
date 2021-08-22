@@ -30,7 +30,7 @@ namespace osafw
         {
             get { return Utils.f2int(FW.Current.SessionInt("user_id")); }
         }
-        
+
         /// <summary>
         /// return true if current user is logged
         /// </summary>
@@ -84,7 +84,7 @@ namespace osafw
             if (!item.ContainsKey("access_level"))
                 item["access_level"] = Users.ACL_MEMBER;
 
-                if (!item.ContainsKey("pwd"))
+            if (!item.ContainsKey("pwd"))
                 item["pwd"] = Utils.getRandStr(8); // generate password
             item["pwd"] = this.hashPwd((string)item["pwd"]);
             return base.add(item);
@@ -267,13 +267,13 @@ namespace osafw
         // return standard list of id,iname where status=0 order by iname
         public override ArrayList list()
         {
-            string sql = "select id, fname+' '+lname as iname from " + table_name + " where status=0 order by fname, lname";
-            return db.array(sql);
+            string sql = "select id, fname+' '+lname as iname from " + db.q_ident(table_name) + " where status=0 order by fname, lname";
+            return db.arrayp(sql, DB.h());
         }
-        public override ArrayList listSelectOptions(Hashtable def = null/* TODO Change to default(_) if this is not a reference type */)
+        public override ArrayList listSelectOptions(Hashtable def = null)
         {
-            string sql = "select id, fname+' '+lname as iname from " + table_name + " where status=0 order by fname, lname";
-            return db.array(sql);
+            string sql = "select id, fname+' '+lname as iname from " + db.q_ident(table_name) + " where status=0 order by fname, lname";
+            return db.arrayp(sql, DB.h());
         }
 
         /// <summary>
@@ -302,7 +302,7 @@ namespace osafw
             if (menu_items == null)
             {
                 // read main menu items for sidebar
-                menu_items = db.array(table_menu_items, new Hashtable() { { "status", 0 } }, "iname");
+                menu_items = db.array(table_menu_items, DB.h("status", STATUS_ACTIVE), "iname");
                 FwCache.setValue("menu_items", menu_items);
             }
 

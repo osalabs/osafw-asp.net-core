@@ -49,17 +49,31 @@ namespace osafw
 
             // apply filters from Me.f
             string where = " ";
+            Hashtable where_params = new();
             if (!string.IsNullOrEmpty((string)f["from_date"]))
-                where += " and el.add_time>=" + db.qd(f["from_date"]);
+            {
+                where += " and el.add_time>=@from_date";
+                where_params["@from_date"] = f["from_date"];
+            }
             if (System.DateTime.TryParse((string)f["to_date"], out DateTime to_date))
-                where += " and el.add_time<" + db.qd(to_date.AddDays(1));
+            {
+                where += " and el.add_time<@to_date";
+                where_params["@to_date"] = to_date.AddDays(1);
+            }
+                
             if (!string.IsNullOrEmpty((string)f["events_id"]))
-                where += " and el.events_id=" + db.qi(f["events_id"]);
+            {
+                where += " and el.events_id=@events_id";
+                where_params["@events_id"] = f["events_id"];
+            }            
 
             // define query
             string sql;
-            sql = "select top 20 el.*, e.iname  as event_name, u.fname, u.lname " + "  from [events] e, event_log el " + "       LEFT OUTER JOIN users u ON (u.id=el.add_users_id)" + " where el.events_id=e.id" + where + " order by el.id desc";
-            var rows = db.array(sql);
+            sql = "select top 20 el.*, e.iname  as event_name, u.fname, u.lname " + "  from [events] e, event_log el " +
+                  "       LEFT OUTER JOIN users u ON (u.id=el.add_users_id)" + 
+                  " where el.events_id=e.id" + where + 
+                  " order by el.id desc";
+            var rows = db.arrayp(sql, where_params);
             ps["rows"] = rows;
             ps["count"] = rows.Count;
 

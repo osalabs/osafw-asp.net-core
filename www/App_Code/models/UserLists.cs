@@ -24,17 +24,29 @@ namespace osafw
         // list for select by entity and for only logged user
         public ArrayList listSelectByEntity(string entity)
         {
-            return db.array("select id, iname from " + table_name + " where status=0 and entity=" + db.q(entity) + " and add_users_id=" + db.qi(Users.id) + " order by iname");
+            Hashtable where = new();
+            where["status"] = STATUS_ACTIVE;
+            where["entity"] = entity;
+            where["add_users_id"] = Users.id;
+            return db.array(table_name, where, "iname", Utils.qw("id iname"));
         }
 
         public ArrayList listItemsById(int id)
         {
-            return db.array("select id, item_id from " + table_items + " where status=0 and user_lists_id=" + db.qi(id) + " order by id desc");
+            Hashtable where = new();
+            where["status"] = STATUS_ACTIVE;
+            where["user_lists_id"] = id;
+            return db.array(table_items, where, "id desc", Utils.qw("id item_id"));
         }
 
         public ArrayList listForItem(string entity, int item_id)
         {
-            return db.array("select t.id, t.iname, " + item_id + " as item_id, ti.id as is_checked from " + table_name + " t" + " LEFT OUTER JOIN " + table_items + " ti ON (ti.user_lists_id=t.id and ti.item_id=" + item_id + " )" + " where t.status=0 and t.entity=" + db.q(entity) + " and t.add_users_id=" + db.qi(Users.id) + " order by t.iname");
+            return db.arrayp("select t.id, t.iname, @item_id as item_id, ti.id as is_checked " +
+                "  from " + db.q_ident(table_name) + " t" +
+                " LEFT OUTER JOIN " + db.q_ident(table_items) + " ti ON (ti.user_lists_id=t.id and ti.item_id=@item_id )" +
+                " where t.status=0 and t.entity=@entity" +
+                "   and t.add_users_id=@users_id" +
+                " order by t.iname", DB.h("@item_id", item_id, "@entity", entity, "@users_id", Users.id));
         }
 
         public override void delete(int id, bool is_perm = false)
@@ -52,7 +64,7 @@ namespace osafw
 
         public Hashtable oneItemsByUK(int user_lists_id, int item_id)
         {
-            return db.row(table_items, new Hashtable() { { "user_lists_id", user_lists_id }, { "item_id", item_id } });
+            return db.row(table_items, DB.h("user_lists_id", user_lists_id, "item_id", item_id));
         }
 
         public virtual void deleteItems(int id)

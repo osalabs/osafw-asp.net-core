@@ -145,8 +145,12 @@ namespace osafw
             var inamefield = "";
             Utils.split2(":", lufields, ref idfield, ref inamefield);
 
-            string sql = "select " + db.q_ident(idfield) + " as id, " + db.q_ident(inamefield) + " as iname from " + db.q_ident(lutable) + " order by 1";
-            return FormUtils.selectOptions(db.array(sql), (string)sel_id);
+            ArrayList fields = new();
+            fields.Add(new Hashtable { { "field", idfield }, { "alias", "id" } });
+            fields.Add(new Hashtable { { "field", inamefield }, { "alias", "iname" } });
+            var rows = db.array(lutable, new Hashtable(), "1", fields);
+
+            return FormUtils.selectOptions(rows, (string)sel_id);
         }
 
         public string getLookupValue(string itype_lookup, object sel_id)

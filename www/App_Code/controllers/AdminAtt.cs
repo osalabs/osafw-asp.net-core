@@ -40,14 +40,20 @@ namespace osafw
                 f["sortdir"] = "asc";
             Hashtable SORTSQL = Utils.qh("id|id iname|iname add_time|add_time fsize|fsize ext|ext category|att_categories_id status|status");
 
-            string where = " status = 0 and table_name='' ";
+            list_where = " status = 0 and table_name='' ";
             if (!string.IsNullOrEmpty((string)f["s"]))
-                where += " and (iname like " + db.q("%" + f["s"] + "%") + " or fname like " + db.q("%" + f["s"] + "%") + ")";
-
+            {
+                list_where += " and (iname like @iname or fname like @iname)";
+                list_where_params["@iname"] = "%" + f["s"] + "%";
+            }
+                
             if (!string.IsNullOrEmpty((string)f["att_categories_id"]))
-                where += " and att_categories_id=" + Utils.f2int(f["att_categories_id"]);
+            {
+                list_where += " and att_categories_id=@att_categories_id";
+                list_where_params["@att_categories_id"] = Utils.f2int(f["att_categories_id"]);
+            }                
 
-            int count = (int)db.value("select count(*) from " + model.table_name + " where " + where);
+            int count = (int)db.valuep("select count(*) from " + model.table_name + " where " + list_where, list_where_params);
             ps["count"] = count;
             if (count > 0)
             {
@@ -66,9 +72,9 @@ namespace osafw
                 }
 
                 // offset+1 because _RowNumber starts from 1
-                string sql = "SELECT TOP " + limit + " * " + " FROM (" + "   SELECT *, ROW_NUMBER() OVER (ORDER BY " + orderby + ") AS _RowNumber" + "   FROM " + model.table_name + "   WHERE " + where + ") tmp" + " WHERE _RowNumber >= " + (offset + 1) + " ORDER BY " + orderby;
+                string sql = "SELECT TOP " + limit + " * " + " FROM (" + "   SELECT *, ROW_NUMBER() OVER (ORDER BY " + orderby + ") AS _RowNumber" + "   FROM " + model.table_name + "   WHERE " + list_where + ") tmp" + " WHERE _RowNumber >= " + db.qi(offset + 1) + " ORDER BY " + orderby;
 
-                list_rows = db.array(sql);
+                list_rows = db.arrayp(sql, list_where_params);
                 ps["list_rows"] = list_rows;
                 ps["pager"] = FormUtils.getPager(count, pagenum, pagesize);
 

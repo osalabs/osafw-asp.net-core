@@ -43,7 +43,7 @@ namespace osafw
 
                     try
                     {
-                        var value = db.value("select count(*) from menu_items"); // just a last table in database.sql script
+                        var value = db.value("menu_items", new Hashtable(), "count(*)"); // just a last table in database.sql script
                         ps["is_db_tables"] = true;
                     }
                     catch (Exception ex)
