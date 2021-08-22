@@ -90,7 +90,7 @@ namespace osafw
 
         public ArrayList listChildren(int parent_id)
         {
-            return db.array("select * from " + table_name + " where status<>127 and parent_id=" + db.qi(parent_id) + " order by iname");
+            return db.array("select * from " + db.q_ident(table_name) + " where status<>127 and parent_id=@parent_id order by iname", DB.h("@parent_id", parent_id));
         }
 
         /// <summary>
@@ -100,9 +100,9 @@ namespace osafw
         /// <param name="orderby">order by fields to apply in sql</param>
         /// <returns>parsepage AL with hierarcy (via "children" key)</returns>
         /// <remarks></remarks>
-        public ArrayList tree(string where, string orderby)
+        public ArrayList tree(string where, Hashtable list_where_params, string orderby)
         {
-            ArrayList rows = db.array("select * from " + table_name + " where " + where + " order by " + orderby);
+            ArrayList rows = db.arrayp("select * from " + db.q_ident(table_name) + " where " + where + " order by " + orderby, list_where_params);
             ArrayList pages_tree = getPagesTree(rows, 0);
             return pages_tree;
         }
@@ -207,7 +207,7 @@ namespace osafw
             Hashtable ps = new();
 
             // for navigation
-            var pages_tree = tree("status=0", "parent_id, prio desc, iname"); // published only
+            var pages_tree = tree("status=0", new Hashtable(), "parent_id, prio desc, iname"); // published only
             ps["pages"] = getPagesTreeList(pages_tree, 0);
 
             Hashtable item = oneByFullUrl(full_url);

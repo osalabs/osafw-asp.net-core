@@ -32,11 +32,13 @@ namespace osafw
 
         public override void setListSearch()
         {
-            this.list_where = " 1=1 ";
             base.setListSearch();
 
             if (!string.IsNullOrEmpty((string)list_filter["s"]))
-                list_where += " and icat=" + db.qi(list_filter["s"]);
+            {
+                list_where += " and icat=@icat";
+                list_where_params["icat"] = Utils.f2int(list_filter["s"]);
+            }                
         }
 
         public override Hashtable ShowFormAction(string form_id = "")

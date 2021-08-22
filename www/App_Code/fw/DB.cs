@@ -392,7 +392,7 @@ namespace osafw
         /// <returns></returns>
         public Hashtable row(string table, Hashtable where, string order_by = "")
         {
-            return row(hash2sql_select(table, where, order_by));
+            return row(hash2sql_select(table, where, order_by, "TOP 1 *"));
         }
 
         /// <summary>
@@ -1286,6 +1286,28 @@ namespace osafw
                 string tblname = row["TABLE_NAME"].ToString();
                 result.Add(tblname);
             }
+
+            return result;
+        }
+
+        public string schema_field_type(string table, string field_name)
+        {
+            connect();
+            load_table_schema(table);
+            field_name = field_name.ToLower();
+            if (!((Hashtable)schema[table]).ContainsKey(field_name))
+                return "";
+            string field_type = (string)((Hashtable)schema[table])[field_name];
+
+            string result;
+            if (Regex.IsMatch(field_type, "int"))
+                result = "int";
+            else if (field_type == "datetime")
+                result = field_type;
+            else if (field_type == "float")
+                result = field_type;
+            else
+                result = "varchar";
 
             return result;
         }

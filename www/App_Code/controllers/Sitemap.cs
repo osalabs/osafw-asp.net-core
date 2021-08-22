@@ -28,7 +28,7 @@ namespace osafw
 
             Hashtable item = model.oneByFullUrl(base_url);
 
-            ArrayList pages_tree = model.tree(" status=0 ", "parent_id, prio desc, iname");
+            ArrayList pages_tree = model.tree(" status=0 ", new Hashtable(), "parent_id, prio desc, iname");
             _add_full_url(pages_tree);
 
             ps["page"] = item;

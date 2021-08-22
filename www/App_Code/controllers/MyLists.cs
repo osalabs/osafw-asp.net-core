@@ -43,13 +43,18 @@ namespace osafw
 
         public override void setListSearch()
         {
-            list_where = " status<>127 and add_users_id = " + db.qi(Users.id); // only logged user lists
+            list_where = " status<>127 and add_users_id=@add_users_id";
+            list_where_params["@add_users_id"] = Users.id;
 
             base.setListSearch();
 
             if (!string.IsNullOrEmpty((string)list_filter["entity"]))
-                this.list_where += " and entity=" + db.q(list_filter["entity"]);
+            {
+                this.list_where += " and entity=@entity";
+                this.list_where_params["@entity"] = list_filter["entity"];
+            }
         }
+
         public override void getListRows()
         {
             base.getListRows();

@@ -62,7 +62,7 @@ namespace osafw
                 var is_dev_login = false;
                 if (Utils.f2bool(fw.config("IS_DEV")) && string.IsNullOrEmpty(login) && pwd == "~")
                 {
-                    var dev = db.row("select TOP 1 email, pwd from users where status=0 and access_level=100 order by id");
+                    var dev = db.row(model.table_name, DB.h("status", Users.STATUS_ACTIVE, "access_level", Users.ACL_SITEADMIN), "id");
                     login = (string)dev["email"];
                     is_dev_login = true;
                 }

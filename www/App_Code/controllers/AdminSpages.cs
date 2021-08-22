@@ -43,11 +43,11 @@ namespace osafw
             if ((string)list_filter["sortby"] == "iname" && (string)list_filter["s"] == "" & ((string)this.list_filter["status"] == "" || (string)this.list_filter["status"] == "0"))
             {
                 // show tree only if sort by title and no search and status by all or active
-                this.list_count = (int)db.value("select count(*) from " + model.table_name + " where " + this.list_where);
+                this.list_count = (int)db.valuep("select count(*) from " + db.q_ident(model.table_name) + " where " + this.list_where, this.list_where_params);
                 if (this.list_count > 0)
                 {
                     // build pages tree
-                    ArrayList pages_tree = model.tree(this.list_where, "parent_id, prio desc, iname");
+                    ArrayList pages_tree = model.tree(this.list_where, this.list_where_params, "parent_id, prio desc, iname");
                     this.list_rows = model.getPagesTreeList(pages_tree, 0);
 
                     // apply LIMIT
@@ -97,7 +97,7 @@ namespace osafw
             var item = (Hashtable)ps["i"];
             int id = Utils.f2int(item["id"]);
             string where = " status<>127 ";
-            ArrayList pages_tree = model.tree(where, "parent_id, prio desc, iname");
+            ArrayList pages_tree = model.tree(where, new Hashtable(), "parent_id, prio desc, iname");
             ps["select_options_parent_id"] = model.getPagesTreeSelectHtml((string)item["parent_id"], pages_tree);
 
             ps["parent_url"] = model.getFullUrl(Utils.f2int(item["parent_id"]));

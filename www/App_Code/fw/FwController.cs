@@ -43,8 +43,9 @@ namespace osafw
         protected string list_view;                  // table/view to use in list sql, if empty model0.table_name used
         protected string list_orderby;               // orderby for the list screen
         protected Hashtable list_filter;             // filter values for the list screen
+        protected Hashtable list_where_params = new();       // any sql params for the list_where
         protected string list_where = " 1=1 ";       // where to use in list sql, default is non-deleted records (see setListSearch() )
-        protected int list_count;                // count of list rows returned from db
+        protected int list_count;                    // count of list rows returned from db
         protected ArrayList list_rows;               // list rows returned from db (array of hashes)
         protected ArrayList list_pager;              // pager for the list from FormUtils.getPager
         protected string list_sortdef;               // required for Index, default list sorting: name asc|desc
@@ -445,7 +446,7 @@ namespace osafw
                     // list_table_name could contain subquery as "(...) t" - detect it (contains whitespace)
                     is_subquery = Regex.IsMatch(list_table_name, @"\s");
 
-                string like_quoted = db.q("%" + s + "%");
+                string like_s = "%" + s + "%";
 
                 string[] afields = Utils.qw(this.search_fields); // OR fields delimited by space
                 for (int i = 0; i <= afields.Length - 1; i++)
@@ -455,19 +456,35 @@ namespace osafw
                     for (int j = 0; j <= afieldsand.Length - 1; j++)
                     {
                         string fand = afieldsand[j];
+                        string param_name = "list_search_" + i + "_" + j;
                         if (fand.Substring(0, 1) == "!")
                         {
                             // exact match
                             fand = fand.Substring(1);
                             if (is_subquery)
+                            {
                                 // for subqueries - just use string quoting, but convert to number (so only numeric search supported in this case)
-                                afieldsand[j] = fand + " = " + db.qi(s);
+                                list_where_params[param_name] = Utils.f2int(s);
+                                afieldsand[j] = db.q_ident(fand) + " = @" + param_name;
+                            }
                             else
-                                afieldsand[j] = fand + " = " + db.qone(list_table_name, fand, s);
+                            {
+                                var ft = db.schema_field_type(list_table_name, fand);
+                                if (ft == "int")
+                                    list_where_params[param_name] = Utils.f2int(s);
+                                else if (ft == "float")
+                                    list_where_params[param_name] = Utils.f2float(s);
+                                else
+                                    list_where_params[param_name] = s;
+                            }
+                            afieldsand[j] = db.q_ident(fand) + " = @" + param_name;
                         }
                         else
+                        {
                             // like match
-                            afieldsand[j] = fand + " LIKE " + like_quoted;
+                            afieldsand[j] = db.q_ident(fand) + " LIKE @" + param_name;
+                            list_where_params[param_name] = like_s;
+                        }
                     }
                     afields[i] = Strings.Join(afieldsand, " and ");
                 }
@@ -478,7 +495,10 @@ namespace osafw
                 this.list_where += " and id IN (select ti.item_id from " + fw.model<UserLists>().table_items + " ti where ti.user_lists_id=" + db.qi(list_filter["userlist"]) + " and ti.add_users_id=" + db.qi(Users.id) + " ) ";
 
             if (!string.IsNullOrEmpty(related_id) && !string.IsNullOrEmpty(related_field_name))
-                list_where += " and " + db.q_ident(related_field_name) + "=" + db.q(related_id);
+            {
+                list_where += " and " + db.q_ident(related_field_name) + "=@related_field_name";
+                list_where_params["related_field_name"] = related_id;
+            }
 
             setListSearchAdvanced();
         }
@@ -561,7 +581,7 @@ namespace osafw
         public virtual void getListCount(string list_view = "")
         {
             string list_view_name = (!string.IsNullOrEmpty(list_view) ? list_view : this.list_view);
-            this.list_count = (int)db.value("select count(*) from " + list_view_name + " where " + this.list_where);
+            this.list_count = (int)db.valuep("select count(*) from " + list_view_name + " where " + this.list_where, this.list_where_params);
         }
 
         /// <summary>
@@ -602,13 +622,13 @@ namespace osafw
                 {
                     // for SQL Server 2012+
                     sql = "SELECT * FROM " + list_view_name + " WHERE " + this.list_where + " ORDER BY " + this.list_orderby + " OFFSET " + offset + " ROWS " + " FETCH NEXT " + limit + " ROWS ONLY";
-                    this.list_rows = db.array(sql);
+                    this.list_rows = db.arrayp(sql, list_where_params);
                 }
                 else if (db.dbtype == "OLE")
                 {
                     // OLE - for Access - emulate using TOP and return just a limit portion (bad perfomance, but no way)
                     sql = "SELECT TOP " + (offset + limit) + " * FROM " + list_view_name + " WHERE " + this.list_where + " ORDER BY " + this.list_orderby;
-                    var rows = db.array(sql);
+                    var rows = db.arrayp(sql, list_where_params);
                     if (offset >= rows.Count)
                         // offset too far
                         this.list_rows = new ArrayList();
@@ -760,7 +780,7 @@ namespace osafw
                 if (success)
                 fw.redirect(location);
             else
-                fw.routeRedirect(action, new[] { id });
+                fw.routeRedirect(action, new[] { id.ToString() });
             return null;
         }
 

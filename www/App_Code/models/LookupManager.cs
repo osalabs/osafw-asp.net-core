@@ -33,7 +33,7 @@ namespace osafw
             if (tname == "")
                 throw new ApplicationException("Wrong topByTname params");
 
-            return db.row("select TOP " + top_number + " * from " + tname);
+            return db.row("select TOP " + db.qi(top_number) + " * from " + db.q_ident(tname));
         }
 
         public virtual int maxIdByTname(string tname)

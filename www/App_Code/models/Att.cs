@@ -348,9 +348,15 @@ namespace osafw
 
 
         // return first att image linked via att_table_link
-        public Hashtable getFirstLinkedImage(string table_name, int id)
+        public Hashtable getFirstLinkedImage(string linked_table_name, int id)
         {
-            return db.row("select top 1 a.* " + " from " + att_table_link + " atl, att a " + " where atl.table_name=" + db.q(table_name) + " and atl.item_id=" + db.qi(id) + " and a.id=atl.att_id" + " and a.is_image=1 " + " order by a.id ");
+            Hashtable @params = new()
+            {
+                {"@table", linked_table_name},
+                {"@item_id", id},
+            };
+            return db.rowp("SELECT TOP 1 a.* from " + db.q_ident(att_table_link) + " atl, " + db.q_ident(this.table_name) + " a"+
+                " WHERE atl.table_name=@table_name and atl.item_id=@item_id and a.id=atl.att_id and a.is_image=1 order by a.id ", @params);
         }
 
         // return all att images linked via att_table_link

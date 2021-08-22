@@ -152,7 +152,7 @@ namespace osafw
         public void HashPasswordsAction()
         {
             rw("hashing passwords");
-            var rows = db.array("select id, pwd from " + db.q_ident(model.table_name) + " order by id");
+            var rows = db.array(model.table_name, new Hashtable(), "id");
             foreach (Hashtable row in rows)
             {
                 if (row["pwd"].ToString().Substring(0, 2) == "$2")
