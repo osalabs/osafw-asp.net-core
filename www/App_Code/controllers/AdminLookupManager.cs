@@ -408,7 +408,7 @@ namespace osafw
             }
             catch (ApplicationException ex)
             {
-                fw.G["err_msg"] = ex.Message;
+                fw.setGlobalError(ex.Message);
                 String[] args = new[] { id.ToString() };
                 fw.routeRedirect("ShowForm", null, args);
             }
@@ -571,8 +571,8 @@ namespace osafw
             }
             catch (Exception ex)
             {
-                throw;
-                fw.G["err_msg"] = ex.Message;
+                //throw;
+                fw.setGlobalError(ex.Message);
                 fw.routeRedirect("Index");
             }
         }

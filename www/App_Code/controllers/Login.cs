@@ -101,7 +101,7 @@ namespace osafw
             {
                 logger(LogLevel.WARN, ex.Message);
                 fw.G["err_ctr"] = reqi("err_ctr") + 1;
-                fw.G["err_msg"] = ex.Message;
+                fw.setGlobalError(ex.Message);
                 fw.routeRedirect("Index");
             }
         }

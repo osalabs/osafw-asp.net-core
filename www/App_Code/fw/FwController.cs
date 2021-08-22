@@ -648,7 +648,7 @@ namespace osafw
         {
             // if Validation exception - don't set general error message - specific validation message set in templates
             if (!(ex is ValidationException))
-                fw.G["err_msg"] = ex.Message;
+                fw.setGlobalError(ex.Message);
         }
 
         /// <summary>
@@ -738,21 +738,11 @@ namespace osafw
                 var ps = new Hashtable();
                 var _json = new Hashtable()
                 {
-                    {
-                        "success",success
-                    },
-                    {
-                        "id",id
-                    },
-                    {
-                        "is_new",is_new
-                    },
-                    {
-                        "location",location
-                    },
-                    {
-                        "err_msg",fw.G["err_msg"]
-                    }
+                    {"success",success},
+                    {"id",id},
+                    {"is_new",is_new},
+                    {"location",location},
+                    {"err_msg",fw.G["err_msg"]}
                 };
                 // add ERR field errors to response if any
                 if (fw.FERR.Count > 0)
@@ -913,7 +903,7 @@ namespace osafw
         public virtual string getViewListUserFields()
         {
             var item = fw.model<UserViews>().oneByIcode(base_url); // base_url is screen identifier
-            var fields = (string)item["fields"]??"";
+            var fields = (string)item["fields"] ?? "";
             return (fields.Length > 0 ? fields : view_list_defaults);
         }
 

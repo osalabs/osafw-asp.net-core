@@ -42,7 +42,7 @@ namespace osafw
                 if (fw.SessionBool("admindb_pwd_checked") || reqs("pwd") == dbpwd)
                     fw.SessionBool("admindb_pwd_checked", true);
                 else if (sql.Length > 0)
-                    fw.G["err_msg"] = "Wrong password";
+                    fw.setGlobalError("Wrong password");
                 if (sql.Length > 0 && fw.SessionBool("admindb_pwd_checked"))
                 {
                     if (sql == "show tables")
@@ -70,7 +70,7 @@ namespace osafw
             }
             catch (Exception ex)
             {
-                fw.G["err_msg"] = "Error occured: " + ex.Message;
+                fw.setGlobalError("Error occured: " + ex.Message);
             }
 
             ArrayList dbsources = new ArrayList();

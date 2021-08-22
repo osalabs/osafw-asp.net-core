@@ -77,7 +77,7 @@ namespace osafw
             }
             catch (ApplicationException ex)
             {
-                fw.G["err_msg"] = ex.Message;
+                fw.setGlobalError(ex.Message);
                 String[] args = new[] { repcode };
                 fw.routeRedirect("Show", null, args);
             }

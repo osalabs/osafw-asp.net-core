@@ -216,6 +216,12 @@ namespace osafw
             return FwConfig.settings[name];
         }
 
+        //set G["err_msg"]
+        public void setGlobalError(string str)
+        {
+            this.G["err_msg"] = str;
+        }
+
         /// <summary>
         /// returns format expected by client browser
         /// </summary>

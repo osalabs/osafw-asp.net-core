@@ -60,7 +60,7 @@ namespace osafw
             }
             catch (ApplicationException ex)
             {
-                fw.G["err_msg"] = ex.Message;
+                fw.setGlobalError(ex.Message);
                 fw.routeRedirect("Index");
             }
         }
