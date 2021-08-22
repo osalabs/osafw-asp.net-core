@@ -198,7 +198,7 @@ namespace osafw
                 ps["err_msg"] = ex.Message;
                 ps["_json"] = true;
 
-                fw.G["err_msg"] = ex.Message;
+                fw.setGlobalError(ex.Message);
                 ps["_route_redirect"] = new Hashtable()
                 {
                     {"method","ShowForm"},

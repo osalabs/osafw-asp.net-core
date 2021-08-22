@@ -267,10 +267,14 @@ namespace osafw
             conn.Close();
         }
 
-        public DbDataReader query(string sql)
+        public DbDataReader query(string sql, Hashtable @params = null)
         {
             connect();
-            logger(LogLevel.INFO, "DB:", db_name, " ", sql);
+            if (@params!=null && @params.Count>0)
+                logger(LogLevel.INFO, "DB:", db_name, " ", sql, @params);
+            else
+                logger(LogLevel.INFO, "DB:", db_name, " ", sql);
+          
 
             SQL_QUERY_CTR += 1;
 
@@ -278,10 +282,16 @@ namespace osafw
             if (dbtype == "SQL")
             {
                 dbcomm = new SqlCommand(sql, (SqlConnection)conn);
+                if (@params != null)
+                    foreach (string p in @params.Keys)
+                        dbcomm.Parameters.Add(new SqlParameter(p, @params[p]));
             }
             else if (dbtype == "OLE" && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 dbcomm = new OleDbCommand(sql, (OleDbConnection)conn);
+                if (@params != null)
+                    foreach (string p in @params.Keys)
+                        dbcomm.Parameters.Add(new OleDbParameter(p, @params[p]));
             }
 
             DbDataReader dbread = dbcomm.ExecuteReader();
@@ -309,23 +319,27 @@ namespace osafw
             return dbcomm.ExecuteNonQuery();
         }
 
+        //read row values as a strings
         private Hashtable readRow(DbDataReader dbread)
         {
             Hashtable result = new();
 
-            for (int i = 0; i <= dbread.FieldCount - 1; i++)
+            if (dbread.HasRows)
             {
-                try
+                for (int i = 0; i <= dbread.FieldCount - 1; i++)
                 {
-                    if (is_check_ole_types && UNSUPPORTED_OLE_TYPES.ContainsKey(dbread.GetDataTypeName(i))) continue;
+                    try
+                    {
+                        if (is_check_ole_types && UNSUPPORTED_OLE_TYPES.ContainsKey(dbread.GetDataTypeName(i))) continue;
 
-                    string value = dbread[i].ToString();
-                    string name = dbread.GetName(i).ToString();
-                    result.Add(name, value);
-                }
-                catch (Exception Ex)
-                {
-                    break;
+                        string value = dbread[i].ToString();
+                        string name = dbread.GetName(i).ToString();
+                        result.Add(name, value);
+                    }
+                    catch (Exception Ex)
+                    {
+                        break;
+                    }
                 }
             }
 
@@ -355,34 +369,67 @@ namespace osafw
             return result;
         }
 
+        /// <summary>
+        /// read single first row using raw sql query
+        /// </summary>
+        /// <param name="sql"></param>
+        /// <returns></returns>
         public Hashtable row(string sql)
         {
             DbDataReader dbread = query(sql);
             dbread.Read();
-
-            Hashtable h = new();
-            if (dbread.HasRows)
-                h = readRow(dbread);
-
+            var result = readRow(dbread);
             dbread.Close();
-            return h;
+            return result;
         }
 
+        /// <summary>
+        /// read signle irst row using table/where/orderby
+        /// </summary>
+        /// <param name="table"></param>
+        /// <param name="where"></param>
+        /// <param name="order_by"></param>
+        /// <returns></returns>
         public Hashtable row(string table, Hashtable where, string order_by = "")
         {
             return row(hash2sql_select(table, where, order_by));
         }
 
+        /// <summary>
+        /// read single first row using parametrized sql query
+        /// </summary>
+        /// <param name="sql"></param>
+        /// <param name="params"></param>
+        /// <returns></returns>
+        public Hashtable rowp(string sql, Hashtable @params)
+        {
+            DbDataReader dbread = query(sql, @params);
+            dbread.Read();
+            var result = readRow(dbread);
+            dbread.Close();
+            return result;
+        }
+
+        public ArrayList readArray(DbDataReader dbread)
+        {
+            ArrayList result = new();
+
+            while (dbread.Read())
+                result.Add(readRow(dbread));
+
+            dbread.Close();
+            return result;
+        }
+
+        /// <summary>
+        /// read all rows using raw query
+        /// </summary>
+        /// <param name="sql"></param>
+        /// <returns></returns>
         public ArrayList array(string sql)
         {
             DbDataReader dbread = query(sql);
-            ArrayList a = new();
-
-            while (dbread.Read())
-                a.Add(readRow(dbread));
-
-            dbread.Close();
-            return a;
+            return readArray(dbread);
         }
 
         public DBList array2(string sql)
@@ -395,6 +442,18 @@ namespace osafw
 
             dbread.Close();
             return a;
+        }
+
+        /// <summary>
+        /// read all rows using parametrized query
+        /// </summary>
+        /// <param name="sql"></param>
+        /// <param name="params"></param>
+        /// <returns></returns>
+        public ArrayList arrayp(string sql, Hashtable @params)
+        {
+            DbDataReader dbread = query(sql, @params);
+            return readArray(dbread);
         }
 
         /// <summary>
@@ -440,18 +499,42 @@ namespace osafw
             return array(hash2sql_select(table, where, order_by, select_fields));
         }
 
-        // return just first column values as arraylist
+        /// <summary>
+        /// read column helper
+        /// </summary>
+        /// <param name="dbread"></param>
+        /// <returns></returns>
+        public ArrayList readCol(DbDataReader dbread)
+        {
+            ArrayList result = new();
+            while (dbread.Read())
+                result.Add(dbread[0].ToString());
+
+            dbread.Close();
+            return result;
+        }
+
+        /// <summary>
+        /// return just first column values (strings!) as arraylist using raw sql query
+        /// </summary>
+        /// <param name="sql"></param>
+        /// <returns></returns>
         public ArrayList col(string sql)
         {
             DbDataReader dbread = query(sql);
-            ArrayList a = new();
-            while (dbread.Read())
-            {
-                a.Add(dbread[0].ToString());
-            }
+            return readCol(dbread);
+        }
 
-            dbread.Close();
-            return a;
+        /// <summary>
+        /// read first column using parametrized query
+        /// </summary>
+        /// <param name="sql"></param>
+        /// <param name="params"></param>
+        /// <returns></returns>
+        public ArrayList colp(string sql, Hashtable @params)
+        {
+            DbDataReader dbread = query(sql, @params);
+            return readCol(dbread);
         }
 
         /// <summary>
@@ -477,20 +560,33 @@ namespace osafw
             return col(hash2sql_select(table, where, order_by, field_name));
         }
 
-        // return just first value from column
-        public object value(string sql)
+        public object readValue(DbDataReader dbread)
         {
-            DbDataReader dbread = query(sql);
             object result = null;
 
             while (dbread.Read())
             {
-                result = dbread[0];
+                result = dbread[0]; //read first
                 break; // just return first row
             }
 
             dbread.Close();
             return result;
+        }
+
+        // return just first value from column
+        // NOTE, not string, but db type
+        public object value(string sql)
+        {
+            DbDataReader dbread = query(sql);
+            return readValue(dbread);
+        }
+
+        // return just first value from column
+        public object valuep(string sql, Hashtable @params)
+        {
+            DbDataReader dbread = query(sql, @params);
+            return readValue(dbread);
         }
 
         /// <summary>
