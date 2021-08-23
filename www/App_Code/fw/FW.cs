@@ -84,7 +84,6 @@ namespace osafw
         public bool is_log_events = true; // can be set temporarly to false to prevent event logging (for batch process for ex)
 
         public string last_error_send_email = "";
-        private long max_log_size = 1024 * 1024 * 1024;
 
         //TODO MIGRATE #Const isSentry = False 'if you use Sentry set to True here, install SentrySDK, in web.config fill endpoint URL to "log_sentry" 
         private IDisposable sentryClient;
@@ -135,8 +134,6 @@ namespace osafw
             Hashtable _flash = SessionHashtable("_flash");
             if (_flash != null) G["_flash"] = _flash;
             SessionHashtable("_flash", new Hashtable());
-
-            max_log_size = Utils.f2long(config("log_max_size"));
         }
 
         // ***************** work with SESSION
@@ -792,21 +789,10 @@ namespace osafw
                 try
                 {
                     // force seek to end just in case other process added to file
-                    using (System.IO.StreamWriter floggerSW = File.AppendText(log_file))
+                    using (StreamWriter floggerSW = File.AppendText(log_file))
                     {
                         floggerSW.WriteLine(str.ToString());
-                        // check if log file too large and need to be rotated
-                        if (max_log_size > 0 && floggerSW.BaseStream.Length > max_log_size)
-                        {
-                            floggerSW.Close();
-                            var to_path = config("log") + ".1";
-                            File.Delete(to_path);
-                            File.Move((string)config("log"), to_path);
-                        }
                     }
-                    //do not close writer here as there will be more output in request
-
-                    
                 }
                 catch (Exception ex)
                 {
@@ -1376,6 +1362,23 @@ namespace osafw
                 try
                 {
                     db.Dispose(); // this will return db connections to pool
+
+                    // check if log file too large and need to be rotated
+                    string log_file = (string)config("log");
+                    if (!string.IsNullOrEmpty(log_file))
+                    {
+                        long max_log_size = Utils.f2long(config("log_max_size"));
+                        using (FileStream floggerFS = new FileStream(log_file, FileMode.Open, FileAccess.Read, FileShare.Read))
+                        {
+                            if (max_log_size > 0 && floggerFS.Length > max_log_size)
+                            {
+                                floggerFS.Close();
+                                var to_path = log_file + ".1";
+                                File.Delete(to_path);
+                                File.Move(log_file, to_path);
+                            }
+                        }
+                    }
                 }
                 // TODO: set large fields to null.
                 catch (Exception ex)
