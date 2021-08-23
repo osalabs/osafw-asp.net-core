@@ -65,7 +65,7 @@ namespace osafw
 
 
         // add new record and return new record id
-        public virtual int addByTname(string tname, Hashtable item)
+        public virtual int addByTname(string tname, DBRow item)
         {
             if (tname == "")
                 throw new ApplicationException("Wrong update_by_tname params");
@@ -77,7 +77,7 @@ namespace osafw
             {
                 // if no list cols - it's std table - add std fields
                 if (!item.ContainsKey("add_users_id") && Users.isLogged)
-                    item["add_users_id"] = Users.id;
+                    item["add_users_id"] = Utils.f2str(Users.id);
             }
 
             int id = db.insert(tname, item);
@@ -86,7 +86,7 @@ namespace osafw
         }
 
         // update exising record
-        public virtual bool updateByTname(string tname, int id, Hashtable item, string md5 = "")
+        public virtual bool updateByTname(string tname, int id, DBRow item, string md5 = "")
         {
             if (tname == "" || id == 0)
                 throw new ApplicationException("Wrong update_by_tname params");
@@ -122,7 +122,7 @@ namespace osafw
             // logger(itemold)
             // logger("NEW")
             // logger(item)
-            Hashtable item_save = new();
+            DBRow item_save = new();
             foreach (string key in item.Keys)
             {
                 if (itemold[key].ToString() != item[key].ToString())
@@ -140,9 +140,9 @@ namespace osafw
                 {
                     // if no list cols - it's std table - add std fields
                     if (!item_save.ContainsKey("upd_time"))
-                        item_save["upd_time"] = DateTime.Now;
+                        item_save["upd_time"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
                     if (!item_save.ContainsKey("upd_users_id") && Users.isLogged)
-                        item_save["upd_users_id"] = Users.id;
+                        item_save["upd_users_id"] = Utils.f2str(Users.id);
                 }
 
                 db.update(tname, item_save, where);

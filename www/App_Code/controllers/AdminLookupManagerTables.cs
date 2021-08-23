@@ -107,7 +107,7 @@ namespace osafw
                 itemdb["column_types"] = Utils.nlstr2commastr((string)itemdb["column_types"]);
                 itemdb["column_groups"] = Utils.nlstr2commastr((string)itemdb["column_groups"]);
 
-                id = this.modelAddOrUpdate(id, itemdb);
+                id = this.modelAddOrUpdate(id, new DBRow(itemdb));
             }
             catch (ApplicationException ex)
             {

@@ -141,7 +141,7 @@ namespace osafw
             return ps;
         }
 
-        public override int modelAddOrUpdate(int id, Hashtable fields)
+        public override int modelAddOrUpdate(int id, DBRow fields)
         {
             if (is_dynamic_showform)
                 processSaveShowFormFields(id, fields);
@@ -180,7 +180,7 @@ namespace osafw
                 FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes);
                 FormUtils.filterNullable(itemdb, save_fields_nullable);
 
-                id = this.modelAddOrUpdate(id, itemdb);
+                id = this.modelAddOrUpdate(id, new DBRow(itemdb));
             }
             catch (ApplicationException ex)
             {
@@ -310,7 +310,7 @@ namespace osafw
         {
             int id = Utils.f2int(form_id);
 
-            model0.update(id, new Hashtable() { { model0.field_status, FwModel.STATUS_ACTIVE } });
+            model0.update(id, new DBRow() { { model0.field_status, Utils.f2str(FwModel.STATUS_ACTIVE) } });
 
             fw.flash("record_updated", 1);
             return this.afterSave(true, id);
@@ -610,7 +610,7 @@ namespace osafw
         }
 
         // auto-process fields BEFORE record saved to db
-        protected virtual void processSaveShowFormFields(int id, Hashtable fields)
+        protected virtual void processSaveShowFormFields(int id, DBRow fields)
         {
             Hashtable item = reqh("item");
 
@@ -629,25 +629,25 @@ namespace osafw
                         // multiple checkboxes
                         fields[field] = FormUtils.multi2ids(reqh(field + "_multi"));
                     else if (type == "autocomplete")
-                        fields[field] = fw.model((string)def["lookup_model"]).findOrAddByIname((string)fields[field], out _);
+                        fields[field] = Utils.f2str(fw.model((string)def["lookup_model"]).findOrAddByIname((string)fields[field], out _));
                     else if (type == "date_combo")
-                        fields[field] = FormUtils.dateForCombo(item, field);
+                        fields[field] = FormUtils.dateForCombo(item, field).ToString();
                     else if (type == "time")
-                        fields[field] = FormUtils.timeStrToInt((string)fields[field]); // ftime - convert from HH:MM to int (0-24h in seconds)
+                        fields[field] = Utils.f2str(FormUtils.timeStrToInt((string)fields[field])); // ftime - convert from HH:MM to int (0-24h in seconds)
                     else if (type == "number")
                     {
                         if (fnullable.ContainsKey(field) && (string)fields[field] == "")
                             // if field nullable and empty - pass NULL
                             fields[field] = null;
                         else
-                            fields[field] = Utils.f2float(fields[field]);// number - convert to number (if field empty or non-number - it will become 0)
+                            fields[field] = Utils.f2str(Utils.f2float(fields[field]));// number - convert to number (if field empty or non-number - it will become 0)
                     }
                 }
             }
         }
 
         // auto-process fields AFTER record saved to db
-        protected virtual void processSaveShowFormFieldsAfter(int id, Hashtable fields)
+        protected virtual void processSaveShowFormFieldsAfter(int id, DBRow fields)
         {
             // for now we just look if we have att_links_edit field and update att links
             foreach (Hashtable def in (ArrayList)this.config["showform_fields"])

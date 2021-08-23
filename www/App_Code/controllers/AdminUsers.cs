@@ -69,7 +69,7 @@ namespace osafw
                 if (string.IsNullOrEmpty((string)itemdb["pwd"]))
                     itemdb.Remove("pwd");
 
-                id = this.modelAddOrUpdate(id, itemdb);
+                id = this.modelAddOrUpdate(id, new DBRow(itemdb));
 
                 if (Users.id == id)
                     model.reloadSession(id);
@@ -158,7 +158,7 @@ namespace osafw
                 if (row["pwd"].ToString().Substring(0, 2) == "$2")
                     continue; // already hashed
                 var hashed = model.hashPwd((string)row["pwd"]);
-                db.update(model.table_name, new Hashtable() { { "pwd", hashed } }, new Hashtable() { { "id", row["id"] } });
+                db.update(model.table_name, new DBRow() { { "pwd", hashed } }, new Hashtable() { { "id", row["id"] } });
             }
             rw("done");
         }

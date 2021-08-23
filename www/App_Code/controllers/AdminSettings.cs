@@ -79,7 +79,7 @@ namespace osafw
                 // itemdb("dict_link_multi") = FormUtils.multi2ids(reqh("dict_link_multi"))
 
                 // only update, no add new settings
-                model.update(id, itemdb);
+                model.update(id, new DBRow(itemdb));
                 fw.flash("record_updated", 1);
 
                 // custom code:

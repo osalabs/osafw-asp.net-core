@@ -75,7 +75,7 @@ namespace osafw
         public void setValue(string icode, string ivalue)
         {
             DBRow item = this.oneByIcode(icode);
-            Hashtable fields = new();
+            DBRow fields = new();
             if (item.ContainsKey("id"))
             {
                 // exists - update
@@ -87,7 +87,7 @@ namespace osafw
                 // not exists - add new
                 fields["icode"] = icode;
                 fields["ivalue"] = ivalue;
-                fields["is_user_edit"] = 0; // all auto-added settings is not user-editable by default
+                fields["is_user_edit"] = "0"; // all auto-added settings is not user-editable by default
                 this.add(fields);
             }
         }

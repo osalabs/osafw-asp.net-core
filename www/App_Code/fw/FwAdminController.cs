@@ -148,7 +148,7 @@ namespace osafw
                 FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes);
                 FormUtils.filterNullable(itemdb, save_fields_nullable);
 
-                id = this.modelAddOrUpdate(id, itemdb);
+                id = this.modelAddOrUpdate(id, new DBRow(itemdb));
             }
             catch (ApplicationException ex)
             {

@@ -30,22 +30,22 @@ namespace osafw
             {
                 // exists
                 result = Utils.f2int(item[field_id]);
-                update(Utils.f2int(item[field_id]), new Hashtable() { { "fields", fields } });
+                update(Utils.f2int(item[field_id]), new DBRow() { { "fields", fields } });
             }
             else
                 // new
-                result = add(new Hashtable()
-            {
+                result = add(new DBRow()
                 {
-                    field_icode, screen
-                },
-                {
-                    "fields", fields
-                },
-                {
-                    field_add_users_id, Users.id
-                }
-            });
+                    {
+                        field_icode, screen
+                    },
+                    {
+                        "fields", fields
+                    },
+                    {
+                        field_add_users_id, Utils.f2str(Users.id)
+                    }
+                });
             return result;
         }
 

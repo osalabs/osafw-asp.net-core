@@ -1123,13 +1123,13 @@ namespace osafw
                 column_names += (column_names.ToString().Length > 0 ? "," : "") + ((Hashtable)fields["idesc"])["iname"];
             }
 
-            Hashtable item = new Hashtable()
+            DBRow item = new()
             {
                 {
-                    "tname",entity["table"]
+                    "tname", Utils.f2str(entity["table"])
                 },
                 {
-                    "iname",entity["iname"]
+                    "iname", Utils.f2str(entity["iname"])
                 },
                 {
                     "columns",columns
@@ -2049,7 +2049,7 @@ namespace osafw
         // update by url
         private void updateMenuItem(string controller_url, string controller_title)
         {
-            var fields = new Hashtable()
+            var fields = new DBRow()
             {
                 {"url",controller_url},
                 {"iname",controller_title},

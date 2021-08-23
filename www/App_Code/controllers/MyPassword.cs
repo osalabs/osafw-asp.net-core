@@ -71,7 +71,7 @@ namespace osafw
 
                 if (id > 0)
                 {
-                    model.update(id, itemdb);
+                    model.update(id, new DBRow(itemdb));
 
                     fw.logEvent("chpwd");
                     fw.flash("record_updated", 1);

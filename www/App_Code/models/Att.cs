@@ -40,19 +40,19 @@ namespace osafw
                 IFormFile file = fw.request.Form.Files[file_index];
 
                 // update db with file information
-                Hashtable fields = new();
+                DBRow fields = new();
                 if (is_new)
                     fields["iname"] = file.FileName;
                 fields["iname"] = file.FileName;
                 fields["fname"] = file.FileName;
-                fields["fsize"] = Utils.fileSize(filepath);
+                fields["fsize"] = Utils.f2str(Utils.fileSize(filepath));
                 fields["ext"] = ext;
-                fields["status"] = STATUS_ACTIVE; // finished upload - change status to active
+                fields["status"] = Utils.f2str(STATUS_ACTIVE); // finished upload - change status to active
                                                   // turn on image flag if it's an image
                 if (UploadUtils.isUploadImgExtAllowed(ext))
                 {
                     // if it's an image - turn on flag and resize for thumbs
-                    fields["is_image"] = 1;
+                    fields["is_image"] = "1";
 
                     Utils.resizeImage(filepath, getUploadImgPath(id, "s", ext), MAX_THUMB_W_S, MAX_THUMB_H_S);
                     Utils.resizeImage(filepath, getUploadImgPath(id, "m", ext), MAX_THUMB_W_M, MAX_THUMB_H_M);
@@ -61,7 +61,7 @@ namespace osafw
 
                 this.update(id, fields);
                 fields["filepath"] = filepath;
-                result = fields;
+                result = fields.toHashtable();
             }
             return result;
         }
@@ -82,8 +82,8 @@ namespace osafw
                 if (file.Length > 0)
                 {
                     // add att db record
-                    Hashtable itemdb = (Hashtable)item.Clone();
-                    itemdb["status"] = 1; // under upload
+                    DBRow itemdb = new DBRow(item);
+                    itemdb["status"] = "1"; // under upload
                     var id = this.add(itemdb);
 
                     var resone = this.uploadOne(id, i, true);
@@ -103,7 +103,7 @@ namespace osafw
             Hashtable where = new();
             where["table_name"] = "tmp_" + att_table_name + "_" + files_code;
             where["item_id"] = 0;
-            db.update(table_name, new Hashtable() { { "table_name", att_table_name }, { "item_id", item_id } }, where);
+            db.update(table_name, new DBRow() { { "table_name", att_table_name }, { "item_id", Utils.f2str(item_id) } }, where);
             return true;
         }
 
@@ -128,8 +128,8 @@ namespace osafw
             int me_id = Users.id;
 
             // 1. set status=1 (under update)
-            Hashtable fields = new();
-            fields["status"] = 1;
+            DBRow fields = new();
+            fields["status"] = "1";
             Hashtable where = new();
             where["table_name"] = table_name;
             where["item_id"] = id;
@@ -152,7 +152,7 @@ namespace osafw
                 {
                     // existing link
                     fields = new();
-                    fields["status"] = 0;
+                    fields["status"] = "0";
                     where = new();
                     where["id"] = row["id"];
                     db.update(att_table_link, fields, where);
@@ -161,10 +161,10 @@ namespace osafw
                 {
                     // new link
                     fields = new();
-                    fields["att_id"] = att_id;
+                    fields["att_id"] = Utils.f2str(att_id);
                     fields["table_name"] = table_name;
-                    fields["item_id"] = id;
-                    fields["add_users_id"] = me_id;
+                    fields["item_id"] = Utils.f2str(id);
+                    fields["add_users_id"] = Utils.f2str(me_id);
                     db.insert(att_table_link, fields);
                 }
             }
@@ -485,7 +485,7 @@ namespace osafw
             if (result)
             {
                 // mark as uploaded
-                this.update(id, new Hashtable() { { "is_s3", 1 } });
+                this.update(id, new DBRow() { { "is_s3", "1" } });
                 // remove local files
                 deleteLocalFiles(id);
             }
@@ -544,14 +544,14 @@ namespace osafw
             foreach (IFormFile file in afiles)
             {
                 // first - save to db so we can get att_id
-                Hashtable attitem = new Hashtable();
+                DBRow attitem = new ();
                 attitem["att_categories_id"] = att_categories_id;
                 attitem["table_name"] = item_table_name;
-                attitem["item_id"] = item_id;
-                attitem["is_s3"] = 1;
-                attitem["status"] = 1;
+                attitem["item_id"] = Utils.f2str(item_id);
+                attitem["is_s3"] = "1";
+                attitem["status"] = "1";
                 attitem["fname"] = file.FileName;
-                attitem["fsize"] = file.Length;
+                attitem["fsize"] = Utils.f2str(file.Length);
                 attitem["ext"] = UploadUtils.getUploadFileExt(file.FileName);
                 var att_id = fw.model<Att>().add(attitem);
 
@@ -561,7 +561,7 @@ namespace osafw
 
                     // TODO check response for 200 and if not - error/delete?
                     // once uploaded - mark in db as uploaded
-                    fw.model<Att>().update(att_id, new Hashtable() { { "status", 0 } });
+                    fw.model<Att>().update(att_id, new DBRow() { { "status", "0" } });
 
                     result += 1;
                 }

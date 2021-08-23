@@ -1111,11 +1111,11 @@ namespace osafw
         }
 
         // return last inserted id
-        public int insert(string table, Hashtable fields)
+        public int insert(string table, DBRow fields)
         {
             if (fields.Count < 1) return 0;
 
-            exec(hash2sql_i(table, fields));
+            exec(hash2sql_i(table, fields.toHashtable()));
 
             object insert_id;
 
@@ -1146,13 +1146,13 @@ namespace osafw
             return exec(sql);
         }
 
-        public int update(string table, Hashtable fields, Hashtable where)
+        public int update(string table, DBRow fields, Hashtable where)
         {
-            return exec(hash2sql_u(table, fields, where));
+            return exec(hash2sql_u(table, fields.toHashtable(), where));
         }
 
         // retrun number of affected rows
-        public int update_or_insert(string table, Hashtable fields, Hashtable where)
+        public int update_or_insert(string table, DBRow fields, Hashtable where)
         {
             // merge fields and where
             Hashtable allfields = new();
@@ -1166,7 +1166,7 @@ namespace osafw
                 allfields[k] = where[k];
             }
 
-            string update_sql = hash2sql_u(table, fields, where);
+            string update_sql = hash2sql_u(table, fields.toHashtable(), where);
             string insert_sql = hash2sql_i(table, allfields);
             string full_sql = update_sql + "  IF @@ROWCOUNT = 0 " + insert_sql;
 

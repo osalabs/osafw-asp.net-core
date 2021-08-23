@@ -79,10 +79,10 @@ namespace osafw
             return isExistsByField(uniq_key, not_id, "email");
         }
 
-        public override int add(Hashtable item)
+        public override int add(DBRow item)
         {
             if (!item.ContainsKey("access_level"))
-                item["access_level"] = Users.ACL_MEMBER;
+                item["access_level"] = Utils.f2str(Users.ACL_MEMBER);
 
             if (!item.ContainsKey("pwd"))
                 item["pwd"] = Utils.getRandStr(8); // generate password
@@ -90,7 +90,7 @@ namespace osafw
             return base.add(item);
         }
 
-        public override bool update(int id, Hashtable item)
+        public override bool update(int id, DBRow item)
         {
             if (item.ContainsKey("pwd"))
                 item["pwd"] = this.hashPwd((string)item["pwd"]);
@@ -151,15 +151,13 @@ namespace osafw
         {
             var pwd_reset_token = Utils.getRandStr(50);
 
-            Hashtable item = new()
+            DBRow item = new()
             {
                 {
-                    "pwd_reset",
-                    this.hashPwd(pwd_reset_token)
+                    "pwd_reset", this.hashPwd(pwd_reset_token)
                 },
                 {
-                    "pwd_reset_time",
-                    DateTime.Now
+                    "pwd_reset_time", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
                 }
             };
             this.update(id, item);
@@ -232,8 +230,8 @@ namespace osafw
 
             fw.logEvent("login", id);
             // update login info
-            Hashtable fields = new();
-            fields["login_time"] = DateTime.Now;
+            DBRow fields = new();
+            fields["login_time"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
             this.update(id, fields);
             return true;
         }

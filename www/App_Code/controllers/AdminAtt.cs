@@ -160,7 +160,7 @@ namespace osafw
 
                 if (id > 0)
                 {
-                    model.update(id, itemdb);
+                    model.update(id, new DBRow(itemdb));
                     fw.flash("updated", 1);
 
                     // Proceed upload - for edit - just one file

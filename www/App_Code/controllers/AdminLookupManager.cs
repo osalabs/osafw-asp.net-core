@@ -384,13 +384,13 @@ namespace osafw
             {
                 Validate(id, item);
 
-                Hashtable itemdb = new();
+                DBRow itemdb = new();
                 foreach (Hashtable col in cols)
                 {
                     if (item.ContainsKey(col["name"]))
-                        itemdb[col["name"]] = item[col["name"]];
+                        itemdb[(string)col["name"]] = Utils.f2str(item[col["name"]]);
                     else if ((string)col["itype"] == "checkbox")
-                        itemdb[col["name"]] = 0;// for checkboxes just set them 0
+                        itemdb[(string)col["name"]] = "0";// for checkboxes just set them 0
                 }
 
                 if (id > 0)
@@ -512,12 +512,12 @@ namespace osafw
                         string md5 = (string)rows[key];
                         // logger(form_id)
                         Hashtable item = reqh("f" + form_id);
-                        Hashtable itemdb = new();
+                        DBRow itemdb = new();
                         // copy from form item to db item - only defined columns
                         foreach (Hashtable col in cols)
                         {
                             if (item.ContainsKey(col["name"]))
-                                itemdb[col["name"]] = item[col["name"]];
+                                itemdb[(string)col["name"]] = Utils.f2str(item[col["name"]]);
                         }
                         // check if this row need to be deleted
                         if (rowsdel.ContainsKey(form_id))
@@ -544,14 +544,14 @@ namespace osafw
                                       // logger("new formid=" & form_id)
 
                         Hashtable item = reqh("fnew" + form_id);
-                        Hashtable itemdb = new();
+                        DBRow itemdb = new();
                         bool is_row_empty = true;
                         // copy from form item to db item - only defined columns
                         foreach (Hashtable col in cols)
                         {
                             if (item.ContainsKey(col["name"]))
                             {
-                                itemdb[col["name"]] = item[col["name"]];
+                                itemdb[(string)col["name"]] = Utils.f2str(item[col["name"]]);
                                 if (!string.IsNullOrEmpty((string)item[col["name"]]))
                                     is_row_empty = false; // detect at least one non-empty value
                             }

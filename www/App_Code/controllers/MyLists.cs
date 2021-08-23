@@ -89,7 +89,7 @@ namespace osafw
                 Hashtable itemdb = FormUtils.filter(item, this.save_fields);
                 FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes);
 
-                id = this.modelAddOrUpdate(id, itemdb);
+                id = this.modelAddOrUpdate(id, new DBRow(itemdb));
 
                 if (is_new && item.ContainsKey("item_id"))
                 {

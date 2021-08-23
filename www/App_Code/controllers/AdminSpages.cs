@@ -159,7 +159,7 @@ namespace osafw
                 if ((string)itemdb["pub_time"] == "")
                     itemdb["pub_time"] = DateTime.Now;
 
-                id = this.modelAddOrUpdate(id, itemdb);
+                id = this.modelAddOrUpdate(id, new DBRow(itemdb));
 
                 if ((string)item_old["is_home"] == "1")
                     FwCache.remove("home_page"); // reset home page cache if Home page changed
