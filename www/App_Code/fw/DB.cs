@@ -207,9 +207,22 @@ namespace osafw
             this.UNSUPPORTED_OLE_TYPES = Utils.qh("DBTYPE_IDISPATCH DBTYPE_IUNKNOWN"); // also? DBTYPE_ARRAY DBTYPE_VECTOR DBTYPE_BYTES
         }
 
+        public DB(string connstr, string type, string db_name)
+        {
+            this.conf["type"] = type;
+            this.conf["connection_string"] = connstr;
+
+            this.dbtype = (string)this.conf["type"];
+            this.connstr = (string)this.conf["connection_string"];
+
+            this.db_name = db_name;
+
+            this.UNSUPPORTED_OLE_TYPES = Utils.qh("DBTYPE_IDISPATCH DBTYPE_IUNKNOWN");
+        }
+
         public void logger(LogLevel level, params object[] args)
         {
-            if (args.Length == 0)
+            if (args.Length == 0 || fw == null)
                 return;
             fw.logger(level, args);
         }
@@ -223,7 +236,7 @@ namespace osafw
             var cache_key = "DB#" + connstr;
 
             // first, try to get connection from request cache (so we will use only one connection per db server - TBD make configurable?)
-            if (conn == null)
+            if (conn == null && fw != null && fw.cache.getRequestValue(cache_key) != null)
             {
                 conn = (DbConnection)fw.cache.getRequestValue(cache_key);
             }
@@ -233,7 +246,10 @@ namespace osafw
             {
                 schema = new Hashtable(); // reset schema cache
                 conn = createConnection(connstr, (string)conf["type"]);
-                fw.cache.setRequestValue(cache_key, conn);
+                if (fw != null)
+                {
+                    fw.cache.setRequestValue(cache_key, conn);
+                }
             }
 
             // if it's disconnected - re-connect
@@ -654,6 +670,7 @@ namespace osafw
         }
 
         // string will be Left(RTrim(str),length)
+        // TODO move to Utils since its not belong DB 
         public string left(string str, int length)
         {
             if (string.IsNullOrEmpty(str)) return "";
