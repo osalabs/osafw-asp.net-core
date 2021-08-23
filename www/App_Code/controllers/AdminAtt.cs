@@ -220,16 +220,16 @@ namespace osafw
             bool result = true;
             // only require file during first upload
             // only require iname during update
-            Hashtable itemdb;
+            DBRow itemdb;
             if (id > 0)
             {
-                itemdb = model.one(id).toHashtable();
+                itemdb = model.one(id);
                 result &= validateRequired(item, Utils.qw(required_fields));
             }
             else
             {
                 itemdb = new();
-                itemdb["fsize"] = 0;
+                itemdb["fsize"] = "0";
             }
 
             if (Utils.f2int(itemdb["fsize"]) == 0)

@@ -51,13 +51,13 @@ namespace osafw
             // code below to show list of items in columns instead of plain list
 
             int columns = 4;
-            ArrayList tables = model_tables.list();
+            DBList tables = model_tables.list();
             int max_rows = (int)Math.Ceiling(tables.Count / (double)columns);
             ArrayList cols = new();
 
             // add rows
             int curcol = 0;
-            foreach (Hashtable table in tables)
+            foreach (DBRow table in tables)
             {
                 if (cols.Count <= curcol)
                     cols.Add(new Hashtable());
@@ -68,7 +68,7 @@ namespace osafw
                     h["list_rows"] = new ArrayList();
                 }
                 ArrayList al = (ArrayList)h["list_rows"];
-                al.Add(table);
+                al.Add(table.toHashtable());
                 if (al.Count >= max_rows)
                     curcol += 1;
             }
@@ -85,7 +85,7 @@ namespace osafw
             if (Utils.f2int(defs["is_one_form"]) == 1)
             {
                 string id_fname = fw.model<LookupManagerTables>().getColumnId(defs);
-                var row = model.topByTname((string)defs["tname"]);
+                DBRow row = model.topByTname((string)defs["tname"]);
                 // fw.redirect(base_url & "/" & row(id_fname) & "/edit/?d=" & dict)
                 String[] args = (new[] { (string)row[id_fname] });
                 fw.routeRedirect("ShowForm", null, args);
@@ -294,7 +294,7 @@ namespace osafw
             if (isGet())
             {
                 if (id > 0)
-                    item = model.oneByTname(dict, id);
+                    item = model.oneByTname(dict, id).toHashtable();
                 else
                 {
                     // set defaults here
@@ -306,7 +306,7 @@ namespace osafw
             else
             {
                 // read from db
-                item = model.oneByTname(dict, id);
+                item = model.oneByTname(dict, id).toHashtable();
                 // and merge new values from the form
                 Utils.mergeHash(item, reqh("item"));
             }
@@ -440,7 +440,7 @@ namespace osafw
 
             Hashtable hf = new();
             int id = Utils.f2int(form_id);
-            Hashtable item = model.oneByTname(dict, id);
+            Hashtable item = model.oneByTname(dict, id).toHashtable();
             hf["i"] = item;
             hf["iname"] = item[new ArrayList(item.Keys)[0]];
             hf["id"] = id;

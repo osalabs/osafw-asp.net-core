@@ -32,7 +32,7 @@ namespace osafw
             //is_uploaded = UploadUtils.uploadSimple(up);
 
             rw("!@!@!!@!@!@");
-            ArrayList users = fw.model<Users>().list();
+            DBList users = fw.model<Users>().list();
             return new Hashtable();
         }
 

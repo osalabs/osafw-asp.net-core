@@ -117,7 +117,7 @@ namespace osafw
 
             if (result)
             {
-                Hashtable itemdb = model.one(id).toHashtable();
+                DBRow itemdb = model.one(id);
                 if (!fw.model<Users>().checkPwd((string)item["old_pwd"], (string)itemdb["pwd"]))
                 {
                     result = false;

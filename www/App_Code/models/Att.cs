@@ -146,7 +146,7 @@ namespace osafw
                 where["table_name"] = table_name;
                 where["item_id"] = id;
                 where["att_id"] = att_id;
-                Hashtable row = db.row(att_table_link, where).toHashtable();
+                DBRow row = db.row(att_table_link, where);
 
                 if (Utils.f2int(row["id"]) > 0)
                 {
@@ -356,7 +356,7 @@ namespace osafw
         }
 
         // return first att image linked via att_table_link
-        public Hashtable getFirstLinkedImage(string linked_table_name, int id)
+        public DBRow getFirstLinkedImage(string linked_table_name, int id)
         {
             Hashtable @params = new()
             {
@@ -364,7 +364,7 @@ namespace osafw
                 {"@item_id", id},
             };
             return db.rowp("SELECT TOP 1 a.* from " + db.q_ident(att_table_link) + " atl, " + db.q_ident(this.table_name) + " a"+
-                " WHERE atl.table_name=@table_name and atl.item_id=@item_id and a.id=atl.att_id and a.is_image=1 order by a.id ", @params).toHashtable();
+                " WHERE atl.table_name=@table_name and atl.item_id=@item_id and a.id=atl.att_id and a.is_image=1 order by a.id ", @params);
         }
 
         // return all att images linked via att_table_link
@@ -400,16 +400,16 @@ namespace osafw
         }
 
         // return one att record with additional check by table_name
-        public Hashtable oneWithTableName(int id, string item_table_name)
+        public DBRow oneWithTableName(int id, string item_table_name)
         {
-            var row = one(id).toHashtable();
+            var row = one(id);
             if ((string)row["table_name"] != item_table_name)
                 row.Clear();
             return row;
         }
 
         // return one att record by table_name and item_id
-        public Hashtable oneByTableName(string item_table_name, int item_id)
+        public DBRow oneByTableName(string item_table_name, int item_id)
         {
             return db.row(table_name, new Hashtable()
             {
@@ -421,7 +421,7 @@ namespace osafw
                     "item_id",
                     item_id
                 }
-            }).toHashtable();
+            });
         }
 
         public string getS3KeyByID(string id, string size = "")

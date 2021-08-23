@@ -169,12 +169,12 @@ namespace osafw
         }
 
         // return standard list of id,iname where status=0 order by iname
-        public virtual ArrayList list()
+        public virtual DBList list()
         {
             Hashtable where = new();
             if (!string.IsNullOrEmpty(field_status))
                 where[field_status] = db.opNOT(STATUS_DELETED);
-            return db.array(table_name, where, getOrderBy()).toArrayList();
+            return db.array(table_name, where, getOrderBy());
         }
 
         // override if id/iname differs in table
@@ -430,7 +430,7 @@ namespace osafw
         {
             var linked_rows = db.array(table_name, DB.h(linked_field_main_id, id)).toArrayList();
 
-            ArrayList lookup_rows = linked_model_link.list();
+            ArrayList lookup_rows = linked_model_link.list().toArrayList();
             if (linked_rows != null && linked_rows.Count > 0)
             {
                 foreach (Hashtable row in lookup_rows)
@@ -471,7 +471,7 @@ namespace osafw
         {
             var linked_rows = db.array(table_name, DB.h(linked_field_link_id, id)).toArrayList();
 
-            ArrayList lookup_rows = linked_model_main.list();
+            ArrayList lookup_rows = linked_model_main.list().toArrayList();
             if (linked_rows != null && linked_rows.Count > 0)
             {
                 foreach (Hashtable row in lookup_rows)
@@ -505,7 +505,7 @@ namespace osafw
             return lookup_rows;
         }
 
-        protected void setMultiListChecked(ref ArrayList rows, ArrayList ids, Hashtable def = null)
+        protected void setMultiListChecked(ref ArrayList rows, List<string> ids, Hashtable def = null)
         {
             var is_checked_only = (def != null && Utils.f2bool(def["lookup_checked_only"]));
 
@@ -532,9 +532,9 @@ namespace osafw
 
         // sel_ids - selected ids in the list()
         // def - in dynamic controller - field definition (also contains "i" and "ps", "lookup_params", ...) or you could use it to pass additional params
-        public virtual ArrayList getMultiListAL(ArrayList ids, Hashtable def = null)
+        public virtual ArrayList getMultiListAL(List<string> ids, Hashtable def = null)
         {
-            ArrayList rows = this.list();
+            ArrayList rows = this.list().toArrayList();
             setMultiListChecked(ref rows, ids, def);
             return rows;
         }
@@ -544,7 +544,7 @@ namespace osafw
         // def - in dynamic controller - field definition (also contains "i" and "ps", "lookup_params", ...) or you could use it to pass additional params
         public virtual ArrayList getMultiList(string sel_ids, Hashtable def = null)
         {
-            ArrayList ids = new(Strings.Split(sel_ids, ","));
+            List<string> ids = new(Strings.Split(sel_ids, ","));
             return this.getMultiListAL(ids, def);
         }
 
@@ -556,20 +556,20 @@ namespace osafw
         /// <param name="id_name">field name for main id</param>
         /// <param name="link_id_name">field name for linked id</param>
         /// <returns></returns>
-        public virtual ArrayList getLinkedIds(string link_table_name, int id, string id_name, string link_id_name)
+        public virtual List<string> getLinkedIds(string link_table_name, int id, string id_name, string link_id_name)
         {
             Hashtable where = new();
             where[id_name] = id;
-            ArrayList rows = db.array(link_table_name, where).toArrayList();
-            ArrayList result = new();
-            foreach (Hashtable row in rows)
+            DBList rows = db.array(link_table_name, where);
+            List<string> result = new();
+            foreach (DBRow row in rows)
                 result.Add(row[link_id_name]);
 
             return result;
         }
 
         // shortcut for getLinkedIds based on dynamic controller definition
-        public virtual ArrayList getLinkedIdsByDef(int id, Hashtable def)
+        public virtual List<string> getLinkedIdsByDef(int id, Hashtable def)
         {
             return getLinkedIds((string)def["table_link"], id, (string)def["table_link_id_name"], (string)def["table_link_linked_id_name"]);
         }

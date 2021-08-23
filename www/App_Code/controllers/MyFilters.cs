@@ -82,7 +82,7 @@ namespace osafw
                     required_fields += " icode";
                 Validate(id, item);
                 // load old record if necessary
-                Hashtable item_old = model0.one(id).toHashtable();
+                DBRow item_old = model0.one(id);
 
                 // also check that this filter is user's filter (cannot override system filter)
                 if (item_old.Count > 0 && Utils.f2int(item_old["is_system"]) == 1)

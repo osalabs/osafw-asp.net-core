@@ -125,7 +125,7 @@ namespace osafw
         {
             int id = Utils.f2int(form_id);
 
-            Hashtable user = model.one(id).toHashtable();
+            DBRow user = model.one(id);
             if (user.Count == 0)
                 throw new ApplicationException("Wrong User ID");
             if (Utils.f2int(user["access_level"]) >= Utils.f2int(fw.Session("access_level")))

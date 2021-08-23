@@ -41,14 +41,14 @@ namespace osafw
         }
 
         // retun one latest record by url (i.e. with most recent pub_time if there are more than one page with such url)
-        public Hashtable oneByUrl(string url, int parent_id)
+        public DBRow oneByUrl(string url, int parent_id)
         {
             Hashtable where = new()
             {
                 ["parent_id"] = parent_id,
                 ["url"] = url
             };
-            return db.row(table_name, where, "pub_time desc").toHashtable();
+            return db.row(table_name, where, "pub_time desc");
         }
 
         // return one latest record by full_url (i.e. relative url from root, without domain)
@@ -59,7 +59,7 @@ namespace osafw
             Hashtable item = new();
             for (int i = 1; i <= url_parts.GetUpperBound(0); i++)
             {
-                item = oneByUrl(url_parts[i], parent_id);
+                item = oneByUrl(url_parts[i], parent_id).toHashtable();
                 if (item.Count == 0)
                     return item;// empty hashtable
                 parent_id = Utils.f2int(item["id"]);

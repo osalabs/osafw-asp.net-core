@@ -46,11 +46,11 @@ namespace osafw
             csv_export_headers = "id,First Name,Last Name,Email,Registered";
         }
 
-        public Hashtable oneByEmail(string email)
+        public DBRow oneByEmail(string email)
         {
             Hashtable where = new();
             where["email"] = email;
-            Hashtable hU = db.row(table_name, where).toHashtable();
+            DBRow hU = db.row(table_name, where);
             return hU;
         }
 
@@ -263,10 +263,10 @@ namespace osafw
         }
 
         // return standard list of id,iname where status=0 order by iname
-        public override ArrayList list()
+        public override DBList list()
         {
             string sql = "select id, fname+' '+lname as iname from " + db.q_ident(table_name) + " where status=0 order by fname, lname";
-            return db.arrayp(sql, DB.h()).toArrayList();
+            return db.arrayp(sql, DB.h());
         }
         public override ArrayList listSelectOptions(Hashtable def = null)
         {
