@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections;
+using System.Collections.Generic;
 
 namespace osafw
 {
@@ -40,7 +41,7 @@ namespace osafw
 
             // add/modify rows from db if necessary
             foreach (Hashtable row in this.list_rows)
-                row["demo_dicts"] = model_related.one(Utils.f2int(row["demo_dicts_id"]));
+                row["demo_dicts"] = model_related.one(Utils.f2int(row["demo_dicts_id"])).toHashtable();
         }
 
         public override Hashtable ShowAction(string form_id = "")
@@ -77,7 +78,7 @@ namespace osafw
             ps["multi_datarow_link"] = model_related.getMultiListAL(model.getLinkedIds(model.table_link, id, "demos_id", "demo_dicts_id"));
             FormUtils.comboForDate((string)item["fdate_combo"], ps, "fdate_combo");
 
-            ps["att"] = fw.model<Att>().one(Utils.f2int(item["att_id"]));
+            ps["att"] = fw.model<Att>().one(Utils.f2int(item["att_id"])).toHashtable();
             ps["att_links"] = fw.model<Att>().getAllLinked(model.table_name, id);
 
             return ps;
@@ -146,7 +147,7 @@ namespace osafw
 
         public Hashtable AutocompleteAction()
         {
-            ArrayList items = model_related.getAutocompleteList(reqs("q"));
+            List<string> items = model_related.getAutocompleteList(reqs("q"));
 
             return new Hashtable() { { "_json", items } };
         }

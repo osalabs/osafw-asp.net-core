@@ -126,7 +126,7 @@ namespace osafw
 
             try
             {
-                Hashtable item_old = model.one(id);
+                Hashtable item_old = model.one(id).toHashtable();
                 // for non-home page enable some fields
                 string save_fields2 = this.save_fields;
                 if ((string)item_old["is_home"] != "1")

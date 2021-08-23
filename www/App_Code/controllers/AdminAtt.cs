@@ -74,7 +74,7 @@ namespace osafw
                 // offset+1 because _RowNumber starts from 1
                 string sql = "SELECT TOP " + limit + " * " + " FROM (" + "   SELECT *, ROW_NUMBER() OVER (ORDER BY " + orderby + ") AS _RowNumber" + "   FROM " + model.table_name + "   WHERE " + list_where + ") tmp" + " WHERE _RowNumber >= " + db.qi(offset + 1) + " ORDER BY " + orderby;
 
-                list_rows = db.arrayp(sql, list_where_params);
+                list_rows = db.arrayp(sql, list_where_params).toArrayList();
                 ps["list_rows"] = list_rows;
                 ps["pager"] = FormUtils.getPager(count, pagenum, pagesize);
 
@@ -101,7 +101,7 @@ namespace osafw
         public Hashtable ShowFormAction(string form_id = "")
         {
             Hashtable ps = new Hashtable();
-            Hashtable item;
+            DBRow item;
             int id = Utils.f2int(form_id);
 
             if (isGet())
@@ -110,7 +110,7 @@ namespace osafw
                     item = model.one(id);
                 else
                     // set defaults here
-                    item = new Hashtable();
+                    item = new DBRow();
             }
             else
             {
@@ -180,7 +180,7 @@ namespace osafw
                 ps["id"] = id;
                 if (id > 0)
                 {
-                    item = model.one(id);
+                    item = model.one(id).toHashtable();
                     ps["success"] = true;
                     ps["url"] = model.getUrlDirect(id);
                     ps["iname"] = item["iname"];
@@ -223,7 +223,7 @@ namespace osafw
             Hashtable itemdb;
             if (id > 0)
             {
-                itemdb = model.one(id);
+                itemdb = model.one(id).toHashtable();
                 result &= validateRequired(item, Utils.qw(required_fields));
             }
             else
@@ -300,7 +300,7 @@ namespace osafw
             where["status"] = 0;
             if (category_icode.Length>0)
             {
-                Hashtable att_cat = fw.model<AttCategories>().oneByIcode(category_icode);
+                DBRow att_cat = fw.model<AttCategories>().oneByIcode(category_icode);
                 if (att_cat.Count > 0)
                 {
                     att_categories_id = Utils.f2int(att_cat["id"]);
@@ -310,8 +310,8 @@ namespace osafw
             if (att_categories_id > 0)
                 where["att_categories_id"] = att_categories_id;
 
-            ArrayList rows = db.array(model.table_name, where, "add_time desc");
-            foreach (Hashtable row in rows)
+            var rows = db.array(model.table_name, where, "add_time desc");
+            foreach (DBRow row in rows)
                 row["direct_url"] = model.getUrlDirect(row);
             ps["att_dr"] = rows;
             ps["select_att_categories_id"] = fw.model<AttCategories>().listSelectOptions();

@@ -25,7 +25,7 @@ namespace osafw
         }
 
         // just return first row by icode field (you may want to make it unique)
-        public override Hashtable oneByIcode(string icode)
+        public override DBRow oneByIcode(string icode)
         {
             Hashtable where = new();
             where["icode"] = icode;
@@ -34,7 +34,7 @@ namespace osafw
 
         public void log(string ev_icode, int item_id = 0, int item_id2 = 0, string iname = "", int records_affected = 0, Hashtable changed_fields = null)
         {
-            Hashtable hEV = oneByIcode(ev_icode);
+            Hashtable hEV = oneByIcode(ev_icode).toHashtable();
             if (!hEV.ContainsKey("id"))
             {
                 fw.logger(LogLevel.WARN, "No event defined for icode=[", ev_icode, "], auto-creating");

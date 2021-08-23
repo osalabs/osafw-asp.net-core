@@ -27,7 +27,7 @@ namespace osafw
             Hashtable where = new();
             where["parent_id"] = 0;
             where["status"] = db.opNOT(STATUS_DELETED);
-            return db.array(table_name, where, "iname", Utils.qw("id iname"));
+            return db.array(table_name, where, "iname", Utils.qw("id iname")).toArrayList();
         }
     }
 }

@@ -24,7 +24,7 @@ namespace osafw
             {
                 Hashtable where = new();
                 where["tname"] = tname;
-                item = db.row(table_name, where);
+                item = db.row(table_name, where).toHashtable();
                 fw.cache.setRequestValue("LookupManagerTables_one_by_tname_" + table_name + "#" + tname, item);
             }
             return item;
@@ -148,7 +148,7 @@ namespace osafw
             ArrayList fields = new();
             fields.Add(new Hashtable { { "field", idfield }, { "alias", "id" } });
             fields.Add(new Hashtable { { "field", inamefield }, { "alias", "iname" } });
-            var rows = db.array(lutable, new Hashtable(), "1", fields);
+            var rows = db.array(lutable, new Hashtable(), "1", fields).toArrayList();
 
             return FormUtils.selectOptions(rows, (string)sel_id);
         }

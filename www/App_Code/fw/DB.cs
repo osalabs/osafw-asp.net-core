@@ -15,8 +15,51 @@ using System.Text.RegularExpressions;
 namespace osafw
 {
 
-    public class DBRow : Dictionary<string, string> { }
-    public class DBList : List<DBRow> { }
+    public class DBRow : Dictionary<string, string> {
+
+        public DBRow(){}
+        public DBRow(Hashtable h)
+        {
+            if (h != null)
+            {
+                foreach (string k in h.Keys)
+                {
+                    this[k] = Utils.f2str(h[k]);
+                }
+            }
+        }
+        public string this[string key]
+        {
+            get
+            {
+                return base.ContainsKey(key) ? base[key] : "";
+            }
+            set
+            {
+                base[key] = value;
+            }
+        }
+        public Hashtable toHashtable()
+        {
+            Hashtable result = new();
+            foreach(string k in this.Keys)
+            {
+                result[k] = this[k];
+            }
+            return result;
+        }
+    }
+    public class DBList : List<DBRow> {
+        public ArrayList toArrayList()
+        {
+            ArrayList result = new();
+            foreach (DBRow r in this)
+            {
+                result.Add(r.toHashtable());
+            }
+            return result;
+        }
+    }
 
     public enum DBOps : int
     {
@@ -322,9 +365,9 @@ namespace osafw
         }
 
         //read row values as a strings
-        private Hashtable readRow(DbDataReader dbread)
+        private DBRow readRow(DbDataReader dbread)
         {
-            Hashtable result = new();
+            DBRow result = new();
 
             if (dbread.HasRows)
             {
@@ -376,7 +419,7 @@ namespace osafw
         /// </summary>
         /// <param name="sql"></param>
         /// <returns></returns>
-        public Hashtable row(string sql)
+        public DBRow row(string sql)
         {
             DbDataReader dbread = query(sql);
             dbread.Read();
@@ -392,7 +435,7 @@ namespace osafw
         /// <param name="where"></param>
         /// <param name="order_by"></param>
         /// <returns></returns>
-        public Hashtable row(string table, Hashtable where, string order_by = "")
+        public DBRow row(string table, Hashtable where, string order_by = "")
         {
             return row(hash2sql_select(table, where, order_by, "TOP 1 *"));
         }
@@ -403,7 +446,7 @@ namespace osafw
         /// <param name="sql"></param>
         /// <param name="params"></param>
         /// <returns></returns>
-        public Hashtable rowp(string sql, Hashtable @params)
+        public DBRow rowp(string sql, Hashtable @params)
         {
             DbDataReader dbread = query(sql, @params);
             dbread.Read();
@@ -412,9 +455,9 @@ namespace osafw
             return result;
         }
 
-        public ArrayList readArray(DbDataReader dbread)
+        public DBList readArray(DbDataReader dbread)
         {
-            ArrayList result = new();
+            DBList result = new();
 
             while (dbread.Read())
                 result.Add(readRow(dbread));
@@ -428,23 +471,12 @@ namespace osafw
         /// </summary>
         /// <param name="sql"></param>
         /// <returns></returns>
-        public ArrayList array(string sql)
+        public DBList array(string sql)
         {
             DbDataReader dbread = query(sql);
             return readArray(dbread);
         }
 
-        public DBList array2(string sql)
-        {
-            DbDataReader dbread = query(sql);
-            DBList a = new();
-
-            while (dbread.Read())
-                a.Add(readRow2(dbread));
-
-            dbread.Close();
-            return a;
-        }
 
         /// <summary>
         /// read all rows using parametrized query
@@ -452,7 +484,7 @@ namespace osafw
         /// <param name="sql"></param>
         /// <param name="params"></param>
         /// <returns></returns>
-        public ArrayList arrayp(string sql, Hashtable @params)
+        public DBList arrayp(string sql, Hashtable @params)
         {
             DbDataReader dbread = query(sql, @params);
             return readArray(dbread);
@@ -467,7 +499,7 @@ namespace osafw
         /// <param name="order_by">optional order by, MUST BE QUOTED</param>
         /// <param name="aselect_fields">optional select fields array or hashtable(for aliases) or arraylist of hashtable("field"=>,"alias"=> for cases if there could be several same fields with diff aliases), if not set * returned</param>
         /// <returns></returns>
-        public ArrayList array(string table, Hashtable where, string order_by = "", ICollection aselect_fields = null)
+        public DBList array(string table, Hashtable where, string order_by = "", ICollection aselect_fields = null)
         {
             string select_fields = "*";
             if (aselect_fields != null)
@@ -506,9 +538,9 @@ namespace osafw
         /// </summary>
         /// <param name="dbread"></param>
         /// <returns></returns>
-        public ArrayList readCol(DbDataReader dbread)
+        public List<string> readCol(DbDataReader dbread)
         {
-            ArrayList result = new();
+            List<string> result = new();
             while (dbread.Read())
                 result.Add(dbread[0].ToString());
 
@@ -521,7 +553,7 @@ namespace osafw
         /// </summary>
         /// <param name="sql"></param>
         /// <returns></returns>
-        public ArrayList col(string sql)
+        public List<string> col(string sql)
         {
             DbDataReader dbread = query(sql);
             return readCol(dbread);
@@ -533,7 +565,7 @@ namespace osafw
         /// <param name="sql"></param>
         /// <param name="params"></param>
         /// <returns></returns>
-        public ArrayList colp(string sql, Hashtable @params)
+        public List<string> colp(string sql, Hashtable @params)
         {
             DbDataReader dbread = query(sql, @params);
             return readCol(dbread);
@@ -547,7 +579,7 @@ namespace osafw
         /// <param name="field_name">optional field name, if empty - first field returned</param>
         /// <param name="order_by">optional order by (MUST be quoted)</param>
         /// <returns></returns>
-        public ArrayList col(string table, Hashtable where, string field_name, string order_by = "")
+        public List<string> col(string table, Hashtable where, string field_name, string order_by = "")
         {
             if (field_name == null) field_name = "";
 
@@ -1355,7 +1387,7 @@ namespace osafw
                     " WHERE t.table_name = c.table_name" +
                     "   AND t.table_name = @table_name"+ 
                     " order by c.ORDINAL_POSITION";
-                result = arrayp(sql, DB.h("@table_name", table));
+                result = arrayp(sql, DB.h("@table_name", table)).toArrayList();
                 foreach (Hashtable row in result)
                 {
                     row["fw_type"] = map_mssqltype2fwtype((string)row["type"]); // meta type
@@ -1429,6 +1461,7 @@ namespace osafw
                     where = " WHERE col1.TABLE_NAME=@table_name";
                     where_params["@table_name"] = table;
                 }
+
                 result = this.arrayp("SELECT " + 
                     " col1.CONSTRAINT_NAME as [name]" + 
                     ", col1.TABLE_NAME As [table]" + 
@@ -1447,7 +1480,7 @@ namespace osafw
                     "       AND col2.CONSTRAINT_SCHEMA = rc.UNIQUE_CONSTRAINT_SCHEMA " + 
                     "       AND col2.CONSTRAINT_NAME = rc.UNIQUE_CONSTRAINT_NAME " + 
                     "       AND col2.ORDINAL_POSITION = col1.ORDINAL_POSITION)" + 
-                    where, where_params);
+                    where, where_params).toArrayList();
             }
             else if(RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {

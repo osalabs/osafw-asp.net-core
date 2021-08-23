@@ -53,7 +53,7 @@ namespace osafw
         {
             Hashtable ps = new();
             int id = Utils.f2int(form_id);
-            Hashtable item = model0.one(id);
+            DBRow item = model0.one(id);
             if (item.Count == 0)
                 throw new ApplicationException("Not Found");
 
@@ -85,7 +85,7 @@ namespace osafw
         public virtual Hashtable ShowFormAction(string form_id = "")
         {
             Hashtable ps = new();
-            var item = reqh("item"); // set defaults from request params
+            var item = new DBRow(reqh("item")); // set defaults from request params
             var id = Utils.f2int(form_id); // primary key is integer by default
 
             if (isGet())
@@ -112,7 +112,7 @@ namespace osafw
             setAddUpdUser(ps, item);
 
             ps["id"] = id;
-            ps["i"] = item;
+            ps["i"] = item.toHashtable();
             ps["return_url"] = return_url;
             ps["related_id"] = related_id;
             if (fw.FERR.Count > 0)

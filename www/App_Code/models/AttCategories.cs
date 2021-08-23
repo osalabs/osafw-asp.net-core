@@ -15,7 +15,7 @@ namespace osafw
         }
 
         // just return first row by iname field (you may want to make it unique)
-        public override Hashtable oneByIcode(string icode)
+        public override DBRow oneByIcode(string icode)
         {
             Hashtable where = new();
             where["icode"] = icode;
@@ -34,7 +34,7 @@ namespace osafw
                     field_icode,
                     db.opLIKE(icode_prefix + "[_]%")
                 }
-            }, field_id, Utils.qw("id iname"));
+            }, field_id, Utils.qw("id iname")).toArrayList();
         }
     }
 }

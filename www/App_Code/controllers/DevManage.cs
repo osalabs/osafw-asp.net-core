@@ -285,7 +285,7 @@ namespace osafw
 
             // extract ShowAction
             config["is_dynamic_show"] = false;
-            Hashtable fitem = new();
+            DBRow fitem = new();
             var fields = cInstance.prepareShowFields(fitem, new Hashtable());
             _makeValueTags(fields);
 
@@ -954,7 +954,7 @@ namespace osafw
             var entities = loadJson<ArrayList>(config_file);
 
             // drop all FKs we created before, so we'll be able to drop tables later
-            var fks = db.arrayp("SELECT fk.name, o.name as table_name FROM sys.foreign_keys fk, sys.objects o where fk.is_system_named=0 and o.object_id=fk.parent_object_id", DB.h());
+            var fks = db.arrayp("SELECT fk.name, o.name as table_name FROM sys.foreign_keys fk, sys.objects o where fk.is_system_named=0 and o.object_id=fk.parent_object_id", DB.h()).toArrayList();
             foreach (Hashtable fk in fks)
                 db.exec("ALTER TABLE " + db.q_ident((string)fk["table_name"]) + " DROP CONSTRAINT " + db.q_ident((string)fk["name"]));
 

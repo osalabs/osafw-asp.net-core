@@ -125,7 +125,7 @@ namespace osafw
         {
             int id = Utils.f2int(form_id);
 
-            Hashtable user = model.one(id);
+            Hashtable user = model.one(id).toHashtable();
             if (user.Count == 0)
                 throw new ApplicationException("Wrong User ID");
             if (Utils.f2int(user["access_level"]) >= Utils.f2int(fw.Session("access_level")))
@@ -153,7 +153,7 @@ namespace osafw
         {
             rw("hashing passwords");
             var rows = db.array(model.table_name, new Hashtable(), "id");
-            foreach (Hashtable row in rows)
+            foreach (DBRow row in rows)
             {
                 if (row["pwd"].ToString().Substring(0, 2) == "$2")
                     continue; // already hashed

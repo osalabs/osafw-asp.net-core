@@ -61,7 +61,7 @@ namespace osafw
 
 
         // just return first row by icode field
-        public override Hashtable oneByIcode(string icode)
+        public override DBRow oneByIcode(string icode)
         {
             Hashtable where = new();
             where["icode"] = icode;
@@ -74,13 +74,13 @@ namespace osafw
         }
         public void setValue(string icode, string ivalue)
         {
-            Hashtable item = this.oneByIcode(icode);
+            DBRow item = this.oneByIcode(icode);
             Hashtable fields = new();
             if (item.ContainsKey("id"))
             {
                 // exists - update
                 fields["ivalue"] = ivalue;
-                update((int)item["id"], fields);
+                update(Utils.f2int(item["id"]), fields);
             }
             else
             {

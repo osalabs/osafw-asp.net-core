@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -78,12 +79,12 @@ namespace osafw
             return db;
         }
 
-        public virtual Hashtable one(int id)
+        public virtual DBRow one(int id)
         {
             var cache_key = this.cache_prefix + id;
-            Hashtable item = (Hashtable)fw.cache.getRequestValue(cache_key);
+            DBRow item = (DBRow)fw.cache.getRequestValue(cache_key);
             if (item == null)
-            {
+            { 
                 Hashtable where = new();
                 where[this.field_id] = id;
                 item = db.row(table_name, where);
@@ -97,7 +98,7 @@ namespace osafw
         {
             object[] arr = new object[ids.Count - 1 + 1];
             ids.CopyTo(arr, 0);
-            return db.array(table_name, new Hashtable() { { "id", db.opIN(arr) } });
+            return db.array(table_name, new Hashtable() { { "id", db.opIN(arr) } }).toArrayList();
         }
 
         // add renamed fields For template engine - spaces and special chars replaced With "_" and other normalizations
@@ -118,7 +119,28 @@ namespace osafw
             if (!is_normalize_names)
                 return;
 
-            foreach (Hashtable row in rows)
+            foreach (DBRow row in rows)
+                normalizeNames(row);
+        }
+
+        public void normalizeNames(DBRow row)
+        {
+            if (!is_normalize_names || row.Count == 0)
+                return;
+
+            foreach (string key in new ArrayList(row.Keys)) // static copy of row keys to avoid loop issues
+                row[Utils.name2fw(key)] = row[key];
+
+            if (!string.IsNullOrEmpty(field_id) && row[field_id] != null && !row.ContainsKey("id"))
+                row["id"] = row[field_id];
+        }
+
+        public void normalizeNames(DBList rows)
+        {
+            if (!is_normalize_names)
+                return;
+
+            foreach (DBRow row in rows)
                 normalizeNames(row);
         }
 
@@ -127,8 +149,8 @@ namespace osafw
             if (field_iname == "")
                 return "";
 
-            Hashtable row = one(id);
-            return (string)row[field_iname];
+            DBRow row = one(id);
+            return row[field_iname];
         }
         public virtual string iname(object id)
         {
@@ -152,7 +174,7 @@ namespace osafw
             Hashtable where = new();
             if (!string.IsNullOrEmpty(field_status))
                 where[field_status] = db.opNOT(STATUS_DELETED);
-            return db.array(table_name, where, getOrderBy());
+            return db.array(table_name, where, getOrderBy()).toArrayList();
         }
 
         // override if id/iname differs in table
@@ -168,7 +190,7 @@ namespace osafw
                 new Hashtable() { { "field", field_id }, { "alias", "id" } },
                 new Hashtable() { { "field", field_iname }, { "alias", "iname" } }
             };
-            return db.array(table_name, where, getOrderBy(), select_fields);
+            return db.array(table_name, where, getOrderBy(), select_fields).toArrayList();
         }
 
         // similar to listSelectOptions but returns iname/iname
@@ -183,7 +205,7 @@ namespace osafw
                 new Hashtable() { { "field", field_iname }, { "alias", "id" } },
                 new Hashtable() { { "field", field_iname }, { "alias", "iname" } }
             };
-            return db.array(table_name, where, getOrderBy(), select_fields);
+            return db.array(table_name, where, getOrderBy(), select_fields).toArrayList();
         }
 
         // return count of all non-deleted
@@ -196,20 +218,20 @@ namespace osafw
         }
 
         // just return first row by iname field (you may want to make it unique)
-        public virtual Hashtable oneByIname(string iname)
+        public virtual DBRow oneByIname(string iname)
         {
             if (field_iname == "")
-                return new Hashtable();
+                return new DBRow();
 
             Hashtable where = new();
             where[field_iname] = iname;
             return db.row(table_name, where);
         }
 
-        public virtual Hashtable oneByIcode(string icode)
+        public virtual DBRow oneByIcode(string icode)
         {
             if (field_icode == "")
-                return new Hashtable();
+                return new DBRow();
 
             Hashtable where = new();
             where[field_icode] = icode;
@@ -264,7 +286,7 @@ namespace osafw
             if (is_log_changes)
             {
                 var item_old = this.one(id);
-                item_changes = fw.model<FwEvents>().changes_only(item, item_old);
+                item_changes = fw.model<FwEvents>().changes_only(item, item_old.toHashtable());
             }
 
             if (!string.IsNullOrEmpty(field_upd_time))
@@ -392,7 +414,7 @@ namespace osafw
             return FormUtils.selectOptions(this.listSelectOptions(), sel_id);
         }
 
-        public virtual ArrayList getAutocompleteList(string q)
+        public virtual List<string> getAutocompleteList(string q)
         {
             Hashtable where = new();
             where[field_iname] = db.opLIKE("%" + q + "%");
@@ -406,7 +428,7 @@ namespace osafw
         // def - in dynamic controller - field definition (also contains "i" and "ps", "lookup_params", ...) or you could use it to pass additional params
         public virtual ArrayList getMultiListLinkedRows(object id, Hashtable def = null)
         {
-            var linked_rows = db.array(table_name, DB.h(linked_field_main_id, id));
+            var linked_rows = db.array(table_name, DB.h(linked_field_main_id, id)).toArrayList();
 
             ArrayList lookup_rows = linked_model_link.list();
             if (linked_rows != null && linked_rows.Count > 0)
@@ -447,7 +469,7 @@ namespace osafw
         // def - in dynamic controller - field definition (also contains "i" and "ps", "lookup_params", ...) or you could use it to pass additional params
         public virtual ArrayList getMultiListLinkedRowsByLinkedId(object id, Hashtable def = null)
         {
-            var linked_rows = db.array(table_name, DB.h(linked_field_link_id, id));
+            var linked_rows = db.array(table_name, DB.h(linked_field_link_id, id)).toArrayList();
 
             ArrayList lookup_rows = linked_model_main.list();
             if (linked_rows != null && linked_rows.Count > 0)
@@ -538,7 +560,7 @@ namespace osafw
         {
             Hashtable where = new();
             where[id_name] = id;
-            ArrayList rows = db.array(link_table_name, where);
+            ArrayList rows = db.array(link_table_name, where).toArrayList();
             ArrayList result = new();
             foreach (Hashtable row in rows)
                 result.Add(row[link_id_name]);
@@ -696,7 +718,7 @@ namespace osafw
             if (iname.Length == 0)
                 return 0;
             int result;
-            Hashtable item = this.oneByIname(iname);
+            DBRow item = this.oneByIname(iname);
             if (item.ContainsKey(this.field_id))
                 // exists
                 result = Utils.f2int(item[this.field_id]);
@@ -705,7 +727,7 @@ namespace osafw
                 // not exists - add new
                 item = new();
                 item[field_iname] = iname;
-                result = this.add(item);
+                result = this.add(item.toHashtable());
                 is_added = true;
             }
             return result;
@@ -722,7 +744,7 @@ namespace osafw
                 aselect_fields = Utils.qw(csv_export_fields);
 
             var rows = db.array(table_name, where, "", aselect_fields);
-            return Utils.getCSVExport(csv_export_headers, csv_export_fields, rows);
+            return Utils.getCSVExport(csv_export_headers, csv_export_fields, rows.toArrayList());
         }
 
         public void Dispose()

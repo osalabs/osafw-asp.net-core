@@ -40,7 +40,7 @@ namespace osafw
             {
                 if (id > 0)
                 {
-                    item = model0.one(id);
+                    item = model0.one(id).toHashtable();
                     // convert comma separated to newline separated
                     item["list_columns"] = Utils.commastr2nlstr((string)item["list_columns"]);
                     item["columns"] = Utils.commastr2nlstr((string)item["columns"]);
@@ -58,7 +58,7 @@ namespace osafw
             else
             {
                 // read from db
-                item = model0.one(id);
+                item = model0.one(id).toHashtable();
                 // convert comma separated to newline separated
                 item["list_columns"] = Utils.commastr2nlstr((string)item["list_columns"]);
                 item["columns"] = Utils.commastr2nlstr((string)item["columns"]);

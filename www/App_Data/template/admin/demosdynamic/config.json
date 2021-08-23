@@ -284,7 +284,7 @@
                     "label": "DemoDicts",
                     "lookup_model": "DemoDicts",
                     "type": "select",
-                    "is_option0": true,
+                    "is_option_empty": true,
                     "class_contents": "col-md-3",
                     "class_control": "on-refresh"
                 },

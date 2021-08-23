@@ -68,7 +68,7 @@ namespace osafw
         {
             Hashtable ps = new();
             int id = Utils.f2int(form_id);
-            Hashtable item = model0.one(id);
+            var item = model0.one(id);
             if (item.Count == 0)
                 throw new ApplicationException("Not Found");
 
@@ -84,7 +84,7 @@ namespace osafw
                 this.setUserLists(ps, id);
 
             ps["id"] = id;
-            ps["i"] = item;
+            ps["i"] = item.toHashtable();
             ps["return_url"] = return_url;
             ps["related_id"] = related_id;
             ps["base_url"] = base_url;
@@ -99,7 +99,7 @@ namespace osafw
             // Me.form_new_defaults = New Hashtable From {{"field", "default value"}} 'OR set new form defaults here
 
             Hashtable ps = new();
-            var item = reqh("item"); // set defaults from request params
+            var item = new DBRow(reqh("item")); // set defaults from request params
             var id = Utils.f2int(form_id);
 
             if (isGet())
@@ -132,7 +132,7 @@ namespace osafw
             // FormUtils.comboForDate(item["fdate_combo"], ps, "fdate_combo")
 
             ps["id"] = id;
-            ps["i"] = item;
+            ps["i"] = item.toHashtable();
             ps["return_url"] = return_url;
             ps["related_id"] = related_id;
             if (fw.FERR.Count > 0)
@@ -365,7 +365,7 @@ namespace osafw
         {
             if (model_related == null)
                 throw new ApplicationException("No model_related defined");
-            ArrayList items = model_related.getAutocompleteList(reqs("q"));
+            List<string> items = model_related.getAutocompleteList(reqs("q"));
 
             return new Hashtable() { { "_json", items } };
         }
@@ -423,7 +423,7 @@ namespace osafw
         /// <param name="item"></param>
         /// <param name="ps"></param>
         /// <returns></returns>
-        public virtual ArrayList prepareShowFields(Hashtable item, Hashtable ps)
+        public virtual ArrayList prepareShowFields(DBRow item, Hashtable ps)
         {
             var id = Utils.f2int(item["id"]);
 
@@ -502,7 +502,7 @@ namespace osafw
             return fields;
         }
 
-        public virtual ArrayList prepareShowFormFields(Hashtable item, Hashtable ps)
+        public virtual ArrayList prepareShowFormFields(DBRow item, Hashtable ps)
         {
             var id = Utils.f2int(item["id"]);
 
@@ -575,7 +575,7 @@ namespace osafw
                             // lookup value
                             var lookup_row = fw.model((string)def["lookup_model"]).one(Utils.f2int(item[field]));
                             def["lookup_row"] = lookup_row;
-                            def["value"] = lookup_row[def["lookup_field"]];
+                            def["value"] = lookup_row[(string)def["lookup_field"]];
                         }
                         else
                         {

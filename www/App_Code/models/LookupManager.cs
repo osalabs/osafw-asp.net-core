@@ -33,7 +33,7 @@ namespace osafw
             if (tname == "")
                 throw new ApplicationException("Wrong topByTname params");
 
-            return db.row("select TOP " + db.qi(top_number) + " * from " + db.q_ident(tname));
+            return db.row("select TOP " + db.qi(top_number) + " * from " + db.q_ident(tname)).toHashtable();
         }
 
         public virtual int maxIdByTname(string tname)
@@ -60,7 +60,7 @@ namespace osafw
 
             Hashtable where = new();
             where[fw.model<LookupManagerTables>().getColumnId(defs)] = id;
-            return db.row(tname, where);
+            return db.row(tname, where).toHashtable();
         }
 
 

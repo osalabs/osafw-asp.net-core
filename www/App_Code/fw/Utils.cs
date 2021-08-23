@@ -368,7 +368,7 @@ namespace osafw
                 sheet_name = sheet_name.Substring(0, sheet_name.Length - 1);
                 try
                 {
-                    ArrayList rows = accdb.array(sheet_name_full, where);
+                    ArrayList rows = accdb.array(sheet_name_full, where).toArrayList();
                     callback(sheet_name, rows);
                 }
                 catch (Exception ex)
@@ -685,9 +685,32 @@ namespace osafw
             if (hash2 != null)
             {
                 // make static copy of hash2.keys, so even if hash2.keys changing (ex: hash1 is same as hash2) it will not affect the loop
-                foreach (string key in new ArrayList(hash2.Keys))
+                foreach (string key in hash2.Keys)
                 {
                     hash1[key] = hash2[key];
+                }
+            }
+        }
+
+        public static void mergeHash(DBRow hash1, Hashtable hash2)
+        {
+            if (hash2 != null)
+            {
+                // make static copy of hash2.keys, so even if hash2.keys changing (ex: hash1 is same as hash2) it will not affect the loop
+                foreach (string key in hash2.Keys)
+                {
+                    hash1[key] = Utils.f2str(hash2[key]);
+                }
+            }
+        }
+        public static void mergeHash(DBRow hash1, DBRow hash2)
+        {
+            if (hash2 != null)
+            {
+                // make static copy of hash2.keys, so even if hash2.keys changing (ex: hash1 is same as hash2) it will not affect the loop
+                foreach (string key in hash2.Keys)
+                {
+                    hash1[key] = Utils.f2str(hash2[key]);
                 }
             }
         }

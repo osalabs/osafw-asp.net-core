@@ -261,7 +261,7 @@ namespace osafw
                 var userfilters_id = reqi("userfilters_id");
                 if (userfilters_id > 0)
                 {
-                    Hashtable uf = fw.model<UserFilters>().one(userfilters_id);
+                    DBRow uf = fw.model<UserFilters>().one(userfilters_id);
                     Hashtable f1 = (Hashtable)Utils.jsonDecode(uf["idesc"]);
                     if (f1 != null)
                         f = f1;
@@ -622,13 +622,13 @@ namespace osafw
                 {
                     // for SQL Server 2012+
                     sql = "SELECT * FROM " + list_view_name + " WHERE " + this.list_where + " ORDER BY " + this.list_orderby + " OFFSET " + offset + " ROWS " + " FETCH NEXT " + limit + " ROWS ONLY";
-                    this.list_rows = db.arrayp(sql, list_where_params);
+                    this.list_rows = db.arrayp(sql, list_where_params).toArrayList();
                 }
                 else if (db.dbtype == "OLE")
                 {
                     // OLE - for Access - emulate using TOP and return just a limit portion (bad perfomance, but no way)
                     sql = "SELECT TOP " + (offset + limit) + " * FROM " + list_view_name + " WHERE " + this.list_where + " ORDER BY " + this.list_orderby;
-                    var rows = db.arrayp(sql, list_where_params);
+                    var rows = db.arrayp(sql, list_where_params).toArrayList();
                     if (offset >= rows.Count)
                         // offset too far
                         this.list_rows = new ArrayList();
@@ -838,7 +838,7 @@ namespace osafw
                 Utils.writeCSVExport(fw.response, "export.csv", csv_export_headers, fields, list_rows);
         }
 
-        public virtual void setAddUpdUser(Hashtable ps, Hashtable item)
+        public virtual void setAddUpdUser(Hashtable ps, DBRow item)
         {
             if (!string.IsNullOrEmpty(model0.field_add_users_id))
                 ps["add_users_id_name"] = fw.model<Users>().iname(item[model0.field_add_users_id]);

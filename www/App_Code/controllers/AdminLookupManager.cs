@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using Microsoft.VisualBasic;
 
 namespace osafw
@@ -204,7 +205,7 @@ namespace osafw
                           " WHERE " + list_where +
                           " ORDER BY " + orderby + " OFFSET " + offset + " ROWS " + " FETCH NEXT " + limit + " ROWS ONLY";
 
-                ps["list_rows"] = db.arrayp(sql, list_where_params);
+                ps["list_rows"] = db.arrayp(sql, list_where_params).toArrayList();
                 ps["pager"] = FormUtils.getPager((int)ps["count"], (int)f["pagenum"], f["pagesize"]);
                 if (ps["pager"] != null)
                 {
@@ -581,7 +582,7 @@ namespace osafw
         // TODO for lookup tables
         public Hashtable AutocompleteAction()
         {
-            ArrayList items = model_tables.getAutocompleteList(reqs("q"));
+            List<string> items = model_tables.getAutocompleteList(reqs("q"));
 
             return new Hashtable() { { "_json", items } };
         }

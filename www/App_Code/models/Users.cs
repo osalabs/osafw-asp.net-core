@@ -50,7 +50,7 @@ namespace osafw
         {
             Hashtable where = new();
             where["email"] = email;
-            Hashtable hU = db.row(table_name, where);
+            Hashtable hU = db.row(table_name, where).toHashtable();
             return hU;
         }
 
@@ -167,7 +167,7 @@ namespace osafw
             var user = this.one(id);
             user["pwd_reset_token"] = pwd_reset_token;
 
-            return fw.sendEmailTpl((string)user["email"], "email_pwd.txt", user);
+            return fw.sendEmailTpl((string)user["email"], "email_pwd.txt", user.toHashtable());
         }
 
         /// <summary>
@@ -242,7 +242,7 @@ namespace osafw
         {
             if (id == 0)
                 id = Users.id;
-            Hashtable user = one(id);
+            DBRow user = one(id);
 
             fw.SessionInt("user_id", id);
             fw.Session("login", (string)user["email"]);
@@ -268,12 +268,12 @@ namespace osafw
         public override ArrayList list()
         {
             string sql = "select id, fname+' '+lname as iname from " + db.q_ident(table_name) + " where status=0 order by fname, lname";
-            return db.arrayp(sql, DB.h());
+            return db.arrayp(sql, DB.h()).toArrayList();
         }
         public override ArrayList listSelectOptions(Hashtable def = null)
         {
             string sql = "select id, fname+' '+lname as iname from " + db.q_ident(table_name) + " where status=0 order by fname, lname";
-            return db.arrayp(sql, DB.h());
+            return db.arrayp(sql, DB.h()).toArrayList();
         }
 
         /// <summary>
@@ -302,7 +302,7 @@ namespace osafw
             if (menu_items == null)
             {
                 // read main menu items for sidebar
-                menu_items = db.array(table_menu_items, DB.h("status", STATUS_ACTIVE), "iname");
+                menu_items = db.array(table_menu_items, DB.h("status", STATUS_ACTIVE), "iname").toArrayList();
                 FwCache.setValue("menu_items", menu_items);
             }
 

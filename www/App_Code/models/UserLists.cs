@@ -28,7 +28,7 @@ namespace osafw
             where["status"] = STATUS_ACTIVE;
             where["entity"] = entity;
             where["add_users_id"] = Users.id;
-            return db.array(table_name, where, "iname", Utils.qw("id iname"));
+            return db.array(table_name, where, "iname", Utils.qw("id iname")).toArrayList();
         }
 
         public ArrayList listItemsById(int id)
@@ -36,7 +36,7 @@ namespace osafw
             Hashtable where = new();
             where["status"] = STATUS_ACTIVE;
             where["user_lists_id"] = id;
-            return db.array(table_items, where, "id desc", Utils.qw("id item_id"));
+            return db.array(table_items, where, "id desc", Utils.qw("id item_id")).toArrayList();
         }
 
         public ArrayList listForItem(string entity, int item_id)
@@ -46,7 +46,7 @@ namespace osafw
                 " LEFT OUTER JOIN " + db.q_ident(table_items) + " ti ON (ti.user_lists_id=t.id and ti.item_id=@item_id )" +
                 " where t.status=0 and t.entity=@entity" +
                 "   and t.add_users_id=@users_id" +
-                " order by t.iname", DB.h("@item_id", item_id, "@entity", entity, "@users_id", Users.id));
+                " order by t.iname", DB.h("@item_id", item_id, "@entity", entity, "@users_id", Users.id)).toArrayList();
         }
 
         public override void delete(int id, bool is_perm = false)
@@ -64,7 +64,7 @@ namespace osafw
 
         public Hashtable oneItemsByUK(int user_lists_id, int item_id)
         {
-            return db.row(table_items, DB.h("user_lists_id", user_lists_id, "item_id", item_id));
+            return db.row(table_items, DB.h("user_lists_id", user_lists_id, "item_id", item_id)).toHashtable();
         }
 
         public virtual void deleteItems(int id)

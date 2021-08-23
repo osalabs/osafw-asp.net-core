@@ -20,7 +20,7 @@ namespace osafw
         // delete record, but don't allow to delete home page
         public override void delete(int id, bool is_perm = false)
         {
-            Hashtable item_old = one(id);
+            DBRow item_old = one(id);
             // home page cannot be deleted
             if ((string)item_old["is_home"] != "1")
                 base.delete(id, is_perm);
@@ -48,7 +48,7 @@ namespace osafw
                 ["parent_id"] = parent_id,
                 ["url"] = url
             };
-            return db.row(table_name, where, "pub_time desc");
+            return db.row(table_name, where, "pub_time desc").toHashtable();
         }
 
         // return one latest record by full_url (i.e. relative url from root, without domain)
@@ -95,7 +95,7 @@ namespace osafw
 
         public ArrayList listChildren(int parent_id)
         {
-            return db.arrayp("select * from " + db.q_ident(table_name) + " where status<>127 and parent_id=@parent_id order by iname", DB.h("@parent_id", parent_id));
+            return db.arrayp("select * from " + db.q_ident(table_name) + " where status<>127 and parent_id=@parent_id order by iname", DB.h("@parent_id", parent_id)).toArrayList();
         }
 
         /// <summary>
@@ -107,7 +107,7 @@ namespace osafw
         /// <remarks></remarks>
         public ArrayList tree(string where, Hashtable list_where_params, string orderby)
         {
-            ArrayList rows = db.arrayp("select * from " + db.q_ident(table_name) + " where " + where + " order by " + orderby, list_where_params);
+            ArrayList rows = db.arrayp("select * from " + db.q_ident(table_name) + " where " + where + " order by " + orderby, list_where_params).toArrayList();
             ArrayList pages_tree = getPagesTree(rows, 0);
             return pages_tree;
         }
@@ -201,7 +201,7 @@ namespace osafw
             if (id == 0)
                 return "";
 
-            Hashtable item = one(id);
+            DBRow item = one(id);
             return getFullUrl(Utils.f2int(item["parent_id"])) + "/" + item["url"];
         }
 

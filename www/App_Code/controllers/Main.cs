@@ -61,7 +61,7 @@ namespace osafw
             one["rows"] = db.arrayp("with zzz as ("
                 + " select TOP 14 CAST(el.add_time as date) as idate, count(*) as ivalue from events ev, event_log el where ev.icode='login' and el.events_id=ev.id"
                 + " group by CAST(el.add_time as date) order by CAST(el.add_time as date) desc)"
-                + " select CONCAT(MONTH(idate),'/',DAY(idate)) as ilabel, ivalue from zzz order by idate", DB.h());
+                + " select CONCAT(MONTH(idate),'/',DAY(idate)) as ilabel, ivalue from zzz order by idate", DB.h()).toArrayList();
             panes["barchart"] = one;
 
             one = new Hashtable();
@@ -69,7 +69,7 @@ namespace osafw
             one["title"] = "Users by Type";
             one["id"] = "user_types";
             // one["url") ] "/Admin/Reports/sample"
-            one["rows"] = db.arrayp("select access_level, count(*) as ivalue from users group by access_level order by count(*) desc", DB.h());
+            one["rows"] = db.arrayp("select access_level, count(*) as ivalue from users group by access_level order by count(*) desc", DB.h()).toArrayList();
             foreach (Hashtable row in (ArrayList)one["rows"])
                 row["ilabel"] = FormUtils.selectTplName("/common/sel/access_level.sel", (string)row["access_level"]);
             panes["piechart"] = one;
@@ -78,7 +78,7 @@ namespace osafw
             one["type"] = "table";
             one["title"] = "Last Events";
             // one["url") ] "/Admin/Reports/sample"
-            var rows = db.arrayp("select TOP 10 el.add_time as [On], ev.iname as Event from events ev, event_log el where el.events_id=ev.id order by el.id desc", DB.h());
+            var rows = db.arrayp("select TOP 10 el.add_time as [On], ev.iname as Event from events ev, event_log el where el.events_id=ev.id order by el.id desc", DB.h()).toArrayList();
             one["rows"] = rows;
             var headers = new ArrayList();
             one["headers"] = headers;
@@ -121,7 +121,7 @@ namespace osafw
             one["rows"] = db.arrayp("with zzz as ("
                 + " select TOP 14 CAST(el.add_time as date) as idate, count(*) as ivalue from events ev, event_log el where el.events_id=ev.id"
                 + " group by CAST(el.add_time as date) order by CAST(el.add_time as date) desc)"
-                + " select CONCAT(MONTH(idate),'/',DAY(idate)) as ilabel, ivalue from zzz order by idate", DB.h());
+                + " select CONCAT(MONTH(idate),'/',DAY(idate)) as ilabel, ivalue from zzz order by idate", DB.h()).toArrayList();
             panes["linechart"] = one;
 
             return ps;

@@ -113,7 +113,7 @@ namespace osafw
         /// <returns>number of uploads deleted</returns>
         public int cleanupTmpUploads()
         {
-            var rows = db.arrayp("select * from " + db.q_ident(table_name) + " where add_time<DATEADD(hour, -48, getdate()) and (status=1 or table_name like 'tmp[_]%')", DB.h());
+            var rows = db.arrayp("select * from " + db.q_ident(table_name) + " where add_time<DATEADD(hour, -48, getdate()) and (status=1 or table_name like 'tmp[_]%')", DB.h()).toArrayList();
             foreach (Hashtable row in rows)
                 this.delete((int)row["id"], true);
             return rows.Count;
@@ -146,7 +146,7 @@ namespace osafw
                 where["table_name"] = table_name;
                 where["item_id"] = id;
                 where["att_id"] = att_id;
-                Hashtable row = db.row(att_table_link, where);
+                Hashtable row = db.row(att_table_link, where).toHashtable();
 
                 if (Utils.f2int(row["id"]) > 0)
                 {
@@ -196,7 +196,7 @@ namespace osafw
         // return correct url - direct, i.e. not via /Att
         public string getUrlDirect(int id, string size = "")
         {
-            Hashtable item = one(id);
+            DBRow item = one(id);
             if (item.Count == 0)
                 return "";
 
@@ -204,9 +204,9 @@ namespace osafw
         }
 
         // if you already have item, must contain: item("id"), item("ext")
-        public string getUrlDirect(Hashtable item, string size = "")
+        public string getUrlDirect(DBRow item, string size = "")
         {
-            return getUploadUrl(Utils.f2long(item["id"]), (string)item["ext"], size);
+            return getUploadUrl(Utils.f2long(item["id"]), item["ext"], size);
         }
 
         // IN: extension - doc, jpg, ... (dot is optional)
@@ -236,7 +236,7 @@ namespace osafw
                 db.del(att_table_link, DB.h("att_id", id));
 
             // remove files first
-            Hashtable item = one(id);
+            DBRow item = one(id);
             if ((string)item["is_s3"] == "1")
                 fw.model<S3>().deleteObject(table_name + "/" + item["id"]);
                 //fw.logger(LogLevel.WARN, "Att record has S3 flag, but S3 storage is not enabled");
@@ -249,7 +249,7 @@ namespace osafw
 
         public void deleteLocalFiles(int id)
         {
-            Hashtable item = one(id);
+            DBRow item = one(id);
 
             string filepath = getUploadImgPath(id, "", (string)item["ext"]);
             if (!string.IsNullOrEmpty(filepath))
@@ -271,7 +271,7 @@ namespace osafw
         public void checkAccessRights(int id)
         {
             bool result = true;
-            Hashtable item = one(id);
+            DBRow item = one(id);
 
             int user_access_level = Utils.f2int(fw.Session("access_level"));
 
@@ -292,7 +292,7 @@ namespace osafw
         // if no file found - throws ApplicationException
         public void transmitFile(int id, string size = "", string disposition = "attachment")
         {
-            Hashtable item = one(id);
+            DBRow item = one(id);
             if (size != "s" && size != "m")
                 size = "";
 
@@ -352,7 +352,7 @@ namespace osafw
                 + " where atl.table_name=@link_table_name"
                 + " and atl.item_id=@item_id"
                 + " and a.id=atl.att_id" + where 
-                + " order by a.id ", @params);
+                + " order by a.id ", @params).toArrayList();
         }
 
         // return first att image linked via att_table_link
@@ -364,7 +364,7 @@ namespace osafw
                 {"@item_id", id},
             };
             return db.rowp("SELECT TOP 1 a.* from " + db.q_ident(att_table_link) + " atl, " + db.q_ident(this.table_name) + " a"+
-                " WHERE atl.table_name=@table_name and atl.item_id=@item_id and a.id=atl.att_id and a.is_image=1 order by a.id ", @params);
+                " WHERE atl.table_name=@table_name and atl.item_id=@item_id and a.id=atl.att_id and a.is_image=1 order by a.id ", @params).toHashtable();
         }
 
         // return all att images linked via att_table_link
@@ -383,7 +383,7 @@ namespace osafw
             where["item_id"] = item_id;
             if (is_image > -1)
                 where["is_image"] = is_image;
-            return db.array(table_name, where, "id");
+            return db.array(table_name, where, "id").toArrayList();
         }
 
         // like getAllByTableName, but also fills att_categories hash
@@ -402,7 +402,7 @@ namespace osafw
         // return one att record with additional check by table_name
         public Hashtable oneWithTableName(int id, string item_table_name)
         {
-            var row = one(id);
+            var row = one(id).toHashtable();
             if ((string)row["table_name"] != item_table_name)
                 row.Clear();
             return row;
@@ -412,16 +412,16 @@ namespace osafw
         public Hashtable oneByTableName(string item_table_name, int item_id)
         {
             return db.row(table_name, new Hashtable()
-        {
             {
-                "table_name",
-                item_table_name
-            },
-            {
-                "item_id",
-                item_id
-            }
-        });
+                {
+                    "table_name",
+                    item_table_name
+                },
+                {
+                    "item_id",
+                    item_id
+                }
+            }).toHashtable();
         }
 
         public string getS3KeyByID(string id, string size = "")

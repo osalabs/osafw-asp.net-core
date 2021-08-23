@@ -31,7 +31,7 @@ namespace osafw
                 throw new ApplicationException("404 File Not Found");
             string size = reqs("size");
 
-            Hashtable item = model.one(id);
+            Hashtable item = model.one(id).toHashtable();
             if ((string)item["is_s3"] == "1")
                 model.redirectS3(item, size);
 
@@ -46,7 +46,7 @@ namespace osafw
             string size = reqs("size");
             bool is_preview = reqs("preview") == "1";
 
-            Hashtable item = model.one(id);
+            Hashtable item = model.one(id).toHashtable();
             if ((string)item["is_s3"] == "1")
                 model.redirectS3(item, size);
 
