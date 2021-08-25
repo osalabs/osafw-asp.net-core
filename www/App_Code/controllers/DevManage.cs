@@ -30,7 +30,7 @@ namespace osafw
 
         public Hashtable IndexAction()
         {
-            Hashtable ps = new Hashtable();
+            Hashtable ps = new();
 
             // table and views list
             var tables = db.tables();
@@ -115,7 +115,7 @@ namespace osafw
             {
                 string[] files = System.IO.Directory.GetFiles(updates_root);
 
-                ArrayList rows = new ArrayList();
+                ArrayList rows = new();
                 foreach (string file in files)
                     rows.Add(new Hashtable() { { "filename", System.IO.Path.GetFileName(file) } });
                 ps["rows"] = rows;
@@ -323,7 +323,7 @@ namespace osafw
         // analyse database tables and create db.json describing entities, fields and relationships
         public Hashtable AnalyseDBAction()
         {
-            Hashtable ps = new Hashtable();
+            Hashtable ps = new();
             var item = reqh("item");
             string connstr = item["connstr"] + "";
 
@@ -391,10 +391,10 @@ namespace osafw
 
         public Hashtable EntityBuilderAction()
         {
-            Hashtable ps = new Hashtable();
+            Hashtable ps = new();
 
             var entities_file = fw.config("template") + ENTITIES_PATH;
-            Hashtable item = new Hashtable();
+            Hashtable item = new();
             item["entities"] = FW.getFileContent(entities_file);
             ps["i"] = item;
 
@@ -440,7 +440,7 @@ namespace osafw
 
         public Hashtable DBInitializerAction()
         {
-            Hashtable ps = new Hashtable();
+            Hashtable ps = new();
 
             var config_file = fw.config("template") + DB_JSON_PATH;
             var entities = loadJson<ArrayList>(config_file);
@@ -606,7 +606,7 @@ namespace osafw
                 var tblschema = db.load_table_schema_full(tblname);
                 // logger(tblschema)
 
-                Hashtable table_entity = new Hashtable();
+                Hashtable table_entity = new();
                 table_entity["db_config"] = db.db_name;
                 table_entity["table"] = tblname;
                 table_entity["fw_name"] = Utils.name2fw(tblname); // new table name using fw standards
@@ -630,7 +630,7 @@ namespace osafw
 
         private ArrayList tableschema2fields(ArrayList schema)
         {
-            ArrayList result = new ArrayList(schema);
+            ArrayList result = new(schema);
 
             foreach (Hashtable fldschema in schema)
             {
@@ -659,7 +659,7 @@ namespace osafw
         // convert array of hashtables to hashtable of hashtables using key
         private Hashtable array2hashtable(ArrayList arr, string key)
         {
-            Hashtable result = new Hashtable();
+            Hashtable result = new();
             foreach (Hashtable item in arr)
                 result[item[key]] = item;
             return result;
@@ -830,14 +830,14 @@ namespace osafw
                         continue;
                     }
 
-                    Hashtable field = new Hashtable();
+                    Hashtable field = new();
                     ((ArrayList)table_entity["fields"]).Add(field);
 
                     // check if field is foreign key
                     if (field_name.Substring(field_name.Length - 3) == ".id")
                     {
                         // this is foreign key field
-                        Hashtable fk = new Hashtable();
+                        Hashtable fk = new();
                         ((ArrayList)table_entity["foreign_keys"]).Add(fk);
 
                         fk["pk_table"] = Utils.name2fw(Regex.Replace(field_name, @"\.id$", ""));  // Customers.id => customers
@@ -1262,17 +1262,17 @@ namespace osafw
                     tables[tentity["table"]] = tentity;
 
             var is_fw = Utils.f2bool(entity["is_fw"]);
-            Hashtable hfields = new Hashtable();
+            Hashtable hfields = new();
             var sys_fields = Utils.qh("id status add_time add_users_id upd_time upd_users_id");
 
-            ArrayList saveFields = new ArrayList();
-            ArrayList saveFieldsNullable = new ArrayList();
-            Hashtable hFieldsMap = new Hashtable();   // name => iname
-            Hashtable hFieldsMapFW = new Hashtable(); // fw_name => name
-            ArrayList showFieldsLeft = new ArrayList();
-            ArrayList showFieldsRight = new ArrayList();
-            ArrayList showFormFieldsLeft = new ArrayList();
-            ArrayList showFormFieldsRight = new ArrayList(); // system fields - to the right
+            ArrayList saveFields = new();
+            ArrayList saveFieldsNullable = new();
+            Hashtable hFieldsMap = new();   // name => iname
+            Hashtable hFieldsMapFW = new(); // fw_name => name
+            ArrayList showFieldsLeft = new();
+            ArrayList showFieldsRight = new();
+            ArrayList showFormFieldsLeft = new();
+            ArrayList showFormFieldsRight = new(); // system fields - to the right
 
             foreach (Hashtable fld in fields)
             {
@@ -1291,8 +1291,8 @@ namespace osafw
                     hFieldsMapFW[fld["fw_name"]] = fld["name"];
                 }
 
-                Hashtable sf = new Hashtable();  // show fields
-                Hashtable sff = new Hashtable(); // showform fields
+                Hashtable sf = new();  // show fields
+                Hashtable sff = new(); // showform fields
                 var is_skip = false;
                 sf["field"] = fld["name"];
                 sf["label"] = fld["iname"];
@@ -1548,7 +1548,7 @@ namespace osafw
                     if (!string.IsNullOrEmpty(table_name_linked))
                     {
                         // if table "MODELTBL_TBL2_link" exists - add control for linked table
-                        Hashtable sflink = new Hashtable()
+                        Hashtable sflink = new()
                         {
                             {
                                 "field",table_name_linked + "_link"
@@ -1572,7 +1572,7 @@ namespace osafw
                                 "table_link_linked_id_name",table_name_linked + "_id"
                             }
                         };
-                        Hashtable sfflink = new Hashtable()
+                        Hashtable sfflink = new()
                         {
                             {
                                 "field",table_name_linked + "_link"

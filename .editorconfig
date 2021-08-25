@@ -2,3 +2,12 @@
 
 # IDE1006: Naming Styles
 dotnet_diagnostic.IDE1006.severity = none
+
+# IDE0063: Use simple 'using' statement
+csharp_prefer_simple_using_statement = false
+
+# IDE0056: Use index operator
+csharp_style_prefer_index_operator = false
+
+# IDE0028: Simplify collection initialization
+dotnet_style_collection_initializer = false

@@ -80,8 +80,8 @@ namespace osafw
         private bool isWritable(string filepath)
         {
             //TODO MIGRATE rewrite obsolete code
-            System.Security.Permissions.FileIOPermission writePermission = new System.Security.Permissions.FileIOPermission(System.Security.Permissions.FileIOPermissionAccess.Write, filepath);
-            System.Security.PermissionSet permissionSet = new System.Security.PermissionSet(System.Security.Permissions.PermissionState.None);
+            FileIOPermission writePermission = new (FileIOPermissionAccess.Write, filepath);
+            System.Security.PermissionSet permissionSet = new (PermissionState.None);
             permissionSet.AddPermission(writePermission);
             return permissionSet.IsSubsetOf(AppDomain.CurrentDomain.PermissionSet);
         }

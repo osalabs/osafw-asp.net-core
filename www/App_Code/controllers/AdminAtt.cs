@@ -100,7 +100,7 @@ namespace osafw
 
         public Hashtable ShowFormAction(string form_id = "")
         {
-            Hashtable ps = new Hashtable();
+            Hashtable ps = new();
             DBRow item;
             int id = Utils.f2int(form_id);
 
@@ -130,7 +130,7 @@ namespace osafw
             setAddUpdUser(ps, item);
 
             ps["id"] = id;
-            ps["i"] = item;
+            ps["i"] = item.toHashtable();
             if (fw.FERR.Count > 0)
                 logger(fw.FERR);
 
@@ -140,13 +140,12 @@ namespace osafw
 
         public Hashtable SaveAction(string form_id = "")
         {
-            Hashtable ps = new Hashtable();
+            Hashtable ps = new();
             Hashtable item = reqh("item");
             if (item == null)
                 item = new Hashtable();
 
             int id = Utils.f2int(form_id);
-            int is_image = 0;
 
             try
             {
@@ -257,7 +256,7 @@ namespace osafw
             Hashtable ps = new();
             int id = Utils.f2int(form_id);
 
-            ps["i"] = model.one(id);
+            ps["i"] = model.one(id).toHashtable();
             return ps;
         }
 

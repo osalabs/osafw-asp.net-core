@@ -64,7 +64,7 @@ namespace osafw
                 this.setUserLists(ps, id);
 
             ps["id"] = id;
-            ps["i"] = item;
+            ps["i"] = item.toHashtable();
             ps["return_url"] = return_url;
             ps["related_id"] = related_id;
             ps["base_url"] = base_url;

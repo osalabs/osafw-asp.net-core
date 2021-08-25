@@ -362,8 +362,7 @@ namespace osafw.Tests
         [TestMethod()]
         public void parse_string_ratioTest()
         {
-            string r = "";
-            string tpl = "<~fradio radio=\"fradio\" name=\"item[fradio]\" delim=\"&nbsp;\">";
+            /*string tpl = "<~fradio radio=\"fradio\" name=\"item[fradio]\" delim=\"&nbsp;\">";
             string tpl_result = "<select name = \"item[fruit]\">" +
                 "<option value=\"\">- select a fruit -</option>" +
                 "<option value=\"1\">Apple</option>\r\n" +
@@ -372,8 +371,9 @@ namespace osafw.Tests
                 "</select>";
             Hashtable ps = new();
             ps["fradio"] = new ArrayList() { "Apple", "Plum", "Banana" };
-            r = new ParsePage(null).parse_string(tpl, ps);
-            Assert.AreEqual("", r);
+            var r = new ParsePage(null).parse_string(tpl, ps);
+            Assert.AreEqual("", r);*/
+            throw new NotImplementedException();
         }
 
         [TestMethod()]

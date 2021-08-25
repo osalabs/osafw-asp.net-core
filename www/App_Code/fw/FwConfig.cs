@@ -211,8 +211,9 @@ namespace osafw
 
             // convert strings to specific types
             LogLevel log_level = LogLevel.INFO; // default log level if No or Wrong level in config
-            if (settings.ContainsKey("log_level"))
-                Enum.TryParse<LogLevel>((string?)settings["log_level"], true, out log_level);
+            if (settings.ContainsKey("log_level") && settings["log_level"] != null)
+                Enum.TryParse<LogLevel>((string)settings["log_level"], true, out log_level);
+
             settings["log_level"] = log_level;
 
             // default settings that depend on other settings

@@ -23,7 +23,7 @@ namespace osafw
 
         public Hashtable IndexAction()
         {
-            Hashtable ps = new Hashtable();
+            Hashtable ps = new();
 
             fw.Session("contact_view_time", DateTime.Now.ToString());
 

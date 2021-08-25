@@ -73,7 +73,7 @@ namespace osafw
         // return next day of week
         public static DateTime nextDOW(DayOfWeek whDayOfWeek, DateTime theDate = default)
         {
-            if (theDate == default(DateTime))
+            if (theDate == default)
                 theDate = DateTime.Today;
             DateTime d = theDate.AddDays(whDayOfWeek - theDate.DayOfWeek);
             if (d <= theDate)

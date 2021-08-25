@@ -20,7 +20,7 @@ namespace osafw
 
         public Hashtable IndexAction()
         {
-            Hashtable ps = new Hashtable();
+            Hashtable ps = new();
             var selected_db = reqs("db");
             if (selected_db == "")
                 selected_db = "main";
@@ -73,7 +73,7 @@ namespace osafw
                 fw.setGlobalError("Error occured: " + ex.Message);
             }
 
-            ArrayList dbsources = new ArrayList();
+            ArrayList dbsources = new();
             foreach (string dbname in ((Hashtable)fw.config("db")).Keys)
                 dbsources.Add(new Hashtable()
                 {

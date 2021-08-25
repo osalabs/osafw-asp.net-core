@@ -1368,7 +1368,7 @@ namespace osafw
                     if (!string.IsNullOrEmpty(log_file))
                     {
                         long max_log_size = Utils.f2long(config("log_max_size"));
-                        using (FileStream floggerFS = new FileStream(log_file, FileMode.Open, FileAccess.Read, FileShare.Read))
+                        using (FileStream floggerFS = new(log_file, FileMode.Open, FileAccess.Read, FileShare.Read))
                         {
                             if (max_log_size > 0 && floggerFS.Length > max_log_size)
                             {

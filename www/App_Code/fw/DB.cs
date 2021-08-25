@@ -28,7 +28,8 @@ namespace osafw
                 }
             }
         }
-        public string this[string key]
+        
+        public new string this[string key]
         {
             get
             {

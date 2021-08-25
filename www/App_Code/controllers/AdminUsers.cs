@@ -139,7 +139,7 @@ namespace osafw
 
         public Hashtable SendPwdAction(string form_id)
         {
-            Hashtable ps = new Hashtable();
+            Hashtable ps = new();
             int id = Utils.f2int(form_id);
 
             ps["success"] = model.sendPwdReset(id);

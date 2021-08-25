@@ -82,7 +82,7 @@ namespace osafw
                 if (file.Length > 0)
                 {
                     // add att db record
-                    DBRow itemdb = new DBRow(item);
+                    DBRow itemdb = new(item);
                     itemdb["status"] = "1"; // under upload
                     var id = this.add(itemdb);
 
