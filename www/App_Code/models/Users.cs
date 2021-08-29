@@ -28,7 +28,7 @@ namespace osafw
         /// </summary>
         public static int id
         {
-            get { return Utils.f2int(FW.Current.SessionInt("user_id")); }
+            get { return Utils.f2int(FW.Current.Session("user_id")); }
         }
 
         /// <summary>
@@ -242,7 +242,7 @@ namespace osafw
                 id = Users.id;
             DBRow user = one(id);
 
-            fw.SessionInt("user_id", id);
+            fw.Session("user_id", Utils.f2str(id));
             fw.Session("login", (string)user["email"]);
             fw.Session("access_level", (string)user["access_level"]); //note, set as string
             fw.Session("lang", (string)user["lang"]);

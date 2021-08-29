@@ -131,7 +131,7 @@ namespace osafw
 
         public void ThemeAction(string form_id)
         {
-            fw.SessionInt("theme", Utils.f2int(form_id));
+            fw.Session("theme", form_id);
 
             fw.redirect(base_url);
         }

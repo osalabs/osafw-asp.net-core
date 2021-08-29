@@ -263,7 +263,7 @@ namespace osafw
         {
             // item("add_time") = Now() 'not necessary because add_time field in db should have default value now() or getdate()
             if (!string.IsNullOrEmpty(field_add_users_id) && !item.ContainsKey(field_add_users_id) && Users.isLogged)
-                item[field_add_users_id] = Utils.f2str(fw.SessionInt("user_id"));
+                item[field_add_users_id] = fw.Session("user_id");
             int id = db.insert(table_name, item);
 
             if (is_log_changes)
@@ -292,7 +292,7 @@ namespace osafw
             if (!string.IsNullOrEmpty(field_upd_time))
                 item[field_upd_time] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
             if (!string.IsNullOrEmpty(field_upd_users_id) && !item.ContainsKey(field_upd_users_id) && Users.isLogged)
-                item[field_upd_users_id] = Utils.f2str(fw.SessionInt("user_id"));
+                item[field_upd_users_id] = fw.Session("user_id");
 
             Hashtable where = new();
             where[this.field_id] = id;
