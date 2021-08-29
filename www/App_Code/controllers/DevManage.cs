@@ -219,8 +219,8 @@ namespace osafw
         public void CreateModelAction()
         {
             var item = reqh("item");
-            var table_name = item["table_name"].ToString().Trim();
-            var model_name = item["model_name"].ToString().Trim();
+            var table_name = Utils.f2str(item["table_name"]).Trim();
+            var model_name = Utils.f2str(item["model_name"]).Trim();
 
             Hashtable entity = new()
             {
@@ -237,9 +237,9 @@ namespace osafw
         public void CreateControllerAction()
         {
             var item = reqh("item");
-            var model_name = item["model_name"].ToString().Trim();
-            var controller_url = item["controller_url"].ToString().Trim();
-            var controller_title = item["controller_title"].ToString().Trim();
+            var model_name = Utils.f2str(item["model_name"]).Trim();
+            var controller_url = Utils.f2str(item["controller_url"]).Trim();
+            var controller_title = Utils.f2str(item["controller_title"]).Trim();
 
             // emulate entity
             var entity = new Hashtable()
@@ -260,7 +260,7 @@ namespace osafw
             // table = Utils.name2fw(model_name) - this is not always ok
 
             createController(entity, null);
-            var controller_name = entity["controller_url"].ToString().Replace("/", "");
+            var controller_name = Utils.f2str(entity["controller_url"]).Replace("/", "");
 
             fw.flash("controller_created", controller_name);
             fw.flash("controller_url", entity["controller_url"]);
@@ -270,7 +270,7 @@ namespace osafw
         public void ExtractControllerAction()
         {
             var item = reqh("item");
-            var controller_name = item["controller_name"].ToString().Trim();
+            var controller_name = Utils.f2str(item["controller_name"]).Trim();
 
             if (!_controllers().Contains(controller_name))
                 throw new ApplicationException("No controller found");
@@ -488,7 +488,7 @@ namespace osafw
             foreach (Hashtable entity in entities)
             {
                 entity["is_model_exists"] = _models().Contains(entity["model_name"]);
-                entity["controller_name"] = entity["controller_url"].ToString().Replace("/", "");
+                entity["controller_name"] = Utils.f2str(entity["controller_url"]).Replace("/", "");
                 entity["is_controller_exists"] = _controllers().Contains(entity["controller_name"] + "Controller");
             }
 
@@ -512,7 +512,7 @@ namespace osafw
                 if (item.ContainsKey(key + "is_model"))
                 {
                     // create model
-                    if (item[key + "model_name"].ToString().Length > 0 && entity["model_name"] != item[key + "model_name"])
+                    if (Utils.f2str(item[key + "model_name"]).Length > 0 && entity["model_name"] != item[key + "model_name"])
                     {
                         is_updated = true;
                         entity["model_name"] = item[key + "model_name"];
@@ -523,30 +523,30 @@ namespace osafw
                 if (item.ContainsKey(key + "is_controller"))
                 {
                     // create controller (model must exists)
-                    if (item[key + "controller_name"].ToString().Length > 0 && entity["controller_name"] != item[key + "controller_name"])
+                    if (Utils.f2str(item[key + "controller_name"]).Length > 0 && entity["controller_name"] != item[key + "controller_name"])
                     {
                         is_updated = true;
                         entity["controller_name"] = item[key + "controller_name"];
                     }
-                    if (item[key + "controller_title"].ToString().Length > 0 && entity["controller_title"] != item[key + "controller_title"])
+                    if (Utils.f2str(item[key + "controller_title"]).Length > 0 && entity["controller_title"] != item[key + "controller_title"])
                     {
                         is_updated = true;
                         entity["controller_title"] = item[key + "controller_title"];
                     }
-                    if (!entity.ContainsKey("controller_is_dynamic_show") || Utils.f2bool(entity["controller_is_dynamic_show"]) != (item[key + "coview"].ToString().Length > 0))
+                    if (!entity.ContainsKey("controller_is_dynamic_show") || Utils.f2bool(entity["controller_is_dynamic_show"]) != (Utils.f2str(item[key + "coview"]).Length > 0))
                     {
                         is_updated = true;
-                        entity["controller_is_dynamic_show"] = item[key + "coview"].ToString().Length > 0;
+                        entity["controller_is_dynamic_show"] = Utils.f2str(item[key + "coview"]).Length > 0;
                     }
-                    if (!entity.ContainsKey("controller_is_dynamic_showform") || Utils.f2bool(entity["controller_is_dynamic_showform"]) != (item[key + "coedit"].ToString().Length > 0))
+                    if (!entity.ContainsKey("controller_is_dynamic_showform") || Utils.f2bool(entity["controller_is_dynamic_showform"]) != (Utils.f2str(item[key + "coedit"]).Length > 0))
                     {
                         is_updated = true;
-                        entity["controller_is_dynamic_showform"] = item[key + "coedit"].ToString().Length > 0;
+                        entity["controller_is_dynamic_showform"] = Utils.f2str(item[key + "coedit"]).Length > 0;
                     }
-                    if (!entity.ContainsKey("controller_is_lookup") || Utils.f2bool(entity["controller_is_lookup"]) != (item[key + "colookup"].ToString().Length > 0))
+                    if (!entity.ContainsKey("controller_is_lookup") || Utils.f2bool(entity["controller_is_lookup"]) != (Utils.f2str(item[key + "colookup"]).Length > 0))
                     {
                         is_updated = true;
-                        entity["controller_is_lookup"] = item[key + "colookup"].ToString().Length > 0;
+                        entity["controller_is_lookup"] = Utils.f2str(item[key + "colookup"]).Length > 0;
                     }
                     this.createController(entity, entities);
                 }
@@ -858,7 +858,7 @@ namespace osafw
                     field["numeric_precision"] = null;
                     field["maxlen"] = null;
                     // detect type if not yet set by foreigh key
-                    if (field["fw_type"].ToString() == "")
+                    if (Utils.f2str(field["fw_type"]) == "")
                     {
                         field["fw_type"] = "varchar";
                         field["fw_subtype"] = "nvarchar";
@@ -923,7 +923,7 @@ namespace osafw
                             field["default"] = m.Groups[1].Value;
                         else
                             // no default set - then for nvarchar set empty strin gdefault
-                            if (field["fw_type"].ToString() == "varchar")
+                            if (Utils.f2str(field["fw_type"]) == "varchar")
                             field["default"] = "";
                     }
                 }
@@ -1054,7 +1054,7 @@ namespace osafw
                         fld_int = fld;
 
                     // for iname - just use 2nd to 4th field which not end with ID, varchar type and has some maxlen
-                    if (fld_iname == null && i >= 2 && i <= 4 && (string)fld["fw_type"] == "varchar" && Utils.f2int(fld["maxlen"]) > 0 && Utils.Right(fld["name"].ToString(), 2).ToLower() != "id")
+                    if (fld_iname == null && i >= 2 && i <= 4 && (string)fld["fw_type"] == "varchar" && Utils.f2int(fld["maxlen"]) > 0 && Utils.Right(Utils.f2str(fld["name"]), 2).ToLower() != "id")
                         fld_iname = fld;
 
                     if (Regex.IsMatch((string)fld["name"], @"^[\w_]", RegexOptions.IgnoreCase))
@@ -1109,18 +1109,18 @@ namespace osafw
             var fields = this.array2hashtable((ArrayList)entity["fields"], "fw_name");
             if (fields.ContainsKey("icode"))
             {
-                columns += (columns.ToString().Length > 0 ? "," : "") + "icode";
-                column_names += (column_names.ToString().Length > 0 ? "," : "") + ((Hashtable)fields["icode"])["iname"];
+                columns += (columns.Length > 0 ? "," : "") + "icode";
+                column_names += (column_names.Length > 0 ? "," : "") + ((Hashtable)fields["icode"])["iname"];
             }
             if (fields.ContainsKey("iname"))
             {
-                columns += (columns.ToString().Length > 0 ? "," : "") + "iname";
-                column_names += (column_names.ToString().Length > 0 ? "," : "") + ((Hashtable)fields["iname"])["iname"];
+                columns += (columns.Length > 0 ? "," : "") + "iname";
+                column_names += (column_names.Length > 0 ? "," : "") + ((Hashtable)fields["iname"])["iname"];
             }
             if (fields.ContainsKey("idesc"))
             {
-                columns += (columns.ToString().Length > 0 ? "," : "") + "idesc";
-                column_names += (column_names.ToString().Length > 0 ? "," : "") + ((Hashtable)fields["idesc"])["iname"];
+                columns += (columns.Length > 0 ? "," : "") + "idesc";
+                column_names += (column_names.Length > 0 ? "," : "") + ((Hashtable)fields["idesc"])["iname"];
             }
 
             DBRow item = new()
@@ -1246,7 +1246,7 @@ namespace osafw
             {
                 // TODO deprecate reading from db, always use entity info
                 DB db;
-                if (entity["db_config"].ToString().Length > 0)
+                if (Utils.f2str(entity["db_config"]).Length > 0)
                     db = new DB(fw, (Hashtable)((Hashtable)fw.config("db"))[entity["db_config"]], (string)entity["db_config"]);
                 else
                     db = new DB(fw);
@@ -1278,9 +1278,9 @@ namespace osafw
             {
                 logger("field name=", fld["name"], fld);
 
-                if (fld["fw_name"].ToString() == "")
+                if (Utils.f2str(fld["fw_name"]) == "")
                     fld["fw_name"] = Utils.name2fw((string)fld["name"]); // system name using fw standards
-                if (fld["iname"].ToString() == "")
+                if (Utils.f2str(fld["iname"]) == "")
                     fld["iname"] = Utils.name2human((string)fld["name"]); // human name using fw standards
 
                 hfields[fld["name"]] = fld;
@@ -1301,18 +1301,18 @@ namespace osafw
                 sff["field"] = fld["name"];
                 sff["label"] = fld["iname"];
 
-                if (fld["is_nullable"].ToString() == "0" && fld["default"] == null)
+                if (Utils.f2str(fld["is_nullable"]) == "0" && fld["default"] == null)
                     sff["required"] = true;// if not nullable and no default - required
 
-                if (fld["is_nullable"].ToString() == "1")
+                if (Utils.f2str(fld["is_nullable"]) == "1")
                     saveFieldsNullable.Add(fld["name"]);
 
                 var maxlen = Utils.f2int(fld["maxlen"]);
                 if (maxlen > 0)
                     sff["maxlength"] = maxlen;
-                if (fld["fw_type"].ToString() == "varchar")
+                if (Utils.f2str(fld["fw_type"]) == "varchar")
                 {
-                    if (maxlen <= 0 || fld["name"].ToString() == "idesc")
+                    if (maxlen <= 0 || Utils.f2str(fld["name"]) == "idesc")
                     {
                         sf["type"] = "markdown";
                         sff["type"] = "textarea";
@@ -1334,7 +1334,7 @@ namespace osafw
                         }
                     }
                 }
-                else if (fld["fw_type"].ToString() == "int")
+                else if (Utils.f2str(fld["fw_type"]) == "int")
                 {
                     // int fields could be: foreign keys, yes/no, just a number input
 
@@ -1370,7 +1370,7 @@ namespace osafw
 
                     if (!is_fk)
                     {
-                        if (fld["name"].ToString() == "parent_id")
+                        if (Utils.f2str(fld["name"]) == "parent_id")
                         {
                             // special case - parent_id
                             var mname = model_name;
@@ -1384,7 +1384,7 @@ namespace osafw
                             sff["is_option0"] = true;
                             sff["class_contents"] = "col-md-3";
                         }
-                        else if (fld["fw_subtype"].ToString() == "boolean")
+                        else if (Utils.f2str(fld["fw_subtype"]) == "boolean")
                         {
                             // make it as yes/no radio
                             sff["type"] = "yesno";
@@ -1400,13 +1400,13 @@ namespace osafw
                         }
                     }
                 }
-                else if (fld["fw_type"].ToString() == "float")
+                else if (Utils.f2str(fld["fw_type"]) == "float")
                 {
                     sff["type"] = "number";
                     sff["step"] = 0.1;
                     sff["class_contents"] = "col-md-3";
                 }
-                else if (fld["fw_type"].ToString() == "datetime")
+                else if (Utils.f2str(fld["fw_type"]) == "datetime")
                 {
                     sf["type"] = "date";
                     sff["type"] = "date_popup";
@@ -1416,7 +1416,7 @@ namespace osafw
                     // everything else - just input
                     sff["type"] = "input";
 
-                if (fld["is_identity"].ToString() == "1")
+                if (Utils.f2str(fld["is_identity"]) == "1")
                 {
                     sff["type"] = "group_id";
                     sff.Remove("class_contents");
@@ -1515,7 +1515,7 @@ namespace osafw
                     continue;
 
                 var is_sys = false;
-                if (fld["is_identity"].ToString() == "1" || sys_fields.Contains(fld["name"]) || sf["type"].ToString() == "att" || sf["type"].ToString() == "att_links")
+                if (Utils.f2str(fld["is_identity"]) == "1" || sys_fields.Contains(fld["name"]) || Utils.f2str(sf["type"]) == "att" || Utils.f2str(sf["type"]) == "att_links")
                 {
                     // add to system fields
                     showFieldsRight.Add(sf);
@@ -1528,7 +1528,7 @@ namespace osafw
                     showFormFieldsLeft.Add(sff);
                 }
 
-                if (!is_sys || fld["name"].ToString() == "status")
+                if (!is_sys || Utils.f2str(fld["name"]) == "status")
                     // add to save fields only if not system (except status)
                     saveFields.Add(fld["name"]);
             }
@@ -1635,13 +1635,13 @@ namespace osafw
             for (var i = 0; i <= fields.Count - 1; i++)
             {
                 Hashtable field = (Hashtable)fields[i];
-                if (field["is_identity"].ToString() == "1")
+                if (Utils.f2str(field["is_identity"]) == "1")
                     continue;
-                if (field["fw_type"].ToString() == "varchar" && Utils.f2int(field["maxlen"]) <= 0)
+                if (Utils.f2str(field["fw_type"]) == "varchar" && Utils.f2int(field["maxlen"]) <= 0)
                     continue;
                 if (is_fw)
                 {
-                    if (field["name"].ToString() == "add_time" || field["name"].ToString() == "add_users_id" || field["name"].ToString() == "upd_time" || field["name"].ToString() == "upd_users_id")
+                    if (Utils.f2str(field["name"]) == "add_time" || Utils.f2str(field["name"]) == "add_users_id" || Utils.f2str(field["name"]) == "upd_time" || Utils.f2str(field["name"]) == "upd_users_id")
                         continue;
                     config["view_list_defaults"] += (i == 0 ? "" : " ") + field["name"];
                 }
@@ -1708,7 +1708,7 @@ namespace osafw
             foreach (Hashtable field in fields)
             {
                 var fsql = "";
-                if (field["name"].ToString() == "status")
+                if (Utils.f2str(field["name"]) == "status")
                     fsql += Constants.vbCrLf; // add empty line before system fields starting with "status"
 
                 fsql += "  " + db.q_ident((string)field["name"]).PadRight(21, ' ') + " " + entityfield2dbtype(field);
@@ -1735,7 +1735,7 @@ namespace osafw
             {
                 case "int":
                     {
-                        if (entity["fw_subtype"].ToString() == "boolean" || entity["fw_subtype"].ToString() == "bit")
+                        if (Utils.f2str(entity["fw_subtype"]) == "boolean" || Utils.f2str(entity["fw_subtype"]) == "bit")
                             result = "BIT";
                         else if ((int)entity["numeric_precision"] == 3)
                             result = "TINYINT";
@@ -1752,7 +1752,7 @@ namespace osafw
 
                 case "datetime":
                     {
-                        if (entity["fw_subtype"].ToString() == "date")
+                        if (Utils.f2str(entity["fw_subtype"]) == "date")
                             result = "DATE";
                         else
                             result = "DATETIME2";
@@ -1795,7 +1795,7 @@ namespace osafw
                     // any other text - quote
                     def = Regex.Replace(def, "^'(.*)'$", "$1"); // remove outer quotes if any
 
-                    if (entity["fw_type"].ToString() == "int")
+                    if (Utils.f2str(entity["fw_type"]) == "int")
                         // if field type int - convert to int
                         result += "(" + db.qi(def) + ")";
                     else
