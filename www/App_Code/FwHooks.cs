@@ -24,7 +24,7 @@ namespace osafw
 
             // also force set XSS
             if (string.IsNullOrEmpty(fw.Session("XSS"))) fw.Session("XSS", Utils.getRandStr(16));
-            //TODO MIGRATE if (Users.id > 0) fw.model<Users>().loadMenuItems();
+            if (Users.id > 0) fw.model<Users>().loadMenuItems();
         }
 
         // called from FW.run before fw.Finalize()
