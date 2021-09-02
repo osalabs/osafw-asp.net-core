@@ -245,7 +245,7 @@ namespace osafw
             where[field] = uniq_key;
             if (!string.IsNullOrEmpty(field_id))
                 where[field_id] = db.opNOT(not_id);
-            string val = (string)db.value(table_name, where, "1");
+            string val = Utils.f2str(db.value(table_name, where, "1"));
             if (val == "1")
                 return true;
             else
