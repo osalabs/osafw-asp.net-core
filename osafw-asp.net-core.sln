@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30011.22
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "www", "www\www.csproj", "{133B6565-4929-4974-A6F1-AB487215EF79}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "www", "www\osafw.csproj", "{133B6565-4929-4974-A6F1-AB487215EF79}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{FA5F8B04-9EF4-4845-A2A5-DB803DB288B1}"
 	ProjectSection(SolutionItems) = preProject
