@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\www\www.csproj" />
+    <ProjectReference Include="..\osafw-app\osafw-app.csproj" />
   </ItemGroup>
 
 </Project>

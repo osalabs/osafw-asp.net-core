@@ -1,8 +1,10 @@
 .vs
-/www/obj
-/www/bin
-/www/App_Data/logs
-/www/upload
+/osafw-app/obj
+/osafw-app/bin
+/osafw-app/App_Data/logs
+/osafw-app/upload
+/osafw-tests/obj
+/osafw-tests/bin
 /TestsProject/obj
 /TestsProject/bin
 
