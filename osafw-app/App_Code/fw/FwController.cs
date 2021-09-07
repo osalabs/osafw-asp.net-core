@@ -622,18 +622,18 @@ namespace osafw
                 {
                     // for SQL Server 2012+
                     sql = "SELECT * FROM " + list_view_name + " WHERE " + this.list_where + " ORDER BY " + this.list_orderby + " OFFSET " + offset + " ROWS " + " FETCH NEXT " + limit + " ROWS ONLY";
-                    this.list_rows = db.arrayp(sql, list_where_params).toArrayList();
+                    this.list_rows = db.arrayp(sql, list_where_params);
                 }
                 else if (db.dbtype == "OLE")
                 {
                     // OLE - for Access - emulate using TOP and return just a limit portion (bad perfomance, but no way)
                     sql = "SELECT TOP " + (offset + limit) + " * FROM " + list_view_name + " WHERE " + this.list_where + " ORDER BY " + this.list_orderby;
-                    var rows = db.arrayp(sql, list_where_params).toArrayList();
+                    var rows = db.arrayp(sql, list_where_params);
                     if (offset >= rows.Count)
                         // offset too far
                         this.list_rows = new ArrayList();
                     else
-                        this.list_rows = rows.GetRange(offset, Math.Min(limit, rows.Count - offset));
+                        this.list_rows = (DBList)rows.GetRange(offset, Math.Min(limit, rows.Count - offset));
                 }
                 else
                     throw new ApplicationException("Unsupported db type");

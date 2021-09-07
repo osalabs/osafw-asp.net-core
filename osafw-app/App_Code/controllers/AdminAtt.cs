@@ -74,7 +74,7 @@ namespace osafw
                 // offset+1 because _RowNumber starts from 1
                 string sql = "SELECT TOP " + limit + " * " + " FROM (" + "   SELECT *, ROW_NUMBER() OVER (ORDER BY " + orderby + ") AS _RowNumber" + "   FROM " + model.table_name + "   WHERE " + list_where + ") tmp" + " WHERE _RowNumber >= " + db.qi(offset + 1) + " ORDER BY " + orderby;
 
-                list_rows = db.arrayp(sql, list_where_params).toArrayList();
+                list_rows = db.arrayp(sql, list_where_params);
                 ps["list_rows"] = list_rows;
                 ps["pager"] = FormUtils.getPager(count, pagenum, pagesize);
 

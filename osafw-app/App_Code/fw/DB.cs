@@ -40,25 +40,38 @@ namespace osafw
                 base[key] = value;
             }
         }
-        public Hashtable toHashtable()
+        public static implicit operator Hashtable(DBRow row)
         {
             Hashtable result = new();
-            foreach(string k in this.Keys)
+            foreach(string k in row.Keys)
             {
-                result[k] = this[k];
+                result[k] = row[k];
             }
             return result;
         }
+        public static explicit operator DBRow(Hashtable row)
+        {
+            return new DBRow(row);
+        }
+        public Hashtable toHashtable()
+        {
+            return this;
+        }
     }
     public class DBList : List<DBRow> {
-        public ArrayList toArrayList()
+        public static implicit operator ArrayList(DBList rows)
         {
             ArrayList result = new();
-            foreach (DBRow r in this)
+            foreach (var r in rows)
             {
-                result.Add(r.toHashtable());
+                result.Add((Hashtable)r);
             }
             return result;
+        }
+
+        public ArrayList toArrayList()
+        {
+            return this;
         }
     }
 

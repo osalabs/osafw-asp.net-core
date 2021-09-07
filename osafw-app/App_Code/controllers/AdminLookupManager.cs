@@ -205,7 +205,8 @@ namespace osafw
                           " WHERE " + list_where +
                           " ORDER BY " + orderby + " OFFSET " + offset + " ROWS " + " FETCH NEXT " + limit + " ROWS ONLY";
 
-                ps["list_rows"] = db.arrayp(sql, list_where_params).toArrayList();
+                ArrayList list_rows = db.arrayp(sql, list_where_params);
+                ps["list_rows"] = list_rows;
                 ps["pager"] = FormUtils.getPager((int)ps["count"], (int)f["pagenum"], f["pagesize"]);
                 if (ps["pager"] != null)
                 {
@@ -215,7 +216,7 @@ namespace osafw
                 }
 
                 // add/modify rows from db
-                foreach (Hashtable row in (ArrayList)ps["list_rows"])
+                foreach (Hashtable row in list_rows)
                 {                    
                     // calc md5 first if in edit mode
                     if ((string)f["mode"] == "edit")

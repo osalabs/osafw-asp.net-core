@@ -762,7 +762,16 @@ namespace osafw
 
         private Hashtable proc_repeat_modifiers(IList uftag, int i)
         {
-            Hashtable uftagi = (Hashtable)((Hashtable)uftag[i]).Clone(); // make a shallow copy as we modify this level
+            Hashtable uftagi1;
+            if (uftag[i] is DBRow)
+            {
+                uftagi1 = (DBRow)uftag[i];
+            }
+            else
+            {
+                uftagi1 = (Hashtable)uftag[i];
+            }           
+            Hashtable uftagi = (Hashtable)uftagi1.Clone(); // make a shallow copy as we modify this level
             int cnt = uftag.Count;
 
             if (i == 0)
