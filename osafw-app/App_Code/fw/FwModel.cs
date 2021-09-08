@@ -98,7 +98,7 @@ namespace osafw
         {
             object[] arr = new object[ids.Count - 1 + 1];
             ids.CopyTo(arr, 0);
-            return db.array(table_name, new Hashtable() { { "id", db.opIN(arr) } }).toArrayList();
+            return db.array(table_name, new Hashtable() { { "id", db.opIN(arr) } });
         }
 
         // add renamed fields For template engine - spaces and special chars replaced With "_" and other normalizations
@@ -190,7 +190,7 @@ namespace osafw
                 new Hashtable() { { "field", field_id }, { "alias", "id" } },
                 new Hashtable() { { "field", field_iname }, { "alias", "iname" } }
             };
-            return db.array(table_name, where, getOrderBy(), select_fields).toArrayList();
+            return db.array(table_name, where, getOrderBy(), select_fields);
         }
 
         // similar to listSelectOptions but returns iname/iname
@@ -205,7 +205,7 @@ namespace osafw
                 new Hashtable() { { "field", field_iname }, { "alias", "id" } },
                 new Hashtable() { { "field", field_iname }, { "alias", "iname" } }
             };
-            return db.array(table_name, where, getOrderBy(), select_fields).toArrayList();
+            return db.array(table_name, where, getOrderBy(), select_fields);
         }
 
         // return count of all non-deleted
@@ -428,9 +428,9 @@ namespace osafw
         // def - in dynamic controller - field definition (also contains "i" and "ps", "lookup_params", ...) or you could use it to pass additional params
         public virtual ArrayList getMultiListLinkedRows(object id, Hashtable def = null)
         {
-            var linked_rows = db.array(table_name, DB.h(linked_field_main_id, id)).toArrayList();
+            ArrayList linked_rows = db.array(table_name, DB.h(linked_field_main_id, id));
 
-            ArrayList lookup_rows = linked_model_link.list().toArrayList();
+            ArrayList lookup_rows = linked_model_link.list();
             if (linked_rows != null && linked_rows.Count > 0)
             {
                 foreach (Hashtable row in lookup_rows)
@@ -469,9 +469,9 @@ namespace osafw
         // def - in dynamic controller - field definition (also contains "i" and "ps", "lookup_params", ...) or you could use it to pass additional params
         public virtual ArrayList getMultiListLinkedRowsByLinkedId(object id, Hashtable def = null)
         {
-            var linked_rows = db.array(table_name, DB.h(linked_field_link_id, id)).toArrayList();
+            ArrayList linked_rows = db.array(table_name, DB.h(linked_field_link_id, id));
 
-            ArrayList lookup_rows = linked_model_main.list().toArrayList();
+            ArrayList lookup_rows = linked_model_main.list();
             if (linked_rows != null && linked_rows.Count > 0)
             {
                 foreach (Hashtable row in lookup_rows)
@@ -534,7 +534,7 @@ namespace osafw
         // def - in dynamic controller - field definition (also contains "i" and "ps", "lookup_params", ...) or you could use it to pass additional params
         public virtual ArrayList getMultiListAL(List<string> ids, Hashtable def = null)
         {
-            ArrayList rows = this.list().toArrayList();
+            ArrayList rows = this.list();
             setMultiListChecked(ref rows, ids, def);
             return rows;
         }
@@ -744,7 +744,7 @@ namespace osafw
                 aselect_fields = Utils.qw(csv_export_fields);
 
             var rows = db.array(table_name, where, "", aselect_fields);
-            return Utils.getCSVExport(csv_export_headers, csv_export_fields, rows.toArrayList());
+            return Utils.getCSVExport(csv_export_headers, csv_export_fields, rows);
         }
 
         public void Dispose()

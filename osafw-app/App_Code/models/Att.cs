@@ -113,9 +113,9 @@ namespace osafw
         /// <returns>number of uploads deleted</returns>
         public int cleanupTmpUploads()
         {
-            var rows = db.arrayp("select * from " + db.q_ident(table_name) + " where add_time<DATEADD(hour, -48, getdate()) and (status=1 or table_name like 'tmp[_]%')", DB.h()).toArrayList();
-            foreach (Hashtable row in rows)
-                this.delete((int)row["id"], true);
+            var rows = db.arrayp("select * from " + db.q_ident(table_name) + " where add_time<DATEADD(hour, -48, getdate()) and (status=1 or table_name like 'tmp[_]%')", DB.h());
+            foreach (var row in rows)
+                this.delete(Utils.f2int(row["id"]), true);
             return rows.Count;
         }
 
@@ -352,7 +352,7 @@ namespace osafw
                 + " where atl.table_name=@link_table_name"
                 + " and atl.item_id=@item_id"
                 + " and a.id=atl.att_id" + where 
-                + " order by a.id ", @params).toArrayList();
+                + " order by a.id ", @params);
         }
 
         // return first att image linked via att_table_link
@@ -383,7 +383,7 @@ namespace osafw
             where["item_id"] = item_id;
             if (is_image > -1)
                 where["is_image"] = is_image;
-            return db.array(table_name, where, "id").toArrayList();
+            return db.array(table_name, where, "id");
         }
 
         // like getAllByTableName, but also fills att_categories hash

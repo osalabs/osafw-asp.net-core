@@ -310,9 +310,9 @@ namespace osafw
                 where["att_categories_id"] = att_categories_id;
 
             var rows = db.array(model.table_name, where, "add_time desc");
-            foreach (DBRow row in rows)
+            foreach (var row in rows)
                 row["direct_url"] = model.getUrlDirect(row);
-            ps["att_dr"] = rows.toArrayList();
+            ps["att_dr"] = rows;
             ps["select_att_categories_id"] = fw.model<AttCategories>().listSelectOptions();
             ps["att_categories_id"] = att_categories_id;
 

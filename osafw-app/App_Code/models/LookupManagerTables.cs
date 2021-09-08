@@ -148,7 +148,7 @@ namespace osafw
             ArrayList fields = new();
             fields.Add(new Hashtable { { "field", idfield }, { "alias", "id" } });
             fields.Add(new Hashtable { { "field", inamefield }, { "alias", "iname" } });
-            var rows = db.array(lutable, new Hashtable(), "1", fields).toArrayList();
+            var rows = db.array(lutable, new Hashtable(), "1", fields);
 
             return FormUtils.selectOptions(rows, (string)sel_id);
         }

@@ -368,7 +368,7 @@ namespace osafw
                 sheet_name = sheet_name.Substring(0, sheet_name.Length - 1);
                 try
                 {
-                    ArrayList rows = accdb.array(sheet_name_full, where).toArrayList();
+                    ArrayList rows = accdb.array(sheet_name_full, where);
                     callback(sheet_name, rows);
                 }
                 catch (Exception ex)

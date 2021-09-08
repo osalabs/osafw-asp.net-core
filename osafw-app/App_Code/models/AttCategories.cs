@@ -34,7 +34,7 @@ namespace osafw
                     field_icode,
                     db.opLIKE(icode_prefix + "[_]%")
                 }
-            }, field_id, Utils.qw("id iname")).toArrayList();
+            }, field_id, Utils.qw("id iname"));
         }
     }
 }

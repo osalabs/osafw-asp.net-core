@@ -40,8 +40,8 @@ namespace osafw
             DateTime start_time = DateTime.Now;
             for (int i = 0; i < 1000; i++)
             {
-                var rows = db.arrayp("select * from event_log", DB.h()).toArrayList();
-                foreach (Hashtable row in rows)
+                var rows = db.arrayp("select * from event_log", DB.h());
+                foreach (var row in rows)
                 {
                     row["id_str"] = row["id"] + "ok";
                 }

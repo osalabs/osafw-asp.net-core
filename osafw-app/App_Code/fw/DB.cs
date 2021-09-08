@@ -1418,7 +1418,7 @@ namespace osafw
                     " WHERE t.table_name = c.table_name" +
                     "   AND t.table_name = @table_name"+ 
                     " order by c.ORDINAL_POSITION";
-                result = arrayp(sql, DB.h("@table_name", table)).toArrayList();
+                result = arrayp(sql, DB.h("@table_name", table));
                 foreach (Hashtable row in result)
                 {
                     row["fw_type"] = map_mssqltype2fwtype((string)row["type"]); // meta type
@@ -1511,7 +1511,7 @@ namespace osafw
                     "       AND col2.CONSTRAINT_SCHEMA = rc.UNIQUE_CONSTRAINT_SCHEMA " + 
                     "       AND col2.CONSTRAINT_NAME = rc.UNIQUE_CONSTRAINT_NAME " + 
                     "       AND col2.ORDINAL_POSITION = col1.ORDINAL_POSITION)" + 
-                    where, where_params).toArrayList();
+                    where, where_params);
             }
             else if(RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
