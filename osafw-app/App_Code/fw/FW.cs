@@ -377,7 +377,7 @@ namespace osafw
                     {
                         if (!string.IsNullOrEmpty(route.id))
                         {
-                            if (request.Form.Count > 0 || request.Body.Length > 0)
+                            if (request.Form.Count > 0 || request.ContentLength > 0)
                                 route.action_raw = "Save";
                             else
                                 route.action_raw = "Delete";
