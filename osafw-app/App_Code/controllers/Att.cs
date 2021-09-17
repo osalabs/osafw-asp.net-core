@@ -60,7 +60,7 @@ namespace osafw
                     string filepath = fw.config("site_root") + "/img/att_file.png"; // TODO move to web.config or to model? and no need for transfer file - just redirect TODO
                     string ext = UploadUtils.getUploadFileExt(filepath);
                     fw.response.Headers.Add("Content-type", model.getMimeForExt(ext));
-                    fw.response.SendFileAsync(filepath);
+                    fw.response.SendFileAsync(filepath).Wait();
                 }
             }
             else

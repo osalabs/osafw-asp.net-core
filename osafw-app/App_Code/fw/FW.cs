@@ -1105,8 +1105,7 @@ namespace osafw
             response.Headers.Add("Content-type", ContentType);
             response.Headers.Add("Content-Length", Utils.fileSize(filepath).ToString());
             response.Headers.Add("Content-Disposition", ContentDisposition + "; filename=\"" + attname + "\"");
-            response.SendFileAsync(filepath);
-            //TODO MIGRATE test if necessary resp.OutputStream.Close();
+            response.SendFileAsync(filepath).Wait();
         }
 
         // SEND EMAIL

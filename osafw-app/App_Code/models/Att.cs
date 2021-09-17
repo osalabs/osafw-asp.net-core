@@ -326,7 +326,7 @@ namespace osafw
 
                     fw.response.Headers.Add("Content-type", getMimeForExt(ext));
                     fw.response.Headers.Add("Content-Disposition", disposition + "; filename=\"" + filename + "\"");
-                    fw.response.SendFileAsync(filepath);
+                    fw.response.SendFileAsync(filepath).Wait();
                 }
             }
             else
