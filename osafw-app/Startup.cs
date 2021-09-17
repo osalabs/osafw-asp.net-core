@@ -57,6 +57,11 @@ namespace osafw
                 app.UseHttpsRedirection();
             }
             app.UseStaticFiles();
+            app.UseStaticFiles(new StaticFileOptions()
+            {
+                FileProvider = new PhysicalFileProvider(Path.Combine(Directory.GetCurrentDirectory(), @"upload")),
+                RequestPath = new PathString("/upload")
+            });
             app.UseSession();
             // TODO MIGRATE app.UseCookiePolicy(); if not use standard auth identity
             // TODO MIGRATE reponse cacheing https://docs.microsoft.com/en-us/aspnet/core/performance/caching/middleware?view=aspnetcore-5.0
