@@ -8,13 +8,13 @@
 
     <~fields repeat inline>
         <~group_block if="is_group" inline>
-            <div class="form-row">
+            <div class="row form-row">
                 <div class="col col-md-offset-3">
                     <h4><~igroup></h4>
                 </div>
             </div>
         </~group_block>
-        <div class="form-row <~/common/error if="is_error">">
+        <div class="row form-row <~/common/error if="is_error">">
           <label class="col-form-label col-md-3" for="<~colname>"><~iname></label>
           <div class="col">
             <~type_input unless="type">
@@ -28,7 +28,7 @@
 
     <~/common/form/group_status if="is_fwtable">
 
-    <div class="form-row">
+    <div class="row form-row">
       <div class="col-md-3 text-right">
         <p class="form-control-plaintext"><span class="form-saved-status"></span></p>
       </div>

@@ -6,7 +6,7 @@
 
     <~/common/form/group_id>
 
-    <div class="form-row">
+    <div class="row form-row">
       <label class="col-form-label col-md-3" for="att_categories_id">`Category`</label>
       <div class="col-md-3">
         <select id="att_categories_id" name="item[att_categories_id]" class="form-control">
@@ -22,17 +22,17 @@
       </~linked_table_info>
     </div>
 
-    <div class="form-row">
+    <div class="row form-row">
       <label class="col-form-label col-md-3 required" for="iname">`File name`</label>
       <div class="col-md-9">
         <input id="iname" name="item[iname]" maxlength="128" value="<~i[iname]>" type="text" class="form-control">
         <~stats_block if="id" inline>
-          <small class="form-text text-muted">File size: <~fsize_human>. Original file name: <~i[fname]></small>
+          <small class="form-text">File size: <~fsize_human>. Original file name: <~i[fname]></small>
         </~stats_block>
       </div>
     </div>
 
-    <div class="form-row">
+    <div class="row form-row">
       <label class="col-form-label col-md-3 required" for="file1">`File`</label>
       <div class="col-md-9">
         <~not_uploaded unless="i[fsize]" inline>

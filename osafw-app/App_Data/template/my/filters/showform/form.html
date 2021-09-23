@@ -9,21 +9,21 @@
     <div class="row">
       <div class="col-lg-6">
 
-        <div class="form-row">
+        <div class="row form-row">
           <label class="col-form-label col-md-3" for="icode">`Screen`</label>
           <div class="col">
             <p class="form-control-plaintext"><~i[icode]></p>
           </div>
         </div>
 
-        <div class="form-row">
+        <div class="row form-row">
           <label class="col-form-label col-md-3 required" for="iname">`Title`</label>
           <div class="col">
             <input id="iname" name="item[iname]" maxlength="255" value="<~i[iname]>" type="text" class="form-control" required>
             <p class="err-EXISTS">`Such title already exists in our database`</p>
           </div>
         </div>
-        <!--div class="form-row">
+        <!--div class="row form-row">
           <label class="col-form-label col-md-3" for="idesc">`Content`</label>
           <div class="col">
             <p class="form-control-plaintext"><~#i[idesc]></p>
@@ -31,12 +31,12 @@
         </div-->
 
         <~sys_block if="is_admin" inline>
-        <div class="form-row">
+        <div class="row form-row">
           <label class="col-form-label col-md-2" for="is_system">Is System?</label>
           <div class="col-md-1">
-            <div class="custom-control custom-checkbox custom-control-inline">
-              <input class="custom-control-input" type="checkbox" id="is_system" name="item[is_system]" value="1" <~/common/checked if="i[is_system]">>
-              <label class="custom-control-label" for="is_system"></label>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="checkbox" id="is_system" name="item[is_system]" value="1" <~/common/checked if="i[is_system]">>
+              <label class="form-check-label" for="is_system"></label>
             </div>
           </div>
           <div class="col-md-6">

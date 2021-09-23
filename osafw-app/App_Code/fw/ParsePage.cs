@@ -1180,7 +1180,10 @@ namespace osafw
                 // End If
 
                 // Bootstrap 4 style
-                result.Append("<div class='custom-control custom-radio ").Append(delim).Append("'><input class='custom-control-input' type='radio' name=\"").Append(name).Append("\" id=\"").Append(name_id).Append("\" value=\"").Append(value).Append("\"").Append(str_checked).Append("><label class='custom-control-label' for='").Append(name_id).Append("'>").Append(desc).Append("</label></div>");
+                // result.Append("<div class='custom-control custom-radio ").Append(delim).Append("'><input class='custom-control-input' type='radio' name=\"").Append(name).Append("\" id=\"").Append(name_id).Append("\" value=\"").Append(value).Append("\"").Append(str_checked).Append("><label class='custom-control-label' for='").Append(name_id).Append("'>").Append(desc).Append("</label></div>");
+
+                // Bootstrap 5 style
+                result.Append("<div class='form-check ").Append(delim).Append("'><input class='form-check-input' type='radio' name=\"").Append(name).Append("\" id=\"").Append(name_id).Append("\" value=\"").Append(value).Append("\"").Append(str_checked).Append("><label class='form-check-label' for='").Append(name_id).Append("'>").Append(desc).Append("</label></div>");
 
                 i += 1;
             }

@@ -7,19 +7,19 @@
     <input type="hidden" name="XSS" value="<~session[XSS]>">
 
   <fieldset>
-    <div class="form-row">
+    <div class="row form-row">
       <div class="col-2">Table</div>
       <div class="col">
-        <div class="custom-control custom-checkbox custom-control-inline">
-          <input type="checkbox" class="custom-control-input on-all-cb" data-cb=".cb-model" id="all-cb-model" checked>
-          <label class="custom-control-label" for="all-cb-model" title="select all/none">&nbsp;</label>
+        <div class="form-check form-check-inline">
+          <input type="checkbox" class="form-check-input on-all-cb" data-cb=".cb-model" id="all-cb-model" checked>
+          <label class="form-check-label" for="all-cb-model" title="select all/none">&nbsp;</label>
         </div>
         Model Name (plural)
       </div>
       <div class="col">
-        <div class="custom-control custom-checkbox custom-control-inline">
-          <input type="checkbox" class="custom-control-input on-all-cb" data-cb=".cb-controller" id="all-cb-controller" checked>
-          <label class="custom-control-label" for="all-cb-controller" title="select all/none">&nbsp;</label>
+        <div class="form-check form-check-inline">
+          <input type="checkbox" class="form-check-input on-all-cb" data-cb=".cb-controller" id="all-cb-controller" checked>
+          <label class="form-check-label" for="all-cb-controller" title="select all/none">&nbsp;</label>
         </div>
         Controller URL
       </div>
@@ -28,14 +28,14 @@
     </div>
 
     <~entities repeat inline>
-      <div class="form-row mb-1">
+      <div class="row form-row mb-1">
         <label class="col-form-label col-2"><~table></label>
         <div class="col">
           <div class="input-group">
             <div class="input-group-prepend">
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" class="custom-control-input cb-model" id="<~fw_name>#cbmodel" name="item[<~fw_name>#is_model]" <~/common/checked unless="is_model_exists">>
-                <label class="custom-control-label" for="<~fw_name>#cbmodel">&nbsp;</label>
+              <div class="form-check">
+                <input type="checkbox" class="form-check-input cb-model" id="<~fw_name>#cbmodel" name="item[<~fw_name>#is_model]" <~/common/checked unless="is_model_exists">>
+                <label class="form-check-label" for="<~fw_name>#cbmodel">&nbsp;</label>
               </div>
             </div>
             <input name="item[<~fw_name>#model_name]" maxlength="255" value="" type="text" class="form-control" placeholder="<~model_name>">
@@ -44,9 +44,9 @@
         <div class="col">
           <div class="input-group">
             <div class="input-group-prepend">
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" class="custom-control-input cb-controller" id="<~fw_name>#cbcontroller" name="item[<~fw_name>#is_controller]" <~/common/checked unless="is_controller_exists">>
-                <label class="custom-control-label" for="<~fw_name>#cbcontroller">&nbsp;</label>
+              <div class="form-check">
+                <input type="checkbox" class="form-check-input cb-controller" id="<~fw_name>#cbcontroller" name="item[<~fw_name>#is_controller]" <~/common/checked unless="is_controller_exists">>
+                <label class="form-check-label" for="<~fw_name>#cbcontroller">&nbsp;</label>
               </div>
             </div>
             <input name="item[<~fw_name>#controller_name]" maxlength="255" value="" type="text" class="form-control" placeholder="<~controller_url>">
@@ -56,17 +56,17 @@
           <input name="item[<~fw_name>#controller_title]" maxlength="255" value="" type="text" class="form-control" placeholder="<~controller_title>">
         </div>
         <div class="col">
-          <div class="custom-control custom-checkbox custom-control-inline">
-            <input type="checkbox" class="custom-control-input" id="<~fw_name>#cbcoview" name="item[<~fw_name>#coview]" <~/common/checked unless="controller_is_lookup">>
-            <label class="custom-control-label" for="<~fw_name>#cbcoview">View</label>
+          <div class="form-check form-check-inline">
+            <input type="checkbox" class="form-check-input" id="<~fw_name>#cbcoview" name="item[<~fw_name>#coview]" <~/common/checked unless="controller_is_lookup">>
+            <label class="form-check-label" for="<~fw_name>#cbcoview">View</label>
           </div>
-          <div class="custom-control custom-checkbox custom-control-inline">
-            <input type="checkbox" class="custom-control-input" id="<~fw_name>#cbcoedit" name="item[<~fw_name>#coedit]" <~/common/checked unless="controller_is_lookup">>
-            <label class="custom-control-label" for="<~fw_name>#cbcoedit">Edit</label>
+          <div class="form-check form-check-inline">
+            <input type="checkbox" class="form-check-input" id="<~fw_name>#cbcoedit" name="item[<~fw_name>#coedit]" <~/common/checked unless="controller_is_lookup">>
+            <label class="form-check-label" for="<~fw_name>#cbcoedit">Edit</label>
           </div>
-          <div class="custom-control custom-checkbox custom-control-inline cb-lookup">
-            <input type="checkbox" class="custom-control-input" id="<~fw_name>#cbcolookup" name="item[<~fw_name>#colookup]" <~/common/checked if="controller_is_lookup">>
-            <label class="custom-control-label" for="<~fw_name>#cbcolookup">Lookup</label>
+          <div class="form-check form-check-inline cb-lookup">
+            <input type="checkbox" class="form-check-input" id="<~fw_name>#cbcolookup" name="item[<~fw_name>#colookup]" <~/common/checked if="controller_is_lookup">>
+            <label class="form-check-label" for="<~fw_name>#cbcolookup">Lookup</label>
           </div>
         </div>
       </div>

@@ -6,13 +6,13 @@
     <input type="hidden" name="XSS" value="<~session[XSS]>">
 
 
-    <div class="form-row">
+    <div class="row form-row">
       <label class="col-form-label col-md-1">Select Files</label>
       <div class="col">
         <~rows repeat inline>
-        <div class="custom-control custom-checkbox">
-          <input class="custom-control-input" type="checkbox" id="file_<~filename>" name="item[<~filename>]" value="1">
-          <label class="custom-control-label" for="file_<~filename>"><~filename></label>
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="file_<~filename>" name="item[<~filename>]" value="1">
+          <label class="form-check-label" for="file_<~filename>"><~filename></label>
         </div>
         </~rows>
       </div>

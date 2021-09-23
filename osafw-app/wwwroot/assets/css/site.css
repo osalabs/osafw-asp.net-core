@@ -5,8 +5,7 @@
 /*default button appearance*/
 .btn-default {
   color: #111111;
-  background-color: #F8F9FA;
-  border-color: #E2E6EA;
+  background-color: #E8E8E8;
 }
 
 .btn-default:hover,
@@ -15,8 +14,7 @@
 .btn-default.active,
 .open .dropdown-toggle.btn-default {
   color: #111111;
-  background-color: #E2E6EA;
-  border-color: #E2E6EA;
+  background-color: #CCCBCB;
 }
 
 .btn-default:active,
@@ -40,8 +38,7 @@ fieldset[disabled] .btn-default:active,
 .btn-default.disabled.active,
 .btn-default[disabled].active,
 fieldset[disabled] .btn-default.active {
-  background-color: #F8F9FA;
-  border-color: #E2E6EA;
+  background-color: #CCCBCB;
 }
 
 .btn-default .badge {
@@ -158,7 +155,7 @@ form[data-list-filter] {
 }
 
 .form-row {
-  padding-bottom: 0.2rem;
+  padding-bottom: 1rem;
 }
 
 .a_visited a:visited {
