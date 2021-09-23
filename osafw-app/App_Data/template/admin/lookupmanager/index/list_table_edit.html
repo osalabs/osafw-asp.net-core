@@ -42,7 +42,7 @@
                 <~type_checkbox ifeq="type" value="checkbox" inline><div class="checkbox"><label><input name="f<~id>[<~colname>]" value="1" type="checkbox" <~/common/checked ifeq="value"> ></label></div>
                 </~type_checkbox>
                 <~type_lookup ifeq="type" value="lookup" inline>
-                    <select name="f<~id>[<~colname>]" class="form-control">
+                    <select name="f<~id>[<~colname>]" class="form-select">
                         <option value="">`- select -`</option>
                         <~select_options noescape>
                     </select>
@@ -65,7 +65,7 @@
                 <~type_checkbox ifeq="type" value="checkbox" inline><div class="checkbox"><label><input name="fnew0[<~colname>]" value="1" type="checkbox" ></label></div>
                 </~type_checkbox>
                 <~type_lookup ifeq="type" value="lookup" inline>
-                    <select name="fnew0[<~colname>]" class="form-control">
+                    <select name="fnew0[<~colname>]" class="form-select">
                         <option value="">`- select -`</option>
                         <~select_options noescape>
                     </select>

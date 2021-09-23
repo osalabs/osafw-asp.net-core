@@ -20,7 +20,7 @@
               <p class="form-control-plaintext">Home Page is Always Published</p>
           </~status_a_home>
           <~status_not_a_home unless="i[is_home]" inline>
-          <select id="status" name="item[status]" class="form-control">
+          <select id="status" name="item[status]" class="form-select">
               <~/admin/spages/status.sel select="i[status]">
           </select>
           </~status_not_a_home>
@@ -54,7 +54,7 @@
           <p class="form-control-plaintext">Home Page is Always a Top page</p>
       </~parent_a_home>
       <~parent_not_a_home unless="i[is_home]" inline>
-      <select id="parent_id" name="item[parent_id]" class="form-control">
+      <select id="parent_id" name="item[parent_id]" class="form-select">
         <option value="0">-no parent-</option>
         <~select_options_parent_id noescape>
       </select>
@@ -65,7 +65,7 @@
   <!--div class="row form-row">
     <label class="col-form-label col-md-3" for="template">`Template`</label>
     <div class="col-md-3">
-      <select id="template" name="item[template]" class="form-control">
+      <select id="template" name="item[template]" class="form-select">
         <option value="">-default-</option>
         <~/admin/spages/template.sel select="i[template]">
       </select>

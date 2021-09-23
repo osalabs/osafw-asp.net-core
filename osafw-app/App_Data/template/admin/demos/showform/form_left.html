@@ -1,7 +1,7 @@
 <div class="row form-row">
   <label class="col-form-label col-md-3" for="parent_id">`Parent`</label>
   <div class="col-md-3">
-    <select id="parent_id" name="item[parent_id]" class="form-control">
+    <select id="parent_id" name="item[parent_id]" class="form-select">
       <option value="0"></option>
       <~select_options_parent_id select="i[parent_id]">
     </select>
@@ -10,7 +10,7 @@
 <div class="row form-row">
   <label class="col-form-label col-md-3" for="demo_dicts_id">`DemoDicts`</label>
   <div class="col-md-3">
-    <select id="demo_dicts_id" name="item[demo_dicts_id]" class="form-control on-refresh">
+    <select id="demo_dicts_id" name="item[demo_dicts_id]" class="form-select on-refresh">
       <option value=""></option>
       <~select_options_demo_dicts_id select="i[demo_dicts_id]">
     </select>
@@ -113,7 +113,7 @@
 <div class="row form-row">
   <label class="col-form-label col-md-3" for="fcombo">Combo</label>
   <div class="col-md-3">
-    <select id="fcombo" name="item[fcombo]" class="form-control">
+    <select id="fcombo" name="item[fcombo]" class="form-select">
       <option value="0">- select -</option>
       <~/common/sel/fcombo.sel select="i[fcombo]">
     </select>
@@ -145,15 +145,15 @@
 <div class="row form-row">
   <label class="col-form-label col-md-3" for="fdate_combo">Date combo</label>
   <div class="col-md-9 fdate-combo">
-    <select id="fdate_combo" name="item[fdate_combo_day]" class="form-control">
+    <select id="fdate_combo" name="item[fdate_combo_day]" class="form-select">
       <option value="">- day -</option>
       <~/common/sel/date_day.sel select="fdate_combo_day">
     </select>
-    <select name="item[fdate_combo_mon]" class="form-control">
+    <select name="item[fdate_combo_mon]" class="form-select">
       <option value="">- month -</option>
       <~/common/sel/date_mon.sel select="fdate_combo_mon">
     </select>
-    <select name="item[fdate_combo_year]" class="form-control">
+    <select name="item[fdate_combo_year]" class="form-select">
       <option value="">- year -</option>
       <~/common/sel/date_year.sel select="fdate_combo_year">
     </select>
