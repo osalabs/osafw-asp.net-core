@@ -28,11 +28,40 @@ namespace osafw
                 options.TableName = "fwsessions";
             });
 
-            // Set max limit for multipart content
+            // Set form limits
             services.Configure<FormOptions>(x =>
             {
-                x.ValueLengthLimit = int.MaxValue;
-                x.MultipartBodyLengthLimit = int.MaxValue; // In case of multipart
+                // BufferBody
+                // Enables full request body buffering. Use this if multiple components need to read the raw stream. The default value is false.
+
+                // BufferBodyLengthLimit
+                // If BufferBody is enabled, this is the limit for the total number of bytes that will be buffered. Forms that exceed this limit will throw an InvalidDataException when parsed.
+
+                // KeyLengthLimit
+                // A limit on the length of individual keys. Forms containing keys that exceed this limit will throw an InvalidDataException when parsed.
+
+                // MemoryBufferThreshold
+                // If BufferBody is enabled, this many bytes of the body will be buffered in memory. If this threshold is exceeded then the buffer will be moved to a temp file on disk instead. This also applies when buffering individual multipart section bodies.
+
+                // MultipartBodyLengthLimit
+                // A limit for the length of each multipart body. Forms sections that exceed this limit will throw an InvalidDataException when parsed.
+
+                // MultipartBoundaryLengthLimit
+                // A limit for the length of the boundary identifier. Forms with boundaries that exceed this limit will throw an InvalidDataException when parsed.
+
+                // MultipartHeadersCountLimit
+                // A limit for the number of headers to allow in each multipart section. Headers with the same name will be combined. Form sections that exceed this limit will throw an InvalidDataException when parsed.
+
+                // MultipartHeadersLengthLimit
+                // A limit for the total length of the header keys and values in each multipart section. Form sections that exceed this limit will throw an InvalidDataException when parsed.
+
+                // ValueCountLimit
+                // A limit for the number of form entries to allow. Forms that exceed this limit will throw an InvalidDataException when parsed.
+
+                // ValueLengthLimit
+                // A limit on the length of individual form values. Forms containing values that exceed this limit will throw an InvalidDataException when parsed.
+                x.ValueLengthLimit = 104857600; // 100Мб
+                x.MultipartBodyLengthLimit = 104857600; // 100Мб
             });
 
             services.Configure<IISServerOptions>(options =>
