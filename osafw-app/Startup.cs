@@ -28,6 +28,13 @@ namespace osafw
                 options.TableName = "fwsessions";
             });
 
+            // Set max limit for multipart content
+            services.Configure<FormOptions>(x =>
+            {
+                x.ValueLengthLimit = int.MaxValue;
+                x.MultipartBodyLengthLimit = int.MaxValue; // In case of multipart
+            });
+
             services.Configure<IISServerOptions>(options =>
             {
                 options.AllowSynchronousIO = false; 
