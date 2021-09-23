@@ -1,11 +1,11 @@
 Member Password Reset
 Hello <~fname> <~lname>,
 
-use the following link to reset your password:
+Use the following link to reset your password:
 <~GLOBAL[ROOT_DOMAIN]><~ROOT_URL>/Password/(Reset)?token=<~pwd_reset_token urlencode>&login=<~email urlencode>
 
 This link will expire in 1 hour.
 
-If you didn't requested password reset, just ignore this email.
+If you didn't request a password reset, just ignore this email.
 
 <~/emails/sign_en.txt>
