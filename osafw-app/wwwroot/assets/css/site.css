@@ -165,6 +165,12 @@ form[data-list-filter] {
   color: #800080;
 }
 
+.att-info {
+  width: 10rem;
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+
 .nobold {
   font-weight:normal;
 }
