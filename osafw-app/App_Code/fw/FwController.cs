@@ -872,7 +872,7 @@ namespace osafw
                         "is_checked",true
                     },
                     {
-                        "is_sortable", string.IsNullOrEmpty((string)list_sortmap[fieldname])
+                        "is_sortable", !string.IsNullOrEmpty((string)list_sortmap[fieldname])
                     }
                 });
                     fields_added[fieldname] = true;
