@@ -1,5 +1,5 @@
 <div class="d-none d-md-block position-relative" style="padding-left: 1em;">
- <div class="float-right"><button class="btn btn-link on-sidebar-toggler"><~/common/icons/three-dots-vertical></button></div>
+ <div class="float-end"><button class="btn btn-link on-sidebar-toggler"><~/common/icons/three-dots-vertical></button></div>
  <h3><a href="<~ROOT_URL>/" class="text-dark"><~/site_name></a><~./beta if="GLOBAL[is_test]"></h3>
 </div>
 <ul class="nav flex-column">
@@ -41,7 +41,7 @@
   <!--li class="nav-item <~/common/active ifeq="GLOBAL[controller]" value="MyLists">" ><a class="nav-link" href="<~/my/lists/url>"><~/common/icons/list-stars> `My Lists`</a></li-->
   <li class="nav-item <~/common/active ifeq="GLOBAL[controller]" value="MySettings">" ><a class="nav-link" href="<~/my/settings/url>"><~/common/icons/file-person> `My Profile`</a></li>
   <li class="nav-item <~/common/active ifeq="GLOBAL[controller]" value="MyPassword">" ><a class="nav-link" href="<~/my/password/url>"><~/common/icons/key> `Change Password`</a></li>
-  <li class="nav-item"><a class="nav-link" href="#" data-toggle="modal" data-target="#modal-my-feedback"><~/common/icons/bug> <~/my/feedback/showform/title></a></li>
+  <li class="nav-item"><a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#modal-my-feedback"><~/common/icons/bug> <~/my/feedback/showform/title></a></li>
   <li class="nav-item"><a class="nav-link" href="<~ROOT_URL>/Logoff"><~/common/icons/box-arrow-right> `Logoff`</a></li>
   </~logged_menu>
 </ul>

@@ -37,7 +37,7 @@
                 <td>
                 <~type_input unless="type" inline><input name="f<~id>[<~colname>]" type="text" value="<~value>" maxlength="<~maxlen>" class="form-control">
                 </~type_input>
-                <~type_readonly ifeq="type" value="readonly" inline><input value="<~value>" type="text" readonly class="form-control-plaintext ml-1">
+                <~type_readonly ifeq="type" value="readonly" inline><input value="<~value>" type="text" readonly class="form-control-plaintext ms-1">
                 </~type_readonly>
                 <~type_checkbox ifeq="type" value="checkbox" inline><div class="checkbox"><label><input name="f<~id>[<~colname>]" value="1" type="checkbox" <~/common/checked ifeq="value"> ></label></div>
                 </~type_checkbox>

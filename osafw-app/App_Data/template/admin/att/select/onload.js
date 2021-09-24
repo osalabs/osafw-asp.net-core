@@ -22,7 +22,7 @@ $modal.find('input[type=file]').on('change', function(e){
     $modal.find('form').submit();
 });
 
-$modal.find('[data-dismiss=modal]').on('click', function (e) {
+$modal.find('[data-bs-dismiss=modal]').on('click', function (e) {
     $modal.modal('hide');
 });
 

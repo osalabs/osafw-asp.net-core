@@ -67,6 +67,9 @@ table.list .search {
 table.list tbody td {
   font-size: 0.9rem;
 }
+table.list tbody a {
+  text-decoration: none;
+}
 
 #modal-custom-cols .sort-arrows {
   float: right;

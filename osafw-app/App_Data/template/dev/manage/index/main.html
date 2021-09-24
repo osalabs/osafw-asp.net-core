@@ -54,10 +54,10 @@ existing DB &rarr; db.json &rarr; models &rarr; controllers
 <form method="post" action="<~../url>/(AnalyseDB)" class="row row-cols-auto g-2">
     <input type="hidden" name="XSS" value="<~session[XSS]>">
     <div class="col">
-        <input name="item[connstr]" value="<~i[connstr] default="Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\myFolder\myAccessFile.accdb;Persist Security Info=False;">" type="text" class="form-control ml-2" required placeholder="Connection String" style="width:800px">
+        <input name="item[connstr]" value="<~i[connstr] default="Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\myFolder\myAccessFile.accdb;Persist Security Info=False;">" type="text" class="form-control ms-2" required placeholder="Connection String" style="width:800px">
     </div>
     <div class="col">
-        <button class="btn btn-default ml-2">Analyse</button>
+        <button class="btn btn-default ms-2">Analyse</button>
     </div>
 </form>
 
@@ -73,10 +73,10 @@ existing DB &rarr; db.json &rarr; models &rarr; controllers
                 </select>
             </div>
             <div class="col">
-                <input name="item[model_name]" maxlength="255" value="<~i[model_name]>" type="text" class="form-control ml-2" placeholder="Model name (plural)" style="width:300px">
+                <input name="item[model_name]" maxlength="255" value="<~i[model_name]>" type="text" class="form-control ms-2" placeholder="Model name (plural)" style="width:300px">
             </div>
             <div class="col">
-                <button class="btn btn-default ml-2">Create Model</button>
+                <button class="btn btn-default ms-2">Create Model</button>
             </div>
         </form>
     </li>
@@ -90,13 +90,13 @@ existing DB &rarr; db.json &rarr; models &rarr; controllers
                 </select>
             </div>
             <div class="col">
-                <input name="item[controller_url]" maxlength="255" value="<~i[controller_url]>" type="text" class="form-control ml-2" placeholder="Controller URL (ex: /Admin/Demos)" style="width:300px">
+                <input name="item[controller_url]" maxlength="255" value="<~i[controller_url]>" type="text" class="form-control ms-2" placeholder="Controller URL (ex: /Admin/Demos)" style="width:300px">
             </div>
             <div class="col">
-                <input name="item[controller_title]" maxlength="255" value="<~i[controller_title]>" type="text" class="form-control ml-2" placeholder="Title (singular)" style="width:300px">
+                <input name="item[controller_title]" maxlength="255" value="<~i[controller_title]>" type="text" class="form-control ms-2" placeholder="Title (singular)" style="width:300px">
             </div>
             <div class="col">
-                <button class="btn btn-default ml-2">Create Controller</button>
+                <button class="btn btn-default ms-2">Create Controller</button>
             </div>
         </form>
     </li>
@@ -110,7 +110,7 @@ existing DB &rarr; db.json &rarr; models &rarr; controllers
                 </select>
             </div>
             <div class="col">
-                <button class="btn btn-default ml-2">Extract Controller</button>
+                <button class="btn btn-default ms-2">Extract Controller</button>
             </div>
         </form>
     </li>

@@ -10,7 +10,7 @@
             <~headers repeat inline>
                 <th <~dsort if="is_sortable" inline>data-sort="<~field_name>"</~dsort>><~field_name_visible></th>
             </~headers>
-            <th class="nobold text-right"><a href="#" class="px-2 mr-2 on-toggle-search" title="`Filter Columns`"><~/common/icons/funnel-fill></a><a href="#" class="on-custom-cols" title="Customize Columns"><~/common/icons/table></a></th>
+            <th class="nobold text-end"><a href="#" class="px-2 me-2 on-toggle-search" title="`Filter Columns`"><~/common/icons/funnel-fill></a><a href="#" class="on-custom-cols" title="Customize Columns"><~/common/icons/table></a></th>
         </tr>
         <tr class="search" <~search_show ifeq="f[is_search]" value="1" inline>style="display:table-row"</~search_show>>
             <th></th>
@@ -25,7 +25,7 @@
         <tr data-url="<~row_click_url>" data-id="<~id>">
             <td><input class="multicb" type="checkbox" name="cb[<~id>]" value="1"></td>
             <~cols repeat inline><td><~data var unless="is_custom"><~col_custom if="is_custom"></td></~cols>
-            <td class="text-nowrap text-right">
+            <td class="text-nowrap text-end">
                 <a href="<~../url>/<~id><~/common/list/relid>">`View`</a>
                 <~/common/dot><a href="<~row_click_url>">`Edit`</a>
                 <~#/common/list/btn_del>
