@@ -1213,7 +1213,15 @@ namespace osafw
 
                     using (SmtpClient client = new())
                     {
-                        client.Send(message);
+                        Hashtable mailSettings = (Hashtable)this.config("mail_settings");
+                        if (mailSettings.Count > 0)
+                        {
+                            client.Host = Utils.f2str(mailSettings["host"]);
+                            client.Port = Utils.f2int(mailSettings["port"]);
+                            client.EnableSsl = Utils.f2bool(mailSettings["enableSsl"]);
+                            client.Credentials = new System.Net.NetworkCredential(Utils.f2str(mailSettings["username"]), Utils.f2str(mailSettings["password"]));
+                            client.Send(message);
+                        }
                     }
                 }
             }
