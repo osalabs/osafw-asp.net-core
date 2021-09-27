@@ -407,12 +407,26 @@ div.jGrowl div.jGrowl-notification
   margin-left: 260px;
 }
 
+.no-sidebar.fwlayout-fluid .sidebar:not(.show,.collapsing) {
+  display: none;
+}
+.no-sidebar.fwlayout-fluid main {
+  margin-left: 0;
+}
+.no-sidebar.fwlayout-fluid .site-navbar {
+  display: block !important;
+}
+.no-sidebar.fwlayout-fluid .site-navbar .navbar-toggler {
+  display: block !important;
+}
+
+
 @media screen and (max-width: 768px) {
   .fwlayout-fluid .sidebar:not(.show,.collapsing) {
     display: none;
   }
   .fwlayout-fluid main {
-    margin-left: 0px;
+    margin-left: 0;
   }
 
   .fwlayout-fluid .site-footer {
