@@ -326,7 +326,7 @@
                 },
                 {
                     "type": "row",
-                    "class": "form-row"
+                    "class": "row form-row"
                 },
                     {
                         "type": "col",

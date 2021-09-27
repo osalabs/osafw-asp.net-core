@@ -37,21 +37,23 @@ a.thumbnail:hover {
 
 <div class="modal-header">
     <h5 class="modal-title"><~./title></h5>
-    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
 <div class="modal-body modal-overflowed">
-    <form class="form-inline mb-3" method="post" action="<~../url>" enctype="multipart/form-data">
+    <form class="row row-cols-auto g-3 mb-3" method="post" action="<~../url>" enctype="multipart/form-data">
         <input type="hidden" name="XSS" value="<~session[XSS]>">
         <input type="hidden" name="mode" value="select">
 
-        <span class="btn btn-success btn-fileinput mr-3">
+        <div class="col">
+          <span class="btn btn-success btn-fileinput me-3">
             <span class="msg-button"><~/common/icons/cloud-upload-fill><span> Upload new file...</span></span>
             <span class="msg-uploading d-none"><span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> uploading...</span>
             <input name="file1" type="file">
-        </span>
-        <div class="form-group">
-            <label class="mr-3">`or choose from existing uploads, category`:</label>
-            <select name="item[att_categories_id]" class="form-control">
+          </span>
+        </div>
+        <label class="col col-form-label me-3">`or choose from existing uploads, category`:</label>
+        <div class="col">
+            <select name="item[att_categories_id]" class="form-select">
                 <option value="">- `show all` -</option>
                 <~select_att_categories_id select="att_categories_id">
             </select>
@@ -60,7 +62,7 @@ a.thumbnail:hover {
 
     <div class="thumbs clearfix">
         <~att_dr repeat inline>
-            <a class="float-left thumbnail text-nooverflow" href="#" data-id="<~id>" title="<~iname>">
+            <a class="float-start thumbnail text-nooverflow" href="#" data-id="<~id>" title="<~iname>">
                 <img src="<~/att/url>/<~id>?preview=1&size=s" alt="<~iname>" data-url="<~direct_url>" data-is_image="<~is_image>">
                 <span class="title"><~iname></span>
             </a>

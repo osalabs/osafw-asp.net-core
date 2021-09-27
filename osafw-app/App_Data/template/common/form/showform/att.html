@@ -5,11 +5,11 @@
     <div class="col-6 col-lg">
         <div class="card text-center att-info" <~/common/display_none unless="att">>
           <input name="item[<~field>]" value="<~value>" type="hidden" <~attrs_control noescape>>
-          <img class="card-img-top" src="<~/att/url>/<~att[id]>?preview=1&size=s" alt="">
+          <img class="card-img-top" src="<~/att/url>/<~value>?preview=1&size=s" alt="">
           <div class="card-body text-nooverflow">
             <p class="card-text att-iname"><~att[iname]></p>
-            <a href="<~/att/url>/<~att[id]>" target="_blank" class="btn btn-default"><~/common/icons/cloud-download-fill> `Download`</a>
-            <button type="button" class="btn btn-default on-remove-att"><~/common/icons/x-circle-fill> `Remove`</button>
+            <a href="<~/att/url>/<~value>" target="_blank" class="btn btn-default" title="`Download`"><~/common/icons/cloud-download-fill></a>
+            <button type="button" class="btn btn-default on-remove-att" title="`Remove`"><~/common/icons/x-circle-fill></button>
           </div>
         </div>
     </div>

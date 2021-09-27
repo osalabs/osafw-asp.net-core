@@ -4,7 +4,7 @@
   <fieldset>
     <~/common/form/msg>
 
-    <div class="form-group row">
+    <div class="row form-row">
       <label class="col-form-label col-md-3 required" for="email">`Email`</label>
       <div class="col-md-9">
         <input id="email" name="item[email]" maxlength="128" value="<~i[email]>" type="email" class="form-control" required>
@@ -13,7 +13,7 @@
       </div>
     </div>
 
-    <div class="form-group row">
+    <div class="row form-row">
       <label class="col-form-label col-md-3 required" for="pwd">`Password`</label>
       <div class="col-md-4">
         <input id="pwd" name="item[pwd]" maxlength="64" value="" type="password" class="form-control" required>
@@ -24,21 +24,21 @@
       </div>
     </div>
 
-    <div class="form-group row">
+    <div class="row form-row">
       <label class="col-form-label col-md-3" for="fname">`First name`</label>
       <div class="col-md-9">
         <input id="fname" name="item[fname]" maxlength="32" value="<~i[fname]>" type="text" class="form-control">
       </div>
     </div>
-    <div class="form-group row">
+    <div class="row form-row">
       <label class="col-form-label col-md-3" for="lname">`Last name`</label>
       <div class="col-md-9">
         <input id="lname" name="item[lname]" maxlength="32" value="<~i[lname]>" type="text" class="form-control">
       </div>
     </div>
 
-    <div class="form-group row">
-      <div class="col-md-9 ml-md-auto">
+    <div class="row form-row">
+      <div class="col-md-9 ms-md-auto">
         <button type="submit" class="btn btn-primary">`Sign Up`</button>
         <button type="button" class="btn btn-default on-cancel" data-href="<~/login/url>">`Cancel`</button>
       </div>

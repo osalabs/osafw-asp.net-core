@@ -1,7 +1,7 @@
 var mode = '<~f[mode]>';
 
-$(document).on('click', '.on-mode-switch', function(e){
-  var value = $(e.target).find('input').val();
+$(document).on('click', '.on-mode-switch .btn-check', function(e){
+  var value = $('input[name="fmode"]:checked').val()
   $('#FFilter').find('input[name="f[mode]"]').val( value );
   $('#FFilter').submit();
 });

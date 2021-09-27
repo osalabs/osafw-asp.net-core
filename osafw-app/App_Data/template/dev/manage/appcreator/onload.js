@@ -7,5 +7,5 @@ $(document).on('click', '.on-all-cb', function (e) {
 $(document).on('change', '.cb-lookup', function (e) {
     var $this = $(this);
     var is_checked = $this.find('input').prop('checked');
-    $this.closest('.col').find('.custom-checkbox:not(.cb-lookup)').find('input[type=checkbox]').prop('checked', !is_checked);
+    $this.closest('.col').find('.form-check:not(.cb-lookup)').find('input[type=checkbox]').prop('checked', !is_checked);
 });

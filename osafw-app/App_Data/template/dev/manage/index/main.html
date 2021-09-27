@@ -51,49 +51,67 @@ existing DB &rarr; db.json &rarr; models &rarr; controllers
 </ul>
 
 <h5 class="mt-4">Analyse External DB and create db.json</h5>
-<form method="post" action="<~../url>/(AnalyseDB)" class="form-inline">
+<form method="post" action="<~../url>/(AnalyseDB)" class="row row-cols-auto g-2">
     <input type="hidden" name="XSS" value="<~session[XSS]>">
-    <input name="item[connstr]" value="<~i[connstr] default="Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\myFolder\myAccessFile.accdb;Persist Security Info=False;">" type="text" class="form-control ml-2" required placeholder="Connection String" style="width:800px">
-
-    <button class="btn btn-default ml-2">Analyse</button>
+    <div class="col">
+        <input name="item[connstr]" value="<~i[connstr] default="Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\myFolder\myAccessFile.accdb;Persist Security Info=False;">" type="text" class="form-control ms-2" required placeholder="Connection String" style="width:800px">
+    </div>
+    <div class="col">
+        <button class="btn btn-default ms-2">Analyse</button>
+    </div>
 </form>
 
 <h5 class="mt-4">Quick Create Models and Controllers</h5>
 <ul>
     <li>
-        <form method="post" action="<~../url>/(CreateModel)" class="form-inline">
+        <form method="post" action="<~../url>/(CreateModel)" class="row row-cols-auto g-2">
             <input type="hidden" name="XSS" value="<~session[XSS]>">
-            <select name="item[table_name]" class="form-control" style="width:200px">
-              <option value="">- select table -</option>
-              <~select_tables select="i[table_name]">
-            </select>
-            <input name="item[model_name]" maxlength="255" value="<~i[model_name]>" type="text" class="form-control ml-2" placeholder="Model name (plural)" style="width:300px">
-
-            <button class="btn btn-default ml-2">Create Model</button>
+            <div class="col">
+                <select name="item[table_name]" class="form-select" style="width:200px">
+                  <option value="">- select table -</option>
+                  <~select_tables select="i[table_name]">
+                </select>
+            </div>
+            <div class="col">
+                <input name="item[model_name]" maxlength="255" value="<~i[model_name]>" type="text" class="form-control ms-2" placeholder="Model name (plural)" style="width:300px">
+            </div>
+            <div class="col">
+                <button class="btn btn-default ms-2">Create Model</button>
+            </div>
         </form>
     </li>
     <li class="mt-2">
-        <form method="post" action="<~../url>/(CreateController)" class="form-inline">
+        <form method="post" action="<~../url>/(CreateController)" class="row row-cols-auto g-2">
             <input type="hidden" name="XSS" value="<~session[XSS]>">
-            <select name="item[model_name]" class="form-control" style="width:200px">
-              <option value="">- select model -</option>
-              <~select_models select="i[model_name]">
-            </select>
-            <input name="item[controller_url]" maxlength="255" value="<~i[controller_url]>" type="text" class="form-control ml-2" placeholder="Controller URL (ex: /Admin/Demos)" style="width:300px">
-            <input name="item[controller_title]" maxlength="255" value="<~i[controller_title]>" type="text" class="form-control ml-2" placeholder="Title (singular)" style="width:300px">
-
-            <button class="btn btn-default ml-2">Create Controller</button>
+            <div class="col">
+                <select name="item[model_name]" class="form-select" style="width:200px">
+                  <option value="">- select model -</option>
+                  <~select_models select="i[model_name]">
+                </select>
+            </div>
+            <div class="col">
+                <input name="item[controller_url]" maxlength="255" value="<~i[controller_url]>" type="text" class="form-control ms-2" placeholder="Controller URL (ex: /Admin/Demos)" style="width:300px">
+            </div>
+            <div class="col">
+                <input name="item[controller_title]" maxlength="255" value="<~i[controller_title]>" type="text" class="form-control ms-2" placeholder="Title (singular)" style="width:300px">
+            </div>
+            <div class="col">
+                <button class="btn btn-default ms-2">Create Controller</button>
+            </div>
         </form>
     </li>
     <li class="mt-2">
-        <form method="post" action="<~../url>/(ExtractController)" class="form-inline">
+        <form method="post" action="<~../url>/(ExtractController)" class="row row-cols-auto g-2">
             <input type="hidden" name="XSS" value="<~session[XSS]>">
-            <select name="item[controller_name]" class="form-control" style="width:200px">
-              <option value="">- select controller -</option>
-              <~select_controllers select="i[controller_name]">
-            </select>
-
-            <button class="btn btn-default ml-2">Extract Controller</button>
+            <div class="col">
+                <select name="item[controller_name]" class="form-select" style="width:200px">
+                  <option value="">- select controller -</option>
+                  <~select_controllers select="i[controller_name]">
+                </select>
+            </div>
+            <div class="col">
+                <button class="btn btn-default ms-2">Extract Controller</button>
+            </div>
         </form>
     </li>
 </ul>

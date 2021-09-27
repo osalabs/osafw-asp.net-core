@@ -1,10 +1,10 @@
-<form id="FQuickUpload" class="form-inline" method="post" action="<~../url>" enctype="multipart/form-data">
+<form id="FQuickUpload" class="row row-cols-auto g-3" method="post" action="<~../url>" enctype="multipart/form-data">
  <input type="hidden" name="XSS" value="<~session[XSS]>">
 
- <div class="form-row">
-    <span class="btn btn-success btn-fileinput"><~/common/icons/cloud-upload-fill><span> Upload new file(s)...</span>
+ <div class="col">
+    <span role="button" class="btn btn-success btn-fileinput"><~/common/icons/cloud-upload-fill><span> Upload new file(s)...</span>
         <input name="file1" type="file" multiple>
     </span>
-    <div class="wait-msg d-inline ml-1"></div>
+    <div class="wait-msg d-inline ms-1"></div>
  </div>
 </form>

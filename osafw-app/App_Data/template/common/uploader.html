@@ -78,7 +78,7 @@
         $(document).on('click', '.on-del-file', function (e) {
             var $this = $(this);
             var id = $this.data('id');
-            var filename = $this.closest('.form-row').find('.field-fname').text();
+            var filename = $this.closest('.row form-row').find('.field-fname').text();
 
 
             fw.confirm('Are you sure to delete '+filename+' ?', 'Delete File', function(){
@@ -90,7 +90,7 @@
                     type: 'POST',
                 }).done(function (data) {
                     if (data.success){
-                        $this.closest('.form-row').remove();
+                        $this.closest('.row form-row').remove();
                     }else{
                         fw.error(data.err_msg ? data.err_msg : 'Server error');
                     }

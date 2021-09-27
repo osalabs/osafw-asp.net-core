@@ -3,15 +3,14 @@
 </nav>
 <h1><~title> (<~count>)</h1>
 
-<div class="clearfix btn-std">
+<div class="btn-std">
 <~mode_switch if="is_two_modes" inline>
-<div class="btn-group btn-group-toggle pull-right on-mode-switch" data-toggle="buttons">
-  <label class="btn btn-default <~/common/active unless="f[mode]">">
-    <input type="radio" name="f[mode]" value="" id="option1" autocomplete="off" <~/common/checked unless="f[mode]">> <~/common/icons/card-list> Browse
-  </label>
-  <label class="btn btn-default <~/common/active if="f[mode]">">
-    <input type="radio" name="f[mode]" value="edit" id="option2" autocomplete="off" <~/common/checked if="f[mode]">> <~/common/icons/pencil-square> Table Edit
-  </label>
+<div class="btn-group on-mode-switch" role="group" data-bs-toggle="buttons">
+  <input type="radio" class="btn-check" name="fmode" value="" id="option_browse" autocomplete="off" <~/common/checked unless="f[mode]">>
+  <label class="btn btn-default <~/common/active unless="f[mode]">" for="option_browse"><~/common/icons/card-list> `Browse`</label>
+
+  <input type="radio" class="btn-check" name="fmode" value="edit" id="option_edit" autocomplete="off" <~/common/checked if="f[mode]">>
+  <label class="btn btn-default <~/common/active if="f[mode]">" for="option_edit"><~/common/icons/pencil-square> `Table Edit`</label>
 </div>
 </~mode_switch>
 

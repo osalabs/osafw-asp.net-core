@@ -8,17 +8,15 @@
 
       <div class="modal-header">
         <h5 class="modal-title"><~./title></h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-          <span aria-hidden="true">&times;</span>
-        </button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
 
-        <div class="form-row">
+        <div class="row form-row">
           <label class="required" for="iname">`Issue Summary`</label>
           <input id="iname" name="item[iname]" maxlength="64" value="<~i[iname]>" type="text" class="form-control" required>
         </div>
-        <div class="form-row">
+        <div class="row form-row">
           <label class="required" for="idesc">`Issue Description`</label>
           <textarea id="idesc" name="item[idesc]" rows="5" class="form-control" required></textarea>
         </div>
@@ -26,7 +24,7 @@
       </div>
       <div class="modal-footer">
         <button type="submit" class="btn btn-primary">`Submit`</button>
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">`Cancel`</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">`Cancel`</button>
       </div>
 
       </form>

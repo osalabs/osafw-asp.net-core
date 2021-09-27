@@ -3,26 +3,26 @@
 
   <fieldset>
     <h4><~title>:
-      <select name="db" class="form-control d-inline w-25">
+      <select name="db" class="form-select d-inline w-25">
         <option>- select-</option>
         <~dbsources select="selected_db">
       </select>
     </h4>
 
     <~/common/form/msg>
-    <div class="form-group">
+    <div class="form-row">
       <label class="col-form-label" for="sql">SQL query</label>
       <div>
         <textarea type="text" id="sql" name="sql" rows="15" class="form-control"><~sql></textarea>
-        <small class="form-text text-muted">run one query at a time</small>
+        <small class="form-text">run one query at a time</small>
       </div>
     </div>
     <~pwd_check unless="SESSION[admindb_pwd_checked]" inline>
-    <div class="form-row">
+    <div class="row form-row">
       <label class="col-form-label col-md-3" for="pwd">Password</label>
       <div class="col-md-9">
         <input type="password" id="pwd" name="pwd" class="form-control">
-        <small class="form-text text-muted">additional protection password</small>
+        <small class="form-text">additional protection password</small>
       </div>
     </div>
     </~pwd_check>

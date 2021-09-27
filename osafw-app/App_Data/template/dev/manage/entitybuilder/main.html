@@ -7,12 +7,12 @@
 <form method="post" action="<~../url>/(EntityBuilderSave)">
     <input type="hidden" name="XSS" value="<~session[XSS]>">
 
-    <div class="form-group">
+    <div class="form-row">
         <label for="ta">Entities</label>
         <textarea class="form-control" id="ta" name="item[entities]" rows="15" style="font-family: monospace;"><~i[entities]></textarea>
     </div>
-    <button class="btn btn-primary ml-2">Create db.json</button>
-    <button class="btn btn-dark ml-2" name="DoMagic" value="1">Just do the magic and create App</button>
+    <button class="btn btn-primary ms-2">Create db.json</button>
+    <button class="btn btn-dark ms-2" name="DoMagic" value="1">Just do the magic and create App</button>
 </form>
 
 <div class="text-muted mt-5">

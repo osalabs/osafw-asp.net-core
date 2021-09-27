@@ -2,25 +2,25 @@
   <legend>Publish</legend>
 
   <~publish_not_a_home unless="i[is_home]" inline>
-  <div class="form-row">
+  <div class="row form-row">
     <label class="col-form-label col-3 col-lg-3" for="pub_time">`On date`</label>
     <div class="col">
       <div class="input-group date">
         <input id="pub_time" name="item[pub_time]" maxlength="10" value="<~i[pub_time] date>" type="text" class="form-control">
-        <div class="input-group-append"><button class="btn btn-default" type="button"><~/common/icons/calendar3></button></div>
+        <button class="btn btn-default" type="button"><~/common/icons/calendar3></button>
       </div>
     </div>
   </div>
   </~publish_not_a_home>
 
-  <div class="form-row">
+  <div class="row form-row">
     <label class="col-form-label col-3 col-lg-3" for="status">`Status`</label>
     <div class="col">
           <~status_a_home if="i[is_home]" inline>
               <p class="form-control-plaintext">Home Page is Always Published</p>
           </~status_a_home>
           <~status_not_a_home unless="i[is_home]" inline>
-          <select id="status" name="item[status]" class="form-control">
+          <select id="status" name="item[status]" class="form-select">
               <~/admin/spages/status.sel select="i[status]">
           </select>
           </~status_not_a_home>
@@ -32,14 +32,14 @@
 <fieldset>
   <legend>Page Attributes</legend>
 
-  <div class="form-row">
+  <div class="row form-row">
     <label class="col-form-label col-md-3" for="purl">`Parent&nbsp;Url`</label>
     <div class="col">
       <p class="form-control-plaintext"><~parent_url>/</p>
     </div>
   </div>
 
-  <div class="form-row">
+  <div class="row form-row">
     <label class="col-form-label col-md-3" for="url">`Url`</label>
     <div class="col-md-9">
       <input id="url" name="item[url]" maxlength="255" value="<~i[url]>" type="text" class="form-control" <~/common/disabled if="i[is_home]">>
@@ -47,14 +47,14 @@
     </div>
   </div>
 
-  <div class="form-row">
+  <div class="row form-row">
     <label class="col-form-label col-md-3" for="parent_id">`Parent&nbsp;page`</label>
     <div class="col-md-9">
       <~parent_a_home if="i[is_home]" inline>
           <p class="form-control-plaintext">Home Page is Always a Top page</p>
       </~parent_a_home>
       <~parent_not_a_home unless="i[is_home]" inline>
-      <select id="parent_id" name="item[parent_id]" class="form-control">
+      <select id="parent_id" name="item[parent_id]" class="form-select">
         <option value="0">-no parent-</option>
         <~select_options_parent_id noescape>
       </select>
@@ -62,17 +62,17 @@
     </div>
   </div>
 
-  <!--div class="form-row">
+  <!--div class="row form-row">
     <label class="col-form-label col-md-3" for="template">`Template`</label>
     <div class="col-md-3">
-      <select id="template" name="item[template]" class="form-control">
+      <select id="template" name="item[template]" class="form-select">
         <option value="">-default-</option>
         <~/admin/spages/template.sel select="i[template]">
       </select>
     </div>
   </div-->
 
-  <div class="form-row">
+  <div class="row form-row">
     <label class="col-form-label col-md-3" for="prio">`Priority`</label>
     <div class="col-md-3">
       <input id="prio" name="item[prio]" maxlength="13" value="<~i[prio]>" type="text" class="form-control">
@@ -81,7 +81,7 @@
       <small class="form-control-plaintext text-muted">0 - lowest priority</small>
     </div>
   </div>
-  <div class="form-row <~/common/error if="ERR[redirect_url]">">
+  <div class="row form-row <~/common/error if="ERR[redirect_url]">">
     <label class="col-form-label col-md-3" for="redirect_url">`Redirect to`</label>
     <div class="col">
       <input id="redirect_url" name="item[redirect_url]" maxlength="255" value="<~i[redirect_url]>" type="text" class="form-control">
