@@ -27,7 +27,9 @@
 //    ]
 //}
 
-//TODO should compile only if Amazon.S3 SDK installed
+//#define is_S3
+
+#if is_S3
 
 using System;
 using Microsoft.VisualBasic;
@@ -223,3 +225,5 @@ namespace osafw
     }
 
 }
+
+#endif

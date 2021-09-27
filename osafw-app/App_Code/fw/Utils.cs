@@ -28,7 +28,7 @@ namespace osafw
         {
             string[] arr = str.Trim().Split(" ");
 
-            foreach (int i in Enumerable.Range(arr.GetLowerBound(0), arr.GetLowerBound(0)))
+            for (int i = 0; i < arr.Length; i++)
             {
                 if (arr[i] == null) arr[i] = "";
                 arr[i] = arr[i].Replace("&nbsp;", " ");

@@ -226,7 +226,7 @@ namespace osafw
         public string getResponseExpectedFormat()
         {
             string result = "";
-            if (this.route.format == "json" || ((string)this.request.Headers["Accept"]).Contains("application/json"))
+            if (this.route.format == "json" || Utils.f2str(this.request.Headers["Accept"]).Contains("application/json"))
                 result = "json";
             else if (this.route.format == "pjax" || !string.IsNullOrEmpty(this.request.Headers["X-Requested-With"]))
                 result = "pjax";
@@ -1213,12 +1213,12 @@ namespace osafw
 
                     using (SmtpClient client = new())
                     {
-                        Hashtable mailSettings = (Hashtable)this.config("mail_settings");
+                        Hashtable mailSettings = (Hashtable)this.config("mail");
                         if (mailSettings.Count > 0)
                         {
                             client.Host = Utils.f2str(mailSettings["host"]);
                             client.Port = Utils.f2int(mailSettings["port"]);
-                            client.EnableSsl = Utils.f2bool(mailSettings["enableSsl"]);
+                            client.EnableSsl = Utils.f2bool(mailSettings["is_ssl"]);
                             client.Credentials = new System.Net.NetworkCredential(Utils.f2str(mailSettings["username"]), Utils.f2str(mailSettings["password"]));
                             client.Send(message);
                         }

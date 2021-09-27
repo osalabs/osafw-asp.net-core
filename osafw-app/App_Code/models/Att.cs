@@ -3,6 +3,8 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
+//#define is_S3
+
 using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections;
@@ -62,6 +64,10 @@ namespace osafw
                 this.update(id, fields);
                 fields["filepath"] = filepath;
                 result = fields.toHashtable();
+
+#if is_S3
+                  moveToS3(id);
+#endif
             }
             return result;
         }
@@ -183,13 +189,24 @@ namespace osafw
         {
             // Dim item As Hashtable = one(id)
             // Return get_upload_url(id, item("ext"), size)
-            if (id == 0)
+            DBRow item = one(id);
+            if (item.Count == 0)
                 return "";
 
-            // if /Att need to be on offline folder
-            string result = fw.config("ROOT_URL") + "/Att/" + id;
-            if (!string.IsNullOrEmpty(size))
-                result += "?size=" + size;
+            string result = "";
+            if (item["is_s3"] == "1")
+            {
+#if is_S3
+                result = fw.model<S3>().getSignedUrl(getS3KeyByID(item["id"], size));
+#endif
+            }
+            else
+            {
+                // if /Att need to be on offline folder
+                result = fw.config("ROOT_URL") + "/Att/" + item["id"];
+                if (!string.IsNullOrEmpty(size))
+                    result += "?size=" + size;
+            }
             return result;
         }
 
@@ -200,13 +217,35 @@ namespace osafw
             if (item.Count == 0)
                 return "";
 
-            return getUrlDirect(item, size);
+            string result = "";
+            if (item["is_s3"] == "1")
+            {
+#if is_S3
+                result = fw.model<S3>().getSignedUrl(getS3KeyByID(item["id"], size));
+#endif
+            }
+            else
+            {
+                result = getUrlDirect(item, size);
+            }
+            return result;
         }
 
         // if you already have item, must contain: item("id"), item("ext")
         public string getUrlDirect(DBRow item, string size = "")
         {
-            return getUploadUrl(Utils.f2long(item["id"]), item["ext"], size);
+            string result = "";
+            if (item["is_s3"] == "1")
+            {
+#if is_S3
+                result = fw.model<S3>().getSignedUrl(getS3KeyByID(item["id"], size));
+#endif
+            }
+            else
+            {
+                result = getUploadUrl(Utils.f2long(item["id"]), item["ext"], size);
+            }
+            return result;
         }
 
         // IN: extension - doc, jpg, ... (dot is optional)
@@ -238,11 +277,18 @@ namespace osafw
             // remove files first
             DBRow item = one(id);
             if ((string)item["is_s3"] == "1")
+            {
+#if is_S3
                 fw.model<S3>().deleteObject(table_name + "/" + item["id"]);
-                //fw.logger(LogLevel.WARN, "Att record has S3 flag, but S3 storage is not enabled");
+#else
+                fw.logger(LogLevel.WARN, "Att record has S3 flag, but S3 storage is not enabled");
+#endif
+            }
             else
+            {
                 // local storage
                 deleteLocalFiles(id);
+            }
 
             base.delete(id, is_perm);
         }
@@ -441,16 +487,15 @@ namespace osafw
             if (Users.id == 0)
                 throw new ApplicationException("Access Denied"); // denied for non-logged
 
-            //#If is_S3 Then
+#if is_S3
             var url = fw.model<S3>().getSignedUrl(getS3KeyByID((string)item["id"], size));
             fw.redirect(url);
-            //#Else
+#else
             logger(LogLevel.WARN, "redirectS3 - S3 not enabled");
-            //#End If
+#endif
         }
 
-        //#If is_S3 Then
-
+#if is_S3
         /// <summary>
         /// move file from local file storage to S3
         /// </summary>
@@ -577,5 +622,6 @@ namespace osafw
 
             return result;
         }
+#endif
     }
 }

@@ -48,12 +48,17 @@ namespace osafw
 
             DBRow item = model.one(id);
             if ((string)item["is_s3"] == "1")
+            {
                 model.redirectS3(item.toHashtable(), size);
+                return;
+            }
 
             if (is_preview)
             {
-                if ((string)item["is_image"]=="1")
+                if ((string)item["is_image"] == "1")
+                {
                     model.transmitFile(id, size, "inline");
+                }
                 else
                 {
                     // if it's not an image and requested preview - return std image
@@ -61,10 +66,13 @@ namespace osafw
                     string ext = UploadUtils.getUploadFileExt(filepath);
                     fw.response.Headers.Add("Content-type", model.getMimeForExt(ext));
                     fw.response.SendFileAsync(filepath).Wait();
+
                 }
             }
             else
+            {
                 model.transmitFile(id, size, "inline");
+            }
         }
     }
 }
