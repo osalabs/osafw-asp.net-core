@@ -34,11 +34,11 @@ namespace osafw
 
         public void log(string ev_icode, int item_id = 0, int item_id2 = 0, string iname = "", int records_affected = 0, Hashtable changed_fields = null)
         {
-            DBRow hEV = oneByIcode(ev_icode);
+            Hashtable hEV = oneByIcode(ev_icode).toHashtable();
             if (!hEV.ContainsKey("id"))
             {
                 fw.logger(LogLevel.WARN, "No event defined for icode=[", ev_icode, "], auto-creating");
-                hEV = new DBRow
+                hEV = new Hashtable
                 {
                     ["icode"] = ev_icode,
                     ["iname"] = ev_icode,
@@ -47,17 +47,18 @@ namespace osafw
                 hEV["id"] = Utils.f2str(this.add(hEV));
             }
 
-            var fields = new DBRow()
+            var fields = new Hashtable()
             {
-                ["events_id"] = Utils.f2str(hEV["id"]),
-                ["item_id"] = Utils.f2str(item_id),
-                ["item_id2"] = Utils.f2str(item_id2),
+                ["events_id"] = hEV["id"],
+                ["item_id"] = item_id,
+                ["item_id2"] = item_id2,
                 ["iname"] = iname,
-                ["records_affected"] = Utils.f2str(records_affected)
+                ["records_affected"] = records_affected
             };
             if (changed_fields != null)
                 fields["fields"] = Utils.jsonEncode(changed_fields);
-            fields["add_users_id"] = Utils.f2str(Users.id);
+
+            fields["add_users_id"] = Users.id;
             db.insert(log_table_name, fields);
         }
 

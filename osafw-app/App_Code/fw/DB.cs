@@ -421,29 +421,6 @@ namespace osafw
             return result;
         }
 
-        private DBRow readRow2(DbDataReader dbread)
-        {
-            DBRow result = new();
-
-            for (int i = 0; i <= dbread.FieldCount - 1; i++)
-            {
-                try
-                {
-                    if (is_check_ole_types && UNSUPPORTED_OLE_TYPES.ContainsKey(dbread.GetDataTypeName(i))) continue;
-
-                    string value = dbread[i].ToString();
-                    string name = dbread.GetName(i).ToString();
-                    result.Add(name, value);
-                }
-                catch (Exception Ex)
-                {
-                    break;
-                }
-            }
-
-            return result;
-        }
-
         /// <summary>
         /// read single first row using raw sql query
         /// </summary>
@@ -1125,11 +1102,11 @@ namespace osafw
         }
 
         // return last inserted id
-        public int insert(string table, DBRow fields)
+        public int insert(string table, Hashtable fields)
         {
             if (fields.Count < 1) return 0;
 
-            exec(hash2sql_i(table, fields.toHashtable()));
+            exec(hash2sql_i(table, fields));
 
             object insert_id;
 
@@ -1160,13 +1137,13 @@ namespace osafw
             return exec(sql);
         }
 
-        public int update(string table, DBRow fields, Hashtable where)
+        public int update(string table, Hashtable fields, Hashtable where)
         {
-            return exec(hash2sql_u(table, fields.toHashtable(), where));
+            return exec(hash2sql_u(table, fields, where));
         }
 
         // retrun number of affected rows
-        public int update_or_insert(string table, DBRow fields, Hashtable where)
+        public int update_or_insert(string table, Hashtable fields, Hashtable where)
         {
             // merge fields and where
             Hashtable allfields = new();
@@ -1180,7 +1157,7 @@ namespace osafw
                 allfields[k] = where[k];
             }
 
-            string update_sql = hash2sql_u(table, fields.toHashtable(), where);
+            string update_sql = hash2sql_u(table, fields, where);
             string insert_sql = hash2sql_i(table, allfields);
             string full_sql = update_sql + "  IF @@ROWCOUNT = 0 " + insert_sql;
 

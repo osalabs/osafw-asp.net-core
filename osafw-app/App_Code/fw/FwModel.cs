@@ -259,7 +259,7 @@ namespace osafw
         }
 
         // add new record and return new record id
-        public virtual int add(DBRow item)
+        public virtual int add(Hashtable item)
         {
             // item("add_time") = Now() 'not necessary because add_time field in db should have default value now() or getdate()
             if (!string.IsNullOrEmpty(field_add_users_id) && !item.ContainsKey(field_add_users_id) && Users.isLogged)
@@ -269,7 +269,7 @@ namespace osafw
             if (is_log_changes)
             {
                 if (is_log_fields_changed)
-                    fw.logEvent(table_name + "_add", id, 0, "", 0, item.toHashtable());
+                    fw.logEvent(table_name + "_add", id, 0, "", 0, item);
                 else
                     fw.logEvent(table_name + "_add", id);
             }
@@ -280,13 +280,13 @@ namespace osafw
         }
 
         // update exising record
-        public virtual bool update(int id, DBRow item)
+        public virtual bool update(int id, Hashtable item)
         {
             Hashtable item_changes = new();
             if (is_log_changes)
             {
-                var item_old = this.one(id);
-                item_changes = fw.model<FwEvents>().changes_only(item.toHashtable(), item_old.toHashtable());
+                var item_old = this.one(id).toHashtable();
+                item_changes = fw.model<FwEvents>().changes_only(item, item_old);
             }
 
             if (!string.IsNullOrEmpty(field_upd_time))
@@ -325,12 +325,12 @@ namespace osafw
             }
             else
             {
-                DBRow vars = new();
-                vars[field_status] = Utils.f2str(STATUS_DELETED);
+                Hashtable vars = new();
+                vars[field_status] = STATUS_DELETED;
                 if (!string.IsNullOrEmpty(field_upd_time))
                     vars[field_upd_time] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
                 if (!string.IsNullOrEmpty(field_upd_users_id) && Users.isLogged)
-                    vars[field_upd_users_id] = Utils.f2str(Users.id);
+                    vars[field_upd_users_id] = Users.id;
 
                 db.update(table_name, vars, where);
             }
@@ -584,7 +584,7 @@ namespace osafw
         /// <param name="linked_keys">hashtable with keys as link id (as passed from web)</param>
         public virtual void updateLinked(string link_table_name, int id, string id_name, string link_id_name, Hashtable linked_keys)
         {
-            DBRow fields = new();
+            Hashtable fields = new();
             Hashtable where = new();
             var link_table_field_status = "status";
 
@@ -597,8 +597,8 @@ namespace osafw
             {
                 foreach (string link_id in linked_keys.Keys)
                 {
-                    fields = new DBRow();
-                    fields[id_name] = Utils.f2str(id);
+                    fields = new Hashtable();
+                    fields[id_name] = id;
                     fields[link_id_name] = link_id;
                     fields[link_table_field_status] = "0";
 
@@ -617,15 +617,15 @@ namespace osafw
         }
 
         // override to add set more additional fields
-        public virtual void updateLinkedRowsAdditional(Hashtable linked_keys, string link_id, DBRow fields)
+        public virtual void updateLinkedRowsAdditional(Hashtable linked_keys, string link_id, Hashtable fields)
         {
             if (!string.IsNullOrEmpty(field_prio) && linked_keys.Contains(field_prio + "_" + link_id))
-                fields[field_prio] = Utils.f2str(Utils.f2int(linked_keys[field_prio + "_" + link_id]));// get value from prio_ID
+                fields[field_prio] = Utils.f2int(linked_keys[field_prio + "_" + link_id]);// get value from prio_ID
         }
         // called from withing link model like UsersCompanies that links 2 tables
         public virtual void updateLinkedRows(int main_id, Hashtable linked_keys)
         {
-            DBRow fields = new();
+            Hashtable fields = new();
             Hashtable where = new();
             var link_table_field_status = this.field_status;
 
@@ -641,8 +641,8 @@ namespace osafw
                     if (Utils.f2int(link_id) == 0)
                         continue; // skip non-id, ex prio_ID
 
-                    fields = new DBRow();
-                    fields[linked_field_main_id] = Utils.f2str(main_id);
+                    fields = new Hashtable();
+                    fields[linked_field_main_id] = main_id;
                     fields[linked_field_link_id] = link_id;
                     fields[link_table_field_status] = "0";
 
@@ -664,15 +664,15 @@ namespace osafw
         }
 
         // override to add set more additional fields
-        public virtual void updateLinkedRowsByLinkedIdAdditional(Hashtable linked_keys, string main_id, DBRow fields)
+        public virtual void updateLinkedRowsByLinkedIdAdditional(Hashtable linked_keys, string main_id, Hashtable fields)
         {
             if (string.IsNullOrEmpty(field_prio) && linked_keys.ContainsKey(field_prio + "_" + main_id))
-                fields[field_prio] = Utils.f2str(Utils.f2int(linked_keys[field_prio + "_" + main_id]));// get value from prio_ID
+                fields[field_prio] = Utils.f2int(linked_keys[field_prio + "_" + main_id]);// get value from prio_ID
         }
         // called from withing link model like UsersCompanies that links 2 tables
         public virtual void updateLinkedRowsByLinkedId(int linked_id, Hashtable linked_keys)
         {
-            DBRow fields = new();
+            Hashtable fields = new();
             Hashtable where = new();
             var link_table_field_status = this.field_status;
 
@@ -688,7 +688,7 @@ namespace osafw
                     if (Utils.f2int(main_id) == 0)
                         continue; // skip non-id, ex prio_ID
 
-                    fields = new DBRow();
+                    fields = new Hashtable();
                     fields[linked_field_link_id] = Utils.f2str(linked_id);
                     fields[linked_field_main_id] = main_id;
                     fields[link_table_field_status] = "0";
@@ -718,7 +718,7 @@ namespace osafw
             if (iname.Length == 0)
                 return 0;
             int result;
-            DBRow item = this.oneByIname(iname);
+            Hashtable item = this.oneByIname(iname).toHashtable();
             if (item.ContainsKey(this.field_id))
                 // exists
                 result = Utils.f2int(item[this.field_id]);

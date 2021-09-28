@@ -1123,23 +1123,22 @@ namespace osafw
                 column_names += (column_names.Length > 0 ? "," : "") + ((Hashtable)fields["idesc"])["iname"];
             }
 
-            DBRow item = new()
+            Hashtable item = new()
             {
                 {
-                    "tname", Utils.f2str(entity["table"])
+                    "tname", entity["table"]
                 },
                 {
-                    "iname", Utils.f2str(entity["iname"])
+                    "iname", entity["iname"]
                 },
                 {
-                    "columns",columns
+                    "columns", columns
                 },
                 {
-                    "column_names",column_names
+                    "column_names", column_names
                 }
             };
-            if (ltable.Count > 0)
-                // replace
+            if (ltable.Count > 0)// replace
                 fw.model<LookupManagerTables>().update((int)ltable["id"], item);
             else
                 fw.model<LookupManagerTables>().add(item);
@@ -2049,7 +2048,7 @@ namespace osafw
         // update by url
         private void updateMenuItem(string controller_url, string controller_title)
         {
-            var fields = new DBRow()
+            var fields = new Hashtable()
             {
                 {"url",controller_url},
                 {"iname",controller_title},
@@ -2059,8 +2058,7 @@ namespace osafw
             var mitem = db.row("menu_items", DB.h("url", controller_url));
             if (mitem.Count > 0)
                 db.update("menu_items", fields, DB.h("id", mitem["id"]));
-            else
-                // add to menu_items
+            else // add to menu_items
                 db.insert("menu_items", fields);
         }
 
