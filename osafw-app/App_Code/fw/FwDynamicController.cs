@@ -141,7 +141,7 @@ namespace osafw
             return ps;
         }
 
-        public override int modelAddOrUpdate(int id, DBRow fields)
+        public override int modelAddOrUpdate(int id, Hashtable fields)
         {
             if (is_dynamic_showform)
                 processSaveShowFormFields(id, fields);
@@ -610,7 +610,7 @@ namespace osafw
         }
 
         // auto-process fields BEFORE record saved to db
-        protected virtual void processSaveShowFormFields(int id, DBRow fields)
+        protected virtual void processSaveShowFormFields(int id, Hashtable fields)
         {
             Hashtable item = reqh("item");
 
@@ -647,7 +647,7 @@ namespace osafw
         }
 
         // auto-process fields AFTER record saved to db
-        protected virtual void processSaveShowFormFieldsAfter(int id, DBRow fields)
+        protected virtual void processSaveShowFormFieldsAfter(int id, Hashtable fields)
         {
             // for now we just look if we have att_links_edit field and update att links
             foreach (Hashtable def in (ArrayList)this.config["showform_fields"])

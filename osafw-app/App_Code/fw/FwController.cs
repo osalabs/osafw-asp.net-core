@@ -678,7 +678,7 @@ namespace osafw
         /// <param name="fields">hash of field/values</param>
         /// <returns>new autoincrement id (if added) or old id (if update)</returns>
         /// <remarks>Also set fw.FLASH</remarks>
-        public virtual int modelAddOrUpdate(int id, DBRow fields)
+        public virtual int modelAddOrUpdate(int id, Hashtable fields)
         {
             if (id > 0)
             {
