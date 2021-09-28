@@ -25,7 +25,7 @@ namespace osafw
         public Hashtable IndexAction()
         {
             Hashtable ps = new();
-            if (Users.isLogged)
+            if (fw.isLogged)
                 fw.redirect((string)fw.config("LOGGED_DEFAULT_URL"));
 
             Hashtable item = reqh("item");
@@ -108,7 +108,7 @@ namespace osafw
 
         public void DeleteAction()
         {
-            fw.logEvent("logoff", Users.id);
+            fw.logEvent("logoff", fw.userId);
 
             fw.context.Session.Clear();
             fw.redirect((string)fw.config("UNLOGGED_DEFAULT_URL"));

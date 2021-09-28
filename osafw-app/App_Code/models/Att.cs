@@ -131,7 +131,7 @@ namespace osafw
             if (form_att == null)
                 return;
 
-            int me_id = Users.id;
+            int me_id = fw.userId;
 
             // 1. set status=1 (under update)
             DBRow fields = new();
@@ -484,7 +484,7 @@ namespace osafw
         // generate signed url and redirect to it, so user download directly from S3      
         public void redirectS3(Hashtable item, string size = "")
         {
-            if (Users.id == 0)
+            if (fw.userId == 0)
                 throw new ApplicationException("Access Denied"); // denied for non-logged
 
 #if is_S3

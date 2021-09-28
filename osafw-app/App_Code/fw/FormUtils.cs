@@ -387,7 +387,7 @@ namespace osafw
                 {
                     result = new DateTime(year, mon, day).ToOADate();
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     result = null;
                 }
@@ -429,7 +429,7 @@ namespace osafw
             {
                 result = f2int(a[0]) * 3600 + f2int(a[1]) * 60;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
             }
             return result;
@@ -443,7 +443,7 @@ namespace osafw
             {
                 result = (int)Conversion.Val(a[0]);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
             }
             return result;

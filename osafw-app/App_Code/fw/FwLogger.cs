@@ -64,7 +64,7 @@ namespace osafw
                 }
                 str.Append(':').Append(method_name).Append(' ').Append(sf.GetFileLineNumber().ToString()).Append(" # ");
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 str.Append(" ... #");
             }

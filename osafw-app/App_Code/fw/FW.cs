@@ -63,7 +63,6 @@ namespace osafw
         public static Hashtable METHOD_ALLOWED = Utils.qh("GET POST PUT DELETE");
 
         private readonly Hashtable models = new ();
-        public static FW Current; // store FW current "singleton", set in run WARNING - avoid to use as if 2 parallel requests come, a bit later one will overwrite this
         public FwCache cache = new(); // request level cache
 
         public Hashtable FORM;
@@ -88,11 +87,24 @@ namespace osafw
         //TODO MIGRATE #Const isSentry = False 'if you use Sentry set to True here, install SentrySDK, in web.config fill endpoint URL to "log_sentry" 
         private IDisposable sentryClient;
 
+        // shortcut for currently logged users.id
+        // usage: fw.userId
+        public int userId
+        {
+            get { return Utils.f2int(Session("user_id")); }
+        }
+
+        // shortcut to obtain if we working under logged in user
+        // usage: fw.isLogged
+        public bool isLogged
+        {
+            get { return userId > 0; }
+        }
+
         // begin processing one request
         public static void run(HttpContext context, IConfiguration configuration)
         {
             FW fw = new (context, configuration);
-            FW.Current = fw;
 
             FwHooks.initRequest(fw);
             fw.dispatch();
@@ -536,7 +548,7 @@ namespace osafw
             {
                 logger(LogLevel.DEBUG, Ex.Message);
                 // if not logged - just redirect to login 
-                if (!Users.isLogged)
+                if (!this.isLogged)
                     redirect((string)config("UNLOGGED_DEFAULT_URL"), false);
                 else
                     errMsg(Ex.Message);

@@ -42,7 +42,7 @@ namespace osafw
             this.fw = fw;
             this.db = fw.db;
 
-            is_logged = Users.isLogged;
+            is_logged = fw.isLogged;
         }
 
         // '''''''''''''''''''''''''' high level tests

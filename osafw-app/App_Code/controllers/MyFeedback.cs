@@ -34,7 +34,7 @@ namespace osafw
         public void SaveAction()
         {
             var item = reqh("item");
-            var id = Users.id;
+            var id = fw.userId;
 
             try
             {

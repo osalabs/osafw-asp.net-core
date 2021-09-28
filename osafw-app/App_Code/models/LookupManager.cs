@@ -76,8 +76,8 @@ namespace osafw
             if (string.IsNullOrEmpty((string)defs["list_columns"]))
             {
                 // if no list cols - it's std table - add std fields
-                if (!item.ContainsKey("add_users_id") && Users.isLogged)
-                    item["add_users_id"] = Utils.f2str(Users.id);
+                if (!item.ContainsKey("add_users_id") && fw.isLogged)
+                    item["add_users_id"] = Utils.f2str(fw.userId);
             }
 
             int id = db.insert(tname, item);
@@ -141,8 +141,8 @@ namespace osafw
                     // if no list cols - it's std table - add std fields
                     if (!item_save.ContainsKey("upd_time"))
                         item_save["upd_time"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-                    if (!item_save.ContainsKey("upd_users_id") && Users.isLogged)
-                        item_save["upd_users_id"] = Utils.f2str(Users.id);
+                    if (!item_save.ContainsKey("upd_users_id") && fw.isLogged)
+                        item_save["upd_users_id"] = Utils.f2str(fw.userId);
                 }
 
                 db.update(tname, item_save, where);

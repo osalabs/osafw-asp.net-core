@@ -32,7 +32,7 @@ namespace osafw
 
             Hashtable ps = new();
             Hashtable item = reqh("item");
-            int id = Users.id;
+            int id = fw.userId;
 
             if (isGet())
             {
@@ -59,7 +59,7 @@ namespace osafw
 
         public void SaveAction()
         {
-            int id = Users.id;
+            int id = fw.userId;
             try
             {
                 Validate(id, reqh("item"));

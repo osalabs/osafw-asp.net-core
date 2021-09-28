@@ -262,7 +262,7 @@ namespace osafw
         public virtual int add(Hashtable item)
         {
             // item("add_time") = Now() 'not necessary because add_time field in db should have default value now() or getdate()
-            if (!string.IsNullOrEmpty(field_add_users_id) && !item.ContainsKey(field_add_users_id) && Users.isLogged)
+            if (!string.IsNullOrEmpty(field_add_users_id) && !item.ContainsKey(field_add_users_id) && fw.isLogged)
                 item[field_add_users_id] = fw.Session("user_id");
             int id = db.insert(table_name, item);
 
@@ -291,7 +291,7 @@ namespace osafw
 
             if (!string.IsNullOrEmpty(field_upd_time))
                 item[field_upd_time] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-            if (!string.IsNullOrEmpty(field_upd_users_id) && !item.ContainsKey(field_upd_users_id) && Users.isLogged)
+            if (!string.IsNullOrEmpty(field_upd_users_id) && !item.ContainsKey(field_upd_users_id) && fw.isLogged)
                 item[field_upd_users_id] = fw.Session("user_id");
 
             Hashtable where = new();
@@ -329,8 +329,8 @@ namespace osafw
                 vars[field_status] = STATUS_DELETED;
                 if (!string.IsNullOrEmpty(field_upd_time))
                     vars[field_upd_time] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-                if (!string.IsNullOrEmpty(field_upd_users_id) && Users.isLogged)
-                    vars[field_upd_users_id] = Users.id;
+                if (!string.IsNullOrEmpty(field_upd_users_id) && fw.isLogged)
+                    vars[field_upd_users_id] = fw.userId;
 
                 db.update(table_name, vars, where);
             }

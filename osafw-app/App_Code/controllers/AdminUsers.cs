@@ -71,7 +71,7 @@ namespace osafw
 
                 id = this.modelAddOrUpdate(id, new DBRow(itemdb));
 
-                if (Users.id == id)
+                if (fw.userId == id)
                     model.reloadSession(id);
             }
             catch (ApplicationException ex)
@@ -131,7 +131,7 @@ namespace osafw
             if (Utils.f2int(user["access_level"]) >= Utils.f2int(fw.Session("access_level")))
                 throw new ApplicationException("Access Denied. Cannot simulate user with higher access level");
 
-            fw.logEvent("simulate", id, Users.id);
+            fw.logEvent("simulate", id, fw.userId);
 
             if (model.doLogin(id))
                 fw.redirect((string)fw.config("LOGGED_DEFAULT_URL"));

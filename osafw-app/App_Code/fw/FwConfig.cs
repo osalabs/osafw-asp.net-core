@@ -42,9 +42,9 @@ namespace osafw
         }
 
         // reload settings
-        public static void reload()
+        public static void reload(FW fw)
         {
-            initDefaults(FW.Current.context, FwConfig.hostname);
+            initDefaults(fw.context, FwConfig.hostname);
             readSettings();
             specialSettings();
         }

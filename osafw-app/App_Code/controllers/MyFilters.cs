@@ -45,7 +45,7 @@ namespace osafw
         {
             // only logged user lists
             list_where = " status<>127 and add_users_id=@add_users_id";
-            list_where_params["@add_users_id"] = Users.id;
+            list_where_params["@add_users_id"] = fw.userId;
 
             base.setListSearch();
 

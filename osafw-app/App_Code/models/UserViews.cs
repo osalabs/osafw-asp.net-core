@@ -17,7 +17,7 @@ namespace osafw
         // return screen record for logged user
         public override DBRow oneByIcode(string screen)
         {
-            return db.row(table_name, DB.h(field_add_users_id, Users.id, field_icode, screen));
+            return db.row(table_name, DB.h(field_add_users_id, fw.userId, field_icode, screen));
         }
 
         // update screen fields for logged user
@@ -43,7 +43,7 @@ namespace osafw
                         "fields", fields
                     },
                     {
-                        field_add_users_id, Utils.f2str(Users.id)
+                        field_add_users_id, Utils.f2str(fw.userId)
                     }
                 });
             return result;
@@ -55,7 +55,7 @@ namespace osafw
             return db.arrayp("select id, iname from " + db.q_ident(table_name) +
                 " where status=0 and entity=@entity" +
                 "   and (is_system=1 OR add_users_id=@users_id)" +
-                " order by is_system desc, iname", DB.h("@entity", entity, "@users_id", Users.id)).toArrayList();
+                " order by is_system desc, iname", DB.h("@entity", entity, "@users_id", fw.userId)).toArrayList();
         }
     }
 

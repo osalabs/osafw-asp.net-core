@@ -23,22 +23,6 @@ namespace osafw
 
         private readonly string table_menu_items = "menu_items";
 
-        /// <summary>
-        /// return current user id or 0 for non-logged users
-        /// </summary>
-        public static int id
-        {
-            get { return Utils.f2int(FW.Current.Session("user_id")); }
-        }
-
-        /// <summary>
-        /// return true if current user is logged
-        /// </summary>
-        public static bool isLogged
-        {
-            get { return Users.id > 0; }
-        }
-
         public Users() : base()
         {
             table_name = "users";
@@ -239,7 +223,7 @@ namespace osafw
         public bool reloadSession(int id = 0)
         {
             if (id == 0)
-                id = Users.id;
+                id = fw.userId;
             DBRow user = one(id);
 
             fw.Session("user_id", Utils.f2str(id));

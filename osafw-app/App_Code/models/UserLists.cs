@@ -27,7 +27,7 @@ namespace osafw
             Hashtable where = new();
             where["status"] = STATUS_ACTIVE;
             where["entity"] = entity;
-            where["add_users_id"] = Users.id;
+            where["add_users_id"] = fw.userId;
             return db.array(table_name, where, "iname", Utils.qw("id iname")).toArrayList();
         }
 
@@ -46,7 +46,7 @@ namespace osafw
                 " LEFT OUTER JOIN " + db.q_ident(table_items) + " ti ON (ti.user_lists_id=t.id and ti.item_id=@item_id )" +
                 " where t.status=0 and t.entity=@entity" +
                 "   and t.add_users_id=@users_id" +
-                " order by t.iname", DB.h("@item_id", item_id, "@entity", entity, "@users_id", Users.id)).toArrayList();
+                " order by t.iname", DB.h("@item_id", item_id, "@entity", entity, "@users_id", fw.userId)).toArrayList();
         }
 
         public override void delete(int id, bool is_perm = false)
@@ -81,7 +81,7 @@ namespace osafw
             DBRow item = new();
             item["user_lists_id"] = Utils.f2str(user_lists_id);
             item["item_id"] = Utils.f2str(item_id);
-            item["add_users_id"] = Utils.f2str(Users.id);
+            item["add_users_id"] = Utils.f2str(fw.userId);
 
             int id = db.insert(table_items, item);
             fw.logEvent(table_items + "_add", id);

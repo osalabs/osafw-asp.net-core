@@ -44,7 +44,7 @@ namespace osafw
         public override void setListSearch()
         {
             list_where = " status<>127 and add_users_id=@add_users_id";
-            list_where_params["@add_users_id"] = Users.id;
+            list_where_params["@add_users_id"] = fw.userId;
 
             base.setListSearch();
 
@@ -132,7 +132,7 @@ namespace osafw
             try
             {
                 var user_lists = fw.model<UserLists>().one(user_lists_id);
-                if (item_id == 0 || user_lists.Count == 0 || Utils.f2int(user_lists["add_users_id"]) != Users.id)
+                if (item_id == 0 || user_lists.Count == 0 || Utils.f2int(user_lists["add_users_id"]) != fw.userId)
                     throw new ApplicationException("Wrong Request");
 
                 var res = fw.model<UserLists>().toggleItemList(user_lists_id, item_id);
@@ -163,7 +163,7 @@ namespace osafw
             try
             {
                 var user_lists = fw.model<UserLists>().one(user_lists_id);
-                if (user_lists.Count == 0 || Utils.f2int(user_lists["add_users_id"]) != Users.id)
+                if (user_lists.Count == 0 || Utils.f2int(user_lists["add_users_id"]) != fw.userId)
                     throw new ApplicationException("Wrong Request");
 
                 foreach (string key in items.Keys)
@@ -196,7 +196,7 @@ namespace osafw
             try
             {
                 var user_lists = fw.model<UserLists>().one(user_lists_id);
-                if (user_lists.Count == 0 || Utils.f2int(user_lists["add_users_id"]) != Users.id)
+                if (user_lists.Count == 0 || Utils.f2int(user_lists["add_users_id"]) != fw.userId)
                     throw new ApplicationException("Wrong Request");
 
                 foreach (string key in items.Keys)

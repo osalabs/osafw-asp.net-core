@@ -187,7 +187,7 @@ namespace osafw
             {                
                 result = (int)db.value(tblname, new Hashtable(), "count(*)");
             }
-            catch (Exception ex)
+            catch (Exception)
             {
             }
 

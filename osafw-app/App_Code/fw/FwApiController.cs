@@ -20,7 +20,7 @@ namespace osafw
         {
             var result = false;
 
-            if (Users.isLogged)
+            if (fw.isLogged)
                 result = true;
             if (!result)
                 throw new ApplicationException("API auth error");
