@@ -244,18 +244,10 @@ namespace osafw
             // emulate entity
             var entity = new Hashtable()
             {
-                {
-                    "model_name",model_name
-                },
-                {
-                    "controller_url",controller_url
-                },
-                {
-                    "controller_title",controller_title
-                },
-                {
-                    "table",fw.model(model_name).table_name
-                }
+                {"model_name",model_name},
+                {"controller_url",controller_url},
+                {"controller_title",controller_title},
+                {"table",fw.model(model_name).table_name}
             };
             // table = Utils.name2fw(model_name) - this is not always ok
 
@@ -363,12 +355,8 @@ namespace osafw
             foreach (string dbname in ((Hashtable)fw.config("db")).Keys)
                 dbsources.Add(new Hashtable()
                 {
-                    {
-                        "id",dbname
-                    },
-                    {
-                        "iname",dbname
-                    }
+                    {"id",dbname},
+                    {"iname",dbname}
                 });
 
             ps["dbsources"] = dbsources;
@@ -904,11 +892,10 @@ namespace osafw
                             field["fw_type"] = "datetime";
                             field["fw_subtype"] = "datetime2";
                         }
-                        else
-                                                // not type specified
-                                                // additionally detect date field from name
-                                                if (Regex.IsMatch((string)field["name"], "Date$", RegexOptions.IgnoreCase))
+                        else if (Regex.IsMatch((string)field["name"], "Date$", RegexOptions.IgnoreCase))
                         {
+                            // not type specified
+                            // additionally detect date field from name
                             field["fw_type"] = "datetime";
                             field["fw_subtype"] = "date";
                         }
@@ -1125,18 +1112,10 @@ namespace osafw
 
             Hashtable item = new()
             {
-                {
-                    "tname", entity["table"]
-                },
-                {
-                    "iname", entity["iname"]
-                },
-                {
-                    "columns", columns
-                },
-                {
-                    "column_names", column_names
-                }
+                { "tname", entity["table"] },
+                { "iname", entity["iname"] },
+                { "columns", columns },
+                { "column_names", column_names }
             };
             if (ltable.Count > 0)// replace
                 fw.model<LookupManagerTables>().update((int)ltable["id"], item);
@@ -1194,14 +1173,8 @@ namespace osafw
             // replace in url.html /Admin/DemosDynamic to controller_url
             Hashtable replacements = new()
             {
-                {
-                    "/Admin/DemosDynamic",
-                    controller_url
-                },
-                {
-                    "DemoDynamic",
-                    controller_title
-                }
+                { "/Admin/DemosDynamic", controller_url },
+                { "DemoDynamic", controller_title }
             };
             replaceInFiles(tpl_to, replacements);
 
@@ -1275,43 +1248,44 @@ namespace osafw
 
             foreach (Hashtable fld in fields)
             {
-                logger("field name=", fld["name"], fld);
+                string fld_name = Utils.f2str(fld["name"]);
+                logger("field name=", fld_name, fld);
 
                 if (Utils.f2str(fld["fw_name"]) == "")
-                    fld["fw_name"] = Utils.name2fw((string)fld["name"]); // system name using fw standards
+                    fld["fw_name"] = Utils.name2fw(fld_name); // system name using fw standards
                 if (Utils.f2str(fld["iname"]) == "")
-                    fld["iname"] = Utils.name2human((string)fld["name"]); // human name using fw standards
+                    fld["iname"] = Utils.name2human(fld_name); // human name using fw standards
 
-                hfields[fld["name"]] = fld;
-                hFieldsMap[fld["name"]] = fld["iname"];
+                hfields[fld_name] = fld;
+                hFieldsMap[fld_name] = fld["iname"];
                 if (!is_fw)
                 {
                     hFieldsMap[fld["fw_name"]] = fld["iname"];
-                    hFieldsMapFW[fld["fw_name"]] = fld["name"];
+                    hFieldsMapFW[fld["fw_name"]] = fld_name;
                 }
 
                 Hashtable sf = new();  // show fields
                 Hashtable sff = new(); // showform fields
                 var is_skip = false;
-                sf["field"] = fld["name"];
+                sf["field"] = fld_name;
                 sf["label"] = fld["iname"];
                 sf["type"] = "plaintext";
 
-                sff["field"] = fld["name"];
+                sff["field"] = fld_name;
                 sff["label"] = fld["iname"];
 
                 if (Utils.f2str(fld["is_nullable"]) == "0" && fld["default"] == null)
                     sff["required"] = true;// if not nullable and no default - required
 
                 if (Utils.f2str(fld["is_nullable"]) == "1")
-                    saveFieldsNullable.Add(fld["name"]);
+                    saveFieldsNullable.Add(fld_name);
 
                 var maxlen = Utils.f2int(fld["maxlen"]);
                 if (maxlen > 0)
                     sff["maxlength"] = maxlen;
                 if (Utils.f2str(fld["fw_type"]) == "varchar")
                 {
-                    if (maxlen <= 0 || Utils.f2str(fld["name"]) == "idesc")
+                    if (maxlen <= 0 || fld_name == "idesc")
                     {
                         sf["type"] = "markdown";
                         sff["type"] = "textarea";
@@ -1343,7 +1317,7 @@ namespace osafw
                     {
                         foreach (Hashtable fkinfo in (ArrayList)entity["foreign_keys"])
                         {
-                            if (fkinfo["column"] == fld["name"])
+                            if ((string)fkinfo["column"] == fld_name)
                             {
                                 is_fk = true;
                                 var mname = _tablename2model(Utils.name2fw((string)fkinfo["pk_table"]));
@@ -1369,7 +1343,7 @@ namespace osafw
 
                     if (!is_fk)
                     {
-                        if (Utils.f2str(fld["name"]) == "parent_id")
+                        if (fld_name == "parent_id")
                         {
                             // special case - parent_id
                             var mname = model_name;
@@ -1383,19 +1357,23 @@ namespace osafw
                             sff["is_option0"] = true;
                             sff["class_contents"] = "col-md-3";
                         }
-                        else if (Utils.f2str(fld["fw_subtype"]) == "boolean")
+                        else if (Utils.f2str(fld["fw_subtype"]) == "boolean" || Utils.f2str(entity["fw_subtype"]) == "bit" || Strings.Left(fld_name, 3) == "is_")
                         {
                             // make it as yes/no radio
                             sff["type"] = "yesno";
                             sff["is_inline"] = true;
-                            sff["class_contents"] = "d-flex align-items-center";
+                            sff["class_contents"] = "col d-flex align-items-center";
                         }
                         else
                         {
                             sff["type"] = "number";
-                            sff["min"] = 0;
-                            sff["max"] = 999999;
                             sff["class_contents"] = "col-md-3";
+                            if (!(fld_name == "id" || Strings.Right(fld_name, 3) == "_id") || fld_name == "status")
+                            {
+                                //for number non-ids - add min/max
+                                sff["min"] = 0;
+                                sff["max"] = 999999;
+                            }
                         }
                     }
                 }
@@ -1423,7 +1401,7 @@ namespace osafw
                 }
 
                 // special fields
-                switch (fld["name"])
+                switch (fld_name)
                 {
                     case "iname":
                         {
@@ -1514,7 +1492,7 @@ namespace osafw
                     continue;
 
                 var is_sys = false;
-                if (Utils.f2str(fld["is_identity"]) == "1" || sys_fields.Contains(fld["name"]) || Utils.f2str(sf["type"]) == "att" || Utils.f2str(sf["type"]) == "att_links")
+                if (Utils.f2str(fld["is_identity"]) == "1" || sys_fields.Contains(fld_name) || Utils.f2str(sf["type"]) == "att" || Utils.f2str(sf["type"]) == "att_links")
                 {
                     // add to system fields
                     showFieldsRight.Add(sf);
@@ -1527,9 +1505,9 @@ namespace osafw
                     showFormFieldsLeft.Add(sff);
                 }
 
-                if (!is_sys || Utils.f2str(fld["name"]) == "status")
+                if (!is_sys || fld_name == "status")
                     // add to save fields only if not system (except status)
-                    saveFields.Add(fld["name"]);
+                    saveFields.Add(fld_name);
             }
 
             // special case - "Lookup via Link Table" - could be multiple tables
@@ -1549,51 +1527,23 @@ namespace osafw
                         // if table "MODELTBL_TBL2_link" exists - add control for linked table
                         Hashtable sflink = new()
                         {
-                            {
-                                "field",table_name_linked + "_link"
-                            },
-                            {
-                                "label","Linked " + table_name_linked
-                            },
-                            {
-                                "type","multi"
-                            },
-                            {
-                                "lookup_model",_tablename2model(table_name_linked)
-                            },
-                            {
-                                "table_link",table_name_link
-                            },
-                            {
-                                "table_link_id_name",table_name + "_id"
-                            },
-                            {
-                                "table_link_linked_id_name",table_name_linked + "_id"
-                            }
+                            { "field", table_name_linked + "_link" },
+                            { "label", "Linked " + table_name_linked },
+                            { "type", "multi" },
+                            { "lookup_model", _tablename2model(table_name_linked) },
+                            { "table_link", table_name_link },
+                            { "table_link_id_name", table_name + "_id" },
+                            { "table_link_linked_id_name", table_name_linked + "_id" }
                         };
                         Hashtable sfflink = new()
                         {
-                            {
-                                "field",table_name_linked + "_link"
-                            },
-                            {
-                                "label","Linked " + table_name_linked
-                            },
-                            {
-                                "type","multicb"
-                            },
-                            {
-                                "lookup_model",_tablename2model(table_name_linked)
-                            },
-                            {
-                                "table_link",table_name_link
-                            },
-                            {
-                                "table_link_id_name",table_name + "_id"
-                            },
-                            {
-                                "table_link_linked_id_name",table_name_linked + "_id"
-                            }
+                            { "field", table_name_linked + "_link" },
+                            { "label", "Linked " + table_name_linked },
+                            { "type", "multicb" },
+                            { "lookup_model", _tablename2model(table_name_linked) },
+                            { "table_link", table_name_link },
+                            { "table_link_id_name", table_name + "_id" },
+                            { "table_link_linked_id_name", table_name_linked + "_id" }
                         };
 
                         showFieldsLeft.Add(sflink);
