@@ -295,7 +295,7 @@ namespace osafw
             if (isGet())
             {
                 if (id > 0)
-                    item = model.oneByTname(dict, id).toHashtable();
+                    item = model.oneByTname(dict, id);
                 else
                 {
                     // set defaults here
@@ -307,7 +307,7 @@ namespace osafw
             else
             {
                 // read from db
-                item = model.oneByTname(dict, id).toHashtable();
+                item = model.oneByTname(dict, id);
                 // and merge new values from the form
                 Utils.mergeHash(item, reqh("item"));
             }
@@ -441,7 +441,7 @@ namespace osafw
 
             Hashtable hf = new();
             int id = Utils.f2int(form_id);
-            Hashtable item = model.oneByTname(dict, id).toHashtable();
+            Hashtable item = model.oneByTname(dict, id);
             hf["i"] = item;
             hf["iname"] = item[new ArrayList(item.Keys)[0]];
             hf["id"] = id;

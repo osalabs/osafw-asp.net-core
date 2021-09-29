@@ -153,7 +153,7 @@ namespace osafw
                 where["table_name"] = table_name;
                 where["item_id"] = id;
                 where["att_id"] = att_id;
-                DBRow row = db.row(att_table_link, where);
+                var row = db.row(att_table_link, where);
 
                 if (Utils.f2int(row["id"]) > 0)
                 {
@@ -190,7 +190,7 @@ namespace osafw
         {
             // Dim item As Hashtable = one(id)
             // Return get_upload_url(id, item("ext"), size)
-            DBRow item = one(id);
+            var item = one(id);
             if (item.Count == 0)
                 return "";
 
@@ -214,7 +214,7 @@ namespace osafw
         // return correct url - direct, i.e. not via /Att
         public string getUrlDirect(int id, string size = "")
         {
-            DBRow item = one(id);
+            var item = one(id);
             if (item.Count == 0)
                 return "";
 
@@ -233,10 +233,10 @@ namespace osafw
         }
 
         // if you already have item, must contain: item("id"), item("ext")
-        public string getUrlDirect(DBRow item, string size = "")
+        public string getUrlDirect(Hashtable item, string size = "")
         {
             string result = "";
-            if (item["is_s3"] == "1")
+            if (Utils.f2int(item["is_s3"]) == 1)
             {
 #if is_S3
                 result = fw.model<S3>().getSignedUrl(getS3KeyByID(item["id"], size));
@@ -244,7 +244,7 @@ namespace osafw
             }
             else
             {
-                result = getUploadUrl(Utils.f2long(item["id"]), item["ext"], size);
+                result = getUploadUrl(Utils.f2long(item["id"]), Utils.f2str(item["ext"]), size);
             }
             return result;
         }
@@ -276,8 +276,8 @@ namespace osafw
                 db.del(att_table_link, DB.h("att_id", id));
 
             // remove files first
-            DBRow item = one(id);
-            if ((string)item["is_s3"] == "1")
+            var item = one(id);
+            if (Utils.f2int(item["is_s3"]) == 1)
             {
 #if is_S3
                 fw.model<S3>().deleteObject(table_name + "/" + item["id"]);
@@ -296,7 +296,7 @@ namespace osafw
 
         public void deleteLocalFiles(int id)
         {
-            DBRow item = one(id);
+            var item = one(id);
 
             string filepath = getUploadImgPath(id, "", (string)item["ext"]);
             if (!string.IsNullOrEmpty(filepath))
@@ -318,7 +318,7 @@ namespace osafw
         public void checkAccessRights(int id)
         {
             bool result = true;
-            DBRow item = one(id);
+            var item = one(id);
 
             int user_access_level = Utils.f2int(fw.Session("access_level"));
 
@@ -339,7 +339,7 @@ namespace osafw
         // if no file found - throws ApplicationException
         public void transmitFile(int id, string size = "", string disposition = "attachment")
         {
-            DBRow item = one(id);
+            var item = one(id);
             if (size != "s" && size != "m")
                 size = "";
 
@@ -403,7 +403,7 @@ namespace osafw
         }
 
         // return first att image linked via att_table_link
-        public DBRow getFirstLinkedImage(string linked_table_name, int id)
+        public Hashtable getFirstLinkedImage(string linked_table_name, int id)
         {
             Hashtable @params = new()
             {
@@ -411,7 +411,7 @@ namespace osafw
                 {"@item_id", id},
             };
             return db.rowp("SELECT TOP 1 a.* from " + db.q_ident(att_table_link) + " atl, " + db.q_ident(this.table_name) + " a"+
-                " WHERE atl.table_name=@table_name and atl.item_id=@item_id and a.id=atl.att_id and a.is_image=1 order by a.id ", @params);
+                " WHERE atl.table_name=@table_name and atl.item_id=@item_id and a.id=atl.att_id and a.is_image=1 order by a.id ", @params).toHashtable();
         }
 
         // return all att images linked via att_table_link
@@ -447,16 +447,16 @@ namespace osafw
         }
 
         // return one att record with additional check by table_name
-        public DBRow oneWithTableName(int id, string item_table_name)
+        public Hashtable oneWithTableName(int id, string item_table_name)
         {
-            var row = one(id);
+            var row = one(id).toHashtable();
             if ((string)row["table_name"] != item_table_name)
                 row.Clear();
             return row;
         }
 
         // return one att record by table_name and item_id
-        public DBRow oneByTableName(string item_table_name, int item_id)
+        public Hashtable oneByTableName(string item_table_name, int item_id)
         {
             return db.row(table_name, new Hashtable()
             {
@@ -468,7 +468,7 @@ namespace osafw
                     "item_id",
                     item_id
                 }
-            });
+            }).toHashtable();
         }
 
         public string getS3KeyByID(string id, string size = "")
@@ -531,7 +531,7 @@ namespace osafw
             if (result)
             {
                 // mark as uploaded
-                this.update(id, new DBRow() { { "is_s3", "1" } });
+                this.update(id, new Hashtable() { { "is_s3", "1" } });
                 // remove local files
                 deleteLocalFiles(id);
             }
@@ -590,7 +590,7 @@ namespace osafw
             foreach (IFormFile file in afiles)
             {
                 // first - save to db so we can get att_id
-                DBRow attitem = new ();
+                Hashtable attitem = new ();
                 attitem["att_categories_id"] = att_categories_id;
                 attitem["table_name"] = item_table_name;
                 attitem["item_id"] = Utils.f2str(item_id);
@@ -607,7 +607,7 @@ namespace osafw
 
                     // TODO check response for 200 and if not - error/delete?
                     // once uploaded - mark in db as uploaded
-                    fw.model<Att>().update(att_id, new DBRow() { { "status", "0" } });
+                    fw.model<Att>().update(att_id, new Hashtable() { { "status", "0" } });
 
                     result += 1;
                 }

@@ -50,7 +50,7 @@ namespace osafw
                 if (login.Length == 0)
                     throw new ApplicationException("Please enter your Email");
 
-                Hashtable user = model.oneByEmail(login).toHashtable();
+                Hashtable user = model.oneByEmail(login);
                 if (user.Count == 0 || Utils.f2int(user["status"]) != 0)
                     throw new ApplicationException("Not a valid Email");
 

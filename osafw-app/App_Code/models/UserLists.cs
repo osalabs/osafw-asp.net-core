@@ -62,9 +62,9 @@ namespace osafw
             base.delete(id, is_perm);
         }
 
-        public DBRow oneItemsByUK(int user_lists_id, int item_id)
+        public Hashtable oneItemsByUK(int user_lists_id, int item_id)
         {
-            return db.row(table_items, DB.h("user_lists_id", user_lists_id, "item_id", item_id));
+            return db.row(table_items, DB.h("user_lists_id", user_lists_id, "item_id", item_id)).toHashtable();
         }
 
         public virtual void deleteItems(int id)
@@ -92,7 +92,7 @@ namespace osafw
         public bool toggleItemList(int user_lists_id, int item_id)
         {
             var result = false;
-            DBRow litem = oneItemsByUK(user_lists_id, item_id);
+            Hashtable litem = oneItemsByUK(user_lists_id, item_id);
             if (litem.Count > 0)
                 // remove 
                 deleteItems(Utils.f2int(litem["id"]));
@@ -128,7 +128,7 @@ namespace osafw
         public bool delItemList(int user_lists_id, int item_id)
         {
             var result = false;
-            DBRow litem = oneItemsByUK(user_lists_id, item_id);
+            Hashtable litem = oneItemsByUK(user_lists_id, item_id);
             if (litem.Count > 0)
             {
                 deleteItems(Utils.f2int(litem["id"]));

@@ -28,12 +28,12 @@ namespace osafw
         }
 
         // return top X rows (default 1) from table tname
-        public virtual DBRow topByTname(string tname, int top_number = 1)
+        public virtual Hashtable topByTname(string tname, int top_number = 1)
         {
             if (tname == "")
                 throw new ApplicationException("Wrong topByTname params");
 
-            return db.row("select TOP " + db.qi(top_number) + " * from " + db.q_ident(tname));
+            return db.row("select TOP " + db.qi(top_number) + " * from " + db.q_ident(tname)).toHashtable();
         }
 
         public virtual int maxIdByTname(string tname)
@@ -49,7 +49,7 @@ namespace osafw
             return (int)db.value("SELECT MAX(" + db.q_ident(id_field) + ") from " + db.q_ident(tname));
         }
 
-        public virtual DBRow oneByTname(string tname, int id)
+        public virtual Hashtable oneByTname(string tname, int id)
         {
             if (tname == "" || id == 0)
                 throw new ApplicationException("Wrong oneByTname params");
@@ -60,7 +60,7 @@ namespace osafw
 
             Hashtable where = new();
             where[fw.model<LookupManagerTables>().getColumnId(defs)] = id;
-            return db.row(tname, where);
+            return db.row(tname, where).toHashtable();
         }
 
 
@@ -109,7 +109,7 @@ namespace osafw
             if (!string.IsNullOrEmpty(md5))
             {
                 // additionally check we got right record by comparing md5
-                if (md5 != getRowMD5(itemold.toHashtable()))
+                if (md5 != getRowMD5(itemold))
                     throw new ApplicationException("Cannot update database. Wrong checksum. Probably someone else already updated data you are trying to edit.");
             }
 
@@ -169,7 +169,7 @@ namespace osafw
             if (!string.IsNullOrEmpty(md5))
             {
                 // additionally check we got right record by comparing md5
-                if (md5 != getRowMD5(itemold.toHashtable()))
+                if (md5 != getRowMD5(itemold))
                     throw new ApplicationException("Cannot delete from database. Wrong checksum. Probably someone else already updated data you are trying to edit.");
             }
 

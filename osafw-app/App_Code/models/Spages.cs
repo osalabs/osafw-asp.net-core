@@ -20,7 +20,7 @@ namespace osafw
         // delete record, but don't allow to delete home page
         public override void delete(int id, bool is_perm = false)
         {
-            DBRow item_old = one(id);
+            var item_old = one(id);
             // home page cannot be deleted
             if ((string)item_old["is_home"] != "1")
                 base.delete(id, is_perm);
@@ -41,14 +41,14 @@ namespace osafw
         }
 
         // retun one latest record by url (i.e. with most recent pub_time if there are more than one page with such url)
-        public DBRow oneByUrl(string url, int parent_id)
+        public Hashtable oneByUrl(string url, int parent_id)
         {
             Hashtable where = new()
             {
                 ["parent_id"] = parent_id,
                 ["url"] = url
             };
-            return db.row(table_name, where, "pub_time desc");
+            return db.row(table_name, where, "pub_time desc").toHashtable();
         }
 
         // return one latest record by full_url (i.e. relative url from root, without domain)
@@ -59,7 +59,7 @@ namespace osafw
             Hashtable item = new();
             for (int i = 1; i <= url_parts.GetUpperBound(0); i++)
             {
-                item = oneByUrl(url_parts[i], parent_id).toHashtable();
+                item = oneByUrl(url_parts[i], parent_id);
                 if (item.Count == 0)
                     return item;// empty hashtable
                 parent_id = Utils.f2int(item["id"]);
@@ -201,7 +201,7 @@ namespace osafw
             if (id == 0)
                 return "";
 
-            DBRow item = one(id);
+            var item = one(id);
             return getFullUrl(Utils.f2int(item["parent_id"])) + "/" + item["url"];
         }
 

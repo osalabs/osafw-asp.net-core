@@ -105,7 +105,7 @@ namespace osafw.Tests
         [TestMethod()]
         public void rowTest()
         {
-            DBRow row = db.row("SELECT * FROM " + table_name + " WHERE id=1;");
+            var row = db.row("SELECT * FROM " + table_name + " WHERE id=1;");
 
             Assert.IsTrue(row.Count > 0);
             Assert.IsTrue(row.ContainsKey("id"));
@@ -119,7 +119,7 @@ namespace osafw.Tests
         {
             DBList rows = db.array("SELECT * FROM " + table_name + ";");
 
-            foreach (DBRow row in rows) {
+            foreach (var row in rows) {
                 Assert.IsTrue(row.Count > 0);
                 Assert.IsTrue(row.ContainsKey("id"));
                 Assert.IsTrue(row.ContainsKey("iname"));
@@ -374,8 +374,8 @@ namespace osafw.Tests
         [TestMethod()]
         public void insertTest()
         {
-            db.insert(table_name, new DBRow(DB.h("id", 5, "iname", "test5")));
-            DBRow r = db.row(table_name, DB.h("id", 5));
+            db.insert(table_name, DB.h("id", 5, "iname", "test5"));
+            var r = db.row(table_name, DB.h("id", 5));
             Assert.AreEqual("test5", r["iname"]);
             // TODO test all methods types
         }
@@ -383,8 +383,8 @@ namespace osafw.Tests
         [TestMethod()]
         public void updateTest()
         {
-            db.update(table_name, new DBRow(DB.h("iname", "test5")), DB.h("id", 3));
-            DBRow r = db.row(table_name, DB.h("id", 3));
+            db.update(table_name, DB.h("iname", "test5"), DB.h("id", 3));
+            var r = db.row(table_name, DB.h("id", 3));
             Assert.AreEqual("test5", r["iname"]);
 
             // TODO test all methods types
@@ -393,11 +393,11 @@ namespace osafw.Tests
         [TestMethod()]
         public void update_or_insertTest()
         {
-            db.update_or_insert(table_name, new DBRow(DB.h("iname", "test5")), DB.h("id", 5));
-            DBRow r = db.row(table_name, DB.h("id", 5));
+            db.update_or_insert(table_name, DB.h("iname", "test5"), DB.h("id", 5));
+            var r = db.row(table_name, DB.h("id", 5));
             Assert.AreEqual("test5", r["iname"]);
 
-            db.update_or_insert(table_name, new DBRow(DB.h("iname", "test5")), DB.h("id", 3));
+            db.update_or_insert(table_name, DB.h("iname", "test5"), DB.h("id", 3));
             r = db.row(table_name, DB.h("id", 3));
             Assert.AreEqual("test5", r["iname"]);
         }
@@ -406,7 +406,7 @@ namespace osafw.Tests
         public void delTest()
         {
             db.del(table_name, DB.h("id", 3));
-            DBRow r = db.row(table_name, DB.h("id", 3));
+            var r = db.row(table_name, DB.h("id", 3));
             Assert.IsTrue(r.Count == 0);
         }
 

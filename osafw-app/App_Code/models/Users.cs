@@ -30,12 +30,11 @@ namespace osafw
             csv_export_headers = "id,First Name,Last Name,Email,Registered";
         }
 
-        public DBRow oneByEmail(string email)
+        public Hashtable oneByEmail(string email)
         {
             Hashtable where = new();
             where["email"] = email;
-            DBRow hU = db.row(table_name, where);
-            return hU;
+            return db.row(table_name, where).toHashtable();
         }
 
         /// <summary>
@@ -224,7 +223,7 @@ namespace osafw
         {
             if (id == 0)
                 id = fw.userId;
-            DBRow user = one(id);
+            var user = one(id);
 
             fw.Session("user_id", Utils.f2str(id));
             fw.Session("login", (string)user["email"]);

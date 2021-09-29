@@ -82,7 +82,7 @@ namespace osafw
         public virtual DBRow one(int id)
         {
             var cache_key = this.cache_prefix + id;
-            DBRow item = (DBRow)fw.cache.getRequestValue(cache_key);
+            var item = (DBRow)fw.cache.getRequestValue(cache_key);
             if (item == null)
             { 
                 Hashtable where = new();
