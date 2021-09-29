@@ -42,14 +42,15 @@ namespace osafw
                 IFormFile file = fw.request.Form.Files[file_index];
 
                 // update db with file information
-                DBRow fields = new();
+                Hashtable fields = new();
                 if (is_new)
                     fields["iname"] = file.FileName;
+
                 fields["iname"] = file.FileName;
                 fields["fname"] = file.FileName;
-                fields["fsize"] = Utils.f2str(Utils.fileSize(filepath));
+                fields["fsize"] = Utils.fileSize(filepath);
                 fields["ext"] = ext;
-                fields["status"] = Utils.f2str(STATUS_ACTIVE); // finished upload - change status to active
+                fields["status"] = STATUS_ACTIVE; // finished upload - change status to active
                                                   // turn on image flag if it's an image
                 if (UploadUtils.isUploadImgExtAllowed(ext))
                 {
@@ -63,7 +64,7 @@ namespace osafw
 
                 this.update(id, fields);
                 fields["filepath"] = filepath;
-                result = fields.toHashtable();
+                result = fields;
 
 #if is_S3
                   moveToS3(id);
@@ -88,7 +89,7 @@ namespace osafw
                 if (file.Length > 0)
                 {
                     // add att db record
-                    DBRow itemdb = new(item);
+                    Hashtable itemdb = new Hashtable(item);
                     itemdb["status"] = "1"; // under upload
                     var id = this.add(itemdb);
 
@@ -109,7 +110,7 @@ namespace osafw
             Hashtable where = new();
             where["table_name"] = "tmp_" + att_table_name + "_" + files_code;
             where["item_id"] = 0;
-            db.update(table_name, new DBRow() { { "table_name", att_table_name }, { "item_id", Utils.f2str(item_id) } }, where);
+            db.update(table_name, new Hashtable() { { "table_name", att_table_name }, { "item_id", Utils.f2str(item_id) } }, where);
             return true;
         }
 
@@ -134,7 +135,7 @@ namespace osafw
             int me_id = fw.userId;
 
             // 1. set status=1 (under update)
-            DBRow fields = new();
+            Hashtable fields = new();
             fields["status"] = "1";
             Hashtable where = new();
             where["table_name"] = table_name;

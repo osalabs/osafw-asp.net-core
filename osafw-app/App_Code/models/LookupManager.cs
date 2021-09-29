@@ -65,7 +65,7 @@ namespace osafw
 
 
         // add new record and return new record id
-        public virtual int addByTname(string tname, DBRow item)
+        public virtual int addByTname(string tname, Hashtable item)
         {
             if (tname == "")
                 throw new ApplicationException("Wrong update_by_tname params");
@@ -86,7 +86,7 @@ namespace osafw
         }
 
         // update exising record
-        public virtual bool updateByTname(string tname, int id, DBRow item, string md5 = "")
+        public virtual bool updateByTname(string tname, int id, Hashtable item, string md5 = "")
         {
             if (tname == "" || id == 0)
                 throw new ApplicationException("Wrong update_by_tname params");
@@ -122,7 +122,7 @@ namespace osafw
             // logger(itemold)
             // logger("NEW")
             // logger(item)
-            DBRow item_save = new();
+            Hashtable item_save = new();
             foreach (string key in item.Keys)
             {
                 if (itemold[key].ToString() != item[key].ToString())
@@ -142,7 +142,7 @@ namespace osafw
                     if (!item_save.ContainsKey("upd_time"))
                         item_save["upd_time"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
                     if (!item_save.ContainsKey("upd_users_id") && fw.isLogged)
-                        item_save["upd_users_id"] = Utils.f2str(fw.userId);
+                        item_save["upd_users_id"] = fw.userId;
                 }
 
                 db.update(tname, item_save, where);

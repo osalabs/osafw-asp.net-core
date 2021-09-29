@@ -125,7 +125,7 @@ namespace osafw
                 var itemdb = FormUtils.filter(item, Utils.qw("pwd"));
 
                 itemdb["pwd_reset"] = ""; // also reset token
-                model.update(id, new DBRow(itemdb));
+                model.update(id, itemdb);
 
                 fw.logEvent("chpwd");
                 fw.flash("success", "Password updated");

@@ -101,21 +101,21 @@ namespace osafw
         public Hashtable ShowFormAction(string form_id = "")
         {
             Hashtable ps = new();
-            DBRow item;
+            Hashtable item;
             int id = Utils.f2int(form_id);
 
             if (isGet())
             {
                 if (id > 0)
-                    item = model.one(id);
+                    item = model.one(id).toHashtable();
                 else
                     // set defaults here
-                    item = new DBRow();
+                    item = new Hashtable();
             }
             else
             {
                 // read from db
-                item = model.one(id);
+                item = model.one(id).toHashtable();
 
                 // and merge new values from the form
                 Utils.mergeHash(item, reqh("item"));
@@ -130,7 +130,7 @@ namespace osafw
             setAddUpdUser(ps, item);
 
             ps["id"] = id;
-            ps["i"] = item.toHashtable();
+            ps["i"] = item;
             if (fw.FERR.Count > 0)
                 logger(fw.FERR);
 
@@ -159,7 +159,7 @@ namespace osafw
 
                 if (id > 0)
                 {
-                    model.update(id, new DBRow(itemdb));
+                    model.update(id, itemdb);
                     fw.flash("updated", 1);
 
                     // Proceed upload - for edit - just one file
@@ -219,7 +219,7 @@ namespace osafw
             bool result = true;
             // only require file during first upload
             // only require iname during update
-            DBRow itemdb;
+            Hashtable itemdb;
             if (id > 0)
             {
                 itemdb = model.one(id);
@@ -299,7 +299,7 @@ namespace osafw
             where["status"] = 0;
             if (category_icode.Length>0)
             {
-                DBRow att_cat = fw.model<AttCategories>().oneByIcode(category_icode);
+                var att_cat = fw.model<AttCategories>().oneByIcode(category_icode);
                 if (att_cat.Count > 0)
                 {
                     att_categories_id = Utils.f2int(att_cat["id"]);

@@ -69,7 +69,7 @@ namespace osafw
                     item["access_level"] = 0;
                     item["add_users_id"] = 0;
                 }
-                id = modelAddOrUpdate(id, new DBRow(itemdb));
+                id = modelAddOrUpdate(id, itemdb);
 
                 fw.sendEmailTpl((string)itemdb["email"], "signup.txt", itemdb);
 

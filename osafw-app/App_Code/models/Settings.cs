@@ -75,7 +75,7 @@ namespace osafw
         public void setValue(string icode, string ivalue)
         {
             DBRow item = this.oneByIcode(icode);
-            DBRow fields = new();
+            Hashtable fields = new();
             if (item.ContainsKey("id"))
             {
                 // exists - update

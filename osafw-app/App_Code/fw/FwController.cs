@@ -261,7 +261,7 @@ namespace osafw
                 var userfilters_id = reqi("userfilters_id");
                 if (userfilters_id > 0)
                 {
-                    DBRow uf = fw.model<UserFilters>().one(userfilters_id);
+                    Hashtable uf = fw.model<UserFilters>().one(userfilters_id).toHashtable();
                     Hashtable f1 = (Hashtable)Utils.jsonDecode(uf["idesc"]);
                     if (f1 != null)
                         f = f1;
@@ -838,7 +838,7 @@ namespace osafw
                 Utils.writeCSVExport(fw.response, "export.csv", csv_export_headers, fields, list_rows);
         }
 
-        public virtual void setAddUpdUser(Hashtable ps, DBRow item)
+        public virtual void setAddUpdUser(Hashtable ps, Hashtable item)
         {
             if (!string.IsNullOrEmpty(model0.field_add_users_id))
                 ps["add_users_id_name"] = fw.model<Users>().iname(item[model0.field_add_users_id]);

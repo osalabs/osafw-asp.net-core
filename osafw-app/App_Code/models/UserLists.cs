@@ -78,10 +78,10 @@ namespace osafw
         // add new record and return new record id
         public virtual int addItems(int user_lists_id, int item_id)
         {
-            DBRow item = new();
-            item["user_lists_id"] = Utils.f2str(user_lists_id);
-            item["item_id"] = Utils.f2str(item_id);
-            item["add_users_id"] = Utils.f2str(fw.userId);
+            Hashtable item = new();
+            item["user_lists_id"] = user_lists_id;
+            item["item_id"] = item_id;
+            item["add_users_id"] = fw.userId;
 
             int id = db.insert(table_items, item);
             fw.logEvent(table_items + "_add", id);

@@ -68,7 +68,7 @@ namespace osafw
         {
             Hashtable ps = new();
             int id = Utils.f2int(form_id);
-            var item = model0.one(id);
+            var item = model0.one(id).toHashtable();
             if (item.Count == 0)
                 throw new ApplicationException("Not Found");
 
@@ -84,7 +84,7 @@ namespace osafw
                 this.setUserLists(ps, id);
 
             ps["id"] = id;
-            ps["i"] = item.toHashtable();
+            ps["i"] = item;
             ps["return_url"] = return_url;
             ps["related_id"] = related_id;
             ps["base_url"] = base_url;
@@ -99,14 +99,14 @@ namespace osafw
             // Me.form_new_defaults = New Hashtable From {{"field", "default value"}} 'OR set new form defaults here
 
             Hashtable ps = new();
-            var item = new DBRow(reqh("item")); // set defaults from request params
+            var item = reqh("item"); // set defaults from request params
             var id = Utils.f2int(form_id);
 
             if (isGet())
             {
                 if (id > 0)
                 {
-                    item = model0.one(id);
+                    item = model0.one(id).toHashtable();
                 }
                 else
                 {
@@ -117,7 +117,7 @@ namespace osafw
             else
             {
                 // read from db
-                var itemdb = model0.one(id);
+                var itemdb = model0.one(id).toHashtable();
                 // and merge new values from the form
                 Utils.mergeHash(itemdb, item);
                 item = itemdb;
@@ -132,7 +132,7 @@ namespace osafw
             // FormUtils.comboForDate(item["fdate_combo"], ps, "fdate_combo")
 
             ps["id"] = id;
-            ps["i"] = item.toHashtable();
+            ps["i"] = item;
             ps["return_url"] = return_url;
             ps["related_id"] = related_id;
             if (fw.FERR.Count > 0)
@@ -180,7 +180,7 @@ namespace osafw
                 FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes);
                 FormUtils.filterNullable(itemdb, save_fields_nullable);
 
-                id = this.modelAddOrUpdate(id, new DBRow(itemdb));
+                id = this.modelAddOrUpdate(id, itemdb);
             }
             catch (ApplicationException ex)
             {
@@ -310,7 +310,7 @@ namespace osafw
         {
             int id = Utils.f2int(form_id);
 
-            model0.update(id, new DBRow() { { model0.field_status, Utils.f2str(FwModel.STATUS_ACTIVE) } });
+            model0.update(id, new Hashtable() { { model0.field_status, Utils.f2str(FwModel.STATUS_ACTIVE) } });
 
             fw.flash("record_updated", 1);
             return this.afterSave(true, id);
@@ -423,7 +423,7 @@ namespace osafw
         /// <param name="item"></param>
         /// <param name="ps"></param>
         /// <returns></returns>
-        public virtual ArrayList prepareShowFields(DBRow item, Hashtable ps)
+        public virtual ArrayList prepareShowFields(Hashtable item, Hashtable ps)
         {
             var id = Utils.f2int(item["id"]);
 
@@ -502,7 +502,7 @@ namespace osafw
             return fields;
         }
 
-        public virtual ArrayList prepareShowFormFields(DBRow item, Hashtable ps)
+        public virtual ArrayList prepareShowFormFields(Hashtable item, Hashtable ps)
         {
             var id = Utils.f2int(item["id"]);
 

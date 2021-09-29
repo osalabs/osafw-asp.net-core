@@ -87,7 +87,7 @@ namespace osafw
                     // read new filter data from session
                     itemdb["idesc"] = Utils.jsonEncode(fw.Session("_filter_" + item["screen"]));
 
-                id = this.modelAddOrUpdate(id, new DBRow(itemdb));
+                id = this.modelAddOrUpdate(id, itemdb);
             }
             catch (ApplicationException ex)
             {

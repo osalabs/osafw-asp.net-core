@@ -30,11 +30,11 @@ namespace osafw
             {
                 // exists
                 result = Utils.f2int(item[field_id]);
-                update(Utils.f2int(item[field_id]), new DBRow() { { "fields", fields } });
+                update(Utils.f2int(item[field_id]), new Hashtable() { { "fields", fields } });
             }
             else
                 // new
-                result = add(new DBRow()
+                result = add(new Hashtable()
                 {
                     {
                         field_icode, screen

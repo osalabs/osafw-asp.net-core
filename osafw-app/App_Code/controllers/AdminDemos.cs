@@ -114,7 +114,7 @@ namespace osafw
                 itemdb["ftime"] = FormUtils.timeStrToInt((string)item["ftime_str"]); // ftime - convert from HH:MM to int (0-24h in seconds)
                 itemdb["fint"] = Utils.f2int(itemdb["fint"]); // field accepts only int
 
-                id = this.modelAddOrUpdate(id, new DBRow(itemdb));
+                id = this.modelAddOrUpdate(id, itemdb);
 
                 model.updateLinked(model.table_link, id, "demos_id", "demo_dicts_id", reqh("demo_dicts_link"));
                 fw.model<Att>().updateAttLinks(model.table_name, id, reqh("att"));

@@ -53,7 +53,7 @@ namespace osafw
         {
             Hashtable ps = new();
             int id = Utils.f2int(form_id);
-            DBRow item = model0.one(id);
+            Hashtable item = model0.one(id).toHashtable();
             if (item.Count == 0)
                 throw new ApplicationException("Not Found");
 
@@ -64,7 +64,7 @@ namespace osafw
                 this.setUserLists(ps, id);
 
             ps["id"] = id;
-            ps["i"] = item.toHashtable();
+            ps["i"] = item;
             ps["return_url"] = return_url;
             ps["related_id"] = related_id;
             ps["base_url"] = base_url;
@@ -85,14 +85,14 @@ namespace osafw
         public virtual Hashtable ShowFormAction(string form_id = "")
         {
             Hashtable ps = new();
-            var item = new DBRow(reqh("item")); // set defaults from request params
+            var item = reqh("item"); // set defaults from request params
             var id = Utils.f2int(form_id); // primary key is integer by default
 
             if (isGet())
             {
                 if (id > 0)
                 {
-                    item = model0.one(id);
+                    item = model0.one(id).toHashtable();
                 }
                 else
                 {
@@ -103,7 +103,7 @@ namespace osafw
             else
             {
                 // read from db
-                var itemdb = model0.one(id);
+                var itemdb = model0.one(id).toHashtable();
                 // and merge new values from the form
                 Utils.mergeHash(itemdb, item);
                 item = itemdb;
@@ -112,7 +112,7 @@ namespace osafw
             setAddUpdUser(ps, item);
 
             ps["id"] = id;
-            ps["i"] = item.toHashtable();
+            ps["i"] = item;
             ps["return_url"] = return_url;
             ps["related_id"] = related_id;
             if (fw.FERR.Count > 0)
@@ -148,7 +148,7 @@ namespace osafw
                 FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes);
                 FormUtils.filterNullable(itemdb, save_fields_nullable);
 
-                id = this.modelAddOrUpdate(id, new DBRow(itemdb));
+                id = this.modelAddOrUpdate(id, itemdb);
             }
             catch (ApplicationException ex)
             {

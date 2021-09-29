@@ -65,7 +65,7 @@ namespace osafw
                 // Dim itemold As Hashtable = model.one(id)
 
                 Hashtable itemdb = FormUtils.filter(item, save_fields);
-                model.update(id, new DBRow(itemdb));
+                model.update(id, itemdb);
                 fw.flash("record_updated", 1);
 
                 model.reloadSession();

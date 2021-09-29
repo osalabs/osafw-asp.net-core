@@ -57,7 +57,7 @@ namespace osafw
 
             // add rows
             int curcol = 0;
-            foreach (DBRow table in tables)
+            foreach (var table in tables)
             {
                 if (cols.Count <= curcol)
                     cols.Add(new Hashtable());
@@ -85,7 +85,7 @@ namespace osafw
             if (Utils.f2int(defs["is_one_form"]) == 1)
             {
                 string id_fname = fw.model<LookupManagerTables>().getColumnId(defs);
-                DBRow row = model.topByTname((string)defs["tname"]);
+                var row = model.topByTname((string)defs["tname"]);
                 // fw.redirect(base_url & "/" & row(id_fname) & "/edit/?d=" & dict)
                 String[] args = (new[] { (string)row[id_fname] });
                 fw.routeRedirect("ShowForm", null, args);
@@ -385,11 +385,11 @@ namespace osafw
             {
                 Validate(id, item);
 
-                DBRow itemdb = new();
+                Hashtable itemdb = new();
                 foreach (Hashtable col in cols)
                 {
                     if (item.ContainsKey(col["name"]))
-                        itemdb[(string)col["name"]] = Utils.f2str(item[col["name"]]);
+                        itemdb[(string)col["name"]] = item[col["name"]];
                     else if ((string)col["itype"] == "checkbox")
                         itemdb[(string)col["name"]] = "0";// for checkboxes just set them 0
                 }
@@ -513,12 +513,12 @@ namespace osafw
                         string md5 = (string)rows[key];
                         // logger(form_id)
                         Hashtable item = reqh("f" + form_id);
-                        DBRow itemdb = new();
+                        Hashtable itemdb = new();
                         // copy from form item to db item - only defined columns
                         foreach (Hashtable col in cols)
                         {
                             if (item.ContainsKey(col["name"]))
-                                itemdb[(string)col["name"]] = Utils.f2str(item[col["name"]]);
+                                itemdb[(string)col["name"]] = item[col["name"]];
                         }
                         // check if this row need to be deleted
                         if (rowsdel.ContainsKey(form_id))
@@ -545,14 +545,14 @@ namespace osafw
                                       // logger("new formid=" & form_id)
 
                         Hashtable item = reqh("fnew" + form_id);
-                        DBRow itemdb = new();
+                        Hashtable itemdb = new();
                         bool is_row_empty = true;
                         // copy from form item to db item - only defined columns
                         foreach (Hashtable col in cols)
                         {
                             if (item.ContainsKey(col["name"]))
                             {
-                                itemdb[(string)col["name"]] = Utils.f2str(item[col["name"]]);
+                                itemdb[(string)col["name"]] = item[col["name"]];
                                 if (!string.IsNullOrEmpty((string)item[col["name"]]))
                                     is_row_empty = false; // detect at least one non-empty value
                             }

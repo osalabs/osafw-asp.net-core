@@ -82,7 +82,7 @@ namespace osafw
                     required_fields += " icode";
                 Validate(id, item);
                 // load old record if necessary
-                DBRow item_old = model0.one(id);
+                Hashtable item_old = model0.one(id).toHashtable();
 
                 // also check that this filter is user's filter (cannot override system filter)
                 if (item_old.Count > 0 && Utils.f2int(item_old["is_system"]) == 1)
@@ -95,7 +95,7 @@ namespace osafw
                     // read new filter data from session
                     itemdb["idesc"] = Utils.jsonEncode(fw.Session("_filter_" + item["icode"]));
 
-                id = this.modelAddOrUpdate(id, new DBRow(itemdb));
+                id = this.modelAddOrUpdate(id, itemdb);
             }
             catch (ApplicationException ex)
             {

@@ -126,7 +126,7 @@ namespace osafw
 
             try
             {
-                DBRow item_old = model.one(id);
+                Hashtable item_old = model.one(id).toHashtable();
                 // for non-home page enable some fields
                 string save_fields2 = this.save_fields;
                 if ((string)item_old["is_home"] != "1")
@@ -159,7 +159,7 @@ namespace osafw
                 if ((string)itemdb["pub_time"] == "")
                     itemdb["pub_time"] = DateTime.Now;
 
-                id = this.modelAddOrUpdate(id, new DBRow(itemdb));
+                id = this.modelAddOrUpdate(id, itemdb);
 
                 if ((string)item_old["is_home"] == "1")
                     FwCache.remove("home_page"); // reset home page cache if Home page changed

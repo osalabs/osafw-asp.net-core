@@ -71,7 +71,7 @@ namespace osafw
 
                 if (id > 0)
                 {
-                    model.update(id, new DBRow(itemdb));
+                    model.update(id, itemdb);
 
                     fw.logEvent("chpwd");
                     fw.flash("record_updated", 1);
@@ -117,7 +117,7 @@ namespace osafw
 
             if (result)
             {
-                DBRow itemdb = model.one(id);
+                Hashtable itemdb = model.one(id).toHashtable();
                 if (!fw.model<Users>().checkPwd((string)item["old_pwd"], (string)itemdb["pwd"]))
                 {
                     result = false;
