@@ -178,7 +178,7 @@ namespace osafw
             bool result = this.validateRequired(item, this.required_fields);
 
             if (result && model.isExistsByUrl((string)item["url"], Utils.f2int(item["parent_id"]), id))
-                fw.FERR["url"] = "EXISTS";
+                fw.FormErrors["url"] = "EXISTS";
 
             //if (result && model0.isExists(item["iname"], id)){
             //    fw.FERR["iname"] = "EXISTS";

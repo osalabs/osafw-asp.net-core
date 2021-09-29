@@ -94,18 +94,18 @@ namespace osafw
             if (result && model.isExists(item["email"], 0))
             {
                 result = false;
-                fw.FERR["email"] = "EXISTS";
+                fw.FormErrors["email"] = "EXISTS";
             }
             if (result && !FormUtils.isEmail((string)item["email"]))
             {
                 result = false;
-                fw.FERR["email"] = "WRONG";
+                fw.FormErrors["email"] = "WRONG";
             }
 
             if (result && (string)item["pwd"] != (string)item["pwd2"])
             {
                 result = false;
-                fw.FERR["pwd2"] = "WRONG";
+                fw.FormErrors["pwd2"] = "WRONG";
             }
 
             if (!result)

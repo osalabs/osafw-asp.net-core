@@ -41,7 +41,7 @@ namespace osafw
 
             ps["i"] = item;
             ps["err_ctr"] = Utils.f2int(fw.G["err_ctr"]) + 1;
-            ps["ERR"] = fw.FERR;
+            ps["ERR"] = fw.FormErrors;
             return ps;
         }
 
@@ -76,7 +76,7 @@ namespace osafw
 
                 if (login.Length == 0 || pwd.Length == 0)
                 {
-                    fw.FERR["REGISTER"] = true;
+                    fw.FormErrors["REGISTER"] = true;
                     throw new ApplicationException("");
                 }
 

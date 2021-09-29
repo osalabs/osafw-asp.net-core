@@ -53,7 +53,7 @@ namespace osafw
 
             ps["id"] = id;
             ps["i"] = item;
-            ps["ERR"] = fw.FERR;
+            ps["ERR"] = fw.FormErrors;
             return ps;
         }
 
@@ -90,23 +90,23 @@ namespace osafw
             bool result = true;
             result &= validateRequired(item, Utils.qw("email old_pwd pwd pwd2"));
             if (!result)
-                fw.FERR["REQ"] = 1;
+                fw.FormErrors["REQ"] = 1;
 
             if (result && model.isExists(item["email"], id))
             {
                 result = false;
-                fw.FERR["email"] = "EXISTS";
+                fw.FormErrors["email"] = "EXISTS";
             }
             if (result && !FormUtils.isEmail((string)item["email"]))
             {
                 result = false;
-                fw.FERR["email"] = "WRONG";
+                fw.FormErrors["email"] = "WRONG";
             }
 
             if (result && model.cleanPwd((string)item["pwd"]) != model.cleanPwd((string)item["pwd2"]))
             {
                 result = false;
-                fw.FERR["pwd2"] = "NOTEQUAL";
+                fw.FormErrors["pwd2"] = "NOTEQUAL";
             }
 
             // uncomment if project requires good password strength
@@ -121,12 +121,12 @@ namespace osafw
                 if (!fw.model<Users>().checkPwd((string)item["old_pwd"], (string)itemdb["pwd"]))
                 {
                     result = false;
-                    fw.FERR["old_pwd"] = "WRONG";
+                    fw.FormErrors["old_pwd"] = "WRONG";
                 }
             }
 
-            if (fw.FERR.Count > 0 && !fw.FERR.ContainsKey("REQ"))
-                fw.FERR["INVALID"] = 1;
+            if (fw.FormErrors.Count > 0 && !fw.FormErrors.ContainsKey("REQ"))
+                fw.FormErrors["INVALID"] = 1;
 
             if (!result)
                 throw new ApplicationException("");

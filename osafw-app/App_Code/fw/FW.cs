@@ -67,7 +67,7 @@ namespace osafw
 
         public Hashtable FORM;
         public Hashtable G; // for storing global vars - used in template engine, also stores "_flash"
-        public Hashtable FERR; // for storing form id's with error messages, put to hf("ERR") for parser
+        public Hashtable FormErrors; // for storing form id's with error messages, put to hf("ERR") for parser
 
         public DB db;
 
@@ -139,7 +139,7 @@ namespace osafw
             // override default lang with user's lang
             if (!string.IsNullOrEmpty(Session("lang"))) G["lang"] = Session("lang");
 
-            FERR = new Hashtable(); // reset errors
+            FormErrors = new Hashtable(); // reset errors
             parseForm();
 
             // save flash to current var and update session as flash is used only for nearest request
@@ -993,8 +993,8 @@ namespace osafw
                 return; // no further processing
             }
 
-            if (this.FERR.Count > 0 && !ps.ContainsKey("ERR"))
-                ps["ERR"] = this.FERR; // add errors if any
+            if (this.FormErrors.Count > 0 && !ps.ContainsKey("ERR"))
+                ps["ERR"] = this.FormErrors; // add errors if any
 
             string layout;
             if (format == "pjax")

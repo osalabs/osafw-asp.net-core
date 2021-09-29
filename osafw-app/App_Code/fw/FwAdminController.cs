@@ -115,8 +115,8 @@ namespace osafw
             ps["i"] = item;
             ps["return_url"] = return_url;
             ps["related_id"] = related_id;
-            if (fw.FERR.Count > 0)
-                logger(fw.FERR);
+            if (fw.FormErrors.Count > 0)
+                logger(fw.FormErrors);
 
             return ps;
         }

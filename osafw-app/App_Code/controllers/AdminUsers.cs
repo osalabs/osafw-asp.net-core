@@ -88,17 +88,17 @@ namespace osafw
             bool result = true;
             result = result & validateRequired(item, Utils.qw(required_fields));
             if (!result)
-                fw.FERR["REQ"] = 1;
+                fw.FormErrors["REQ"] = 1;
 
             if (result && model.isExists(item["email"], id))
             {
                 result = false;
-                fw.FERR["ehack"] = "EXISTS";
+                fw.FormErrors["ehack"] = "EXISTS";
             }
             if (result && !FormUtils.isEmail((string)item["email"]))
             {
                 result = false;
-                fw.FERR["ehack"] = "WRONG";
+                fw.FormErrors["ehack"] = "WRONG";
             }
 
             // uncomment if project requires good password strength
@@ -112,8 +112,8 @@ namespace osafw
             // FW.FERR("other field name") = "HINT_ERR_CODE"
             // End If
 
-            if (fw.FERR.Count > 0 && !fw.FERR.ContainsKey("REQ"))
-                fw.FERR["INVALID"] = 1;
+            if (fw.FormErrors.Count > 0 && !fw.FormErrors.ContainsKey("REQ"))
+                fw.FormErrors["INVALID"] = 1;
 
             if (!result)
                 throw new ApplicationException("");

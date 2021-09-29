@@ -135,8 +135,8 @@ namespace osafw
             ps["i"] = item;
             ps["return_url"] = return_url;
             ps["related_id"] = related_id;
-            if (fw.FERR.Count > 0)
-                logger(fw.FERR);
+            if (fw.FormErrors.Count > 0)
+                logger(fw.FormErrors);
 
             return ps;
         }
@@ -249,27 +249,27 @@ namespace osafw
                 var val = Utils.qh((string)def["validate"]);
                 if (val.ContainsKey("exists") && model0.isExistsByField(field_value, id, field))
                 {
-                    fw.FERR[field] = "EXISTS";
+                    fw.FormErrors[field] = "EXISTS";
                     result = false;
                 }
                 if (val.ContainsKey("isemail") && !FormUtils.isEmail(field_value))
                 {
-                    fw.FERR[field] = "WRONG";
+                    fw.FormErrors[field] = "WRONG";
                     result = false;
                 }
                 if (val.ContainsKey("isphone") && !FormUtils.isPhone(field_value))
                 {
-                    fw.FERR[field] = "WRONG";
+                    fw.FormErrors[field] = "WRONG";
                     result = false;
                 }
                 if (val.ContainsKey("isdate") && !Utils.isDate(field_value))
                 {
-                    fw.FERR[field] = "WRONG";
+                    fw.FormErrors[field] = "WRONG";
                     result = false;
                 }
                 if (val.ContainsKey("isfloat") && !Utils.isFloat(field_value))
                 {
-                    fw.FERR[field] = "WRONG";
+                    fw.FormErrors[field] = "WRONG";
                     result = false;
                 }
             }

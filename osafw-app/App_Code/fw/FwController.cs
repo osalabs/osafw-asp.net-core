@@ -325,14 +325,14 @@ namespace osafw
                     if (!string.IsNullOrEmpty(fld) && (!item.ContainsKey(fld) || ((string)item[fld]).Trim() == ""))
                     {
                         result = false;
-                        fw.FERR[fld] = true;
+                        fw.FormErrors[fld] = true;
                     }
                 }
             }
             else
                 result = false;
             if (!result)
-                fw.FERR["REQUIRED"] = true;
+                fw.FormErrors["REQUIRED"] = true;
             return result;
         }
         // same as above but fields param passed as a qw string
@@ -350,12 +350,12 @@ namespace osafw
         /// </remarks>
         public virtual void validateCheckResult(bool result = true)
         {
-            if (fw.FERR.ContainsKey("REQUIRED") && (bool)fw.FERR["REQUIRED"])
+            if (fw.FormErrors.ContainsKey("REQUIRED") && (bool)fw.FormErrors["REQUIRED"])
                 result = false;
 
-            if (fw.FERR.Count > 0 && (!fw.FERR.ContainsKey("REQUIRED") || !(bool)fw.FERR["REQUIRED"]))
+            if (fw.FormErrors.Count > 0 && (!fw.FormErrors.ContainsKey("REQUIRED") || !(bool)fw.FormErrors["REQUIRED"]))
             {
-                fw.FERR["INVALID"] = true;
+                fw.FormErrors["INVALID"] = true;
                 result = false;
             }
 
@@ -765,8 +765,8 @@ namespace osafw
                     {"err_msg",fw.G["err_msg"]}
                 };
                 // add ERR field errors to response if any
-                if (fw.FERR.Count > 0)
-                    _json["ERR"] = fw.FERR;
+                if (fw.FormErrors.Count > 0)
+                    _json["ERR"] = fw.FormErrors;
 
                 if (more_json != null)
                     Utils.mergeHash(_json, more_json);

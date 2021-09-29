@@ -131,8 +131,8 @@ namespace osafw
 
             ps["id"] = id;
             ps["i"] = item;
-            if (fw.FERR.Count > 0)
-                logger(fw.FERR);
+            if (fw.FormErrors.Count > 0)
+                logger(fw.FormErrors);
 
             return ps;
         }
@@ -236,15 +236,15 @@ namespace osafw
                 if (fw.request.Form.Files.Count == 0 || fw.request.Form.Files[0]==null || fw.request.Form.Files[0].Length == 0)
                 {
                     result = false;
-                    fw.FERR["file1"] = "NOFILE";
+                    fw.FormErrors["file1"] = "NOFILE";
                 }
             }
 
             if (!result)
-                fw.FERR["REQUIRED"] = true;
+                fw.FormErrors["REQUIRED"] = true;
 
-            if (fw.FERR.Count > 0 && !fw.FERR.ContainsKey("REQ"))
-                fw.FERR["INVALID"] = 1;
+            if (fw.FormErrors.Count > 0 && !fw.FormErrors.ContainsKey("REQ"))
+                fw.FormErrors["INVALID"] = 1;
 
             if (!result)
                 throw new ApplicationException("");

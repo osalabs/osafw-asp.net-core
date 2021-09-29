@@ -67,15 +67,15 @@ namespace osafw
             bool result = true;
             result &= validateRequired(item, Utils.qw(required_fields));
             if (!result)
-                fw.FERR["REQ"] = 1;
+                fw.FormErrors["REQ"] = 1;
 
             //if (result && !SomeOtherValidation())
             //{
             //    fw.FERR["other field name"] = "HINT_ERR_CODE";
             //}
 
-            if (fw.FERR.Count > 0 && !fw.FERR.ContainsKey("REQ"))
-                fw.FERR["INVALID"] = 1;
+            if (fw.FormErrors.Count > 0 && !fw.FormErrors.ContainsKey("REQ"))
+                fw.FormErrors["INVALID"] = 1;
 
             if (!result)
                 throw new ApplicationException("");

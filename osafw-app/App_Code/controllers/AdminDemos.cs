@@ -133,9 +133,9 @@ namespace osafw
             bool result = this.validateRequired(item, this.required_fields);
 
             if (result && model.isExists(item["email"], id))
-                fw.FERR["email"] = "EXISTS";
+                fw.FormErrors["email"] = "EXISTS";
             if (result && !FormUtils.isEmail((string)item["email"]))
-                fw.FERR["email"] = "WRONG";
+                fw.FormErrors["email"] = "WRONG";
 
             //if (result && !SomeOtherValidation())
             //{

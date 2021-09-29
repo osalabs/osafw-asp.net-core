@@ -144,16 +144,16 @@ namespace osafw
             bool result = true;
             result &= validateRequired(item, Utils.qw("pwd pwd2"));
             if (!result)
-                fw.FERR["REQ"] = 1;
+                fw.FormErrors["REQ"] = 1;
 
             if (result && (string)item["pwd"] != (string)item["pwd2"])
             {
                 result = false;
-                fw.FERR["pwd2"] = "NOTEQUAL";
+                fw.FormErrors["pwd2"] = "NOTEQUAL";
             }
 
-            if (fw.FERR.Count > 0 && !fw.FERR.ContainsKey("REQ"))
-                fw.FERR["INVALID"] = 1;
+            if (fw.FormErrors.Count > 0 && !fw.FormErrors.ContainsKey("REQ"))
+                fw.FormErrors["INVALID"] = 1;
 
             if (!result)
                 throw new ApplicationException("");
