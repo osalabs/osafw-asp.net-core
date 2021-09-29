@@ -10,6 +10,7 @@ using System.Linq;
 using Microsoft.VisualBasic;
 using System.Collections;
 using System.Text.RegularExpressions;
+using System.Text.Json;
 
 namespace osafw
 {
@@ -563,7 +564,20 @@ namespace osafw
 
         private void saveJson(object data, string filename)
         {
-            var json_str = Utils.jsonEncode(data, true);
+            var json_str = "";
+            if (data is Hashtable)
+            {
+                //if this is hashtable - it's for config.json, output keys in specific order
+                JsonSerializerOptions options = new();
+                options.WriteIndented = true;
+                options.Converters.Add(new ConfigJsonConverter());
+                json_str = JsonSerializer.Serialize(data, data.GetType(), options);
+            }
+            else
+            {
+                json_str = Utils.jsonEncode(data, true);
+            }
+            
             FW.setFileContent(filename, ref json_str);
         }
 
@@ -2016,6 +2030,43 @@ namespace osafw
         {
             var tables = Utils.qh(FW_TABLES);
             return tables.ContainsKey(table_name.ToLower());
+        }
+    }
+
+    public class ConfigJsonConverter: System.Text.Json.Serialization.JsonConverter<Hashtable>
+    {
+        string ordered_keys = "model is_dynamic_index list_view list_sortdef search_fields related_field_name view_list_defaults view_list_map view_list_custom is_dynamic_show show_fields is_dynamic_showform showform_fields form_new_defaults required_fields save_fields save_fields_checkboxes save_fields_nullable field type lookup_model label class class_control class_label class_contents";
+        public override Hashtable Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void Write(Utf8JsonWriter writer, Hashtable value, JsonSerializerOptions options)
+        {
+            writer.WriteStartObject();
+
+            Hashtable hwritten = new();
+            //write specific keys first
+            foreach (var key in Utils.qw(ordered_keys))
+            {
+                if (value.ContainsKey(key))
+                {
+                    writer.WritePropertyName(key);
+                    JsonSerializer.Serialize(writer, value[key], options);
+                    hwritten[key] = true;
+                }
+            }
+
+            //then write rest of keys
+            foreach (string key in value.Keys)
+            {
+                if (hwritten.ContainsKey(key))
+                    continue;
+                writer.WritePropertyName(key);
+                JsonSerializer.Serialize(writer, value[key], options);
+            }
+
+            writer.WriteEndObject();
         }
     }
 }
