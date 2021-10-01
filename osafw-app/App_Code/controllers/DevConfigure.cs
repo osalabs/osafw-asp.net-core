@@ -60,10 +60,10 @@ namespace osafw
             ps["is_write_dirs"] = false;
             string upload_dir = (string)fw.config("site_root") + fw.config("UPLOAD_DIR");
             // check if dir is writable
-            ps["is_write_dirs"] = isWritable(upload_dir);
+            ps["is_write_dirs"] = isWritable(upload_dir, true);
 
             ps["is_write_langok"] = true;
-            if (isWritable(fw.config("template") + "/lang") && !Utils.f2bool(fw.config("IS_DEV")))
+            if (isWritable(fw.config("template") + "/lang", true) && !Utils.f2bool(fw.config("IS_DEV")))
                 ps["is_write_langok"] = false;
 
             // obsolete in .net 4
@@ -77,13 +77,23 @@ namespace osafw
             return ps;
         }
 
-        private bool isWritable(string filepath)
+        private bool isWritable(string dir_or_filepath, bool is_dir = false)
         {
-            //TODO MIGRATE rewrite obsolete code
-            FileIOPermission writePermission = new (FileIOPermissionAccess.Write, filepath);
-            System.Security.PermissionSet permissionSet = new (PermissionState.None);
-            permissionSet.AddPermission(writePermission);
-            return permissionSet.IsSubsetOf(AppDomain.CurrentDomain.PermissionSet);
+            var result = false;
+            try
+            {
+                var path = dir_or_filepath + (is_dir ? "": "osafw_writable_check.txt");
+                string V = "osafw";
+                FW.setFileContent(path, ref V);
+                File.Delete(path);
+                result = true;
+            }
+            catch (Exception)
+            {
+                //can't write
+                //logger(ex.Message);
+            }
+            return result;
         }
 
     }
