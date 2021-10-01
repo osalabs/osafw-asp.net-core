@@ -70,7 +70,9 @@ namespace osafw
                 {
                     // for normal logins - have a delay up to 2s to slow down any brute force attempts
                     var ran = new Random();
+#pragma warning disable SCS0005 // Weak random generator
                     int delay = (int)((ran.NextDouble() * 2 + 0.5) * 1000);
+#pragma warning restore SCS0005 // Weak random generator
                     System.Threading.Thread.Sleep(delay);
                 }
 

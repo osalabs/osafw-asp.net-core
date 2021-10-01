@@ -270,7 +270,7 @@ namespace osafw
                         }
                     }
                 }
-                catch (AuthException ex)
+                catch (AuthException)
                 {
                     // just skip controllers not authorized to current user
                     fw.logger(controller_name + " controller test skipped, user no authorized");

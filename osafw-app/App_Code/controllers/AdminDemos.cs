@@ -92,7 +92,7 @@ namespace osafw
             if (reqi("refresh") == 1)
             {
                 fw.routeRedirect("ShowForm", new[] { form_id });
-                return null/* TODO Change to default(_) if this is not a reference type */;
+                return null;
             }
 
             Hashtable item = reqh("item");

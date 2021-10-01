@@ -1,4 +1,7 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿//if you use Sentry set to True here, install SentrySDK, in web.config fill endpoint URL to "log_sentry" 
+#define isSentry
+
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.Configuration;
 using System;
@@ -84,8 +87,9 @@ namespace osafw
 
         public string last_error_send_email = "";
 
-        //TODO MIGRATE #Const isSentry = False 'if you use Sentry set to True here, install SentrySDK, in web.config fill endpoint URL to "log_sentry" 
-        private IDisposable sentryClient;
+#if isSentry
+        private readonly IDisposable sentryClient;
+#endif
 
         // shortcut for currently logged users.id
         // usage: fw.userId
@@ -118,8 +122,6 @@ namespace osafw
             this.response = context.Response;
 
             FwConfig.init(context, configuration);
-
-            logger("NEW FW INSTANCE - TODO MIGRATE test it's once per request, test parallel requests **************");
 
             //TODO MIGRATE
             //# If isSentry Then
@@ -538,7 +540,7 @@ namespace osafw
             }
             // logger(LogLevel.INFO, "NO EXCEPTION IN dispatch")
 
-            catch (RedirectException Ex)
+            catch (RedirectException)
             {
                 // not an error, just exit via Redirect
                 logger(LogLevel.INFO, "Redirected...");
@@ -1133,7 +1135,7 @@ namespace osafw
         public bool sendEmail(string mail_from, string mail_to, string mail_subject, string mail_body, Hashtable filenames = null, ArrayList aCC = null, string reply_to = "", Hashtable options = null)
         {
             bool result = true;
-            MailMessage message = null/* TODO Change to default(_) if this is not a reference type */;
+            MailMessage message = null;
             if (options == null)
                 options = new Hashtable();
 
@@ -1254,7 +1256,7 @@ namespace osafw
         }
 
         // shortcut for send_email from template from the /emails template dir
-        public bool sendEmailTpl(string mail_to, string tpl, Hashtable hf, Hashtable filenames = null/* TODO Change to default(_) if this is not a reference type */, ArrayList aCC = null/* TODO Change to default(_) if this is not a reference type */, string reply_to = "")
+        public bool sendEmailTpl(string mail_to, string tpl, Hashtable hf, Hashtable filenames = null, ArrayList aCC = null, string reply_to = "")
         {
             ParsePage parser_obj = new(this);
             Regex r = new(@"[\n\r]+");
@@ -1295,7 +1297,6 @@ namespace osafw
             Hashtable ps = new();
             var tpl_dir = "/error";
 
-            /* TODO ERROR: Skipped IfDirectiveTrivia *//* TODO ERROR: Skipped DisabledTextTrivia *//* TODO ERROR: Skipped EndIfDirectiveTrivia */
             ps["err_time"] = DateTime.Now;
             ps["err_msg"] = msg;
             if (Utils.f2bool(this.config("IS_DEV")))
@@ -1349,7 +1350,7 @@ namespace osafw
             return (FwModel)models[model_name];
         }
 
-        public void logEvent(string ev_icode, int item_id = 0, int item_id2 = 0, string iname = "", int records_affected = 0, Hashtable changed_fields = null/* TODO Change to default(_) if this is not a reference type */)
+        public void logEvent(string ev_icode, int item_id = 0, int item_id2 = 0, string iname = "", int records_affected = 0, Hashtable changed_fields = null)
         {
             if (!is_log_events)
                 return;

@@ -466,7 +466,7 @@ namespace osafw
         // value (string, hashtable, etc..), empty string "" 
         // Or Nothing - tag not present in hf param (only if hf is Hashtable), file lookup will be necessary
         // set is_found to True if tag value found hf/parent_hf (so can be used to detect if there are no tag value at all so no fileseek required)
-        private object hfvalue(string tag, object hf, Hashtable parent_hf = null/* TODO Change to default(_) if this is not a reference type */)
+        private object hfvalue(string tag, object hf, Hashtable parent_hf = null)
         {
             object tag_value = "";
             object ptr;

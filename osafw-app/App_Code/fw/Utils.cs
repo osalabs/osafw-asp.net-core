@@ -204,7 +204,7 @@ namespace osafw
                     result = Convert.ToDateTime(AField.ToString().Trim());
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 result = null;
             }
@@ -593,8 +593,8 @@ namespace osafw
             // Save the scaled image.
             string ext = UploadUtils.getUploadFileExt(to_file);
             ImageFormat out_format = image.RawFormat;
-            EncoderParameters EncoderParameters = null/* TODO Change to default(_) if this is not a reference type */;
-            ImageCodecInfo ImageCodecInfo = null/* TODO Change to default(_) if this is not a reference type */;
+            EncoderParameters EncoderParameters = null;
+            ImageCodecInfo ImageCodecInfo = null;
 
             if (ext == ".gif")
             {
@@ -889,14 +889,6 @@ namespace osafw
         public static string serialize(object data)
         {
             return jsonEncode(data);
-
-            //binary fomatter is not secure TODO MIGRATE cleanup
-            //var xstream = new System.IO.MemoryStream(); ;
-            //var xformatter = new BinaryFormatter();
-
-            //xformatter.Serialize(xstream, data);
-
-            //return Convert.ToBase64String(xstream.ToArray());
         }
 
         // deserialize base64 string serialized with Utils.serialize
@@ -904,19 +896,6 @@ namespace osafw
         public static object deserialize(string str)
         {
             return jsonDecode(str);
-            //binary fomatter is not secure TODO MIGRATE cleanup
-            //object data;
-            //try
-            //{
-            //    MemoryStream xstream = new MemoryStream(Convert.FromBase64String(str));
-            //    var xformatter = new BinaryFormatter();
-            //    data = xformatter.Deserialize(xstream);
-            //}
-            //catch (Exception ex)
-            //{
-            //    data = null;
-            //}
-            //return data;
         }
 
         // return Hashtable keys as an array

@@ -411,7 +411,7 @@ namespace osafw
                         string name = dbread.GetName(i).ToString();
                         result.Add(name, value);
                     }
-                    catch (Exception Ex)
+                    catch (Exception)
                     {
                         break;
                     }

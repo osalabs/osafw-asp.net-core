@@ -69,7 +69,7 @@ namespace osafw
         // all params for WkHTMLtoPDF: http://wkhtmltopdf.org/usage/wkhtmltopdf.txt
         // options:
         // landscape = True - will produce landscape output
-        public static void html2pdf(FW fw, string htmlfile, string filename, Hashtable options = null/* TODO Change to default(_) if this is not a reference type */)
+        public static void html2pdf(FW fw, string htmlfile, string filename, Hashtable options = null)
         {
             if (htmlfile.Length < 1 | filename.Length < 1)
                 throw new ApplicationException("Wrong filename");

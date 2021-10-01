@@ -26,8 +26,8 @@ namespace osafw
                 selected_db = "main";
 
             string sql = reqs("sql");
-            ArrayList tablehead = null/* TODO Change to default(_) if this is not a reference type */;
-            ArrayList tablerows = null/* TODO Change to default(_) if this is not a reference type */;
+            ArrayList tablehead = null;
+            ArrayList tablerows = null;
             int sql_ctr = 0;
             long sql_time = DateTime.Now.Ticks;
 
@@ -102,7 +102,7 @@ namespace osafw
         private ArrayList sth2table(DbDataReader sth)
         {
             if (sth == null || !sth.HasRows)
-                return null/* TODO Change to default(_) if this is not a reference type */;
+                return null;
             ArrayList result = new();
 
             while (sth.Read())

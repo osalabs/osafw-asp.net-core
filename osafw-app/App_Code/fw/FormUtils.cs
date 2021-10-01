@@ -210,7 +210,7 @@ namespace osafw
                 pagesize = (int)pagesize1;
             }
                 
-            ArrayList pager = null/* TODO Change to default(_) if this is not a reference type */;
+            ArrayList pager = null;
             const int PAD_PAGES = 5;
 
             if (count > pagesize)
