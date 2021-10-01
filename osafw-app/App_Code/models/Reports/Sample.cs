@@ -7,7 +7,7 @@ using System.Collections;
 
 namespace osafw
 {
-    public class ReportSample : ReportBase
+    public class ReportSample : FwReports
     {
         public ReportSample() : base()
         {

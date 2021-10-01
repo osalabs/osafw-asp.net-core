@@ -12,12 +12,10 @@ namespace osafw
     {
         public static new int access_level = Users.ACL_MANAGER;
         public static new string route_default_action = "show";
-        protected Reports model = new();
 
         public override void init(FW fw)
         {
             base.init(fw);
-            model.init(fw);
             required_fields = "iname"; // default required fields, space-separated
             base_url = "/Admin/Reports"; // base url for the controller
         }
@@ -32,7 +30,7 @@ namespace osafw
         public void ShowAction(string repcode)
         {
             Hashtable ps = new();
-            repcode = model.cleanupRepcode(repcode);
+            repcode = FwReports.cleanupRepcode(repcode);
 
             var is_run = reqs("dofilter").Length > 0 || reqs("is_run").Length > 0;
             ps["is_run"] = is_run;
@@ -45,7 +43,7 @@ namespace osafw
             if (string.IsNullOrEmpty((string)f["format"]))
                 f["format"] = "html";
 
-            var report = model.createInstance(repcode, f);
+            var report = FwReports.createInstance(fw, repcode, f);
 
             ps["filter"] = report.getReportFilters(); // filter data like select/lookups
             ps["f"] = report.f; // filter values
@@ -60,9 +58,9 @@ namespace osafw
         // save changes from editable reports
         public void SaveAction()
         {
-            var repcode = model.cleanupRepcode(reqs("repcode"));
+            var repcode = FwReports.cleanupRepcode(reqs("repcode"));
 
-            var report = model.createInstance(repcode, reqh("f"));
+            var report = FwReports.createInstance(fw, repcode, reqh("f"));
 
             try
             {
