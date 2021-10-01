@@ -1,10 +1,12 @@
 using System;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Net.Http.Headers;
 
 namespace osafw
 {
@@ -69,6 +71,7 @@ namespace osafw
             {
                 options.AllowSynchronousIO = false; 
             });
+
             services.AddSession(options =>
             {
                 options.Cookie.IsEssential = true; 
@@ -93,10 +96,37 @@ namespace osafw
             {
                 app.UseHttpsRedirection();
             }
-            app.UseStaticFiles();
+
+            //enable aggressive caching of static files
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                OnPrepareResponse = (context) =>
+                {
+                    var headers = context.Context.Response.GetTypedHeaders();
+                    headers.CacheControl = new CacheControlHeaderValue
+                    {
+                        Public = true,
+                        MaxAge = TimeSpan.FromDays(365)
+                    };
+                }
+            });
             app.UseSession();
-            // TODO MIGRATE app.UseCookiePolicy(); if not use standard auth identity
-            // TODO MIGRATE reponse cacheing https://docs.microsoft.com/en-us/aspnet/core/performance/caching/middleware?view=aspnetcore-5.0
+            
+            //set stricter cookie policy
+            app.UseCookiePolicy(new CookiePolicyOptions
+            {
+                CheckConsentNeeded = _ => false,
+                HttpOnly = Microsoft.AspNetCore.CookiePolicy.HttpOnlyPolicy.Always,
+                MinimumSameSitePolicy = Microsoft.AspNetCore.Http.SameSiteMode.Strict,
+                Secure = CookieSecurePolicy.SameAsRequest,
+                OnAppendCookie = (context) =>
+                {
+                    context.IssueCookie = true;
+                },
+                OnDeleteCookie = (context) =>
+                {
+                }
+            });
 
             // Create branch to the MyHandlerMiddleware. 
             // All requests will follow this branch.
