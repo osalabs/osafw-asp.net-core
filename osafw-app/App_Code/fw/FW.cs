@@ -767,8 +767,8 @@ namespace osafw
                 return;
 
             StringBuilder str = new (DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"));
-            str.Append(" ").Append(level.ToString()).Append(" ");
-            str.Append(System.Diagnostics.Process.GetCurrentProcess().Id).Append(" ");
+            str.Append(' ').Append(level.ToString()).Append(' ');
+            str.Append(Environment.ProcessId).Append(' ');
             System.Diagnostics.StackTrace st = new (true);
 
             try
@@ -784,7 +784,7 @@ namespace osafw
                 string fname = sf.GetFileName();
                 if (fname != null)
                     str.Append(fname.Replace((string)this.config("site_root"), "").Replace(@"\App_Code", ""));
-                str.Append(':').Append(sf.GetMethod().Name).Append(' ').Append(sf.GetFileLineNumber().ToString()).Append(" # ");
+                str.Append(':').Append(sf.GetMethod().Name).Append(' ').Append(sf.GetFileLineNumber()).Append(" # ");
             }
             catch (Exception ex)
             {
@@ -828,31 +828,31 @@ namespace osafw
             {
                 Type type = dmp_obj.GetType();
                 TypeCode typeCode = Type.GetTypeCode(type);
-                string intend = new StringBuilder().Insert(0, "    ", level).Append(" ").ToString();
+                string intend = new StringBuilder().Insert(0, "    ", level).Append(' ').ToString();
 
                 level += 1;
                 if (typeCode.ToString() == "Object")
                 {
                     str.Append(System.Environment.NewLine);
-                    if (dmp_obj is IList)
+                    if (dmp_obj is IList list)
                     {
                         str.Append(intend + "[" + System.Environment.NewLine);
-                        foreach (object v in (IList)dmp_obj)
+                        foreach (object v in list)
                             str.Append(intend + " " + dumper(v, level) + System.Environment.NewLine);
                         str.Append(intend + "]" + System.Environment.NewLine);
                     }
-                    else if (dmp_obj is IDictionary)
+                    else if (dmp_obj is IDictionary dictionary)
                     {
                         str.Append(intend + "{" + System.Environment.NewLine);
-                        foreach (object k in ((IDictionary)dmp_obj).Keys)
-                            str.Append(intend + " " + k + " => " + dumper(((IDictionary)dmp_obj)[k], level) + System.Environment.NewLine);
+                        foreach (object k in dictionary.Keys)
+                            str.Append(intend + " " + k + " => " + dumper(dictionary[k], level) + System.Environment.NewLine);
                         str.Append(intend + "}" + System.Environment.NewLine);
                     }
-                    else if (dmp_obj is ISession)
+                    else if (dmp_obj is ISession session)
                     {
                         str.Append(intend + "{" + System.Environment.NewLine);
-                        foreach (string k in ((ISession)dmp_obj).Keys)
-                            str.Append(intend + " " + k + " => " + dumper(((ISession)dmp_obj).GetString(k), level) + System.Environment.NewLine);
+                        foreach (string k in session.Keys)
+                            str.Append(intend + " " + k + " => " + dumper(session.GetString(k), level) + System.Environment.NewLine);
                         str.Append(intend + "}" + System.Environment.NewLine);
                     }
                     else
@@ -980,7 +980,7 @@ namespace osafw
             {
                 if (ps.ContainsKey("_json"))
                 {
-                    if (ps["_json"] is bool && (bool)ps["_json"] == true)
+                    if (ps["_json"] is bool b && b == true)
                     {
                         ps.Remove("_json"); // remove internal flag
                         this.parserJson(ps);

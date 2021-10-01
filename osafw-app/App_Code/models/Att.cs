@@ -89,7 +89,7 @@ namespace osafw
                 if (file.Length > 0)
                 {
                     // add att db record
-                    Hashtable itemdb = new Hashtable(item);
+                    Hashtable itemdb = new(item);
                     itemdb["status"] = "1"; // under upload
                     var id = this.add(itemdb);
 
@@ -320,8 +320,7 @@ namespace osafw
             bool result = true;
             var item = one(id);
 
-            int user_access_level = Utils.f2int(fw.Session("access_level"));
-
+            // int user_access_level = Utils.f2int(fw.Session("access_level"));
             // If item("access_level") > user_access_level Then
             // result = False
             // End If

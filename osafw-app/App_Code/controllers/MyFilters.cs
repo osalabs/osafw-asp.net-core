@@ -35,7 +35,7 @@ namespace osafw
 
         public override Hashtable initFilter(string session_key = null)
         {
-            var result = base.initFilter(session_key);
+            base.initFilter(session_key);
             if (!this.list_filter.ContainsKey("icode"))
                 this.list_filter["icode"] = related_id;
             return this.list_filter;

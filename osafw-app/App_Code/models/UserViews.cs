@@ -24,8 +24,8 @@ namespace osafw
         // return user_views.id
         public int updateByIcode(string screen, string fields)
         {
-            var result = 0;
             var item = oneByIcode(screen);
+            int result;
             if (item.Count > 0)
             {
                 // exists

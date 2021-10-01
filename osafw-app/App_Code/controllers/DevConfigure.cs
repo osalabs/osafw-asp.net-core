@@ -77,7 +77,7 @@ namespace osafw
             return ps;
         }
 
-        private bool isWritable(string dir_or_filepath, bool is_dir = false)
+        private static bool isWritable(string dir_or_filepath, bool is_dir = false)
         {
             var result = false;
             try

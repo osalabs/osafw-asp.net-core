@@ -15,9 +15,10 @@ using System.Text.RegularExpressions;
 namespace osafw
 {
 
-    public class DBRow : Dictionary<string, string> {
+    public class DBRow : Dictionary<string, string>
+    {
 
-        public DBRow(){}
+        public DBRow() { }
         public DBRow(Hashtable h)
         {
             if (h != null)
@@ -28,7 +29,7 @@ namespace osafw
                 }
             }
         }
-        
+
         public new string this[string key]
         {
             get
@@ -43,7 +44,7 @@ namespace osafw
         public static implicit operator Hashtable(DBRow row)
         {
             Hashtable result = new();
-            foreach(string k in row.Keys)
+            foreach (string k in row.Keys)
             {
                 result[k] = row[k];
             }
@@ -58,7 +59,8 @@ namespace osafw
             return this;
         }
     }
-    public class DBList : List<DBRow> {
+    public class DBList : List<DBRow>
+    {
         public static implicit operator ArrayList(DBList rows)
         {
             ArrayList result = new();
@@ -161,18 +163,18 @@ namespace osafw
 
         public static int SQL_QUERY_CTR = 0; // counter for SQL queries during request
 
-        private FW fw; // for now only used for: fw.logger and fw.cache (for request-level cacheing of multi-db connections)
+        private readonly FW fw; // for now only used for: fw.logger and fw.cache (for request-level cacheing of multi-db connections)
 
         public string db_name = "";
         public string dbtype = "SQL";
-        private Hashtable conf = new();  // config contains: connection_string, type
-        private string connstr = "";
+        private readonly Hashtable conf = new();  // config contains: connection_string, type
+        private readonly string connstr = "";
 
         private Hashtable schema = new(); // schema for currently connected db
         private DbConnection conn; // actual db connection - SqlConnection or OleDbConnection
 
         private bool is_check_ole_types = false; // if true - checks for unsupported OLE types during readRow
-        private Hashtable UNSUPPORTED_OLE_TYPES = new();
+        private readonly Hashtable UNSUPPORTED_OLE_TYPES = new();
 
         /// <summary>
         ///  "synax sugar" helper to build Hashtable from list of arguments instead more complex New Hashtable from {...}
@@ -188,7 +190,7 @@ namespace osafw
             {
                 throw new ArgumentException("h() accepts even number of arguments");
             }
-            
+
             for (var i = 0; i <= args.Length - 1; i += 2)
             {
                 result[args[i]] = args[i + 1];
@@ -345,11 +347,11 @@ namespace osafw
         public DbDataReader query(string sql, Hashtable @params = null)
         {
             connect();
-            if (@params!=null && @params.Count>0)
+            if (@params != null && @params.Count > 0)
                 logger(LogLevel.INFO, "DB:", db_name, " ", sql, @params);
             else
                 logger(LogLevel.INFO, "DB:", db_name, " ", sql);
-          
+
 
             SQL_QUERY_CTR += 1;
 
@@ -756,8 +758,7 @@ namespace osafw
             string result;
             if (dbtype == "SQL")
             {
-                DateTime tmpdate;
-                if (DateTime.TryParse(str.ToString(), out tmpdate))
+                if (DateTime.TryParse(str.ToString(), out DateTime tmpdate))
                 {
                     result = "convert(DATETIME2, '" + tmpdate.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.DateTimeFormatInfo.InvariantInfo) + "', 120)";
                 }
@@ -819,9 +820,9 @@ namespace osafw
 
             object field_value;
             DBOperation dbop = null;
-            if (field_value_or_op is DBOperation)
+            if (field_value_or_op is DBOperation operation)
             {
-                dbop = (DBOperation)field_value_or_op;
+                dbop = operation;
                 field_value = dbop.value;
             }
             else
@@ -1188,9 +1189,8 @@ namespace osafw
                 var delim = kv_delim;
                 if (string.IsNullOrEmpty(delim))
                 {
-                    if (vv is DBOperation)
+                    if (vv is DBOperation dbop)
                     {
-                        DBOperation dbop = (DBOperation)vv;
                         delim = " " + dbop.opstr + " ";
                         if (dbop.is_value)
                         {
@@ -1379,21 +1379,21 @@ namespace osafw
                 // get information about all columns in the table
                 // default = ((0)) ('') (getdate())
                 // maxlen = -1 for nvarchar(MAX)
-                string sql = "SELECT c.column_name as 'name'," + 
-                    " c.data_type as 'type'," + 
-                    " CASE c.is_nullable WHEN 'YES' THEN 1 ELSE 0 END AS 'is_nullable'," + 
-                    " c.column_default as 'default'," + 
-                    " c.character_maximum_length as 'maxlen'," + 
-                    " c.numeric_precision," + 
-                    " c.numeric_scale," + 
-                    " c.character_set_name as 'charset'," + 
-                    " c.collation_name as 'collation'," + 
-                    " c.ORDINAL_POSITION as 'pos'," + 
-                    " COLUMNPROPERTY(object_id(c.table_name), c.column_name, 'IsIdentity') as is_identity" + 
-                    " FROM INFORMATION_SCHEMA.TABLES t," + 
-                    "   INFORMATION_SCHEMA.COLUMNS c" + 
+                string sql = "SELECT c.column_name as 'name'," +
+                    " c.data_type as 'type'," +
+                    " CASE c.is_nullable WHEN 'YES' THEN 1 ELSE 0 END AS 'is_nullable'," +
+                    " c.column_default as 'default'," +
+                    " c.character_maximum_length as 'maxlen'," +
+                    " c.numeric_precision," +
+                    " c.numeric_scale," +
+                    " c.character_set_name as 'charset'," +
+                    " c.collation_name as 'collation'," +
+                    " c.ORDINAL_POSITION as 'pos'," +
+                    " COLUMNPROPERTY(object_id(c.table_name), c.column_name, 'IsIdentity') as is_identity" +
+                    " FROM INFORMATION_SCHEMA.TABLES t," +
+                    "   INFORMATION_SCHEMA.COLUMNS c" +
                     " WHERE t.table_name = c.table_name" +
-                    "   AND t.table_name = @table_name"+ 
+                    "   AND t.table_name = @table_name" +
                     " order by c.ORDINAL_POSITION";
                 result = arrayp(sql, DB.h("@table_name", table));
                 foreach (Hashtable row in result)
@@ -1402,7 +1402,7 @@ namespace osafw
                     row["fw_subtype"] = ((string)row["type"]).ToLower();
                 }
             }
-            else if(RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 // OLE DB (Access)
                 DataTable schemaTable = ((OleDbConnection)conn).GetOleDbSchemaTable(OleDbSchemaGuid.Columns, new object[] { null, null, table, null });
@@ -1470,27 +1470,27 @@ namespace osafw
                     where_params["@table_name"] = table;
                 }
 
-                result = this.arrayp("SELECT " + 
-                    " col1.CONSTRAINT_NAME as [name]" + 
-                    ", col1.TABLE_NAME As [table]" + 
-                    ", col1.COLUMN_NAME as [column]" + 
-                    ", col2.TABLE_NAME as [pk_table]" + 
-                    ", col2.COLUMN_NAME as [pk_column]" + 
-                    ", rc.UPDATE_RULE as [on_update]" + 
-                    ", rc.DELETE_RULE as [on_delete]" + 
-                    " FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS rc " + 
-                    " INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE col1 " + 
-                    "   ON (col1.CONSTRAINT_CATALOG = rc.CONSTRAINT_CATALOG  " + 
-                    "       AND col1.CONSTRAINT_SCHEMA = rc.CONSTRAINT_SCHEMA " + 
-                    "       AND col1.CONSTRAINT_NAME = rc.CONSTRAINT_NAME)" + 
-                    " INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE col2 " + 
-                    "   ON (col2.CONSTRAINT_CATALOG = rc.UNIQUE_CONSTRAINT_CATALOG  " + 
-                    "       AND col2.CONSTRAINT_SCHEMA = rc.UNIQUE_CONSTRAINT_SCHEMA " + 
-                    "       AND col2.CONSTRAINT_NAME = rc.UNIQUE_CONSTRAINT_NAME " + 
-                    "       AND col2.ORDINAL_POSITION = col1.ORDINAL_POSITION)" + 
+                result = this.arrayp("SELECT " +
+                    " col1.CONSTRAINT_NAME as [name]" +
+                    ", col1.TABLE_NAME As [table]" +
+                    ", col1.COLUMN_NAME as [column]" +
+                    ", col2.TABLE_NAME as [pk_table]" +
+                    ", col2.COLUMN_NAME as [pk_column]" +
+                    ", rc.UPDATE_RULE as [on_update]" +
+                    ", rc.DELETE_RULE as [on_delete]" +
+                    " FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS rc " +
+                    " INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE col1 " +
+                    "   ON (col1.CONSTRAINT_CATALOG = rc.CONSTRAINT_CATALOG  " +
+                    "       AND col1.CONSTRAINT_SCHEMA = rc.CONSTRAINT_SCHEMA " +
+                    "       AND col1.CONSTRAINT_NAME = rc.CONSTRAINT_NAME)" +
+                    " INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE col2 " +
+                    "   ON (col2.CONSTRAINT_CATALOG = rc.UNIQUE_CONSTRAINT_CATALOG  " +
+                    "       AND col2.CONSTRAINT_SCHEMA = rc.UNIQUE_CONSTRAINT_SCHEMA " +
+                    "       AND col2.CONSTRAINT_NAME = rc.UNIQUE_CONSTRAINT_NAME " +
+                    "       AND col2.ORDINAL_POSITION = col1.ORDINAL_POSITION)" +
                     where, where_params);
             }
-            else if(RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 var dt = ((OleDbConnection)conn).GetOleDbSchemaTable(System.Data.OleDb.OleDbSchemaGuid.Foreign_Keys, new object[] { null });
                 foreach (DataRow row in dt.Rows)
@@ -1571,7 +1571,7 @@ namespace osafw
                 schema.Clear();
         }
 
-        private string map_mssqltype2fwtype(string mstype)
+        private static string map_mssqltype2fwtype(string mstype)
         {
             string result;
             switch (mstype.ToLower())
@@ -1617,42 +1617,36 @@ namespace osafw
         }
 
         [SupportedOSPlatform("windows")]
-        private string map_oletype2fwtype(int mstype)
+        private static string map_oletype2fwtype(int mstype)
         {
-            string result = "";
-            switch (mstype)
+            string result = mstype switch
             {
                 // TODO - unsupported: image, varbinary, longvarbinary, dbtime, timestamp
                 // NOTE: Boolean here is: True=-1 (vbTrue), False=0 (vbFalse)
-                case (int)OleDbType.Boolean:
-                case (int)OleDbType.TinyInt:
-                case (int)OleDbType.UnsignedTinyInt:
-                case (int)OleDbType.SmallInt:
-                case (int)OleDbType.UnsignedSmallInt:
-                case (int)OleDbType.Integer:
-                case (int)OleDbType.UnsignedInt:
-                case (int)OleDbType.BigInt:
-                case (int)OleDbType.UnsignedBigInt:
-                    result = "int";
-                    break;
-                case (int)OleDbType.Double:
-                case (int)OleDbType.Numeric:
-                case (int)OleDbType.VarNumeric:
-                case (int)OleDbType.Single:
-                case (int)OleDbType.Decimal:
-                case (int)OleDbType.Currency:
-                    result = "float";
-                    break;
-                case (int)OleDbType.Date:
-                case (int)OleDbType.DBDate:
-                case (int)OleDbType.DBTimeStamp:
-                    result = "datetime";
-                    break;
-                default: // "text", "ntext", "varchar", "longvarchar" "nvarchar", "char", "nchar", "wchar", "varwchar", "longvarwchar", "dbtime":
-                    result = "varchar";
-                    break;
-            }
+                (int)OleDbType.Boolean
+                or (int)OleDbType.TinyInt
+                or (int)OleDbType.UnsignedTinyInt
+                or (int)OleDbType.SmallInt
+                or (int)OleDbType.UnsignedSmallInt
+                or (int)OleDbType.Integer
+                or (int)OleDbType.UnsignedInt
+                or (int)OleDbType.BigInt
+                or (int)OleDbType.UnsignedBigInt => "int",
 
+                (int)OleDbType.Double
+                or (int)OleDbType.Numeric
+                or (int)OleDbType.VarNumeric
+                or (int)OleDbType.Single
+                or (int)OleDbType.Decimal
+                or (int)OleDbType.Currency => "float",
+
+                (int)OleDbType.Date
+                or (int)OleDbType.DBDate
+                or (int)OleDbType.DBTimeStamp => "datetime",
+
+                // "text", "ntext", "varchar", "longvarchar" "nvarchar", "char", "nchar", "wchar", "varwchar", "longvarwchar", "dbtime":
+                _ => "varchar",
+            };
             return result;
         }
 
@@ -1671,6 +1665,7 @@ namespace osafw
         public void Dispose()
         {
             Dispose(true);
+            GC.SuppressFinalize(this);  
         }
     }
 

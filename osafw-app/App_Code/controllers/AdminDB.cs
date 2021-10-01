@@ -99,7 +99,7 @@ namespace osafw
             fw.routeRedirect("Index");
         }
 
-        private ArrayList sth2table(DbDataReader sth)
+        private static ArrayList sth2table(DbDataReader sth)
         {
             if (sth == null || !sth.HasRows)
                 return null;
@@ -124,7 +124,7 @@ namespace osafw
             return result;
         }
 
-        private ArrayList sth2head(DbDataReader sth)
+        private static ArrayList sth2head(DbDataReader sth)
         {
             if (sth == null)
                 return null;
@@ -194,12 +194,12 @@ namespace osafw
             return result;
         }
 
-        private string strip_comments(string sql)
+        private static string strip_comments(string sql)
         {
             return Regex.Replace(sql, @"/\*.+?\*/", " ", RegexOptions.Singleline);
         }
 
-        private string[] split_multi_sql(string sql)
+        private static string[] split_multi_sql(string sql)
         {
             return Regex.Split(sql, @";[\n\r]+");
         }

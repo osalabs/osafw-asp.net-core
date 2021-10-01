@@ -113,8 +113,8 @@ namespace osafw
 
             // save_fields could be defined as qw string - check and convert
             var save_fields_raw = this.config["save_fields"];
-            if (save_fields_raw is IList)
-                save_fields = Utils.qwRevert((IList)save_fields_raw); // not optimal, but simplest for now
+            if (save_fields_raw is IList list)
+                save_fields = Utils.qwRevert(list); // not optimal, but simplest for now
             else
                 save_fields = Utils.f2str(save_fields_raw);
 
@@ -122,15 +122,15 @@ namespace osafw
 
             // save_fields_checkboxes could be defined as qw string - check and convert
             var save_fields_checkboxes_raw = this.config["save_fields_checkboxes"];
-            if (save_fields_checkboxes_raw is IDictionary)
-                save_fields_checkboxes = Utils.qhRevert((IDictionary)save_fields_checkboxes_raw); // not optimal, but simplest for now
+            if (save_fields_checkboxes_raw is IDictionary dictionary)
+                save_fields_checkboxes = Utils.qhRevert(dictionary); // not optimal, but simplest for now
             else
                 save_fields_checkboxes = Utils.f2str(save_fields_checkboxes_raw);
 
             // save_fields_nullable could be defined as qw string - check and convert
             var save_fields_nullable_raw = this.config["save_fields_nullable"];
-            if (save_fields_nullable_raw is IList)
-                save_fields_nullable = Utils.qwRevert((IList)save_fields_nullable_raw); // not optimal, but simplest for now
+            if (save_fields_nullable_raw is IList list1)
+                save_fields_nullable = Utils.qwRevert(list1); // not optimal, but simplest for now
             else
                 save_fields_nullable = Utils.f2str(save_fields_nullable_raw);
 
@@ -695,7 +695,6 @@ namespace osafw
 
         public virtual string getReturnLocation(string id = "")
         {
-            var result = "";
             string url;
             string url_q = (!string.IsNullOrEmpty(related_id) ? "&related_id=" + related_id : "");
             var is_add_new = reqi("is_add_more");
@@ -724,6 +723,7 @@ namespace osafw
                 url_q = "?" + url_q;
             }
 
+            string result;
             if (is_add_new != 1 && !string.IsNullOrEmpty(return_url))
             {
                 if (fw.isJsonExpected())

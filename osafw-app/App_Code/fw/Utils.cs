@@ -192,7 +192,7 @@ namespace osafw
         // TODO parse without Try/Catch
         public static object f2date(object AField)
         {
-            object result = null;
+            object result;
             try
             {
                 if (AField == null || AField.ToString() == "Null" || AField.ToString() == "")
@@ -246,8 +246,7 @@ namespace osafw
         // convert to double, optionally throw error
         public static double f2float(object AField, bool is_error = false)
         {
-            double result = 0.0;
-            if (AField == null || !double.TryParse(AField.ToString(), out result) && is_error)
+            if (AField == null || !double.TryParse(AField.ToString(), out double result) && is_error)
             {
                 throw new FormatException();
             }
@@ -389,7 +388,7 @@ namespace osafw
             bool is_first = true;
             foreach (string fld in fields)
             {
-                if (!is_first) result.Append(",");
+                if (!is_first) result.Append(',');
 
                 string str = Regex.Replace(row[fld] + "", "[\n\r]+", " ");
                 str = str.Replace("\"", "\\\"");
@@ -540,7 +539,7 @@ namespace osafw
             System.Drawing.Image image = System.Drawing.Image.FromStream(stream);
 
             // Detect orientation and auto-rotate correctly
-            var is_rotated = rotateImage(image);
+            rotateImage(image);
 
             // Calculate proportional max width and height.
             int oldWidth = image.Width;
@@ -648,11 +647,10 @@ namespace osafw
 
         private static ImageCodecInfo GetEncoderInfo(ImageFormat format)
         {
-            int j = 0;
             ImageCodecInfo[] encoders;
             encoders = ImageCodecInfo.GetImageEncoders();
 
-            j = 0;
+            int j = 0;
             while (j < encoders.Length)
             {
                 if (encoders[j].FormatID == format.Guid) return encoders[j];
@@ -726,12 +724,12 @@ namespace osafw
                 ArrayList keys = new(hash2.Keys);
                 foreach (string key in keys)
                 {
-                    if (hash2[key] is Hashtable)
+                    if (hash2[key] is Hashtable ht)
                     {
                         if (!(hash1[key] is Hashtable))
                             hash1[key] = new Hashtable();
                         Hashtable _hash1 = (Hashtable)hash1[key];
-                        Hashtable _hash2 = (Hashtable)hash2[key];
+                        Hashtable _hash2 = ht;
                         mergeHashDeep(ref _hash1, ref _hash2);
                     }
                     else
@@ -800,7 +798,7 @@ namespace osafw
             var reader = new Utf8JsonReader(jsonUtf8, options);
             reader.Read(); //initial read
 
-            object result = null;
+            object result;
             try
             {
                 result = jsonDecodeRead(ref reader);
@@ -997,25 +995,17 @@ namespace osafw
         {
             if (num <= 0) return num.ToString();
 
-            switch (num % 100)
+            return (num % 100) switch
             {
-                case 11:
-                case 12:
-                case 13:
-                    return num + "th";
-            }
-
-            switch (num % 10)
-            {
-                case 1:
-                    return num + "st";
-                case 2:
-                    return num + "nd";
-                case 3:
-                    return num + "rd";
-                default:
-                    return num + "th";
-            }
+                11 or 12 or 13 => num + "th",
+                _ => (num % 10) switch
+                {
+                    1 => num + "st",
+                    2 => num + "nd",
+                    3 => num + "rd",
+                    _ => num + "th",
+                },
+            };
         }
 
         // truncate  - This truncates a variable to a character length, the default is 80.
@@ -1076,11 +1066,11 @@ namespace osafw
                 {
                     string _fld = fld;
                     // if fld contains asc or desc - change to opposite
-                    if (_fld.IndexOf(" asc") >= 0)
+                    if (_fld.Contains(" asc"))
                     {
                         _fld = _fld.Replace(" asc", " desc");
                     }
-                    else if (_fld.IndexOf("desc") >= 0)
+                    else if (_fld.Contains("desc"))
                     {
                         _fld = _fld.Replace(" desc", " asc");
                     }
@@ -1316,7 +1306,7 @@ namespace osafw
             result = Regex.Replace(result, @"\W+", " "); // non-alphanum chars to spaces
             result = Utils.capitalize(result);
             result = Regex.Replace(result, " +", ""); // remove spaces
-            return str;
+            return result;
         }
 
         public static string Right(string str, int len)

@@ -178,7 +178,7 @@ namespace osafw
         {
             var result = 0;
             // launch the query
-            string sql1 = strip_comments_sql(sql);
+            //sql = strip_comments_sql(sql);
             String[] asql = split_multi_sql(sql);
             foreach (string sqlone1 in asql)
             {
@@ -206,11 +206,11 @@ namespace osafw
             }
             return result;
         }
-        private string strip_comments_sql(string sql)
+        private static string strip_comments_sql(string sql)
         {
             return Regex.Replace(sql, @"/\*.+?\*/", " ", RegexOptions.Singleline);
         }
-        private string[] split_multi_sql(string sql)
+        private static string[] split_multi_sql(string sql)
         {
             return Regex.Split(sql, @";[\n\r](?:GO[\n\r]+)[\n\r]*|[\n\r]+GO[\n\r]+");
         }
@@ -476,9 +476,9 @@ namespace osafw
 
             foreach (Hashtable entity in entities)
             {
-                entity["is_model_exists"] = _models().Contains(entity["model_name"]);
+                entity["is_model_exists"] = models.Contains(entity["model_name"]);
                 entity["controller_name"] = Utils.f2str(entity["controller_url"]).Replace("/", "");
-                entity["is_controller_exists"] = _controllers().Contains(entity["controller_name"] + "Controller");
+                entity["is_controller_exists"] = controllers.Contains(entity["controller_name"] + "Controller");
             }
 
             ps["entities"] = entities;
@@ -553,7 +553,7 @@ namespace osafw
         // ****************************** PRIVATE HELPERS (move to Dev model?)
 
         // load json
-        private T loadJson<T>(string filename) where T : new()
+        private static T loadJson<T>(string filename) where T : new()
         {
             T result;
             result = (T)Utils.jsonDecode(FW.getFileContent(filename));
@@ -562,9 +562,9 @@ namespace osafw
             return result;
         }
 
-        private void saveJson(object data, string filename)
+        private static void saveJson(object data, string filename)
         {
-            var json_str = "";
+            string json_str;
             if (data is Hashtable)
             {
                 //if this is hashtable - it's for config.json, output keys in specific order
@@ -581,7 +581,7 @@ namespace osafw
             FW.setFileContent(filename, ref json_str);
         }
 
-        private ArrayList dbschema2entities(DB db)
+        private static ArrayList dbschema2entities(DB db)
         {
             ArrayList result = new();
             // Access System tables:
@@ -616,7 +616,7 @@ namespace osafw
                 table_entity["fields"] = tableschema2fields(tblschema);
                 table_entity["foreign_keys"] = db.get_foreign_keys(tblname);
 
-                table_entity["model_name"] = this._tablename2model((string)table_entity["fw_name"]); // potential Model Name
+                table_entity["model_name"] = _tablename2model((string)table_entity["fw_name"]); // potential Model Name
                 table_entity["controller_url"] = "/Admin/" + table_entity["model_name"]; // potential Controller URL/Name/Title
                 table_entity["controller_title"] = Utils.name2human((string)table_entity["model_name"]);
 
@@ -630,7 +630,7 @@ namespace osafw
             return result;
         }
 
-        private ArrayList tableschema2fields(ArrayList schema)
+        private static ArrayList tableschema2fields(ArrayList schema)
         {
             ArrayList result = new(schema);
 
@@ -659,7 +659,7 @@ namespace osafw
 
 
         // convert array of hashtables to hashtable of hashtables using key
-        private Hashtable array2hashtable(ArrayList arr, string key)
+        private static Hashtable array2hashtable(ArrayList arr, string key)
         {
             Hashtable result = new();
             foreach (Hashtable item in arr)
@@ -667,7 +667,7 @@ namespace osafw
             return result;
         }
 
-        private List<string> _models()
+        private static List<string> _models()
         {
             var baseType = typeof(FwModel);
             var assembly = baseType.Assembly;
@@ -677,7 +677,7 @@ namespace osafw
                     select t.Name).ToList();
         }
 
-        private List<string> _controllers()
+        private static List<string> _controllers()
         {
             var baseType = typeof(FwController);
             var assembly = baseType.Assembly;
@@ -699,7 +699,7 @@ namespace osafw
                 replaceInFiles(foldername, strings);
         }
 
-        private void replaceInFile(string filepath, Hashtable strings)
+        private static void replaceInFile(string filepath, Hashtable strings)
         {
             var content = FW.getFileContent(filepath);
             if (content.Length == 0)
@@ -713,7 +713,7 @@ namespace osafw
 
         // demo_dicts => DemoDicts
         // TODO actually go thru models and find model with table_name
-        private string _tablename2model(string table_name)
+        private static string _tablename2model(string table_name)
         {
             string result = "";
             string[] pieces = Strings.Split(table_name, "_");
@@ -722,7 +722,7 @@ namespace osafw
             return result;
         }
 
-        private void _makeValueTags(ArrayList fields)
+        private static void _makeValueTags(ArrayList fields)
         {
             foreach (Hashtable def in fields)
             {
@@ -803,7 +803,7 @@ namespace osafw
 
                     table_entity["fw_name"] = Utils.name2fw(table_name); // new table name using fw standards
 
-                    table_entity["model_name"] = this._tablename2model((string)table_entity["fw_name"]); // potential Model Name
+                    table_entity["model_name"] = _tablename2model((string)table_entity["fw_name"]); // potential Model Name
                     table_entity["controller_url"] = "/Admin/" + table_entity["model_name"]; // potential Controller URL/Name/Title
                     table_entity["controller_title"] = Utils.name2human((string)table_entity["model_name"]);
                     if (Regex.IsMatch(line, @"\blookup\b"))
@@ -1107,7 +1107,7 @@ namespace osafw
 
             string columns = "";
             string column_names = "";
-            var fields = this.array2hashtable((ArrayList)entity["fields"], "fw_name");
+            var fields = array2hashtable((ArrayList)entity["fields"], "fw_name");
             if (fields.ContainsKey("icode"))
             {
                 columns += (columns.Length > 0 ? "," : "") + "icode";
@@ -1526,15 +1526,13 @@ namespace osafw
 
             // special case - "Lookup via Link Table" - could be multiple tables
             var rx_table_link = "^" + Regex.Escape(table_name) + "_(.+?)_link$";
-            var table_name_linked = "";
-            var table_name_link = "";
             foreach (string table in tables.Keys)
             {
                 var m = Regex.Match(table, rx_table_link);
                 if (m.Success)
                 {
-                    table_name_linked = m.Groups[1].Value;
-                    table_name_link = table;
+                    string table_name_linked = m.Groups[1].Value;
+                    string table_name_link = table;
 
                     if (!string.IsNullOrEmpty(table_name_linked))
                     {
@@ -1690,7 +1688,7 @@ namespace osafw
             return result;
         }
 
-        private string entityfield2dbtype(Hashtable entity)
+        private static string entityfield2dbtype(Hashtable entity)
         {
             string result;
 
@@ -1792,7 +1790,7 @@ namespace osafw
 
         // return default fields for the entity
         // id[, icode], iname, idesc, status, add_time, add_users_id, upd_time, upd_users_id
-        private ArrayList defaultFields()
+        private static ArrayList defaultFields()
         {
             // New Hashtable From {
             // {"name", "icode"},
@@ -1851,7 +1849,7 @@ namespace osafw
             };
         }
 
-        private ArrayList defaultFieldsAfter()
+        private static ArrayList defaultFieldsAfter()
         {
             return new ArrayList()
             {
@@ -1923,20 +1921,20 @@ namespace osafw
             };
         }
 
-        private ArrayList addressFields(string field_name)
+        private static ArrayList addressFields(string field_name)
         {
             var m = Regex.Match(field_name, "(.*?)(Address)$", RegexOptions.IgnoreCase);
             string prefix = m.Groups[1].Value;
             var city_name = prefix + "city";
             var state_name = prefix + "state";
             var zip_name = prefix + "zip";
-            var country_name = prefix + "country";
+            //var country_name = prefix + "country";
             if (m.Groups[2].Value == "Address")
             {
                 city_name = prefix + "City";
                 state_name = prefix + "State";
                 zip_name = prefix + "Zip";
-                country_name = prefix + "Country";
+                //country_name = prefix + "Country";
             }
 
             return new ArrayList()
@@ -2026,7 +2024,7 @@ namespace osafw
                 db.insert("menu_items", fields);
         }
 
-        private bool isFwTableName(string table_name)
+        private static bool isFwTableName(string table_name)
         {
             var tables = Utils.qh(FW_TABLES);
             return tables.ContainsKey(table_name.ToLower());
@@ -2035,7 +2033,7 @@ namespace osafw
 
     public class ConfigJsonConverter: System.Text.Json.Serialization.JsonConverter<Hashtable>
     {
-        string ordered_keys = "model is_dynamic_index list_view list_sortdef search_fields related_field_name view_list_defaults view_list_map view_list_custom is_dynamic_show show_fields is_dynamic_showform showform_fields form_new_defaults required_fields save_fields save_fields_checkboxes save_fields_nullable field type lookup_model label class class_control class_label class_contents";
+        readonly string ordered_keys = "model is_dynamic_index list_view list_sortdef search_fields related_field_name view_list_defaults view_list_map view_list_custom is_dynamic_show show_fields is_dynamic_showform showform_fields form_new_defaults required_fields save_fields save_fields_checkboxes save_fields_nullable field type lookup_model label class class_control class_label class_contents";
         public override Hashtable Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             throw new NotImplementedException();

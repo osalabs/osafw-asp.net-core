@@ -750,6 +750,7 @@ namespace osafw
         public void Dispose()
         {
             fw.Dispose();
+            GC.SuppressFinalize(this);
         }
     }
 

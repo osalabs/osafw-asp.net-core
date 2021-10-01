@@ -426,17 +426,18 @@ namespace osafw
             return file_data;
         }
 
-        private MatchCollection get_full_tags(ref string page)
+        private static MatchCollection get_full_tags(ref string page)
         {
             return RX_FULL_TAGS.Matches(page);
         }
 
-        private void sort_tags(MatchCollection full_tags)
+        private static void sort_tags(MatchCollection full_tags)
         {
+            //TODO implement
         }
 
         // Note: also strip tag to short tag
-        private void get_tag_attrs(ref string tag, ref Hashtable attrs)
+        private static void get_tag_attrs(ref string tag, ref Hashtable attrs)
         {
             // If Regex.IsMatch(tag, "\s") Then
             if (tag.Contains(" "))
@@ -630,8 +631,7 @@ namespace osafw
                 eqvalue = "";
 
             // detect if eqvalue is integer
-            int zzz = Int32.MinValue;
-            if (Int32.TryParse(eqvalue.ToString(), out zzz))
+            if (Int32.TryParse(eqvalue.ToString(), out int zzz))
                 eqvalue = zzz;
 
             object ravalue;
@@ -722,7 +722,7 @@ namespace osafw
             return result;
         }
 
-        private string get_inline_tpl(ref string hpage, ref string tag, ref string tag_full)
+        private static string get_inline_tpl(ref string hpage, ref string tag, ref string tag_full)
         {
             // fw.logger("ParsePage - get_inline_tpl: ", tag, " | ", tag_full)
             string re = Regex.Escape("<~" + tag_full + ">") + "(.*?)" + Regex.Escape("</~" + tag + ">");
@@ -760,12 +760,12 @@ namespace osafw
             return value.ToString();
         }
 
-        private Hashtable proc_repeat_modifiers(IList uftag, int i)
+        private static Hashtable proc_repeat_modifiers(IList uftag, int i)
         {
             Hashtable uftagi1;
-            if (uftag[i] is DBRow)
+            if (uftag[i] is DBRow row)
             {
-                uftagi1 = (DBRow)uftag[i];
+                uftagi1 = row;
             }
             else
             {
@@ -998,8 +998,6 @@ namespace osafw
                     // escape $0-$9 and ${...}, i.e. all $ chars replaced with $$
                     value = Regex.Replace(value, @"\$", "$$$$");
                     hpage_ref = Regex.Replace(hpage_ref, restr, value, RegexOptions.IgnoreCase | RegexOptions.Singleline);
-
-                    attr_count -= 1;
                     return; // special case - if inline - exit now, no more replace necessary
                 }
             }
@@ -1183,7 +1181,7 @@ namespace osafw
                 // result.Append("<div class='custom-control custom-radio ").Append(delim).Append("'><input class='custom-control-input' type='radio' name=\"").Append(name).Append("\" id=\"").Append(name_id).Append("\" value=\"").Append(value).Append("\"").Append(str_checked).Append("><label class='custom-control-label' for='").Append(name_id).Append("'>").Append(desc).Append("</label></div>");
 
                 // Bootstrap 5 style
-                result.Append("<div class='form-check ").Append(delim).Append("'><input class='form-check-input' type='radio' name=\"").Append(name).Append("\" id=\"").Append(name_id).Append("\" value=\"").Append(value).Append("\"").Append(str_checked).Append("><label class='form-check-label' for='").Append(name_id).Append("'>").Append(desc).Append("</label></div>");
+                result.Append("<div class='form-check ").Append(delim).Append("'><input class='form-check-input' type='radio' name=\"").Append(name).Append("\" id=\"").Append(name_id).Append("\" value=\"").Append(value).Append('"').Append(str_checked).Append("><label class='form-check-label' for='").Append(name_id).Append("'>").Append(desc).Append("</label></div>");
 
                 i += 1;
             }

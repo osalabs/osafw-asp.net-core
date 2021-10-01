@@ -107,12 +107,12 @@ namespace osafw
                 else
                     val = (string)item["iname"];
 
-                result.Append("<option value=\"").Append(Utils.htmlescape(val)).Append("\"");
+                result.Append("<option value=\"").Append(Utils.htmlescape(val)).Append('"');
                 if (item.ContainsKey("class"))
                     result.Append(" class=\"" + item["class"] + "\"");
                 if (Array.IndexOf(asel, Strings.Trim(val)) != -1)
                     result.Append(" selected ");
-                result.Append(">").Append(text).Append("</option>" + Constants.vbCrLf);
+                result.Append('>').Append(text).Append("</option>" + Constants.vbCrLf);
             }
 
             return result.ToString();
@@ -398,8 +398,7 @@ namespace osafw
 
         public static bool comboForDate(string value, Hashtable item, string field_prefix)
         {
-            DateTime dt;
-            if (DateTime.TryParse(value, out dt))
+            if (DateTime.TryParse(value, out DateTime dt))
             {
                 item[field_prefix + "_day"] = dt.Day;
                 item[field_prefix + "_mon"] = dt.Month;
@@ -454,8 +453,7 @@ namespace osafw
         // OUT: false if item(field_name) wrong datetime
         public static bool timeToForm(Hashtable item, string field_name)
         {
-            DateTime dt;
-            if (DateTime.TryParse((string)item[field_name], out dt))
+            if (DateTime.TryParse((string)item[field_name], out DateTime dt))
             {
                 item[field_name + "_hh"] = dt.Hour;
                 item[field_name + "_mm"] = dt.Minute;
