@@ -1,5 +1,5 @@
 ﻿//if you use Sentry set to True here, install SentrySDK, in web.config fill endpoint URL to "log_sentry" 
-#define isSentry
+//#define isSentry
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
@@ -71,6 +71,7 @@ namespace osafw
         public Hashtable FORM;
         public Hashtable G; // for storing global vars - used in template engine, also stores "_flash"
         public Hashtable FormErrors; // for storing form id's with error messages, put to hf("ERR") for parser
+        public Exception last_file_exception; // set by getFileContent, getFileLines in case of exception
 
         public DB db;
 
@@ -124,11 +125,11 @@ namespace osafw
             FwConfig.init(context, configuration);
 
             //TODO MIGRATE
-            //# If isSentry Then
-            //            'Sentry Raven processing
-            //        sentryClient = Sentry.SentrySdk.Init(config("log_sentry"))
-            //        Sentry.SentrySdk.ConfigureScope(Sub(scope) scope.User = New Sentry.Protocol.User With {.Email = SESSION("login")})
-            //#End If
+#if isSentry
+            //Sentry Raven processing
+            sentryClient = Sentry.SentrySdk.Init(config("log_sentry"))
+            Sentry.SentrySdk.ConfigureScope(Sub(scope) scope.User = New Sentry.Protocol.User With {.Email = SESSION("login")})
+#endif
 
             db = new DB(this);
             DB.SQL_QUERY_CTR = 0; // reset query counter
@@ -868,7 +869,7 @@ namespace osafw
             return str.ToString();
         }
 
-        // return file content OR "" if no file exists or some other error happened (see errorInfo)
+        // return file content OR "" if no file exists or some other error happened (ignore errors)
         /// <summary>
         /// return file content OR ""
         /// </summary>
@@ -876,6 +877,18 @@ namespace osafw
         /// <returns></returns>
         public static string getFileContent(string filename)
         {
+            return getFileContent(filename, out _);
+        }
+
+        /// <summary>
+        /// return file content OR "" if no file exists or some other error happened (see error)
+        /// </summary>
+        /// <param name="filename"></param>
+        /// <param name="error"></param>
+        /// <returns></returns>
+        public static string getFileContent(string filename, out Exception error)
+        {
+            error = null;
             string result = "";
             filename = Regex.Replace(filename, "/", @"\");
             if (!File.Exists(filename))
@@ -885,22 +898,32 @@ namespace osafw
             {
                 result = File.ReadAllText(filename);
             }
-            catch (Exception Ex)
+            catch (Exception ex)
             {
-                // TODO logger("ERROR", "Error getting file content [" & file_name & "]")
-                //TODO MIGRATE set fw.last_file_error ?
-                //errInfo = Ex.Message;
+                //logger("ERROR", "Error getting file content [" & file_name & "]")
+                error = ex;
             }
             return result;
         }
 
         /// <summary>
-        /// return array of file lines OR empty array if no file exists or some other error happened (see errorInfo)
+        /// return array of file lines OR empty array if no file exists or some other error happened (ignore errors)
         /// </summary>
         /// <param name="filename"></param>
         /// <returns></returns>
         public static string[] getFileLines(string filename)
         {
+            return getFileLines(filename, out _);
+        }
+
+        /// <summary>
+        /// return array of file lines OR empty array if no file exists or some other error happened (see error)
+        /// </summary>
+        /// <param name="filename"></param>
+        /// <returns></returns>
+        public static string[] getFileLines(string filename, out Exception error)
+        {
+            error = null;
             string[] result = Array.Empty<string>();
             try
             {
@@ -908,9 +931,8 @@ namespace osafw
             }
             catch (Exception ex)
             {
-                // TODO logger("ERROR", "Error getting file content [" & file_name & "]")
-                //TODO MIGRATE set fw.last_file_error ?
-                //errInfo = ex.Message;
+                //logger("ERROR", "Error getting file content [" & file_name & "]")
+                error = ex;
             }
             return result;
         }
@@ -1374,8 +1396,10 @@ namespace osafw
                 if (disposing)
                 {
                     // dispose managed state (managed objects).
+#if isSentry
                     if (sentryClient != null)
                         sentryClient.Dispose();
+#endif
                 }
 
                 // free unmanaged resources (unmanaged objects) and override Finalize() below.

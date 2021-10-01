@@ -43,7 +43,7 @@ namespace osafw.Tests
             try
             {
                 _ = p.parse_json(null);
-            } catch(NullReferenceException e)
+            } catch(NullReferenceException)
             {
                 isException = true;
             }
