@@ -5,12 +5,10 @@
 
 using System;
 using System.Collections;
-using System.Collections.Specialized;
 using System.IO;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
-using Microsoft.VisualBasic; //TODO MIGRATE get rid of
 
 namespace osafw
 {

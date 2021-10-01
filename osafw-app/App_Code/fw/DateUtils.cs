@@ -5,7 +5,6 @@
 
 using System;
 using System.Text.RegularExpressions;
-using Microsoft.VisualBasic;
 
 namespace osafw
 {

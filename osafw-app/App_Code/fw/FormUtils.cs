@@ -5,22 +5,13 @@
 
 using System;
 using System.Collections;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Security;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using Microsoft.VisualBasic;
 using static osafw.Utils;
 
 namespace osafw
-{    
+{
 
     public class FormUtils
     {
@@ -338,8 +329,12 @@ namespace osafw
         {
             if (items==null || items.Count == 0)
                 return "";
-            // return string.Join(",", items.Keys); //TODO MIGRATE check
-            return string.Join(",", new ArrayList(items.Keys).ToArray());
+
+            var keys = items.Keys;
+            var zzz = new string[keys.Count];
+            keys.CopyTo(zzz,0);
+            return string.Join(",", zzz);
+            //return string.Join(",", new ArrayList(items.Keys).ToArray());
         }
 
         // input: comma separated string
