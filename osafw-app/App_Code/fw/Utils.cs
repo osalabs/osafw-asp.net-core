@@ -274,7 +274,9 @@ namespace osafw
             Random _random = new();
             for (int i = 1; i < size + 1; i++)
             {
+#pragma warning disable SCS0005 // Weak random generator
                 result.Append(chars[_random.Next(0, chars.Length - 1)]);
+#pragma warning restore SCS0005 // Weak random generator
             }
 
             return result.ToString();
@@ -968,7 +970,9 @@ namespace osafw
             UTF8Encoding ustr = new();
             byte[] bstr = ustr.GetBytes(str);
 
-            MD5 md5hasher = MD5CryptoServiceProvider.Create();
+#pragma warning disable SCS0006 // Weak hashing function
+            MD5 md5hasher = MD5.Create();
+#pragma warning restore SCS0006 // Weak hashing function
             byte[] bhash = md5hasher.ComputeHash(bstr);
 
             // convert hash value to hex string
