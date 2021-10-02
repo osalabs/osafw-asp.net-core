@@ -1,0 +1,63 @@
+/*blue theme*/
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500&display=swap');
+
+input, button, select, optgroup, textarea, label, .alert, .badge, .blockquote-footer, .btn, [data-list] .page, .tox .tox-menu__footer .tox-button:last-child, .tox .tox-dialog__footer .tox-button:last-child, .tox .tox-menu__footer .tox-button--secondary, .tox .tox-dialog__footer .tox-button--secondary, .navbar, .sidebar-nav, .pagination, .valid-feedback, .invalid-feedback {
+    font-family: "Poppins",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
+}
+
+h1, h3, .h3{
+  font-size: 1.8rem;
+  font-weight: 500;
+  color: #344050;
+  font-family: "Poppins",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
+}
+h3, .h3 {
+  font-size: 1.5rem;
+}
+
+body.fwlayout-fluid {
+  background-color: #EDF2F9;
+  color: #5e6e82;
+}
+.fwlayout-fluid .fw-card {
+  background-color: #f9fafd;
+  border-radius: .375rem;
+  padding: 1rem 1rem 0.25rem 1rem;
+  box-shadow: 0 7px 14px 0 rgba(65, 69, 88, 0.1), 0 3px 6px 0 rgba(0, 0, 0, 0.07);
+}
+.fwlayout-fluid .table > :not(caption) > * > * {
+  border-bottom-width: 0;
+}
+.fwlayout-fluid .sidebar-nav .nav-link {
+  font-weight: 500;
+  font-size: .875rem;
+  color: #5e6e82;
+}
+.fwlayout-fluid .sidebar-nav .glyphicon, .fwlayout-fluid .sidebar-nav .bi {
+  color: #5e6e82;
+}
+
+.bg-theme-color {
+  background-color: #EDF2F9;
+}
+
+.card {
+  border-radius: .375rem;
+  border: 0px solid;
+  box-shadow: 0 7px 14px 0 rgba(65, 69, 88, 0.1), 0 3px 6px 0 rgba(0, 0, 0, 0.07);
+}
+
+label {
+  font-weight: 500 !important;
+  letter-spacing: .02em;
+}
+
+.col-form-label {
+  font-size: 0.875rem;
+}
+
+.btn-default {
+  color: #4d5969;
+  background-color: #fff;
+  box-shadow: rgba(43, 45, 80, 0.1) 0px 0px 0px 1px, rgba(43, 45, 80, 0.08) 0px 2px 5px 0px, rgba(0, 0, 0, 0.07) 0px 1px 1.5px 0px, rgba(0, 0, 0, 0.08) 0px 1px 2px 0px;
+}
