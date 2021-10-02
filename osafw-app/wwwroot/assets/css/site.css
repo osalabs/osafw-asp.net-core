@@ -157,6 +157,10 @@ form[data-list-filter] {
   margin-bottom: 0.5rem;
 }
 
+#FOneDelete {
+  display: none;
+}
+
 .form-row {
   padding-bottom: 1rem;
 }
@@ -342,6 +346,18 @@ div.jGrowl div.jGrowl-notification
   }
 
 /* LAYOUT FLUID*/
+body.fwlayout-fluid {
+  background-color: #fafafa;
+}
+.fwlayout-fluid .fw-card {
+  background-color: #fff;
+  border-radius: 0.25rem;
+  padding: 1rem 1rem 0.25rem 1rem;
+  box-shadow: 0 0 35px 0 rgb(154 161 171 / 15%);
+}
+.fwlayout-fluid .table > :not(caption) > * > * {
+  border-bottom-width: 0;
+}
 .fwlayout-fluid .sidebar {
   width: 260px;
   z-index: 100;
@@ -352,7 +368,6 @@ div.jGrowl div.jGrowl-notification
   bottom: 0;
   top: 0;
   padding: 0;
-  box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
   color: #000;
 }
   .fwlayout-fluid .sidebar-nav{
@@ -481,5 +496,5 @@ div.jGrowl div.jGrowl-notification
 
 /*** add site specific css below ***/
 .bg-theme-color {
-  background-color: #e9ecef;
+  background-color: #cfd1d2;
 }
