@@ -1,0 +1,8 @@
+<div class="form-check <~./cc_inline if="is_inline">">
+  <input type="radio" id="<~field>$0" name="item[<~field>]" class="form-check-input" value="0" <~/common/checked unless="value" >>
+  <label class="form-check-label" for="<~field>$0">`No`</label>
+</div>
+<div class="form-check <~./cc_inline if="is_inline">">
+  <input type="radio" id="<~field>$1" name="item[<~field>]" class="form-check-input" value="1" <~/common/checked if="value">>
+  <label class="form-check-label" for="<~field>$1">`Yes`</label>
+</div>

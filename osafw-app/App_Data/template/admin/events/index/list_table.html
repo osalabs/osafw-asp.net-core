@@ -1,0 +1,29 @@
+<table class="table table-striped table-sm table-hover list">
+    <thead>
+        <tr data-sortby="<~f[sortby]>" data-sortdir="<~f[sortdir]>">
+            <th data-sort="id">`Date/Time`</th>
+            <th>`User`</th>
+            <th>`Event`</th>
+            <th>`Related Object ID`</th>
+            <th>`Notes`</th>
+            <th>`Fields Changed`</th>
+        </tr>
+    </thead>
+    <tbody>
+<~list_rows repeat inline>
+        <tr>
+            <td><~add_time></td>
+            <td><~user[fname]> <~user[lname]></td>
+            <td><~event[iname]></td>
+            <td><~item_id if="item_id"><~item_id2_block if="item_id2" inline>, <~item_id2></~item_id2_block></td>
+            <td><~iname>
+                <~ra if="records_affected" inline><div>Records affected - <~records_affected></div></~ra>
+            </td>
+            <td><~fields>
+            </td>
+        </tr>
+</~list_rows>
+    </tbody>
+</table>
+
+<~/common/pagination>

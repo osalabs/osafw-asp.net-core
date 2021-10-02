@@ -1,0 +1,2 @@
+Main Dashboard === 主仪表板
+My Profile === 我的个人资料

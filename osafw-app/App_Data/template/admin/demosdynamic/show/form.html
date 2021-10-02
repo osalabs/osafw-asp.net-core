@@ -1,0 +1,6 @@
+    <~fields repeat inline>
+      <~/common/form/show/one_field unless="is_custom">
+      <~custom_fields inline if="is_custom">
+        <~custom_field ifeq="field" value="some_custom_field">
+      </~custom_fields>
+    </~fields>

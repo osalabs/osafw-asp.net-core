@@ -1,0 +1,27 @@
+<div id="fw-form-msg">
+<~green_block if="GLOBAL[ok_msg]" inline><div class="alert alert-success"><~GLOBAL[ok_msg]></div></~green_block>
+<~err_block if="GLOBAL[err_msg]" inline><div class="alert alert-danger"><~GLOBAL[err_msg]></div></~err_block>
+<~err_blockREQ if="ERR[REQUIRED]" inline><div class="alert alert-danger">`Please fill in all required fields`</div></~err_blockREQ>
+<~err_blockINVALID if="ERR[INVALID]" inline><div class="alert alert-danger">`Please correct the errors`</div></~err_blockINVALID>
+
+<~green if="GLOBAL[_flash][success]" inline>
+    <div class="alert alert-success"><~GLOBAL[_flash][success]></div>
+</~green>
+<~error if="GLOBAL[_flash][error]" inline>
+    <div class="alert alert-danger"><~GLOBAL[_flash][error]></div>
+</~error>
+
+<~added if="GLOBAL[_flash][record_added]" inline>
+    <div class="alert alert-success">`New Record has been added`</div>
+</~added>
+<~updated if="GLOBAL[_flash][record_updated]" inline>
+    <div class="alert alert-success">`Record has been modified`</div>
+</~updated>
+
+<~onedelete if="GLOBAL[_flash][onedelete]" inline>
+    <div class="alert alert-success">`Record has been deleted`</div>
+</~onedelete>
+<~multidelete if="GLOBAL[_flash][multidelete]" inline>
+    <div class="alert alert-success"><~GLOBAL[_flash][multidelete]> `records has been deleted`</div>
+</~multidelete>
+</div>

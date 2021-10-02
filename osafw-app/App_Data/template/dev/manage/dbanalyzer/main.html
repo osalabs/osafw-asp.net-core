@@ -1,0 +1,19 @@
+<~/common/form/msg>
+
+<h4><a href="<~/dev/manage/url>" class="btn btn-light btn-sm px-3"><~/common/icons/arrow-left-circle></a> <~title></h4>
+
+<h5 class="mt-4">Select database to analyze tables and create db.json</h5>
+
+<form method="post" action="<~../url>/(DBAnalyzerSave)" class="row row-cols-auto g-3">
+    <input type="hidden" name="XSS" value="<~session[XSS]>">
+    <div class="col">DB from config:</div>
+    <div class="col">
+      <select name="item[db]" class="form-select ms-2">
+        <option>- select-</option>
+        <~dbsources select="i[db]">
+      </select>
+    </div>
+    <div class="col">
+      <button class="col btn btn-primary ms-2">Analyse and Create db.json</button>
+    </div>
+</form>

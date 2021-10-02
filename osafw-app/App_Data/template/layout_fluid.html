@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <~/layout/sys_head>
+  </head>
+  <body class="fwlayout-fluid <~body_class>">
+    <~/layout/header>
+
+    <div class="sidebar bg-theme-color" id="sidebar">
+      <div class="sidebar-nav">
+        <~/layout/sidebar unless="hide_std_sidebar">
+        <~sidebar>
+      </div>
+      <footer class="site-footer">
+        <~/layout/footer>
+      </footer>
+    </div>
+    <main>
+      <div class="container-fluid">
+        <~main>
+      </div>
+    </main>
+
+    <~/layout/sys_footer>
+  </body>
+</html>

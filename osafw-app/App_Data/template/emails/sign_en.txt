@@ -1,0 +1,2 @@
+With best regards, Administration
+<~GLOBAL[ROOT_DOMAIN]>

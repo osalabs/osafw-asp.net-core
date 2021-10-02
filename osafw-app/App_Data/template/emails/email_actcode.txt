@@ -1,0 +1,12 @@
+Member Activation Code
+Hello <~nick>,
+
+you just registered to be a member at <~GLOBAL[ROOT_DOMAIN]><~ROOT_URL>
+
+Please, confirm your registration by clicking the link below:
+
+<~GLOBAL[ROOT_DOMAIN]><~ROOT_URL>/php/register.php?conf=1&code=<~confcode>
+
+
+Have a nice day,
+Admin

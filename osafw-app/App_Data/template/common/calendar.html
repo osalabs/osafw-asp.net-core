@@ -1,0 +1,9 @@
+<link href="<~GLOBAL[ASSETS_URL]>/css/datepicker.css" rel="stylesheet">
+<script src="<~GLOBAL[ASSETS_URL]>/js/bootstrap-datepicker.js"></script>
+<script>
+    $(document).ready(function() {
+        $('.date').datepicker({format: 'mm/dd/yyyy'}).on('changeDate', function (e) {
+            $(this).find('input').trigger('blur');
+        });
+    });
+</script>

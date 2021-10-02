@@ -1,0 +1,30 @@
+- customers
+  - Address
+  - Phone
+  - Fax
+  - ContactName
+  - Email
+  - BillAddress
+  - FollowUpDate NULL
+- customers_notes
+  - customers.id required
+- vendors
+  - Address
+  - Phone
+  - Fax
+  - ContactName
+  - Email
+- products
+  - vendors.id required #dot-name means foreign key, required means required, otherwise - NOT NULL default ''
+  - price float
+- orders_stages lookup #lookup means - don't create controller, add to Lookup Manager
+- orders #"quote" is just one of order's stage
+  - customers.id
+  - orders_stages.id
+  - OrderDate
+- order_items
+  - orders.id
+  - products.id
+  - uom varchar(3)
+  - quantity int
+  - price float

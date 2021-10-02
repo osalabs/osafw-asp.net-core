@@ -1,0 +1,21 @@
+<nav class="d-print-none">
+  <a href="<~../url>">`Lookup Manager`</a> <span class="text-muted">/</span>
+  <a href="<~../url>?d=<~d>"><~../index/title></a> <span class="text-muted">/</span>
+</nav>
+<h1><~title></h1>
+
+<div class="btn-std">
+<~multi_lookup unless="defs[is_one_form]" inline>
+<div class="btn-group">
+    <a class="btn btn-default" href="<~../url>/new?d=<~d>"><~/common/icons/plusb> `Add New`</a>
+</div>
+</~multi_lookup>
+
+<~single_lookup if="defs[is_one_form]" inline>
+<div class="btn-group">
+    <a class="btn btn-default" href="<~../url>"><~/common/char/larr> `Back to Lookup Manager`</a>
+</div>
+</~single_lookup>
+</div>
+
+<~form>

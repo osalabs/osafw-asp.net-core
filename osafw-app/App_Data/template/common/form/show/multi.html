@@ -1,0 +1,9 @@
+<div class="field-multi-value <~hauto if="lookup_checked_only" inline>h-auto</~hauto>">
+  <~multi_datarow repeat inline>
+    <div class="form-check">
+      <input type="checkbox" class="form-check-input" <~/common/checked if="is_checked"> <~/common/disabled>>
+      <label class="form-check-label"><~iname></label>
+    </div>
+  </~multi_datarow>
+</div>
+<~./help_block if="help_text">

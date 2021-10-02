@@ -1,0 +1,10 @@
+<~/site_name> - Sign Up confirmation
+Hello <~user[fname]> <~user[lname]>,
+
+you successfully signed up at <~GLOBAL[ROOT_DOMAIN]><~GLOBAL[ROOT_URL]>.
+
+Your login credentials to access the service:
+login: <~user[email]>
+password: <~user[pwd]>
+
+<~/emails/sign_en.txt>

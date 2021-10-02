@@ -1,0 +1,16 @@
+.card {
+ margin-bottom: 1.5rem;
+}
+
+.chart-container {
+ position: relative;
+ width:100%;
+ height:250px;
+}
+
+.on-card-click {
+ cursor: pointer;
+}
+.on-card-click:hover {
+    background-color: #ffc;
+}
