@@ -41,7 +41,17 @@ window.Chart.defaults = $.extend(true, window.Chart.defaults, {
         }
     },
     doughnut: {
-        cutoutPercentage: 80
+        cutoutPercentage: 80,
+        backgroundColor: [
+            '#007bff',
+            '#3295FF',
+            '#66AFFF',
+            '#99CAFF',
+            '#B2D7FF',
+            '#CCE4FF',
+            '#E5F1FF',
+            '#F2F8FF'
+        ]
     },
     bar: {
         scales: {
@@ -118,6 +128,9 @@ window.Chart.defaults = $.extend(true, window.Chart.defaults, {
         }        
     }
 });
+
+<~theme1.js ifeq="SESSION[theme]" value="1">
+<~theme2.js ifeq="SESSION[theme]" value="2">
 
 //console.log(window.Chart.defaults);
 

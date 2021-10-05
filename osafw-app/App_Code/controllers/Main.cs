@@ -86,30 +86,26 @@ namespace osafw
             one["headers"] = headers;
             if (rows.Count > 0)
             {
-                //var fields = ((Hashtable)rows[0]).Keys.Cast<string>.ToArray();
-                var fields = ((Hashtable)rows[0]).Keys;
+                var keys = ((Hashtable)rows[0]).Keys;
+                var fields = new string[keys.Count];
+                keys.CopyTo(fields,0);
                 foreach (var key in fields)
                     headers.Add(new Hashtable() { { "field_name", key } });
                 foreach (Hashtable row in rows)
                 {
                     ArrayList cols = new();
                     foreach (var fieldname in fields)
-                        cols.Add(new Hashtable()
                     {
+                        logger(fieldname);
+                        cols.Add(new Hashtable()
                         {
-                            "row",
-                            row
-                        },
-                        {
-                            "field_name",
-                            fieldname
-                        },
-                        {
-                            "data",
-                            row[fieldname]
-                        }
-                    });
+                            {"row",row},
+                            {"field_name",fieldname},
+                            {"data",row[fieldname]}
+                        });
+                    }
                     row["cols"] = cols;
+                    logger(cols.Count);
                 }
             }
             panes["tabledata"] = one;

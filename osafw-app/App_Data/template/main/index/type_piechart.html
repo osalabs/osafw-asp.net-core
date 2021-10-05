@@ -11,16 +11,7 @@
                 labels: [<~rows repeat inline>"<~ilabel>",</~rows>], //zzz
                 datasets: [{
                     data: [<~rows repeat inline ivalues><~ivalue>,</~rows>], //zzz
-                    backgroundColor: [
-                        '#007bff',
-                        '#3295FF',
-                        '#66AFFF',
-                        '#99CAFF',
-                        '#B2D7FF',
-                        '#CCE4FF',
-                        '#E5F1FF',
-                        '#F2F8FF'
-                    ]
+                    backgroundColor: window.Chart.defaults.doughnut.backgroundColor
                 }]
             },
             options: {
