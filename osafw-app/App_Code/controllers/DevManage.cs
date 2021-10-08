@@ -403,7 +403,7 @@ namespace osafw
             {
                 if (is_create_all)
                 {
-                    // TODO create db.json, db, models/controllers
+                    // create db.json, db, models/controllers
                     createDBJsonFromText((string)item["entities"]);
                     createDBFromDBJson();
                     createDBSQLFromDBJson();
@@ -565,19 +565,12 @@ namespace osafw
         private static void saveJson(object data, string filename)
         {
             string json_str;
-            if (data is Hashtable)
-            {
-                //if this is hashtable - it's for config.json, output keys in specific order
-                JsonSerializerOptions options = new();
-                options.WriteIndented = true;
-                options.Converters.Add(new ConfigJsonConverter());
-                json_str = JsonSerializer.Serialize(data, data.GetType(), options);
-            }
-            else
-            {
-                json_str = Utils.jsonEncode(data, true);
-            }
-            
+            //use custom converter to output keys in specific order
+            JsonSerializerOptions options = new();
+            options.WriteIndented = true;
+            options.Converters.Add(new ConfigJsonConverter());
+            json_str = JsonSerializer.Serialize(data, data.GetType(), options);
+
             FW.setFileContent(filename, ref json_str);
         }
 
@@ -776,6 +769,13 @@ namespace osafw
             Hashtable table_entity = null;
             foreach (string line1 in lines)
             {
+                string comments = "";
+                var m1 = Regex.Match(line1, "#(.+)$");
+                if (m1.Success)
+                {
+                    comments = m1.Groups[1].Value;
+                }
+
                 string line = Regex.Replace(line1, "#.+$", ""); // remove any human comments
                 if (line.Trim() == "")
                     continue;
@@ -812,6 +812,7 @@ namespace osafw
                     // add default system fields
                     table_entity["fields"] = new ArrayList(defaultFields());
                     table_entity["foreign_keys"] = new ArrayList();
+                    if (comments.Length > 0) table_entity["comments"] = comments;
                 }
                 else
                 {
@@ -824,6 +825,30 @@ namespace osafw
                     line = Regex.Replace(line, @"^  -\s*", ""); // remove prefix 
                     var parts = Regex.Split(line, @"\s+");
                     var field_name = parts[0]; // name is first 
+
+                    //lookup on parts
+                    var hparts = new Hashtable();
+                    for (int i = 0; i < parts.Length - 1; i++)
+                    {
+                        hparts[parts[i]] = i;
+                    }
+
+                    if (field_name == "remove")
+                    {
+                        //remove previously added field from the field list (usually used for automatically added fields)
+                        var field_name_to_remove = parts[1];
+                        var fields = (ArrayList)table_entity["fields"];
+                        for (int i = 0; i < fields.Count; i++)
+                        {
+                            var item = (Hashtable)fields[i];
+                            if ((string)item["name"] == field_name_to_remove)
+                            {
+                                fields.RemoveAt(i);
+                                break;
+                            }
+                        }
+                        continue;
+                    }
 
                     // special - *Address -> set of address fields
                     if (Regex.IsMatch(field_name, "Address$", RegexOptions.IgnoreCase))
@@ -848,13 +873,31 @@ namespace osafw
                         fk["column"] = field_name;
 
                         field["fw_type"] = "int";
-                        field["fw_type"] = "int";
+                    }
+                    else
+                    {
+                        //check if we have FK like
+                        //- birth_countries_id FK countries.id ...
+                        if (hparts.Contains("FK"))
+                        {
+                            // this is foreign key field
+                            Hashtable fk = new();
+                            ((ArrayList)table_entity["foreign_keys"]).Add(fk);
+
+                            var fk_table_field = parts[(int)hparts["FK"] + 1]; //table.id next to FK
+                            fk["pk_table"] = Utils.name2fw(Regex.Replace(fk_table_field, @"\.id$", ""));  // Customers.id => customers
+                            fk["pk_column"] = "id";
+                            fk["column"] = field_name;
+
+                            field["fw_type"] = "int";
+                        }
                     }
 
                     field["name"] = field_name;
                     field["iname"] = Utils.name2human(field_name);
                     field["fw_name"] = Utils.name2fw(field_name);
                     field["is_identity"] = 0;
+                    if (comments.Length > 0) field["comments"] = comments;
 
                     field["is_nullable"] = Regex.IsMatch(line, @"\bNULL\b") ? 1 : 0;
                     field["numeric_precision"] = null;
@@ -912,20 +955,31 @@ namespace osafw
                             // additionally detect date field from name
                             field["fw_type"] = "datetime";
                             field["fw_subtype"] = "date";
+                            field["is_nullable"] = 1;
+                        }
+                        else if (Regex.IsMatch(field_name, @"^is_", RegexOptions.IgnoreCase))
+                        {
+                            field["numeric_precision"] = 3;
+                            field["fw_type"] = "int";
+                            field["fw_subtype"] = "tinyint";
+                            field["default"] = 0;
                         }
                         else
                             // just a default varchar(255)
                             field["maxlen"] = 255;
 
-                        // default
-                        field["default"] = null;
+                        // default                       
                         m = Regex.Match(line, @"\bdefault\s+\((.+)\)"); // default (VALUE_HERE)
                         if (m.Success)
                             field["default"] = m.Groups[1].Value;
-                        else
-                            // no default set - then for nvarchar set empty strin gdefault
+
+                        if (!field.Contains("default"))
+                        {
+                            field["default"] = null;
+                            // no default set - then for nvarchar set empty string gdefault
                             if (Utils.f2str(field["fw_type"]) == "varchar")
-                            field["default"] = "";
+                                field["default"] = "";
+                        }
                     }
                 }
             }
@@ -988,7 +1042,9 @@ namespace osafw
                 var sql = entity2SQL(entity);
                 // only create App_Data/database.sql
                 // add drop
-                database_sql += "DROP TABLE " + db.q_ident((string)entity["table"]) + ";" + Constants.vbCrLf;
+                if (entity.ContainsKey("comments"))
+                    database_sql += "-- " + entity["comments"] + Constants.vbCrLf;
+                database_sql += "DROP TABLE " + q_ident((string)entity["table"]) + ";" + Constants.vbCrLf;
                 database_sql += sql + ";" + Constants.vbCrLf + Constants.vbCrLf;
             }
 
@@ -1047,15 +1103,15 @@ namespace osafw
                 foreach (Hashtable fld in (ArrayList)entity["fields"])
                 {
                     // find identity
-                    if (fld_identity == null && (string)fld["is_identity"] == "1")
+                    if (fld_identity == null && Utils.f2str(fld["is_identity"]) == "1")
                         fld_identity = fld;
 
                     // first int field
-                    if (fld_int == null && (string)fld["fw_type"] == "int")
+                    if (fld_int == null && Utils.f2str(fld["fw_type"]) == "int")
                         fld_int = fld;
 
                     // for iname - just use 2nd to 4th field which not end with ID, varchar type and has some maxlen
-                    if (fld_iname == null && i >= 2 && i <= 4 && (string)fld["fw_type"] == "varchar" && Utils.f2int(fld["maxlen"]) > 0 && Utils.Right(Utils.f2str(fld["name"]), 2).ToLower() != "id")
+                    if (fld_iname == null && i >= 2 && i <= 4 && Utils.f2str(fld["fw_type"]) == "varchar" && Utils.f2int(fld["maxlen"]) > 0 && Utils.Right(Utils.f2str(fld["name"]), 2).ToLower() != "id")
                         fld_iname = fld;
 
                     if (Regex.IsMatch((string)fld["name"], @"^[\w_]", RegexOptions.IgnoreCase))
@@ -1132,7 +1188,7 @@ namespace osafw
                 { "column_names", column_names }
             };
             if (ltable.Count > 0)// replace
-                fw.model<LookupManagerTables>().update((int)ltable["id"], item);
+                fw.model<LookupManagerTables>().update(Utils.f2int(ltable["id"]), item);
             else
                 fw.model<LookupManagerTables>().add(item);
         }
@@ -1659,27 +1715,44 @@ namespace osafw
             }
         }
 
+        //quote identifier, but only if necessary
+        private string q_ident(string str)
+        {
+            if (Regex.IsMatch(str, @"[^\w_]"))
+            {
+                return db.q_ident(str);
+            }
+            else
+            {
+                return str;
+            }
+        }
+
         // convert db.json entity to SQL CREATE TABLE
         private string entity2SQL(Hashtable entity)
         {
-            var result = "CREATE TABLE " + db.q_ident((string)entity["table"]) + " (" + Constants.vbCrLf;
+            var result = "CREATE TABLE " + q_ident((string)entity["table"]) + " (" + Constants.vbCrLf;
 
             var i = 1;
             var fields = (ArrayList)entity["fields"];
             foreach (Hashtable field in fields)
             {
                 var fsql = "";
-                if (Utils.f2str(field["name"]) == "status")
+                var field_name = Utils.f2str(field["name"]);
+                if (field_name == "status")
                     fsql += Constants.vbCrLf; // add empty line before system fields starting with "status"
 
-                fsql += "  " + db.q_ident((string)field["name"]).PadRight(21, ' ') + " " + entityfield2dbtype(field);
-                if ((int)field["is_identity"] == 1)
+                fsql += "  " + q_ident(field_name).PadRight(21, ' ') + " " + entityfield2dbtype(field);
+                if (Utils.f2int(field["is_identity"]) == 1)
                     fsql += " IDENTITY(1, 1) PRIMARY KEY CLUSTERED";
-                fsql += (int)field["is_nullable"] == 0 ? " NOT NULL" : "";
+                fsql += Utils.f2int(field["is_nullable"]) == 0 ? " NOT NULL" : "";
                 fsql += entityfield2dbdefault(field);
                 fsql += entityfield2dbfk(field, entity);
+                fsql += (i < fields.Count ? "," : "");
+                if (field.ContainsKey("comments"))
+                    fsql = fsql.PadRight(64, ' ') + "-- " + field["comments"];
 
-                result += fsql + (i < fields.Count ? "," : "") + Constants.vbCrLf;
+                result += fsql + Constants.vbCrLf;
                 i += 1;
             }
 
@@ -1698,7 +1771,7 @@ namespace osafw
                     {
                         if (Utils.f2str(entity["fw_subtype"]) == "boolean" || Utils.f2str(entity["fw_subtype"]) == "bit")
                             result = "BIT";
-                        else if ((int)entity["numeric_precision"] == 3)
+                        else if (Utils.f2int(entity["numeric_precision"]) == 3)
                             result = "TINYINT";
                         else
                             result = "INT";
@@ -1723,7 +1796,8 @@ namespace osafw
                 default:
                     {
                         result = "NVARCHAR";
-                        if ((int)entity["maxlen"] > 0 & (int)entity["maxlen"] < 256)
+                        var maxlen = Utils.f2int(entity["maxlen"]);
+                        if (maxlen > 0 & maxlen < 256)
                             result += "(" + entity["maxlen"] + ")";
                         else
                             result += "(MAX)";
@@ -1737,9 +1811,9 @@ namespace osafw
         private string entityfield2dbdefault(Hashtable entity)
         {
             var result = "";
-            string def = (string)entity["default"];
-            if (def != null)
+            if (entity["default"] != null)
             {
+                string def = Utils.f2str(entity["default"]);
                 result += " DEFAULT ";
                 // remove outer parentheses if any
                 def = Regex.Replace(def, @"^\((.+)\)$", "$1");
@@ -1747,10 +1821,10 @@ namespace osafw
 
                 if (Regex.IsMatch(def, @"^\d+$"))
                     // only digits
-                    result += "(" + def + ")";
+                    result += def;
                 else if (def == "getdate()" || Regex.IsMatch(def, @"^\=?now\(\)$", RegexOptions.IgnoreCase))
                     // access now() => getdate()
-                    result += "(getdate())";
+                    result += "getdate()";
                 else
                 {
                     // any other text - quote
@@ -1778,12 +1852,17 @@ namespace osafw
 
             foreach (Hashtable fk in (ArrayList)entity["foreign_keys"])
             {
-                if (fk["column"] == field["name"])
+                logger("CHECK FK:", fk["column"], "=", field["name"]);
+                if ((string)fk["column"] == (string)field["name"])
                 {
-                    result = " CONSTRAINT FK_" + entity["fw_name"] + "_" + Utils.name2fw((string)fk["pk_table"]) + " FOREIGN KEY REFERENCES " + db.q_ident((string)fk["pk_table"]) + "(" + db.q_ident((string)fk["pk_column"]) + ")";
+                    //build FK name as FK_TABLE_FIELDWITHOUTID
+                    var fk_name = (string)fk["column"];
+                    fk_name = Regex.Replace(fk_name, "_id$", "", RegexOptions.IgnoreCase);
+                    result = " CONSTRAINT FK_" + entity["fw_name"] + "_" + Utils.name2fw(fk_name) + " FOREIGN KEY REFERENCES " + q_ident((string)fk["pk_table"]) + "(" + q_ident((string)fk["pk_column"]) + ")";
                     break;
                 }
             }
+            logger("FK result: ", result);
 
             return result;
         }
@@ -2031,9 +2110,9 @@ namespace osafw
         }
     }
 
-    public class ConfigJsonConverter: System.Text.Json.Serialization.JsonConverter<Hashtable>
+    public class ConfigJsonConverter : System.Text.Json.Serialization.JsonConverter<Hashtable>
     {
-        readonly string ordered_keys = "model is_dynamic_index list_view list_sortdef search_fields related_field_name view_list_defaults view_list_map view_list_custom is_dynamic_show show_fields is_dynamic_showform showform_fields form_new_defaults required_fields save_fields save_fields_checkboxes save_fields_nullable field type lookup_model label class class_control class_label class_contents";
+        readonly string ordered_keys = "model is_dynamic_index list_view list_sortdef search_fields related_field_name view_list_defaults view_list_map view_list_custom is_dynamic_show show_fields is_dynamic_showform showform_fields form_new_defaults required_fields save_fields save_fields_checkboxes save_fields_nullable field type lookup_model label class class_control class_label class_contents table fields foreign_keys is_fw name iname fw_name fw_type fw_subtype maxlen is_nullable is_identity numeric_precision default db_config model_name controller_title controller_url controller_is_lookup";
         public override Hashtable Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             throw new NotImplementedException();
