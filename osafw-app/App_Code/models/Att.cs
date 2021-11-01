@@ -127,7 +127,7 @@ namespace osafw
         }
 
         // add/update att_table_links
-        public void updateAttLinks(string table_name, int id, Hashtable form_att)
+        public void updateAttLinks(string att_table_name, int id, Hashtable form_att)
         {
             if (form_att == null)
                 return;
@@ -138,7 +138,7 @@ namespace osafw
             Hashtable fields = new();
             fields["status"] = "1";
             Hashtable where = new();
-            where["table_name"] = table_name;
+            where["table_name"] = att_table_name;
             where["item_id"] = id;
             db.update(att_table_link, fields, where);
 
@@ -150,7 +150,7 @@ namespace osafw
                     continue;
 
                 where = new();
-                where["table_name"] = table_name;
+                where["table_name"] = att_table_name;
                 where["item_id"] = id;
                 where["att_id"] = att_id;
                 var row = db.row(att_table_link, where);
@@ -169,7 +169,7 @@ namespace osafw
                     // new link
                     fields = new();
                     fields["att_id"] = Utils.f2str(att_id);
-                    fields["table_name"] = table_name;
+                    fields["table_name"] = att_table_name;
                     fields["item_id"] = Utils.f2str(id);
                     fields["add_users_id"] = Utils.f2str(me_id);
                     db.insert(att_table_link, fields);
@@ -178,7 +178,7 @@ namespace osafw
 
             // 3. remove not updated atts (i.e. user removed them)
             where = new();
-            where["table_name"] = table_name;
+            where["table_name"] = att_table_name;
             where["item_id"] = id;
             where["status"] = 1;
             db.del(att_table_link, where);
@@ -414,18 +414,18 @@ namespace osafw
         }
 
         // return all att images linked via att_table_link
-        public ArrayList getAllLinkedImages(string table_name, int id)
+        public ArrayList getAllLinkedImages(string link_table_name, int id)
         {
-            return getAllLinked(table_name, id, 1);
+            return getAllLinked(link_table_name, id, 1);
         }
 
         // return all att files linked via att.table_name and att.item_id
         // is_image = -1 (all - files and images), 0 (files only), 1 (images only)
-        public ArrayList getAllByTableName(string table_name, int item_id, int is_image = -1)
+        public ArrayList getAllByTableName(string att_table_name, int item_id, int is_image = -1)
         {
             Hashtable where = new();
             where["status"] = STATUS_ACTIVE;
-            where["table_name"] = table_name;
+            where["table_name"] = att_table_name;
             where["item_id"] = item_id;
             if (is_image > -1)
                 where["is_image"] = is_image;
@@ -433,9 +433,9 @@ namespace osafw
         }
 
         // like getAllByTableName, but also fills att_categories hash
-        public ArrayList getAllByTableNameWithCategories(string table_name, int item_id, int is_image = -1)
+        public ArrayList getAllByTableNameWithCategories(string att_table_name, int item_id, int is_image = -1)
         {
-            var rows = getAllByTableName(table_name, item_id, is_image);
+            var rows = getAllByTableName(att_table_name, item_id, is_image);
             foreach (Hashtable row in rows)
             {
                 var att_categories_id = Utils.f2int(row["att_categories_id"]);
@@ -446,22 +446,22 @@ namespace osafw
         }
 
         // return one att record with additional check by table_name
-        public Hashtable oneWithTableName(int id, string item_table_name)
+        public Hashtable oneWithTableName(int id, string att_table_name)
         {
             var row = one(id).toHashtable();
-            if ((string)row["table_name"] != item_table_name)
+            if ((string)row["table_name"] != att_table_name)
                 row.Clear();
             return row;
         }
 
         // return one att record by table_name and item_id
-        public Hashtable oneByTableName(string item_table_name, int item_id)
+        public Hashtable oneByTableName(string att_table_name, int item_id)
         {
             return db.row(table_name, new Hashtable()
             {
                 {
                     "table_name",
-                    item_table_name
+                    att_table_name
                 },
                 {
                     "item_id",
@@ -542,13 +542,13 @@ namespace osafw
         /// <summary>
         /// upload all posted files (fw.request.Form.Files) to S3 for the table
         /// </summary>
-        /// <param name="item_table_name"></param>
+        /// <param name="att_table_name"></param>
         /// <param name="item_id"></param>
         /// <param name="att_categories_id"></param>
         /// <param name="fieldnames">qw string of ONLY field names to upload</param>
         /// <returns>number of successuflly uploaded files</returns>
         /// <remarks>also set FLASH error if some files not uploaded</remarks>
-        public int uploadPostedFilesS3(string item_table_name, int item_id, string att_categories_id = null, string fieldnames = "")
+        public int uploadPostedFilesS3(string att_table_name, int item_id, string att_categories_id = null, string fieldnames = "")
         {
             var result = 0;
 
@@ -591,7 +591,7 @@ namespace osafw
                 // first - save to db so we can get att_id
                 Hashtable attitem = new ();
                 attitem["att_categories_id"] = att_categories_id;
-                attitem["table_name"] = item_table_name;
+                attitem["table_name"] = att_table_name;
                 attitem["item_id"] = Utils.f2str(item_id);
                 attitem["is_s3"] = "1";
                 attitem["status"] = "1";
