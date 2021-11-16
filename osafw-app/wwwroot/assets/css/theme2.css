@@ -15,27 +15,48 @@ h3, .h3 {
   font-size: 1.5rem;
 }
 
-body.fwlayout-fluid {
+body.fwlayout-fluid, body.fwlayout-std {
   background-color: #EDF2F9;
   color: #5e6e82;
 }
-.fwlayout-fluid .fw-card {
+.fw-card {
   background-color: #f9fafd;
   border-radius: .375rem;
   padding: 1rem 1rem 0.25rem 1rem;
   box-shadow: 0 7px 14px 0 rgba(65, 69, 88, 0.1), 0 3px 6px 0 rgba(0, 0, 0, 0.07);
 }
-.fwlayout-fluid .table > :not(caption) > * > * {
-  border-bottom-width: 0;
-}
-.fwlayout-fluid .sidebar-nav .nav-link {
-  font-weight: 500;
-  font-size: .875rem;
-  color: #5e6e82;
-}
+  .fwlayout-fluid .table > :not(caption) > * > * {
+    border-bottom-width: 1px;
+  }
+  .fwlayout-fluid .sidebar-nav .nav{
+    background-color: #fff;
+    padding-left: 0;
+    padding-right: 0;
+    margin-left: 0.5rem;
+    margin-right: 0.5rem;
+  }
+  .fwlayout-fluid .sidebar-nav .nav-header {
+    color: #344050;
+    margin-top: 1.5rem;
+  }
+  .fwlayout-fluid .sidebar-nav .nav-link {
+    font-weight: 500;
+    font-size: .875rem;
+    color: #5e6e82;
+  }
+  .fwlayout-fluid .sidebar-nav .nav > .nav-item.active {
+    background-color:#2c7be5;
+  }
+    .fwlayout-fluid .sidebar-nav .nav > .nav-item.active > a{
+      color: #fff;
+    }
+
 .fwlayout-fluid .sidebar-nav .glyphicon, .fwlayout-fluid .sidebar-nav .bi {
   color: #5e6e82;
 }
+  .fwlayout-fluid .sidebar-nav .glyphicon, .fwlayout-fluid .sidebar-nav .nav-item.active .bi {
+    color: #fff;
+  }
 
 .bg-theme-color {
   background-color: #EDF2F9;
@@ -60,4 +81,41 @@ label {
   color: #4d5969;
   background-color: #fff;
   box-shadow: rgba(43, 45, 80, 0.1) 0px 0px 0px 1px, rgba(43, 45, 80, 0.08) 0px 2px 5px 0px, rgba(0, 0, 0, 0.07) 0px 1px 1.5px 0px, rgba(0, 0, 0, 0.08) 0px 1px 2px 0px;
+}
+
+.table {
+  color: #5e6e82;
+}
+.table thead{
+  color: #344050;
+  background-color: #edf2f9;
+}
+.table-striped > tbody > tr:nth-of-type(2n+1) {
+  --bs-table-accent-bg: #fff;
+  color: #5e6e82;
+}
+
+.table-striped tbody tr:nth-of-type(2n) {
+  /*background-color: #f9fafd;*/
+  color: #5e6e82;
+}
+
+table.list > thead > tr > th[data-sort] {
+  color: #344050;
+  text-decoration: none;
+  cursor: pointer;
+}
+table.list > thead > tr > th[data-sort]:not(.active-sort):after {
+  color: #c6ccd5;
+  content: url(/assets/img/chevron-expand.svg);
+}
+
+table.list > thead > tr > th[data-sort].active-sort {
+  background-color: transparent !important;
+  color: #007bff;
+}
+
+#list-btn-multi {
+  border-radius: .375rem;
+  background-color: transparent;
 }

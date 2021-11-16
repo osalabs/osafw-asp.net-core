@@ -382,6 +382,7 @@ body.fwlayout-fluid {
     position: absolute;
     bottom:0;
     font-size: x-small;
+    width: 100%;
   }
   .fwlayout-fluid .sidebar-nav .nav-header {
     text-transform: uppercase;
