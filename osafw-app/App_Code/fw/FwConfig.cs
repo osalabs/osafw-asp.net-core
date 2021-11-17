@@ -57,9 +57,24 @@ namespace osafw
                 hostname = context.GetServerVariable("HTTP_HOST");
             settings["hostname"] = hostname;
 
-            string ApplicationPath = req.PathBase; //TODO MIGRATE test with IIS subfolder if this is correct variable
+            string ApplicationPath = req.PathBase;
             settings["ROOT_URL"] = Regex.Replace(ApplicationPath, @"\/$", ""); // removed last / if any
-            string PhysicalApplicationPath = AppDomain.CurrentDomain.BaseDirectory.Substring(0, AppDomain.CurrentDomain.BaseDirectory.IndexOf(@"\bin"));//TODO MIGRATE what is bin???
+
+            string PhysicalApplicationPath;
+            string basedir = AppDomain.CurrentDomain.BaseDirectory; //application root directory
+            var bin_index = basedir.IndexOf(@"\bin"); 
+            if (bin_index == -1)
+            {
+                // try to find bin directory - if it's NOT found than we working under published-only site setup,
+                // so basedir is our app path
+                PhysicalApplicationPath = basedir;
+            }
+            else
+            {
+                //if bin found - then app path is parent folder of the bin
+                PhysicalApplicationPath = basedir.Substring(0, basedir.IndexOf(@"\bin"));
+            }
+
             settings["site_root"] = Regex.Replace(PhysicalApplicationPath, @"\\$", ""); // removed last \ if any
 
             settings["template"] = settings["site_root"] + @"\App_Data\template";
