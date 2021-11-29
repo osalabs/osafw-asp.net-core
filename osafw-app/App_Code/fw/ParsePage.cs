@@ -1267,8 +1267,8 @@ namespace osafw
         // parse all `multilang` strings and replace to corresponding current language string
         private void parse_lang(ref string page)
         {
-            if (!lang_parse)
-                return; // don't parse langs if told so
+            if (!lang_parse || page == null)
+                return; // don't parse langs if told so or page is null to avoid Regex exception
 
             page = RX_LANG.Replace(page, lang_evaluator);
         }
