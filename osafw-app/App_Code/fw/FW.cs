@@ -1364,7 +1364,9 @@ namespace osafw
         {
             if (!models.ContainsKey(model_name))
             {
-                FwModel m = (FwModel)Activator.CreateInstance(Type.GetType(FW_NAMESPACE_PREFIX + model_name));
+                Type mt = Type.GetType(FW_NAMESPACE_PREFIX + model_name);
+                if (mt == null) throw new ApplicationException("Error initializing model: [" + FW_NAMESPACE_PREFIX + model_name + "] class not found");
+                FwModel m = (FwModel)Activator.CreateInstance(mt);
                 // initialize
                 m.init(this);
                 models[model_name] = m;
