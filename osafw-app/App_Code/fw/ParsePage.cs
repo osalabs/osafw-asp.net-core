@@ -706,9 +706,9 @@ namespace osafw
                 result = true;
             else if (oper == "unless" && (bool)eqvalue == false)
                 result = true;
-            else if (oper == "ifeq" && eqvalue.ToString() == ravalue.ToString())
+            else if (oper == "ifeq" && (is_numeric_comparison && Utils.f2int(eqvalue) == Utils.f2int(ravalue) || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) == 0))
                 result = true;
-            else if (oper == "ifne" && eqvalue != ravalue)
+            else if (oper == "ifne" && (is_numeric_comparison && Utils.f2int(eqvalue) != Utils.f2int(ravalue) || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) != 0))
                 result = true;
             else if (oper == "iflt" && (is_numeric_comparison && Utils.f2int(eqvalue) < Utils.f2int(ravalue) || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) < 0))
                 result = true;
