@@ -407,10 +407,10 @@ window.fw={
       if (status==0){
           //nothing
       }else if (status==1){ //not saved
-          cls='badge-danger';
+          cls='bg-danger';
           txt='not saved';
       }else if (status==2){ //saved
-          cls='badge-success';
+          cls='bg-success';
           txt='saved';
       }
       var html=spinner+'<span class="badge '+cls+'">'+txt+'</span>';
