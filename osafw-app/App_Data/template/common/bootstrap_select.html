@@ -33,8 +33,17 @@
     // $('.my-selectpicker').selectpicker();
 
     // handle form autosave
+    $('.selectpicker').on('changed.bs.select', function (e) {
+      $(this).data('selectpicker-is-changed', true)
+    })
+
     $('.bootstrap-select>.dropdown-toggle').on('blur', function (e) {
-      $(this).parents('form[data-autosave]').trigger('autosave')
+      var $select = $(this).prev('select')
+
+      if (!!$select.data('selectpicker-is-changed')) {
+        $select.data('selectpicker-is-changed', false)
+        $select.parents('form[data-autosave]').trigger('autosave')
+      }
     })
   })
 </script>
