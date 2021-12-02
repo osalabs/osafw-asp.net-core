@@ -15,6 +15,11 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.Drawing.Drawing2D;
 using System.Runtime.Versioning;
+using System.Collections.Generic;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Security.Cryptography.X509Certificates;
+using System.Security.Authentication;
 
 namespace osafw
 {
@@ -1166,89 +1171,100 @@ namespace osafw
             return HttpUtility.UrlEncode(str);
         }
 
-        // sent multipart/form-data POST request to remote URL with files (key=fieldname, value=filepath) and formFields
-        public static string UploadFilesToRemoteUrl(
+        /// <summary>
+        /// load content from url
+        /// </summary>
+        /// <param name="url">url to get data from</param>
+        /// <param name="params">optional, name/value params if set - post will be used, instead of get</param>
+        /// <returns>content received. empty string if error</returns>
+        public static string loadUrl(string url, Hashtable @params = null)
+        {
+            HttpClient client = new();
+
+            string content;
+            if (@params != null)
+            {
+                //POST
+                var nv = new List<KeyValuePair<string, string>>();
+                foreach (string key in @params.Keys)
+                    nv.Add(new KeyValuePair<string, string>(key, (string)@params[key]));
+
+                HttpContent form = new FormUrlEncodedContent(nv);
+                HttpResponseMessage response = client.PostAsync(url, form).Result;
+                content = response.Content.ReadAsStringAsync().Result;
+            }
+            else
+            {
+                //GET
+                using HttpResponseMessage response = client.GetAsync(url).Result;
+                content = response.Content.ReadAsStringAsync().Result;
+            }
+
+            return content;
+        }
+
+        /// <summary>
+        /// sent multipart/form-data POST request to remote URL with files and formFields
+        /// </summary>
+        /// <param name="url"></param>
+        /// <param name="files">key=fieldname, value=filepath</param>
+        /// <param name="formFields">optional, key=fieldname, value=value</param>
+        /// <param name="cert">optional, certificate</param>
+        /// <returns></returns>
+        /// TODO - combine this method with loadUrl() ?
+        public static string sendFileToUrl(
             string url,
             Hashtable files,
             System.Collections.Specialized.NameValueCollection formFields = null,
-            System.Security.Cryptography.X509Certificates.X509Certificate2 cert = null)
+            string cert_path = null)
         {
-            string boundary = "----------------------------" + DateTime.Now.Ticks.ToString("x");
-            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
-            request.ContentType = "multipart/form-data; boundary=" + boundary;
-            request.Method = "POST";
-            request.KeepAlive = true;
-            if (cert != null) request.ClientCertificates.Add(cert);
+            string result = "";
+            HttpClient client;
 
-            var memStream = new MemoryStream();
-            var boundarybytes = Encoding.ASCII.GetBytes("\r\n--" + boundary + "\r\n");
-            var endBoundaryBytes = Encoding.ASCII.GetBytes("\r\n--" + boundary + "--");
-
-            // String formdataTemplate = "\r\n--" & boundary + "\r\nContent-Disposition: form-data; name=\"{0}\";\r\n\r\n{1}";
-            string formdataTemplate = "--" + boundary + "\r\n" + "Content-Disposition: form-data; name=\"{0}\";\r\n{1}\r\n";
-            if (formFields != null)
+            //add certificate if requested
+            if (cert_path != null)
             {
-                foreach (string key in formFields.Keys)
+                var handler = new HttpClientHandler
                 {
-                    string formitem = string.Format(formdataTemplate, key, formFields[key]);
-                    if (memStream.Length > 0)
-                    {
-                        formitem = "\r\n" + formitem; // add crlf before the string only for second and further lines
-                    }
+                    SslProtocols = SslProtocols.Tls12
+                };
+                handler.ClientCertificates.Add(new X509Certificate2(cert_path));
 
-                    byte[] formitembytes = Encoding.UTF8.GetBytes(formitem);
-                    memStream.Write(formitembytes, 0, formitembytes.Length);
-                }
+                client = new(handler);
             }
-
-            string headerTemplate = "Content-Disposition: form-data; name=\"{0}\"; filename=\"{1}\"\r\nContent-Type: {2}\r\n\r\n";
-            foreach (string fileField in files.Keys)
+            else
             {
-                memStream.Write(boundarybytes, 0, boundarybytes.Length);
+                client = new();
+            }
+            
+            using (var form = new MultipartFormDataContent())
+            {
+                //add form fields
+                foreach (string name in formFields.Keys)
+                    form.Add(new StringContent(formFields[name]), name);
 
-                // mime (TODO use System.Web.MimeMapping.GetMimeMapping() for .net 4.5+)
-                string mimeType = "application/octet-stream";
-                if (Path.GetExtension((string)files[fileField]) == ".xml") mimeType = "text/xml";
-
-                string header = string.Format(headerTemplate, fileField, System.IO.Path.GetFileName((string)files[fileField]), mimeType);
-                var headerbytes = Encoding.UTF8.GetBytes(header);
-                memStream.Write(headerbytes, 0, headerbytes.Length);
-
-                using (var fileStream = new FileStream((string)files[fileField], FileMode.Open, FileAccess.Read))
+                //add files
+                foreach (string fileField in files.Keys)
                 {
-                    byte[] buffer = new byte[1023];
-                    int bytesRead = fileStream.Read(buffer, 0, buffer.Length);
-                    while (bytesRead != 0)
+                    var filepath = (string)files[fileField];
+                    using (var fs = new FileStream(filepath, FileMode.Open))
                     {
-                        memStream.Write(buffer, 0, bytesRead);
-                        bytesRead = fileStream.Read(buffer, 0, buffer.Length);
+                        //TODO use some mime mapping class
+                        string mimeType = "application/octet-stream";
+                        if (Path.GetExtension(filepath) == ".xml") mimeType = "text/xml";
+
+                        var part = new StreamContent(fs);
+                        part.Headers.ContentType = MediaTypeHeaderValue.Parse(mimeType);
+                        form.Add(part, "file", "test.txt");
                     }
                 }
-            }
 
-            memStream.Write(endBoundaryBytes, 0, endBoundaryBytes.Length);
-            // Diagnostics.Debug.WriteLine("***")
-            // Diagnostics.Debug.WriteLine(Encoding.ASCII.GetString(memStream.ToArray()))
-            // Diagnostics.Debug.WriteLine("***")
+                HttpResponseMessage response = client.PostAsync(url, form).Result;
+                result = response.Content.ReadAsStringAsync().Result;
+            }                       
 
-            request.ContentLength = memStream.Length;
-            using (var requestStream = request.GetRequestStream())
-            {
-                memStream.Position = 0;
-                byte[] tempBuffer = new byte[memStream.Length - 1];
-                memStream.Read(tempBuffer, 0, tempBuffer.Length);
-                memStream.Close();
-                requestStream.Write(tempBuffer, 0, tempBuffer.Length);
-            }
-
-            using (var response = request.GetResponse())
-            {
-                var stream2 = response.GetResponseStream();
-                var reader2 = new StreamReader(stream2);
-                return reader2.ReadToEnd();
-            }
+            return result;
         }
-
 
         // convert/normalize external table/field name to fw standard name
         // "SomeCrazy/Name" => "some_crazy_name"

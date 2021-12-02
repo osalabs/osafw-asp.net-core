@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections;
-using System.Collections.Specialized;
 using System.IO;
 using System.Net.Mail;
 using System.Reflection;
@@ -1293,25 +1292,6 @@ namespace osafw
         public void sendEmailAdmin(string msg)
         {
             this.sendEmail("", (string)this.config("admin_email"), msg.Substring(0, 512), msg);
-        }
-
-        public string loadUrl(string url, Hashtable @params = null)
-        {
-            System.Net.WebClient client = new ();
-            string content;
-            if (@params != null)
-            {
-                // POST
-                NameValueCollection nv = new();
-                foreach (string key in @params.Keys)
-                    nv.Add(key, (string)@params[key]);
-                content = (new System.Text.UTF8Encoding()).GetString(client.UploadValues(url, "POST", nv));
-            }
-            else
-                // GET
-                content = client.DownloadString(url);
-
-            return content;
         }
 
         public void errMsg(string msg, Exception Ex = null)
