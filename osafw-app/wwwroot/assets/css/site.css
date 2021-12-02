@@ -4,8 +4,9 @@
 
 /*default button appearance*/
 .btn-default {
+  background-color: #fafafa;
+  border-color: #ddd;
   color: #111111;
-  background-color: #E8E8E8;
 }
 
 .btn-default:hover,
@@ -14,7 +15,7 @@
 .btn-default.active,
 .open .dropdown-toggle.btn-default {
   color: #111111;
-  background-color: #CCCBCB;
+  background-color: #ddd;
 }
 
 .btn-default:active,
