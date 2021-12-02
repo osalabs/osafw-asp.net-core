@@ -636,7 +636,7 @@ namespace osafw
                         fields[field] = Utils.f2str(FormUtils.timeStrToInt((string)fields[field])); // ftime - convert from HH:MM to int (0-24h in seconds)
                     else if (type == "number")
                     {
-                        if (fnullable.ContainsKey(field) && (string)fields[field] == "")
+                        if (fnullable.ContainsKey(field) && string.IsNullOrEmpty((string)fields[field]))
                             // if field nullable and empty - pass NULL
                             fields[field] = null;
                         else
