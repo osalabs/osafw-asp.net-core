@@ -1,10 +1,11 @@
-<div class="modal fade" tabindex="-1" role="dialog" id="modal-custom-cols" data-load-url="<~../url>/(UserViews)">
+<div class="modal fade" tabindex="-1" role="dialog" id="modal-custom-cols" data-load-url="<~../url>/(UserViews)<~/common/list/relid>">
   <div class="modal-dialog modal-lg" role="document">
   <form method="post" action="<~../url>/(SaveUserViews)">
     <input type="hidden" name="XSS" value="<~session[XSS]>">
-    <input type="hidden" name="return_url" value="<~../url>">
+    <input type="hidden" name="return_url" value="<~../url>/<~/common/list/relid>">
     <input type="hidden" name="load_id" value="">
     <input type="hidden" name="item[iname]" value="">
+    <~/common/form/relid>
 
     <div class="modal-content">
         <p>
