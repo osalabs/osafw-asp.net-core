@@ -907,12 +907,12 @@ namespace osafw
                         }
                         else
                         {
-                            quoted = Utils.f2int(field_value).ToString();
+                            quoted = Utils.f2long(field_value).ToString();
                         }
                     }
                     else
                     {
-                        quoted = Utils.f2int(field_value).ToString();
+                        quoted = Utils.f2long(field_value).ToString();
                     }
                 }
                 else if (field_type == "datetime")
