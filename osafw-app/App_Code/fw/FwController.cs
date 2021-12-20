@@ -462,7 +462,7 @@ namespace osafw
                             {
                                 var ft = db.schema_field_type(list_table_name, fand);
                                 if (ft == "int")
-                                    list_where_params[param_name] = Utils.f2int(s);
+                                    list_where_params[param_name] = Utils.f2long(s);
                                 else if (ft == "float")
                                     list_where_params[param_name] = Utils.f2float(s);
                                 else
