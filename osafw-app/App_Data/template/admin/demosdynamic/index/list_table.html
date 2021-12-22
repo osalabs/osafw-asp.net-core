@@ -10,7 +10,7 @@
             <~headers repeat inline>
                 <th <~dsort if="is_sortable" inline>data-sort="<~field_name>"</~dsort>><~field_name_visible></th>
             </~headers>
-            <th class="nobold text-end"><a href="#" class="px-2 me-2 on-toggle-search" title="`Filter Columns`"><~/common/icons/funnel-fill></a><a href="#" class="on-custom-cols" title="Customize Columns"><~/common/icons/table></a></th>
+            <th class="nobold text-end text-nowrap"><a href="#" class="px-2 me-2 on-toggle-search" title="`Filter Columns`"><~/common/icons/funnel-fill></a><a href="#" class="on-custom-cols" title="Customize Columns"><~/common/icons/table></a></th>
         </tr>
         <tr class="search" <~search_show ifeq="f[is_search]" value="1" inline>style="display:table-row"</~search_show>>
             <th></th>
