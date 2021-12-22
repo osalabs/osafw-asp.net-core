@@ -534,9 +534,9 @@ namespace osafw
                     foreach (string field in aselect_fields)
                     {
                         quoted.Add(this.q_ident(field));
-                    }
-                    select_fields = quoted.Count > 0 ? string.Join(", ", quoted.ToArray()) : "*";
+                    }                    
                 }
+                select_fields = quoted.Count > 0 ? string.Join(", ", quoted.ToArray()) : "*";
             }
 
             return array(hash2sql_select(table, where, order_by, select_fields));
