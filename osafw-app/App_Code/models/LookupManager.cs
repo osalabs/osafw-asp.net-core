@@ -46,7 +46,8 @@ namespace osafw
                 throw new ApplicationException("Wrong lookup table name");
 
             var id_field = fw.model<LookupManagerTables>().getColumnId(defs);
-            return (int)db.value("SELECT MAX(" + db.q_ident(id_field) + ") from " + db.q_ident(tname));
+            var value = db.value("SELECT MAX(" + db.q_ident(id_field) + ") from " + db.q_ident(tname));
+            return Utils.f2int(value);
         }
 
         public virtual Hashtable oneByTname(string tname, int id)
