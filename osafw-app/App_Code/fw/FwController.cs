@@ -852,20 +852,12 @@ namespace osafw
                 foreach (var fieldname in Utils.qw(fields))
                 {
                     result.Add(new Hashtable()
-                {
                     {
-                        "field_name",fieldname
-                    },
-                    {
-                        "field_name_visible",view_list_map[fieldname]
-                    },
-                    {
-                        "is_checked",true
-                    },
-                    {
-                        "is_sortable", !string.IsNullOrEmpty((string)list_sortmap[fieldname])
-                    }
-                });
+                        {"field_name",fieldname},
+                        {"field_name_visible",view_list_map[fieldname]},
+                        {"is_checked",true},
+                        {"is_sortable", !string.IsNullOrEmpty((string)list_sortmap[fieldname])}
+                    });
                     fields_added[fieldname] = true;
                 }
             }
@@ -887,17 +879,11 @@ namespace osafw
                         continue;
 
                     result.Add(new Hashtable()
-                {
                     {
-                        "field_name",k
-                    },
-                    {
-                        "field_name_visible",view_list_map[k]
-                    },
-                    {
-                        "is_sortable",string.IsNullOrEmpty((string)list_sortmap[k])
-                    }
-                });
+                        {"field_name",k},
+                        {"field_name_visible",view_list_map[k]},
+                        {"is_sortable",string.IsNullOrEmpty((string)list_sortmap[k])}
+                    });
                 }
             }
             return result;
@@ -947,20 +933,12 @@ namespace osafw
                     ArrayList cols = new();
                     foreach (var fieldname in Utils.qw(fields))
                         cols.Add(new Hashtable()
-                    {
                         {
-                            "row",row
-                        },
-                        {
-                            "field_name",fieldname
-                        },
-                        {
-                            "data",row[fieldname]
-                        },
-                        {
-                            "is_custom",hcustom.ContainsKey(fieldname)
-                        }
-                    });
+                            {"row",row},
+                            {"field_name",fieldname},
+                            {"data",row[fieldname]},
+                            {"is_custom",hcustom.ContainsKey(fieldname)}
+                        });
                     row["cols"] = cols;
                 }
             }
