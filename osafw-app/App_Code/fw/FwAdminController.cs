@@ -179,10 +179,10 @@ namespace osafw
 
             var ps = new Hashtable()
             {
-                ["i"] = model0.one(id),
-                ["related_id"] = this.related_id,
-                ["return_url"] = this.return_url,
-                ["base_url"] = this.base_url,
+                {"i", model0.one(id).toHashtable()},
+                {"related_id", this.related_id},
+                {"return_url", this.return_url},
+                {"base_url", this.base_url},
             };
 
             fw.parser("/common/form/showdelete", ps);

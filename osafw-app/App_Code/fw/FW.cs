@@ -991,12 +991,8 @@ namespace osafw
                 {
                     ps = new Hashtable()
                     {
-                        {
-                            "success", false
-                        },
-                        {
-                            "message", @"JSON response is not enabled for this Controller.Action (set ps[""_json""])=True or ps[""_json""])=data... to enable)."
-                        }
+                        {"success", false},
+                        {"message", @"JSON response is not enabled for this Controller.Action (set ps[""_json""])=True or ps[""_json""])=data... to enable)."}
                     };
                     this.parserJson(ps);
                 }

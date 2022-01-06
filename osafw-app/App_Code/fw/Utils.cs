@@ -1354,7 +1354,9 @@ namespace osafw
             foreach (FileInfo file in dir.GetFiles())
             {
                 string tempPath = Path.Combine(destDirName, file.Name);
-                file.CopyTo(tempPath, false);
+                // Copy only not existing files to prevent overwriting and prevent exception by copying config,json which is already generated
+                if (!File.Exists(tempPath))
+                    file.CopyTo(tempPath, false);
             }
 
             // If copying subdirectories, copy them and their contents to new location.
