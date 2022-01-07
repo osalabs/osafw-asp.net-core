@@ -528,6 +528,16 @@ namespace osafw
                                 break;
                             }
                         }
+                        else if (ptr is IDictionary dict)
+                        {
+                            if (dict.Contains(k))
+                                ptr = dict[k];
+                            else
+                            {
+                                ptr = ""; // no such key in hash
+                                break;
+                            }
+                        }
                         else if (ptr is IList list)
                         {
                             ptr = list[Utils.f2int(k)];

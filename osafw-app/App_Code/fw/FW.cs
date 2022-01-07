@@ -972,7 +972,7 @@ namespace osafw
         // TODO - create another func and call it from call_controller for processing _redirect, ... (non-parsepage) instead of calling parser?
         public void parser(string bdir, Hashtable ps)
         {
-            this.response.Headers.Add("Cache-Control", cache_control);
+            if (!this.response.HasStarted) this.response.Headers.Add("Cache-Control", cache_control);
 
             string format = this.getResponseExpectedFormat();
             if (format == "json")
@@ -1046,7 +1046,7 @@ namespace osafw
         {
             ParsePage parser_obj = new (this);
             string page = parser_obj.parse_json(ps);
-            response.Headers.Add("Content-type", "application/json; charset=utf-8");
+            if (!this.response.HasStarted) response.Headers.Add("Content-type", "application/json; charset=utf-8");
             responseWrite(page);
         }
 

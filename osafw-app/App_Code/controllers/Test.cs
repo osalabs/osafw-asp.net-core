@@ -12,9 +12,10 @@ namespace osafw
             //ArrayList users = fw.modelOf(typeof(Users)).list();
 
             //fw.logger(users);
+            var ps = new Hashtable();
+            ps["user"] = fw.model<Users>().one(1);
 
-
-            return new Hashtable();
+            return ps;
         }
 
         public Hashtable UploadAction()
