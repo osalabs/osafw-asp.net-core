@@ -456,7 +456,6 @@ namespace osafw
                             {
                                 // for subqueries - just use string quoting, but convert to number (so only numeric search supported in this case)
                                 list_where_params[param_name] = Utils.f2long(s);
-                                afieldsand[j] = db.q_ident(fand) + " = @" + param_name;
                             }
                             else
                             {
@@ -466,7 +465,7 @@ namespace osafw
                                 else if (ft == "float")
                                     list_where_params[param_name] = Utils.f2float(s);
                                 else
-                                    list_where_params[param_name] = s;
+                                    list_where_params[param_name] = s;                                
                             }
                             afieldsand[j] = db.q_ident(fand) + " = @" + param_name;
                         }
