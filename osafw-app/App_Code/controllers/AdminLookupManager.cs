@@ -335,7 +335,8 @@ namespace osafw
                         fh["maxlen"] = col["maxlen"];
                 }
                 else
-                    fh["maxlen"] = col["numeric_precision"];
+                    fh["maxlen"] = Utils.f2str(Utils.f2int(col["numeric_precision"]) + (Utils.f2int(col["numeric_scale"]) > 0 ? 1 : 0));
+                    
                 if (col["itype"].ToString().Contains("."))
                 {
                     // lookup type
