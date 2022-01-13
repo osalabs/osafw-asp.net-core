@@ -856,7 +856,7 @@ namespace osafw
                 else if (dbop.op == DBOps.BETWEEN)
                 {
                     object[] values = (object[])dbop.value;
-                    quoted = qone_by_type(field_type, (string)values[0]) + " AND " + qone_by_type(field_type, (string)values[1]);
+                    quoted = qone_by_type(field_type, values[0]) + " AND " + qone_by_type(field_type, values[1]);
                 }
                 else
                 {
