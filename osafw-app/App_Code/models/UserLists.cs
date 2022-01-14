@@ -21,6 +21,17 @@ namespace osafw
             return (int)db.value(table_items, new Hashtable() { { "user_lists_id", id } }, "count(*)");
         }
 
+        public ArrayList listSelectOptionsEntities()
+        {
+            return db.arrayp(
+                " SELECT DISTINCT entity AS id, entity AS iname " +
+                " FROM " + db.q_ident(table_name) +
+                " WHERE add_users_id = @users_id " +
+                " ORDER BY entity "
+                , DB.h("@users_id", fw.userId)
+            ).toArrayList();
+        }
+
         // list for select by entity and for only logged user
         public ArrayList listSelectByEntity(string entity)
         {
@@ -94,7 +105,7 @@ namespace osafw
             var result = false;
             Hashtable litem = oneItemsByUK(user_lists_id, item_id);
             if (litem.Count > 0)
-                // remove 
+                // remove
                 deleteItems(Utils.f2int(litem["id"]));
             else
             {
