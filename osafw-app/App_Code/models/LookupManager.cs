@@ -33,7 +33,7 @@ namespace osafw
             if (tname == "")
                 throw new ApplicationException("Wrong topByTname params");
 
-            return db.row("select TOP " + db.qi(top_number) + " * from " + db.q_ident(tname));
+            return db.rowp("select TOP @top * from " + db.q_ident(tname), DB.h("top", top_number));
         }
 
         public virtual int maxIdByTname(string tname)
@@ -46,7 +46,7 @@ namespace osafw
                 throw new ApplicationException("Wrong lookup table name");
 
             var id_field = fw.model<LookupManagerTables>().getColumnId(defs);
-            var value = db.value("SELECT MAX(" + db.q_ident(id_field) + ") from " + db.q_ident(tname));
+            var value = db.valuep("SELECT MAX(" + db.q_ident(id_field) + ") from " + db.q_ident(tname));
             return Utils.f2int(value);
         }
 

@@ -105,7 +105,7 @@ namespace osafw.Tests
         [TestMethod()]
         public void rowTest()
         {
-            var row = db.row("SELECT * FROM " + table_name + " WHERE id=1;");
+            var row = db.rowp("SELECT * FROM " + table_name + " WHERE id=1;");
 
             Assert.IsTrue(row.Count > 0);
             Assert.IsTrue(row.ContainsKey("id"));
@@ -117,7 +117,7 @@ namespace osafw.Tests
         [TestMethod()]
         public void arrayTest()
         {
-            DBList rows = db.array("SELECT * FROM " + table_name + ";");
+            DBList rows = db.arrayp("SELECT * FROM " + table_name + ";");
 
             foreach (var row in rows) {
                 Assert.IsTrue(row.Count > 0);
@@ -134,7 +134,7 @@ namespace osafw.Tests
         [TestMethod()]
         public void colTest()
         {
-            List<string> col = db.col("SELECT iname FROM " + table_name);
+            List<string> col = db.colp("SELECT iname FROM " + table_name);
 
             Assert.AreEqual("test1", col[0]);
             Assert.AreEqual("test2", col[1]);
@@ -145,7 +145,7 @@ namespace osafw.Tests
         [TestMethod()]
         public void valueTest()
         {
-            string value = (string)db.value("SELECT iname FROM " + table_name + " WHERE id=1;");
+            string value = (string)db.valuep("SELECT iname FROM " + table_name + " WHERE id=1;");
             Assert.AreEqual("test1", value);
             // TODO test all methods types
         }

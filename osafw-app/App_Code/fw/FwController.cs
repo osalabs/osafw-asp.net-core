@@ -482,7 +482,11 @@ namespace osafw
             }
 
             if (!string.IsNullOrEmpty((string)list_filter["userlist"]))
-                this.list_where += " and id IN (select ti.item_id from " + fw.model<UserLists>().table_items + " ti where ti.user_lists_id=" + db.qi(list_filter["userlist"]) + " and ti.add_users_id=" + db.qi(fw.userId) + " ) ";
+            {
+                list_where += " and id IN (select ti.item_id from " + db.q_ident(fw.model<UserLists>().table_items) + " ti where ti.user_lists_id=@user_lists_id and ti.add_users_id=@userId) ";
+                list_where_params["user_lists_id"] = db.qi(list_filter["userlist"]);
+                list_where_params["userId"] = fw.userId;
+            }               
 
             if (!string.IsNullOrEmpty(related_id) && !string.IsNullOrEmpty(related_field_name))
             {
@@ -561,10 +565,14 @@ namespace osafw
                     // if want to see trashed and not admin - just show active
                     if (status == FwModel.STATUS_DELETED & !fw.model<Users>().checkAccess(Users.ACL_SITEADMIN, false))
                         status = 0;
-                    this.list_where += " and " + db.q_ident(model0.field_status) + "=" + db.qi(status);
+                    this.list_where += " and " + db.q_ident(model0.field_status) + "=@status";
+                    this.list_where_params["status"] = status;
                 }
                 else
-                    this.list_where += " and " + db.q_ident(model0.field_status) + "<>" + db.qi(FwModel.STATUS_DELETED);// by default - show all non-deleted
+                {
+                    this.list_where += " and " + db.q_ident(model0.field_status) + "<>@status";
+                    this.list_where_params["status"] = FwModel.STATUS_DELETED;// by default - show all non-deleted
+                }
             }
         }
 

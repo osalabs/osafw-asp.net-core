@@ -431,13 +431,10 @@ namespace osafw
         /// </summary>
         /// <param name="sql"></param>
         /// <returns></returns>
+        [Obsolete("row(sql) is deprecated, please use rowp(sql, params) instead.")]
         public DBRow row(string sql)
         {
-            DbDataReader dbread = query(sql);
-            dbread.Read();
-            var result = readRow(dbread);
-            dbread.Close();
-            return result;
+            return rowp(sql);
         }
 
         /// <summary>
@@ -446,10 +443,10 @@ namespace osafw
         /// <param name="table"></param>
         /// <param name="where"></param>
         /// <param name="order_by"></param>
-        /// <returns></returns>
+        /// <returns></returns>        
         public DBRow row(string table, Hashtable where, string order_by = "")
         {
-            return row(hash2sql_select(table, where, order_by, "TOP 1 *"));
+            return rowp(hash2sql_select(table, where, order_by, "TOP 1 *"));
         }
 
         /// <summary>
@@ -458,7 +455,7 @@ namespace osafw
         /// <param name="sql"></param>
         /// <param name="params"></param>
         /// <returns></returns>
-        public DBRow rowp(string sql, Hashtable @params)
+        public DBRow rowp(string sql, Hashtable @params = null)
         {
             DbDataReader dbread = query(sql, @params);
             dbread.Read();
@@ -483,6 +480,7 @@ namespace osafw
         /// </summary>
         /// <param name="sql"></param>
         /// <returns></returns>
+        [Obsolete("array(sql) is deprecated, please use arrayp(sql, params) instead.")]
         public DBList array(string sql)
         {
             DbDataReader dbread = query(sql);
@@ -542,7 +540,7 @@ namespace osafw
                 select_fields = quoted.Count > 0 ? string.Join(", ", quoted.ToArray()) : "*";
             }
 
-            return array(hash2sql_select(table, where, order_by, select_fields));
+            return arrayp(hash2sql_select(table, where, order_by, select_fields));
         }
 
         /// <summary>
@@ -565,6 +563,7 @@ namespace osafw
         /// </summary>
         /// <param name="sql"></param>
         /// <returns></returns>
+        [Obsolete("col(sql) is deprecated, please use colp(sql, params) instead.")]
         public List<string> col(string sql)
         {
             DbDataReader dbread = query(sql);
@@ -577,7 +576,7 @@ namespace osafw
         /// <param name="sql"></param>
         /// <param name="params"></param>
         /// <returns></returns>
-        public List<string> colp(string sql, Hashtable @params)
+        public List<string> colp(string sql, Hashtable @params = null)
         {
             DbDataReader dbread = query(sql, @params);
             return readCol(dbread);
@@ -603,7 +602,7 @@ namespace osafw
             {
                 field_name = q_ident(field_name);
             }
-            return col(hash2sql_select(table, where, order_by, field_name));
+            return colp(hash2sql_select(table, where, order_by, field_name));
         }
 
         public object readValue(DbDataReader dbread)
@@ -622,6 +621,7 @@ namespace osafw
 
         // return just first value from column
         // NOTE, not string, but db type
+        [Obsolete("value(sql) is deprecated, please use valuep(sql, params) instead.")]
         public object value(string sql)
         {
             DbDataReader dbread = query(sql);
@@ -629,7 +629,7 @@ namespace osafw
         }
 
         // return just first value from column
-        public object valuep(string sql, Hashtable @params)
+        public object valuep(string sql, Hashtable @params = null)
         {
             DbDataReader dbread = query(sql, @params);
             return readValue(dbread);
@@ -662,7 +662,7 @@ namespace osafw
             {
                 field_name = q_ident(field_name);
             }
-            return value(hash2sql_select(table, where, order_by, field_name));
+            return valuep(hash2sql_select(table, where, order_by, field_name));
         }
 
         // string will be Left(RTrim(str),length)
@@ -1116,11 +1116,11 @@ namespace osafw
 
             if (dbtype == "SQL")
             {
-                insert_id = value("SELECT SCOPE_IDENTITY() AS [SCOPE_IDENTITY] ");
+                insert_id = valuep("SELECT SCOPE_IDENTITY() AS [SCOPE_IDENTITY] ");
             }
             else if (dbtype == "OLE")
             {
-                insert_id = value("SELECT @@identity");
+                insert_id = valuep("SELECT @@identity");
             }
             else
             {
