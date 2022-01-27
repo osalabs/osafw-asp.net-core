@@ -33,6 +33,8 @@ namespace osafw
 
             related_field_name = "demo_dicts_id";
             model_related = fw.model<DemoDicts>();
+
+            is_userlists = true;
         }
 
         public override void getListRows()

@@ -11,10 +11,12 @@
     <div class="row form-row">
       <label class="col-form-label col-md-3 required" for="entity">`Screen`</label>
       <div class="col-md-4">
-        <select id="entity" name="item[entity]" class="form-select selectpicker" data-live-search="true" required>
-          <option value=""></option>
-          <~../entities.sel select="i[entity]">
-        </select>
+        <input id="entity" name="item[entity]" value="<~i[entity]>" type="text" class="form-control" readonly>
+      </div>
+      <div class="col">
+        <p class="form-control-plaintext">
+          <a target="_blank" href="<~i[entity]>?dofilter=1&f%5Buserlist%5D=<~id>">View List Items</a>
+        </p>
       </div>
     </div>
 

@@ -17,12 +17,12 @@
 <~list_rows repeat inline>
         <tr data-url="<~row_click_url>">
             <td><input class="multicb" type="checkbox" name="cb[<~id>]" value="1"></td>
-            <td><~../entities.sel selvalue="entity"></td>
+            <td><a target="_blank" href="<~entity>?dofilter=1&f%5Buserlist%5D=<~id>"><~entity></a></td>
             <td><~iname></td>
             <td><~add_time></td>
             <td><~/common/sel/status.sel selvalue="status"></td>
             <td class="text-nowrap text-end">
-                <~/common/dot><a href="<~row_click_url>">`Edit`</a>
+                <a href="<~row_click_url>">`Edit`</a>
                 <~/common/dot><a href="<~../url>/<~id>/delete" class="on-delete-list-row">`Del`</a>
             </td>
         </tr>

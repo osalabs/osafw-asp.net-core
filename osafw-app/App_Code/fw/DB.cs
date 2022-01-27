@@ -143,6 +143,9 @@ namespace osafw
                 case DBOps.NOTIN:
                     opstr = "NOT IN";
                     break;
+                case DBOps.BETWEEN:
+                    opstr = "BETWEEN";
+                    break;
                 case DBOps.LIKE:
                     opstr = "LIKE";
                     break;
@@ -534,7 +537,7 @@ namespace osafw
                     foreach (string field in aselect_fields)
                     {
                         quoted.Add(this.q_ident(field));
-                    }                    
+                    }
                 }
                 select_fields = quoted.Count > 0 ? string.Join(", ", quoted.ToArray()) : "*";
             }
@@ -663,7 +666,7 @@ namespace osafw
         }
 
         // string will be Left(RTrim(str),length)
-        // TODO move to Utils since its not belong DB 
+        // TODO move to Utils since its not belong DB
         public string left(string str, int length)
         {
             if (string.IsNullOrEmpty(str)) return "";
@@ -689,7 +692,7 @@ namespace osafw
             return " IN (" + (result.Count > 0 ? string.Join(", ", result.ToArray()) : "NULL") + ")";
         }
 
-        // same as insql, but for quoting numbers - uses qi() 
+        // same as insql, but for quoting numbers - uses qi()
         public string insqli(string parameters)
         {
             return insqli(parameters.Split(","));
@@ -838,8 +841,8 @@ namespace osafw
                 {
                     if (dbop.value != null && (dbop.value) is IList)
                     {
-                        ArrayList result = new();
-                        foreach (object param in (ArrayList)dbop.value)
+                        List<string> result = new();
+                        foreach (object param in (object[])dbop.value)
                         {
                             result.Add(qone_by_type(field_type, param));
                         }
@@ -852,8 +855,8 @@ namespace osafw
                 }
                 else if (dbop.op == DBOps.BETWEEN)
                 {
-                    ArrayList values = (ArrayList)dbop.value;
-                    quoted = qone_by_type(field_type, (string)values[0]) + " AND " + qone_by_type(field_type, (string)values[1]);
+                    object[] values = (object[])dbop.value;
+                    quoted = qone_by_type(field_type, values[0]) + " AND " + qone_by_type(field_type, values[1]);
                 }
                 else
                 {
@@ -946,7 +949,7 @@ namespace osafw
         // operations support for non-raw sql methods
 
         /// <summary>
-        ///  NOT EQUAL operation 
+        ///  NOT EQUAL operation
         ///  Example: Dim rows = db.array("users", New Hashtable From {{"status", db.opNOT(127)}})
         ///  <![CDATA[ select * from users where status<>127 ]]>
         ///  </summary>
@@ -1048,7 +1051,7 @@ namespace osafw
         ///  2 ways to call:
         ///  opIN(1,2,4) - as multiple arguments
         ///  opIN(array) - as one array of values
-        ///  
+        ///
         ///  Example: Dim rows = db.array("users", New Hashtable From {{"id", db.opIN(1, 2)}})
         ///  select * from users where id IN (1,2)
         ///  </summary>
@@ -1072,7 +1075,7 @@ namespace osafw
         ///  2 ways to call:
         ///  opIN(1,2,4) - as multiple arguments
         ///  opIN(array) - as one array of values
-        ///  
+        ///
         ///  Example: Dim rows = db.array("users", New Hashtable From {{"id", db.opNOTIN(1, 2)}})
         ///  select * from users where id NOT IN (1,2)
         ///  </summary>
@@ -1665,7 +1668,7 @@ namespace osafw
         public void Dispose()
         {
             Dispose(true);
-            GC.SuppressFinalize(this);  
+            GC.SuppressFinalize(this);
         }
     }
 

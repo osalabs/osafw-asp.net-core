@@ -27,9 +27,16 @@ namespace osafw
 
             search_fields = "iname idesc";
             list_sortdef = "iname asc";   // default sorting: name, asc|desc direction
-            list_sortmap = Utils.qh("id|id iname|iname add_time|add_time");
+            list_sortmap = Utils.qh("id|id entity|entity iname|iname add_time|add_time");
 
             related_id = reqs("related_id");
+        }
+
+        public override Hashtable setPS(Hashtable ps = null)
+        {
+            ps = base.setPS(ps);
+            ps["select_entities"] = model.listSelectOptionsEntities();
+            return ps;
         }
 
         public override Hashtable initFilter(string session_key = null)
@@ -40,9 +47,18 @@ namespace osafw
             return this.list_filter;
         }
 
+        public override void setListSearchStatus()
+        {
+            if (!string.IsNullOrEmpty((string)list_filter["status"]))
+            {
+                this.list_where += " and status=@status";
+                this.list_where_params["@status"] = list_filter["status"];
+            }
+        }
+
         public override void setListSearch()
         {
-            list_where = " status<>127 and add_users_id=@add_users_id";
+            list_where = " add_users_id=@add_users_id";
             list_where_params["@add_users_id"] = fw.userId;
 
             base.setListSearch();
