@@ -52,7 +52,7 @@ namespace osafw
         {
             Hashtable ps = new();
             int id = Utils.f2int(form_id);
-            Hashtable item = model0.one(id).toHashtable();
+            Hashtable item = model0.one(id);
             if (item.Count == 0)
                 throw new ApplicationException("Not Found");
 
@@ -91,7 +91,7 @@ namespace osafw
             {
                 if (id > 0)
                 {
-                    item = model0.one(id).toHashtable();
+                    item = model0.one(id);
                 }
                 else
                 {
@@ -102,7 +102,7 @@ namespace osafw
             else
             {
                 // read from db
-                var itemdb = model0.one(id).toHashtable();
+                Hashtable itemdb = model0.one(id);
                 // and merge new values from the form
                 Utils.mergeHash(itemdb, item);
                 item = itemdb;
@@ -179,7 +179,7 @@ namespace osafw
 
             var ps = new Hashtable()
             {
-                {"i", model0.one(id).toHashtable()},
+                {"i", model0.one(id)},
                 {"related_id", this.related_id},
                 {"return_url", this.return_url},
                 {"base_url", this.base_url},

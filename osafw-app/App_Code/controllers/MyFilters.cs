@@ -44,7 +44,7 @@ namespace osafw
         public override void setListSearch()
         {
             // only logged user lists
-            list_where = " status<>127 and add_users_id=@add_users_id";
+            list_where = " add_users_id=@add_users_id";
             list_where_params["@add_users_id"] = fw.userId;
 
             base.setListSearch();
@@ -82,7 +82,7 @@ namespace osafw
                     required_fields += " icode";
                 Validate(id, item);
                 // load old record if necessary
-                Hashtable item_old = model0.one(id).toHashtable();
+                Hashtable item_old = model0.one(id);
 
                 // also check that this filter is user's filter (cannot override system filter)
                 if (item_old.Count > 0 && Utils.f2int(item_old["is_system"]) == 1)

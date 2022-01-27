@@ -252,7 +252,7 @@ namespace osafw
                 var userfilters_id = reqi("userfilters_id");
                 if (userfilters_id > 0)
                 {
-                    Hashtable uf = fw.model<UserFilters>().one(userfilters_id).toHashtable();
+                    Hashtable uf = fw.model<UserFilters>().one(userfilters_id);
                     Hashtable f1 = (Hashtable)Utils.jsonDecode(uf["idesc"]);
                     if (f1 != null)
                         f = f1;
@@ -559,12 +559,12 @@ namespace osafw
                 {
                     var status = Utils.f2int(this.list_filter["status"]);
                     // if want to see trashed and not admin - just show active
-                    if (status == 127 & !fw.model<Users>().checkAccess(Users.ACL_SITEADMIN, false))
+                    if (status == FwModel.STATUS_DELETED & !fw.model<Users>().checkAccess(Users.ACL_SITEADMIN, false))
                         status = 0;
                     this.list_where += " and " + db.q_ident(model0.field_status) + "=" + db.qi(status);
                 }
                 else
-                    this.list_where += " and " + db.q_ident(model0.field_status) + "<>127 ";// by default - show all non-deleted
+                    this.list_where += " and " + db.q_ident(model0.field_status) + "<>" + db.qi(FwModel.STATUS_DELETED);// by default - show all non-deleted
             }
         }
 

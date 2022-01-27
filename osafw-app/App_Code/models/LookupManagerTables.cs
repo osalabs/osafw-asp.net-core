@@ -24,7 +24,7 @@ namespace osafw
             {
                 Hashtable where = new();
                 where["tname"] = tname;
-                item = db.row(table_name, where).toHashtable();
+                item = db.row(table_name, where);
                 fw.cache.setRequestValue("LookupManagerTables_one_by_tname_" + table_name + "#" + tname, item);
             }
             return item;

@@ -37,11 +37,11 @@ namespace osafw
             var id = fw.userId;
 
             if (isGet())
-                item = model.one(id).toHashtable();
+                item = model.one(id);
             else
             {
                 // read from db
-                var itemdb = model.one(id).toHashtable();
+                Hashtable itemdb = model.one(id);
                 // and merge new values from the form
                 Utils.mergeHash(itemdb, item);
                 item = itemdb;

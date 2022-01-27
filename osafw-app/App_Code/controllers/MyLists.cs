@@ -54,6 +54,11 @@ namespace osafw
                 this.list_where += " and status=@status";
                 this.list_where_params["@status"] = list_filter["status"];
             }
+            else
+            {
+                // if no status passed - by default show all non-deleted
+                this.list_where += " and status<>" + db.qi(FwModel.STATUS_DELETED);
+            }
         }
 
         public override void setListSearch()

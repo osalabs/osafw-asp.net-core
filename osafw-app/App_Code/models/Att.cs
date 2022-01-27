@@ -410,7 +410,11 @@ namespace osafw
                 {"@item_id", id},
             };
             return db.rowp("SELECT TOP 1 a.* from " + db.q_ident(att_table_link) + " atl, " + db.q_ident(this.table_name) + " a"+
-                " WHERE atl.table_name=@table_name and atl.item_id=@item_id and a.id=atl.att_id and a.is_image=1 order by a.id ", @params).toHashtable();
+                @" WHERE atl.table_name=@table_name
+                     and atl.item_id=@item_id 
+                     and a.id=atl.att_id 
+                     and a.is_image=1 
+                order by a.id ", @params);
         }
 
         // return all att images linked via att_table_link
@@ -459,15 +463,9 @@ namespace osafw
         {
             return db.row(table_name, new Hashtable()
             {
-                {
-                    "table_name",
-                    att_table_name
-                },
-                {
-                    "item_id",
-                    item_id
-                }
-            }).toHashtable();
+                {"table_name",att_table_name},
+                {"item_id",item_id}
+            });
         }
 
         public string getS3KeyByID(string id, string size = "")

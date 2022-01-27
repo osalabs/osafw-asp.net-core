@@ -35,7 +35,7 @@ namespace osafw
             DateTime start_time = DateTime.Now;
             for (int i = 0; i < 1000; i++)
             {
-                var rows = db.arrayp("select * from event_log", DB.h());
+                var rows = db.arrayp("select * from event_log");
                 foreach (var row in rows)
                 {
                     row["id_str"] = row["id"] + "ok";
@@ -47,7 +47,7 @@ namespace osafw
             start_time = DateTime.Now;
             for (int i = 0; i < 1000; i++)
             {
-                var rows = db.array("select * from event_log");
+                var rows = db.array("event_log", DB.h());
                 foreach (var row in rows)
                 {
                     row["id_str"] = row["id"] + "ok";

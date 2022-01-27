@@ -285,7 +285,7 @@ namespace osafw
             Hashtable item_changes = new();
             if (is_log_changes)
             {
-                var item_old = this.one(id).toHashtable();
+                Hashtable item_old = this.one(id);
                 item_changes = fw.model<FwEvents>().changes_only(item, item_old);
             }
 
@@ -718,7 +718,7 @@ namespace osafw
             if (iname.Length == 0)
                 return 0;
             int result;
-            Hashtable item = this.oneByIname(iname).toHashtable();
+            Hashtable item = this.oneByIname(iname);
             if (item.ContainsKey(this.field_id))
                 // exists
                 result = Utils.f2int(item[this.field_id]);

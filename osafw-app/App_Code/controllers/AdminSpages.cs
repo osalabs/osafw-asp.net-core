@@ -96,8 +96,8 @@ namespace osafw
 
             var item = (Hashtable)ps["i"];
             int id = Utils.f2int(item["id"]);
-            string where = " status<>127 ";
-            ArrayList pages_tree = model.tree(where, new Hashtable(), "parent_id, prio desc, iname");
+            string where = " status<>@status ";
+            ArrayList pages_tree = model.tree(where, DB.h("status", FwModel.STATUS_DELETED), "parent_id, prio desc, iname");
             ps["select_options_parent_id"] = model.getPagesTreeSelectHtml((string)item["parent_id"], pages_tree);
 
             ps["parent_url"] = model.getFullUrl(Utils.f2int(item["parent_id"]));
@@ -126,7 +126,7 @@ namespace osafw
 
             try
             {
-                Hashtable item_old = model.one(id).toHashtable();
+                Hashtable item_old = model.one(id);
                 // for non-home page enable some fields
                 string save_fields2 = this.save_fields;
                 if ((string)item_old["is_home"] != "1")

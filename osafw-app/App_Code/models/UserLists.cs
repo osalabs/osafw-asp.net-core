@@ -23,13 +23,12 @@ namespace osafw
 
         public ArrayList listSelectOptionsEntities()
         {
-            return db.arrayp(
-                " SELECT DISTINCT entity AS id, entity AS iname " +
-                " FROM " + db.q_ident(table_name) +
-                " WHERE add_users_id = @users_id " +
-                " ORDER BY entity "
-                , DB.h("@users_id", fw.userId)
-            ).toArrayList();
+            return db.arrayp(@" SELECT DISTINCT entity AS id, entity AS iname
+                                  FROM " + db.q_ident(table_name) +
+                             @"  WHERE add_users_id = @users_id 
+                              ORDER BY entity "
+                            , DB.h("@users_id", fw.userId)
+            );
         }
 
         // list for select by entity and for only logged user
@@ -39,7 +38,7 @@ namespace osafw
             where["status"] = STATUS_ACTIVE;
             where["entity"] = entity;
             where["add_users_id"] = fw.userId;
-            return db.array(table_name, where, "iname", Utils.qw("id iname")).toArrayList();
+            return db.array(table_name, where, "iname", Utils.qw("id iname"));
         }
 
         public ArrayList listItemsById(int id)
@@ -47,17 +46,17 @@ namespace osafw
             Hashtable where = new();
             where["status"] = STATUS_ACTIVE;
             where["user_lists_id"] = id;
-            return db.array(table_items, where, "id desc", Utils.qw("id item_id")).toArrayList();
+            return db.array(table_items, where, "id desc", Utils.qw("id item_id"));
         }
 
         public ArrayList listForItem(string entity, int item_id)
         {
-            return db.arrayp("select t.id, t.iname, @item_id as item_id, ti.id as is_checked " +
-                "  from " + db.q_ident(table_name) + " t" +
-                " LEFT OUTER JOIN " + db.q_ident(table_items) + " ti ON (ti.user_lists_id=t.id and ti.item_id=@item_id )" +
-                " where t.status=0 and t.entity=@entity" +
-                "   and t.add_users_id=@users_id" +
-                " order by t.iname", DB.h("@item_id", item_id, "@entity", entity, "@users_id", fw.userId)).toArrayList();
+            return db.arrayp(@"select t.id, t.iname, @item_id as item_id, ti.id as is_checked
+                                 from " + db.q_ident(table_name) + " t" +
+                             "        LEFT OUTER JOIN " + db.q_ident(table_items) + @" ti ON (ti.user_lists_id=t.id and ti.item_id=@item_id )
+                                where t.status=0 and t.entity=@entity
+                                  and t.add_users_id=@users_id
+                             order by t.iname", DB.h("@item_id", item_id, "@entity", entity, "@users_id", fw.userId));
         }
 
         public override void delete(int id, bool is_perm = false)
@@ -75,7 +74,7 @@ namespace osafw
 
         public Hashtable oneItemsByUK(int user_lists_id, int item_id)
         {
-            return db.row(table_items, DB.h("user_lists_id", user_lists_id, "item_id", item_id)).toHashtable();
+            return db.row(table_items, DB.h("user_lists_id", user_lists_id, "item_id", item_id));
         }
 
         public virtual void deleteItems(int id)

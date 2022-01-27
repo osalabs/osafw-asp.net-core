@@ -496,7 +496,7 @@ namespace osafw
         /// <param name="sql"></param>
         /// <param name="params"></param>
         /// <returns></returns>
-        public DBList arrayp(string sql, Hashtable @params)
+        public DBList arrayp(string sql, Hashtable @params = null)
         {
             DbDataReader dbread = query(sql, @params);
             return readArray(dbread);
@@ -1382,22 +1382,22 @@ namespace osafw
                 // get information about all columns in the table
                 // default = ((0)) ('') (getdate())
                 // maxlen = -1 for nvarchar(MAX)
-                string sql = "SELECT c.column_name as 'name'," +
-                    " c.data_type as 'type'," +
-                    " CASE c.is_nullable WHEN 'YES' THEN 1 ELSE 0 END AS 'is_nullable'," +
-                    " c.column_default as 'default'," +
-                    " c.character_maximum_length as 'maxlen'," +
-                    " c.numeric_precision," +
-                    " c.numeric_scale," +
-                    " c.character_set_name as 'charset'," +
-                    " c.collation_name as 'collation'," +
-                    " c.ORDINAL_POSITION as 'pos'," +
-                    " COLUMNPROPERTY(object_id(c.table_name), c.column_name, 'IsIdentity') as is_identity" +
-                    " FROM INFORMATION_SCHEMA.TABLES t," +
-                    "   INFORMATION_SCHEMA.COLUMNS c" +
-                    " WHERE t.table_name = c.table_name" +
-                    "   AND t.table_name = @table_name" +
-                    " order by c.ORDINAL_POSITION";
+                string sql = @"SELECT c.column_name as 'name',
+                      c.data_type as 'type',
+                      CASE c.is_nullable WHEN 'YES' THEN 1 ELSE 0 END AS 'is_nullable',
+                      c.column_default as 'default',
+                      c.character_maximum_length as 'maxlen',
+                      c.numeric_precision,
+                      c.numeric_scale,
+                      c.character_set_name as 'charset',
+                      c.collation_name as 'collation',
+                      c.ORDINAL_POSITION as 'pos',
+                      COLUMNPROPERTY(object_id(c.table_name), c.column_name, 'IsIdentity') as is_identity
+                      FROM INFORMATION_SCHEMA.TABLES t,
+                        INFORMATION_SCHEMA.COLUMNS c
+                      WHERE t.table_name = c.table_name
+                        AND t.table_name = @table_name
+                      order by c.ORDINAL_POSITION";
                 result = arrayp(sql, DB.h("@table_name", table));
                 foreach (Hashtable row in result)
                 {
@@ -1473,24 +1473,24 @@ namespace osafw
                     where_params["@table_name"] = table;
                 }
 
-                result = this.arrayp("SELECT " +
-                    " col1.CONSTRAINT_NAME as [name]" +
-                    ", col1.TABLE_NAME As [table]" +
-                    ", col1.COLUMN_NAME as [column]" +
-                    ", col2.TABLE_NAME as [pk_table]" +
-                    ", col2.COLUMN_NAME as [pk_column]" +
-                    ", rc.UPDATE_RULE as [on_update]" +
-                    ", rc.DELETE_RULE as [on_delete]" +
-                    " FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS rc " +
-                    " INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE col1 " +
-                    "   ON (col1.CONSTRAINT_CATALOG = rc.CONSTRAINT_CATALOG  " +
-                    "       AND col1.CONSTRAINT_SCHEMA = rc.CONSTRAINT_SCHEMA " +
-                    "       AND col1.CONSTRAINT_NAME = rc.CONSTRAINT_NAME)" +
-                    " INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE col2 " +
-                    "   ON (col2.CONSTRAINT_CATALOG = rc.UNIQUE_CONSTRAINT_CATALOG  " +
-                    "       AND col2.CONSTRAINT_SCHEMA = rc.UNIQUE_CONSTRAINT_SCHEMA " +
-                    "       AND col2.CONSTRAINT_NAME = rc.UNIQUE_CONSTRAINT_NAME " +
-                    "       AND col2.ORDINAL_POSITION = col1.ORDINAL_POSITION)" +
+                result = this.arrayp(@"SELECT 
+                      col1.CONSTRAINT_NAME as [name]
+                     , col1.TABLE_NAME As [table]
+                     , col1.COLUMN_NAME as [column]
+                     , col2.TABLE_NAME as [pk_table]
+                     , col2.COLUMN_NAME as [pk_column]
+                     , rc.UPDATE_RULE as [on_update]
+                     , rc.DELETE_RULE as [on_delete]
+                      FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS rc 
+                      INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE col1 
+                        ON (col1.CONSTRAINT_CATALOG = rc.CONSTRAINT_CATALOG  
+                            AND col1.CONSTRAINT_SCHEMA = rc.CONSTRAINT_SCHEMA 
+                            AND col1.CONSTRAINT_NAME = rc.CONSTRAINT_NAME)
+                      INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE col2 
+                        ON (col2.CONSTRAINT_CATALOG = rc.UNIQUE_CONSTRAINT_CATALOG  
+                            AND col2.CONSTRAINT_SCHEMA = rc.UNIQUE_CONSTRAINT_SCHEMA 
+                            AND col2.CONSTRAINT_NAME = rc.UNIQUE_CONSTRAINT_NAME 
+                            AND col2.ORDINAL_POSITION = col1.ORDINAL_POSITION)" +
                     where, where_params);
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
