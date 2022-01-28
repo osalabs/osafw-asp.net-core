@@ -91,7 +91,7 @@ namespace osafw
             settings["ROOT_DOMAIN"] = http + context.GetServerVariable("SERVER_NAME") + port;
         }
 
-        private static void readSettingsSection(IConfigurationSection section, ref Hashtable settings)
+        public static void readSettingsSection(IConfigurationSection section, ref Hashtable settings)
         {
             if (section.Value != null)
             {
@@ -170,6 +170,35 @@ namespace osafw
             }
 
             return route_prefixes_rx;
+        }
+
+        public static void overrideSettingsByName(string override_name, ref Hashtable settings)
+        {
+            Hashtable overs = (Hashtable)settings["override"];
+            if (overs != null)
+            {
+                foreach (string over_name in overs.Keys)
+                {
+                    if (over_name == override_name)
+                    {
+                        settings["config_override"] = over_name;
+                        Hashtable over = (Hashtable)overs[over_name];
+                        Utils.mergeHashDeep(ref settings, ref over);
+                        break;
+                    }
+                }
+            }
+
+            // convert strings to specific types
+            LogLevel log_level = LogLevel.INFO; // default log level if No or Wrong level in config
+            if (settings.ContainsKey("log_level") && settings["log_level"] != null)
+                Enum.TryParse<LogLevel>((string)settings["log_level"], true, out log_level);
+
+            settings["log_level"] = log_level;
+
+            // default settings that depend on other settings
+            if (!settings.ContainsKey("ASSETS_URL"))
+                settings["ASSETS_URL"] = settings["ROOT_URL"] + "/assets";
         }
     }
 }
