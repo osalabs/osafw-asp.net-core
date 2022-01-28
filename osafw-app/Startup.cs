@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -25,8 +26,24 @@ namespace osafw
         {
             services.AddDistributedSqlServerCache(options =>
             {
-                //TODO MIGRATE - remove sessions_connection_string and use appSettings->db->main->connection_string AND override->XXX->db->main->connection_string
-                options.ConnectionString = Startup.Configuration.GetValue<string>("sessions_connection_string");
+                // Read current env varibale ASPNETCORE_ENVIRONMENT
+                var enviroment = Utils.f2str(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"));
+                
+                // Rean appsetting.json file to hashtable
+                var appSessings = new Hashtable();
+                FwConfig.readSettingsSection(Startup.Configuration.GetSection("appSettings"), ref appSessings);
+                
+                // Try override settings by name 
+                var settings = (Hashtable)appSessings["appSettings"];
+                FwConfig.overrideSettingsByName(enviroment, ref settings);
+                
+                // Retriving db connection string
+                var db = (Hashtable)settings["db"];
+                var main = (Hashtable)db["main"];
+                var conn_str = (string)main["connection_string"];
+
+                // Setup sessions server middleware
+                options.ConnectionString = conn_str;
                 options.SchemaName = "dbo";
                 options.TableName = "fwsessions";
             });
