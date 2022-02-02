@@ -80,7 +80,7 @@ namespace osafw
             fw.flash("success", "Application Caches cleared");
 
             FwCache.clear();
-            db.clear_schema_cache();
+            db.clearSchemaCache();
             var pp = new ParsePage(fw);
             pp.clear_cache();
 
@@ -171,7 +171,7 @@ namespace osafw
 
             // and last - reset db schema cache
             FwCache.clear();
-            db.clear_schema_cache();
+            db.clearSchemaCache();
         }
         // TODO move these functions to DB?
         private int exec_multi_sql(string sql, bool is_ignore_errors = false)
@@ -598,7 +598,7 @@ namespace osafw
                     continue;
 
                 // get table schema
-                var tblschema = db.load_table_schema_full(tblname);
+                var tblschema = db.loadTableSchemaFull(tblname);
                 // logger(tblschema)
 
                 Hashtable table_entity = new();
@@ -607,7 +607,7 @@ namespace osafw
                 table_entity["fw_name"] = Utils.name2fw(tblname); // new table name using fw standards
                 table_entity["iname"] = Utils.name2human(tblname); // human table name
                 table_entity["fields"] = tableschema2fields(tblschema);
-                table_entity["foreign_keys"] = db.get_foreign_keys(tblname);
+                table_entity["foreign_keys"] = db.listForeignKeys(tblname);
 
                 table_entity["model_name"] = _tablename2model((string)table_entity["fw_name"]); // potential Model Name
                 table_entity["controller_url"] = "/Admin/" + table_entity["model_name"]; // potential Controller URL/Name/Title
@@ -1011,7 +1011,7 @@ namespace osafw
             // drop all FKs we created before, so we'll be able to drop tables later
             DBList fks = db.arrayp("SELECT fk.name, o.name as table_name FROM sys.foreign_keys fk, sys.objects o where fk.is_system_named=0 and o.object_id=fk.parent_object_id", DB.h());
             foreach (var fk in fks)
-                db.exec("ALTER TABLE " + db.q_ident((string)fk["table_name"]) + " DROP CONSTRAINT " + db.q_ident((string)fk["name"]));
+                db.exec("ALTER TABLE " + db.qid((string)fk["table_name"]) + " DROP CONSTRAINT " + db.qid((string)fk["name"]));
 
             foreach (Hashtable entity in entities)
             {
@@ -1020,7 +1020,7 @@ namespace osafw
 
                 try
                 {
-                    db.exec("DROP TABLE " + db.q_ident((string)entity["table"]));
+                    db.exec("DROP TABLE " + db.qid((string)entity["table"]));
                 }
                 catch (Exception ex)
                 {
@@ -1292,7 +1292,7 @@ namespace osafw
                     db = new DB(fw, (Hashtable)((Hashtable)fw.config("db"))[entity["db_config"]], (string)entity["db_config"]);
                 else
                     db = new DB(fw);
-                fields = db.load_table_schema_full(table_name);
+                fields = db.loadTableSchemaFull(table_name);
                 if (!entity.ContainsKey("is_fw"))
                     entity["is_fw"] = true; // TODO actually detect if there any fields to be normalized
                 var atables = db.tables();
@@ -1720,7 +1720,7 @@ namespace osafw
         {
             if (Regex.IsMatch(str, @"[^\w_]"))
             {
-                return db.q_ident(str);
+                return db.qid(str);
             }
             else
             {

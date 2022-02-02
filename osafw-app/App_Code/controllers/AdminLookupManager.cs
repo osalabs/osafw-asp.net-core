@@ -129,7 +129,7 @@ namespace osafw
 
             foreach (Hashtable col in cols)
             {
-                SORTSQL[col["name"]] = db.q_ident((string)col["name"]);
+                SORTSQL[col["name"]] = db.qid((string)col["name"]);
 
                 if (list_cols.Count > 0 && !list_cols.ContainsKey(col["name"]))
                     continue;
@@ -180,13 +180,13 @@ namespace osafw
                 list_where_params["@slike"] = "%" + f["s"] + "%";
                 string swhere = "";
                 foreach (Hashtable col in cols)
-                    swhere += " or " + db.q_ident((string)col["name"]) + " like @slike";
+                    swhere += " or " + db.qid((string)col["name"]) + " like @slike";
                     
                 if (!string.IsNullOrEmpty(swhere))
                     list_where += " and (0=1 " + swhere + ")";
             }
 
-            ps["count"] = db.valuep("select count(*) from " + db.q_ident(list_table_name) + " where " + list_where, list_where_params);
+            ps["count"] = db.valuep("select count(*) from " + db.qid(list_table_name) + " where " + list_where, list_where_params);
             if ((int)ps["count"] > 0)
             {
                 int offset = (int)f["pagenum"] * (int)f["pagesize"];
@@ -201,7 +201,7 @@ namespace osafw
                     orderby += " desc";
                 }
 
-                var sql = "SELECT * FROM " + db.q_ident(list_table_name) +
+                var sql = "SELECT * FROM " + db.qid(list_table_name) +
                           " WHERE " + list_where +
                           " ORDER BY " + orderby + " OFFSET " + offset + " ROWS " + " FETCH NEXT " + limit + " ROWS ONLY";
 

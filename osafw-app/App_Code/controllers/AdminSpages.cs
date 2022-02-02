@@ -43,7 +43,7 @@ namespace osafw
             if ((string)list_filter["sortby"] == "iname" && (string)list_filter["s"] == "" & ((string)this.list_filter["status"] == "" || (string)this.list_filter["status"] == "0"))
             {
                 // show tree only if sort by title and no search and status by all or active
-                this.list_count = (int)db.valuep("select count(*) from " + db.q_ident(model.table_name) + " where " + this.list_where, this.list_where_params);
+                this.list_count = (int)db.valuep("select count(*) from " + db.qid(model.table_name) + " where " + this.list_where, this.list_where_params);
                 if (this.list_count > 0)
                 {
                     // build pages tree

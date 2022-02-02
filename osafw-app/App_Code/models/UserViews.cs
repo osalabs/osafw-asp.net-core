@@ -52,7 +52,7 @@ namespace osafw
         // list for select by entity and only for logged user OR active system views
         public ArrayList listSelectByIcode(string entity)
         {
-            return db.arrayp("select id, iname from " + db.q_ident(table_name) +
+            return db.arrayp("select id, iname from " + db.qid(table_name) +
                             @" where status=0 and entity=@entity
                                  and (is_system=1 OR add_users_id=@users_id)
                             order by is_system desc, iname", DB.h("@entity", entity, "@users_id", fw.userId));

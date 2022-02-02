@@ -80,7 +80,7 @@ namespace osafw
                 }
             }
 
-            ArrayList cols = db.load_table_schema_full((string)defs["tname"]);
+            ArrayList cols = db.loadTableSchemaFull((string)defs["tname"]);
             foreach (Hashtable col in cols)
             {
                 string coltype = (string)col["type"];

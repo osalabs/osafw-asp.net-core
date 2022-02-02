@@ -24,7 +24,7 @@ namespace osafw
         public ArrayList listSelectOptionsEntities()
         {
             return db.arrayp(@" SELECT DISTINCT entity AS id, entity AS iname
-                                  FROM " + db.q_ident(table_name) +
+                                  FROM " + db.qid(table_name) +
                              @"  WHERE add_users_id = @users_id 
                               ORDER BY entity "
                             , DB.h("@users_id", fw.userId)
@@ -52,8 +52,8 @@ namespace osafw
         public ArrayList listForItem(string entity, int item_id)
         {
             return db.arrayp(@"select t.id, t.iname, @item_id as item_id, ti.id as is_checked
-                                 from " + db.q_ident(table_name) + " t" +
-                             "        LEFT OUTER JOIN " + db.q_ident(table_items) + @" ti ON (ti.user_lists_id=t.id and ti.item_id=@item_id )
+                                 from " + db.qid(table_name) + " t" +
+                             "        LEFT OUTER JOIN " + db.qid(table_items) + @" ti ON (ti.user_lists_id=t.id and ti.item_id=@item_id )
                                 where t.status=0 and t.entity=@entity
                                   and t.add_users_id=@users_id
                              order by t.iname", DB.h("@item_id", item_id, "@entity", entity, "@users_id", fw.userId));

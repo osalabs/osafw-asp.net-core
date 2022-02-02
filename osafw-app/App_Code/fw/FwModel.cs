@@ -164,7 +164,7 @@ namespace osafw
         {
             var result = field_iname;
             if (!string.IsNullOrEmpty(field_prio))
-                result = db.q_ident(field_prio) + " desc, " + db.q_ident(field_iname);
+                result = db.qid(field_prio) + " desc, " + db.qid(field_iname);
             return result;
         }
 
@@ -605,7 +605,7 @@ namespace osafw
                     where = new Hashtable();
                     where[id_name] = id;
                     where[link_id_name] = link_id;
-                    db.update_or_insert(link_table_name, fields, where);
+                    db.updateOrInsert(link_table_name, fields, where);
                 }
             }
 
@@ -652,7 +652,7 @@ namespace osafw
                     where = new Hashtable();
                     where[linked_field_main_id] = main_id;
                     where[linked_field_link_id] = link_id;
-                    db.update_or_insert(table_name, fields, where);
+                    db.updateOrInsert(table_name, fields, where);
                 }
             }
 
@@ -700,7 +700,7 @@ namespace osafw
                     where[linked_field_link_id] = linked_id;
                     where[linked_field_main_id] = main_id;
                     logger(fields);
-                    db.update_or_insert(table_name, fields, where);
+                    db.updateOrInsert(table_name, fields, where);
                 }
             }
 

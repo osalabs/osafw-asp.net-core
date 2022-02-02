@@ -120,7 +120,7 @@ namespace osafw
         /// <returns>number of uploads deleted</returns>
         public int cleanupTmpUploads()
         {
-            var rows = db.arrayp("select * from " + db.q_ident(table_name) + " where add_time<DATEADD(hour, -48, getdate()) and (status=1 or table_name like 'tmp[_]%')", DB.h());
+            var rows = db.arrayp("select * from " + db.qid(table_name) + " where add_time<DATEADD(hour, -48, getdate()) and (status=1 or table_name like 'tmp[_]%')", DB.h());
             foreach (var row in rows)
                 this.delete(Utils.f2int(row["id"]), true);
             return rows.Count;
@@ -394,7 +394,7 @@ namespace osafw
                 @params["@is_image"] = is_image;
             }
                 
-            return db.arrayp("select a.* " + " from " + db.q_ident(att_table_link) + " atl, "+ db.q_ident(this.table_name)+" a "
+            return db.arrayp("select a.* " + " from " + db.qid(att_table_link) + " atl, "+ db.qid(this.table_name)+" a "
                 + " where atl.table_name=@link_table_name"
                 + " and atl.item_id=@item_id"
                 + " and a.id=atl.att_id" + where 
@@ -409,7 +409,7 @@ namespace osafw
                 {"@table", linked_table_name},
                 {"@item_id", id},
             };
-            return db.rowp("SELECT TOP 1 a.* from " + db.q_ident(att_table_link) + " atl, " + db.q_ident(this.table_name) + " a"+
+            return db.rowp("SELECT TOP 1 a.* from " + db.qid(att_table_link) + " atl, " + db.qid(this.table_name) + " a"+
                 @" WHERE atl.table_name=@table_name
                      and atl.item_id=@item_id 
                      and a.id=atl.att_id 

@@ -111,7 +111,7 @@ namespace osafw
         /// <remarks></remarks>
         public ArrayList tree(string where, Hashtable list_where_params, string orderby)
         {
-            ArrayList rows = db.arrayp("select * from " + db.q_ident(table_name) + 
+            ArrayList rows = db.arrayp("select * from " + db.qid(table_name) + 
                                        " where " + where + 
                                        " order by " + orderby, list_where_params);
             ArrayList pages_tree = getPagesTree(rows, 0);

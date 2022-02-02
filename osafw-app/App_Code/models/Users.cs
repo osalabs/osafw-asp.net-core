@@ -232,12 +232,12 @@ namespace osafw
         // return standard list of id,iname where status=0 order by iname
         public override DBList list()
         {
-            string sql = "select id, fname+' '+lname as iname from " + db.q_ident(table_name) + " where status=0 order by fname, lname";
+            string sql = "select id, fname+' '+lname as iname from " + db.qid(table_name) + " where status=0 order by fname, lname";
             return db.arrayp(sql);
         }
         public override ArrayList listSelectOptions(Hashtable def = null)
         {
-            string sql = "select id, fname+' '+lname as iname from " + db.q_ident(table_name) + " where status=0 order by fname, lname";
+            string sql = "select id, fname+' '+lname as iname from " + db.qid(table_name) + " where status=0 order by fname, lname";
             return db.arrayp(sql);
         }
 
