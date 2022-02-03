@@ -251,11 +251,11 @@ namespace osafw
         // convert to double, optionally throw error
         public static double f2float(object AField, bool is_error = false)
         {
+            if (AField == null && !is_error) return 0.0;
             if (AField == null || !double.TryParse(AField.ToString(), out double result) && is_error)
-            {
-                throw new FormatException();
-            }
-            return result;
+                 throw new FormatException();
+            else
+                return result;
         }
 
         // just return false if input cannot be converted to float
