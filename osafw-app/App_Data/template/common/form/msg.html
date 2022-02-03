@@ -4,9 +4,15 @@
 <~err_blockREQ if="ERR[REQUIRED]" inline><div class="alert alert-danger">`Please fill in all required fields`</div></~err_blockREQ>
 <~err_blockINVALID if="ERR[INVALID]" inline><div class="alert alert-danger">`Please correct the errors`</div></~err_blockINVALID>
 
-<~green if="GLOBAL[_flash][success]" inline>
+<~success if="GLOBAL[_flash][success]" inline>
     <div class="alert alert-success"><~GLOBAL[_flash][success]></div>
-</~green>
+</~success>
+<~info if="GLOBAL[_flash][info]" inline>
+    <div class="alert alert-info"><~GLOBAL[_flash][info]></div>
+</~info>
+<~warning if="GLOBAL[_flash][warning]" inline>
+    <div class="alert alert-warning"><~GLOBAL[_flash][warning]></div>
+</~warning>
 <~error if="GLOBAL[_flash][error]" inline>
     <div class="alert alert-danger"><~GLOBAL[_flash][error]></div>
 </~error>
