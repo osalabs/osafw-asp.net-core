@@ -19,11 +19,18 @@ namespace osafw
         protected virtual bool auth()
         {
             var result = false;
+            string x_api_key = fw.request.Headers["X-API-Key"];
+            var api_key = fw.config()["API_KEY"] as string;
 
-            if (fw.isLogged)
+            //authorize if user logged OR API_KEY configured and matches
+            if (fw.isLogged || !string.IsNullOrEmpty(api_key) && x_api_key == api_key)
                 result = true;
+
             if (!result)
+            {
+                fw.response.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;
                 throw new ApplicationException("API auth error");
+            }
 
             return result;
         }
