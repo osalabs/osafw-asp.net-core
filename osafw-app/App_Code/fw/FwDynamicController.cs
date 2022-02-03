@@ -432,7 +432,7 @@ namespace osafw
             {
                 def["i"] = item; // ref to item
                 string dtype = (string)def["type"];
-                string field = (string)def["field"];
+                string field = Utils.f2str(def["field"]);
 
                 if (dtype is "row" or "row_end" or "col" or "col_end")
                     // structural tags
