@@ -252,7 +252,7 @@ namespace osafw
         public static double f2float(object AField, bool is_error = false)
         {
             if (AField == null && !is_error) return 0.0;
-            if (AField == null || !double.TryParse(AField.ToString(), out double result) && is_error)
+            if ((AField == null || !double.TryParse(AField.ToString(), out double result) && is_error))
                  throw new FormatException();
             else
                 return result;
