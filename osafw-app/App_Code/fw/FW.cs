@@ -774,13 +774,14 @@ namespace osafw
             {
                 var i = 1;
                 System.Diagnostics.StackFrame sf = st.GetFrame(i);
+                string fname = sf.GetFileName() ?? "";
                 // skip logger methods and DB internals as we want to know line where logged thing actually called from
-                while (sf.GetMethod().Name == "logger" || (sf.GetFileName() ?? "").Substring((sf.GetFileName() ?? "").Length - 6) == @"\DB.vb")
+                while (sf.GetMethod().Name == "logger" || fname.Length>=6 && fname.Substring(fname.Length - 6) == @"\DB.vb")
                 {
                     i += 1;
                     sf = st.GetFrame(i);
                 }
-                string fname = sf.GetFileName();
+                fname = sf.GetFileName();
                 if (fname != null)
                     str.Append(fname.Replace((string)this.config("site_root"), "").Replace(@"\App_Code", ""));
                 str.Append(':').Append(sf.GetMethod().Name).Append(' ').Append(sf.GetFileLineNumber()).Append(" # ");
@@ -820,6 +821,8 @@ namespace osafw
             StringBuilder str = new ();
             if (dmp_obj == null)
                 return "[Nothing]";
+            if (dmp_obj == DBNull.Value)
+                return "[DBNull]";
             if (level > 10)
                 return "[Too Much Recursion]";
 

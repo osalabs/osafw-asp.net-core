@@ -352,6 +352,12 @@ namespace osafw
                 //fw.resp.Cache.SetMaxAge(new TimeSpan(30, 0, 0, 0));
 
                 string filepath = getUploadImgPath(id, size, (string)item["ext"]);
+                if (!File.Exists(filepath))
+                {
+                    fw.response.StatusCode = 404;
+                    return;
+                }                    
+
                 DateTime filetime = System.IO.File.GetLastWriteTime(filepath);
                 filetime = new DateTime(filetime.Year, filetime.Month, filetime.Day, filetime.Hour, filetime.Minute, filetime.Second); // remove any milliseconds
 

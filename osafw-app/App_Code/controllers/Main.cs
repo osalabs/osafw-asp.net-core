@@ -96,7 +96,6 @@ namespace osafw
                     ArrayList cols = new();
                     foreach (var fieldname in fields)
                     {
-                        logger(fieldname);
                         cols.Add(new Hashtable()
                         {
                             {"row",row},
@@ -105,7 +104,6 @@ namespace osafw
                         });
                     }
                     row["cols"] = cols;
-                    logger(cols.Count);
                 }
             }
             panes["tabledata"] = one;

@@ -23,22 +23,22 @@ namespace osafw
 
         public void log(string ev_icode, int item_id = 0, int item_id2 = 0, string iname = "", int records_affected = 0, Hashtable changed_fields = null)
         {
-            Hashtable hEV = oneByIcode(ev_icode);
-            if (!hEV.ContainsKey("id"))
+            Hashtable ev = oneByIcode(ev_icode);
+            if (ev.Count==0)
             {
                 fw.logger(LogLevel.WARN, "No event defined for icode=[", ev_icode, "], auto-creating");
-                hEV = new Hashtable
+                ev = new Hashtable
                 {
                     ["icode"] = ev_icode,
                     ["iname"] = ev_icode,
                     ["idesc"] = "auto-created"
                 };
-                hEV["id"] = Utils.f2str(this.add(hEV));
+                ev["id"] = Utils.f2str(this.add(ev));
             }
 
             var fields = new Hashtable()
             {
-                ["events_id"] = hEV["id"],
+                ["events_id"] = ev["id"],
                 ["item_id"] = item_id,
                 ["item_id2"] = item_id2,
                 ["iname"] = iname,

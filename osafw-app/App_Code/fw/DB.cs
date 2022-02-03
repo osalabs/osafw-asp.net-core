@@ -375,7 +375,10 @@ namespace osafw
         public int exec(string sql, Hashtable @params = null, bool is_get_identity = false)
         {
             connect();
-            logger(LogLevel.INFO, "DB:", db_name, ", SQL QUERY: ", sql);
+            if (@params != null && @params.Count > 0)
+                logger(LogLevel.INFO, "DB:", db_name, " ", sql, @params);
+            else
+                logger(LogLevel.INFO, "DB:", db_name, " ", sql);
 
             SQL_QUERY_CTR += 1;
 
@@ -737,7 +740,7 @@ namespace osafw
                     result = dt;
                 else
                     if (DateTime.TryParse(value.ToString(), out DateTime tmpdate))
-                        result = tmpdate;
+                    result = tmpdate;
 
             return result;
         }
@@ -872,13 +875,15 @@ namespace osafw
             if (field_value_or_op is DBOperation dbop1)
                 dbop = dbop1;
             else
+            {
                 // if it's equal - convert to EQ db operation
                 if (is_for_where)
-                // for WHERE xxx=NULL should be xxx IS NULL
-                dbop = opEQ(field_value_or_op);
-            else
-                // for update SET xxx=NULL should be as is
-                dbop = new DBOperation(DBOps.EQ, field_value_or_op);
+                    // for WHERE xxx=NULL should be xxx IS NULL
+                    dbop = opEQ(field_value_or_op);
+                else
+                    // for update SET xxx=NULL should be as is
+                    dbop = new DBOperation(DBOps.EQ, field_value_or_op);
+            }
 
             return field2Op(table, field_name, dbop);
         }
@@ -896,6 +901,8 @@ namespace osafw
             }
 
             string field_type = (string)schema_table[field_name];
+            //logger(LogLevel.DEBUG, "field2Op IN: ", table, ".", field_name, " ", field_type, " ", dbop.op, " ", dbop.value);
+
             // db operation
             if (dbop.op == DBOps.IN || dbop.op == DBOps.NOTIN)
             {
@@ -912,6 +919,7 @@ namespace osafw
             else
                 // convert to field's type
                 dbop.value = field2typed(field_type, dbop.value);
+
             return dbop;
         }
 
@@ -919,36 +927,49 @@ namespace osafw
         {
             object result = DBNull.Value;
 
+            //logger(LogLevel.DEBUG, "field2typed IN: ", field_type, " ", field_value);
+
             // if value set to null or DBNull - assume it's NULL in db
             if (field_value == null || field_value == DBNull.Value)
             {
                 //result is DBNull
             }
             else
-                // fw.logger(table & "." & field_name & " => " & field_type & ", value=[" & field_value & "]")
-                if (Regex.IsMatch(field_type, "int"))
             {
-                // if field is numerical and string true/false - convert to 1/0
-                if (field_value is string str)
+                if (Regex.IsMatch(field_type, "int"))
                 {
-                    if (Regex.IsMatch(str, "true", RegexOptions.IgnoreCase))
-                        result = 1;
-                    else if (Regex.IsMatch(str, "false", RegexOptions.IgnoreCase))
-                        result = 0;
-                    else if (string.IsNullOrEmpty(str))
-                        // if empty string for numerical field - assume NULL
-                        result = DBNull.Value;
+                    // if field is numerical and string true/false - convert to 1/0
+                    if (field_value is string str)
+                    {
+                        if (Regex.IsMatch(str, "true", RegexOptions.IgnoreCase))
+                            result = 1;
+                        else if (Regex.IsMatch(str, "false", RegexOptions.IgnoreCase))
+                            result = 0;
+                        else if (string.IsNullOrEmpty(str))
+                            // if empty string for numerical field - assume NULL
+                            result = DBNull.Value;
+                        else
+                            result = Utils.f2int(field_value);
+                    }
+                    else
+                        result = Utils.f2int(field_value);
                 }
+                else if (field_type == "datetime")
+                {
+                    result = this.qd(field_value);
+                    if (result == null)
+                    {
+                        result = DBNull.Value;
+                    }
+                }
+                else if (field_type == "float")
+                    result = Utils.f2float(field_value);
                 else
-                    result = Utils.f2int(field_value);
+                    // string or other unknown value
+                    result = field_value;
             }
-            else if (field_type == "datetime")
-                result = this.qd(field_value);
-            else if (field_type == "float")
-                result = Utils.f2float(field_value);
-            else
-                // string or other unknown value
-                result = field_value;
+            //logger(LogLevel.DEBUG, "field2typed OUT: ", field_type, " ", field_value);
+
             return result;
         }
 
@@ -1219,6 +1240,8 @@ namespace osafw
         {
             DBQueryAndParams result = new();
             result.sql = "UPDATE " + qid(table) + " " + " SET ";
+
+            logger(LogLevel.DEBUG, "buildUpdate:", table, fields);
 
             var set_params = prepareParams(table, fields, "update", "_SET");
             result.sql += set_params.sql;
