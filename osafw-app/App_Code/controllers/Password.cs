@@ -47,11 +47,11 @@ namespace osafw
                 string login = reqh("item")["login"].ToString().Trim();
 
                 if (login.Length == 0)
-                    throw new ApplicationException("Please enter your Email");
+                    throw new UserException("Please enter your Email");
 
                 Hashtable user = model.oneByEmail(login);
                 if (user.Count == 0 || Utils.f2int(user["status"]) != 0)
-                    throw new ApplicationException("Not a valid Email");
+                    throw new UserException("Not a valid Email");
 
                 model.sendPwdReset(Utils.f2int(user["id"]));
 
@@ -71,7 +71,7 @@ namespace osafw
             var token = reqs("token");
             var user = model.oneByEmail(login);
             if (user.Count == 0 || Utils.f2int(user["status"]) != 0)
-                throw new ApplicationException("Not a valid Email");
+                throw new UserException("Not a valid Email");
 
             if ((string)user["pwd_reset"] == "" || !model.checkPwd(token, (string)user["pwd_reset"])
                 || (DateTime.Now - DateTime.Parse((string)user["pwd_reset_time"])).Minutes > PWD_RESET_EXPIRATION)
@@ -104,7 +104,7 @@ namespace osafw
             var token = reqs("token");
             var user = model.oneByEmail(login);
             if (user.Count == 0 || Utils.f2int(user["status"]) != 0)
-                throw new ApplicationException("Not a valid Email");
+                throw new UserException("Not a valid Email");
 
             if ((string)user["pwd_reset"] == "" || !model.checkPwd(token, (string)user["pwd_reset"])
                 || (DateTime.Now - DateTime.Parse((string)user["pwd_reset_time"])).Minutes > PWD_RESET_EXPIRATION)
@@ -138,7 +138,7 @@ namespace osafw
             }
         }
 
-        public bool ValidateReset(int id, Hashtable item)
+        public void ValidateReset(int id, Hashtable item)
         {
             bool result = true;
             result &= validateRequired(item, Utils.qw("pwd pwd2"));
@@ -151,12 +151,7 @@ namespace osafw
                 fw.FormErrors["pwd2"] = "NOTEQUAL";
             }
 
-            if (fw.FormErrors.Count > 0 && !fw.FormErrors.ContainsKey("REQ"))
-                fw.FormErrors["INVALID"] = 1;
-
-            if (!result)
-                throw new ApplicationException("");
-            return true;
+            this.validateCheckResult();
         }
 
         public Hashtable SentAction()

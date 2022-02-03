@@ -53,7 +53,7 @@ namespace osafw
         {
             string report_class_name = repcodeToClass(repcode);
             if (string.IsNullOrEmpty(report_class_name))
-                throw new ApplicationException("Wrong Report Code");
+                throw new UserException("Wrong Report Code");
 
             FwReports report = (FwReports)Activator.CreateInstance(Type.GetType(FW.FW_NAMESPACE_PREFIX + report_class_name, true));
             report.init(fw, repcode, f);

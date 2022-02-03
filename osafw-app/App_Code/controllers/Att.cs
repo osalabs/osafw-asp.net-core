@@ -24,29 +24,33 @@ namespace osafw
             fw.redirect(fw.config("ASSETS_URL") + "/img/0.gif");
         }
 
-        public void DownloadAction(string form_id = "")
+        public void DownloadAction(int id = 0)
         {
-            int id = Utils.f2int(form_id);
             if (id == 0)
-                throw new ApplicationException("404 File Not Found");
+                throw new NotFoundException();
             string size = reqs("size");
 
             Hashtable item = model.one(id);
+            if (item.Count == 0)
+                throw new NotFoundException();
+
             if ((string)item["is_s3"] == "1")
                 model.redirectS3(item, size);
 
-            model.transmitFile(Utils.f2int(form_id), size);
+            model.transmitFile(id, size);
         }
 
-        public void ShowAction(string form_id = "")
+        public void ShowAction(int id = 0)
         {
-            int id = Utils.f2int(form_id);
             if (id == 0)
-                throw new ApplicationException("404 File Not Found");
+                throw new NotFoundException();
             string size = reqs("size");
             bool is_preview = reqs("preview") == "1";
 
             Hashtable item = model.one(id);
+            if (item.Count == 0)
+                throw new NotFoundException();
+
             if ((string)item["is_s3"] == "1")
             {
                 model.redirectS3(item, size);

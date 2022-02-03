@@ -30,11 +30,10 @@ namespace osafw
             list_sortmap = Utils.qh("id|id iname|iname tname|tname");
         }
 
-        public override Hashtable ShowFormAction(string form_id = "")
+        public override Hashtable ShowFormAction(int id = 0)
         {
             Hashtable ps = new();
             Hashtable item;
-            int id = Utils.f2int(form_id);
 
             if (isGet())
             {
@@ -81,13 +80,12 @@ namespace osafw
             return ps;
         }
 
-        public override Hashtable SaveAction(string form_id = "")
+        public override Hashtable SaveAction(int id = 0)
         {
             if (this.save_fields == null)
                 throw new Exception("No fields to save defined, define in save_fields ");
 
             Hashtable item = reqh("item");
-            int id = Utils.f2int(form_id);
             var success = true;
             var is_new = (id == 0);
 

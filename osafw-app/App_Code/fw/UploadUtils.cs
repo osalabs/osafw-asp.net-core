@@ -65,7 +65,7 @@ namespace osafw
                 if (up.max_filesize > 0 && (ulong)file.Length > up.max_filesize)
                 {
                     if (up.is_required)
-                        throw new ApplicationException("Uploaded file too large in size");
+                        throw new UserException("Uploaded file too large in size");
                     return result;
                 }
 
@@ -74,7 +74,7 @@ namespace osafw
                 if (up.allowed_ext.Count > 0 && !up.allowed_ext.ContainsKey(up.ext))
                 {
                     if (up.is_required)
-                        throw new ApplicationException("Uploaded file extension is not allowed");
+                        throw new UserException("Uploaded file extension is not allowed");
                     return result;
                 }
 
@@ -95,7 +95,7 @@ namespace osafw
                 if (!up.is_overwrite & System.IO.File.Exists(up.full_path))
                 {
                     if (up.is_required)
-                        throw new ApplicationException("Uploaded file cannot overwrite existing file");
+                        throw new UserException("Uploaded file cannot overwrite existing file");
                     return result;
                 }
 
@@ -110,7 +110,7 @@ namespace osafw
                 result = true;
             }
             else if (up.is_required)
-                throw new ApplicationException("No required file uploaded");
+                throw new UserException("No required file uploaded");
 
             return result;
         }

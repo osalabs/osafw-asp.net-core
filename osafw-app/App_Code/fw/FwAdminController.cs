@@ -48,13 +48,12 @@ namespace osafw
             return ps;
         }
 
-        public virtual Hashtable ShowAction(string form_id = "")
+        public virtual Hashtable ShowAction(int id)
         {
             Hashtable ps = new();
-            int id = Utils.f2int(form_id);
             Hashtable item = model0.one(id);
             if (item.Count == 0)
-                throw new ApplicationException("Not Found");
+                throw new NotFoundException();
 
             setAddUpdUser(ps, item);
 
@@ -75,17 +74,16 @@ namespace osafw
         /// <summary>
         /// Shows editable Form for adding or editing one entity row
         /// </summary>
-        /// <param name="form_id"></param>
+        /// <param name="id"></param>
         /// <returns>in Hashtable:
         /// id - id of the entity
         /// i - hashtable of entity fields
         /// </returns>
         /// <remarks></remarks>
-        public virtual Hashtable ShowFormAction(string form_id = "")
+        public virtual Hashtable ShowFormAction(int id = 0)
         {
             Hashtable ps = new();
             var item = reqh("item"); // set defaults from request params
-            var id = Utils.f2int(form_id); // primary key is integer by default
 
             if (isGet())
             {
@@ -120,7 +118,7 @@ namespace osafw
             return ps;
         }
 
-        public virtual Hashtable SaveAction(string form_id = "")
+        public virtual Hashtable SaveAction(int id = 0)
         {
             // checkXSS() 'no need to check in standard SaveAction, but add to your custom actions that modifies data
             if (this.save_fields == null)
@@ -128,12 +126,11 @@ namespace osafw
 
             if (reqi("refresh") == 1)
             {
-                fw.routeRedirect("ShowForm", new[] { form_id });
+                fw.routeRedirect("ShowForm", new object[] { id });
                 return null;
             }
 
             Hashtable item = reqh("item");
-            int id = Utils.f2int(form_id);
             var success = true;
             var is_new = (id == 0);
 
@@ -173,9 +170,8 @@ namespace osafw
             this.validateCheckResult();
         }
 
-        public virtual void ShowDeleteAction(string form_id)
+        public virtual void ShowDeleteAction(int id)
         {
-            int id = Utils.f2int(form_id);
 
             var ps = new Hashtable()
             {
@@ -188,10 +184,8 @@ namespace osafw
             fw.parser("/common/form/showdelete", ps);
         }
 
-        public virtual Hashtable DeleteAction(string form_id)
+        public virtual Hashtable DeleteAction(int id)
         {
-            int id = Utils.f2int(form_id);
-
             model0.delete(id);
             fw.flash("onedelete", 1);
             return this.afterSave(true);
@@ -209,7 +203,7 @@ namespace osafw
             {
                 var user_lists = fw.model<UserLists>().one(user_lists_id);
                 if (user_lists.Count == 0 || Utils.f2int(user_lists["add_users_id"]) != fw.userId)
-                    throw new ApplicationException("Wrong Request");
+                    throw new UserException("Wrong Request");
             }
 
             foreach (string id1 in cbses.Keys)

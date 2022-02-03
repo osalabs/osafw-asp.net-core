@@ -253,7 +253,7 @@ namespace osafw
             if (users_acl < acl)
             {
                 if (is_die)
-                    throw new ApplicationException("Access Denied");
+                    throw new AuthException();
                 return false;
             }
 

@@ -29,7 +29,7 @@ namespace osafw
             if (!result)
             {
                 fw.response.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;
-                throw new ApplicationException("API auth error");
+                throw new AuthException("API auth error");
             }
 
             return result;
@@ -60,7 +60,7 @@ namespace osafw
 
             // validate referrer is same as our hostname
             if (string.IsNullOrEmpty(origin) || (origin != "http://" + fw.config("hostname") && origin != "https://" + fw.config("hostname") && origin != (string)fw.config("API_ALLOW_ORIGIN")))
-                throw new ApplicationException("Invalid origin " + origin);
+                throw new AuthException("Invalid origin " + origin);
 
             // create headers
             fw.response.Headers.Remove("Access-Control-Allow-Origin");

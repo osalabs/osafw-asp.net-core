@@ -266,7 +266,7 @@ namespace osafw
             var controller_name = Utils.f2str(item["controller_name"]).Trim();
 
             if (!_controllers().Contains(controller_name))
-                throw new ApplicationException("No controller found");
+                throw new NotFoundException("No controller found");
 
             FwDynamicController cInstance = (FwDynamicController)Activator.CreateInstance(Type.GetType(FW.FW_NAMESPACE_PREFIX + controller_name, true));
             cInstance.init(fw);
@@ -370,7 +370,7 @@ namespace osafw
             string dbname = item["db"] + "";
             var dbconfig = ((Hashtable)fw.config("db"))[dbname];
             if (dbconfig == null)
-                throw new ApplicationException("Wrong DB selection");
+                throw new UserException("Wrong DB selection");
 
             createDBJsonFromExistingDB(dbname);
             fw.flash("success", "template" + DB_JSON_PATH + " created");
@@ -799,7 +799,7 @@ namespace osafw
                     table_entity["iname"] = Utils.name2human(table_name);
                     table_entity["table"] = Utils.name2fw(table_name);
                     if (isFwTableName((string)table_entity["table"]))
-                        throw new ApplicationException("Cannot have table name " + table_entity["table"]);
+                        throw new UserException("Cannot have table name " + table_entity["table"]);
 
                     table_entity["fw_name"] = Utils.name2fw(table_name); // new table name using fw standards
 
@@ -1073,7 +1073,7 @@ namespace osafw
             if (model_name == "")
                 model_name = Utils.nameCamelCase(table_name);
             if (table_name == "" || model_name == "")
-                throw new ApplicationException("No table name or no model name");
+                throw new UserException("No table name or no model name");
             // If _models().Contains(model_name) Then Throw New ApplicationException("Such model already exists")
 
             // copy DemoDicts.cs to model_name.cs

@@ -64,13 +64,12 @@ namespace osafw
                 return ps;
         }
 
-        public virtual Hashtable ShowAction(string form_id = "")
+        public virtual Hashtable ShowAction(int id = 0)
         {
             Hashtable ps = new();
-            int id = Utils.f2int(form_id);
             Hashtable item = model0.one(id);
             if (item.Count == 0)
-                throw new ApplicationException("Not Found");
+                throw new NotFoundException();
 
             // added/updated should be filled before dynamic fields
             setAddUpdUser(ps, item);
@@ -93,14 +92,13 @@ namespace osafw
             return ps;
         }
 
-        public virtual Hashtable ShowFormAction(string form_id = "")
+        public virtual Hashtable ShowFormAction(int id = 0)
         {
             // define form_new_defaults via config.json
             // Me.form_new_defaults = New Hashtable From {{"field", "default value"}} 'OR set new form defaults here
 
             Hashtable ps = new();
             var item = reqh("item"); // set defaults from request params
-            var id = Utils.f2int(form_id);
 
             if (isGet())
             {
@@ -154,19 +152,18 @@ namespace osafw
             return id;
         }
 
-        public virtual Hashtable SaveAction(string form_id = "")
+        public virtual Hashtable SaveAction(int id = 0)
         {
             if (this.save_fields == null)
                 throw new Exception("No fields to save defined, define in Controller.save_fields");
 
             if (reqi("refresh") == 1)
             {
-                fw.routeRedirect("ShowForm", new[] { form_id });
+                fw.routeRedirect("ShowForm", new object[] { id });
                 return null;
             }
 
             Hashtable item = reqh("item");
-            int id = Utils.f2int(form_id);
             var success = true;
             var is_new = (id == 0);
 
@@ -276,10 +273,8 @@ namespace osafw
             return result;
         }
 
-        public virtual void ShowDeleteAction(string form_id)
+        public virtual void ShowDeleteAction(int id)
         {
-            int id = Utils.f2int(form_id);
-
             var ps = new Hashtable()
             {
                 {"i", model0.one(id)},
@@ -291,10 +286,8 @@ namespace osafw
             fw.parser("/common/form/showdelete", ps);
         }
 
-        public virtual Hashtable DeleteAction(string form_id)
+        public virtual Hashtable DeleteAction(int id)
         {
-            int id = Utils.f2int(form_id);
-
             var item = model0.one(id);
             // if record already deleted and we are admin - perform permanent delete
             if (!string.IsNullOrEmpty(model0.field_status) && Utils.f2int(item[model0.field_status]) == FwModel.STATUS_DELETED && fw.model<Users>().checkAccess(Users.ACL_ADMIN, false))
@@ -306,10 +299,8 @@ namespace osafw
             return this.afterSave(true);
         }
 
-        public virtual Hashtable RestoreDeletedAction(string form_id)
+        public virtual Hashtable RestoreDeletedAction(int id)
         {
-            int id = Utils.f2int(form_id);
-
             model0.update(id, new Hashtable() { { model0.field_status, Utils.f2str(FwModel.STATUS_ACTIVE) } });
 
             fw.flash("record_updated", 1);
@@ -328,7 +319,7 @@ namespace osafw
             {
                 var user_lists = fw.model<UserLists>().one(user_lists_id);
                 if (user_lists.Count == 0 || Utils.f2int(user_lists["add_users_id"]) != fw.userId)
-                    throw new ApplicationException("Wrong Request");
+                    throw new UserException("Wrong Request");
             }
 
             foreach (string id1 in cbses.Keys)
@@ -371,7 +362,7 @@ namespace osafw
         }
 
         // ********************* support for customizable list screen
-        public virtual void UserViewsAction(string form_id = "")
+        public virtual void UserViewsAction(int id = 0)
         {
             Hashtable ps = new();
 

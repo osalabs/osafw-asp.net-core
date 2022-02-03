@@ -96,11 +96,10 @@ namespace osafw
             return ps;
         }
 
-        public override Hashtable ShowFormAction(string form_id = "")
+        public override Hashtable ShowFormAction(int id = 0)
         {
             Hashtable ps = new();
             Hashtable item;
-            int id = Utils.f2int(form_id);
 
             if (isGet())
             {
@@ -136,12 +135,10 @@ namespace osafw
         }
 
 
-        public override Hashtable SaveAction(string form_id = "")
+        public override Hashtable SaveAction(int id = 0)
         {
             Hashtable ps = new();
             Hashtable item = reqh("item");
-
-            int id = Utils.f2int(form_id);
 
             try
             {
@@ -212,14 +209,13 @@ namespace osafw
 
         public override void Validate(int id, Hashtable item)
         {
-            bool result = true;
             // only require file during first upload
             // only require iname during update
             Hashtable itemdb;
             if (id > 0)
             {
                 itemdb = model.one(id);
-                result &= validateRequired(item, Utils.qw(required_fields));
+                validateRequired(item, Utils.qw(required_fields));
             }
             else
             {
@@ -231,19 +227,11 @@ namespace osafw
             {
                 if (fw.request.Form.Files.Count == 0 || fw.request.Form.Files[0]==null || fw.request.Form.Files[0].Length == 0)
                 {
-                    result = false;
                     fw.FormErrors["file1"] = "NOFILE";
                 }
             }
 
-            if (!result)
-                fw.FormErrors["REQUIRED"] = true;
-
-            if (fw.FormErrors.Count > 0 && !fw.FormErrors.ContainsKey("REQ"))
-                fw.FormErrors["INVALID"] = 1;
-
-            if (!result)
-                throw new ApplicationException("");
+            this.validateCheckResult();
         }
 
         public Hashtable SelectAction()

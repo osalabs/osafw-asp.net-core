@@ -330,7 +330,7 @@ namespace osafw
                 result = false;
 
             if (!result)
-                throw new ApplicationException("Access Denied. You don't have enough rights to get this file");
+                throw new AuthException("Access Denied. You don't have enough rights to get this file");
         }
 
         // transimt file by id/size to user's browser, optional disposition - attachment(default)/inline
@@ -382,7 +382,7 @@ namespace osafw
                 }
             }
             else
-                throw new ApplicationException("No file specified");
+                throw new UserException("No file specified");
         }
 
         // return all att files linked via att_table_link
@@ -489,7 +489,7 @@ namespace osafw
         public void redirectS3(Hashtable item, string size = "")
         {
             if (fw.userId == 0)
-                throw new ApplicationException("Access Denied"); // denied for non-logged
+                throw new AuthException(); // denied for non-logged
 
 #if is_S3
             var url = fw.model<S3>().getSignedUrl(getS3KeyByID((string)item["id"], size));

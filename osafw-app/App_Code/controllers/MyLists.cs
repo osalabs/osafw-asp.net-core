@@ -84,20 +84,19 @@ namespace osafw
                 row["ctr"] = model.countItems(Utils.f2int(row["id"]));
         }
 
-        public override Hashtable ShowFormAction(string form_id = "")
+        public override Hashtable ShowFormAction(int id = 0)
         {
             this.form_new_defaults = new();
             this.form_new_defaults["entity"] = related_id;
-            return base.ShowFormAction(form_id);
+            return base.ShowFormAction(id);
         }
 
-        public override Hashtable SaveAction(string form_id = "")
+        public override Hashtable SaveAction(int id = 0)
         {
             if (this.save_fields == null)
                 throw new Exception("No fields to save defined, define in Controller.save_fields");
 
             Hashtable item = reqh("item");
-            int id = Utils.f2int(form_id);
             var success = true;
             var is_new = (id == 0);
 
@@ -140,9 +139,8 @@ namespace osafw
             return this.afterSave(success, id, is_new);
         }
 
-        public Hashtable ToggleListAction(string form_id)
+        public Hashtable ToggleListAction(int id)
         {
-            var user_lists_id = Utils.f2int(form_id);
             var item_id = reqi("item_id");
             var ps = new Hashtable()
             {
@@ -152,11 +150,11 @@ namespace osafw
 
             try
             {
-                var user_lists = fw.model<UserLists>().one(user_lists_id);
+                var user_lists = fw.model<UserLists>().one(id);
                 if (item_id == 0 || user_lists.Count == 0 || Utils.f2int(user_lists["add_users_id"]) != fw.userId)
-                    throw new ApplicationException("Wrong Request");
+                    throw new UserException("Wrong Request");
 
-                var res = fw.model<UserLists>().toggleItemList(user_lists_id, item_id);
+                var res = fw.model<UserLists>().toggleItemList(id, item_id);
                 ps["iname"] = user_lists["iname"];
                 ps["action"] = (res ? "added" : "removed");
             }
@@ -170,9 +168,8 @@ namespace osafw
         }
 
         // request item_id - could be one id, or comma-separated ids
-        public Hashtable AddToListAction(string form_id)
+        public Hashtable AddToListAction(int id)
         {
-            var user_lists_id = Utils.f2int(form_id);
             Hashtable items = Utils.commastr2hash(reqs("item_id"));
 
             var ps = new Hashtable()
@@ -183,15 +180,15 @@ namespace osafw
 
             try
             {
-                var user_lists = fw.model<UserLists>().one(user_lists_id);
+                var user_lists = fw.model<UserLists>().one(id);
                 if (user_lists.Count == 0 || Utils.f2int(user_lists["add_users_id"]) != fw.userId)
-                    throw new ApplicationException("Wrong Request");
+                    throw new UserException("Wrong Request");
 
                 foreach (string key in items.Keys)
                 {
                     var item_id = Utils.f2int(key);
                     if (item_id > 0)
-                        fw.model<UserLists>().addItemList(user_lists_id, item_id);
+                        fw.model<UserLists>().addItemList(id, item_id);
                 }
             }
             catch (ApplicationException ex)
@@ -204,9 +201,8 @@ namespace osafw
         }
 
         // request item_id - could be one id, or comma-separated ids
-        public Hashtable RemoveFromListAction(string form_id)
+        public Hashtable RemoveFromListAction(int id)
         {
-            var user_lists_id = Utils.f2int(form_id);
             Hashtable items = Utils.commastr2hash(reqs("item_id"));
             var ps = new Hashtable()
             {
@@ -216,15 +212,15 @@ namespace osafw
 
             try
             {
-                var user_lists = fw.model<UserLists>().one(user_lists_id);
+                var user_lists = fw.model<UserLists>().one(id);
                 if (user_lists.Count == 0 || Utils.f2int(user_lists["add_users_id"]) != fw.userId)
-                    throw new ApplicationException("Wrong Request");
+                    throw new UserException("Wrong Request");
 
                 foreach (string key in items.Keys)
                 {
                     var item_id = Utils.f2int(key);
                     if (item_id > 0)
-                        fw.model<UserLists>().delItemList(user_lists_id, item_id);
+                        fw.model<UserLists>().delItemList(id, item_id);
                 }
             }
             catch (ApplicationException ex)

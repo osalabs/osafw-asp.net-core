@@ -19,12 +19,19 @@ namespace osafw
     [Serializable]
     public class AuthException : ApplicationException
     {
+        public AuthException() : base("Access denied") { }
         public AuthException(string message) : base(message) { }
     }
     [Serializable]
     public class UserException : ApplicationException
     {
         public UserException(string message) : base(message) { }
+    }
+    [Serializable]
+    public class NotFoundException : UserException
+    {
+        public NotFoundException() : base("Not Found") { }
+        public NotFoundException(string message) : base(message) { }
     }
     [Serializable]
     public class ValidationException : ApplicationException { }
@@ -64,7 +71,7 @@ namespace osafw
         public const string FW_NAMESPACE_PREFIX = "osafw.";
         public static Hashtable METHOD_ALLOWED = Utils.qh("GET POST PUT DELETE");
 
-        private readonly Hashtable models = new ();
+        private readonly Hashtable models = new();
         public FwCache cache = new(); // request level cache
 
         public Hashtable FORM;
@@ -79,7 +86,7 @@ namespace osafw
         public HttpResponse response;
 
         public string request_url; // current request url (relative to application url)
-        public FwRoute route = new ();
+        public FwRoute route = new();
         public TimeSpan request_time; // after dispatch() - total request processing time
 
         public string cache_control = "no-cache"; // cache control header to add to pages, controllers can change per request
@@ -108,7 +115,7 @@ namespace osafw
         // begin processing one request
         public static void run(HttpContext context, IConfiguration configuration)
         {
-            FW fw = new (context, configuration);
+            FW fw = new(context, configuration);
 
             FwHooks.initRequest(fw);
             fw.dispatch();
@@ -199,7 +206,7 @@ namespace osafw
         // FLASH - used to pass something to the next request (and only on this request)        
         // get flash value by name
         // set flash value by name - return fw in this case
-        public object flash(string name, object value = null) 
+        public object flash(string name, object value = null)
         {
             if (value == null)
             {
@@ -410,11 +417,9 @@ namespace osafw
                         route.action_raw = "Delete";
                     else
                     {
-                        logger(LogLevel.WARN, "Wrong Route Params");
                         logger(LogLevel.WARN, route.method);
                         logger(LogLevel.WARN, url);
-                        errMsg("Wrong Route Params");
-                        return;
+                        throw new UserException("Wrong Route Params");
                     }
 
                     logger(LogLevel.TRACE, "REST controller.action=", route.controller, ".", route.action_raw);
@@ -448,12 +453,12 @@ namespace osafw
         {
             DateTime start_time = DateTime.Now;
 
-            this.getRoute();
-
-            string[] args = new[] { route.id }; // TODO - add rest of possible params from parts
-
             try
             {
+                this.getRoute();
+
+                string[] args = new[] { route.id }; // TODO - add rest of possible params from parts
+
                 var auth_check_controller = _auth(route.controller, route.action);
 
                 Type calledType = Type.GetType(FW_NAMESPACE_PREFIX + route.controller + "Controller", false, true); // case ignored
@@ -765,10 +770,10 @@ namespace osafw
             if (level > (LogLevel)this.config("log_level"))
                 return;
 
-            StringBuilder str = new (DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            StringBuilder str = new(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"));
             str.Append(' ').Append(level.ToString()).Append(' ');
             str.Append(Environment.ProcessId).Append(' ');
-            System.Diagnostics.StackTrace st = new (true);
+            System.Diagnostics.StackTrace st = new(true);
 
             try
             {
@@ -776,7 +781,7 @@ namespace osafw
                 System.Diagnostics.StackFrame sf = st.GetFrame(i);
                 string fname = sf.GetFileName() ?? "";
                 // skip logger methods and DB internals as we want to know line where logged thing actually called from
-                while (sf.GetMethod().Name == "logger" || fname.Length>=6 && fname.Substring(fname.Length - 6) == @"\DB.vb")
+                while (sf.GetMethod().Name == "logger" || fname.Length >= 6 && fname.Substring(fname.Length - 6) == @"\DB.vb")
                 {
                     i += 1;
                     sf = st.GetFrame(i);
@@ -818,7 +823,7 @@ namespace osafw
 
         public static string dumper(object dmp_obj, int level = 0) // TODO better type detection(suitable for all collection types)
         {
-            StringBuilder str = new ();
+            StringBuilder str = new();
             if (dmp_obj == null)
                 return "[Nothing]";
             if (dmp_obj == DBNull.Value)
@@ -949,7 +954,7 @@ namespace osafw
         {
             filename = Regex.Replace(filename, "/", @"\");
 
-            using (StreamWriter sw = new (filename, isAppend))
+            using (StreamWriter sw = new(filename, isAppend))
             {
                 sw.Write(fileData);
             }
@@ -1047,7 +1052,7 @@ namespace osafw
 
         public void parserJson(object ps)
         {
-            ParsePage parser_obj = new (this);
+            ParsePage parser_obj = new(this);
             string page = parser_obj.parse_json(ps);
             if (!this.response.HasStarted) response.Headers.Add("Content-type", "application/json; charset=utf-8");
             responseWrite(page);
@@ -1109,22 +1114,42 @@ namespace osafw
         // Call controller
         public void callController(Type calledType, MethodInfo mInfo, object[] args = null)
         {
-            // check if method accept agrs and don't pass args if no args expected
+            //convert args to parameters with proper types
             System.Reflection.ParameterInfo[] @params = mInfo.GetParameters();
-            if (@params.Length == 0)
-                args = null;
+            object[] parameters = new object[@params.Length];
+            for (int i = 0; i < @params.Length; i++)
+            {
+                var pi = @params[i];
+                if (i < args.Length)
+                {
+                    //logger("ARG IN:", args[i].GetType().Name, args[i]);
+                    try
+                    {
+                        parameters[i] = Convert.ChangeType(args[i], pi.ParameterType);
+                    }
+                    catch (Exception)
+                    {
+                        //cannot convert, use default value for param type if param doesn't have default
+                        if (!pi.HasDefaultValue)
+                        {
+                            parameters[i] = Activator.CreateInstance(pi.ParameterType);
+                        }                        
+                    }
+                    //logger("ARG OUT:", parameters[i].GetType().Name, parameters[i]);
+                }
+            }
 
             FwController new_controller = (FwController)Activator.CreateInstance(calledType);
             new_controller.init(this);
             Hashtable ps = null;
             try
             {
-                ps = (Hashtable)mInfo.Invoke(new_controller, args);
+                ps = (Hashtable)mInfo.Invoke(new_controller, parameters);
             }
             catch (TargetInvocationException ex)
             {
                 // ignore redirect exception
-                if (ex.InnerException == null || !((ex.InnerException) is RedirectException))
+                if (ex.InnerException == null || !(ex.InnerException is RedirectException))
                     throw; // this keeps stack, also see http://weblogs.asp.net/fmarguerie/rethrowing-exceptions-and-preserving-the-full-call-stack-trace
             }
             if (ps != null)
@@ -1311,12 +1336,35 @@ namespace osafw
 
             ps["success"] = false;
             ps["message"] = msg;
+            ps["title"] = msg;
             ps["_json"] = true;
 
-            if (Ex is ApplicationException)
-                this.response.StatusCode = 500;
+            var code = 0;
+            if (Ex is NotFoundException)
+            {
+                //Not Found
+                code = 404;
+                tpl_dir += "/4xx";
+            }
             else if (Ex is UserException)
-                this.response.StatusCode = 403;
+            {
+                //Bad request from user
+                code = 400;
+                tpl_dir += "/4xx";
+            }
+            else if (Ex is AuthException)
+            {
+                //Forbidden
+                code = 403;
+                tpl_dir += "/4xx";
+            }            
+            else if (Ex is ApplicationException)
+                //Server Error
+                code = 500;
+
+            ps["code"] = code;
+            if (code > 0)
+                this.response.StatusCode = code;
 
             parser(tpl_dir, ps);
         }

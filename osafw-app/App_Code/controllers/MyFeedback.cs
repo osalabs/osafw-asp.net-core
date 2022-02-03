@@ -38,7 +38,7 @@ namespace osafw
 
             try
             {
-                Validate(id.ToString(), item);
+                Validate(id, item);
                 // load old record if necessary
                 // Dim itemold As Hashtable = model.one(id)
 
@@ -62,24 +62,11 @@ namespace osafw
             fw.redirect(this.getReturnLocation());
         }
 
-        public bool Validate(string id, Hashtable item)
+        public virtual void Validate(int id, Hashtable item)
         {
-            bool result = true;
-            result &= validateRequired(item, Utils.qw(required_fields));
-            if (!result)
-                fw.FormErrors["REQ"] = 1;
+            bool result = this.validateRequired(item, this.required_fields);
 
-            //if (result && !SomeOtherValidation())
-            //{
-            //    fw.FERR["other field name"] = "HINT_ERR_CODE";
-            //}
-
-            if (fw.FormErrors.Count > 0 && !fw.FormErrors.ContainsKey("REQ"))
-                fw.FormErrors["INVALID"] = 1;
-
-            if (!result)
-                throw new ApplicationException("");
-            return true;
+            this.validateCheckResult();
         }
     }
 }

@@ -85,7 +85,7 @@ namespace osafw
             }
         }
 
-        public bool Validate(int id, Hashtable item)
+        public void Validate(int id, Hashtable item)
         {
             bool result = true;
             result &= validateRequired(item, Utils.qw("email old_pwd pwd pwd2"));
@@ -125,12 +125,7 @@ namespace osafw
                 }
             }
 
-            if (fw.FormErrors.Count > 0 && !fw.FormErrors.ContainsKey("REQ"))
-                fw.FormErrors["INVALID"] = 1;
-
-            if (!result)
-                throw new ApplicationException("");
-            return true;
+            this.validateCheckResult();
         }
     }
 }
