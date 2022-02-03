@@ -1291,6 +1291,7 @@ namespace osafw
             if (str_lc == "icode") return "Code";
             if (str_lc == "iname") return "Name";
             if (str_lc == "idesc") return "Description";
+            if (str_lc == "iyear") return "Year";
             if (str_lc == "id") return "ID";
             if (str_lc == "fname") return "First Name";
             if (str_lc == "lname") return "Last Name";
