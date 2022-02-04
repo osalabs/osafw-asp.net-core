@@ -1,0 +1,24 @@
+  <fieldset>
+    <div class="row form-row">
+      <label class="col-form-label col-md-3 required" for="iname">`Title`</label>
+      <div class="col-md-9">
+        <input id="iname" name="item[iname]" maxlength="64" value="<~i[iname]>" type="text" class="form-control" required>
+        <p class="err-EXISTS">`Such title already exists in our database`</p>
+      </div>
+    </div>
+    <div class="row form-row">
+      <label class="col-form-label col-md-3" for="idesc">`Description`</label>
+      <div class="col-md-9">
+        <textarea id="idesc" name="item[idesc]" rows="5" class="form-control"><~i[idesc]></textarea>
+      </div>
+    </div>
+
+    <div class="row form-row">
+      <label class="col-form-label col-md-3" for="icode">`Internal code`</label>
+      <div class="col-md-9">
+        <input id="icode" name="item[icode]" maxlength="64" value="<~i[icode]>" type="text" class="form-control">
+        <small class="form-text">`used by website backend code, don't change`</small>
+      </div>
+    </div>
+
+  </fieldset>
