@@ -456,101 +456,15 @@ namespace osafw
             try
             {
                 this.getRoute();
-
-                string[] args = new[] { route.id }; // TODO - add rest of possible params from parts
-
-                var auth_check_controller = _auth(route.controller, route.action);
-
-                Type calledType = Type.GetType(FW_NAMESPACE_PREFIX + route.controller + "Controller", false, true); // case ignored
-                if (calledType == null)
-                {
-                    logger(LogLevel.DEBUG, "No controller found for controller=[", route.controller, "], using default Home");
-                    // no controller found - call default controller with default action
-                    calledType = Type.GetType(FW_NAMESPACE_PREFIX + "HomeController", true);
-                    route.controller_path = "/Home";
-                    route.controller = "Home";
-                    route.action = "NotFound";
-                }
-                else
-                    // controller found
-                    if (auth_check_controller == 1)
-                {
-                    // but need's check access level on controller level
-                    var field = calledType.GetField("access_level", BindingFlags.Public | BindingFlags.Static);
-                    if (field != null)
-                    {
-                        int current_level = Utils.f2int(Session("access_level")); //will be 0 for visitors
-                        if (current_level < Utils.f2int(field.GetValue(null)))
-                            throw new AuthException("Bad access - Not authorized (2)");
-                    }
-                }
-
-                logger(LogLevel.TRACE, "TRY controller.action=", route.controller, ".", route.action);
-
-                MethodInfo mInfo = calledType.GetMethod(route.action + "Action");
-                if (mInfo == null)
-                {
-                    logger(LogLevel.DEBUG, "No method found for controller.action=[", route.controller, ".", route.action, "], checking route_default_action");
-                    // no method found - try to get default action
-                    FieldInfo pInfo = calledType.GetField("route_default_action");
-                    if (pInfo != null)
-                    {
-                        string pvalue = (string)pInfo.GetValue(null);
-                        if (pvalue == "index")
-                        {
-                            // = index - use IndexAction for unknown actions
-                            route.action = "Index";
-                            mInfo = calledType.GetMethod(route.action + "Action");
-                        }
-                        else if (pvalue == "show")
-                        {
-                            // = show - assume action is id and use ShowAction
-                            if (!string.IsNullOrEmpty(route.id))
-                                route.@params.Add(route.id); // route.id is a first param in this case. TODO - add all rest of params from split("/") here
-                            if (!string.IsNullOrEmpty(route.action_more))
-                                route.@params.Add(route.action_more); // route.action_more is a second param in this case
-
-                            route.id = route.action_raw;
-                            args[0] = route.id;
-
-                            route.action = "Show";
-                            mInfo = calledType.GetMethod(route.action + "Action");
-                        }
-                    }
-                }
-
-                // save to globals so it can be used in templates
-                G["controller"] = route.controller;
-                G["action"] = route.action;
-                G["controller.action"] = route.controller + "." + route.action;
-
-                logger(LogLevel.TRACE, "FINAL controller.action=", route.controller, ".", route.action);
-                // logger(LogLevel.TRACE, "route.method=" , route.method)
-                // logger(LogLevel.TRACE, "route.controller=" , route.controller)
-                // logger(LogLevel.TRACE, "route.action=" , route.action)
-                // logger(LogLevel.TRACE, "route.format=" , route.format)
-                // logger(LogLevel.TRACE, "route.id=" , route.id)
-                // logger(LogLevel.TRACE, "route.action_more=" , route.action_more)
-
                 logger(LogLevel.INFO, "REQUEST START [", route.method, " ", request_url, "] => ", route.controller, ".", route.action);
 
-                if (mInfo == null)
-                {
-                    // if no method - just call FW.parser(hf) - show template from /route.controller/route.action dir
-                    logger(LogLevel.DEBUG, "DEFAULT PARSER");
-                    parser(new Hashtable());
-                }
-                else
-                    callController(calledType, mInfo, args);
+                this.callRoute();
             }
-            // logger(LogLevel.INFO, "NO EXCEPTION IN dispatch")
-
             catch (RedirectException)
             {
                 // not an error, just exit via Redirect
                 logger(LogLevel.INFO, "Redirected...");
             }
-
             catch (AuthException Ex)
             {
                 logger(LogLevel.DEBUG, Ex.Message);
@@ -560,10 +474,8 @@ namespace osafw
                 else
                     errMsg(Ex.Message);
             }
-
             catch (ApplicationException Ex)
             {
-
                 // get very first exception
                 string msg = Ex.Message;
                 Exception iex = Ex;
@@ -599,7 +511,6 @@ namespace osafw
                     errMsg(msg, Ex);
                 }
             }
-
             catch (Exception Ex)
             {
                 // it's general Exception, so something more severe occur, log as error and notify admin
@@ -1071,24 +982,12 @@ namespace osafw
 
         public void routeRedirect(string action, string controller, object[] args = null)
         {
+            logger(LogLevel.TRACE, "routeRedirect to ", controller, ".", action, args);
             setController((!string.IsNullOrEmpty(controller) ? controller : route.controller), action);
 
-            Type calledType = Type.GetType(FW_NAMESPACE_PREFIX + route.controller + "Controller", true);
-            MethodInfo mInfo = calledType.GetMethod(route.action + "Action");
-            if (mInfo == null)
-            {
-                logger(LogLevel.INFO, "No method found for controller.action=[", route.controller, ".", route.action, "], displaying static page from related templates");
-                // no method found - set to default Index method
-                // route.action = "Index"
-                // mInfo = calledType.GetMethod(route.action & "Action")
-
-                // if no method - show template from /route.controller/route.action dir
-                parser("/" + route.controller.ToLower() + "/" + route.action.ToLower(), new Hashtable());
-            }
-
-            if (mInfo != null)
-                callController(calledType, mInfo, args);
+            callRoute();
         }
+
         // same as above just with default controller
         public void routeRedirect(string action, object[] args = null)
         {
@@ -1103,12 +1002,108 @@ namespace osafw
         public void setController(string controller, string action = "")
         {
             route.controller = controller;
-            if (!string.IsNullOrEmpty(action))
-                route.action = action;
+            // route.controller_path = controller; // TODO this won't work if redirect to controller with different prefix
+            route.action = action;
 
             G["controller"] = route.controller;
             G["action"] = route.action;
-            G["controller.ction"] = route.controller + "." + route.action;
+            G["controller.action"] = route.controller + "." + route.action;
+        }
+
+        public void setRoute(FwRoute r)
+        {
+            this.route = r;
+            setController(r.controller, r.action); //to update G
+        }
+
+        public void callRoute()
+        {
+            string[] args = new[] { route.id }; // TODO - add rest of possible params from parts
+
+            var auth_check_controller = _auth(route.controller, route.action);
+
+            Type calledType = Type.GetType(FW_NAMESPACE_PREFIX + route.controller + "Controller", false, true); // case ignored
+            if (calledType == null)
+            {
+                logger(LogLevel.DEBUG, "No controller found for controller=[", route.controller, "], using default Home");
+                // no controller found - call default controller with default action
+                calledType = Type.GetType(FW_NAMESPACE_PREFIX + "HomeController", true);
+                route.controller_path = "/Home";
+                route.controller = "Home";
+                route.action = "NotFound";
+            }
+            else
+            {
+                // controller found
+                if (auth_check_controller == 1)
+                {
+                    // but need's check access level on controller level
+                    var field = calledType.GetField("access_level", BindingFlags.Public | BindingFlags.Static);
+                    if (field != null)
+                    {
+                        int current_level = Utils.f2int(Session("access_level")); //will be 0 for visitors
+                        if (current_level < Utils.f2int(field.GetValue(null)))
+                            throw new AuthException("Bad access - Not authorized (2)");
+                    }
+                }
+            }
+
+            logger(LogLevel.TRACE, "TRY controller.action=", route.controller, ".", route.action);
+
+            MethodInfo mInfo = calledType.GetMethod(route.action + "Action");
+            if (mInfo == null)
+            {
+                logger(LogLevel.DEBUG, "No method found for controller.action=[", route.controller, ".", route.action, "], checking route_default_action");
+                // no method found - try to get default action
+                FieldInfo pInfo = calledType.GetField("route_default_action");
+                if (pInfo != null)
+                {
+                    string pvalue = (string)pInfo.GetValue(null);
+                    if (pvalue == "index")
+                    {
+                        // = index - use IndexAction for unknown actions
+                        route.action = "Index";
+                        mInfo = calledType.GetMethod(route.action + "Action");
+                    }
+                    else if (pvalue == "show")
+                    {
+                        // = show - assume action is id and use ShowAction
+                        if (!string.IsNullOrEmpty(route.id))
+                            route.@params.Add(route.id); // route.id is a first param in this case. TODO - add all rest of params from split("/") here
+                        if (!string.IsNullOrEmpty(route.action_more))
+                            route.@params.Add(route.action_more); // route.action_more is a second param in this case
+
+                        route.id = route.action_raw;
+                        args[0] = route.id;
+
+                        route.action = "Show";
+                        mInfo = calledType.GetMethod(route.action + "Action");
+                    }
+                }
+            }
+
+            // save to globals so it can be used in templates
+            setController(route.controller, route.action);
+
+            logger(LogLevel.TRACE, "FINAL controller.action=", route.controller, ".", route.action);
+            // logger(LogLevel.TRACE, "route.method=" , route.method)
+            // logger(LogLevel.TRACE, "route.controller=" , route.controller)
+            // logger(LogLevel.TRACE, "route.action=" , route.action)
+            // logger(LogLevel.TRACE, "route.format=" , route.format)
+            // logger(LogLevel.TRACE, "route.id=" , route.id)
+            // logger(LogLevel.TRACE, "route.action_more=" , route.action_more)
+
+            logger(LogLevel.DEBUG, "ROUTE [", route.method, " ", request_url, "] => ", route.controller, ".", route.action);
+
+            if (mInfo == null)
+            {
+                logger(LogLevel.INFO, "No method found for controller.action=[", route.controller, ".", route.action, "], displaying static page from related templates");
+                // if no method - just call FW.parser(hf) - show template from /route.controller/route.action dir
+                parser(new Hashtable());
+            }
+            else
+                callController(calledType, mInfo, args);
+
         }
 
         // Call controller
