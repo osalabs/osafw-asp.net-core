@@ -188,30 +188,21 @@ namespace osafw
         public static bool f2bool(object AField)
         {
             if (AField == null) return false;
+            if (AField is bool b) return b;
             if (bool.TryParse(AField.ToString(), out bool result))
                 return result;
 
             return false;
         }
 
-        // TODO parse without Try/Catch
-        public static object f2date(object AField)
+        public static DateTime? f2date(object AField)
         {
-            object result;
-            try
+            DateTime? result = null;
+            if (AField == null) return result;
+            if (AField is DateTime) return (DateTime?)AField;
+            if (DateTime.TryParse(AField.ToString().Trim(), out DateTime dt))
             {
-                if (AField == null || AField.ToString() == "Null" || AField.ToString() == "")
-                {
-                    result = null;
-                }
-                else
-                {
-                    result = Convert.ToDateTime(AField.ToString().Trim());
-                }
-            }
-            catch (Exception)
-            {
-                result = null;
+                result = dt;
             }
             return result;
         }
@@ -219,14 +210,14 @@ namespace osafw
 
         public static bool isDate(object AField)
         {
-            object result = f2date(AField.ToString());
-            return result != null;
+            return f2date(AField) != null;
         }
 
         // guarantee to return string (if cannot convert to string - just return empty string)
         public static string f2str(object AField)
         {
             if (AField == null) return "";
+            if (AField is string s) return s;
             string result = Convert.ToString(AField);
             return result;
         }
@@ -234,6 +225,7 @@ namespace osafw
         public static int f2int(object AField)
         {
             if (AField == null) return 0;
+            if (AField is int i) return i;
             if (int.TryParse(AField.ToString(), out int result))
                 return result;
 
@@ -242,6 +234,7 @@ namespace osafw
         public static long f2long(object AField)
         {
             if (AField == null) return 0;
+            if (AField is long l) return l;
             if (long.TryParse(AField.ToString(), out long result))
                 return result;
 
@@ -252,6 +245,7 @@ namespace osafw
         public static double f2float(object AField, bool is_error = false)
         {
             if (AField == null && !is_error) return 0.0;
+            if (AField is double d) return d;
             if ((AField == null || !double.TryParse(AField.ToString(), out double result) && is_error))
                  throw new FormatException();
             else
