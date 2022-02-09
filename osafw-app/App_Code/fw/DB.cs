@@ -885,11 +885,11 @@ namespace osafw
                     dbop = new DBOperation(DBOps.EQ, field_value_or_op);
             }
 
-            return field2Op(table, field_name, dbop);
+            return field2Op(table, field_name, dbop, is_for_where);
         }
 
         // returnDBOperation class with value converted to type appropriate for the db field 
-        public DBOperation field2Op(string table, string field_name, DBOperation dbop)
+        public DBOperation field2Op(string table, string field_name, DBOperation dbop, bool is_for_where = false)
         {
             connect();
             loadTableSchema(table);
@@ -917,8 +917,18 @@ namespace osafw
                 ((IList)dbop.value)[1] = field2typed(field_type, ((IList)dbop.value)[1]);
             }
             else
+            {
                 // convert to field's type
                 dbop.value = field2typed(field_type, dbop.value);
+                if (is_for_where && dbop.value==DBNull.Value) {
+                    // for where if we got null value here for EQ/NOT operation - make it ISNULL/ISNOT NULL
+                    // (this could happen when comparing int field to empty string)
+                    if (dbop.op == DBOps.EQ)
+                        dbop = opISNULL();
+                    else if (dbop.op == DBOps.NOT)
+                        dbop = opISNOTNULL();
+                }
+            }
 
             return dbop;
         }
