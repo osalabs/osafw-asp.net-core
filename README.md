@@ -1,5 +1,4 @@
-# osafw-asp.net
-ASP.NET Core C# web framework optimized for creation of Business Applications
+# ASP.NET Core C# web framework optimized for building Business Applications
 
 Created as simplified and lightweight alternative to other ASP.NET frameworks like ASP.NET MVC
 
