@@ -150,7 +150,7 @@ namespace osafw
         public static ArrayList splitEmails(string emails)
         {
             ArrayList result = new();
-            string[] arr = Regex.Split(emails, "[; \n\r]+");
+            string[] arr = Regex.Split(emails, @"[; \n\r]+");
             foreach (string email in arr)
             {
                 string _email = email.Trim();
@@ -389,7 +389,7 @@ namespace osafw
             {
                 if (!is_first) result.Append(',');
 
-                string str = Regex.Replace(row[fld] + "", "[\n\r]+", " ");
+                string str = Regex.Replace(row[fld] + "", @"[\n\r]+", " ");
                 str = str.Replace("\"", "\\\"");
                 // check if string need to be quoted (if it contains " or ,)
                 if (str.IndexOf("\"") > 0 || str.IndexOf(",") > 0)
@@ -1273,14 +1273,14 @@ namespace osafw
             result = Regex.Replace(result, @"^_+|_+$", ""); // remove first and last _ if any
             result = result.ToLower(); // and finally to lowercase
             result = result.Trim();
-            return result; ;
+            return result;
         }
 
 
         // convert some system name to human-friendly name'
         // "system_name_id" => "System Name ID"
         public static string name2human(string str)
-        {
+        {            
             string str_lc = str.ToLower();
             if (str_lc == "icode") return "Code";
             if (str_lc == "iname") return "Name";
@@ -1296,12 +1296,13 @@ namespace osafw
             result = Regex.Replace(result, @"([a-z ])([A-Z]+)", "$1 $2"); // split CamelCase words
             result = Regex.Replace(result, @" +", " "); // deduplicate spaces
             result = Utils.capitalize(result, "all"); // Title Case
+            result = result.Trim();
 
-            if (Regex.IsMatch(result, "\bid\b", RegexOptions.IgnoreCase))
+            if (Regex.IsMatch(result, @"\bid\b", RegexOptions.IgnoreCase))
             {
                 // if contains id/ID - remove it and make singular
-                result = Regex.Replace(result, @"\bid\b", "", RegexOptions.IgnoreCase);
-                result = Regex.Replace(result, @"(?:es|s)\s*$", "", RegexOptions.IgnoreCase); // remove -es or -s at the end
+                result = Regex.Replace(result, @"\s*\bid\b", "", RegexOptions.IgnoreCase);
+                result = Regex.Replace(result, @"(\S)(?:es|s)\s*$", "$1", RegexOptions.IgnoreCase); // remove -es or -s at the end
             }
 
             result = result.Trim();
