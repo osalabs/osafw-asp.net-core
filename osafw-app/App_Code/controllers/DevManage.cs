@@ -957,7 +957,7 @@ namespace osafw
                             field["fw_subtype"] = "date";
                             field["is_nullable"] = 1;
                         }
-                        else if (Regex.IsMatch(field_name, @"^is_", RegexOptions.IgnoreCase))
+                        else if (Regex.IsMatch(field_name, @"^is_", RegexOptions.IgnoreCase) || Regex.IsMatch(field_name, @"^Is[A-Z]"))
                         {
                             field["numeric_precision"] = 3;
                             field["fw_type"] = "int";
@@ -1244,7 +1244,7 @@ namespace osafw
             Hashtable replacements = new()
             {
                 { "/Admin/DemosDynamic", controller_url },
-                { "DemoDynamic", controller_title }
+                { "Demo Dynamic", controller_title }
             };
             replaceInFiles(tpl_to, replacements);
 
@@ -1427,7 +1427,7 @@ namespace osafw
                             sff["is_option0"] = true;
                             sff["class_contents"] = "col-md-3";
                         }
-                        else if (Utils.f2str(fld["fw_subtype"]) == "boolean" || Utils.f2str(entity["fw_subtype"]) == "bit" || Strings.Left(fld_name, 3) == "is_")
+                        else if (Utils.f2str(fld["fw_subtype"]) == "boolean" || Utils.f2str(entity["fw_subtype"]) == "bit" || Strings.Left(fld_name, 3) == "is_" || Regex.IsMatch(fld_name, @"^Is[A-Z]"))
                         {
                             // make it as yes/no radio
                             sff["type"] = "yesno";

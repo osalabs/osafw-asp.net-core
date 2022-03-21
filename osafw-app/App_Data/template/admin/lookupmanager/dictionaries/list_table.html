@@ -1,9 +1,11 @@
 <div class="row list-items">
     <~list_сols repeat inline>
         <div class="col-sm-<~col_sm>">
+            <div class="list-group">
             <~list_rows repeat inline>
-                <a href="<~../url>?d=<~tname urlencode>" class="btn btn-link"><~iname></a>
+                <a href="<~../url>?d=<~tname urlencode>" class="list-group-item"><~iname></a>
             </~list_rows>
+            </div>
         </div>
     </~list_сols>
 </div>
