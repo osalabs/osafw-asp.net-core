@@ -561,18 +561,25 @@ namespace osafw
                     }
                     else if (def.ContainsKey("lookup_model"))
                     {
-                        if (def.ContainsKey("lookup_field"))
-                        {
-                            // lookup value
-                            var lookup_row = fw.model((string)def["lookup_model"]).one(Utils.f2int(item[field]));
-                            def["lookup_row"] = lookup_row;
-                            def["value"] = lookup_row[(string)def["lookup_field"]];
-                        }
-                        else
+                        if (dtype == "select")
                         {
                             // lookup select
                             def["select_options"] = fw.model((string)def["lookup_model"]).listSelectOptions(def);
                             def["value"] = item[field];
+                        } else
+                        {
+                            var lookup_model = fw.model((string)def["lookup_model"]);
+                            def["lookup_id"] = Utils.f2int(item[field]);
+                            var lookup_row = lookup_model.one(Utils.f2int(def["lookup_id"]));
+                            def["lookup_row"] = lookup_row;
+
+                            string lookup_field = Utils.f2str(def["lookup_field"]);
+                            if (lookup_field == "")
+                                lookup_field = lookup_model.field_iname;
+
+                            def["value"] = lookup_row[lookup_field];
+                            if (!def.ContainsKey("admin_url"))
+                                def["admin_url"] = "/Admin/" + def["lookup_model"]; // default admin url from model name
                         }
                     }
                     else if (def.ContainsKey("lookup_tpl"))
