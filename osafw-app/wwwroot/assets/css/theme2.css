@@ -124,3 +124,39 @@ table.list > thead > tr > th[data-sort].active-sort {
   border-radius: .375rem;
   background-color: transparent;
 }
+
+/* Markdown Editor adjustments*/
+.md-editor .md-footer, .md-editor>.md-header {
+  background: #edf2f9 !important;
+}
+
+.md-editor>.md-header.btn-toolbar .btn {
+  box-shadow: none !important;
+}
+
+.md-editor .md-control.md-control-fullscreen,
+.md-editor.md-fullscreen-mode .md-fullscreen-controls a {
+  color: #8c8c8c !important;
+}
+
+.md-editor .md-control.md-control-fullscreen:hover,
+.md-editor.md-fullscreen-mode .md-fullscreen-controls a:hover {
+  color: #333 !important;
+}
+
+.md-editor.md-fullscreen-mode .md-header {
+  top: 10px !important;
+}
+
+.md-editor.md-fullscreen-mode .md-header.btn-toolbar .btn.btn-default {
+  color: inherit !important;
+  border: 1px solid #ddd !important;
+  background-color: #fff !important;
+}
+
+.md-editor.md-fullscreen-mode .md-header.btn-toolbar .btn.btn-default:hover,
+.md-editor.md-fullscreen-mode .md-header.btn-toolbar .btn.btn-default:focus,
+.md-editor.md-fullscreen-mode .md-header.btn-toolbar .btn.btn-default.active {
+  color: #111111 !important;
+  background-color: #ddd !important;
+}
