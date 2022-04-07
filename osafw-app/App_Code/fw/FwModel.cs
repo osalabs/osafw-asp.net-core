@@ -164,7 +164,7 @@ namespace osafw
         {
             var result = field_iname;
             if (!string.IsNullOrEmpty(field_prio))
-                result = db.q_ident(field_prio) + " desc, " + db.q_ident(field_iname);
+                result = db.qid(field_prio) + " desc, " + db.qid(field_iname);
             return result;
         }
 
@@ -285,7 +285,7 @@ namespace osafw
             Hashtable item_changes = new();
             if (is_log_changes)
             {
-                var item_old = this.one(id).toHashtable();
+                Hashtable item_old = this.one(id);
                 item_changes = fw.model<FwEvents>().changes_only(item, item_old);
             }
 
@@ -605,7 +605,7 @@ namespace osafw
                     where = new Hashtable();
                     where[id_name] = id;
                     where[link_id_name] = link_id;
-                    db.update_or_insert(link_table_name, fields, where);
+                    db.updateOrInsert(link_table_name, fields, where);
                 }
             }
 
@@ -652,7 +652,7 @@ namespace osafw
                     where = new Hashtable();
                     where[linked_field_main_id] = main_id;
                     where[linked_field_link_id] = link_id;
-                    db.update_or_insert(table_name, fields, where);
+                    db.updateOrInsert(table_name, fields, where);
                 }
             }
 
@@ -700,7 +700,7 @@ namespace osafw
                     where[linked_field_link_id] = linked_id;
                     where[linked_field_main_id] = main_id;
                     logger(fields);
-                    db.update_or_insert(table_name, fields, where);
+                    db.updateOrInsert(table_name, fields, where);
                 }
             }
 
@@ -718,7 +718,7 @@ namespace osafw
             if (iname.Length == 0)
                 return 0;
             int result;
-            Hashtable item = this.oneByIname(iname).toHashtable();
+            Hashtable item = this.oneByIname(iname);
             if (item.ContainsKey(this.field_id))
                 // exists
                 result = Utils.f2int(item[this.field_id]);

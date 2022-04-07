@@ -29,27 +29,26 @@ namespace osafw
             model_related = fw.model<Users>();
         }
 
-        public override Hashtable ShowFormAction(string form_id = "")
+        public override Hashtable ShowFormAction(int id = 0)
         {
-            var ps = base.ShowFormAction(form_id);
+            var ps = base.ShowFormAction(id);
             Hashtable item = (Hashtable)ps["i"];
             ps["att"] = fw.model<Att>().one(Utils.f2int(item["att_id"]));
             return ps;
         }
 
-        public override Hashtable SaveAction(string form_id = "")
+        public override Hashtable SaveAction(int id = 0)
         {
             if (this.save_fields == null)
                 throw new Exception("No fields to save defined, define in Controller.save_fields");
 
             if (reqi("refresh") == 1)
             {
-                fw.routeRedirect("ShowForm", new string[]{form_id});
+                fw.routeRedirect("ShowForm", new object[]{ id });
                 return null;
             }
 
             Hashtable item = reqh("item");
-            int id = Utils.f2int(form_id);
             var success = true;
             var is_new = (id == 0);
 
@@ -112,24 +111,18 @@ namespace osafw
             // FW.FERR("other field name") = "HINT_ERR_CODE"
             // End If
 
-            if (fw.FormErrors.Count > 0 && !fw.FormErrors.ContainsKey("REQ"))
-                fw.FormErrors["INVALID"] = 1;
-
-            if (!result)
-                throw new ApplicationException("");
+            this.validateCheckResult();        
         }
 
         // cleanup session for current user and re-login as user from id
         // check access - only users with higher level may login as lower leve
-        public void SimulateAction(string form_id)
+        public void SimulateAction(int id)
         {
-            int id = Utils.f2int(form_id);
-
-            Hashtable user = model.one(id).toHashtable();
+            Hashtable user = model.one(id);
             if (user.Count == 0)
-                throw new ApplicationException("Wrong User ID");
+                throw new NotFoundException("Wrong User ID");
             if (Utils.f2int(user["access_level"]) >= Utils.f2int(fw.Session("access_level")))
-                throw new ApplicationException("Access Denied. Cannot simulate user with higher access level");
+                throw new AuthException("Access Denied. Cannot simulate user with higher access level");
 
             fw.logEvent("simulate", id, fw.userId);
 
@@ -137,10 +130,9 @@ namespace osafw
                 fw.redirect((string)fw.config("LOGGED_DEFAULT_URL"));
         }
 
-        public Hashtable SendPwdAction(string form_id)
+        public Hashtable SendPwdAction(int id)
         {
             Hashtable ps = new();
-            int id = Utils.f2int(form_id);
 
             ps["success"] = model.sendPwdReset(id);
             ps["err_msg"] = fw.last_error_send_email;

@@ -51,10 +51,9 @@ namespace osafw
             return ps;
         }
 
-        public void SaveAction(string form_id = "")
+        public void SaveAction(int id = 0)
         {
             var item = reqh("item");
-            int id = Utils.f2int(form_id);
 
             try
             {
@@ -109,7 +108,7 @@ namespace osafw
             }
 
             if (!result)
-                throw new ApplicationException(msg);
+                throw new UserException(msg);
             return true;
         }
     }

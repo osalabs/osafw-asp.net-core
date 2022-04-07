@@ -30,17 +30,16 @@ namespace osafw
             list_sortmap = Utils.qh("id|id iname|iname tname|tname");
         }
 
-        public override Hashtable ShowFormAction(string form_id = "")
+        public override Hashtable ShowFormAction(int id = 0)
         {
             Hashtable ps = new();
             Hashtable item;
-            int id = Utils.f2int(form_id);
 
             if (isGet())
             {
                 if (id > 0)
                 {
-                    item = model0.one(id).toHashtable();
+                    item = model0.one(id);
                     // convert comma separated to newline separated
                     item["list_columns"] = Utils.commastr2nlstr((string)item["list_columns"]);
                     item["columns"] = Utils.commastr2nlstr((string)item["columns"]);
@@ -58,7 +57,7 @@ namespace osafw
             else
             {
                 // read from db
-                item = model0.one(id).toHashtable();
+                item = model0.one(id);
                 // convert comma separated to newline separated
                 item["list_columns"] = Utils.commastr2nlstr((string)item["list_columns"]);
                 item["columns"] = Utils.commastr2nlstr((string)item["columns"]);
@@ -81,13 +80,12 @@ namespace osafw
             return ps;
         }
 
-        public override Hashtable SaveAction(string form_id = "")
+        public override Hashtable SaveAction(int id = 0)
         {
             if (this.save_fields == null)
                 throw new Exception("No fields to save defined, define in save_fields ");
 
             Hashtable item = reqh("item");
-            int id = Utils.f2int(form_id);
             var success = true;
             var is_new = (id == 0);
 

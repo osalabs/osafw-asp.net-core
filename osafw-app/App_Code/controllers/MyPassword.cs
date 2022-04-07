@@ -37,7 +37,7 @@ namespace osafw
             if (isGet())
             {
                 if (id > 0)
-                    item = model.one(id).toHashtable();
+                    item = model.one(id);
                 else
                     // set defaults here
                     item = new Hashtable();
@@ -45,7 +45,7 @@ namespace osafw
             else
             {
                 // read from db
-                var itemdb = model.one(id).toHashtable();
+                Hashtable itemdb = model.one(id);
                 // and merge new values from the form
                 Utils.mergeHash(itemdb, item);
                 item = itemdb;
@@ -85,7 +85,7 @@ namespace osafw
             }
         }
 
-        public bool Validate(int id, Hashtable item)
+        public void Validate(int id, Hashtable item)
         {
             bool result = true;
             result &= validateRequired(item, Utils.qw("email old_pwd pwd pwd2"));
@@ -117,7 +117,7 @@ namespace osafw
 
             if (result)
             {
-                Hashtable itemdb = model.one(id).toHashtable();
+                Hashtable itemdb = model.one(id);
                 if (!fw.model<Users>().checkPwd((string)item["old_pwd"], (string)itemdb["pwd"]))
                 {
                     result = false;
@@ -125,12 +125,7 @@ namespace osafw
                 }
             }
 
-            if (fw.FormErrors.Count > 0 && !fw.FormErrors.ContainsKey("REQ"))
-                fw.FormErrors["INVALID"] = 1;
-
-            if (!result)
-                throw new ApplicationException("");
-            return true;
+            this.validateCheckResult();
         }
     }
 }

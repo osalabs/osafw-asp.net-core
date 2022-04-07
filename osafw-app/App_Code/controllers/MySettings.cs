@@ -37,11 +37,11 @@ namespace osafw
             var id = fw.userId;
 
             if (isGet())
-                item = model.one(id).toHashtable();
+                item = model.one(id);
             else
             {
                 // read from db
-                var itemdb = model.one(id).toHashtable();
+                Hashtable itemdb = model.one(id);
                 // and merge new values from the form
                 Utils.mergeHash(itemdb, item);
                 item = itemdb;
@@ -79,7 +79,7 @@ namespace osafw
             }
         }
 
-        public bool Validate(int id, Hashtable item)
+        public void Validate(int id, Hashtable item)
         {
             bool result = true;
             result &= validateRequired(item, Utils.qw(required_fields));
@@ -102,12 +102,7 @@ namespace osafw
             //    fw.FERR["other field name"] = "HINT_ERR_CODE";
             //}
 
-            if (fw.FormErrors.Count > 0 && !fw.FormErrors.ContainsKey("REQ"))
-                fw.FormErrors["INVALID"] = 1;
-
-            if (!result)
-                throw new ApplicationException("");
-            return true;
+            this.validateCheckResult();
         }
     }
 }

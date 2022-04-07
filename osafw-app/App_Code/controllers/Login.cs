@@ -79,7 +79,7 @@ namespace osafw
                 if (login.Length == 0 || pwd.Length == 0)
                 {
                     fw.FormErrors["REGISTER"] = true;
-                    throw new ApplicationException("");
+                    throw new UserException("");
                 }
 
                 var user = model.oneByEmail(login);
@@ -88,7 +88,7 @@ namespace osafw
                     if (user.Count == 0 || (string)user["status"] != "0" || !model.checkPwd(pwd, (string)user["pwd"]))
                     {
                         fw.logEvent("login_fail", 0, 0, login);
-                        throw new ApplicationException("User Authentication Error");
+                        throw new AuthException("User Authentication Error");
                     }
                 }
 

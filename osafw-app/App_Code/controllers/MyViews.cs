@@ -43,7 +43,7 @@ namespace osafw
 
         public override void setListSearch()
         {
-            list_where = " status<>127 and add_users_id=@add_users_id";
+            list_where = " add_users_id=@add_users_id";
             list_where_params["@add_users_id"] = fw.userId;
 
             base.setListSearch();
@@ -55,22 +55,21 @@ namespace osafw
             }
         }
 
-        public override Hashtable ShowFormAction(string form_id = "")
+        public override Hashtable ShowFormAction(int id = 0)
         {
             this.form_new_defaults = new();
             this.form_new_defaults["screen"] = related_id;
-            var ps = base.ShowFormAction(form_id);
+            var ps = base.ShowFormAction(id);
             ps["is_admin"] = Utils.f2int(fw.Session("access_level")) == Users.ACL_ADMIN;
             return ps;
         }
 
-        public override Hashtable SaveAction(string form_id = "")
+        public override Hashtable SaveAction(int id = 0)
         {
             if (this.save_fields == null)
                 throw new Exception("No fields to save defined, define in Controller.save_fields");
 
             Hashtable item = reqh("item");
-            int id = Utils.f2int(form_id);
             var success = true;
             var is_new = (id == 0);
 

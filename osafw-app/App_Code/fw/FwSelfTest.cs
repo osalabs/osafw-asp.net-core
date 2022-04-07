@@ -140,7 +140,7 @@ namespace osafw
                 {
                     try
                     {
-                        db.value("select TOP 1 * from " + table);
+                        db.valuep("select TOP 1 * from " + db.qid(table));
                         plus_ok();
                         echo("table " + table, "OK");
                     }

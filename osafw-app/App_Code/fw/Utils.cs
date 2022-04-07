@@ -150,7 +150,7 @@ namespace osafw
         public static ArrayList splitEmails(string emails)
         {
             ArrayList result = new();
-            string[] arr = Regex.Split(emails, "[; \n\r]+");
+            string[] arr = Regex.Split(emails, @"[; \n\r]+");
             foreach (string email in arr)
             {
                 string _email = email.Trim();
@@ -188,30 +188,21 @@ namespace osafw
         public static bool f2bool(object AField)
         {
             if (AField == null) return false;
+            if (AField is bool b) return b;
             if (bool.TryParse(AField.ToString(), out bool result))
                 return result;
 
             return false;
         }
 
-        // TODO parse without Try/Catch
-        public static object f2date(object AField)
+        public static DateTime? f2date(object AField)
         {
-            object result;
-            try
+            DateTime? result = null;
+            if (AField == null) return result;
+            if (AField is DateTime) return (DateTime?)AField;
+            if (DateTime.TryParse(AField.ToString().Trim(), out DateTime dt))
             {
-                if (AField == null || AField.ToString() == "Null" || AField.ToString() == "")
-                {
-                    result = null;
-                }
-                else
-                {
-                    result = Convert.ToDateTime(AField.ToString().Trim());
-                }
-            }
-            catch (Exception)
-            {
-                result = null;
+                result = dt;
             }
             return result;
         }
@@ -219,14 +210,14 @@ namespace osafw
 
         public static bool isDate(object AField)
         {
-            object result = f2date(AField.ToString());
-            return result != null;
+            return f2date(AField) != null;
         }
 
         // guarantee to return string (if cannot convert to string - just return empty string)
         public static string f2str(object AField)
         {
             if (AField == null) return "";
+            if (AField is string s) return s;
             string result = Convert.ToString(AField);
             return result;
         }
@@ -234,6 +225,7 @@ namespace osafw
         public static int f2int(object AField)
         {
             if (AField == null) return 0;
+            if (AField is int i) return i;
             if (int.TryParse(AField.ToString(), out int result))
                 return result;
 
@@ -242,6 +234,7 @@ namespace osafw
         public static long f2long(object AField)
         {
             if (AField == null) return 0;
+            if (AField is long l) return l;
             if (long.TryParse(AField.ToString(), out long result))
                 return result;
 
@@ -251,11 +244,12 @@ namespace osafw
         // convert to double, optionally throw error
         public static double f2float(object AField, bool is_error = false)
         {
-            if (AField == null || !double.TryParse(AField.ToString(), out double result) && is_error)
-            {
-                throw new FormatException();
-            }
-            return result;
+            if (AField == null && !is_error) return 0.0;
+            if (AField is double d) return d;
+            if ((AField == null || !double.TryParse(AField.ToString(), out double result) && is_error))
+                 throw new FormatException();
+            else
+                return result;
         }
 
         // just return false if input cannot be converted to float
@@ -395,7 +389,7 @@ namespace osafw
             {
                 if (!is_first) result.Append(',');
 
-                string str = Regex.Replace(row[fld] + "", "[\n\r]+", " ");
+                string str = Regex.Replace(row[fld] + "", @"[\n\r]+", " ");
                 str = str.Replace("\"", "\\\"");
                 // check if string need to be quoted (if it contains " or ,)
                 if (str.IndexOf("\"") > 0 || str.IndexOf(",") > 0)
@@ -1279,14 +1273,14 @@ namespace osafw
             result = Regex.Replace(result, @"^_+|_+$", ""); // remove first and last _ if any
             result = result.ToLower(); // and finally to lowercase
             result = result.Trim();
-            return result; ;
+            return result;
         }
 
 
         // convert some system name to human-friendly name'
         // "system_name_id" => "System Name ID"
         public static string name2human(string str)
-        {
+        {            
             string str_lc = str.ToLower();
             if (str_lc == "icode") return "Code";
             if (str_lc == "iname") return "Name";
@@ -1302,12 +1296,13 @@ namespace osafw
             result = Regex.Replace(result, @"([a-z ])([A-Z]+)", "$1 $2"); // split CamelCase words
             result = Regex.Replace(result, @" +", " "); // deduplicate spaces
             result = Utils.capitalize(result, "all"); // Title Case
+            result = result.Trim();
 
-            if (Regex.IsMatch(result, "\bid\b", RegexOptions.IgnoreCase))
+            if (Regex.IsMatch(result, @"\bid\b", RegexOptions.IgnoreCase))
             {
                 // if contains id/ID - remove it and make singular
-                result = Regex.Replace(result, @"\bid\b", "", RegexOptions.IgnoreCase);
-                result = Regex.Replace(result, @"(?:es|s)\s*$", "", RegexOptions.IgnoreCase); // remove -es or -s at the end
+                result = Regex.Replace(result, @"\s*\bid\b", "", RegexOptions.IgnoreCase);
+                result = Regex.Replace(result, @"(\S)(?:es|s)\s*$", "$1", RegexOptions.IgnoreCase); // remove -es or -s at the end
             }
 
             result = result.Trim();

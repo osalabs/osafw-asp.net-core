@@ -41,12 +41,12 @@ namespace osafw
             }                
         }
 
-        public override Hashtable ShowFormAction(string form_id = "")
+        public override Hashtable ShowFormAction(int id = 0)
         {
             // set new form defaults here if any
             // Me.form_new_defaults = New Hashtable
             // item("field")="default value"
-            Hashtable ps = base.ShowFormAction(form_id);
+            Hashtable ps = base.ShowFormAction(id);
 
             Hashtable item = (Hashtable)ps["i"];
             // TODO - multi values for select, checkboxes, radio
@@ -56,13 +56,12 @@ namespace osafw
             return ps;
         }
 
-        public override Hashtable SaveAction(string form_id = "")
+        public override Hashtable SaveAction(int id = 0)
         {
             if (this.save_fields == null)
                 throw new Exception("No fields to save defined, define in save_fields ");
 
             Hashtable item = reqh("item");
-            int id = Utils.f2int(form_id);
             var success = true;
             var is_new = (id == 0);
             var location = "";
@@ -102,14 +101,14 @@ namespace osafw
             bool result = this.validateRequired(item, this.required_fields);
 
             if (id == 0)
-                throw new ApplicationException("Wrong Settings ID");
+                throw new UserException("Wrong Settings ID");
 
             this.validateCheckResult();
         }
 
-        public override Hashtable DeleteAction(string form_id)
+        public override Hashtable DeleteAction(int id)
         {
-            throw new ApplicationException("Site Settings cannot be deleted");
+            throw new UserException("Site Settings cannot be deleted");
         }
     }
 }

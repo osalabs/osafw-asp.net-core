@@ -252,7 +252,7 @@ namespace osafw
                 var userfilters_id = reqi("userfilters_id");
                 if (userfilters_id > 0)
                 {
-                    Hashtable uf = fw.model<UserFilters>().one(userfilters_id).toHashtable();
+                    Hashtable uf = fw.model<UserFilters>().one(userfilters_id);
                     Hashtable f1 = (Hashtable)Utils.jsonDecode(uf["idesc"]);
                     if (f1 != null)
                         f = f1;
@@ -400,7 +400,7 @@ namespace osafw
                         order = "asc";
                     else
                         order = "desc";
-                    aorderby[i] = db.q_ident(field) + " " + order;
+                    aorderby[i] = db.qid(field) + " " + order;
                 }
                 orderby = Strings.Join(aorderby, ", ");
             }
@@ -413,7 +413,7 @@ namespace osafw
                     string field = null;
                     string order = null;
                     Utils.split2(@"\s+", Strings.Trim(aorderby[i]), ref field, ref order);
-                    aorderby[i] = db.q_ident(field) + " " + order;
+                    aorderby[i] = db.qid(field) + " " + order;
                 }
                 orderby = Strings.Join(aorderby, ", ");
             }
@@ -459,7 +459,7 @@ namespace osafw
                             }
                             else
                             {
-                                var ft = db.schema_field_type(list_table_name, fand);
+                                var ft = db.schemaFieldType(list_table_name, fand);
                                 if (ft == "int")
                                     list_where_params[param_name] = Utils.f2long(s);
                                 else if (ft == "float")
@@ -467,12 +467,12 @@ namespace osafw
                                 else
                                     list_where_params[param_name] = s;                                
                             }
-                            afieldsand[j] = db.q_ident(fand) + " = @" + param_name;
+                            afieldsand[j] = db.qid(fand) + " = @" + param_name;
                         }
                         else
                         {
                             // like match
-                            afieldsand[j] = db.q_ident(fand) + " LIKE @" + param_name;
+                            afieldsand[j] = db.qid(fand) + " LIKE @" + param_name;
                             list_where_params[param_name] = like_s;
                         }
                     }
@@ -482,11 +482,15 @@ namespace osafw
             }
 
             if (!string.IsNullOrEmpty((string)list_filter["userlist"]))
-                this.list_where += " and id IN (select ti.item_id from " + fw.model<UserLists>().table_items + " ti where ti.user_lists_id=" + db.qi(list_filter["userlist"]) + " and ti.add_users_id=" + db.qi(fw.userId) + " ) ";
+            {
+                list_where += " and id IN (select ti.item_id from " + db.qid(fw.model<UserLists>().table_items) + " ti where ti.user_lists_id=@user_lists_id and ti.add_users_id=@userId) ";
+                list_where_params["user_lists_id"] = db.qi(list_filter["userlist"]);
+                list_where_params["userId"] = fw.userId;
+            }               
 
             if (!string.IsNullOrEmpty(related_id) && !string.IsNullOrEmpty(related_field_name))
             {
-                list_where += " and " + db.q_ident(related_field_name) + "=@related_field_name";
+                list_where += " and " + db.qid(related_field_name) + "=@related_field_name";
                 list_where_params["related_field_name"] = related_id;
             }
 
@@ -510,8 +514,8 @@ namespace osafw
                 {
                     string value = (string)hsearch[fieldname];
                     string str;
-                    var fieldname_sql = "ISNULL(CAST(" + db.q_ident(fieldname) + " as NVARCHAR), '')";
-                    var fieldname_sql2 = "TRY_CONVERT(DECIMAL(18,1),CAST(" + db.q_ident(fieldname) + " as NVARCHAR))"; // SQL Server 2012+ only
+                    var fieldname_sql = "ISNULL(CAST(" + db.qid(fieldname) + " as NVARCHAR), '')";
+                    var fieldname_sql2 = "TRY_CONVERT(DECIMAL(18,1),CAST(" + db.qid(fieldname) + " as NVARCHAR))"; // SQL Server 2012+ only
                     if (value.Substring(0, 1) == "=")
                         str = " = " + db.q(value[1..]);
                     else if (value.Substring(0, 2) == "!=")
@@ -559,12 +563,16 @@ namespace osafw
                 {
                     var status = Utils.f2int(this.list_filter["status"]);
                     // if want to see trashed and not admin - just show active
-                    if (status == 127 & !fw.model<Users>().checkAccess(Users.ACL_SITEADMIN, false))
+                    if (status == FwModel.STATUS_DELETED & !fw.model<Users>().checkAccess(Users.ACL_SITEADMIN, false))
                         status = 0;
-                    this.list_where += " and " + db.q_ident(model0.field_status) + "=" + db.qi(status);
+                    this.list_where += " and " + db.qid(model0.field_status) + "=@status";
+                    this.list_where_params["status"] = status;
                 }
                 else
-                    this.list_where += " and " + db.q_ident(model0.field_status) + "<>127 ";// by default - show all non-deleted
+                {
+                    this.list_where += " and " + db.qid(model0.field_status) + "<>@status";
+                    this.list_where_params["status"] = FwModel.STATUS_DELETED;// by default - show all non-deleted
+                }
             }
         }
 
@@ -598,7 +606,7 @@ namespace osafw
 
             if (string.IsNullOrEmpty(list_view))
                 list_view = model0.table_name;
-            var list_view_name = (list_view.Substring(0, 1) == "(" ? list_view : db.q_ident(list_view)); // don't quote if list_view is a subquery (starting with parentheses)
+            var list_view_name = (list_view.Substring(0, 1) == "(" ? list_view : db.qid(list_view)); // don't quote if list_view is a subquery (starting with parentheses)
 
             this.getListCount(list_view_name);
             if (this.list_count > 0)

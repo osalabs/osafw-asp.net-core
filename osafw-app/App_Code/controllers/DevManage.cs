@@ -80,7 +80,7 @@ namespace osafw
             fw.flash("success", "Application Caches cleared");
 
             FwCache.clear();
-            db.clear_schema_cache();
+            db.clearSchemaCache();
             var pp = new ParsePage(fw);
             pp.clear_cache();
 
@@ -171,7 +171,7 @@ namespace osafw
 
             // and last - reset db schema cache
             FwCache.clear();
-            db.clear_schema_cache();
+            db.clearSchemaCache();
         }
         // TODO move these functions to DB?
         private int exec_multi_sql(string sql, bool is_ignore_errors = false)
@@ -266,7 +266,7 @@ namespace osafw
             var controller_name = Utils.f2str(item["controller_name"]).Trim();
 
             if (!_controllers().Contains(controller_name))
-                throw new ApplicationException("No controller found");
+                throw new NotFoundException("No controller found");
 
             FwDynamicController cInstance = (FwDynamicController)Activator.CreateInstance(Type.GetType(FW.FW_NAMESPACE_PREFIX + controller_name, true));
             cInstance.init(fw);
@@ -370,7 +370,7 @@ namespace osafw
             string dbname = item["db"] + "";
             var dbconfig = ((Hashtable)fw.config("db"))[dbname];
             if (dbconfig == null)
-                throw new ApplicationException("Wrong DB selection");
+                throw new UserException("Wrong DB selection");
 
             createDBJsonFromExistingDB(dbname);
             fw.flash("success", "template" + DB_JSON_PATH + " created");
@@ -598,7 +598,7 @@ namespace osafw
                     continue;
 
                 // get table schema
-                var tblschema = db.load_table_schema_full(tblname);
+                var tblschema = db.loadTableSchemaFull(tblname);
                 // logger(tblschema)
 
                 Hashtable table_entity = new();
@@ -607,7 +607,7 @@ namespace osafw
                 table_entity["fw_name"] = Utils.name2fw(tblname); // new table name using fw standards
                 table_entity["iname"] = Utils.name2human(tblname); // human table name
                 table_entity["fields"] = tableschema2fields(tblschema);
-                table_entity["foreign_keys"] = db.get_foreign_keys(tblname);
+                table_entity["foreign_keys"] = db.listForeignKeys(tblname);
 
                 table_entity["model_name"] = _tablename2model((string)table_entity["fw_name"]); // potential Model Name
                 table_entity["controller_url"] = "/Admin/" + table_entity["model_name"]; // potential Controller URL/Name/Title
@@ -799,7 +799,7 @@ namespace osafw
                     table_entity["iname"] = Utils.name2human(table_name);
                     table_entity["table"] = Utils.name2fw(table_name);
                     if (isFwTableName((string)table_entity["table"]))
-                        throw new ApplicationException("Cannot have table name " + table_entity["table"]);
+                        throw new UserException("Cannot have table name " + table_entity["table"]);
 
                     table_entity["fw_name"] = Utils.name2fw(table_name); // new table name using fw standards
 
@@ -957,7 +957,7 @@ namespace osafw
                             field["fw_subtype"] = "date";
                             field["is_nullable"] = 1;
                         }
-                        else if (Regex.IsMatch(field_name, @"^is_", RegexOptions.IgnoreCase))
+                        else if (Regex.IsMatch(field_name, @"^is_", RegexOptions.IgnoreCase) || Regex.IsMatch(field_name, @"^Is[A-Z]"))
                         {
                             field["numeric_precision"] = 3;
                             field["fw_type"] = "int";
@@ -1011,7 +1011,7 @@ namespace osafw
             // drop all FKs we created before, so we'll be able to drop tables later
             DBList fks = db.arrayp("SELECT fk.name, o.name as table_name FROM sys.foreign_keys fk, sys.objects o where fk.is_system_named=0 and o.object_id=fk.parent_object_id", DB.h());
             foreach (var fk in fks)
-                db.exec("ALTER TABLE " + db.q_ident((string)fk["table_name"]) + " DROP CONSTRAINT " + db.q_ident((string)fk["name"]));
+                db.exec("ALTER TABLE " + db.qid((string)fk["table_name"]) + " DROP CONSTRAINT " + db.qid((string)fk["name"]));
 
             foreach (Hashtable entity in entities)
             {
@@ -1020,7 +1020,7 @@ namespace osafw
 
                 try
                 {
-                    db.exec("DROP TABLE " + db.q_ident((string)entity["table"]));
+                    db.exec("DROP TABLE " + db.qid((string)entity["table"]));
                 }
                 catch (Exception ex)
                 {
@@ -1073,7 +1073,7 @@ namespace osafw
             if (model_name == "")
                 model_name = Utils.nameCamelCase(table_name);
             if (table_name == "" || model_name == "")
-                throw new ApplicationException("No table name or no model name");
+                throw new UserException("No table name or no model name");
             // If _models().Contains(model_name) Then Throw New ApplicationException("Such model already exists")
 
             // copy DemoDicts.cs to model_name.cs
@@ -1244,7 +1244,7 @@ namespace osafw
             Hashtable replacements = new()
             {
                 { "/Admin/DemosDynamic", controller_url },
-                { "DemoDynamic", controller_title }
+                { "Demo Dynamic", controller_title }
             };
             replaceInFiles(tpl_to, replacements);
 
@@ -1292,7 +1292,7 @@ namespace osafw
                     db = new DB(fw, (Hashtable)((Hashtable)fw.config("db"))[entity["db_config"]], (string)entity["db_config"]);
                 else
                     db = new DB(fw);
-                fields = db.load_table_schema_full(table_name);
+                fields = db.loadTableSchemaFull(table_name);
                 if (!entity.ContainsKey("is_fw"))
                     entity["is_fw"] = true; // TODO actually detect if there any fields to be normalized
                 var atables = db.tables();
@@ -1427,7 +1427,7 @@ namespace osafw
                             sff["is_option0"] = true;
                             sff["class_contents"] = "col-md-3";
                         }
-                        else if (Utils.f2str(fld["fw_subtype"]) == "boolean" || Utils.f2str(entity["fw_subtype"]) == "bit" || Strings.Left(fld_name, 3) == "is_")
+                        else if (Utils.f2str(fld["fw_subtype"]) == "boolean" || Utils.f2str(entity["fw_subtype"]) == "bit" || Strings.Left(fld_name, 3) == "is_" || Regex.IsMatch(fld_name, @"^Is[A-Z]"))
                         {
                             // make it as yes/no radio
                             sff["type"] = "yesno";
@@ -1720,7 +1720,7 @@ namespace osafw
         {
             if (Regex.IsMatch(str, @"[^\w_]"))
             {
-                return db.q_ident(str);
+                return db.qid(str);
             }
             else
             {

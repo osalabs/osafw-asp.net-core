@@ -8,7 +8,7 @@ using System.Collections;
 
 namespace osafw
 {
-    public class AdminAttController : FwController
+    public class AdminAttController : FwAdminController
     {
         public static new int access_level = Users.ACL_MANAGER;
 
@@ -24,7 +24,7 @@ namespace osafw
             base_url = "/Admin/Att"; // base url for the controller
         }
 
-        public Hashtable IndexAction()
+        public override Hashtable IndexAction()
         {
             Hashtable ps = new();
 
@@ -96,16 +96,15 @@ namespace osafw
             return ps;
         }
 
-        public Hashtable ShowFormAction(string form_id = "")
+        public override Hashtable ShowFormAction(int id = 0)
         {
             Hashtable ps = new();
             Hashtable item;
-            int id = Utils.f2int(form_id);
 
             if (isGet())
             {
                 if (id > 0)
-                    item = model.one(id).toHashtable();
+                    item = model.one(id);
                 else
                     // set defaults here
                     item = new Hashtable();
@@ -113,7 +112,7 @@ namespace osafw
             else
             {
                 // read from db
-                item = model.one(id).toHashtable();
+                item = model.one(id);
 
                 // and merge new values from the form
                 Utils.mergeHash(item, reqh("item"));
@@ -136,14 +135,10 @@ namespace osafw
         }
 
 
-        public Hashtable SaveAction(string form_id = "")
+        public override Hashtable SaveAction(int id = 0)
         {
             Hashtable ps = new();
             Hashtable item = reqh("item");
-            if (item == null)
-                item = new Hashtable();
-
-            int id = Utils.f2int(form_id);
 
             try
             {
@@ -177,7 +172,7 @@ namespace osafw
                 ps["id"] = id;
                 if (id > 0)
                 {
-                    item = model.one(id).toHashtable();
+                    item = model.one(id);
                     ps["success"] = true;
                     ps["url"] = model.getUrlDirect(id);
                     ps["iname"] = item["iname"];
@@ -212,16 +207,15 @@ namespace osafw
             return ps;
         }
 
-        public bool Validate(int id, Hashtable item)
+        public override void Validate(int id, Hashtable item)
         {
-            bool result = true;
             // only require file during first upload
             // only require iname during update
             Hashtable itemdb;
             if (id > 0)
             {
                 itemdb = model.one(id);
-                result &= validateRequired(item, Utils.qw(required_fields));
+                validateRequired(item, Utils.qw(required_fields));
             }
             else
             {
@@ -233,58 +227,11 @@ namespace osafw
             {
                 if (fw.request.Form.Files.Count == 0 || fw.request.Form.Files[0]==null || fw.request.Form.Files[0].Length == 0)
                 {
-                    result = false;
                     fw.FormErrors["file1"] = "NOFILE";
                 }
             }
 
-            if (!result)
-                fw.FormErrors["REQUIRED"] = true;
-
-            if (fw.FormErrors.Count > 0 && !fw.FormErrors.ContainsKey("REQ"))
-                fw.FormErrors["INVALID"] = 1;
-
-            if (!result)
-                throw new ApplicationException("");
-            return true;
-        }
-
-        public Hashtable ShowDeleteAction(string form_id)
-        {
-            Hashtable ps = new();
-            int id = Utils.f2int(form_id);
-
-            ps["i"] = model.one(id).toHashtable();
-            return ps;
-        }
-
-        public void DeleteAction(string form_id)
-        {
-            int id = Utils.f2int(form_id);
-
-            model.delete(id);
-            fw.flash("onedelete", 1);
-            fw.redirect(base_url);
-        }
-
-        public void SaveMultiAction()
-        {
-            Hashtable cbses = reqh("cb");
-            if (cbses == null)
-                cbses = new Hashtable();
-            int ctr = 0;
-
-            foreach (string id in cbses.Keys)
-            {
-                if (fw.FORM.ContainsKey("delete"))
-                {
-                    model.delete(Utils.f2int(id));
-                    ctr += 1;
-                }
-            }
-
-            fw.flash("multidelete", ctr);
-            fw.redirect(base_url);
+            this.validateCheckResult();
         }
 
         public Hashtable SelectAction()

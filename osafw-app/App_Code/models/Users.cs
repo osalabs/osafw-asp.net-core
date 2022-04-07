@@ -34,7 +34,7 @@ namespace osafw
         {
             Hashtable where = new();
             where["email"] = email;
-            return db.row(table_name, where).toHashtable();
+            return db.row(table_name, where);
         }
 
         /// <summary>
@@ -136,19 +136,15 @@ namespace osafw
 
             Hashtable item = new()
             {
-                {
-                    "pwd_reset", this.hashPwd(pwd_reset_token)
-                },
-                {
-                    "pwd_reset_time", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
-                }
+                {"pwd_reset", this.hashPwd(pwd_reset_token)},
+                {"pwd_reset_time", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")}
             };
             this.update(id, item);
 
             var user = this.one(id);
             user["pwd_reset_token"] = pwd_reset_token;
 
-            return fw.sendEmailTpl((string)user["email"], "email_pwd.txt", user.toHashtable());
+            return fw.sendEmailTpl((string)user["email"], "email_pwd.txt", user);
         }
 
         /// <summary>
@@ -173,22 +169,10 @@ namespace osafw
             // bonus points for mixing it up
             Hashtable vars = new()
             {
-                {
-                    "digits",
-                    Regex.IsMatch(pwd, @"\d")
-                },
-                {
-                    "lower",
-                    Regex.IsMatch(pwd, "[a-z]")
-                },
-                {
-                    "upper",
-                    Regex.IsMatch(pwd, "[A-Z]")
-                },
-                {
-                    "other",
-                    Regex.IsMatch(pwd, @"\W")
-                }
+                {"digits",Regex.IsMatch(pwd, @"\d")},
+                {"lower",Regex.IsMatch(pwd, "[a-z]")},
+                {"upper",Regex.IsMatch(pwd, "[A-Z]")},
+                {"other",Regex.IsMatch(pwd, @"\W")}
             };
             var ctr = 0;
             foreach (bool value in vars.Values)
@@ -248,13 +232,13 @@ namespace osafw
         // return standard list of id,iname where status=0 order by iname
         public override DBList list()
         {
-            string sql = "select id, fname+' '+lname as iname from " + db.q_ident(table_name) + " where status=0 order by fname, lname";
-            return db.arrayp(sql, DB.h());
+            string sql = "select id, fname+' '+lname as iname from " + db.qid(table_name) + " where status=0 order by fname, lname";
+            return db.arrayp(sql);
         }
         public override ArrayList listSelectOptions(Hashtable def = null)
         {
-            string sql = "select id, fname+' '+lname as iname from " + db.q_ident(table_name) + " where status=0 order by fname, lname";
-            return db.arrayp(sql, DB.h()).toArrayList();
+            string sql = "select id, fname+' '+lname as iname from " + db.qid(table_name) + " where status=0 order by fname, lname";
+            return db.arrayp(sql);
         }
 
         /// <summary>
@@ -269,7 +253,7 @@ namespace osafw
             if (users_acl < acl)
             {
                 if (is_die)
-                    throw new ApplicationException("Access Denied");
+                    throw new AuthException();
                 return false;
             }
 
@@ -283,7 +267,7 @@ namespace osafw
             if (menu_items == null)
             {
                 // read main menu items for sidebar
-                menu_items = db.array(table_menu_items, DB.h("status", STATUS_ACTIVE), "iname").toArrayList();
+                menu_items = db.array(table_menu_items, DB.h("status", STATUS_ACTIVE), "iname");
                 FwCache.setValue("menu_items", menu_items);
             }
 

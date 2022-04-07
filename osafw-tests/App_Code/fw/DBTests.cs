@@ -105,7 +105,7 @@ namespace osafw.Tests
         [TestMethod()]
         public void rowTest()
         {
-            var row = db.row("SELECT * FROM " + table_name + " WHERE id=1;");
+            var row = db.rowp("SELECT * FROM " + table_name + " WHERE id=1;");
 
             Assert.IsTrue(row.Count > 0);
             Assert.IsTrue(row.ContainsKey("id"));
@@ -117,7 +117,7 @@ namespace osafw.Tests
         [TestMethod()]
         public void arrayTest()
         {
-            DBList rows = db.array("SELECT * FROM " + table_name + ";");
+            DBList rows = db.arrayp("SELECT * FROM " + table_name + ";");
 
             foreach (var row in rows) {
                 Assert.IsTrue(row.Count > 0);
@@ -134,7 +134,7 @@ namespace osafw.Tests
         [TestMethod()]
         public void colTest()
         {
-            List<string> col = db.col("SELECT iname FROM " + table_name);
+            List<string> col = db.colp("SELECT iname FROM " + table_name);
 
             Assert.AreEqual("test1", col[0]);
             Assert.AreEqual("test2", col[1]);
@@ -145,7 +145,7 @@ namespace osafw.Tests
         [TestMethod()]
         public void valueTest()
         {
-            string value = (string)db.value("SELECT iname FROM " + table_name + " WHERE id=1;");
+            string value = (string)db.valuep("SELECT iname FROM " + table_name + " WHERE id=1;");
             Assert.AreEqual("test1", value);
             // TODO test all methods types
         }
@@ -171,7 +171,7 @@ namespace osafw.Tests
         [TestMethod()]
         public void q_identTest()
         {
-            string r = db.q_ident(table_name);
+            string r = db.qid(table_name);
             Assert.AreEqual("[" + table_name + "]", r);
         }
 
@@ -219,33 +219,13 @@ namespace osafw.Tests
         public void qdTest()
         {
             string s = "2021-08-08 01:02:03";
-            string r = db.qd(s);
+            string r = db.qdstr(s);
             Assert.AreEqual("convert(DATETIME2, '" + s + "', 120)", r);
 
-            r = db.qd("");
+            r = db.qdstr("");
             Assert.AreEqual("NULL", r);
 
             // TODO test with non SQL connnection
-        }
-
-        [TestMethod()]
-        public void quoteTest()
-        {
-            Hashtable r = db.quote(table_name, DB.h("id", "5", "iname", "test5"));
-            Assert.AreEqual("5", r["[id]"]);
-            Assert.AreEqual("'test5'", r["[iname]"]);
-        }
-
-        [TestMethod()]
-        public void qoneTest()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod()]
-        public void qone_by_typeTest()
-        {
-            throw new NotImplementedException();
         }
 
         [TestMethod()]
@@ -393,11 +373,11 @@ namespace osafw.Tests
         [TestMethod()]
         public void update_or_insertTest()
         {
-            db.update_or_insert(table_name, DB.h("iname", "test5"), DB.h("id", 5));
+            db.updateOrInsert(table_name, DB.h("iname", "test5"), DB.h("id", 5));
             var r = db.row(table_name, DB.h("id", 5));
             Assert.AreEqual("test5", r["iname"]);
 
-            db.update_or_insert(table_name, DB.h("iname", "test5"), DB.h("id", 3));
+            db.updateOrInsert(table_name, DB.h("iname", "test5"), DB.h("id", 3));
             r = db.row(table_name, DB.h("id", 3));
             Assert.AreEqual("test5", r["iname"]);
         }

@@ -19,11 +19,18 @@ namespace osafw
         protected virtual bool auth()
         {
             var result = false;
+            string x_api_key = fw.request.Headers["X-API-Key"];
+            var api_key = fw.config()["API_KEY"] as string;
 
-            if (fw.isLogged)
+            //authorize if user logged OR API_KEY configured and matches
+            if (fw.isLogged || !string.IsNullOrEmpty(api_key) && x_api_key == api_key)
                 result = true;
+
             if (!result)
-                throw new ApplicationException("API auth error");
+            {
+                fw.response.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;
+                throw new AuthException("API auth error");
+            }
 
             return result;
         }
@@ -53,7 +60,7 @@ namespace osafw
 
             // validate referrer is same as our hostname
             if (string.IsNullOrEmpty(origin) || (origin != "http://" + fw.config("hostname") && origin != "https://" + fw.config("hostname") && origin != (string)fw.config("API_ALLOW_ORIGIN")))
-                throw new ApplicationException("Invalid origin " + origin);
+                throw new AuthException("Invalid origin " + origin);
 
             // create headers
             fw.response.Headers.Remove("Access-Control-Allow-Origin");

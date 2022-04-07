@@ -1,4 +1,4 @@
-<form class="fw-card" method="post" data-check-changes <~das if="id" inline>data-autosave</~das> action="<~../url><~uu1 if="id" inline>/<~id></~uu1>" data-errors="<~ERR json>">
+<form method="post" data-check-changes <~das if="id" inline>data-autosave</~das> action="<~../url><~uu1 if="id" inline>/<~id></~uu1>" data-errors="<~ERR json>">
  <input type="hidden" name="XSS" value="<~session[XSS]>">
  <input type="hidden" name="return_url" value="<~return_url>">
 
@@ -21,7 +21,7 @@
         </~btn_preview>
       </div>
       <div class="col">
-        <div class="float-end text-end bg-white ps-3 pb-3" style="min-width:240px;">
+        <div class="float-end text-end ps-3 pb-3" style="min-width:240px;">
             <span class="form-saved-status"></span>
             <button type="submit" class="btn btn-primary">`Submit`</button>
             <button type="button" class="btn btn-default on-cancel" data-href="<~/common/form/cancel_url>">`Cancel`</button>
@@ -30,14 +30,16 @@
     </div>
 
 
-  <div class="row">
-    <div class="col-lg-9">
-      <~/common/form/msg>
+  <div id="FEdit" class="fw-card">
+    <div class="row">
+      <div class="col-lg-9">
+        <~/common/form/msg>
 
-      <~page_content>
-    </div>
-    <div class="col-lg-3">
-      <~page_settings>
+        <~page_content>
+      </div>
+      <div class="col-lg-3">
+        <~page_settings>
+      </div>
     </div>
   </div>
 

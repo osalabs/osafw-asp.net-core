@@ -44,7 +44,7 @@ namespace osafw
         public override void setListSearch()
         {
             // only logged user lists
-            list_where = " status<>127 and add_users_id=@add_users_id";
+            list_where = " add_users_id=@add_users_id";
             list_where_params["@add_users_id"] = fw.userId;
 
             base.setListSearch();
@@ -56,22 +56,21 @@ namespace osafw
             }                
         }
 
-        public override Hashtable ShowFormAction(string form_id = "")
+        public override Hashtable ShowFormAction(int id = 0)
         {
             this.form_new_defaults = new();
             this.form_new_defaults["icode"] = related_id;
-            var ps = base.ShowFormAction(form_id);
+            var ps = base.ShowFormAction(id);
             ps["is_admin"] = Utils.f2int(fw.Session("access_level")) == Users.ACL_ADMIN;
             return ps;
         }
 
-        public override Hashtable SaveAction(string form_id = "")
+        public override Hashtable SaveAction(int id = 0)
         {
             if (this.save_fields == null)
                 throw new Exception("No fields to save defined, define in Controller.save_fields");
 
             var item = reqh("item");
-            var id = Utils.f2int(form_id);
             var success = true;
             var is_new = (id == 0);
             var is_overwrite = reqi("is_overwrite") == 1;
@@ -82,11 +81,11 @@ namespace osafw
                     required_fields += " icode";
                 Validate(id, item);
                 // load old record if necessary
-                Hashtable item_old = model0.one(id).toHashtable();
+                Hashtable item_old = model0.one(id);
 
                 // also check that this filter is user's filter (cannot override system filter)
                 if (item_old.Count > 0 && Utils.f2int(item_old["is_system"]) == 1)
-                    throw new ApplicationException("Cannot overwrite system filter");
+                    throw new UserException("Cannot overwrite system filter");
 
                 Hashtable itemdb = FormUtils.filter(item, this.save_fields);
                 FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes);

@@ -48,7 +48,7 @@ namespace osafw
                 ["parent_id"] = parent_id,
                 ["url"] = url
             };
-            return db.row(table_name, where, "pub_time desc").toHashtable();
+            return db.row(table_name, where, "pub_time desc");
         }
 
         // return one latest record by full_url (i.e. relative url from root, without domain)
@@ -95,7 +95,11 @@ namespace osafw
 
         public ArrayList listChildren(int parent_id)
         {
-            return db.arrayp("select * from " + db.q_ident(table_name) + " where status<>127 and parent_id=@parent_id order by iname", DB.h("@parent_id", parent_id)).toArrayList();
+            var where = new Hashtable {
+                { "status", db.opNOT(FwModel.STATUS_DELETED)},
+                { "parent_id", parent_id}
+            };
+            return db.array(table_name, where, "iname");
         }
 
         /// <summary>
@@ -107,7 +111,9 @@ namespace osafw
         /// <remarks></remarks>
         public ArrayList tree(string where, Hashtable list_where_params, string orderby)
         {
-            ArrayList rows = db.arrayp("select * from " + db.q_ident(table_name) + " where " + where + " order by " + orderby, list_where_params).toArrayList();
+            ArrayList rows = db.arrayp("select * from " + db.qid(table_name) + 
+                                       " where " + where + 
+                                       " order by " + orderby, list_where_params);
             ArrayList pages_tree = getPagesTree(rows, 0);
             return pages_tree;
         }
@@ -216,7 +222,7 @@ namespace osafw
             ps["pages"] = getPagesTreeList(pages_tree, 0);
 
             Hashtable item = oneByFullUrl(full_url);
-            if (item.Count == 0 || Utils.f2int(item["status"]) == 127 && !fw.model<Users>().checkAccess(100, false))
+            if (item.Count == 0 || Utils.f2int(item["status"]) == FwModel.STATUS_DELETED && !fw.model<Users>().checkAccess(Users.ACL_ADMIN, false))
             {
                 ps["hide_std_sidebar"] = true;
                 fw.parser("/error/404", ps);

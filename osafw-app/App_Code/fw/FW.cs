@@ -19,12 +19,19 @@ namespace osafw
     [Serializable]
     public class AuthException : ApplicationException
     {
+        public AuthException() : base("Access denied") { }
         public AuthException(string message) : base(message) { }
     }
     [Serializable]
     public class UserException : ApplicationException
     {
         public UserException(string message) : base(message) { }
+    }
+    [Serializable]
+    public class NotFoundException : UserException
+    {
+        public NotFoundException() : base("Not Found") { }
+        public NotFoundException(string message) : base(message) { }
     }
     [Serializable]
     public class ValidationException : ApplicationException { }
@@ -64,7 +71,7 @@ namespace osafw
         public const string FW_NAMESPACE_PREFIX = "osafw.";
         public static Hashtable METHOD_ALLOWED = Utils.qh("GET POST PUT DELETE");
 
-        private readonly Hashtable models = new ();
+        private readonly Hashtable models = new();
         public FwCache cache = new(); // request level cache
 
         public Hashtable FORM;
@@ -79,7 +86,7 @@ namespace osafw
         public HttpResponse response;
 
         public string request_url; // current request url (relative to application url)
-        public FwRoute route = new ();
+        public FwRoute route = new();
         public TimeSpan request_time; // after dispatch() - total request processing time
 
         public string cache_control = "no-cache"; // cache control header to add to pages, controllers can change per request
@@ -108,7 +115,7 @@ namespace osafw
         // begin processing one request
         public static void run(HttpContext context, IConfiguration configuration)
         {
-            FW fw = new (context, configuration);
+            FW fw = new(context, configuration);
 
             FwHooks.initRequest(fw);
             fw.dispatch();
@@ -199,7 +206,7 @@ namespace osafw
         // FLASH - used to pass something to the next request (and only on this request)        
         // get flash value by name
         // set flash value by name - return fw in this case
-        public object flash(string name, object value = null) 
+        public object flash(string name, object value = null)
         {
             if (value == null)
             {
@@ -410,11 +417,9 @@ namespace osafw
                         route.action_raw = "Delete";
                     else
                     {
-                        logger(LogLevel.WARN, "Wrong Route Params");
                         logger(LogLevel.WARN, route.method);
                         logger(LogLevel.WARN, url);
-                        errMsg("Wrong Route Params");
-                        return;
+                        throw new UserException("Wrong Route Params");
                     }
 
                     logger(LogLevel.TRACE, "REST controller.action=", route.controller, ".", route.action_raw);
@@ -448,104 +453,18 @@ namespace osafw
         {
             DateTime start_time = DateTime.Now;
 
-            this.getRoute();
-
-            string[] args = new[] { route.id }; // TODO - add rest of possible params from parts
-
             try
             {
-                var auth_check_controller = _auth(route.controller, route.action);
-
-                Type calledType = Type.GetType(FW_NAMESPACE_PREFIX + route.controller + "Controller", false, true); // case ignored
-                if (calledType == null)
-                {
-                    logger(LogLevel.DEBUG, "No controller found for controller=[", route.controller, "], using default Home");
-                    // no controller found - call default controller with default action
-                    calledType = Type.GetType(FW_NAMESPACE_PREFIX + "HomeController", true);
-                    route.controller_path = "/Home";
-                    route.controller = "Home";
-                    route.action = "NotFound";
-                }
-                else
-                    // controller found
-                    if (auth_check_controller == 1)
-                {
-                    // but need's check access level on controller level
-                    var field = calledType.GetField("access_level", BindingFlags.Public | BindingFlags.Static);
-                    if (field != null)
-                    {
-                        int current_level = Utils.f2int(Session("access_level")); //will be 0 for visitors
-                        if (current_level < Utils.f2int(field.GetValue(null)))
-                            throw new AuthException("Bad access - Not authorized (2)");
-                    }
-                }
-
-                logger(LogLevel.TRACE, "TRY controller.action=", route.controller, ".", route.action);
-
-                MethodInfo mInfo = calledType.GetMethod(route.action + "Action");
-                if (mInfo == null)
-                {
-                    logger(LogLevel.DEBUG, "No method found for controller.action=[", route.controller, ".", route.action, "], checking route_default_action");
-                    // no method found - try to get default action
-                    FieldInfo pInfo = calledType.GetField("route_default_action");
-                    if (pInfo != null)
-                    {
-                        string pvalue = (string)pInfo.GetValue(null);
-                        if (pvalue == "index")
-                        {
-                            // = index - use IndexAction for unknown actions
-                            route.action = "Index";
-                            mInfo = calledType.GetMethod(route.action + "Action");
-                        }
-                        else if (pvalue == "show")
-                        {
-                            // = show - assume action is id and use ShowAction
-                            if (!string.IsNullOrEmpty(route.id))
-                                route.@params.Add(route.id); // route.id is a first param in this case. TODO - add all rest of params from split("/") here
-                            if (!string.IsNullOrEmpty(route.action_more))
-                                route.@params.Add(route.action_more); // route.action_more is a second param in this case
-
-                            route.id = route.action_raw;
-                            args[0] = route.id;
-
-                            route.action = "Show";
-                            mInfo = calledType.GetMethod(route.action + "Action");
-                        }
-                    }
-                }
-
-                // save to globals so it can be used in templates
-                G["controller"] = route.controller;
-                G["action"] = route.action;
-                G["controller.action"] = route.controller + "." + route.action;
-
-                logger(LogLevel.TRACE, "FINAL controller.action=", route.controller, ".", route.action);
-                // logger(LogLevel.TRACE, "route.method=" , route.method)
-                // logger(LogLevel.TRACE, "route.controller=" , route.controller)
-                // logger(LogLevel.TRACE, "route.action=" , route.action)
-                // logger(LogLevel.TRACE, "route.format=" , route.format)
-                // logger(LogLevel.TRACE, "route.id=" , route.id)
-                // logger(LogLevel.TRACE, "route.action_more=" , route.action_more)
-
+                this.getRoute();
                 logger(LogLevel.INFO, "REQUEST START [", route.method, " ", request_url, "] => ", route.controller, ".", route.action);
 
-                if (mInfo == null)
-                {
-                    // if no method - just call FW.parser(hf) - show template from /route.controller/route.action dir
-                    logger(LogLevel.DEBUG, "DEFAULT PARSER");
-                    parser(new Hashtable());
-                }
-                else
-                    callController(calledType, mInfo, args);
+                this.callRoute();
             }
-            // logger(LogLevel.INFO, "NO EXCEPTION IN dispatch")
-
             catch (RedirectException)
             {
                 // not an error, just exit via Redirect
                 logger(LogLevel.INFO, "Redirected...");
             }
-
             catch (AuthException Ex)
             {
                 logger(LogLevel.DEBUG, Ex.Message);
@@ -555,10 +474,8 @@ namespace osafw
                 else
                     errMsg(Ex.Message);
             }
-
             catch (ApplicationException Ex)
             {
-
                 // get very first exception
                 string msg = Ex.Message;
                 Exception iex = Ex;
@@ -594,7 +511,6 @@ namespace osafw
                     errMsg(msg, Ex);
                 }
             }
-
             catch (Exception Ex)
             {
                 // it's general Exception, so something more severe occur, log as error and notify admin
@@ -765,22 +681,23 @@ namespace osafw
             if (level > (LogLevel)this.config("log_level"))
                 return;
 
-            StringBuilder str = new (DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            StringBuilder str = new(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"));
             str.Append(' ').Append(level.ToString()).Append(' ');
             str.Append(Environment.ProcessId).Append(' ');
-            System.Diagnostics.StackTrace st = new (true);
+            System.Diagnostics.StackTrace st = new(true);
 
             try
             {
                 var i = 1;
                 System.Diagnostics.StackFrame sf = st.GetFrame(i);
+                string fname = sf.GetFileName() ?? "";
                 // skip logger methods and DB internals as we want to know line where logged thing actually called from
-                while (sf.GetMethod().Name == "logger" || (sf.GetFileName() ?? "").Substring((sf.GetFileName() ?? "").Length - 6) == @"\DB.vb")
+                while (sf.GetMethod().Name == "logger" || fname.Length >= 6 && fname.Substring(fname.Length - 6) == @"\DB.vb")
                 {
                     i += 1;
                     sf = st.GetFrame(i);
                 }
-                string fname = sf.GetFileName();
+                fname = sf.GetFileName();
                 if (fname != null)
                     str.Append(fname.Replace((string)this.config("site_root"), "").Replace(@"\App_Code", ""));
                 str.Append(':').Append(sf.GetMethod().Name).Append(' ').Append(sf.GetFileLineNumber()).Append(" # ");
@@ -817,9 +734,11 @@ namespace osafw
 
         public static string dumper(object dmp_obj, int level = 0) // TODO better type detection(suitable for all collection types)
         {
-            StringBuilder str = new ();
+            StringBuilder str = new();
             if (dmp_obj == null)
                 return "[Nothing]";
+            if (dmp_obj == DBNull.Value)
+                return "[DBNull]";
             if (level > 10)
                 return "[Too Much Recursion]";
 
@@ -946,7 +865,7 @@ namespace osafw
         {
             filename = Regex.Replace(filename, "/", @"\");
 
-            using (StreamWriter sw = new (filename, isAppend))
+            using (StreamWriter sw = new(filename, isAppend))
             {
                 sw.Write(fileData);
             }
@@ -1044,7 +963,7 @@ namespace osafw
 
         public void parserJson(object ps)
         {
-            ParsePage parser_obj = new (this);
+            ParsePage parser_obj = new(this);
             string page = parser_obj.parse_json(ps);
             if (!this.response.HasStarted) response.Headers.Add("Content-type", "application/json; charset=utf-8");
             responseWrite(page);
@@ -1063,24 +982,12 @@ namespace osafw
 
         public void routeRedirect(string action, string controller, object[] args = null)
         {
+            logger(LogLevel.TRACE, "routeRedirect to ", controller, ".", action, args);
             setController((!string.IsNullOrEmpty(controller) ? controller : route.controller), action);
 
-            Type calledType = Type.GetType(FW_NAMESPACE_PREFIX + route.controller + "Controller", true);
-            MethodInfo mInfo = calledType.GetMethod(route.action + "Action");
-            if (mInfo == null)
-            {
-                logger(LogLevel.INFO, "No method found for controller.action=[", route.controller, ".", route.action, "], displaying static page from related templates");
-                // no method found - set to default Index method
-                // route.action = "Index"
-                // mInfo = calledType.GetMethod(route.action & "Action")
-
-                // if no method - show template from /route.controller/route.action dir
-                parser("/" + route.controller.ToLower() + "/" + route.action.ToLower(), new Hashtable());
-            }
-
-            if (mInfo != null)
-                callController(calledType, mInfo, args);
+            callRoute();
         }
+
         // same as above just with default controller
         public void routeRedirect(string action, object[] args = null)
         {
@@ -1095,33 +1002,149 @@ namespace osafw
         public void setController(string controller, string action = "")
         {
             route.controller = controller;
-            if (!string.IsNullOrEmpty(action))
-                route.action = action;
+            // route.controller_path = controller; // TODO this won't work if redirect to controller with different prefix
+            route.action = action;
 
             G["controller"] = route.controller;
             G["action"] = route.action;
-            G["controller.ction"] = route.controller + "." + route.action;
+            G["controller.action"] = route.controller + "." + route.action;
+        }
+
+        public void setRoute(FwRoute r)
+        {
+            this.route = r;
+            setController(r.controller, r.action); //to update G
+        }
+
+        public void callRoute()
+        {
+            string[] args = new[] { route.id }; // TODO - add rest of possible params from parts
+
+            var auth_check_controller = _auth(route.controller, route.action);
+
+            Type calledType = Type.GetType(FW_NAMESPACE_PREFIX + route.controller + "Controller", false, true); // case ignored
+            if (calledType == null)
+            {
+                logger(LogLevel.DEBUG, "No controller found for controller=[", route.controller, "], using default Home");
+                // no controller found - call default controller with default action
+                calledType = Type.GetType(FW_NAMESPACE_PREFIX + "HomeController", true);
+                route.controller_path = "/Home";
+                route.controller = "Home";
+                route.action = "NotFound";
+            }
+            else
+            {
+                // controller found
+                if (auth_check_controller == 1)
+                {
+                    // but need's check access level on controller level
+                    var field = calledType.GetField("access_level", BindingFlags.Public | BindingFlags.Static);
+                    if (field != null)
+                    {
+                        int current_level = Utils.f2int(Session("access_level")); //will be 0 for visitors
+                        if (current_level < Utils.f2int(field.GetValue(null)))
+                            throw new AuthException("Bad access - Not authorized (2)");
+                    }
+                }
+            }
+
+            logger(LogLevel.TRACE, "TRY controller.action=", route.controller, ".", route.action);
+
+            MethodInfo mInfo = calledType.GetMethod(route.action + "Action");
+            if (mInfo == null)
+            {
+                logger(LogLevel.DEBUG, "No method found for controller.action=[", route.controller, ".", route.action, "], checking route_default_action");
+                // no method found - try to get default action
+                FieldInfo pInfo = calledType.GetField("route_default_action");
+                if (pInfo != null)
+                {
+                    string pvalue = (string)pInfo.GetValue(null);
+                    if (pvalue == "index")
+                    {
+                        // = index - use IndexAction for unknown actions
+                        route.action = "Index";
+                        mInfo = calledType.GetMethod(route.action + "Action");
+                    }
+                    else if (pvalue == "show")
+                    {
+                        // = show - assume action is id and use ShowAction
+                        if (!string.IsNullOrEmpty(route.id))
+                            route.@params.Add(route.id); // route.id is a first param in this case. TODO - add all rest of params from split("/") here
+                        if (!string.IsNullOrEmpty(route.action_more))
+                            route.@params.Add(route.action_more); // route.action_more is a second param in this case
+
+                        route.id = route.action_raw;
+                        args[0] = route.id;
+
+                        route.action = "Show";
+                        mInfo = calledType.GetMethod(route.action + "Action");
+                    }
+                }
+            }
+
+            // save to globals so it can be used in templates
+            setController(route.controller, route.action);
+
+            logger(LogLevel.TRACE, "FINAL controller.action=", route.controller, ".", route.action);
+            // logger(LogLevel.TRACE, "route.method=" , route.method)
+            // logger(LogLevel.TRACE, "route.controller=" , route.controller)
+            // logger(LogLevel.TRACE, "route.action=" , route.action)
+            // logger(LogLevel.TRACE, "route.format=" , route.format)
+            // logger(LogLevel.TRACE, "route.id=" , route.id)
+            // logger(LogLevel.TRACE, "route.action_more=" , route.action_more)
+
+            logger(LogLevel.DEBUG, "ROUTE [", route.method, " ", request_url, "] => ", route.controller, ".", route.action);
+
+            if (mInfo == null)
+            {
+                logger(LogLevel.INFO, "No method found for controller.action=[", route.controller, ".", route.action, "], displaying static page from related templates");
+                // if no method - just call FW.parser(hf) - show template from /route.controller/route.action dir
+                parser(new Hashtable());
+            }
+            else
+                callController(calledType, mInfo, args);
+
         }
 
         // Call controller
         public void callController(Type calledType, MethodInfo mInfo, object[] args = null)
         {
-            // check if method accept agrs and don't pass args if no args expected
+            //convert args to parameters with proper types
             System.Reflection.ParameterInfo[] @params = mInfo.GetParameters();
-            if (@params.Length == 0)
-                args = null;
+            object[] parameters = new object[@params.Length];
+            for (int i = 0; i < @params.Length; i++)
+            {
+                var pi = @params[i];
+                if (i < args.Length)
+                {
+                    //logger("ARG IN:", args[i].GetType().Name, args[i]);
+                    try
+                    {
+                        parameters[i] = Convert.ChangeType(args[i], pi.ParameterType);
+                    }
+                    catch (Exception)
+                    {
+                        //cannot convert, use default value for param type if param doesn't have default
+                        if (!pi.HasDefaultValue)
+                        {
+                            parameters[i] = Activator.CreateInstance(pi.ParameterType);
+                        }                        
+                    }
+                    //logger("ARG OUT:", parameters[i].GetType().Name, parameters[i]);
+                }
+            }
 
             FwController new_controller = (FwController)Activator.CreateInstance(calledType);
             new_controller.init(this);
             Hashtable ps = null;
             try
             {
-                ps = (Hashtable)mInfo.Invoke(new_controller, args);
+                ps = (Hashtable)mInfo.Invoke(new_controller, parameters);
             }
             catch (TargetInvocationException ex)
             {
                 // ignore redirect exception
-                if (ex.InnerException == null || !((ex.InnerException) is RedirectException))
+                if (ex.InnerException == null || !(ex.InnerException is RedirectException))
                     throw; // this keeps stack, also see http://weblogs.asp.net/fmarguerie/rethrowing-exceptions-and-preserving-the-full-call-stack-trace
             }
             if (ps != null)
@@ -1308,12 +1331,35 @@ namespace osafw
 
             ps["success"] = false;
             ps["message"] = msg;
+            ps["title"] = msg;
             ps["_json"] = true;
 
-            if (Ex is ApplicationException)
-                this.response.StatusCode = 500;
+            var code = 0;
+            if (Ex is NotFoundException)
+            {
+                //Not Found
+                code = 404;
+                tpl_dir += "/4xx";
+            }
             else if (Ex is UserException)
-                this.response.StatusCode = 403;
+            {
+                //Bad request from user
+                code = 400;
+                tpl_dir += "/4xx";
+            }
+            else if (Ex is AuthException)
+            {
+                //Forbidden
+                code = 403;
+                tpl_dir += "/4xx";
+            }            
+            else if (Ex is ApplicationException)
+                //Server Error
+                code = 500;
+
+            ps["code"] = code;
+            if (code > 0)
+                this.response.StatusCode = code;
 
             parser(tpl_dir, ps);
         }

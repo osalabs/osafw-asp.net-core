@@ -43,7 +43,7 @@ namespace osafw
             if ((string)list_filter["sortby"] == "iname" && (string)list_filter["s"] == "" & ((string)this.list_filter["status"] == "" || (string)this.list_filter["status"] == "0"))
             {
                 // show tree only if sort by title and no search and status by all or active
-                this.list_count = (int)db.valuep("select count(*) from " + db.q_ident(model.table_name) + " where " + this.list_where, this.list_where_params);
+                this.list_count = (int)db.valuep("select count(*) from " + db.qid(model.table_name) + " where " + this.list_where, this.list_where_params);
                 if (this.list_count > 0)
                 {
                     // build pages tree
@@ -84,7 +84,7 @@ namespace osafw
             return ps;
         }
 
-        public override Hashtable ShowFormAction(string form_id = "")
+        public override Hashtable ShowFormAction(int id = 0)
         {
             // set new form defaults here if any
             if (!string.IsNullOrEmpty(reqs("parent_id")))
@@ -92,12 +92,11 @@ namespace osafw
                 this.form_new_defaults = new Hashtable();
                 this.form_new_defaults["parent_id"] = reqi("parent_id");
             }
-            Hashtable ps = base.ShowFormAction(form_id);
+            Hashtable ps = base.ShowFormAction(id);
 
             var item = (Hashtable)ps["i"];
-            int id = Utils.f2int(item["id"]);
-            string where = " status<>127 ";
-            ArrayList pages_tree = model.tree(where, new Hashtable(), "parent_id, prio desc, iname");
+            string where = " status<>@status ";
+            ArrayList pages_tree = model.tree(where, DB.h("status", FwModel.STATUS_DELETED), "parent_id, prio desc, iname");
             ps["select_options_parent_id"] = model.getPagesTreeSelectHtml((string)item["parent_id"], pages_tree);
 
             ps["parent_url"] = model.getFullUrl(Utils.f2int(item["parent_id"]));
@@ -114,19 +113,18 @@ namespace osafw
             return ps;
         }
 
-        public override Hashtable SaveAction(string form_id = "")
+        public override Hashtable SaveAction(int id = 0)
         {
             if (this.save_fields == null)
                 throw new Exception("No fields to save defined, define in save_fields ");
 
             Hashtable item = reqh("item");
-            int id = Utils.f2int(form_id);
             var success = true;
             var is_new = (id == 0);
 
             try
             {
-                Hashtable item_old = model.one(id).toHashtable();
+                Hashtable item_old = model.one(id);
                 // for non-home page enable some fields
                 string save_fields2 = this.save_fields;
                 if ((string)item_old["is_home"] != "1")

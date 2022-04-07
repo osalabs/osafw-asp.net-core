@@ -174,8 +174,11 @@ namespace osafw.Tests
         [TestMethod()]
         public void f2dateTest()
         {
-            string s = "10/9/2021";
-            object r = (DateTime)Utils.f2date(s);
+            object r = (DateTime)Utils.f2date(DateTime.Now);
+            Assert.IsNotNull(r);
+            Assert.IsInstanceOfType(r, typeof(DateTime));
+
+            r = (DateTime)Utils.f2date("2021-10-9");
 
             Assert.IsInstanceOfType(r, typeof(DateTime));
             DateTime d = (DateTime)r;
@@ -183,8 +186,15 @@ namespace osafw.Tests
             Assert.AreEqual(d.Month, 10);
             Assert.AreEqual(d.Year, 2021);
 
-            s = "11/10/2020 01:02:03";
-            r = (DateTime)Utils.f2date(s);
+            r = (DateTime)Utils.f2date("10/9/2021");
+
+            Assert.IsInstanceOfType(r, typeof(DateTime));
+            d = (DateTime)r;
+            Assert.AreEqual(d.Day, 9);
+            Assert.AreEqual(d.Month, 10);
+            Assert.AreEqual(d.Year, 2021);
+
+            r = (DateTime)Utils.f2date("11/10/2020 01:02:03");
 
             Assert.IsInstanceOfType(r, typeof(DateTime));
             d = (DateTime)r;
@@ -195,8 +205,16 @@ namespace osafw.Tests
             Assert.AreEqual(d.Minute, 2);
             Assert.AreEqual(d.Second, 3);
 
-            s = "ABC";
-            r = Utils.f2date(s);
+            r = Utils.f2date("ABC");
+            Assert.IsNull(r);
+
+            r = Utils.f2date("");
+            Assert.IsNull(r);
+
+            r = Utils.f2date(null);
+            Assert.IsNull(r);
+
+            r = Utils.f2date(DBNull.Value);
             Assert.IsNull(r);
         }
 

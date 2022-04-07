@@ -46,11 +46,11 @@ namespace osafw
                 row["demo_dicts"] = model_related.one(Utils.f2int(row["demo_dicts_id"])).toHashtable();
         }
 
-        public override Hashtable ShowAction(string form_id = "")
+        public override Hashtable ShowAction(int id)
         {
-            Hashtable ps = base.ShowAction(form_id);
+            Hashtable ps = base.ShowAction(id);
             var item = (Hashtable)ps["i"];
-            var id = Utils.f2int(item["id"]);
+            //var id = Utils.f2int(item["id"]);
 
             ps["parent"] = model.one(Utils.f2int(item["parent_id"]));
             ps["demo_dicts"] = model_related.one(Utils.f2int(item["demo_dicts_id"]));
@@ -63,16 +63,15 @@ namespace osafw
             return ps;
         }
 
-        public override Hashtable ShowFormAction(string form_id = "")
+        public override Hashtable ShowFormAction(int id = 0)
         {
             // Me.form_new_defaults = New Hashtable 'set new form defaults here if any
             // Me.form_new_defaults = reqh("item") 'OR optionally set defaults from request params
             // item["field")="]efault value"
-            Hashtable ps = base.ShowFormAction(form_id);
+            Hashtable ps = base.ShowFormAction(id);
 
             // read dropdowns lists from db
             var item = (Hashtable)ps["i"];
-            var id = Utils.f2int(item["id"]);
             ps["select_options_parent_id"] = model.listSelectOptionsParent();
             ps["select_options_demo_dicts_id"] = model_related.listSelectOptions();
             ps["dict_link_auto_id_iname"] = model_related.iname(item["dict_link_auto_id"]);
@@ -86,19 +85,18 @@ namespace osafw
             return ps;
         }
 
-        public override Hashtable SaveAction(string form_id = "")
+        public override Hashtable SaveAction(int id = 0)
         {
             if (this.save_fields == null)
                 throw new Exception("No fields to save defined, define in save_fields ");
 
             if (reqi("refresh") == 1)
             {
-                fw.routeRedirect("ShowForm", new[] { form_id });
+                fw.routeRedirect("ShowForm", new object[] { id });
                 return null;
             }
 
             Hashtable item = reqh("item");
-            int id = Utils.f2int(form_id);
             var success = true;
             var is_new = (id == 0);
 

@@ -129,7 +129,7 @@ namespace osafw
 
             foreach (Hashtable col in cols)
             {
-                SORTSQL[col["name"]] = db.q_ident((string)col["name"]);
+                SORTSQL[col["name"]] = db.qid((string)col["name"]);
 
                 if (list_cols.Count > 0 && !list_cols.ContainsKey(col["name"]))
                     continue;
@@ -180,13 +180,13 @@ namespace osafw
                 list_where_params["@slike"] = "%" + f["s"] + "%";
                 string swhere = "";
                 foreach (Hashtable col in cols)
-                    swhere += " or " + db.q_ident((string)col["name"]) + " like @slike";
+                    swhere += " or " + db.qid((string)col["name"]) + " like @slike";
                     
                 if (!string.IsNullOrEmpty(swhere))
                     list_where += " and (0=1 " + swhere + ")";
             }
 
-            ps["count"] = db.valuep("select count(*) from " + db.q_ident(list_table_name) + " where " + list_where, list_where_params);
+            ps["count"] = db.valuep("select count(*) from " + db.qid(list_table_name) + " where " + list_where, list_where_params);
             if ((int)ps["count"] > 0)
             {
                 int offset = (int)f["pagenum"] * (int)f["pagesize"];
@@ -201,7 +201,7 @@ namespace osafw
                     orderby += " desc";
                 }
 
-                var sql = "SELECT * FROM " + db.q_ident(list_table_name) +
+                var sql = "SELECT * FROM " + db.qid(list_table_name) +
                           " WHERE " + list_where +
                           " ORDER BY " + orderby + " OFFSET " + offset + " ROWS " + " FETCH NEXT " + limit + " ROWS ONLY";
 
@@ -271,16 +271,15 @@ namespace osafw
             return ps;
         }
 
-        public Hashtable ShowFormAction(string form_id = "")
+        public Hashtable ShowFormAction(int id = 0)
         {
             if (is_readonly)
-                throw new UserException("Access denied");
+                throw new AuthException();
 
             check_dict();
 
             Hashtable hf = new();
             Hashtable item;
-            int id = Utils.f2int(form_id);
             ArrayList cols = model_tables.getColumns(defs);
             bool is_fwtable = false;
 
@@ -371,15 +370,14 @@ namespace osafw
             return hf;
         }
 
-        public void SaveAction(string form_id = "")
+        public void SaveAction(int id = 0)
         {
             if (is_readonly)
-                throw new UserException("Access denied");
+                throw new AuthException();
 
             check_dict();
 
             Hashtable item = reqh("item");
-            int id = Utils.f2int(form_id);
             ArrayList cols = model_tables.getColumns(defs);
 
             try
@@ -418,30 +416,21 @@ namespace osafw
             }
         }
 
-        public bool Validate(int id, Hashtable item)
+        public void Validate(int id, Hashtable item)
         {
-            bool result = true;
-            result &= validateRequired(item, Utils.qw(required_fields));
-            if (!result)
-                fw.FormErrors["REQ"] = 1;
+            validateRequired(item, Utils.qw(required_fields));
 
-            if (fw.FormErrors.Count > 0 && !fw.FormErrors.ContainsKey("REQ"))
-                fw.FormErrors["INVALID"] = 1;
-
-            if (!result)
-                throw new ApplicationException("");
-            return true;
+            this.validateCheckResult();
         }
 
-        public Hashtable ShowDeleteAction(string form_id)
+        public Hashtable ShowDeleteAction(int id)
         {
             if (is_readonly)
-                throw new UserException("Access denied");
+                throw new AuthException();
 
             check_dict();
 
             Hashtable hf = new();
-            int id = Utils.f2int(form_id);
             Hashtable item = model.oneByTname(dict, id);
             hf["i"] = item;
             hf["iname"] = item[new ArrayList(item.Keys)[0]];
@@ -452,13 +441,12 @@ namespace osafw
             return hf;
         }
 
-        public void DeleteAction(string form_id)
+        public void DeleteAction(int id)
         {
             if (is_readonly)
-                throw new UserException("Access denied");
+                throw new AuthException();
 
             check_dict();
-            int id = Utils.f2int(form_id);
 
             model.deleteByTname(dict, id);
             fw.flash("onedelete", 1);
@@ -468,7 +456,7 @@ namespace osafw
         public void SaveMultiAction()
         {
             if (is_readonly)
-                throw new UserException("Access denied");
+                throw new AuthException();
 
             check_dict();
 

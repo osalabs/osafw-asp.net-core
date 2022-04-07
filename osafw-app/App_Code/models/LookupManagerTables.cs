@@ -24,7 +24,7 @@ namespace osafw
             {
                 Hashtable where = new();
                 where["tname"] = tname;
-                item = db.row(table_name, where).toHashtable();
+                item = db.row(table_name, where);
                 fw.cache.setRequestValue("LookupManagerTables_one_by_tname_" + table_name + "#" + tname, item);
             }
             return item;
@@ -80,7 +80,7 @@ namespace osafw
                 }
             }
 
-            ArrayList cols = db.load_table_schema_full((string)defs["tname"]);
+            ArrayList cols = db.loadTableSchemaFull((string)defs["tname"]);
             foreach (Hashtable col in cols)
             {
                 string coltype = (string)col["type"];

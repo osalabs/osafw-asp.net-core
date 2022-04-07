@@ -358,6 +358,7 @@ body.fwlayout-fluid {
   padding: 1rem 1rem 0.25rem 1rem;
   box-shadow: 0 0 35px 0 rgb(154 161 171 / 15%);
 */}
+
 .fwlayout-fluid .table > :not(caption) > * > * {
   border-bottom-width: 0;
 }
@@ -501,4 +502,12 @@ body.fwlayout-fluid {
 /*** add site specific css below ***/
 .bg-theme-color {
   background-color: #F2F2F2;
+}
+#FEdit.fw-card,
+#FView.fw-card,
+#FDel.fw-card
+{
+  border: 1px solid #E0E0E0;
+  border-radius: 0.25rem;
+  padding: 1rem 1rem 0.25rem 1rem;
 }

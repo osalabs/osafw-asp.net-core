@@ -120,7 +120,7 @@ namespace osafw
         /// <returns>number of uploads deleted</returns>
         public int cleanupTmpUploads()
         {
-            var rows = db.arrayp("select * from " + db.q_ident(table_name) + " where add_time<DATEADD(hour, -48, getdate()) and (status=1 or table_name like 'tmp[_]%')", DB.h());
+            var rows = db.arrayp("select * from " + db.qid(table_name) + " where add_time<DATEADD(hour, -48, getdate()) and (status=1 or table_name like 'tmp[_]%')", DB.h());
             foreach (var row in rows)
                 this.delete(Utils.f2int(row["id"]), true);
             return rows.Count;
@@ -330,7 +330,7 @@ namespace osafw
                 result = false;
 
             if (!result)
-                throw new ApplicationException("Access Denied. You don't have enough rights to get this file");
+                throw new AuthException("Access Denied. You don't have enough rights to get this file");
         }
 
         // transimt file by id/size to user's browser, optional disposition - attachment(default)/inline
@@ -352,6 +352,12 @@ namespace osafw
                 //fw.resp.Cache.SetMaxAge(new TimeSpan(30, 0, 0, 0));
 
                 string filepath = getUploadImgPath(id, size, (string)item["ext"]);
+                if (!File.Exists(filepath))
+                {
+                    fw.response.StatusCode = 404;
+                    return;
+                }                    
+
                 DateTime filetime = System.IO.File.GetLastWriteTime(filepath);
                 filetime = new DateTime(filetime.Year, filetime.Month, filetime.Day, filetime.Hour, filetime.Minute, filetime.Second); // remove any milliseconds
 
@@ -376,7 +382,7 @@ namespace osafw
                 }
             }
             else
-                throw new ApplicationException("No file specified");
+                throw new UserException("No file specified");
         }
 
         // return all att files linked via att_table_link
@@ -394,7 +400,7 @@ namespace osafw
                 @params["@is_image"] = is_image;
             }
                 
-            return db.arrayp("select a.* " + " from " + db.q_ident(att_table_link) + " atl, "+ db.q_ident(this.table_name)+" a "
+            return db.arrayp("select a.* " + " from " + db.qid(att_table_link) + " atl, "+ db.qid(this.table_name)+" a "
                 + " where atl.table_name=@link_table_name"
                 + " and atl.item_id=@item_id"
                 + " and a.id=atl.att_id" + where 
@@ -409,8 +415,12 @@ namespace osafw
                 {"@table", linked_table_name},
                 {"@item_id", id},
             };
-            return db.rowp("SELECT TOP 1 a.* from " + db.q_ident(att_table_link) + " atl, " + db.q_ident(this.table_name) + " a"+
-                " WHERE atl.table_name=@table_name and atl.item_id=@item_id and a.id=atl.att_id and a.is_image=1 order by a.id ", @params).toHashtable();
+            return db.rowp("SELECT TOP 1 a.* from " + db.qid(att_table_link) + " atl, " + db.qid(this.table_name) + " a"+
+                @" WHERE atl.table_name=@table_name
+                     and atl.item_id=@item_id 
+                     and a.id=atl.att_id 
+                     and a.is_image=1 
+                order by a.id ", @params);
         }
 
         // return all att images linked via att_table_link
@@ -459,15 +469,9 @@ namespace osafw
         {
             return db.row(table_name, new Hashtable()
             {
-                {
-                    "table_name",
-                    att_table_name
-                },
-                {
-                    "item_id",
-                    item_id
-                }
-            }).toHashtable();
+                {"table_name",att_table_name},
+                {"item_id",item_id}
+            });
         }
 
         public string getS3KeyByID(string id, string size = "")
@@ -485,7 +489,7 @@ namespace osafw
         public void redirectS3(Hashtable item, string size = "")
         {
             if (fw.userId == 0)
-                throw new ApplicationException("Access Denied"); // denied for non-logged
+                throw new AuthException(); // denied for non-logged
 
 #if is_S3
             var url = fw.model<S3>().getSignedUrl(getS3KeyByID((string)item["id"], size));
