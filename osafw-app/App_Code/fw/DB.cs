@@ -1437,7 +1437,7 @@ namespace osafw
                 }
                 // order by ORDINAL_POSITION
 
-                result.AddRange((from Hashtable h in fieldslist orderby ((Hashtable)h["pos"]) ascending select h).ToList());
+                result.AddRange((from Hashtable h in fieldslist orderby ((long)h["pos"]) ascending select h).ToList());
 
                 // now detect identity (because order is important)
                 foreach (Hashtable h in result)
