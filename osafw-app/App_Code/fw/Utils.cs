@@ -955,7 +955,15 @@ namespace osafw
                 TimeSpan ts = DateTime.Now - fi.CreationTime;
                 if (ts.TotalMinutes > 60)
                 {
-                    fi.Delete();
+                    try
+                    {
+                        fi.Delete();
+                    }
+                    catch (Exception)
+                    {
+
+                        //throw; //ignore errors as it just cleanup, should not affect main logic, could be access denied
+                    }                    
                 }
             }
         }
