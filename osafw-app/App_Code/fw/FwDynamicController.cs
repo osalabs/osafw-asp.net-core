@@ -561,13 +561,14 @@ namespace osafw
                     }
                     else if (def.ContainsKey("lookup_model"))
                     {
-                        if (dtype == "select")
+                        if (dtype == "select" || dtype == "radio")
                         {
                             // lookup select
                             def["select_options"] = fw.model((string)def["lookup_model"]).listSelectOptions(def);
                             def["value"] = item[field];
                         } else
                         {
+                            // single value from lookup
                             var lookup_model = fw.model((string)def["lookup_model"]);
                             def["lookup_id"] = Utils.f2int(item[field]);
                             var lookup_row = lookup_model.one(Utils.f2int(def["lookup_id"]));
