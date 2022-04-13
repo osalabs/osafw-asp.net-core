@@ -23,7 +23,7 @@ namespace osafw
 
         public static void init(HttpContext context, IConfiguration configuration, string hostname = "")
         {
-            // appSettings is Shared, so it's lifetime same as application lifetime 
+            // appSettings is Shared, so it's lifetime same as application lifetime
             // if appSettings already initialized no need to read web.config again
             lock (locker)
             {
@@ -62,7 +62,7 @@ namespace osafw
 
             string PhysicalApplicationPath;
             string basedir = AppDomain.CurrentDomain.BaseDirectory; //application root directory
-            var bin_index = basedir.IndexOf(@"\bin"); 
+            var bin_index = basedir.IndexOf(@"\bin");
             if (bin_index == -1)
             {
                 // try to find bin directory - if it's NOT found than we working under published-only site setup,
@@ -162,7 +162,10 @@ namespace osafw
                 var route_prefixes = (Hashtable)settings["route_prefixes"];
                 if (route_prefixes != null)
                 {
-                    foreach (string url in route_prefixes.Keys)
+                    var urls = new ArrayList(route_prefixes.Keys);
+                    urls.Sort(new routePrefixesComparer());
+
+                    foreach (string url in urls)
                         r.Add(Regex.Escape(url));
 
                     route_prefixes_rx = "^(" + string.Join("|", (string[])r.ToArray(typeof(string))) + ")(/.*)?$";
@@ -170,6 +173,26 @@ namespace osafw
             }
 
             return route_prefixes_rx;
+        }
+
+        private class routePrefixesComparer : IComparer
+        {
+            // Guarantee that "/AdminImport" or "/Admin/Import" prefix goes before "/Admin"
+            int IComparer.Compare(object x, object y)
+            {
+                var a = (string)x;
+                var b = (string)y;
+                if (a.StartsWith((string)y) && a.Length < b.Length)
+                    return 1;
+                else if (a.StartsWith((string)y) && a.Length > b.Length)
+                    return -1;
+                else if (b.StartsWith((string)x) && b.Length < a.Length)
+                    return -1;
+                else if (b.StartsWith((string)x) && b.Length > a.Length)
+                    return 1;
+                else
+                    return new CaseInsensitiveComparer().Compare(a, b);
+            }
         }
 
         public static void overrideSettingsByName(string override_name, ref Hashtable settings)
