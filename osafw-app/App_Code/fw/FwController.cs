@@ -465,7 +465,7 @@ namespace osafw
                                 else if (ft == "float")
                                     list_where_params[param_name] = Utils.f2float(s);
                                 else
-                                    list_where_params[param_name] = s;                                
+                                    list_where_params[param_name] = s;
                             }
                             afieldsand[j] = db.qid(fand) + " = @" + param_name;
                         }
@@ -481,12 +481,7 @@ namespace osafw
                 list_where += " and (" + Strings.Join(afields, " or ") + ")";
             }
 
-            if (!string.IsNullOrEmpty((string)list_filter["userlist"]))
-            {
-                list_where += " and id IN (select ti.item_id from " + db.qid(fw.model<UserLists>().table_items) + " ti where ti.user_lists_id=@user_lists_id and ti.add_users_id=@userId) ";
-                list_where_params["user_lists_id"] = db.qi(list_filter["userlist"]);
-                list_where_params["userId"] = fw.userId;
-            }               
+            setListSearchUserList();
 
             if (!string.IsNullOrEmpty(related_id) && !string.IsNullOrEmpty(related_field_name))
             {
@@ -496,6 +491,17 @@ namespace osafw
 
             setListSearchAdvanced();
         }
+
+        public virtual void setListSearchUserList()
+        {
+            if (!string.IsNullOrEmpty((string)list_filter["userlist"]))
+            {
+                list_where += " and id IN (select ti.item_id from " + db.qid(fw.model<UserLists>().table_items) + " ti where ti.user_lists_id=@user_lists_id and ti.add_users_id=@userId) ";
+                list_where_params["user_lists_id"] = db.qi(list_filter["userlist"]);
+                list_where_params["userId"] = fw.userId;
+            }
+        }
+
 
         /// <summary>
         /// set list_where based on search[] filter
@@ -703,11 +709,22 @@ namespace osafw
                 {
                     // if Submit and Add New - redirect to new
                     url = this.base_url + "/new";
-                    url_q = "&copy_id=" + id;
+                    url_q += "&copy_id=" + id;
                 }
                 else
-                    // or just return to edit screen
-                    url = this.base_url + "/" + id + "/edit";
+                {                    
+                    if (reqi("backtoview") == 1)
+                    {
+                        // or return to view screen
+                        url = this.base_url + "/" + id;
+                    }
+                    else
+                    {
+                        // or just return to edit screen
+                        url = this.base_url + "/" + id + "/edit";
+                    }
+                }
+
             }
             else
                 url = this.base_url;

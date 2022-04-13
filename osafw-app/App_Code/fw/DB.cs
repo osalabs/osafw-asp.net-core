@@ -1215,9 +1215,15 @@ namespace osafw
             //single query alternative, but too much params to pass: update_sql + "  IF @@ROWCOUNT = 0 " + insert_sql
         }
 
-        // retrun number of affected rows
-        public int del(string table, Hashtable where)
+        /// <summary>
+        /// delete records from table
+        /// </summary>
+        /// <param name="table">table name</param>
+        /// <param name="where">optional where, WARNING, if empty - DELETE ALL RECORDS in table</param>
+        /// <returns>number of affected rows</returns>
+        public int del(string table, Hashtable where = null)
         {
+            if (where == null) where = new Hashtable(); 
             var qp = buildDelete(table, where);
             return exec(qp.sql, qp.@params);
         }

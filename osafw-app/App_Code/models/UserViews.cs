@@ -20,11 +20,49 @@ namespace osafw
             return db.row(table_name, DB.h(field_add_users_id, fw.userId, field_icode, screen));
         }
 
-        // update screen fields for logged user
-        // return user_views.id
-        public int updateByIcode(string screen, string fields)
+        // additionally by id
+        public DBRow oneByIcodeId(string icode, int id)
         {
-            var item = oneByIcode(screen);
+            return db.row(table_name, DB.h(field_add_users_id, fw.userId, field_icode, icode, field_id, id));
+        }
+
+        // by icode/iname/loggeduser
+        public DBRow oneByUK(string icode, string iname) {
+            var where = new Hashtable();
+            where["icode"] = icode;
+            where["iname"] = iname;
+            where["add_users_id"] = fw.userId;
+            return db.row(table_name, where);
+        }
+
+        public int addSimple(string icode, string fields , string iname) {
+            return add(new Hashtable {
+                { field_icode, icode},
+                { "fields", fields},
+                { "iname", iname},
+                { field_add_users_id, fw.userId}
+            });
+        }
+
+        public int addOrUpdateByUK(string icode, string fields, string iname) {
+            int id;
+            var item = oneByUK(icode, iname);
+            if (item.Count > 0) {
+                id = Utils.f2int(item["id"]);
+                update(id, DB.h("fields", fields));
+            }
+            else {
+                id = addSimple(icode, fields, iname);
+            }
+            return id;
+        }
+
+
+        // update default screen fields for logged user
+        // return user_views.id
+        public int updateByIcode(string icode, string fields)
+        {
+            var item = oneByIcode(icode);
             int result;
             if (item.Count > 0)
             {
@@ -36,15 +74,9 @@ namespace osafw
                 // new
                 result = add(new Hashtable()
                 {
-                    {
-                        field_icode, screen
-                    },
-                    {
-                        "fields", fields
-                    },
-                    {
-                        field_add_users_id, Utils.f2str(fw.userId)
-                    }
+                    {field_icode, icode},
+                    {"fields", fields},
+                    {field_add_users_id, Utils.f2str(fw.userId)}
                 });
             return result;
         }
@@ -57,6 +89,15 @@ namespace osafw
                                  and (is_system=1 OR add_users_id=@users_id)
                             order by is_system desc, iname", DB.h("@entity", entity, "@users_id", fw.userId));
         }
+
+        public void setViewForIcode(string icode, int id)
+        {
+            var item = oneByIcodeId(icode, id);
+            if (item.Count == 0) return;
+
+            updateByIcode(icode, item["fields"]);
+        }
+
     }
 
 }

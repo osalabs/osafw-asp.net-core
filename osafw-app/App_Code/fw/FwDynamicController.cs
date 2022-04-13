@@ -381,12 +381,21 @@ namespace osafw
         {
             Hashtable fld = reqh("fld");
 
+            var load_id = reqi("load_id");
+            var is_reset = reqi("is_reset");
+
             try
             {
-                if (reqi("is_reset") == 1)
+                if (load_id > 0)
+                {
+                    fw.model<UserViews>().setViewForIcode(base_url, load_id);
+                }
+                else if (is_reset == 1)
                     fw.model<UserViews>().updateByIcode(base_url, view_list_defaults);
                 else
                 {
+                    var item = reqh("item");
+
                     // save fields
                     // order by value
                     var ordered = fld.Cast<DictionaryEntry>().OrderBy(entry => Utils.f2int(entry.Value)).ToList();
@@ -395,7 +404,15 @@ namespace osafw
                     foreach (var el in ordered)
                         anames.Add((string)el.Key);
 
-                    fw.model<UserViews>().updateByIcode(base_url, Strings.Join(anames.ToArray(), " "));
+                    var fields = Strings.Join(anames.ToArray(), " ");
+
+                    var iname = (string)item["iname"];
+                    if (!string.IsNullOrEmpty(iname)) {
+                        //create new view by name or update if this name exists
+                        fw.model<UserViews>().addOrUpdateByUK(base_url, fields, iname);
+                    }
+                    //update default view with fields
+                    fw.model<UserViews>().updateByIcode(base_url, fields);
                 }
             }
             catch (ApplicationException ex)
@@ -566,7 +583,8 @@ namespace osafw
                             // lookup select
                             def["select_options"] = fw.model((string)def["lookup_model"]).listSelectOptions(def);
                             def["value"] = item[field];
-                        } else
+                        }
+                        else
                         {
                             // single value from lookup
                             var lookup_model = fw.model((string)def["lookup_model"]);
