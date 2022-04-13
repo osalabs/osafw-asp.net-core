@@ -6,6 +6,7 @@
 using System;
 using System.Collections;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
@@ -162,37 +163,13 @@ namespace osafw
                 var route_prefixes = (Hashtable)settings["route_prefixes"];
                 if (route_prefixes != null)
                 {
-                    var urls = new ArrayList(route_prefixes.Keys);
-                    urls.Sort(new routePrefixesComparer());
-
-                    foreach (string url in urls)
-                        r.Add(Regex.Escape(url));
-
-                    route_prefixes_rx = "^(" + string.Join("|", (string[])r.ToArray(typeof(string))) + ")(/.*)?$";
+                    //sort prefixes, so longer prefixes mathced first, also escape to use in regex 
+                    var prefixes = from string prefix in route_prefixes.Keys orderby prefix.Length descending, prefix select Regex.Escape(prefix);
+                    route_prefixes_rx = @"^(" + string.Join("|", prefixes) + @")(/.*)?$";
                 }
             }
 
             return route_prefixes_rx;
-        }
-
-        private class routePrefixesComparer : IComparer
-        {
-            // Guarantee that "/AdminImport" or "/Admin/Import" prefix goes before "/Admin"
-            int IComparer.Compare(object x, object y)
-            {
-                var a = (string)x;
-                var b = (string)y;
-                if (a.StartsWith((string)y) && a.Length < b.Length)
-                    return 1;
-                else if (a.StartsWith((string)y) && a.Length > b.Length)
-                    return -1;
-                else if (b.StartsWith((string)x) && b.Length < a.Length)
-                    return -1;
-                else if (b.StartsWith((string)x) && b.Length > a.Length)
-                    return 1;
-                else
-                    return new CaseInsensitiveComparer().Compare(a, b);
-            }
         }
 
         public static void overrideSettingsByName(string override_name, ref Hashtable settings)
