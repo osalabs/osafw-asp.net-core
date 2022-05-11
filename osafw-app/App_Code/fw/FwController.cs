@@ -41,7 +41,7 @@ namespace osafw
         protected ArrayList list_pager;              // pager for the list from FormUtils.getPager
         protected string list_sortdef;               // required for Index, default list sorting: name asc|desc
         protected Hashtable list_sortmap;            // required for Index, sortmap fields
-        protected string search_fields;              // optional, search fields, space-separated 
+        protected string search_fields;              // optional, search fields, space-separated
                                                      // fields to search via $s=list_filter["s"), ] - means exact match, not "like"
                                                      // format: "field1 field2,!field3 field4" => field1 LIKE '%$s%' or (field2 LIKE '%$s%' and field3='$s') or field4 LIKE '%$s%'
 
@@ -557,7 +557,7 @@ namespace osafw
         }
 
         /// <summary>
-        /// set list_where filter based on status filter: 
+        /// set list_where filter based on status filter:
         /// - if status not set - filter our deleted (i.e. show all)
         /// - if status set - filter by status, but if status=127 (deleted) only allow to see deleted by admins
         /// </summary>
@@ -712,7 +712,7 @@ namespace osafw
                     url_q += "&copy_id=" + id;
                 }
                 else
-                {                    
+                {
                     if (reqi("backtoview") == 1)
                     {
                         // or return to view screen
@@ -816,6 +816,15 @@ namespace osafw
             ps["related_id"] = this.related_id;
             ps["base_url"] = this.base_url;
             ps["is_userlists"] = this.is_userlists;
+
+            //implement "Showing FROM to TO of TOTAL records"
+            if (this.list_rows.Count > 0)
+            {
+                int pagenum = Utils.f2int(list_filter["pagenum"]);
+                int pagesize = Utils.f2int(list_filter["pagesize"]);
+                ps["count_from"] = pagenum * pagesize + 1;
+                ps["count_to"] = pagenum * pagesize + this.list_rows.Count;
+            }
 
             if (!string.IsNullOrEmpty(this.return_url))
                 ps["return_url"] = this.return_url; // if not passed - don't override return_url.html
