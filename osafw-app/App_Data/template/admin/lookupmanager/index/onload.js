@@ -25,7 +25,7 @@ if (mode){
             $tr.prepend('<input type="hidden" name="del['+id+']" value="1">');
             $tr.slideUp();
         }
-        $('#DataF .btn-primary').removeClass('disabled');
+        $('#DataF .btn-primary').prop('disabled', false);
     });
 
     $(document).on('click', '.on-cancel', function (e) {
@@ -34,13 +34,13 @@ if (mode){
     });
 
     $tedit.on('keyup', ':input', function (e) {
-        $('#DataF .btn-primary').removeClass('disabled');
+        $('#DataF .btn-primary').prop('disabled', false);
     });
     $tedit.on('click', 'input[type=checkbox]', function (e) {
-        $('#DataF .btn-primary').removeClass('disabled');
+        $('#DataF .btn-primary').prop('disabled', false);
     });
     $tedit.on('change', 'select', function (e) {
-        $('#DataF .btn-primary').removeClass('disabled');
+        $('#DataF .btn-primary').prop('disabled', false);
     });
 
     $(document).on('click', '.on-add-new', function (e) {
@@ -61,7 +61,7 @@ function add_new_row(){
     var nextid = $tedit.data('newid')+1;
     $tedit.data('newid', nextid);
 
-    var $tpl = $tedit.find('.tpl').clone().removeClass('tpl hide');
+    var $tpl = $tedit.find('.tpl').clone().removeClass('tpl d-none');
     $tpl.data('id', nextid);
     $tpl.data('isnew', true);
     $tpl.find('input.rowid').prop('name', 'new['+nextid+']');

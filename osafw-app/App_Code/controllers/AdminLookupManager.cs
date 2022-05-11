@@ -181,7 +181,7 @@ namespace osafw
                 string swhere = "";
                 foreach (Hashtable col in cols)
                     swhere += " or " + db.qid((string)col["name"]) + " like @slike";
-                    
+
                 if (!string.IsNullOrEmpty(swhere))
                     list_where += " and (0=1 " + swhere + ")";
             }
@@ -207,6 +207,10 @@ namespace osafw
 
                 ArrayList list_rows = db.arrayp(sql, list_where_params);
                 ps["list_rows"] = list_rows;
+
+                ps["count_from"] = (int)f["pagenum"] * (int)f["pagesize"] + 1;
+                ps["count_to"] = (int)f["pagenum"] * (int)f["pagesize"] + list_rows.Count;
+
                 ps["pager"] = FormUtils.getPager((int)ps["count"], (int)f["pagenum"], f["pagesize"]);
                 if (ps["pager"] != null)
                 {
@@ -217,7 +221,7 @@ namespace osafw
 
                 // add/modify rows from db
                 foreach (Hashtable row in list_rows)
-                {                    
+                {
                     // calc md5 first if in edit mode
                     if ((string)f["mode"] == "edit")
                         row["row_md5"] = model.getRowMD5(row);
@@ -300,7 +304,7 @@ namespace osafw
                     // set defaults here
                     item = new();
                     // item["field"]="default value";
-                    item["prio"] = model.maxIdByTname(dict) + 1; // default prio (if exists) = max(id)+1 
+                    item["prio"] = model.maxIdByTname(dict) + 1; // default prio (if exists) = max(id)+1
                 }
             }
             else
@@ -335,7 +339,7 @@ namespace osafw
                 }
                 else
                     fh["maxlen"] = Utils.f2str(Utils.f2int(col["numeric_precision"]) + (Utils.f2int(col["numeric_scale"]) > 0 ? 1 : 0));
-                    
+
                 if (col["itype"].ToString().Contains("."))
                 {
                     // lookup type
