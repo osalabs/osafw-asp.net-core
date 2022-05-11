@@ -34,11 +34,11 @@ namespace osafw
         {
             base.setListSearch();
 
-            if (!string.IsNullOrEmpty((string)list_filter["s"]))
+            if (!string.IsNullOrEmpty((string)list_filter["icat"]))
             {
                 list_where += " and icat=@icat";
-                list_where_params["icat"] = Utils.f2int(list_filter["s"]);
-            }                
+                list_where_params["icat"] = Utils.f2str(list_filter["icat"]);
+            }
         }
 
         public override Hashtable ShowFormAction(int id = 0)
