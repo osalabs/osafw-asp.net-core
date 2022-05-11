@@ -288,9 +288,8 @@ namespace osafw
 
         public virtual Hashtable DeleteAction(int id)
         {
-            var item = model0.one(id);
             // if record already deleted and we are admin - perform permanent delete
-            if (!string.IsNullOrEmpty(model0.field_status) && Utils.f2int(item[model0.field_status]) == FwModel.STATUS_DELETED && fw.model<Users>().checkAccess(Users.ACL_ADMIN, false))
+            if (fw.model<Users>().checkAccess(Users.ACL_ADMIN, false) && !string.IsNullOrEmpty(model0.field_status) && Utils.f2int(model0.one(id)[model0.field_status]) == FwModel.STATUS_DELETED)
                 model0.delete(id, true);
             else
                 model0.delete(id);
@@ -327,7 +326,11 @@ namespace osafw
                 int id = Utils.f2int(id1);
                 if (is_delete)
                 {
-                    model0.delete(id);
+                    // if record already deleted and we are admin - perform permanent delete
+                    if (fw.model<Users>().checkAccess(Users.ACL_ADMIN, false) && !string.IsNullOrEmpty(model0.field_status) && Utils.f2int(model0.one(id)[model0.field_status]) == FwModel.STATUS_DELETED)
+                        model0.delete(id, true);
+                    else
+                        model0.delete(id);
                     ctr += 1;
                 }
                 else if (user_lists_id > 0)
