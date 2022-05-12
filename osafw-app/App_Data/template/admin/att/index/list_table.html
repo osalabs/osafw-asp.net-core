@@ -19,10 +19,12 @@
         <tr data-url="<~row_click_url>">
             <td><input class="multicb" type="checkbox" name="cb[<~id>]" value="1"></td>
             <td><~cat[iname]></td>
-            <td <~uploaded_img if="is_image" inline>style="background: transparent url('<~url_s>') no-repeat top right;background-size:contain"</~uploaded_img>>
-                <~iname>
-                <div class="form-text">
-                    Original file name: <~fname>
+            <td>
+                <div <~uploaded_img if="is_image" inline>style="background: transparent url('<~url_s>') no-repeat top right;background-size:contain"</~uploaded_img>>
+                    <~iname>
+                    <div class="form-text">
+                        Original file name: <~fname>
+                    </div>
                 </div>
             </td>
             <td><~fsize_human></td>

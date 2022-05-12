@@ -38,18 +38,29 @@ namespace osafw
                 f["sortdir"] = "asc";
             Hashtable SORTSQL = Utils.qh("id|id iname|iname add_time|add_time fsize|fsize ext|ext category|att_categories_id status|status");
 
-            list_where = " status = 0 and table_name='' ";
+            list_where = " table_name='' ";
             if (!string.IsNullOrEmpty((string)f["s"]))
             {
                 list_where += " and (iname like @iname or fname like @iname)";
                 list_where_params["@iname"] = "%" + f["s"] + "%";
             }
-                
+
             if (!string.IsNullOrEmpty((string)f["att_categories_id"]))
             {
                 list_where += " and att_categories_id=@att_categories_id";
                 list_where_params["@att_categories_id"] = Utils.f2int(f["att_categories_id"]);
-            }                
+            }
+
+            if (!string.IsNullOrEmpty((string)f["status"]))
+            {
+                list_where += " and status=@status";
+                list_where_params["@status"] = Utils.f2int(f["status"]);
+            }
+            else
+            {
+                list_where += " and status <> @status";
+                list_where_params["@status"] = Att.STATUS_DELETED;
+            }
 
             int count = (int)db.valuep("select count(*) from " + model.table_name + " where " + list_where, list_where_params);
             ps["count"] = count;
@@ -59,7 +70,7 @@ namespace osafw
                 int pagesize = Utils.f2int(f["pagesize"]);
                 int offset = pagenum * pagesize;
                 int limit = pagesize;
-                string orderby = (string)SORTSQL[f["sortby"]??""];
+                string orderby = (string)SORTSQL[f["sortby"] ?? ""];
                 if (string.IsNullOrEmpty(orderby))
                     throw new Exception("No orderby defined for [" + f["sortby"] + "]");
                 if ((string)f["sortdir"] == "desc")
@@ -74,6 +85,8 @@ namespace osafw
 
                 list_rows = db.arrayp(sql, list_where_params);
                 ps["list_rows"] = list_rows;
+                ps["count_from"] = (int)f["pagenum"] * (int)f["pagesize"] + 1;
+                ps["count_to"] = (int)f["pagenum"] * (int)f["pagesize"] + list_rows.Count;
                 ps["pager"] = FormUtils.getPager(count, pagenum, pagesize);
 
                 // add/modify rows from db
@@ -81,11 +94,14 @@ namespace osafw
                 {
                     row["fsize_human"] = Utils.bytes2str(Utils.f2long(row["fsize"]));
                     if (Utils.f2int(row["is_image"]) == 1)
+                    {
                         row["url_s"] = model.getUrl(Utils.f2int(row["id"]), "s");
+                        row["url_direct_s"] = model.getUrlDirect(Utils.f2int(row["id"]), "s");
+                    }
                     row["url_direct"] = model.getUrlDirect(Utils.f2int(row["id"]));
 
                     var att_categories_id = Utils.f2int(row["att_categories_id"]);
-                    if (att_categories_id>0)
+                    if (att_categories_id > 0)
                         row["cat"] = fw.model<AttCategories>().one(att_categories_id);
                 }
             }
@@ -182,7 +198,7 @@ namespace osafw
                     ps["success"] = false;
 
                 // otherwise just redirect
-                if (return_url.Length>0)
+                if (return_url.Length > 0)
                 {
                     fw.flash("success", "File uploaded");
                     ps["_redirect"] = return_url;
@@ -225,7 +241,7 @@ namespace osafw
 
             if (Utils.f2int(itemdb["fsize"]) == 0)
             {
-                if (fw.request.Form.Files.Count == 0 || fw.request.Form.Files[0]==null || fw.request.Form.Files[0].Length == 0)
+                if (fw.request.Form.Files.Count == 0 || fw.request.Form.Files[0] == null || fw.request.Form.Files[0].Length == 0)
                 {
                     fw.FormErrors["file1"] = "NOFILE";
                 }
@@ -242,7 +258,7 @@ namespace osafw
 
             Hashtable where = new();
             where["status"] = 0;
-            if (category_icode.Length>0)
+            if (category_icode.Length > 0)
             {
                 var att_cat = fw.model<AttCategories>().oneByIcode(category_icode);
                 if (att_cat.Count > 0)
