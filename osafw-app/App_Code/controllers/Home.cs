@@ -35,8 +35,12 @@ namespace osafw
 
         public void ShowAction(string id = "")
         {
+            var page_name = Strings.LCase(id);
+
             Hashtable ps = new ();
             ps["hide_sidebar"] = true; // TODO control via pages
+            ps["page_name"] = page_name;
+
             fw.parser("/home/" + Utils.routeFixChars(Strings.LCase(id)), (string)fw.config("PAGE_LAYOUT_PUBLIC"), ps);
         }
 
