@@ -187,6 +187,7 @@ namespace osafw
             }
 
             ps["count"] = db.valuep("select count(*) from " + db.qid(list_table_name) + " where " + list_where, list_where_params);
+
             if ((int)ps["count"] > 0)
             {
                 int offset = (int)f["pagenum"] * (int)f["pagesize"];
