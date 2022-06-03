@@ -52,15 +52,19 @@
     // manual init for custom identifier
     // $('.my-selectpicker').selectpicker();
 
-    // handle form autosave
+    // handle form autosave and FFilter auto submit
     $('.selectpicker').on('changed.bs.select', function (e) {
       var $this = $(this)
       $this.data('selectpicker-is-changed', true)
       // Hide dropdown on change as it hides only on mouse click, but not on Enter key selection or programmically channge.
       // Only unless multiple and if the dropdown is shown (as we can change the select value programmically)
       if (!$this.prop('multiple') && $this.nextAll('.dropdown-menu.show').length > 0) $this.selectpicker('toggle')
+
+      // FFilter auto submit
+      $this.closest('form[data-list-filter][data-autosubmit]').trigger('submit')
     })
 
+    // autosave
     $('.selectpicker ~ .dropdown-toggle').on('blur', function (e) {
       var $select = $(this).prevAll('.selectpicker')
 
