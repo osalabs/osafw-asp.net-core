@@ -25,6 +25,26 @@
     outline: none !important;
     box-shadow: 0 0 0 0.25rem rgb(13 110 253 / 25%);
   }
+
+  .bootstrap-select>.dropdown-menu>.popover-header {
+    margin-bottom: 0.25rem;
+    font-weight: 700;
+    --bs-text-opacity: 1;
+    color: rgba(0,0,0,.5)!important;
+  }
+
+  .bootstrap-select>.dropdown-menu>.popover-header>.close {
+    float:right;
+    padding: 0;
+    background-color: transparent;
+    border: 0;
+    font-size: 1.75rem;
+    line-height: 1;
+    color: #000;
+    text-shadow: 0 1px 0 #fff;
+    opacity: .5;
+  }
+
 </style>
 
 <script>
@@ -34,16 +54,51 @@
 
     // handle form autosave
     $('.selectpicker').on('changed.bs.select', function (e) {
-      $(this).data('selectpicker-is-changed', true)
+      var $this = $(this)
+      $this.data('selectpicker-is-changed', true)
+      // Hide dropdown on change as it hides only on mouse click, but not on Enter key selection or programmically channge.
+      // Only unless multiple and if the dropdown is shown (as we can change the select value programmically)
+      if (!$this.prop('multiple') && $this.nextAll('.dropdown-menu.show').length > 0) $this.selectpicker('toggle')
     })
 
-    $('.bootstrap-select>.dropdown-toggle').on('blur', function (e) {
-      var $select = $(this).prev('select')
+    $('.selectpicker ~ .dropdown-toggle').on('blur', function (e) {
+      var $select = $(this).prevAll('.selectpicker')
 
       if (!!$select.data('selectpicker-is-changed')) {
         $select.data('selectpicker-is-changed', false)
-        $select.parents('form[data-autosave]').trigger('autosave')
+        $select.closest('form[data-autosave]').trigger('autosave')
       }
     })
+
+    // Selection reset for header close button. Usage: <... data-header="Reset Selection" data-header-reset="1" ...>
+    $('.bootstrap-select > .selectpicker[data-header][data-header-reset="1"] ~ .dropdown-menu > .popover-header > .close').on('click', function (e) {
+      $(this).closest('.dropdown-menu').prevAll('.selectpicker').selectpicker('val', '').trigger('change').nextAll('.dropdown-toggle').trigger('blur')
+    })
+
+    // vlad: empty dropdown on long scrolls workaround if values is selected. Without this the dropdown is empty until you start scrolling.
+    // It's a workaround for the latest v1.14.0-beta2 version, test this bug again after a new version of the bootstrap-select is released
+    // We basically override the scroll to selected item logic.
+    $('.selectpicker').on('shown.bs.select', function (e) {
+      var $this = $(this)
+      var val = parseInt($this.val())
+      if (isNaN(val)) return // no value selected, retrun
+
+      // vlad: without timeout the scroll container has zero height, it seems that shown.bs.select is triggered before the dropdown is rendedred
+      // rendered.bs.select and refreshed.bs.select events do nothing
+      setTimeout(function(e) {
+        var $scroll_container = $this.closest('.bootstrap-select').find('div.inner.show')
+        var $li = $scroll_container.find('li.selected')
+        if ($li.length === 0) return //additional protection
+
+        var has_scroll = $scroll_container[0].scrollHeight > $scroll_container[0].clientHeight
+
+        if (has_scroll && $scroll_container.scrollTop() === 0) {
+          var offset = $li[0].offsetTop - $scroll_container[0].clientHeight/2 - $li[0].clientHeight
+          $scroll_container.scrollTop(offset)
+        }
+      }, 50)
+
+    });
+
   })
 </script>

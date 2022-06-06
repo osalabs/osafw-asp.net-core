@@ -10,6 +10,8 @@ window.fw={
   ICON_QUEST: '<svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-question-circle-fill" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM5.496 6.033a.237.237 0 0 1-.24-.247C5.35 4.091 6.737 3.5 8.005 3.5c1.396 0 2.672.73 2.672 2.24 0 1.08-.635 1.594-1.244 2.057-.737.559-1.01.768-1.01 1.486v.105a.25.25 0 0 1-.25.25h-.81a.25.25 0 0 1-.25-.246l-.004-.217c-.038-.927.495-1.498 1.168-1.987.59-.444.965-.736.965-1.371 0-.825-.628-1.168-1.314-1.168-.803 0-1.253.478-1.342 1.134-.018.137-.128.25-.266.25h-.825zm2.325 6.443c-.584 0-1.009-.394-1.009-.927 0-.552.425-.94 1.01-.94.609 0 1.028.388 1.028.94 0 .533-.42.927-1.029.927z"/></svg>',
   ICON_SORT_ASC: '<svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-arrow-down" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M8 1a.5.5 0 0 1 .5.5v11.793l3.146-3.147a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 .708-.708L7.5 13.293V1.5A.5.5 0 0 1 8 1z"/></svg>',
   ICON_SORT_DESC: '<svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-arrow-up" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M8 15a.5.5 0 0 0 .5-.5V2.707l3.146 3.147a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 1 0 .708.708L7.5 2.707V14.5a.5.5 0 0 0 .5.5z"/></svg>',
+  MODAL_ALERT: '<div class="modal fade" tabindex="-1" role="dialog" id="fw-modal-alert"><div class="modal-dialog modal-sm" role="document"><div class="modal-content"><div class="modal-header"><h5 class="modal-title"></h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><p></p></div><div class="modal-footer"><button type="button" class="btn btn-primary btn-block" data-bs-dismiss="modal">OK</button></div></div></div></div>',
+  MODAL_CONFIRM: '<div class="modal fade" tabindex="-1" role="dialog" id="fw-modal-confirm"><div class="modal-dialog modal-sm" role="document"><div class="modal-content"><div class="modal-header"><h5 class="modal-title"></h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><p></p></div><div class="modal-footer"><button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button><button type="button" class="btn btn-default" data-bs-dismiss="modal">Cancel</button></div></div></div></div>',
 
   ok: function (str, options){
     options = $.extend({}, {theme: 'hint_green'}, options);
@@ -28,7 +30,7 @@ window.fw={
     if (!title) title=fw.ICON_INFO+' Alert';
     var $modal=$('#fw-modal-alert');
     if (!$modal.length){//add template to document
-      $(document.body).append('<div class="modal fade" tabindex="-1" role="dialog" id="fw-modal-alert"><div class="modal-dialog modal-sm" role="document"><div class="modal-content"><div class="modal-header"><h5 class="modal-title"></h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><p></p></div><div class="modal-footer"><button type="button" class="btn btn-primary btn-block" data-bs-dismiss="modal">OK</button></div></div></div></div>');
+      $(document.body).append(fw.MODAL_ALERT);
       $modal=$('#fw-modal-alert');
     }
     $modal.modal('show').find('.modal-title').html(title).end().find('.modal-body p').html(content);
@@ -52,7 +54,7 @@ window.fw={
     if (!title) title=fw.ICON_QUEST+' Confirm';
     var $modal=$('#fw-modal-confirm');
     if (!$modal.length){//add template to document
-      $(document.body).append('<div class="modal fade" tabindex="-1" role="dialog" id="fw-modal-confirm"><div class="modal-dialog modal-sm" role="document"><div class="modal-content"><div class="modal-header"><h5 class="modal-title"></h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><p></p></div><div class="modal-footer"><button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button><button type="button" class="btn btn-default" data-bs-dismiss="modal">Cancel</button></div></div></div></div>');
+      $(document.body).append(fw.MODAL_CONFIRM);
       $modal=$('#fw-modal-confirm');
     }
     $modal.modal('show').find('.modal-title').html(title).end().find('.modal-body p').html(content);
@@ -369,7 +371,7 @@ window.fw={
       set_progress($f, true);
       $f.ajaxSubmit({
           dataType: 'json',
-          success: function function_name (data) {
+          success: function (data) {
               set_progress($f, false);
               //console.log('ajaxSubmit success', data);
               $('#fw-form-msg').hide();
@@ -391,10 +393,11 @@ window.fw={
               if (data.msg) fw.ok(data.msg, hint_options);
               $f.trigger('autosave-success',[data]);
           },
-          error: function function_name (argument) {
+          error: function (e) {
               set_progress($f, false);
-              //console.log('ajaxSubmit error', data);
+              //console.log('ajaxSubmit error', e);
               $f.data('is-ajaxsubmit',false);
+              $f.trigger('autosave-error',[e]);
               //hint_error('Server error occured during auto save form');
           }
       });

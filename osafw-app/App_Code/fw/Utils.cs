@@ -963,7 +963,7 @@ namespace osafw
                     {
 
                         //throw; //ignore errors as it just cleanup, should not affect main logic, could be access denied
-                    }                    
+                    }
                 }
             }
         }
@@ -1034,8 +1034,8 @@ namespace osafw
                 if (trlen1 > 0) trlen = trlen1;
             }
             if (hattrs.ContainsKey("trchar")) trchar = (string)hattrs["trchar"];
-            if (hattrs.ContainsKey("trend")) trend = (int)hattrs["trend"];
-            if (hattrs.ContainsKey("trword")) trword = (int)hattrs["trword"];
+            if (hattrs.ContainsKey("trend")) trend = f2int(hattrs["trend"]);
+            if (hattrs.ContainsKey("trword")) trword = f2int(hattrs["trword"]);
 
             int orig_len = str.Length;
             if (orig_len < trlen) return str; // no need truncate
@@ -1238,7 +1238,7 @@ namespace osafw
             {
                 client = new();
             }
-            
+
             using (var form = new MultipartFormDataContent())
             {
                 //add form fields
@@ -1263,7 +1263,7 @@ namespace osafw
 
                 HttpResponseMessage response = client.PostAsync(url, form).Result;
                 result = response.Content.ReadAsStringAsync().Result;
-            }                       
+            }
 
             return result;
         }
@@ -1288,7 +1288,7 @@ namespace osafw
         // convert some system name to human-friendly name'
         // "system_name_id" => "System Name ID"
         public static string name2human(string str)
-        {            
+        {
             string str_lc = str.ToLower();
             if (str_lc == "icode") return "Code";
             if (str_lc == "iname") return "Name";
@@ -1350,7 +1350,7 @@ namespace osafw
                     + sourceDirName);
             }
 
-            // If the destination directory doesn't exist, create it.       
+            // If the destination directory doesn't exist, create it.
             Directory.CreateDirectory(destDirName);
 
             // Get the files in the directory and copy them to the new location.

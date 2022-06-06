@@ -35,9 +35,19 @@ namespace osafw
 
         public void ShowAction(string id = "")
         {
-            Hashtable ps = new ();
+            var page_name = Strings.LCase(id);
+
+            string tpl_name;
+            if (page_name == "about")
+                tpl_name = (string)fw.config("PAGE_LAYOUT_PUBLIC_FLUID");
+            else
+                tpl_name = (string)fw.config("PAGE_LAYOUT_PUBLIC");
+
+            Hashtable ps = new();
             ps["hide_sidebar"] = true; // TODO control via pages
-            fw.parser("/home/" + Utils.routeFixChars(Strings.LCase(id)), (string)fw.config("PAGE_LAYOUT_PUBLIC"), ps);
+            ps["page_name"] = page_name;
+
+            fw.parser("/home/" + Utils.routeFixChars(page_name), tpl_name, ps);
         }
 
         // called if fw.dispatch can't find controller

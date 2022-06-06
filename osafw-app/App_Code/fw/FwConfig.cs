@@ -149,6 +149,13 @@ namespace osafw
             // default settings that depend on other settings
             if (!settings.ContainsKey("ASSETS_URL"))
                 settings["ASSETS_URL"] = settings["ROOT_URL"] + "/assets";
+
+            //themes
+            if (settings.ContainsKey("THEME") && (string)settings["THEME"] != "default")
+            {
+                settings["template"] = settings["site_root"] + @"\App_Data\themes\" + settings["THEME"] + @"\template";
+                settings["THEME_URL"] = settings["ROOT_URL"] + @"/themes/" + settings["THEME"];
+            }
         }
 
 
@@ -163,7 +170,7 @@ namespace osafw
                 var route_prefixes = (Hashtable)settings["route_prefixes"];
                 if (route_prefixes != null)
                 {
-                    //sort prefixes, so longer prefixes mathced first, also escape to use in regex 
+                    //sort prefixes, so longer prefixes mathced first, also escape to use in regex
                     var prefixes = from string prefix in route_prefixes.Keys orderby prefix.Length descending, prefix select Regex.Escape(prefix);
                     route_prefixes_rx = @"^(" + string.Join("|", prefixes) + @")(/.*)?$";
                 }

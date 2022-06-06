@@ -2,9 +2,10 @@
  <input type="hidden" name="XSS" value="<~session[XSS]>">
 
  <div class="col">
-    <span role="button" class="btn btn-success btn-fileinput"><~/common/icons/cloud-upload-fill><span> Upload new file(s)...</span>
+    <span role="button" class="btn btn-success btn-fileinput">
+        <span class="msg-button"><~/common/icons/cloud-upload-fill><span> Upload new file(s)...</span></span>
+        <span class="msg-uploading d-none"><span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> uploading...</span>
         <input name="file1" type="file" multiple>
     </span>
-    <div class="wait-msg d-inline ms-1"></div>
  </div>
 </form>

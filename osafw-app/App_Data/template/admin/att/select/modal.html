@@ -1,4 +1,4 @@
-<div class="modal fade" id="modal-att" data-load-url="<~/admin/att/url>/(Select)">
+<div class="modal fade" id="modal-att" data-load-url="<~/admin/att/url>/(Select)" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
     </div>
@@ -34,7 +34,7 @@ function modal_att_open($att_category, on_select_callback){
                 $attinfo = $fg.find('.att-info').show();
                 $attinfo.find(':input:hidden').val(id);
             }
-            
+
             $attinfo.find('img').show().prop('src', '/Att/'+id+'?preview=1&size='+att_preview_size);
             $attinfo.find('a').prop('href', '/Att/'+id);
             $attinfo.find('.att-iname').text(iname);

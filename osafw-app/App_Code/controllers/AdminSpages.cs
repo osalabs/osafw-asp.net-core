@@ -97,7 +97,7 @@ namespace osafw
             var item = (Hashtable)ps["i"];
             string where = " status<>@status ";
             ArrayList pages_tree = model.tree(where, DB.h("status", FwModel.STATUS_DELETED), "parent_id, prio desc, iname");
-            ps["select_options_parent_id"] = model.getPagesTreeSelectHtml((string)item["parent_id"], pages_tree);
+            ps["select_options_parent_id"] = model.getPagesTreeSelectHtml(Utils.f2str(item["parent_id"]), pages_tree);
 
             ps["parent_url"] = model.getFullUrl(Utils.f2int(item["parent_id"]));
             ps["full_url"] = model.getFullUrl(Utils.f2int(item["id"]));
@@ -180,7 +180,7 @@ namespace osafw
 
             //if (result && model0.isExists(item["iname"], id)){
             //    fw.FERR["iname"] = "EXISTS";
-            //} 
+            //}
 
             //if (result && !SomeOtherValidation())
             //{
