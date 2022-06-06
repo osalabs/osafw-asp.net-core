@@ -85,8 +85,9 @@ namespace osafw
 
                 list_rows = db.arrayp(sql, list_where_params);
                 ps["list_rows"] = list_rows;
-                ps["count_from"] = (int)f["pagenum"] * (int)f["pagesize"] + 1;
-                ps["count_to"] = (int)f["pagenum"] * (int)f["pagesize"] + list_rows.Count;
+
+                ps["count_from"] = pagenum * pagesize + 1;
+                ps["count_to"] = pagenum * pagesize + list_rows.Count;
                 ps["pager"] = FormUtils.getPager(count, pagenum, pagesize);
 
                 // add/modify rows from db

@@ -37,14 +37,13 @@ namespace osafw
         {
             var page_name = Strings.LCase(id);
 
-            string tpl_name;
-            if (page_name == "about")
-                tpl_name = (string)fw.config("PAGE_LAYOUT_PUBLIC_FLUID");
-            else
-                tpl_name = (string)fw.config("PAGE_LAYOUT_PUBLIC");
+            string tpl_name = (string)fw.G["PAGE_LAYOUT"];
+            //override layout for specific pages - TODO control via Spages
+            //if (page_name == "about")
+            //    tpl_name = (string)fw.config("PAGE_LAYOUT_PUBLIC_FLUID");
 
             Hashtable ps = new();
-            ps["hide_sidebar"] = true; // TODO control via pages
+            ps["hide_sidebar"] = true; // TODO control via Spages
             ps["page_name"] = page_name;
 
             fw.parser("/home/" + Utils.routeFixChars(page_name), tpl_name, ps);

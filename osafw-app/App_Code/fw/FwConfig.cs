@@ -77,8 +77,7 @@ namespace osafw
             }
 
             settings["site_root"] = Regex.Replace(PhysicalApplicationPath, @"\\$", ""); // removed last \ if any
-
-            settings["template"] = settings["site_root"] + @"\App_Data\template";
+            
             settings["log"] = settings["site_root"] + @"\App_Data\logs\main.log";
             settings["log_max_size"] = 100 * 1024 * 1024; // 100 MB is max log size
             settings["tmp"] = Path.GetTempPath();
@@ -150,12 +149,11 @@ namespace osafw
             if (!settings.ContainsKey("ASSETS_URL"))
                 settings["ASSETS_URL"] = settings["ROOT_URL"] + "/assets";
 
-            //themes
-            if (settings.ContainsKey("THEME") && (string)settings["THEME"] != "default")
-            {
-                settings["template"] = settings["site_root"] + @"\App_Data\themes\" + settings["THEME"] + @"\template";
-                settings["THEME_URL"] = settings["ROOT_URL"] + @"/themes/" + settings["THEME"];
-            }
+            // default template dir
+            if (!settings.ContainsKey("template"))
+                settings["template"] = @"\App_Data\template";
+            // make absolute path to templates from site root
+            settings["template"] = (string)settings["site_root"] + settings["template"];
         }
 
 

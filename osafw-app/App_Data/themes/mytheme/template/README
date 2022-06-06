@@ -1,5 +1,0 @@
-Copy default theme template files from /AppData/template and build your custom design/layout based on the default structure.
-
-Add '"THEME": "mytheme"' option to the appsettings.json. Templates path for FWConfig.settings["template"] will be set to "/AppData/themes/mytheme/template".
-
-See /wwwroot/themes/mytheme/README for the theme public assets details.
