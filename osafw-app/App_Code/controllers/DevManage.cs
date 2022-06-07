@@ -860,16 +860,31 @@ namespace osafw
                     Hashtable field = new();
                     ((ArrayList)table_entity["fields"]).Add(field);
 
-                    // check if field is foreign key
+                    // check if field is foreign key like lookuptablename.id or prefix^lookuptablename.id
                     if (field_name.Substring(field_name.Length - 3) == ".id")
                     {
                         // this is foreign key field
                         Hashtable fk = new();
                         ((ArrayList)table_entity["foreign_keys"]).Add(fk);
 
-                        fk["pk_table"] = Utils.name2fw(Regex.Replace(field_name, @"\.id$", ""));  // Customers.id => customers
+                        if (field_name.Contains('^'))
+                        {
+                            //prefix^lookuptablename.id -> prefix_lookuptablename_id and FK to lookuptablename.id
+                            field_name = Regex.Replace(field_name, @"\.id$", ""); //remove .id
+                            var pk_table = Regex.Replace(field_name, @"^(.+?)\^", ""); //remove prefix
+                            fk["pk_table"] = Utils.name2fw(pk_table);  // Customers.id => customers                        
+
+                            field_name = field_name.Replace("^", "_"); //prefix^lookuptablename -> prefix_lookuptablename
+                            field_name = Utils.name2fw(field_name) + "_id"; //normalize name and add _id
+                        }
+                        else
+                        {
+                            //lookuptablename.id -> lookuptablename_id and FK to lookuptablename.id
+                            fk["pk_table"] = Utils.name2fw(Regex.Replace(field_name, @"\.id$", ""));  // Customers.id => customers                        
+                            field_name = fk["pk_table"] + "_id";
+                        }
+
                         fk["pk_column"] = "id";
-                        field_name = fk["pk_table"] + "_id";
                         fk["column"] = field_name;
 
                         field["fw_type"] = "int";
@@ -938,6 +953,12 @@ namespace osafw
                             field["numeric_precision"] = 53;
                             field["fw_type"] = "float";
                             field["fw_subtype"] = "float";
+                        }
+                        else if (Regex.IsMatch(line, @"\bcurrency\b", RegexOptions.IgnoreCase))
+                        {
+                            field["numeric_precision"] = 2;
+                            field["fw_type"] = "float";
+                            field["fw_subtype"] = "decimal";
                         }
                         else if (Regex.IsMatch(line, @"\bdate\b", RegexOptions.IgnoreCase))
                         {
@@ -1020,7 +1041,7 @@ namespace osafw
 
                 try
                 {
-                    db.exec("DROP TABLE " + db.qid((string)entity["table"]));
+                    db.exec("DROP TABLE IF EXISTS " + db.qid((string)entity["table"]));
                 }
                 catch (Exception ex)
                 {
@@ -1044,7 +1065,7 @@ namespace osafw
                 // add drop
                 if (entity.ContainsKey("comments"))
                     database_sql += "-- " + entity["comments"] + Constants.vbCrLf;
-                database_sql += "DROP TABLE " + q_ident((string)entity["table"]) + ";" + Constants.vbCrLf;
+                database_sql += "DROP TABLE IF EXISTS " + q_ident((string)entity["table"]) + ";" + Constants.vbCrLf;
                 database_sql += sql + ";" + Constants.vbCrLf + Constants.vbCrLf;
             }
 
@@ -1780,7 +1801,10 @@ namespace osafw
 
                 case "float":
                     {
-                        result = "FLOAT";
+                        if (Utils.f2str(entity["fw_subtype"]) == "currency")
+                            result = "DECIMAL(18,2)";
+                        else
+                            result = "FLOAT";
                         break;
                     }
 
