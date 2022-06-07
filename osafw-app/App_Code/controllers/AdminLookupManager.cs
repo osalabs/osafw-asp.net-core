@@ -187,10 +187,13 @@ namespace osafw
             }
 
             ps["count"] = db.valuep("select count(*) from " + db.qid(list_table_name) + " where " + list_where, list_where_params);
+
             if ((int)ps["count"] > 0)
             {
-                int offset = (int)f["pagenum"] * (int)f["pagesize"];
-                int limit = (int)f["pagesize"];
+                int pagenum = Utils.f2int(list_filter["pagenum"]);
+                int pagesize = Utils.f2int(list_filter["pagesize"]);
+                int offset = pagenum * pagesize;
+                int limit = pagesize;
                 string orderby = (string)SORTSQL[(string)f["sortby"]];
                 if (string.IsNullOrEmpty(orderby))
                     orderby = "1";
@@ -208,10 +211,10 @@ namespace osafw
                 ArrayList list_rows = db.arrayp(sql, list_where_params);
                 ps["list_rows"] = list_rows;
 
-                ps["count_from"] = (int)f["pagenum"] * (int)f["pagesize"] + 1;
-                ps["count_to"] = (int)f["pagenum"] * (int)f["pagesize"] + list_rows.Count;
+                ps["count_from"] = pagenum * pagesize + 1;
+                ps["count_to"] = pagenum * pagesize + list_rows.Count;
 
-                ps["pager"] = FormUtils.getPager((int)ps["count"], (int)f["pagenum"], f["pagesize"]);
+                ps["pager"] = FormUtils.getPager((int)ps["count"], pagenum, pagesize);
                 if (ps["pager"] != null)
                 {
                     // add dict info for pager

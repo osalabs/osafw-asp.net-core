@@ -84,7 +84,7 @@ namespace osafw
             var cache_key = this.cache_prefix + id;
             var item = (DBRow)fw.cache.getRequestValue(cache_key);
             if (item == null)
-            { 
+            {
                 Hashtable where = new();
                 where[this.field_id] = id;
                 item = db.row(table_name, where);
@@ -337,6 +337,18 @@ namespace osafw
             if (is_log_changes)
                 fw.logEvent(table_name + "_del", id);
         }
+
+        public virtual void deleteWithPermanentCheck(int id)
+        {
+            // if record already deleted and we are admin - perform permanent delete
+            if (fw.model<Users>().checkAccess(Users.ACL_ADMIN, false)
+                && !string.IsNullOrEmpty(field_status)
+                && Utils.f2int(one(id)[field_status]) == FwModel.STATUS_DELETED)
+                delete(id, true);
+            else
+                delete(id);
+        }
+
 
         public virtual void removeCache(int id)
         {
