@@ -61,7 +61,7 @@ window.fw={
     $modal.off('shown.bs.modal').on('shown.bs.modal', function (e) {
       $modal.find('.btn-primary').focus();
     });
-    $modal.find('.btn-primary').one('click', function (e) {
+    $modal.find('.btn-primary').off('click').one('click', function (e) {
       callback();
     });
   },
