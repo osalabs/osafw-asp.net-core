@@ -15,6 +15,8 @@ namespace osafw
 
     public class FormUtils
     {
+        public const int MAX_PAGE_ITEMS= 25; //default max number of items on list screen
+
         public static Array getYesNo()
         {
             return qw("No|No Yes|Yes");
@@ -195,7 +197,7 @@ namespace osafw
         // return pager or Nothing if no paging required
         public static ArrayList getPager(int count, int pagenum, object pagesize1 = null)
         {
-            int pagesize = 25; // TODO get from  FW.config("MAX_PAGE_ITEMS")
+            int pagesize = MAX_PAGE_ITEMS;
             if (pagesize1 != null)
             {
                 pagesize = (int)pagesize1;

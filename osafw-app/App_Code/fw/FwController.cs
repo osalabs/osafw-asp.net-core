@@ -277,7 +277,7 @@ namespace osafw
 
             // paging
             f["pagenum"] = Utils.f2int(f["pagenum"]); //sets default to 0 if no value or non-numeric
-            f["pagesize"] = Utils.f2int(f["pagesize"] ?? fw.config("MAX_PAGE_ITEMS"));
+            f["pagesize"] = Utils.f2int(f["pagesize"] ?? FormUtils.MAX_PAGE_ITEMS);
 
             // save in session for later use
             fw.SessionHashtable(session_key, f);

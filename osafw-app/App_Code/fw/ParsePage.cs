@@ -382,6 +382,13 @@ namespace osafw
             LANG_CACHE.Clear();
         }
 
+        //read precached file and split it into lines (ignores empty lines)
+        private string[] precache_file_lines(string filename)
+        {
+            var content = precache_file(filename);
+            return Regex.Split(content, "[\r\n]+");
+        }
+
         private string precache_file(string filename)
         {
             string modtime = "";
@@ -1098,7 +1105,7 @@ namespace osafw
                     return "";
                 }
 
-                string[] lines = FW.getFileLines(TMPL_PATH + "/" + tpl_path);
+                string[] lines = precache_file_lines(TMPL_PATH + "/" + tpl_path);
                 foreach (string line in lines)
                 {
                     if (line.Length < 2)
@@ -1147,7 +1154,7 @@ namespace osafw
                 tpl_path = basedir + "/" + tpl_path;
             }
 
-            string[] lines = FW.getFileLines(TMPL_PATH + "/" + tpl_path);
+            string[] lines = precache_file_lines(TMPL_PATH + "/" + tpl_path);
 
             int i = 0;
             foreach (string line in lines)
@@ -1247,7 +1254,7 @@ namespace osafw
                     return "";
                 }
 
-                string[] lines = FW.getFileLines(TMPL_PATH + "/" + tpl_path);
+                string[] lines = precache_file_lines(TMPL_PATH + "/" + tpl_path);
                 foreach (string line in lines)
                 {
                     if (line.Length < 2)

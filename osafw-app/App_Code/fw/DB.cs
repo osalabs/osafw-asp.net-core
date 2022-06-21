@@ -1524,12 +1524,11 @@ namespace osafw
         // load table schema from db
         public Hashtable loadTableSchema(string table)
         {
-            // for non-MSSQL schemas - just use config schema for now - TODO
+            // for unsupported schemas - use config schema
             if (dbtype != "SQL" && dbtype != "OLE")
             {
                 if (schema.Count == 0)
                     schema = (Hashtable)conf["schema"];
-                return null;
             }
 
             // check if schema already there
