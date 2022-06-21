@@ -21,7 +21,7 @@ namespace osafw
 
         public void IndexAction()
         {
-            fw.redirect(fw.config("ASSETS_URL") + "/img/0.gif");
+            fw.redirect(fw.config("ASSETS_URL") + Att.IMGURL_0);
         }
 
         public void DownloadAction(int id = 0)
@@ -65,12 +65,8 @@ namespace osafw
                 }
                 else
                 {
-                    // if it's not an image and requested preview - return std image
-                    string filepath = fw.config("site_root") + "/img/att_file.png"; // TODO move to web.config or to model? and no need for transfer file - just redirect TODO
-                    string ext = UploadUtils.getUploadFileExt(filepath);
-                    fw.response.Headers.Add("Content-type", model.getMimeForExt(ext));
-                    fw.response.SendFileAsync(filepath).Wait();
-
+                    // if it's not an image and requested preview - return(redirect) std file image
+                    fw.redirect(fw.config("ASSETS_URL") + Att.IMGURL_FILE);
                 }
             }
             else

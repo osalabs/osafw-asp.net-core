@@ -15,6 +15,9 @@ namespace osafw
 {
     public class Att : FwModel
     {
+        public const string IMGURL_0 = "/img/0.gif";
+        public const string IMGURL_FILE = "/img/att_file.png";
+
         const int MAX_THUMB_W_S = 180;
         const int MAX_THUMB_H_S = 180;
         const int MAX_THUMB_W_M = 512;
