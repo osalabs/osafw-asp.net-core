@@ -1,0 +1,47 @@
+<script src="<~GLOBAL[ASSETS_URL]>/js/jquery-ui.min.js"></script>
+<script>
+    $(document).ready(function() {
+        //sort by drag & drop
+        var $rows = $(".fw-sortable");
+        $rows.sortable();
+
+        //in list mode we have sortable rows
+        $(document).on('sortupdate', '.fw-sortable', function( e, ui ) {
+            //console.log('sortupdate', e, ui);
+            var $under = ui.item.prev();
+            var $above = ui.item.next();
+            //console.log($under, $above);
+            var url=$(".fw-sortable").data('url-savesort'); // ex: controller/(SaveSort)?d=<~d>&sortdir=<~f[sortdir]>
+            var data={
+                'XSS': '<~SESSION[XSS]>',
+                'id' : ui.item.data('id'),
+                'under': $under.data('id'),
+                'above': $above.data('id')
+            };
+            $.post(url, data, null, 'json')
+                .done(function (data) {
+                  if (data.success) {
+                    //OK
+                  } else {
+                    fw.error(data.err_msg || "Server error");
+                  }
+                })
+                .fail(function (jqxhr, textStatus, error) {
+                    var err = textStatus + ", " + error;
+                    fw.error("Request Failed: " + err);
+                });
+        });
+
+        // $rows.on('sortchange', function( e, ui ) {
+        //     console.log('sortchange', e);
+        // });
+        // $rows.on('sortstop', function( e, ui ) {
+        //     console.log('sortstop', e);
+        // });
+        // $rows.on('sortupdate', function( e, ui ) {
+        //     console.log('sortupdate', e, ui);
+        //     //update values - just find all checkbox elements - jquery iterate it in order, so we only need to assign incrementing index
+        //     //update_indexes();
+        // });
+    });
+</script>

@@ -83,7 +83,8 @@ namespace osafw
             ArrayList cols = db.loadTableSchemaFull((string)defs["tname"]);
             foreach (Hashtable col in cols)
             {
-                string coltype = (string)col["type"];
+                var colname = (string)col["name"];
+                var coltype = (string)col["type"];
                 // skip unsupported (binary) fields
                 // identity field also skipped as not updateable
                 if ((string)col["is_identity"] == "1" || coltype == "timestamp" || coltype == "image" || coltype == "varbinary")
@@ -92,7 +93,7 @@ namespace osafw
                 // add/override custom info
                 if (custom_columns.Count > 0)
                 {
-                    Hashtable cc = (Hashtable)custom_columns[col["name"]];
+                    Hashtable cc = (Hashtable)custom_columns[colname];
                     if (cc == null)
                         // skip this field as not custom defined
                         continue;
@@ -103,11 +104,20 @@ namespace osafw
                 {
                     // defaults
                     // col["index") ]= 0
-                    col["iname"] = Utils.name2human((string)col["name"]); // default display name is column name
+                    col["iname"] = Utils.name2human(colname); // default display name is column name
                     col["itype"] = ""; // no default input type
                     col["igroup"] = ""; // no default group
                 }
-                result.Add(col);
+
+                //if prio column detected - set it as first for easy sort UI
+                if (colname == "prio")
+                {
+                    result.Insert(0, col);
+                }
+                else
+                {
+                    result.Add(col);
+                }
             }
 
             if (custom_columns.Count > 0)
@@ -127,6 +137,15 @@ namespace osafw
                 return result;
         }
 
+        //convert cols into hashtable
+        public Hashtable hColumns(ArrayList cols)
+        {
+            var result = new Hashtable();
+            foreach (Hashtable col in cols)
+                result[col["name"]] = col;
+            return result;
+        }
+
         // return "id" or customer column_id defined in defs
         public string getColumnId(Hashtable defs)
         {
@@ -134,6 +153,17 @@ namespace osafw
                 return (string)defs["column_id"];
             else
                 return "id";
+        }
+
+        public string getColumnPrio(Hashtable defs)
+        {
+            var cols = getColumns(defs);
+            var hCols = hColumns(cols);
+
+            if (hCols.ContainsKey("prio"))
+                return "prio";
+            else
+                return "";
         }
 
         public string getLookupSelectOptions(string itype_lookup, object sel_id)

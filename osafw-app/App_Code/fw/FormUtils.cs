@@ -8,6 +8,7 @@ using System.Collections;
 using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.VisualBasic;
+using System.Linq;
 using static osafw.Utils;
 
 namespace osafw
@@ -15,7 +16,7 @@ namespace osafw
 
     public class FormUtils
     {
-        public const int MAX_PAGE_ITEMS= 25; //default max number of items on list screen
+        public const int MAX_PAGE_ITEMS = 25; //default max number of items on list screen
 
         public static Array getYesNo()
         {
@@ -40,7 +41,7 @@ namespace osafw
             StringBuilder result = new();
 
             isel = Strings.Trim(isel);
-            int i=0;
+            int i = 0;
             string[] av;
             string val;
             string text;
@@ -149,7 +150,7 @@ namespace osafw
 
         public static ArrayList selectTplOptions(string tpl_path)
         {
-            ArrayList result = new ();
+            ArrayList result = new();
 
             string[] lines = FW.getFileLines((string)FwConfig.settings["template"] + tpl_path);
 
@@ -202,7 +203,7 @@ namespace osafw
             {
                 pagesize = (int)pagesize1;
             }
-                
+
             ArrayList pager = null;
             const int PAD_PAGES = 5;
 
@@ -329,12 +330,12 @@ namespace osafw
         // itemdb("dict_link_multi") = FormUtils.multi2ids(reqh("dict_link_multi"))
         public static string multi2ids(Hashtable items)
         {
-            if (items==null || items.Count == 0)
+            if (items == null || items.Count == 0)
                 return "";
 
             var keys = items.Keys;
             var zzz = new string[keys.Count];
-            keys.CopyTo(zzz,0);
+            keys.CopyTo(zzz, 0);
             return string.Join(",", zzz);
             //return string.Join(",", new ArrayList(items.Keys).ToArray());
         }
@@ -505,6 +506,23 @@ namespace osafw
                 // if date set - add time
                 result = ((DateTime)dt).AddSeconds(timeint);
             return result;
+        }
+
+        //filter list of rows by is_checked=true, then return ordered by prio,iname
+        public static ArrayList listCheckedOrderByPrioIname(ArrayList rows)
+        {
+            return new ArrayList((from Hashtable h in rows
+                                  where (bool)h["is_checked"]
+                                  orderby (int)h["prio"] ascending, h["iname"] ascending
+                                  select h).ToList());
+        }
+
+        // do not filter by checked only, but checked first: ordered by is_checked desc,prio,iname
+        public static ArrayList listOrderByPrioIname(ArrayList rows)
+        {
+            return new ArrayList((from Hashtable h in rows
+                                  orderby (bool)h["is_checked"] descending, (int)h["prio"] ascending, h["iname"] ascending
+                                  select h).ToList());
         }
     }
 }

@@ -1151,29 +1151,28 @@ namespace osafw
                     fld_iname = fld_identity;
 
                 if (fld_identity != null && (string)fld_identity["name"] != "id")
-                    codegen += "        field_id = \"" + fld_identity["name"] + "\"" + Constants.vbCrLf;
+                    codegen += "        field_id = \"" + fld_identity["name"] + "\";" + Constants.vbCrLf;
                 if (fld_iname != null && (string)fld_iname["name"] != "iname")
-                    codegen += "        field_iname = \"" + fld_iname["name"] + "\"" + Constants.vbCrLf;
+                    codegen += "        field_iname = \"" + fld_iname["name"] + "\";" + Constants.vbCrLf;
 
                 // also reset fw fields if such not exists
                 if (!fields.ContainsKey("status"))
-                    codegen += "        field_status = \"\"" + Constants.vbCrLf;
+                    codegen += "        field_status = \"\";" + Constants.vbCrLf;
                 if (!fields.ContainsKey("add_users_id"))
-                    codegen += "        field_add_users_id = \"\"" + Constants.vbCrLf;
+                    codegen += "        field_add_users_id = \"\";" + Constants.vbCrLf;
                 if (!fields.ContainsKey("upd_users_id"))
-                    codegen += "        field_upd_users_id = \"\"" + Constants.vbCrLf;
+                    codegen += "        field_upd_users_id = \"\";" + Constants.vbCrLf;
                 if (!fields.ContainsKey("upd_time"))
-                    codegen += "        field_upd_time = \"\"" + Constants.vbCrLf;
+                    codegen += "        field_upd_time = \"\";" + Constants.vbCrLf;
+                if (fields.ContainsKey("prio"))
+                    codegen += "        field_prio = \"prio\";" + Constants.vbCrLf;
 
-                if (!Utils.f2bool(entity["is_fw"]))
-                    codegen += "        is_normalize_names = True" + Constants.vbCrLf;
-
-                if (is_normalize_names)
-                    codegen += "        is_normalize_names = True" + Constants.vbCrLf;
+                if (is_normalize_names || !Utils.f2bool(entity["is_fw"]))
+                    codegen += "        is_normalize_names = True;" + Constants.vbCrLf;
             }
 
 
-            mdemo = mdemo.Replace("'###CODEGEN", codegen);
+            mdemo = mdemo.Replace("//###CODEGEN", codegen);
 
             FW.setFileContent(path + @"\" + model_name + ".cs", ref mdemo);
         }

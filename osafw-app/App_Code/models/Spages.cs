@@ -218,7 +218,7 @@ namespace osafw
             Hashtable ps = new();
 
             // for navigation
-            var pages_tree = tree("status=0", new Hashtable(), "parent_id, prio desc, iname"); // published only
+            var pages_tree = tree("status=0", new Hashtable(), "parent_id, prio, iname"); // published only
             ps["pages"] = getPagesTreeList(pages_tree, 0);
 
             Hashtable item = oneByFullUrl(full_url);

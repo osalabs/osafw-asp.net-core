@@ -402,7 +402,8 @@ namespace osafw
                     var fields = Strings.Join(anames.ToArray(), " ");
 
                     var iname = (string)item["iname"];
-                    if (!string.IsNullOrEmpty(iname)) {
+                    if (!string.IsNullOrEmpty(iname))
+                    {
                         //create new view by name or update if this name exists
                         fw.model<UserViews>().addOrUpdateByUK(base_url, fields, iname);
                     }
@@ -416,6 +417,21 @@ namespace osafw
             }
 
             fw.redirect(return_url);
+        }
+
+        //********************* support for sortable rows
+        public Hashtable SaveSortAction()
+        {
+            var ps = new Hashtable() { { "success", true } };
+
+            var sortdir = reqs("sortdir");
+            var id = reqi("id");
+            var under_id = reqi("under");
+            var above_id = reqi("above");
+
+            ps["success"] = model0.reorderPrio(sortdir, id, under_id, above_id);
+
+            return new Hashtable() { { "_json", ps } };
         }
 
         // ''''' HELPERS for dynamic fields

@@ -160,11 +160,13 @@ namespace osafw
             return result;
         }
 
+        //default order is iname asc
+        //or if prio column exists - prio asc, iname asc
         protected virtual string getOrderBy()
         {
             var result = field_iname;
             if (!string.IsNullOrEmpty(field_prio))
-                result = db.qid(field_prio) + " desc, " + db.qid(field_iname);
+                result = db.qid(field_prio) + ", " + db.qid(field_iname);
             return result;
         }
 
@@ -275,6 +277,12 @@ namespace osafw
             }
 
             this.removeCache(id);
+
+            if (!string.IsNullOrEmpty(field_prio))
+            {
+                //if priority field defined - update it with newly added id to allow proper re/ordering
+                db.update(table_name, DB.h(field_prio, id), DB.h(field_id, id));
+            }
 
             return id;
         }
@@ -757,6 +765,116 @@ namespace osafw
 
             var rows = db.array(table_name, where, "", aselect_fields);
             return Utils.getCSVExport(csv_export_headers, csv_export_fields, rows);
+        }
+
+        // ********************* support for sortable records
+        public int updatePrioRange(int inc_value, int from_prio, int to_prio)
+        {
+            var field_prioq = db.qid(field_prio);
+            var p = DB.h("inc_value", inc_value, "from_prio", from_prio, "to_prio", to_prio);
+            return db.exec("UPDATE " + db.qid(table_name) + 
+                " SET " + field_prioq + "=" + field_prioq + "+(@inc_value)" + 
+                " WHERE " + field_prioq + " BETWEEN @from_prio AND @to_prio", p);
+        }
+
+        public int updatePrio(int id, int prio)
+        {
+            return db.update(table_name, DB.h(field_prio, prio), DB.h(field_id, id));
+        }
+
+        // reorder prio column
+        public bool reorderPrio(string sortdir, int id, int under_id, int above_id)
+        {
+            if (sortdir != "asc" && sortdir != "desc")
+                throw new ApplicationException("Wrong sort directrion");
+
+            if (string.IsNullOrEmpty(field_prio))
+                return false;
+
+            int id_prio = Utils.f2int(one(id)[field_prio]);
+
+            // detect reorder
+            if (under_id > 0)
+            {
+                // under id present
+                int under_prio = Utils.f2int(one(under_id)[field_prio]);
+                if (sortdir == "asc")
+                {
+                    if (id_prio < under_prio)
+                    {
+                        // if my prio less than under_prio - make all records between old prio and under_prio as -1
+                        updatePrioRange(-1, id_prio, under_prio);
+                        // and set new id prio as under_prio
+                        updatePrio(id, under_prio);
+                    }
+                    else
+                    {
+                        // if my prio more than under_prio - make all records between old prio and under_prio as +1
+                        updatePrioRange(+1, (under_prio + 1), id_prio);
+                        // and set new id prio as under_prio+1
+                        updatePrio(id, under_prio + 1);
+                    }
+                }
+                else
+                    // desc
+                    if (id_prio < under_prio)
+                {
+                    // if my prio less than under_prio - make all records between old prio and under_prio-1 as -1
+                    updatePrioRange(-1, id_prio, under_prio - 1);
+                    // and set new id prio as under_prio-1
+                    updatePrio(id, under_prio - 1);
+                }
+                else
+                {
+                    // if my prio more than under_prio - make all records between under_prio and old prio as +1
+                    updatePrioRange(+1, under_prio, id_prio);
+                    // and set new id prio as under_prio
+                    updatePrio(id, under_prio);
+                }
+            }
+            else if (above_id > 0)
+            {
+                // above id present
+                int above_prio = Utils.f2int(one(above_id)[field_prio]);
+                if (sortdir == "asc")
+                {
+                    if (id_prio < above_prio)
+                    {
+                        // if my prio less than under_prio - make all records between old prio and above_prio-1 as -1
+                        updatePrioRange(-1, id_prio, above_prio - 1);
+                        // and set new id prio as under_prio
+                        updatePrio(id, above_prio - 1);
+                    }
+                    else
+                    {
+                        // if my prio more than under_prio - make all records between above_prio and old prio as +1
+                        updatePrioRange(+1, above_prio, id_prio);
+                        // and set new id prio as under_prio+1
+                        updatePrio(id, above_prio);
+                    }
+                }
+                else
+                    // desc
+                    if (id_prio < above_prio)
+                {
+                    // if my prio less than under_prio - make all records between old prio and above_prio as -1
+                    updatePrioRange(-1, id_prio, above_prio);
+                    // and set new id prio as above_prio
+                    updatePrio(id, above_prio);
+                }
+                else
+                {
+                    // if my prio more than under_prio - make all records between above_prio+1 and old prio as +1
+                    updatePrioRange(+1, above_prio + 1, id_prio);
+                    // and set new id prio as under_prio+1
+                    updatePrio(id, above_prio + 1);
+                }
+            }
+            else
+                // bad reorder call - ignore
+                return false;
+
+            return true;
         }
 
         public void Dispose()

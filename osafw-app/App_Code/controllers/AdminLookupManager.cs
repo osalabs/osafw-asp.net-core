@@ -237,29 +237,31 @@ namespace osafw
                     ArrayList fv = new();
                     foreach (Hashtable col in cols)
                     {
-                        if (list_cols.Count > 0 && !list_cols.ContainsKey(col["name"]))
+                        var colname = (string)col["name"];
+                        var colitype = (string)col["itype"];
+                        if (list_cols.Count > 0 && !list_cols.ContainsKey(colname))
                             continue;
 
                         Hashtable fh = new();
-                        fh["colname"] = col["name"];
+                        fh["colname"] = colname;
                         fh["iname"] = col["iname"];
-                        fh["value"] = row[col["name"]];
-                        if (list_cols.Count == 0 && ((string)col["name"] == "status" || (string)col["name"] == "iname"))
+                        fh["value"] = row[colname];
+                        if (list_cols.Count == 0 && (colname == "status" || colname == "iname" || colname == "prio"))
                             fh["is_custom"] = true;
 
                         fh["id"] = row["id"];
                         fh["maxlen"] = col["maxlen"];
-                        fh["type"] = col["itype"];
+                        fh["type"] = colitype;
                         if ((string)fh["type"] == "textarea")
                             fh["type"] = ""; // show textarea as inputtext in table edit mode
 
-                        if (col["itype"].ToString().Contains("."))
+                        if (colitype.Contains("."))
                         {
                             // lookup type
                             fh["type"] = "lookup";
-                            fh["select_options"] = model_tables.getLookupSelectOptions((string)col["itype"], fh["value"]);
+                            fh["select_options"] = model_tables.getLookupSelectOptions(colitype, fh["value"]);
                             // for lookup type display value should be from lookup table
-                            fh["value"] = model_tables.getLookupValue((string)col["itype"], fh["value"]);
+                            fh["value"] = model_tables.getLookupValue(colitype, fh["value"]);
                         }
 
                         fv.Add(fh);
@@ -574,6 +576,22 @@ namespace osafw
                 fw.setGlobalError(ex.Message);
                 fw.routeRedirect("Index");
             }
+        }
+
+        public Hashtable SaveSortAction()
+        {
+            if (is_readonly) throw new UserException("Access denied");
+            var ps = new Hashtable();
+            ps["success"] = true;
+
+            var sortdir = reqs("sortdir");
+            var id = reqi("id");
+            var under_id = reqi("under");
+            var above_id = reqi("above");
+
+            model.reorderPrio(defs, sortdir, id, under_id, above_id);
+
+            return new Hashtable() { { "_json", ps } };
         }
 
         // TODO for lookup tables

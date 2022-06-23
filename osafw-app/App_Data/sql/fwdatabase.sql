@@ -18,7 +18,7 @@ CREATE TABLE att_categories (
   icode                 NVARCHAR(64) NOT NULL DEFAULT '', /*to use from code*/
   iname                 NVARCHAR(64) NOT NULL DEFAULT '',
   idesc                 NVARCHAR(MAX),
-  prio                  INT NOT NULL DEFAULT 0,     /* 0 is normal and lowest priority*/
+  prio                  INT NOT NULL DEFAULT 0,     /*0-on insert, then =id, default order by prio asc,iname*/
 
   status                TINYINT NOT NULL DEFAULT 0,        /*0-ok, 127-deleted*/
   add_time              DATETIME2 NOT NULL DEFAULT getdate(),
@@ -159,7 +159,7 @@ CREATE TABLE spages (
 
   pub_time              DATETIME2,                               /*publish date-time*/
   template              NVARCHAR(64),                           /*template to use, if not defined - default site template used*/
-  prio                  INT NOT NULL DEFAULT 0,                 /* 0 is normal and lowest priority*/
+  prio                  INT NOT NULL DEFAULT 0,                 /*0-on insert, then =id, default order by prio asc,iname*/
   is_home               INT DEFAULT 0,                          /* 1 is for home page (non-deletable page*/
   redirect_url          NVARCHAR(255) NOT NULL DEFAULT '',      /*if set - redirect to this url instead displaying page*/
 

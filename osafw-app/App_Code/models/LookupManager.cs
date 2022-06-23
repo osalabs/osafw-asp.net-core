@@ -83,6 +83,15 @@ namespace osafw
 
             int id = db.insert(tname, item);
             fw.logEvent(tname + "_add", id);
+
+            var field_prio = fw.model<LookupManagerTables>().getColumnPrio(defs);
+            if (!string.IsNullOrEmpty(field_prio))
+            {
+                //if priority field defined - update it with newly added id to allow proper re/ordering
+                var field_id = fw.model<LookupManagerTables>().getColumnId(defs);
+                db.update(tname, DB.h(field_prio, id), DB.h(field_id, id));
+            }
+
             return id;
         }
 
@@ -219,5 +228,120 @@ namespace osafw
 
             return result;
         }
+
+        public int updatePrioRange(int inc_value, int from_prio, int to_prio, string tname, string field_prio)
+        {
+            var field_prioq = db.qid(field_prio);
+            var p = DB.h("inc_value", inc_value, "from_prio", from_prio, "to_prio", to_prio);
+            return db.exec("UPDATE " + db.qid(tname) +
+                " SET " + field_prioq + "=" + field_prioq + "+(@inc_value)" +
+                " WHERE " + field_prioq + " BETWEEN @from_prio AND @to_prio", p);
+        }
+
+        public int updatePrio(int id, int prio, string tname, string field_id, string field_prio)
+        {
+            return db.update(tname, DB.h(field_prio, prio), DB.h(field_id, id));
+        }
+
+        // reorder prio column
+        public bool reorderPrio(Hashtable defs, string sortdir, int id, int under_id, int above_id)
+        {
+            if (sortdir != "asc" && sortdir != "desc")
+                throw new ApplicationException("Wrong sort directrion");
+
+            var field_id = fw.model<LookupManagerTables>().getColumnId(defs);
+            var field_prio = fw.model<LookupManagerTables>().getColumnPrio(defs);
+            if (string.IsNullOrEmpty(field_prio))
+                return false;
+
+            var field_prioq = db.qid(field_prio);
+
+            var tname = (string)defs["tname"];
+            int id_prio = Utils.f2int(oneByTname(tname, id)[field_prio]);
+
+            // detect reorder
+            if (under_id > 0)
+            {
+                // under id present
+                int under_prio = Utils.f2int(oneByTname(tname, under_id)[field_prio]);
+                if (sortdir == "asc")
+                {
+                    if (id_prio < under_prio)
+                    {
+                        // if my prio less than under_prio - make all records between old prio and under_prio as -1
+                        updatePrioRange(-1, id_prio, under_prio, tname, field_prio);
+                        // and set new id prio as under_prio
+                        updatePrio(id, under_prio, tname, field_id, field_prio);
+                    }
+                    else
+                    {
+                        // if my prio more than under_prio - make all records between old prio and under_prio as +1
+                        updatePrioRange(+1, (under_prio + 1), id_prio, tname, field_prio);
+                        // and set new id prio as under_prio+1
+                        updatePrio(id, under_prio + 1, tname, field_id, field_prio);
+                    }
+                }
+                else
+                    // desc
+                    if (id_prio < under_prio)
+                {
+                    // if my prio less than under_prio - make all records between old prio and under_prio-1 as -1
+                    updatePrioRange(-1, id_prio, under_prio - 1, tname, field_prio);
+                    // and set new id prio as under_prio-1
+                    updatePrio(id, under_prio - 1, tname, field_id, field_prio);
+                }
+                else
+                {
+                    // if my prio more than under_prio - make all records between under_prio and old prio as +1
+                    updatePrioRange(+1, under_prio, id_prio, tname, field_prio);
+                    // and set new id prio as under_prio
+                    updatePrio(id, under_prio, tname, field_id, field_prio);
+                }
+            }
+            else if (above_id > 0)
+            {
+                // above id present
+                int above_prio = Utils.f2int(oneByTname(tname, above_id)[field_prio]);
+                if (sortdir == "asc")
+                {
+                    if (id_prio < above_prio)
+                    {
+                        // if my prio less than under_prio - make all records between old prio and above_prio-1 as -1
+                        updatePrioRange(-1, id_prio, above_prio - 1, tname, field_prio);
+                        // and set new id prio as under_prio
+                        updatePrio(id, above_prio - 1, tname, field_id, field_prio);
+                    }
+                    else
+                    {
+                        // if my prio more than under_prio - make all records between above_prio and old prio as +1
+                        updatePrioRange(+1, above_prio, id_prio, tname, field_prio);
+                        // and set new id prio as under_prio+1
+                        updatePrio(id, above_prio, tname, field_id, field_prio);
+                    }
+                }
+                else
+                    // desc
+                    if (id_prio < above_prio)
+                {
+                    // if my prio less than under_prio - make all records between old prio and above_prio as -1
+                    updatePrioRange(-1, id_prio, above_prio, tname, field_prio);
+                    // and set new id prio as above_prio
+                    updatePrio(id, above_prio, tname, field_id, field_prio);
+                }
+                else
+                {
+                    // if my prio more than under_prio - make all records between above_prio+1 and old prio as +1
+                    updatePrioRange(+1, above_prio + 1, id_prio, tname, field_prio);
+                    // and set new id prio as under_prio+1
+                    updatePrio(id, above_prio + 1, tname, field_id, field_prio);
+                }
+            }
+            else
+                // bad reorder call - ignore
+                return false;
+
+            return true;
+        }
+
     }
 }
