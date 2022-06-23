@@ -16,7 +16,7 @@ using System.Text.RegularExpressions;
 namespace osafw
 {
     // standard exceptions used by framework 
-    [Serializable]
+    [Serializable]   
     public class AuthException : ApplicationException
     {
         public AuthException() : base("Access denied") { }
@@ -25,7 +25,14 @@ namespace osafw
     [Serializable]
     public class UserException : ApplicationException
     {
+        //thrown when input parameters from the request (browser/user) are not valid
         public UserException(string message) : base(message) { }
+    }
+    [Serializable]
+    public class ValidationException : UserException
+    {
+        //specificially for validation forms
+        public ValidationException(string message = "") : base(message) { }
     }
     [Serializable]
     public class NotFoundException : UserException
@@ -33,8 +40,7 @@ namespace osafw
         public NotFoundException() : base("Not Found") { }
         public NotFoundException(string message) : base(message) { }
     }
-    [Serializable]
-    public class ValidationException : ApplicationException { }
+
     [Serializable]
     public class RedirectException : Exception { }
 
