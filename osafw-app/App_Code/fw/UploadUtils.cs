@@ -296,5 +296,12 @@ namespace osafw
             else
                 return "";
         }
+
+        // alternative for .NET 4 MimeMapping.GetMimeMapping(FileName)
+        public static string mimeMapping(string filename)
+        {
+            new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider().TryGetContentType(filename, out string contentType);
+            return contentType ?? "application/octet-stream";
+        }
     }
 }

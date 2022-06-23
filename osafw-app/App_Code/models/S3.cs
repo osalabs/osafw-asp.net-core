@@ -28,7 +28,6 @@
 //}
 
 //#define is_S3
-
 #if is_S3
 
 using System;
@@ -66,13 +65,13 @@ namespace osafw
         // root should end with "/" if non-empty
         public AmazonS3Client initClient(string access_key = "", string secret_key = "", string region = "", string bucket = "", string root = "")
         {
-            string akey = (string)(!string.IsNullOrEmpty(access_key)? access_key: fw.config("AWSAccessKey"));
-            string skey = (string)(!string.IsNullOrEmpty(secret_key)? secret_key: fw.config("AWSSecretKey"));
+            string akey = (string)(!string.IsNullOrEmpty(access_key) ? access_key : fw.config("AWSAccessKey"));
+            string skey = (string)(!string.IsNullOrEmpty(secret_key) ? secret_key : fw.config("AWSSecretKey"));
             // region is defined in web.config "AWSRegion"
 
-            this.region = (string)(!string.IsNullOrEmpty(region)? region: fw.config("AWSRegion"));
-            this.bucket = (string)(!string.IsNullOrEmpty(bucket)? bucket: fw.config("S3Bucket"));
-            this.root = (string)(!string.IsNullOrEmpty(root)? root: fw.config("S3Root"));
+            this.region = (string)(!string.IsNullOrEmpty(region) ? region : fw.config("AWSRegion"));
+            this.bucket = (string)(!string.IsNullOrEmpty(bucket) ? bucket : fw.config("S3Bucket"));
+            this.root = (string)(!string.IsNullOrEmpty(root) ? root : fw.config("S3Root"));
 
             client = new AmazonS3Client(akey, skey, Amazon.RegionEndpoint.GetBySystemName(this.region)); // , Amazon.RegionEndpoint.USWest2
 
@@ -103,7 +102,15 @@ namespace osafw
             return task.Result;
         }
 
-        public PutObjectResponse uploadFilepath(string key, string filepath, string disposition = "")
+        /// <summary>
+        /// upload local file by filepath to the S3
+        /// </summary>
+        /// <param name="key">relative to the S3Root</param>
+        /// <param name="file">file from http upload</param>
+        /// <param name="disposition">if defined (ex: inline) - Content-Disposition with file.FileName added</param>
+        /// <param name="filename">optional filename to include in disposition header</param>
+        /// <returns></returns>
+        public PutObjectResponse uploadLocalFile(string key, string filepath, string disposition = "", string filename = "")
         {
             logger("uploading to S3: key=[" + key + "], filepath=[" + filepath + "]");
             var request = new PutObjectRequest()
@@ -112,18 +119,19 @@ namespace osafw
                 Key = this.root + key,
                 FilePath = filepath
             };
-            request.Headers["Content-Type"] = fw.model<Att>().getMimeForExt(UploadUtils.getUploadFileExt(filepath));
+            request.Headers["Content-Type"] = UploadUtils.mimeMapping(filepath);
 
             if (!string.IsNullOrEmpty(disposition))
             {
-                var filename = Strings.Replace(System.IO.Path.GetFileName(filepath), "\"", "'"); // replace quotes
-                request.Headers["Content-Disposition"] = "inline; filename=\"" + filename + "\"";
+                if (filename == "") filename = System.IO.Path.GetFileName(filepath);
+                filename = Strings.Replace(filename, "\"", "'"); // replace quotes
+                request.Headers["Content-Disposition"] = disposition + "; filename=\"" + filename + "\"";
             }
 
             var task = client.PutObjectAsync(request);
             task.Wait();
             // logger("uploaded to: " & request.Key)
-            // logger("HttpStatusCode=" & response.HttpStatusCode)
+            if (task.Result.HttpStatusCode != System.Net.HttpStatusCode.OK) logger(LogLevel.WARN, "HttpStatusCode=" + task.Result.HttpStatusCode);
             return task.Result;
         }
 
@@ -132,10 +140,11 @@ namespace osafw
         /// </summary>
         /// <param name="key">relative to the S3Root</param>
         /// <param name="file">file from http upload</param>
-        /// <param name="disposition">if defined - Content-Disposition with file.FileName added</param>
+        /// <param name="disposition">if defined (ex: inline) - Content-Disposition with file.FileName added</param>
+        /// <param name="filename">optional filename to include in disposition header</param>
         /// <returns></returns>
         /// alternative way for disposition - in get https://docs.aws.amazon.com/AmazonS3/latest/dev/RetrievingObjectUsingNetSDK.html
-        public PutObjectResponse uploadPostedFile(string key, IFormFile file, string disposition = "")
+        public PutObjectResponse uploadPostedFile(string key, IFormFile file, string disposition = "", string filename = "")
         {
             var request = new PutObjectRequest()
             {
@@ -147,14 +156,15 @@ namespace osafw
 
             if (!string.IsNullOrEmpty(disposition))
             {
-                var filename = file.FileName.Replace("\"", "'"); // replace quotes
-                request.Headers["Content-Disposition"] = "inline; filename=\"" + filename + "\"";
+                if (filename == "") filename = file.FileName;
+                filename = filename.Replace("\"", "'"); // replace quotes
+                request.Headers["Content-Disposition"] = disposition + "; filename=\"" + filename + "\"";
             }
 
             var task = client.PutObjectAsync(request);
             task.Wait();
             // logger("uploaded to: " & request.Key)
-            // logger("HttpStatusCode=" & response.HttpStatusCode)
+            if (task.Result.HttpStatusCode != System.Net.HttpStatusCode.OK) logger(LogLevel.WARN, "HttpStatusCode=" + task.Result.HttpStatusCode);
             return task.Result;
         }
 
@@ -169,13 +179,23 @@ namespace osafw
         /// <param name="key">relative to the S3Root</param>
         /// <returns>url to download the </returns>
         /// see for all the details and ability to override response headers https://docs.aws.amazon.com/sdkfornet/v3/apidocs/items/S3/MS3GetPreSignedURLGetPreSignedUrlRequest.html
-        public string getSignedUrl(string key)
+        /// TODO for cacheing use custom builder which will round current time to 10min (or 1h) and sign with "fixed" time instead current
+        /// https://stackoverflow.com/questions/45213553/aws-s3-presigned-request-cache
+        /// or cache signed urls on caller level (Att model)
+        public string getSignedUrl(string key, int expires_minutes = 10, int max_age = 31536000)
         {
+            if (max_age == 0)
+                max_age = expires_minutes * 60;//special case to match max_age to expires
+
+            var headers = new ResponseHeaderOverrides();
+            headers.CacheControl = "private, max-age=" + max_age + ", immutable"; //max age=31536000 with immuatable avoids send revalidation request from browser to resource https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching#avoiding_revalidation
+
             var request = new GetPreSignedUrlRequest()
             {
                 BucketName = this.bucket,
                 Key = this.root + key,
-                Expires = DateTime.Now.AddMinutes(10)
+                Expires = DateTime.Now.AddMinutes(10),
+                ResponseHeaderOverrides = headers
             };
             // or DateTime.UtcNow
             // sample code
@@ -196,20 +216,24 @@ namespace osafw
         /// <remarks>RECURSIVE! for folders</remarks>
         public DeleteObjectResponse deleteObject(string key)
         {
+            logger("S3 deleteObject: [" + key + "]");
             if (Strings.Right(key, 1) == "/")
             {
                 // it's subfolder - delete all content first
-
                 ListObjectsRequest listrequest = new()
                 {
                     BucketName = this.bucket,
-                    Prefix = key
+                    Prefix = this.root + key,
+                    Delimiter = "/"
                 };
                 var task = client.ListObjectsAsync(listrequest);
                 task.Wait();
                 ListObjectsResponse list = task.Result;
                 foreach (S3Object entry in list.S3Objects)
                     deleteObject(entry.Key);
+
+                //remove last /
+                key = key.TrimEnd('/');
             }
 
             DeleteObjectRequest request = new()
