@@ -5,76 +5,75 @@
 
 using System;
 
-namespace osafw
+namespace osafw;
+
+public class FwApiController : FwController
 {
-    public class FwApiController : FwController
+    // Public Shared Shadows route_default_action As String = "index" 'empty|index|show - calls IndexAction or ShowAction accordingly if no requested controller action found. If empty (default) - show template from /cur_controller/cur_action dir
+
+    public override void init(FW fw)
     {
-        // Public Shared Shadows route_default_action As String = "index" 'empty|index|show - calls IndexAction or ShowAction accordingly if no requested controller action found. If empty (default) - show template from /cur_controller/cur_action dir
+        base.init(fw);
+    }
 
-        public override void init(FW fw)
+    protected virtual bool auth()
+    {
+        var result = false;
+        string x_api_key = fw.request.Headers["X-API-Key"];
+        var api_key = fw.config()["API_KEY"] as string;
+
+        //authorize if user logged OR API_KEY configured and matches
+        if (fw.isLogged || !string.IsNullOrEmpty(api_key) && x_api_key == api_key)
+            result = true;
+
+        if (!result)
         {
-            base.init(fw);
+            fw.response.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;
+            throw new AuthException("API auth error");
         }
 
-        protected virtual bool auth()
+        return result;
+    }
+
+    // send output seaders
+    // and if auth requested - check authorization
+    protected virtual void prepare(bool isAuth = true)
+    {
+        // logger(fw.req.Headers)
+
+        var origin = "";
+        if (!string.IsNullOrEmpty(fw.request.Headers["Origin"].ToString()))
+            origin = fw.request.Headers["Origin"];
+        else
         {
-            var result = false;
-            string x_api_key = fw.request.Headers["X-API-Key"];
-            var api_key = fw.config()["API_KEY"] as string;
-
-            //authorize if user logged OR API_KEY configured and matches
-            if (fw.isLogged || !string.IsNullOrEmpty(api_key) && x_api_key == api_key)
-                result = true;
-
-            if (!result)
+            // try referrer
+            if (!string.IsNullOrEmpty(fw.request.Headers["Referer"].ToString()))
             {
-                fw.response.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;
-                throw new AuthException("API auth error");
+                var uri = new Uri(fw.request.Headers["Referer"]);
+                origin = uri.GetLeftPart(UriPartial.Authority);
             }
-
-            return result;
         }
 
-        // send output seaders
-        // and if auth requested - check authorization
-        protected virtual void prepare(bool isAuth = true)
-        {
-            // logger(fw.req.Headers)
+        // logger(fw.config("hostname"))
+        // logger("referer:")
+        // logger(referrer)
 
-            var origin = "";
-            if (!string.IsNullOrEmpty(fw.request.Headers["Origin"].ToString()))
-                origin = fw.request.Headers["Origin"];
-            else
-            {
-                // try referrer
-                if (!string.IsNullOrEmpty(fw.request.Headers["Referer"].ToString()))
-                {
-                    var uri = new Uri(fw.request.Headers["Referer"]);
-                    origin = uri.GetLeftPart(UriPartial.Authority);
-                }
-            }
+        // validate referrer is same as our hostname
+        if (string.IsNullOrEmpty(origin) || (origin != "http://" + fw.config("hostname") && origin != "https://" + fw.config("hostname") && origin != (string)fw.config("API_ALLOW_ORIGIN")))
+            throw new AuthException("Invalid origin " + origin);
 
-            // logger(fw.config("hostname"))
-            // logger("referer:")
-            // logger(referrer)
+        // create headers
+        fw.response.Headers.Remove("Access-Control-Allow-Origin");
+        fw.response.Headers.Add("Access-Control-Allow-Origin", origin);
 
-            // validate referrer is same as our hostname
-            if (string.IsNullOrEmpty(origin) || (origin != "http://" + fw.config("hostname") && origin != "https://" + fw.config("hostname") && origin != (string)fw.config("API_ALLOW_ORIGIN")))
-                throw new AuthException("Invalid origin " + origin);
+        fw.response.Headers.Remove("Access-Control-Allow-Credentials");
+        fw.response.Headers.Add("Access-Control-Allow-Credentials", "true");
 
-            // create headers
-            fw.response.Headers.Remove("Access-Control-Allow-Origin");
-            fw.response.Headers.Add("Access-Control-Allow-Origin", origin);
+        fw.response.Headers.Remove("Access-Control-Allow-Methods");
+        fw.response.Headers.Add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
 
-            fw.response.Headers.Remove("Access-Control-Allow-Credentials");
-            fw.response.Headers.Add("Access-Control-Allow-Credentials", "true");
-
-            fw.response.Headers.Remove("Access-Control-Allow-Methods");
-            fw.response.Headers.Add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-
-            // check auth
-            if (isAuth)
-                this.auth();
-        }
+        // check auth
+        if (isAuth)
+            this.auth();
     }
 }
