@@ -1,13 +1,12 @@
-<form class="fw-card" action="<~../url>/SaveMulti" method="post">
+<form class="fw-card" action="<~../url>/(SaveMulti)" method="post" onsubmit="return confirm('`Are you sure?`')">
 <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
 <input type="hidden" name="d" value="<~d>">
-<input type="hidden" name="_method" value="PUT">
 
 <table class="table table-striped table-sm table-hover list">
     <thead>
         <~group_headers_block if="is_group_headers" inline>
             <tr class="list-header">
-                <th></th>
+                <~cbcol1 unless="is_readonly" inline><th></th></~cbcol1>
                 <~group_headers repeat inline xyz>
                     <th colspan="<~colspan>"><~iname></th>
                 </~group_headers>
@@ -15,24 +14,24 @@
             </tr>
         </~group_headers_block>
         <tr data-sortby="<~f[sortby]>" data-sortdir="<~f[sortdir]>">
-            <th><input type="checkbox" name="all" value="1" class="on-list-chkall"></th>
+            <~cbcol2 unless="is_readonly" inline><th class="column-checkboxes"><input type="checkbox" name="all" value="1" class="on-list-chkall"></th></~cbcol2>
             <~fields_headers repeat inline>
-                <th data-sort="<~colname>">`<~iname>`</th>
+                <th class="column-<~colname>" data-sort="<~colname>">`<~iname>`</th>
             </~fields_headers>
-            <th></th>
+            <th style="width:80px"></th>
         </tr>
     </thead>
-    <tbody>
+    <tbody class="<~fwsortable ifeq="f[sortby]" value="prio">" data-url-savesort="<~../url>/(SaveSort)?d=<~d>&sortdir=<~f[sortdir]>">
 <~list_rows repeat inline>
-        <tr data-url="<~row_click_url>">
-            <td><input class="multicb" type="checkbox" name="cb[<~id>]" value="1"></td>
+        <tr data-url="<~row_click_url>" data-id="<~id>">
+            <~cbcol unless="is_readonly" inline><td><input class="multicb" type="checkbox" name="cb[<~id>]" value="1"></td></~cbcol>
             <~fields_values repeat inline>
                 <td><~value var unless="is_custom"><~col_custom if="is_custom"></td>
             </~fields_values>
             <td class="text-nowrap text-end">
                 <~readonly_block unless="is_readonly" inline>
                   <a href="<~row_click_url>">`Edit`</a>
-                  <~/common/dot><a href="<~../url>/<~id>/delete?d=<~d>" class="on-delete-list-row">`Del`</a>
+                  <a href="<~../url>/<~id>/delete?d=<~d>" class="text-danger on-delete-list-row"><~/common/icons/x></a>
                 </~readonly_block>
             </td>
         </tr>
@@ -46,7 +45,7 @@
 </p>
 </~footer_text>
 
-<~/common/list/btn_multidel>
+<~/common/list/btn_multidel unless="is_readonly">
 
 </form>
 <form id="FOneDelete" action="<~../url>/%id%?XSS=<~SESSION[XSS]>&d=<~d>" method="post">
