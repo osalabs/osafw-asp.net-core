@@ -82,6 +82,7 @@ public class Startup
         else
         {
             app.UseHttpsRedirection();
+            //app.UseHsts(); //enable if need Strict-Transport-Security header
         }
 
         //enable aggressive caching of static files
@@ -113,6 +114,18 @@ public class Startup
             OnDeleteCookie = (context) =>
             {
             }
+        });
+
+        // security headers
+        app.Use(async (context, next) =>
+        {
+            //TODO FIX if set ContentType here, then responseWrite fails with "cannot write to the response body, response has completed"
+            //context.Response.ContentType = "text/html; charset=utf-8"; //default content type
+            //context.Response.Headers.Add("X-Content-Type-Options", "NOSNIFF"); //TODO FIX cannot set this header till fix issue with ContentType
+            context.Response.Headers.Add("X-Frame-Options", "DENY"); // SAMEORIGIN allows site iframes
+            context.Response.Headers.Add("X-Permitted-Cross-Domain-Policies", "master-only");
+            context.Response.Headers.Add("X-XSS-Protection", "1; mode=block");
+            await next();
         });
 
         // Create branch to the MyHandlerMiddleware. 

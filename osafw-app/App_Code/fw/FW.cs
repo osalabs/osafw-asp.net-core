@@ -964,6 +964,9 @@ public class FW : IDisposable
         logger(LogLevel.DEBUG, "parsing page bdir=", bdir, ", tpl=", tpl_name);
         ParsePage parser_obj = new(this);
         string page = parser_obj.parse_page(bdir, tpl_name, hf);
+        //TODO FIX if set ContentType here, then responseWrite fails with "cannot write to the response body, response has completed"
+        //if (!this.response.HasStarted) response.Headers.Add("Content-type", "text/html; charset=utf-8");
+        //response.ContentType= "text/html; charset=utf-8";
         responseWrite(page);
     }
 
@@ -971,7 +974,8 @@ public class FW : IDisposable
     {
         ParsePage parser_obj = new(this);
         string page = parser_obj.parse_json(ps);
-        if (!this.response.HasStarted) response.Headers.Add("Content-type", "application/json; charset=utf-8");
+        //if (!this.response.HasStarted) response.Headers.Add("Content-type", "application/json; charset=utf-8");
+        response.ContentType = "application/json; charset=utf-8";
         responseWrite(page);
     }
 

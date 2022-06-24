@@ -8,14 +8,18 @@ public class TestController : FwController
 {
     public Hashtable IndexAction()
     {
-        rw("<html><form method=\"POST\" action=\"/Test/(Upload)\"><input type=\"file\" name=\"file1\"/><input type=\"submit\"/></form></html>");
-        //ArrayList users = fw.modelOf(typeof(Users)).list();
-
-        //fw.logger(users);
         var ps = new Hashtable();
-        ps["user"] = fw.model<Users>().one(1);
+        ps["success"] = true;
+        return new Hashtable { { "_json", ps } };
 
-        return ps;
+        //rw("<html><form method=\"POST\" action=\"/Test/(Upload)\"><input type=\"file\" name=\"file1\"/><input type=\"submit\"/></form></html>");
+        ////ArrayList users = fw.modelOf(typeof(Users)).list();
+
+        ////fw.logger(users);
+        //var ps = new Hashtable();
+        //ps["user"] = fw.model<Users>().one(1);
+
+        //return ps;
     }
 
     public Hashtable UploadAction()
@@ -77,6 +81,13 @@ public class TestController : FwController
             //else
             //    rw("Unable to parse '"+value??"<null>"+"'.");
         }
+    }
+
+    public Hashtable JsonAction()
+    {
+        var ps = new Hashtable();
+        ps["success"] = true;
+        return new Hashtable { { "_json", ps } };
     }
 
 }
