@@ -58,42 +58,34 @@ public class AdminSettingsController : FwAdminController
 
     public override Hashtable SaveAction(int id = 0)
     {
+        route_onerror = FW.ACTION_SHOW_FORM;
+        route_return = FW.ACTION_INDEX;
+
         if (this.save_fields == null)
             throw new Exception("No fields to save defined, define in save_fields ");
 
         Hashtable item = reqh("item");
         var success = true;
         var is_new = (id == 0);
-        var location = "";
 
-        try
-        {
-            Validate(id, item);
-            // load old record if necessary
-            // Dim item_old As Hashtable = model.one(id)
+        Validate(id, item);
+        // load old record if necessary
+        // Dim item_old As Hashtable = model.one(id)
 
-            Hashtable itemdb = FormUtils.filter(item, this.save_fields);
-            // TODO - checkboxes
-            // FormUtils.form2dbhash_checkboxes(itemdb, item, save_fields_checkboxes)
-            // itemdb("dict_link_multi") = FormUtils.multi2ids(reqh("dict_link_multi"))
+        Hashtable itemdb = FormUtils.filter(item, this.save_fields);
+        // TODO - checkboxes
+        // FormUtils.form2dbhash_checkboxes(itemdb, item, save_fields_checkboxes)
+        // itemdb("dict_link_multi") = FormUtils.multi2ids(reqh("dict_link_multi"))
 
-            // only update, no add new settings
-            model.update(id, itemdb);
-            fw.flash("record_updated", 1);
+        // only update, no add new settings
+        model.update(id, itemdb);
+        fw.flash("record_updated", 1);
 
-            // custom code:
-            // reset cache
-            FwCache.remove("main_menu");
+        // custom code:
+        // reset cache
+        FwCache.remove("main_menu");
 
-            location = base_url;
-        }
-        catch (ApplicationException ex)
-        {
-            success = false;
-            this.setFormError(ex);
-        }
-
-        return this.afterSave(success, id, is_new, FW.ACTION_SHOW_FORM, location);
+        return this.afterSave(success, id);
     }
 
     public override void Validate(int id, Hashtable item)

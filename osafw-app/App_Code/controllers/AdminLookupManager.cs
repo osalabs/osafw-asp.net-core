@@ -88,7 +88,7 @@ public class AdminLookupManagerController : FwController
             var row = model.topByTname((string)defs["tname"]);
             // fw.redirect(base_url & "/" & row(id_fname) & "/edit/?d=" & dict)
             String[] args = (new[] { (string)row[id_fname] });
-            fw.routeRedirect(FW.ACTION_SHOW_FORM, null, args);
+            fw.routeRedirect(FW.ACTION_SHOW_FORM, args);
             return null;
         }
 
@@ -381,6 +381,7 @@ public class AdminLookupManagerController : FwController
 
     public void SaveAction(int id = 0)
     {
+        route_onerror = FW.ACTION_SHOW_FORM; //set route to go if error happens
         if (is_readonly)
             throw new AuthException();
 
@@ -389,40 +390,31 @@ public class AdminLookupManagerController : FwController
         Hashtable item = reqh("item");
         ArrayList cols = model_tables.getColumns(defs);
 
-        try
+        Validate(id, item);
+
+        Hashtable itemdb = new();
+        foreach (Hashtable col in cols)
         {
-            Validate(id, item);
-
-            Hashtable itemdb = new();
-            foreach (Hashtable col in cols)
-            {
-                if (item.ContainsKey(col["name"]))
-                    itemdb[(string)col["name"]] = item[col["name"]];
-                else if ((string)col["itype"] == "checkbox")
-                    itemdb[(string)col["name"]] = "0";// for checkboxes just set them 0
-            }
-
-            if (id > 0)
-            {
-                if (model.updateByTname(dict, id, itemdb))
-                    fw.flash("updated", 1);
-            }
-            else
-            {
-                model.addByTname(dict, itemdb);
-                fw.flash("added", 1);
-            }
-
-            // redirect to list as we don't have id on insert
-            // fw.redirect(base_url + "/" + id + "/edit")
-            fw.redirect(base_url + "/?d=" + dict);
+            if (item.ContainsKey(col["name"]))
+                itemdb[(string)col["name"]] = item[col["name"]];
+            else if ((string)col["itype"] == "checkbox")
+                itemdb[(string)col["name"]] = "0";// for checkboxes just set them 0
         }
-        catch (ApplicationException ex)
+
+        if (id > 0)
         {
-            fw.setGlobalError(ex.Message);
-            String[] args = new[] { id.ToString() };
-            fw.routeRedirect(FW.ACTION_SHOW_FORM, null, args);
+            if (model.updateByTname(dict, id, itemdb))
+                fw.flash("updated", 1);
         }
+        else
+        {
+            model.addByTname(dict, itemdb);
+            fw.flash("added", 1);
+        }
+
+        // redirect to list as we don't have id on insert
+        // fw.redirect(base_url + "/" + id + "/edit")
+        fw.redirect(base_url + "/?d=" + dict);
     }
 
     public void Validate(int id, Hashtable item)
@@ -464,118 +456,110 @@ public class AdminLookupManagerController : FwController
 
     public void SaveMultiAction()
     {
+        route_onerror = FW.ACTION_INDEX;
         if (is_readonly)
             throw new AuthException();
 
         check_dict();
 
-        try
+        int del_ctr = 0;
+        Hashtable cbses = reqh("cb");
+        if (cbses == null)
+            cbses = new Hashtable();
+        if (cbses.Count > 0)
         {
-            int del_ctr = 0;
-            Hashtable cbses = reqh("cb");
-            if (cbses == null)
-                cbses = new Hashtable();
-            if (cbses.Count > 0)
+            // multirecord delete
+            foreach (string id in cbses.Keys)
             {
-                // multirecord delete
-                foreach (string id in cbses.Keys)
+                if (fw.FORM.ContainsKey("delete"))
                 {
-                    if (fw.FORM.ContainsKey("delete"))
-                    {
-                        model.deleteByTname(dict, Utils.f2int(id));
-                        del_ctr += 1;
-                    }
+                    model.deleteByTname(dict, Utils.f2int(id));
+                    del_ctr += 1;
+                }
+            }
+        }
+
+        if (reqs("mode") == "edit")
+        {
+            // multirecord save
+            ArrayList cols = model_tables.getColumns(defs);
+
+            // go thru all existing rows
+            Hashtable rows = reqh("row");
+            if (rows == null)
+                rows = new Hashtable();
+            Hashtable rowsdel = reqh("del");
+            if (rowsdel == null)
+                rowsdel = new Hashtable();
+            Hashtable ids_md5 = new();
+            foreach (string key in rows.Keys)
+            {
+                string form_id = key;
+                int id = Utils.f2int(form_id);
+                if (id == 0)
+                    continue; // skip wrong rows
+
+                string md5 = (string)rows[key];
+                // logger(form_id)
+                Hashtable item = reqh("f" + form_id);
+                Hashtable itemdb = new();
+                // copy from form item to db item - only defined columns
+                foreach (Hashtable col in cols)
+                {
+                    if (item.ContainsKey(col["name"]))
+                        itemdb[(string)col["name"]] = item[col["name"]];
+                }
+                // check if this row need to be deleted
+                if (rowsdel.ContainsKey(form_id))
+                {
+                    model.deleteByTname(dict, id);
+                    del_ctr += 1;
+                }
+                else
+                {
+                    // existing row
+                    model.updateByTname(dict, id, itemdb, md5);
+                    fw.flash("updated", 1);
                 }
             }
 
-            if (reqs("mode") == "edit")
+            // new rows
+            rows = reqh("new");
+            foreach (string key in rows.Keys)
             {
-                // multirecord save
-                ArrayList cols = model_tables.getColumns(defs);
+                string form_id = key;
+                int id = Utils.f2int(form_id);
+                if (id == 0)
+                    continue; // skip wrong rows
+                              // logger("new formid=" & form_id)
 
-                // go thru all existing rows
-                Hashtable rows = reqh("row");
-                if (rows == null)
-                    rows = new Hashtable();
-                Hashtable rowsdel = reqh("del");
-                if (rowsdel == null)
-                    rowsdel = new Hashtable();
-                Hashtable ids_md5 = new();
-                foreach (string key in rows.Keys)
+                Hashtable item = reqh("fnew" + form_id);
+                Hashtable itemdb = new();
+                bool is_row_empty = true;
+                // copy from form item to db item - only defined columns
+                foreach (Hashtable col in cols)
                 {
-                    string form_id = key;
-                    int id = Utils.f2int(form_id);
-                    if (id == 0)
-                        continue; // skip wrong rows
-
-                    string md5 = (string)rows[key];
-                    // logger(form_id)
-                    Hashtable item = reqh("f" + form_id);
-                    Hashtable itemdb = new();
-                    // copy from form item to db item - only defined columns
-                    foreach (Hashtable col in cols)
+                    if (item.ContainsKey(col["name"]))
                     {
-                        if (item.ContainsKey(col["name"]))
-                            itemdb[(string)col["name"]] = item[col["name"]];
-                    }
-                    // check if this row need to be deleted
-                    if (rowsdel.ContainsKey(form_id))
-                    {
-                        model.deleteByTname(dict, id);
-                        del_ctr += 1;
-                    }
-                    else
-                    {
-                        // existing row
-                        model.updateByTname(dict, id, itemdb, md5);
-                        fw.flash("updated", 1);
+                        itemdb[(string)col["name"]] = item[col["name"]];
+                        if (!string.IsNullOrEmpty((string)item[col["name"]]))
+                            is_row_empty = false; // detect at least one non-empty value
                     }
                 }
 
-                // new rows
-                rows = reqh("new");
-                foreach (string key in rows.Keys)
+                // add new row, but only if at least one value is not empty
+                if (!is_row_empty)
                 {
-                    string form_id = key;
-                    int id = Utils.f2int(form_id);
-                    if (id == 0)
-                        continue; // skip wrong rows
-                                  // logger("new formid=" & form_id)
-
-                    Hashtable item = reqh("fnew" + form_id);
-                    Hashtable itemdb = new();
-                    bool is_row_empty = true;
-                    // copy from form item to db item - only defined columns
-                    foreach (Hashtable col in cols)
-                    {
-                        if (item.ContainsKey(col["name"]))
-                        {
-                            itemdb[(string)col["name"]] = item[col["name"]];
-                            if (!string.IsNullOrEmpty((string)item[col["name"]]))
-                                is_row_empty = false; // detect at least one non-empty value
-                        }
-                    }
-
-                    // add new row, but only if at least one value is not empty
-                    if (!is_row_empty)
-                    {
-                        model.addByTname(dict, itemdb);
-                        fw.flash("updated", 1);
-                    }
+                    model.addByTname(dict, itemdb);
+                    fw.flash("updated", 1);
                 }
             }
-
-            if (del_ctr > 0)
-                fw.flash("multidelete", del_ctr);
-
-            fw.redirect(base_url + "/?d=" + dict);
         }
-        catch (Exception ex)
-        {
-            //throw;
-            fw.setGlobalError(ex.Message);
-            fw.routeRedirect(FW.ACTION_INDEX);
-        }
+
+        if (del_ctr > 0)
+            fw.flash("multidelete", del_ctr);
+
+        fw.redirect(base_url + "/?d=" + dict);
     }
 
     public Hashtable SaveSortAction()

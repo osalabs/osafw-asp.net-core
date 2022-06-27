@@ -12,7 +12,7 @@ public class MySettingsController : FwController
 {
     public static new int access_level = Users.ACL_MEMBER;
 
-    protected Users model = new ();
+    protected Users model = new();
 
     public override void init(FW fw)
     {
@@ -28,7 +28,6 @@ public class MySettingsController : FwController
     {
         fw.routeRedirect(FW.ACTION_SHOW_FORM, null);
     }
-
 
     public Hashtable ShowFormAction()
     {
@@ -55,28 +54,22 @@ public class MySettingsController : FwController
 
     public void SaveAction()
     {
+        route_onerror = FW.ACTION_SHOW_FORM; //set route to go if error happens
+
         var item = reqh("item");
         var id = fw.userId;
 
-        try
-        {
-            Validate(id, item);
-            // load old record if necessary
-            // Dim itemold As Hashtable = model.one(id)
+        Validate(id, item);
+        // load old record if necessary
+        // Dim itemold As Hashtable = model.one(id)
 
-            Hashtable itemdb = FormUtils.filter(item, save_fields);
-            model.update(id, itemdb);
-            fw.flash("record_updated", 1);
+        Hashtable itemdb = FormUtils.filter(item, save_fields);
+        model.update(id, itemdb);
+        fw.flash("record_updated", 1);
 
-            model.reloadSession();
+        model.reloadSession();
 
-            fw.redirect(base_url + "/" + id + "/edit");
-        }
-        catch (ApplicationException ex)
-        {
-            fw.setGlobalError(ex.Message);
-            fw.routeRedirect(FW.ACTION_SHOW_FORM);
-        }
+        afterSave(true, id);
     }
 
     public void Validate(int id, Hashtable item)

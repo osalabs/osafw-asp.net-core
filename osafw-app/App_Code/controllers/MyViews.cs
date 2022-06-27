@@ -66,6 +66,8 @@ public class MyViewsController : FwAdminController
 
     public override Hashtable SaveAction(int id = 0)
     {
+        route_onerror = FW.ACTION_SHOW_FORM; //set route to go if error happens
+
         if (this.save_fields == null)
             throw new Exception("No fields to save defined, define in Controller.save_fields");
 
@@ -73,29 +75,18 @@ public class MyViewsController : FwAdminController
         var success = true;
         var is_new = (id == 0);
 
-        try
-        {
-            Validate(id, item);
-            // load old record if necessary
-            // Dim item_old As Hashtable = model0.one(id)
+        Validate(id, item);
+        // load old record if necessary
+        // Dim item_old As Hashtable = model0.one(id)
 
-            Hashtable itemdb = FormUtils.filter(item, this.save_fields);
-            FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes);
+        Hashtable itemdb = FormUtils.filter(item, this.save_fields);
+        FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes);
 
-            if (is_new)
-                // read new filter data from session
-                itemdb["idesc"] = Utils.jsonEncode(fw.Session("_filter_" + item["screen"]));
+        if (is_new)
+            // read new filter data from session
+            itemdb["idesc"] = Utils.jsonEncode(fw.Session("_filter_" + item["screen"]));
 
-            id = this.modelAddOrUpdate(id, itemdb);
-        }
-        catch (ApplicationException ex)
-        {
-            success = false;
-            this.setFormError(ex);
-        }
-
-        if (!string.IsNullOrEmpty(return_url))
-            fw.redirect(return_url);
+        id = this.modelAddOrUpdate(id, itemdb);
 
         return this.afterSave(success, id, is_new);
     }

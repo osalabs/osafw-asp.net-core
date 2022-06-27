@@ -30,36 +30,28 @@ public class MyFeedbackController : FwController
         throw new ApplicationException("Not Implemented");
     }
 
-
-    public void SaveAction()
+    public Hashtable SaveAction()
     {
         var item = reqh("item");
         var id = fw.userId;
 
-        try
-        {
-            Validate(id, item);
-            // load old record if necessary
-            // Dim itemold As Hashtable = model.one(id)
+        Validate(id, item);
+        // load old record if necessary
+        // Dim itemold As Hashtable = model.one(id)
 
-            Hashtable itemdb = FormUtils.filter(item, save_fields);
-            var user = fw.model<Users>().one(id);
-            Hashtable ps = new()
+        Hashtable itemdb = FormUtils.filter(item, save_fields);
+        var user = fw.model<Users>().one(id);
+        Hashtable ps = new()
             {
                 { "user", user },
                 { "i", itemdb },
                 { "url", return_url }
             };
-            fw.sendEmailTpl((string)fw.config("support_email"), "feedback.txt", ps, null, null, (string)user["email"]);
+        fw.sendEmailTpl((string)fw.config("support_email"), "feedback.txt", ps, null, null, (string)user["email"]);
 
-            fw.flash("success", "Feedback sent. Thank you.");
-        }
-        catch (ApplicationException ex)
-        {
-            fw.setGlobalError(ex.Message);
-        }
+        fw.flash("success", "Feedback sent. Thank you.");
 
-        fw.redirect(this.getReturnLocation());
+        return afterSave(true);
     }
 
     public virtual void Validate(int id, Hashtable item)

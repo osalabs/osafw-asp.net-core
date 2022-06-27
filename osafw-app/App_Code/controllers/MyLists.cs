@@ -93,6 +93,8 @@ public class MyListsController : FwAdminController
 
     public override Hashtable SaveAction(int id = 0)
     {
+        route_onerror = FW.ACTION_SHOW_FORM; //set route to go if error happens
+
         if (this.save_fields == null)
             throw new Exception("No fields to save defined, define in Controller.save_fields");
 
@@ -100,41 +102,30 @@ public class MyListsController : FwAdminController
         var success = true;
         var is_new = (id == 0);
 
-        try
+        Validate(id, item);
+        // load old record if necessary
+        // Dim item_old As Hashtable = model0.one(id)
+
+        Hashtable itemdb = FormUtils.filter(item, this.save_fields);
+        FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes);
+
+        id = this.modelAddOrUpdate(id, itemdb);
+
+        if (is_new && item.ContainsKey("item_id"))
         {
-            Validate(id, item);
-            // load old record if necessary
-            // Dim item_old As Hashtable = model0.one(id)
-
-            Hashtable itemdb = FormUtils.filter(item, this.save_fields);
-            FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes);
-
-            id = this.modelAddOrUpdate(id, itemdb);
-
-            if (is_new && item.ContainsKey("item_id"))
+            // item_id could contain comma-separated ids
+            var hids = Utils.commastr2hash((string)item["item_id"]);
+            if (hids.Count > 0)
             {
-                // item_id could contain comma-separated ids
-                var hids = Utils.commastr2hash((string)item["item_id"]);
-                if (hids.Count > 0)
+                // if item id passed - link item with the created list
+                foreach (string sitem_id in hids.Keys)
                 {
-                    // if item id passed - link item with the created list
-                    foreach (string sitem_id in hids.Keys)
-                    {
-                        var item_id = Utils.f2int(sitem_id);
-                        if (item_id > 0)
-                            model.addItems(id, item_id);
-                    }
+                    var item_id = Utils.f2int(sitem_id);
+                    if (item_id > 0)
+                        model.addItems(id, item_id);
                 }
             }
         }
-        catch (ApplicationException ex)
-        {
-            success = false;
-            this.setFormError(ex);
-        }
-
-        if (!string.IsNullOrEmpty(return_url))
-            fw.redirect(return_url);
 
         return this.afterSave(success, id, is_new);
     }
@@ -142,93 +133,55 @@ public class MyListsController : FwAdminController
     public Hashtable ToggleListAction(int id)
     {
         var item_id = reqi("item_id");
-        var ps = new Hashtable()
-        {
-            {"_json",true},
-            {"success",true}
-        };
+        var ps = new Hashtable();
 
-        try
-        {
-            var user_lists = fw.model<UserLists>().one(id);
-            if (item_id == 0 || user_lists.Count == 0 || Utils.f2int(user_lists["add_users_id"]) != fw.userId)
-                throw new UserException("Wrong Request");
+        var user_lists = fw.model<UserLists>().one(id);
+        if (item_id == 0 || user_lists.Count == 0 || Utils.f2int(user_lists["add_users_id"]) != fw.userId)
+            throw new UserException("Wrong Request");
 
-            var res = fw.model<UserLists>().toggleItemList(id, item_id);
-            ps["iname"] = user_lists["iname"];
-            ps["action"] = (res ? "added" : "removed");
-        }
-        catch (ApplicationException ex)
-        {
-            ps["success"] = false;
-            ps["err_msg"] = ex.Message;
-        }
+        var res = fw.model<UserLists>().toggleItemList(id, item_id);
+        ps["iname"] = user_lists["iname"];
+        ps["action"] = (res ? "added" : "removed");
 
-        return ps;
+        return afterSave(true, ps);
     }
 
     // request item_id - could be one id, or comma-separated ids
     public Hashtable AddToListAction(int id)
     {
+        throw new ApplicationException("zzzz");
         Hashtable items = Utils.commastr2hash(reqs("item_id"));
 
-        var ps = new Hashtable()
-        {
-            {"_json",true},
-            {"success",true}
-        };
+        var user_lists = fw.model<UserLists>().one(id);
+        if (user_lists.Count == 0 || Utils.f2int(user_lists["add_users_id"]) != fw.userId)
+            throw new UserException("Wrong Request");
 
-        try
+        foreach (string key in items.Keys)
         {
-            var user_lists = fw.model<UserLists>().one(id);
-            if (user_lists.Count == 0 || Utils.f2int(user_lists["add_users_id"]) != fw.userId)
-                throw new UserException("Wrong Request");
-
-            foreach (string key in items.Keys)
-            {
-                var item_id = Utils.f2int(key);
-                if (item_id > 0)
-                    fw.model<UserLists>().addItemList(id, item_id);
-            }
-        }
-        catch (ApplicationException ex)
-        {
-            ps["success"] = false;
-            ps["err_msg"] = ex.Message;
+            var item_id = Utils.f2int(key);
+            if (item_id > 0)
+                fw.model<UserLists>().addItemList(id, item_id);
         }
 
-        return ps;
+        return afterSave(true);
     }
 
     // request item_id - could be one id, or comma-separated ids
     public Hashtable RemoveFromListAction(int id)
     {
         Hashtable items = Utils.commastr2hash(reqs("item_id"));
-        var ps = new Hashtable()
-        {
-            {"_json",true},
-            {"success",true}
-        };
 
-        try
-        {
-            var user_lists = fw.model<UserLists>().one(id);
-            if (user_lists.Count == 0 || Utils.f2int(user_lists["add_users_id"]) != fw.userId)
-                throw new UserException("Wrong Request");
+        var user_lists = fw.model<UserLists>().one(id);
+        if (user_lists.Count == 0 || Utils.f2int(user_lists["add_users_id"]) != fw.userId)
+            throw new UserException("Wrong Request");
 
-            foreach (string key in items.Keys)
-            {
-                var item_id = Utils.f2int(key);
-                if (item_id > 0)
-                    fw.model<UserLists>().delItemList(id, item_id);
-            }
-        }
-        catch (ApplicationException ex)
+        foreach (string key in items.Keys)
         {
-            ps["success"] = false;
-            ps["err_msg"] = ex.Message;
+            var item_id = Utils.f2int(key);
+            if (item_id > 0)
+                fw.model<UserLists>().delItemList(id, item_id);
         }
 
-        return ps;
+        return afterSave(true);
     }
 }

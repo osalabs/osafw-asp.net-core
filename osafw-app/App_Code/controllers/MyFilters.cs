@@ -53,7 +53,7 @@ public class MyFiltersController : FwAdminController
         {
             this.list_where += " and icode=@icode";
             this.list_where_params["@icode"] = list_filter["icode"];
-        }                
+        }
     }
 
     public override Hashtable ShowFormAction(int id = 0)
@@ -67,6 +67,8 @@ public class MyFiltersController : FwAdminController
 
     public override Hashtable SaveAction(int id = 0)
     {
+        route_onerror = FW.ACTION_SHOW_FORM; //set route to go if error happens
+
         if (this.save_fields == null)
             throw new Exception("No fields to save defined, define in Controller.save_fields");
 
@@ -75,35 +77,24 @@ public class MyFiltersController : FwAdminController
         var is_new = (id == 0);
         var is_overwrite = reqi("is_overwrite") == 1;
 
-        try
-        {
-            if (is_new)
-                required_fields += " icode";
-            Validate(id, item);
-            // load old record if necessary
-            Hashtable item_old = model0.one(id);
+        if (is_new)
+            required_fields += " icode";
+        Validate(id, item);
+        // load old record if necessary
+        Hashtable item_old = model0.one(id);
 
-            // also check that this filter is user's filter (cannot override system filter)
-            if (item_old.Count > 0 && Utils.f2int(item_old["is_system"]) == 1)
-                throw new UserException("Cannot overwrite system filter");
+        // also check that this filter is user's filter (cannot override system filter)
+        if (item_old.Count > 0 && Utils.f2int(item_old["is_system"]) == 1)
+            throw new UserException("Cannot overwrite system filter");
 
-            Hashtable itemdb = FormUtils.filter(item, this.save_fields);
-            FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes);
+        Hashtable itemdb = FormUtils.filter(item, this.save_fields);
+        FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes);
 
-            if (is_new || is_overwrite)
-                // read new filter data from session
-                itemdb["idesc"] = Utils.jsonEncode(fw.Session("_filter_" + item["icode"]));
+        if (is_new || is_overwrite)
+            // read new filter data from session
+            itemdb["idesc"] = Utils.jsonEncode(fw.Session("_filter_" + item["icode"]));
 
-            id = this.modelAddOrUpdate(id, itemdb);
-        }
-        catch (ApplicationException ex)
-        {
-            success = false;
-            this.setFormError(ex);
-        }
-
-        if (!string.IsNullOrEmpty(return_url))
-            fw.redirect(return_url);
+        id = this.modelAddOrUpdate(id, itemdb);
 
         return this.afterSave(success, id, is_new);
     }

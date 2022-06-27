@@ -154,6 +154,8 @@ public class FwDynamicController : FwController
 
     public virtual Hashtable SaveAction(int id = 0)
     {
+        route_onerror = FW.ACTION_SHOW_FORM;
+
         if (this.save_fields == null)
             throw new Exception("No fields to save defined, define in Controller.save_fields");
 
@@ -167,23 +169,15 @@ public class FwDynamicController : FwController
         var success = true;
         var is_new = (id == 0);
 
-        try
-        {
-            Validate(id, item);
-            // load old record if necessary
-            // Dim item_old As Hashtable = model0.one(id)
+        Validate(id, item);
+        // load old record if necessary
+        // Dim item_old As Hashtable = model0.one(id)
 
-            Hashtable itemdb = FormUtils.filter(item, this.save_fields);
-            FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes);
-            FormUtils.filterNullable(itemdb, save_fields_nullable);
+        Hashtable itemdb = FormUtils.filter(item, this.save_fields);
+        FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes);
+        FormUtils.filterNullable(itemdb, save_fields_nullable);
 
-            id = this.modelAddOrUpdate(id, itemdb);
-        }
-        catch (ApplicationException ex)
-        {
-            success = false;
-            this.setFormError(ex);
-        }
+        id = this.modelAddOrUpdate(id, itemdb);
 
         return this.afterSave(success, id, is_new);
     }
@@ -304,6 +298,8 @@ public class FwDynamicController : FwController
 
     public virtual Hashtable SaveMultiAction()
     {
+        route_onerror = FW.ACTION_INDEX;
+
         Hashtable cbses = reqh("cb");
         bool is_delete = fw.FORM.ContainsKey("delete");
         int user_lists_id = reqi("addtolist");
@@ -369,6 +365,7 @@ public class FwDynamicController : FwController
         // row["is_checked") ] hfields.ContainsKey(row["field_name"))]            // Next
 
         ps["rows"] = rows;
+        ps["select_userviews"] = fw.model<UserViews>().listSelectOptions();
         fw.parser("/common/list/userviews", ps);
     }
 
@@ -379,41 +376,34 @@ public class FwDynamicController : FwController
         var load_id = reqi("load_id");
         var is_reset = reqi("is_reset");
 
-        try
+        if (load_id > 0)
         {
-            if (load_id > 0)
-            {
-                fw.model<UserViews>().setViewForIcode(base_url, load_id);
-            }
-            else if (is_reset == 1)
-                fw.model<UserViews>().updateByIcode(base_url, view_list_defaults);
-            else
-            {
-                var item = reqh("item");
-
-                // save fields
-                // order by value
-                var ordered = fld.Cast<DictionaryEntry>().OrderBy(entry => Utils.f2int(entry.Value)).ToList();
-                // and then get ordered keys
-                List<string> anames = new();
-                foreach (var el in ordered)
-                    anames.Add((string)el.Key);
-
-                var fields = Strings.Join(anames.ToArray(), " ");
-
-                var iname = (string)item["iname"];
-                if (!string.IsNullOrEmpty(iname))
-                {
-                    //create new view by name or update if this name exists
-                    fw.model<UserViews>().addOrUpdateByUK(base_url, fields, iname);
-                }
-                //update default view with fields
-                fw.model<UserViews>().updateByIcode(base_url, fields);
-            }
+            fw.model<UserViews>().setViewForIcode(base_url, load_id);
         }
-        catch (ApplicationException ex)
+        else if (is_reset == 1)
+            fw.model<UserViews>().updateByIcode(base_url, view_list_defaults);
+        else
         {
-            this.setFormError(ex);
+            var item = reqh("item");
+
+            // save fields
+            // order by value
+            var ordered = fld.Cast<DictionaryEntry>().OrderBy(entry => Utils.f2int(entry.Value)).ToList();
+            // and then get ordered keys
+            List<string> anames = new();
+            foreach (var el in ordered)
+                anames.Add((string)el.Key);
+
+            var fields = Strings.Join(anames.ToArray(), " ");
+
+            var iname = (string)item["iname"];
+            if (!string.IsNullOrEmpty(iname))
+            {
+                //create new view by name or update if this name exists
+                fw.model<UserViews>().addOrUpdateByUK(base_url, fields, iname);
+            }
+            //update default view with fields
+            fw.model<UserViews>().updateByIcode(base_url, fields);
         }
 
         fw.redirect(return_url);

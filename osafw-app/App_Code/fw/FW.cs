@@ -78,6 +78,7 @@ public class FW : IDisposable
     public const string ACTION_INDEX = "Index";
     public const string ACTION_SHOW = "Show";
     public const string ACTION_SHOW_FORM = "ShowForm";
+    public const string ACTION_SHOW_FORM_NEW = "New"; //not actual action, just a const
     public const string ACTION_SAVE = "Save";
     public const string ACTION_SAVE_MULTI = "SaveMulti";
     public const string ACTION_SHOW_DELETE = "ShowDelete";

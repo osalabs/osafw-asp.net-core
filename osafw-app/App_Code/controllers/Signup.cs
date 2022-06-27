@@ -53,33 +53,26 @@ public class SignupController : FwController
 
     public void SaveAction(int id = 0)
     {
+        route_onerror = FW.ACTION_SHOW_FORM; //set route to go if error happens
+
         var item = reqh("item");
+        Validate(item);
+        // load old record if necessary
+        // Dim itemdb As Hashtable = model.one(id)
 
-        try
+        var itemdb = FormUtils.filter(item, Utils.qw("email pwd fname lname"));
+
+        if (id == 0)
         {
-            Validate(item);
-            // load old record if necessary
-            // Dim itemdb As Hashtable = model.one(id)
-
-            var itemdb = FormUtils.filter(item, Utils.qw("email pwd fname lname"));
-
-            if (id == 0)
-            {
-                item["access_level"] = 0;
-                item["add_users_id"] = 0;
-            }
-            id = modelAddOrUpdate(id, itemdb);
-
-            fw.sendEmailTpl((string)itemdb["email"], "signup.txt", itemdb);
-
-            model.doLogin(id);
-            fw.redirect((string)fw.config("LOGGED_DEFAULT_URL"));
+            item["access_level"] = 0;
+            item["add_users_id"] = 0;
         }
-        catch (ApplicationException ex)
-        {
-            this.setFormError(ex);
-            fw.routeRedirect(FW.ACTION_SHOW_FORM, new string[] { id.ToString() });
-        }
+        id = modelAddOrUpdate(id, itemdb);
+
+        fw.sendEmailTpl((string)itemdb["email"], "signup.txt", itemdb);
+
+        model.doLogin(id);
+        fw.redirect((string)fw.config("LOGGED_DEFAULT_URL"));
     }
 
     public bool Validate(Hashtable item)

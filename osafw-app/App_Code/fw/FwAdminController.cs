@@ -120,6 +120,7 @@ public class FwAdminController : FwController
 
     public virtual Hashtable SaveAction(int id = 0)
     {
+        route_onerror = FW.ACTION_SHOW_FORM;
         // checkXSS() 'no need to check in standard SaveAction, but add to your custom actions that modifies data
         if (this.save_fields == null)
             throw new Exception("No fields to save defined, define in Controller.save_fields");
@@ -134,23 +135,15 @@ public class FwAdminController : FwController
         var success = true;
         var is_new = (id == 0);
 
-        try
-        {
-            Validate(id, item);
-            // load old record if necessary
-            // Dim item_old As Hashtable = model0.one(id)
+        Validate(id, item);
+        // load old record if necessary
+        // Dim item_old As Hashtable = model0.one(id)
 
-            Hashtable itemdb = FormUtils.filter(item, this.save_fields);
-            FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes);
-            FormUtils.filterNullable(itemdb, save_fields_nullable);
+        Hashtable itemdb = FormUtils.filter(item, this.save_fields);
+        FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes);
+        FormUtils.filterNullable(itemdb, save_fields_nullable);
 
-            id = this.modelAddOrUpdate(id, itemdb);
-        }
-        catch (ApplicationException ex)
-        {
-            success = false;
-            this.setFormError(ex);
-        }
+        id = this.modelAddOrUpdate(id, itemdb);
 
         return this.afterSave(success, id, is_new);
     }
@@ -193,6 +186,8 @@ public class FwAdminController : FwController
 
     public virtual Hashtable SaveMultiAction()
     {
+        route_onerror = FW.ACTION_INDEX;
+
         Hashtable cbses = reqh("cb");
         bool is_delete = fw.FORM.ContainsKey("delete");
         int user_lists_id = reqi("addtolist");

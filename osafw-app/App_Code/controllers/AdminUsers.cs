@@ -39,12 +39,14 @@ public class AdminUsersController : FwDynamicController
 
     public override Hashtable SaveAction(int id = 0)
     {
+        route_onerror = FW.ACTION_SHOW_FORM; //set route to go if error happens
+
         if (this.save_fields == null)
             throw new Exception("No fields to save defined, define in Controller.save_fields");
 
         if (reqi("refresh") == 1)
         {
-            fw.routeRedirect(FW.ACTION_SHOW_FORM, new object[]{ id });
+            fw.routeRedirect(FW.ACTION_SHOW_FORM, new object[] { id });
             return null;
         }
 
@@ -54,30 +56,22 @@ public class AdminUsersController : FwDynamicController
 
         item["email"] = item["ehack"]; // just because Chrome autofills fields too agressively
 
-        try
-        {
-            Validate(id, item);
-            // load old record if necessary
-            // Dim item_old As Hashtable = model0.one(id)
+        Validate(id, item);
+        // load old record if necessary
+        // Dim item_old As Hashtable = model0.one(id)
 
-            Hashtable itemdb = FormUtils.filter(item, this.save_fields);
-            FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes);
-            FormUtils.filterNullable(itemdb, save_fields_nullable);
+        Hashtable itemdb = FormUtils.filter(item, this.save_fields);
+        FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes);
+        FormUtils.filterNullable(itemdb, save_fields_nullable);
 
-            itemdb["pwd"] = itemdb["pwd"].ToString().Trim();
-            if (string.IsNullOrEmpty((string)itemdb["pwd"]))
-                itemdb.Remove("pwd");
+        itemdb["pwd"] = itemdb["pwd"].ToString().Trim();
+        if (string.IsNullOrEmpty((string)itemdb["pwd"]))
+            itemdb.Remove("pwd");
 
-            id = this.modelAddOrUpdate(id, itemdb);
+        id = this.modelAddOrUpdate(id, itemdb);
 
-            if (fw.userId == id)
-                model.reloadSession(id);
-        }
-        catch (ApplicationException ex)
-        {
-            success = false;
-            this.setFormError(ex);
-        }
+        if (fw.userId == id)
+            model.reloadSession(id);
 
         return this.afterSave(success, id, is_new);
     }
@@ -111,7 +105,7 @@ public class AdminUsersController : FwDynamicController
         // FW.FERR("other field name") = "HINT_ERR_CODE"
         // End If
 
-        this.validateCheckResult();        
+        this.validateCheckResult();
     }
 
     // cleanup session for current user and re-login as user from id

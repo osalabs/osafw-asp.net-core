@@ -42,26 +42,20 @@ public class PasswordController : FwController
 
     public void SaveAction()
     {
-        try
-        {
-            string login = reqh("item")["login"].ToString().Trim();
+        route_onerror = FW.ACTION_INDEX; //set route to go if error happens
 
-            if (login.Length == 0)
-                throw new UserException("Please enter your Email");
+        string login = reqh("item")["login"].ToString().Trim();
 
-            Hashtable user = model.oneByEmail(login);
-            if (user.Count == 0 || Utils.f2int(user["status"]) != 0)
-                throw new UserException("Not a valid Email");
+        if (login.Length == 0)
+            throw new UserException("Please enter your Email");
 
-            model.sendPwdReset(Utils.f2int(user["id"]));
+        Hashtable user = model.oneByEmail(login);
+        if (user.Count == 0 || Utils.f2int(user["status"]) != 0)
+            throw new UserException("Not a valid Email");
 
-            fw.redirect(base_url + "/(Sent)");
-        }
-        catch (ApplicationException ex)
-        {
-            fw.setGlobalError(ex.Message);
-            fw.routeRedirect(FW.ACTION_INDEX);
-        }
+        model.sendPwdReset(Utils.f2int(user["id"]));
+
+        fw.redirect(base_url + "/(Sent)");
     }
 
     public Hashtable ResetAction()
@@ -99,6 +93,8 @@ public class PasswordController : FwController
 
     public void SaveResetAction()
     {
+        route_onerror = "Reset"; //set route to go if error happens
+
         var item = reqh("item");
         var login = reqs("login");
         var token = reqs("token");
@@ -115,27 +111,19 @@ public class PasswordController : FwController
 
         int id = Utils.f2int(user["id"]);
 
-        try
-        {
-            ValidateReset(id, item);
-            // load old record if necessary
-            // Dim itemdb As Hashtable = Users.one(id)
+        ValidateReset(id, item);
+        // load old record if necessary
+        // Dim itemdb As Hashtable = Users.one(id)
 
-            var itemdb = FormUtils.filter(item, Utils.qw("pwd"));
+        var itemdb = FormUtils.filter(item, Utils.qw("pwd"));
 
-            itemdb["pwd_reset"] = ""; // also reset token
-            model.update(id, itemdb);
+        itemdb["pwd_reset"] = ""; // also reset token
+        model.update(id, itemdb);
 
-            fw.logEvent("chpwd");
-            fw.flash("success", "Password updated");
+        fw.logEvent("chpwd");
+        fw.flash("success", "Password updated");
 
-            fw.redirect("/Login");
-        }
-        catch (ApplicationException ex)
-        {
-            setFormError(ex);
-            fw.routeRedirect("Reset");
-        }
+        fw.redirect("/Login");
     }
 
     public void ValidateReset(int id, Hashtable item)

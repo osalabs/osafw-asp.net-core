@@ -115,6 +115,8 @@ public class AdminSpagesController : FwAdminController
 
     public override Hashtable SaveAction(int id = 0)
     {
+        route_onerror = FW.ACTION_SHOW_FORM;
+
         if (this.save_fields == null)
             throw new Exception("No fields to save defined, define in save_fields ");
 
@@ -122,51 +124,43 @@ public class AdminSpagesController : FwAdminController
         var success = true;
         var is_new = (id == 0);
 
-        try
-        {
-            Hashtable item_old = model.one(id);
-            // for non-home page enable some fields
-            string save_fields2 = this.save_fields;
-            if ((string)item_old["is_home"] != "1")
-                save_fields2 += " parent_id url status pub_time";
+        Hashtable item_old = model.one(id);
+        // for non-home page enable some fields
+        string save_fields2 = this.save_fields;
+        if ((string)item_old["is_home"] != "1")
+            save_fields2 += " parent_id url status pub_time";
 
-            // auto-generate url if it's empty
+        // auto-generate url if it's empty
+        if ((string)item["url"] == "")
+        {
+            item["url"] = item["iname"];
+            item["url"] = Regex.Replace((string)item["url"], @"^\W+", "");
+            item["url"] = Regex.Replace((string)item["url"], @"\W+$", "");
+            item["url"] = Regex.Replace((string)item["url"], @"\W+", "-");
             if ((string)item["url"] == "")
             {
-                item["url"] = item["iname"];
-                item["url"] = Regex.Replace((string)item["url"], @"^\W+", "");
-                item["url"] = Regex.Replace((string)item["url"], @"\W+$", "");
-                item["url"] = Regex.Replace((string)item["url"], @"\W+", "-");
-                if ((string)item["url"] == "")
-                {
-                    if (id > 0)
-                        item["url"] = "page-" + id;
-                    else
-                        item["url"] = "page-" + Utils.uuid();
-                }
+                if (id > 0)
+                    item["url"] = "page-" + id;
+                else
+                    item["url"] = "page-" + Utils.uuid();
             }
-
-            Validate(id, item);
-            // load old record if necessary
-
-            Hashtable itemdb = FormUtils.filter(item, save_fields2);
-            FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes);
-            itemdb["prio"] = Utils.f2int(itemdb["prio"]);
-
-            // if no publish time defined - publish it now
-            if ((string)itemdb["pub_time"] == "")
-                itemdb["pub_time"] = DateTime.Now;
-
-            id = this.modelAddOrUpdate(id, itemdb);
-
-            if ((string)item_old["is_home"] == "1")
-                FwCache.remove("home_page"); // reset home page cache if Home page changed
         }
-        catch (ApplicationException ex)
-        {
-            success = false;
-            this.setFormError(ex);
-        }
+
+        Validate(id, item);
+        // load old record if necessary
+
+        Hashtable itemdb = FormUtils.filter(item, save_fields2);
+        FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes);
+        itemdb["prio"] = Utils.f2int(itemdb["prio"]);
+
+        // if no publish time defined - publish it now
+        if ((string)itemdb["pub_time"] == "")
+            itemdb["pub_time"] = DateTime.Now;
+
+        id = this.modelAddOrUpdate(id, itemdb);
+
+        if ((string)item_old["is_home"] == "1")
+            FwCache.remove("home_page"); // reset home page cache if Home page changed
 
         return this.afterSave(success, id, is_new);
     }

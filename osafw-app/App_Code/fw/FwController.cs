@@ -57,6 +57,7 @@ public abstract class FwController
 
     protected bool is_userlists = false;       // true if controller should support UserLists
 
+    protected string route_return;               // FW.ACTION_SHOW or _INDEX to return (usually after SaveAction, default ACTION_SHOW_FORM)
     protected string return_url;                 // url to return after SaveAction successfully completed, passed via request
     protected string related_id;                 // related id, passed via request. Controller should limit view to items related to this id
     protected string related_field_name;         // if set (in Controller) and $related_id passed - list will be filtered on this field
@@ -161,6 +162,8 @@ public abstract class FwController
 
         is_dynamic_show = Utils.f2bool(this.config["is_dynamic_show"]);
         is_dynamic_showform = Utils.f2bool(this.config["is_dynamic_showform"]);
+
+        route_return = Utils.f2str(this.config["route_return"]);
     }
 
     /// <summary>
@@ -670,10 +673,9 @@ public abstract class FwController
 
     public virtual void setFormError(Exception ex)
     {
-        //actually better if we set default validation message for the whole form
         //if Validation exception - don't set general error message - specific validation message set in templates
-        //if (!(ex is ValidationException))
-        fw.setGlobalError(ex.Message);
+        if (!(ex is ValidationException))
+            fw.setGlobalError(ex.Message);
     }
 
     /// <summary>
@@ -698,64 +700,85 @@ public abstract class FwController
         return id;
     }
 
-    public virtual string getReturnLocation(string id = "")
+    /// <summary>
+    /// return url for afterSave based on:
+    /// if return_url set (and no add new form requested) - go to return_url
+    /// id:
+    ///   - if empty - base_url
+    ///   - if >0 - base_url + index/view/new/edit depending on return_to var/param
+    ///  also appends:
+    ///   - base_url_suffix
+    ///   - related_id
+    ///   - copy_id
+    /// </summary>
+    /// <param name="id"></param>
+    /// <returns></returns>
+    public virtual string afterSaveLocation(string id = "")
     {
         string url;
         string url_q = (!string.IsNullOrEmpty(related_id) ? "&related_id=" + related_id : "");
-        var is_add_new = reqi("is_add_more");
+        var is_add_new = false;
 
         if (!string.IsNullOrEmpty(id))
         {
-            if (is_add_new > 0)
+            var request_route_return = reqs("route_return");
+            var to = (string.IsNullOrEmpty(request_route_return) ? this.route_return : request_route_return);
+            if (to == FW.ACTION_SHOW)
+                // or return to view screen
+                url = this.base_url + "/" + id;
+            else if (to == FW.ACTION_INDEX)
+                // or return to list screen
+                url = this.base_url + "/";
+            else if (to == FW.ACTION_SHOW_FORM_NEW)
             {
-                // if Submit and Add New - redirect to new
+                // or return to add new form
                 url = this.base_url + "/new";
                 url_q += "&copy_id=" + id;
+                is_add_new = true;
             }
             else
-            {
-                if (reqi("backtoview") == 1)
-                {
-                    // or return to view screen
-                    url = this.base_url + "/" + id;
-                }
-                else
-                {
-                    // or just return to edit screen
-                    url = this.base_url + "/" + id + "/edit";
-                }
-            }
-
+                // default is return to edit screen
+                url = this.base_url + "/" + id + "/edit";
         }
         else
             url = this.base_url;
 
+        //add base_url_suffix if any
         if (!string.IsNullOrEmpty(base_url_suffix))
             url_q += "&" + base_url_suffix;
 
+        //add query
+        var is_url_q = false;
         if (!string.IsNullOrEmpty(url_q))
         {
+            is_url_q = true;
             url_q = Regex.Replace(url_q, @"^\&", ""); // make url clean
             url_q = "?" + url_q;
         }
 
         string result;
-        if (is_add_new != 1 && !string.IsNullOrEmpty(return_url))
+        if (is_add_new || string.IsNullOrEmpty(return_url))
         {
+            //if has add new or no specific return_url - just 
+            result = url + url_q;
+        }
+        else
+        {
+            //if has return url - go to it
             if (fw.isJsonExpected())
                 // if json - it's usually autosave - don't redirect back to return url yet
-                result = url + url_q + (!string.IsNullOrEmpty(url_q) ? "&" : "?") + "return_url=" + Utils.urlescape(return_url);
+                result = url + url_q + (is_url_q ? "&" : "?") + "return_url=" + Utils.urlescape(return_url);
             else
                 result = return_url;
         }
-        else
-            result = url + url_q;
 
         return result;
     }
 
     /// <summary>
-    /// Called from SaveAction/DeleteAction/DeleteMulti or similar. Return json or route redirect back to ShowForm or redirect to proper location
+    /// Called from SaveAction/DeleteAction/DeleteMulti or similar. 
+    /// Return json or route redirect back to ShowForm 
+    /// or redirect to proper location
     /// </summary>
     /// <param name="success">operation successful or not</param>
     /// <param name="id">item id</param>
@@ -767,7 +790,7 @@ public abstract class FwController
     public virtual Hashtable afterSave(bool success, object id = null, bool is_new = false, string action = "ShowForm", string location = "", Hashtable more_json = null)
     {
         if (string.IsNullOrEmpty(location))
-            location = this.getReturnLocation(Utils.f2str(id));
+            location = this.afterSaveLocation(Utils.f2str(id));
 
         if (fw.isJsonExpected())
         {
@@ -810,7 +833,6 @@ public abstract class FwController
     //called when unhandled error happens in action
     public virtual Hashtable actionError(Exception ex, object[] args)
     {
-        setFormError(ex);
 
         Hashtable ps = null;
         if (fw.isJsonExpected())
@@ -819,7 +841,7 @@ public abstract class FwController
             var _json = new Hashtable()
             {
                 {"success",false},
-                {"err_msg",fw.G["err_msg"]}
+                {"err_msg", ex.Message}
             };
             // add ERR field errors to response if any
             if (fw.FormErrors.Count > 0)
@@ -829,6 +851,8 @@ public abstract class FwController
         else
         {
             //if not json - redirect to route route_onerror if it's defined
+            setFormError(ex);
+
             if (string.IsNullOrEmpty(route_onerror))
                 throw ex; //re-throw exception
             else

@@ -58,26 +58,18 @@ public class AdminReportsController : FwController
     // save changes from editable reports
     public void SaveAction()
     {
+        route_onerror = FW.ACTION_SHOW;
+
         var repcode = FwReports.cleanupRepcode(reqs("repcode"));
 
         var report = FwReports.createInstance(fw, repcode, reqh("f"));
 
-        try
+        if (report.saveChanges())
+            fw.redirect(base_url + "/" + repcode + "?is_run=1");
+        else
         {
-            if (report.saveChanges())
-                fw.redirect(base_url + "/" + repcode + "?is_run=1");
-            else
-            {
-                fw.FORM["is_run"] = 1;
-                String[] args = new[] { repcode };
-                fw.routeRedirect(FW.ACTION_SHOW, null, args);
-            }
-        }
-        catch (ApplicationException ex)
-        {
-            fw.setGlobalError(ex.Message);
-            String[] args = new[] { repcode };
-            fw.routeRedirect(FW.ACTION_SHOW, null, args);
+            fw.FORM["is_run"] = 1;
+            fw.routeRedirect(FW.ACTION_SHOW, new String[] { repcode });
         }
     }
 }

@@ -18,6 +18,8 @@ public class MyPasswordController : FwController
     {
         base.init(fw);
         model.init(fw);
+
+        base_url = "/My/Password";
     }
 
     public void IndexAction()
@@ -59,30 +61,26 @@ public class MyPasswordController : FwController
 
     public void SaveAction()
     {
+        route_onerror = FW.ACTION_SHOW_FORM; //set route to go if error happens
+
         int id = fw.userId;
-        try
+
+        Validate(id, reqh("item"));
+        // load old record if necessary
+        // Dim itemdb As Hashtable = Users.one(id)
+
+        var itemdb = FormUtils.filter(reqh("item"), Utils.qw("email pwd"));
+        itemdb["pwd"] = itemdb["pwd"].ToString().Trim();
+
+        if (id > 0)
         {
-            Validate(id, reqh("item"));
-            // load old record if necessary
-            // Dim itemdb As Hashtable = Users.one(id)
+            model.update(id, itemdb);
 
-            var itemdb = FormUtils.filter(reqh("item"), Utils.qw("email pwd"));
-            itemdb["pwd"] = itemdb["pwd"].ToString().Trim();
-
-            if (id > 0)
-            {
-                model.update(id, itemdb);
-
-                fw.logEvent("chpwd");
-                fw.flash("record_updated", 1);
-            }
-
-            fw.redirect("/My/Password/" + id + "/edit");
+            fw.logEvent("chpwd");
+            fw.flash("record_updated", 1);
         }
-        catch (ApplicationException)
-        {
-            fw.routeRedirect(FW.ACTION_SHOW_FORM);
-        }
+
+        afterSave(true, id);
     }
 
     public void Validate(int id, Hashtable item)

@@ -90,7 +90,7 @@ public class AdminDemosController : FwAdminController
         route_onerror = FW.ACTION_SHOW_FORM; //set route to go if error happens
 
         if (this.save_fields == null)
-            throw new Exception("No fields to save defined, define in save_fields ");
+            throw new Exception("No fields to save defined, define in save_fields");
 
         if (reqi("refresh") == 1)
         {

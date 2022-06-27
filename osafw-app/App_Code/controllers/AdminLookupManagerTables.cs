@@ -80,39 +80,15 @@ public class AdminLookupManagerTablesController : FwAdminController
         return ps;
     }
 
-    public override Hashtable SaveAction(int id = 0)
+    public override int modelAddOrUpdate(int id, Hashtable fields)
     {
-        if (this.save_fields == null)
-            throw new Exception("No fields to save defined, define in save_fields ");
+        // convert from newline to comma str
+        fields["list_columns"] = Utils.nlstr2commastr((string)fields["list_columns"]);
+        fields["columns"] = Utils.nlstr2commastr((string)fields["columns"]);
+        fields["column_names"] = Utils.nlstr2commastr((string)fields["column_names"]);
+        fields["column_types"] = Utils.nlstr2commastr((string)fields["column_types"]);
+        fields["column_groups"] = Utils.nlstr2commastr((string)fields["column_groups"]);
 
-        Hashtable item = reqh("item");
-        var success = true;
-        var is_new = (id == 0);
-
-        try
-        {
-            Validate(id, item);
-            // load old record if necessary
-            // Dim item_old As Hashtable = model0.one(id)
-
-            Hashtable itemdb = FormUtils.filter(item, this.save_fields);
-            FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes);
-
-            // convert from newline to comma str
-            itemdb["list_columns"] = Utils.nlstr2commastr((string)itemdb["list_columns"]);
-            itemdb["columns"] = Utils.nlstr2commastr((string)itemdb["columns"]);
-            itemdb["column_names"] = Utils.nlstr2commastr((string)itemdb["column_names"]);
-            itemdb["column_types"] = Utils.nlstr2commastr((string)itemdb["column_types"]);
-            itemdb["column_groups"] = Utils.nlstr2commastr((string)itemdb["column_groups"]);
-
-            id = this.modelAddOrUpdate(id, itemdb);
-        }
-        catch (ApplicationException ex)
-        {
-            success = false;
-            this.setFormError(ex);
-        }
-
-        return this.afterSave(success, id, is_new);
+        return base.modelAddOrUpdate(id, fields);
     }
 }
