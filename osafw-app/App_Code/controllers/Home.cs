@@ -5,7 +5,7 @@ namespace osafw;
 
 public class HomeController : FwController
 {
-    public static new string route_default_action = "show";
+    public static new string route_default_action = FW.ACTION_SHOW;
 
     public override void init(FW fw)
     {

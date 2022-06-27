@@ -26,7 +26,7 @@ public class MySettingsController : FwController
 
     public void IndexAction()
     {
-        fw.routeRedirect("ShowForm", null);
+        fw.routeRedirect(FW.ACTION_SHOW_FORM, null);
     }
 
 
@@ -75,7 +75,7 @@ public class MySettingsController : FwController
         catch (ApplicationException ex)
         {
             fw.setGlobalError(ex.Message);
-            fw.routeRedirect("ShowForm");
+            fw.routeRedirect(FW.ACTION_SHOW_FORM);
         }
     }
 

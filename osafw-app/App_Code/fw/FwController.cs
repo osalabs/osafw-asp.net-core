@@ -15,7 +15,8 @@ public abstract class FwController
 {
     public static int access_level = Users.ACL_VISITOR; // access level for the controller. fw.config("access_levels") overrides this. -1 (public access), 0(min logged level), 100(max admin level)
 
-    public static string route_default_action = ""; // supported values - "" (use Default Parser for unknown actions), index (use IndexAction for unknown actions), show (assume action is id and use ShowAction)
+    public static string route_default_action = ""; // supported values - "" (use Default Parser for unknown actions), Index (use IndexAction for unknown actions), Show (assume action is id and use ShowAction)
+    public string route_onerror = ""; //route redirect action name in case ApplicationException occurs in current route, if empty - 500 error page returned
     public string base_url; // base url for the controller
     public string base_url_suffix; // additional base url suffix
 
@@ -669,9 +670,10 @@ public abstract class FwController
 
     public virtual void setFormError(Exception ex)
     {
-        // if Validation exception - don't set general error message - specific validation message set in templates
-        if (!(ex is ValidationException))
-            fw.setGlobalError(ex.Message);
+        //actually better if we set default validation message for the whole form
+        //if Validation exception - don't set general error message - specific validation message set in templates
+        //if (!(ex is ValidationException))
+        fw.setGlobalError(ex.Message);
     }
 
     /// <summary>
@@ -789,18 +791,50 @@ public abstract class FwController
             return ps;
         }
         else
+        {
             // If save Then success - Return redirect
             // If save Then failed - Return back To add/edit form
             if (success)
-            fw.redirect(location);
-        else
-            fw.routeRedirect(action, new[] { id.ToString() });
+                fw.redirect(location);
+            else
+                fw.routeRedirect(action, new[] { id.ToString() });
+        }
         return null;
     }
 
     public virtual Hashtable afterSave(bool success, Hashtable more_json)
     {
         return afterSave(success, "", false, "no_action", "", more_json);
+    }
+
+    //called when unhandled error happens in action
+    public virtual Hashtable actionError(Exception ex, object[] args)
+    {
+        setFormError(ex);
+
+        Hashtable ps = null;
+        if (fw.isJsonExpected())
+        {
+            //for json response - just respond success=false with any errors
+            var _json = new Hashtable()
+            {
+                {"success",false},
+                {"err_msg",fw.G["err_msg"]}
+            };
+            // add ERR field errors to response if any
+            if (fw.FormErrors.Count > 0)
+                _json["ERR"] = fw.FormErrors;
+            ps = new Hashtable() { { "_json", _json } };
+        }
+        else
+        {
+            //if not json - redirect to route route_onerror if it's defined
+            if (string.IsNullOrEmpty(route_onerror))
+                throw ex; //re-throw exception
+            else
+                fw.routeRedirect(route_onerror, args);
+        }
+        return ps;
     }
 
     public virtual Hashtable setPS(Hashtable ps = null)

@@ -12,7 +12,7 @@ namespace osafw;
 public class SignupController : FwController
 {
     protected Users model;
-    public static new string route_default_action = "index";
+    public static new string route_default_action = FW.ACTION_INDEX;
 
     public override void init(FW fw)
     {
@@ -31,7 +31,7 @@ public class SignupController : FwController
 
     public void IndexAction()
     {
-        fw.routeRedirect("ShowForm");
+        fw.routeRedirect(FW.ACTION_SHOW_FORM);
     }
 
     public Hashtable ShowFormAction()
@@ -78,7 +78,7 @@ public class SignupController : FwController
         catch (ApplicationException ex)
         {
             this.setFormError(ex);
-            fw.routeRedirect("ShowForm", null, new string[] { id.ToString() });
+            fw.routeRedirect(FW.ACTION_SHOW_FORM, new string[] { id.ToString() });
         }
     }
 

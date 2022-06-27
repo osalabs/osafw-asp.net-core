@@ -223,8 +223,8 @@ public class FwSelfTest
                     //var bufferingFeature2 = fw.context.Features.Get<IHttpResponseBodyFeature>();
                     //bufferingFeature2?.DisableBuffering();
 
-                    fw._auth(controller_name, "Index");
-                    fw.setController(controller_name, "Index");
+                    fw._auth(controller_name, FW.ACTION_INDEX);
+                    fw.setController(controller_name, FW.ACTION_INDEX);
 
                     FwController new_controller = (FwController)Activator.CreateInstance(calledType);
                     new_controller.init(fw);

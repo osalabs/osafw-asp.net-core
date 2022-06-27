@@ -22,7 +22,7 @@ public class MyPasswordController : FwController
 
     public void IndexAction()
     {
-        fw.routeRedirect("ShowForm", "MyPassword");
+        fw.routeRedirect(FW.ACTION_SHOW_FORM, "MyPassword");
     }
 
     public Hashtable ShowFormAction()
@@ -81,7 +81,7 @@ public class MyPasswordController : FwController
         }
         catch (ApplicationException)
         {
-            fw.routeRedirect("ShowForm");
+            fw.routeRedirect(FW.ACTION_SHOW_FORM);
         }
     }
 

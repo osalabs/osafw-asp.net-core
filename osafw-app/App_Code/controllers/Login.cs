@@ -104,7 +104,7 @@ public class LoginController : FwController
             logger(LogLevel.WARN, ex.Message);
             fw.G["err_ctr"] = reqi("err_ctr") + 1;
             fw.setGlobalError(ex.Message);
-            fw.routeRedirect("Index");
+            fw.routeRedirect(FW.ACTION_INDEX);
         }
     }
 

@@ -159,7 +159,7 @@ public class FwDynamicController : FwController
 
         if (reqi("refresh") == 1)
         {
-            fw.routeRedirect("ShowForm", new object[] { id });
+            fw.routeRedirect(FW.ACTION_SHOW_FORM, new object[] { id });
             return null;
         }
 

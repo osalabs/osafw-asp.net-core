@@ -93,7 +93,7 @@ public class AdminSettingsController : FwAdminController
             this.setFormError(ex);
         }
 
-        return this.afterSave(success, id, is_new, "ShowForm", location);
+        return this.afterSave(success, id, is_new, FW.ACTION_SHOW_FORM, location);
     }
 
     public override void Validate(int id, Hashtable item)

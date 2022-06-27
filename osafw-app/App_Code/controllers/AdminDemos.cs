@@ -87,12 +87,14 @@ public class AdminDemosController : FwAdminController
 
     public override Hashtable SaveAction(int id = 0)
     {
+        route_onerror = FW.ACTION_SHOW_FORM; //set route to go if error happens
+
         if (this.save_fields == null)
             throw new Exception("No fields to save defined, define in save_fields ");
 
         if (reqi("refresh") == 1)
         {
-            fw.routeRedirect("ShowForm", new object[] { id });
+            fw.routeRedirect(FW.ACTION_SHOW_FORM, new object[] { id });
             return null;
         }
 
@@ -100,30 +102,22 @@ public class AdminDemosController : FwAdminController
         var success = true;
         var is_new = (id == 0);
 
-        try
-        {
-            Validate(id, item);
-            // load old record if necessary
-            // Dim item_old As Hashtable = model.one(id)
+        Validate(id, item);
+        // load old record if necessary
+        // Dim item_old As Hashtable = model.one(id)
 
-            Hashtable itemdb = FormUtils.filter(item, this.save_fields);
-            FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes);
-            itemdb["dict_link_auto_id"] = model_related.findOrAddByIname((string)item["dict_link_auto_id_iname"], out _);
-            itemdb["dict_link_multi"] = FormUtils.multi2ids(reqh("dict_link_multi"));
-            itemdb["fdate_combo"] = FormUtils.dateForCombo(item, "fdate_combo");
-            itemdb["ftime"] = FormUtils.timeStrToInt((string)item["ftime_str"]); // ftime - convert from HH:MM to int (0-24h in seconds)
-            itemdb["fint"] = Utils.f2int(itemdb["fint"]); // field accepts only int
+        Hashtable itemdb = FormUtils.filter(item, this.save_fields);
+        FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes);
+        itemdb["dict_link_auto_id"] = model_related.findOrAddByIname((string)item["dict_link_auto_id_iname"], out _);
+        itemdb["dict_link_multi"] = FormUtils.multi2ids(reqh("dict_link_multi"));
+        itemdb["fdate_combo"] = FormUtils.dateForCombo(item, "fdate_combo");
+        itemdb["ftime"] = FormUtils.timeStrToInt((string)item["ftime_str"]); // ftime - convert from HH:MM to int (0-24h in seconds)
+        itemdb["fint"] = Utils.f2int(itemdb["fint"]); // field accepts only int
 
-            id = this.modelAddOrUpdate(id, itemdb);
+        id = this.modelAddOrUpdate(id, itemdb);
 
-            model.updateLinked(model.table_link, id, "demos_id", "demo_dicts_id", reqh("demo_dicts_link"));
-            fw.model<Att>().updateAttLinks(model.table_name, id, reqh("att"));
-        }
-        catch (ApplicationException ex)
-        {
-            success = false;
-            this.setFormError(ex);
-        }
+        model.updateLinked(model.table_link, id, "demos_id", "demo_dicts_id", reqh("demo_dicts_link"));
+        fw.model<Att>().updateAttLinks(model.table_name, id, reqh("att"));
 
         return this.afterSave(success, id, is_new);
     }

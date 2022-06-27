@@ -96,7 +96,7 @@ public class AdminDBController : FwController
 
     public void SaveAction()
     {
-        fw.routeRedirect("Index");
+        fw.routeRedirect(FW.ACTION_INDEX);
     }
 
     private static ArrayList sth2table(DbDataReader sth)

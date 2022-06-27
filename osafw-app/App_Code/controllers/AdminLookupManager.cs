@@ -88,7 +88,7 @@ public class AdminLookupManagerController : FwController
             var row = model.topByTname((string)defs["tname"]);
             // fw.redirect(base_url & "/" & row(id_fname) & "/edit/?d=" & dict)
             String[] args = (new[] { (string)row[id_fname] });
-            fw.routeRedirect("ShowForm", null, args);
+            fw.routeRedirect(FW.ACTION_SHOW_FORM, null, args);
             return null;
         }
 
@@ -421,7 +421,7 @@ public class AdminLookupManagerController : FwController
         {
             fw.setGlobalError(ex.Message);
             String[] args = new[] { id.ToString() };
-            fw.routeRedirect("ShowForm", null, args);
+            fw.routeRedirect(FW.ACTION_SHOW_FORM, null, args);
         }
     }
 
@@ -574,7 +574,7 @@ public class AdminLookupManagerController : FwController
         {
             //throw;
             fw.setGlobalError(ex.Message);
-            fw.routeRedirect("Index");
+            fw.routeRedirect(FW.ACTION_INDEX);
         }
     }
 

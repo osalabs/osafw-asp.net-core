@@ -60,7 +60,7 @@ public class PasswordController : FwController
         catch (ApplicationException ex)
         {
             fw.setGlobalError(ex.Message);
-            fw.routeRedirect("Index");
+            fw.routeRedirect(FW.ACTION_INDEX);
         }
     }
 

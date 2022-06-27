@@ -11,7 +11,7 @@ namespace osafw;
 public class FwAdminController : FwController
 {
     public static new int access_level = Users.ACL_SITEADMIN;
-    // Public Shared Shadows route_default_action As String = "index" 'empty|index|show - calls IndexAction or ShowAction accordingly if no requested controller action found. If empty (default) - show template from /cur_controller/cur_action dir
+    //public static new string route_default_action = FW.ACTION_INDEX; //empty|Index|Show - calls IndexAction or ShowAction accordingly if no requested controller action found. If empty (default) - show template from /cur_controller/cur_action dir
 
     public override void init(FW fw)
     {
@@ -126,7 +126,7 @@ public class FwAdminController : FwController
 
         if (reqi("refresh") == 1)
         {
-            fw.routeRedirect("ShowForm", new object[] { id });
+            fw.routeRedirect(FW.ACTION_SHOW_FORM, new object[] { id });
             return null;
         }
 

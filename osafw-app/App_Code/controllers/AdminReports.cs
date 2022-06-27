@@ -11,7 +11,7 @@ namespace osafw;
 public class AdminReportsController : FwController
 {
     public static new int access_level = Users.ACL_MANAGER;
-    public static new string route_default_action = "show";
+    public static new string route_default_action = FW.ACTION_SHOW;
 
     public override void init(FW fw)
     {
@@ -70,14 +70,14 @@ public class AdminReportsController : FwController
             {
                 fw.FORM["is_run"] = 1;
                 String[] args = new[] { repcode };
-                fw.routeRedirect("Show", null, args);
+                fw.routeRedirect(FW.ACTION_SHOW, null, args);
             }
         }
         catch (ApplicationException ex)
         {
             fw.setGlobalError(ex.Message);
             String[] args = new[] { repcode };
-            fw.routeRedirect("Show", null, args);
+            fw.routeRedirect(FW.ACTION_SHOW, null, args);
         }
     }
 }

@@ -9,8 +9,6 @@ namespace osafw;
 
 public class FwApiController : FwController
 {
-    // Public Shared Shadows route_default_action As String = "index" 'empty|index|show - calls IndexAction or ShowAction accordingly if no requested controller action found. If empty (default) - show template from /cur_controller/cur_action dir
-
     public override void init(FW fw)
     {
         base.init(fw);

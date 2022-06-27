@@ -16,7 +16,7 @@ using System.Text.RegularExpressions;
 namespace osafw;
 
 // standard exceptions used by framework 
-[Serializable]   
+[Serializable]
 public class AuthException : ApplicationException
 {
     public AuthException() : base("Access denied") { }
@@ -32,7 +32,7 @@ public class UserException : ApplicationException
 public class ValidationException : UserException
 {
     //specificially for validation forms
-    public ValidationException(string message = "") : base(message) { }
+    public ValidationException() : base("Please review and update your input") { }
 }
 [Serializable]
 public class NotFoundException : UserException
@@ -74,6 +74,15 @@ public class FwRoute
 
 public class FW : IDisposable
 {
+    //controller standard actions
+    public const string ACTION_INDEX = "Index";
+    public const string ACTION_SHOW = "Show";
+    public const string ACTION_SHOW_FORM = "ShowForm";
+    public const string ACTION_SAVE = "Save";
+    public const string ACTION_SAVE_MULTI = "SaveMulti";
+    public const string ACTION_SHOW_DELETE = "ShowDelete";
+    public const string ACTION_DELETE = "Delete";
+
     public const string FW_NAMESPACE_PREFIX = "osafw.";
     public static Hashtable METHOD_ALLOWED = Utils.qh("GET POST PUT DELETE");
 
@@ -284,7 +293,7 @@ public class FW : IDisposable
         route = new FwRoute()
         {
             controller = "Home",
-            action = "Index",
+            action = ACTION_INDEX,
             action_raw = "",
             id = "",
             action_more = "",
@@ -390,37 +399,37 @@ public class FW : IDisposable
                 if (route.method == "GET")
                 {
                     if (route.action_more == "new")
-                        route.action_raw = "ShowForm";
+                        route.action_raw = ACTION_SHOW_FORM;
                     else if (!string.IsNullOrEmpty(route.id) & route.action_more == "edit")
-                        route.action_raw = "ShowForm";
+                        route.action_raw = ACTION_SHOW_FORM;
                     else if (!string.IsNullOrEmpty(route.id) & route.action_more == "delete")
-                        route.action_raw = "ShowDelete";
+                        route.action_raw = ACTION_SHOW_DELETE;
                     else if (!string.IsNullOrEmpty(route.id))
-                        route.action_raw = "Show";
+                        route.action_raw = ACTION_SHOW;
                     else
-                        route.action_raw = "Index";
+                        route.action_raw = ACTION_INDEX;
                 }
                 else if (route.method == "POST")
                 {
                     if (!string.IsNullOrEmpty(route.id))
                     {
                         if (request.Form.Count > 0 || request.ContentLength > 0)
-                            route.action_raw = "Save";
+                            route.action_raw = ACTION_SAVE;
                         else
-                            route.action_raw = "Delete";
+                            route.action_raw = ACTION_DELETE;
                     }
                     else
-                        route.action_raw = "Save";
+                        route.action_raw = ACTION_SAVE;
                 }
                 else if (route.method == "PUT")
                 {
                     if (!string.IsNullOrEmpty(route.id))
-                        route.action_raw = "Save";
+                        route.action_raw = ACTION_SAVE;
                     else
-                        route.action_raw = "SaveMulti";
+                        route.action_raw = ACTION_SAVE_MULTI;
                 }
                 else if (route.method == "DELETE" & !string.IsNullOrEmpty(route.id))
-                    route.action_raw = "Delete";
+                    route.action_raw = ACTION_DELETE;
                 else
                 {
                     logger(LogLevel.WARN, route.method);
@@ -452,7 +461,7 @@ public class FW : IDisposable
         route.controller = controller_prefix + route.controller;
         route.action = Utils.routeFixChars(route.action_raw);
         if (string.IsNullOrEmpty(route.action))
-            route.action = "Index";
+            route.action = ACTION_INDEX;
     }
 
     public void dispatch()
@@ -558,9 +567,9 @@ public class FW : IDisposable
             || route.method == "POST"
             || route.method == "PUT"
             || route.method == "DELETE"
-            || action == "Save"
-            || action == "Delete"
-            || action == "SaveMulti")
+            || action == ACTION_SAVE
+            || action == ACTION_DELETE
+            || action == ACTION_SAVE_MULTI)
             && !string.IsNullOrEmpty(Session("XSS")) && Session("XSS") != (string)FORM["XSS"])
         {
             // XSS validation failed - check if we are under xss-excluded controller
@@ -1032,12 +1041,12 @@ public class FW : IDisposable
 
         var auth_check_controller = _auth(route.controller, route.action);
 
-        Type calledType = Type.GetType(FW_NAMESPACE_PREFIX + route.controller + "Controller", false, true); // case ignored
-        if (calledType == null)
+        Type controllerClass = Type.GetType(FW_NAMESPACE_PREFIX + route.controller + "Controller", false, true); // case ignored
+        if (controllerClass == null)
         {
             logger(LogLevel.DEBUG, "No controller found for controller=[", route.controller, "], using default Home");
             // no controller found - call default controller with default action
-            calledType = Type.GetType(FW_NAMESPACE_PREFIX + "HomeController", true);
+            controllerClass = Type.GetType(FW_NAMESPACE_PREFIX + "HomeController", true);
             route.controller_path = "/Home";
             route.controller = "Home";
             route.action = "NotFound";
@@ -1048,7 +1057,7 @@ public class FW : IDisposable
             if (auth_check_controller == 1)
             {
                 // but need's check access level on controller level
-                var field = calledType.GetField("access_level", BindingFlags.Public | BindingFlags.Static);
+                var field = controllerClass.GetField("access_level", BindingFlags.Public | BindingFlags.Static);
                 if (field != null)
                 {
                     int current_level = Utils.f2int(Session("access_level")); //will be 0 for visitors
@@ -1060,22 +1069,22 @@ public class FW : IDisposable
 
         logger(LogLevel.TRACE, "TRY controller.action=", route.controller, ".", route.action);
 
-        MethodInfo mInfo = calledType.GetMethod(route.action + "Action");
-        if (mInfo == null)
+        MethodInfo actionMethod = controllerClass.GetMethod(route.action + "Action");
+        if (actionMethod == null)
         {
             logger(LogLevel.DEBUG, "No method found for controller.action=[", route.controller, ".", route.action, "], checking route_default_action");
             // no method found - try to get default action
-            FieldInfo pInfo = calledType.GetField("route_default_action");
+            FieldInfo pInfo = controllerClass.GetField("route_default_action");
             if (pInfo != null)
             {
                 string pvalue = (string)pInfo.GetValue(null);
-                if (pvalue == "index")
+                if (pvalue == ACTION_INDEX)
                 {
                     // = index - use IndexAction for unknown actions
-                    route.action = "Index";
-                    mInfo = calledType.GetMethod(route.action + "Action");
+                    route.action = ACTION_INDEX;
+                    actionMethod = controllerClass.GetMethod(route.action + "Action");
                 }
-                else if (pvalue == "show")
+                else if (pvalue == ACTION_SHOW)
                 {
                     // = show - assume action is id and use ShowAction
                     if (!string.IsNullOrEmpty(route.id))
@@ -1086,8 +1095,8 @@ public class FW : IDisposable
                     route.id = route.action_raw;
                     args[0] = route.id;
 
-                    route.action = "Show";
-                    mInfo = calledType.GetMethod(route.action + "Action");
+                    route.action = ACTION_SHOW;
+                    actionMethod = controllerClass.GetMethod(route.action + "Action");
                 }
             }
         }
@@ -1105,22 +1114,21 @@ public class FW : IDisposable
 
         logger(LogLevel.DEBUG, "ROUTE [", route.method, " ", request_url, "] => ", route.controller, ".", route.action);
 
-        if (mInfo == null)
+        if (actionMethod == null)
         {
             logger(LogLevel.INFO, "No method found for controller.action=[", route.controller, ".", route.action, "], displaying static page from related templates");
             // if no method - just call FW.parser(hf) - show template from /route.controller/route.action dir
             parser(new Hashtable());
         }
         else
-            callController(calledType, mInfo, args);
-
+            callController(controllerClass, actionMethod, args);
     }
 
     // Call controller
-    public void callController(Type calledType, MethodInfo mInfo, object[] args = null)
+    public void callController(Type controllerClass, MethodInfo actionMethod, object[] args = null)
     {
         //convert args to parameters with proper types
-        System.Reflection.ParameterInfo[] @params = mInfo.GetParameters();
+        System.Reflection.ParameterInfo[] @params = actionMethod.GetParameters();
         object[] parameters = new object[@params.Length];
         for (int i = 0; i < @params.Length; i++)
         {
@@ -1138,24 +1146,36 @@ public class FW : IDisposable
                     if (!pi.HasDefaultValue)
                     {
                         parameters[i] = Activator.CreateInstance(pi.ParameterType);
-                    }                        
+                    }
                 }
                 //logger("ARG OUT:", parameters[i].GetType().Name, parameters[i]);
             }
         }
 
-        FwController new_controller = (FwController)Activator.CreateInstance(calledType);
-        new_controller.init(this);
+        FwController controller = (FwController)Activator.CreateInstance(controllerClass);
+        controller.init(this);
         Hashtable ps = null;
         try
         {
-            ps = (Hashtable)mInfo.Invoke(new_controller, parameters);
+            ps = (Hashtable)actionMethod.Invoke(controller, parameters);
         }
         catch (TargetInvocationException ex)
-        {
+        {            
+            Exception iex = null;
+            if (ex.InnerException != null)
+                iex = ex.InnerException;
+
+            if (iex != null && !(iex is ApplicationException))
+            {
+                throw; //throw if not an ApplicationException happened - this keeps stack, also see http://weblogs.asp.net/fmarguerie/rethrowing-exceptions-and-preserving-the-full-call-stack-trace
+            }
+
             // ignore redirect exception
-            if (ex.InnerException == null || !(ex.InnerException is RedirectException))
-                throw; // this keeps stack, also see http://weblogs.asp.net/fmarguerie/rethrowing-exceptions-and-preserving-the-full-call-stack-trace
+            if (iex == null || !(iex is RedirectException))
+            {
+                //if got ApplicationException - call error action handler
+                ps = controller.actionError(iex, args);
+            }
         }
         if (ps != null)
             parser(ps);
@@ -1362,7 +1382,7 @@ public class FW : IDisposable
             //Forbidden
             code = 403;
             tpl_dir += "/4xx";
-        }            
+        }
         else if (Ex is ApplicationException)
             //Server Error
             code = 500;
