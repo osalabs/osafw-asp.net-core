@@ -149,7 +149,6 @@ public class MyListsController : FwAdminController
     // request item_id - could be one id, or comma-separated ids
     public Hashtable AddToListAction(int id)
     {
-        throw new ApplicationException("zzzz");
         Hashtable items = Utils.commastr2hash(reqs("item_id"));
 
         var user_lists = fw.model<UserLists>().one(id);
