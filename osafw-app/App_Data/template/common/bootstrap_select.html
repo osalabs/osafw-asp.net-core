@@ -65,8 +65,8 @@
     })
 
     // form changes & autosave
-    $root.find(selector + ' ~ .dropdown-toggle').on('blur', function (e) {
-      var $select = $(this).prevAll(selector)
+    $('.selectpicker ~ .dropdown-toggle').on('blur', function (e) {
+      var $select = $(this).prevAll('.selectpicker')
 
       if (!!$select.data('selectpicker-is-changed')) {
         $select.data('selectpicker-is-changed', false)
