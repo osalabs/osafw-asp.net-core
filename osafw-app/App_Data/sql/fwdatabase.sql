@@ -202,6 +202,7 @@ CREATE TABLE events (
 CREATE UNIQUE INDEX events_icode_idx ON events (icode);
 INSERT INTO events (icode, iname) VALUES ('login',    'User login');
 INSERT INTO events (icode, iname) VALUES ('logoff',   'User logoff');
+INSERT INTO events (icode, iname) VALUES ('login_fail', 'Login failed');
 INSERT INTO events (icode, iname) VALUES ('chpwd',    'User changed login/pwd');
 INSERT INTO events (icode, iname) VALUES ('users_add',    'New user added');
 INSERT INTO events (icode, iname) VALUES ('users_upd',    'User updated');
@@ -211,7 +212,7 @@ INSERT INTO events (icode, iname) VALUES ('users_del',    'User deleted');
 DROP TABLE IF EXISTS event_log;
 CREATE TABLE event_log (
   id BIGINT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
-  events_id        INT NOT NULL DEFAULT 0,           /* email type sent */
+  events_id             INT NOT NULL FOREIGN KEY REFERENCES events(id),           /* event id */
 
   item_id               INT NOT NULL DEFAULT 0,           /*related id*/
   item_id2              INT NOT NULL DEFAULT 0,           /*related id (if another)*/
@@ -225,6 +226,8 @@ CREATE TABLE event_log (
   add_users_id          INT DEFAULT 0,                        /*user added record, 0 if sent by cron module*/
 
   INDEX IX_event_log_events_id (events_id),
+  INDEX IX_event_log_item_id (item_id),
+  INDEX IX_event_log_item_id2 (item_id2),
   INDEX IX_event_log_add_users_id (add_users_id),
   INDEX IX_event_log_add_time (add_time)
 );

@@ -71,7 +71,7 @@ public class AdminEventsController : FwAdminController
 
         foreach (Hashtable row in list_rows)
         {
-            logger(row);
+            //logger(row);
             row["user"] = model_users.one(Utils.f2int(row["add_users_id"]));
             row["event"] = model.one(Utils.f2int(row["events_id"]));
         }
