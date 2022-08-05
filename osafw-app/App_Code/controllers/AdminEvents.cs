@@ -51,7 +51,7 @@ public class AdminEventsController : FwAdminController
         }
         if (!string.IsNullOrEmpty((string)list_filter["users_id"]))
         {
-            list_where += " and users_id = @f_users_id";
+            list_where += " and add_users_id = @f_users_id";
             list_where_params["f_users_id"] = Utils.f2int(list_filter["users_id"]);
         }
         if (!string.IsNullOrEmpty((string)list_filter["date"]))
