@@ -612,6 +612,8 @@ public class ParsePage
         if (!string.IsNullOrEmpty(sub))
             // if sub attr contains name - use it to get value from hf (instead using tag_value)
             tag_value = hfvalue(sub, hf, parent_hf);
+        if (tag_value is DBRow)
+            tag_value = ((DBRow)tag_value).toHashtable();
         if (!(tag_value is Hashtable))
         {
             fw.logger(LogLevel.DEBUG, "ParsePage - not a Hash passed for a SUB tag=", tag, ", sub=" + sub);
