@@ -63,6 +63,7 @@ table.list > thead > tr > th[data-sort] {
 }
 table.list > thead > tr > th[data-sort].active-sort{
   background-color: #ffffcc !important;
+  white-space: nowrap;
 }
 table.list .search {
   display: none;
