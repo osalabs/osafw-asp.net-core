@@ -514,7 +514,7 @@ window.fw={
     var sortdir=$sh.data('sortdir');
 
     var sort_img= (sortdir=='desc') ? fw.ICON_SORT_DESC : fw.ICON_SORT_ASC;
-    $sh.find('th[data-sort="'+sortby+'"]').addClass('active-sort').append('<span class="ml-1">'+sort_img+'</span>');
+    $sh.find('th[data-sort="'+sortby+'"]').addClass('active-sort').append('<span class="ms-1">'+sort_img+'</span>');
 
     $sh.on('click', 'th[data-sort]', function() {
       var $td=$(this);
