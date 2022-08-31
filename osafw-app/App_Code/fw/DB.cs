@@ -177,6 +177,7 @@ public class DB : IDisposable
 
     public string db_name = "";
     public string dbtype = "SQL";
+    public int sql_command_timeout = 30; // default command timeout, override in model for long queries (in reports or export, for example)
     private readonly Hashtable conf = new();  // config contains: connection_string, type
     private readonly string connstr = "";
 
@@ -350,6 +351,7 @@ public class DB : IDisposable
         if (dbtype == "SQL")
         {
             var dbcomm = new SqlCommand(sql, (SqlConnection)conn);
+            dbcomm.CommandTimeout = sql_command_timeout;
             if (@params != null)
                 foreach (string p in @params.Keys)
                     dbcomm.Parameters.AddWithValue(p, @params[p]);
@@ -390,6 +392,7 @@ public class DB : IDisposable
                 sql += ";SELECT SCOPE_IDENTITY()";
             }
             var dbcomm = new SqlCommand(sql, (SqlConnection)conn);
+            dbcomm.CommandTimeout = sql_command_timeout;
             if (@params != null)
                 foreach (string p in @params.Keys)
                     dbcomm.Parameters.AddWithValue(p, @params[p]);
