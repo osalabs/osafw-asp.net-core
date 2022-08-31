@@ -476,9 +476,11 @@ public class DevManageController : FwController
 
         foreach (Hashtable entity in entities)
         {
+            var controller_url = Utils.f2str(entity["controller_url"]);
             entity["is_model_exists"] = models.Contains(entity["model_name"]);
-            entity["controller_name"] = Utils.f2str(entity["controller_url"]).Replace("/", "");
-            entity["is_controller_exists"] = controllers.Contains(entity["controller_name"] + "Controller");
+            entity["controller_name"] = Utils.f2str(controller_url).Replace("/", "");
+            //create controller only if not exists already and url not empty
+            entity["is_controller_create"] = !controllers.Contains(entity["controller_name"] + "Controller") && !string.IsNullOrEmpty(controller_url);
         }
 
         ps["entities"] = entities;
@@ -804,8 +806,19 @@ public class DevManageController : FwController
                 table_entity["fw_name"] = Utils.name2fw(table_name); // new table name using fw standards
 
                 table_entity["model_name"] = _tablename2model((string)table_entity["fw_name"]); // potential Model Name
-                table_entity["controller_url"] = "/Admin/" + table_entity["model_name"]; // potential Controller URL/Name/Title
-                table_entity["controller_title"] = Utils.name2human((string)table_entity["model_name"]);
+
+                
+                if (Regex.IsMatch(line, @"\bnoui\b"))
+                {
+                    //check if noui - no UI requested - set explicit empty URL so app won't not create controller
+                    table_entity["controller_url"] = "";
+                    table_entity["controller_title"] = "";
+                }
+                else
+                {
+                    table_entity["controller_url"] = "/Admin/" + table_entity["model_name"]; // potential Controller URL/Name/Title
+                    table_entity["controller_title"] = Utils.name2human((string)table_entity["model_name"]);
+                }
                 if (Regex.IsMatch(line, @"\blookup\b"))
                     table_entity["controller_is_lookup"] = true;
                 table_entity["is_fw"] = true;
@@ -858,7 +871,6 @@ public class DevManageController : FwController
                 }
 
                 Hashtable field = new();
-                ((ArrayList)table_entity["fields"]).Add(field);
 
                 // check if field is foreign key like lookuptablename.id or prefix^lookuptablename.id
                 if (field_name.Substring(field_name.Length - 3) == ".id")
@@ -906,8 +918,78 @@ public class DevManageController : FwController
 
                         field["fw_type"] = "int";
                     }
+
+                    if (hparts.Contains("multiple"))
+                    {
+                        //this is many to many link table
+                        var linked_tblname = Utils.name2fw(field_name);
+                        var link_tblname = table_entity["table"] + "_" + linked_tblname;
+                        var link_entity = new Hashtable();
+                        link_entity["db_config"] = table_entity["db_config"];
+                        link_entity["table"] = link_tblname;
+                        link_entity["fw_name"] = Utils.name2fw(link_tblname); // new table name using fw standards
+                        link_entity["iname"] = Utils.name2human(link_tblname); // human table name
+                        link_entity["is_fw"] = true;
+
+                        //2 link fields - one to main table, another - to lookup table
+                        var link_fields = new ArrayList();
+                        link_fields.Add(new Hashtable()
+                                    {
+                                        {"name",table_entity["table"]+"_id"},
+                                        {"fw_name",table_entity["table"]+"_id"},
+                                        {"iname",Utils.name2human((string)table_entity["table"])},
+                                        {"is_identity",0},
+                                        {"default",null},
+                                        {"maxlen",null},
+                                        {"numeric_precision",null},
+                                        {"is_nullable",0}, //NOT NULL for linking!
+                                        {"fw_type","int"},
+                                        {"fw_subtype","int"}
+                                    });
+                        link_fields.Add(new Hashtable()
+                                    {
+                                        {"name",linked_tblname+"_id"},
+                                        {"fw_name",linked_tblname+"_id"},
+                                        {"iname",Utils.name2human((string)linked_tblname)},
+                                        {"is_identity",0},
+                                        {"default",null},
+                                        {"maxlen",null},
+                                        {"numeric_precision",null},
+                                        {"is_nullable",0}, //NOT NULL for linking!
+                                        {"fw_type","int"},
+                                        {"fw_subtype","int"}
+                                    });
+                        link_fields.Add(defaultFieldStatus());
+                        link_fields.AddRange(defaultFieldsAdded());
+                        link_entity["fields"] = link_fields;
+
+                        //2 foreign keys - to main table and lookup table
+                        var link_fk = new ArrayList();
+                        link_fk.Add(new Hashtable()
+                                {
+                                    {"pk_table", table_entity["table"]},
+                                    {"pk_column", "id"},
+                                    {"column", table_entity["table"]+"_id"}
+                                });
+                        link_fk.Add(new Hashtable()
+                                {
+                                    {"pk_table", linked_tblname},
+                                    {"pk_column", "id"},
+                                    {"column", linked_tblname+"_id"}
+                                });
+                        link_entity["foreign_keys"] = new ArrayList();
+
+                        link_entity["model_name"] = _tablename2model((string)link_entity["fw_name"]); // potential Model Name
+                        link_entity["controller_url"] = ""; // no ui for link tables
+                        link_entity["controller_title"] = ""; // no ui for link tables
+                        if (comments.Length > 0) link_entity["comments"] = comments;
+
+                        entities.Add(link_entity);
+                        continue; //do not add a field as we made a link table
+                    }
                 }
 
+                ((ArrayList)table_entity["fields"]).Add(field);
                 field["name"] = field_name;
                 field["iname"] = Utils.name2human(field_name);
                 field["fw_name"] = Utils.name2fw(field_name);
@@ -1135,7 +1217,7 @@ public class DevManageController : FwController
                 if (fld_iname == null && i >= 2 && i <= 4 && Utils.f2str(fld["fw_type"]) == "varchar" && Utils.f2int(fld["maxlen"]) > 0 && Utils.Right(Utils.f2str(fld["name"]), 2).ToLower() != "id")
                     fld_iname = fld;
 
-                if (Regex.IsMatch((string)fld["name"], @"^[\w_]", RegexOptions.IgnoreCase))
+                if (Regex.IsMatch((string)fld["name"], @"[^\w_]", RegexOptions.IgnoreCase))
                     // normalize names only if at least one field contains non-alphanumeric chars
                     is_normalize_names = true;
 
@@ -1183,29 +1265,63 @@ public class DevManageController : FwController
 
         string columns = "";
         string column_names = "";
-        var fields = array2hashtable((ArrayList)entity["fields"], "fw_name");
-        if (fields.ContainsKey("icode"))
+        string column_types = "";
+        bool is_first = true;
+
+        var hfks = array2hashtable((ArrayList)entity["foreign_keys"], "column");
+
+        var fields = (ArrayList)entity["fields"];
+        foreach (Hashtable field in fields)
         {
-            columns += (columns.Length > 0 ? "," : "") + "icode";
-            column_names += (column_names.Length > 0 ? "," : "") + ((Hashtable)fields["icode"])["iname"];
+            var fw_name = (string)field["fw_name"];
+            if (fw_name=="icode" || fw_name == "iname" || fw_name == "idesc")
+            {
+                columns += (!is_first ? "," : "") + fw_name;
+                column_names += (!is_first ? "," : "") + field["iname"];
+                column_types += (!is_first ? "," : "") + "";
+            }
+            else
+            {
+                columns += (!is_first ? "," : "") + field["name"];
+                column_names += (!is_first ? "," : "") + field["iname"];
+
+                //check if lookup table
+                var ctype = "";
+                if (hfks.ContainsKey(field["name"]))
+                {
+                    var fk = (Hashtable)hfks[field["name"]];
+                    ctype = fk["pk_table"] + "." + fk["pk_column"]+":iname"; //iname as default, might not work for non-fw tables
+                }                
+
+                column_types += (!is_first ? "," : "") + ctype;
+            }
+            is_first = false;
         }
-        if (fields.ContainsKey("iname"))
-        {
-            columns += (columns.Length > 0 ? "," : "") + "iname";
-            column_names += (column_names.Length > 0 ? "," : "") + ((Hashtable)fields["iname"])["iname"];
-        }
-        if (fields.ContainsKey("idesc"))
-        {
-            columns += (columns.Length > 0 ? "," : "") + "idesc";
-            column_names += (column_names.Length > 0 ? "," : "") + ((Hashtable)fields["idesc"])["iname"];
-        }
+
+        //var fields = array2hashtable((ArrayList)entity["fields"], "fw_name");
+        //if (fields.ContainsKey("icode"))
+        //{
+        //    columns += (columns.Length > 0 ? "," : "") + "icode";
+        //    column_names += (column_names.Length > 0 ? "," : "") + ((Hashtable)fields["icode"])["iname"];
+        //}
+        //if (fields.ContainsKey("iname"))
+        //{
+        //    columns += (columns.Length > 0 ? "," : "") + "iname";
+        //    column_names += (column_names.Length > 0 ? "," : "") + ((Hashtable)fields["iname"])["iname"];
+        //}
+        //if (fields.ContainsKey("idesc"))
+        //{
+        //    columns += (columns.Length > 0 ? "," : "") + "idesc";
+        //    column_names += (column_names.Length > 0 ? "," : "") + ((Hashtable)fields["idesc"])["iname"];
+        //}
 
         Hashtable item = new()
         {
             { "tname", entity["table"] },
             { "iname", entity["iname"] },
             { "columns", columns },
-            { "column_names", column_names }
+            { "column_names", column_names },
+            { "column_types", column_types }
         };
         if (ltable.Count > 0)// replace
             fw.model<LookupManagerTables>().update(Utils.f2int(ltable["id"]), item);
@@ -1220,7 +1336,16 @@ public class DevManageController : FwController
         string controller_title = (string)entity["controller_title"];
 
         if (controller_url == "")
+        {            
+            //if controller url explicitly empty - do not create controller
+            return;
+        }
+        if (controller_url == null)
+        {
+            //if controller url is not defined - default to admin model
             controller_url = "/Admin/" + model_name;
+        }
+
         var controller_name = controller_url.Replace("/", "");
         if (controller_title == "")
             controller_title = Utils.name2human(model_name);
@@ -1601,7 +1726,7 @@ public class DevManageController : FwController
         }
 
         // special case - "Lookup via Link Table" - could be multiple tables
-        var rx_table_link = "^" + Regex.Escape(table_name) + "_(.+?)_link$";
+        var rx_table_link = "^" + Regex.Escape(table_name) + "_(.+?)$";
         foreach (string table in tables.Keys)
         {
             var m = Regex.Match(table, rx_table_link);
@@ -1610,13 +1735,13 @@ public class DevManageController : FwController
                 string table_name_linked = m.Groups[1].Value;
                 string table_name_link = table;
 
-                if (!string.IsNullOrEmpty(table_name_linked))
+                if (!string.IsNullOrEmpty(table_name_linked) && tables.ContainsKey(table_name_linked))
                 {
-                    // if table "MODELTBL_TBL2_link" exists - add control for linked table
+                    // if tables "TBL2" and "MODELTBL_TBL2" exists - add control for linked table
                     Hashtable sflink = new()
                     {
                         { "field", table_name_linked + "_link" },
-                        { "label", "Linked " + table_name_linked },
+                        { "label", Utils.name2human(table_name_linked) },
                         { "type", "multi" },
                         { "lookup_model", _tablename2model(table_name_linked) },
                         { "table_link", table_name_link },
@@ -1626,7 +1751,7 @@ public class DevManageController : FwController
                     Hashtable sfflink = new()
                     {
                         { "field", table_name_linked + "_link" },
-                        { "label", "Linked " + table_name_linked },
+                        { "label", Utils.name2human(table_name_linked) },
                         { "type", "multicb" },
                         { "lookup_model", _tablename2model(table_name_linked) },
                         { "table_link", table_name_link },
@@ -1890,6 +2015,107 @@ public class DevManageController : FwController
         return result;
     }
 
+    private static Hashtable defaultFieldID()
+    {
+        return new Hashtable()
+            {
+                {"name","id"},
+                {"fw_name","id"},
+                {"iname","ID"},
+                {"is_identity",1},
+                {"default",null},
+                {"maxlen",null},
+                {"numeric_precision",10},
+                {"is_nullable",0},
+                {"fw_type","int"},
+                {"fw_subtype","integer"}
+            };
+    }
+
+    private static Hashtable defaultFieldStatus()
+    {
+        return new Hashtable()
+            {
+                {"name","status"},
+                {"fw_name","status"},
+                {"iname","Status"},
+                {"is_identity",0},
+                {"default",0},
+                {"maxlen",null},
+                {"numeric_precision",3},
+                {"is_nullable",0},
+                {"fw_type","int"},
+                {"fw_subtype","tinyint"}
+            };
+    }
+
+    private static ArrayList defaultFieldsAdded()
+    {
+        return new ArrayList()
+        {
+            new Hashtable()
+            {
+                {"name","add_time"},
+                {"fw_name","add_time"},
+                {"iname","Added on"},
+                {"is_identity",0},
+                {"default","getdate()"},
+                {"maxlen",null},
+                {"numeric_precision",null},
+                {"is_nullable",0},
+                {"fw_type","datetime"},
+                {"fw_subtype","datetime2"}
+            },
+            new Hashtable()
+            {
+                {"name","add_users_id"},
+                {"fw_name","add_users_id"},
+                {"iname","Added by"},
+                {"is_identity",0},
+                {"default",null},
+                {"maxlen",null},
+                {"numeric_precision",10},
+                {"is_nullable",1},
+                {"fw_type","int"},
+                {"fw_subtype","int"}
+            }
+        };
+    }
+
+    private static ArrayList defaultFieldsUpdated()
+    {
+        return new ArrayList()
+        {
+            new Hashtable()
+            {
+                {"name","upd_time"},
+                {"fw_name","upd_time"},
+                {"iname","Updated on"},
+                {"is_identity",0},
+                {"default",null},
+                {"maxlen",null},
+                {"numeric_precision",null},
+                {"is_nullable",1},
+                {"fw_type","datetime"},
+                {"fw_subtype","datetime2"}
+            },
+            new Hashtable()
+            {
+                {"name","upd_users_id"},
+                {"fw_name","upd_users_id"},
+                {"iname","Updated by"},
+                {"is_identity",0},
+                {"default",null},
+                {"maxlen",null},
+                {"numeric_precision",10},
+                {"is_nullable",1},
+                {"fw_type","int"},
+                {"fw_subtype","int"}
+            }
+        };
+    }
+
+
     // return default fields for the entity
     // id[, icode], iname, idesc, status, add_time, add_users_id, upd_time, upd_users_id
     private static ArrayList defaultFields()
@@ -1909,19 +2135,7 @@ public class DevManageController : FwController
 
         return new ArrayList()
         {
-            new Hashtable()
-            {
-                {"name","id"},
-                {"fw_name","id"},
-                {"iname","ID"},
-                {"is_identity",1},
-                {"default",null},
-                {"maxlen",null},
-                {"numeric_precision",10},
-                {"is_nullable",0},
-                {"fw_type","int"},
-                {"fw_subtype","integer"}
-            },
+            defaultFieldID(),
             new Hashtable()
             {
                 {"name","iname"},
@@ -1953,74 +2167,11 @@ public class DevManageController : FwController
 
     private static ArrayList defaultFieldsAfter()
     {
-        return new ArrayList()
-        {
-            new Hashtable()
-            {
-                {"name","status"},
-                {"fw_name","status"},
-                {"iname","Status"},
-                {"is_identity",0},
-                {"default",0},
-                {"maxlen",null},
-                {"numeric_precision",3},
-                {"is_nullable",0},
-                {"fw_type","int"},
-                {"fw_subtype","tinyint"}
-            },
-            new Hashtable()
-            {
-                {"name","add_time"},
-                {"fw_name","add_time"},
-                {"iname","Added on"},
-                {"is_identity",0},
-                {"default","getdate()"},
-                {"maxlen",null},
-                {"numeric_precision",null},
-                {"is_nullable",0},
-                {"fw_type","datetime"},
-                {"fw_subtype","datetime2"}
-            },
-            new Hashtable()
-            {
-                {"name","add_users_id"},
-                {"fw_name","add_users_id"},
-                {"iname","Added by"},
-                {"is_identity",0},
-                {"default",null},
-                {"maxlen",null},
-                {"numeric_precision",10},
-                {"is_nullable",1},
-                {"fw_type","int"},
-                {"fw_subtype","int"}
-            },
-            new Hashtable()
-            {
-                {"name","upd_time"},
-                {"fw_name","upd_time"},
-                {"iname","Updated on"},
-                {"is_identity",0},
-                {"default",null},
-                {"maxlen",null},
-                {"numeric_precision",null},
-                {"is_nullable",1},
-                {"fw_type","datetime"},
-                {"fw_subtype","datetime2"}
-            },
-            new Hashtable()
-            {
-                {"name","upd_users_id"},
-                {"fw_name","upd_users_id"},
-                {"iname","Updated by"},
-                {"is_identity",0},
-                {"default",null},
-                {"maxlen",null},
-                {"numeric_precision",10},
-                {"is_nullable",1},
-                {"fw_type","int"},
-                {"fw_subtype","int"}
-            }
-        };
+        var result = new ArrayList();
+        result.Add(defaultFieldStatus());
+        result.AddRange(defaultFieldsAdded());
+        result.AddRange(defaultFieldsUpdated());
+        return result;
     }
 
     private static ArrayList addressFields(string field_name)

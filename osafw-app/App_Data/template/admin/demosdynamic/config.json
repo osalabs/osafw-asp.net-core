@@ -30,7 +30,7 @@
     "save_fields_nullable": "demo_dicts_id att_id fdate_pop",
 
     "form_new_defaults": {
-        "iname": "default field value for Add New form"
+        "iname": ""
     },
 
     "search_fields": "!id iname idesc",

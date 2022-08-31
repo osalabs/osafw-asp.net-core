@@ -1310,7 +1310,10 @@ public class Utils
         {
             // if contains id/ID - remove it and make singular
             result = Regex.Replace(result, @"\s*\bid\b", "", RegexOptions.IgnoreCase);
-            result = Regex.Replace(result, @"(\S)(?:es|s)\s*$", "$1", RegexOptions.IgnoreCase); // remove -es or -s at the end
+            // singularize TODO use external lib to handle all cases
+            result = Regex.Replace(result, @"(\S)(?:ies)\s*$", "$1y", RegexOptions.IgnoreCase); // -ies -> -y
+            result = Regex.Replace(result, @"(\S)(?:es)\s*$", "$1e", RegexOptions.IgnoreCase); // -es -> -e
+            result = Regex.Replace(result, @"(\S)(?:s)\s*$", "$1", RegexOptions.IgnoreCase); // remove -s at the end
         }
 
         result = result.Trim();

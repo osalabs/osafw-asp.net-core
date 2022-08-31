@@ -1259,7 +1259,7 @@ public class DB : IDisposable
         DBQueryAndParams result = new();
         result.sql = "UPDATE " + qid(table) + " " + " SET ";
 
-        logger(LogLevel.DEBUG, "buildUpdate:", table, fields);
+        //logger(LogLevel.DEBUG, "buildUpdate:", table, fields);
 
         var set_params = prepareParams(table, fields, "update", "_SET");
         result.sql += set_params.sql;
