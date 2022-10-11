@@ -1373,5 +1373,25 @@ namespace osafw
             }
         }
 
+        public static void CreateCookie(FW fw, string name, string value, long exp_sec)
+        {
+            var options = new CookieOptions()
+            {
+                Path = "/",
+                Expires = new DateTimeOffset(DateTime.Now.AddSeconds(exp_sec))
+            };
+            fw.response.Cookies.Append(name, value, options);
+        }
+
+        public static string GetCookie(FW fw, string name)
+        {
+            return fw.request.Cookies[name];
+        }
+
+        public static void DeleteCookie(FW fw, string name)
+        {
+            fw.response.Cookies.Delete(name);
+        }
+
     }
 }
