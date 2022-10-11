@@ -4,13 +4,12 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net-core
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
-namespace osafw
+namespace osafw;
+
+public class SiteUtils
 {
-    public class SiteUtils
+    public static string sample()
     {
-        public static string sample()
-        {
-            return "";
-        }
+        return "";
     }
 }

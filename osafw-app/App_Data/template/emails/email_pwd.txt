@@ -6,6 +6,6 @@ Use the following link to reset your password:
 
 This link will expire in 1 hour.
 
-If you didn't request a password reset, just ignore this email.
+If you didn't request a password reset, please ignore this email.
 
 <~/emails/sign_en.txt>

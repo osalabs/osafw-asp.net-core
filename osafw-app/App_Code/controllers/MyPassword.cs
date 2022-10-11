@@ -6,126 +6,123 @@
 using System;
 using System.Collections;
 
-namespace osafw
+namespace osafw;
+
+public class MyPasswordController : FwController
 {
-    public class MyPasswordController : FwController
+    public static new int access_level = Users.ACL_MEMBER;
+
+    protected Users model = new();
+
+    public override void init(FW fw)
     {
-        public static new int access_level = Users.ACL_MEMBER;
+        base.init(fw);
+        model.init(fw);
 
-        protected Users model = new();
+        base_url = "/My/Password";
+    }
 
-        public override void init(FW fw)
+    public void IndexAction()
+    {
+        fw.routeRedirect(FW.ACTION_SHOW_FORM, "MyPassword");
+    }
+
+    public Hashtable ShowFormAction()
+    {
+        if (reqs("result") == "record_updated")
+            fw.G["green_msg"] = "Login/Password has been changed";
+
+        Hashtable ps = new();
+        Hashtable item = reqh("item");
+        int id = fw.userId;
+
+        if (isGet())
         {
-            base.init(fw);
-            model.init(fw);
-        }
-
-        public void IndexAction()
-        {
-            fw.routeRedirect("ShowForm", "MyPassword");
-        }
-
-        public Hashtable ShowFormAction()
-        {
-            if (reqs("result") == "record_updated")
-                fw.G["green_msg"] = "Login/Password has been changed";
-
-            Hashtable ps = new();
-            Hashtable item = reqh("item");
-            int id = fw.userId;
-
-            if (isGet())
-            {
-                if (id > 0)
-                    item = model.one(id);
-                else
-                    // set defaults here
-                    item = new Hashtable();
-            }
+            if (id > 0)
+                item = model.one(id);
             else
-            {
-                // read from db
-                Hashtable itemdb = model.one(id);
-                // and merge new values from the form
-                Utils.mergeHash(itemdb, item);
-                item = itemdb;
-            }
-
-            ps["id"] = id;
-            ps["i"] = item;
-            ps["ERR"] = fw.FormErrors;
-            return ps;
+                // set defaults here
+                item = new Hashtable();
         }
-
-        public void SaveAction()
+        else
         {
-            int id = fw.userId;
-            try
-            {
-                Validate(id, reqh("item"));
-                // load old record if necessary
-                // Dim itemdb As Hashtable = Users.one(id)
-
-                var itemdb = FormUtils.filter(reqh("item"), Utils.qw("email pwd"));
-                itemdb["pwd"] = itemdb["pwd"].ToString().Trim();
-
-                if (id > 0)
-                {
-                    model.update(id, itemdb);
-
-                    fw.logEvent("chpwd");
-                    fw.flash("record_updated", 1);
-                }
-
-                fw.redirect("/My/Password/" + id + "/edit");
-            }
-            catch (ApplicationException)
-            {
-                fw.routeRedirect("ShowForm");
-            }
+            // read from db
+            Hashtable itemdb = model.one(id);
+            // and merge new values from the form
+            Utils.mergeHash(itemdb, item);
+            item = itemdb;
         }
 
-        public void Validate(int id, Hashtable item)
+        ps["id"] = id;
+        ps["i"] = item;
+        ps["ERR"] = fw.FormErrors;
+        return ps;
+    }
+
+    public void SaveAction()
+    {
+        route_onerror = FW.ACTION_SHOW_FORM; //set route to go if error happens
+
+        int id = fw.userId;
+
+        Validate(id, reqh("item"));
+        // load old record if necessary
+        // Dim itemdb As Hashtable = Users.one(id)
+
+        var itemdb = FormUtils.filter(reqh("item"), Utils.qw("email pwd"));
+        itemdb["pwd"] = itemdb["pwd"].ToString().Trim();
+
+        if (id > 0)
         {
-            bool result = true;
-            result &= validateRequired(item, Utils.qw("email old_pwd pwd pwd2"));
-            if (!result)
-                fw.FormErrors["REQ"] = 1;
+            model.update(id, itemdb);
 
-            if (result && model.isExists(item["email"], id))
-            {
-                result = false;
-                fw.FormErrors["email"] = "EXISTS";
-            }
-            if (result && !FormUtils.isEmail((string)item["email"]))
-            {
-                result = false;
-                fw.FormErrors["email"] = "WRONG";
-            }
-
-            if (result && model.cleanPwd((string)item["pwd"]) != model.cleanPwd((string)item["pwd2"]))
-            {
-                result = false;
-                fw.FormErrors["pwd2"] = "NOTEQUAL";
-            }
-
-            // uncomment if project requires good password strength
-            // If result AndAlso item.ContainsKey("pwd") AndAlso model.scorePwd(item["pwd"]) <= 60 Then
-            // result = False
-            // fw.FERR["pwd") ] "BAD"
-            // End If
-
-            if (result)
-            {
-                Hashtable itemdb = model.one(id);
-                if (!fw.model<Users>().checkPwd((string)item["old_pwd"], (string)itemdb["pwd"]))
-                {
-                    result = false;
-                    fw.FormErrors["old_pwd"] = "WRONG";
-                }
-            }
-
-            this.validateCheckResult();
+            fw.logEvent("chpwd");
+            fw.flash("record_updated", 1);
         }
+
+        afterSave(true, id);
+    }
+
+    public void Validate(int id, Hashtable item)
+    {
+        bool result = true;
+        result &= validateRequired(item, Utils.qw("email old_pwd pwd pwd2"));
+        if (!result)
+            fw.FormErrors["REQ"] = 1;
+
+        if (result && model.isExists(item["email"], id))
+        {
+            result = false;
+            fw.FormErrors["email"] = "EXISTS";
+        }
+        if (result && !FormUtils.isEmail((string)item["email"]))
+        {
+            result = false;
+            fw.FormErrors["email"] = "WRONG";
+        }
+
+        if (result && model.cleanPwd((string)item["pwd"]) != model.cleanPwd((string)item["pwd2"]))
+        {
+            result = false;
+            fw.FormErrors["pwd2"] = "NOTEQUAL";
+        }
+
+        // uncomment if project requires good password strength
+        // If result AndAlso item.ContainsKey("pwd") AndAlso model.scorePwd(item["pwd"]) <= 60 Then
+        // result = False
+        // fw.FERR["pwd") ] "BAD"
+        // End If
+
+        if (result)
+        {
+            Hashtable itemdb = model.one(id);
+            if (!fw.model<Users>().checkPwd((string)item["old_pwd"], (string)itemdb["pwd"]))
+            {
+                result = false;
+                fw.FormErrors["old_pwd"] = "WRONG";
+            }
+        }
+
+        this.validateCheckResult();
     }
 }

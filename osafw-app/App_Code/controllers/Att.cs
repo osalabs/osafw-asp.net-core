@@ -7,76 +7,71 @@ using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections;
 
-namespace osafw
+namespace osafw;
+
+public class AttController : FwController
 {
-    public class AttController : FwController
+    protected Att model = new();
+
+    public override void init(FW fw)
     {
-        protected Att model = new();
+        base.init(fw);
+        model.init(fw);
+    }
 
-        public override void init(FW fw)
+    public void IndexAction()
+    {
+        fw.redirect(fw.config("ASSETS_URL") + Att.IMGURL_0);
+    }
+
+    public void DownloadAction(int id = 0)
+    {
+        if (id == 0)
+            throw new NotFoundException();
+        string size = reqs("size");
+
+        Hashtable item = model.one(id);
+        if (item.Count == 0)
+            throw new NotFoundException();
+
+        if ((string)item["is_s3"] == "1")
+            model.redirectS3(item, size);
+
+        model.transmitFile(id, size);
+    }
+
+    public void ShowAction(int id = 0)
+    {
+        if (id == 0)
+            throw new NotFoundException();
+        string size = reqs("size");
+        bool is_preview = reqs("preview") == "1";
+
+        Hashtable item = model.one(id);
+        if (item.Count == 0)
+            throw new NotFoundException();
+
+        if ((string)item["is_s3"] == "1")
         {
-            base.init(fw);
-            model.init(fw);
+            model.redirectS3(item, size);
+            return;
         }
 
-        public void IndexAction()
+        if (is_preview)
         {
-            fw.redirect(fw.config("ASSETS_URL") + "/img/0.gif");
-        }
-
-        public void DownloadAction(int id = 0)
-        {
-            if (id == 0)
-                throw new NotFoundException();
-            string size = reqs("size");
-
-            Hashtable item = model.one(id);
-            if (item.Count == 0)
-                throw new NotFoundException();
-
-            if ((string)item["is_s3"] == "1")
-                model.redirectS3(item, size);
-
-            model.transmitFile(id, size);
-        }
-
-        public void ShowAction(int id = 0)
-        {
-            if (id == 0)
-                throw new NotFoundException();
-            string size = reqs("size");
-            bool is_preview = reqs("preview") == "1";
-
-            Hashtable item = model.one(id);
-            if (item.Count == 0)
-                throw new NotFoundException();
-
-            if ((string)item["is_s3"] == "1")
-            {
-                model.redirectS3(item, size);
-                return;
-            }
-
-            if (is_preview)
-            {
-                if ((string)item["is_image"] == "1")
-                {
-                    model.transmitFile(id, size, "inline");
-                }
-                else
-                {
-                    // if it's not an image and requested preview - return std image
-                    string filepath = fw.config("site_root") + "/img/att_file.png"; // TODO move to web.config or to model? and no need for transfer file - just redirect TODO
-                    string ext = UploadUtils.getUploadFileExt(filepath);
-                    fw.response.Headers.Add("Content-type", model.getMimeForExt(ext));
-                    fw.response.SendFileAsync(filepath).Wait();
-
-                }
-            }
-            else
+            if ((string)item["is_image"] == "1")
             {
                 model.transmitFile(id, size, "inline");
             }
+            else
+            {
+                // if it's not an image and requested preview - return(redirect) std file image
+                fw.redirect(fw.config("ASSETS_URL") + Att.IMGURL_FILE);
+            }
+        }
+        else
+        {
+            model.transmitFile(id, size, "inline");
         }
     }
 }

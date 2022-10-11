@@ -7,6 +7,7 @@ CREATE TABLE demo_dicts (
 
   iname                 NVARCHAR(64) NOT NULL default '',
   idesc                 NVARCHAR(MAX),
+  prio                  INT NOT NULL DEFAULT 0,     /*0-on insert, then =id, default order by prio asc,iname*/
 
   status                TINYINT NOT NULL DEFAULT 0,        /*0-ok, 1-under upload, 127-deleted*/
   add_time              DATETIME2 NOT NULL DEFAULT getdate(),

@@ -10,198 +10,197 @@ using System.Data;
 using System.Text.RegularExpressions;
 using System.Collections;
 
-namespace osafw
+namespace osafw;
+
+public class AdminDBController : FwController
 {
-    public class AdminDBController : FwController
+    public static new int access_level = Users.ACL_SITEADMIN;
+
+    private const string dbpwd = "db321";
+
+    public Hashtable IndexAction()
     {
-        public static new int access_level = Users.ACL_SITEADMIN;
+        Hashtable ps = new();
+        var selected_db = reqs("db");
+        if (selected_db == "")
+            selected_db = "main";
 
-        private const string dbpwd = "db321";
+        string sql = reqs("sql");
+        ArrayList tablehead = null;
+        ArrayList tablerows = null;
+        int sql_ctr = 0;
+        long sql_time = DateTime.Now.Ticks;
 
-        public Hashtable IndexAction()
+        try
         {
-            Hashtable ps = new();
-            var selected_db = reqs("db");
-            if (selected_db == "")
-                selected_db = "main";
-
-            string sql = reqs("sql");
-            ArrayList tablehead = null;
-            ArrayList tablerows = null;
-            int sql_ctr = 0;
-            long sql_time = DateTime.Now.Ticks;
-
-            try
+            if (selected_db.Length > 0)
             {
-                if (selected_db.Length > 0)
-                {
-                    logger("CONNECT TO", selected_db);
-                    db = new DB(fw, (Hashtable)((Hashtable)fw.config("db"))[selected_db], selected_db);
-                }
+                logger("CONNECT TO", selected_db);
+                db = new DB(fw, (Hashtable)((Hashtable)fw.config("db"))[selected_db], selected_db);
+            }
 
-                if (fw.SessionBool("admindb_pwd_checked") || reqs("pwd") == dbpwd)
-                    fw.SessionBool("admindb_pwd_checked", true);
-                else if (sql.Length > 0)
-                    fw.setGlobalError("Wrong password");
-                if (sql.Length > 0 && fw.SessionBool("admindb_pwd_checked"))
+            if (fw.SessionBool("admindb_pwd_checked") || reqs("pwd") == dbpwd)
+                fw.SessionBool("admindb_pwd_checked", true);
+            else if (sql.Length > 0)
+                fw.setGlobalError("Wrong password");
+            if (sql.Length > 0 && fw.SessionBool("admindb_pwd_checked"))
+            {
+                if (sql == "show tables")
+                    // special case - show tables
+                    show_tables(ref tablehead, ref tablerows);
+                else
                 {
-                    if (sql == "show tables")
-                        // special case - show tables
-                        show_tables(ref tablehead, ref tablerows);
-                    else
+                    // launch the query
+                    string sql1 = strip_comments(sql);
+                    String[] asql = split_multi_sql(sql);
+                    foreach (string sqlone1 in asql)
                     {
-                        // launch the query
-                        string sql1 = strip_comments(sql);
-                        String[] asql = split_multi_sql(sql);
-                        foreach (string sqlone1 in asql)
+                        var sqlone = sqlone1.Trim();
+                        if (sqlone.Length > 0)
                         {
-                            var sqlone = sqlone1.Trim();
-                            if (sqlone.Length > 0)
-                            {
-                                DbDataReader sth = db.query(sqlone);
-                                tablehead = sth2head(sth);
-                                tablerows = sth2table(sth);
-                                sth.Close();
-                                sql_ctr += 1;
-                            }
+                            DbDataReader sth = db.query(sqlone);
+                            tablehead = sth2head(sth);
+                            tablerows = sth2table(sth);
+                            sth.Close();
+                            sql_ctr += 1;
                         }
                     }
                 }
             }
-            catch (Exception ex)
+        }
+        catch (Exception ex)
+        {
+            fw.setGlobalError("Error occured: " + ex.Message);
+        }
+
+        ArrayList dbsources = new();
+        foreach (string dbname in ((Hashtable)fw.config("db")).Keys)
+            dbsources.Add(new Hashtable()
             {
-                fw.setGlobalError("Error occured: " + ex.Message);
+                {"id",dbname},
+                {"iname",dbname},
+                {"is_checked",dbname == selected_db}
+            });
+
+        ps["dbsources"] = dbsources;
+        ps["selected_db"] = selected_db;
+        ps["sql"] = sql;
+        ps["sql_ctr"] = sql_ctr;
+        ps["sql_time"] = (DateTime.Now.Ticks - sql_time) / (double)10 / 1000 / 1000; // 100nano/micro/milliseconds/seconds
+        ps["head_fields"] = tablehead;
+        ps["rows"] = tablerows;
+        if (tablerows != null | tablehead != null)
+            ps["is_results"] = true;
+        return ps;
+    }
+
+    public void SaveAction()
+    {
+        fw.routeRedirect(FW.ACTION_INDEX);
+    }
+
+    private static ArrayList sth2table(DbDataReader sth)
+    {
+        if (sth == null || !sth.HasRows)
+            return null;
+        ArrayList result = new();
+
+        while (sth.Read())
+        {
+            Hashtable tblrow = new();
+            var fields = new ArrayList();
+            tblrow["fields"] = fields;
+
+            for (int i = 0; i <= sth.FieldCount - 1; i++)
+            {
+                Hashtable tblfld = new();
+                tblfld["value"] = sth[i].ToString();
+
+                fields.Add(tblfld);
             }
-
-            ArrayList dbsources = new();
-            foreach (string dbname in ((Hashtable)fw.config("db")).Keys)
-                dbsources.Add(new Hashtable()
-                {
-                    {"id",dbname},
-                    {"iname",dbname},
-                    {"is_checked",dbname == selected_db}
-                });
-
-            ps["dbsources"] = dbsources;
-            ps["selected_db"] = selected_db;
-            ps["sql"] = sql;
-            ps["sql_ctr"] = sql_ctr;
-            ps["sql_time"] = (DateTime.Now.Ticks - sql_time) / (double)10 / 1000 / 1000; // 100nano/micro/milliseconds/seconds
-            ps["head_fields"] = tablehead;
-            ps["rows"] = tablerows;
-            if (tablerows != null | tablehead != null)
-                ps["is_results"] = true;
-            return ps;
+            result.Add(tblrow);
         }
 
-        public void SaveAction()
+        return result;
+    }
+
+    private static ArrayList sth2head(DbDataReader sth)
+    {
+        if (sth == null)
+            return null;
+        ArrayList result = new();
+
+        for (int i = 0; i <= sth.FieldCount - 1; i++)
         {
-            fw.routeRedirect("Index");
+            Hashtable tblfld = new();
+            tblfld["field_name"] = sth.GetName(i);
+
+            result.Add(tblfld);
         }
 
-        private static ArrayList sth2table(DbDataReader sth)
-        {
-            if (sth == null || !sth.HasRows)
-                return null;
-            ArrayList result = new();
+        return result;
+    }
 
-            while (sth.Read())
+    private void show_tables(ref ArrayList tablehead, ref ArrayList tablerows)
+    {
+        tablehead = new ArrayList();
+        Hashtable h = new();
+        h["field_name"] = "Table";
+        tablehead.Add(h);
+        h = new();
+        h["field_name"] = "Row Count";
+        tablehead.Add(h);
+
+        tablerows = new ArrayList();
+
+        DbConnection conn = db.connect();
+        DataTable dataTable = conn.GetSchema("Tables");
+        foreach (DataRow row in dataTable.Rows)
+        {
+            string tblname = row["TABLE_NAME"].ToString();
+            if (Strings.InStr(tblname, "MSys", CompareMethod.Binary) == 0)
             {
                 Hashtable tblrow = new();
                 var fields = new ArrayList();
                 tblrow["fields"] = fields;
 
-                for (int i = 0; i <= sth.FieldCount - 1; i++)
-                {
-                    Hashtable tblfld = new();
-                    tblfld["value"] = sth[i].ToString();
-
-                    fields.Add(tblfld);
-                }
-                result.Add(tblrow);
-            }
-
-            return result;
-        }
-
-        private static ArrayList sth2head(DbDataReader sth)
-        {
-            if (sth == null)
-                return null;
-            ArrayList result = new();
-
-            for (int i = 0; i <= sth.FieldCount - 1; i++)
-            {
                 Hashtable tblfld = new();
-                tblfld["field_name"] = sth.GetName(i);
+                tblfld["db"] = db.db_name;
+                tblfld["value"] = tblname;
+                tblfld["is_select_link"] = true;
+                fields.Add(tblfld);
 
-                result.Add(tblfld);
-            }
+                tblfld = new();
+                tblfld["value"] = get_tbl_count(tblname);
+                fields.Add(tblfld);
 
-            return result;
-        }
-
-        private void show_tables(ref ArrayList tablehead, ref ArrayList tablerows)
-        {
-            tablehead = new ArrayList();
-            Hashtable h = new();
-            h["field_name"] = "Table";
-            tablehead.Add(h);
-            h = new();
-            h["field_name"] = "Row Count";
-            tablehead.Add(h);
-
-            tablerows = new ArrayList();
-
-            DbConnection conn = db.connect();
-            DataTable dataTable = conn.GetSchema("Tables");
-            foreach (DataRow row in dataTable.Rows)
-            {
-                string tblname = row["TABLE_NAME"].ToString();
-                if (Strings.InStr(tblname, "MSys", CompareMethod.Binary) == 0)
-                {
-                    Hashtable tblrow = new();
-                    var fields = new ArrayList();
-                    tblrow["fields"] = fields;
-
-                    Hashtable tblfld = new();
-                    tblfld["db"] = db.db_name;
-                    tblfld["value"] = tblname;
-                    tblfld["is_select_link"] = true;
-                    fields.Add(tblfld);
-
-                    tblfld = new();
-                    tblfld["value"] = get_tbl_count(tblname);
-                    fields.Add(tblfld);
-
-                    tblrow["db"] = db.db_name;
-                    tablerows.Add(tblrow);
-                }
+                tblrow["db"] = db.db_name;
+                tablerows.Add(tblrow);
             }
         }
+    }
 
-        private int get_tbl_count(string tblname)
+    private int get_tbl_count(string tblname)
+    {
+        int result = -1;
+        try
+        {                
+            result = (int)db.value(tblname, new Hashtable(), "count(*)");
+        }
+        catch (Exception)
         {
-            int result = -1;
-            try
-            {                
-                result = (int)db.value(tblname, new Hashtable(), "count(*)");
-            }
-            catch (Exception)
-            {
-            }
-
-            return result;
         }
 
-        private static string strip_comments(string sql)
-        {
-            return Regex.Replace(sql, @"/\*.+?\*/", " ", RegexOptions.Singleline);
-        }
+        return result;
+    }
 
-        private static string[] split_multi_sql(string sql)
-        {
-            return Regex.Split(sql, @";[\n\r]+");
-        }
+    private static string strip_comments(string sql)
+    {
+        return Regex.Replace(sql, @"/\*.+?\*/", " ", RegexOptions.Singleline);
+    }
+
+    private static string[] split_multi_sql(string sql)
+    {
+        return Regex.Split(sql, @";[\n\r]+");
     }
 }

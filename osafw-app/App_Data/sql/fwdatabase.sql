@@ -18,7 +18,7 @@ CREATE TABLE att_categories (
   icode                 NVARCHAR(64) NOT NULL DEFAULT '', /*to use from code*/
   iname                 NVARCHAR(64) NOT NULL DEFAULT '',
   idesc                 NVARCHAR(MAX),
-  prio                  INT NOT NULL DEFAULT 0,     /* 0 is normal and lowest priority*/
+  prio                  INT NOT NULL DEFAULT 0,     /*0-on insert, then =id, default order by prio asc,iname*/
 
   status                TINYINT NOT NULL DEFAULT 0,        /*0-ok, 127-deleted*/
   add_time              DATETIME2 NOT NULL DEFAULT getdate(),
@@ -26,12 +26,6 @@ CREATE TABLE att_categories (
   upd_time              DATETIME2,
   upd_users_id          INT DEFAULT 0
 );
-INSERT INTO att_categories (icode, iname) VALUES
-('general', 'General images')
-,('users', 'Member photos')
-,('files', 'Files')
-,('spage_banner', 'Page banners')
-;
 
 DROP TABLE IF EXISTS att;
 CREATE TABLE att (
@@ -167,7 +161,7 @@ CREATE TABLE spages (
 
   pub_time              DATETIME2,                               /*publish date-time*/
   template              NVARCHAR(64),                           /*template to use, if not defined - default site template used*/
-  prio                  INT NOT NULL DEFAULT 0,                 /* 0 is normal and lowest priority*/
+  prio                  INT NOT NULL DEFAULT 0,                 /*0-on insert, then =id, default order by prio asc,iname*/
   is_home               INT DEFAULT 0,                          /* 1 is for home page (non-deletable page*/
   redirect_url          NVARCHAR(255) NOT NULL DEFAULT '',      /*if set - redirect to this url instead displaying page*/
 
@@ -208,18 +202,12 @@ CREATE TABLE events (
   upd_users_id          INT DEFAULT 0
 );
 CREATE UNIQUE INDEX events_icode_idx ON events (icode);
-INSERT INTO events (icode, iname) VALUES ('login',    'User login');
-INSERT INTO events (icode, iname) VALUES ('logoff',   'User logoff');
-INSERT INTO events (icode, iname) VALUES ('chpwd',    'User changed login/pwd');
-INSERT INTO events (icode, iname) VALUES ('users_add',    'New user added');
-INSERT INTO events (icode, iname) VALUES ('users_upd',    'User updated');
-INSERT INTO events (icode, iname) VALUES ('users_del',    'User deleted');
 
 /* log of all user-initiated events */
 DROP TABLE IF EXISTS event_log;
 CREATE TABLE event_log (
   id BIGINT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
-  events_id        INT NOT NULL DEFAULT 0,           /* email type sent */
+  events_id             INT NOT NULL FOREIGN KEY REFERENCES events(id),           /* event id */
 
   item_id               INT NOT NULL DEFAULT 0,           /*related id*/
   item_id2              INT NOT NULL DEFAULT 0,           /*related id (if another)*/
@@ -233,6 +221,8 @@ CREATE TABLE event_log (
   add_users_id          INT DEFAULT 0,                        /*user added record, 0 if sent by cron module*/
 
   INDEX IX_event_log_events_id (events_id),
+  INDEX IX_event_log_item_id (item_id),
+  INDEX IX_event_log_item_id2 (item_id2),
   INDEX IX_event_log_add_users_id (add_users_id),
   INDEX IX_event_log_add_time (add_time)
 );
@@ -267,9 +257,6 @@ CREATE TABLE lookup_manager_tables (
 
   INDEX UX_lookup_manager_tables_tname (tname)
 );
-insert into lookup_manager_tables (tname, iname) VALUES
-('events','Events')
-;
 
 /*user custom views*/
 DROP TABLE IF EXISTS user_views;
@@ -359,3 +346,5 @@ CREATE TABLE user_filters (
   upd_time              DATETIME2,
   upd_users_id          INT DEFAULT 0
 );
+
+-- after this file - run lookups.sql

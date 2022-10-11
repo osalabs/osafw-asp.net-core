@@ -1,7 +1,9 @@
 var mode = '<~f[mode]>';
+var is_readonly = '<~is_readonly>';
+if (is_readonly=='True') return;
 
-$(document).on('click', '.on-mode-switch .btn-check', function(e){
-  var value = $('input[name="fmode"]:checked').val()
+$(document).on('click', '.on-mode-switch', function(e){
+  var value = $(this).val();
   $('#FFilter').find('input[name="f[mode]"]').val( value );
   $('#FFilter').submit();
 });

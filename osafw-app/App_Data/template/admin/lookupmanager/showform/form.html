@@ -2,7 +2,7 @@
  <input type="hidden" name="XSS" value="<~session[XSS]>">
  <input type="hidden" name="d" value="<~d>">
 
-  <fieldset class="mb-3">
+  <fieldset class="mb-3" <~disabled if="is_readonly">>
     <~/common/form/msg>
 
   <div class="row">
@@ -14,7 +14,7 @@
     </div>
   </div>
 
-  <~/common/form/actions_std_responsive>
+  <~#/common/form/actions_std_responsive>
 
   </fieldset>
 </form>

@@ -7,66 +7,57 @@
 using System;
 using System.Collections;
 
-namespace osafw
+namespace osafw;
+
+public class MyFeedbackController : FwController
 {
-    public class MyFeedbackController : FwController
+    public static new int access_level = Users.ACL_MEMBER;
+
+    protected Users model = new();
+
+    public override void init(FW fw)
     {
-        public static new int access_level = Users.ACL_MEMBER;
+        base.init(fw);
+        model.init(fw);
+        required_fields = "iname idesc"; // default required fields, space-separated
+        base_url = "/My/Feedback"; // base url for the controller
 
-        protected Users model = new();
+        save_fields = "iname idesc";
+    }
 
-        public override void init(FW fw)
-        {
-            base.init(fw);
-            model.init(fw);
-            required_fields = "iname idesc"; // default required fields, space-separated
-            base_url = "/My/Feedback"; // base url for the controller
+    public void IndexAction()
+    {
+        throw new ApplicationException("Not Implemented");
+    }
 
-            save_fields = "iname idesc";
-        }
+    public Hashtable SaveAction()
+    {
+        var item = reqh("item");
+        var id = fw.userId;
 
-        public void IndexAction()
-        {
-            throw new ApplicationException("Not Implemented");
-        }
+        Validate(id, item);
+        // load old record if necessary
+        // Dim itemold As Hashtable = model.one(id)
 
-
-        public void SaveAction()
-        {
-            var item = reqh("item");
-            var id = fw.userId;
-
-            try
+        Hashtable itemdb = FormUtils.filter(item, save_fields);
+        var user = fw.model<Users>().one(id);
+        Hashtable ps = new()
             {
-                Validate(id, item);
-                // load old record if necessary
-                // Dim itemold As Hashtable = model.one(id)
+                { "user", user },
+                { "i", itemdb },
+                { "url", return_url }
+            };
+        fw.sendEmailTpl((string)fw.config("support_email"), "feedback.txt", ps, null, null, (string)user["email"]);
 
-                Hashtable itemdb = FormUtils.filter(item, save_fields);
-                var user = fw.model<Users>().one(id);
-                Hashtable ps = new()
-                {
-                    { "user", user },
-                    { "i", itemdb },
-                    { "url", return_url }
-                };
-                fw.sendEmailTpl((string)fw.config("support_email"), "feedback.txt", ps, null, null, (string)user["email"]);
+        fw.flash("success", "Feedback sent. Thank you.");
 
-                fw.flash("success", "Feedback sent. Thank you.");
-            }
-            catch (ApplicationException ex)
-            {
-                fw.setGlobalError(ex.Message);
-            }
+        return afterSave(true);
+    }
 
-            fw.redirect(this.getReturnLocation());
-        }
+    public virtual void Validate(int id, Hashtable item)
+    {
+        bool result = this.validateRequired(item, this.required_fields);
 
-        public virtual void Validate(int id, Hashtable item)
-        {
-            bool result = this.validateRequired(item, this.required_fields);
-
-            this.validateCheckResult();
-        }
+        this.validateCheckResult();
     }
 }

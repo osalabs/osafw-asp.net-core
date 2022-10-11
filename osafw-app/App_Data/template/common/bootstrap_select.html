@@ -64,13 +64,16 @@
       $this.closest('form[data-list-filter][data-autosubmit]').trigger('submit')
     })
 
-    // autosave
+    // form changes & autosave
     $('.selectpicker ~ .dropdown-toggle').on('blur', function (e) {
       var $select = $(this).prevAll('.selectpicker')
 
       if (!!$select.data('selectpicker-is-changed')) {
         $select.data('selectpicker-is-changed', false)
-        $select.closest('form[data-autosave]').trigger('autosave')
+        $select.closest('form[data-check-changes]').trigger('change')
+
+        if ($select.is(':not([data-noautosave])'))
+          $select.closest('form[data-autosave]').trigger('autosave')
       }
     })
 

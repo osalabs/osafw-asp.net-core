@@ -1,4 +1,4 @@
-﻿// Users model class
+// Users model class
 //
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
@@ -9,320 +9,320 @@ using System.Collections;
 using static BCrypt.Net.BCrypt;
 using System.Text.RegularExpressions;
 
-namespace osafw
+namespace osafw;
+
+public class Users : FwModel
 {
-    public class Users : FwModel
+    // ACL constants
+    public const int ACL_VISITOR = 0; //non-logged visitor
+    public const int ACL_MEMBER = 1; //min access level for users
+    public const int ACL_EMPLOYEE = 50;
+    public const int ACL_MANAGER = 80;
+    public const int ACL_ADMIN = 90;
+    public const int ACL_SITEADMIN = 100;
+
+    public const string PERM_COOKIE_NAME = "perm";
+    public const int PERM_COOKIE_DAYS = 356;
+
+    private readonly string table_menu_items = "menu_items";
+    private readonly string table_users_cookies = "users_cookies";
+
+    public Users() : base()
     {
-        // ACL constants
-        public const int ACL_VISITOR = 0; //non-logged visitor
-        public const int ACL_MEMBER = 1; //min access level for users
-        public const int ACL_EMPLOYEE = 50;
-        public const int ACL_MANAGER = 80;
-        public const int ACL_ADMIN = 90;
-        public const int ACL_SITEADMIN = 100;
+        table_name = "users";
+        csv_export_fields = "id fname lname email add_time";
+        csv_export_headers = "id,First Name,Last Name,Email,Registered";
+    }
 
-        public const string PERM_COOKIE_NAME = "perm";
-        public const int PERM_COOKIE_DAYS = 356;
+    public Hashtable oneByEmail(string email)
+    {
+        Hashtable where = new();
+        where["email"] = email;
+        return db.row(table_name, where);
+    }
 
-        private readonly string table_menu_items = "menu_items";
-        private readonly string table_users_cookies = "users_cookies";
+    /// <summary>
+    /// return full user name - First Name Last Name
+    /// </summary>
+    /// <param name="id">Object type because if upd_users_id could be null</param>
+    /// <returns></returns>
+    public new string iname(object id)
+    {
+        string result = "";
 
-        public Users() : base()
+        int iid = Utils.f2int(id);
+        if (iid > 0)
         {
-            table_name = "users";
-            csv_export_fields = "id fname lname email add_time";
-            csv_export_headers = "id,First Name,Last Name,Email,Registered";
+            var item = one(iid);
+            result = item["fname"] + "  " + item["lname"];
         }
 
-        public Hashtable oneByEmail(string email)
-        {
-            Hashtable where = new();
-            where["email"] = email;
-            return db.row(table_name, where);
-        }
+        return result;
+    }
 
-        /// <summary>
-        /// return full user name - First Name Last Name
-        /// </summary>
-        /// <param name="id">Object type because if upd_users_id could be null</param>
-        /// <returns></returns>
-        public new string iname(object id)
-        {
-            string result = "";
+    // check if user exists for a given email
+    public override bool isExists(object uniq_key, int not_id)
+    {
+        return isExistsByField(uniq_key, not_id, "email");
+    }
 
-            int iid = Utils.f2int(id);
-            if (iid > 0)
-            {
-                var item = one(iid);
-                result = item["fname"] + "  " + item["lname"];
-            }
+    public override int add(Hashtable item)
+    {
+        if (!item.ContainsKey("access_level"))
+            item["access_level"] = Users.ACL_MEMBER;
 
-            return result;
-        }
+        if (!item.ContainsKey("pwd"))
+            item["pwd"] = Utils.getRandStr(8); // generate password
+        item["pwd"] = this.hashPwd((string)item["pwd"]);
+        return base.add(item);
+    }
 
-        // check if user exists for a given email
-        public override bool isExists(object uniq_key, int not_id)
-        {
-            return isExistsByField(uniq_key, not_id, "email");
-        }
-
-        public override int add(Hashtable item)
-        {
-            if (!item.ContainsKey("access_level"))
-                item["access_level"] = Users.ACL_MEMBER;
-
-            if (!item.ContainsKey("pwd"))
-                item["pwd"] = Utils.getRandStr(8); // generate password
+    public override bool update(int id, Hashtable item)
+    {
+        if (item.ContainsKey("pwd"))
             item["pwd"] = this.hashPwd((string)item["pwd"]);
-            return base.add(item);
-        }
+        return base.update(id, item);
+    }
 
-        public override bool update(int id, Hashtable item)
+    /// <summary>
+    /// performs any required password cleaning (for now - just limit pwd length at 32 and trim)
+    /// </summary>
+    /// <param name="plain_pwd">non-encrypted plain pwd</param>
+    /// <returns>clean plain pwd</returns>
+    public string cleanPwd(string plain_pwd)
+    {
+        return Strings.Trim(Strings.Left(plain_pwd, 32));
+    }
+
+    /// <summary>
+    /// generate password hash from plain password
+    /// </summary>
+    /// <param name="plain_pwd">plain pwd</param>
+    /// <returns>hash using https://github.com/BcryptNet/bcrypt.net </returns>
+    public string hashPwd(string plain_pwd)
+    {
+        try
         {
-            if (item.ContainsKey("pwd"))
-                item["pwd"] = this.hashPwd((string)item["pwd"]);
-            return base.update(id, item);
+            return EnhancedHashPassword(cleanPwd(plain_pwd));
         }
-
-        /// <summary>
-        /// performs any required password cleaning (for now - just limit pwd length at 32 and trim)
-        /// </summary>
-        /// <param name="plain_pwd">non-encrypted plain pwd</param>
-        /// <returns>clean plain pwd</returns>
-        public string cleanPwd(string plain_pwd)
+        catch (Exception)
         {
-            return Strings.Trim(Strings.Left(plain_pwd, 32));
         }
+        return "";
+    }
 
-        /// <summary>
-        /// generate password hash from plain password
-        /// </summary>
-        /// <param name="plain_pwd">plain pwd</param>
-        /// <returns>hash using https://github.com/BcryptNet/bcrypt.net </returns>
-        public string hashPwd(string plain_pwd)
+    /// <summary>
+    /// return true if plain password has the same hash as provided
+    /// </summary>
+    /// <param name="plain_pwd">plain pwd from user input</param>
+    /// <param name="pwd_hash">password hash previously generated by hashPwd</param>
+    /// <returns></returns>
+    public bool checkPwd(string plain_pwd, string pwd_hash)
+    {
+        try
         {
-            try
-            {
-                return EnhancedHashPassword(cleanPwd(plain_pwd));
-            }
-            catch (Exception)
-            {
-            }
-            return "";
+            return EnhancedVerify(cleanPwd(plain_pwd), pwd_hash);
         }
-
-        /// <summary>
-        /// return true if plain password has the same hash as provided
-        /// </summary>
-        /// <param name="plain_pwd">plain pwd from user input</param>
-        /// <param name="pwd_hash">password hash previously generated by hashPwd</param>
-        /// <returns></returns>
-        public bool checkPwd(string plain_pwd, string pwd_hash)
+        catch (Exception)
         {
-            try
-            {
-                return EnhancedVerify(cleanPwd(plain_pwd), pwd_hash);
-            }
-            catch (Exception)
-            {
-            }
-            return false;
         }
+        return false;
+    }
 
-        /// <summary>
-        /// generate reset token, save to users and send pwd reset link to the user
-        /// </summary>
-        /// <param name="id"></param>
-        /// <returns></returns>
-        public bool sendPwdReset(int id)
+    /// <summary>
+    /// generate reset token, save to users and send pwd reset link to the user
+    /// </summary>
+    /// <param name="id"></param>
+    /// <returns></returns>
+    public bool sendPwdReset(int id)
+    {
+        var pwd_reset_token = Utils.getRandStr(50);
+
+        Hashtable item = new()
         {
-            var pwd_reset_token = Utils.getRandStr(50);
+            {"pwd_reset", this.hashPwd(pwd_reset_token)},
+            {"pwd_reset_time", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")}
+        };
+        this.update(id, item);
 
-            Hashtable item = new()
-            {
-                {"pwd_reset", this.hashPwd(pwd_reset_token)},
-                {"pwd_reset_time", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")}
-            };
-            this.update(id, item);
+        var user = this.one(id);
+        user["pwd_reset_token"] = pwd_reset_token;
 
-            var user = this.one(id);
-            user["pwd_reset_token"] = pwd_reset_token;
+        return fw.sendEmailTpl((string)user["email"], "email_pwd.txt", user);
+    }
 
-            return fw.sendEmailTpl((string)user["email"], "email_pwd.txt", user);
-        }
-
-        /// <summary>
-        /// evaluate password's stength and return a score (>60 good, >80 strong)
-        /// </summary>
-        /// <param name="pwd"></param>
-        /// <returns></returns>
-        public double scorePwd(string pwd)
-        {
-            var result = 0;
-            if (string.IsNullOrEmpty(pwd))
-                return result;
-
-            // award every unique letter until 5 repetitions
-            Hashtable chars = new();
-            for (var i = 0; i <= pwd.Length - 1; i++)
-            {
-                chars[pwd[i]] = Utils.f2int(chars[pwd[i]]) + 1;
-                result += (int)(5.0 / (double)chars[pwd[i]]);
-            }
-
-            // bonus points for mixing it up
-            Hashtable vars = new()
-            {
-                {"digits",Regex.IsMatch(pwd, @"\d")},
-                {"lower",Regex.IsMatch(pwd, "[a-z]")},
-                {"upper",Regex.IsMatch(pwd, "[A-Z]")},
-                {"other",Regex.IsMatch(pwd, @"\W")}
-            };
-            var ctr = 0;
-            foreach (bool value in vars.Values)
-            {
-                if (value) ctr += 1;
-            }
-            result += (ctr - 1) * 10;
-
-            // adjust for length
-            result = (int)(Math.Log(pwd.Length) / Math.Log(8)) * result;
-
+    /// <summary>
+    /// evaluate password's stength and return a score (>60 good, >80 strong)
+    /// </summary>
+    /// <param name="pwd"></param>
+    /// <returns></returns>
+    public double scorePwd(string pwd)
+    {
+        var result = 0;
+        if (string.IsNullOrEmpty(pwd))
             return result;
+
+        // award every unique letter until 5 repetitions
+        Hashtable chars = new();
+        for (var i = 0; i <= pwd.Length - 1; i++)
+        {
+            chars[pwd[i]] = Utils.f2int(chars[pwd[i]]) + 1;
+            result += (int)(5.0 / (double)chars[pwd[i]]);
         }
 
-        // fill the session and do all necessary things just user authenticated (and before redirect
-        public bool doLogin(int id)
+        // bonus points for mixing it up
+        Hashtable vars = new()
         {
-            fw.context.Session.Clear();
-            fw.Session("XSS", Utils.getRandStr(16));
-
-            reloadSession(id);
-
-            fw.logEvent("login", id);
-            // update login info
-            Hashtable fields = new();
-            fields["login_time"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-            this.update(id, fields);
-            return true;
+            {"digits",Regex.IsMatch(pwd, @"\d")},
+            {"lower",Regex.IsMatch(pwd, "[a-z]")},
+            {"upper",Regex.IsMatch(pwd, "[A-Z]")},
+            {"other",Regex.IsMatch(pwd, @"\W")}
+        };
+        var ctr = 0;
+        foreach (bool value in vars.Values)
+        {
+            if (value) ctr += 1;
         }
+        result += (ctr - 1) * 10;
 
-        public bool reloadSession(int id = 0)
+        // adjust for length
+        result = (int)(Math.Log(pwd.Length) / Math.Log(8)) * result;
+
+        return result;
+    }
+
+    // fill the session and do all necessary things just user authenticated (and before redirect
+    public bool doLogin(int id)
+    {
+        fw.context.Session.Clear();
+        fw.Session("XSS", Utils.getRandStr(16));
+
+        reloadSession(id);
+
+        fw.logEvent("login", id);
+        // update login info
+        Hashtable fields = new();
+        fields["login_time"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+        this.update(id, fields);
+        return true;
+    }
+
+    public bool reloadSession(int id = 0)
+    {
+        if (id == 0)
+            id = fw.userId;
+        var user = one(id);
+
+        fw.Session("user_id", Utils.f2str(id));
+        fw.Session("login", (string)user["email"]);
+        fw.Session("access_level", (string)user["access_level"]); //note, set as string
+        fw.Session("lang", (string)user["lang"]);
+        // fw.SESSION("user", hU)
+        var fname = ((string)user["fname"]).Trim();
+        var lname = ((string)user["lname"]).Trim();
+        if (!string.IsNullOrEmpty(fname) || !string.IsNullOrEmpty(lname))
+            fw.Session("user_name", fname + Interaction.IIf(!string.IsNullOrEmpty(fname), " ", "") + lname);
+        else
+            fw.Session("user_name", (string)user["email"]);
+
+        var avatar_link = "";
+        if (Utils.f2int(user["att_id"]) > 0)
+            avatar_link = fw.model<Att>().getUrl(Utils.f2int(user["att_id"]), "s");
+        fw.Session("user_avatar_link", avatar_link);
+
+        return true;
+    }
+
+    // return standard list of id,iname where status=0 order by iname
+    public override DBList list()
+    {
+        string sql = "select id, fname+' '+lname as iname from " + db.qid(table_name) + " where status=0 order by fname, lname";
+        return db.arrayp(sql);
+    }
+    public override ArrayList listSelectOptions(Hashtable def = null)
+    {
+        string sql = "select id, fname+' '+lname as iname from " + db.qid(table_name) + " where status=0 order by fname, lname";
+        return db.arrayp(sql);
+    }
+
+    /// <summary>
+    /// check if current user acl is enough. throw exception or return false if user's acl is not enough
+    /// </summary>
+    /// <param name="acl">minimum required access level</param>
+    public bool checkAccess(int acl, bool is_die = true)
+    {
+        int users_acl = Utils.f2int(fw.Session("access_level"));
+
+        // check access
+        if (users_acl < acl)
         {
-            if (id == 0)
-                id = fw.userId;
-            var user = one(id);
-
-            fw.Session("user_id", Utils.f2str(id));
-            fw.Session("login", (string)user["email"]);
-            fw.Session("access_level", (string)user["access_level"]); //note, set as string
-            fw.Session("lang", (string)user["lang"]);
-            // fw.SESSION("user", hU)
-            var fname = ((string)user["fname"]).Trim();
-            var lname = ((string)user["lname"]).Trim();
-            if (!string.IsNullOrEmpty(fname) || !string.IsNullOrEmpty(lname))
-                fw.Session("user_name", fname + Interaction.IIf(!string.IsNullOrEmpty(fname), " ", "") + lname);
-            else
-                fw.Session("user_name", (string)user["email"]);
-
-            var avatar_link = "";
-            if (Utils.f2int(user["att_id"]) > 0)
-                avatar_link = fw.model<Att>().getUrl(Utils.f2int(user["att_id"]), "s");
-            fw.Session("user_avatar_link", avatar_link);
-
-            return true;
-        }
-
-        // return standard list of id,iname where status=0 order by iname
-        public override DBList list()
-        {
-            string sql = "select id, fname+' '+lname as iname from " + db.qid(table_name) + " where status=0 order by fname, lname";
-            return db.arrayp(sql);
-        }
-        public override ArrayList listSelectOptions(Hashtable def = null)
-        {
-            string sql = "select id, fname+' '+lname as iname from " + db.qid(table_name) + " where status=0 order by fname, lname";
-            return db.arrayp(sql);
-        }
-
-        /// <summary>
-        /// check if current user acl is enough. throw exception or return false if user's acl is not enough
-        /// </summary>
-        /// <param name="acl">minimum required access level</param>
-        public bool checkAccess(int acl, bool is_die = true)
-        {
-            int users_acl = Utils.f2int(fw.Session("access_level"));
-
-            // check access
-            if (users_acl < acl)
-            {
-                if (is_die)
-                    throw new AuthException();
-                return false;
-            }
-
-            return true;
-        }
-
-        public void loadMenuItems()
-        {
-            ArrayList menu_items = (ArrayList)FwCache.getValue("menu_items");
-
-            if (menu_items == null)
-            {
-                // read main menu items for sidebar
-                menu_items = db.array(table_menu_items, DB.h("status", STATUS_ACTIVE), "iname");
-                FwCache.setValue("menu_items", menu_items);
-            }
-
-            // only Menu items user can see per ACL
-            var users_acl = Utils.f2int(fw.Session("access_level"));
-            ArrayList result = new();
-            foreach (Hashtable item in menu_items)
-            {
-                if (Utils.f2int(item["access_level"]) <= users_acl)
-                    result.Add(item);
-            }
-
-            fw.G["menu_items"] = result;
-        }
-        public string createPermCookie(int id)
-        {
-            long curTS = new DateTimeOffset(DateTime.UtcNow).ToUnixTimeSeconds();
-            string rnd = curTS.ToString() + Utils.getRandStr(32);
-            string cookieId = rnd.Substring(0, 32);
-
-            var fields = DB.h("cookie_id", cookieId, "users_id", id);
-            db.updateOrInsert(table_users_cookies, fields, DB.h("users_id", id));
-
-            Utils.CreateCookie(fw, PERM_COOKIE_NAME, cookieId, curTS + 60 * 60 * 24 * PERM_COOKIE_DAYS);
-
-            return cookieId;
-        }
-
-        public bool checkPermanentLogin()
-        {
-            var cookieId = Utils.GetCookie(fw, PERM_COOKIE_NAME);
-            if (cookieId != "")
-            {
-                DBRow row = db.row(table_users_cookies, DB.h("cookie_id", cookieId));
-                if (row.Count > 0)
-                {
-                    doLogin(Utils.f2int(row["users_id"]));
-                    return true;
-                }
-                else
-                {
-                    Utils.DeleteCookie(fw, PERM_COOKIE_NAME);
-                }
-            }
+            if (is_die)
+                throw new AuthException();
             return false;
         }
 
-        public void removePermCookie(int id)
+        return true;
+    }
+
+    public void loadMenuItems()
+    {
+        ArrayList menu_items = (ArrayList)FwCache.getValue("menu_items");
+
+        if (menu_items == null)
         {
-            Utils.DeleteCookie(fw, PERM_COOKIE_NAME);
-            db.del(table_users_cookies, DB.h("users_id", id));
+            // read main menu items for sidebar
+            menu_items = db.array(table_menu_items, DB.h("status", STATUS_ACTIVE), "iname");
+            FwCache.setValue("menu_items", menu_items);
         }
+
+        // only Menu items user can see per ACL
+        var users_acl = Utils.f2int(fw.Session("access_level"));
+        ArrayList result = new();
+        foreach (Hashtable item in menu_items)
+        {
+            if (Utils.f2int(item["access_level"]) <= users_acl)
+                result.Add(item);
+        }
+
+        fw.G["menu_items"] = result;
+    }
+    
+    public string createPermCookie(int id)
+    {
+        long curTS = new DateTimeOffset(DateTime.UtcNow).ToUnixTimeSeconds();
+        string rnd = curTS.ToString() + Utils.getRandStr(32);
+        string cookieId = rnd.Substring(0, 32);
+
+        var fields = DB.h("cookie_id", cookieId, "users_id", id);
+        db.updateOrInsert(table_users_cookies, fields, DB.h("users_id", id));
+
+        Utils.CreateCookie(fw, PERM_COOKIE_NAME, cookieId, curTS + 60 * 60 * 24 * PERM_COOKIE_DAYS);
+
+        return cookieId;
+    }
+
+    public bool checkPermanentLogin()
+    {
+        var cookieId = Utils.GetCookie(fw, PERM_COOKIE_NAME);
+        if (cookieId != "")
+        {
+            DBRow row = db.row(table_users_cookies, DB.h("cookie_id", cookieId));
+            if (row.Count > 0)
+            {
+                doLogin(Utils.f2int(row["users_id"]));
+                return true;
+            }
+            else
+            {
+                Utils.DeleteCookie(fw, PERM_COOKIE_NAME);
+            }
+        }
+        return false;
+    }
+
+    public void removePermCookie(int id)
+    {
+        Utils.DeleteCookie(fw, PERM_COOKIE_NAME);
+        db.del(table_users_cookies, DB.h("users_id", id));
     }
 }

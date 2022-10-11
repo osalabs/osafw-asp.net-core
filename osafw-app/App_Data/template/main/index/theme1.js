@@ -1,18 +1,19 @@
 //dark theme
 window.Chart.defaults = $.extend(true, window.Chart.defaults, {
-    global: {
-        elements: {
-            line: {
-                borderColor: '#000000',
-                backgroundColor: '#000000',
-            },
-            rectangle: {
-                backgroundColor: '#000000',
-            }
+    elements: {
+        bar: {
+            borderColor: '#000000',
+            backgroundColor: '#000000',
+        },
+        line: {
+            borderColor: '#000000',
+            backgroundColor: '#000000',
+        },
+        rectangle: {
+            backgroundColor: '#000000',
         }
     },
     doughnut: {
-        cutoutPercentage: 80,
         backgroundColor: [
             '#7b7b7b',
             '#323232',
