@@ -254,7 +254,7 @@ CREATE TABLE lookup_manager_tables (
 DROP TABLE IF EXISTS user_views;
 CREATE TABLE user_views (
   id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
-  icode                 NVARCHAR(128) NOT NULL, --related screen code, ex: "Demos"
+  icode                 NVARCHAR(128) NOT NULL, --related screen url, ex: "/Admin/Demos"
   fields                NVARCHAR(MAX), -- comma-separated list of fields to display, order kept
 
   iname                 NVARCHAR(255) NOT NULL DEFAULT '', -- if empty - it's a "default" view

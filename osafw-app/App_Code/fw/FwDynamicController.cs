@@ -53,7 +53,7 @@ public class FwDynamicController : FwController
 
         if (is_dynamic_index)
             // customizable headers
-            setViewList(ps, reqh("search"));
+            setViewList(ps, list_filter_search);
 
         if (reqs("export").Length > 0)
         {
@@ -358,21 +358,15 @@ public class FwDynamicController : FwController
         Hashtable ps = new();
 
         var rows = getViewListArr(getViewListUserFields(), true); // list all fields
-
-        // 'set checked only for those selected by user
-        // Dim hfields = Utils.qh(getViewListUserFields())
-        // For Each row In rows
-        // row["is_checked") ] hfields.ContainsKey(row["field_name"))]            // Next
-
         ps["rows"] = rows;
-        ps["select_userviews"] = fw.model<UserViews>().listSelectOptions();
+
+        ps["select_userviews"] = fw.model<UserViews>().listSelectByIcode(base_url);
         fw.parser("/common/list/userviews", ps);
     }
 
     public virtual void SaveUserViewsAction()
     {
-        Hashtable fld = reqh("fld");
-
+        var fld = reqh("fld");
         var load_id = reqi("load_id");
         var is_reset = reqi("is_reset");
 
@@ -385,6 +379,7 @@ public class FwDynamicController : FwController
         else
         {
             var item = reqh("item");
+            var iname = Utils.f2str(item["iname"]);
 
             // save fields
             // order by value
@@ -393,16 +388,14 @@ public class FwDynamicController : FwController
             List<string> anames = new();
             foreach (var el in ordered)
                 anames.Add((string)el.Key);
-
             var fields = Strings.Join(anames.ToArray(), " ");
 
-            var iname = (string)item["iname"];
             if (!string.IsNullOrEmpty(iname))
             {
-                //create new view by name or update if this name exists
+                // create new view by name or update if this name exists
                 fw.model<UserViews>().addOrUpdateByUK(base_url, fields, iname);
             }
-            //update default view with fields
+            // update default view with fields
             fw.model<UserViews>().updateByIcode(base_url, fields);
         }
 

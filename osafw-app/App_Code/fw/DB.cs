@@ -922,7 +922,8 @@ public class DB : IDisposable
         {
             // convert to field's type
             dbop.value = field2typed(field_type, dbop.value);
-            if (is_for_where && dbop.value==DBNull.Value) {
+            if (is_for_where && dbop.value == DBNull.Value)
+            {
                 // for where if we got null value here for EQ/NOT operation - make it ISNULL/ISNOT NULL
                 // (this could happen when comparing int field to empty string)
                 if (dbop.op == DBOps.EQ)
@@ -1225,7 +1226,7 @@ public class DB : IDisposable
     /// <returns>number of affected rows</returns>
     public int del(string table, Hashtable where = null)
     {
-        if (where == null) where = new Hashtable(); 
+        if (where == null) where = new Hashtable();
         var qp = buildDelete(table, where);
         return exec(qp.sql, qp.@params);
     }
@@ -1312,10 +1313,10 @@ public class DB : IDisposable
         DataTable dataTable = conn.GetSchema("Tables");
         foreach (DataRow row in dataTable.Rows)
         {
-            // fw.logger("************ TABLE" & row("TABLE_NAME"))
-            // For Each cl As DataColumn In dataTable.Columns
-            // fw.logger(cl.Tostring & " = " & row(cl))
-            // Next
+            //fw.logger("************ TABLE"+ row["TABLE_NAME"]);
+            //foreach(DataColumn cl in dataTable.Columns){
+            //    fw.logger(cl.ToString() + " = " + row[cl]);
+            //}
 
             // skip any system tables or views (VIEW, ACCESS TABLE, SYSTEM TABLE)
             if ((string)row["TABLE_TYPE"] != "TABLE" && (string)row["TABLE_TYPE"] != "BASE TABLE" && (string)row["TABLE_TYPE"] != "PASS-THROUGH")
