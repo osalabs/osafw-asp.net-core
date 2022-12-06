@@ -1,4 +1,4 @@
-﻿// Users model class
+// Users model class
 //
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
@@ -21,7 +21,11 @@ public class Users : FwModel
     public const int ACL_ADMIN = 90;
     public const int ACL_SITEADMIN = 100;
 
+    public const string PERM_COOKIE_NAME = "perm";
+    public const int PERM_COOKIE_DAYS = 356;
+
     private readonly string table_menu_items = "menu_items";
+    private readonly string table_users_cookies = "users_cookies";
 
     public Users() : base()
     {
@@ -285,5 +289,44 @@ public class Users : FwModel
         }
 
         fw.G["menu_items"] = result;
+    }
+    
+    public string createPermCookie(int id)
+    {
+        long curTS = new DateTimeOffset(DateTime.UtcNow).ToUnixTimeSeconds();
+        string rnd = curTS.ToString() + Utils.getRandStr(32);
+        string cookieId = rnd.Substring(0, 32);
+
+        var fields = DB.h("cookie_id", cookieId, "users_id", id);
+        db.updateOrInsert(table_users_cookies, fields, DB.h("users_id", id));
+
+        Utils.CreateCookie(fw, PERM_COOKIE_NAME, cookieId, curTS + 60 * 60 * 24 * PERM_COOKIE_DAYS);
+
+        return cookieId;
+    }
+
+    public bool checkPermanentLogin()
+    {
+        var cookieId = Utils.GetCookie(fw, PERM_COOKIE_NAME);
+        if (cookieId != "")
+        {
+            DBRow row = db.row(table_users_cookies, DB.h("cookie_id", cookieId));
+            if (row.Count > 0)
+            {
+                doLogin(Utils.f2int(row["users_id"]));
+                return true;
+            }
+            else
+            {
+                Utils.DeleteCookie(fw, PERM_COOKIE_NAME);
+            }
+        }
+        return false;
+    }
+
+    public void removePermCookie(int id)
+    {
+        Utils.DeleteCookie(fw, PERM_COOKIE_NAME);
+        db.del(table_users_cookies, DB.h("users_id", id));
     }
 }
