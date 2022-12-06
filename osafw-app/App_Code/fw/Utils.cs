@@ -1376,4 +1376,25 @@ public class Utils
         }
     }
 
+    /// work with Cookies
+    public static void createCookie(FW fw, string name, string value, long exp_sec)
+    {
+        var options = new CookieOptions()
+        {
+            Path = "/",
+            Expires = new DateTimeOffset(DateTime.Now.AddSeconds(exp_sec))
+        };
+        fw.response.Cookies.Append(name, value, options);
+    }
+
+    public static string getCookie(FW fw, string name)
+    {
+        return fw.request.Cookies[name];
+    }
+
+    public static void deleteCookie(FW fw, string name)
+    {
+        fw.response.Cookies.Delete(name);
+    }
+
 }

@@ -108,6 +108,14 @@ CREATE TABLE users (
 INSERT INTO users (fname, lname, email, pwd, access_level)
 VALUES ('Website','Admin','admin@admin.com','CHANGE_ME',100);
 
+/*user cookies (for permanent sessions)*/
+DROP TABLE IF EXISTS users_cookies;
+CREATE TABLE users_cookies (
+    cookie_id           NVARCHAR(32) PRIMARY KEY CLUSTERED NOT NULL,      /*cookie id: time(secs)+rand(16)*/
+    users_id            INT NOT NULL CONSTRAINT FK_users_cookies_users FOREIGN KEY REFERENCES users(id),
+
+    add_time            DATETIME2 NOT NULL DEFAULT getdate()
+);
 
 /*Site Settings - special table for misc site settings*/
 DROP TABLE IF EXISTS settings;
