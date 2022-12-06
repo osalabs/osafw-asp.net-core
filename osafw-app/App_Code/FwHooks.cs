@@ -20,8 +20,9 @@ public sealed class FwHooks
         // FwCache.set_value("main_menu", main_menu)
         // End If
 
-
         // fw.G("main_menu") = main_menu
+
+        // if user not logged - check permanent cookie and auto login user
         if (fw.userId == 0)
             fw.model<Users>().checkPermanentLogin();
 

@@ -92,13 +92,12 @@ public class LoginController : FwController
                 }
             }
 
-            if (model.doLogin(Utils.f2int(user["id"])))
+            var users_id = Utils.f2int(user["id"]);
+            if (model.doLogin(users_id))
             {
                 // Check is login need to be remembered
                 if (item.ContainsKey("remember"))
-                {
-                    model.createPermCookie(Utils.f2int(user["id"]));
-                }
+                    model.createPermCookie(users_id);
             }
 
             if (!string.IsNullOrEmpty(gourl) && !Regex.IsMatch(gourl, "^http", RegexOptions.IgnoreCase))
@@ -108,19 +107,17 @@ public class LoginController : FwController
         }
         catch (ApplicationException ex)
         {
-
-            fw.logEvent("logoff", fw.userId);
-
-            fw.model<Users>().removePermCookie(fw.userId);
-            fw.context.Session.Clear();
-            fw.redirect((string)fw.config("UNLOGGED_DEFAULT_URL"));
+            logger(LogLevel.WARN, ex.Message);
+            fw.G["err_ctr"] = reqi("err_ctr") + 1;
+            fw.setGlobalError(ex.Message);
+            fw.routeRedirect(FW.ACTION_INDEX);
         }
     }
 
     public void DeleteAction()
     {
         fw.logEvent("logoff", fw.userId);
-
+        fw.model<Users>().removePermCookie(fw.userId);
         fw.context.Session.Clear();
         fw.redirect((string)fw.config("UNLOGGED_DEFAULT_URL"));
     }
