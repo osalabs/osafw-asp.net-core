@@ -59,7 +59,7 @@ namespace osafw.Tests
         {
             var _db = new DB(connstr, "SQL", "main");
             _db.connect();
-            Assert.AreEqual(ConnectionState.Open, _db.getConnection());
+            Assert.AreEqual(ConnectionState.Open, _db.getConnection().State);
             _db.disconnect();
         }
 
