@@ -67,7 +67,7 @@ public class MyViewsController : FwAdminController
         this.form_new_defaults = new();
         this.form_new_defaults["icode"] = related_id;
         var ps = base.ShowFormAction(id);
-        ps["is_admin"] = fw.model<Users>().checkAccess(Users.ACL_ADMIN, false);
+        ps["is_admin"] = fw.model<Users>().isAccess(Users.ACL_ADMIN);
         return ps;
     }
 

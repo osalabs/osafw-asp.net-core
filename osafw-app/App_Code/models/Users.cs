@@ -242,22 +242,26 @@ public class Users : FwModel
     }
 
     /// <summary>
-    /// check if current user acl is enough. throw exception or return false if user's acl is not enough
+    /// return true if currently logged user has at least minimum requested access level
     /// </summary>
-    /// <param name="acl">minimum required access level</param>
-    public bool checkAccess(int acl, bool is_die = true)
+    /// <param name="min_acl">minimum required access level</param>
+    /// <returns></returns>
+    public bool isAccess(int min_acl)
     {
         int users_acl = Utils.f2int(fw.Session("access_level"));
+        return users_acl >= min_acl;
+    }
 
-        // check access
-        if (users_acl < acl)
+    /// <summary>
+    /// if currently logged user has at least minimum requested access level. Throw AuthException if user's acl is not enough
+    /// </summary>
+    /// <param name="min_acl">minimum required access level</param>
+    public void checkAccess(int min_acl)
+    {
+        if (!isAccess(min_acl))
         {
-            if (is_die)
-                throw new AuthException();
-            return false;
+            throw new AuthException();
         }
-
-        return true;
     }
 
     public void loadMenuItems()

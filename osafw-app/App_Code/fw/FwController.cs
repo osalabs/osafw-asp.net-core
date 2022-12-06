@@ -589,7 +589,7 @@ public abstract class FwController
             {
                 var status = Utils.f2int(this.list_filter["status"]);
                 // if want to see trashed and not admin - just show active
-                if (status == FwModel.STATUS_DELETED & !fw.model<Users>().checkAccess(Users.ACL_SITEADMIN, false))
+                if (status == FwModel.STATUS_DELETED & !fw.model<Users>().isAccess(Users.ACL_SITEADMIN))
                     status = 0;
                 this.list_where += " and " + db.qid(model0.field_status) + "=@status";
                 this.list_where_params["status"] = status;
