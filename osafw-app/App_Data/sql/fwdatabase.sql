@@ -26,12 +26,6 @@ CREATE TABLE att_categories (
   upd_time              DATETIME2,
   upd_users_id          INT DEFAULT 0
 );
-INSERT INTO att_categories (icode, iname) VALUES
-('general', 'General images')
-,('users', 'Member photos')
-,('files', 'Files')
-,('spage_banner', 'Page banners')
-;
 
 DROP TABLE IF EXISTS att;
 CREATE TABLE att (
@@ -114,6 +108,14 @@ CREATE TABLE users (
 INSERT INTO users (fname, lname, email, pwd, access_level)
 VALUES ('Website','Admin','admin@admin.com','CHANGE_ME',100);
 
+/*user cookies (for permanent sessions)*/
+DROP TABLE IF EXISTS users_cookies;
+CREATE TABLE users_cookies (
+    cookie_id           NVARCHAR(32) PRIMARY KEY CLUSTERED NOT NULL,      /*cookie id: time(secs)+rand(16)*/
+    users_id            INT NOT NULL CONSTRAINT FK_users_cookies_users FOREIGN KEY REFERENCES users(id),
+
+    add_time            DATETIME2 NOT NULL DEFAULT getdate()
+);
 
 /*Site Settings - special table for misc site settings*/
 DROP TABLE IF EXISTS settings;
@@ -200,13 +202,6 @@ CREATE TABLE events (
   upd_users_id          INT DEFAULT 0
 );
 CREATE UNIQUE INDEX events_icode_idx ON events (icode);
-INSERT INTO events (icode, iname) VALUES ('login',    'User login');
-INSERT INTO events (icode, iname) VALUES ('logoff',   'User logoff');
-INSERT INTO events (icode, iname) VALUES ('login_fail', 'Login failed');
-INSERT INTO events (icode, iname) VALUES ('chpwd',    'User changed login/pwd');
-INSERT INTO events (icode, iname) VALUES ('users_add',    'New user added');
-INSERT INTO events (icode, iname) VALUES ('users_upd',    'User updated');
-INSERT INTO events (icode, iname) VALUES ('users_del',    'User deleted');
 
 /* log of all user-initiated events */
 DROP TABLE IF EXISTS event_log;
@@ -262,15 +257,12 @@ CREATE TABLE lookup_manager_tables (
 
   INDEX UX_lookup_manager_tables_tname (tname)
 );
-insert into lookup_manager_tables (tname, iname) VALUES
-('events','Events')
-;
 
 /*user custom views*/
 DROP TABLE IF EXISTS user_views;
 CREATE TABLE user_views (
   id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
-  icode                 NVARCHAR(128) NOT NULL, --related screen code, ex: "Demos"
+  icode                 NVARCHAR(128) NOT NULL, --related screen url, ex: "/Admin/Demos"
   fields                NVARCHAR(MAX), -- comma-separated list of fields to display, order kept
 
   iname                 NVARCHAR(255) NOT NULL DEFAULT '', -- if empty - it's a "default" view
@@ -354,3 +346,5 @@ CREATE TABLE user_filters (
   upd_time              DATETIME2,
   upd_users_id          INT DEFAULT 0
 );
+
+-- after this file - run lookups.sql

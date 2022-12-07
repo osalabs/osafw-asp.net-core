@@ -105,8 +105,25 @@ public class AdminLookupManagerController : FwController
         // sorting
         if (string.IsNullOrEmpty((string)f["sortby"]))
         {
+            var is_prio_exists = false;
+            foreach (Hashtable col in cols) {
+                if (Utils.f2str(col["name"]) == "prio")
+                {
+                    is_prio_exists = true;
+                    break;
+                }
+            }
             if (cols.Count > 0)
-                f["sortby"] = ((Hashtable)cols[0])["name"]; // by default - sort by first column
+            {
+                if (is_prio_exists)
+                {
+                    f["sortby"] = "prio asc, iname";
+                }
+                else
+                {
+                    f["sortby"] = ((Hashtable)cols[0])["name"]; // by default - sort by first column
+                }
+            }
             else
                 f["sortby"] = "";
         }

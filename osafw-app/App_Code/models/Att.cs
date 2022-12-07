@@ -445,6 +445,25 @@ public class Att : FwModel
         return db.array(table_name, where, "id");
     }
 
+    public ArrayList getAllLinkedByCategory(string att_table_name, int item_id, int is_image = -1, string category_name = "")
+    {
+        var results = new ArrayList();
+        var rows = getAllLinked(att_table_name, item_id, is_image);
+        foreach (Hashtable row in rows)
+        {
+            var att_category = fw.model<AttCategories>().oneByIcode(category_name);
+            if (att_category.Count > 0)
+            {
+                var att_categories_id = Utils.f2int(row["att_categories_id"]);
+                if (att_categories_id == Utils.f2int(att_category["id"]))
+                {
+                    results.Add(row);
+                }
+            }
+        }
+        return results;
+    }
+
     // like getAllByTableName, but also fills att_categories hash
     public ArrayList getAllByTableNameWithCategories(string att_table_name, int item_id, int is_image = -1)
     {

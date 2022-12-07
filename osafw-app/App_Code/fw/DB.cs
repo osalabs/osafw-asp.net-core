@@ -177,6 +177,7 @@ public class DB : IDisposable
 
     public string db_name = "";
     public string dbtype = "SQL";
+    public int sql_command_timeout = 30; // default command timeout, override in model for long queries (in reports or export, for example)
     private readonly Hashtable conf = new();  // config contains: connection_string, type
     private readonly string connstr = "";
 
@@ -350,6 +351,7 @@ public class DB : IDisposable
         if (dbtype == "SQL")
         {
             var dbcomm = new SqlCommand(sql, (SqlConnection)conn);
+            dbcomm.CommandTimeout = sql_command_timeout;
             if (@params != null)
                 foreach (string p in @params.Keys)
                     dbcomm.Parameters.AddWithValue(p, @params[p]);
@@ -390,6 +392,7 @@ public class DB : IDisposable
                 sql += ";SELECT SCOPE_IDENTITY()";
             }
             var dbcomm = new SqlCommand(sql, (SqlConnection)conn);
+            dbcomm.CommandTimeout = sql_command_timeout;
             if (@params != null)
                 foreach (string p in @params.Keys)
                     dbcomm.Parameters.AddWithValue(p, @params[p]);
@@ -919,7 +922,8 @@ public class DB : IDisposable
         {
             // convert to field's type
             dbop.value = field2typed(field_type, dbop.value);
-            if (is_for_where && dbop.value==DBNull.Value) {
+            if (is_for_where && dbop.value == DBNull.Value)
+            {
                 // for where if we got null value here for EQ/NOT operation - make it ISNULL/ISNOT NULL
                 // (this could happen when comparing int field to empty string)
                 if (dbop.op == DBOps.EQ)
@@ -1222,7 +1226,7 @@ public class DB : IDisposable
     /// <returns>number of affected rows</returns>
     public int del(string table, Hashtable where = null)
     {
-        if (where == null) where = new Hashtable(); 
+        if (where == null) where = new Hashtable();
         var qp = buildDelete(table, where);
         return exec(qp.sql, qp.@params);
     }
@@ -1256,7 +1260,7 @@ public class DB : IDisposable
         DBQueryAndParams result = new();
         result.sql = "UPDATE " + qid(table) + " " + " SET ";
 
-        logger(LogLevel.DEBUG, "buildUpdate:", table, fields);
+        //logger(LogLevel.DEBUG, "buildUpdate:", table, fields);
 
         var set_params = prepareParams(table, fields, "update", "_SET");
         result.sql += set_params.sql;
@@ -1309,10 +1313,10 @@ public class DB : IDisposable
         DataTable dataTable = conn.GetSchema("Tables");
         foreach (DataRow row in dataTable.Rows)
         {
-            // fw.logger("************ TABLE" & row("TABLE_NAME"))
-            // For Each cl As DataColumn In dataTable.Columns
-            // fw.logger(cl.Tostring & " = " & row(cl))
-            // Next
+            //fw.logger("************ TABLE"+ row["TABLE_NAME"]);
+            //foreach(DataColumn cl in dataTable.Columns){
+            //    fw.logger(cl.ToString() + " = " + row[cl]);
+            //}
 
             // skip any system tables or views (VIEW, ACCESS TABLE, SYSTEM TABLE)
             if ((string)row["TABLE_TYPE"] != "TABLE" && (string)row["TABLE_TYPE"] != "BASE TABLE" && (string)row["TABLE_TYPE"] != "PASS-THROUGH")

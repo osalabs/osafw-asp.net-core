@@ -7,7 +7,6 @@ using System;
 using System.Collections;
 
 namespace osafw;
-
 public class MyViewsController : FwAdminController
 {
     public static new int access_level = Users.ACL_MEMBER;
@@ -23,12 +22,12 @@ public class MyViewsController : FwAdminController
         // initialization
         base_url = "/My/Views";
         required_fields = "iname";
-        save_fields = "screen iname status";
+        save_fields = "icode iname status";
         save_fields_checkboxes = "is_system";
 
         search_fields = "iname";
         list_sortdef = "iname asc";   // default sorting: name, asc|desc direction
-        list_sortmap = Utils.qh("id|id iname|iname add_time|add_time entity|screen");
+        list_sortmap = Utils.qh("id|id iname|iname add_time|add_time icode|icode");
 
         related_id = reqs("related_id");
     }
@@ -36,31 +35,39 @@ public class MyViewsController : FwAdminController
     public override Hashtable initFilter(string session_key = null)
     {
         var result = base.initFilter(session_key);
-        if (!this.list_filter.ContainsKey("screen"))
-            this.list_filter["screen"] = related_id;
+        if (!this.list_filter.ContainsKey("icode"))
+            this.list_filter["icode"] = related_id;
         return this.list_filter;
     }
 
     public override void setListSearch()
     {
-        list_where = " add_users_id=@add_users_id";
+        list_where = " iname>'' "; // do not show default records
+        list_where += " and add_users_id=@add_users_id";
         list_where_params["@add_users_id"] = fw.userId;
 
         base.setListSearch();
 
-        if (!string.IsNullOrEmpty((string)list_filter["screen"]))
+        if (!string.IsNullOrEmpty((string)list_filter["icode"]))
         {
-            this.list_where += " and screen=@screen";
-            this.list_where_params["@screen"] = list_filter["screen"];
+            this.list_where += " and icode=@icode";
+            this.list_where_params["@icode"] = list_filter["icode"];
         }
+    }
+
+    public override Hashtable setPS(Hashtable ps = null)
+    {
+        var result = base.setPS(ps);
+        result["select_icodes"] = model.listSelectIcodes();
+        return result;
     }
 
     public override Hashtable ShowFormAction(int id = 0)
     {
         this.form_new_defaults = new();
-        this.form_new_defaults["screen"] = related_id;
+        this.form_new_defaults["icode"] = related_id;
         var ps = base.ShowFormAction(id);
-        ps["is_admin"] = Utils.f2int(fw.Session("access_level")) == Users.ACL_ADMIN;
+        ps["is_admin"] = fw.model<Users>().isAccess(Users.ACL_ADMIN);
         return ps;
     }
 
@@ -75,18 +82,21 @@ public class MyViewsController : FwAdminController
         var success = true;
         var is_new = (id == 0);
 
-        Validate(id, item);
-        // load old record if necessary
-        // Dim item_old As Hashtable = model0.one(id)
+            Validate(id, item);
+            // load old record if necessary
+            // Dim item_old As Hashtable = model0.one(id)
 
-        Hashtable itemdb = FormUtils.filter(item, this.save_fields);
-        FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes);
+            Hashtable itemdb = FormUtils.filter(item, this.save_fields);
+            FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes);
 
-        if (is_new)
-            // read new filter data from session
-            itemdb["idesc"] = Utils.jsonEncode(fw.Session("_filter_" + item["screen"]));
+            if (is_new)
+                // read new filter data from session
+                itemdb["idesc"] = Utils.jsonEncode(fw.Session("_filter_" + item["icode"]));
 
-        id = this.modelAddOrUpdate(id, itemdb);
+            id = this.modelAddOrUpdate(id, itemdb);
+
+        if (!string.IsNullOrEmpty(return_url))
+            fw.redirect(return_url);
 
         return this.afterSave(success, id, is_new);
     }

@@ -22,6 +22,10 @@ public sealed class FwHooks
 
         // fw.G("main_menu") = main_menu
 
+        // if user not logged - check permanent cookie and auto login user
+        if (fw.userId == 0)
+            fw.model<Users>().checkPermanentLogin();
+
         // also force set XSS
         if (string.IsNullOrEmpty(fw.Session("XSS"))) fw.Session("XSS", Utils.getRandStr(16));
         if (fw.userId > 0) fw.model<Users>().loadMenuItems();

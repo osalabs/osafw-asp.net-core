@@ -34,6 +34,7 @@ public abstract class FwController
     protected string list_view;                  // table/view to use in list sql, if empty model0.table_name used
     protected string list_orderby;               // orderby for the list screen
     protected Hashtable list_filter;             // filter values for the list screen
+    protected Hashtable list_filter_search;      // filter for the search columns from reqh("search")
     protected Hashtable list_where_params = new();       // any sql params for the list_where
     protected string list_where = " 1=1 ";       // where to use in list sql, default is non-deleted records (see setListSearch() )
     protected int list_count;                    // count of list rows returned from db
@@ -286,6 +287,22 @@ public abstract class FwController
         fw.SessionHashtable(session_key, f);
 
         this.list_filter = f;
+
+        // advanced search
+        string session_key_search = "_filtersearch_" + fw.G["controller.action"];
+        list_filter_search = reqh("search");
+        if (list_filter_search.Count == 0 && !is_dofilter)
+        {
+            //read from session
+            list_filter_search = fw.SessionHashtable(session_key_search);
+            if (list_filter_search == null) list_filter_search = new Hashtable();
+        }
+        else
+        {
+            //remember in session
+            fw.SessionHashtable(session_key_search, list_filter_search);
+        }
+
         return f;
     }
 
@@ -516,7 +533,7 @@ public abstract class FwController
     public virtual void setListSearchAdvanced()
     {
         // advanced search
-        Hashtable hsearch = reqh("search");
+        Hashtable hsearch = list_filter_search;
         foreach (string fieldname in hsearch.Keys)
         {
             if (!string.IsNullOrEmpty((string)hsearch[fieldname]) && (!is_dynamic_index || view_list_map.ContainsKey(fieldname)))
@@ -572,7 +589,7 @@ public abstract class FwController
             {
                 var status = Utils.f2int(this.list_filter["status"]);
                 // if want to see trashed and not admin - just show active
-                if (status == FwModel.STATUS_DELETED & !fw.model<Users>().checkAccess(Users.ACL_SITEADMIN, false))
+                if (status == FwModel.STATUS_DELETED & !fw.model<Users>().isAccess(Users.ACL_SITEADMIN))
                     status = 0;
                 this.list_where += " and " + db.qid(model0.field_status) + "=@status";
                 this.list_where_params["status"] = status;
@@ -1000,7 +1017,7 @@ public abstract class FwController
     // depends on ps("list_rows")
     // use is_cols=false when return ps as json
     // usage:
-    // model.setViewList(ps, reqh("search"))
+    // model.setViewList(ps, list_filter_search)
     public virtual void setViewList(Hashtable ps, Hashtable hsearch, bool is_cols = true)
     {
         var fields = getViewListUserFields();

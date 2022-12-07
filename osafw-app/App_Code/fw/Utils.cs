@@ -1312,7 +1312,10 @@ public class Utils
         {
             // if contains id/ID - remove it and make singular
             result = Regex.Replace(result, @"\s*\bid\b", "", RegexOptions.IgnoreCase);
-            result = Regex.Replace(result, @"(\S)(?:es|s)\s*$", "$1", RegexOptions.IgnoreCase); // remove -es or -s at the end
+            // singularize TODO use external lib to handle all cases
+            result = Regex.Replace(result, @"(\S)(?:ies)\s*$", "$1y", RegexOptions.IgnoreCase); // -ies -> -y
+            result = Regex.Replace(result, @"(\S)(?:es)\s*$", "$1e", RegexOptions.IgnoreCase); // -es -> -e
+            result = Regex.Replace(result, @"(\S)(?:s)\s*$", "$1", RegexOptions.IgnoreCase); // remove -s at the end
         }
 
         result = result.Trim();
@@ -1373,6 +1376,27 @@ public class Utils
                 CopyDirectory(subdir.FullName, tempPath, isCopyRecursive);
             }
         }
+    }
+
+    /// work with Cookies
+    public static void createCookie(FW fw, string name, string value, long exp_sec)
+    {
+        var options = new CookieOptions()
+        {
+            Path = "/",
+            Expires = new DateTimeOffset(DateTime.Now.AddSeconds(exp_sec))
+        };
+        fw.response.Cookies.Append(name, value, options);
+    }
+
+    public static string getCookie(FW fw, string name)
+    {
+        return fw.request.Cookies[name];
+    }
+
+    public static void deleteCookie(FW fw, string name)
+    {
+        fw.response.Cookies.Delete(name);
     }
 
 }

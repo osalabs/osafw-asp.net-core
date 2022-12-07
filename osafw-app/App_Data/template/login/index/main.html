@@ -31,9 +31,13 @@
     </div>
 
     <div class="checkbox mb-3">
-      <div class="form-check form-check-inline">
+      <div class="form-check form-check-inline float-right">
+        <input class="form-check-input on-pwd-hideshow" type="checkbox" id="remember" name="item[remember]" value="1" <~/common/checked if="i[remember]">>
+        <label class="form-check-label" for="remember">`Remember Me`</label>
+      </div>
+      <div class="form-check form-check-inline float-right">
         <input class="form-check-input on-pwd-hideshow" type="checkbox" id="chpwd" name="item[chpwd]" value="1" <~/common/checked if="i[chpwd]">>
-        <label class="form-check-label" for="chpwd">`show characters`</label>
+        <label class="form-check-label" for="chpwd">`Show Password`</label>
       </div>
     </div>
 

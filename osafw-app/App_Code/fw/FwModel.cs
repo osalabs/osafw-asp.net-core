@@ -349,7 +349,7 @@ public abstract class FwModel : IDisposable
     public virtual void deleteWithPermanentCheck(int id)
     {
         // if record already deleted and we are admin - perform permanent delete
-        if (fw.model<Users>().checkAccess(Users.ACL_ADMIN, false)
+        if (fw.model<Users>().isAccess(Users.ACL_ADMIN)
             && !string.IsNullOrEmpty(field_status)
             && Utils.f2int(one(id)[field_status]) == FwModel.STATUS_DELETED)
             delete(id, true);
