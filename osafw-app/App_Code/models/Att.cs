@@ -25,7 +25,7 @@ public class Att : FwModel
     const int MAX_THUMB_W_L = 1200;
     const int MAX_THUMB_H_L = 1200;
 
-    public string MIME_MAP = "doc|application/msword docx|application/msword xls|application/vnd.ms-excel xlsx|application/vnd.ms-excel ppt|application/vnd.ms-powerpoint pptx|application/vnd.ms-powerpoint pdf|application/pdf html|text/html zip|application/x-zip-compressed jpg|image/jpeg jpeg|image/jpeg gif|image/gif png|image/png wmv|video/x-ms-wmv avi|video/x-msvideo mp4|video/mp4";
+    public string MIME_MAP = "doc|application/msword docx|application/msword xls|application/vnd.ms-excel xlsx|application/vnd.ms-excel ppt|application/vnd.ms-powerpoint pptx|application/vnd.ms-powerpoint csv|text/csv pdf|application/pdf html|text/html zip|application/x-zip-compressed jpg|image/jpeg jpeg|image/jpeg gif|image/gif png|image/png wmv|video/x-ms-wmv avi|video/x-msvideo mp4|video/mp4";
     public string att_table_link = "att_table_link";
 
     public Att() : base()
@@ -359,7 +359,7 @@ public class Att : FwModel
             {
                 fw.response.StatusCode = 404;
                 return;
-            }                    
+            }
 
             DateTime filetime = System.IO.File.GetLastWriteTime(filepath);
             filetime = new DateTime(filetime.Year, filetime.Month, filetime.Day, filetime.Hour, filetime.Minute, filetime.Second); // remove any milliseconds
@@ -402,11 +402,11 @@ public class Att : FwModel
             where += " and a.is_image=@is_image";
             @params["@is_image"] = is_image;
         }
-            
+
         return db.arrayp("select a.* " + " from " + db.qid(att_table_link) + " atl, "+ db.qid(this.table_name)+" a "
             + " where atl.table_name=@link_table_name"
             + " and atl.item_id=@item_id"
-            + " and a.id=atl.att_id" + where 
+            + " and a.id=atl.att_id" + where
             + " order by a.id ", @params);
     }
 
@@ -488,7 +488,7 @@ public class Att : FwModel
 
     //////////////////// S3 related functions - only works with S3 model if Amazon.S3 installed
 
-    // generate signed url and redirect to it, so user download directly from S3      
+    // generate signed url and redirect to it, so user download directly from S3
     public void redirectS3(Hashtable item, string size = "")
     {
         if (fw.userId == 0)
