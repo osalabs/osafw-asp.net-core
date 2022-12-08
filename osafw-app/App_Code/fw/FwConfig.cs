@@ -55,7 +55,8 @@ public class FwConfig
         HttpRequest req = context.Request;
 
         if (string.IsNullOrEmpty(hostname))
-            hostname = context.GetServerVariable("HTTP_HOST");
+            hostname = context.Request.Host.ToString();
+            //hostname = context.GetServerVariable("HTTP_HOST") ?? "";
         settings["hostname"] = hostname;
 
         string ApplicationPath = req.PathBase;
@@ -77,7 +78,7 @@ public class FwConfig
         }
 
         settings["site_root"] = Regex.Replace(PhysicalApplicationPath, @"\\$", ""); // removed last \ if any
-        
+
         settings["log"] = settings["site_root"] + @"\App_Data\logs\main.log";
         settings["log_max_size"] = 100 * 1024 * 1024; // 100 MB is max log size
         settings["tmp"] = Path.GetTempPath();
