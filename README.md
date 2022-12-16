@@ -70,7 +70,7 @@ Controllers automatically directly mapped to URLs, so developer doesn't need to 
 
   - `GET /Controller` - list view `IndexAction()`
   - `GET /Controller/ID` - one record view `ShowAction()`
-  - `GET /Controller/ID/new` - one record new form `ShowFormAction()`
+  - `GET /Controller/new` - one record new form `ShowFormAction()`
   - `GET /Controller/ID/edit` - one record edit form `ShowFormAction()`
   - `GET /Controller/ID/delete` - one record delete confirmation form `ShowDeleteAction()`
   - `POST /Controller` - insert new record `SaveAction()`
