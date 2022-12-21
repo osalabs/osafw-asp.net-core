@@ -18,6 +18,7 @@ public class FwConfig
     public static string hostname;
     public static Hashtable settings;
     public static string route_prefixes_rx = "";
+    public static char separatorChar = Path.DirectorySeparatorChar;
     public static IConfiguration configuration;
 
     private static readonly object locker = new();
@@ -60,11 +61,11 @@ public class FwConfig
         settings["hostname"] = hostname;
 
         string ApplicationPath = req.PathBase;
-        settings["ROOT_URL"] = Regex.Replace(ApplicationPath, @"\/$", ""); // removed last / if any
+        settings["ROOT_URL"] = Regex.Replace(ApplicationPath, @$"{separatorChar}$", ""); // removed last / if any
 
         string PhysicalApplicationPath;
         string basedir = AppDomain.CurrentDomain.BaseDirectory; //application root directory
-        var bin_index = basedir.IndexOf(@"\bin");
+        var bin_index = basedir.IndexOf($@"{separatorChar}bin");
         if (bin_index == -1)
         {
             // try to find bin directory - if it's NOT found than we working under published-only site setup,
@@ -74,12 +75,12 @@ public class FwConfig
         else
         {
             //if bin found - then app path is parent folder of the bin
-            PhysicalApplicationPath = basedir.Substring(0, basedir.IndexOf(@"\bin"));
+            PhysicalApplicationPath = basedir.Substring(0, basedir.IndexOf($@"{separatorChar}bin"));
         }
 
-        settings["site_root"] = Regex.Replace(PhysicalApplicationPath, @"\\$", ""); // removed last \ if any
+        settings["site_root"] = Regex.Replace(PhysicalApplicationPath, @$"{separatorChar}$", ""); // removed last \ if any
 
-        settings["log"] = settings["site_root"] + @"\App_Data\logs\main.log";
+        settings["log"] = settings["site_root"] + $@"{separatorChar}App_Data{separatorChar}logs{separatorChar}main.log";
         settings["log_max_size"] = 100 * 1024 * 1024; // 100 MB is max log size
         settings["tmp"] = Path.GetTempPath();
 
@@ -152,7 +153,7 @@ public class FwConfig
 
         // default template dir
         if (!settings.ContainsKey("template"))
-            settings["template"] = @"\App_Data\template";
+            settings["template"] = $@"{separatorChar}App_Data{separatorChar}template";
         // make absolute path to templates from site root
         settings["template"] = (string)settings["site_root"] + settings["template"];
     }
