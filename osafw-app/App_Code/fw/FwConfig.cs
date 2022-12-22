@@ -61,7 +61,7 @@ public class FwConfig
         settings["hostname"] = hostname;
 
         string ApplicationPath = req.PathBase;
-        settings["ROOT_URL"] = Regex.Replace(ApplicationPath, @$"{path_separator}$", ""); // removed last / if any
+        settings["ROOT_URL"] = Regex.Replace(ApplicationPath, @"/$", ""); // removed last / if any
 
         string PhysicalApplicationPath;
         string basedir = AppDomain.CurrentDomain.BaseDirectory; //application root directory
@@ -78,7 +78,7 @@ public class FwConfig
             PhysicalApplicationPath = basedir.Substring(0, basedir.IndexOf($@"{path_separator}bin"));
         }
 
-        settings["site_root"] = Regex.Replace(PhysicalApplicationPath, @$"{path_separator}$", ""); // removed last \ if any
+        settings["site_root"] = Regex.Replace(PhysicalApplicationPath, @$"\{path_separator}$", ""); // removed last \ if any
 
         settings["log"] = settings["site_root"] + $@"{path_separator}App_Data{path_separator}logs{path_separator}main.log";
         settings["log_max_size"] = 100 * 1024 * 1024; // 100 MB is max log size

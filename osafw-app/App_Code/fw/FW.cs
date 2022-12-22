@@ -825,8 +825,11 @@ public class FW : IDisposable
     {
         error = null;
         string result = "";
+
+        //For Windows - replace Unix-style separators / to \
         if(path_separator == '\\')
-            filename = Regex.Replace(filename, path_separator.ToString(), @"\");
+            filename = filename.Replace('/', path_separator);
+
         if (!File.Exists(filename))
             return result;
 
@@ -881,8 +884,9 @@ public class FW : IDisposable
     /// <param name="isAppend">False by default </param>
     public static void setFileContent(string filename, ref string fileData, bool isAppend = false)
     {
-        if(path_separator == '\\')
-            filename = Regex.Replace(filename, path_separator.ToString(), @"\");
+        //For Windows - replace Unix-style separators / to \
+        if (path_separator == '\\')
+            filename = filename.Replace('/', path_separator);
 
         using (StreamWriter sw = new(filename, isAppend))
         {
@@ -910,7 +914,7 @@ public class FW : IDisposable
     // TODO - create another func and call it from call_controller for processing _redirect, ... (non-parsepage) instead of calling parser?
     public void parser(string bdir, Hashtable ps)
     {
-        if (!this.response.HasStarted) this.response.Headers.Add("Cache-Control", cache_control);
+        if (!this.response.HasStarted) this.response.Headers["Cache-Control"]= cache_control;
 
         string format = this.getResponseExpectedFormat();
         if (format == "json")
