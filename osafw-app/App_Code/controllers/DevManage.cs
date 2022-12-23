@@ -851,7 +851,7 @@ public class DevManageController : FwController
 
                 //lookup on parts
                 var hparts = new Hashtable();
-                for (int i = 0; i < parts.Length - 1; i++)
+                for (int i = 0; i < parts.Length; i++)
                 {
                     hparts[parts[i]] = i;
                 }
