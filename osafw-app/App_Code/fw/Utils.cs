@@ -327,6 +327,8 @@ public class Utils
                 // logger(h)
                 callback(row);
             }
+
+            dbread.Close();
         }
     }
 
