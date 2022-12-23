@@ -109,6 +109,7 @@ public class FW : IDisposable
     public bool is_log_events = true; // can be set temporarly to false to prevent event logging (for batch process for ex)
 
     public string last_error_send_email = "";
+    private static readonly char path_separator = Path.DirectorySeparatorChar;
 
 #if isSentry
     private readonly IDisposable sentryClient;
@@ -708,14 +709,14 @@ public class FW : IDisposable
             System.Diagnostics.StackFrame sf = st.GetFrame(i);
             string fname = sf.GetFileName() ?? "";
             // skip logger methods and DB internals as we want to know line where logged thing actually called from
-            while (sf.GetMethod().Name == "logger" || fname.Length >= 6 && fname.Substring(fname.Length - 6) == @"\DB.vb")
+            while (sf.GetMethod().Name == "logger" || fname.Length >= 6 && fname.Substring(fname.Length - 6) == $@"{path_separator}DB.vb")
             {
                 i += 1;
                 sf = st.GetFrame(i);
             }
             fname = sf.GetFileName();
             if (fname != null)
-                str.Append(fname.Replace((string)this.config("site_root"), "").Replace(@"\App_Code", ""));
+                str.Append(fname.Replace((string)this.config("site_root"), "").Replace($@"{path_separator}App_Code", ""));
             str.Append(':').Append(sf.GetMethod().Name).Append(' ').Append(sf.GetFileLineNumber()).Append(" # ");
         }
         catch (Exception ex)
@@ -824,7 +825,11 @@ public class FW : IDisposable
     {
         error = null;
         string result = "";
-        filename = Regex.Replace(filename, "/", @"\");
+
+        //For Windows - replace Unix-style separators / to \
+        if(path_separator == '\\')
+            filename = filename.Replace('/', path_separator);
+
         if (!File.Exists(filename))
             return result;
 
@@ -879,7 +884,9 @@ public class FW : IDisposable
     /// <param name="isAppend">False by default </param>
     public static void setFileContent(string filename, ref string fileData, bool isAppend = false)
     {
-        filename = Regex.Replace(filename, "/", @"\");
+        //For Windows - replace Unix-style separators / to \
+        if (path_separator == '\\')
+            filename = filename.Replace('/', path_separator);
 
         using (StreamWriter sw = new(filename, isAppend))
         {
@@ -907,7 +914,7 @@ public class FW : IDisposable
     // TODO - create another func and call it from call_controller for processing _redirect, ... (non-parsepage) instead of calling parser?
     public void parser(string bdir, Hashtable ps)
     {
-        if (!this.response.HasStarted) this.response.Headers.Add("Cache-Control", cache_control);
+        if (!this.response.HasStarted) this.response.Headers["Cache-Control"]= cache_control;
 
         string format = this.getResponseExpectedFormat();
         if (format == "json")
