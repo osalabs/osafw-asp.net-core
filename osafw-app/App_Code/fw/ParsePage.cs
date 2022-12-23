@@ -169,6 +169,7 @@ public class ParsePage
     private readonly bool lang_parse = true; // parse lang strings in `` or not - true - parse(default), false - no
     private readonly bool lang_update = true; // save unknown matches to lang file (helps during development)
     private readonly MatchEvaluator lang_evaluator;
+    private static readonly char path_separator = Path.DirectorySeparatorChar;
 
     public ParsePage(FW fw)
     {
@@ -393,7 +394,8 @@ public class ParsePage
     {
         string modtime = "";
         string file_data = "";
-        filename = filename.Replace("/", @"\");
+        if(path_separator == '\\')
+            filename = filename.Replace(path_separator.ToString(), @"\");
         // fw.logger("preacaching [" & filename & "]")
 
         // check and get from cache

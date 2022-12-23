@@ -18,17 +18,20 @@
 <div class="text-muted mt-5">
     Notes:<br>
     - use 2 spaces indent and "-" for fields<br>
-    - tablename <b>lookup</b> means do not create controller, add to Lookup Manager
-    - tablename <b>noui</b> means do not create controller at all, if only model will be used
+    - tablename <b>lookup</b> means do not create controller, add to Lookup Manager<br>
+    - tablename <b>noui</b> means do not create controller at all, if only model will be used<br>
     - every entity will already contain standard fields: <em>id, iname, idesc, status, add_time, add_users_id, upd_time, upd_users_id</em><br>
+    - <b>remove default_field_name</b> - removes field name added by default (above)<br>
     - <b>*Address</b> = creates several fields address, address2, city, state, zip, country<br>
     - <b>*Date</b> = date type applied<br>
     - fieldname<b>.id</b> means foreign key<br>
     - fieldname <b>required</b> means NOT NULL required field, otherwise <em>NOT NULL default ''</em> applied<br>
     - fieldname <b>NULL</b> means no default applied and field can be null<br>
+    - fieldname <b>default (VALUE_HERE)</b> - apply default value<br>
     - fieldname <b>FK lookuptablename.id</b> means foreign key if field name needs to be different, sample: <em>- birth_countries_id FK countries.id</em><br>
-    - <b>prefix^lookuptablename.id</b> creates <em>prefix_lookuptablename_id</em> field and FK to lookuptablename.id
+    - <b>prefix^lookuptablename.id</b> creates <em>prefix_lookuptablename_id</em> field and FK to lookuptablename.id<br>
     - fieldname <b>multiple</b> creates link subtable, sample: under products table <em>- categories multiple</em> - creates <em>products_categories</em> link table with related multi-checkboxes UI<br>
+    - <b>[UNIQUE]KEY (field1,field2,...)</b> - creates an (unique) index (also indexes automatically added for each FK and link subtables)<br>
     - everything after "<b>#</b>" is a comment (preserved in generated .sql)<br>
     <br>
     Sample for CRM:<br>

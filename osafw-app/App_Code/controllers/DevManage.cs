@@ -11,6 +11,8 @@ using Microsoft.VisualBasic;
 using System.Collections;
 using System.Text.RegularExpressions;
 using System.Text.Json;
+using Microsoft.AspNetCore.Mvc.Formatters;
+using System.Data;
 
 namespace osafw;
 
@@ -763,6 +765,13 @@ public class DevManageController : FwController
         }
     }
 
+    private void _addIndexToEntity(Hashtable table_entity, string index_prefix, string key_fields)
+    {
+        var indexes = (Hashtable)table_entity["indexes"];
+        var next_num = indexes.Count + 1;
+        indexes[index_prefix + next_num] = key_fields;
+    }
+
     private void createDBJsonFromText(string entities_text)
     {
         var entities = new ArrayList();
@@ -807,7 +816,7 @@ public class DevManageController : FwController
 
                 table_entity["model_name"] = _tablename2model((string)table_entity["fw_name"]); // potential Model Name
 
-                
+
                 if (Regex.IsMatch(line, @"\bnoui\b"))
                 {
                     //check if noui - no UI requested - set explicit empty URL so app won't not create controller
@@ -825,6 +834,7 @@ public class DevManageController : FwController
                 // add default system fields
                 table_entity["fields"] = new ArrayList(defaultFields());
                 table_entity["foreign_keys"] = new ArrayList();
+                table_entity["indexes"] = new Hashtable(); // UX1|IX2 => comma separated fields fields
                 if (comments.Length > 0) table_entity["comments"] = comments;
             }
             else
@@ -844,6 +854,21 @@ public class DevManageController : FwController
                 for (int i = 0; i < parts.Length - 1; i++)
                 {
                     hparts[parts[i]] = i;
+                }
+
+                if (field_name == "UNIQUEKEY" || field_name == "KEY")
+                {
+                    //add index
+                    var m = Regex.Match(line, @"\s+\((.+)\)"); // (field1, field2...)
+                    if (m.Success)
+                    {
+                        _addIndexToEntity(table_entity, (field_name == "UNIQUEKEY" ? "UX" : "IX"), m.Groups[1].Value);
+                        continue;
+                    }
+                    else
+                    {
+                        logger("Wrong KEY defition");
+                    }
                 }
 
                 if (field_name == "remove")
@@ -900,6 +925,9 @@ public class DevManageController : FwController
                     fk["column"] = field_name;
 
                     field["fw_type"] = "int";
+
+                    //for each field with foreign key - add an index (as SQL Server won't do this automatically, only MySQL)
+                    _addIndexToEntity(table_entity, "IX", (string)fk["column"]);
                 }
                 else
                 {
@@ -917,6 +945,9 @@ public class DevManageController : FwController
                         fk["column"] = field_name;
 
                         field["fw_type"] = "int";
+
+                        //for each field with foreign key - add an index (as SQL Server won't do this automatically, only MySQL)
+                        _addIndexToEntity(table_entity, "IX", (string)fk["column"]);
                     }
 
                     if (hparts.Contains("multiple"))
@@ -933,10 +964,12 @@ public class DevManageController : FwController
 
                         //2 link fields - one to main table, another - to lookup table
                         var link_fields = new ArrayList();
+                        var field_name1 = table_entity["table"] + "_id";
+                        var field_name2 = linked_tblname + "_id";
                         link_fields.Add(new Hashtable()
                                     {
-                                        {"name",table_entity["table"]+"_id"},
-                                        {"fw_name",table_entity["table"]+"_id"},
+                                        {"name",field_name1},
+                                        {"fw_name",field_name1},
                                         {"iname",Utils.name2human((string)table_entity["table"])},
                                         {"is_identity",0},
                                         {"default",null},
@@ -948,8 +981,8 @@ public class DevManageController : FwController
                                     });
                         link_fields.Add(new Hashtable()
                                     {
-                                        {"name",linked_tblname+"_id"},
-                                        {"fw_name",linked_tblname+"_id"},
+                                        {"name",field_name2},
+                                        {"fw_name",field_name2},
                                         {"iname",Utils.name2human((string)linked_tblname)},
                                         {"is_identity",0},
                                         {"default",null},
@@ -969,15 +1002,21 @@ public class DevManageController : FwController
                                 {
                                     {"pk_table", table_entity["table"]},
                                     {"pk_column", "id"},
-                                    {"column", table_entity["table"]+"_id"}
+                                    {"column", field_name1}
                                 });
                         link_fk.Add(new Hashtable()
                                 {
                                     {"pk_table", linked_tblname},
                                     {"pk_column", "id"},
-                                    {"column", linked_tblname+"_id"}
+                                    {"column", field_name2}
                                 });
-                        link_entity["foreign_keys"] = new ArrayList();
+                        link_entity["foreign_keys"] = link_fk;
+                        //automatic PK on both link fields
+                        link_entity["indexes"] = new Hashtable()
+                        {
+                            {"PK", field_name1+", "+field_name2},
+                            {"UX", field_name2+", "+field_name1}, //have an index with reversed fields order
+                        };
 
                         link_entity["model_name"] = _tablename2model((string)link_entity["fw_name"]); // potential Model Name
                         link_entity["controller_url"] = ""; // no ui for link tables
@@ -1250,7 +1289,7 @@ public class DevManageController : FwController
                 codegen += "        field_prio = \"prio\";" + Constants.vbCrLf;
 
             if (is_normalize_names || !Utils.f2bool(entity["is_fw"]))
-                codegen += "        is_normalize_names = True;" + Constants.vbCrLf;
+                codegen += "        is_normalize_names = true;" + Constants.vbCrLf;
         }
 
 
@@ -1274,7 +1313,7 @@ public class DevManageController : FwController
         foreach (Hashtable field in fields)
         {
             var fw_name = (string)field["fw_name"];
-            if (fw_name=="icode" || fw_name == "iname" || fw_name == "idesc")
+            if (fw_name == "icode" || fw_name == "iname" || fw_name == "idesc")
             {
                 columns += (!is_first ? "," : "") + fw_name;
                 column_names += (!is_first ? "," : "") + field["iname"];
@@ -1290,8 +1329,8 @@ public class DevManageController : FwController
                 if (hfks.ContainsKey(field["name"]))
                 {
                     var fk = (Hashtable)hfks[field["name"]];
-                    ctype = fk["pk_table"] + "." + fk["pk_column"]+":iname"; //iname as default, might not work for non-fw tables
-                }                
+                    ctype = fk["pk_table"] + "." + fk["pk_column"] + ":iname"; //iname as default, might not work for non-fw tables
+                }
 
                 column_types += (!is_first ? "," : "") + ctype;
             }
@@ -1336,7 +1375,7 @@ public class DevManageController : FwController
         string controller_title = (string)entity["controller_title"];
 
         if (controller_url == "")
-        {            
+        {
             //if controller url explicitly empty - do not create controller
             return;
         }
@@ -1876,7 +1915,8 @@ public class DevManageController : FwController
     // convert db.json entity to SQL CREATE TABLE
     private string entity2SQL(Hashtable entity)
     {
-        var result = "CREATE TABLE " + q_ident((string)entity["table"]) + " (" + Constants.vbCrLf;
+        var table_name = (string)entity["table"];
+        var result = "CREATE TABLE " + q_ident(table_name) + " (" + Constants.vbCrLf;
 
         var i = 1;
         var fields = (ArrayList)entity["fields"];
@@ -1899,6 +1939,30 @@ public class DevManageController : FwController
 
             result += fsql + Constants.vbCrLf;
             i += 1;
+        }
+
+        var indexes = (Hashtable)entity["indexes"] ?? null;
+        if (indexes != null)
+        {
+            foreach (string index_prefix in indexes.Keys)
+            {                
+                var isql = ", ";
+                var prefix2 = index_prefix.Substring(0, 2);
+                if (prefix2 == "PK")
+                {
+                    //PRIMARY KEY CLUSTERED (field, field,...)
+                    isql += "PRIMARY KEY CLUSTERED ";
+                }
+                else
+                {
+                    //INDEX [UI]X123_tablename [UNIQUE] (field, field,...)
+                    isql += "INDEX " + index_prefix + "_" + table_name;
+                    isql += (prefix2 == "UX" ? " UNIQUE " : " ");
+                }
+
+                isql += "(" + indexes[index_prefix] + ")";
+                result += isql + Constants.vbCrLf;
+            }
         }
 
         result += ")";
