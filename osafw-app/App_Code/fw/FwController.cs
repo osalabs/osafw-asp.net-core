@@ -542,34 +542,42 @@ public abstract class FwController
                 string str;
                 var fieldname_sql = "ISNULL(CAST(" + db.qid(fieldname) + " as NVARCHAR), '')";
                 var fieldname_sql2 = "TRY_CONVERT(DECIMAL(18,1),CAST(" + db.qid(fieldname) + " as NVARCHAR))"; // SQL Server 2012+ only
-                if (value.Substring(0, 1) == "=")
+                if (value.Length > 1 && value.Substring(0, 1) == "=")
+                {
                     str = " = " + db.q(value[1..]);
-                else if (value.Substring(0, 2) == "!=")
+                }
+                else if (value.Length > 2 && value.Substring(0, 2) == "!=")
+                {
                     str = " <> " + db.q(value[2..]);
-                else if (value.Substring(0, 2) == "<=")
+                }
+                else if (value.Length > 2 && value.Substring(0, 2) == "<=")
                 {
                     fieldname_sql = fieldname_sql2;
                     str = " <= " + db.q(value[2..]);
                 }
-                else if (value.Substring(0, 1) == "<")
+                else if (value.Length >= 1 && value.Substring(0, 1) == "<")
                 {
                     fieldname_sql = fieldname_sql2;
                     str = " < " + db.q(value[1..]);
                 }
-                else if (value.Substring(0, 2) == ">=")
+                else if (value.Length > 2 && value.Substring(0, 2) == ">=")
                 {
                     fieldname_sql = fieldname_sql2;
                     str = " >= " + db.q(value[2..]);
                 }
-                else if (value.Substring(0, 1) == ">")
+                else if (value.Length > 1 && value.Substring(0, 1) == ">")
                 {
                     fieldname_sql = fieldname_sql2;
                     str = " > " + db.q(value[1..]);
                 }
-                else if (value.Substring(0, 1) == "!")
+                else if (value.Length > 1 && value.Substring(0, 1) == "!")
+                {
                     str = " NOT LIKE " + db.q("%" + value[1..] + "%");
+                }
                 else
+                {
                     str = " LIKE " + db.q("%" + value + "%");
+                }
 
                 this.list_where += " and " + fieldname_sql + " " + str;
             }
