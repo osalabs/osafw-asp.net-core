@@ -394,8 +394,9 @@ public class ParsePage
     {
         string modtime = "";
         string file_data = "";
+        //For Windows - replace Unix-style separators / to \
         if(path_separator == '\\')
-            filename = filename.Replace(path_separator.ToString(), @"\");
+            filename = filename.Replace('/', @"\");
         // fw.logger("preacaching [" & filename & "]")
 
         // check and get from cache
