@@ -650,13 +650,13 @@ public abstract class FwController
 
             string sql;
 
-            if (db.dbtype == "SQL")
+            if (db.dbtype == DB.DBTYPE_SQLSRV)
             {
                 // for SQL Server 2012+
                 sql = "SELECT * FROM " + list_view_name + " WHERE " + this.list_where + " ORDER BY " + this.list_orderby + " OFFSET " + offset + " ROWS " + " FETCH NEXT " + limit + " ROWS ONLY";
                 this.list_rows = db.arrayp(sql, list_where_params);
             }
-            else if (db.dbtype == "OLE")
+            else if (db.dbtype == DB.DBTYPE_OLE)
             {
                 // OLE - for Access - emulate using TOP and return just a limit portion (bad perfomance, but no way)
                 sql = "SELECT TOP " + (offset + limit) + " * FROM " + list_view_name + " WHERE " + this.list_where + " ORDER BY " + this.list_orderby;

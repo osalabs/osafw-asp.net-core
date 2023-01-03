@@ -1,4 +1,14 @@
-﻿using System;
+﻿// DB for ASP.NET - framework convenient database wrapper
+//
+// Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
+// (c) 2009-2023 Oleg Savchuk www.osalabs.com
+
+#define isMySQL
+#if isMySQL
+using MySqlConnector;
+#endif
+
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
@@ -11,6 +21,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Text.RegularExpressions;
+
 
 namespace osafw;
 
@@ -168,6 +179,11 @@ public struct DBQueryAndParams
 
 public class DB : IDisposable
 {
+    public const string DBTYPE_SQLSRV= "SQL";
+    public const string DBTYPE_OLE = "OLE";
+    public const string DBTYPE_ODBC = "ODBC";
+    public const string DBTYPE_MYSQL = "MySQL";
+
     private static Hashtable schemafull_cache; // cache for the full schema, lifetime = app lifetime
     private static Hashtable schema_cache; // cache for the schema, lifetime = app lifetime
 
@@ -176,7 +192,7 @@ public class DB : IDisposable
     private readonly FW fw; // for now only used for: fw.logger and fw.cache (for request-level cacheing of multi-db connections)
 
     public string db_name = "";
-    public string dbtype = "SQL";
+    public string dbtype = DBTYPE_SQLSRV; // SQL=SQL Server, OLE=OleDB, MySQL=MySQL
     public int sql_command_timeout = 30; // default command timeout, override in model for long queries (in reports or export, for example)
     private readonly Hashtable conf = new();  // config contains: connection_string, type
     private readonly string connstr = "";
@@ -185,7 +201,7 @@ public class DB : IDisposable
     private DbConnection conn; // actual db connection - SqlConnection or OleDbConnection
 
     private bool is_check_ole_types = false; // if true - checks for unsupported OLE types during readRow
-    private readonly Hashtable UNSUPPORTED_OLE_TYPES = new();
+    private readonly Hashtable UNSUPPORTED_OLE_TYPES = Utils.qh("DBTYPE_IDISPATCH DBTYPE_IUNKNOWN"); // also? DBTYPE_ARRAY DBTYPE_VECTOR DBTYPE_BYTES
 
     /// <summary>
     ///  "synax sugar" helper to build Hashtable from list of arguments instead more complex New Hashtable from {...}
@@ -224,8 +240,6 @@ public class DB : IDisposable
         this.connstr = (string)this.conf["connection_string"];
 
         this.db_name = db_name;
-
-        this.UNSUPPORTED_OLE_TYPES = Utils.qh("DBTYPE_IDISPATCH DBTYPE_IUNKNOWN"); // also? DBTYPE_ARRAY DBTYPE_VECTOR DBTYPE_BYTES
     }
 
     public DB(string connstr, string type, string db_name)
@@ -237,8 +251,6 @@ public class DB : IDisposable
         this.connstr = (string)this.conf["connection_string"];
 
         this.db_name = db_name;
-
-        this.UNSUPPORTED_OLE_TYPES = Utils.qh("DBTYPE_IDISPATCH DBTYPE_IUNKNOWN");
     }
 
     public void logger(LogLevel level, params object[] args)
@@ -273,7 +285,7 @@ public class DB : IDisposable
         if (conn.State != ConnectionState.Open)
             conn.Open();
 
-        if (this.dbtype == "OLE")
+        if (this.dbtype == DBTYPE_OLE)
             is_check_ole_types = true;
         else
             is_check_ole_types = false;
@@ -300,15 +312,21 @@ public class DB : IDisposable
     {
         DbConnection result;
 
-        if (dbtype == "SQL")
+        logger(LogLevel.DEBUG, "******* createConnection:", connstr, " dbtype:", dbtype);
+
+        if (dbtype == DBTYPE_SQLSRV)
         {
             result = new SqlConnection(connstr);
         }
-        else if (dbtype == "OLE" && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        else if (dbtype == DBTYPE_MYSQL)
+        {
+            result = new MySqlConnection(connstr);
+        }
+        else if (dbtype == DBTYPE_OLE && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             result = new OleDbConnection(connstr);
         }
-        else if (dbtype == "ODBC")
+        else if (dbtype == DBTYPE_ODBC)
         {
             result = new OdbcConnection(connstr);
         }
@@ -348,7 +366,7 @@ public class DB : IDisposable
         SQL_QUERY_CTR += 1;
 
         DbDataReader dbread;
-        if (dbtype == "SQL")
+        if (dbtype == DBTYPE_SQLSRV)
         {
             var dbcomm = new SqlCommand(sql, (SqlConnection)conn);
             dbcomm.CommandTimeout = sql_command_timeout;
@@ -357,9 +375,17 @@ public class DB : IDisposable
                     dbcomm.Parameters.AddWithValue(p, @params[p]);
             dbread = dbcomm.ExecuteReader();
         }
-        else if (dbtype == "OLE" && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        else if (dbtype == DBTYPE_OLE && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             var dbcomm = new OleDbCommand(sql, (OleDbConnection)conn);
+            if (@params != null)
+                foreach (string p in @params.Keys)
+                    dbcomm.Parameters.AddWithValue(p, @params[p]);
+            dbread = dbcomm.ExecuteReader();
+        }
+        else if (dbtype == DBTYPE_MYSQL)
+        {
+            var dbcomm = new MySqlCommand(sql, (MySqlConnection)conn);
             if (@params != null)
                 foreach (string p in @params.Keys)
                     dbcomm.Parameters.AddWithValue(p, @params[p]);
@@ -384,7 +410,7 @@ public class DB : IDisposable
         SQL_QUERY_CTR += 1;
 
         int result;
-        if (dbtype == "SQL")
+        if (dbtype == DBTYPE_SQLSRV)
         {
             if (is_get_identity)
             {
@@ -402,13 +428,26 @@ public class DB : IDisposable
             else
                 result = dbcomm.ExecuteNonQuery();
         }
-        else if (dbtype == "OLE" && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        else if (dbtype == DBTYPE_OLE && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             var dbcomm = new OleDbCommand(sql, (OleDbConnection)conn);
             if (@params != null)
                 foreach (string p in @params.Keys)
                     dbcomm.Parameters.AddWithValue(p, @params[p]);
             result = dbcomm.ExecuteNonQuery();
+        }
+        else if (dbtype == DBTYPE_MYSQL)
+        {
+            var dbcomm = new MySqlCommand(sql, (MySqlConnection)conn);
+            dbcomm.CommandTimeout = sql_command_timeout;
+            if (@params != null)
+                foreach (string p in @params.Keys)
+                    dbcomm.Parameters.AddWithValue(p, @params[p]);
+
+            result = dbcomm.ExecuteNonQuery();
+
+            if (is_get_identity)
+                result = (int)dbcomm.LastInsertedId; //TODO change result type to long
         }
         else
             throw new ApplicationException("Unsupported DB Type");
@@ -752,7 +791,7 @@ public class DB : IDisposable
     public string qdstr(object str)
     {
         string result;
-        if (dbtype == "SQL")
+        if (dbtype == DBTYPE_SQLSRV)
         {
             if (DateTime.TryParse(str.ToString(), out DateTime tmpdate))
             {
@@ -1170,13 +1209,17 @@ public class DB : IDisposable
 
         object insert_id;
 
-        if (dbtype == "SQL")
+        if (dbtype == DBTYPE_SQLSRV)
             // SELECT SCOPE_IDENTITY() not always return what we need
             insert_id = exec(qp.sql, qp.@params, true);
-        else if (dbtype == "OLE")
+        else if (dbtype == DBTYPE_OLE)
         {
             exec(qp.sql, qp.@params);
             insert_id = valuep("SELECT @@identity");
+        }
+        else if (dbtype == DBTYPE_MYSQL)
+        {
+            insert_id = exec(qp.sql, qp.@params, true);
         }
         else
             throw new ApplicationException("Get last insert ID for DB type [" + dbtype + "] not implemented");
@@ -1383,7 +1426,7 @@ public class DB : IDisposable
 
         // cache miss
         ArrayList result = new();
-        if (dbtype == "SQL")
+        if (dbtype == DBTYPE_SQLSRV)
         {
             // fw.logger("cache MISS " & current_db & "." & table)
             // get information about all columns in the table
@@ -1406,6 +1449,34 @@ public class DB : IDisposable
                         AND t.table_name = @table_name
                       order by c.ORDINAL_POSITION";
             result = arrayp(sql, DB.h("@table_name", table));
+            foreach (Hashtable row in result)
+            {
+                row["fw_type"] = mapTypeSQL2Fw((string)row["type"]); // meta type
+                row["fw_subtype"] = ((string)row["type"]).ToLower();
+            }
+        }
+        else if (dbtype == DBTYPE_MYSQL)
+        {
+            string sql = @"SELECT c.column_name as name,
+                      c.data_type as type,
+                      CASE c.is_nullable WHEN 'YES' THEN 1 ELSE 0 END AS is_nullable,
+                      c.column_default as default,
+                      c.character_maximum_length as maxlen,
+                      c.numeric_precision as numeric_precision,
+                      c.numeric_scale as numeric_scale,
+                      c.character_set_name as charset,
+                      c.collation_name as collation,
+                      c.ORDINAL_POSITION as pos,
+                      LOCATE('auto_increment',EXTRA)>0 as is_identity
+                      FROM INFORMATION_SCHEMA.TABLES t,
+                           INFORMATION_SCHEMA.COLUMNS c
+                      WHERE t.table_name = c.table_name
+                        AND t.table_schema = c.table_schema
+                        AND t.table_catalog = c.table_catalog
+                        AND t.table_name = @table_name
+                        AND t.table_schema = @db_name
+                      order by c.ORDINAL_POSITION";
+            result = arrayp(sql, DB.h("@table_name", table, "@db_name", conn.Database));
             foreach (Hashtable row in result)
             {
                 row["fw_type"] = mapTypeSQL2Fw((string)row["type"]); // meta type
@@ -1470,7 +1541,7 @@ public class DB : IDisposable
     public ArrayList listForeignKeys(string table = "")
     {
         ArrayList result = new();
-        if (dbtype == "SQL")
+        if (dbtype == DBTYPE_SQLSRV)
         {
             var where = "";
             var where_params = new Hashtable();
@@ -1528,7 +1599,7 @@ public class DB : IDisposable
     public Hashtable loadTableSchema(string table)
     {
         // for unsupported schemas - use config schema
-        if (dbtype != "SQL" && dbtype != "OLE")
+        if (dbtype != DBTYPE_SQLSRV && dbtype != DBTYPE_OLE)
         {
             if (schema.Count == 0)
                 schema = (Hashtable)conf["schema"];
