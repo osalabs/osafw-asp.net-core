@@ -396,7 +396,7 @@ public class ParsePage
         string file_data = "";
         //For Windows - replace Unix-style separators / to \
         if(path_separator == '\\')
-            filename = filename.Replace('/', @"\");
+            filename = filename.Replace('/', path_separator);
         // fw.logger("preacaching [" & filename & "]")
 
         // check and get from cache

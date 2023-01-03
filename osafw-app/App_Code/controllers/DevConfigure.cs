@@ -68,10 +68,10 @@ public class DevConfigureController : FwController
         // obsolete in .net 4
         // If System.Security.SecurityManager.IsGranted(writePermission) Then ps["is_write_dirs") ] True
 
-        ps["is_error_log"] = false;
-        ps["is_error_log"] = isWritable((string)fw.config("log"));
+        var log_path = (string)fw.config("log");
+        ps["is_error_log"] = isWritable(log_path);
 
-        ps["error_log_size"] = Utils.bytes2str(Utils.fileSize((string)fw.config("log")));
+        ps["error_log_size"] = Utils.bytes2str(Utils.fileSize(log_path));
 
         return ps;
     }

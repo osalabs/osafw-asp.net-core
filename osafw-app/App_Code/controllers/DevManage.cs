@@ -11,8 +11,8 @@ using Microsoft.VisualBasic;
 using System.Collections;
 using System.Text.RegularExpressions;
 using System.Text.Json;
-using Microsoft.AspNetCore.Mvc.Formatters;
 using System.Data;
+using System.Xml.Linq;
 
 namespace osafw;
 
@@ -1553,11 +1553,13 @@ public class DevManageController : FwController
                     if (maxlen < 255)
                     {
                         int col = (int)Math.Round(maxlen / (double)255 * 9 * 4);
-                        if (col < 2)
-                            col = 2; // minimum - 2
-                        if (col > 9)
-                            col = 9;
-                        sff["class_contents"] = "col-md-" + col;
+                        if (col <= 9)
+                        {
+                            //if more than 9 - just use whole width
+                            if (col < 2)
+                                col = 2; // minimum - 2
+                            sff["class_contents"] = "col-md-" + col;
+                        }
                     }
                 }
             }
@@ -1589,7 +1591,7 @@ public class DevManageController : FwController
                                 sff["is_option_empty"] = true;
                             sff["option0_title"] = "- select -";
 
-                            sff["class_contents"] = "col-md-3";
+                            //sff["class_contents"] = "col-md-4";
                             break;
                         }
                     }
@@ -1609,7 +1611,7 @@ public class DevManageController : FwController
                         sff["type"] = "select";
                         sff["lookup_model"] = mname;
                         sff["is_option0"] = true;
-                        sff["class_contents"] = "col-md-3";
+                        //sff["class_contents"] = "col-md-4";
                     }
                     else if (Utils.f2str(fld["fw_subtype"]) == "boolean" || Utils.f2str(entity["fw_subtype"]) == "bit" || Strings.Left(fld_name, 3) == "is_" || Regex.IsMatch(fld_name, @"^Is[A-Z]"))
                     {
@@ -1621,7 +1623,7 @@ public class DevManageController : FwController
                     else
                     {
                         sff["type"] = "number";
-                        sff["class_contents"] = "col-md-3";
+                        sff["class_contents"] = "col-md-4";
                         if (!(fld_name == "id" || Strings.Right(fld_name, 3) == "_id") || fld_name == "status")
                         {
                             //for number non-ids - add min/max
@@ -1635,13 +1637,13 @@ public class DevManageController : FwController
             {
                 sff["type"] = "number";
                 sff["step"] = 0.1;
-                sff["class_contents"] = "col-md-3";
+                sff["class_contents"] = "col-md-4";
             }
             else if (Utils.f2str(fld["fw_type"]) == "datetime")
             {
                 sf["type"] = "date";
                 sff["type"] = "date_popup";
-                sff["class_contents"] = "col-md-3";
+                sff["class_contents"] = "col-md-5";
             }
             else
                 // everything else - just input
@@ -1667,12 +1669,12 @@ public class DevManageController : FwController
                     {
                         sf["type"] = "att";
                         sf["label"] = "Attachment";
-                        sf["class_contents"] = "col-md-3";
+                        //sf["class_contents"] = "col-md-4";
                         sff.Remove("lookup_model");
 
                         sff["type"] = "att_edit";
                         sff["label"] = "Attachment";
-                        sff["class_contents"] = "col-md-3";
+                        //sff["class_contents"] = "col-md-4";
                         sff["att_category"] = "general";
                         sff.Remove("class_contents");
                         sff.Remove("lookup_model");
@@ -1688,7 +1690,7 @@ public class DevManageController : FwController
                         sff["label"] = "Status";
                         sff["type"] = "select";
                         sff["lookup_tpl"] = "/common/sel/status.sel";
-                        sff["class_contents"] = "col-md-3";
+                        sff["class_contents"] = "col-md-4";
                         break;
                     }
 
@@ -1732,7 +1734,7 @@ public class DevManageController : FwController
                             sff["lookup_tpl"] = "/common/sel/state.sel";
                             sff["is_option_empty"] = true;
                             sff["option0_title"] = "- select -";
-                            sff["class_contents"] = "col-md-3";
+                            sff["class_contents"] = "col-md-4";
                         }
                         else
                         {
@@ -1746,7 +1748,7 @@ public class DevManageController : FwController
                 continue;
 
             var is_sys = false;
-            if (Utils.f2str(fld["is_identity"]) == "1" || sys_fields.Contains(fld_name) || Utils.f2str(sf["type"]) == "att" || Utils.f2str(sf["type"]) == "att_links")
+            if (Utils.f2str(fld["is_identity"]) == "1" || sys_fields.Contains(fld_name))
             {
                 // add to system fields
                 showFieldsRight.Add(sf);
@@ -1755,8 +1757,20 @@ public class DevManageController : FwController
             }
             else
             {
-                showFieldsLeft.Add(sf);
-                showFormFieldsLeft.Add(sff);
+                //non-system fields
+                if (Utils.f2str(sf["type"]) == "att"
+                    || Utils.f2str(sf["type"]) == "att_links"
+                    || Utils.f2str(sff["type"]) == "textarea" && fields.Count >= 10)
+                {
+                    //add to the right: attachments, textareas (only if many fields)
+                    showFieldsRight.Add(sf);
+                    showFormFieldsRight.Add(sff);
+                }
+                else
+                {
+                    showFieldsLeft.Add(sf);
+                    showFormFieldsLeft.Add(sff);
+                }
             }
 
             if (!is_sys || fld_name == "status")
@@ -1831,23 +1845,28 @@ public class DevManageController : FwController
         // alternatively - just show couple fields
         // If is_fw Then config("view_list_defaults") = "id" & If(hfields.ContainsKey("iname"), " iname", "") & If(hfields.ContainsKey("add_time"), " add_time", "") & If(hfields.ContainsKey("status"), " status", "")
 
-        // just show all fields, except identity, large text and system fields
+        // show first 6 fields (priority to required) +status, except identity, large text and system fields
         config["view_list_defaults"] = "";
-        for (var i = 0; i <= fields.Count - 1; i++)
+        int defaults_ctr = 0;
+        var rfields = (from Hashtable fld in fields
+                       where Utils.f2str(fld["is_identity"]) != "1"
+                         && !(Utils.f2str(fld["fw_type"]) == "varchar" && Utils.f2int(fld["maxlen"]) <= 0)
+                         && !(sys_fields.Contains(fld["name"]) && Utils.f2str(fld["name"]) != "status")
+                       orderby (Utils.f2str(fld["is_nullable"]) == "0" && fld["default"] == null) descending
+                       select fld);
+        foreach (Hashtable field in rfields)
         {
-            Hashtable field = (Hashtable)fields[i];
-            if (Utils.f2str(field["is_identity"]) == "1")
+            var fname = (string)field["name"];
+            if (defaults_ctr > 5 && fname != "status")
                 continue;
-            if (Utils.f2str(field["fw_type"]) == "varchar" && Utils.f2int(field["maxlen"]) <= 0)
-                continue;
-            if (is_fw)
+
+            if (!is_fw)
             {
-                if (Utils.f2str(field["name"]) == "add_time" || Utils.f2str(field["name"]) == "add_users_id" || Utils.f2str(field["name"]) == "upd_time" || Utils.f2str(field["name"]) == "upd_users_id")
-                    continue;
-                config["view_list_defaults"] += (i == 0 ? "" : " ") + field["name"];
+                fname = (string)field["fw_name"];
             }
-            else
-                config["view_list_defaults"] += (i == 0 ? "" : " ") + field["fw_name"];
+
+            config["view_list_defaults"] += (defaults_ctr == 0 ? "" : " ") + fname;
+            defaults_ctr++;
         }
 
         if (!is_fw)
@@ -1859,6 +1878,7 @@ public class DevManageController : FwController
 
             // for non-fw - list_sortmap separately
             config["list_sortmap"] = hFieldsMapFW;
+
         config["view_list_map"] = hFieldsMap; // fields to names
         config["view_list_custom"] = "status";
 
@@ -1945,7 +1965,7 @@ public class DevManageController : FwController
         if (indexes != null)
         {
             foreach (string index_prefix in indexes.Keys)
-            {                
+            {
                 var isql = ", ";
                 var prefix2 = index_prefix.Substring(0, 2);
                 if (prefix2 == "PK")
