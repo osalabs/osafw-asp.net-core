@@ -1,3 +1,8 @@
+#define isMySQL //uncomment if using MySQL
+#if isMySQL
+using Pomelo.Extensions.Caching.MySql;
+#endif
+
 using System;
 using System.Collections;
 using Microsoft.AspNetCore.Builder;
@@ -24,6 +29,31 @@ public class Startup
     // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
     public void ConfigureServices(IServiceCollection services)
     {
+#if isMySQL
+        services.AddDistributedMySqlCache(options =>
+        {
+            // override settings based on env variable ASPNETCORE_ENVIRONMENT
+            var enviroment = Utils.f2str(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"));
+
+            var appSessings = new Hashtable();
+            FwConfig.readSettingsSection(Startup.Configuration.GetSection("appSettings"), ref appSessings);
+
+            // Try override settings by name 
+            var settings = (Hashtable)appSessings["appSettings"];
+            FwConfig.overrideSettingsByName(enviroment, ref settings);
+
+            // Retriving db connection string
+            var db = (Hashtable)settings["db"];
+            var main = (Hashtable)db["main"];
+            var conn_str = (string)main["connection_string"];
+
+            // Setup sessions server middleware
+            options.ConnectionString = conn_str;
+            options.SchemaName = "dbo";
+            options.TableName = "fwsessions";
+        });
+#endif
+#if !isMySQL
         services.AddDistributedSqlServerCache(options =>
         {
             // override settings based on env variable ASPNETCORE_ENVIRONMENT
@@ -46,7 +76,7 @@ public class Startup
             options.SchemaName = "dbo";
             options.TableName = "fwsessions";
         });
-
+#endif
         // Set form limits
         services.Configure<FormOptions>(options =>
         {

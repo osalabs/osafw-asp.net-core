@@ -3,7 +3,7 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2023 Oleg Savchuk www.osalabs.com
 
-#define isMySQL
+#define isMySQL //uncomment if using MySQL
 #if isMySQL
 using MySqlConnector;
 #endif
@@ -312,16 +312,16 @@ public class DB : IDisposable
     {
         DbConnection result;
 
-        logger(LogLevel.DEBUG, "******* createConnection:", connstr, " dbtype:", dbtype);
-
         if (dbtype == DBTYPE_SQLSRV)
         {
             result = new SqlConnection(connstr);
         }
+#if isMySQL
         else if (dbtype == DBTYPE_MYSQL)
         {
             result = new MySqlConnection(connstr);
         }
+#endif
         else if (dbtype == DBTYPE_OLE && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             result = new OleDbConnection(connstr);
@@ -383,6 +383,7 @@ public class DB : IDisposable
                     dbcomm.Parameters.AddWithValue(p, @params[p]);
             dbread = dbcomm.ExecuteReader();
         }
+#if isMySQL
         else if (dbtype == DBTYPE_MYSQL)
         {
             var dbcomm = new MySqlCommand(sql, (MySqlConnection)conn);
@@ -391,6 +392,7 @@ public class DB : IDisposable
                     dbcomm.Parameters.AddWithValue(p, @params[p]);
             dbread = dbcomm.ExecuteReader();
         }
+#endif
         else
             throw new ApplicationException("Unsupported DB Type");
 
@@ -436,6 +438,7 @@ public class DB : IDisposable
                     dbcomm.Parameters.AddWithValue(p, @params[p]);
             result = dbcomm.ExecuteNonQuery();
         }
+#if isMySQL
         else if (dbtype == DBTYPE_MYSQL)
         {
             var dbcomm = new MySqlCommand(sql, (MySqlConnection)conn);
@@ -449,6 +452,7 @@ public class DB : IDisposable
             if (is_get_identity)
                 result = (int)dbcomm.LastInsertedId; //TODO change result type to long
         }
+#endif
         else
             throw new ApplicationException("Unsupported DB Type");
 
@@ -1559,6 +1563,36 @@ public class DB : IDisposable
                      , col2.COLUMN_NAME as [pk_column]
                      , rc.UPDATE_RULE as [on_update]
                      , rc.DELETE_RULE as [on_delete]
+                      FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS rc 
+                      INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE col1 
+                        ON (col1.CONSTRAINT_CATALOG = rc.CONSTRAINT_CATALOG  
+                            AND col1.CONSTRAINT_SCHEMA = rc.CONSTRAINT_SCHEMA 
+                            AND col1.CONSTRAINT_NAME = rc.CONSTRAINT_NAME)
+                      INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE col2 
+                        ON (col2.CONSTRAINT_CATALOG = rc.UNIQUE_CONSTRAINT_CATALOG  
+                            AND col2.CONSTRAINT_SCHEMA = rc.UNIQUE_CONSTRAINT_SCHEMA 
+                            AND col2.CONSTRAINT_NAME = rc.UNIQUE_CONSTRAINT_NAME 
+                            AND col2.ORDINAL_POSITION = col1.ORDINAL_POSITION)" +
+                where, where_params);
+        }
+        if (dbtype == DBTYPE_MYSQL)
+        {
+            var where = "";
+            var where_params = new Hashtable();
+            if (table != "")
+            {
+                where = " WHERE col1.TABLE_NAME=@table_name";
+                where_params["@table_name"] = table;
+            }
+
+            result = this.arrayp(@"SELECT 
+                      col1.CONSTRAINT_NAME as `name`
+                     , col1.TABLE_NAME As `table`
+                     , col1.COLUMN_NAME as `column`
+                     , col2.TABLE_NAME as `pk_table`
+                     , col2.COLUMN_NAME as `pk_column`
+                     , rc.UPDATE_RULE as `on_update`
+                     , rc.DELETE_RULE as `on_delete`
                       FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS rc 
                       INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE col1 
                         ON (col1.CONSTRAINT_CATALOG = rc.CONSTRAINT_CATALOG  
