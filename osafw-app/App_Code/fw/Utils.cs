@@ -247,7 +247,7 @@ public class Utils
         if (AField == null && !is_error) return 0.0;
         if (AField is double d) return d;
         if ((AField == null || !double.TryParse(AField.ToString(), out double result) && is_error))
-             throw new FormatException();
+            throw new FormatException();
         else
             return result;
     }
@@ -661,10 +661,24 @@ public class Utils
 
     } // GetEncoderInfo
 
+    /// <summary>
+    /// return file size by path, if file not exists or not accessible - return 0
+    /// </summary>
+    /// <param name="filepath"></param>
+    /// <returns></returns>
     public static long fileSize(string filepath)
     {
-        FileInfo fi = new(filepath);
-        return fi.Length;
+        long result=0;
+        try
+        {
+            FileInfo fi = new(filepath);
+            result = fi.Length;
+        }
+        catch (Exception)
+        {
+            //ignore errors
+        }
+        return result;
     }
 
     // extract just file name (with ext) from file path
@@ -1295,6 +1309,9 @@ public class Utils
         if (str_lc == "icode") return "Code";
         if (str_lc == "iname") return "Name";
         if (str_lc == "idesc") return "Description";
+        if (str_lc == "idate") return "Date";
+        if (str_lc == "itype") return "Type";
+        if (str_lc == "iyear") return "Year";
         if (str_lc == "id") return "ID";
         if (str_lc == "fname") return "First Name";
         if (str_lc == "lname") return "Last Name";
