@@ -70,8 +70,8 @@ CREATE TABLE demos (
 /*multi link table*/
 DROP TABLE IF EXISTS demos_demo_dicts_link;
 CREATE TABLE demos_demo_dicts_link (
-  demos_id              INT UNSIGNED NULL FOREIGN KEY REFERENCES demos(id),
-  demo_dicts_id         INT UNSIGNED NULL FOREIGN KEY REFERENCES demo_dicts(id),
+  demos_id              INT UNSIGNED NULL,
+  demo_dicts_id         INT UNSIGNED NULL,
 
   status                TINYINT NOT NULL DEFAULT 0,        /*0-ok, 1-under change, deleted instantly*/
   add_time              TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

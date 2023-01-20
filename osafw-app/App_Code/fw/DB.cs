@@ -179,7 +179,7 @@ public struct DBQueryAndParams
 
 public class DB : IDisposable
 {
-    public const string DBTYPE_SQLSRV= "SQL";
+    public const string DBTYPE_SQLSRV = "SQL";
     public const string DBTYPE_OLE = "OLE";
     public const string DBTYPE_ODBC = "ODBC";
     public const string DBTYPE_MYSQL = "MySQL";
@@ -495,7 +495,7 @@ public class DB : IDisposable
     /// <returns></returns>        
     public DBRow row(string table, Hashtable where, string order_by = "")
     {
-        var qp = buildSelect(table, where, order_by, "TOP 1 *");
+        var qp = buildSelect(table, where, order_by, 1);
         return rowp(qp.sql, qp.@params);
     }
 
@@ -577,7 +577,7 @@ public class DB : IDisposable
             select_fields = quoted.Count > 0 ? string.Join(", ", quoted.ToArray()) : "*";
         }
 
-        var qp = buildSelect(table, where, order_by, select_fields);
+        var qp = buildSelect(table, where, order_by, select_fields: select_fields);
         return arrayp(qp.sql, qp.@params);
     }
 
@@ -624,7 +624,7 @@ public class DB : IDisposable
             field_name = "*";
         else
             field_name = qid(field_name);
-        var qp = buildSelect(table, where, order_by, field_name);
+        var qp = buildSelect(table, where, order_by, select_fields: field_name);
         return colp(qp.sql, qp.@params);
     }
 
@@ -672,7 +672,7 @@ public class DB : IDisposable
         }
         else
             field_name = qid(field_name);
-        var qp = buildSelect(table, where, order_by, field_name);
+        var qp = buildSelect(table, where, order_by, select_fields: field_name);
         return valuep(qp.sql, qp.@params);
     }
 
@@ -719,14 +719,25 @@ public class DB : IDisposable
         return " IN (" + (result.Count > 0 ? string.Join(", ", result.ToArray()) : "NULL") + ")";
     }
 
-    // quote identifier: table => [table]
+    // quote identifier:
+    // table => [table] (SQL Server)
+    // table => `table` (MySQL)
     public string qid(string str)
     {
         if (str == null) str = "";
 
-        str = str.Replace("[", "");
-        str = str.Replace("]", "");
-        return "[" + str + "]";
+        if (dbtype == DBTYPE_MYSQL)
+        {
+            str = str.Replace("`", "");
+            str = str.Replace("`", "");
+            return "`" + str + "`";
+        }
+        else
+        {
+            str = str.Replace("[", "");
+            str = str.Replace("]", "");
+            return "[" + str + "]";
+        }
     }
 
     [Obsolete("use qid() instead")]
@@ -1284,12 +1295,20 @@ public class DB : IDisposable
     /// <param name="table">table name</param>
     /// <param name="where">where conditions</param>
     /// <param name="order_by">optional order by string, MUST already be quoted!</param>
+    /// <param name="limit">optional limit number of results</param>
     /// <param name="select_fields">optional (default "*") fields to select, MUST already be quoted!</param>
     /// <returns></returns>
-    private DBQueryAndParams buildSelect(string table, Hashtable where, string order_by = "", string select_fields = "*")
+    private DBQueryAndParams buildSelect(string table, Hashtable where, string order_by = "", int limit = -1, string select_fields = "*")
     {
         DBQueryAndParams result = new();
-        result.sql = "SELECT " + select_fields + " FROM " + qid(table);
+        result.sql = "SELECT";
+
+        if (limit > -1 && (dbtype == DBTYPE_SQLSRV || dbtype == DBTYPE_OLE))
+        {
+            result.sql += " TOP " + limit;
+        }
+
+        result.sql += " " + select_fields + " FROM " + qid(table);
         if (where.Count > 0)
         {
             var where_params = prepareParams(table, where);
@@ -1298,6 +1317,11 @@ public class DB : IDisposable
         }
         if (order_by.Length > 0)
             result.sql += " ORDER BY " + order_by;
+
+        if (limit > -1 && dbtype == DBTYPE_MYSQL)
+        {
+            result.sql += " LIMIT " + limit;
+        }
 
         return result;
     }
@@ -1464,7 +1488,7 @@ public class DB : IDisposable
             string sql = @"SELECT c.column_name as name,
                       c.data_type as type,
                       CASE c.is_nullable WHEN 'YES' THEN 1 ELSE 0 END AS is_nullable,
-                      c.column_default as default,
+                      c.column_default as `default`,
                       c.character_maximum_length as maxlen,
                       c.numeric_precision as numeric_precision,
                       c.numeric_scale as numeric_scale,
@@ -1633,7 +1657,7 @@ public class DB : IDisposable
     public Hashtable loadTableSchema(string table)
     {
         // for unsupported schemas - use config schema
-        if (dbtype != DBTYPE_SQLSRV && dbtype != DBTYPE_OLE)
+        if (dbtype != DBTYPE_SQLSRV && dbtype != DBTYPE_OLE && dbtype != DBTYPE_MYSQL)
         {
             if (schema.Count == 0)
                 schema = (Hashtable)conf["schema"];

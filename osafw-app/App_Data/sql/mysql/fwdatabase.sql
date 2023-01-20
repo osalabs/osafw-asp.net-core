@@ -74,7 +74,7 @@ CREATE TABLE att_table_link (
   add_users_id          INT UNSIGNED DEFAULT 0,
 
   PRIMARY KEY (id),
-  UNIQUE KEY UX_att_table_link ON att_table_link (table_name, item_id, att_id),
+  UNIQUE KEY UX_att_table_link (table_name, item_id, att_id),
   FOREIGN KEY (att_id) REFERENCES att(id)
 ) DEFAULT CHARSET=utf8mb4;
 
@@ -113,7 +113,7 @@ CREATE TABLE users (
   upd_users_id          INT UNSIGNED DEFAULT 0,
 
   PRIMARY KEY (id),
-  UNIQUE KEY UX_users_email UNIQUE (email),
+  UNIQUE KEY UX_users_email (email),
   FOREIGN KEY (att_id) REFERENCES att(id)
 ) DEFAULT CHARSET=utf8mb4;
 INSERT INTO users (fname, lname, email, pwd, access_level)
@@ -122,10 +122,11 @@ VALUES ('Website','Admin','admin@admin.com',UUID(),100);
 /*user cookies (for permanent sessions)*/
 DROP TABLE IF EXISTS users_cookies;
 CREATE TABLE users_cookies (
-  cookie_id           VARCHAR(32) PRIMARY KEY CLUSTERED NOT NULL,      /*cookie id: time(secs)+rand(16)*/
-  users_id            INT NOT NULL,
+  cookie_id           VARCHAR(32) NOT NULL,      /*cookie id: time(secs)+rand(16)*/
+  users_id            INT UNSIGNED NOT NULL,
 
-  add_time            TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  add_time            TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
   PRIMARY KEY (cookie_id),
   FOREIGN KEY (users_id) REFERENCES users(id)
 ) DEFAULT CHARSET=utf8mb4;
@@ -136,7 +137,7 @@ CREATE TABLE settings (
   id                    INT UNSIGNED NOT NULL auto_increment,
   icat                  VARCHAR(64) NOT NULL DEFAULT '', /*settings category: ''-system, 'other' -site specific*/
   icode                 VARCHAR(64) NOT NULL DEFAULT '', /*settings internal code*/
-  ivalue                VARCHAR(MAX) NOT NULL DEFAULT '', /*value*/
+  ivalue                TEXT, /*value*/
 
   iname                 VARCHAR(64) NOT NULL DEFAULT '', /*settings visible name*/
   idesc                 TEXT,                    /*settings visible description*/
@@ -150,8 +151,9 @@ CREATE TABLE settings (
   upd_time              TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   upd_users_id          INT UNSIGNED DEFAULT 0,
 
-  INDEX UX_settings_icode UNIQUE (icode),
-  INDEX IX_settings_icat (icat)
+  PRIMARY KEY (id),
+  UNIQUE KEY UX_settings_icode (icode),
+  KEY IX_settings_icat (icat)
 ) DEFAULT CHARSET=utf8mb4;
 INSERT INTO settings (is_user_edit, input, icat, icode, ivalue, iname, idesc) VALUES
 (1, 10, '', 'test', 'novalue', 'test settings', 'description');
@@ -165,7 +167,7 @@ CREATE TABLE spages (
   url                   VARCHAR(255) NOT NULL DEFAULT '',      /*sub-url from parent page*/
   iname                 VARCHAR(64) NOT NULL DEFAULT '',       /*page name-title*/
   idesc                 TEXT,                          /*page contents, markdown*/
-  head_att_id           INT NULL FOREIGN KEY REFERENCES att(id), /*optional head banner image*/
+  head_att_id           INT UNSIGNED NULL, /*optional head banner image*/
 
   idesc_left            TEXT,                          /*left sidebar content, markdown*/
   idesc_right           TEXT,                          /*right sidebar content, markdown*/
@@ -187,8 +189,10 @@ CREATE TABLE spages (
   upd_time              TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   upd_users_id          INT UNSIGNED DEFAULT 0,
 
-  INDEX IX_spages_parent_id (parent_id, prio),
-  INDEX IX_spages_url (url)
+  PRIMARY KEY (id),
+  KEY IX_spages_parent_id (parent_id, prio),
+  KEY IX_spages_url (url),
+  FOREIGN KEY (head_att_id) REFERENCES att(id)
 ) DEFAULT CHARSET=utf8mb4;
 --TRUNCATE TABLE spages;
 INSERT INTO spages (parent_id, url, iname) VALUES
@@ -212,15 +216,17 @@ CREATE TABLE events (
   add_time              TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   add_users_id          INT UNSIGNED DEFAULT 0,
   upd_time              TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  upd_users_id          INT UNSIGNED DEFAULT 0
+  upd_users_id          INT UNSIGNED DEFAULT 0,
+
+  PRIMARY KEY (id),
+  UNIQUE KEY UX_events_icode (icode)
 ) DEFAULT CHARSET=utf8mb4;
-CREATE UNIQUE INDEX events_icode_idx ON events (icode);
 
 /* log of all user-initiated events */
 DROP TABLE IF EXISTS event_log;
 CREATE TABLE event_log (
-  id BIGINT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
-  events_id             INT NOT NULL FOREIGN KEY REFERENCES events(id),           /* event id */
+  id                    BIGINT UNSIGNED NOT NULL auto_increment,
+  events_id             INT UNSIGNED NOT NULL,           /* event id */
 
   item_id               INT NOT NULL DEFAULT 0,           /*related id*/
   item_id2              INT NOT NULL DEFAULT 0,           /*related id (if another)*/
@@ -233,11 +239,13 @@ CREATE TABLE event_log (
   add_time              TIMESTAMP DEFAULT CURRENT_TIMESTAMP,  /*date record added*/
   add_users_id          INT UNSIGNED DEFAULT 0,                        /*user added record, 0 if sent by cron module*/
 
-  INDEX IX_event_log_events_id (events_id),
-  INDEX IX_event_log_item_id (item_id),
-  INDEX IX_event_log_item_id2 (item_id2),
-  INDEX IX_event_log_add_users_id (add_users_id),
-  INDEX IX_event_log_add_time (add_time)
+  PRIMARY KEY (id),
+  KEY IX_event_log_events_id (events_id),
+  KEY IX_event_log_item_id (item_id),
+  KEY IX_event_log_item_id2 (item_id2),
+  KEY IX_event_log_add_users_id (add_users_id),
+  KEY IX_event_log_add_time (add_time),
+  FOREIGN KEY (events_id) REFERENCES events(id)
 ) DEFAULT CHARSET=utf8mb4;
 
 /*Lookup Manager Tables*/
@@ -268,13 +276,14 @@ CREATE TABLE lookup_manager_tables (
   upd_time              TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   upd_users_id          INT UNSIGNED DEFAULT 0,
 
-  INDEX UX_lookup_manager_tables_tname (tname)
+  PRIMARY KEY (id),
+  UNIQUE KEY UX_lookup_manager_tables_tname (tname)
 ) DEFAULT CHARSET=utf8mb4;
 
 /*user custom views*/
 DROP TABLE IF EXISTS user_views;
 CREATE TABLE user_views (
-  id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+  id                    INT UNSIGNED NOT NULL auto_increment,
   icode                 VARCHAR(128) NOT NULL, --related screen url, ex: "/Admin/Demos"
   fields                TEXT, -- comma-separated list of fields to display, order kept
 
@@ -288,13 +297,14 @@ CREATE TABLE user_views (
   upd_time              TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   upd_users_id          INT UNSIGNED DEFAULT 0,
 
-  INDEX UX_user_views (add_users_id, icode, iname)
+  PRIMARY KEY (id),
+  KEY UX_user_views (add_users_id, icode, iname)
 ) DEFAULT CHARSET=utf8mb4;
 
 /*user lists*/
 DROP TABLE IF EXISTS user_lists;
 CREATE TABLE user_lists (
-  id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+  id                    INT UNSIGNED NOT NULL auto_increment,
   entity                VARCHAR(128) NOT NULL, -- usually table name or base_url, ex: 'demos' or /Admin/Demos
 
   iname                 VARCHAR(255) NOT NULL,
@@ -306,15 +316,16 @@ CREATE TABLE user_lists (
   upd_time              TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   upd_users_id          INT UNSIGNED DEFAULT 0,
 
-  INDEX IX_user_lists (add_users_id, entity)
+  PRIMARY KEY (id),
+  KEY IX_user_lists (add_users_id, entity)
 ) DEFAULT CHARSET=utf8mb4;
 
 /*items linked to user lists */
 DROP TABLE IF EXISTS user_lists_items;
 CREATE TABLE user_lists_items (
-  id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
-  user_lists_id         INT NOT NULL FOREIGN KEY REFERENCES user_lists(id),
-  item_id               INT NOT NULL, -- related item id, example demos.id
+  id                    INT UNSIGNED NOT NULL auto_increment,
+  user_lists_id         INT UNSIGNED NOT NULL,
+  item_id               INT UNSIGNED NOT NULL, -- related item id, example demos.id
 
   status                TINYINT NOT NULL DEFAULT 0,
   add_time              TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -322,7 +333,9 @@ CREATE TABLE user_lists_items (
   upd_time              TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   upd_users_id          INT UNSIGNED DEFAULT 0,
 
-  INDEX UX_user_lists_items (user_lists_id, item_id)
+  PRIMARY KEY (id),
+  KEY UX_user_lists_items (user_lists_id, item_id),
+  FOREIGN KEY (user_lists_id) REFERENCES user_lists(id)
 ) DEFAULT CHARSET=utf8mb4;
 
 /*Custom menu items for sidebar*/
@@ -340,12 +353,15 @@ CREATE TABLE menu_items (
   add_time              TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   add_users_id          INT UNSIGNED DEFAULT 0,
   upd_time              TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  upd_users_id          INT UNSIGNED DEFAULT 0
+  upd_users_id          INT UNSIGNED DEFAULT 0,
+
+  PRIMARY KEY (id)
 ) DEFAULT CHARSET=utf8mb4;
 -- INSERT INTO menu_items (iname, url, icon, controller) VALUES ('Test Menu Item', '/Admin/Demos', 'list-ul', 'AdminDemos');
+
 DROP TABLE IF EXISTS user_filters;
 CREATE TABLE user_filters (
-  id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+  id                    INT UNSIGNED NOT NULL auto_increment,
   icode                 VARCHAR(128) NOT NULL, -- related screen, ex: GLOBAL[controller.action]
 
   iname                 VARCHAR(255) NOT NULL,
@@ -357,7 +373,9 @@ CREATE TABLE user_filters (
   add_time              TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   add_users_id          INT UNSIGNED DEFAULT 0, -- related owner user
   upd_time              TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  upd_users_id          INT UNSIGNED DEFAULT 0
+  upd_users_id          INT UNSIGNED DEFAULT 0,
+
+  PRIMARY KEY (id)
 ) DEFAULT CHARSET=utf8mb4;
 
 -- after this file - run lookups.sql
