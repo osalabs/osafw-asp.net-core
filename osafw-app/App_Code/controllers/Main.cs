@@ -60,8 +60,9 @@ public class MainController : FwController
         one["id"] = "logins_per_day";
         // one["url") ] "/Admin/Reports/sample"
         one["rows"] = db.arrayp("with zzz as ("
-            + " select TOP 14 CAST(el.add_time as date) as idate, count(*) as ivalue from events ev, event_log el where ev.icode='login' and el.events_id=ev.id"
-            + " group by CAST(el.add_time as date) order by CAST(el.add_time as date) desc)"
+            + db.limit("select CAST(el.add_time as date) as idate, count(*) as ivalue from events ev, event_log el where ev.icode='login' and el.events_id=ev.id"
+            + " group by CAST(el.add_time as date) order by CAST(el.add_time as date) desc",14)
+            + ")"
             + " select CONCAT(MONTH(idate),'/',DAY(idate)) as ilabel, ivalue from zzz order by idate", DB.h());
         panes["barchart"] = one;
 
@@ -80,7 +81,7 @@ public class MainController : FwController
         one["type"] = "table";
         one["title"] = "Last Events";
         // one["url") ] "/Admin/Reports/sample"
-        rows = db.arrayp("select TOP 10 el.add_time as [On], ev.iname as Event from events ev, event_log el where el.events_id=ev.id order by el.id desc", DB.h());
+        rows = db.arrayp(db.limit("select el.add_time as "+db.qid("On")+", ev.iname as Event from events ev, event_log el where el.events_id=ev.id order by el.id desc",10), DB.h());
         one["rows"] = rows;
         var headers = new ArrayList();
         one["headers"] = headers;
@@ -115,8 +116,9 @@ public class MainController : FwController
         one["id"] = "eventsctr";
         // one["url") ] "/Admin/Reports/sample"
         one["rows"] = db.arrayp("with zzz as ("
-            + " select TOP 14 CAST(el.add_time as date) as idate, count(*) as ivalue from events ev, event_log el where el.events_id=ev.id"
-            + " group by CAST(el.add_time as date) order by CAST(el.add_time as date) desc)"
+            + db.limit("select CAST(el.add_time as date) as idate, count(*) as ivalue from events ev, event_log el where el.events_id=ev.id"
+            + " group by CAST(el.add_time as date) order by CAST(el.add_time as date) desc",14)
+            + ")"
             + " select CONCAT(MONTH(idate),'/',DAY(idate)) as ilabel, ivalue from zzz order by idate", DB.h());
         panes["linechart"] = one;
 

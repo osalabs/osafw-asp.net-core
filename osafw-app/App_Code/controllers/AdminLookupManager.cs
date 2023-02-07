@@ -205,7 +205,7 @@ public class AdminLookupManagerController : FwController
 
         ps["count"] = db.valuep("select count(*) from " + db.qid(list_table_name) + " where " + list_where, list_where_params);
 
-        if ((int)ps["count"] > 0)
+        if ((long)ps["count"] > 0)
         {
             int pagenum = Utils.f2int(list_filter["pagenum"]);
             int pagesize = Utils.f2int(list_filter["pagesize"]);
@@ -221,17 +221,13 @@ public class AdminLookupManagerController : FwController
                 orderby += " desc";
             }
 
-            var sql = "SELECT * FROM " + db.qid(list_table_name) +
-                      " WHERE " + list_where +
-                      " ORDER BY " + orderby + " OFFSET " + offset + " ROWS " + " FETCH NEXT " + limit + " ROWS ONLY";
-
-            ArrayList list_rows = db.arrayp(sql, list_where_params);
+            ArrayList list_rows  = db.selectRaw("*", db.qid(list_table_name), list_where, list_where_params, orderby, offset, limit);
             ps["list_rows"] = list_rows;
 
             ps["count_from"] = pagenum * pagesize + 1;
             ps["count_to"] = pagenum * pagesize + list_rows.Count;
 
-            ps["pager"] = FormUtils.getPager((int)ps["count"], pagenum, pagesize);
+            ps["pager"] = FormUtils.getPager((long)ps["count"], pagenum, pagesize);
             if (ps["pager"] != null)
             {
                 // add dict info for pager

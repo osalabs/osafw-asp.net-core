@@ -37,7 +37,7 @@ public abstract class FwController
     protected Hashtable list_filter_search;      // filter for the search columns from reqh("search")
     protected Hashtable list_where_params = new();       // any sql params for the list_where
     protected string list_where = " 1=1 ";       // where to use in list sql, default is non-deleted records (see setListSearch() )
-    protected int list_count;                    // count of list rows returned from db
+    protected long list_count;                    // count of list rows returned from db
     protected ArrayList list_rows;               // list rows returned from db (array of hashes)
     protected ArrayList list_pager;              // pager for the list from FormUtils.getPager
     protected string list_sortdef;               // required for Index, default list sorting: name asc|desc
@@ -613,7 +613,7 @@ public abstract class FwController
     public virtual void getListCount(string list_view = "")
     {
         string list_view_name = (!string.IsNullOrEmpty(list_view) ? list_view : this.list_view);
-        this.list_count = (int)db.valuep("select count(*) from " + list_view_name + " where " + this.list_where, this.list_where_params);
+        this.list_count = (long)db.valuep("select count(*) from " + list_view_name + " where " + this.list_where, this.list_where_params);
     }
 
     /// <summary>
@@ -648,27 +648,8 @@ public abstract class FwController
             int offset = pagenum * pagesize;
             int limit = pagesize;
 
-            string sql;
+            this.list_rows = db.selectRaw("*", list_view_name, list_where, list_where_params, list_orderby, offset, limit);
 
-            if (db.dbtype == DB.DBTYPE_SQLSRV)
-            {
-                // for SQL Server 2012+
-                sql = "SELECT * FROM " + list_view_name + " WHERE " + this.list_where + " ORDER BY " + this.list_orderby + " OFFSET " + offset + " ROWS " + " FETCH NEXT " + limit + " ROWS ONLY";
-                this.list_rows = db.arrayp(sql, list_where_params);
-            }
-            else if (db.dbtype == DB.DBTYPE_OLE)
-            {
-                // OLE - for Access - emulate using TOP and return just a limit portion (bad perfomance, but no way)
-                sql = "SELECT TOP " + (offset + limit) + " * FROM " + list_view_name + " WHERE " + this.list_where + " ORDER BY " + this.list_orderby;
-                var rows = db.arrayp(sql, list_where_params);
-                if (offset >= rows.Count)
-                    // offset too far
-                    this.list_rows = new ArrayList();
-                else
-                    this.list_rows = (DBList)rows.GetRange(offset, Math.Min(limit, rows.Count - offset));
-            }
-            else
-                throw new ApplicationException("Unsupported db type");
             model0.normalizeNames(this.list_rows);
 
             // for 2005<= SQL Server versions <2012
@@ -678,10 +659,6 @@ public abstract class FwController
             // "   FROM " & list_view &
             // "   WHERE " & Me.list_where &
             // ") tmp WHERE _RowNumber BETWEEN " & (offset + 1) & " AND " & (offset + 1 + limit - 1)
-
-            // for MySQL this would be much simplier
-            // sql = "SELECT * FROM model0.table_name WHERE Me.list_where ORDER BY Me.list_orderby LIMIT offset, limit";
-
 
             if (!is_export)
                 this.list_pager = FormUtils.getPager(this.list_count, pagenum, pagesize);

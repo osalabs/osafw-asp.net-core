@@ -22,7 +22,6 @@ using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Text.RegularExpressions;
 
-
 namespace osafw;
 
 public class DBRow : Dictionary<string, string>
@@ -582,6 +581,51 @@ public class DB : IDisposable
     }
 
     /// <summary>
+    /// Build and execute raw select statement with offset/limit according to server type
+    /// !All parameters must be properly enquoted
+    /// </summary>
+    /// <param name="fields"></param>
+    /// <param name="from"></param>
+    /// <param name="where"></param>
+    /// <param name="where_params"></param>
+    /// <param name="orderby"></param>
+    /// <param name="offset"></param>
+    /// <param name="limit"></param>
+    /// <returns></returns>
+    /// <exception cref="ApplicationException"></exception>
+    public DBList selectRaw(string fields, string from, string where, Hashtable where_params, string orderby, int offset=0, int limit = -1)
+    {
+        DBList result;
+        if (this.dbtype == DB.DBTYPE_SQLSRV)
+        {
+            // for SQL Server 2012+
+            var sql = "SELECT "+ fields + " FROM " + from + " WHERE " + where + " ORDER BY " + orderby + " OFFSET " + offset + " ROWS " + " FETCH NEXT " + limit + " ROWS ONLY";
+            result = this.arrayp(sql, where_params);
+        }
+        else if (this.dbtype == DB.DBTYPE_MYSQL)
+        {
+            // for MySQL
+            var sql = "SELECT "+ fields + " FROM " + from + " WHERE " + where + " ORDER BY " + orderby + " LIMIT " + offset + ", " + limit;
+            result = this.arrayp(sql, where_params);
+        }
+        else if (this.dbtype == DB.DBTYPE_OLE)
+        {
+            // OLE - for Access - emulate using TOP and return just a limit portion (bad perfomance, but no way)
+            var sql = "SELECT TOP " + (offset + limit) + " "+ fields + " FROM " + from + " WHERE " + where + " ORDER BY " + orderby;
+            var rows = this.arrayp(sql, where_params);
+            if (offset >= rows.Count)
+                // offset too far
+                result = new DBList();
+            else
+                result = (DBList)rows.GetRange(offset, Math.Min(limit, rows.Count - offset));
+        }
+        else
+            throw new ApplicationException("Unsupported db type");
+
+        return result;
+    }
+
+    /// <summary>
     /// read column helper
     /// </summary>
     /// <param name="dbread"></param>
@@ -828,6 +872,26 @@ public class DB : IDisposable
             {
                 result = "NULL";
             }
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// returns sql with TOP or LIMIT accoring to Server type
+    /// </summary>
+    /// <param name="sql">simple statement starting with SELECT</param>
+    /// <param name="limit"></param>
+    /// <returns></returns>
+    public string limit(string sql, int limit)
+    {
+        var result = "";
+        if (dbtype == DBTYPE_MYSQL)
+        {
+            result = sql + " LIMIT " + limit;
+        }
+        else
+        {
+            result = Regex.Replace(sql, @"^(select )",@"$1 TOP "+limit+" ", RegexOptions.IgnoreCase);
         }
         return result;
     }

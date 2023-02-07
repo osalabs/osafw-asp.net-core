@@ -13,6 +13,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Net.Http.Headers;
+using System.Text.RegularExpressions;
 
 namespace osafw;
 
@@ -45,11 +46,16 @@ public class Startup
             // Retriving db connection string
             var db = (Hashtable)settings["db"];
             var main = (Hashtable)db["main"];
-            var conn_str = (string)main["connection_string"];
+            var conn_str = (string)main["connection_string"]; //MySQL connection string ex: "Server=127.0.0.1;User ID=root;Password=;Database=demo;Allow User Variables=true;"
+
+            //extract 
+            var m = Regex.Match(conn_str, @"Database=(\w+)", RegexOptions.IgnoreCase);
+            if (!m.Success)
+                throw new ApplicationException("No database name defined in connection_string");
 
             // Setup sessions server middleware
             options.ConnectionString = conn_str;
-            options.SchemaName = "dbo";
+            options.SchemaName = m.Groups[1].Value; //database name
             options.TableName = "fwsessions";
         });
 #endif

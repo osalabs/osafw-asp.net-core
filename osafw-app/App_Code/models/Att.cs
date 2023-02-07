@@ -418,12 +418,12 @@ public class Att : FwModel
             {"@table", linked_table_name},
             {"@item_id", id},
         };
-        return db.rowp("SELECT TOP 1 a.* from " + db.qid(att_table_link) + " atl, " + db.qid(this.table_name) + " a"+
+        return db.rowp(db.limit("SELECT a.* from " + db.qid(att_table_link) + " atl, " + db.qid(this.table_name) + " a"+
             @" WHERE atl.table_name=@table_name
                      and atl.item_id=@item_id 
                      and a.id=atl.att_id 
                      and a.is_image=1 
-                order by a.id ", @params);
+                order by a.id",1), @params);
     }
 
     // return all att images linked via att_table_link

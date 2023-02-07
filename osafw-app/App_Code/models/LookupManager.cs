@@ -33,7 +33,7 @@ public class LookupManager : FwModel
         if (tname == "")
             throw new ApplicationException("Wrong topByTname params");
 
-        return db.rowp("select TOP @top * from " + db.qid(tname), DB.h("top", top_number));
+        return db.rowp(db.limit("select * from " + db.qid(tname), top_number));
     }
 
     public virtual int maxIdByTname(string tname)
