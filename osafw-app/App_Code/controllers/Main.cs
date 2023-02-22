@@ -49,7 +49,7 @@ public class MainController : FwController
 
         one = new Hashtable();
         one["type"] = "bignum";
-        one["title"] = "Demo items";
+        one["title"] = "Events";
         one["url"] = "/Admin/DemosDynamic";
         one["value"] = fw.model<Demos>().getCount();
         panes["plate4"] = one;

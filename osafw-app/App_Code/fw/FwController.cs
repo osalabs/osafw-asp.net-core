@@ -613,7 +613,7 @@ public abstract class FwController
     public virtual void getListCount(string list_view = "")
     {
         string list_view_name = (!string.IsNullOrEmpty(list_view) ? list_view : this.list_view);
-        this.list_count = (long)db.valuep("select count(*) from " + list_view_name + " where " + this.list_where, this.list_where_params);
+        this.list_count = Utils.f2long(db.valuep("select count(*) from " + list_view_name + " where " + this.list_where, this.list_where_params));
     }
 
     /// <summary>

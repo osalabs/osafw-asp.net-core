@@ -216,7 +216,7 @@ public abstract class FwModel : IDisposable
         Hashtable where = new();
         if (!string.IsNullOrEmpty(field_status))
             where[field_status] = db.opNOT(STATUS_DELETED);
-        return (long)db.value(table_name, where, "count(*)");
+        return Utils.f2long(db.value(table_name, where, "count(*)"));
     }
 
     // just return first row by iname field (you may want to make it unique)

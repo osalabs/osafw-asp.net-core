@@ -203,7 +203,7 @@ public class AdminLookupManagerController : FwController
                 list_where += " and (0=1 " + swhere + ")";
         }
 
-        ps["count"] = db.valuep("select count(*) from " + db.qid(list_table_name) + " where " + list_where, list_where_params);
+        ps["count"] = Utils.f2long(db.valuep("select count(*) from " + db.qid(list_table_name) + " where " + list_where, list_where_params));
 
         if ((long)ps["count"] > 0)
         {
