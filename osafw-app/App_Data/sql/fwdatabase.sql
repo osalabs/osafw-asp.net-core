@@ -3,11 +3,13 @@
 /* net core sessions */
 DROP TABLE IF EXISTS fwsessions;
 CREATE TABLE fwsessions (
-  Id                    NVARCHAR(900) NOT NULL PRIMARY KEY,
+  Id                    NVARCHAR(449) NOT NULL PRIMARY KEY,
   Value                 VARBINARY(MAX) NOT NULL,
   ExpiresAtTime         DATETIMEOFFSET(7) NOT NULL,
   SlidingExpirationInSeconds BIGINT NULL,
-  AbsoluteExpiration    DATETIMEOFFSET NULL
+  AbsoluteExpiration    DATETIMEOFFSET NULL,
+
+  INDEX IX_ExpiresAtTime (ExpiresAtTime)
 );
 
 /* upload categories */

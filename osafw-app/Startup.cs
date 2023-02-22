@@ -71,8 +71,10 @@ public class Startup
             // Try override settings by name 
             var settings = (Hashtable)appSessings["appSettings"];
             FwConfig.overrideSettingsByName(enviroment, ref settings);
-            
+
             // Retriving db connection string
+            // TrustServerCertificate=true; should be present if using Microsoft.Extensions.Caching.SqlServer v7 or above
+            // or use Encrypt=False;
             var db = (Hashtable)settings["db"];
             var main = (Hashtable)db["main"];
             var conn_str = (string)main["connection_string"];
