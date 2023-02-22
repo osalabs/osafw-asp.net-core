@@ -16,7 +16,7 @@ CREATE TABLE fwsessions (
 /* upload categories */
 DROP TABLE IF EXISTS att_categories;
 CREATE TABLE att_categories (
-  id                    INT UNSIGNED NOT NULL auto_increment,
+  id                    INT NOT NULL auto_increment,
 
   icode                 VARCHAR(64) NOT NULL DEFAULT '', /*to use from code*/
   iname                 VARCHAR(64) NOT NULL DEFAULT '',
@@ -25,35 +25,35 @@ CREATE TABLE att_categories (
 
   status                TINYINT NOT NULL DEFAULT 0,        /*0-ok, 127-deleted*/
   add_time              TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  add_users_id          INT UNSIGNED DEFAULT 0,
+  add_users_id          INT DEFAULT 0,
   upd_time              TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  upd_users_id          INT UNSIGNED DEFAULT 0,
+  upd_users_id          INT DEFAULT 0,
 
   PRIMARY KEY (id)
 ) DEFAULT CHARSET=utf8mb4;
 
 DROP TABLE IF EXISTS att;
 CREATE TABLE att (
-  id                    INT UNSIGNED NOT NULL auto_increment, /* files stored on disk under 0/0/0/id.dat */
-  att_categories_id     INT UNSIGNED NULL,
+  id                    INT NOT NULL auto_increment, /* files stored on disk under 0/0/0/id.dat */
+  att_categories_id     INT NULL,
 
   table_name            VARCHAR(128) NOT NULL DEFAULT '',
-  item_id               INT UNSIGNED NOT NULL DEFAULT 0,
+  item_id               INT NOT NULL DEFAULT 0,
 
   is_s3                 TINYINT DEFAULT 0, /* 1 if file is in S3 - see config: $S3Bucket/$S3Root/att/att_id */
   is_inline             TINYINT DEFAULT 0, /* if uploaded with wysiwyg */
   is_image              TINYINT DEFAULT 0, /* 1 if this is supported image */
 
   fname                 VARCHAR(255) NOT NULL DEFAULT '',              /*original file name*/
-  fsize                 INT UNSIGNED DEFAULT 0,                   /*file size*/
+  fsize                 INT DEFAULT 0,                   /*file size*/
   ext                   VARCHAR(16) NOT NULL DEFAULT '',                 /*extension*/
   iname                 VARCHAR(255) NOT NULL DEFAULT '',   /*attachment name*/
 
   status                TINYINT NOT NULL DEFAULT 0,        /*0-ok, 1-under upload, 127-deleted*/
   add_time              TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  add_users_id          INT UNSIGNED DEFAULT 0,
+  add_users_id          INT DEFAULT 0,
   upd_time              TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  upd_users_id          INT UNSIGNED DEFAULT 0,
+  upd_users_id          INT DEFAULT 0,
 
   PRIMARY KEY (id),
   KEY IX_att_table_name_item_id (table_name, item_id),
@@ -63,15 +63,15 @@ CREATE TABLE att (
 /* link att files to table items*/
 DROP TABLE IF EXISTS att_table_link;
 CREATE TABLE att_table_link (
-  id                    INT UNSIGNED NOT NULL auto_increment,
-  att_id                INT UNSIGNED NOT NULL,
+  id                    INT NOT NULL auto_increment,
+  att_id                INT NOT NULL,
 
   table_name            VARCHAR(128) NOT NULL DEFAULT '',
   item_id               INT NOT NULL,
 
   status                TINYINT NOT NULL DEFAULT 0,        /*0-ok, 1-under update*/
   add_time              TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  add_users_id          INT UNSIGNED DEFAULT 0,
+  add_users_id          INT DEFAULT 0,
 
   PRIMARY KEY (id),
   UNIQUE KEY UX_att_table_link (table_name, item_id, att_id),
@@ -81,7 +81,7 @@ CREATE TABLE att_table_link (
 
 DROP TABLE IF EXISTS users;
 CREATE TABLE users (
-  id                    INT UNSIGNED NOT NULL auto_increment,
+  id                    INT NOT NULL auto_increment,
 
   email                 VARCHAR(128) NOT NULL DEFAULT '',
   pwd                   VARCHAR(255) NOT NULL DEFAULT '', -- hashed password
@@ -100,7 +100,7 @@ CREATE TABLE users (
   lang                  VARCHAR(16) NOT NULL DEFAULT 'en', -- user interface language
 
   idesc                 TEXT,
-  att_id                INT UNSIGNED NULL,                -- avatar
+  att_id                INT NULL,                -- avatar
 
   login_time            TIMESTAMP,
   pwd_reset             VARCHAR(255) NULL,
@@ -108,9 +108,9 @@ CREATE TABLE users (
 
   status                TINYINT NOT NULL DEFAULT 0,        /*0-ok, 127-deleted*/
   add_time              TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  add_users_id          INT UNSIGNED DEFAULT 0,
+  add_users_id          INT DEFAULT 0,
   upd_time              TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  upd_users_id          INT UNSIGNED DEFAULT 0,
+  upd_users_id          INT DEFAULT 0,
 
   PRIMARY KEY (id),
   UNIQUE KEY UX_users_email (email),
@@ -123,7 +123,7 @@ VALUES ('Website','Admin','admin@admin.com',UUID(),100);
 DROP TABLE IF EXISTS users_cookies;
 CREATE TABLE users_cookies (
   cookie_id           VARCHAR(32) NOT NULL,      /*cookie id: time(secs)+rand(16)*/
-  users_id            INT UNSIGNED NOT NULL,
+  users_id            INT NOT NULL,
 
   add_time            TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
@@ -134,7 +134,7 @@ CREATE TABLE users_cookies (
 /*Site Settings - special table for misc site settings*/
 DROP TABLE IF EXISTS settings;
 CREATE TABLE settings (
-  id                    INT UNSIGNED NOT NULL auto_increment,
+  id                    INT NOT NULL auto_increment,
   icat                  VARCHAR(64) NOT NULL DEFAULT '', /*settings category: ''-system, 'other' -site specific*/
   icode                 VARCHAR(64) NOT NULL DEFAULT '', /*settings internal code*/
   ivalue                TEXT, /*value*/
@@ -147,9 +147,9 @@ CREATE TABLE settings (
   is_user_edit          TINYINT DEFAULT 0,  /* if 1 - use can edit this value*/
 
   add_time              TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  add_users_id          INT UNSIGNED DEFAULT 0,
+  add_users_id          INT DEFAULT 0,
   upd_time              TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  upd_users_id          INT UNSIGNED DEFAULT 0,
+  upd_users_id          INT DEFAULT 0,
 
   PRIMARY KEY (id),
   UNIQUE KEY UX_settings_icode (icode),
@@ -161,13 +161,13 @@ INSERT INTO settings (is_user_edit, input, icat, icode, ivalue, iname, idesc) VA
 /*Static pages*/
 DROP TABLE IF EXISTS spages;
 CREATE TABLE spages (
-  id                    INT UNSIGNED NOT NULL auto_increment,
+  id                    INT NOT NULL auto_increment,
   parent_id             INT NOT NULL DEFAULT 0,  /*parent page id*/
 
   url                   VARCHAR(255) NOT NULL DEFAULT '',      /*sub-url from parent page*/
   iname                 VARCHAR(64) NOT NULL DEFAULT '',       /*page name-title*/
   idesc                 TEXT,                          /*page contents, markdown*/
-  head_att_id           INT UNSIGNED NULL, /*optional head banner image*/
+  head_att_id           INT NULL, /*optional head banner image*/
 
   idesc_left            TEXT,                          /*left sidebar content, markdown*/
   idesc_right           TEXT,                          /*right sidebar content, markdown*/
@@ -185,9 +185,9 @@ CREATE TABLE spages (
 
   status                TINYINT NOT NULL DEFAULT 0,    /*0-ok, 10-not published, 127-deleted*/
   add_time              TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  add_users_id          INT UNSIGNED DEFAULT 0,
+  add_users_id          INT DEFAULT 0,
   upd_time              TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  upd_users_id          INT UNSIGNED DEFAULT 0,
+  upd_users_id          INT DEFAULT 0,
 
   PRIMARY KEY (id),
   KEY IX_spages_parent_id (parent_id, prio),
@@ -206,7 +206,7 @@ update spages set is_home=1 where id=1;
 /*event types for log*/
 DROP TABLE IF EXISTS events;
 CREATE TABLE events (
-  id                    INT UNSIGNED NOT NULL auto_increment,
+  id                    INT NOT NULL auto_increment,
   icode                 VARCHAR(64) NOT NULL default '',
 
   iname                 VARCHAR(255) NOT NULL default '',
@@ -214,9 +214,9 @@ CREATE TABLE events (
 
   status                TINYINT NOT NULL DEFAULT 0,        /*0-ok, 127-deleted*/
   add_time              TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  add_users_id          INT UNSIGNED DEFAULT 0,
+  add_users_id          INT DEFAULT 0,
   upd_time              TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  upd_users_id          INT UNSIGNED DEFAULT 0,
+  upd_users_id          INT DEFAULT 0,
 
   PRIMARY KEY (id),
   UNIQUE KEY UX_events_icode (icode)
@@ -225,8 +225,8 @@ CREATE TABLE events (
 /* log of all user-initiated events */
 DROP TABLE IF EXISTS event_log;
 CREATE TABLE event_log (
-  id                    BIGINT UNSIGNED NOT NULL auto_increment,
-  events_id             INT UNSIGNED NOT NULL,           /* event id */
+  id                    BIGINT NOT NULL auto_increment,
+  events_id             INT NOT NULL,           /* event id */
 
   item_id               INT NOT NULL DEFAULT 0,           /*related id*/
   item_id2              INT NOT NULL DEFAULT 0,           /*related id (if another)*/
@@ -237,7 +237,7 @@ CREATE TABLE event_log (
   fields                TEXT,       /*serialized json with related fields data (for history) in form {fieldname: data, fieldname: data}*/
 
   add_time              TIMESTAMP DEFAULT CURRENT_TIMESTAMP,  /*date record added*/
-  add_users_id          INT UNSIGNED DEFAULT 0,                        /*user added record, 0 if sent by cron module*/
+  add_users_id          INT DEFAULT 0,                        /*user added record, 0 if sent by cron module*/
 
   PRIMARY KEY (id),
   KEY IX_event_log_events_id (events_id),
@@ -251,7 +251,7 @@ CREATE TABLE event_log (
 /*Lookup Manager Tables*/
 DROP TABLE IF EXISTS lookup_manager_tables;
 CREATE TABLE lookup_manager_tables (
-  id                    INT UNSIGNED NOT NULL auto_increment,
+  id                    INT NOT NULL auto_increment,
 
   tname                 VARCHAR(255) NOT NULL DEFAULT '', /*table name*/
   iname                 VARCHAR(255) NOT NULL DEFAULT '', /*human table name*/
@@ -272,9 +272,9 @@ CREATE TABLE lookup_manager_tables (
 
   status                TINYINT NOT NULL DEFAULT 0,                /*0-ok, 127-deleted*/
   add_time              TIMESTAMP DEFAULT CURRENT_TIMESTAMP,  /*date record added*/
-  add_users_id          INT UNSIGNED DEFAULT 0,                        /*user added record*/
+  add_users_id          INT DEFAULT 0,                        /*user added record*/
   upd_time              TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  upd_users_id          INT UNSIGNED DEFAULT 0,
+  upd_users_id          INT DEFAULT 0,
 
   PRIMARY KEY (id),
   UNIQUE KEY UX_lookup_manager_tables_tname (tname)
@@ -283,7 +283,7 @@ CREATE TABLE lookup_manager_tables (
 /*user custom views*/
 DROP TABLE IF EXISTS user_views;
 CREATE TABLE user_views (
-  id                    INT UNSIGNED NOT NULL auto_increment,
+  id                    INT NOT NULL auto_increment,
   icode                 VARCHAR(128) NOT NULL, --related screen url, ex: "/Admin/Demos"
   fields                TEXT, -- comma-separated list of fields to display, order kept
 
@@ -293,9 +293,9 @@ CREATE TABLE user_views (
 
   status                TINYINT NOT NULL DEFAULT 0,
   add_time              TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  add_users_id          INT UNSIGNED DEFAULT 0, -- related user
+  add_users_id          INT DEFAULT 0, -- related user
   upd_time              TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  upd_users_id          INT UNSIGNED DEFAULT 0,
+  upd_users_id          INT DEFAULT 0,
 
   PRIMARY KEY (id),
   KEY UX_user_views (add_users_id, icode, iname)
@@ -304,7 +304,7 @@ CREATE TABLE user_views (
 /*user lists*/
 DROP TABLE IF EXISTS user_lists;
 CREATE TABLE user_lists (
-  id                    INT UNSIGNED NOT NULL auto_increment,
+  id                    INT NOT NULL auto_increment,
   entity                VARCHAR(128) NOT NULL, -- usually table name or base_url, ex: 'demos' or /Admin/Demos
 
   iname                 VARCHAR(255) NOT NULL,
@@ -312,9 +312,9 @@ CREATE TABLE user_lists (
 
   status                TINYINT NOT NULL DEFAULT 0,
   add_time              TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  add_users_id          INT UNSIGNED DEFAULT 0, -- related owner user
+  add_users_id          INT DEFAULT 0, -- related owner user
   upd_time              TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  upd_users_id          INT UNSIGNED DEFAULT 0,
+  upd_users_id          INT DEFAULT 0,
 
   PRIMARY KEY (id),
   KEY IX_user_lists (add_users_id, entity)
@@ -323,15 +323,15 @@ CREATE TABLE user_lists (
 /*items linked to user lists */
 DROP TABLE IF EXISTS user_lists_items;
 CREATE TABLE user_lists_items (
-  id                    INT UNSIGNED NOT NULL auto_increment,
-  user_lists_id         INT UNSIGNED NOT NULL,
-  item_id               INT UNSIGNED NOT NULL, -- related item id, example demos.id
+  id                    INT NOT NULL auto_increment,
+  user_lists_id         INT NOT NULL,
+  item_id               INT NOT NULL, -- related item id, example demos.id
 
   status                TINYINT NOT NULL DEFAULT 0,
   add_time              TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  add_users_id          INT UNSIGNED DEFAULT 0, -- related owner user
+  add_users_id          INT DEFAULT 0, -- related owner user
   upd_time              TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  upd_users_id          INT UNSIGNED DEFAULT 0,
+  upd_users_id          INT DEFAULT 0,
 
   PRIMARY KEY (id),
   KEY UX_user_lists_items (user_lists_id, item_id),
@@ -341,7 +341,7 @@ CREATE TABLE user_lists_items (
 /*Custom menu items for sidebar*/
 DROP TABLE IF EXISTS menu_items;
 CREATE TABLE menu_items (
-  id                    INT UNSIGNED NOT NULL auto_increment,
+  id                    INT NOT NULL auto_increment,
 
   iname                 VARCHAR(64) NOT NULL default '',
   url                   VARCHAR(255) NOT NULL default '',  -- menu url
@@ -351,9 +351,9 @@ CREATE TABLE menu_items (
 
   status                TINYINT NOT NULL DEFAULT 0,        /*0-ok, 10-hidden, 127-deleted*/
   add_time              TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  add_users_id          INT UNSIGNED DEFAULT 0,
+  add_users_id          INT DEFAULT 0,
   upd_time              TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  upd_users_id          INT UNSIGNED DEFAULT 0,
+  upd_users_id          INT DEFAULT 0,
 
   PRIMARY KEY (id)
 ) DEFAULT CHARSET=utf8mb4;
@@ -361,7 +361,7 @@ CREATE TABLE menu_items (
 
 DROP TABLE IF EXISTS user_filters;
 CREATE TABLE user_filters (
-  id                    INT UNSIGNED NOT NULL auto_increment,
+  id                    INT NOT NULL auto_increment,
   icode                 VARCHAR(128) NOT NULL, -- related screen, ex: GLOBAL[controller.action]
 
   iname                 VARCHAR(255) NOT NULL,
@@ -371,9 +371,9 @@ CREATE TABLE user_filters (
 
   status                TINYINT DEFAULT 0,
   add_time              TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  add_users_id          INT UNSIGNED DEFAULT 0, -- related owner user
+  add_users_id          INT DEFAULT 0, -- related owner user
   upd_time              TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  upd_users_id          INT UNSIGNED DEFAULT 0,
+  upd_users_id          INT DEFAULT 0,
 
   PRIMARY KEY (id)
 ) DEFAULT CHARSET=utf8mb4;

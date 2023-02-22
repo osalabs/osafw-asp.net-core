@@ -4,7 +4,7 @@
 /*Demo Dictionary table*/
 DROP TABLE IF EXISTS demo_dicts;
 CREATE TABLE demo_dicts (
-  id                    INT UNSIGNED NOT NULL auto_increment,
+  id                    INT NOT NULL auto_increment,
 
   iname                 VARCHAR(64) NOT NULL default '',
   idesc                 TEXT,
@@ -12,9 +12,9 @@ CREATE TABLE demo_dicts (
 
   status                TINYINT NOT NULL DEFAULT 0,        /*0-ok, 1-under upload, 127-deleted*/
   add_time              TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  add_users_id          INT UNSIGNED DEFAULT 0,
+  add_users_id          INT DEFAULT 0,
   upd_time              TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  upd_users_id          INT UNSIGNED DEFAULT 0,
+  upd_users_id          INT DEFAULT 0,
 
   PRIMARY KEY (id)
   -- UNIQUE KEY (iname)
@@ -28,9 +28,9 @@ INSERT INTO demo_dicts (iname, idesc) VALUES
 /*Demo table*/
 DROP TABLE IF EXISTS demos;
 CREATE TABLE demos (
-  id                    INT UNSIGNED NOT NULL auto_increment,
-  parent_id             INT UNSIGNED NOT NULL DEFAULT 0,           /*parent id - combo selection from SQL*/
-  demo_dicts_id         INT UNSIGNED NULL,                         /* demo dictionary link*/
+  id                    INT NOT NULL auto_increment,
+  parent_id             INT NOT NULL DEFAULT 0,           /*parent id - combo selection from SQL*/
+  demo_dicts_id         INT NULL,                         /* demo dictionary link*/
 
   iname                 VARCHAR(64) NOT NULL DEFAULT '',  /*string value for names*/
   idesc                 TEXT,                             /*large text value*/
@@ -40,26 +40,26 @@ CREATE TABLE demos (
   fint                  INT NOT NULL DEFAULT 0,           /*accept only INT*/
   ffloat                FLOAT NOT NULL DEFAULT 0,         /*accept float digital values*/
 
-  dict_link_auto_id     INT UNSIGNED NOT NULL DEFAULT 0,  /*index of autocomplete field - linked to demo_dicts*/
+  dict_link_auto_id     INT NOT NULL DEFAULT 0,  /*index of autocomplete field - linked to demo_dicts*/
   dict_link_multi       VARCHAR(255) NOT NULL DEFAULT '', /*multiple select values, link to demo_dicts*/
 
-  fcombo                INT UNSIGNED NOT NULL DEFAULT 0,  /*index of combo selection*/
-  fradio                INT UNSIGNED NOT NULL DEFAULT 0,  /*index of radio selection*/
-  fyesno                TINYINT UNSIGNED NOT NULL DEFAULT 0, /*yes/no field 0 - NO, 1 - YES*/
-  is_checkbox           TINYINT UNSIGNED NOT NULL DEFAULT 0, /*checkbox field 0 - not set, 1 - set*/
+  fcombo                INT NOT NULL DEFAULT 0,  /*index of combo selection*/
+  fradio                INT NOT NULL DEFAULT 0,  /*index of radio selection*/
+  fyesno                TINYINT NOT NULL DEFAULT 0, /*yes/no field 0 - NO, 1 - YES*/
+  is_checkbox           TINYINT NOT NULL DEFAULT 0, /*checkbox field 0 - not set, 1 - set*/
 
   fdate_combo           DATE,                             /*date field with 3 combos editing*/
   fdate_pop             DATE,                             /*date field with popup editing*/
   fdatetime             DATETIME,                         /*date+time field*/
-  ftime                 INT UNSIGNED NOT NULL DEFAULT 0,  /*time field - we always store time as seconds from start of the day [0-86400]*/
+  ftime                 INT NOT NULL DEFAULT 0,  /*time field - we always store time as seconds from start of the day [0-86400]*/
 
-  att_id                INT UNSIGNED NULL,                /*optional attached image*/
+  att_id                INT NULL,                /*optional attached image*/
 
   status                TINYINT NOT NULL DEFAULT 0,        /*0-ok, 127-deleted*/
   add_time              TIMESTAMP DEFAULT CURRENT_TIMESTAMP,  /*date record added*/
-  add_users_id          INT UNSIGNED DEFAULT 0,                        /*user added record*/
+  add_users_id          INT DEFAULT 0,                        /*user added record*/
   upd_time              TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  upd_users_id          INT UNSIGNED DEFAULT 0,
+  upd_users_id          INT DEFAULT 0,
 
   PRIMARY KEY (id),
   UNIQUE KEY (email),
@@ -70,14 +70,14 @@ CREATE TABLE demos (
 /*multi link table*/
 DROP TABLE IF EXISTS demos_demo_dicts_link;
 CREATE TABLE demos_demo_dicts_link (
-  demos_id              INT UNSIGNED NULL,
-  demo_dicts_id         INT UNSIGNED NULL,
+  demos_id              INT NULL,
+  demo_dicts_id         INT NULL,
 
   status                TINYINT NOT NULL DEFAULT 0,        /*0-ok, 1-under change, deleted instantly*/
   add_time              TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  add_users_id          INT UNSIGNED DEFAULT 0,
+  add_users_id          INT DEFAULT 0,
   upd_time              TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  upd_users_id          INT UNSIGNED DEFAULT 0,
+  upd_users_id          INT DEFAULT 0,
 
   FOREIGN KEY (demos_id) REFERENCES demos(id),
   FOREIGN KEY (demo_dicts_id) REFERENCES demo_dicts(id)
