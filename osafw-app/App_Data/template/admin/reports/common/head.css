@@ -1,0 +1,21 @@
+@media print {
+  #sidebar, .site-navbar {
+    display: none;
+  }
+
+  body {
+    background-color: #fff !important;
+  }
+
+  body > main > .container-fluid  {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .fw-card {
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0;
+  }
+}
+

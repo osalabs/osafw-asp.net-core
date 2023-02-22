@@ -1,0 +1,17 @@
+To use custom theme/templates:
+- copy default templates files from "/AppData/template" to "/AppData/template_mytheme"
+- make changes in templates design/layout/structure
+- put 'the "template_theme": "mytheme"' setting to the 'appSettings' section in 'appsettings.json'
+- add your custom public assets to the "/wwwroot/assets/theme_mytheme" folder
+
+The public assets folder structure could be the following:
+theme_mytheme/
+|   |-- /css/
+|   |-- /img/
+|   |-- /js/
+|   |-- /vendors/
+|   |   |-- /lib1/
+|   |   |-- /lib2/
+|   |   |-- /lib3/
+
+Use '<~GLOBAL[ASSETS_URL]>/theme_mytheme' in templates to access your theme assets, i.e. '<img src="<~GLOBAL[ASSETS_URL]>/theme_mytheme/img/logo.png">'.
