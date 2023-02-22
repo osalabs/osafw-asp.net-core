@@ -1,3 +1,8 @@
+//#define isMySQL //uncomment if using MySQL, see fw/DB.cs for full instructions
+#if isMySQL
+using Pomelo.Extensions.Caching.MySql;
+#endif
+
 using System;
 using System.Collections;
 using Microsoft.AspNetCore.Builder;
@@ -8,6 +13,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Net.Http.Headers;
+using System.Text.RegularExpressions;
 
 namespace osafw;
 
@@ -24,6 +30,36 @@ public class Startup
     // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
     public void ConfigureServices(IServiceCollection services)
     {
+#if isMySQL
+        services.AddDistributedMySqlCache(options =>
+        {
+            // override settings based on env variable ASPNETCORE_ENVIRONMENT
+            var enviroment = Utils.f2str(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"));
+
+            var appSessings = new Hashtable();
+            FwConfig.readSettingsSection(Startup.Configuration.GetSection("appSettings"), ref appSessings);
+
+            // Try override settings by name 
+            var settings = (Hashtable)appSessings["appSettings"];
+            FwConfig.overrideSettingsByName(enviroment, ref settings);
+
+            // Retriving db connection string
+            var db = (Hashtable)settings["db"];
+            var main = (Hashtable)db["main"];
+            var conn_str = (string)main["connection_string"]; //MySQL connection string ex: "Server=127.0.0.1;User ID=root;Password=;Database=demo;Allow User Variables=true;"
+
+            //extract 
+            var m = Regex.Match(conn_str, @"Database=(\w+)", RegexOptions.IgnoreCase);
+            if (!m.Success)
+                throw new ApplicationException("No database name defined in connection_string");
+
+            // Setup sessions server middleware
+            options.ConnectionString = conn_str;
+            options.SchemaName = m.Groups[1].Value; //database name
+            options.TableName = "fwsessions";
+        });
+#endif
+#if !isMySQL
         services.AddDistributedSqlServerCache(options =>
         {
             // override settings based on env variable ASPNETCORE_ENVIRONMENT
@@ -46,7 +82,7 @@ public class Startup
             options.SchemaName = "dbo";
             options.TableName = "fwsessions";
         });
-
+#endif
         // Set form limits
         services.Configure<FormOptions>(options =>
         {

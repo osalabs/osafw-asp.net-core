@@ -211,12 +211,12 @@ public abstract class FwModel : IDisposable
     }
 
     // return count of all non-deleted
-    public int getCount()
+    public long getCount()
     {
         Hashtable where = new();
         if (!string.IsNullOrEmpty(field_status))
             where[field_status] = db.opNOT(STATUS_DELETED);
-        return (int)db.value(table_name, where, "count(*)");
+        return (long)db.value(table_name, where, "count(*)");
     }
 
     // just return first row by iname field (you may want to make it unique)

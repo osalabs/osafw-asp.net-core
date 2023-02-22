@@ -59,10 +59,11 @@ public class ReportSample : FwReports
         // define query
         string sql;
 
-        sql = @"select top 20 el.*, e.iname  as event_name, u.fname, u.lname from [events] e, event_log el 
+        sql = @"select el.*, e.iname  as event_name, u.fname, u.lname from events e, event_log el 
                          LEFT OUTER JOIN users u ON (u.id=el.add_users_id) 
                      where el.events_id=e.id" + where + 
               " order by el.id desc";
+        sql = db.limit(sql, 20); //limit to first results only
         var rows = db.arrayp(sql, where_params).toArrayList();
         ps["rows"] = rows;
         ps["count"] = rows.Count;

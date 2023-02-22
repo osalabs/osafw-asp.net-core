@@ -140,7 +140,7 @@ public class FwSelfTest
             {
                 try
                 {
-                    db.valuep("select TOP 1 * from " + db.qid(table));
+                    db.valuep(db.limit("select * from " + db.qid(table),1));
                     plus_ok();
                     echo("table " + table, "OK");
                 }
