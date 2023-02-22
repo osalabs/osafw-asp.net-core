@@ -1,4 +1,4 @@
-#define isMySQL //uncomment if using MySQL
+//#define isMySQL //uncomment if using MySQL, see fw/DB.cs for full instructions
 #if isMySQL
 using Pomelo.Extensions.Caching.MySql;
 #endif

@@ -3,7 +3,17 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2023 Oleg Savchuk www.osalabs.com
 
-#define isMySQL //uncomment if using MySQL
+/*
+ * to use with Mysql:
+ * - uncomment #define isMySQL here
+ * - uncomment #define isMySQL in Startup.cs
+ * - uncomment or add "MySqlConnector" and "Pomelo.Extensions.Caching.MySql" packages in osafw-app.csproj
+ * - in appsettings.json set :
+ *   - db/main/connection_string to "Server=127.0.0.1;User ID=XXX;Password=YYY;Database=ZZZ;Allow User Variables=true;"
+ *   - db/main/type to "MySQL"
+ * - use App_Data/sql/mysql database initialization files
+ */
+//#define isMySQL //uncomment if using MySQL
 #if isMySQL
 using MySqlConnector;
 #endif
