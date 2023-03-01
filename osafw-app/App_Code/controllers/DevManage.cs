@@ -12,7 +12,6 @@ using System.Collections;
 using System.Text.RegularExpressions;
 using System.Text.Json;
 using System.Data;
-using System.Xml.Linq;
 
 namespace osafw;
 
@@ -244,6 +243,9 @@ public class DevManageController : FwController
         var controller_url = Utils.f2str(item["controller_url"]).Trim();
         var controller_title = Utils.f2str(item["controller_title"]).Trim();
 
+        var config_file = fw.config("template") + DB_JSON_PATH;
+        var entities = loadJson<ArrayList>(config_file);
+
         // emulate entity
         var entity = new Hashtable()
         {
@@ -254,7 +256,7 @@ public class DevManageController : FwController
         };
         // table = Utils.name2fw(model_name) - this is not always ok
 
-        createController(entity, null);
+        createController(entity, entities);
         var controller_name = Utils.f2str(entity["controller_url"]).Replace("/", "");
 
         fw.flash("controller_created", controller_name);
@@ -1443,7 +1445,7 @@ public class DevManageController : FwController
     {
         // save_fields - all fields from model table (except id and sytem add_time/user fields)
         // save_fields_checkboxes - empty (TODO based on bit field?)
-        // list_view - model.table_name
+        // list_view - model.table_name OR (select t.*, fk.iname... from model.table_name LEFT OUTER JOIN fk...) t in case there are foreign keys and we need names
         // view_list_defaults - iname add_time status
         // view_list_map
         // view_list_custom - just status
@@ -1465,6 +1467,11 @@ public class DevManageController : FwController
         string model_name = (string)entity["model_name"];
         string table_name = (string)entity["table"];
         logger("updating config for controller=", entity["controller_url"]);
+
+        var sys_fields = Utils.qh("id status add_time add_users_id upd_time upd_users_id");
+
+        
+        
 
         Hashtable tables = new(); // hindex by table name to entities
         ArrayList fields = (ArrayList)entity["fields"];
@@ -1488,12 +1495,35 @@ public class DevManageController : FwController
                 tables[tentity["table"]] = tentity;
 
         var is_fw = Utils.f2bool(entity["is_fw"]);
-        Hashtable hfields = new();
-        var sys_fields = Utils.qh("id status add_time add_users_id upd_time upd_users_id");
+
+        //build index by field name
+        Hashtable hfields = new(); // name => fld index
+        foreach (Hashtable fld in fields)
+            hfields[Utils.f2str(fld["name"])] = fld;
+
+        var foreign_keys = (ArrayList)entity["foreign_keys"] ?? new ArrayList();
+        //add system user fields to fake foreign keys, so it can generate list query with user names
+        if (hfields.ContainsKey("add_users_id"))
+        {
+            Hashtable fk = new();
+            fk["pk_column"] = "id";
+            fk["pk_table"] = "users";
+            fk["column"] = "add_users_id";
+            foreign_keys.Add(fk);
+        }
+        if (hfields.ContainsKey("upd_users_id"))
+        {
+            Hashtable fk = new();
+            fk["pk_column"] = "id";
+            fk["pk_table"] = "users";
+            fk["column"] = "upd_users_id";
+            foreign_keys.Add(fk);
+        }
+        var hforeign_keys = array2hashtable(foreign_keys, "column"); // column -> fk info
 
         ArrayList saveFields = new();
         ArrayList saveFieldsNullable = new();
-        Hashtable hFieldsMap = new();   // name => iname
+        Hashtable hFieldsMap = new();   // name => iname - map for the view_list_map
         Hashtable hFieldsMapFW = new(); // fw_name => name
         ArrayList showFieldsLeft = new();
         ArrayList showFieldsRight = new();
@@ -1510,8 +1540,17 @@ public class DevManageController : FwController
             if (Utils.f2str(fld["iname"]) == "")
                 fld["iname"] = Utils.name2human(fld_name); // human name using fw standards
 
-            hfields[fld_name] = fld;
-            hFieldsMap[fld_name] = fld["iname"];
+            var is_field_fk = hforeign_keys.ContainsKey(fld_name);
+            var fk_field_name = "";
+            
+            if (is_field_fk)
+            {
+                fk_field_name = (string)((Hashtable)hforeign_keys[fld_name])["column"] + "_iname";
+                hFieldsMap[fk_field_name] = fld["iname"]; //if FK field - add as column_id_iname
+            }
+            else
+                hFieldsMap[fld_name] = fld["iname"]; //regular field
+            
             if (!is_fw)
             {
                 hFieldsMap[fld["fw_name"]] = fld["iname"];
@@ -1559,7 +1598,7 @@ public class DevManageController : FwController
                             if (col < 2)
                                 col = 2; // minimum - 2
                             sff["class_contents"] = "col-md-" + col;
-                        }
+                        }                        
                     }
                 }
             }
@@ -1569,31 +1608,28 @@ public class DevManageController : FwController
 
                 // check foreign keys - and make type=select
                 var is_fk = false;
-                if (entity.ContainsKey("foreign_keys"))
+                foreach (Hashtable fkinfo in foreign_keys)
                 {
-                    foreach (Hashtable fkinfo in (ArrayList)entity["foreign_keys"])
+                    if ((string)fkinfo["column"] == fld_name)
                     {
-                        if ((string)fkinfo["column"] == fld_name)
-                        {
-                            is_fk = true;
-                            var mname = _tablename2model(Utils.name2fw((string)fkinfo["pk_table"]));
+                        is_fk = true;
+                        var mname = _tablename2model(Utils.name2fw((string)fkinfo["pk_table"]));
 
-                            sf["lookup_model"] = mname;
-                            // sf["lookup_field"] = "iname"    
-                            sf["type"] = "plaintext_link";
+                        sf["lookup_model"] = mname;
+                        // sf["lookup_field"] = "iname"    
+                        sf["type"] = "plaintext_link";
 
-                            sff["type"] = "select";
-                            sff["lookup_model"] = mname;
-                            if (Regex.Replace(fld["default"] + "", @"\D+", "") == "0")
-                                // if default is 0 - allow 0 option
-                                sff["is_option0"] = true;
-                            else
-                                sff["is_option_empty"] = true;
-                            sff["option0_title"] = "- select -";
+                        sff["type"] = "select";
+                        sff["lookup_model"] = mname;
+                        if (Regex.Replace(fld["default"] + "", @"\D+", "") == "0")
+                            // if default is 0 - allow 0 option
+                            sff["is_option0"] = true;
+                        else
+                            sff["is_option_empty"] = true;
+                        sff["option0_title"] = "- select -";
 
-                            //sff["class_contents"] = "col-md-4";
-                            break;
-                        }
+                        //sff["class_contents"] = "col-md-4";
+                        break;
                     }
                 }
 
@@ -1691,6 +1727,8 @@ public class DevManageController : FwController
                         sff["type"] = "select";
                         sff["lookup_tpl"] = "/common/sel/status.sel";
                         sff["class_contents"] = "col-md-4";
+                        sff.Remove("min");//remove min/max because status detected above as numeric field
+                        sff.Remove("max");
                         break;
                     }
 
@@ -1758,9 +1796,9 @@ public class DevManageController : FwController
             else
             {
                 //non-system fields
-                if (Utils.f2str(sf["type"]) == "att"
-                    || Utils.f2str(sf["type"]) == "att_links"
-                    || Utils.f2str(sff["type"]) == "textarea" && fields.Count >= 10)
+                if (Utils.f2str(sf["type"]) == "att" 
+                    || Utils.f2str(sf["type"]) == "att_links" 
+                    || Utils.f2str(sff["type"]) == "textarea" && fields.Count>=10)
                 {
                     //add to the right: attachments, textareas (only if many fields)
                     showFieldsRight.Add(sf);
@@ -1838,8 +1876,44 @@ public class DevManageController : FwController
         config.Remove("list_sortmap"); // N/A in dynamic controller
         config.Remove("required_fields"); // not necessary in dynamic controller as controlled by showform_fields required attribute
         config["related_field_name"] = ""; // TODO?
-        config["list_view"] = table_name;
 
+        // list_view
+        if (foreign_keys.Count>0)
+        {
+            //we have foreign keys, so for the list screen we need to read FK entites names - build subquery
+
+            var fk_inames = new ArrayList();
+            var fk_joins = new ArrayList();
+            for (int i = 0; i < foreign_keys.Count; i++)
+            {
+                var fk = (Hashtable)foreign_keys[i];
+                var alias = $"fk{i}";
+                var tcolumn = (string)fk["column"];
+                var pk_table = (string)fk["pk_table"];
+                var pk_column = (string)fk["pk_column"];
+
+                var field = (Hashtable)hfields[tcolumn];
+                var sql_join = "";
+                if (Utils.f2int(field["is_nullable"]) == 1)
+                {
+                    //if FK field can be NULL - use LEFT OUTER JOIN
+                    sql_join = $"LEFT OUTER JOIN {db.qid(pk_table)} {alias} ON ({alias}.{pk_column}=t.{tcolumn})";
+                }
+                else
+                {
+                    sql_join = $"INNER JOIN {db.qid(pk_table)} {alias} ON ({alias}.{pk_column}=t.{tcolumn})";
+                }
+                fk_joins.Add(sql_join);
+                fk_inames.Add($"{alias}.iname as "+db.qid(tcolumn + "_iname")); //TODO detect non-iname for non-fw tables?
+            }
+            var inames = string.Join(", ", fk_inames.Cast<string>().ToArray());
+            var joins = string.Join(" ", fk_joins.Cast<string>().ToArray());
+            config["list_view"] = $"(SELECT t.*, {inames} FROM {db.qid(table_name)} t {joins}) tt";
+        }
+        else
+        {
+            config["list_view"] = table_name; //if no foreign keys - just read from main table
+        }
 
         // default fields for list view
         // alternatively - just show couple fields
@@ -1853,12 +1927,17 @@ public class DevManageController : FwController
                          && !(Utils.f2str(fld["fw_type"]) == "varchar" && Utils.f2int(fld["maxlen"]) <= 0)
                          && !(sys_fields.Contains(fld["name"]) && Utils.f2str(fld["name"]) != "status")
                        orderby (Utils.f2str(fld["is_nullable"]) == "0" && fld["default"] == null) descending
-                       select fld);
+                      select fld);
         foreach (Hashtable field in rfields)
         {
             var fname = (string)field["name"];
             if (defaults_ctr > 5 && fname != "status")
                 continue;
+
+            if (hforeign_keys.ContainsKey(fname))
+            {
+                fname = (string)((Hashtable)hforeign_keys[fname])["column"] + "_iname";
+            }
 
             if (!is_fw)
             {
@@ -1869,7 +1948,30 @@ public class DevManageController : FwController
             defaults_ctr++;
         }
 
+        //for (var i = 0; i <= fields.Count - 1; i++)
+        //{
+        //    Hashtable field = (Hashtable)fields[i];
+        //    if (Utils.f2str(field["is_identity"]) == "1")
+        //        continue;
+        //    if (Utils.f2str(field["fw_type"]) == "varchar" && Utils.f2int(field["maxlen"]) <= 0)
+        //        continue;
+        //    var fname = (string)field["name"];
+        //    if (sys_fields.Contains(field["name"]) && fname != "status")
+        //        continue;
+        //    if (defaults_ctr > 5 && fname != "status")
+        //        continue;
+            
+        //    if (!is_fw)
+        //    {
+        //        fname = (string)field["fw_name"];
+        //    }
+
+        //    config["view_list_defaults"] += (i == 0 ? "" : " ") + fname;
+        //    defaults_ctr++;
+        //}
+
         if (!is_fw)
+        {
             // nor non-fw tables - just show first 3 fields
             // config["view_list_defaults"] = ""
             // For i = 0 To Math.Min(2, fields.Count - 1)
@@ -1878,7 +1980,7 @@ public class DevManageController : FwController
 
             // for non-fw - list_sortmap separately
             config["list_sortmap"] = hFieldsMapFW;
-
+        }
         config["view_list_map"] = hFieldsMap; // fields to names
         config["view_list_custom"] = "status";
 
@@ -2370,7 +2472,7 @@ public class DevManageController : FwController
 
 public class ConfigJsonConverter : System.Text.Json.Serialization.JsonConverter<Hashtable>
 {
-    readonly string ordered_keys = "model is_dynamic_index list_view list_sortdef search_fields related_field_name view_list_defaults view_list_map view_list_custom is_dynamic_show show_fields is_dynamic_showform showform_fields form_new_defaults required_fields save_fields save_fields_checkboxes save_fields_nullable field type lookup_model label class class_control class_label class_contents table fields foreign_keys is_fw name iname fw_name fw_type fw_subtype maxlen is_nullable is_identity numeric_precision default db_config model_name controller_title controller_url controller_is_lookup";
+    readonly string ordered_keys = "model is_dynamic_index list_view list_sortdef search_fields related_field_name view_list_defaults view_list_map view_list_custom is_dynamic_show show_fields is_dynamic_showform showform_fields form_new_defaults required_fields save_fields save_fields_checkboxes save_fields_nullable field type lookup_model label class class_control class_label class_contents required validate maxlength min max lookup_tpl is_option_empty option0_title table fields foreign_keys is_fw name iname fw_name fw_type fw_subtype maxlen is_nullable is_identity numeric_precision default db_config model_name controller_title controller_url controller_is_lookup";
     public override Hashtable Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         throw new NotImplementedException();
