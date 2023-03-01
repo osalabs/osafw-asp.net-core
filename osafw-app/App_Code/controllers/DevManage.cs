@@ -1083,6 +1083,12 @@ public class DevManageController : FwController
                         field["fw_type"] = "float";
                         field["fw_subtype"] = "decimal";
                     }
+                    else if (Regex.IsMatch(line, @"\bdecimal\b", RegexOptions.IgnoreCase))
+                    {
+                        field["numeric_precision"] = 2;
+                        field["fw_type"] = "float";
+                        field["fw_subtype"] = "decimal";
+                    }
                     else if (Regex.IsMatch(line, @"\bdate\b", RegexOptions.IgnoreCase))
                     {
                         field["fw_type"] = "datetime";
