@@ -1000,7 +1000,12 @@ public abstract class FwController
     {
         // load schema info to perform specific conversions
         var result = new Hashtable();
-        var table_schema = db.tableSchemaFull(list_view);
+        //use table_name or list_view if it's not subquery
+        var list_view_name = model0.table_name;
+        if (!string.IsNullOrEmpty(list_view) && list_view.Substring(0, 1) != "(")
+            list_view_name = list_view;
+
+        var table_schema = db.tableSchemaFull(list_view_name);
         foreach (var fieldname in afields)
         {
             if (!table_schema.ContainsKey(fieldname)) continue;
