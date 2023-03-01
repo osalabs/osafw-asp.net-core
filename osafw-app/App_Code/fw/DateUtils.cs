@@ -58,6 +58,20 @@ public class DateUtils
     }
 
     // IN: datetime string
+    // OUT: date string
+    // Example: 1/17/2023 12:00:00 AM => 1/17/2023
+    public static string Str2DateOnly(string str)
+    {
+        string result = str;
+        var dt = Utils.f2date(str);
+        if (dt != null)
+        {
+            result = ((DateTime)dt).ToShortDateString();
+        }
+        return result;
+    }
+
+    // IN: datetime string
     // OUT: HH:MM
     public static string Date2TimeStr(string str)
     {

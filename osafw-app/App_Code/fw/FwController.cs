@@ -996,6 +996,27 @@ public abstract class FwController
         return (fields.Length > 0 ? fields : view_list_defaults);
     }
 
+    public virtual Hashtable getViewListConversions(string[] afields)
+    {
+        // load schema info to perform specific conversions
+        var result = new Hashtable();
+        var table_schema = db.tableSchemaFull(list_view);
+        foreach (var fieldname in afields)
+        {
+            if (!table_schema.ContainsKey(fieldname)) continue;
+            var field_schema = (Hashtable)table_schema[fieldname];
+
+            //if field is exactly DATE - show only date part without time
+            if ((string)field_schema["fw_subtype"] == "date")
+            {
+                result[fieldname] = "date";
+            }
+            // ADD OTHER CONVERSIONS HERE if necessary
+        }
+
+        return result;
+    }
+
     // add to ps:
     // headers
     // headers_search
@@ -1020,17 +1041,29 @@ public abstract class FwController
         if (is_cols)
         {
             // dynamic cols
+            var afields = Utils.qw(fields);
+
+            var hconversions = getViewListConversions(afields);
+
             foreach (Hashtable row in (ArrayList)ps["list_rows"])
             {
                 ArrayList cols = new();
-                foreach (var fieldname in Utils.qw(fields))
+                foreach (var fieldname in afields)
+                {                    
+                    var data = (string)row[fieldname];
+                    if (hconversions.ContainsKey(fieldname))
+                    {
+                        data = DateUtils.Str2DateOnly(data);
+                    }
+
                     cols.Add(new Hashtable()
                     {
                         {"row",row},
                         {"field_name",fieldname},
-                        {"data",row[fieldname]},
+                        {"data",data},
                         {"is_custom",hcustom.ContainsKey(fieldname)}
                     });
+                }
                 row["cols"] = cols;
             }
         }
