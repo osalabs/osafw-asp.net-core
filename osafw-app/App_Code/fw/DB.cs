@@ -1514,6 +1514,17 @@ public class DB : IDisposable
         return result;
     }
 
+    //return full table schema as hashtable fieldname => {name=>..., type=>,...}
+    public Hashtable tableSchemaFull(string table)
+    {
+        var result = new Hashtable();
+        ArrayList fields = loadTableSchemaFull(table);
+        foreach (Hashtable row in fields)
+            result[row["name"].ToString().ToLower()] = row;
+
+        return result;
+    }
+
     public ArrayList loadTableSchemaFull(string table)
     {
         // check if full schema already there
