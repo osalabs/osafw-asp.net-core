@@ -152,10 +152,10 @@ public class FwConfig
             settings["ASSETS_URL"] = settings["ROOT_URL"] + "/assets";
 
         // default or theme template dir
-        if (!settings.ContainsKey("template"))
-            settings["template"] = $@"{path_separator}App_Data{path_separator}template";
-        // make absolute path to templates from site root
-        settings["template"] = (string)settings["site_root"] + settings["template"];
+        if (!settings.ContainsKey("template_theme") || (string)settings["template_theme"] == "default")
+            settings["template"] = (string)settings["site_root"] + $@"{path_separator}App_Data{path_separator}template";
+        else
+            settings["template"] = (string)settings["site_root"] + $@"{path_separator}App_Data{path_separator}template_{(string)settings["template_theme"]}";
     }
 
 
