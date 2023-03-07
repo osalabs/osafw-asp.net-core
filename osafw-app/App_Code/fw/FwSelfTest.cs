@@ -133,7 +133,7 @@ public class FwSelfTest
         if (is_db)
         {
             echo("<strong>DB Tables</strong>");
-            // fw core db tables exists and we can read from it 
+            // fw core db tables exists and we can read from it
             // (select count(*) from: users, settings, spages, att, att_table_link, att_categories, events, event_log)
             string[] tables = Utils.qw(existing_tables);
             foreach (var table in tables)
@@ -193,10 +193,10 @@ public class FwSelfTest
             {
 
                 // check controller have SelfTest method
-                // SelfTest method should accept one argument FwSelfTest 
+                // SelfTest method should accept one argument FwSelfTest
                 // and return FwSelfTest.Result
                 // sample Controller.SelfTest declaration:
-                // 
+                //
                 // Public Function SelfTest(t As FwSelfTest) As FwSelfTest.Result
                 // Dim res As Boolean = True
                 // res = res AndAlso t.is_true("Inner var check", (var = 1)) = FwSelfTest.Result.OK

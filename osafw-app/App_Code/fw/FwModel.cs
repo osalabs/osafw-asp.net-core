@@ -772,8 +772,8 @@ public abstract class FwModel : IDisposable
     {
         var field_prioq = db.qid(field_prio);
         var p = DB.h("inc_value", inc_value, "from_prio", from_prio, "to_prio", to_prio);
-        return db.exec("UPDATE " + db.qid(table_name) + 
-            " SET " + field_prioq + "=" + field_prioq + "+(@inc_value)" + 
+        return db.exec("UPDATE " + db.qid(table_name) +
+            " SET " + field_prioq + "=" + field_prioq + "+(@inc_value)" +
             " WHERE " + field_prioq + " BETWEEN @from_prio AND @to_prio", p);
     }
 

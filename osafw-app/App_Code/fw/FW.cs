@@ -1,4 +1,4 @@
-﻿//if you use Sentry set to True here, install SentrySDK, in web.config fill endpoint URL to "log_sentry" 
+﻿//if you use Sentry set to True here, install SentrySDK, in web.config fill endpoint URL to "log_sentry"
 //#define isSentry
 
 using Microsoft.AspNetCore.Http;
@@ -15,7 +15,7 @@ using System.Text.RegularExpressions;
 
 namespace osafw;
 
-// standard exceptions used by framework 
+// standard exceptions used by framework
 [Serializable]
 public class AuthException : ApplicationException
 {
@@ -220,7 +220,7 @@ public class FW : IDisposable
     }
 
 
-    // FLASH - used to pass something to the next request (and only on this request)        
+    // FLASH - used to pass something to the next request (and only on this request)
     // get flash value by name
     // set flash value by name - return fw in this case
     public object flash(string name, object value = null)
@@ -375,7 +375,7 @@ public class FW : IDisposable
             // GET   /controller/{id}/delete     ShowDelete
             // POST/PUT  /controller/{id}        Save     (save changes to exisitng record - Update    Note:Request.Form should contain data
             // POST/DELETE  /controller/{id}            Delete    Note:Request.Form should NOT contain any data
-            // 
+            //
             // /controller/(Action)              Action    call for arbitrary action from the controller
             Match m = Regex.Match(url, @"^/([^/]+)(?:/(new|\.\w+)|/([\d\w_-]+)(?:\.(\w+))?(?:/(edit|delete))?)?/?$");
             if (m.Success)
@@ -485,7 +485,7 @@ public class FW : IDisposable
         catch (AuthException Ex)
         {
             logger(LogLevel.DEBUG, Ex.Message);
-            // if not logged - just redirect to login 
+            // if not logged - just redirect to login
             if (!this.isLogged)
                 redirect((string)config("UNLOGGED_DEFAULT_URL"), false);
             else
@@ -562,7 +562,7 @@ public class FW : IDisposable
     {
         int result = 0;
 
-        // integrated XSS check - only for POST/PUT/DELETE requests 
+        // integrated XSS check - only for POST/PUT/DELETE requests
         // OR for standard actions: Save, Delete, SaveMulti
         // OR if it contains XSS param
         if ((FORM.ContainsKey("XSS")
@@ -1168,7 +1168,7 @@ public class FW : IDisposable
             ps = (Hashtable)actionMethod.Invoke(controller, parameters);
         }
         catch (TargetInvocationException ex)
-        {            
+        {
             Exception iex = null;
             if (ex.InnerException != null)
                 iex = ex.InnerException;
@@ -1205,7 +1205,7 @@ public class FW : IDisposable
     // filenames (optional) - human filename => hash filepath
     // aCC - arraylist of CC addresses (strings)
     // reply_to - optional reply to email
-    // options - hashtable with options: 
+    // options - hashtable with options:
     // "read-receipt"
     // RETURN:
     // true if sent successfully

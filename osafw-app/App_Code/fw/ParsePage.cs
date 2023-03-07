@@ -9,10 +9,10 @@
  - CSRF shield - all vars escaped, if var shouldn't be escaped use "noescape" attr: < ~raw_variable noescape >
   - attrs["select") ]an contain strings with separator ","(or custom defined) for multiple select
   - <~#commented_tag> - comment tags that doesn't need to be parsed(quickly replaced by empty string)
- 
+
 
  # Supported attributes:
- 
+
 
  var - tag is variable, no fileseek necessary
  ifXX - if confitions
@@ -24,18 +24,18 @@
    ifle="var" value="XXX" - tag/template will be parsed only if var<=XXX
    var can be ICollection (Hashtable/ArrayList/...)
    <~tag if="ArrayList"> will fail if ArrayList.Count=0 or success if ArrayList.Count>0
- 
+
     ## old mapping
     neq => ne
     ge => gt
     le => lt
     gee => ge
     lee => le
- 
+
 
   vvalue - value as hf variable:
     <~tag ifeq="var" vvalue="YYY"> - actual value got via hfvalue('YYY', $hf);
- 
+
 
   #shortcuts
   <~tag if="var"> - tag will be shown if var is evaluated as TRUE, not using eval(), equivalent to "if ($var)"
@@ -46,7 +46,7 @@
     1 or other non-zero number
     "true" string
     true (boolean)
- 
+
 
     FALSE values:
    "0" or "false" string
@@ -55,7 +55,7 @@
    ''
     unset variable
   -------------------------
- 
+
 
   repeat - this tag is repeat content ($hf hash should contain reference to array of hashes),
     supported repeat vars:
@@ -64,7 +64,7 @@
     repeat.total (total number of items)
     repeat.index  (0-based)
     repeat.iteration (1-based)
- 
+
 
   sub - this tag tell parser to use subhash for parse subtemplate ($hf hash should contain reference to hash), examples:
      <~tag sub inline>...</~tag>- use $hf[tag] as hashtable for inline template
@@ -167,7 +167,7 @@ public class ParsePage
     private bool is_found_last_hfvalue = false;
     private readonly string lang = "en";
     private readonly bool lang_parse = true; // parse lang strings in `` or not - true - parse(default), false - no
-    private readonly bool lang_update = true; // save unknown matches to lang file (helps during development) 
+    private readonly bool lang_update = true; // save unknown matches to lang file (helps during development)
     private readonly MatchEvaluator lang_evaluator;
     private static readonly char path_separator = Path.DirectorySeparatorChar;
 
@@ -184,7 +184,7 @@ public class ParsePage
             if (string.IsNullOrEmpty(lang))
                 lang = "en";
 
-            // load cache for all current lang matches 
+            // load cache for all current lang matches
             if (LANG_CACHE[lang] == null)
                 load_lang();
 
@@ -473,8 +473,8 @@ public class ParsePage
     }
 
     // hf can be: Hashtable or HttpSessionState
-    // returns: 
-    // value (string, hashtable, etc..), empty string "" 
+    // returns:
+    // value (string, hashtable, etc..), empty string ""
     // Or Nothing - tag not present in hf param (only if hf is Hashtable), file lookup will be necessary
     // set is_found to True if tag value found hf/parent_hf (so can be used to detect if there are no tag value at all so no fileseek required)
     private object hfvalue(string tag, object hf, Hashtable parent_hf = null)
@@ -792,7 +792,7 @@ public class ParsePage
         else
         {
             uftagi1 = (Hashtable)uftag[i];
-        }           
+        }
         Hashtable uftagi = (Hashtable)uftagi1.Clone(); // make a shallow copy as we modify this level
         int cnt = uftag.Count;
 
@@ -1302,7 +1302,7 @@ public class ParsePage
         return langMap(value);
     }
 
-    // 
+    //
     /// <summary>
     /// map input string (with optional context) into output accoring to the current lang
     /// </summary>

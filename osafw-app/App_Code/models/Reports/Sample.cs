@@ -49,19 +49,19 @@ public class ReportSample : FwReports
             where += " and el.add_time<@to_date";
             where_params["@to_date"] = to_date.AddDays(1);
         }
-            
+
         if (!string.IsNullOrEmpty((string)f["events_id"]))
         {
             where += " and el.events_id=@events_id";
             where_params["@events_id"] = f["events_id"];
-        }            
+        }
 
         // define query
         string sql;
 
         sql = @"select el.*, e.iname  as event_name, u.fname, u.lname from events e, event_log el 
                          LEFT OUTER JOIN users u ON (u.id=el.add_users_id) 
-                     where el.events_id=e.id" + where + 
+                     where el.events_id=e.id" + where +
               " order by el.id desc";
         sql = db.limit(sql, 20); //limit to first results only
         var rows = db.arrayp(sql, where_params).toArrayList();

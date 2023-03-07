@@ -29,7 +29,7 @@ public class DevSelfTestController : FwController
         Test.echo_totals();
     }
 
-    // just have this stub here, so we don't call IndexAction and stuck in a recursion 
+    // just have this stub here, so we don't call IndexAction and stuck in a recursion
     public FwSelfTest.Result SelfTest(FwSelfTest t)
     {
         return FwSelfTest.Result.OK;

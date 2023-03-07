@@ -103,7 +103,7 @@ public class Spages : FwModel
     }
 
     /// <summary>
-    /// Read ALL rows from db according to where, then apply getPagesTree to return tree structure 
+    /// Read ALL rows from db according to where, then apply getPagesTree to return tree structure
     /// </summary>
     /// <param name="where">where to apply in sql</param>
     /// <param name="orderby">order by fields to apply in sql</param>
@@ -111,8 +111,8 @@ public class Spages : FwModel
     /// <remarks></remarks>
     public ArrayList tree(string where, Hashtable list_where_params, string orderby)
     {
-        ArrayList rows = db.arrayp("select * from " + db.qid(table_name) + 
-                                   " where " + where + 
+        ArrayList rows = db.arrayp("select * from " + db.qid(table_name) +
+                                   " where " + where +
                                    " order by " + orderby, list_where_params);
         ArrayList pages_tree = getPagesTree(rows, 0);
         return pages_tree;
