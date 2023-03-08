@@ -1509,7 +1509,8 @@ public class DevManageController : FwController
 
         var foreign_keys = (ArrayList)entity["foreign_keys"] ?? new ArrayList();
         //add system user fields to fake foreign keys, so it can generate list query with user names
-        if (hfields.ContainsKey("add_users_id"))
+        var hforeign_keys = array2hashtable(foreign_keys, "column"); // column -> fk info
+        if (hfields.ContainsKey("add_users_id") && !hforeign_keys.ContainsKey("add_users_id"))
         {
             Hashtable fk = new();
             fk["pk_column"] = "id";
@@ -1517,7 +1518,7 @@ public class DevManageController : FwController
             fk["column"] = "add_users_id";
             foreign_keys.Add(fk);
         }
-        if (hfields.ContainsKey("upd_users_id"))
+        if (hfields.ContainsKey("upd_users_id") && !hforeign_keys.ContainsKey("add_users_id"))
         {
             Hashtable fk = new();
             fk["pk_column"] = "id";
@@ -1525,7 +1526,7 @@ public class DevManageController : FwController
             fk["column"] = "upd_users_id";
             foreign_keys.Add(fk);
         }
-        var hforeign_keys = array2hashtable(foreign_keys, "column"); // column -> fk info
+        hforeign_keys = array2hashtable(foreign_keys, "column"); // refresh in case new foreign keys added above
 
         ArrayList saveFields = new();
         ArrayList saveFieldsNullable = new();
@@ -2119,6 +2120,8 @@ public class DevManageController : FwController
                 {
                     if (Utils.f2str(entity["fw_subtype"]) == "currency")
                         result = "DECIMAL(18,2)";
+                    else if (Utils.f2str(entity["fw_subtype"]) == "decimal")
+                        result = "DECIMAL(18,"+ Utils.f2int(entity["numeric_precision"]) + ")";
                     else
                         result = "FLOAT";
                     break;
