@@ -10,7 +10,6 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Web;
 using System.Net;
-using System.Security.Cryptography;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Drawing.Drawing2D;
@@ -18,6 +17,7 @@ using System.Runtime.Versioning;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Security.Authentication;
 
@@ -949,10 +949,28 @@ public class Utils
         return result.ToString();
     }
 
-    // return unique file name in form UUID (without extension)
+    // return UUID (3.4 x 10^38 unique IDs)
     public static string uuid()
     {
         return System.Guid.NewGuid().ToString();
+    }
+
+    //return nanoID (2.1 trillion unique IDs)
+    public static string nanoid(int size = 21)
+    {
+
+        using (var rng = RandomNumberGenerator.Create())
+        {
+            var bytes = new byte[size];
+            rng.GetBytes(bytes);
+            var chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz-".ToCharArray();
+            var result = new char[size];
+            for (int i = 0; i < size; i++)
+            {
+                result[i] = chars[bytes[i] % chars.Length];
+            }
+            return new string(result);
+        }
     }
 
     // return path to tmp filename WITHOUT extension
