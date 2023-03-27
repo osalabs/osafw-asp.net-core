@@ -171,6 +171,16 @@ public abstract class FwModel : IDisposable
         return result;
     }
 
+    //find record by iname, if not exists - add, return id (existing or newly added)
+    public virtual int idByInameOrAdd(string iname)
+    {
+        var row = oneByIname(iname);
+        var id = Utils.f2int(row[field_id]);
+        if (id == 0)
+            id = add(DB.h(field_iname, iname));
+        return id;
+    }
+
     //default order is iname asc
     //or if prio column exists - prio asc, iname asc
     protected virtual string getOrderBy()
