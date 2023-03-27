@@ -196,6 +196,7 @@ public class DB : IDisposable
     private static Hashtable schemafull_cache; // cache for the full schema, lifetime = app lifetime
     private static Hashtable schema_cache; // cache for the schema, lifetime = app lifetime
 
+    public static string last_sql = ""; // last executed sql
     public static int SQL_QUERY_CTR = 0; // counter for SQL queries during request
 
     private readonly FW fw; // for now only used for: fw.logger and fw.cache (for request-level cacheing of multi-db connections)
@@ -372,6 +373,7 @@ public class DB : IDisposable
         else
             logger(LogLevel.INFO, "DB:", db_name, " ", sql);
 
+        last_sql = sql;
         SQL_QUERY_CTR += 1;
 
         DbDataReader dbread;
@@ -418,6 +420,7 @@ public class DB : IDisposable
         else
             logger(LogLevel.INFO, "DB:", db_name, " ", sql);
 
+        last_sql = sql;
         SQL_QUERY_CTR += 1;
 
         int result;

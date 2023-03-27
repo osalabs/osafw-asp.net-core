@@ -1363,6 +1363,8 @@ public class FW : IDisposable
             ps["is_dump"] = true;
             if (Ex != null)
                 ps["DUMP_STACK"] = Ex.ToString();
+            
+            ps["DUMP_SQL"] = DB.last_sql;
             ps["DUMP_FORM"] = dumper(FORM);
             ps["DUMP_SESSION"] = dumper(context.Session);
         }
