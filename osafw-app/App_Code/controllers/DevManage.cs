@@ -182,7 +182,7 @@ public class DevManageController : FwController
         var result = 0;
         // launch the query
         //sql = strip_comments_sql(sql);
-        String[] asql = split_multi_sql(sql);
+        String[] asql = DB.splitMultiSQL(sql);
         foreach (string sqlone1 in asql)
         {
             var sqlone = sqlone1.Trim();
@@ -216,16 +216,6 @@ public class DevManageController : FwController
     {
         return Regex.Replace(sql, @"/\*.+?\*/", " ", RegexOptions.Singleline);
     }
-    //split multiple sql statements by:
-    //;+newline
-    //;+newline+GO
-    //newline+GO
-    private static string[] split_multi_sql(string sql)
-    {
-        sql = Regex.Replace(sql, @"^--\s.*[\r\n]*", "", RegexOptions.Multiline); //first, remove lines starting with '-- ' sql comment
-        return Regex.Split(sql, @";[\n\r]+(?:GO[\n\r]*)?|[\n\r]+GO[\n\r]+");
-    }
-
 
 
     public void CreateModelAction()

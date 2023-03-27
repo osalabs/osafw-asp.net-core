@@ -232,6 +232,16 @@ public class DB : IDisposable
         return result;
     }
 
+    //split multiple sql statements by:
+    //;+newline
+    //;+newline+GO
+    //newline+GO
+    public static string[] splitMultiSQL(string sql)
+    {
+        sql = Regex.Replace(sql, @"^--\s.*[\r\n]*", "", RegexOptions.Multiline); //first, remove lines starting with '-- ' sql comment
+        return Regex.Split(sql, @";[\n\r]+(?:GO[\n\r]*)?|[\n\r]+GO[\n\r]+");
+    }
+
     /// <summary>
     ///  construct new DB object with
     ///  </summary>
@@ -468,6 +478,46 @@ public class DB : IDisposable
         else
             throw new ApplicationException("Unsupported DB Type");
 
+        return result;
+    }
+
+    /// <summary>
+    /// execute multiple sql statements from a single string (like file script)
+    /// Important! Use only to execute trusted scripts
+    /// </summary>
+    /// <param name="sql"></param>
+    /// <param name="is_ignore_errors">if true - if error happened, it's ignored and next statements executed anyway</param>
+    /// <returns>number of successfully executed statements</returns>
+    public int execMultipleSQL(string sql, bool is_ignore_errors = false)
+    {
+        var result = 0;
+
+        //extract separate each sql statement 
+        string[] asql = DB.splitMultiSQL(sql);
+        foreach (string sqlone1 in asql)
+        {
+            var sqlone = sqlone1.Trim();
+            if (sqlone.Length > 0)
+            {
+                if (is_ignore_errors)
+                {
+                    try
+                    {
+                        exec(sqlone);
+                        result += 1;
+                    }
+                    catch (Exception ex)
+                    {
+                        logger(LogLevel.WARN, ex.Message);
+                    }
+                }
+                else
+                {
+                    exec(sqlone);
+                    result += 1;
+                }
+            }
+        }
         return result;
     }
 

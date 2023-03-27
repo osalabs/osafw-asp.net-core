@@ -17,6 +17,13 @@ public class DevConfigureController : FwController
 
     protected DemoDicts model;
 
+    public override void init(FW fw)
+    {
+        base.init(fw);
+
+        base_url = "/Dev/Configure"; // base url for the controller
+    }
+
     public Hashtable IndexAction()
     {
         Hashtable ps = new();
@@ -93,6 +100,37 @@ public class DevConfigureController : FwController
             //logger(ex.Message);
         }
         return result;
+    }
+
+    public Hashtable InitDBAction()
+    {
+        if (!Utils.f2bool(fw.config("IS_DEV")))
+            throw new AuthException("Not in a DEV mode");
+
+        Hashtable ps = new();
+        int sql_ctr = 0;
+        string[] files = { "fwdatabase.sql", "database.sql", "lookups.sql", "views.sql" };
+        foreach (string file in files)
+        {
+            var sql_file = fw.config("site_root") + @"\App_Data\sql\" + file;
+            logger("Checking sql file:", sql_file);
+            if (File.Exists(sql_file))
+            {
+                logger("Executing sql file:", sql_file);
+                sql_ctr += db.execMultipleSQL(FW.getFileContent(sql_file));
+            }
+        }
+
+        logger("Executed SQL count:", sql_ctr);
+        if (sql_ctr > 0)
+        {
+            //if some scripts executed generate admin password
+            var pwd = Utils.getRandStr(8);
+            fw.model<Users>().update(1, DB.h("pwd", pwd));
+            ps["pwd"] = pwd;
+        }
+
+        return ps;
     }
 
 }

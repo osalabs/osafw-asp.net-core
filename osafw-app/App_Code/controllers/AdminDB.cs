@@ -52,7 +52,7 @@ public class AdminDBController : FwController
                 {
                     // launch the query
                     string sql1 = strip_comments(sql);
-                    String[] asql = split_multi_sql(sql);
+                    String[] asql = DB.splitMultiSQL(sql);
                     foreach (string sqlone1 in asql)
                     {
                         var sqlone = sqlone1.Trim();
@@ -198,9 +198,5 @@ public class AdminDBController : FwController
     {
         return Regex.Replace(sql, @"/\*.+?\*/", " ", RegexOptions.Singleline);
     }
-
-    private static string[] split_multi_sql(string sql)
-    {
-        return Regex.Split(sql, @";[\n\r]+");
-    }
+ 
 }
