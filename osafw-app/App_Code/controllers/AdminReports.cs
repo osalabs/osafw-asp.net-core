@@ -38,7 +38,7 @@ public class AdminReportsController : FwController
         // report filters (options)
         Hashtable f = initFilter("AdminReports." + repcode);
 
-        // get format directly form request as we don't need to remember format 
+        // get format directly form request as we don't need to remember format
         f["format"] = reqh("f")["format"];
         if (string.IsNullOrEmpty((string)f["format"]))
             f["format"] = "html";

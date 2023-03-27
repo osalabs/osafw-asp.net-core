@@ -59,7 +59,7 @@ public class UploadUtils
         {
             up.orig_filename = file.FileName;
 
-            // check for allowed filesize 
+            // check for allowed filesize
             up.filesize = (ulong)file.Length;
             if (up.max_filesize > 0 && (ulong)file.Length > up.max_filesize)
             {
@@ -129,7 +129,7 @@ public class UploadUtils
     public static bool uploadFile(FW fw, string module_name, int id, out string filepath, int file_index = 0, bool is_skip_check = false)
     {
         filepath = "";
-        if (file_index > fw.request.Form.Files.Count-1) 
+        if (file_index > fw.request.Form.Files.Count-1)
             return false;
         IFormFile file = fw.request.Form.Files[file_index];
 

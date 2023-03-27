@@ -50,7 +50,7 @@ public class FwCache
     // remove one key from cache
     public static void remove(string key)
     {
-        lock (locker) 
+        lock (locker)
         {
             cache.Remove(key);
         }

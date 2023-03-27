@@ -621,7 +621,7 @@ public class DevManageController : FwController
 
             // set is_fw flag - if it's fw compatible (contains id,iname,status,add_time,add_users_id)
             var fields = array2hashtable((ArrayList)table_entity["fields"], "name");
-            // AndAlso fields.Contains("iname") 
+            // AndAlso fields.Contains("iname")
             table_entity["is_fw"] = fields.Contains("id") && fields.Contains("status") && fields.Contains("add_time") && fields.Contains("add_users_id");
             result.Add(table_entity);
         }
@@ -806,7 +806,7 @@ public class DevManageController : FwController
 
                 line = Regex.Replace(line, @"^-\s*", ""); // remove prefix 'human table name
                 var parts = Regex.Split(line, @"\s+");
-                var table_name = parts[0]; // name is first 
+                var table_name = parts[0]; // name is first
 
                 table_entity["db_config"] = ""; // main
                 table_entity["iname"] = Utils.name2human(table_name);
@@ -847,9 +847,9 @@ public class DevManageController : FwController
                 if (line.Substring(0, 3) != "  -")
                     continue; // skip strange things
 
-                line = Regex.Replace(line, @"^  -\s*", ""); // remove prefix 
+                line = Regex.Replace(line, @"^  -\s*", ""); // remove prefix
                 var parts = Regex.Split(line, @"\s+");
-                var field_name = parts[0]; // name is first 
+                var field_name = parts[0]; // name is first
 
                 //lookup on parts
                 var hparts = new Hashtable();
@@ -911,7 +911,7 @@ public class DevManageController : FwController
                         //prefix^lookuptablename.id -> prefix_lookuptablename_id and FK to lookuptablename.id
                         field_name = Regex.Replace(field_name, @"\.id$", ""); //remove .id
                         var pk_table = Regex.Replace(field_name, @"^(.+?)\^", ""); //remove prefix
-                        fk["pk_table"] = Utils.name2fw(pk_table);  // Customers.id => customers                        
+                        fk["pk_table"] = Utils.name2fw(pk_table);  // Customers.id => customers
 
                         field_name = field_name.Replace("^", "_"); //prefix^lookuptablename -> prefix_lookuptablename
                         field_name = Utils.name2fw(field_name) + "_id"; //normalize name and add _id
@@ -919,7 +919,7 @@ public class DevManageController : FwController
                     else
                     {
                         //lookuptablename.id -> lookuptablename_id and FK to lookuptablename.id
-                        fk["pk_table"] = Utils.name2fw(Regex.Replace(field_name, @"\.id$", ""));  // Customers.id => customers                        
+                        fk["pk_table"] = Utils.name2fw(Regex.Replace(field_name, @"\.id$", ""));  // Customers.id => customers
                         field_name = fk["pk_table"] + "_id";
                     }
 
@@ -1118,7 +1118,7 @@ public class DevManageController : FwController
                         // just a default varchar(255)
                         field["maxlen"] = 255;
 
-                    // default                       
+                    // default
                     m = Regex.Match(line, @"\bdefault\s+\((.+)\)"); // default (VALUE_HERE)
                     if (m.Success)
                         field["default"] = m.Groups[1].Value;
@@ -1476,8 +1476,8 @@ public class DevManageController : FwController
 
         var sys_fields = Utils.qh("id status add_time add_users_id upd_time upd_users_id");
 
-        
-        
+
+
 
         Hashtable tables = new(); // hindex by table name to entities
         ArrayList fields = (ArrayList)entity["fields"];
@@ -1549,7 +1549,7 @@ public class DevManageController : FwController
 
             var is_field_fk = hforeign_keys.ContainsKey(fld_name);
             var fk_field_name = "";
-            
+
             if (is_field_fk)
             {
                 fk_field_name = (string)((Hashtable)hforeign_keys[fld_name])["column"] + "_iname";
@@ -1557,7 +1557,7 @@ public class DevManageController : FwController
             }
             else
                 hFieldsMap[fld_name] = fld["iname"]; //regular field
-            
+
             if (!is_fw)
             {
                 hFieldsMap[fld["fw_name"]] = fld["iname"];
@@ -1605,7 +1605,7 @@ public class DevManageController : FwController
                             if (col < 2)
                                 col = 2; // minimum - 2
                             sff["class_contents"] = "col-md-" + col;
-                        }                        
+                        }
                     }
                 }
             }
@@ -1623,7 +1623,7 @@ public class DevManageController : FwController
                         var mname = _tablename2model(Utils.name2fw((string)fkinfo["pk_table"]));
 
                         sf["lookup_model"] = mname;
-                        // sf["lookup_field"] = "iname"    
+                        // sf["lookup_field"] = "iname"
                         sf["type"] = "plaintext_link";
 
                         sff["type"] = "select";
@@ -1803,8 +1803,8 @@ public class DevManageController : FwController
             else
             {
                 //non-system fields
-                if (Utils.f2str(sf["type"]) == "att" 
-                    || Utils.f2str(sf["type"]) == "att_links" 
+                if (Utils.f2str(sf["type"]) == "att"
+                    || Utils.f2str(sf["type"]) == "att_links"
                     || Utils.f2str(sff["type"]) == "textarea" && fields.Count>=10)
                 {
                     //add to the right: attachments, textareas (only if many fields)
@@ -1967,7 +1967,7 @@ public class DevManageController : FwController
         //        continue;
         //    if (defaults_ctr > 5 && fname != "status")
         //        continue;
-            
+
         //    if (!is_fw)
         //    {
         //        fname = (string)field["fw_name"];

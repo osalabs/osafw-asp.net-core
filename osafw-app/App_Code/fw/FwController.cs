@@ -761,7 +761,7 @@ public abstract class FwController
         string result;
         if (is_add_new || string.IsNullOrEmpty(return_url))
         {
-            //if has add new or no specific return_url - just 
+            //if has add new or no specific return_url - just
             result = url + url_q;
         }
         else
@@ -778,8 +778,8 @@ public abstract class FwController
     }
 
     /// <summary>
-    /// Called from SaveAction/DeleteAction/DeleteMulti or similar. 
-    /// Return json or route redirect back to ShowForm 
+    /// Called from SaveAction/DeleteAction/DeleteMulti or similar.
+    /// Return json or route redirect back to ShowForm
     /// or redirect to proper location
     /// </summary>
     /// <param name="success">operation successful or not</param>
@@ -1054,7 +1054,7 @@ public abstract class FwController
             {
                 ArrayList cols = new();
                 foreach (var fieldname in afields)
-                {                    
+                {
                     var data = (string)row[fieldname];
                     if (hconversions.ContainsKey(fieldname))
                     {

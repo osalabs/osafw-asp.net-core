@@ -39,7 +39,7 @@ public class Startup
             var appSessings = new Hashtable();
             FwConfig.readSettingsSection(Startup.Configuration.GetSection("appSettings"), ref appSessings);
 
-            // Try override settings by name 
+            // Try override settings by name
             var settings = (Hashtable)appSessings["appSettings"];
             FwConfig.overrideSettingsByName(enviroment, ref settings);
 
@@ -48,7 +48,7 @@ public class Startup
             var main = (Hashtable)db["main"];
             var conn_str = (string)main["connection_string"]; //MySQL connection string ex: "Server=127.0.0.1;User ID=root;Password=;Database=demo;Allow User Variables=true;"
 
-            //extract 
+            //extract
             var m = Regex.Match(conn_str, @"Database=(\w+)", RegexOptions.IgnoreCase);
             if (!m.Success)
                 throw new ApplicationException("No database name defined in connection_string");
@@ -64,11 +64,11 @@ public class Startup
         {
             // override settings based on env variable ASPNETCORE_ENVIRONMENT
             var enviroment = Utils.f2str(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"));
-            
+
             var appSessings = new Hashtable();
             FwConfig.readSettingsSection(Startup.Configuration.GetSection("appSettings"), ref appSessings);
-            
-            // Try override settings by name 
+
+            // Try override settings by name
             var settings = (Hashtable)appSessings["appSettings"];
             FwConfig.overrideSettingsByName(enviroment, ref settings);
 
@@ -94,12 +94,12 @@ public class Startup
 
         services.Configure<IISServerOptions>(options =>
         {
-            options.AllowSynchronousIO = false; 
+            options.AllowSynchronousIO = false;
         });
 
         services.AddSession(options =>
         {
-            options.Cookie.IsEssential = true; 
+            options.Cookie.IsEssential = true;
             if ((int)Startup.Configuration.GetValue(typeof(int), "sessionIdleTimeout") > 0)
             {
                 options.IdleTimeout = TimeSpan.FromSeconds((int)Startup.Configuration.GetValue(typeof(int), "sessionIdleTimeout"));
@@ -137,7 +137,7 @@ public class Startup
             }
         });
         app.UseSession();
-        
+
         //set stricter cookie policy
         app.UseCookiePolicy(new CookiePolicyOptions
         {
@@ -166,7 +166,7 @@ public class Startup
             await next();
         });
 
-        // Create branch to the MyHandlerMiddleware. 
+        // Create branch to the MyHandlerMiddleware.
         // All requests will follow this branch.
         app.MapWhen(context => context.Request != null,appBranch => {
             appBranch.UseMyHandler();

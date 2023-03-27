@@ -501,7 +501,7 @@ public class DB : IDisposable
     /// <param name="table"></param>
     /// <param name="where"></param>
     /// <param name="order_by"></param>
-    /// <returns></returns>        
+    /// <returns></returns>
     public DBRow row(string table, Hashtable where, string order_by = "")
     {
         var qp = buildSelect(table, where, order_by, 1);
@@ -1018,7 +1018,7 @@ public class DB : IDisposable
         return field2Op(table, field_name, dbop, is_for_where);
     }
 
-    // returnDBOperation class with value converted to type appropriate for the db field 
+    // returnDBOperation class with value converted to type appropriate for the db field
     public DBOperation field2Op(string table, string field_name, DBOperation dbop, bool is_for_where = false)
     {
         connect();
