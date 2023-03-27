@@ -26,7 +26,7 @@ public class MySettingsController : FwController
 
     public void IndexAction()
     {
-        fw.routeRedirect(FW.ACTION_SHOW_FORM, null);
+        fw.redirect(base_url + "/new");
     }
 
     public Hashtable ShowFormAction()

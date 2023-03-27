@@ -24,7 +24,7 @@ public class MyPasswordController : FwController
 
     public void IndexAction()
     {
-        fw.routeRedirect(FW.ACTION_SHOW_FORM, "MyPassword");
+        fw.redirect(base_url+"/new");
     }
 
     public Hashtable ShowFormAction()

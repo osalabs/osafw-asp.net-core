@@ -8,6 +8,7 @@ using System;
 using System.Collections;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using Microsoft.VisualBasic;
 
 namespace osafw;
@@ -277,16 +278,13 @@ public class FwSelfTest
 
             catch (Exception ex)
             {
-                //TODO MIGRATE
-                //if (fw.response.BufferOutput)
-                //{
-                //    fw.response.Clear();
-                //    fw.response.BufferOutput = false;
-                //}
 
                 if (ex.InnerException != null)
                 {
-                    if ((ex.InnerException) is RedirectException || ex.InnerException.Message.Contains("Cannot redirect after HTTP headers have been sent."))
+                    if (ex.InnerException is RedirectException 
+                        || ex.InnerException.Message.Contains("Cannot redirect after HTTP headers have been sent.")
+                        || ex is TargetInvocationException && ex.InnerException is InvalidOperationException && ex.InnerException.Message.Contains("StatusCode cannot be set because the response has already started.")
+                        )
                     {
                         // just redirect in Controller.Index - it's OK
                         plus_ok();
@@ -300,7 +298,10 @@ public class FwSelfTest
                         echo(t.Name, ex.InnerException.Message, FwSelfTest.Result.ERR);
                     }
                 }
-                else if ((ex) is RedirectException || ex.Message.Contains("Cannot redirect after HTTP headers have been sent."))
+                else if (ex is RedirectException
+                    || ex.Message.Contains("Cannot redirect after HTTP headers have been sent.")
+                    || ex is InvalidOperationException && ex.Message.Contains("StatusCode cannot be set because the response has already started.")
+                    )
                 {
                     // just redirect in Controller.Index - it's OK
                     plus_ok();
