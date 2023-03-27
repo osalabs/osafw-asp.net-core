@@ -87,6 +87,7 @@ CREATE TABLE users (
   pwd                   VARCHAR(255) NOT NULL DEFAULT '', -- hashed password
   access_level          TINYINT NOT NULL,                 -- 0 - visitor, 1 - usual user, 80 - moderator, 100 - admin
 
+  iname                 AS CONCAT(fname,' ', lname) STORED, -- standard iname field, calculated from first+last name
   fname                 VARCHAR(32) NOT NULL DEFAULT '',
   lname                 VARCHAR(32) NOT NULL DEFAULT '',
   title                 VARCHAR(128) NOT NULL DEFAULT '',

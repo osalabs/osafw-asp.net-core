@@ -94,6 +94,16 @@ public abstract class FwModel : IDisposable
         return item;
     }
 
+    //overload of one() to accept id of any type, so no need to explicitly convert by caller
+    public virtual DBRow one(object id)
+    {
+        var iid = Utils.f2int(id);
+        if (iid > 0)
+            return one(iid);
+        else
+            return new DBRow();
+    }
+
     public virtual ArrayList multi(ICollection ids)
     {
         object[] arr = new object[ids.Count - 1 + 1];
@@ -155,8 +165,9 @@ public abstract class FwModel : IDisposable
     public virtual string iname(object id)
     {
         var result = "";
-        if (Utils.f2int(id) > 0)
-            result = iname(Utils.f2int(id));
+        var iid = Utils.f2int(id);
+        if (iid > 0)
+            result = iname(iid);
         return result;
     }
 

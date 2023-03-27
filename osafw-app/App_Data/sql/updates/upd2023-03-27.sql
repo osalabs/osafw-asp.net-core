@@ -1,0 +1,1 @@
+ALTER TABLE users ADD iname AS CONCAT(fname,' ', lname) PERSISTED;
