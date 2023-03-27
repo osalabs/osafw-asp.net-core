@@ -668,7 +668,7 @@ public class Utils
     /// <returns></returns>
     public static long fileSize(string filepath)
     {
-        long result=0;
+        long result = 0;
         try
         {
             FileInfo fi = new(filepath);
@@ -1193,29 +1193,44 @@ public class Utils
     /// load content from url
     /// </summary>
     /// <param name="url">url to get data from</param>
-    /// <param name="params">optional, name/value params if set - post will be used, instead of get</param>
+    /// <param name="parameters">optional, name/value params if set - post will be used, instead of get</param>
+    /// <param name="headers">optional, name/value headers to add to request</param>
     /// <returns>content received. empty string if error</returns>
-    public static string loadUrl(string url, Hashtable @params = null)
+    public static string loadUrl(string url, Hashtable parameters = null, Hashtable headers = null)
     {
-        HttpClient client = new();
-
         string content;
-        if (@params != null)
+        using (HttpClient client = new())
         {
-            //POST
-            var nv = new List<KeyValuePair<string, string>>();
-            foreach (string key in @params.Keys)
-                nv.Add(new KeyValuePair<string, string>(key, (string)@params[key]));
+            if (headers != null)
+                foreach (string hkey in headers.Keys)
+                    client.DefaultRequestHeaders.Add(hkey, (string)headers[hkey]);
 
-            HttpContent form = new FormUrlEncodedContent(nv);
-            HttpResponseMessage response = client.PostAsync(url, form).Result;
-            content = response.Content.ReadAsStringAsync().Result;
-        }
-        else
-        {
-            //GET
-            using HttpResponseMessage response = client.GetAsync(url).Result;
-            content = response.Content.ReadAsStringAsync().Result;
+
+            if (parameters != null)
+            {
+                //POST
+                var nv = new Dictionary<string, string>();
+                foreach (string key in parameters.Keys)
+                    nv.Add(key, (string)parameters[key]);
+
+                using (HttpContent form = new FormUrlEncodedContent(nv))
+                {
+                    using (HttpResponseMessage response = client.PostAsync(url, form).Result)
+                    {
+                        //response.EnsureSuccessStatusCode(); //uncomment if exception wanted in case remote request unsuccessful
+                        content = response.Content.ReadAsStringAsync().Result;
+                    }
+                }
+            }
+            else
+            {
+                //GET
+                using (HttpResponseMessage response = client.GetAsync(url).Result)
+                {
+                    //response.EnsureSuccessStatusCode(); //uncomment if exception wanted in case remote request unsuccessful
+                    content = response.Content.ReadAsStringAsync().Result;
+                }
+            }
         }
 
         return content;
