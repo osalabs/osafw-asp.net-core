@@ -138,6 +138,8 @@ public class DevManageController : FwController
         var is_view_only = (reqi("ViewsOnly") == 1);
         var ctr = 0;
 
+        rw("<html><body>");
+
         try
         {
             if (!is_view_only)
@@ -195,11 +197,14 @@ public class DevManageController : FwController
                     }
                     catch (Exception ex)
                     {
+                        rw(sqlone);
                         rw("<span style='color:red'>" + ex.Message + "</span>");
+                        rw("");
                     }
                 }
                 else
                 {
+                    rw($"<pre>{sqlone}</pre>");
                     db.exec(sqlone);
                     result += 1;
                 }
@@ -211,9 +216,14 @@ public class DevManageController : FwController
     {
         return Regex.Replace(sql, @"/\*.+?\*/", " ", RegexOptions.Singleline);
     }
+    //split multiple sql statements by:
+    //;+newline
+    //;+newline+GO
+    //newline+GO
     private static string[] split_multi_sql(string sql)
     {
-        return Regex.Split(sql, @";[\n\r](?:GO[\n\r]+)[\n\r]*|[\n\r]+GO[\n\r]+");
+        sql = Regex.Replace(sql, @"^--\s.*[\r\n]*", "", RegexOptions.Multiline); //first, remove lines starting with '-- ' sql comment
+        return Regex.Split(sql, @";[\n\r]+(?:GO[\n\r]*)?|[\n\r]+GO[\n\r]+");
     }
 
 
