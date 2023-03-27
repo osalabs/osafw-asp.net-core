@@ -153,7 +153,7 @@ namespace osafw.Tests
             string sb64 = "QUJDMTIz";
 
             Stream sw = new MemoryStream(Encoding.UTF8.GetBytes(s));
-            string r = Utils.ConvertStreamToBase64(sw);
+            string r = Utils.streamToBase64(sw);
 
             Assert.AreEqual(r, sb64);
         }

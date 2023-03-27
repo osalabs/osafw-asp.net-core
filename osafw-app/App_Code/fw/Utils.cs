@@ -177,7 +177,20 @@ public class Utils
         return str;
     }
 
-    public static string ConvertStreamToBase64(Stream fs)
+    public static string base64encode(string str)
+    {
+        byte[] bytes = Encoding.UTF8.GetBytes(str);
+        return Convert.ToBase64String(bytes);
+    }
+
+    public static string base64decode(string str64)
+    {
+        byte[] bytes = Convert.FromBase64String(str64);
+        return Encoding.UTF8.GetString(bytes);
+    }
+
+
+    public static string streamToBase64(Stream fs)
     {
         BinaryReader BinRead = new(fs);
         byte[] BinBytes = BinRead.ReadBytes((int)fs.Length);
