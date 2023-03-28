@@ -2,11 +2,10 @@
   "1": "1",
   "list_view": "users",
   "view_list_defaults": "id email fname lname access_level status",
-  "save_fields_checkboxes": "",
   "list_sortdef": "id",
   "related_field_name": "",
   "search_fields": "!id email fname lname",
-  "view_list_custom": "access_level status",
+  "view_list_custom": "access_level is_readonly status",
   "view_list_map": {
     "id": "ID",
     "email": "Email",
@@ -23,6 +22,7 @@
     "idesc": "Notes",
     "status": "Status",
     "login_time": "Last Login Time",
+    "is_readonly": "Read Only?",
     "add_time": "Added On",
     "upd_time": "Updated On"
   },
@@ -122,6 +122,7 @@
   "is_dynamic_showform": false,
   "is_dynamic_index": true,
   "required_fields": "email access_level", 
+  "save_fields_checkboxes": "is_readonly",
   "save_fields": [
     "email",
     "pwd",

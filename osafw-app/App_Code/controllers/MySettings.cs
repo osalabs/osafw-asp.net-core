@@ -22,6 +22,8 @@ public class MySettingsController : FwController
         base_url = "/My/Settings"; // base url for the controller
 
         save_fields = "email fname lname address1 address2 city state zip phone lang";
+
+        is_readonly = false;//allow update my stuff
     }
 
     public void IndexAction()

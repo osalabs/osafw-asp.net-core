@@ -10,7 +10,7 @@ namespace osafw;
 
 public class AdminSettingsController : FwAdminController
 {
-    public static new int access_level = Users.ACL_SITEADMIN;
+    public static new int access_level = Users.ACL_ADMIN;
 
     protected Settings model;
 

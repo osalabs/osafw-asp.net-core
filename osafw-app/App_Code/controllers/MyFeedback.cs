@@ -23,6 +23,8 @@ public class MyFeedbackController : FwController
         base_url = "/My/Feedback"; // base url for the controller
 
         save_fields = "iname idesc";
+
+        is_readonly = false;//allow for all
     }
 
     public void IndexAction()

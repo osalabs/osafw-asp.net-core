@@ -30,6 +30,12 @@
             <~/common/sel/access_level.sel select="i[access_level]">
         </select>
   </div>
+  <div class="col d-flex align-items-center">
+    <div class="form-check form-check-inline">
+      <input class="form-check-input" type="checkbox" id="is_readonly" name="item[is_readonly]" value="1" <~/common/checked if="i[is_readonly]">>
+      <label class="form-check-label" for="is_readonly">`Read Only?`</label>
+    </div>
+  </div>
 </div>
 
 <div class="row form-row">

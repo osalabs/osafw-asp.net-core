@@ -20,6 +20,8 @@ public class MyPasswordController : FwController
         model.init(fw);
 
         base_url = "/My/Password";
+
+        is_readonly = false;//allow update my stuff
     }
 
     public void IndexAction()

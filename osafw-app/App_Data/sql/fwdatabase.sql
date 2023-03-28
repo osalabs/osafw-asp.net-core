@@ -79,6 +79,7 @@ CREATE TABLE users (
   email                 NVARCHAR(128) NOT NULL DEFAULT '',
   pwd                   NVARCHAR(255) NOT NULL DEFAULT '', -- hashed password
   access_level          TINYINT NOT NULL,  /*0 - visitor, 1 - usual user, 80 - moderator, 100 - admin*/
+  is_readonly           TINYINT NOT NULL DEFAULT 0,        -- 1 if user is readonly
 
   iname                 AS CONCAT(fname,' ', lname) PERSISTED, -- standard iname field, calculated from first+last name
   fname                 NVARCHAR(32) NOT NULL DEFAULT '',

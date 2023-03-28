@@ -67,6 +67,7 @@ public class FwAdminController : FwController
         ps["related_id"] = related_id;
         ps["base_url"] = base_url;
         ps["is_userlists"] = is_userlists;
+        ps["is_readonly"] = is_readonly;
 
         return ps;
     }
@@ -112,6 +113,7 @@ public class FwAdminController : FwController
         ps["i"] = item;
         ps["return_url"] = return_url;
         ps["related_id"] = related_id;
+        ps["is_readonly"] = is_readonly;
         if (fw.FormErrors.Count > 0)
             logger(fw.FormErrors);
 
@@ -124,7 +126,8 @@ public class FwAdminController : FwController
         // checkXSS() 'no need to check in standard SaveAction, but add to your custom actions that modifies data
         if (this.save_fields == null)
             throw new Exception("No fields to save defined, define in Controller.save_fields");
-
+        
+        fw.model<Users>().checkReadOnly();
         if (reqi("refresh") == 1)
         {
             fw.routeRedirect(FW.ACTION_SHOW_FORM, new object[] { id });
@@ -165,6 +168,7 @@ public class FwAdminController : FwController
 
     public virtual void ShowDeleteAction(int id)
     {
+        fw.model<Users>().checkReadOnly();
 
         var ps = new Hashtable()
         {
@@ -179,6 +183,8 @@ public class FwAdminController : FwController
 
     public virtual Hashtable DeleteAction(int id)
     {
+        fw.model<Users>().checkReadOnly();
+
         model0.deleteWithPermanentCheck(id);
         fw.flash("onedelete", 1);
         return this.afterSave(true);
@@ -190,6 +196,9 @@ public class FwAdminController : FwController
 
         Hashtable cbses = reqh("cb");
         bool is_delete = fw.FORM.ContainsKey("delete");
+        if (is_delete)
+            fw.model<Users>().checkReadOnly();
+
         int user_lists_id = reqi("addtolist");
         var remove_user_lists_id = reqi("removefromlist");
         int ctr = 0;

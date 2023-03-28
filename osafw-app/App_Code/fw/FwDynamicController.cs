@@ -75,7 +75,7 @@ public class FwDynamicController : FwController
         var is_prev = (reqi("prev") == 1);
         var is_edit = (reqi("edit") == 1);
 
-        this.initFilter("_filter_"+ fw.G["controller"] + ".Index"); //read list filter for the IndexAction
+        this.initFilter("_filter_" + fw.G["controller"] + ".Index"); //read list filter for the IndexAction
 
         if (list_sortmap.Count == 0)
             list_sortmap = getViewListSortmap();
@@ -135,7 +135,7 @@ public class FwDynamicController : FwController
             url += "/?";
         if (related_id.Length > 0)
             url += "related_id=" + Utils.urlescape(related_id);
-        if (return_url.Length>0)
+        if (return_url.Length > 0)
             url += "&return_url=" + Utils.urlescape(return_url);
 
         fw.redirect(url);
@@ -165,6 +165,7 @@ public class FwDynamicController : FwController
         ps["related_id"] = related_id;
         ps["base_url"] = base_url;
         ps["is_userlists"] = is_userlists;
+        ps["is_readonly"] = is_readonly;
 
         return ps;
     }
@@ -210,6 +211,7 @@ public class FwDynamicController : FwController
         ps["i"] = item;
         ps["return_url"] = return_url;
         ps["related_id"] = related_id;
+        ps["is_readonly"] = is_readonly;
         if (fw.FormErrors.Count > 0)
             logger(fw.FormErrors);
 
@@ -236,6 +238,7 @@ public class FwDynamicController : FwController
         if (this.save_fields == null)
             throw new Exception("No fields to save defined, define in Controller.save_fields");
 
+        fw.model<Users>().checkReadOnly();
         if (reqi("refresh") == 1)
         {
             fw.routeRedirect(FW.ACTION_SHOW_FORM, new object[] { id });
@@ -346,6 +349,8 @@ public class FwDynamicController : FwController
 
     public virtual void ShowDeleteAction(int id)
     {
+        fw.model<Users>().checkReadOnly();
+
         var ps = new Hashtable()
         {
             {"i", model0.one(id)},
@@ -359,6 +364,8 @@ public class FwDynamicController : FwController
 
     public virtual Hashtable DeleteAction(int id)
     {
+        fw.model<Users>().checkReadOnly();
+
         model0.deleteWithPermanentCheck(id);
 
         fw.flash("onedelete", 1);
@@ -367,6 +374,8 @@ public class FwDynamicController : FwController
 
     public virtual Hashtable RestoreDeletedAction(int id)
     {
+        fw.model<Users>().checkReadOnly();
+
         model0.update(id, new Hashtable() { { model0.field_status, Utils.f2str(FwModel.STATUS_ACTIVE) } });
 
         fw.flash("record_updated", 1);
@@ -379,6 +388,9 @@ public class FwDynamicController : FwController
 
         Hashtable cbses = reqh("cb");
         bool is_delete = fw.FORM.ContainsKey("delete");
+        if (is_delete)
+            fw.model<Users>().checkReadOnly();
+
         int user_lists_id = reqi("addtolist");
         var remove_user_lists_id = reqi("removefromlist");
         int ctr = 0;

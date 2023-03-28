@@ -2,7 +2,7 @@
  <input type="hidden" name="XSS" value="<~session[XSS]>">
  <input type="hidden" name="return_url" value="<~return_url>">
 
-  <fieldset>
+  <fieldset <~/common/disabled if="is_readonly">>
     <~/common/form/msg>
 
     <div class="row">

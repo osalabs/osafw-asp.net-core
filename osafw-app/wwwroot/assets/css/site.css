@@ -40,7 +40,16 @@ fieldset[disabled] .btn-default:active,
 .btn-default[disabled].active,
 fieldset[disabled] .btn-default.active {
   background-color: #CCCBCB;
+  color: #999;
+  pointer-events: none;
+  cursor: default;
 }
+
+a[disabled] {
+  color: #999;
+  pointer-events: none;
+  cursor: default;
+ }
 
 .btn-default .badge {
   color: #F8F9FA;

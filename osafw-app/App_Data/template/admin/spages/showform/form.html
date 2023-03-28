@@ -6,13 +6,13 @@
       <div class="col">
         <div class="btn-group">
           <a class="btn btn-default" href="<~../url><~/common/list/relid>"><~/common/icons/arrow-left-circle><span class="d-none d-lg-inline"> `Back to list`</span></a>
-          <a class="btn btn-default" href="<~../url>/new<~/common/list/relid>"><~/common/icons/plusb><span class="d-none d-lg-inline"> `Add New`</span></a>
+          <a class="btn btn-default" href="<~../url>/new<~/common/list/relid>" <~/common/disabled if="is_readonly">><~/common/icons/plusb><span class="d-none d-lg-inline"> `Add New`</span></a>
         </div>
         <div class="btn-group">
           <a class="btn btn-default <~/common/disabledcl unless="i[parent_id]">" href="<~../url>/<~i[parent_id]>/edit" ><~/common/icons/journal-arrow-up> `Up`</a>
           <~add_sub if="id" inline>
             <~add_sub2 unless="i[is_home]" inline>
-              <a class="btn btn-default" href="<~../url>/new?parent_id=<~id>"><~/common/icons/file-earmark-plus><span class="d-none d-lg-inline"> `Add Sub-Page`</span><span class="d-inline d-lg-none"> `Sub`</span></a>
+              <a class="btn btn-default" href="<~../url>/new?parent_id=<~id>" <~/common/disabled if="is_readonly">><~/common/icons/file-earmark-plus><span class="d-none d-lg-inline"> `Add Sub-Page`</span><span class="d-inline d-lg-none"> `Sub`</span></a>
             </~add_sub2>
           </~add_sub>
         </div>
@@ -23,7 +23,7 @@
       <div class="col">
         <div class="float-end text-end ps-3 pb-3" style="min-width:240px;">
             <span class="form-saved-status"></span>
-            <button type="submit" class="btn btn-primary">`Submit`</button>
+            <button type="submit" class="btn btn-primary" <~/common/disabled if="is_readonly">>`Submit`</button>
             <button type="button" class="btn btn-default on-cancel" data-href="<~/common/form/cancel_url>">`Cancel`</button>
         </div>
       </div>

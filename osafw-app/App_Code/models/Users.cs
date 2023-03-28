@@ -268,6 +268,36 @@ public class Users : FwModel
         }
     }
 
+    /// <summary>
+    /// return true if user is ReadOnly user
+    /// </summary>
+    /// <param name="id">optional, if not passed - currently logged user checked</param>
+    /// <returns></returns>
+    public bool isReadOnly(int id = -1)
+    {
+        var result = false;
+        if (id == -1)
+            id = fw.userId;
+
+        var user = one(id);
+        logger(user);
+        if (Utils.f2bool(user["is_readonly"]))
+            result = true;
+
+        return result;
+    }
+
+    /// <summary>
+    /// check if logged user is readonly, if yes - throws AuthEception
+    /// </summary>
+    /// <param name="id">optional, if not passed - currently logged user checked</param>
+    /// <exception cref="AuthException"></exception>
+    public void checkReadOnly(int id = -1)
+    {
+        if (isReadOnly(id))
+            throw new AuthException();
+    }
+
     public void loadMenuItems()
     {
         ArrayList menu_items = (ArrayList)FwCache.getValue("menu_items");

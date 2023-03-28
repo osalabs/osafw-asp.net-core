@@ -30,6 +30,8 @@ public class MyListsController : FwAdminController
         list_sortmap = Utils.qh("id|id entity|entity iname|iname add_time|add_time");
 
         related_id = reqs("related_id");
+
+        is_readonly = false;//allow update my stuff
     }
 
     public override Hashtable setPS(Hashtable ps = null)

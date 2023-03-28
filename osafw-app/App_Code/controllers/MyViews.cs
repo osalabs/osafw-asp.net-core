@@ -30,6 +30,8 @@ public class MyViewsController : FwAdminController
         list_sortmap = Utils.qh("id|id iname|iname add_time|add_time icode|icode");
 
         related_id = reqs("related_id");
+
+        is_readonly = false;//allow update my stuff
     }
 
     public override Hashtable initFilter(string session_key = null)

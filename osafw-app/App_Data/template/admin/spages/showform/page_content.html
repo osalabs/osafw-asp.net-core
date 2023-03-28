@@ -1,4 +1,4 @@
-<fieldset>
+<fieldset <~/common/disabled if="is_readonly">>
     <div class="row form-row">
       <div class="col-md-12">
         <input id="iname" name="item[iname]" maxlength="64" value="<~i[iname]>" type="text" class="form-control form-control-lg" placeholder="`Page Title`" required>
@@ -47,7 +47,7 @@
 
 </fieldset>
 
-<fieldset>
+<fieldset <~/common/disabled if="is_readonly">>
   <legend>Customize</legend>
 
   <div class="row form-row">

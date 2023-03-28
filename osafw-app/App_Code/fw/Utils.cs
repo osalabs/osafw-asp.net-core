@@ -203,6 +203,7 @@ public class Utils
     {
         if (AField == null) return false;
         if (AField is bool b) return b;
+        if (f2float(AField) != 0) return true; //non-zero number is true
         if (bool.TryParse(AField.ToString(), out bool result))
             return result;
 

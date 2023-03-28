@@ -49,15 +49,17 @@ public abstract class FwController
 
     // support of customizable view list
     // map of fileld names to screen names
-    protected bool is_dynamic_index = false;   // true if controller has dynamic IndexAction, then define below:
-    protected string view_list_defaults = "";     // qw list of default columns
-    protected Hashtable view_list_map;            // list of all available columns fieldname|visiblename
-    protected string view_list_custom = "";       // qw list of custom-formatted fields for the list_table
+    protected bool is_dynamic_index = false;     // true if controller has dynamic IndexAction, then define below:
+    protected string view_list_defaults = "";    // qw list of default columns
+    protected Hashtable view_list_map;           // list of all available columns fieldname|visiblename
+    protected string view_list_custom = "";      // qw list of custom-formatted fields for the list_table
 
-    protected bool is_dynamic_show = false;    // true if controller has dynamic ShowAction, requires "show_fields" to be defined in config.json
-    protected bool is_dynamic_showform = false; // true if controller has dynamic ShowFormAction, requires "showform_fields" to be defined in config.json
+    protected bool is_dynamic_show = false;      // true if controller has dynamic ShowAction, requires "show_fields" to be defined in config.json
+    protected bool is_dynamic_showform = false;  // true if controller has dynamic ShowFormAction, requires "showform_fields" to be defined in config.json
 
-    protected bool is_userlists = false;       // true if controller should support UserLists
+    protected bool is_userlists = false;         // true if controller should support UserLists
+
+    protected bool is_readonly = false;          // true if user is readonly, no actions modifying data allowed
 
     protected string route_return;               // FW.ACTION_SHOW or _INDEX to return (usually after SaveAction, default ACTION_SHOW_FORM)
     protected string return_url;                 // url to return after SaveAction successfully completed, passed via request
@@ -78,6 +80,8 @@ public abstract class FwController
     {
         this.fw = fw;
         this.db = fw.db;
+
+        is_readonly = fw.model<Users>().isReadOnly();
 
         return_url = reqs("return_url");
         related_id = reqs("related_id");
@@ -876,6 +880,7 @@ public abstract class FwController
         ps["related_id"] = this.related_id;
         ps["base_url"] = this.base_url;
         ps["is_userlists"] = this.is_userlists;
+        ps["is_readonly"] = is_readonly;
 
         //implement "Showing FROM to TO of TOTAL records"
         if (this.list_rows.Count > 0)

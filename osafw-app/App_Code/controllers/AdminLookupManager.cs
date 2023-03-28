@@ -19,7 +19,6 @@ public class AdminLookupManagerController : FwController
     protected string dict; // current lookup dictionary
     protected Hashtable defs;
     protected string dictionaries_url;
-    private bool is_readonly = false;
 
     public override void init(FW fw)
     {
@@ -295,8 +294,7 @@ public class AdminLookupManagerController : FwController
 
     public Hashtable ShowFormAction(int id = 0)
     {
-        if (is_readonly)
-            throw new AuthException();
+        fw.model<Users>().checkReadOnly();
 
         check_dict();
 
@@ -395,8 +393,8 @@ public class AdminLookupManagerController : FwController
     public void SaveAction(int id = 0)
     {
         route_onerror = FW.ACTION_SHOW_FORM; //set route to go if error happens
-        if (is_readonly)
-            throw new AuthException();
+
+        fw.model<Users>().checkReadOnly();
 
         check_dict();
 
@@ -439,8 +437,7 @@ public class AdminLookupManagerController : FwController
 
     public Hashtable ShowDeleteAction(int id)
     {
-        if (is_readonly)
-            throw new AuthException();
+        fw.model<Users>().checkReadOnly();
 
         check_dict();
 
@@ -457,8 +454,7 @@ public class AdminLookupManagerController : FwController
 
     public void DeleteAction(int id)
     {
-        if (is_readonly)
-            throw new AuthException();
+        fw.model<Users>().checkReadOnly();
 
         check_dict();
 
@@ -470,8 +466,8 @@ public class AdminLookupManagerController : FwController
     public void SaveMultiAction()
     {
         route_onerror = FW.ACTION_INDEX;
-        if (is_readonly)
-            throw new AuthException();
+
+        fw.model<Users>().checkReadOnly();
 
         check_dict();
 
@@ -577,7 +573,8 @@ public class AdminLookupManagerController : FwController
 
     public Hashtable SaveSortAction()
     {
-        if (is_readonly) throw new UserException("Access denied");
+        fw.model<Users>().checkReadOnly();
+
         var ps = new Hashtable();
         ps["success"] = true;
 
