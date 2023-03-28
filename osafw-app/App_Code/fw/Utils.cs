@@ -20,6 +20,7 @@ using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Security.Authentication;
+using Amazon.Runtime.Internal.Util;
 
 namespace osafw;
 
@@ -462,11 +463,18 @@ public class Utils
         await HttpResponseWritingExtensions.WriteAsync(response, Utils.getCSVExport(csv_export_headers, csv_export_fields, rows).ToString());
     }
 
-    public static async void writeXLSExport(FW fw, string filename, string csv_export_headers, string csv_export_fields, ArrayList rows)
+    /// <summary>
+    /// export to XLS based on /common/list/export templates
+    /// </summary>
+    /// <param name="fw"></param>
+    /// <param name="filename"></param>
+    /// <param name="csv_export_headers">comma-separated names for headers in specific order</param>
+    /// <param name="csv_export_fields">qw-string(space separated) list of fields to match headers</param>
+    /// <param name="rows">db array of rows</param>
+    public static void writeXLSExport(FW fw, string filename, string csv_export_headers, string csv_export_fields, ArrayList rows)
     {
         Hashtable ps = new();
-        ps["rows"] = rows;
-
+        
         ArrayList headers = new();
         foreach (string str in csv_export_headers.Split(","))
         {
@@ -476,32 +484,62 @@ public class Utils
         }
         ps["headers"] = headers;
 
-        string[] fields = Utils.qw(csv_export_fields);
-        foreach (Hashtable row in rows)
-        {
-            ArrayList cell = new();
-            foreach (string f in fields)
-            {
-                Hashtable h = new();
-                h["value"] = row[f];
-                cell.Add(h);
-            }
-            row["cell"] = cell;
-        }
-
-        // parse and out document
-        // TODO ConvUtils.parse_page_xls(fw, LCase(fw.cur_controller_path & "/index/export"), "xls.html", hf, "filename")
-
-        ParsePage parser = new(fw);
-        // Dim tpl_dir = LCase(fw.cur_controller_path & "/index/export")
         string tpl_dir = "/common/list/export";
-        string page = parser.parse_page(tpl_dir, "xls.html", ps);
-
         filename = filename.Replace("\"", "_");
 
         fw.response.Headers.Add("Content-type", "application/vnd.ms-excel");
         fw.response.Headers.Add("Content-Disposition", "attachment; filename=\"" + filename + "\"");
-        await HttpResponseWritingExtensions.WriteAsync(fw.response, page);
+
+        //output headers
+        ParsePage parser = new(fw);
+        var filedata = parser.parse_page(tpl_dir, "xls_head.html", ps);
+        fw.responseWrite(filedata);
+
+        //output rows in chunks to save memory and keep connection alive
+        string[] fields = Utils.qw(csv_export_fields);
+        //ps["rows"] = rows;
+        var buffer = new ArrayList();
+        var psbuffer = new Hashtable() { { "rows", buffer } };
+        foreach (Hashtable row in rows)
+        {
+            var rowcopy = new Hashtable();
+            Utils.mergeHash(rowcopy, row);
+
+            ArrayList cell = new();
+            foreach (string f in fields)
+            {
+                Hashtable h = new();
+                h["value"] = rowcopy[f];
+                cell.Add(h);
+            }
+            rowcopy["cell"] = cell;
+            buffer.Add(rowcopy);
+
+            //write to output every 10000 rows
+            if (buffer.Count >= 10000)
+            {
+                filedata = parser.parse_page(tpl_dir, "xls_rows.html", psbuffer);
+                fw.responseWrite(filedata);
+                buffer.Clear();
+            }
+        }
+
+        //output if something left
+        if (buffer.Count > 0)
+        {
+            filedata = parser.parse_page(tpl_dir, "xls_rows.html", psbuffer);
+            fw.responseWrite(filedata);
+        }
+
+        //output footer
+        filedata = parser.parse_page(tpl_dir, "xls_foot.html", ps);
+        fw.responseWrite(filedata);
+
+        //simpler but uses more memory and for large results browser might give up waiting results from connection
+        //ParsePage parser = new(fw);
+        //string tpl_dir = "/common/list/export";
+        //string page = parser.parse_page(tpl_dir, "xls.html", ps);
+        //await HttpResponseWritingExtensions.WriteAsync(fw.response, page);
     }
 
     // Detect orientation and auto-rotate correctly

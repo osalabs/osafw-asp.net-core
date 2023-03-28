@@ -45,6 +45,7 @@ public abstract class FwController
     protected string search_fields;              // optional, search fields, space-separated
                                                  // fields to search via $s=list_filter["s"), ] - means exact match, not "like"
                                                  // format: "field1 field2,!field3 field4" => field1 LIKE '%$s%' or (field2 LIKE '%$s%' and field3='$s') or field4 LIKE '%$s%'
+    protected string export_filename = "export"; // default filename for export, without extension
 
     // support of customizable view list
     // map of fileld names to screen names
@@ -916,9 +917,9 @@ public abstract class FwController
         string csv_export_headers = string.Join(",", headers.ToArray());
 
         if (reqs("export") == "xls")
-            Utils.writeXLSExport(fw, "export.xls", csv_export_headers, fields, list_rows);
+            Utils.writeXLSExport(fw, export_filename + ".xls", csv_export_headers, fields, list_rows);
         else
-            Utils.writeCSVExport(fw.response, "export.csv", csv_export_headers, fields, list_rows);
+            Utils.writeCSVExport(fw.response, export_filename + ".csv", csv_export_headers, fields, list_rows);
     }
 
     public virtual void setAddUpdUser(Hashtable ps, Hashtable item)
