@@ -430,8 +430,10 @@
                 },
                 {
                     "field": "fdatetime",
-                    "label": "Date and Time (TODO)",
-                    "type": "date_long"
+                    "label": "Date and Time",
+                    "type": "datetime_popup",
+                    "default_time": "now",
+                    "class_contents": "col-md-5"
                 },
                 {
                     "field": "ftime",

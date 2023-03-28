@@ -172,19 +172,20 @@
 
 <div class="row form-row">
   <label class="col-form-label col-md-3" for="fdatetime">Date and Time</label>
-  <div class="col-md-4">
-    <input id="fdatetime" name="item[fdatetime]" maxlength="32" value="<~i[fdatetime]>" type="text" placeholder="M/D/YYYY HH:MM:SS" class="form-control">
-  </div>
-  <div class="col-md-4">
-    <small class="form-text">M/D/YYYY HH:MM:SS [AM|PM]</small>
+  <div class="col-md-5">
+    <div class="input-group date datetime" data-default-time="now">
+      <input id="<~field>" name="item[fdatetime]" maxlength="25" value="<~i[fdatetime] date="M/d/yyyy h:mm tt">" type="text" class="form-control" placeholder="M/D/YYYY HH:MM [AM|PM]">
+      <button class="btn btn-outline-secondary border border-left-0" type="button"><~/common/icons/calendar3></button>
+    </div>
   </div>
 </div>
+
 <div class="row form-row">
   <label class="col-form-label col-md-3" for="ftime">Time</label>
   <div class="col-md-2">
     <input id="ftime" name="item[ftime_str]" maxlength="5" value="<~i[ftime_str]>" type="text" placeholder="HH:MM" class="form-control">
   </div>
   <div class="col-md-2">
-    <small class="form-text">HH:MM</small>
+    <p class="form-control-plaintext"><small class="form-text">HH:MM</small></p>
   </div>
 </div>
