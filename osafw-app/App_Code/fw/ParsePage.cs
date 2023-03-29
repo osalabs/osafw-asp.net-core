@@ -104,6 +104,7 @@
         <~var date="sql">   output "yyyy-MM-dd hh:mm:ss" - sql date and time
   url           - add http:// to begin of string if absent
   number_format - FormatNumber(value, 2) => 12345.12
+  currency      - FormatCurrency(value, 2) => $12,345.12
   truncate      - truncate with options <~tag truncate="80" trchar="..." trword="1" trend="1">
   strip_tags
   trim
@@ -889,6 +890,11 @@ public class ParsePage
                         value = value.Replace(NumberFormatInfo.InvariantInfo.NumberGroupSeparator, "");
                     }
 
+                    attr_count -= 1;
+                }
+                if (attr_count> 0 && hattrs.ContainsKey("currency"))
+                {
+                    value = Utils.f2float(value).ToString("C2");
                     attr_count -= 1;
                 }
                 if (attr_count > 0 && hattrs.ContainsKey("date"))

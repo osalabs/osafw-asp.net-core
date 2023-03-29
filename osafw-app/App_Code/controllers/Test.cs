@@ -9,6 +9,7 @@ public class TestController : FwController
     public Hashtable IndexAction()
     {
         var ps = new Hashtable();
+        ps["money"] = 1234.5612;
         ps["success"] = true;
         return new Hashtable { { "_json", ps } };
 
@@ -30,7 +31,6 @@ public class TestController : FwController
         //is_uploaded = UploadUtils.uploadSimple(up);
 
         rw("!@!@!!@!@!@");
-        DBList users = fw.model<Users>().list();
         return new Hashtable();
     }
 
