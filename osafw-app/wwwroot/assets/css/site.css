@@ -17,6 +17,12 @@ body {
   margin-bottom: 20px;
 }
 
+/*.nav-pills {
+  --bs-nav-pills-link-active-color: #fff;
+  --bs-nav-pills-link-active-bg: #0d6efd;
+}
+*/
+
 /*default button appearance*/
 .btn-default {
   background-color: #fafafa;
@@ -365,17 +371,12 @@ div.jGrowl div.jGrowl-notification
   .fwlayout-std .sidebar-nav .nav > li.active > a {
     background-color:#eee;
   }
-  .fwlayout-std .sidebar-nav .nav > .nav-header {
-    padding: 5px 10px;
-    color: #868e96;
-  }
   .fwlayout-std .sidebar-nav .glyphicon{
     color: #aaa;
   }
 
 /* LAYOUT FLUID*/
 body.fwlayout-fluid {
-  background-color: #fff;
 }
 .fwlayout-fluid .fw-card {
 /*  background-color: #fff;
@@ -413,14 +414,7 @@ body.fwlayout-fluid {
     font-size: x-small;
     width: 100%;
   }
-  .fwlayout-fluid .sidebar-nav .nav-header {
-    text-transform: uppercase;
-    color: #666;
-    padding-left: 1rem;
-    padding-right: 1rem;
-    margin-top: 0.5rem;
-    margin-bottom: .25rem;
-  }
+
   .fwlayout-fluid .sidebar-nav .nav-item {
     -webkit-transition: background 225ms ease-in;
     transition: background 225ms ease-in;
@@ -525,9 +519,7 @@ body.fwlayout-fluid {
 /*** end of fw ***/
 
 /*** add site specific css below ***/
-.bg-theme-color {
-  background-color: #F2F2F2;
-}
+
 #FEdit.fw-card,
 #FView.fw-card,
 #FDel.fw-card
