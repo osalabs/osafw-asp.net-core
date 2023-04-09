@@ -7,13 +7,12 @@
     <~/layout/header>
 
     <div class="sidebar" id="sidebar">
-      <div class="d-flex flex-column flex-shrink-0 p-3 bg-body-tertiary">
+      <div class="d-flex flex-column flex-shrink-0 p-3 bg-body-tertiary w-100">
         <~/layout/sidebar unless="hide_std_sidebar">
         <~sidebar>
+        <~/layout/sidebar_my>
+        <~#/layout/footer>
       </div>
-      <footer class="site-footer">
-        <~/layout/footer>
-      </footer>
     </div>
     <main>
       <div class="container-fluid">

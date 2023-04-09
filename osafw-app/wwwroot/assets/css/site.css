@@ -358,25 +358,9 @@ div.jGrowl div.jGrowl-notification
     background-position: -198px 0px;
   }
 
-/* LAYOUT STD*/
-.fwlayout-std .sidebar-nav {
- box-shadow: 1px 1px 7px #eee;
- padding: 10px;
- border-radius: 4px;
-}
-  .fwlayout-std .sidebar-nav .nav > li > a {
-    padding: 5px 10px;
-    color: #2a6aae;
-  }
-  .fwlayout-std .sidebar-nav .nav > li.active > a {
-    background-color:#eee;
-  }
-  .fwlayout-std .sidebar-nav .glyphicon{
-    color: #aaa;
-  }
-
-/* LAYOUT FLUID*/
+/*LAYOUT*/
 body.fwlayout-fluid {
+  /**TODO REMOVE**/
 }
 .fwlayout-fluid .fw-card {
 /*  background-color: #fff;
@@ -385,14 +369,11 @@ body.fwlayout-fluid {
   box-shadow: 0 0 35px 0 rgb(154 161 171 / 15%);
 */}
 
-.fwlayout-fluid .table > :not(caption) > * > * {
-  border-bottom-width: 0;
-}
-.fwlayout-fluid .sidebar {
+.sidebar {
   width: 260px;
   z-index: 100;
 
-  display: block;
+  display: flex!important;
   position: fixed;
   left: 0;
   bottom: 0;
@@ -442,20 +423,20 @@ body.fwlayout-fluid {
     color: #929292;
   }
 
-.fwlayout-fluid main {
+main {
   margin-left: 260px;
 }
 
-.no-sidebar.fwlayout-fluid .sidebar:not(.show,.collapsing) {
-  display: none;
+.no-sidebar .sidebar:not(.show,.collapsing) {
+  display: none!important;
 }
-.no-sidebar.fwlayout-fluid main {
+.no-sidebar main {
   margin-left: 0;
 }
-.no-sidebar.fwlayout-fluid .site-navbar {
+.no-sidebar .site-navbar {
   display: block !important;
 }
-.no-sidebar.fwlayout-fluid .site-navbar .navbar-toggler {
+.no-sidebar .site-navbar .navbar-toggler {
   display: block !important;
 }
 
