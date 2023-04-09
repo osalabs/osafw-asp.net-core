@@ -279,8 +279,10 @@ public class Users : FwModel
         if (id == -1)
             id = fw.userId;
 
+        if (id <=0)
+            return true; //if no user logged - readonly
+
         var user = one(id);
-        logger(user);
         if (Utils.f2bool(user["is_readonly"]))
             result = true;
 
