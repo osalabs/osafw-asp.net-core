@@ -92,41 +92,5 @@
       </~dev_menu>
     </~admin100_menu>
 
-    <li class="nav-item"><a href="#" class="nav-link disabled"><~/layout/user_avatar if="SESSION[user_avatar_link]"><~SESSION[user_name]></a></li>
-    <li class="nav-item" >
-      <a href="<~/my/filters/url>" class="nav-link link-body-emphasis <~/common/active ifeq="GLOBAL[controller]" value="MyFilters">">
-      <~/common/icons/funnel> `My Filters`
-      </a>
-    </li>
-    <li class="nav-item" >
-      <a href="<~/my/views/url>" class="nav-link link-body-emphasis <~/common/active ifeq="GLOBAL[controller]" value="MyViews">">
-        <~/common/icons/list-stars> `My Views`
-      </a>
-    </li>
-    <li class="nav-item" >
-      <a href="<~/my/lists/url>" class="nav-link link-body-emphasis <~/common/active ifeq="GLOBAL[controller]" value="MyLists">">
-        <~/common/icons/flag-fill> `My Lists`
-      </a>
-    </li>
-    <li class="nav-item" >
-      <a href="<~/my/settings/url>" class="nav-link link-body-emphasis <~/common/active ifeq="GLOBAL[controller]" value="MySettings">">
-        <~/common/icons/file-person> `My Profile`
-      </a>
-    </li>
-    <li class="nav-item" >
-      <a href="<~/my/password/url>" class="nav-link link-body-emphasis <~/common/active ifeq="GLOBAL[controller]" value="MyPassword">">
-        <~/common/icons/key> `Change Password`
-      </a>
-    </li>
-    <li class="nav-item">
-      <a class="nav-link link-body-emphasis" href="#" data-bs-toggle="modal" data-bs-target="#modal-my-feedback">
-        <~/common/icons/bug> <~/my/feedback/showform/title>
-      </a>
-    </li>
-    <li class="nav-item">
-      <a class="nav-link link-body-emphasis" href="<~ROOT_URL>/Logoff"><~
-        /common/icons/box-arrow-right> `Logoff`
-      </a>
-    </li>
   </~logged_menu>
 </ul>

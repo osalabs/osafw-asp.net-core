@@ -389,12 +389,6 @@ body.fwlayout-fluid {
     overflow-y: auto;
     padding: 5px 0;
   }
-  .fwlayout-fluid .site-footer {
-    position: absolute;
-    bottom:0;
-    font-size: x-small;
-    width: 100%;
-  }
 
   .fwlayout-fluid .sidebar-nav .nav-item {
     -webkit-transition: background 225ms ease-in;
@@ -425,6 +419,8 @@ body.fwlayout-fluid {
 
 main {
   margin-left: 260px;
+}
+.site-footer {
 }
 
 .no-sidebar .sidebar:not(.show,.collapsing) {
