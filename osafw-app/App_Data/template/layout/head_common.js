@@ -1,9 +1,14 @@
 // Set theme to the user's preferred color scheme
-function updateTheme() {
-  const colorMode = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-  document.querySelector("html").setAttribute("data-bs-theme", colorMode);
+function getPrefUIMode() {
+  let mode = document.documentElement.getAttribute('data-bs-theme');
+  if (mode) return mode;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
-// Set theme on load
-updateTheme();
-// Update theme when the preferred scheme changes
-window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', updateTheme);
+function setUIMode(mode) {
+  if (mode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    document.documentElement.setAttribute('data-bs-theme', 'dark');
+  } else {
+    document.documentElement.setAttribute('data-bs-theme', mode);
+  }
+}
+setUIMode(getPrefUIMode());

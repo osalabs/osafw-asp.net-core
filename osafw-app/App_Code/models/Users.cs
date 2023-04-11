@@ -217,7 +217,10 @@ public class Users : FwModel
         fw.Session("login", (string)user["email"]);
         fw.Session("access_level", (string)user["access_level"]); //note, set as string
         fw.Session("lang", (string)user["lang"]);
+        fw.Session("ui_theme", (string)user["ui_theme"]);
+        fw.Session("ui_mode", (string)user["ui_mode"]);
         // fw.SESSION("user", hU)
+
         var fname = ((string)user["fname"]).Trim();
         var lname = ((string)user["lname"]).Trim();
         if (!string.IsNullOrEmpty(fname) || !string.IsNullOrEmpty(lname))

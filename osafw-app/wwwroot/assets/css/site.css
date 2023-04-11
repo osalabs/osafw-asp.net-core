@@ -337,7 +337,7 @@ main {
 
 @media screen and (max-width: 768px) {
   .sidebar:not(.show,.collapsing) {
-    display: none;
+    display: none!important;
   }
   main {
     margin-left: 0;

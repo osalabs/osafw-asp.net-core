@@ -92,7 +92,10 @@ CREATE TABLE users (
   state                 NVARCHAR(4) NOT NULL DEFAULT '',
   zip                   NVARCHAR(16) NOT NULL DEFAULT '',
   phone                 NVARCHAR(16) NOT NULL DEFAULT '',
+
   lang                  NVARCHAR(16) NOT NULL DEFAULT 'en', -- user interface language
+  ui_theme              TINYINT NOT NULL DEFAULT 0, -- 0--default theme
+  ui_mode               TINYINT NOT NULL DEFAULT 0, -- 0--auto, 10-light, 20-dark
 
   idesc                 NVARCHAR(MAX),
   att_id                INT NULL FOREIGN KEY REFERENCES att(id),                -- avatar

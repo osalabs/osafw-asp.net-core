@@ -125,9 +125,18 @@ public class MainController : FwController
         return ps;
     }
 
-    public void ThemeAction(string form_id)
+    public void UIThemeAction(string form_id)
     {
-        fw.Session("theme", form_id);
+        fw.Session("ui_theme", form_id);
+        fw.model<Users>().update(fw.userId, new Hashtable() { { "ui_theme", form_id } });
+
+        fw.redirect(base_url);
+    }
+
+    public void UIModeAction(string form_id)
+    {
+        fw.Session("ui_mode", form_id);
+        fw.model<Users>().update(fw.userId, new Hashtable() { { "ui_mode", form_id } });
 
         fw.redirect(base_url);
     }
