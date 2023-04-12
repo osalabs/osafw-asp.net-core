@@ -266,7 +266,7 @@ form[data-list-filter] {
  position: sticky;
 }
 
-/* jGrowl*/
+/* jGrowl customizations */
 div.jGrowl div.hint_green{
  background-color:#28a745;
  color:#fff;
