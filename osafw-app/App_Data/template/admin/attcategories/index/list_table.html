@@ -19,7 +19,7 @@
             <td><~add_time></td>
             <td class="text-nowrap text-end">
                 <a href="<~row_click_url>">`Edit`</a>
-                <~/common/list/btn_del>
+                <~/common/list/row_btn_del>
             </td>
         </tr>
 </~list_rows>
@@ -29,7 +29,5 @@
 <~/common/list/btn_multidel>
 
 </form>
-<form id="FOneDelete" action="<~../url>/%id%?XSS=<~SESSION[XSS]>" method="post">
-</form>
-
-<~/common/pagination>
+<~/common/list/form_delete>
+<~/common/list/pagination>

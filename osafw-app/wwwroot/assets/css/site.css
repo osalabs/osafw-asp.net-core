@@ -140,6 +140,7 @@ main {
  left: var(--fw-spacer);
 }
 
+.pagination .active a {font-weight:bold}
 
 /****** form screens */
 

@@ -34,7 +34,7 @@
                 <a href="<~ROOT_URL>/Att/Download/<~id>">`Download`</a>
                 <~/common/dot><a href="<~ROOT_URL>/Att/<~id>" target="_blank">`Open`</a>
                 <~/common/dot><a href="<~row_click_url>">`Edit`</a>
-                <~/common/list/btn_del>
+                <~/common/list/row_btn_del>
             </td>
         </tr>
 </~list_rows>
@@ -44,7 +44,5 @@
 <~/common/list/btn_multidel>
 
 </form>
-<form id="FOneDelete" action="<~../url>/%id%?XSS=<~SESSION[XSS]>" method="post">
-</form>
-
-<~/common/pagination>
+<~/common/list/form_delete>
+<~/common/list/pagination>
