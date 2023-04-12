@@ -156,11 +156,11 @@ window.fw={
       var len = $('.multicb:checked').length;
       if (len>0){
         //float
-        $bm.addClass('floating');
+        $bm.addClass('position-sticky');
         $bm.find('.rows-num').text(len);
       }else{
         //de-float
-        $bm.removeClass('floating');
+        $bm.removeClass('position-sticky');
         $bm.find('.rows-num').text('');
       }
     });
