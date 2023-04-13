@@ -1,11 +1,12 @@
 <style>
 .thumbnail {
     display: block;
-    margin-bottom: 20px;
+    margin-bottom: var(--fw-spacer);
     line-height: 1.42857143;
-    background-color: #fff;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+    background-color: var(--bs-secondary-bg);
+    color: var(--bs-body-color);
+    border: var(--bs-border-width) var(--bs-border-style) var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
     position: relative;
 }
 .thumbnail a > img, .thumbnail > img {
@@ -18,20 +19,21 @@
 
 .thumbnail .title {
     display: block;
-    padding: 4px;
+    padding: var(--fw-spacer05);
     position: absolute;
     bottom: 0;
     left: 0;
 }
 
 a.thumbnail:hover {
-    border: 1px solid #666;
+    border: var(--bs-border-width) var(--bs-border-style) var(--bs-border-color-translucent);
+    color: var(--bs-emphasis-color);
 }
 
 .thumbs .thumbnail {
     width: 138px;
     height: 140px;
-    margin-right: 10px;
+    margin-right: var(--fw-spacer05);
 }
 </style>
 
