@@ -1,3 +1,4 @@
+var is_dark_mode = document.documentElement.getAttribute('data-bs-theme')=='dark';
 window.Chart.defaults = $.extend(true, window.Chart.defaults, {
     responsive: true,
     maintainAspectRatio: false,
@@ -41,8 +42,8 @@ window.Chart.defaults = $.extend(true, window.Chart.defaults, {
         },
         arc: {
             backgroundColor: '#333333',
-            borderColor: '#ffffff',
-            borderWidth: 4
+            borderColor: (is_dark_mode ? '#222' : '#fff'),
+            borderWidth: 2
         }
     },
 
