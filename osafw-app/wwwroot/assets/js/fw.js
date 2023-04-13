@@ -155,11 +155,17 @@ window.fw={
 
     //list check all/none handler
     $(document).on('click', '.on-list-chkall', function (e){
-      $(".multicb", this.form).prop('checked', this.checked);
+      var $cbs = $(".multicb", this.form).prop('checked', this.checked);
+      if (this.checked){
+        $cbs.closest("tr").addClass("selected");
+      }else{
+        $cbs.closest("tr").removeClass("selected");
+      }
     });
 
     //make list multi buttons floating if at least one row checked
     $(document).on('click', '.on-list-chkall, .multicb', function (e) {
+      var $this = $(this);
       var $bm = $('#list-btn-multi');
       var len = $('.multicb:checked').length;
       if (len>0){
@@ -170,6 +176,13 @@ window.fw={
         //de-float
         $bm.removeClass('position-sticky');
         $bm.find('.rows-num').text('');
+      }
+      if ($this.is(".multicb")){
+        if (this.checked){
+          $this.closest("tr").addClass("selected");
+        }else{
+          $this.closest("tr").removeClass("selected");
+        }
       }
     });
 

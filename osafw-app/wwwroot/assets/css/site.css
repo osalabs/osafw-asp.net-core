@@ -7,6 +7,7 @@
   --fw-spacer05: calc(var(--fw-spacer)*0.5);
   --fw-hiliter: #ffffcc;
   --fw-table-row-font-size: 0.9rem;
+  --fw-sidebar-width: 260px;
 }
 
 [data-bs-theme=dark] {
@@ -79,7 +80,7 @@ a[disabled]
 
 /****** layout */
 .sidebar {
-  width: 260px;
+  width: var(--fw-sidebar-width);
   z-index: 100;
 
   display: flex!important;
@@ -92,7 +93,7 @@ a[disabled]
 }
 
 main {
-  margin-left: 260px;
+  margin-left: var(--fw-sidebar-width);
 }
 .site-footer {
 }
@@ -140,6 +141,9 @@ table.list tbody td {
 table.list tbody a {
   text-decoration: none;
 }
+table.list > tbody > tr.selected {
+  background-color: var(--fw-hiliter) !important;
+}
 
 /*for .scrollable tables with fixed header*/
 .data-header {
@@ -160,7 +164,11 @@ table.list tbody a {
  bottom: 0;
  left: var(--fw-spacer);
 }
-
+  #list-btn-multi.position-fixed {
+    left: var(--fw-sidebar-width);
+    padding-left: var(--fw-spacer);
+    padding-bottom: var(--fw-spacer);
+  }
 .pagination .active a {font-weight:bold}
 .pagination select {
   border-top-left-radius: 0;
