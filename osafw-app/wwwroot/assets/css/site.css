@@ -8,12 +8,17 @@
   --fw-hiliter: #ffffcc;
   --fw-table-row-font-size: 0.9rem;
   --fw-sidebar-width: 260px;
+  --fw-btn-default-color: var(--bs-emphasis-color);
+  --fw-btn-default-bg: var(--bs-light);
+  --fw-btn-default-border: var(--bs-light-border-subtle);
 }
 
 [data-bs-theme=dark] {
   --fw-body-bg: #1c1c1c;
   --fw-hiliter: #555522;
   /*--fw-pane-bg: var(--bs-tertiary-bg);*/
+  --fw-btn-default-bg: var(--bs-light-bg-subtle);
+  --fw-btn-default-border: var(--bs-light-border-subtle);
 }
 
 body {
@@ -47,9 +52,9 @@ body {
 /****** fw elements */
 /*default button appearance*/
 .btn-default {
-  background-color: var(--bs-gray-100);
-  border-color: var(--bs-gray-300);
-  --bs-btn-color: #000;
+  background-color: var(--fw-btn-default-bg);
+  border-color: var(--fw-btn-default-border);
+  --bs-btn-color: var(--fw-btn-default-color);
 }
 
   .btn-default:hover,
@@ -57,9 +62,8 @@ body {
   .btn-default:active,
   .btn-default.active,
   .open .dropdown-toggle.btn-default {
-    color: var(--bs-gray-900);
-    background-color: var(--bs-gray-300);
-    border-color: var(--bs-gray-300);
+    background-color: var(--fw-btn-default-border);
+    border-color: var(--fw-btn-default-border);
   }
 
   .btn-default:active,
@@ -222,15 +226,14 @@ table.list {
   }
 /*list multi buttons floating when some rows checked*/
 #list-btn-multi {
- background-color: rgba(var(--bs-tertiary-bg-rgb),0.5);
  padding: var(--fw-spacer05) var(--fw-spacer05) 0 0;
  display: inline-block;
  bottom: 0;
  left: var(--fw-spacer);
 }
-  #list-btn-multi.position-fixed {
+  #list-btn-multi.position-sticky {
+    background-color: rgba(var(--bs-tertiary-bg-rgb),0.5);
     left: var(--fw-sidebar-width);
-    padding-left: var(--fw-spacer);
     padding-bottom: var(--fw-spacer);
   }
 .pagination .active a {font-weight:bold}
