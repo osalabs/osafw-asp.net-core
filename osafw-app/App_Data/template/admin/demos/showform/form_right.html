@@ -9,7 +9,7 @@
     <div class="card att-info" <~/common/display_none unless="att">>
       <input name="item[att_id]" value="<~i[att_id]>" type="hidden">
       <img class="card-img-top" src="<~/att/url>/<~att[id]>?preview=1&size=s" alt="">
-      <div class="card-body text-nooverflow">
+      <div class="card-body text-truncate">
         <p class="card-text att-iname"><~att[iname]></p>
         <a href="<~/att/url>/<~att[id]>" target="_blank" class="btn btn-default" title="`Download`"><~/common/icons/cloud-download></a>
         <button type="button" class="btn btn-default on-remove-att" title="`Remove`"><~/common/icons/x-circle></button>
@@ -29,7 +29,7 @@
           <div class="card att-info">
             <input type="hidden" name="att[<~id>]" value="1">
             <img class="card-img-top" src="<~/att/url>/<~id>?preview=1&size=s" alt="">
-            <div class="card-body text-nooverflow">
+            <div class="card-body text-truncate">
               <p class="card-text att-iname"><~iname></p>
               <a href="<~/att/url>/<~id>" target="_blank" class="btn btn-default" title="`Download`"><~/common/icons/cloud-download></a>
               <button type="button" class="btn btn-default on-remove-att" title="`Remove`"><~/common/icons/x-circle></button>
@@ -41,7 +41,7 @@
         <div class="card att-info">
           <input type="hidden" name="" value="1">
           <img class="card-img-top" src="" alt="">
-          <div class="card-body text-nooverflow">
+          <div class="card-body text-truncate">
             <p class="card-text att-iname"></p>
             <a href="" target="_blank" class="btn btn-default" title="`Download`"><~/common/icons/cloud-download></a>
             <button type="button" class="btn btn-default on-remove-att" title="`Remove`"><~/common/icons/x-circle></button>
