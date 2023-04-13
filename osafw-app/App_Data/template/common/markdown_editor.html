@@ -6,12 +6,23 @@
 <link href="<~GLOBAL[ASSETS_URL]>/css/glyphicons.css" rel="stylesheet">
 <link href="<~GLOBAL[ASSETS_URL]>/css/bootstrap-markdown.min.css" rel="stylesheet">
 <style>
+.md-editor .md-footer
+, .md-editor>.md-header {
+ background-color: var(--fw-pane-bg);
+}
 .md-editor > textarea {
  padding:10px;
- background-color: #fff;
+ background-color: var(--bs-body-bg);
+ color: var(--bs-body-color);
  overflow: hidden;
 }
+.md-editor > textarea:focus {
+ background-color: var(--bs-body-bg);
+ color: var(--bs-body-color);
+}
 .md-editor > .md-preview {
+  background-color: var(--bs-body-bg);
+  color: var(--bs-body-color);
   padding:10px;
   height: auto !important;
 }
