@@ -75,7 +75,7 @@ window.fw={
     var $ffilter = $('form[data-list-filter]:first');
 
     //advanced search filter
-    $(document).on('click', '.on-toggle-search', function (e) {
+    var on_toggle_search = function (e) {
       var $fis = $ffilter.find('input[name="f[is_search]"]');
       var $el = $('table.list .search');
       if ($el.is(':visible')){
@@ -88,7 +88,15 @@ window.fw={
           $.jGrowl("WORD to search for contains word<br>=WORD to search for equals word<br>!=WORD to search for NOT equals word<br>!WORD to search for NOT contains word",
             {header: 'Search hints', theme: 'hint_info', sticky: true});
       }
-    });
+    };
+    $(document).on('click', '.on-toggle-search', on_toggle_search);
+    //open search if there is something
+    var is_search = $('table.list .search input').filter(function () {
+      return this.value.length > 0
+    }).length>0;
+    if (is_search){
+      on_toggle_search();
+    }
 
     $('table.list').on('keypress','.search :input', function(e) {
       if (e.which == 13) {// on Enter press
