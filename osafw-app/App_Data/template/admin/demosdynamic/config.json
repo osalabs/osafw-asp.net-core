@@ -307,14 +307,16 @@
                     "label": "Wysiwyg editor",
                     "type": "textarea",
                     "rows": "10",
-                    "class_control": "fw-html-editor"
+                    "class_control": "fw-html-editor",
+                    "help_text": "uncomment /common/html_editor in load_script.html"
                 },
                 {
                     "field": "idesc3",
                     "label": "Wysiwyg editor short",
                     "type": "textarea",
                     "rows": "10",
-                    "class_control": "fw-html-editor-short"
+                    "class_control": "fw-html-editor-short",
+                    "help_text": "uncomment /common/html_editor in load_script.html"
                 },
                 {
                     "field": "email",

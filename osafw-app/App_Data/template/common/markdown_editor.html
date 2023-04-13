@@ -6,6 +6,12 @@
 <link href="<~GLOBAL[ASSETS_URL]>/css/glyphicons.css" rel="stylesheet">
 <link href="<~GLOBAL[ASSETS_URL]>/css/bootstrap-markdown.min.css" rel="stylesheet">
 <style>
+.md-editor,
+.md-editor.activeX
+{
+ border: var(--bs-border-width) var(--bs-border-style) var(--bs-border-color);
+ border-radius: var(--bs-border-radius)
+}
 .md-editor .md-footer
 , .md-editor>.md-header {
  background-color: var(--fw-pane-bg);
@@ -13,6 +19,7 @@
 .md-editor > textarea {
  padding:10px;
  background-color: var(--bs-body-bg);
+ border-bottom:none;
  color: var(--bs-body-color);
  overflow: hidden;
 }
