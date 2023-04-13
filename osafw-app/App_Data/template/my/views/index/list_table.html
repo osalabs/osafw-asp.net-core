@@ -14,7 +14,7 @@
             <th></th>
         </tr>
     </thead>
-    <tbody>
+    <tbody class="table-group-divider">
 <~list_rows repeat inline>
         <tr data-url="<~row_click_url>">
             <td><input class="multicb" type="checkbox" name="cb[<~id>]" value="1"></td>
@@ -31,9 +31,7 @@
 </~list_rows>
     </tbody>
 </table>
-
-<~/common/list/btn_multidel>
+<~/common/list/table_under>
 
 </form>
 <~/common/list/form_delete>
-<~/common/list/pagination>

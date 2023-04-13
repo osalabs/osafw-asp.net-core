@@ -26,7 +26,7 @@
             </~fields_headers>
         </tr>
     </thead>
-    <tbody>
+    <tbody class="table-group-divider">
 <~list_rows repeat inline>
         <tr data-id="<~id>">
             <input type="hidden" name="row[<~id>]" value="<~row_md5>" class="rowid">
@@ -86,9 +86,16 @@
 </p>
 </~footer_text>
 
-<input type="submit" value="`Submit changes`" class="btn btn-primary" disabled>
-<input type="button" value="`Cancel`" class="btn btn-default on-cancel" >
+<div class="row align-items-end">
+  <div class="col-sm-12 col-md-6 mb-3">
+     <input type="submit" value="`Submit changes`" class="btn btn-primary" disabled>
+     <input type="button" value="`Cancel`" class="btn btn-default on-cancel" >
+  </div>
+  <div class="col-sm-12 col-md-6 mb-3">
+     <div class="d-flex justify-content-md-end">
+       <~/common/list/pagination>
+     </div>
+  </div>
+</div>
 
 </form>
-
-<~/common/list/pagination>
