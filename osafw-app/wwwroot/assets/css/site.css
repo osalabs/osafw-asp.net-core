@@ -313,7 +313,7 @@ div.jGrowl div.hint_green{
 }
 
 div.jGrowl div.hint_error{
- background-color:var(--bs-error);
+ background-color:var(--bs-danger);
  color:var(--bs-white);
 }
 
