@@ -120,7 +120,7 @@ State ===
 Zip === 
 Phone === 
 Language === 
-Submit === 
+Save === 
 Please fill in all required fields === 
 Please correct the errors === 
 Record has been deleted === 
