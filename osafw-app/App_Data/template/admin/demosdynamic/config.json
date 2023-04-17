@@ -453,7 +453,7 @@
                 {
                     "field": "id",
                     "label": "ID",
-                    "type": "group_id_addnew"
+                    "type": "id"
                 },
                 {
                     "field": "att_id",

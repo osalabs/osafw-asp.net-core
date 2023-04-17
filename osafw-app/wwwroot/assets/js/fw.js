@@ -248,15 +248,27 @@ window.fw={
   //for all forms with data-check-changes on a page - setup changes tracker, call in $(document).ready()
   // <form data-check-changes>
   setup_cancel_form_handlers: function() {
+    //on submit buttons handler
+    // <button type="button" data-target="#form" class="on-submit">Submit</button>
+    $(document).on('click', '.on-submit', function (e) {
+      e.preventDefault();
+      var $this=$(this);
+      var target = $this.data('target');
+      var $form = (target) ? $(target) : $(this.form);
+      $form.submit();
+    });
+
     //on cancel buttons handler
     // <a href="url" class="on-cancel">Cancel</a>
     // // <button type="button" data-href="url" class="on-cancel">Cancel</button>
     $(document).on('click', '.on-cancel', function (e) {
       e.preventDefault();
       var $this=$(this);
+      var target = $this.data('target');
+      var $form = (target) ? $(target) : $(this.form);
       var url = $this.prop('href');
       if (!url) url = $this.data('href');
-      fw.cancel_form(this.form, url);
+      fw.cancel_form($form, url);
     });
 
     var $forms=$('form[data-check-changes]');
