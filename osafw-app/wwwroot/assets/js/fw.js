@@ -249,12 +249,24 @@ window.fw={
   // <form data-check-changes>
   setup_cancel_form_handlers: function() {
     //on submit buttons handler
-    // <button type="button" data-target="#form" class="on-submit">Submit</button>
+    // <button type="button" data-target="#form" class="on-submit" [name="route_return" value="New"]>Submit</button>
     $(document).on('click', '.on-submit', function (e) {
       e.preventDefault();
       var $this=$(this);
       var target = $this.data('target');
       var $form = (target) ? $(target) : $(this.form);
+
+      //if button has a name - add it as parameter to submit form
+      var bname = $this.attr('name');
+      if (bname>''){
+        var bvalue = $this.attr('value');
+        var $input = $form.find('input[name="' + bname + '"]');
+        if (!$input.length) {
+          $input = $('<input type="hidden" name="' + bname + '">').appendTo($form);
+        }
+        $input.val(bvalue);
+      }
+
       $form.submit();
     });
 
