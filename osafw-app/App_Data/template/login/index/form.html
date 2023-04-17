@@ -1,0 +1,39 @@
+<form class="p-4 p-md-5 border rounded-3 bg-body-tertiary form-login" method="post" action="<~ROOT_URL>/Login">
+  <input type="hidden" name="err_ctr" value="<~GLOBAL[err_ctr]>" >
+
+  <fieldset>
+    <div class="form-floating mb-3">
+      <input type="email" id="login" class="form-control form-control-lg filled" autofocusX name="item[login]" value="<~i[login]>" placeholder="name@example.com" autofocus>
+      <label for="login">`Your Email`</label>
+    </div>
+
+    <div class="form-floating mb-3">
+      <input type="text" id="pwd" class="form-control form-control-lg filled" style="display:none" name="item[pwd]" maxlength="64" value="" placeholder="Password">
+      <input type="password" id="pwdh" class="form-control form-control-lg filled" name="item[pwdh]" maxlength="64" value="" placeholder="Password">
+      <label for="pwdh">Password</label>
+    </div>
+
+    <div class="checkbox mb-3">
+      <div class="form-check form-check-inline float-right">
+        <input class="form-check-input" type="checkbox" id="remember" name="item[remember]" value="1" <~/common/checked if="i[remember]">>
+        <label class="form-check-label" for="remember">`Remember Me`</label>
+      </div>
+      <div class="form-check form-check-inline float-right">
+        <input class="form-check-input on-pwd-hideshow" type="checkbox" id="chpwd" name="item[chpwd]" value="1" <~/common/checked if="i[chpwd]">>
+        <label class="form-check-label" for="chpwd">`Show Password`</label>
+      </div>
+    </div>
+
+    <div class="d-grid">
+      <button class="btn btn-lg btn-primary w-100" type="submit">`Log Me In`</button>
+    </div>
+
+    <p class="text-center mt-3">
+      <a class="btn btn-link" href="<~/password/url>">`Forgotten Password`</a>
+      <~btn_signup if="GLOBAL[IS_SIGNUP]" inline>
+        <a class="btn btn-link" href="<~/signup/url>">`Sign Up`</a>
+      </~btn_signup>
+    </p>
+
+  </fieldset>
+</form>

@@ -2,7 +2,7 @@
 <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
 <input type="hidden" name="_method" value="PUT">
 
-<table class="table table-striped table-sm table-hover list">
+<table class="table table-sm table-hover list">
     <thead>
         <tr data-sortby="<~f[sortby]>" data-sortdir="<~f[sortdir]>">
             <th><input type="checkbox" name="all" value="1" class="on-list-chkall"></th>
@@ -12,7 +12,7 @@
             <th></th>
         </tr>
     </thead>
-    <tbody>
+    <tbody class="table-group-divider">
 <~list_rows repeat inline>
         <tr data-url="<~row_click_url>">
             <td><input class="multicb" type="checkbox" name="cb[<~id>]" value="1"></td>
@@ -21,18 +21,14 @@
             <td><~/common/list/col_status_badge></td>
             <td class="text-nowrap text-end">
                 <a href="<~/admin/demos/url>?related_id=<~id>">`Related Demos`</a>
-                <~/common/dot><~/common/list/btn_edit>
-                <~/common/list/btn_del>
+                <~/common/dot><~/common/list/row_btn_edit>
+                <~/common/list/row_btn_del>
             </td>
         </tr>
 </~list_rows>
     </tbody>
 </table>
-
-<~/common/list/btn_multidel>
+<~/common/list/table_under>
 
 </form>
-<form id="FOneDelete" action="<~../url>/%id%?XSS=<~SESSION[XSS]>" method="post">
-</form>
-
-<~/common/pagination>
+<~/common/list/form_delete>

@@ -73,8 +73,24 @@
     </div>
 
     <div class="row form-row">
+      <label class="col-form-label col-md-3" for="ui_theme">`Interface Theme`</label>
+      <div class="col-md-2">
+        <select id="ui_theme" name="item[ui_theme]" class="form-select">
+          <~/common/sel/ui_theme.sel select="i[ui_theme]">
+        </select>
+      </div>
+
+      <label class="col-form-label col-md-2" for="ui_mode">`Display Mode`</label>
+      <div class="col-md-2">
+        <select id="ui_mode" name="item[ui_mode]" class="form-select">
+          <~/common/sel/ui_mode.sel select="i[ui_mode]">
+        </select>
+      </div>
+    </div>
+
+    <div class="row form-row">
         <div class="col-md-9 ms-md-auto">
-            <button type="submit" class="btn btn-primary">`Submit`</button>
+            <button type="submit" class="btn btn-primary">`Save`</button>
         </div>
     </div>
 

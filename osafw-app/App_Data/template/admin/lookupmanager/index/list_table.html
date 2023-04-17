@@ -3,7 +3,7 @@
 <input type="hidden" name="d" value="<~d>">
 <input type="hidden" name="_method" value="PUT">
 
-<table class="table table-striped table-sm table-hover list">
+<table class="table table-sm table-hover list">
     <thead>
         <~group_headers_block if="is_group_headers" inline>
             <tr class="list-header">
@@ -22,7 +22,7 @@
             <th style="width:80px"></th>
         </tr>
     </thead>
-    <tbody class="<~fwsortable ifeq="f[sortby]" value="prio">" data-url-savesort="<~../url>/(SaveSort)?d=<~d>&sortdir=<~f[sortdir]>">
+    <tbody class="table-group-divider <~fwsortable ifeq="f[sortby]" value="prio">" data-url-savesort="<~../url>/(SaveSort)?d=<~d>&sortdir=<~f[sortdir]>">
 <~list_rows repeat inline>
         <tr data-url="<~row_click_url>" data-id="<~id>">
             <~cbcol unless="is_readonly" inline><td><input class="multicb" type="checkbox" name="cb[<~id>]" value="1"></td></~cbcol>
@@ -46,10 +46,8 @@
 </p>
 </~footer_text>
 
-<~/common/list/btn_multidel unless="is_readonly">
+<~/common/list/table_under>
 
 </form>
 <form id="FOneDelete" action="<~../url>/%id%?XSS=<~SESSION[XSS]>&d=<~d>" method="post">
 </form>
-
-<~/common/pagination>

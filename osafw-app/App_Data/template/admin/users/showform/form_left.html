@@ -103,7 +103,7 @@
     <div class="card text-center att-info" <~/common/display_none unless="att">>
       <input name="item[att_id]" value="<~i[att_id]>" type="hidden">
       <img class="card-img-top" src="<~/att/url>/<~att[id]>?preview=1&size=s" alt="">
-      <div class="card-body text-nooverflow">
+      <div class="card-body text-truncate">
         <p class="card-text att-iname"><~att[iname]></p>
         <a href="<~/att/url>/<~att[id]>" target="_blank" class="btn btn-default btn-sm" title="`Download`"><~/common/icons/cloud-download-fill></a>
         <button type="button" class="btn btn-default btn-sm on-remove-att text-danger" title="`Remove`"><~/common/icons/x-circle-fill></button>

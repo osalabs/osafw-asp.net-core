@@ -1,0 +1,11 @@
+    <tbody class="table-group-divider">
+<~list_rows repeat inline>
+        <tr data-url="<~row_click_url>" data-id="<~id>">
+            <td><input class="multicb" type="checkbox" name="cb[<~id>]" value="1"></td>
+            <~cols repeat inline><td><~data var unless="is_custom"><~col_custom if="is_custom"></td></~cols>
+            <td class="text-nowrap text-end">
+                <~list_row_btn>
+            </td>
+        </tr>
+</~list_rows>
+    </tbody>

@@ -75,7 +75,7 @@ window.fw={
     var $ffilter = $('form[data-list-filter]:first');
 
     //advanced search filter
-    $(document).on('click', '.on-toggle-search', function (e) {
+    var on_toggle_search = function (e) {
       var $fis = $ffilter.find('input[name="f[is_search]"]');
       var $el = $('table.list .search');
       if ($el.is(':visible')){
@@ -88,7 +88,15 @@ window.fw={
           $.jGrowl("WORD to search for contains word<br>=WORD to search for equals word<br>!=WORD to search for NOT equals word<br>!WORD to search for NOT contains word",
             {header: 'Search hints', theme: 'hint_info', sticky: true});
       }
-    });
+    };
+    $(document).on('click', '.on-toggle-search', on_toggle_search);
+    //open search if there is something
+    var is_search = $('table.list .search input').filter(function () {
+      return this.value.length > 0
+    }).length>0;
+    if (is_search){
+      on_toggle_search();
+    }
 
     $('table.list').on('keypress','.search :input', function(e) {
       if (e.which == 13) {// on Enter press
@@ -147,21 +155,34 @@ window.fw={
 
     //list check all/none handler
     $(document).on('click', '.on-list-chkall', function (e){
-      $(".multicb", this.form).prop('checked', this.checked);
+      var $cbs = $(".multicb", this.form).prop('checked', this.checked);
+      if (this.checked){
+        $cbs.closest("tr").addClass("selected");
+      }else{
+        $cbs.closest("tr").removeClass("selected");
+      }
     });
 
     //make list multi buttons floating if at least one row checked
     $(document).on('click', '.on-list-chkall, .multicb', function (e) {
+      var $this = $(this);
       var $bm = $('#list-btn-multi');
       var len = $('.multicb:checked').length;
       if (len>0){
         //float
-        $bm.addClass('floating');
+        $bm.addClass('position-sticky');
         $bm.find('.rows-num').text(len);
       }else{
         //de-float
-        $bm.removeClass('floating');
+        $bm.removeClass('position-sticky');
         $bm.find('.rows-num').text('');
+      }
+      if ($this.is(".multicb")){
+        if (this.checked){
+          $this.closest("tr").addClass("selected");
+        }else{
+          $this.closest("tr").removeClass("selected");
+        }
       }
     });
 
@@ -227,15 +248,39 @@ window.fw={
   //for all forms with data-check-changes on a page - setup changes tracker, call in $(document).ready()
   // <form data-check-changes>
   setup_cancel_form_handlers: function() {
+    //on submit buttons handler
+    // <button type="button" data-target="#form" class="on-submit" [name="route_return" value="New"]>Submit</button>
+    $(document).on('click', '.on-submit', function (e) {
+      e.preventDefault();
+      var $this=$(this);
+      var target = $this.data('target');
+      var $form = (target) ? $(target) : $(this.form);
+
+      //if button has a name - add it as parameter to submit form
+      var bname = $this.attr('name');
+      if (bname>''){
+        var bvalue = $this.attr('value');
+        var $input = $form.find('input[name="' + bname + '"]');
+        if (!$input.length) {
+          $input = $('<input type="hidden" name="' + bname + '">').appendTo($form);
+        }
+        $input.val(bvalue);
+      }
+
+      $form.submit();
+    });
+
     //on cancel buttons handler
     // <a href="url" class="on-cancel">Cancel</a>
     // // <button type="button" data-href="url" class="on-cancel">Cancel</button>
     $(document).on('click', '.on-cancel', function (e) {
       e.preventDefault();
       var $this=$(this);
+      var target = $this.data('target');
+      var $form = (target) ? $(target) : $(this.form);
       var url = $this.prop('href');
       if (!url) url = $this.data('href');
-      fw.cancel_form(this.form, url);
+      fw.cancel_form($form, url);
     });
 
     var $forms=$('form[data-check-changes]');
@@ -650,80 +695,6 @@ window.fw={
       } else {
           myField.value += myValue;
       }
-  },
-
-  /* usage:
-  <a href="#" class="on-share" data-url="[optional]" data-title="[optional]" data-top="[optional top offset]" data-left="[optional left offset]">
-  $(document).on('click', '.on-share', fw.toggle_share);
-   */
-  toggle_share: function (e) {
-      e.preventDefault();
-      var el = this;
-      var $this = $(this);
-      $sharer = $('#sharer');
-      var is_exists = !!$sharer.length;
-      if (!is_exists) $(document).on('click', '#sharer a', click_share);
-
-      $sharer.remove();//close any opened
-
-      if (!$sharer.length || $sharer[0].el!=el){
-          //this share opened by another element, so show share again on this element
-          var data = $this.data();
-          var config = {
-              url: data.url ? data.url : window.location.href,
-              title: data.iname ? data.iname : document.title
-          };
-
-          var os = $this.offset();
-          var $sharer=$('<div id="sharer">'+
-                  '<a href="#" data-share="facebook"><i class="ico-share ico-facebook"></i></a>'+
-                  '<a href="#" data-share="pinterest"><i class="ico-share ico-pinterest"></i></a>'+
-                  '<a href="#" data-share="twitter"><i class="ico-share ico-twitter"></i></a>'+
-                  '<a href="#" data-share="linkedin"><i class="ico-share ico-linkedin"></i></a>'+
-                  '<a href="#" data-share="mail"><i class="ico-share ico-mail"></i></a>'+
-                  '</div>');
-          $(document.body).append($sharer);
-
-          var offset_top = data.top ? data.top : 7;
-          var offset_left = data.left ? data.left : -$sharer.width()-12;
-
-          $sharer.css('top',os.top+offset_top).css('left', os.left+offset_left);
-          $sharer[0].el = el;
-          $sharer[0].config = config;
-      }
-  },
-
-  click_share: function (e) {
-      e.preventDefault();
-      var $sharer = $('#sharer');
-      var config = $sharer[0].config;
-      var to = $(this).data('share');
-      var url = encodeURIComponent(config.url);
-      var title = encodeURIComponent(config.title);
-
-      var purl;
-      if (to=='facebook'){
-          purl = 'https://www.facebook.com/sharer/sharer.php?u='+url+'&t='+title;
-      }else if (to=='pinterest'){
-          purl = 'http://pinterest.com/pin/create/button/?url='+url+'&description='+title;
-      }else if (to=='twitter'){
-          purl = 'https://twitter.com/intent/tweet?source='+url+'&text='+title;
-      }else if (to=='linkedin'){
-          purl = 'http://www.linkedin.com/shareArticle?mini=true&url='+url+'&title='+title+'&summary=&source='+url;
-      }else if (to=='mail'){
-          purl = 'mailto:?subject='+title+'&body='+url;
-      }
-
-      if (purl>''){
-          var popup_w = 500;
-          var popup_h = 350;
-          var popup_top  = (screen.height/2) - (popup_h/2);
-          var popup_left = (screen.width/2)  - (popup_w/2);
-          var options = 'toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes,left='+popup_left+',top='+popup_top+',width='+popup_w+',height='+popup_h;
-          window.open(purl, 'share_popup', options);
-      }
-
-      $sharer.remove();
   },
 
   ajaxify_list_navigation: function (div_nav, onclick){

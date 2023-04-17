@@ -217,7 +217,10 @@ public class Users : FwModel
         fw.Session("login", (string)user["email"]);
         fw.Session("access_level", (string)user["access_level"]); //note, set as string
         fw.Session("lang", (string)user["lang"]);
+        fw.Session("ui_theme", (string)user["ui_theme"]);
+        fw.Session("ui_mode", (string)user["ui_mode"]);
         // fw.SESSION("user", hU)
+
         var fname = ((string)user["fname"]).Trim();
         var lname = ((string)user["lname"]).Trim();
         if (!string.IsNullOrEmpty(fname) || !string.IsNullOrEmpty(lname))
@@ -279,8 +282,10 @@ public class Users : FwModel
         if (id == -1)
             id = fw.userId;
 
+        if (id <=0)
+            return true; //if no user logged - readonly
+
         var user = one(id);
-        logger(user);
         if (Utils.f2bool(user["is_readonly"]))
             result = true;
 

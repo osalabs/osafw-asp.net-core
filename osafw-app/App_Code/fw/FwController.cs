@@ -541,9 +541,9 @@ public abstract class FwController
         Hashtable hsearch = list_filter_search;
         foreach (string fieldname in hsearch.Keys)
         {
-            if (!string.IsNullOrEmpty((string)hsearch[fieldname]) && (!is_dynamic_index || view_list_map.ContainsKey(fieldname)))
+            string value = (string)hsearch[fieldname];
+            if (!string.IsNullOrEmpty(value) && (!is_dynamic_index || view_list_map.ContainsKey(fieldname)))
             {
-                string value = (string)hsearch[fieldname];
                 string str;
                 var fieldname_sql = "ISNULL(CAST(" + db.qid(fieldname) + " as NVARCHAR), '')";
                 var fieldname_sql2 = "TRY_CONVERT(DECIMAL(18,1),CAST(" + db.qid(fieldname) + " as NVARCHAR))"; // SQL Server 2012+ only

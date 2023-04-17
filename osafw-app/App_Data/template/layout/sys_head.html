@@ -12,12 +12,6 @@
 <link href="<~GLOBAL[ASSETS_URL]>/css/site.css?v<~GLOBAL[SITE_VERSION]>" rel="stylesheet">
 <~./theme_link if="SESSION[theme]">
 
-<!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
-<!--[if lt IE 9]>
-    <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
-    <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
-<![endif]-->
-
 <!-- Le fav and touch icons -->
 <link rel="shortcut icon" href="<~ROOT_URL>/favicon.ico">
 <!--link rel="apple-touch-icon" href="<~GLOBAL[ASSETS_URL]>/img/apple-touch-icon.png">
@@ -34,6 +28,7 @@
  var ROOT_URL="<~ROOT_URL>";
  var me_id=<~SESSION[user_id]>+0;
  var lng;
+ <~./head_common.js>
 </script>
 
 <~head_script>

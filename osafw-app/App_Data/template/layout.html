@@ -1,23 +1,24 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" <~/layout/ui_mode>>
   <head>
     <~/layout/sys_head>
   </head>
-  <body class="fwlayout-std <~body_class>">
-    <~/layout/header_public>
+  <body class="<~body_class>">
+    <~/layout/header>
 
-    <~sub_header>
-
-    <div class="container main-container">
-        <~pre_main>
-        <div class="row">
-            <~/layout/main_with_sidebar unless="hide_sidebar">
-            <~/layout/main_no_sidebar if="hide_sidebar">
-        </div>
-    </div><!--/.fluid-container-->
-    <footer class="site-footer d-print-none">
-        <~/layout/footer>
-    </footer>
+    <div class="sidebar" id="sidebar">
+      <div class="d-flex flex-column flex-shrink-0 p-3 bg-body-tertiary w-100">
+        <~/layout/sidebar unless="hide_std_sidebar">
+        <~sidebar>
+        <~/layout/sidebar_my>
+        <~#/layout/footer>
+      </div>
+    </div>
+    <main>
+      <div class="container-fluid">
+        <~main>
+      </div>
+    </main>
 
     <~/layout/sys_footer>
   </body>

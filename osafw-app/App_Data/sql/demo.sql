@@ -75,3 +75,37 @@ CREATE TABLE demos_demo_dicts_link (
   INDEX IX_demos_demos_id (demos_id),
   INDEX IX_demos_demo_dicts_id (demo_dicts_id)
 );
+
+
+
+
+/*
+TEST DATA
+INSERT statements for demos table
+*/
+INSERT INTO demos (parent_id, demo_dicts_id, iname, idesc, email, fint, ffloat, dict_link_auto_id, dict_link_multi, fcombo, fradio, fyesno, is_checkbox, fdate_combo, fdate_pop, fdatetime, ftime, att_id, status, add_time, add_users_id)
+SELECT TOP 100
+  ABS(CHECKSUM(NEWID())) % 10,    -- random parent_id between 0 and 9
+  ABS(CHECKSUM(NEWID())) % 3 + 1, -- random demo_dicts_id between 1 and 3
+  CONCAT('Name', ROW_NUMBER() OVER (ORDER BY (SELECT NULL))), -- sequential name
+  CONCAT('Description', ROW_NUMBER() OVER (ORDER BY (SELECT NULL))), -- sequential description
+  CONCAT('email', ROW_NUMBER() OVER (ORDER BY (SELECT NULL))), -- sequential email
+  ABS(CHECKSUM(NEWID())) % 1000, -- random fint between 0 and 999
+  ABS(CHECKSUM(NEWID())) % 1000 + RAND(), -- random ffloat between 0 and 1000
+  ABS(CHECKSUM(NEWID())) % 3 + 1, -- random dict_link_auto_id between 1 and 3
+  CONCAT('LinkMulti', ROW_NUMBER() OVER (ORDER BY (SELECT NULL))), -- sequential dict_link_multi
+  ABS(CHECKSUM(NEWID())) % 3 + 1, -- random fcombo between 1 and 3
+  ABS(CHECKSUM(NEWID())) % 3 + 1, -- random fradio between 1 and 3
+  ABS(CHECKSUM(NEWID())) % 2,    -- random fyesno either 0 or 1
+  ABS(CHECKSUM(NEWID())) % 2,    -- random is_checkbox either 0 or 1
+  DATEFROMPARTS(2023, ABS(CHECKSUM(NEWID())) % 12 + 1, ABS(CHECKSUM(NEWID())) % 28 + 1), -- random fdate_combo between Jan 1, 2023 and Dec 31, 2023
+  DATEFROMPARTS(2023, ABS(CHECKSUM(NEWID())) % 12 + 1, ABS(CHECKSUM(NEWID())) % 28 + 1), -- random fdate_pop between Jan 1, 2023 and Dec 31, 2023
+  DATEADD(MINUTE, ABS(CHECKSUM(NEWID())) % 1440, CONVERT(DATETIME2, GETDATE())), -- random fdatetime within 24 hours of current datetime
+  ABS(CHECKSUM(NEWID())) % 86400, -- random ftime between 0 and 86400 (seconds in a day)
+  ABS(CHECKSUM(NEWID())) % 10 + 1, -- random att_id between 1 and 10
+  0, -- status = 0 (ok)
+  GETDATE(), -- current datetime for add_time
+  1 -- add_users_id = 1 (arbitrary user ID)
+FROM sys.all_objects a
+CROSS JOIN sys.all_objects b
+OPTION (MAXDOP 1); -- single-threaded to avoid duplicate rows due to parallelism

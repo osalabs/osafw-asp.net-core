@@ -1,0 +1,47 @@
+<hr>
+<~logged_menu if="SESSION[user_id]" inline>
+<div class="dropdown">
+  <a href="#" class="d-flex align-items-center link-body-emphasis text-decoration-none dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+    <~/layout/user_avatar if="SESSION[user_avatar_link]">
+    <strong><~SESSION[user_name]></strong>
+  </a>
+  <ul class="dropdown-menu text-small shadow">
+    <!--li>
+        <a href="<~/my/filters/url>" class="dropdown-item <~/common/active ifeq="GLOBAL[controller]" value="MyFilters">">
+            <~/common/icons/funnel> <~/my/filters/index/title>
+        </a>
+    </li-->
+    <li>
+      <a href="<~/my/views/url>" class="dropdown-item <~/common/active ifeq="GLOBAL[controller]" value="MyViews">">
+        <~/common/icons/list-stars> <~/my/views/index/title>
+      </a>
+    </li>
+    <li>
+      <a href="<~/my/lists/url>" class="dropdown-item <~/common/active ifeq="GLOBAL[controller]" value="MyLists">">
+        <~/common/icons/flag-fill> <~/my/lists/index/title>
+      </a>
+    </li>
+    <li>
+      <a href="<~/my/settings/url>" class="dropdown-item <~/common/active ifeq="GLOBAL[controller]" value="MySettings">">
+        <~/common/icons/file-person> <~/my/settings/showform/title>
+      </a>
+    </li>
+    <li>
+      <a href="<~/my/password/url>" class="dropdown-item <~/common/active ifeq="GLOBAL[controller]" value="MyPassword">">
+        <~/common/icons/key> `Change Password`
+      </a>
+    </li>
+    <li>
+      <a href="#" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#modal-my-feedback">
+        <~/common/icons/bug> <~/my/feedback/showform/title>
+      </a>
+    </li>
+    <li><hr class="dropdown-divider"></li>
+    <li>
+      <a class="dropdown-item" href="<~ROOT_URL>/Logoff">
+        <~/common/icons/box-arrow-right> `Logoff`
+      </a>
+    </li>
+  </ul>
+</div>
+</~logged_menu>

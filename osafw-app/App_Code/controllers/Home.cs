@@ -40,7 +40,7 @@ public class HomeController : FwController
         string tpl_name = (string)fw.G["PAGE_LAYOUT"];
         //override layout for specific pages - TODO control via Spages
         //if (page_name == "about")
-        //    tpl_name = (string)fw.config("PAGE_LAYOUT_PUBLIC_FLUID");
+        //    tpl_name = (string)fw.config("PAGE_LAYOUT_PUBLIC");
 
         Hashtable ps = new();
         ps["hide_sidebar"] = true; // TODO control via Spages

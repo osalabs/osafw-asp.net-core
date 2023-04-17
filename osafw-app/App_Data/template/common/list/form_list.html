@@ -1,0 +1,12 @@
+<form class="fw-card" action="<~../url>" method="post">
+  <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
+  <input type="hidden" name="_method" value="PUT">
+  <~/common/form/relid>
+
+  <table class="table table-stripedX table-sm table-hover list">
+    <~/common/list/thead>
+    <~/common/list/tbody>
+  </table>
+
+  <~/common/list/table_under>
+</form>
