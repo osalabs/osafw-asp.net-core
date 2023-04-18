@@ -32,8 +32,8 @@ public class UserViews : FwModel
         };
 
         return db.rowp(@"select * from " + db.qid(table_name) +
-             @" where icode=@icode 
-                      and id=@id 
+             @" where icode=@icode
+                      and id=@id
                       and (is_system=1 OR add_users_id=@meId)", p);
     }
 
@@ -110,7 +110,7 @@ public class UserViews : FwModel
     public ArrayList listSelectByIcode(string icode)
     {
         return db.arrayp("select id, iname from " + db.qid(table_name) +
-                        @" where status=0 
+                        @" where status=0
                                  and iname>''
                                  and icode=@icode
                                  and (is_system=1 OR add_users_id=@users_id)
