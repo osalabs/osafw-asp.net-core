@@ -420,9 +420,9 @@ public class Att : FwModel
         };
         return db.rowp(db.limit("SELECT a.* from " + db.qid(att_table_link) + " atl, " + db.qid(this.table_name) + " a"+
             @" WHERE atl.table_name=@table_name
-                     and atl.item_id=@item_id 
-                     and a.id=atl.att_id 
-                     and a.is_image=1 
+                     and atl.item_id=@item_id
+                     and a.id=atl.att_id
+                     and a.is_image=1
                 order by a.id",1), @params);
     }
 
