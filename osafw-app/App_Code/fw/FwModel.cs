@@ -200,6 +200,12 @@ public abstract class FwModel : IDisposable
         return db.array(table_name, where, getOrderBy());
     }
 
+    // override in your specific models when necessary
+    public virtual ArrayList listByRelatedId(int related_id, Hashtable def = null)
+    {
+        throw new NotImplementedException();
+    }
+
     // override if id/iname differs in table
     // def - in dynamic controller - field definition (also contains "i" and "ps", "lookup_params", ...) or you could use it to pass additional params
     public virtual ArrayList listSelectOptions(Hashtable def = null)

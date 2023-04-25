@@ -159,7 +159,7 @@
                     "type": "multi",
                     "lookup_model": "DemoDicts",
                     "lookup_params": "some optional params",
-                    "table_link": "demos_demo_dicts_link",
+                    "table_link": "demos_demo_dicts",
                     "table_link_id_name": "demos_id",
                     "table_link_linked_id_name": "demo_dicts_id"
                 },
@@ -366,32 +366,6 @@
                 },
 
                 {
-                    "field": "dict_link_auto_id",
-                    "label": "DemoDicts Autocomplete",
-                    "type": "autocomplete",
-                    "autocomplete_url": "/Admin/Demos/(Autocomplete)",
-                    "lookup_model": "DemoDicts",
-                    "lookup_field": "iname",
-                    "help_text": "will add new items to DemoDicts"
-                },
-                {
-                    "field": "dict_link_multi",
-                    "label": "DemoDicts Multi",
-                    "type": "multicb",
-                    "lookup_model": "DemoDicts",
-                    "lookup_params": "some optional params"
-                },
-                {
-                    "field": "demo_dicts_link",
-                    "label": "DemoDicts via Link Table",
-                    "type": "multicb",
-                    "lookup_model": "DemoDicts",
-                    "lookup_params": "some optional params",
-                    "table_link": "demos_demo_dicts_link",
-                    "table_link_id_name": "demos_id",
-                    "table_link_linked_id_name": "demo_dicts_id"
-                },
-                {
                     "field": "fcombo",
                     "label": "Combo",
                     "type": "select",
@@ -454,6 +428,40 @@
                     "field": "id",
                     "label": "ID",
                     "type": "id"
+                },
+                {
+                    "field": "dict_link_auto_id",
+                    "label": "DemoDicts Autocomplete",
+                    "type": "autocomplete",
+                    "autocomplete_url": "/Admin/Demos/(Autocomplete)",
+                    "lookup_model": "DemoDicts",
+                    "lookup_field": "iname",
+                    "help_text": "will add new items to DemoDicts"
+                },
+                {
+                    "field": "dict_link_multi",
+                    "label": "DemoDicts Multi",
+                    "type": "multicb",
+                    "lookup_model": "DemoDicts",
+                    "lookup_params": "some optional params"
+                },
+                {
+                    "field": "demo_dicts_link",
+                    "label": "DemoDicts via Link Table",
+                    "type": "multicb",
+                    "lookup_model": "DemoDicts",
+                    "lookup_params": "some optional params",
+                    "table_link": "demos_demo_dicts",
+                    "table_link_id_name": "demos_id",
+                    "table_link_linked_id_name": "demo_dicts_id"
+                },
+                {
+                    "field": "demo_dicts_subtable",
+                    "label": "Subtable",
+                    "class_label": "col-12 text-start",
+                    "type": "subtable",
+                    "model": "DemosDemoDicts",
+                    "related_field_name": "demos_id",
                 },
                 {
                     "field": "att_id",

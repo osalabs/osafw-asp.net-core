@@ -7,7 +7,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using Microsoft.VisualBasic;
 
 namespace osafw;
@@ -641,6 +640,10 @@ public class FwDynamicController : FwController
             }
             else if (dtype == "att_links_edit")
                 def["att_links"] = fw.model<Att>().getAllLinked(model0.table_name, Utils.f2int(id));
+            else if (dtype== "subtable")
+            {
+                def["list_rows"] = fw.model((string)def["model"]).listByRelatedId(id, def);
+            }
             else
             {
                 // single values
