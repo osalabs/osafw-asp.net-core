@@ -543,6 +543,16 @@ public class FwDynamicController : FwController
                 def["att"] = fw.model<Att>().one(Utils.f2int((string)item[field]));
             else if (dtype == "att_links")
                 def["att_links"] = fw.model<Att>().getAllLinked(model0.table_name, Utils.f2int(id));
+            else if (dtype == "subtable")
+            {
+                // subtable functionality
+                var model_name = (string)def["model"];
+                var sub_model = fw.model(model_name);
+                var list_rows = sub_model.listByRelatedId(id, def); //list related rows from db                        
+                sub_model.prepareSubtable(list_rows, id, def);
+
+                def["list_rows"] = list_rows;
+            }
             else
             {
                 // single values
@@ -644,7 +654,7 @@ public class FwDynamicController : FwController
             else if (dtype == "att_links_edit")
                 def["att_links"] = fw.model<Att>().getAllLinked(model0.table_name, Utils.f2int(id));
 
-            else if (dtype == "subtable")
+            else if (dtype == "subtable_edit")
             {
                 // subtable functionality
                 var model_name = (string)def["model"];
@@ -820,7 +830,7 @@ public class FwDynamicController : FwController
             else if (type == "multicb_prio")
                 fw.model((string)def["lookup_model"]).updateLinkedRows(id, reqh(def["field"] + "_multi"));
 
-            else if (type == "subtable")
+            else if (type == "subtable_edit")
             {
                 //save subtable
                 var model_name = (string)def["model"];

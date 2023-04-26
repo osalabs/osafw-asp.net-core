@@ -147,23 +147,6 @@
                     "lookup_field": "iname"
                 },
                 {
-                    "field": "dict_link_multi",
-                    "label": "DemoDicts Multi",
-                    "type": "multi",
-                    "lookup_model": "DemoDicts",
-                    "lookup_params": "some optional params"
-                },
-                {
-                    "field": "demo_dicts_link",
-                    "label": "DemoDicts via Link Table",
-                    "type": "multi",
-                    "lookup_model": "DemoDicts",
-                    "lookup_params": "some optional params",
-                    "table_link": "demos_demo_dicts",
-                    "table_link_id_name": "demos_id",
-                    "table_link_linked_id_name": "demo_dicts_id"
-                },
-                {
                     "field": "fcombo",
                     "label": "Combo",
                     "type": "plaintext",
@@ -219,6 +202,30 @@
                     "field": "id",
                     "label": "ID",
                     "type": "plaintext"
+                },
+                {
+                    "field": "dict_link_multi",
+                    "label": "DemoDicts Multi",
+                    "type": "multi",
+                    "lookup_model": "DemoDicts",
+                    "lookup_params": "some optional params"
+                },
+                {
+                    "field": "demo_dicts_link",
+                    "label": "DemoDicts via Link Table",
+                    "type": "multi",
+                    "lookup_model": "DemoDicts",
+                    "lookup_params": "some optional params",
+                    "table_link": "demos_demo_dicts",
+                    "table_link_id_name": "demos_id",
+                    "table_link_linked_id_name": "demo_dicts_id"
+                },
+                {
+                    "field": "demo_dicts_subtable",
+                    "label": "Subtable",
+                    "class_label": "col-12 text-start",
+                    "type": "subtable",
+                    "model": "DemosDemoDicts"
                 },
                 {
                     "field": "att_id",
@@ -459,7 +466,7 @@
                     "field": "demo_dicts_subtable",
                     "label": "Subtable",
                     "class_label": "col-12 text-start",
-                    "type": "subtable",
+                    "type": "subtable_edit",
                     "model": "DemosDemoDicts",
                     "related_field_name": "demos_id",
                     "save_fields": "demo_dicts_id iname idesc",
