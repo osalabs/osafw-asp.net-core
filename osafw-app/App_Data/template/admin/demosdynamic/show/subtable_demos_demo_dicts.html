@@ -1,0 +1,35 @@
+<table class="table table-sm">
+   <thead>
+      <tr>
+         <th class="col">`ID`</th>
+         <th class="col">`Demo Dict`</th>
+         <th class="col">`Title`</th>
+         <th class="col">`Notes`</th>
+         <th class="col">`Y/N`</th>
+      </tr>
+   </thead>
+   <tbody>
+   <~list_rows repeat inline>
+      <tr>
+         <td>
+            <~id>
+         </td>
+         <td>
+            <~select_demo_dicts selvalue="demo_dicts_id">
+         </td>
+         <td>
+            <~iname>
+         </td>
+         <td>
+            <~idesc nl2br>
+         </td>
+         <td>
+            <div class="form-check">
+              <input type="checkbox" class="form-check-input" <~/common/checked if="is_checkbox"> <~/common/disabled>>
+              <label class="form-check-label"></label>
+            </div>
+         </td>
+      </tr>
+   </~list_rows>
+   </tbody>
+</table>

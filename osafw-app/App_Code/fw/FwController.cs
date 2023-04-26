@@ -697,12 +697,14 @@ public abstract class FwController
         if (id > 0)
         {
             model0.update(id, fields);
-            fw.flash("record_updated", 1);
+            if (!fw.isJsonExpected())
+                fw.flash("record_updated", 1);
         }
         else
         {
             id = model0.add(fields);
-            fw.flash("record_added", 1);
+            if (!fw.isJsonExpected())
+                fw.flash("record_added", 1);
         }
         return id;
     }

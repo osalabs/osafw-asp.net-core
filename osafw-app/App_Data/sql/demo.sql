@@ -3,7 +3,7 @@
 /*Demo Dictionary table*/
 DROP TABLE IF EXISTS demo_dicts;
 CREATE TABLE demo_dicts (
-  id INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+  id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
 
   iname                 NVARCHAR(64) NOT NULL default '',
   idesc                 NVARCHAR(MAX),
@@ -22,7 +22,7 @@ INSERT INTO demo_dicts (iname, idesc, add_time) VALUES ('test3', 'test3 descript
 /*Demo table*/
 DROP TABLE IF EXISTS demos;
 CREATE TABLE demos (
-  id INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+  id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
   parent_id             INT NOT NULL DEFAULT 0,           /*parent id - combo selection from SQL*/
   demo_dicts_id         INT NULL FOREIGN KEY REFERENCES demo_dicts(id),           /* demo dictionary link*/
 
@@ -60,11 +60,16 @@ CREATE TABLE demos (
   INDEX IX_demos_dict_link_auto_id (dict_link_auto_id)
 );
 
-/*multi link table*/
-DROP TABLE IF EXISTS demos_demo_dicts_link;
-CREATE TABLE demos_demo_dicts_link (
+/*multi link table or subtable*/
+DROP TABLE IF EXISTS demos_demo_dicts;
+CREATE TABLE demos_demo_dicts (
+  id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED, -- not necessary for just a link tables (without additional fields)
   demos_id              INT NULL FOREIGN KEY REFERENCES demos(id),
   demo_dicts_id         INT NULL FOREIGN KEY REFERENCES demo_dicts(id),
+
+  iname                 NVARCHAR(64) NOT NULL DEFAULT '', /*string value for names*/
+  idesc                 NVARCHAR(MAX),                    /*large text value*/
+  is_checkbox           TINYINT NOT NULL DEFAULT 0,       /*checkbox field 0 - not set, 1 - set*/
 
   status                TINYINT NOT NULL DEFAULT 0,        /*0-ok, 1-under change, deleted instantly*/
   add_time              DATETIME2 NOT NULL DEFAULT getdate(),
@@ -73,7 +78,7 @@ CREATE TABLE demos_demo_dicts_link (
   upd_users_id          INT DEFAULT 0,
 
   INDEX IX_demos_demos_id (demos_id),
-  INDEX IX_demos_demo_dicts_id (demo_dicts_id)
+  INDEX IX_demos_demo_dicts_id (demo_dicts_id, demos_id)
 );
 
 

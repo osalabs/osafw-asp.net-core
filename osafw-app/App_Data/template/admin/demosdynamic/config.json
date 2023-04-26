@@ -147,23 +147,6 @@
                     "lookup_field": "iname"
                 },
                 {
-                    "field": "dict_link_multi",
-                    "label": "DemoDicts Multi",
-                    "type": "multi",
-                    "lookup_model": "DemoDicts",
-                    "lookup_params": "some optional params"
-                },
-                {
-                    "field": "demo_dicts_link",
-                    "label": "DemoDicts via Link Table",
-                    "type": "multi",
-                    "lookup_model": "DemoDicts",
-                    "lookup_params": "some optional params",
-                    "table_link": "demos_demo_dicts_link",
-                    "table_link_id_name": "demos_id",
-                    "table_link_linked_id_name": "demo_dicts_id"
-                },
-                {
                     "field": "fcombo",
                     "label": "Combo",
                     "type": "plaintext",
@@ -219,6 +202,30 @@
                     "field": "id",
                     "label": "ID",
                     "type": "plaintext"
+                },
+                {
+                    "field": "dict_link_multi",
+                    "label": "DemoDicts Multi",
+                    "type": "multi",
+                    "lookup_model": "DemoDicts",
+                    "lookup_params": "some optional params"
+                },
+                {
+                    "field": "demo_dicts_link",
+                    "label": "DemoDicts via Link Table",
+                    "type": "multi",
+                    "lookup_model": "DemoDicts",
+                    "lookup_params": "some optional params",
+                    "table_link": "demos_demo_dicts",
+                    "table_link_id_name": "demos_id",
+                    "table_link_linked_id_name": "demo_dicts_id"
+                },
+                {
+                    "field": "demo_dicts_subtable",
+                    "label": "Subtable",
+                    "class_label": "col-12 text-start",
+                    "type": "subtable",
+                    "model": "DemosDemoDicts"
                 },
                 {
                     "field": "att_id",
@@ -341,7 +348,7 @@
                             "min": 0,
                             "max": 999999,
                             "class_label": "col-6",
-                            "class_contents": "col-md-3"
+                            "class_contents": "col-md-4"
                         },
                     {
                         "type": "col_end"
@@ -356,7 +363,7 @@
                             "type": "number",
                             "step": 0.1,
                             "class_label": "col-6",
-                            "class_contents": "col-md-3"
+                            "class_contents": "col"
                         },
                     {
                         "type": "col_end"
@@ -365,32 +372,6 @@
                     "type": "row_end"
                 },
 
-                {
-                    "field": "dict_link_auto_id",
-                    "label": "DemoDicts Autocomplete",
-                    "type": "autocomplete",
-                    "autocomplete_url": "/Admin/Demos/(Autocomplete)",
-                    "lookup_model": "DemoDicts",
-                    "lookup_field": "iname",
-                    "help_text": "will add new items to DemoDicts"
-                },
-                {
-                    "field": "dict_link_multi",
-                    "label": "DemoDicts Multi",
-                    "type": "multicb",
-                    "lookup_model": "DemoDicts",
-                    "lookup_params": "some optional params"
-                },
-                {
-                    "field": "demo_dicts_link",
-                    "label": "DemoDicts via Link Table",
-                    "type": "multicb",
-                    "lookup_model": "DemoDicts",
-                    "lookup_params": "some optional params",
-                    "table_link": "demos_demo_dicts_link",
-                    "table_link_id_name": "demos_id",
-                    "table_link_linked_id_name": "demo_dicts_id"
-                },
                 {
                     "field": "fcombo",
                     "label": "Combo",
@@ -454,6 +435,42 @@
                     "field": "id",
                     "label": "ID",
                     "type": "id"
+                },
+                {
+                    "field": "dict_link_auto_id",
+                    "label": "DemoDicts Autocomplete",
+                    "type": "autocomplete",
+                    "autocomplete_url": "/Admin/Demos/(Autocomplete)",
+                    "lookup_model": "DemoDicts",
+                    "lookup_field": "iname",
+                    "help_text": "will add new items to DemoDicts"
+                },
+                {
+                    "field": "dict_link_multi",
+                    "label": "DemoDicts Multi",
+                    "type": "multicb",
+                    "lookup_model": "DemoDicts",
+                    "lookup_params": "some optional params"
+                },
+                {
+                    "field": "demo_dicts_link",
+                    "label": "DemoDicts via Link Table",
+                    "type": "multicb",
+                    "lookup_model": "DemoDicts",
+                    "lookup_params": "some optional params",
+                    "table_link": "demos_demo_dicts",
+                    "table_link_id_name": "demos_id",
+                    "table_link_linked_id_name": "demo_dicts_id"
+                },
+                {
+                    "field": "demo_dicts_subtable",
+                    "label": "Subtable",
+                    "class_label": "col-12 text-start",
+                    "type": "subtable_edit",
+                    "model": "DemosDemoDicts",
+                    "related_field_name": "demos_id",
+                    "save_fields": "demo_dicts_id iname idesc",
+                    "save_fields_checkboxes": "is_checkbox|0",
                 },
                 {
                     "field": "att_id",

@@ -16,6 +16,7 @@ namespace osafw;
 public abstract class FwModel : IDisposable
 {
     public const int STATUS_ACTIVE = 0;
+    public const int STATUS_UNDER_UPDATE = 1;
     public const int STATUS_INACTIVE = 10;
     public const int STATUS_DELETED = 127;
 
@@ -198,6 +199,36 @@ public abstract class FwModel : IDisposable
         if (!string.IsNullOrEmpty(field_status))
             where[field_status] = db.opNOT(STATUS_DELETED);
         return db.array(table_name, where, getOrderBy());
+    }
+
+    // override in your specific models when necessary
+    public virtual ArrayList listByRelatedId(int related_id, Hashtable def = null)
+    {
+        throw new NotImplementedException();
+        //return db.array(table_name, DB.h(linked_field_main_id, related_id));
+    }
+
+    // override in your specific models when necessary
+    public virtual void prepareSubtable(ArrayList list_rows, int related_id, Hashtable def = null)
+    {
+        var model_name = def != null ? (string)def["model"] : this.GetType().Name;
+        foreach (Hashtable row in list_rows)
+        {
+            row["model"] = model_name;
+            //if row_id starts with "new-" - set flag is_new
+            row["is_new"] = row["id"].ToString().StartsWith("new-");
+        }
+    }
+
+    // override in your specific models when necessary, add defaults for new record
+    public virtual void prepareSubtableAddNew(ArrayList list_rows, int related_id, Hashtable def = null)
+    {
+        var id = "new-" + Utils.nanoid();
+        var item = new Hashtable()
+        {
+            { "id", id }
+        };
+        list_rows.Add(item);
     }
 
     // override if id/iname differs in table
@@ -615,6 +646,26 @@ public abstract class FwModel : IDisposable
         return getLinkedIds((string)def["table_link"], id, (string)def["table_link_id_name"], (string)def["table_link_linked_id_name"]);
     }
 
+    public virtual void setUnderUpdate(int related_id)
+    {
+        if (string.IsNullOrEmpty(field_status) || string.IsNullOrEmpty(linked_field_main_id)) return; //if no status or linked field - do nothing
+
+        db.update(table_name, DB.h(field_status, STATUS_UNDER_UPDATE), DB.h(linked_field_main_id, related_id));
+    }
+
+    public virtual void deleteUnderUpdate(int related_id)
+    {
+        if (string.IsNullOrEmpty(field_status) || string.IsNullOrEmpty(linked_field_main_id)) return; //if no status or linked field - do nothing
+
+        var where = new Hashtable()
+        {
+            {linked_field_main_id, related_id},
+            {field_status, STATUS_UNDER_UPDATE},
+        };
+        db.del(table_name, where);
+    }
+    
+
     /// <summary>
     ///  update (and add/del) linked table
     /// </summary>
@@ -630,7 +681,7 @@ public abstract class FwModel : IDisposable
         var link_table_field_status = "status";
 
         // set all fields as under update
-        fields[link_table_field_status] = "1";
+        fields[link_table_field_status] = STATUS_UNDER_UPDATE;
         where[id_name] = id;
         db.update(link_table_name, fields, where);
 
@@ -641,7 +692,7 @@ public abstract class FwModel : IDisposable
                 fields = new Hashtable();
                 fields[id_name] = id;
                 fields[link_id_name] = link_id;
-                fields[link_table_field_status] = "0";
+                fields[link_table_field_status] = STATUS_ACTIVE;
 
                 where = new Hashtable();
                 where[id_name] = id;
@@ -670,10 +721,8 @@ public abstract class FwModel : IDisposable
         Hashtable where = new();
         var link_table_field_status = this.field_status;
 
-        // set all fields as under update
-        fields[link_table_field_status] = "1";
-        where[linked_field_main_id] = main_id;
-        db.update(table_name, fields, where);
+        // set all rows as under update
+        setUnderUpdate(main_id);
 
         if (linked_keys != null)
         {
@@ -685,7 +734,7 @@ public abstract class FwModel : IDisposable
                 fields = new Hashtable();
                 fields[linked_field_main_id] = main_id;
                 fields[linked_field_link_id] = link_id;
-                fields[link_table_field_status] = "0";
+                fields[link_table_field_status] = STATUS_ACTIVE;
 
                 // additional fields here
                 updateLinkedRowsAdditional(linked_keys, link_id, fields);
@@ -698,10 +747,7 @@ public abstract class FwModel : IDisposable
         }
 
         // remove those who still not updated (so removed)
-        where = new Hashtable();
-        where[linked_field_main_id] = main_id;
-        where[link_table_field_status] = 1;
-        db.del(table_name, where);
+        deleteUnderUpdate(main_id);
     }
 
     // override to add set more additional fields
@@ -718,7 +764,7 @@ public abstract class FwModel : IDisposable
         var link_table_field_status = this.field_status;
 
         // set all fields as under update
-        fields[link_table_field_status] = "1";
+        fields[link_table_field_status] = STATUS_UNDER_UPDATE;
         where[linked_field_link_id] = linked_id;
         db.update(table_name, fields, where);
 
@@ -732,7 +778,7 @@ public abstract class FwModel : IDisposable
                 fields = new Hashtable();
                 fields[linked_field_link_id] = Utils.f2str(linked_id);
                 fields[linked_field_main_id] = main_id;
-                fields[link_table_field_status] = "0";
+                fields[link_table_field_status] = STATUS_ACTIVE;
 
                 // additional fields here
                 updateLinkedRowsByLinkedIdAdditional(linked_keys, main_id, fields);
@@ -748,7 +794,7 @@ public abstract class FwModel : IDisposable
         // remove those who still not updated (so removed)
         where = new Hashtable();
         where[linked_field_link_id] = linked_id;
-        where[link_table_field_status] = 1;
+        where[link_table_field_status] = STATUS_UNDER_UPDATE;
         db.del(table_name, where);
     }
 

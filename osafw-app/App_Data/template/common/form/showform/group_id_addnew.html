@@ -4,4 +4,4 @@
   <button type="submit" class="btn btn-secondary" name="route_return" value="New">`Save and Add New`</button>
   <button type="button" class="btn btn-default on-cancel" data-href="<~/common/form/cancel_url>">`Cancel`</button>
 </div>  
-<p class="form-control-plaintext"><~uexists1 if="value" inline><~value></~uexists1><~unew unless="value" inline>(`new`)</~unew></p>
+<p class="form-control-plaintext"><~value if="value"><~/common/form/idnew unless="value"></p>

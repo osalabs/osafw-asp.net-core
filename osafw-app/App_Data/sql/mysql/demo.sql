@@ -68,10 +68,14 @@ CREATE TABLE demos (
 ) DEFAULT CHARSET=utf8mb4;
 
 /*multi link table*/
-DROP TABLE IF EXISTS demos_demo_dicts_link;
-CREATE TABLE demos_demo_dicts_link (
+DROP TABLE IF EXISTS demos_demo_dicts;
+CREATE TABLE demos_demo_dicts (
   demos_id              INT NULL,
   demo_dicts_id         INT NULL,
+
+  iname                 VARCHAR(64) NOT NULL DEFAULT '',  /*string value for names*/
+  idesc                 TEXT,                             /*large text value*/
+  is_checkbox           TINYINT NOT NULL DEFAULT 0, /*checkbox field 0 - not set, 1 - set*/
 
   status                TINYINT NOT NULL DEFAULT 0,        /*0-ok, 1-under change, deleted instantly*/
   add_time              TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
