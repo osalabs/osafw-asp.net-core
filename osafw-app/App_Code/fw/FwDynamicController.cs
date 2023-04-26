@@ -7,6 +7,8 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Policy;
+using System.Text.RegularExpressions;
 using Microsoft.VisualBasic;
 
 namespace osafw;
@@ -365,9 +367,29 @@ public class FwDynamicController : FwController
     {
         fw.model<Users>().checkReadOnly();
 
-        model0.deleteWithPermanentCheck(id);
+        try
+        {
+            model0.deleteWithPermanentCheck(id);
+            fw.flash("onedelete", 1);
+        }
+        catch (Exception ex)
+        {
+            // check and parese FK errors
+            // The DELETE statement conflicted with the REFERENCE constraint "FK__demos_dem__demos__253C7D7E". The conflict occurred in database "demo", table "dbo.demos_demo_dicts", column 'demos_id'. The statement has been terminated.
+            var msg = ex.Message;
+            var regex = new Regex(@"table\s+""[^.]+\.([^""]+)"",\s+column\s+'([^']+)'");
+            var match = regex.Match(msg);
+            if (match.Success)
+            {
+                string tableName = Utils.capitalize( match.Groups[1].Value, "all");
+                //string columnName = match.Groups[2].Value;
+                msg = $"This record cannot be deleted because it is linked to another {tableName} record. You will need to unlink these records before either can be deleted";
+            }
 
-        fw.flash("onedelete", 1);
+            fw.flash("error", msg);
+            fw.redirect($"{base_url}/{id}/delete");
+        }
+        
         return this.afterSave(true);
     }
 

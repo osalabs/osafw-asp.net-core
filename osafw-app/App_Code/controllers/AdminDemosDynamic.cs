@@ -31,21 +31,4 @@ public class AdminDemosDynamicController : FwDynamicController
         // override sortmap for date fields
         list_sortmap["fdate_pop_str"] = "fdate_pop";
     }
-
-    //public override Hashtable ShowFormAction(int id = 0)
-    //{
-    //    var ps = base.ShowFormAction(id);
-    //    if (is_dynamic_showform)
-    //    {
-    //        var hfields = _fieldsToHash((ArrayList)ps["fields"]);
-    //        var def_subtable = (Hashtable)hfields["demo_dicts_subtable"];            
-    //        var select_demo_dicts = model_related.listSelectOptions();
-    //        foreach (Hashtable row in (ArrayList)def_subtable["list_rows"])
-    //        {
-    //            row["select_demo_dicts"] = select_demo_dicts;
-    //        }
-    //    }
-
-    //    return ps;
-    //}
 }
