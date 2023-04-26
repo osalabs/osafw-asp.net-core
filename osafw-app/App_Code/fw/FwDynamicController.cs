@@ -596,6 +596,9 @@ public class FwDynamicController : FwController
     {
         var id = Utils.f2int(item["id"]);
 
+        var subtable_add = reqh("subtable_add");
+        //var subtable_del = reqh("subtable_del");
+
         var fields = (ArrayList)this.config["showform_fields"];
         if (fields == null)
             throw new ApplicationException("Controller config.json doesn't contain 'showform_fields'");
@@ -640,9 +643,58 @@ public class FwDynamicController : FwController
             }
             else if (dtype == "att_links_edit")
                 def["att_links"] = fw.model<Att>().getAllLinked(model0.table_name, Utils.f2int(id));
-            else if (dtype== "subtable")
+
+            else if (dtype == "subtable")
             {
-                def["list_rows"] = fw.model((string)def["model"]).listByRelatedId(id, def);
+                // subtable functionality
+                var model_name = (string)def["model"];
+                var sub_model = fw.model(model_name);
+                var list_rows = new ArrayList();
+
+                if (isGet())
+                {
+                    if (id > 0)
+                    {
+                        list_rows = sub_model.listByRelatedId(id, def); //list related rows from db                        
+                    }
+                    else
+                        sub_model.prepareSubtableAddNew(list_rows, id, def); //add at least one row
+                }
+                else
+                {
+                    //copy list related rows from the form
+                    // row ids submitted as: item$<~model>[<~id>]
+                    // input name format: item$<~model>#<~id>[field_name]
+                    var hids = reqh("item$" + model_name);
+                    // sort hids.Keys, so numerical keys - first and keys staring with "new-" will be last
+                    var sorted_keys = hids.Keys.Cast<string>().OrderBy(x => x.StartsWith("new-") ? 1 : 0).ThenBy(x => x).ToList();
+                    foreach (string row_id in sorted_keys)
+                    {
+                        var row_item = reqh("item$" + model_name + "#" + row_id);
+                        row_item["id"] = row_id;
+
+                        list_rows.Add(row_item);
+                    }
+                }
+
+                //delete row clicked
+                //if (subtable_del.ContainsKey(model_name))
+                //{
+                //    var del_id = (string)subtable_del[model_name];
+                //    // delete with LINQ from the form list (actual delete from db will be on save)
+                //    list_rows = new ArrayList((from Hashtable d in list_rows
+                //                               where (string)d["id"] != del_id
+                //                               select d).ToList());
+                //}
+
+                //add new clicked
+                if (subtable_add.ContainsKey(model_name))
+                    sub_model.prepareSubtableAddNew(list_rows, id, def);
+
+                //prepare rows for display (add selects, etc..)
+                sub_model.prepareSubtable(list_rows, id, def);
+
+                def["list_rows"] = list_rows;
             }
             else
             {
@@ -752,6 +804,8 @@ public class FwDynamicController : FwController
     // auto-process fields AFTER record saved to db
     protected virtual void processSaveShowFormFieldsAfter(int id, Hashtable fields)
     {
+        var subtable_del = reqh("subtable_del");
+
         // for now we just look if we have att_links_edit field and update att links
         foreach (Hashtable def in (ArrayList)this.config["showform_fields"])
         {
@@ -765,6 +819,50 @@ public class FwDynamicController : FwController
             }
             else if (type == "multicb_prio")
                 fw.model((string)def["lookup_model"]).updateLinkedRows(id, reqh(def["field"] + "_multi"));
+
+            else if (type == "subtable")
+            {
+                //save subtable
+                var model_name = (string)def["model"];
+                var sub_model = fw.model(model_name);
+
+                var save_fields = (string)def["save_fields"];
+                var save_fields_checkboxes = (string)def["save_fields_checkboxes"];
+
+                //check if we delete specific row
+                var del_id = (string)subtable_del[model_name] ?? "";
+
+                //mark all related records as under update (status=1)
+                sub_model.setUnderUpdate(id);
+
+                //update and add new rows
+
+                // row ids submitted as: item$<~model>[<~id>]
+                // input name format: item$<~model>#<~id>[field_name]
+                var hids = reqh("item$" + model_name);
+                // sort hids.Keys, so numerical keys - first and keys staring with "new-" will be last
+                var sorted_keys = hids.Keys.Cast<string>().OrderBy(x => x.StartsWith("new-") ? 1 : 0).ThenBy(x => x).ToList();
+                foreach (string row_id in sorted_keys)
+                {
+                    if (row_id == del_id) continue; //skip deleted row
+
+                    var row_item = reqh("item$" + model_name + "#" + row_id);
+                    Hashtable itemdb = FormUtils.filter(row_item, save_fields);
+                    FormUtils.filterCheckboxes(itemdb, row_item, save_fields_checkboxes);
+
+                    itemdb["status"] = FwModel.STATUS_ACTIVE;
+                    if (row_id.StartsWith("new-"))
+                    {
+                        itemdb[sub_model.linked_field_main_id] = id;
+                        sub_model.add(itemdb);
+                    }
+                    else
+                        sub_model.update(Utils.f2int(row_id), itemdb);
+                }
+
+                //remove any not updated rows (i.e. those deleted by user)
+                sub_model.deleteUnderUpdate(id);
+            }
         }
     }
 

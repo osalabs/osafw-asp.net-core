@@ -341,7 +341,7 @@
                             "min": 0,
                             "max": 999999,
                             "class_label": "col-6",
-                            "class_contents": "col-md-3"
+                            "class_contents": "col-md-4"
                         },
                     {
                         "type": "col_end"
@@ -356,7 +356,7 @@
                             "type": "number",
                             "step": 0.1,
                             "class_label": "col-6",
-                            "class_contents": "col-md-3"
+                            "class_contents": "col"
                         },
                     {
                         "type": "col_end"
@@ -462,6 +462,8 @@
                     "type": "subtable",
                     "model": "DemosDemoDicts",
                     "related_field_name": "demos_id",
+                    "save_fields": "demo_dicts_id iname idesc",
+                    "save_fields_checkboxes": "is_checkbox|0",
                 },
                 {
                     "field": "att_id",
