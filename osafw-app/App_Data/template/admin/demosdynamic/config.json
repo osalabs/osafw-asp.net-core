@@ -221,11 +221,11 @@
                     "table_link_linked_id_name": "demo_dicts_id"
                 },
                 {
-                    "field": "demo_dicts_subtable",
+                    "field": "demos_items_subtable",
                     "label": "Subtable",
                     "class_label": "col-12 text-start",
                     "type": "subtable",
-                    "model": "DemosDemoDicts"
+                    "model": "DemosItems"
                 },
                 {
                     "field": "att_id",
@@ -463,11 +463,11 @@
                     "table_link_linked_id_name": "demo_dicts_id"
                 },
                 {
-                    "field": "demo_dicts_subtable",
+                    "field": "demos_items_subtable",
                     "label": "Subtable",
                     "class_label": "col-12 text-start",
                     "type": "subtable_edit",
-                    "model": "DemosDemoDicts",
+                    "model": "DemosItems",
                     "related_field_name": "demos_id",
                     "save_fields": "demo_dicts_id iname idesc",
                     "save_fields_checkboxes": "is_checkbox|0",

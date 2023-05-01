@@ -204,8 +204,10 @@ public abstract class FwModel : IDisposable
     // override in your specific models when necessary
     public virtual ArrayList listByRelatedId(int related_id, Hashtable def = null)
     {
-        throw new NotImplementedException();
-        //return db.array(table_name, DB.h(linked_field_main_id, related_id));
+        if (string.IsNullOrEmpty(linked_field_main_id))
+            throw new NotImplementedException();
+        else        
+            return db.array(table_name, DB.h(linked_field_main_id, related_id));
     }
 
     // override in your specific models when necessary

@@ -60,13 +60,29 @@ CREATE TABLE demos (
   INDEX IX_demos_dict_link_auto_id (dict_link_auto_id)
 );
 
-/*multi link table or subtable*/
+/*multi link table*/
 DROP TABLE IF EXISTS demos_demo_dicts;
 CREATE TABLE demos_demo_dicts (
-  id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED, -- not necessary for just a link tables (without additional fields)
   demos_id              INT NULL FOREIGN KEY REFERENCES demos(id),
   demo_dicts_id         INT NULL FOREIGN KEY REFERENCES demo_dicts(id),
 
+  status                TINYINT NOT NULL DEFAULT 0,        /*0-ok, 1-under change, deleted instantly*/
+  add_time              DATETIME2 NOT NULL DEFAULT getdate(),
+  add_users_id          INT DEFAULT 0,
+  upd_time              DATETIME2,
+  upd_users_id          INT DEFAULT 0,
+
+  INDEX IX_demos_demo_dicts_demos_id (demos_id, demo_dicts_id),
+  INDEX IX_demos_demo_dicts_demo_dicts_id (demo_dicts_id, demos_id)
+);
+
+/*subtable for demo items*/
+DROP TABLE IF EXISTS demos_items;
+CREATE TABLE demos_items (
+  id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+  demos_id              INT NOT NULL FOREIGN KEY REFERENCES demos(id), -- main record link
+
+  demo_dicts_id         INT NULL FOREIGN KEY REFERENCES demo_dicts(id), -- item lookup
   iname                 NVARCHAR(64) NOT NULL DEFAULT '', /*string value for names*/
   idesc                 NVARCHAR(MAX),                    /*large text value*/
   is_checkbox           TINYINT NOT NULL DEFAULT 0,       /*checkbox field 0 - not set, 1 - set*/
@@ -77,8 +93,8 @@ CREATE TABLE demos_demo_dicts (
   upd_time              DATETIME2,
   upd_users_id          INT DEFAULT 0,
 
-  INDEX IX_demos_demos_id (demos_id),
-  INDEX IX_demos_demo_dicts_id (demo_dicts_id, demos_id)
+  INDEX IX_demos_items_demos_id (demos_id),
+  INDEX IX_demos_items_demo_dicts_id (demo_dicts_id, demos_id)
 );
 
 

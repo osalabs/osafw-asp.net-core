@@ -1002,6 +1002,7 @@ public class FW : IDisposable
     {
         if (Regex.IsMatch(url, "^/"))
             url = this.config("ROOT_URL") + url;
+        logger(LogLevel.DEBUG, $"Redirect to [{url}]");
         response.Redirect(url, false);
         if (is_exception)
             throw new RedirectException();
@@ -1009,7 +1010,7 @@ public class FW : IDisposable
 
     public void routeRedirect(string action, string controller, object[] args = null)
     {
-        logger(LogLevel.TRACE, "routeRedirect to ", controller, ".", action, args);
+        logger(LogLevel.TRACE, $"Route Redirect to [{controller}.{action}]", args);
         setController((!string.IsNullOrEmpty(controller) ? controller : route.controller), action);
 
         callRoute();

@@ -226,7 +226,7 @@ public class ParsePage
         if (tpl_name.Length>0 && tpl_name.Substring(0, 1) != "/")
             tpl_name = basedir + "/" + tpl_name;
 
-        // fw.logger("DEBUG", "ParsePage - Parsing template = " + tpl_name + ", pagelen=" & page.Length)
+        //fw.logger("DEBUG", $"ParsePage - Parsing template = {tpl_name}, pagelen={page.Length}");
         if (page.Length < 1)
             page = precache_file(TMPL_PATH + tpl_name);
 
@@ -284,8 +284,10 @@ public class ParsePage
                             if (attrs.ContainsKey("repeat"))
                                 value = _attr_repeat(ref tag, ref tag_value, ref tpl_name, ref inline_tpl, hf);
                             else if (attrs.ContainsKey("select"))
+                            {
                                 // this is special case for '<select>' HTML tag when options passed as ArrayList
                                 value = _attr_select(tag, tpl_name, ref hf, attrs);
+                            }
                             else if (attrs.ContainsKey("selvalue"))
                             {
                                 // # this is special case for '<select>' HTML tag
@@ -1035,10 +1037,11 @@ public class ParsePage
 
     // if attrs["multi") ]efined - attrs["select") ]an contain strings with separator in attrs["multi") ]default ",") for multiple select
     private string _attr_select(string tag, string tpl_name, ref Hashtable hf, Hashtable attrs)
-    {
+    {        
         StringBuilder result = new();
 
-        string sel_value = Utils.f2str(hfvalue((string)attrs["select"]??"", hf));
+        string sel_value = Utils.f2str(hfvalue((string)attrs["select"] ?? "", hf));
+        //fw.logger($"_attr_select: tag={tag}, tpl_name={tpl_name}", attrs, hf[tag]);
 
         var multi_delim = ""; // by default no multiple select
         if (attrs.ContainsKey("multi"))
@@ -1112,7 +1115,7 @@ public class ParsePage
 
             if (!File.Exists(TMPL_PATH + "/" + tpl_path))
             {
-                fw.logger(LogLevel.DEBUG, "ParsePage - NOR an ArrayList of Hashtables NEITHER .sel template file passed for a select tag=", tag);
+                fw.logger(LogLevel.TRACE, $"ParsePage - NOR an ArrayList of Hashtables NEITHER .sel template file passed for a select tag={tag}");
                 return "";
             }
 
