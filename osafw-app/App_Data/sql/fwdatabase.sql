@@ -256,6 +256,8 @@ CREATE TABLE lookup_manager_tables (
   column_groups         NVARCHAR(MAX),                     /*comma-separated column list of groups column related to, if empty - don't include column in group*/
   url                   NVARCHAR(255) NOT NULL DEFAULT '', /*if defined - redirected to this URL instead of LookupManager forms*/
 
+  access_level          TINYINT NULL,                       -- min access level, if NULL - use Lookup Manager's acl
+
   status                TINYINT NOT NULL DEFAULT 0,                /*0-ok, 127-deleted*/
   add_time              DATETIME2 NOT NULL DEFAULT getdate(),  /*date record added*/
   add_users_id          INT DEFAULT 0,                        /*user added record*/

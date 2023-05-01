@@ -22,12 +22,12 @@ public class AdminLookupManagerTablesController : FwAdminController
 
         base_url = "/Admin/LookupManagerTables";
         required_fields = "tname iname";
-        save_fields = "tname iname idesc header_text footer_text column_id columns column_names column_types column_groups groups status";
+        save_fields = "tname iname idesc header_text footer_text column_id columns column_names column_types column_groups groups url access_level status";
         save_fields_checkboxes = "is_one_form is_custom_form";
 
         search_fields = "tname iname";
         list_sortdef = "iname asc";
-        list_sortmap = Utils.qh("id|id iname|iname tname|tname");
+        list_sortmap = Utils.qh("id|id iname|iname tname|tname acl|access_level");
     }
 
     public override Hashtable ShowFormAction(int id = 0)

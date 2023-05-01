@@ -1,5 +1,15 @@
 <~/common/form/group_id>
 
+    <div class="row form-row">
+      <label class="col-form-label col-md-3" for="access_level">`Access level`</label>
+      <div class="col-md-6 col-xl-4">
+            <select id="access_level" name="item[access_level]" class="form-select" autocomplete="off">
+                <option value=""> - `select` -
+                <~/common/sel/access_level.sel select="i[access_level]">
+            </select>
+      </div>
+    </div>
+
 <~/common/form/group_status>
 
     <div class="row form-row <~/common/error if="ERR[header_text]">">

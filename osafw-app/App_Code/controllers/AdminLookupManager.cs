@@ -33,6 +33,13 @@ public class AdminLookupManagerController : FwController
         defs = model_tables.oneByTname(dict);
         if (defs.Count == 0)
             dict = "";
+        else
+        {
+            //don't allow access to tables with access_level higher than current user
+            var acl = Utils.f2int(defs["access_level"]);
+            if (!fw.model<Users>().isAccess(acl))
+                dict = "";
+        }
     }
 
     private void check_dict()
@@ -58,6 +65,11 @@ public class AdminLookupManagerController : FwController
         int curcol = 0;
         foreach (var table in tables)
         {
+            //do not show tables with access_level higher than current user
+            var acl = Utils.f2int(table["access_level"]);
+            if (!fw.model<Users>().isAccess(acl))
+                continue;
+
             if (cols.Count <= curcol)
                 cols.Add(new Hashtable());
             Hashtable h = (Hashtable)cols[curcol];

@@ -9,6 +9,7 @@
             <th data-sort="tname">`Table Name`</th>
             <th data-sort="iname">`Title`</th>
             <th>`Description`</th>
+            <th data-sort="acl">`Access Level`</th>
             <th></th>
         </tr>
     </thead>
@@ -19,6 +20,7 @@
             <td><~tname></td>
             <td><~iname></td>
             <td><~idesc truncate></td>
+            <td><~/common/sel/access_level.sel selvalue="access_level"></td>
             <td class="text-nowrap text-end">
                 <a href="<~/admin/lookupmanager/url>?d=<~tname urlencode>">`Browse`</a>
                 <~/common/dot><a href="<~row_click_url>">`Edit`</a>
