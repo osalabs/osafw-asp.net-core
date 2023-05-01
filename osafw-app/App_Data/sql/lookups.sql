@@ -3,6 +3,7 @@
 -- lookup manager table definitions
 insert into lookup_manager_tables (tname, iname) VALUES
 ('events','Events')
+, ('att_categories','Upload Categories')
 ;
 
 -- att_categories
