@@ -29,6 +29,17 @@ public class AdminUsersController : FwDynamicController
         model_related = fw.model<Users>();
     }
 
+    public override void setListSearch()
+    {
+        base.setListSearch();
+
+        if (!string.IsNullOrEmpty(Utils.f2str(list_filter["access_level"])))
+        {
+            list_where += " and access_level=@access_level";
+            list_where_params["access_level"] = list_filter["access_level"];
+        }
+    }
+
     public override Hashtable ShowFormAction(int id = 0)
     {
         var ps = base.ShowFormAction(id);

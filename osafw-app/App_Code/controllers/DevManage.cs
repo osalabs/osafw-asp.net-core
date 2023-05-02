@@ -1694,7 +1694,7 @@ public class DevManageController : FwController
 
             if (Utils.f2str(fld["is_identity"]) == "1")
             {
-                sff["type"] = "group_id";
+                sff["type"] = "id";
                 sff.Remove("class_contents");
                 sff.Remove("required");
             }
