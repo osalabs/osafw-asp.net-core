@@ -514,7 +514,7 @@ public abstract class FwModel : IDisposable
                 row["_link"] = new Hashtable();
                 foreach (Hashtable lrow in linked_rows)
                 {
-                    if (row[linked_model_link.field_id] == lrow[linked_field_link_id])
+                    if (Utils.f2str(row[linked_model_link.field_id]) == Utils.f2str(lrow[linked_field_link_id]))
                     {
                         row["is_checked"] = true;
                         row["_link"] = lrow;
@@ -555,7 +555,7 @@ public abstract class FwModel : IDisposable
                 row["_link"] = new Hashtable();
                 foreach (Hashtable lrow in linked_rows)
                 {
-                    if (row[linked_model_main.field_id] == lrow[linked_field_main_id])
+                    if (Utils.f2str(row[linked_model_main.field_id]) == Utils.f2str(lrow[linked_field_main_id]))
                     {
                         row["is_checked"] = true;
                         row["_link"] = lrow;
