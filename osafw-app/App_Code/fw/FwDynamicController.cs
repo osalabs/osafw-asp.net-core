@@ -695,14 +695,14 @@ public class FwDynamicController : FwController
                 else
                 {
                     //copy list related rows from the form
-                    // row ids submitted as: item$<~model>[<~id>]
-                    // input name format: item$<~model>#<~id>[field_name]
-                    var hids = reqh("item$" + model_name);
+                    // row ids submitted as: item-<~model>[<~id>]
+                    // input name format: item-<~model>#<~id>[field_name]
+                    var hids = reqh("item-" + model_name);
                     // sort hids.Keys, so numerical keys - first and keys staring with "new-" will be last
                     var sorted_keys = hids.Keys.Cast<string>().OrderBy(x => x.StartsWith("new-") ? 1 : 0).ThenBy(x => x).ToList();
                     foreach (string row_id in sorted_keys)
                     {
-                        var row_item = reqh("item$" + model_name + "#" + row_id);
+                        var row_item = reqh("item-" + model_name + "#" + row_id);
                         row_item["id"] = row_id;
 
                         list_rows.Add(row_item);
@@ -869,16 +869,16 @@ public class FwDynamicController : FwController
 
                 //update and add new rows
 
-                // row ids submitted as: item$<~model>[<~id>]
-                // input name format: item$<~model>#<~id>[field_name]
-                var hids = reqh("item$" + model_name);
+                // row ids submitted as: item-<~model>[<~id>]
+                // input name format: item-<~model>#<~id>[field_name]
+                var hids = reqh("item-" + model_name);
                 // sort hids.Keys, so numerical keys - first and keys staring with "new-" will be last
                 var sorted_keys = hids.Keys.Cast<string>().OrderBy(x => x.StartsWith("new-") ? 1 : 0).ThenBy(x => x).ToList();
                 foreach (string row_id in sorted_keys)
                 {
                     if (row_id == del_id) continue; //skip deleted row
 
-                    var row_item = reqh("item$" + model_name + "#" + row_id);
+                    var row_item = reqh("item-" + model_name + "#" + row_id);
                     Hashtable itemdb = FormUtils.filter(row_item, save_fields);
                     FormUtils.filterCheckboxes(itemdb, row_item, save_fields_checkboxes);
 

@@ -3,6 +3,7 @@
 <script>
     $(document).ready(function() {
         $('.date').datepicker({format: 'mm/dd/yyyy'}).on('changeDate', function (e) {
+            if (e.viewMode=='years' || e.viewMode=='months' ) return; //do not trigger change yet, while user selecting year/month
             $(this).find('input').trigger('blur');
         });
 
