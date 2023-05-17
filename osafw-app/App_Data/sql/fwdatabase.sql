@@ -356,4 +356,116 @@ CREATE TABLE user_filters (
   upd_users_id          INT DEFAULT 0
 );
 
+
+-- for ROLE BASED ACCESS CONTROL only
+/*Permissions*/
+DROP TABLE IF EXISTS permissions;
+CREATE TABLE permissions (
+  id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+  icode                 NVARCHAR(64) NOT NULL, -- view, add, edit, del or custom codes
+
+  iname                 NVARCHAR(255) NOT NULL default '',
+  idesc                 NVARCHAR(MAX),
+  prio                  INT NOT NULL DEFAULT 0,     /*0-on insert, then =id, default order by prio asc,iname*/
+
+  status                TINYINT NOT NULL DEFAULT 0,        /*0-ok, 1-under upload, 127-deleted*/
+  add_time              DATETIME2 NOT NULL DEFAULT getdate(),
+  add_users_id          INT DEFAULT 0,
+  upd_time              DATETIME2,
+  upd_users_id          INT DEFAULT 0
+);
+INSERT INTO permissions (icode, iname) VALUES ('list', 'List');   -- IndexAction
+INSERT INTO permissions (icode, iname) VALUES ('view', 'View');   -- ShowAction, ShowFormAction
+INSERT INTO permissions (icode, iname) VALUES ('add', 'Add');     -- SaveAction(id=0)
+INSERT INTO permissions (icode, iname) VALUES ('edit', 'Edit');   -- SaveAction
+INSERT INTO permissions (icode, iname) VALUES ('del', 'Delete');  -- ShowDeleteAction, DeleteAction
+INSERT INTO permissions (icode, iname) VALUES ('del_perm', 'Permanently Delete'); -- DeleteAction with permanent TODO do we need this?
+GO
+
+/*Resources*/
+DROP TABLE IF EXISTS resources;
+CREATE TABLE resources (
+  id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+  icode                 NVARCHAR(64) NOT NULL, -- controller, ex: AdminUsers
+
+  iname                 NVARCHAR(255) NOT NULL default '', -- ex: Manage Members
+  idesc                 NVARCHAR(MAX),
+  prio                  INT NOT NULL DEFAULT 0,     /*0-on insert, then =id, default order by prio asc,iname*/
+
+  status                TINYINT NOT NULL DEFAULT 0,        /*0-ok, 1-under upload, 127-deleted*/
+  add_time              DATETIME2 NOT NULL DEFAULT getdate(),
+  add_users_id          INT DEFAULT 0,
+  upd_time              DATETIME2,
+  upd_users_id          INT DEFAULT 0
+);
+GO
+
+/*Available permissions for all resources*/
+DROP TABLE IF EXISTS resources_permissions;
+CREATE TABLE resources_permissions (
+  resources_id          INT NOT NULL FOREIGN KEY REFERENCES resources(id),
+  permissions_id        INT NOT NULL FOREIGN KEY REFERENCES permissions(id),
+
+  status                TINYINT NOT NULL DEFAULT 0,        /*0-ok, 1-under change, deleted instantly*/
+  add_time              DATETIME2 NOT NULL DEFAULT getdate(),
+  add_users_id          INT DEFAULT 0,
+  upd_time              DATETIME2,
+  upd_users_id          INT DEFAULT 0,
+
+  INDEX IX_resources_permissions_resources_id UNIQUE (resources_id, permissions_id),
+  INDEX IX_resources_permissions_permissions_id (permissions_id, resources_id)
+);
+GO
+
+/*Roles*/
+DROP TABLE IF EXISTS roles;
+CREATE TABLE roles (
+  id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+
+  iname                 NVARCHAR(255) NOT NULL default '',
+  idesc                 NVARCHAR(MAX),
+  prio                  INT NOT NULL DEFAULT 0,     /*0-on insert, then =id, default order by prio asc,iname*/
+
+  status                TINYINT NOT NULL DEFAULT 0,        /*0-ok, 1-under upload, 127-deleted*/
+  add_time              DATETIME2 NOT NULL DEFAULT getdate(),
+  add_users_id          INT DEFAULT 0,
+  upd_time              DATETIME2,
+  upd_users_id          INT DEFAULT 0
+);
+GO
+
+/*Assigned permissions for all roles*/
+DROP TABLE IF EXISTS roles_permissions;
+CREATE TABLE roles_permissions (
+  roles_id              INT NOT NULL FOREIGN KEY REFERENCES roles(id),
+  permissions_id        INT NOT NULL FOREIGN KEY REFERENCES permissions(id),
+
+  status                TINYINT NOT NULL DEFAULT 0,        /*0-ok, 1-under change, deleted instantly*/
+  add_time              DATETIME2 NOT NULL DEFAULT getdate(),
+  add_users_id          INT DEFAULT 0,
+  upd_time              DATETIME2,
+  upd_users_id          INT DEFAULT 0,
+
+  INDEX IX_resources_permissions_roles_id UNIQUE (roles_id, permissions_id),
+  INDEX IX_resources_permissions_permissions_id (permissions_id, roles_id)
+);
+GO
+
+/*Roles for all users*/
+DROP TABLE IF EXISTS users_roles;
+CREATE TABLE users_roles (
+  users_id              INT NOT NULL FOREIGN KEY REFERENCES users(id),
+  roles_id              INT NOT NULL FOREIGN KEY REFERENCES roles(id),
+
+  status                TINYINT NOT NULL DEFAULT 0,        /*0-ok, 1-under change, deleted instantly*/
+  add_time              DATETIME2 NOT NULL DEFAULT getdate(),
+  add_users_id          INT DEFAULT 0,
+  upd_time              DATETIME2,
+  upd_users_id          INT DEFAULT 0,
+
+  INDEX IX_users_roles_users_id UNIQUE (users_id, roles_id),
+  INDEX IX_users_roles_roles_id (roles_id, users_id)
+);
+GO
+
 -- after this file - run lookups.sql
