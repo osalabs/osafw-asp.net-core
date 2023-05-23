@@ -1,7 +1,7 @@
 .vs
 /osafw-app/obj
 /osafw-app/bin
-/osafw-app/App_Data/logs
+*.log
 /osafw-app/upload
 /osafw-tests/obj
 /osafw-tests/bin
