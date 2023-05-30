@@ -208,6 +208,11 @@ public class FwDynamicController : FwController
         // ps["select_options_parent_id") ] model.listSelectOptionsParent()
         // FormUtils.comboForDate(item["fdate_combo"], ps, "fdate_combo")
 
+        // Example: how to modify field definition
+        //var fields = (ArrayList)ps["fields"];
+        //var defRadio = defByFieldname("fradio", fields); // find field definition by fieldname
+        //defRadio["type"] = "select"; // let's change 'radio' to 'select' type
+
         ps["id"] = id;
         ps["i"] = item;
         ps["return_url"] = return_url;
@@ -896,6 +901,22 @@ public class FwDynamicController : FwController
                 sub_model.deleteUnderUpdate(id);
             }
         }
+    }
+
+    /// <summary>
+    /// return first field definition by field name
+    /// </summary>
+    /// <param name="fields"></param>
+    /// <param name="field_name"></param>
+    /// <returns></returns>
+    protected Hashtable defByFieldname(string field_name, ArrayList fields)
+    {
+        foreach (Hashtable def in fields)
+        {
+            if (Utils.f2str(def["field"]) == field_name)
+                return def;
+        }
+        return null;
     }
 
     // convert config's fields list into hashtable as field => {}
