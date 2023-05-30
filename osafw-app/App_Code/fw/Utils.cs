@@ -273,6 +273,28 @@ public class Utils
         return double.TryParse(AField.ToString(), out double _);
     }
 
+    /// <summary>
+    /// check that object is empty:
+    /// - null object
+    /// - or for strings it's trimmed zero-length string
+    /// - or for numbers it's zero
+    /// - or for bool it's false
+    /// - or for collections - no elements
+    /// </summary>
+    /// <param name="o"></param>
+    /// <returns></returns>
+    public static bool isEmpty(object o)
+    {
+        if (o == null) return true;
+        if (o is string s) return s.Trim() == "";
+        if (o is int i) return i == 0;
+        if (o is long l) return l == 0;
+        if (o is double d) return d == 0;
+        if (o is bool b) return !b;
+        if (o is ICollection col) return col.Count == 0;
+        return false;
+    }
+
     public static string sTrim(string str, int size)
     {
         if (str.Length > size) str = str.Substring(0, size) + "...";

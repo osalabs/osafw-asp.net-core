@@ -79,7 +79,7 @@ namespace osafw.Tests
             h["CCC"] = 3;
             h["DDD"] = null;
 
-            string [] keys = { "DDD", "CCC" };
+            string[] keys = { "DDD", "CCC" };
             Utils.hashFilter(h, keys);
 
             Assert.AreEqual(h.Keys.Count, 2);
@@ -608,6 +608,39 @@ namespace osafw.Tests
         public void nameCamelCaseTest()
         {
             throw new NotImplementedException();
+        }
+
+        [TestMethod()]
+        public void isEmptyTest()
+        {
+            // test for Utils.isEmpty - null, empty string, space-only string, integers, long, double, bool, arraylist, hashtable
+            Assert.IsTrue(Utils.isEmpty(null));
+            Assert.IsTrue(Utils.isEmpty(""));
+            Assert.IsTrue(Utils.isEmpty(" "));
+            Assert.IsTrue(Utils.isEmpty("  "));
+            Assert.IsFalse(Utils.isEmpty("a"));
+            Assert.IsFalse(Utils.isEmpty("0"));
+            //integers
+            Assert.IsTrue(Utils.isEmpty(0));
+            Assert.IsFalse(Utils.isEmpty(1));
+            Assert.IsFalse(Utils.isEmpty(-1));
+            //long
+            Assert.IsTrue(Utils.isEmpty(0L));
+            Assert.IsFalse(Utils.isEmpty(1L));
+            Assert.IsFalse(Utils.isEmpty(-1L));
+            //double
+            Assert.IsTrue(Utils.isEmpty(0.0));
+            Assert.IsFalse(Utils.isEmpty(1.0));
+            Assert.IsFalse(Utils.isEmpty(-1.0));
+            //bool
+            Assert.IsTrue(Utils.isEmpty(false));
+            Assert.IsFalse(Utils.isEmpty(true));
+            //arraylist
+            Assert.IsTrue(Utils.isEmpty(new ArrayList()));
+            Assert.IsFalse(Utils.isEmpty(new ArrayList() { 1 }));
+            //hashtable
+            Assert.IsTrue(Utils.isEmpty(new Hashtable()));
+            Assert.IsFalse(Utils.isEmpty(new Hashtable() { { "1", 1 } }));
         }
     }
 }
