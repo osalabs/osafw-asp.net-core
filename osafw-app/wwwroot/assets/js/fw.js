@@ -549,6 +549,7 @@ window.fw={
     var $f = $tbl.data('filter') ? $($tbl.data('filter')) : $('form[data-list-filter]:first');
 
     $tbl.on('dblclick', 'tbody tr', function(e){
+      if ($(e.target).is('input.multicb')) return;
       var url=$(this).data('url');
       if (url) window.location=url;
     });
