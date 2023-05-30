@@ -161,15 +161,34 @@ namespace osafw.Tests
         [TestMethod()]
         public void f2boolTest()
         {
-            bool r = Utils.f2bool("True");
-            Assert.IsTrue(r);
+            // tests for Utils.f2bool() - convert object of any type to bool, in case of error return false
+            Assert.IsFalse(Utils.f2bool(null));
+            Assert.IsFalse(Utils.f2bool(""));
+            Assert.IsFalse(Utils.f2bool(0));
+            Assert.IsFalse(Utils.f2bool(0.0));
+            Assert.IsFalse(Utils.f2bool(0.0f));
+            Assert.IsFalse(Utils.f2bool(0.0m));
+            Assert.IsFalse(Utils.f2bool(false));
+            Assert.IsFalse(Utils.f2bool("0"));
+            Assert.IsFalse(Utils.f2bool("false"));
+            Assert.IsFalse(Utils.f2bool("no"));
+            Assert.IsFalse(Utils.f2bool("off"));
+            Assert.IsFalse(Utils.f2bool("n"));
+            Assert.IsFalse(Utils.f2bool("N"));
+            Assert.IsFalse(Utils.f2bool("f"));
+            Assert.IsFalse(Utils.f2bool("F"));
+            Assert.IsFalse(Utils.f2bool("ABC"));            
+            Assert.IsFalse(Utils.f2bool("yes"));
+            Assert.IsFalse(Utils.f2bool("on"));            
+            Assert.IsFalse(Utils.f2bool(new ArrayList())); //empty arraylist false
 
-            r = Utils.f2bool("False");
-            Assert.IsFalse(r);
-
-            r = Utils.f2bool("ABC");
-            Assert.IsFalse(r);
+            Assert.IsTrue(Utils.f2bool("true"));
+            Assert.IsTrue(Utils.f2bool("True"));
+            Assert.IsTrue(Utils.f2bool("TRUE"));
+            Assert.IsTrue(Utils.f2bool("1")); //non-zero number            
+            Assert.IsTrue(Utils.f2bool(new ArrayList() { 1 })); //non-empty arraylist true
         }
+
 
         [TestMethod()]
         public void f2dateTest()

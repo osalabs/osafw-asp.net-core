@@ -9,7 +9,6 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Web;
-using System.Net;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Drawing.Drawing2D;
@@ -20,7 +19,6 @@ using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Security.Authentication;
-using Amazon.Runtime.Internal.Util;
 
 namespace osafw;
 
@@ -199,12 +197,19 @@ public class Utils
         // Convert.ToBase64CharArray();
     }
 
-    public static bool f2bool(object AField)
+    /// <summary>
+    /// convert object of any type to bool, in case of error return false
+    /// </summary>
+    /// <param name="o"></param>
+    /// <returns></returns>
+    public static bool f2bool(object o)
     {
-        if (AField == null) return false;
-        if (AField is bool b) return b;
-        if (f2float(AField) != 0) return true; //non-zero number is true
-        if (bool.TryParse(AField.ToString(), out bool result))
+        // convert object of any type to bool, in case of error return false
+        if (o == null) return false;
+        if (o is bool b) return b;
+        if (o is ICollection ic) return ic.Count > 0; //for collections return true if not empty
+        if (f2float(o) != 0) return true; //non-zero number is true        
+        if (bool.TryParse(o.ToString(), out bool result))
             return result;
 
         return false;
@@ -223,9 +228,14 @@ public class Utils
     }
 
 
-    public static bool isDate(object AField)
+    /// <summary>
+    /// return true if field is date
+    /// </summary>
+    /// <param name="o"></param>
+    /// <returns></returns>
+    public static bool isDate(object o)
     {
-        return f2date(AField) != null;
+        return f2date(o) != null;
     }
 
     // guarantee to return string (if cannot convert to string - just return empty string)
@@ -267,10 +277,14 @@ public class Utils
             return result;
     }
 
-    // just return false if input cannot be converted to float
-    public static bool isFloat(object AField)
+    /// <summary>
+    /// just return false if input cannot be converted to float
+    /// </summary>
+    /// <param name="o"></param>
+    /// <returns></returns>
+    public static bool isFloat(object o)
     {
-        return double.TryParse(AField.ToString(), out double _);
+        return o != null && double.TryParse(o.ToString(), out double _);
     }
 
     /// <summary>
