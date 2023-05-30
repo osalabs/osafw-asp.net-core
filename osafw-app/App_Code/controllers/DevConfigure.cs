@@ -33,7 +33,7 @@ public class DevConfigureController : FwController
 
         ps["is_db_config"] = false;
         var configdb = (Hashtable)fw.config("db");
-        if (configdb != null && configdb["main"] != null && !string.IsNullOrEmpty((string)((Hashtable)configdb["main"])["connection_string"]))
+        if (configdb != null && configdb["main"] != null && !Utils.isEmpty(((Hashtable)configdb["main"])["connection_string"]))
             ps["is_db_config"] = true;
 
         DB db;

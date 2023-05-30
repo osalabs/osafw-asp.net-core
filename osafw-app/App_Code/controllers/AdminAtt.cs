@@ -35,7 +35,7 @@ public class AdminAttController : FwAdminController
 
         base.setListSearch();
 
-        if (!string.IsNullOrEmpty((string)list_filter["att_categories_id"]))
+        if (!Utils.isEmpty(list_filter["att_categories_id"]))
         {
             list_where += " and att_categories_id=@att_categories_id";
             list_where_params["@att_categories_id"] = Utils.f2int(list_filter["att_categories_id"]);
@@ -97,7 +97,7 @@ public class AdminAttController : FwAdminController
         // Dim itemold As Hashtable = model.one(id)
 
         Hashtable itemdb = FormUtils.filter(item, save_fields);
-        if (string.IsNullOrEmpty((string)itemdb["iname"]))
+        if (Utils.isEmpty(itemdb["iname"]))
             itemdb["iname"] = "new file upload";
 
         if (id > 0)

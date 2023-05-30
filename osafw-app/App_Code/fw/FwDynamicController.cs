@@ -552,7 +552,7 @@ public class FwDynamicController : FwController
             else if (dtype == "multi")
             {
                 // complex field
-                if (!string.IsNullOrEmpty((string)def["table_link"]))
+                if (!Utils.isEmpty(def["table_link"]))
                     // def["multi_datarow") ] fw.model(def["lookup_model")).]etMultiListAL(model0.getLinkedIds(def["table_link"), ]d, def["table_link_id_name"), ]ef["table_link_linked_id_name")), ]ef)
                     def["multi_datarow"] = fw.model((string)def["lookup_model"]).getMultiListAL(model0.getLinkedIdsByDef(id, def), def);
                 else
@@ -652,7 +652,7 @@ public class FwDynamicController : FwController
             else if (dtype == "multicb")
             {
                 // complex field
-                if (!string.IsNullOrEmpty((string)def["table_link"]))
+                if (!Utils.isEmpty(def["table_link"]))
                     // model0.getLinkedIds(def["table_link"), ]d, def["table_link_id_name"), ]ef["table_link_linked_id_name"))]
                     def["multi_datarow"] = fw.model((string)def["lookup_model"]).getMultiListAL(model0.getLinkedIdsByDef(id, def), def);
                 else
@@ -846,7 +846,7 @@ public class FwDynamicController : FwController
                 fw.model<Att>().updateAttLinks(model0.table_name, id, reqh("att")); // TODO make att configurable
             else if (type == "multicb")
             {
-                if (def.ContainsKey("table_link") && !string.IsNullOrEmpty((string)def["table_link"]))
+                if (def.ContainsKey("table_link") && !Utils.isEmpty(def["table_link"]))
                     model0.updateLinked((string)def["table_link"], id, (string)def["table_link_id_name"], (string)def["table_link_linked_id_name"], reqh(def["field"] + "_multi"));
             }
             else if (type == "multicb_prio")

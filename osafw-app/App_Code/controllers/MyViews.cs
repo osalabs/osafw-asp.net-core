@@ -50,7 +50,7 @@ public class MyViewsController : FwAdminController
 
         base.setListSearch();
 
-        if (!string.IsNullOrEmpty((string)list_filter["icode"]))
+        if (!Utils.isEmpty(list_filter["icode"]))
         {
             this.list_where += " and icode=@icode";
             this.list_where_params["@icode"] = list_filter["icode"];

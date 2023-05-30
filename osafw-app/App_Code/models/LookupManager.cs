@@ -74,7 +74,7 @@ public class LookupManager : FwModel
         if (defs.Count == 0)
             throw new ApplicationException("Wrong lookup table name");
 
-        if (string.IsNullOrEmpty((string)defs["list_columns"]))
+        if (Utils.isEmpty(defs["list_columns"]))
         {
             // if no list cols - it's std table - add std fields
             if (!item.ContainsKey("add_users_id") && fw.isLogged)
@@ -146,7 +146,7 @@ public class LookupManager : FwModel
             Hashtable where = new();
             where[id_fname] = id;
 
-            if (string.IsNullOrEmpty((string)defs["list_columns"]))
+            if (Utils.isEmpty(defs["list_columns"]))
             {
                 // if no list cols - it's std table - add std fields
                 if (!item_save.ContainsKey("upd_time"))

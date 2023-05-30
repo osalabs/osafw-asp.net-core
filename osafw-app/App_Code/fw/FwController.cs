@@ -519,7 +519,7 @@ public abstract class FwController
 
     public virtual void setListSearchUserList()
     {
-        if (!string.IsNullOrEmpty((string)list_filter["userlist"]))
+        if (!Utils.isEmpty(list_filter["userlist"]))
         {
             list_where += " and id IN (select ti.item_id from " + db.qid(fw.model<UserLists>().table_items) + " ti where ti.user_lists_id=@user_lists_id and ti.add_users_id=@userId) ";
             list_where_params["user_lists_id"] = db.qi(list_filter["userlist"]);
@@ -598,7 +598,7 @@ public abstract class FwController
     {
         if (!string.IsNullOrEmpty(model0.field_status))
         {
-            if (!string.IsNullOrEmpty((string)this.list_filter["status"]))
+            if (!Utils.isEmpty(this.list_filter["status"]))
             {
                 var status = Utils.f2int(this.list_filter["status"]);
                 // if want to see trashed and not admin - just show active
@@ -956,7 +956,7 @@ public abstract class FwController
                     {"field_name",fieldname},
                     {"field_name_visible",view_list_map[fieldname]},
                     {"is_checked",true},
-                    {"is_sortable", !string.IsNullOrEmpty((string)list_sortmap[fieldname])}
+                    {"is_sortable", list_sortmap.ContainsKey(fieldname)}
                 });
                 fields_added[fieldname] = true;
             }
@@ -982,7 +982,7 @@ public abstract class FwController
                 {
                     {"field_name",k},
                     {"field_name_visible",view_list_map[k]},
-                    {"is_sortable",string.IsNullOrEmpty((string)list_sortmap[k])}
+                    {"is_sortable",list_sortmap.ContainsKey(k)}
                 });
             }
         }

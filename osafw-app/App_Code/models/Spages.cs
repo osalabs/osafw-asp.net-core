@@ -67,7 +67,7 @@ public class Spages : FwModel
         // item now contains page data for the url
         if (item.Count > 0)
         {
-            if (!string.IsNullOrEmpty((string)item["head_att_id"]))
+            if (!Utils.isEmpty(item["head_att_id"]))
                 // item["head_att_id_url_s") ] fw.model(Of Att).get_url_direct(item["head_att_id"), ]s")
                 // item["head_att_id_url_m") ] fw.model(Of Att).get_url_direct(item["head_att_id"), ]m")
                 item["head_att_id_url"] = fw.model<Att>().getUrlDirect(Utils.f2int(item["head_att_id"]));
@@ -78,14 +78,14 @@ public class Spages : FwModel
             item["top_url"] = Strings.LCase(url_parts[1]);
 
         // columns
-        if (!string.IsNullOrEmpty((string)item["idesc_left"]))
+        if (!Utils.isEmpty(item["idesc_left"]))
         {
-            if (!string.IsNullOrEmpty((string)item["idesc_right"]))
+            if (!Utils.isEmpty(item["idesc_right"]))
                 item["is_col3"] = true;
             else
                 item["is_col2_left"] = true;
         }
-        else if (!string.IsNullOrEmpty((string)item["idesc_right"]))
+        else if (!Utils.isEmpty(item["idesc_right"]))
             item["is_col2_right"] = true;
         else
             item["is_col1"] = true;
@@ -229,7 +229,7 @@ public class Spages : FwModel
             return;
         }
 
-        if (!string.IsNullOrEmpty((string)item["redirect_url"]))
+        if (!Utils.isEmpty(item["redirect_url"]))
             fw.redirect((string)item["redirect_url"]);
 
         ps["page"] = item;

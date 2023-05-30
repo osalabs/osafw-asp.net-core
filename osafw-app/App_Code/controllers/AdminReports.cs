@@ -40,7 +40,7 @@ public class AdminReportsController : FwController
 
         // get format directly form request as we don't need to remember format
         f["format"] = reqh("f")["format"];
-        if (string.IsNullOrEmpty((string)f["format"]))
+        if (Utils.isEmpty(f["format"]))
             f["format"] = "html";
 
         var report = FwReports.createInstance(fw, repcode, f);

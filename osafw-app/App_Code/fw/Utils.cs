@@ -294,6 +294,9 @@ public class Utils
     /// - or for numbers it's zero
     /// - or for bool it's false
     /// - or for collections - no elements
+    /// Example:
+    /// instead of `string.IsNullOrEmpty((string)itemdb["iname"])`
+    /// use `isEmpty(itemdb["iname"])`
     /// </summary>
     /// <param name="o"></param>
     /// <returns></returns>

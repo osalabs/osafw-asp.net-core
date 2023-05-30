@@ -46,7 +46,7 @@ public class AdminLookupManagerController : FwController
     {
         if (string.IsNullOrEmpty(dict))
             fw.redirect(base_url + "/(Dictionaries)");
-        if (!string.IsNullOrEmpty((string)defs["url"]))
+        if (!Utils.isEmpty(defs["url"]))
             fw.redirect((string)defs["url"]);
     }
 
@@ -114,7 +114,7 @@ public class AdminLookupManagerController : FwController
         Hashtable f = initFilter("_filter_lookupmanager_" + list_table_name);
 
         // sorting
-        if (string.IsNullOrEmpty((string)f["sortby"]))
+        if (Utils.isEmpty(f["sortby"]))
         {
             var is_prio_exists = false;
             foreach (Hashtable col in cols) {
@@ -146,7 +146,7 @@ public class AdminLookupManagerController : FwController
         bool is_group_headers = false;
 
         Hashtable list_cols = new();
-        if (!string.IsNullOrEmpty((string)defs["list_columns"]))
+        if (!Utils.isEmpty(defs["list_columns"]))
         {
             list_cols = Utils.commastr2hash((string)defs["list_columns"]);
             ps["is_two_modes"] = false; // if custom list defined - don't enable table edit mode
@@ -203,7 +203,7 @@ public class AdminLookupManagerController : FwController
         }
 
         list_where = " 1=1";
-        if (!string.IsNullOrEmpty((string)f["s"]))
+        if (!Utils.isEmpty(f["s"]))
         {
             list_where_params["@slike"] = "%" + f["s"] + "%";
             string swhere = "";
@@ -315,7 +315,7 @@ public class AdminLookupManagerController : FwController
         ArrayList cols = model_tables.getColumns(defs);
         bool is_fwtable = false;
 
-        if (string.IsNullOrEmpty((string)defs["list_columns"]))
+        if (Utils.isEmpty(defs["list_columns"]))
         {
             // if no custom columns - remove sys cols
             is_fwtable = true;
@@ -355,7 +355,7 @@ public class AdminLookupManagerController : FwController
             fh["iname"] = col["iname"];
             fh["value"] = item[col["name"]];
             fh["type"] = col["itype"].ToString().Trim();
-            if (!string.IsNullOrEmpty((string)col["maxlen"]))
+            if (!Utils.isEmpty(col["maxlen"]))
             {
                 if ((string)col["maxlen"] == "-1")
                 {
@@ -563,7 +563,7 @@ public class AdminLookupManagerController : FwController
                     if (item.ContainsKey(col["name"]))
                     {
                         itemdb[(string)col["name"]] = item[col["name"]];
-                        if (!string.IsNullOrEmpty((string)item[col["name"]]))
+                        if (!Utils.isEmpty(item[col["name"]]))
                             is_row_empty = false; // detect at least one non-empty value
                     }
                 }

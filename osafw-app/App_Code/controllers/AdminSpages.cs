@@ -104,7 +104,7 @@ public class AdminSpagesController : FwAdminController
 
         ps["parent"] = model.one(Utils.f2int(item["parent_id"]));
 
-        if (!string.IsNullOrEmpty((string)item["head_att_id"]))
+        if (!Utils.isEmpty(item["head_att_id"]))
             ps["att"] = fw.model<Att>().one(Utils.f2int(item["head_att_id"]));
 
         if (id > 0)

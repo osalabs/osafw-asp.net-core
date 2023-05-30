@@ -24,7 +24,7 @@ public class ReportSample : FwReports
         if (!f.ContainsKey("from_date") && !f.ContainsKey("to_date"))
             // set default filters
             f["from_date"] = DateUtils.Date2Str(DateTime.Now.AddDays(-30));// last 30 days
-        if (!string.IsNullOrEmpty((string)f["from_date"]) || !string.IsNullOrEmpty((string)f["to_date"]))
+        if (!Utils.isEmpty(f["from_date"]) || !Utils.isEmpty(f["to_date"]))
             f["is_dates"] = true;
 
         result["select_events"] = fw.model<FwEvents>().listSelectOptions();
@@ -39,7 +39,7 @@ public class ReportSample : FwReports
         // apply filters from Me.f
         string where = " ";
         Hashtable where_params = new();
-        if (!string.IsNullOrEmpty((string)f["from_date"]))
+        if (!Utils.isEmpty(f["from_date"]))
         {
             where += " and el.add_time>=@from_date";
             where_params["@from_date"] = f["from_date"];
@@ -50,7 +50,7 @@ public class ReportSample : FwReports
             where_params["@to_date"] = to_date.AddDays(1);
         }
 
-        if (!string.IsNullOrEmpty((string)f["events_id"]))
+        if (!Utils.isEmpty(f["events_id"]))
         {
             where += " and el.events_id=@events_id";
             where_params["@events_id"] = f["events_id"];
