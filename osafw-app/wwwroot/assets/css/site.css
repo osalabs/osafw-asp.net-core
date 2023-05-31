@@ -146,6 +146,10 @@ a[disabled]
   color: #000;
 }
 
+  .sidebar .nav-pills .nav-link.active {
+    color: var(--bs-nav-pills-link-active-color) !important; /*fix active nav text color for light mode*/
+  }
+
 main {
   margin-left: var(--fw-sidebar-width);
 }
