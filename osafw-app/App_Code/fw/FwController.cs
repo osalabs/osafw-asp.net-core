@@ -545,7 +545,7 @@ public abstract class FwController
             if (!string.IsNullOrEmpty(value) && (!is_dynamic_index || view_list_map.ContainsKey(fieldname)))
             {
                 string str;
-                var fieldname_sql = "ISNULL(CAST(" + db.qid(fieldname) + " as NVARCHAR), '')";
+                var fieldname_sql = "ISNULL(CAST(" + db.qid(fieldname) + " as NVARCHAR(255)), '')"; //255 need as SQL Server by default makes only 30
                 var fieldname_sql2 = "TRY_CONVERT(DECIMAL(18,1),CAST(" + db.qid(fieldname) + " as NVARCHAR))"; // SQL Server 2012+ only
                 if (value.Length > 1 && value.Substring(0, 1) == "=")
                 {
