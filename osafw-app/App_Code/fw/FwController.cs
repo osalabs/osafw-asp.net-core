@@ -329,11 +329,21 @@ public abstract class FwController
     /// </summary>
     /// <param name="item">fields/values to validate</param>
     /// <param name="fields">field names required to be non-empty (trim used)</param>
+    /// <param name="form_errors">optional - form errors to fill</param>
     /// <returns>true if all required field names non-empty</returns>
-    /// <remarks>also set global fw.ERR[REQUIRED]=true in case of validation error</remarks>
-    public virtual bool validateRequired(Hashtable item, Array fields)
+    /// <remarks>also set global fw.FormErrors[REQUIRED]=true in case of validation error if no form_errors defined</remarks>
+    public virtual bool validateRequired(Hashtable item, Array fields, Hashtable form_errors = null)
     {
         bool result = true;
+
+        var is_gloabl_errors = false;
+        if (form_errors == null)
+        {
+            //if no form_errors passed - use global fw.FormErrors
+            form_errors = fw.FormErrors;
+            is_gloabl_errors = true;
+        }
+
         if (item != null && fields.Length > 0)
         {
             foreach (string fld in fields)
@@ -341,14 +351,16 @@ public abstract class FwController
                 if (!string.IsNullOrEmpty(fld) && (!item.ContainsKey(fld) || ((string)item[fld]).Trim() == ""))
                 {
                     result = false;
-                    fw.FormErrors[fld] = true;
+                    form_errors[fld] = true;
                 }
             }
         }
         else
             result = false;
-        if (!result)
-            fw.FormErrors["REQUIRED"] = true;
+
+        if (!result && is_gloabl_errors)
+            form_errors["REQUIRED"] = true; // set global error
+
         return result;
     }
     // same as above but fields param passed as a qw string

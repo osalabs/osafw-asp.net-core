@@ -516,11 +516,13 @@ window.fw={
         $.each(errors,function(key, errcode) {
           var $input = $f.find('[name="item['+key+']"],[name="'+key+'"]');
           if ($input.length){
-            $input.closest('.form-group, .form-row').not('.noerr').addClass('has-danger'); //highlight whole row (unless .noerr exists)
+            var $p=$input.parent();
+            if ($p.is('.input-group,.custom-control,.dropdown,.twitter-typeahead')) $p = $p.parent();
+            if (!$p.is('td,th')){//does not apply to inputs in subtables
+              $input.closest('.form-group, .form-row').not('.noerr').addClass('has-danger'); //highlight whole row (unless .noerr exists)
+            }
             $input.addClass('is-invalid'); //mark input itself
             if (errcode!==true && errcode.length){
-              var $p=$input.parent();
-              if ($p.is('.input-group,.custom-control,.dropdown')) $p = $p.parent();
               $p.find('.err-'+errcode).addClass('invalid-feedback'); //find/show specific error message
             }
           }

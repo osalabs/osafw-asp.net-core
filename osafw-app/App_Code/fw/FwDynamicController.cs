@@ -314,6 +314,9 @@ public class FwDynamicController : FwController
     protected virtual bool validateSimpleDynamic(int id, Hashtable item)
     {
         bool result = true;
+
+        var subtable_del = reqh("subtable_del");
+
         ArrayList fields = (ArrayList)this.config["showform_fields"];
         foreach (Hashtable def in fields)
         {
@@ -321,35 +324,108 @@ public class FwDynamicController : FwController
             if (string.IsNullOrEmpty(field))
                 continue;
 
-            string field_value = (string)item[field];
+            string type = (string)def["type"];
 
-            var val = Utils.qh((string)def["validate"]);
-            if (val.ContainsKey("exists") && model0.isExistsByField(field_value, id, field))
+            if (type == "subtable_edit")
             {
-                fw.FormErrors[field] = "EXISTS";
-                result = false;
+                //validate subtable rows
+                var model_name = (string)def["model"];
+                var sub_model = fw.model(model_name);
+
+                var save_fields = (string)def["required_fields"];
+                var save_fields_checkboxes = (string)def["save_fields_checkboxes"];
+
+                //check if we delete specific row
+                var del_id = (string)subtable_del[model_name] ?? "";
+
+                // row ids submitted as: item-<~model>[<~id>]
+                // input name format: item-<~model>#<~id>[field_name]
+                var hids = reqh("item-" + model_name);
+                // sort hids.Keys, so numerical keys - first and keys staring with "new-" will be last
+                var sorted_keys = hids.Keys.Cast<string>().OrderBy(x => x.StartsWith("new-") ? 1 : 0).ThenBy(x => x).ToList();
+                foreach (string row_id in sorted_keys)
+                {
+                    if (row_id == del_id) continue; //skip deleted row
+
+                    var row_item = reqh("item-" + model_name + "#" + row_id);
+                    Hashtable itemdb = FormUtils.filter(row_item, save_fields);
+                    FormUtils.filterCheckboxes(itemdb, row_item, save_fields_checkboxes);
+
+                    if (row_id.StartsWith("new-"))
+                        itemdb[sub_model.linked_field_main_id] = id;
+
+                    //VAILIDATE itemdb
+                    var is_valid = validateSubtableRowDynamic(row_id, itemdb, def);
+                }
             }
-            if (val.ContainsKey("isemail") && !FormUtils.isEmail(field_value))
+            else
             {
-                fw.FormErrors[field] = "WRONG";
-                result = false;
+                // other types - use "validate" field
+                var val = Utils.qh((string)def["validate"]);
+                if (val.Count > 0)
+                {
+                    string field_value = (string)item[field];
+
+                    if (val.ContainsKey("exists") && model0.isExistsByField(field_value, id, field))
+                    {
+                        fw.FormErrors[field] = "EXISTS";
+                        result = false;
+                    }
+                    if (val.ContainsKey("isemail") && !FormUtils.isEmail(field_value))
+                    {
+                        fw.FormErrors[field] = "WRONG";
+                        result = false;
+                    }
+                    if (val.ContainsKey("isphone") && !FormUtils.isPhone(field_value))
+                    {
+                        fw.FormErrors[field] = "WRONG";
+                        result = false;
+                    }
+                    if (val.ContainsKey("isdate") && !Utils.isDate(field_value))
+                    {
+                        fw.FormErrors[field] = "WRONG";
+                        result = false;
+                    }
+                    if (val.ContainsKey("isfloat") && !Utils.isFloat(field_value))
+                    {
+                        fw.FormErrors[field] = "WRONG";
+                        result = false;
+                    }
+                }
             }
-            if (val.ContainsKey("isphone") && !FormUtils.isPhone(field_value))
-            {
-                fw.FormErrors[field] = "WRONG";
-                result = false;
-            }
-            if (val.ContainsKey("isdate") && !Utils.isDate(field_value))
-            {
-                fw.FormErrors[field] = "WRONG";
-                result = false;
-            }
-            if (val.ContainsKey("isfloat") && !Utils.isFloat(field_value))
-            {
-                fw.FormErrors[field] = "WRONG";
-                result = false;
-            }
+
         }
+        return result;
+    }
+
+    /// <summary>
+    /// validate single subtable row using def[required_fields] and fill fw.FormErrors with row errors if any
+    /// Override in controller and add custom validation if needed
+    /// </summary>
+    /// <param name="row_id">row_id can start with "new-" (for new rows) or be numerical id (existing rows)</param>
+    /// <param name="item">submitted row data from the form</param>
+    /// <param name="def">subable definition from config.json</param>
+    /// <returns></returns>
+    protected virtual bool validateSubtableRowDynamic(string row_id, Hashtable item, Hashtable def)
+    {
+        var result = true;
+        var required_fields = Utils.qw((string)def["required_fields"]);
+        if (required_fields.Length == 0)
+            return result; //nothing to validate
+
+        var row_errors = new Hashtable();
+        result = this.validateRequired(item, required_fields, row_errors);
+        if (!result)
+        {
+            //fill global fw.FormErrors with row errors
+            var model_name = (string)def["model"];
+            foreach ( var field_name in row_errors.Keys ) {
+                // row input names format: item-<~model>#<~id>[field_name]
+                fw.FormErrors[$"item-{model_name}#{row_id}[{field_name}]"] = true;
+            }
+            fw.FormErrors["REQUIRED"] = true; // also set global error
+        }
+
         return result;
     }
 
@@ -887,14 +963,9 @@ public class FwDynamicController : FwController
                     Hashtable itemdb = FormUtils.filter(row_item, save_fields);
                     FormUtils.filterCheckboxes(itemdb, row_item, save_fields_checkboxes);
 
-                    itemdb["status"] = FwModel.STATUS_ACTIVE;
-                    if (row_id.StartsWith("new-"))
-                    {
-                        itemdb[sub_model.linked_field_main_id] = id;
-                        sub_model.add(itemdb);
-                    }
-                    else
-                        sub_model.update(Utils.f2int(row_id), itemdb);
+                    itemdb["status"] = FwModel.STATUS_ACTIVE; // mark new and updated existing rows as active
+
+                    modelAddOrUpdateSubtableDynamic(id, row_id, itemdb, def, sub_model);
                 }
 
                 //remove any not updated rows (i.e. those deleted by user)
@@ -902,6 +973,41 @@ public class FwDynamicController : FwController
             }
         }
     }
+
+
+    /// <summary>
+    /// modelAddOrUpdate for subtable with dynamic model
+    /// </summary>
+    /// <param name="main_id">main entity id</param>
+    /// <param name="row_id">row_id can start with "new-" (for new rows) or be numerical id (existing rows)</param>
+    /// <param name="fields">fields to save to db</param>
+    /// <param name="def">subable definition from config.json</param>
+    /// <param name="sub_model">optional subtable model, if not passed def[model] will be used</param>
+    /// <returns></returns>
+    protected virtual int modelAddOrUpdateSubtableDynamic(int main_id, string row_id, Hashtable fields, Hashtable def, FwModel sub_model = null)
+    {
+        int id;
+
+        if (sub_model == null)
+        {
+            var model_name = (string)def["model"];
+            sub_model = fw.model(model_name);
+        }
+        
+        if (row_id.StartsWith("new-"))
+        {
+            fields[sub_model.linked_field_main_id] = main_id;
+            id = sub_model.add(fields);
+        }
+        else
+        {
+            id = Utils.f2int(row_id);
+            sub_model.update(id, fields);
+        }
+            
+        return id;
+    }
+
 
     /// <summary>
     /// return first field definition by field name
