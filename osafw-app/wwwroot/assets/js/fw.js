@@ -195,6 +195,8 @@ window.fw={
       var el=this;
       if (!el._is_confirmed){
         e.preventDefault();
+        if (!$('.multicb:checked').length) return;//exit if no rows selected
+
         fw.confirm('Are you sure to delete multiple selected records?', function(){
           el._is_confirmed=true;
           $(el).click();//trigger again after confirmed
