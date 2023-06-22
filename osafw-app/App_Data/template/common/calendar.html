@@ -2,16 +2,29 @@
 <script src="<~GLOBAL[ASSETS_URL]>/js/bootstrap-datepicker.js"></script>
 <script>
     $(document).ready(function() {
-        $('.date').datepicker({format: 'mm/dd/yyyy'}).on('changeDate', function (e) {
-            if (e.viewMode=='years' || e.viewMode=='months' ) return; //do not trigger change yet, while user selecting year/month
-            $(this).find('input').trigger('blur');
-        });
+        $('.date').datepicker({format: 'mm/dd/yyyy'})
+            .on('changeDate', function (e) {
+                if (e.viewMode=='years' || e.viewMode=='months' ) return; //do not trigger change yet, while user selecting year/month
+                $(this).find('input').trigger('change');
+            })
+            //focus/blur for proper focus if multiple datepickers present on the page
+            .on('show', function(e){
+                $(this).find('input').focus();
+            })
+            .on('hide', function(e){
+                $(this).find('input').blur();
+            })
+            //update calendar on manual change
+            .find('input').on('change', function(e) {
+                if (e.originalEvent === undefined) return; //changed from the calendar, no need to update
+                $(this).closest('.date').datepicker('update');
+            });
 
         //allow to support time - just add "datetime" class
         function formatAMPM(date) {
           var hours = date.getHours();
           var minutes = date.getMinutes();
-          var ampm = hours >= 12 ? 'pm' : 'am';
+          var ampm = hours >= 12 ? 'PM' : 'AM';
           hours = hours % 12;
           hours = hours ? hours : 12; // the hour '0' should be '12'
           minutes = minutes < 10 ? '0'+minutes : minutes;
