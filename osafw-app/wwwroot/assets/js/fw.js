@@ -450,7 +450,7 @@ window.fw={
               //console.log('ajaxSubmit error', e);
               $f.data('is-ajaxsubmit',false);
               $f.trigger('autosave-error',[e]);
-              //hint_error('Server error occured during auto save form');
+              fw.error(e.responseJSON !== undefined && e.responseJSON.err_msg !== undefined ? e.responseJSON.err_msg : 'Auto-save error. Server error occured.', hint_options);
           }
       });
     });
