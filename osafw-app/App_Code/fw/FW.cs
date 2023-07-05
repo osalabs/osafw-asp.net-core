@@ -67,8 +67,8 @@ public class FwRoute
     public string action;
     public string action_raw;
     public string id;
-    public string action_more;
-    public string format;
+    public string action_more; // new, edit, delete, etc
+    public string format; // html, json, pjax
     public ArrayList @params;
 }
 
@@ -1012,6 +1012,12 @@ public class FW : IDisposable
     {
         logger(LogLevel.TRACE, $"Route Redirect to [{controller}.{action}]", args);
         setController((!string.IsNullOrEmpty(controller) ? controller : route.controller), action);
+
+        if (args != null)
+        {
+            this.route.id = args[0].ToString(); //first argument goes to id
+            this.route.@params = new ArrayList(args); // all arguments go to params
+        }
 
         callRoute();
     }
