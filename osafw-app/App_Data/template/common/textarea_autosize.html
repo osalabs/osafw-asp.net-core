@@ -1,6 +1,11 @@
 <script src="<~GLOBAL[ASSETS_URL]>/js/jquery.textarea_autosize.min.js"></script>
 <script>
 $(document).ready(function(){
-    $('.autoresize').textareaAutoSize();
+    var $autoresize = $('.autoresize')
+    //prevent textarea downsizing from the initial DOM height
+    $autoresize.each(function(){
+        $(this).css('min-height', $(this).outerHeight())
+    });
+    $autoresize.textareaAutoSize();
 });
 </script>
