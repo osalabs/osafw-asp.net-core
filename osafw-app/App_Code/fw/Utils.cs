@@ -208,7 +208,7 @@ public class Utils
         if (o == null) return false;
         if (o is bool b) return b;
         if (o is ICollection ic) return ic.Count > 0; //for collections return true if not empty
-        if (f2float(o) != 0) return true; //non-zero number is true        
+        if (f2float(o) != 0) return true; //non-zero number is true
         if (bool.TryParse(o.ToString(), out bool result))
             return result;
 
@@ -514,7 +514,7 @@ public class Utils
     public static void writeXLSExport(FW fw, string filename, string csv_export_headers, string csv_export_fields, ArrayList rows)
     {
         Hashtable ps = new();
-        
+
         ArrayList headers = new();
         foreach (string str in csv_export_headers.Split(","))
         {
@@ -1296,6 +1296,17 @@ public class Utils
     public static string urlescape(string str)
     {
         return HttpUtility.UrlEncode(str);
+    }
+
+    /* <summary>
+    *  unescapes/decodes escaped/encoded string back
+    *  </summary>
+    *  <param name="str"></param>
+    *  <returns></returns>
+    */
+    public static string urlunescape(string str)
+    {
+        return HttpUtility.UrlDecode(str);
     }
 
     /// <summary>
