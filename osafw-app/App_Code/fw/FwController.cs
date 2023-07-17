@@ -755,6 +755,8 @@ public abstract class FwController
                 // or return to add new form
                 url = this.base_url + "/new";
                 url_q += "&copy_id=" + id;
+                if (!string.IsNullOrEmpty(return_url))
+                    url_q += "&return_url=" + Utils.urlescape(return_url);
                 is_add_new = true;
             }
             else
