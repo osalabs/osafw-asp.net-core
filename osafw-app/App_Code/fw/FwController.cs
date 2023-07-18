@@ -755,8 +755,6 @@ public abstract class FwController
                 // or return to add new form
                 url = this.base_url + "/new";
                 url_q += "&copy_id=" + id;
-                if (!string.IsNullOrEmpty(return_url))
-                    url_q += "&return_url=" + Utils.urlescape(return_url);
                 is_add_new = true;
             }
             else
@@ -765,6 +763,10 @@ public abstract class FwController
         }
         else
             url = this.base_url;
+
+        //preserve return url if present
+        if (!string.IsNullOrEmpty(return_url))
+            url_q += "&return_url=" + Utils.urlescape(return_url);
 
         //add base_url_suffix if any
         if (!string.IsNullOrEmpty(base_url_suffix))
