@@ -19,6 +19,10 @@ input, button, select, optgroup, textarea, label, .alert, .badgeX, .blockquote-f
   --bs-nav-pills-link-active-color: #5e6e82;
 }
 
+.table {
+  --bs-table-hover-bg: #eef2f9;
+}
+
 main {
   padding-top: 0.5rem;
   padding-bottom: 0.5rem;
