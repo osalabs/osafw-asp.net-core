@@ -332,7 +332,7 @@ public abstract class FwModel : IDisposable
 
         this.removeCache(id);
 
-        if (!string.IsNullOrEmpty(field_prio) && string.IsNullOrEmpty(Utils.f2str(item[field_prio])))
+        if (!string.IsNullOrEmpty(field_prio) && !item.ContainsKey(field_prio))
         {
             //if priority field defined - update it with newly added id to allow proper re/ordering
             db.update(table_name, DB.h(field_prio, id), DB.h(field_id, id));
