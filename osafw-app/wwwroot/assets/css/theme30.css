@@ -13,6 +13,9 @@ input, button, select, optgroup, textarea, label, .alert, .badgeX, .blockquote-f
 [data-bs-theme=light]{
   --theme-color: #2c7be5;
   --theme-body-color: #5e6e82;
+  /* --theme-hover-bg: #f4f5fb; */
+  --theme-hover-bg: #e7effb;
+  --theme-table-striped-bg: #f4f5fb;
   --fw-body-bg: #edf2f9;
   --bs-emphasis-color-rgb: rgb(94, 110, 130); /*#5e6e82*/
   /*--bs-link-color-rgb: rgb(44, 123, 229);*/ /*#2c7be5*/
@@ -20,7 +23,24 @@ input, button, select, optgroup, textarea, label, .alert, .badgeX, .blockquote-f
 }
 
 .table {
-  --bs-table-hover-bg: #eef2f9;
+  --bs-table-hover-bg: #e7effb;
+  --bs-table-striped-bg: var(--theme-table-striped-bg);
+  --bs-table-header-bg: var(--fw-body-bg);
+}
+
+.dropdown-menu {
+  --bs-dropdown-item-padding-y: 0.5rem;
+  --bs-dropdown-link-hover-bg: var(--theme-hover-bg);
+  --bs-dropdown-link-active-bg: var(--theme-color);
+  --bs-dropdown-link-active-color: #fff;
+  --bs-dropdown-link-color: var(--theme-body-color);
+  --bs-dropdown-link-hover-color: var(--bs-body-color);
+}
+
+.alert {
+  --bs-alert-padding-y: 0.5rem;
+  --bs-alert-padding-x: 0.75rem;
+  font-size: 0.875rem;
 }
 
 main {
@@ -57,46 +77,67 @@ body {
   border: none;
 }
 
-  .table > :not(caption) > * > * {
-    border-bottom-width: 1px;
+.table > :not(caption) > * > * {
+  border-bottom-width: 1px;
+}
+
+.sidebar > div {
+  background-color: var(--fw-body-bg) !important;
+  /*padding: 0px !important;*/
+}
+.sidebar .nav{
+  background-color: #fff;
+  padding: 0.5rem 0 0.5rem 0;
+  margin-left: 0.5rem;
+  margin-right: 0.5rem;
+  border-radius: .375rem;
+}
+.sidebar .nav-link {
+  font-weight: 500;
+  font-size: .875rem;
+  color: var(--theme-body-color) !important;
+  border-radius: 0;
+}
+.sidebar .nav-link:hover {
+  background-color: var(--theme-hover-bg);
+  color: var(--bs-body-color) !important;
+}
+.sidebar .nav-link.disabled {
+  color: var(--bs-gray-dark) !important;
+  margin-top: 0.75rem;
+  text-transform: uppercase;
+  font-size: 1rem;
+}
+.sidebar .nav-link.active {
+  background-color: var(--theme-color);
+  border-radius: 0;
+}
+  .sidebar .nav-link.active > a{
+    color: #fff;
   }
 
-  .sidebar > div {
-    background-color: var(--fw-body-bg) !important;
-    /*padding: 0px !important;*/
+.sidebar .glyphicon, .sidebar .bi {
+  color: var(--theme-body-color);
+}
+  .sidebar .glyphicon, .sidebar .nav-link.active .bi {
+    color: #fff;
   }
-  .sidebar .nav{
-    background-color: #fff;
-    padding: 0.5rem 0 0.5rem 0;
-    margin-left: 0.5rem;
-    margin-right: 0.5rem;
-    border-radius: .375rem;
+  .sidebar .nav-link > .bi:first-child {
+    margin-right: 0.125rem;
   }
-  .sidebar .nav-link {
-    font-weight: 500;
-    font-size: .875rem;
-    color: var(--theme-body-color) !important;
-  }
-  .sidebar .nav-link.disabled {
-    color: var(--bs-gray-dark) !important;
-    margin-top: 0.75rem;
-    text-transform: uppercase;
-    font-size: 1rem;
-  }
-  .sidebar .nav-link.active {
-    background-color: var(--theme-color);
-    border-radius: 0;
-  }
-    .sidebar .nav-link.active > a{
-      color: #fff;
-    }
 
-  .sidebar .glyphicon, .sidebar .bi {
-    color: var(--theme-body-color);
-  }
-    .sidebar .glyphicon, .sidebar .nav-link.active .bi {
-      color: #fff;
-    }
+.dropdown-item  {
+  font-weight: 500;
+  font-size: .875rem;
+}
+
+.dropdown-item > .bi:first-child {
+  margin-right: 0.125rem;
+}
+
+.dropdown-item:active .bi {
+  color: #fff;
+}
 
 .card {
   border-radius: .375rem;
@@ -109,14 +150,14 @@ label {
   letter-spacing: .02em;
 }
 
-.col-form-label {
+.col-form-label:not(.col-form-lg):not(.col-form-sm):not(.col-form-md) {
   font-size: 0.875rem;
   padding-top: calc(0.1875rem + var(--bs-border-width));
   padding-bottom: calc(0.1875rem + var(--bs-border-width));
 }
 
-.form-control,
-.form-select
+.form-control:not(.form-control-lg):not(.form-control-sm):not(.form-control-md),
+.form-select:not(.form-select-lg):not(.form-select-sm):not(.form-select-md)
 {
   padding: .1875rem .75rem;
   font-size: 0.875rem;
@@ -128,7 +169,7 @@ label {
   padding-bottom: calc(0.375rem + 0.1875rem);
 }
 
-.btn {
+.btn:not(.btn-lg):not(.btn-sm):not(.btn-md) {
   padding: .1875rem .75rem;
   font-size: 0.875rem;
 }
@@ -145,7 +186,7 @@ label {
 }
   .table thead{
     color: #344050;
-    background-color: var(--fw-body-bg) !important;
+    background-color: var(--bs-table-header-bg) !important;
   }
     .table thead th{
       background-color: unset;
