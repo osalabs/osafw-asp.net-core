@@ -1,15 +1,19 @@
 /*blue theme*/
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500&display=swap');
 
-input, button, select, optgroup, textarea, label, .alert, .badge, .blockquote-footer, .btn, [data-list] .page, .tox .tox-menu__footer .tox-button:last-child, .tox .tox-dialog__footer .tox-button:last-child, .tox .tox-menu__footer .tox-button--secondary, .tox .tox-dialog__footer .tox-button--secondary, .navbar, .sidebar, .pagination, .valid-feedback, .invalid-feedback {
+input, button, select, optgroup, textarea, label, .alert, .badgeX, .blockquote-footer, .btn, [data-list] .page, .tox .tox-menu__footer .tox-button:last-child, .tox .tox-dialog__footer .tox-button:last-child, .tox .tox-menu__footer .tox-button--secondary, .tox .tox-dialog__footer .tox-button--secondary, .navbar, .sidebar, .pagination, .valid-feedback, .invalid-feedback {
     font-family: "Poppins",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
+}
+
+.badge {
+  font-family: var(--bs-font-monospace);
 }
 
 :root,
 [data-bs-theme=light]{
   --theme-color: #2c7be5;
   --theme-body-color: #5e6e82;
-  --fw-body-bg: #EDF2F9;
+  --fw-body-bg: #edf2f9;
   --bs-emphasis-color-rgb: rgb(94, 110, 130); /*#5e6e82*/
   /*--bs-link-color-rgb: rgb(44, 123, 229);*/ /*#2c7be5*/
   --bs-nav-pills-link-active-color: #5e6e82;
@@ -59,8 +63,7 @@ body {
   }
   .sidebar .nav{
     background-color: #fff;
-    padding-left: 0;
-    padding-right: 0;
+    padding: 0.5rem 0 0.5rem 0;
     margin-left: 0.5rem;
     margin-right: 0.5rem;
     border-radius: .375rem;
@@ -71,11 +74,14 @@ body {
     color: var(--theme-body-color) !important;
   }
   .sidebar .nav-link.disabled {
-    color: #344050;
-    margin-top: 1.5rem;
+    color: var(--bs-gray-dark) !important;
+    margin-top: 0.75rem;
+    text-transform: uppercase;
+    font-size: 1rem;
   }
   .sidebar .nav-link.active {
-    background-color: #6297df;
+    background-color: var(--theme-color);
+    border-radius: 0;
   }
     .sidebar .nav-link.active > a{
       color: #fff;
@@ -84,7 +90,7 @@ body {
   .sidebar .glyphicon, .sidebar .bi {
     color: var(--theme-body-color);
   }
-    .sidebar .glyphicon, .fwlayout-fluid .sidebar .nav-item.active .bi {
+    .sidebar .glyphicon, .sidebar .nav-link.active .bi {
       color: #fff;
     }
 
@@ -101,6 +107,8 @@ label {
 
 .col-form-label {
   font-size: 0.875rem;
+  padding-top: calc(0.1875rem + var(--bs-border-width));
+  padding-bottom: calc(0.1875rem + var(--bs-border-width));
 }
 
 .form-control,
@@ -131,10 +139,13 @@ label {
 .table {
   color: var(--theme-body-color);
 }
-.table thead{
-  color: #344050;
-  background-color: #edf2f9;
-}
+  .table thead{
+    color: #344050;
+    background-color: var(--fw-body-bg) !important;
+  }
+    .table thead th{
+      background-color: unset;
+    }
 
 table.list tbody td {
   color: var(--theme-body-color);
@@ -151,19 +162,29 @@ table.list tbody td {
 }
 
 table.list > thead > tr > th[data-sort] {
-  color: #344050;
+  color: var(--bs-link-color);
   text-decoration: none;
   cursor: pointer;
 }
 table.list > thead > tr > th[data-sort]:not(.active-sort):after {
-  color: #c6ccd5;
-  content: url(/assets/img/chevron-expand.svg);
+  height: 1rem;
+  width: 1rem;
+  display: inline-block;
+  vertical-align: middle;
+  margin-top: -0.125rem;
+  margin-left: 0.0625rem;
+  content: '';
+  -webkit-mask: url(/assets/img/chevron-expand.svg) no-repeat 50% 50%;
+  mask: url(/assets/img/chevron-expand.svg) no-repeat 50% 50%;
+  -webkit-mask-size: cover;
+  mask-size: cover;
+  background-color: var(--bs-gray-500);
 }
 
-table.list > thead > tr > th[data-sort].active-sort {
+/* table.list > thead > tr > th[data-sort].active-sort {
   background-color: transparent !important;
   color: var(--theme-color);
-}
+} */
 
 .pagination .page-link {
   padding: .25rem .5rem;
@@ -177,7 +198,7 @@ table.list > thead > tr > th[data-sort].active-sort {
 
 /* Markdown Editor adjustments*/
 .md-editor .md-footer, .md-editor>.md-header {
-  background: #edf2f9 !important;
+  background: var(--fw-body-bg) !important;
 }
 
 .md-editor>.md-header.btn-toolbar .btn {
