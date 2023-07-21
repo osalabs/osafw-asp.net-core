@@ -115,6 +115,7 @@ public class S3 : FwModel
     {
         logger("uploading to S3: key=[" + key + "], filepath=[" + filepath + "]");
 
+        // https://docs.aws.amazon.com/sdkfornet/v3/apidocs/items/S3/TS3StorageClass.html
         S3StorageClass s3_storage_class;
         if (storage_class == "GLACIER_IR")
             s3_storage_class = S3StorageClass.GlacierInstantRetrieval;
