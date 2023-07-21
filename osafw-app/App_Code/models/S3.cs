@@ -109,15 +109,24 @@ public class S3 : FwModel
     /// <param name="file">file from http upload</param>
     /// <param name="disposition">if defined (ex: inline) - Content-Disposition with file.FileName added</param>
     /// <param name="filename">optional filename to include in disposition header</param>
+    /// <param name="storage_class">S3 Storage Class, default is STANDARD, can be GLACIER_IR for warm archive files</param>
     /// <returns></returns>
-    public PutObjectResponse uploadLocalFile(string key, string filepath, string disposition = "", string filename = "")
+    public PutObjectResponse uploadLocalFile(string key, string filepath, string disposition = "", string filename = "", string storage_class = "STANDARD")
     {
         logger("uploading to S3: key=[" + key + "], filepath=[" + filepath + "]");
+
+        S3StorageClass s3_storage_class;
+        if (storage_class == "GLACIER_IR")
+            s3_storage_class = S3StorageClass.GlacierInstantRetrieval;
+        else
+            s3_storage_class = S3StorageClass.Standard;
+
         var request = new PutObjectRequest()
         {
             BucketName = this.bucket,
             Key = this.root + key,
-            FilePath = filepath
+            FilePath = filepath,
+            StorageClass = s3_storage_class
         };
         request.Headers["Content-Type"] = UploadUtils.mimeMapping(filepath);
 
