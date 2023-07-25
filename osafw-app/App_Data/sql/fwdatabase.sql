@@ -412,7 +412,7 @@ CREATE TABLE resources_permissions (
   upd_time              DATETIME2,
   upd_users_id          INT DEFAULT 0,
 
-  INDEX IX_resources_permissions_resources_id UNIQUE (resources_id, permissions_id),
+  PRIMARY KEY (resources_id, permissions_id),
   INDEX IX_resources_permissions_permissions_id (permissions_id, resources_id)
 );
 GO
@@ -433,6 +433,13 @@ CREATE TABLE roles (
   upd_users_id          INT DEFAULT 0
 );
 GO
+INSERT INTO roles (iname) VALUES ('Admin');
+INSERT INTO roles (iname) VALUES ('Manager');
+INSERT INTO roles (iname) VALUES ('Employee');
+INSERT INTO roles (iname) VALUES ('Customer Service');
+INSERT INTO roles (iname) VALUES ('Vendor');
+INSERT INTO roles (iname) VALUES ('Customer');
+GO
 
 /*Assigned permissions for all roles*/
 DROP TABLE IF EXISTS roles_permissions;
@@ -446,7 +453,7 @@ CREATE TABLE roles_permissions (
   upd_time              DATETIME2,
   upd_users_id          INT DEFAULT 0,
 
-  INDEX IX_resources_permissions_roles_id UNIQUE (roles_id, permissions_id),
+  PRIMARY KEY (roles_id, permissions_id),
   INDEX IX_resources_permissions_permissions_id (permissions_id, roles_id)
 );
 GO
@@ -463,7 +470,7 @@ CREATE TABLE users_roles (
   upd_time              DATETIME2,
   upd_users_id          INT DEFAULT 0,
 
-  INDEX IX_users_roles_users_id UNIQUE (users_id, roles_id),
+  PRIMARY KEY (users_id, roles_id),
   INDEX IX_users_roles_roles_id (roles_id, users_id)
 );
 GO

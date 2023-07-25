@@ -1,0 +1,43 @@
+<table class="mb-3 w-100">
+   <thead>
+      <tr>
+         <th class="col">`ID`</th>
+         <th class="col">`Demo Dict`</th>
+         <th class="col">`Title`</th>
+         <th class="col">`Notes`</th>
+         <th class="col">`Y/N`</th>
+         <th></th>
+      </tr>
+   </thead>
+   <tbody>
+   <~list_rows repeat inline>
+      <tr>
+         <td>
+            <~id unless="is_new"><~/common/form/idnew if="is_new">
+            <input type="hidden" name="item-<~model>[<~id>]" value="1">
+         </td>
+         <td>
+            <select id="demo_dicts_id-<~model>#<~id>" name="item-<~model>#<~id>[demo_dicts_id]" class="form-control">
+              <option value="">- `select` -</option>
+              <~select_demo_dicts select="demo_dicts_id">
+            </select>
+         </td>
+         <td>
+            <input type="input" id="iname-<~model>#<~id>" name="item-<~model>#<~id>[iname]" value="<~iname>" class="form-control" data-autocomplete="<~/admin/demos/url>/(Autocomplete)?q=%QUERY">
+         </td>
+         <td>
+            <textarea id="idesc-<~model>#<~id>" name="item-<~model>#<~id>[idesc]" class="form-control" rows="1"><~idesc></textarea>
+         </td>
+         <td>
+            <div class="form-check form-check-inline">
+               <input class="form-check-input" type="checkbox" id="is_checkbox-<~model>#<~id>" name="item-<~model>#<~id>[is_checkbox]" value="1" <~/common/checked if="is_checkbox">>
+               <label class="form-check-label" for="is_checkbox-<~model>#<~id>">`Yes`</label>
+            </div>
+         </td>
+         <td class="text-end">
+            <button name="subtable_del[<~model>]" value="<~id>" class="btn btn-link text-danger on-submit" data-refreshX title="`Delete`"><~/common/icons/x></button>
+         </td>
+      </tr>
+   </~list_rows>
+   </tbody>
+</table>
