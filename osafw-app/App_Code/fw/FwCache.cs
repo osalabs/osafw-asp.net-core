@@ -114,7 +114,7 @@ public class FwCache
         var plen = prefix.Length;
         foreach (string key in new ArrayList(request_cache.Keys))
         {
-            if (key.Substring(0, plen) == prefix)
+            if (key.Length > plen && key.Substring(0, plen) == prefix)
             {
                 request_cache.Remove(key);
             }

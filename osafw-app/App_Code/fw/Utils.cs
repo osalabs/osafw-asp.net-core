@@ -256,6 +256,7 @@ public class Utils
 
         return 0;
     }
+
     public static long f2long(object AField)
     {
         if (AField == null) return 0;
@@ -264,6 +265,15 @@ public class Utils
             return result;
 
         return 0;
+    }
+
+    public static Single f2single(object AField)
+    {
+        if (AField == null) return 0f;
+        if (Single.TryParse(AField.ToString(), out Single result))
+            return result;
+
+        return 0f;
     }
 
     // convert to double, optionally throw error
