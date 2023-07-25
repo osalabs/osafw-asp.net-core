@@ -364,7 +364,7 @@ CREATE TABLE permissions (
   id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
   icode                 NVARCHAR(64) NOT NULL, -- view, add, edit, del or custom codes
 
-  iname                 NVARCHAR(255) NOT NULL default '',
+  iname                 NVARCHAR(255) NOT NULL default '', -- View, Add, Edit, Delete, ...
   idesc                 NVARCHAR(MAX),
   prio                  INT NOT NULL DEFAULT 0,     /*0-on insert, then =id, default order by prio asc,iname*/
 
@@ -422,7 +422,7 @@ DROP TABLE IF EXISTS roles;
 CREATE TABLE roles (
   id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
 
-  iname                 NVARCHAR(255) NOT NULL default '',
+  iname                 NVARCHAR(255) NOT NULL default '', -- Admin, Manager, Employee, External, Guest, ...
   idesc                 NVARCHAR(MAX),
   prio                  INT NOT NULL DEFAULT 0,     /*0-on insert, then =id, default order by prio asc,iname*/
 
@@ -467,5 +467,6 @@ CREATE TABLE users_roles (
   INDEX IX_users_roles_roles_id (roles_id, users_id)
 );
 GO
+-- for ROLE BASED ACCESS CONTROL only end
 
 -- after this file - run lookups.sql
