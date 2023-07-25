@@ -195,6 +195,8 @@ window.fw={
       var el=this;
       if (!el._is_confirmed){
         e.preventDefault();
+        if (!$('.multicb:checked').length) return;//exit if no rows selected
+
         fw.confirm('Are you sure to delete multiple selected records?', function(){
           el._is_confirmed=true;
           $(el).click();//trigger again after confirmed
@@ -448,7 +450,7 @@ window.fw={
               //console.log('ajaxSubmit error', e);
               $f.data('is-ajaxsubmit',false);
               $f.trigger('autosave-error',[e]);
-              //hint_error('Server error occured during auto save form');
+              fw.error(e.responseJSON !== undefined && e.responseJSON.err_msg !== undefined ? e.responseJSON.err_msg : 'Auto-save error. Server error occured.', hint_options);
           }
       });
     });
@@ -514,11 +516,13 @@ window.fw={
         $.each(errors,function(key, errcode) {
           var $input = $f.find('[name="item['+key+']"],[name="'+key+'"]');
           if ($input.length){
-            $input.closest('.form-group, .form-row').not('.noerr').addClass('has-danger'); //highlight whole row (unless .noerr exists)
+            var $p=$input.parent();
+            if ($p.is('.input-group,.custom-control,.dropdown,.twitter-typeahead')) $p = $p.parent();
+            if (!$p.is('td,th')){//does not apply to inputs in subtables
+              $input.closest('.form-group, .form-row').not('.noerr').addClass('has-danger'); //highlight whole row (unless .noerr exists)
+            }
             $input.addClass('is-invalid'); //mark input itself
             if (errcode!==true && errcode.length){
-              var $p=$input.parent();
-              if ($p.is('.input-group,.custom-control,.dropdown')) $p = $p.parent();
               $p.find('.err-'+errcode).addClass('invalid-feedback'); //find/show specific error message
             }
           }
@@ -549,6 +553,7 @@ window.fw={
     var $f = $tbl.data('filter') ? $($tbl.data('filter')) : $('form[data-list-filter]:first');
 
     $tbl.on('dblclick', 'tbody tr', function(e){
+      if ($(e.target).is('input.multicb')) return;
       var url=$(this).data('url');
       if (url) window.location=url;
     });

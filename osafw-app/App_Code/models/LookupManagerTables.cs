@@ -41,7 +41,7 @@ public class LookupManagerTables : FwModel
 
         Hashtable custom_columns = new();
         Hashtable ix_custom_columns = new();
-        if (!string.IsNullOrEmpty((string)defs["columns"]))
+        if (!Utils.isEmpty(defs["columns"]))
         {
             var custom_cols = Utils.commastr2hash((string)defs["columns"], "123...");
             foreach (string key in custom_cols.Keys)
@@ -56,14 +56,14 @@ public class LookupManagerTables : FwModel
                 ix_custom_columns[h["index"]] = h; // build inverted index
             }
             // custom names
-            if (!string.IsNullOrEmpty((string)defs["column_names"]))
+            if (!Utils.isEmpty(defs["column_names"]))
             {
                 ArrayList custom_names = new(defs["column_names"].ToString().Split(","));
                 for (var i = 0; i <= custom_names.Count - 1; i++)
                     ((Hashtable)ix_custom_columns[i])["iname"] = custom_names[i];
             }
             // custom types
-            if (!string.IsNullOrEmpty((string)defs["column_types"]))
+            if (!Utils.isEmpty(defs["column_types"]))
             {
                 ArrayList custom_types = new(defs["column_types"].ToString().Split(","));
                 for (var i = 0; i <= custom_types.Count - 1; i++)
@@ -71,7 +71,7 @@ public class LookupManagerTables : FwModel
             }
 
             // groups
-            if (!string.IsNullOrEmpty((string)defs["column_groups"]))
+            if (!Utils.isEmpty(defs["column_groups"]))
             {
                 // Dim groups As Hashtable = Utils.commastr2hash(defs["groups"), ]123...")
                 ArrayList custom_groups = new(defs["column_groups"].ToString().Split(","));
@@ -149,7 +149,7 @@ public class LookupManagerTables : FwModel
     // return "id" or customer column_id defined in defs
     public string getColumnId(Hashtable defs)
     {
-        if (!string.IsNullOrEmpty((string)defs["column_id"]))
+        if (!Utils.isEmpty(defs["column_id"]))
             return (string)defs["column_id"];
         else
             return "id";

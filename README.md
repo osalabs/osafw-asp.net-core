@@ -117,6 +117,18 @@ highlighted as bold is where you could place your code.
     - `Users.update(123)`
   - `fw.redirect("/Admin/Users/123/edit")` //redirect back to edit screen after db updated
 
+- GET /Admin/Users/(Custom)/123?param1=1&param2=ABC - controller's custom action (non-standard REST)
+  - `FwHooks.initRequest()`
+  - `AdminUsers.init()`
+  - `AdminUsers.CustomAction(123)` - here you can get params using `reqi("param1") -> 1` and `reqs("params") -> "ABC"`
+  - then ParsePage parses templates from `/template/admin/users/custom/` unless you redirect somewhere else
+
+- POST /Admin/Users/(Custom)/123 with posted params `param1=1` and `param2=ABC`
+  - `FwHooks.initRequest()`
+  - `AdminUsers.init()`
+  - `AdminUsers.CustomAction(123)` - here you can still get params using `reqi("param1") -> 1` and `reqs("params") -> "ABC"`
+  - then ParsePage parses templates from `/template/admin/users/custom/` unless you redirect somewhere else
+
 #### Flow in IndexAction
 
 Frequently asked details about flow for the `IndexAction()` (in controllers inherited from `FwAdminController` and `FwDynamicController`):

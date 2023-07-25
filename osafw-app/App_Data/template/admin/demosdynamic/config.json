@@ -471,6 +471,7 @@
                     "related_field_name": "demos_id",
                     "save_fields": "demo_dicts_id iname idesc",
                     "save_fields_checkboxes": "is_checkbox|0",
+                    "required_fields": "demo_dicts_id iname"
                 },
                 {
                     "field": "att_id",

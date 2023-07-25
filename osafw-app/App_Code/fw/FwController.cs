@@ -329,11 +329,21 @@ public abstract class FwController
     /// </summary>
     /// <param name="item">fields/values to validate</param>
     /// <param name="fields">field names required to be non-empty (trim used)</param>
+    /// <param name="form_errors">optional - form errors to fill</param>
     /// <returns>true if all required field names non-empty</returns>
-    /// <remarks>also set global fw.ERR[REQUIRED]=true in case of validation error</remarks>
-    public virtual bool validateRequired(Hashtable item, Array fields)
+    /// <remarks>also set global fw.FormErrors[REQUIRED]=true in case of validation error if no form_errors defined</remarks>
+    public virtual bool validateRequired(Hashtable item, Array fields, Hashtable form_errors = null)
     {
         bool result = true;
+
+        var is_gloabl_errors = false;
+        if (form_errors == null)
+        {
+            //if no form_errors passed - use global fw.FormErrors
+            form_errors = fw.FormErrors;
+            is_gloabl_errors = true;
+        }
+
         if (item != null && fields.Length > 0)
         {
             foreach (string fld in fields)
@@ -341,14 +351,16 @@ public abstract class FwController
                 if (!string.IsNullOrEmpty(fld) && (!item.ContainsKey(fld) || ((string)item[fld]).Trim() == ""))
                 {
                     result = false;
-                    fw.FormErrors[fld] = true;
+                    form_errors[fld] = true;
                 }
             }
         }
         else
             result = false;
-        if (!result)
-            fw.FormErrors["REQUIRED"] = true;
+
+        if (!result && is_gloabl_errors)
+            form_errors["REQUIRED"] = true; // set global error
+
         return result;
     }
     // same as above but fields param passed as a qw string
@@ -519,7 +531,7 @@ public abstract class FwController
 
     public virtual void setListSearchUserList()
     {
-        if (!string.IsNullOrEmpty((string)list_filter["userlist"]))
+        if (!Utils.isEmpty(list_filter["userlist"]))
         {
             list_where += " and id IN (select ti.item_id from " + db.qid(fw.model<UserLists>().table_items) + " ti where ti.user_lists_id=@user_lists_id and ti.add_users_id=@userId) ";
             list_where_params["user_lists_id"] = db.qi(list_filter["userlist"]);
@@ -545,7 +557,7 @@ public abstract class FwController
             if (!string.IsNullOrEmpty(value) && (!is_dynamic_index || view_list_map.ContainsKey(fieldname)))
             {
                 string str;
-                var fieldname_sql = "ISNULL(CAST(" + db.qid(fieldname) + " as NVARCHAR), '')";
+                var fieldname_sql = "ISNULL(CAST(" + db.qid(fieldname) + " as NVARCHAR(255)), '')"; //255 need as SQL Server by default makes only 30
                 var fieldname_sql2 = "TRY_CONVERT(DECIMAL(18,1),CAST(" + db.qid(fieldname) + " as NVARCHAR))"; // SQL Server 2012+ only
                 if (value.Length > 1 && value.Substring(0, 1) == "=")
                 {
@@ -598,7 +610,7 @@ public abstract class FwController
     {
         if (!string.IsNullOrEmpty(model0.field_status))
         {
-            if (!string.IsNullOrEmpty((string)this.list_filter["status"]))
+            if (!Utils.isEmpty(this.list_filter["status"]))
             {
                 var status = Utils.f2int(this.list_filter["status"]);
                 // if want to see trashed and not admin - just show active
@@ -751,6 +763,10 @@ public abstract class FwController
         }
         else
             url = this.base_url;
+
+        //preserve return url if present
+        if (!string.IsNullOrEmpty(return_url))
+            url_q += "&return_url=" + Utils.urlescape(return_url);
 
         //add base_url_suffix if any
         if (!string.IsNullOrEmpty(base_url_suffix))
@@ -956,7 +972,7 @@ public abstract class FwController
                     {"field_name",fieldname},
                     {"field_name_visible",view_list_map[fieldname]},
                     {"is_checked",true},
-                    {"is_sortable", !string.IsNullOrEmpty((string)list_sortmap[fieldname])}
+                    {"is_sortable", list_sortmap.ContainsKey(fieldname)}
                 });
                 fields_added[fieldname] = true;
             }
@@ -982,7 +998,7 @@ public abstract class FwController
                 {
                     {"field_name",k},
                     {"field_name_visible",view_list_map[k]},
-                    {"is_sortable",string.IsNullOrEmpty((string)list_sortmap[k])}
+                    {"is_sortable",list_sortmap.ContainsKey(k)}
                 });
             }
         }

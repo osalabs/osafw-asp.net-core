@@ -44,17 +44,17 @@ public class AdminEventsController : FwAdminController
     {
         base.setListSearch();
 
-        if (!string.IsNullOrEmpty((string)list_filter["events_id"]))
+        if (!Utils.isEmpty(list_filter["events_id"]))
         {
             list_where += " and events_id = @f_events_id";
             list_where_params["f_events_id"] = Utils.f2int(list_filter["events_id"]);
         }
-        if (!string.IsNullOrEmpty((string)list_filter["users_id"]))
+        if (!Utils.isEmpty(list_filter["users_id"]))
         {
             list_where += " and add_users_id = @f_users_id";
             list_where_params["f_users_id"] = Utils.f2int(list_filter["users_id"]);
         }
-        if (!string.IsNullOrEmpty((string)list_filter["date"]))
+        if (!Utils.isEmpty(list_filter["date"]))
         {
             list_where += " and add_time >= @f_date and add_time < DATEADD(DAY, 1, @f_date)";
             list_where_params["f_date"] = Utils.f2date(list_filter["date"]);

@@ -79,7 +79,7 @@ namespace osafw.Tests
             h["CCC"] = 3;
             h["DDD"] = null;
 
-            string [] keys = { "DDD", "CCC" };
+            string[] keys = { "DDD", "CCC" };
             Utils.hashFilter(h, keys);
 
             Assert.AreEqual(h.Keys.Count, 2);
@@ -161,15 +161,34 @@ namespace osafw.Tests
         [TestMethod()]
         public void f2boolTest()
         {
-            bool r = Utils.f2bool("True");
-            Assert.IsTrue(r);
+            // tests for Utils.f2bool() - convert object of any type to bool, in case of error return false
+            Assert.IsFalse(Utils.f2bool(null));
+            Assert.IsFalse(Utils.f2bool(""));
+            Assert.IsFalse(Utils.f2bool(0));
+            Assert.IsFalse(Utils.f2bool(0.0));
+            Assert.IsFalse(Utils.f2bool(0.0f));
+            Assert.IsFalse(Utils.f2bool(0.0m));
+            Assert.IsFalse(Utils.f2bool(false));
+            Assert.IsFalse(Utils.f2bool("0"));
+            Assert.IsFalse(Utils.f2bool("false"));
+            Assert.IsFalse(Utils.f2bool("no"));
+            Assert.IsFalse(Utils.f2bool("off"));
+            Assert.IsFalse(Utils.f2bool("n"));
+            Assert.IsFalse(Utils.f2bool("N"));
+            Assert.IsFalse(Utils.f2bool("f"));
+            Assert.IsFalse(Utils.f2bool("F"));
+            Assert.IsFalse(Utils.f2bool("ABC"));            
+            Assert.IsFalse(Utils.f2bool("yes"));
+            Assert.IsFalse(Utils.f2bool("on"));            
+            Assert.IsFalse(Utils.f2bool(new ArrayList())); //empty arraylist false
 
-            r = Utils.f2bool("False");
-            Assert.IsFalse(r);
-
-            r = Utils.f2bool("ABC");
-            Assert.IsFalse(r);
+            Assert.IsTrue(Utils.f2bool("true"));
+            Assert.IsTrue(Utils.f2bool("True"));
+            Assert.IsTrue(Utils.f2bool("TRUE"));
+            Assert.IsTrue(Utils.f2bool("1")); //non-zero number            
+            Assert.IsTrue(Utils.f2bool(new ArrayList() { 1 })); //non-empty arraylist true
         }
+
 
         [TestMethod()]
         public void f2dateTest()
@@ -608,6 +627,39 @@ namespace osafw.Tests
         public void nameCamelCaseTest()
         {
             throw new NotImplementedException();
+        }
+
+        [TestMethod()]
+        public void isEmptyTest()
+        {
+            // test for Utils.isEmpty - null, empty string, space-only string, integers, long, double, bool, arraylist, hashtable
+            Assert.IsTrue(Utils.isEmpty(null));
+            Assert.IsTrue(Utils.isEmpty(""));
+            Assert.IsTrue(Utils.isEmpty(" "));
+            Assert.IsTrue(Utils.isEmpty("  "));
+            Assert.IsFalse(Utils.isEmpty("a"));
+            Assert.IsFalse(Utils.isEmpty("0"));
+            //integers
+            Assert.IsTrue(Utils.isEmpty(0));
+            Assert.IsFalse(Utils.isEmpty(1));
+            Assert.IsFalse(Utils.isEmpty(-1));
+            //long
+            Assert.IsTrue(Utils.isEmpty(0L));
+            Assert.IsFalse(Utils.isEmpty(1L));
+            Assert.IsFalse(Utils.isEmpty(-1L));
+            //double
+            Assert.IsTrue(Utils.isEmpty(0.0));
+            Assert.IsFalse(Utils.isEmpty(1.0));
+            Assert.IsFalse(Utils.isEmpty(-1.0));
+            //bool
+            Assert.IsTrue(Utils.isEmpty(false));
+            Assert.IsFalse(Utils.isEmpty(true));
+            //arraylist
+            Assert.IsTrue(Utils.isEmpty(new ArrayList()));
+            Assert.IsFalse(Utils.isEmpty(new ArrayList() { 1 }));
+            //hashtable
+            Assert.IsTrue(Utils.isEmpty(new Hashtable()));
+            Assert.IsFalse(Utils.isEmpty(new Hashtable() { { "1", 1 } }));
         }
     }
 }

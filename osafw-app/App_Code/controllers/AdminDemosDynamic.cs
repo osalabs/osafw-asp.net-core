@@ -29,6 +29,7 @@ public class AdminDemosDynamicController : FwDynamicController
         is_userlists = true;
 
         // override sortmap for date fields
-        list_sortmap["fdate_pop_str"] = "fdate_pop";
+        // list_sortmap["fdate_pop_str"] = "fdate_pop";
     }
+
 }

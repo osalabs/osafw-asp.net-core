@@ -51,7 +51,7 @@ public class MyListsController : FwAdminController
 
     public override void setListSearchStatus()
     {
-        if (!string.IsNullOrEmpty((string)list_filter["status"]))
+        if (!Utils.isEmpty(list_filter["status"]))
         {
             this.list_where += " and status=@status";
             this.list_where_params["@status"] = db.qi(list_filter["status"]);
@@ -71,7 +71,7 @@ public class MyListsController : FwAdminController
 
         base.setListSearch();
 
-        if (!string.IsNullOrEmpty((string)list_filter["entity"]))
+        if (!Utils.isEmpty(list_filter["entity"]))
         {
             this.list_where += " and entity=@entity";
             this.list_where_params["@entity"] = list_filter["entity"];

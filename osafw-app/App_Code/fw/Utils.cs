@@ -9,7 +9,6 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Web;
-using System.Net;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Drawing.Drawing2D;
@@ -20,7 +19,6 @@ using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Security.Authentication;
-using Amazon.Runtime.Internal.Util;
 
 namespace osafw;
 
@@ -199,12 +197,19 @@ public class Utils
         // Convert.ToBase64CharArray();
     }
 
-    public static bool f2bool(object AField)
+    /// <summary>
+    /// convert object of any type to bool, in case of error return false
+    /// </summary>
+    /// <param name="o"></param>
+    /// <returns></returns>
+    public static bool f2bool(object o)
     {
-        if (AField == null) return false;
-        if (AField is bool b) return b;
-        if (f2float(AField) != 0) return true; //non-zero number is true
-        if (bool.TryParse(AField.ToString(), out bool result))
+        // convert object of any type to bool, in case of error return false
+        if (o == null) return false;
+        if (o is bool b) return b;
+        if (o is ICollection ic) return ic.Count > 0; //for collections return true if not empty
+        if (f2float(o) != 0) return true; //non-zero number is true
+        if (bool.TryParse(o.ToString(), out bool result))
             return result;
 
         return false;
@@ -223,9 +228,14 @@ public class Utils
     }
 
 
-    public static bool isDate(object AField)
+    /// <summary>
+    /// return true if field is date
+    /// </summary>
+    /// <param name="o"></param>
+    /// <returns></returns>
+    public static bool isDate(object o)
     {
-        return f2date(AField) != null;
+        return f2date(o) != null;
     }
 
     // guarantee to return string (if cannot convert to string - just return empty string)
@@ -246,6 +256,7 @@ public class Utils
 
         return 0;
     }
+
     public static long f2long(object AField)
     {
         if (AField == null) return 0;
@@ -254,6 +265,15 @@ public class Utils
             return result;
 
         return 0;
+    }
+
+    public static Single f2single(object AField)
+    {
+        if (AField == null) return 0f;
+        if (Single.TryParse(AField.ToString(), out Single result))
+            return result;
+
+        return 0f;
     }
 
     // convert to double, optionally throw error
@@ -267,10 +287,39 @@ public class Utils
             return result;
     }
 
-    // just return false if input cannot be converted to float
-    public static bool isFloat(object AField)
+    /// <summary>
+    /// just return false if input cannot be converted to float
+    /// </summary>
+    /// <param name="o"></param>
+    /// <returns></returns>
+    public static bool isFloat(object o)
     {
-        return double.TryParse(AField.ToString(), out double _);
+        return o != null && double.TryParse(o.ToString(), out double _);
+    }
+
+    /// <summary>
+    /// check that object is empty:
+    /// - null object
+    /// - or for strings it's trimmed zero-length string
+    /// - or for numbers it's zero
+    /// - or for bool it's false
+    /// - or for collections - no elements
+    /// Example:
+    /// instead of `string.IsNullOrEmpty((string)itemdb["iname"])`
+    /// use `isEmpty(itemdb["iname"])`
+    /// </summary>
+    /// <param name="o"></param>
+    /// <returns></returns>
+    public static bool isEmpty(object o)
+    {
+        if (o == null) return true;
+        if (o is string s) return s.Trim() == "";
+        if (o is int i) return i == 0;
+        if (o is long l) return l == 0;
+        if (o is double d) return d == 0;
+        if (o is bool b) return !b;
+        if (o is ICollection col) return col.Count == 0;
+        return false;
     }
 
     public static string sTrim(string str, int size)
@@ -475,7 +524,7 @@ public class Utils
     public static void writeXLSExport(FW fw, string filename, string csv_export_headers, string csv_export_fields, ArrayList rows)
     {
         Hashtable ps = new();
-        
+
         ArrayList headers = new();
         foreach (string str in csv_export_headers.Split(","))
         {
@@ -1257,6 +1306,17 @@ public class Utils
     public static string urlescape(string str)
     {
         return HttpUtility.UrlEncode(str);
+    }
+
+    /* <summary>
+    *  unescapes/decodes escaped/encoded string back
+    *  </summary>
+    *  <param name="str"></param>
+    *  <returns></returns>
+    */
+    public static string urlunescape(string str)
+    {
+        return HttpUtility.UrlDecode(str);
     }
 
     /// <summary>
