@@ -45,6 +45,8 @@ public class AdminUsersController : FwDynamicController
         var ps = base.ShowFormAction(id);
         Hashtable item = (Hashtable)ps["i"];
         ps["att"] = fw.model<Att>().one(Utils.f2int(item["att_id"]));
+        ps["roles_link"] = fw.model<Roles>().getMultiListAL(fw.model<UsersRoles>().getLinkedIds(fw.model<UsersRoles>().table_name, id, "users_id", "roles_id"));
+
         return ps;
     }
 

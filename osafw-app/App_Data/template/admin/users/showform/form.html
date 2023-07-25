@@ -23,6 +23,21 @@
           </div>
         </div>
 
+        <div class="row form-row">
+          <label class="col-form-label col-md-3" for="roles_link">Roles</label>
+          <div class="col">
+            <div class="field-multi-value">
+              <input type="input" class="form-control form-control-sm on-multi-search mb-1" value="" placeholder="`type to filter...`" data-noautosave>
+              <~roles_link repeat inline>
+                <div class="form-check" data-s="<~iname upper>">
+                  <input type="checkbox" class="form-check-input" id="roles_link$<~id>" name="roles_link[<~id>]" value="1" <~/common/checked if="is_checked">>
+                  <label class="form-check-label" for="roles_link$<~id>"><~iname></label>
+                </div>
+              </~roles_link>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
     <~/common/form/actions_std_responsive>

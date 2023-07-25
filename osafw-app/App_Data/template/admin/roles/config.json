@@ -52,6 +52,15 @@
       "table_link": "roles_permissions"
     },
     {
+      "field": "users_link",
+      "type": "multi",
+      "lookup_model": "Users",
+      "label": "Members",
+      "table_link_id_name": "roles_id",
+      "table_link_linked_id_name": "users_id",
+      "table_link": "users_roles"
+    },
+    {
       "type": "col_end"
     },
     {
@@ -125,6 +134,15 @@
       "table_link_id_name": "roles_id",
       "table_link_linked_id_name": "permissions_id",
       "table_link": "roles_permissions"
+    },
+    {
+      "field": "users_link",
+      "type": "multicb",
+      "lookup_model": "Users",
+      "label": "Members",
+      "table_link_id_name": "roles_id",
+      "table_link_linked_id_name": "users_id",
+      "table_link": "users_roles"
     },
     {
       "type": "col_end"
