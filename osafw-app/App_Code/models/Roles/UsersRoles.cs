@@ -11,6 +11,15 @@ public class UsersRoles : FwModel
     {
         db_config = "";
         table_name = "users_roles";
-        
     }
+
+    public override void init(FW fw)
+    {
+        base.init(fw);
+        junction_model_main = fw.model<Users>();
+        junction_field_main_id = "users_id";
+        junction_model_linked = fw.model<Roles>();
+        junction_field_linked_id = "roles_id";
+    }
+
 }

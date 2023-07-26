@@ -419,7 +419,8 @@ public class FwDynamicController : FwController
         {
             //fill global fw.FormErrors with row errors
             var model_name = (string)def["model"];
-            foreach ( var field_name in row_errors.Keys ) {
+            foreach (var field_name in row_errors.Keys)
+            {
                 // row input names format: item-<~model>#<~id>[field_name]
                 fw.FormErrors[$"item-{model_name}#{row_id}[{field_name}]"] = true;
             }
@@ -462,7 +463,7 @@ public class FwDynamicController : FwController
             var match = regex.Match(msg);
             if (match.Success)
             {
-                string tableName = Utils.capitalize( match.Groups[1].Value, "all");
+                string tableName = Utils.capitalize(match.Groups[1].Value, "all");
                 //string columnName = match.Groups[2].Value;
                 msg = $"This record cannot be deleted because it is linked to another {tableName} record. You will need to unlink these records before either can be deleted";
             }
@@ -470,7 +471,7 @@ public class FwDynamicController : FwController
             fw.flash("error", msg);
             fw.redirect($"{base_url}/{id}/delete");
         }
-        
+
         return this.afterSave(true);
     }
 
@@ -632,16 +633,17 @@ public class FwDynamicController : FwController
                 def["is_structure"] = true;
             else if (dtype == "multi")
             {
-                // complex field
-                if (!Utils.isEmpty(def["table_link"]))
-                    // def["multi_datarow") ] fw.model(def["lookup_model")).]etMultiListAL(model0.getLinkedIds(def["table_link"), ]d, def["table_link_id_name"), ]ef["table_link_linked_id_name")), ]ef)
-                    def["multi_datarow"] = fw.model((string)def["lookup_model"]).getMultiListAL(model0.getLinkedIdsByDef(id, def), def);
+                if (def.ContainsKey("lookup_model"))
+                    def["multi_datarow"] = fw.model((string)def["lookup_model"]).listWithChecked((string)item[field], def);
                 else
-                    def["multi_datarow"] = fw.model((string)def["lookup_model"]).getMultiList((string)item[field], def);
+                    // list linked items by main id from junction model (i.e. list of Companies(with checked) for User from UsersCompanies model)
+                    def["multi_datarow"] = fw.model((string)def["model"]).listLinkedByMainId(id, def); //junction model
+                                                                                                       //def["multi_datarow"] = fw.model((string)def["lookup_model"]).listWithChecked(model0.getLinkedIdsByDef(id, def), def);
+
             }
             else if (dtype == "multi_prio")
                 // complex field with prio
-                def["multi_datarow"] = fw.model((string)def["lookup_model"]).getMultiListLinkedRows(id, def);
+                def["multi_datarow"] = fw.model((string)def["model"]).listLinkedByMainId(id, def); //junction model
             else if (dtype == "att")
                 def["att"] = fw.model<Att>().one(Utils.f2int((string)item[field]));
             else if (dtype == "att_links")
@@ -651,7 +653,7 @@ public class FwDynamicController : FwController
                 // subtable functionality
                 var model_name = (string)def["model"];
                 var sub_model = fw.model(model_name);
-                var list_rows = sub_model.listByRelatedId(id, def); //list related rows from db                        
+                var list_rows = sub_model.listByMainId(id, def); //list related rows from db                        
                 sub_model.prepareSubtable(list_rows, id, def);
 
                 def["list_rows"] = list_rows;
@@ -732,19 +734,24 @@ public class FwDynamicController : FwController
                 def["is_structure"] = true;
             else if (dtype == "multicb")
             {
-                // complex field
-                if (!Utils.isEmpty(def["table_link"]))
-                    // model0.getLinkedIds(def["table_link"), ]d, def["table_link_id_name"), ]ef["table_link_linked_id_name"))]
-                    def["multi_datarow"] = fw.model((string)def["lookup_model"]).getMultiListAL(model0.getLinkedIdsByDef(id, def), def);
+                if (def.ContainsKey("lookup_model"))
+                    def["multi_datarow"] = fw.model((string)def["lookup_model"]).listWithChecked((string)item[field], def);
                 else
-                    def["multi_datarow"] = fw.model((string)def["lookup_model"]).getMultiList((string)item[field], def);
+                {
+                    if (Utils.f2bool(def["is_by_linked"]))
+                        // list main items by linked id from junction model (i.e. list of Users(with checked) for Company from UsersCompanies model)
+                        def["multi_datarow"] = fw.model((string)def["model"]).listMainByLinkedId(id, def); //junction model
+                    else
+                        // list linked items by main id from junction model (i.e. list of Companies(with checked) for User from UsersCompanies model)
+                        def["multi_datarow"] = fw.model((string)def["model"]).listLinkedByMainId(id, def); //junction model
+                }
 
                 foreach (Hashtable row in (ArrayList)def["multi_datarow"]) // contains id, iname, is_checked
                     row["field"] = def["field"];
             }
             else if (dtype == "multicb_prio")
             {
-                def["multi_datarow"] = fw.model((string)def["lookup_model"]).getMultiListLinkedRows(id, def);
+                def["multi_datarow"] = fw.model((string)def["model"]).listLinkedByMainId(id, def); // junction model
 
                 foreach (Hashtable row in (ArrayList)def["multi_datarow"]) // contains id, iname, is_checked, _link[prio]
                     row["field"] = def["field"];
@@ -768,7 +775,7 @@ public class FwDynamicController : FwController
                 {
                     if (id > 0)
                     {
-                        list_rows = sub_model.listByRelatedId(id, def); //list related rows from db                        
+                        list_rows = sub_model.listByMainId(id, def); //list related rows from db                        
                     }
                     else
                         sub_model.prepareSubtableAddNew(list_rows, id, def); //add at least one row
@@ -886,18 +893,16 @@ public class FwDynamicController : FwController
 
         var fnullable = Utils.qh(save_fields_nullable);
 
-        // special auto-processing for fields of particular types
+        // special auto-processing for fields of particular types - use .Cast<string>().ToArray() to make a copy of keys as we modify fields
         foreach (string field in fields.Keys.Cast<string>().ToArray())
         {
             if (showform_fields.ContainsKey(field))
             {
                 var def = (Hashtable)showform_fields[field];
                 string type = (string)def["type"];
-                if (type == "multicb")
-                    // multiple checkboxes
-                    fields[field] = FormUtils.multi2ids(reqh(field + "_multi"));
-                else if (type == "autocomplete")
+                if (type == "autocomplete")
                     fields[field] = Utils.f2str(fw.model((string)def["lookup_model"]).findOrAddByIname((string)fields[field], out _));
+
                 else if (type == "date_combo")
                     fields[field] = FormUtils.dateForCombo(item, field).ToString();
                 else if (type == "time")
@@ -919,6 +924,8 @@ public class FwDynamicController : FwController
     {
         var subtable_del = reqh("subtable_del");
 
+        var fields_update = new Hashtable();
+
         // for now we just look if we have att_links_edit field and update att links
         foreach (Hashtable def in (ArrayList)this.config["showform_fields"])
         {
@@ -927,11 +934,20 @@ public class FwDynamicController : FwController
                 fw.model<Att>().updateAttLinks(model0.table_name, id, reqh("att")); // TODO make att configurable
             else if (type == "multicb")
             {
-                if (def.ContainsKey("table_link") && !Utils.isEmpty(def["table_link"]))
-                    model0.updateLinked((string)def["table_link"], id, (string)def["table_link_id_name"], (string)def["table_link_linked_id_name"], reqh(def["field"] + "_multi"));
+                if (Utils.isEmpty(def["model"]))
+                    fields_update[def["field"]] = FormUtils.multi2ids(reqh(def["field"] + "_multi")); // multiple checkboxes -> single comma-delimited field
+                else
+                {
+                    if (Utils.f2bool(def["is_by_linked"]))
+                        //by linked id
+                        fw.model((string)def["model"]).updateJunctionByLinkedId(id, reqh(def["field"] + "_multi")); // junction model
+                    else
+                        //by main id
+                        fw.model((string)def["model"]).updateJunctionByMainId(id, reqh(def["field"] + "_multi")); // junction model
+                }                    
             }
             else if (type == "multicb_prio")
-                fw.model((string)def["lookup_model"]).updateLinkedRows(id, reqh(def["field"] + "_multi"));
+                fw.model((string)def["model"]).updateJunctionByMainId(id, reqh(def["field"] + "_multi")); // junction model
 
             else if (type == "subtable_edit")
             {
@@ -946,7 +962,7 @@ public class FwDynamicController : FwController
                 var del_id = (string)subtable_del[model_name] ?? "";
 
                 //mark all related records as under update (status=1)
-                sub_model.setUnderUpdate(id);
+                sub_model.setUnderUpdateByMainId(id);
 
                 //update and add new rows
 
@@ -969,8 +985,13 @@ public class FwDynamicController : FwController
                 }
 
                 //remove any not updated rows (i.e. those deleted by user)
-                sub_model.deleteUnderUpdate(id);
+                sub_model.deleteUnderUpdateByMainId(id);
             }
+        }
+
+        if (fields_update.Count > 0)
+        {
+            model0.update(id, fields_update);
         }
     }
 
@@ -993,7 +1014,7 @@ public class FwDynamicController : FwController
             var model_name = (string)def["model"];
             sub_model = fw.model(model_name);
         }
-        
+
         if (row_id.StartsWith("new-"))
         {
             fields[sub_model.junction_field_main_id] = main_id;
@@ -1004,7 +1025,7 @@ public class FwDynamicController : FwController
             id = Utils.f2int(row_id);
             sub_model.update(id, fields);
         }
-            
+
         return id;
     }
 

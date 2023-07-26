@@ -13,7 +13,7 @@ public class DemosItems : FwModel
     public DemosItems() : base()
     {
         db_config = "";
-        table_name = "demos_items";        
+        table_name = "demos_items";
     }
 
     public override void init(FW fw)
@@ -23,7 +23,7 @@ public class DemosItems : FwModel
         junction_field_main_id = "demos_id";
     }
 
-    public override ArrayList listByRelatedId(int demos_id, Hashtable def = null)
+    public override ArrayList listByMainId(int demos_id, Hashtable def = null)
     {
         return db.array(table_name, DB.h(junction_field_main_id, demos_id));
     }

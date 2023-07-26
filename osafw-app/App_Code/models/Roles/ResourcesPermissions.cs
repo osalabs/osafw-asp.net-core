@@ -11,6 +11,14 @@ public class ResourcesPermissions : FwModel
     {
         db_config = "";
         table_name = "resources_permissions";
-        
+    }
+
+    public override void init(FW fw)
+    {
+        base.init(fw);
+        junction_model_main = fw.model<Resources>();
+        junction_field_main_id = "resources_id";
+        junction_model_linked = fw.model<Permissions>();
+        junction_field_linked_id = "permissions_id";
     }
 }
