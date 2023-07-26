@@ -352,7 +352,7 @@ public class FwDynamicController : FwController
                     FormUtils.filterCheckboxes(itemdb, row_item, save_fields_checkboxes);
 
                     if (row_id.StartsWith("new-"))
-                        itemdb[sub_model.linked_field_main_id] = id;
+                        itemdb[sub_model.junction_field_main_id] = id;
 
                     //VAILIDATE itemdb
                     var is_valid = validateSubtableRowDynamic(row_id, itemdb, def);
@@ -996,7 +996,7 @@ public class FwDynamicController : FwController
         
         if (row_id.StartsWith("new-"))
         {
-            fields[sub_model.linked_field_main_id] = main_id;
+            fields[sub_model.junction_field_main_id] = main_id;
             id = sub_model.add(fields);
         }
         else
