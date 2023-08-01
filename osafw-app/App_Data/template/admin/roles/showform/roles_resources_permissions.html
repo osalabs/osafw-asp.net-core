@@ -2,22 +2,28 @@
 <table class="mb-3 w-100 table table-stripedXX table-hover">
     <thead>
         <tr>
+            <th rowspan="2" style="width:20px" title="`Check All/None`">
+                <div><input class="form-check-input on-matrix-chkall" type="checkbox"></div>
+            </th>
             <th rowspan="2">`Resources`</th>
             <th colspan="<~permissions_count>" class="text-center">`Permissions`</th>
         </tr>
         <tr>
             <~permissions_header repeat inline>
-                <th><~iname></th>
+                <th><div><input class="form-check-input on-col-chkall" type="checkbox"></div> <~iname></th>
             </~permissions_header>
         </tr>
     </thead>
     <tbody>
         <~resources repeat inline>
         <tr>
+            <td title="`Check All/None`">
+                <div><input class="form-check-input on-row-chkall" type="checkbox"></div>
+            </td>
             <td><~iname></td>
             <~permissions_cols repeat inline>
                 <td>
-                    <div><input class="form-check-input" type="checkbox" name="rp[<~key>]" value="1" <~/common/checked if="is_checked"> ></div>
+                    <div><input class="form-check-input row-cb" type="checkbox" name="rp[<~key>]" value="1" <~/common/checked if="is_checked"> ></div>
                 </td>
             </~permissions_cols>
         </tr>
