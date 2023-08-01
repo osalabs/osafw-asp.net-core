@@ -322,12 +322,20 @@ public class Users : FwModel
     /// <param name="resource_action">resource action like controller's action 'Index' or '' </param>
     /// <param name="resource_action_more">optional additional action string, usually route.action_more to help distinguish sub-actions</param>  
     /// <returns></returns>
-    public bool isAccessByRolesResourceAction(int users_id, string resource_icode, string resource_action, string resource_action_more = "")
+    public bool isAccessByRolesResourceAction(int users_id, string resource_icode, string resource_action, string resource_action_more = "", Hashtable access_actions_to_permissions = null)
     {
 
 #if isRoles
         // determine permission by resource action
         var permission_icode = fw.model<Permissions>().mapActionToPermission(resource_action, resource_action_more);
+
+        if (access_actions_to_permissions != null)
+        {
+            //check if we have controller's permission's override for the action
+            if (access_actions_to_permissions.ContainsKey(permission_icode))
+                permission_icode = (string)access_actions_to_permissions[permission_icode];
+        }
+
         var result = isAccessByRolesResourcePermission(users_id, resource_icode, permission_icode);
         if (!result)
             logger(LogLevel.DEBUG, "Access by Roles denied", DB.h("resource_icode", resource_icode, "resource_action", resource_action, "resource_action_more", resource_action_more, "permission_icode", permission_icode));

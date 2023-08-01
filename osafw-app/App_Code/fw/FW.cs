@@ -1093,10 +1093,14 @@ public class FW : IDisposable
                 }
 
                 // if user is logged and not SiteAdmin(can access everything)
-                // and user's access level is enough for the controller - check access by roles (if enabled)
-                // TODO avoid direct Users model dependency
-                if (current_user_level > 0 && current_user_level < 100 && !model<Users>().isAccessByRolesResourceAction(userId, route.controller, route.action, route.action_more))
-                    throw new AuthException("Bad access - Not authorized (3)");
+                // and user's access level is enough for the controller - check access by roles (if enabled)                
+                if (current_user_level > 0 && current_user_level < 100)
+                {
+                    // TODO avoid direct Users model dependency
+                    var access_actions_to_permissions = (Hashtable)controllerClass.GetField("access_actions_to_permissions", BindingFlags.Public | BindingFlags.Static)?.GetValue(null);
+                    if (!model<Users>().isAccessByRolesResourceAction(userId, route.controller, route.action, route.action_more, access_actions_to_permissions))
+                        throw new AuthException("Bad access - Not authorized (3)");
+                }                    
             }
         }
 

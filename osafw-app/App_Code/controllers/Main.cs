@@ -10,7 +10,11 @@ namespace osafw;
 public class MainController : FwController
 {
     public static new int access_level = Users.ACL_MEMBER;
-
+    public static new Hashtable access_actions_to_permissions = new() { 
+        { "UITheme", Permissions.PERMISSION_LIST },
+        { "UIMode", Permissions.PERMISSION_LIST },
+    };
+    
     public override void init(FW fw)
     {
         base.init(fw);
