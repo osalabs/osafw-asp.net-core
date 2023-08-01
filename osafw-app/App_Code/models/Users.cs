@@ -320,10 +320,33 @@ public class Users : FwModel
     /// <param name="users_id">usually currently logged user - fw.userId</param>
     /// <param name="resource_icode">resource code like controller name 'AdminUsers'</param>
     /// <param name="resource_action">resource action like controller's action 'Index' or '' </param>
+    /// <param name="resource_action_more">optional additional action string, usually route.action_more to help distinguish sub-actions</param>  
     /// <returns></returns>
-    public bool isAccessByRoles(int users_id, string resource_icode, string resource_action)
+    public bool isAccessByRolesResourceAction(int users_id, string resource_icode, string resource_action, string resource_action_more = "")
     {
 
+#if isRoles
+        // determine permission by resource action
+        var permission_icode = fw.model<Permissions>().mapActionToPermission(resource_action, resource_action_more);
+        var result = isAccessByRolesResourcePermission(users_id, resource_icode, permission_icode);
+        if (!result)
+            logger(LogLevel.DEBUG, "Access by Roles denied", DB.h("resource_icode", resource_icode, "resource_action", resource_action, "resource_action_more", resource_action_more, "permission_icode", permission_icode));
+#else
+        var result = true; //if no Roles support - always allow
+#endif
+
+        return result;
+    }
+
+    /// <summary>
+    /// check if currently logged user roles has access to resource with specific permission
+    /// </summary>
+    /// <param name="users_id"></param>
+    /// <param name="resource_icode"></param>
+    /// <param name="permission_icode"></param>
+    /// <returns></returns>
+    public bool isAccessByRolesResourcePermission(int users_id, string resource_icode, string permission_icode)
+    {
 #if isRoles
         // read resource id
         var resource = fw.model<Resources>().oneByIcode(resource_icode);
@@ -331,8 +354,6 @@ public class Users : FwModel
             return false; //if no resource defined - access denied
         var resources_id = Utils.f2int(resource["id"]);
 
-        // determine permission by resource action
-        var permission_icode = fw.model<Permissions>().mapActionToPermission(resource_action);
         var permission = fw.model<Permissions>().oneByIcode(permission_icode);
         if (permission.Count == 0)
             return false; //if no permission defined - access denied
@@ -344,14 +365,14 @@ public class Users : FwModel
         // check if any of user's roles has access to resource/permission
         var result = fw.model<RolesResourcesPermissions>().isExistsByResourcePermissionRoles(resources_id, permissions_id, roles_ids);
         if (!result)
-            logger(LogLevel.DEBUG, "Access by Roles denied", DB.h("resource_icode", resource_icode, "resource_action", resource_action, "permission_icode", permission_icode));
-
+            logger(LogLevel.DEBUG, "Access by Roles denied", DB.h("resource_icode", resource_icode, "permission_icode", permission_icode));
 #else
         var result = true; //if no Roles support - always allow
 #endif
-
         return result;
     }
+
+
     #endregion
 
     #region Permanent Login Cookies

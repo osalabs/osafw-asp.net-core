@@ -91,6 +91,11 @@ public class FW : IDisposable
     public const string ACTION_SAVE_USER_VIEWS = "SaveUserViews"; // custom user views sacve changes
     public const string ACTION_SAVE_SORT = "SaveSort"; // sort rows on list screen
 
+    //helpers for route.action_more
+    public const string ACTION_MORE_NEW = "new";
+    public const string ACTION_MORE_EDIT = "edit";
+    public const string ACTION_MORE_DELETE = "delete";
+
     public const string FW_NAMESPACE_PREFIX = "osafw.";
     public static Hashtable METHOD_ALLOWED = Utils.qh("GET POST PUT DELETE");
 
@@ -398,8 +403,8 @@ public class FW : IDisposable
                 route.action_more = m.Groups[5].Value;
                 if (!string.IsNullOrEmpty(m.Groups[2].Value))
                 {
-                    if (m.Groups[2].Value == "new")
-                        route.action_more = "new";
+                    if (m.Groups[2].Value == ACTION_MORE_NEW)
+                        route.action_more = ACTION_MORE_NEW;
                     else
                         route.format = m.Groups[2].Value.Substring(1);
                 }
@@ -407,11 +412,11 @@ public class FW : IDisposable
                 // match to method (GET/POST)
                 if (route.method == "GET")
                 {
-                    if (route.action_more == "new")
+                    if (route.action_more == ACTION_MORE_NEW)
                         route.action_raw = ACTION_SHOW_FORM;
-                    else if (!string.IsNullOrEmpty(route.id) & route.action_more == "edit")
+                    else if (!string.IsNullOrEmpty(route.id) & route.action_more == ACTION_MORE_EDIT)
                         route.action_raw = ACTION_SHOW_FORM;
-                    else if (!string.IsNullOrEmpty(route.id) & route.action_more == "delete")
+                    else if (!string.IsNullOrEmpty(route.id) & route.action_more == ACTION_MORE_DELETE)
                         route.action_raw = ACTION_SHOW_DELETE;
                     else if (!string.IsNullOrEmpty(route.id))
                         route.action_raw = ACTION_SHOW;
@@ -1090,7 +1095,7 @@ public class FW : IDisposable
                 // if user is logged and not SiteAdmin(can access everything)
                 // and user's access level is enough for the controller - check access by roles (if enabled)
                 // TODO avoid direct Users model dependency
-                if (current_user_level > 0 && current_user_level < 100 && !model<Users>().isAccessByRoles(userId, route.controller, route.action))
+                if (current_user_level > 0 && current_user_level < 100 && !model<Users>().isAccessByRolesResourceAction(userId, route.controller, route.action, route.action_more))
                     throw new AuthException("Bad access - Not authorized (3)");
             }
         }

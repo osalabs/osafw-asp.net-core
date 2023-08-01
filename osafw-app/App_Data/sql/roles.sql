@@ -10,7 +10,7 @@ INSERT INTO permissions (icode, iname) VALUES ('view', 'View');   -- ShowAction,
 INSERT INTO permissions (icode, iname) VALUES ('add', 'Add');     -- SaveAction(id=0)
 INSERT INTO permissions (icode, iname) VALUES ('edit', 'Edit');   -- SaveAction
 INSERT INTO permissions (icode, iname) VALUES ('del', 'Delete');  -- ShowDeleteAction, DeleteAction
-INSERT INTO permissions (icode, iname) VALUES ('del_perm', 'Permanently Delete'); -- DeleteAction with permanent TODO do we need this?
+-- INSERT INTO permissions (icode, iname) VALUES ('del_perm', 'Permanently Delete'); -- DeleteAction with permanent TODO do we need this?
 UPDATE permissions SET prio=id;
 GO
 
