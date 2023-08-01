@@ -67,7 +67,7 @@ public class RolesResourcesPermissions : FwModel
     /// <param name="roles_id"></param>
     /// <param name="resources_id"></param>
     /// <returns></returns>
-    public Hashtable matrixByRoleResource(int roles_id, int resources_id)
+    public Hashtable matrixRowByRoleResource(int roles_id, int resources_id)
     {
         var result = new Hashtable();
 
@@ -90,7 +90,7 @@ public class RolesResourcesPermissions : FwModel
             resource["permissions_cols"] = permissions_cols;
 
             // load permissions for this resource
-            var hpermissions = fw.model<RolesResourcesPermissions>().matrixByRoleResource(roles_id, Utils.f2int(resource["id"]));
+            var hpermissions = fw.model<RolesResourcesPermissions>().matrixRowByRoleResource(roles_id, Utils.f2int(resource["id"]));
 
             foreach (Hashtable permission in permissions)
             {
