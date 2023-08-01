@@ -358,30 +358,6 @@ CREATE TABLE user_filters (
 
 
 -- for ROLE BASED ACCESS CONTROL only
-/*Permissions*/
-DROP TABLE IF EXISTS permissions;
-CREATE TABLE permissions (
-  id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
-  icode                 NVARCHAR(64) NOT NULL, -- view, add, edit, del or custom codes
-
-  iname                 NVARCHAR(255) NOT NULL default '', -- View, Add, Edit, Delete, ...
-  idesc                 NVARCHAR(MAX),
-  prio                  INT NOT NULL DEFAULT 0,     /*0-on insert, then =id, default order by prio asc,iname*/
-
-  status                TINYINT NOT NULL DEFAULT 0,        /*0-ok, 1-under upload, 127-deleted*/
-  add_time              DATETIME2 NOT NULL DEFAULT getdate(),
-  add_users_id          INT DEFAULT 0,
-  upd_time              DATETIME2,
-  upd_users_id          INT DEFAULT 0
-);
-INSERT INTO permissions (icode, iname) VALUES ('list', 'List');   -- IndexAction
-INSERT INTO permissions (icode, iname) VALUES ('view', 'View');   -- ShowAction, ShowFormAction
-INSERT INTO permissions (icode, iname) VALUES ('add', 'Add');     -- SaveAction(id=0)
-INSERT INTO permissions (icode, iname) VALUES ('edit', 'Edit');   -- SaveAction
-INSERT INTO permissions (icode, iname) VALUES ('del', 'Delete');  -- ShowDeleteAction, DeleteAction
-INSERT INTO permissions (icode, iname) VALUES ('del_perm', 'Permanently Delete'); -- DeleteAction with permanent TODO do we need this?
-GO
-
 /*Resources*/
 DROP TABLE IF EXISTS resources;
 CREATE TABLE resources (
@@ -400,20 +376,24 @@ CREATE TABLE resources (
 );
 GO
 
-/*Available permissions for all resources*/
-DROP TABLE IF EXISTS resources_permissions;
-CREATE TABLE resources_permissions (
-  resources_id          INT NOT NULL FOREIGN KEY REFERENCES resources(id),
-  permissions_id        INT NOT NULL FOREIGN KEY REFERENCES permissions(id),
+/*Permissions*/
+DROP TABLE IF EXISTS permissions;
+CREATE TABLE permissions (
+  id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+  resources_id          INT NULL FOREIGN KEY REFERENCES resources(id), -- optional link to a specific resource if permission specific to that resource
+  icode                 NVARCHAR(64) NOT NULL, -- list, view, add, edit, del, del_perm or custom codes
 
-  status                TINYINT NOT NULL DEFAULT 0,        /*0-ok, 1-under change, deleted instantly*/
+  iname                 NVARCHAR(255) NOT NULL default '', -- View, Add, Edit, Delete, ...
+  idesc                 NVARCHAR(MAX),
+  prio                  INT NOT NULL DEFAULT 0,     /*0-on insert, then =id, default order by prio asc,iname*/
+
+  status                TINYINT NOT NULL DEFAULT 0,        /*0-ok, 1-under upload, 127-deleted*/
   add_time              DATETIME2 NOT NULL DEFAULT getdate(),
   add_users_id          INT DEFAULT 0,
   upd_time              DATETIME2,
   upd_users_id          INT DEFAULT 0,
 
-  PRIMARY KEY (resources_id, permissions_id),
-  INDEX IX_resources_permissions_permissions_id (permissions_id, resources_id)
+  INDEX IX_permissions_resources_id (resources_id)
 );
 GO
 
@@ -433,18 +413,12 @@ CREATE TABLE roles (
   upd_users_id          INT DEFAULT 0
 );
 GO
-INSERT INTO roles (iname) VALUES ('Admin');
-INSERT INTO roles (iname) VALUES ('Manager');
-INSERT INTO roles (iname) VALUES ('Employee');
-INSERT INTO roles (iname) VALUES ('Customer Service');
-INSERT INTO roles (iname) VALUES ('Vendor');
-INSERT INTO roles (iname) VALUES ('Customer');
-GO
 
-/*Assigned permissions for all roles*/
-DROP TABLE IF EXISTS roles_permissions;
-CREATE TABLE roles_permissions (
+/*Assigned permissions for all roles and resource/permissions*/
+DROP TABLE IF EXISTS roles_resources_permissions;
+CREATE TABLE roles_resources_permissions (
   roles_id              INT NOT NULL FOREIGN KEY REFERENCES roles(id),
+  resources_id          INT NOT NULL FOREIGN KEY REFERENCES resources(id),
   permissions_id        INT NOT NULL FOREIGN KEY REFERENCES permissions(id),
 
   status                TINYINT NOT NULL DEFAULT 0,        /*0-ok, 1-under change, deleted instantly*/
@@ -453,8 +427,9 @@ CREATE TABLE roles_permissions (
   upd_time              DATETIME2,
   upd_users_id          INT DEFAULT 0,
 
-  PRIMARY KEY (roles_id, permissions_id),
-  INDEX IX_resources_permissions_permissions_id (permissions_id, roles_id)
+  PRIMARY KEY (roles_id, resources_id, permissions_id),
+  INDEX IX_roles_resources_permissions_resources_id (resources_id, roles_id, permissions_id),
+  INDEX IX_roles_resources_permissions_permissions_id (permissions_id, roles_id, resources_id)
 );
 GO
 
