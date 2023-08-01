@@ -51,6 +51,26 @@ public class RolesResourcesPermissions : FwModel
     }
 
     /// <summary>
+    /// check if at least one record exists for resource/permission and multiple roles - i.e. user has a role with resource's permission
+    /// </summary>
+    /// <param name="resources_id"></param>
+    /// <param name="permissions_id"></param>
+    /// <param name="roles_ids"></param>
+    /// <returns></returns>
+    public bool isExistsByResourcePermissionRoles(int resources_id, int permissions_id, IList roles_ids)
+    {
+        var where = new Hashtable
+        {
+            { "resources_id", resources_id },
+            { "permissions_id", permissions_id },
+            { "roles_id", db.opIN(roles_ids) }
+        };
+        var value = db.value(table_name, where, "1");
+
+        return 1 == Utils.f2int(value);
+    }
+
+    /// <summary>
     /// list of records for given role and resource
     /// </summary>
     /// <param name="roles_id"></param>

@@ -429,7 +429,8 @@ CREATE TABLE roles_resources_permissions (
 
   PRIMARY KEY (roles_id, resources_id, permissions_id),
   INDEX IX_roles_resources_permissions_resources_id (resources_id, roles_id, permissions_id),
-  INDEX IX_roles_resources_permissions_permissions_id (permissions_id, roles_id, resources_id)
+  INDEX IX_roles_resources_permissions_permissions_id (permissions_id, roles_id, resources_id),
+  INDEX IX_roles_resources_permissions_rpr (resources_id, permissions_id, roles_id) -- for quick check resrouce/permissions access by set of roles
 );
 GO
 

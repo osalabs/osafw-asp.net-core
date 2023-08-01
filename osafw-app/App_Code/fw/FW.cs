@@ -78,11 +78,18 @@ public class FW : IDisposable
     public const string ACTION_INDEX = "Index";
     public const string ACTION_SHOW = "Show";
     public const string ACTION_SHOW_FORM = "ShowForm";
-    public const string ACTION_SHOW_FORM_NEW = "New"; //not actual action, just a const
+    public const string ACTION_SHOW_FORM_NEW = "New"; // not actual action, just a const
     public const string ACTION_SAVE = "Save";
     public const string ACTION_SAVE_MULTI = "SaveMulti";
     public const string ACTION_SHOW_DELETE = "ShowDelete";
     public const string ACTION_DELETE = "Delete";
+    //additional actions used across controllers
+    public const string ACTION_DELETE_RESTORE = "RestoreDeleted";
+    public const string ACTION_NEXT = "Next"; // prev/next on view/edit forms
+    public const string ACTION_AUTOCOMPLETE = "Autocomplete"; // autocomplete json
+    public const string ACTION_USER_VIEWS = "UserViews"; // custom user views modal
+    public const string ACTION_SAVE_USER_VIEWS = "SaveUserViews"; // custom user views sacve changes
+    public const string ACTION_SAVE_SORT = "SaveSort"; // sort rows on list screen
 
     public const string FW_NAMESPACE_PREFIX = "osafw.";
     public static Hashtable METHOD_ALLOWED = Utils.qh("GET POST PUT DELETE");
@@ -827,7 +834,7 @@ public class FW : IDisposable
         string result = "";
 
         //For Windows - replace Unix-style separators / to \
-        if(path_separator == '\\')
+        if (path_separator == '\\')
             filename = filename.Replace('/', path_separator);
 
         if (!File.Exists(filename))
@@ -914,7 +921,7 @@ public class FW : IDisposable
     // TODO - create another func and call it from call_controller for processing _redirect, ... (non-parsepage) instead of calling parser?
     public void parser(string bdir, Hashtable ps)
     {
-        if (!this.response.HasStarted) this.response.Headers["Cache-Control"]= cache_control;
+        if (!this.response.HasStarted) this.response.Headers["Cache-Control"] = cache_control;
 
         string format = this.getResponseExpectedFormat();
         if (format == "json")
@@ -1072,13 +1079,19 @@ public class FW : IDisposable
             if (auth_check_controller == 1)
             {
                 // but need's check access level on controller level
+                int current_user_level = Utils.f2int(Session("access_level")); //will be 0 for visitors
                 var field = controllerClass.GetField("access_level", BindingFlags.Public | BindingFlags.Static);
                 if (field != null)
                 {
-                    int current_level = Utils.f2int(Session("access_level")); //will be 0 for visitors
-                    if (current_level < Utils.f2int(field.GetValue(null)))
+                    if (current_user_level < Utils.f2int(field.GetValue(null)))
                         throw new AuthException("Bad access - Not authorized (2)");
                 }
+
+                // if user is logged and not SiteAdmin(can access everything)
+                // and user's access level is enough for the controller - check access by roles (if enabled)
+                // TODO avoid direct Users model dependency
+                if (current_user_level > 0 && current_user_level < 100 && !model<Users>().isAccessByRoles(userId, route.controller, route.action))
+                    throw new AuthException("Bad access - Not authorized (3)");
             }
         }
 
@@ -1370,7 +1383,7 @@ public class FW : IDisposable
             ps["is_dump"] = true;
             if (Ex != null)
                 ps["DUMP_STACK"] = Ex.ToString();
-            
+
             ps["DUMP_SQL"] = DB.last_sql;
             ps["DUMP_FORM"] = dumper(FORM);
             ps["DUMP_SESSION"] = dumper(context.Session);

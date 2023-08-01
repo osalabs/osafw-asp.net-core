@@ -3,6 +3,9 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
+//if you use Roles - uncomment define isRoles here
+#define isRoles
+
 using System;
 using Microsoft.VisualBasic;
 using System.Collections;
@@ -34,6 +37,7 @@ public class Users : FwModel
         csv_export_headers = "id,First Name,Last Name,Email,Registered";
     }
 
+    #region standard one/add/update overrides
     public Hashtable oneByEmail(string email)
     {
         Hashtable where = new();
@@ -84,6 +88,21 @@ public class Users : FwModel
         return base.update(id, item);
     }
 
+    // return standard list of id,iname where status=0 order by iname
+    public override DBList list()
+    {
+        string sql = "select id, fname+' '+lname as iname from " + db.qid(table_name) + " where status=0 order by fname, lname";
+        return db.arrayp(sql);
+    }
+
+    public override ArrayList listSelectOptions(Hashtable def = null)
+    {
+        string sql = "select id, fname+' '+lname as iname from " + db.qid(table_name) + " where status=0 order by fname, lname";
+        return db.arrayp(sql);
+    }
+    #endregion
+
+    #region Work with Passwords
     /// <summary>
     /// performs any required password cleaning (for now - just limit pwd length at 32 and trim)
     /// </summary>
@@ -190,7 +209,9 @@ public class Users : FwModel
 
         return result;
     }
+    #endregion
 
+    #region Login/Session
     // fill the session and do all necessary things just user authenticated (and before redirect
     public bool doLogin(int id)
     {
@@ -235,19 +256,9 @@ public class Users : FwModel
 
         return true;
     }
+    #endregion
 
-    // return standard list of id,iname where status=0 order by iname
-    public override DBList list()
-    {
-        string sql = "select id, fname+' '+lname as iname from " + db.qid(table_name) + " where status=0 order by fname, lname";
-        return db.arrayp(sql);
-    }
-    public override ArrayList listSelectOptions(Hashtable def = null)
-    {
-        string sql = "select id, fname+' '+lname as iname from " + db.qid(table_name) + " where status=0 order by fname, lname";
-        return db.arrayp(sql);
-    }
-
+    #region Access Control
     /// <summary>
     /// return true if currently logged user has at least minimum requested access level
     /// </summary>
@@ -282,7 +293,7 @@ public class Users : FwModel
         if (id == -1)
             id = fw.userId;
 
-        if (id <=0)
+        if (id <= 0)
             return true; //if no user logged - readonly
 
         var user = one(id);
@@ -303,30 +314,47 @@ public class Users : FwModel
             throw new AuthException();
     }
 
-    public void loadMenuItems()
+    /// <summary>
+    /// check if currently logged user roles has access to controller/action
+    /// </summary>
+    /// <param name="users_id">usually currently logged user - fw.userId</param>
+    /// <param name="resource_icode">resource code like controller name 'AdminUsers'</param>
+    /// <param name="resource_action">resource action like controller's action 'Index' or '' </param>
+    /// <returns></returns>
+    public bool isAccessByRoles(int users_id, string resource_icode, string resource_action)
     {
-        ArrayList menu_items = (ArrayList)FwCache.getValue("menu_items");
 
-        if (menu_items == null)
-        {
-            // read main menu items for sidebar
-            menu_items = db.array(table_menu_items, DB.h("status", STATUS_ACTIVE), "iname");
-            FwCache.setValue("menu_items", menu_items);
-        }
+#if isRoles
+        // read resource id
+        var resource = fw.model<Resources>().oneByIcode(resource_icode);
+        if (resource.Count == 0)
+            return false; //if no resource defined - access denied
+        var resources_id = Utils.f2int(resource["id"]);
 
-        // only Menu items user can see per ACL
-        var users_acl = Utils.f2int(fw.Session("access_level"));
-        ArrayList result = new();
-        foreach (Hashtable item in menu_items)
-        {
-            if (Utils.f2int(item["access_level"]) <= users_acl)
-                result.Add(item);
-        }
+        // determine permission by resource action
+        var permission_icode = fw.model<Permissions>().mapActionToPermission(resource_action);
+        var permission = fw.model<Permissions>().oneByIcode(permission_icode);
+        if (permission.Count == 0)
+            return false; //if no permission defined - access denied
+        var permissions_id = Utils.f2int(permission["id"]);
 
-        fw.G["menu_items"] = result;
+        // read all roles for user
+        var roles_ids = fw.model<UsersRoles>().colLinkedIdsByMainId(users_id);
+
+        // check if any of user's roles has access to resource/permission
+        var result = fw.model<RolesResourcesPermissions>().isExistsByResourcePermissionRoles(resources_id, permissions_id, roles_ids);
+        if (!result)
+            logger(LogLevel.DEBUG, "Access by Roles denied", DB.h("resource_icode", resource_icode, "resource_action", resource_action, "permission_icode", permission_icode));
+
+#else
+        var result = true; //if no Roles support - always allow
+#endif
+
+        return result;
     }
+    #endregion
 
-    /// Permanent Cookies
+    #region Permanent Login Cookies
     public string createPermCookie(int id)
     {
         long curTS = new DateTimeOffset(DateTime.UtcNow).ToUnixTimeSeconds();
@@ -366,4 +394,29 @@ public class Users : FwModel
         db.del(table_users_cookies, DB.h("users_id", id));
         db.del(table_users_cookies, DB.h("add_time", db.opLE(DateTime.Now.AddYears(-1)))); // also cleanup old records (i.e. force re-login after a year)
     }
+    #endregion
+
+    public void loadMenuItems()
+    {
+        ArrayList menu_items = (ArrayList)FwCache.getValue("menu_items");
+
+        if (menu_items == null)
+        {
+            // read main menu items for sidebar
+            menu_items = db.array(table_menu_items, DB.h("status", STATUS_ACTIVE), "iname");
+            FwCache.setValue("menu_items", menu_items);
+        }
+
+        // only Menu items user can see per ACL
+        var users_acl = Utils.f2int(fw.Session("access_level"));
+        ArrayList result = new();
+        foreach (Hashtable item in menu_items)
+        {
+            if (Utils.f2int(item["access_level"]) <= users_acl)
+                result.Add(item);
+        }
+
+        fw.G["menu_items"] = result;
+    }
+
 }
