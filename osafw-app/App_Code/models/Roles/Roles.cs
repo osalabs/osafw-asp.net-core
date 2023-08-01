@@ -11,6 +11,6 @@ public class Roles : FwModel
     {
         db_config = "";
         table_name = "roles";
-        
+        field_prio = "prio";
     }
 }

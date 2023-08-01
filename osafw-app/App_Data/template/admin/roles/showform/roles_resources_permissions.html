@@ -1,0 +1,27 @@
+<div class="border rounded p-3 mb-3">
+<table class="mb-3 w-100 table table-stripedXX table-hover">
+    <thead>
+        <tr>
+            <th rowspan="2">`Resources`</th>
+            <th colspan="<~permissions_count>" class="text-center">`Permissions`</th>
+        </tr>
+        <tr>
+            <~permissions_header repeat inline>
+                <th><~iname></th>
+            </~permissions_header>
+        </tr>
+    </thead>
+    <tbody>
+        <~resources repeat inline>
+        <tr>
+            <td><~iname></td>
+            <~permissions_cols repeat inline>
+                <td>
+                    <div><input class="form-check-input" type="checkbox" name="rp[<~key>]" value="1" <~/common/checked if="is_checked"> ></div>
+                </td>
+            </~permissions_cols>
+        </tr>
+        </~resources>
+    </tbody>
+</table>
+</div>

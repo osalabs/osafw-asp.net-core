@@ -43,12 +43,6 @@
       "label": "Prio"
     },
     {
-      "field": "permissions_link",
-      "type": "multi",
-      "model": "RolesPermissions",
-      "label": "Permissions"
-    },
-    {
       "field": "users_link",
       "type": "multi",
       "model": "UsersRoles",
@@ -87,6 +81,10 @@
     },
     {
       "type": "row_end"
+    },
+    {
+      "field": "roles_resources_permissions",
+      "is_custom": true
     }
   ],
   "is_dynamic_showform": true,
@@ -119,12 +117,6 @@
       "class_contents": "col-md-4",
       "min": 0,
       "max": 999999
-    },
-    {
-      "field": "permissions_link",
-      "type": "multicb",
-      "model": "RolesPermissions",
-      "label": "Permissions"
     },
     {
       "field": "users_link",
@@ -167,6 +159,10 @@
     },
     {
       "type": "row_end"
+    },
+    {
+      "field": "roles_resources_permissions",
+      "is_custom": true
     }
   ],
   "form_new_defaults": {

@@ -11,6 +11,6 @@ public class Permissions : FwModel
     {
         db_config = "";
         table_name = "permissions";
-        
+        field_prio = "prio";
     }
 }

@@ -11,6 +11,6 @@ public class Resources : FwModel
     {
         db_config = "";
         table_name = "resources";
-        
+        field_prio = "prio";
     }
 }
