@@ -206,7 +206,7 @@ public abstract class FwModel : IDisposable
     {
         if (string.IsNullOrEmpty(linked_field_main_id))
             throw new NotImplementedException();
-        else        
+        else
             return db.array(table_name, DB.h(linked_field_main_id, related_id));
     }
 
@@ -332,7 +332,7 @@ public abstract class FwModel : IDisposable
 
         this.removeCache(id);
 
-        if (!string.IsNullOrEmpty(field_prio))
+        if (!string.IsNullOrEmpty(field_prio) && !item.ContainsKey(field_prio))
         {
             //if priority field defined - update it with newly added id to allow proper re/ordering
             db.update(table_name, DB.h(field_prio, id), DB.h(field_id, id));
@@ -666,7 +666,7 @@ public abstract class FwModel : IDisposable
         };
         db.del(table_name, where);
     }
-    
+
 
     /// <summary>
     ///  update (and add/del) linked table

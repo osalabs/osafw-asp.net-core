@@ -764,6 +764,10 @@ public abstract class FwController
         else
             url = this.base_url;
 
+        //preserve return url if present
+        if (!string.IsNullOrEmpty(return_url))
+            url_q += "&return_url=" + Utils.urlescape(return_url);
+
         //add base_url_suffix if any
         if (!string.IsNullOrEmpty(base_url_suffix))
             url_q += "&" + base_url_suffix;

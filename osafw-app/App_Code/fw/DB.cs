@@ -492,7 +492,7 @@ public class DB : IDisposable
     {
         var result = 0;
 
-        //extract separate each sql statement 
+        //extract separate each sql statement
         string[] asql = DB.splitMultiSQL(sql);
         foreach (string sqlone1 in asql)
         {
@@ -1143,10 +1143,10 @@ public class DB : IDisposable
                         // if empty string for numerical field - assume NULL
                         result = DBNull.Value;
                     else
-                        result = Utils.f2int(field_value);
+                        result = Utils.f2long(field_value);
                 }
                 else
-                    result = Utils.f2int(field_value);
+                    result = Utils.f2long(field_value);
             }
             else if (field_type == "datetime")
             {
