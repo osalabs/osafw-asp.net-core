@@ -1158,6 +1158,8 @@ public class DB : IDisposable
             }
             else if (field_type == "float")
                 result = Utils.f2float(field_value);
+            else if (field_type == "decimal")
+                result = Utils.f2decimal(field_value);
             else
                 // string or other unknown value
                 result = field_value;
@@ -1561,6 +1563,8 @@ public class DB : IDisposable
             result = field_type;
         else if (field_type == "float")
             result = field_type;
+        else if (field_type == "decimal")
+            result = field_type;
         else
             result = "varchar";
 
@@ -1857,13 +1861,18 @@ public class DB : IDisposable
                 }
 
             case "real":
-            case "numeric":
-            case "decimal":
-            case "money":
-            case "smallmoney":
             case "float":
                 {
                     result = "float";
+                    break;
+                }
+
+            case "decimal":
+            case "numeric":
+            case "money":
+            case "smallmoney":
+                {
+                    result = "decimal";
                     break;
                 }
 
@@ -1905,11 +1914,12 @@ public class DB : IDisposable
             or (int)OleDbType.UnsignedBigInt => "int",
 
             (int)OleDbType.Double
-            or (int)OleDbType.Numeric
+            or (int)OleDbType.Single => "float",
+
+            (int)OleDbType.Numeric
             or (int)OleDbType.VarNumeric
-            or (int)OleDbType.Single
             or (int)OleDbType.Decimal
-            or (int)OleDbType.Currency => "float",
+            or (int)OleDbType.Currency => "decimal",
 
             (int)OleDbType.Date
             or (int)OleDbType.DBDate
