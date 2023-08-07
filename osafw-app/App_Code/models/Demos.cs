@@ -9,8 +9,6 @@ namespace osafw;
 
 public class Demos : FwModel
 {
-    public string table_link = "demos_demo_dicts";
-
     public Demos() : base()
     {
         table_name = "demos";

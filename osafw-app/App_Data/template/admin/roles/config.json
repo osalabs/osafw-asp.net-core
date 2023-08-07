@@ -1,0 +1,185 @@
+{
+  "model": "Roles",
+  "is_dynamic_index": true,
+  "list_view": "(SELECT t.*, fk0.iname as [add_users_id_iname], fk1.iname as [upd_users_id_iname] FROM [roles] t LEFT OUTER JOIN [users] fk0 ON (fk0.id=t.add_users_id) LEFT OUTER JOIN [users] fk1 ON (fk1.id=t.upd_users_id)) tt",
+  "list_sortdef": "iname asc",
+  "search_fields": "id iname",
+  "related_field_name": "",
+  "view_list_defaults": "iname prio status",
+  "view_list_map": {
+    "iname": "Name",
+    "idesc": "Description",
+    "prio": "Prio",
+    "status": "Status",
+    "add_time": "Add Time",
+    "id": "ID",
+    "upd_time": "Upd Time",
+    "add_users_id_iname": "Add User",
+    "upd_users_id_iname": "Upd User"
+  },
+  "view_list_custom": "status",
+  "is_dynamic_show": true,
+  "show_fields": [
+    {
+      "type": "row"
+    },
+    {
+      "type": "col",
+      "class": "col-lg-6"
+    },
+    {
+      "field": "iname",
+      "type": "plaintext",
+      "label": "Name"
+    },
+    {
+      "field": "idesc",
+      "type": "markdown",
+      "label": "Description"
+    },
+    {
+      "field": "prio",
+      "type": "plaintext",
+      "label": "Prio"
+    },
+    {
+      "field": "users_link",
+      "type": "multi",
+      "model": "UsersRoles",
+      "label": "Members"
+    },
+    {
+      "type": "col_end"
+    },
+    {
+      "type": "col",
+      "class": "col-lg-6"
+    },
+    {
+      "field": "id",
+      "type": "plaintext",
+      "label": "ID"
+    },
+    {
+      "field": "status",
+      "type": "plaintext",
+      "label": "Status",
+      "lookup_tpl": "/common/sel/status.sel"
+    },
+    {
+      "field": "add_time",
+      "type": "added",
+      "label": "Added on"
+    },
+    {
+      "field": "upd_time",
+      "type": "updated",
+      "label": "Updated on"
+    },
+    {
+      "type": "col_end"
+    },
+    {
+      "type": "row_end"
+    },
+    {
+      "field": "roles_resources_permissions",
+      "is_custom": true
+    }
+  ],
+  "is_dynamic_showform": true,
+  "showform_fields": [
+    {
+      "type": "row"
+    },
+    {
+      "type": "col",
+      "class": "col-lg-6"
+    },
+    {
+      "field": "iname",
+      "type": "input",
+      "label": "Name",
+      "validate": "exists",
+      "maxlength": 255
+    },
+    {
+      "field": "idesc",
+      "type": "textarea",
+      "label": "Description",
+      "class_control": "markdown autoresize",
+      "rows": 5
+    },
+    {
+      "field": "prio",
+      "type": "number",
+      "label": "Prio",
+      "class_contents": "col-md-4",
+      "min": 0,
+      "max": 999999
+    },
+    {
+      "field": "users_link",
+      "type": "multicb",
+      "model": "UsersRoles",
+      "is_by_linked": true,
+      "label": "Members"
+    },
+    {
+      "type": "col_end"
+    },
+    {
+      "type": "col",
+      "class": "col-lg-6"
+    },
+    {
+      "field": "id",
+      "type": "id",
+      "label": "ID"
+    },
+    {
+      "field": "status",
+      "type": "select",
+      "label": "Status",
+      "class_contents": "col-md-4",
+      "lookup_tpl": "/common/sel/status.sel"
+    },
+    {
+      "field": "add_time",
+      "type": "added",
+      "label": "Added on"
+    },
+    {
+      "field": "upd_time",
+      "type": "updated",
+      "label": "Updated on"
+    },
+    {
+      "type": "col_end"
+    },
+    {
+      "type": "row_end"
+    },
+    {
+      "field": "roles_resources_permissions",
+      "is_custom": true
+    }
+  ],
+  "form_new_defaults": {
+    "iname": ""
+  },
+  "save_fields": [
+    "iname",
+    "idesc",
+    "prio",
+    "status"
+  ],
+  "save_fields_checkboxes": "",
+  "save_fields_nullable": [
+    "idesc",
+    "add_users_id",
+    "upd_time",
+    "upd_users_id"
+  ],
+  "1": "1"
+}

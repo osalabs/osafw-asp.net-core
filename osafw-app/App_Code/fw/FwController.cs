@@ -13,10 +13,11 @@ namespace osafw;
 
 public abstract class FwController
 {
-    public static int access_level = Users.ACL_VISITOR; // access level for the controller. fw.config("access_levels") overrides this. -1 (public access), 0(min logged level), 100(max admin level)
+    public static int access_level = Users.ACL_VISITOR; // access level for the controller. fw.config("access_levels") overrides this. -1 (public access), 0(min logged level), 100(max admin level)    
 
     public static string route_default_action = ""; // supported values - "" (use Default Parser for unknown actions), Index (use IndexAction for unknown actions), Show (assume action is id and use ShowAction)
-    public string route_onerror = ""; //route redirect action name in case ApplicationException occurs in current route, if empty - 500 error page returned
+    public string route_onerror = ""; //route redirect action name in case ApplicationException occurs in current route, if empty - 500 error page returned   
+
     public string base_url; // base url for the controller
     public string base_url_suffix; // additional base url suffix
 
@@ -30,6 +31,7 @@ public abstract class FwController
     protected DB db;
     protected FwModel model0;
     protected Hashtable config;                  // controller config, loaded from template dir/config.json
+    protected Hashtable access_actions_to_permissions; // optional, controller-level custom actions to permissions mapping for role-based access checks, e.g. "UIMain" => Permissions.PERMISSION_VIEW . Can also be used to override default actions to permissions
 
     protected string list_view;                  // table/view to use in list sql, if empty model0.table_name used
     protected string list_orderby;               // orderby for the list screen
@@ -614,7 +616,7 @@ public abstract class FwController
             {
                 var status = Utils.f2int(this.list_filter["status"]);
                 // if want to see trashed and not admin - just show active
-                if (status == FwModel.STATUS_DELETED & !fw.model<Users>().isAccess(Users.ACL_SITEADMIN))
+                if (status == FwModel.STATUS_DELETED & !fw.model<Users>().isAccessLevel(Users.ACL_SITEADMIN))
                     status = 0;
                 this.list_where += " and " + db.qid(model0.field_status) + "=@status";
                 this.list_where_params["status"] = status;
@@ -853,6 +855,22 @@ public abstract class FwController
     public virtual Hashtable afterSave(bool success, Hashtable more_json)
     {
         return afterSave(success, "", false, "no_action", "", more_json);
+    }
+
+    // called before each controller action (init() already called), check access to current fw.route
+    // throw exception if no access
+    public virtual void checkAccess()
+    {
+        //var id = fw.route.id;
+
+        // if user is logged and not SiteAdmin(can access everything)
+        // and user's access level is enough for the controller - check access by roles (if enabled)                
+        int current_user_level = fw.userAccessLevel;
+        if (current_user_level > 0 && current_user_level < 100)
+        {
+            if (!fw.model<Users>().isAccessByRolesResourceAction(fw.userId, fw.route.controller, fw.route.action, fw.route.action_more, access_actions_to_permissions))
+                throw new AuthException("Bad access - Not authorized (3)");
+        }
     }
 
     //called when unhandled error happens in action

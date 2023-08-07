@@ -16,4 +16,13 @@ public class DemosDemoDicts : FwModel
         table_name = "demos_demo_dicts";
     }
 
+    public override void init(FW fw)
+    {
+        base.init(fw);
+        junction_model_main = fw.model<Demos>();
+        junction_field_main_id = "demos_id";
+        junction_model_linked = fw.model<DemoDicts>();
+        junction_field_linked_id = "demo_dicts_id";
+    }
+
 }

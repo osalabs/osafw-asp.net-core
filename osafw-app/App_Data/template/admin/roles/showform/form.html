@@ -1,0 +1,6 @@
+    <~fields repeat inline>
+      <~/common/form/showform/one_field unless="is_custom">
+      <~custom_fields inline if="is_custom">
+        <~roles_resources_permissions ifeq="field" value="roles_resources_permissions">
+      </~custom_fields>
+    </~fields>

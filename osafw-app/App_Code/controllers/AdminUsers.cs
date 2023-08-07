@@ -45,6 +45,10 @@ public class AdminUsersController : FwDynamicController
         var ps = base.ShowFormAction(id);
         Hashtable item = (Hashtable)ps["i"];
         ps["att"] = fw.model<Att>().one(Utils.f2int(item["att_id"]));
+
+        ps["is_roles"] = model.isRoles();
+        ps["roles_link"] = model.listLinkedRoles(id);
+
         return ps;
     }
 
@@ -80,6 +84,8 @@ public class AdminUsersController : FwDynamicController
             itemdb.Remove("pwd");
 
         id = this.modelAddOrUpdate(id, itemdb);
+
+        model.updateLinkedRoles(id, reqh("roles_link"));        
 
         if (fw.userId == id)
             model.reloadSession(id);
@@ -126,7 +132,7 @@ public class AdminUsersController : FwDynamicController
         Hashtable user = model.one(id);
         if (user.Count == 0)
             throw new NotFoundException("Wrong User ID");
-        if (Utils.f2int(user["access_level"]) >= Utils.f2int(fw.Session("access_level")))
+        if (Utils.f2int(user["access_level"]) >= fw.userAccessLevel)
             throw new AuthException("Access Denied. Cannot simulate user with higher access level");
 
         fw.logEvent("simulate", id, fw.userId);
