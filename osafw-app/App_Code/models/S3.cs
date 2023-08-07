@@ -105,19 +105,25 @@ public class S3 : FwModel
     /// <summary>
     /// upload local file by filepath to the S3
     /// </summary>
+    /// <remarks>
+    /// S3 Storage Classes: https://docs.aws.amazon.com/sdkfornet/v3/apidocs/items/S3/TS3StorageClass.html
+    /// </remarks>
     /// <param name="key">relative to the S3Root</param>
     /// <param name="file">file from http upload</param>
     /// <param name="disposition">if defined (ex: inline) - Content-Disposition with file.FileName added</param>
     /// <param name="filename">optional filename to include in disposition header</param>
+    /// <param name="storage_class">S3 Storage Class, default is Amazon.S3.S3StorageClass.Standard, use 5 times cheaper Amazon.S3.S3StorageClass.GlacierInstantRetrieval for warm archive files.</param>
     /// <returns></returns>
-    public PutObjectResponse uploadLocalFile(string key, string filepath, string disposition = "", string filename = "")
+    public PutObjectResponse uploadLocalFile(string key, string filepath, string disposition = "", string filename = "", S3StorageClass storage_class = null)
     {
         logger("uploading to S3: key=[" + key + "], filepath=[" + filepath + "]");
+
         var request = new PutObjectRequest()
         {
             BucketName = this.bucket,
             Key = this.root + key,
-            FilePath = filepath
+            FilePath = filepath,
+            StorageClass = storage_class ?? S3StorageClass.Standard
         };
         request.Headers["Content-Type"] = UploadUtils.mimeMapping(filepath);
 
