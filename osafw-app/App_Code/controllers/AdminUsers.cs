@@ -45,7 +45,9 @@ public class AdminUsersController : FwDynamicController
         var ps = base.ShowFormAction(id);
         Hashtable item = (Hashtable)ps["i"];
         ps["att"] = fw.model<Att>().one(Utils.f2int(item["att_id"]));
-        ps["roles_link"] = fw.model<UsersRoles>().listLinkedByMainId(id);
+
+        ps["is_roles"] = model.isRoles();
+        ps["roles_link"] = model.listLinkedRoles(id);
 
         return ps;
     }
@@ -83,7 +85,7 @@ public class AdminUsersController : FwDynamicController
 
         id = this.modelAddOrUpdate(id, itemdb);
 
-        fw.model<UsersRoles>().updateJunctionByMainId(id, reqh("roles_link"));
+        model.updateLinkedRoles(id, reqh("roles_link"));        
 
         if (fw.userId == id)
             model.reloadSession(id);

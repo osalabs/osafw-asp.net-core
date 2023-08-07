@@ -314,6 +314,19 @@ public class Users : FwModel
     }
 
     /// <summary>
+    /// return true if roles support enabled
+    /// </summary>
+    /// <returns></returns>
+    public bool isRoles()
+    {
+#if isRoles
+        return true;
+#else
+        return false;
+#endif
+    }
+
+    /// <summary>
     /// check if currently logged user roles has access to controller/action
     /// </summary>
     /// <param name="users_id">usually currently logged user - fw.userId</param>
@@ -385,6 +398,23 @@ public class Users : FwModel
         return result;
     }
 
+    //shortcut to avoid calling UsersRoles directly
+    public ArrayList listLinkedRoles(int users_id)
+    {
+#if isRoles
+        return fw.model<UsersRoles>().listLinkedByMainId(users_id);
+#else
+        return new ArrayList();
+#endif
+    }
+
+    //shortcut to avoid calling UsersRoles directly
+    public void updateLinkedRoles(int users_id, Hashtable linked_keys)
+    {
+#if isRoles
+        fw.model<UsersRoles>().updateJunctionByMainId(users_id, linked_keys);        
+#endif
+    }
 
     #endregion
 
