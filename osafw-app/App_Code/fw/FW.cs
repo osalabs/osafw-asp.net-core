@@ -916,6 +916,9 @@ public class FW : IDisposable
     {
         if (!this.response.HasStarted) this.response.Headers["Cache-Control"]= cache_control;
 
+        if (this.FormErrors.Count > 0 && !ps.ContainsKey("ERR"))
+            ps["ERR"] = this.FormErrors; // add errors if any
+
         string format = this.getResponseExpectedFormat();
         if (format == "json")
         {
@@ -953,9 +956,6 @@ public class FW : IDisposable
             this.redirect((string)ps["_redirect"]);
             return; // no further processing
         }
-
-        if (this.FormErrors.Count > 0 && !ps.ContainsKey("ERR"))
-            ps["ERR"] = this.FormErrors; // add errors if any
 
         string layout;
         if (format == "pjax")
@@ -1370,7 +1370,7 @@ public class FW : IDisposable
             ps["is_dump"] = true;
             if (Ex != null)
                 ps["DUMP_STACK"] = Ex.ToString();
-            
+
             ps["DUMP_SQL"] = DB.last_sql;
             ps["DUMP_FORM"] = dumper(FORM);
             ps["DUMP_SESSION"] = dumper(context.Session);
