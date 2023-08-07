@@ -37,7 +37,7 @@ public class AdminLookupManagerController : FwController
         {
             //don't allow access to tables with access_level higher than current user
             var acl = Utils.f2int(defs["access_level"]);
-            if (!fw.model<Users>().isAccess(acl))
+            if (!fw.model<Users>().isAccessLevel(acl))
                 dict = "";
         }
     }
@@ -67,7 +67,7 @@ public class AdminLookupManagerController : FwController
         {
             //do not show tables with access_level higher than current user
             var acl = Utils.f2int(table["access_level"]);
-            if (!fw.model<Users>().isAccess(acl))
+            if (!fw.model<Users>().isAccessLevel(acl))
                 continue;
 
             if (cols.Count <= curcol)

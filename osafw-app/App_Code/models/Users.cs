@@ -264,7 +264,7 @@ public class Users : FwModel
     /// </summary>
     /// <param name="min_acl">minimum required access level</param>
     /// <returns></returns>
-    public bool isAccess(int min_acl)
+    public bool isAccessLevel(int min_acl)
     {
         int users_acl = Utils.f2int(fw.Session("access_level"));
         return users_acl >= min_acl;
@@ -274,9 +274,9 @@ public class Users : FwModel
     /// if currently logged user has at least minimum requested access level. Throw AuthException if user's acl is not enough
     /// </summary>
     /// <param name="min_acl">minimum required access level</param>
-    public void checkAccess(int min_acl)
+    public void checkAccessLevel(int min_acl)
     {
-        if (!isAccess(min_acl))
+        if (!isAccessLevel(min_acl))
         {
             throw new AuthException();
         }
@@ -338,7 +338,13 @@ public class Users : FwModel
 
         var result = isAccessByRolesResourcePermission(users_id, resource_icode, permission_icode);
         if (!result)
-            logger(LogLevel.DEBUG, "Access by Roles denied", DB.h("resource_icode", resource_icode, "resource_action", resource_action, "resource_action_more", resource_action_more, "permission_icode", permission_icode));
+            logger(LogLevel.DEBUG, "Access by Roles denied", new Hashtable {
+                {"resource_icode", resource_icode },
+                {"resource_action", resource_action },
+                {"resource_action_more", resource_action_more },
+                {"permission_icode", permission_icode },
+                {"access_actions_to_permissions", access_actions_to_permissions },
+            });
 #else
         var result = true; //if no Roles support - always allow
 #endif

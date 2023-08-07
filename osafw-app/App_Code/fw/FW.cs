@@ -1092,15 +1092,7 @@ public class FW : IDisposable
                         throw new AuthException("Bad access - Not authorized (2)");
                 }
 
-                // if user is logged and not SiteAdmin(can access everything)
-                // and user's access level is enough for the controller - check access by roles (if enabled)                
-                if (current_user_level > 0 && current_user_level < 100)
-                {
-                    // TODO avoid direct Users model dependency
-                    var access_actions_to_permissions = (Hashtable)controllerClass.GetField("access_actions_to_permissions", BindingFlags.Public | BindingFlags.Static)?.GetValue(null);
-                    if (!model<Users>().isAccessByRolesResourceAction(userId, route.controller, route.action, route.action_more, access_actions_to_permissions))
-                        throw new AuthException("Bad access - Not authorized (3)");
-                }                    
+                //note, Role-Based Access - checked in callController right before calling action
             }
         }
 
@@ -1190,10 +1182,11 @@ public class FW : IDisposable
         }
 
         FwController controller = (FwController)Activator.CreateInstance(controllerClass);
-        controller.init(this);
+        controller.init(this);        
         Hashtable ps = null;
         try
         {
+            controller.checkAccess();
             ps = (Hashtable)actionMethod.Invoke(controller, parameters);
         }
         catch (TargetInvocationException ex)

@@ -80,6 +80,31 @@ public abstract class FwModel : IDisposable
         return db;
     }
 
+    /// <summary>
+    /// standard stub for check access for particular record
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="action">specific action code to check like view or edit</param>
+    /// <exception cref="NotImplementedException"></exception>
+    public virtual bool isAccess(int id = 0, string action = "")
+    {
+        throw new NotImplementedException();
+    }
+
+    /// <summary>
+    /// shortcut for isAccess with throwing AuthException if no access
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="action"></param>
+    /// <exception cref="AuthException"></exception>
+    public virtual void checkAccess(int id = 0, string action = "")
+    {
+        if (!isAccess(id, action))
+        {
+            throw new AuthException();
+        }       
+    }
+
     #region basic CRUD one, list, multi, add, update, delete and related helpers
     public virtual DBRow one(int id)
     {
@@ -363,7 +388,7 @@ public abstract class FwModel : IDisposable
     public virtual void deleteWithPermanentCheck(int id)
     {
         // if record already deleted and we are admin - perform permanent delete
-        if (fw.model<Users>().isAccess(Users.ACL_ADMIN)
+        if (fw.model<Users>().isAccessLevel(Users.ACL_ADMIN)
             && !string.IsNullOrEmpty(field_status)
             && Utils.f2int(one(id)[field_status]) == FwModel.STATUS_DELETED)
             delete(id, true);
