@@ -267,6 +267,15 @@ public class Utils
         return 0;
     }
 
+    public static decimal f2decimal(object AField)
+    {
+        if (AField == null) return decimal.Zero;
+        if (decimal.TryParse(AField.ToString(), out decimal result))
+            return result;
+
+        return decimal.Zero;
+    }
+
     public static Single f2single(object AField)
     {
         if (AField == null) return 0f;

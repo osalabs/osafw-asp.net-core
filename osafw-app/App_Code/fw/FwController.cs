@@ -503,6 +503,8 @@ public abstract class FwController
                                 list_where_params[param_name] = Utils.f2long(s);
                             else if (ft == "float")
                                 list_where_params[param_name] = Utils.f2float(s);
+                            else if (ft == "decimal")
+                                list_where_params[param_name] = Utils.f2decimal(s);
                             else
                                 list_where_params[param_name] = s;
                         }
