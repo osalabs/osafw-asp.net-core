@@ -266,8 +266,7 @@ public class Users : FwModel
     /// <returns></returns>
     public bool isAccessLevel(int min_acl)
     {
-        int users_acl = Utils.f2int(fw.Session("access_level"));
-        return users_acl >= min_acl;
+        return fw.userAccessLevel >= min_acl;
     }
 
     /// <summary>
@@ -443,7 +442,7 @@ public class Users : FwModel
         }
 
         // only Menu items user can see per ACL
-        var users_acl = Utils.f2int(fw.Session("access_level"));
+        var users_acl = fw.userAccessLevel;
         ArrayList result = new();
         foreach (Hashtable item in menu_items)
         {

@@ -323,7 +323,7 @@ public class Att : FwModel
         bool result = true;
         var item = one(id);
 
-        // int user_access_level = Utils.f2int(fw.Session("access_level"));
+        // int user_access_level = fw.userAccessLevel;
         // If item("access_level") > user_access_level Then
         // result = False
         // End If

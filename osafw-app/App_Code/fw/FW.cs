@@ -134,6 +134,11 @@ public class FW : IDisposable
         get { return Utils.f2int(Session("user_id")); }
     }
 
+    public int userAccessLevel
+    {
+        get { return Utils.f2int(Session("access_level")); }
+    }
+
     // shortcut to obtain if we working under logged in user
     // usage: fw.isLogged
     public bool isLogged
@@ -600,7 +605,7 @@ public class FW : IDisposable
         string path2 = "/" + controller;
 
         // pre-check controller's access level by url
-        int current_level = Utils.f2int(Session("access_level"));
+        int current_level = userAccessLevel;
 
         Hashtable rules = (Hashtable)config("access_levels");
         if (rules != null && rules.ContainsKey(path))
@@ -1083,12 +1088,11 @@ public class FW : IDisposable
             // controller found
             if (auth_check_controller == 1)
             {
-                // but need's check access level on controller level
-                int current_user_level = Utils.f2int(Session("access_level")); //will be 0 for visitors
+                // but need's check access level on controller level, logged level will be 0 for visitors
                 var field = controllerClass.GetField("access_level", BindingFlags.Public | BindingFlags.Static);
                 if (field != null)
                 {
-                    if (current_user_level < Utils.f2int(field.GetValue(null)))
+                    if (userAccessLevel < Utils.f2int(field.GetValue(null)))
                         throw new AuthException("Bad access - Not authorized (2)");
                 }
 

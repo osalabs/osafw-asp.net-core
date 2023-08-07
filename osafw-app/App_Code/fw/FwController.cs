@@ -865,7 +865,7 @@ public abstract class FwController
 
         // if user is logged and not SiteAdmin(can access everything)
         // and user's access level is enough for the controller - check access by roles (if enabled)                
-        int current_user_level = Utils.f2int(fw.Session("access_level"));
+        int current_user_level = fw.userAccessLevel;
         if (current_user_level > 0 && current_user_level < 100)
         {
             if (!fw.model<Users>().isAccessByRolesResourceAction(fw.userId, fw.route.controller, fw.route.action, fw.route.action_more, access_actions_to_permissions))

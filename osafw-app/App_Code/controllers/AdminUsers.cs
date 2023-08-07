@@ -130,7 +130,7 @@ public class AdminUsersController : FwDynamicController
         Hashtable user = model.one(id);
         if (user.Count == 0)
             throw new NotFoundException("Wrong User ID");
-        if (Utils.f2int(user["access_level"]) >= Utils.f2int(fw.Session("access_level")))
+        if (Utils.f2int(user["access_level"]) >= fw.userAccessLevel)
             throw new AuthException("Access Denied. Cannot simulate user with higher access level");
 
         fw.logEvent("simulate", id, fw.userId);
