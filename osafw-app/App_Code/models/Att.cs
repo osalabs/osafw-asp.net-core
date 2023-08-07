@@ -318,7 +318,7 @@ public class Att : FwModel
 
     // check access rights for current user for the file by id
     // generate exception
-    public void checkAccessRights(int id)
+    public override void checkAccess(int id = 0, string action = "")
     {
         bool result = true;
         var item = one(id);
@@ -347,7 +347,7 @@ public class Att : FwModel
 
         if (Utils.f2int(item["id"]) > 0)
         {
-            checkAccessRights(Utils.f2int(item["id"]));
+            checkAccess(Utils.f2int(item["id"]));
 
             //TODO MIGRATE
             //fw.resp.Cache.SetCacheability(HttpCacheability.Private); // use public only if all uploads are public

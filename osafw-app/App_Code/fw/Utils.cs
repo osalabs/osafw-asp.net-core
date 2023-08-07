@@ -298,6 +298,26 @@ public class Utils
     }
 
     /// <summary>
+    /// just return false if input cannot be converted to int
+    /// </summary>
+    /// <param name="o"></param>
+    /// <returns></returns>
+    public static bool isInt(object o)
+    {
+        return o != null && int.TryParse(o.ToString(), out int _);
+    }
+
+    /// <summary>
+    /// just return false if input cannot be converted to long
+    /// </summary>
+    /// <param name="o"></param>
+    /// <returns></returns>
+    public static bool isLong(object o)
+    {
+        return o != null && long.TryParse(o.ToString(), out long _);
+    }
+
+    /// <summary>
     /// check that object is empty:
     /// - null object
     /// - or for strings it's trimmed zero-length string
@@ -521,7 +541,8 @@ public class Utils
     /// <param name="csv_export_headers">comma-separated names for headers in specific order</param>
     /// <param name="csv_export_fields">qw-string(space separated) list of fields to match headers</param>
     /// <param name="rows">db array of rows</param>
-    public static void writeXLSExport(FW fw, string filename, string csv_export_headers, string csv_export_fields, ArrayList rows)
+    /// <param name="tpl_dir">template directory</param>
+    public static void writeXLSExport(FW fw, string filename, string csv_export_headers, string csv_export_fields, ArrayList rows, string tpl_dir = "/common/list/export")
     {
         Hashtable ps = new();
 
@@ -534,7 +555,6 @@ public class Utils
         }
         ps["headers"] = headers;
 
-        string tpl_dir = "/common/list/export";
         filename = filename.Replace("\"", "_");
 
         fw.response.Headers.Add("Content-type", "application/vnd.ms-excel");
