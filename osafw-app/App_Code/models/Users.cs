@@ -4,7 +4,7 @@
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
 //if you use Roles - uncomment define isRoles here
-#define isRoles
+//#define isRoles
 
 using System;
 using Microsoft.VisualBasic;

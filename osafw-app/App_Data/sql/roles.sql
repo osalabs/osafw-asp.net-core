@@ -1,3 +1,100 @@
+-- tables for ROLE BASED ACCESS CONTROL (optional)
+/*Resources*/
+DROP TABLE IF EXISTS resources;
+CREATE TABLE resources (
+  id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+  icode                 NVARCHAR(64) NOT NULL, -- controller, ex: AdminUsers
+
+  iname                 NVARCHAR(255) NOT NULL default '', -- ex: Manage Members
+  idesc                 NVARCHAR(MAX),
+  prio                  INT NOT NULL DEFAULT 0,     /*0-on insert, then =id, default order by prio asc,iname*/
+
+  status                TINYINT NOT NULL DEFAULT 0,        /*0-ok, 1-under upload, 127-deleted*/
+  add_time              DATETIME2 NOT NULL DEFAULT getdate(),
+  add_users_id          INT DEFAULT 0,
+  upd_time              DATETIME2,
+  upd_users_id          INT DEFAULT 0
+);
+GO
+
+/*Permissions*/
+DROP TABLE IF EXISTS permissions;
+CREATE TABLE permissions (
+  id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+  resources_id          INT NULL FOREIGN KEY REFERENCES resources(id), -- optional link to a specific resource if permission specific to that resource
+  icode                 NVARCHAR(64) NOT NULL, -- list, view, add, edit, del, del_perm or custom codes
+
+  iname                 NVARCHAR(255) NOT NULL default '', -- View, Add, Edit, Delete, ...
+  idesc                 NVARCHAR(MAX),
+  prio                  INT NOT NULL DEFAULT 0,     /*0-on insert, then =id, default order by prio asc,iname*/
+
+  status                TINYINT NOT NULL DEFAULT 0,        /*0-ok, 1-under upload, 127-deleted*/
+  add_time              DATETIME2 NOT NULL DEFAULT getdate(),
+  add_users_id          INT DEFAULT 0,
+  upd_time              DATETIME2,
+  upd_users_id          INT DEFAULT 0,
+
+  INDEX IX_permissions_resources_id (resources_id)
+);
+GO
+
+/*Roles*/
+DROP TABLE IF EXISTS roles;
+CREATE TABLE roles (
+  id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+
+  iname                 NVARCHAR(255) NOT NULL default '', -- Admin, Manager, Employee, External, Guest, ...
+  idesc                 NVARCHAR(MAX),
+  prio                  INT NOT NULL DEFAULT 0,     /*0-on insert, then =id, default order by prio asc,iname*/
+
+  status                TINYINT NOT NULL DEFAULT 0,        /*0-ok, 1-under upload, 127-deleted*/
+  add_time              DATETIME2 NOT NULL DEFAULT getdate(),
+  add_users_id          INT DEFAULT 0,
+  upd_time              DATETIME2,
+  upd_users_id          INT DEFAULT 0
+);
+GO
+
+/*Assigned permissions for all roles and resource/permissions*/
+DROP TABLE IF EXISTS roles_resources_permissions;
+CREATE TABLE roles_resources_permissions (
+  roles_id              INT NOT NULL FOREIGN KEY REFERENCES roles(id),
+  resources_id          INT NOT NULL FOREIGN KEY REFERENCES resources(id),
+  permissions_id        INT NOT NULL FOREIGN KEY REFERENCES permissions(id),
+
+  status                TINYINT NOT NULL DEFAULT 0,        /*0-ok, 1-under change, deleted instantly*/
+  add_time              DATETIME2 NOT NULL DEFAULT getdate(),
+  add_users_id          INT DEFAULT 0,
+  upd_time              DATETIME2,
+  upd_users_id          INT DEFAULT 0,
+
+  PRIMARY KEY (roles_id, resources_id, permissions_id),
+  INDEX IX_roles_resources_permissions_resources_id (resources_id, roles_id, permissions_id),
+  INDEX IX_roles_resources_permissions_permissions_id (permissions_id, roles_id, resources_id),
+  INDEX IX_roles_resources_permissions_rpr (resources_id, permissions_id, roles_id) -- for quick check resrouce/permissions access by set of roles
+);
+GO
+
+/*Roles for all users*/
+DROP TABLE IF EXISTS users_roles;
+CREATE TABLE users_roles (
+  users_id              INT NOT NULL FOREIGN KEY REFERENCES users(id),
+  roles_id              INT NOT NULL FOREIGN KEY REFERENCES roles(id),
+
+  status                TINYINT NOT NULL DEFAULT 0,        /*0-ok, 1-under change, deleted instantly*/
+  add_time              DATETIME2 NOT NULL DEFAULT getdate(),
+  add_users_id          INT DEFAULT 0,
+  upd_time              DATETIME2,
+  upd_users_id          INT DEFAULT 0,
+
+  PRIMARY KEY (users_id, roles_id),
+  INDEX IX_users_roles_roles_id (roles_id, users_id)
+);
+GO
+
+
+--- fill tables
+
 insert into lookup_manager_tables (tname, iname, url, access_level) VALUES
 ('permissions','Permissions', '', 100)
 , ('resources','Resources', '', 100)
