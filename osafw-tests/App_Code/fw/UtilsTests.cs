@@ -62,12 +62,14 @@ namespace osafw.Tests
             Assert.IsTrue(r.Contains("BBB|2"));
             Assert.IsTrue(r.Contains("CCC|3"));
             int p = r.IndexOf("DDD");
+            int n = r.IndexOf("ZZZZ");
             // chekc is DDD not have value in string
             Assert.IsTrue(p >= 0);
             if (p < r.Length - 1)
             {
                 Assert.IsTrue(r.Contains("DDD| "));
             }
+            Assert.IsTrue(n < 0);
         }
 
         [TestMethod()]
@@ -301,6 +303,24 @@ namespace osafw.Tests
         {
             string r = Utils.getRandStr(10);
             Assert.AreEqual(r.Length, 10);
+        }
+
+        [TestMethod()]
+        public void f2longTest()
+        {
+            long? n = 42;
+            Assert.IsInstanceOfType(Utils.f2long(n), typeof(long));
+            Assert.IsInstanceOfType(Utils.f2long("123"), typeof(long));
+            Assert.AreEqual(Utils.f2long("100M"), 0);
+            Assert.AreEqual(Utils.f2long("123"),123);
+            Assert.AreEqual(Utils.f2long(123), 123);
+            Assert.AreEqual(Utils.f2long("123"), 123.0);
+            Assert.AreEqual(Utils.f2long("123.123b"), 0);
+            Assert.AreEqual(Utils.f2long("b123.123"), 0);
+            Assert.AreEqual(Utils.f2long("ABC"), 0);
+            Assert.AreEqual(Utils.f2long(""), 0);
+            Assert.AreEqual(Utils.f2long(null), 0);
+   
         }
 
         [TestMethod()]
@@ -614,7 +634,12 @@ namespace osafw.Tests
         [TestMethod()]
         public void name2fwTest()
         {
-            throw new NotImplementedException();
+            Assert.AreEqual(Utils.name2fw("dbo.users"), "users");
+            Assert.AreEqual(Utils.name2fw("OrdersProducts/Amount"), "orders_products_amount");
+            Assert.AreEqual(Utils.name2fw("roles&users"), "roles_users");
+            Assert.AreEqual(Utils.name2fw("roles_+__users"), "roles_users");
+            Assert.AreEqual(Utils.name2fw("_JobsDates_"), "jobs_dates");
+            Assert.AreEqual(Utils.name2fw("JOBS_"), "jobs");
         }
 
         [TestMethod()]
