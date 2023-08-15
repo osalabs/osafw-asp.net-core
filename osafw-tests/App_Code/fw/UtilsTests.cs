@@ -312,6 +312,7 @@ namespace osafw.Tests
             Assert.IsInstanceOfType(Utils.f2long(n), typeof(long));
             Assert.IsInstanceOfType(Utils.f2long("123"), typeof(long));
             Assert.AreEqual(Utils.f2long("100M"), 0);
+            Assert.AreEqual(Utils.f2long(100M), 100M);
             Assert.AreEqual(Utils.f2long("123"),123);
             Assert.AreEqual(Utils.f2long(123), 123);
             Assert.AreEqual(Utils.f2long("123"), 123.0);
@@ -320,7 +321,6 @@ namespace osafw.Tests
             Assert.AreEqual(Utils.f2long("ABC"), 0);
             Assert.AreEqual(Utils.f2long(""), 0);
             Assert.AreEqual(Utils.f2long(null), 0);
-   
         }
 
         [TestMethod()]
