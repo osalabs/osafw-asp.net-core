@@ -132,11 +132,14 @@ public class MyPasswordController : FwController
     public Hashtable SetupMFAAction()
     {
         int id = fw.userId;
+        var user = model.one(id);
 
         //generate secret and save to session only (will be saved to db after validation)
-        fw.Session("mfa_secret", model.generateMFASecret());
+        var secret = model.generateMFASecret();
+        fw.Session("mfa_secret", secret);
 
         Hashtable ps = new();
+        ps["qr_code"] = model.generateMFAQRCode(secret, user["email"], (string)fw.config("SITE_NAME"));
         return ps;
     }
 

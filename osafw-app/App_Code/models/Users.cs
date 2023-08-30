@@ -12,9 +12,7 @@ using System.Collections;
 using static BCrypt.Net.BCrypt;
 using System.Text.RegularExpressions;
 using OtpNet;
-using Amazon.S3.Model;
-using Microsoft.AspNetCore.DataProtection;
-using System.Net.Sockets;
+using QRCoder;
 
 namespace osafw;
 
@@ -222,6 +220,14 @@ public class Users : FwModel
     {
         return Base32Encoding.ToString(KeyGeneration.GenerateRandomKey());
     }
+
+    public string generateMFAQRCode(string mfa_secret, string user="user@company", string issuer="osafw")
+    {
+        var uriString = new OtpUri(OtpType.Totp, mfa_secret, user, issuer).ToString();
+
+        var IMG_SIZE = 5;
+        return $"data:image/png;base64,{Convert.ToBase64String(PngByteQRCodeHelper.GetQRCode(uriString, QRCodeGenerator.ECCLevel.Q, IMG_SIZE))}";
+    }   
 
     /// <summary>
     /// check if code is valid against provided MFA secret
