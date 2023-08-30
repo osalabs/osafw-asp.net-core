@@ -30,6 +30,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace osafw;
@@ -38,6 +39,7 @@ public class DBRow : Dictionary<string, string>
 {
 
     public DBRow() { }
+    public DBRow(int capacity) : base(capacity) { }
     public DBRow(Hashtable h)
     {
         if (h != null)
@@ -62,7 +64,7 @@ public class DBRow : Dictionary<string, string>
     }
     public static implicit operator Hashtable(DBRow row)
     {
-        Hashtable result = new();
+        Hashtable result = new(row.Count);
         foreach (string k in row.Keys)
         {
             result[k] = row[k];
@@ -80,9 +82,14 @@ public class DBRow : Dictionary<string, string>
 }
 public class DBList : List<DBRow>
 {
+    public const int DEFAULT_CAPACITY = 25; // default capacity for readArray - for optimal performance should matches default number of rows on list screens
+
+    public DBList() : base() { }
+    public DBList(int capacity) : base(capacity) {}
+
     public static implicit operator ArrayList(DBList rows)
     {
-        ArrayList result = new();
+        ArrayList result = new(rows.Count);
         foreach (var r in rows)
         {
             result.Add((Hashtable)r);
@@ -221,11 +228,11 @@ public class DB : IDisposable
     ///  <returns></returns>
     public static Hashtable h(params object[] args)
     {
-        Hashtable result = new();
-        if (args.Length == 0) return result;
+        if (args.Length == 0) return new Hashtable();
         if (args.Length % 2 != 0)
             throw new ArgumentException("h() accepts even number of arguments");
 
+        Hashtable result = new(args.Length);
         for (var i = 0; i <= args.Length - 1; i += 2)
             result[args[i]] = args[i + 1];
 
@@ -524,27 +531,26 @@ public class DB : IDisposable
     //read row values as a strings
     private DBRow readRow(DbDataReader dbread)
     {
-        DBRow result = new();
+        if (!dbread.HasRows)
+            return new DBRow(); //if no rows - return empty row
 
-        if (dbread.HasRows)
+        int fieldCount = dbread.FieldCount;
+        DBRow result = new(fieldCount); //pre-allocate capacity
+        for (int i = 0; i <= fieldCount - 1; i++)
         {
-            for (int i = 0; i <= dbread.FieldCount - 1; i++)
+            try
             {
-                try
-                {
-                    if (is_check_ole_types && UNSUPPORTED_OLE_TYPES.ContainsKey(dbread.GetDataTypeName(i))) continue;
+                if (is_check_ole_types && UNSUPPORTED_OLE_TYPES.ContainsKey(dbread.GetDataTypeName(i))) continue;
 
-                    string value = dbread[i].ToString();
-                    string name = dbread.GetName(i).ToString();
-                    result.Add(name, value);
-                }
-                catch (Exception)
-                {
-                    break;
-                }
+                string value = dbread[i].ToString();
+                string name = dbread.GetName(i);
+                result.Add(name, value);
+            }
+            catch (Exception)
+            {
+                break;
             }
         }
-
         return result;
     }
 
@@ -578,7 +584,7 @@ public class DB : IDisposable
 
     public DBList readArray(DbDataReader dbread)
     {
-        DBList result = new();
+        DBList result = new(DBList.DEFAULT_CAPACITY); //pre-allocate capacity
 
         while (dbread.Read())
             result.Add(readRow(dbread));
@@ -613,7 +619,7 @@ public class DB : IDisposable
         string select_fields = "*";
         if (aselect_fields != null)
         {
-            ArrayList quoted = new();
+            ArrayList quoted = new(aselect_fields.Count);
             if (aselect_fields is ArrayList)
             {
                 // arraylist of hashtables with "field","alias" keys - usable for the case when we need same field to be selected more than once with different aliases
@@ -695,7 +701,7 @@ public class DB : IDisposable
     /// <returns></returns>
     public List<string> readCol(DbDataReader dbread)
     {
-        List<string> result = new();
+        List<string> result = new(DBList.DEFAULT_CAPACITY);
         while (dbread.Read())
             result.Add(dbread[0].ToString());
 
@@ -802,12 +808,21 @@ public class DB : IDisposable
     }
     public string insql(IList parameters)
     {
-        ArrayList result = new();
-        foreach (string param in parameters)
+        if (parameters == null || parameters.Count == 0)
+            return " IN (NULL)";
+
+        string[] result = new string[parameters.Count];
+        for (int i = 0; i < parameters.Count; i++)
         {
-            result.Add(this.q(param));
+            result[i] = this.q(parameters[i]);
         }
-        return " IN (" + (result.Count > 0 ? string.Join(", ", result.ToArray()) : "NULL") + ")";
+
+        StringBuilder sb = new();
+        sb.Append(" IN (");
+        sb.Append(string.Join(", ", result));
+        sb.Append(')');
+
+        return sb.ToString();
     }
 
     // same as insql, but for quoting numbers - uses qi()
@@ -818,12 +833,21 @@ public class DB : IDisposable
 
     public string insqli(IList parameters)
     {
-        ArrayList result = new();
-        foreach (string param in parameters)
+        if (parameters == null || parameters.Count == 0)
+            return " IN (NULL)";
+
+        string[] result = new string[parameters.Count];
+        for (int i = 0; i < parameters.Count; i++)
         {
-            result.Add(this.qi(param));
+            result[i] = this.qi(parameters[i]).ToString();
         }
-        return " IN (" + (result.Count > 0 ? string.Join(", ", result.ToArray()) : "NULL") + ")";
+
+        StringBuilder sb = new();
+        sb.Append(" IN (");
+        sb.Append(string.Join(", ", result));
+        sb.Append(')');
+
+        return sb.ToString();
     }
 
     // quote identifier:
@@ -986,27 +1010,24 @@ public class DB : IDisposable
         var is_for_insert = (join_type == "insert");
         var is_for_where = (join_type == "where"); // if for where "IS NULL" will be used instead "=NULL"
 
-        var join_delimiter = ",";
-        if (is_for_where)
-            join_delimiter = " AND ";
+        var join_delimiter = is_for_where ? " AND " : ",";
 
-        ArrayList fields_list = new();
-        ArrayList params_sqls = new();
+        ArrayList fields_list = new(fields.Keys.Count);
+        List<string> params_sqls = new();
 
-        Hashtable @params = new();
+        Hashtable @params = new(fields.Keys.Count);
+        var reW = new Regex(@"\W"); //pre-compile regex
+
         foreach (string fname in fields.Keys)
         {
             var dbop = field2Op(table, fname, fields[fname], is_for_where);
 
-            var delim = " " + dbop.opstr + " ";
-            var param_name = Regex.Replace(fname, @"\W", "_") + suffix; // replace any non-alphanum in param names and add suffix
-            string sql;
-            if (is_for_insert)
-                // for insert VALUES it will be form @p1,@p2,... i.e. without field names
-                sql = "";
-            else
-                // for update/where we need it in form like "field="
-                sql = fname + delim;
+            var delim = $" {dbop.opstr} ";
+            var param_name = reW.Replace(fname, "_") + suffix; // replace any non-alphanum in param names and add suffix
+
+            // for insert VALUES it will be form @p1,@p2,... i.e. without field names
+            // for update/where we need it in form like "field="
+            string sql = is_for_insert ? "" : fname + delim;
 
             if (dbop.is_value)
             {
@@ -1017,11 +1038,11 @@ public class DB : IDisposable
                     @params[param_name + "_1"] = ((IList)dbop.value)[0];
                     @params[param_name + "_2"] = ((IList)dbop.value)[1];
                     // BETWEEN @p1 AND @p2
-                    sql += "@" + param_name + "_1 AND @" + param_name + "_2";
+                    sql += $"@{param_name}_1 AND @{param_name}_2";
                 }
                 else if (dbop.op == DBOps.IN || dbop.op == DBOps.NOTIN)
                 {
-                    ArrayList sql_params = new();
+                    List<string> sql_params = new(((IList)dbop.value).Count);
                     var i = 1;
                     foreach (var pvalue in (IList)dbop.value)
                     {
@@ -1030,7 +1051,7 @@ public class DB : IDisposable
                         i += 1;
                     }
                     // [NOT] IN (@p1,@p2,@p3...)
-                    sql += "(" + (sql_params.Count > 0 ? string.Join(",", sql_params.ToArray()) : "NULL") + ")";
+                    sql += "(" + (sql_params.Count > 0 ? string.Join(",", sql_params) : "NULL") + ")";
                 }
                 else
                 {
@@ -1047,7 +1068,7 @@ public class DB : IDisposable
         return new DBQueryAndParams()
         {
             fields = fields_list,
-            sql = string.Join(join_delimiter, params_sqls.ToArray()),
+            sql = string.Join(join_delimiter, params_sqls),
             @params = @params
         };
     }
@@ -1089,7 +1110,7 @@ public class DB : IDisposable
         // db operation
         if (dbop.op == DBOps.IN || dbop.op == DBOps.NOTIN)
         {
-            ArrayList result = new();
+            ArrayList result = new(((IList)dbop.value).Count);
             foreach (var pvalue in (IList)dbop.value)
                 result.Add(field2typed(field_type, pvalue));
             dbop.value = result;
@@ -1389,17 +1410,10 @@ public class DB : IDisposable
     // retrun number of affected rows
     public int updateOrInsert(string table, Hashtable fields, Hashtable where)
     {
-        // merge fields and where
-        Hashtable allfields = new();
-        foreach (string k in fields.Keys)
-            allfields[k] = fields[k];
-
-        foreach (string k in where.Keys)
-            allfields[k] = where[k];
-
+        //try to update first
         var result = update(table, fields, where);
         if (result == 0)
-            // if no rows inserted
+            // if no rows updated - insert
             insert(table, fields);
         return result;
         //single query alternative, but too much params to pass: update_sql + "  IF @@ROWCOUNT = 0 " + insert_sql
@@ -1507,10 +1521,9 @@ public class DB : IDisposable
     // return array of table names in current db
     public ArrayList tables()
     {
-        ArrayList result = new();
-
         DbConnection conn = this.connect();
         DataTable dataTable = conn.GetSchema("Tables");
+        ArrayList result = new(dataTable.Rows.Count);
         foreach (DataRow row in dataTable.Rows)
         {
             //fw.logger("************ TABLE"+ row["TABLE_NAME"]);
@@ -1531,10 +1544,9 @@ public class DB : IDisposable
     // return array of view names in current db
     public ArrayList views()
     {
-        ArrayList result = new();
-
         DbConnection conn = this.connect();
         DataTable dataTable = conn.GetSchema("Tables");
+        ArrayList result = new(dataTable.Rows.Count);
         foreach (DataRow row in dataTable.Rows)
         {
             // skip non-views
@@ -1658,7 +1670,7 @@ public class DB : IDisposable
             // OLE DB (Access)
             DataTable schemaTable = ((OleDbConnection)conn).GetOleDbSchemaTable(OleDbSchemaGuid.Columns, new object[] { null, null, table, null });
 
-            List<Hashtable> fieldslist = new();
+            List<Hashtable> fieldslist = new(schemaTable.Rows.Count);
             foreach (DataRow row in schemaTable.Rows)
             {
                 // unused:
@@ -1816,9 +1828,8 @@ public class DB : IDisposable
 
         if (!((Hashtable)schema_cache[connstr]).ContainsKey(table))
         {
-            Hashtable h = new();
-
             ArrayList fields = loadTableSchemaFull(table);
+            Hashtable h = new(fields.Count);
             foreach (Hashtable row in fields)
                 h[row["name"].ToString().ToLower()] = row["fw_type"];
 
