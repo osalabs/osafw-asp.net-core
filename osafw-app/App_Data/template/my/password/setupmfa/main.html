@@ -1,0 +1,32 @@
+<h1><~title></h1>
+
+<form id="FEdit" class="fw-card" method="post" action="<~../url>/(SaveMFA)" data-errors="<~ERR json>">
+ <input type="hidden" name="XSS" value="<~session[XSS]>">
+ <input type="hidden" name="return_url" value="<~return_url>">
+
+  <fieldset>
+    <~/common/form/msg>
+
+
+  <ol>
+    <li class="pb-4">Install a compatible authenticator application such as Google Authenticator, Microsoft Authenticator, or Duo Mobile on your mobile device or computer</li>
+    <li class="pb-4">
+        Open your authenticator app and scan QR code below:
+        <img>
+    </li>
+    <li class="pb-4">
+        Enter code from your authenticator app:
+        <div class="row">
+            <div class="col-12 col-sm-4 col-xl-2">
+                <input id="mfa_code" name="mfa_code" maxlength="6" value="" type="text" class="form-control" required>
+            </div>
+        </div>
+    </li>
+    <li class="pb-4">
+        <button type="submit" class="btn btn-primary">`Verify and Save`</button>
+    </li>
+  </ol>
+
+  </fieldset>
+
+</form>

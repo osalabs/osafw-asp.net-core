@@ -103,8 +103,8 @@ CREATE TABLE users (
   login_time            DATETIME2,
   pwd_reset             NVARCHAR(255) NULL,
   pwd_reset_time        datetime2 NULL,
-  mfa_secret            NVARCHAR(32), -- mfa secret code, if empty - no mfa for the user configured
-  mfa_recovery          NVARCHAR(255), -- mfa recovery hashed codes, comma-separated
+  mfa_secret            NVARCHAR(64), -- mfa secret code, if empty - no mfa for the user configured
+  mfa_recovery          NVARCHAR(1024), -- mfa recovery hashed codes, space-separated
   mfa_added             DATETIME2,    -- last datetime when mfa setup or resynced
 
   status                TINYINT NOT NULL DEFAULT 0,        /*0-ok, 127-deleted*/

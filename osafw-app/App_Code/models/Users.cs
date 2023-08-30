@@ -11,6 +11,10 @@ using Microsoft.VisualBasic;
 using System.Collections;
 using static BCrypt.Net.BCrypt;
 using System.Text.RegularExpressions;
+using OtpNet;
+using Amazon.S3.Model;
+using Microsoft.AspNetCore.DataProtection;
+using System.Net.Sockets;
 
 namespace osafw;
 
@@ -102,7 +106,7 @@ public class Users : FwModel
     }
     #endregion
 
-    #region Work with Passwords
+    #region Work with Passwords/MFA
     /// <summary>
     /// performs any required password cleaning (for now - just limit pwd length at 32 and trim)
     /// </summary>
@@ -208,6 +212,43 @@ public class Users : FwModel
         result = (int)(Math.Log(pwd.Length) / Math.Log(8)) * result;
 
         return result;
+    }
+
+    /// <summary>
+    /// generate a new MFA secret
+    /// </summary>
+    /// <returns></returns>
+    internal string generateMFASecret()
+    {
+        return Base32Encoding.ToString(KeyGeneration.GenerateRandomKey());
+    }
+
+    /// <summary>
+    /// check if code is valid against provided MFA secret
+    /// </summary>
+    /// <param name="mfa_secret"></param>
+    /// <param name="code"></param>
+    /// <returns></returns>
+    public bool isValidMFACode(string mfa_secret, string code)
+    {
+        if (string.IsNullOrEmpty(mfa_secret))
+            return false;
+
+        var totp = new Totp(Base32Encoding.ToBytes(mfa_secret));
+        // Generate the current TOTP value from the secret and compare it to the user's value.
+        return totp.VerifyTotp(code, out _, new VerificationWindow(2, 2)); // use 1,1 for stricter time check
+    }
+
+    /// <summary>
+    /// check if code is valid against user's MFA secret
+    /// </summary>
+    /// <param name="id">users.id</param>
+    /// <param name="code"></param>
+    /// <returns></returns>
+    public bool isValidMFA(int id, string code)
+    {
+        var user = this.one(id);
+        return isValidMFACode(user["mfa_secret"] ?? "", code);
     }
     #endregion
 
@@ -482,5 +523,4 @@ public class Users : FwModel
 
         fw.G["menu_items"] = result;
     }
-
 }

@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections;
+using System.Collections.Generic;
 
 namespace osafw;
 
@@ -26,7 +27,7 @@ public class MyPasswordController : FwController
 
     public void IndexAction()
     {
-        fw.redirect(base_url+"/new");
+        fw.redirect(base_url + "/new");
     }
 
     public Hashtable ShowFormAction()
@@ -126,5 +127,55 @@ public class MyPasswordController : FwController
         }
 
         this.validateCheckResult();
+    }
+
+    public Hashtable SetupMFAAction()
+    {
+        int id = fw.userId;
+
+        //generate secret and save to session only (will be saved to db after validation)
+        fw.Session("mfa_secret", model.generateMFASecret());
+
+        Hashtable ps = new();
+        return ps;
+    }
+
+    public Hashtable SaveMFAAction()
+    {
+        route_onerror = "SetupMFA"; //set route to go if error happens
+        checkXSS();
+
+        if (string.IsNullOrEmpty(fw.Session("mfa_secret")))
+            fw.redirect(base_url); //no code generated yet
+
+        int id = fw.userId;
+        string mfa_code = reqs("mfa_code");
+
+        if (!model.isValidMFACode(fw.Session("mfa_secret"), mfa_code))
+            throw new UserException("MFA Code is not valid");
+
+        // code is valid, generate recovery codes and save
+        // generate 5 recovery codes as random 8-digit numbers using Utils.getRandStr(8) and concatenate into comma-separated string
+        var hashed_codes = new List<string>(5);
+        ArrayList recovery_codes = new();
+        for (int i = 0; i < 5; i++)
+        {
+            var code = Utils.getRandStr(8);
+            hashed_codes.Add(model.hashPwd(code));
+            recovery_codes.Add(DB.h("code", code));
+        }            
+
+        // save to db
+        model.update(id, new Hashtable {
+            { "mfa_secret" , fw.Session("mfa_secret") },
+            { "mfa_added" , DateTime.Now },
+            { "mfa_recovery" , string.Join(" ",hashed_codes) },
+        });
+        fw.Session("mfa_secret", "");
+
+        return new Hashtable()
+        {
+            { "recovery_codes" , recovery_codes },
+        };
     }
 }
