@@ -165,4 +165,11 @@ public class AdminUsersController : FwDynamicController
         }
         rw("done");
     }
+
+    public void ResetMFAAction(int id)
+    {
+        model.update(id, DB.h("mfa_secret", null));
+        //fw.flash("success", "Multi-Factor Authentication ");
+        fw.redirect($"{base_url}/ShowForm/{id}/edit");
+    }
 }
