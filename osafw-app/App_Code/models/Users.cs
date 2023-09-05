@@ -11,6 +11,8 @@ using Microsoft.VisualBasic;
 using System.Collections;
 using static BCrypt.Net.BCrypt;
 using System.Text.RegularExpressions;
+using OtpNet;
+using QRCoder;
 
 namespace osafw;
 
@@ -102,7 +104,7 @@ public class Users : FwModel
     }
     #endregion
 
-    #region Work with Passwords
+    #region Work with Passwords/MFA
     /// <summary>
     /// performs any required password cleaning (for now - just limit pwd length at 32 and trim)
     /// </summary>
@@ -209,11 +211,88 @@ public class Users : FwModel
 
         return result;
     }
+
+    /// <summary>
+    /// generate a new MFA secret
+    /// </summary>
+    /// <returns></returns>
+    internal string generateMFASecret()
+    {
+        return Base32Encoding.ToString(KeyGeneration.GenerateRandomKey());
+    }
+
+    public string generateMFAQRCode(string mfa_secret, string user="user@company", string issuer="osafw")
+    {
+        var uriString = new OtpUri(OtpType.Totp, mfa_secret, user, issuer).ToString();
+
+        var IMG_SIZE = 5;
+        return $"data:image/png;base64,{Convert.ToBase64String(PngByteQRCodeHelper.GetQRCode(uriString, QRCodeGenerator.ECCLevel.Q, IMG_SIZE))}";
+    }   
+
+    /// <summary>
+    /// check if code is valid against provided MFA secret
+    /// </summary>
+    /// <param name="mfa_secret"></param>
+    /// <param name="code"></param>
+    /// <returns></returns>
+    public bool isValidMFACode(string mfa_secret, string code)
+    {
+        if (string.IsNullOrEmpty(mfa_secret))
+            return false;
+
+        var totp = new Totp(Base32Encoding.ToBytes(mfa_secret));
+        // Generate the current TOTP value from the secret and compare it to the user's value.
+        return totp.VerifyTotp(code, out _, new VerificationWindow(2, 2)); // use 1,1 for stricter time check
+    }
+
+    /// <summary>
+    /// check if code is valid against user's MFA secret
+    /// </summary>
+    /// <param name="id">users.id</param>
+    /// <param name="code"></param>
+    /// <returns></returns>
+    public bool isValidMFA(int id, string code)
+    {
+        var user = this.one(id);
+        return isValidMFACode(user["mfa_secret"] ?? "", code);
+    }
+
+    /// <summary>
+    /// check if code is a MFA recovery code, if yes - remove that code from user's recovery codes
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="code"></param>
+    /// <returns>true if code is a recovery code</returns>
+    public bool checkMFARecovery(int id, string code)
+    {
+        var result = false;
+        var user = this.one(id);
+        var recovery_codes = Utils.f2str(user["mfa_recovery"]).Split(' '); // space-separated hashed codes
+        var new_recovery_codes = "";
+        //split by space and check each code
+        foreach (var recovery_code in recovery_codes)
+        {
+            if (checkPwd(code, recovery_code))
+                result = true;
+            else
+                new_recovery_codes += recovery_code + " "; // not found codes - add to new list
+        }
+
+        if (result)
+        {
+            //if found - update user's recovery codes (as we removed matched one)
+            var item = new Hashtable();
+            item["mfa_recovery"] = new_recovery_codes.Trim();
+            this.update(id, item);
+        }
+
+        return result;
+    }
     #endregion
 
     #region Login/Session
     // fill the session and do all necessary things just user authenticated (and before redirect
-    public bool doLogin(int id)
+    public void doLogin(int id)
     {
         fw.context.Session.Clear();
         fw.Session("XSS", Utils.getRandStr(16));
@@ -223,9 +302,8 @@ public class Users : FwModel
         fw.logEvent("login", id);
         // update login info
         Hashtable fields = new();
-        fields["login_time"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+        fields["login_time"] = DateTime.Now;
         this.update(id, fields);
-        return true;
     }
 
     public bool reloadSession(int id = 0)
@@ -482,5 +560,4 @@ public class Users : FwModel
 
         fw.G["menu_items"] = result;
     }
-
 }

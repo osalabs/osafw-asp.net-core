@@ -98,6 +98,13 @@ public class DateUtils
         }
     }
 
+    // return utc unix timestamp
+    public static long UnixTimestamp()
+    {
+        DateTime currentTime = DateTime.UtcNow;
+        return ((DateTimeOffset)currentTime).ToUnixTimeSeconds();
+    }
+
     public static DateTime Unix2Date(double unixTimeStamp)
     {
         DateTime result = new (1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);

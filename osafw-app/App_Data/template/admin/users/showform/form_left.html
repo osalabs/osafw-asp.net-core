@@ -23,7 +23,22 @@
 </div>
 
 <div class="row form-row">
-  <label class="col-form-label required col-md-3" for="access_level">`Access level`</label>
+  <label class="col-form-label col-md-3" for="access_level">`MFA`</label>
+  <div class="col">
+    <p class="form-control-plaintext">
+    <~mfa_no unless="i[mfa_secret]" inline>
+      <span class="badge text-bg-warning">`Multi-Factor Authentication Is Not Enabled`</span>
+    </~mfa_no>
+    <~mfa_yes if="i[mfa_secret]" inline>
+      <span class="badge text-bg-success">`Multi-Factor Authentication Enabled`</span>
+      <button type="button" class="btn btn-default on-fw-submit" data-url="<~../url>/(ResetMFA)/<~id>?XSS=<~SESSION[XSS]>" data-title="`Reset MFA. User will need to re-setup codes on login`"><~/common/icons/unlock> `Reset MFA`</button>
+    </~mfa_yes>
+    </p>
+  </div>
+</div>
+
+<div class="row form-row">
+  <label class="col-form-label required col-md-3" for="access_level">`Access Level`</label>
   <div class="col-md-6 col-xl-4">
         <select id="access_level" name="item[access_level]" class="form-select" autocomplete="off">
             <option value=""> - `select` -

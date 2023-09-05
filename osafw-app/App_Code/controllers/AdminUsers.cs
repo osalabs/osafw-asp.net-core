@@ -137,8 +137,9 @@ public class AdminUsersController : FwDynamicController
 
         fw.logEvent("simulate", id, fw.userId);
 
-        if (model.doLogin(id))
-            fw.redirect((string)fw.config("LOGGED_DEFAULT_URL"));
+        model.doLogin(id);
+        
+        fw.redirect((string)fw.config("LOGGED_DEFAULT_URL"));
     }
 
     public Hashtable SendPwdAction(int id)
@@ -164,5 +165,12 @@ public class AdminUsersController : FwDynamicController
             db.update(model.table_name, new Hashtable() { { "pwd", hashed } }, new Hashtable() { { "id", row["id"] } });
         }
         rw("done");
+    }
+
+    public void ResetMFAAction(int id)
+    {
+        model.update(id, DB.h("mfa_secret", null));
+        //fw.flash("success", "Multi-Factor Authentication ");
+        fw.redirect($"{base_url}/ShowForm/{id}/edit");
     }
 }
