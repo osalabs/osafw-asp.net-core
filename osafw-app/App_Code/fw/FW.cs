@@ -1490,13 +1490,12 @@ public class FW : IDisposable
                 if (sentryClient != null)
                     sentryClient.Dispose();
 #endif
+                db.Dispose(); // this will return db connections to pool
             }
 
             // free unmanaged resources (unmanaged objects) and override Finalize() below.
             try
             {
-                db.Dispose(); // this will return db connections to pool
-
                 // check if log file too large and need to be rotated
                 string log_file = (string)config("log");
                 if (!string.IsNullOrEmpty(log_file))
