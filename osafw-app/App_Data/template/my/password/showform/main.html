@@ -9,7 +9,7 @@
             <span class="badge text-bg-warning">`Multi-Factor Authentication Is Not Enabled`</span>
         </p>
         <div>
-            <a class="btn btn-default" href="<~../url>/(SetupMFA)"><~/common/icons/qr-code> `Setup MFA`</a>
+            <a class="btn btn-default" href="<~/my/mfa/url>"><~/common/icons/qr-code> `Setup MFA`</a>
         </div>
       </~mfa_no>
       <~mfa_yes if="i[mfa_secret]" inline>
@@ -17,7 +17,7 @@
             <span class="badge text-bg-success">`Multi-Factor Authentication Enabled`</span> <~/common/dot> Created on <~i[mfa_added] date="short">
         </p>
         <div>
-            <a class="btn btn-default" href="<~../url>/(SetupMFA)"><~/common/icons/arrow-clockwise> `Resync MFA`</a>
+            <a class="btn btn-default" href="<~/my/mfa/url>"><~/common/icons/arrow-clockwise> `Resync MFA`</a>
         </div>
       </~mfa_yes>
   </div>

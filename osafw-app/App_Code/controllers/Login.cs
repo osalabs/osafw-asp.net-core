@@ -93,6 +93,7 @@ public class LoginController : FwController
                     throw new AuthException("User Authentication Error");
                 }
 
+                // check if MFA enabled and redirect to MFA login
                 if (!Utils.isEmpty(user["mfa_secret"]))
                 {
                     fw.Session("mfa_login_users_id", (string)user["id"]);
@@ -101,6 +102,13 @@ public class LoginController : FwController
                     fw.Session("mfa_login_remember", Utils.f2str(item["remember"]));
                     fw.Session("mfa_login_gourl", gourl);
                     fw.redirect(base_url + "/(MFA)");
+                }
+
+                // no MFA secret for the user here - check if MFA enforced and redirect to setup MFA
+                if (Utils.f2bool(fw.config("is_mfa_enforced")))
+                {
+                    fw.Session("mfa_login_users_id", (string)user["id"]);
+                    fw.redirect("/My/MFA");
                 }
             }
 
