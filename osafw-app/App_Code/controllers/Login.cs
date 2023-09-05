@@ -18,6 +18,8 @@ public class LoginController : FwController
     {
         base.init(fw);
         model.init(fw);
+
+        base_url = "/Login";
         // override layout
         fw.G["PAGE_LAYOUT"] = fw.G["PAGE_LAYOUT_PUBLIC"];
     }
@@ -90,20 +92,19 @@ public class LoginController : FwController
                     fw.logEvent("login_fail", 0, 0, login);
                     throw new AuthException("User Authentication Error");
                 }
+
+                if (!Utils.isEmpty(user["mfa_secret"]))
+                {
+                    fw.Session("mfa_login_users_id", (string)user["id"]);
+                    fw.Session("mfa_login_attempts", "0");
+                    fw.Session("mfa_login_time", DateUtils.UnixTimestamp().ToString());
+                    fw.Session("mfa_login_remember", Utils.f2str(item["remember"]));
+                    fw.Session("mfa_login_gourl", gourl);
+                    fw.redirect(base_url + "/(MFA)");
+                }
             }
 
-            var users_id = Utils.f2int(user["id"]);
-            if (model.doLogin(users_id))
-            {
-                // Check is login need to be remembered
-                if (item.ContainsKey("remember"))
-                    model.createPermCookie(users_id);
-            }
-
-            if (!string.IsNullOrEmpty(gourl) && !Regex.IsMatch(gourl, "^http", RegexOptions.IgnoreCase))
-                fw.redirect(gourl);
-            else
-                fw.redirect((string)fw.config("LOGGED_DEFAULT_URL"));
+            performLogin(Utils.f2int(user["id"]), Utils.f2str(item["remember"]), gourl);
         }
         catch (ApplicationException ex)
         {
@@ -120,5 +121,78 @@ public class LoginController : FwController
         fw.model<Users>().removePermCookie(fw.userId);
         fw.context.Session.Clear();
         fw.redirect((string)fw.config("UNLOGGED_DEFAULT_URL"));
+    }
+
+    public Hashtable MFAAction()
+    {
+        var users_id = Utils.f2int(fw.Session("mfa_login_users_id"));
+        if (users_id == 0)
+            fw.redirect(base_url);
+
+        var ps = new Hashtable() {
+            { "hide_sidebar" , true},
+            { "users_id", users_id }
+        };
+        return ps;
+    }
+
+    public void SaveMFAAction()
+    {
+        route_onerror = FW.ACTION_INDEX;
+        checkXSS();
+        var users_id = Utils.f2int(fw.Session("mfa_login_users_id"));
+        if (users_id == 0)
+            fw.redirect(base_url);
+
+        // check if MFA login expired (more than 5 min after login)
+        if (DateUtils.UnixTimestamp() - Utils.f2long(fw.Session("mfa_login_time")) > 60 * 5)
+        {
+            fw.Session("mfa_login_users_id", "0");
+            fw.redirect(base_url);
+        }
+
+        // check no more than 10 attempts
+        var mfa_login_attempts = Utils.f2int(fw.Session("mfa_login_attempts"));
+        if (mfa_login_attempts >= 10)
+        {
+            fw.Session("mfa_login_users_id", "0");
+            fw.redirect(base_url);
+        }
+        // increase attempts
+        fw.Session("mfa_login_attempts", (mfa_login_attempts + 1).ToString());
+
+        var item = reqh("item");
+        var mfs_code = item["code"].ToString();
+
+        if (!model.isValidMFA(users_id, mfs_code))
+        {
+            // invalid MFA code, try recovery codes
+            if (!model.checkMFARecovery(users_id, mfs_code))
+            {
+                fw.flash("error", "Invalid MFA code, try again");
+                fw.logEvent("login_fail", users_id, 0, "mfa fail");
+                fw.redirect(base_url + "/(MFA)");
+            }
+        }
+
+        // mfa ok - login
+        performLogin(users_id, fw.Session("mfa_login_remember"), fw.Session("mfa_login_gourl"));
+    }
+
+    private void performLogin(int users_id, string remember, string gourl)
+    {
+        model.doLogin(users_id);
+
+        // Check is login need to be remembered
+        if (!Utils.isEmpty(remember))
+            model.createPermCookie(users_id);
+
+        string url;
+        if (!string.IsNullOrEmpty(gourl) && !Regex.IsMatch(gourl, "^http", RegexOptions.IgnoreCase))
+            url = gourl;
+        else
+            url = (string)fw.config("LOGGED_DEFAULT_URL");
+
+        fw.redirect(url);
     }
 }

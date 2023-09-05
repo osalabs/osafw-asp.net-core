@@ -137,8 +137,9 @@ public class AdminUsersController : FwDynamicController
 
         fw.logEvent("simulate", id, fw.userId);
 
-        if (model.doLogin(id))
-            fw.redirect((string)fw.config("LOGGED_DEFAULT_URL"));
+        model.doLogin(id);
+        
+        fw.redirect((string)fw.config("LOGGED_DEFAULT_URL"));
     }
 
     public Hashtable SendPwdAction(int id)

@@ -256,11 +256,43 @@ public class Users : FwModel
         var user = this.one(id);
         return isValidMFACode(user["mfa_secret"] ?? "", code);
     }
+
+    /// <summary>
+    /// check if code is a MFA recovery code, if yes - remove that code from user's recovery codes
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="code"></param>
+    /// <returns>true if code is a recovery code</returns>
+    public bool checkMFARecovery(int id, string code)
+    {
+        var result = false;
+        var user = this.one(id);
+        var recovery_codes = Utils.f2str(user["mfa_recovery"]).Split(' '); // space-separated hashed codes
+        var new_recovery_codes = "";
+        //split by space and check each code
+        foreach (var recovery_code in recovery_codes)
+        {
+            if (checkPwd(code, recovery_code))
+                result = true;
+            else
+                new_recovery_codes += recovery_code + " "; // not found codes - add to new list
+        }
+
+        if (result)
+        {
+            //if found - update user's recovery codes (as we removed matched one)
+            var item = new Hashtable();
+            item["mfa_recovery"] = new_recovery_codes.Trim();
+            this.update(id, item);
+        }
+
+        return result;
+    }
     #endregion
 
     #region Login/Session
     // fill the session and do all necessary things just user authenticated (and before redirect
-    public bool doLogin(int id)
+    public void doLogin(int id)
     {
         fw.context.Session.Clear();
         fw.Session("XSS", Utils.getRandStr(16));
@@ -270,9 +302,8 @@ public class Users : FwModel
         fw.logEvent("login", id);
         // update login info
         Hashtable fields = new();
-        fields["login_time"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+        fields["login_time"] = DateTime.Now;
         this.update(id, fields);
-        return true;
     }
 
     public bool reloadSession(int id = 0)
