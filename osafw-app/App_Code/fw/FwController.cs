@@ -546,10 +546,11 @@ public abstract class FwController
 
     /// <summary>
     /// set list_where based on search[] filter
-    ///      - exact: "=term"
-    ///      - Not equals "!=term"
+    ///      - exact: "=term" or just "=" - mean empty
+    ///      - Not equals "!=term" or just "!=" - means not empty
     ///      - Not contains: "!term"
     ///      - more/less: <=, <, >=, >"
+    ///      - and support search by date if search value looks like date in format MM/DD/YYYY
     /// </summary>
     public virtual void setListSearchAdvanced()
     {
@@ -562,34 +563,86 @@ public abstract class FwController
             {
                 string str;
                 var fieldname_sql = "ISNULL(CAST(" + db.qid(fieldname) + " as NVARCHAR(255)), '')"; //255 need as SQL Server by default makes only 30
-                var fieldname_sql2 = "TRY_CONVERT(DECIMAL(18,1),CAST(" + db.qid(fieldname) + " as NVARCHAR))"; // SQL Server 2012+ only
-                if (value.Length > 1 && value.Substring(0, 1) == "=")
+                var fieldname_sql_num = "TRY_CONVERT(DECIMAL(18,1),CAST(" + db.qid(fieldname) + " as NVARCHAR))"; // SQL Server 2012+ only
+                var fieldname_sql_date = "TRY_CONVERT(DATE, " + db.qid(fieldname) + ")"; //for date search
+                
+                if (value.Length >= 1 && value.Substring(0, 1) == "=")
                 {
-                    str = " = " + db.q(value[1..]);
+                    var v = value[1..];
+                    if (DateUtils.isDateStr(v))
+                    {
+                        fieldname_sql = fieldname_sql_date;
+                        str = " = " + db.q(DateUtils.Str2SQL(v));
+                    }
+                    else
+                        str = " = " + db.q(v);
                 }
-                else if (value.Length > 2 && value.Substring(0, 2) == "!=")
+                else if (value.Length >= 2 && value.Substring(0, 2) == "!=")
                 {
-                    str = " <> " + db.q(value[2..]);
+                    var v = value[2..];
+                    if (DateUtils.isDateStr(v))
+                    {
+                        fieldname_sql = fieldname_sql_date;
+                        str = " <> " + db.q(DateUtils.Str2SQL(v));
+                    }
+                    else
+                        str = " <> " + db.q(v);
                 }
-                else if (value.Length > 2 && value.Substring(0, 2) == "<=")
+                else if (value.Length >= 2 && value.Substring(0, 2) == "<=")
                 {
-                    fieldname_sql = fieldname_sql2;
-                    str = " <= " + db.q(value[2..]);
+                    var v = value[2..];
+                    if (DateUtils.isDateStr(v))
+                    {
+                        fieldname_sql = fieldname_sql_date;
+                        str = " <= " + db.q(DateUtils.Str2SQL(v));
+                    }
+                    else
+                    {
+                        fieldname_sql = fieldname_sql_num;
+                        str = " <= " + db.qdec(v);
+                    }
                 }
                 else if (value.Length >= 1 && value.Substring(0, 1) == "<")
                 {
-                    fieldname_sql = fieldname_sql2;
-                    str = " < " + db.q(value[1..]);
+                    var v = value[1..];
+                    if (DateUtils.isDateStr(v))
+                    {
+                        fieldname_sql = fieldname_sql_date;
+                        str = " < " + db.q(DateUtils.Str2SQL(v));
+                    }
+                    else
+                    {
+                        fieldname_sql = fieldname_sql_num;
+                        str = " < " + db.qdec(v);
+                    }
                 }
-                else if (value.Length > 2 && value.Substring(0, 2) == ">=")
+                else if (value.Length >= 2 && value.Substring(0, 2) == ">=")
                 {
-                    fieldname_sql = fieldname_sql2;
-                    str = " >= " + db.q(value[2..]);
+                    var v = value[2..];
+                    if (DateUtils.isDateStr(v))
+                    {
+                        fieldname_sql = fieldname_sql_date;
+                        str = " >= " + db.q(DateUtils.Str2SQL(v));
+                    }
+                    else
+                    {
+                        fieldname_sql = fieldname_sql_num;
+                        str = " >= " + db.qdec(v);
+                    }
                 }
                 else if (value.Length > 1 && value.Substring(0, 1) == ">")
                 {
-                    fieldname_sql = fieldname_sql2;
-                    str = " > " + db.q(value[1..]);
+                    var v = value[1..];
+                    if (DateUtils.isDateStr(v))
+                    {
+                        fieldname_sql = fieldname_sql_date;
+                        str = " > " + db.q(DateUtils.Str2SQL(v));
+                    }
+                    else
+                    {
+                        fieldname_sql = fieldname_sql_num;
+                        str = " > " + db.qdec(v);
+                    }
                 }
                 else if (value.Length > 1 && value.Substring(0, 1) == "!")
                 {

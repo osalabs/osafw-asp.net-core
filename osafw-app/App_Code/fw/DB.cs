@@ -918,6 +918,12 @@ public class DB : IDisposable
         return Utils.f2float(str);
     }
 
+    // simple quote as Decimal Value
+    public decimal qdec(object str)
+    {
+        return Utils.f2decimal(str);
+    }
+
     // value to Date (or null if value is not a date)
     public DateTime? qd(object value)
     {
