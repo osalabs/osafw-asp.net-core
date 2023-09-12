@@ -559,102 +559,77 @@ public abstract class FwController
         foreach (string fieldname in hsearch.Keys)
         {
             string value = (string)hsearch[fieldname];
-            if (!string.IsNullOrEmpty(value) && (!is_dynamic_index || view_list_map.ContainsKey(fieldname)))
-            {
-                string str;
-                var fieldname_sql = "ISNULL(CAST(" + db.qid(fieldname) + " as NVARCHAR(255)), '')"; //255 need as SQL Server by default makes only 30
-                var fieldname_sql_num = "TRY_CONVERT(DECIMAL(18,1),CAST(" + db.qid(fieldname) + " as NVARCHAR))"; // SQL Server 2012+ only
-                var fieldname_sql_date = "TRY_CONVERT(DATE, " + db.qid(fieldname) + ")"; //for date search
-                
-                if (value.Length >= 1 && value.Substring(0, 1) == "=")
-                {
-                    var v = value[1..];
-                    if (DateUtils.isDateStr(v))
-                    {
-                        fieldname_sql = fieldname_sql_date;
-                        str = " = " + db.q(DateUtils.Str2SQL(v));
-                    }
-                    else
-                        str = " = " + db.q(v);
-                }
-                else if (value.Length >= 2 && value.Substring(0, 2) == "!=")
-                {
-                    var v = value[2..];
-                    if (DateUtils.isDateStr(v))
-                    {
-                        fieldname_sql = fieldname_sql_date;
-                        str = " <> " + db.q(DateUtils.Str2SQL(v));
-                    }
-                    else
-                        str = " <> " + db.q(v);
-                }
-                else if (value.Length >= 2 && value.Substring(0, 2) == "<=")
-                {
-                    var v = value[2..];
-                    if (DateUtils.isDateStr(v))
-                    {
-                        fieldname_sql = fieldname_sql_date;
-                        str = " <= " + db.q(DateUtils.Str2SQL(v));
-                    }
-                    else
-                    {
-                        fieldname_sql = fieldname_sql_num;
-                        str = " <= " + db.qdec(v);
-                    }
-                }
-                else if (value.Length >= 1 && value.Substring(0, 1) == "<")
-                {
-                    var v = value[1..];
-                    if (DateUtils.isDateStr(v))
-                    {
-                        fieldname_sql = fieldname_sql_date;
-                        str = " < " + db.q(DateUtils.Str2SQL(v));
-                    }
-                    else
-                    {
-                        fieldname_sql = fieldname_sql_num;
-                        str = " < " + db.qdec(v);
-                    }
-                }
-                else if (value.Length >= 2 && value.Substring(0, 2) == ">=")
-                {
-                    var v = value[2..];
-                    if (DateUtils.isDateStr(v))
-                    {
-                        fieldname_sql = fieldname_sql_date;
-                        str = " >= " + db.q(DateUtils.Str2SQL(v));
-                    }
-                    else
-                    {
-                        fieldname_sql = fieldname_sql_num;
-                        str = " >= " + db.qdec(v);
-                    }
-                }
-                else if (value.Length > 1 && value.Substring(0, 1) == ">")
-                {
-                    var v = value[1..];
-                    if (DateUtils.isDateStr(v))
-                    {
-                        fieldname_sql = fieldname_sql_date;
-                        str = " > " + db.q(DateUtils.Str2SQL(v));
-                    }
-                    else
-                    {
-                        fieldname_sql = fieldname_sql_num;
-                        str = " > " + db.qdec(v);
-                    }
-                }
-                else if (value.Length > 1 && value.Substring(0, 1) == "!")
-                {
-                    str = " NOT LIKE " + db.q("%" + value[1..] + "%");
-                }
-                else
-                {
-                    str = " LIKE " + db.q("%" + value + "%");
-                }
+            if (string.IsNullOrEmpty(value) || (is_dynamic_index && !view_list_map.ContainsKey(fieldname)))
+                continue;
 
-                this.list_where += " and " + fieldname_sql + " " + str;
+            
+            var qfieldname = db.qid(fieldname);
+            var fieldname_sql = $"ISNULL(CAST({qfieldname} as NVARCHAR(255)), '')"; //255 need as SQL Server by default makes only 30
+            var fieldname_sql_num = $"TRY_CONVERT(DECIMAL(18,1),CAST({qfieldname} as NVARCHAR))"; // SQL Server 2012+ only
+            var fieldname_sql_date = $"TRY_CONVERT(DATE, {qfieldname})"; //for date search
+
+            string op = value[..1];
+            string op2 = value.Length >= 2 ? value[..2] : null;
+
+            string v = value[1..];
+            if (op2 == "!=" || op2 == "<=" || op2 == ">=")
+                v = value[2..];
+
+            var qv = db.q(v); // quoted value
+            if (DateUtils.isDateStr(v))
+            {
+                //if input looks like a date - compare as date
+                fieldname_sql = fieldname_sql_date;
+                qv = db.q(DateUtils.Str2SQL(v));
             }
+            else
+            {
+                if (op2 == "<=" || op == "<" || op2 == ">=" || op == ">")
+                {
+                    //numerical comparison
+                    fieldname_sql = fieldname_sql_num;
+                    qv = Utils.f2str(db.qdec(v));
+                }
+            }
+
+            string op_value;
+            switch (op2)
+            {
+                // first - check for 2-char operators
+                case "!=":
+                    op_value = $" <> {qv}";
+                    break;
+                case "<=":
+                    op_value = $" <= {qv}";
+                    break;
+                case ">=":
+                    op_value = $" >= {qv}";
+                    break;
+                default:
+                    // then check for 1-char operators
+                    switch (op)
+                    {
+                        case "=":
+                            op_value = $" = {qv}";
+                            break;
+                        case "<":
+                            op_value = $" < {qv}";
+                            break;
+                        case ">":
+                            op_value = $" > {qv}";
+                            break;
+                        case "!":
+                            op_value = $" NOT LIKE {db.q($"%{v}%")}";
+                            break;
+                        default:
+                            //default is just LIKE/contains
+                            op_value = $" LIKE {db.q($"%{value}%")}";
+                            break;
+                    }
+                    break;
+            }
+
+            list_where += $" AND {fieldname_sql} {op_value}";
         }
     }
 
