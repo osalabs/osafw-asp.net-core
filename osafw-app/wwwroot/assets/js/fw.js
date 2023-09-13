@@ -66,6 +66,27 @@ window.fw={
     });
   },
 
+  //toggle on element between mutliple classes in order
+  toggleClasses($el, arr_classes){
+    let cur_index = -1;
+
+    for (let i = 0; i < arr_classes.length; i++) {
+        if ($el.hasClass(arr_classes[i])) {
+            cur_index = i;
+            break;
+        }
+    }
+
+    // Remove the current class
+    if (cur_index !== -1) {
+        $el.removeClass(arr_classes[cur_index]);
+    }
+
+    // Add the next class in the array or go back to the start if we're at the end
+    let nextClassIndex = (cur_index + 1) % arr_classes.length;
+    $el.addClass(arr_classes[nextClassIndex]);
+  },
+
   //called on document ready
   setup_handlers: function (){
     //list screen init
@@ -96,11 +117,17 @@ window.fw={
     $(document).on('click', '.on-toggle-search', on_toggle_search);
     //open search if there is something
     var is_search = $('table.list .search input').filter(function () {
-      return this.value.length > 0
+      return this.value.length > 0;
     }).length>0;
     if (is_search){
       on_toggle_search();
     }
+
+    //list table density switch
+    var on_toggle_density = function (e) {
+      fw.toggleClasses($(this).closest('table.list'), ['table-sm', 'table-dense', 'table-normal']);
+    };
+    $(document).on('click', '.on-toggle-density', on_toggle_density);
 
     $('table.list').on('keypress','.search :input', function(e) {
       if (e.which == 13) {// on Enter press
