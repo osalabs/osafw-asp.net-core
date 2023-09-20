@@ -149,7 +149,7 @@ public class RolesResourcesPermissions : FwModel
             fields[junction_field_permissions_id] = permissions_id;
             fields[field_status] = STATUS_ACTIVE;
             fields[field_upd_users_id] = fw.userId;
-            fields[field_upd_time] = DateTime.Now;
+            fields[field_upd_time] = DB.NOW;
 
             where = new Hashtable();
             where[junction_field_main_id] = roles_id;

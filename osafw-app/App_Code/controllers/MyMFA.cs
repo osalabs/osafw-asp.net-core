@@ -80,7 +80,7 @@ public class MyMFAController : FwController
         // save to db
         model.update(user_id, new Hashtable {
             { "mfa_secret" , fw.Session("mfa_secret") },
-            { "mfa_added" , DateTime.Now },
+            { "mfa_added" , DB.NOW },
             { "mfa_recovery" , string.Join(" ",hashed_codes) },
         });
         fw.Session("mfa_secret", "");

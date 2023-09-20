@@ -68,7 +68,7 @@ public class PasswordController : FwController
             throw new UserException("Not a valid Email");
 
         if ((string)user["pwd_reset"] == "" || !model.checkPwd(token, (string)user["pwd_reset"])
-            || (DateTime.Now - DateTime.Parse((string)user["pwd_reset_time"])).Minutes > PWD_RESET_EXPIRATION)
+            || (db.Now() - DateTime.Parse((string)user["pwd_reset_time"])).TotalMinutes > PWD_RESET_EXPIRATION)
         {
             fw.flash("error", "Password reset token expired. Use Forgotten password link again.");
             fw.redirect("/Login");
@@ -103,7 +103,7 @@ public class PasswordController : FwController
             throw new UserException("Not a valid Email");
 
         if ((string)user["pwd_reset"] == "" || !model.checkPwd(token, (string)user["pwd_reset"])
-            || (DateTime.Now - DateTime.Parse((string)user["pwd_reset_time"])).Minutes > PWD_RESET_EXPIRATION)
+            || (db.Now() - DateTime.Parse((string)user["pwd_reset_time"])).TotalMinutes > PWD_RESET_EXPIRATION)
         {
             fw.flash("error", "Password reset token expired. Use Forgotten password link again.");
             fw.redirect("/Login");

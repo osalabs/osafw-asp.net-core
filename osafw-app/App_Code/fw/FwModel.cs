@@ -337,7 +337,7 @@ public abstract class FwModel : IDisposable
         }
 
         if (!string.IsNullOrEmpty(field_upd_time))
-            item[field_upd_time] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            item[field_upd_time] = DB.NOW;
         if (!string.IsNullOrEmpty(field_upd_users_id) && !item.ContainsKey(field_upd_users_id) && fw.isLogged)
             item[field_upd_users_id] = fw.Session("user_id");
 
@@ -375,7 +375,7 @@ public abstract class FwModel : IDisposable
             Hashtable vars = new();
             vars[field_status] = STATUS_DELETED;
             if (!string.IsNullOrEmpty(field_upd_time))
-                vars[field_upd_time] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                vars[field_upd_time] = DB.NOW;
             if (!string.IsNullOrEmpty(field_upd_users_id) && fw.isLogged)
                 vars[field_upd_users_id] = fw.userId;
 

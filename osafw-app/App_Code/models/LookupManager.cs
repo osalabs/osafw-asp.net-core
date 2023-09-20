@@ -150,7 +150,7 @@ public class LookupManager : FwModel
             {
                 // if no list cols - it's std table - add std fields
                 if (!item_save.ContainsKey("upd_time"))
-                    item_save["upd_time"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                    item_save["upd_time"] = DB.NOW;
                 if (!item_save.ContainsKey("upd_users_id") && fw.isLogged)
                     item_save["upd_users_id"] = fw.userId;
             }

@@ -1007,6 +1007,15 @@ public class DB : IDisposable
     }
 
     /// <summary>
+    /// fetch current database time
+    /// </summary>
+    /// <returns></returns>
+    public DateTime Now()
+    {
+        return (DateTime)valuep($"SELECT {sqlNOW()}");
+    }
+
+    /// <summary>
     /// prepare query and parameters - parameters will be converted to types appropriate for the related fields
     /// </summary>
     /// <param name="table"></param>

@@ -162,7 +162,7 @@ public class Users : FwModel
         Hashtable item = new()
         {
             {"pwd_reset", this.hashPwd(pwd_reset_token)},
-            {"pwd_reset_time", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")}
+            {"pwd_reset_time", DB.NOW}
         };
         this.update(id, item);
 
@@ -302,7 +302,7 @@ public class Users : FwModel
         fw.logEvent("login", id);
         // update login info
         Hashtable fields = new();
-        fields["login_time"] = DateTime.Now;
+        fields["login_time"] = DB.NOW;
         this.update(id, fields);
     }
 
