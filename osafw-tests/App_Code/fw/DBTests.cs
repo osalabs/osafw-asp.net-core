@@ -24,16 +24,19 @@ namespace osafw.Tests
             db = new DB(connstr, "SQL", "main");
             db.connect();
             // create tables for testing
-            db.exec("DROP TABLE IF EXISTS " + table_name + ";");
-            db.exec("CREATE TABLE " + table_name + " (  id INT,iname NVARCHAR(64) NOT NULL default '')");
-
-            db.exec("INSERT INTO " + table_name + "(id, iname) VALUES(1,'test1'),(2,'test2'),(3,'test3');");
-
+            db.exec($"DROP TABLE IF EXISTS {table_name}");
+            db.exec($@"CREATE TABLE {table_name} (
+                        id              INT,
+                        iname           NVARCHAR(64) NOT NULL default '',
+                        idatetime       DATETIME2
+                    )");
+            db.exec($"INSERT INTO {table_name} (id, iname) VALUES (1,'test1'),(2,'test2'),(3,'test3')");
         }
+
         [TestCleanup()]
         public void Cleanup()
         {
-            db.exec("DROP TABLE " + table_name + ";");
+            db.exec($"DROP TABLE {table_name}");
             db.disconnect();
         }
 
@@ -411,7 +414,17 @@ namespace osafw.Tests
         }
 
         [TestMethod()]
-        public void update_or_insertTest()
+        public void sqlNOWTest()
+        {
+            // test NOW/GETDATE via update table record (assuming select and update will happen in the same second)
+            var rnow = db.rowp($"SELECT {db.sqlNOW()} as [now]");
+            db.insert(table_name, DB.h("id", 6, "iname", "test6", "idatetime", DB.NOW));
+            var r = db.row(table_name, DB.h("id", 6));
+            Assert.AreEqual(rnow["now"], r["idatetime"], "");
+        }
+
+        [TestMethod()]
+        public void updateOrInsertTest()
         {
             db.updateOrInsert(table_name, DB.h("iname", "test5"), DB.h("id", 5));
             var r = db.row(table_name, DB.h("id", 5));

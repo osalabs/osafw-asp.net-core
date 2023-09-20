@@ -85,7 +85,7 @@ public class DBList : List<DBRow>
     public const int DEFAULT_CAPACITY = 25; // default capacity for readArray - for optimal performance should matches default number of rows on list screens
 
     public DBList() : base() { }
-    public DBList(int capacity) : base(capacity) {}
+    public DBList(int capacity) : base(capacity) { }
 
     public static implicit operator ArrayList(DBList rows)
     {
@@ -126,7 +126,7 @@ public class DBOperation
     public string opstr; // string value for op
     public bool is_value = true; // if false - operation is unary (no value)
     public object value; // can be array for IN, NOT IN, OR
-    public string sql; // value to be used in sql query string
+    public string sql = ""; // raw value to be used in sql query string if !is_value
 
     public DBOperation(DBOps op, object value = null)
     {
@@ -199,6 +199,11 @@ public class DB : IDisposable
     public const string DBTYPE_OLE = "OLE";
     public const string DBTYPE_ODBC = "ODBC";
     public const string DBTYPE_MYSQL = "MySQL";
+
+    //special value for current db time in queries (GETDATE() or NOW()) can be used as a value like this:
+    // db.insert("table", DB.h("idatetime", DB.NOW)); - insert a row with current datetime
+    // db.array("demos", DB.h("upd_time", db.opGT(DB.NOW))); - get all rows with upd_time > current datetime
+    public static readonly object NOW = new(); 
 
     private static Hashtable schemafull_cache; // cache for the full schema, lifetime = app lifetime
     private static Hashtable schema_cache; // cache for the schema, lifetime = app lifetime
@@ -662,25 +667,25 @@ public class DB : IDisposable
     /// <param name="limit"></param>
     /// <returns></returns>
     /// <exception cref="ApplicationException"></exception>
-    public DBList selectRaw(string fields, string from, string where, Hashtable where_params, string orderby, int offset=0, int limit = -1)
+    public DBList selectRaw(string fields, string from, string where, Hashtable where_params, string orderby, int offset = 0, int limit = -1)
     {
         DBList result;
         if (this.dbtype == DB.DBTYPE_SQLSRV)
         {
             // for SQL Server 2012+
-            var sql = "SELECT "+ fields + " FROM " + from + " WHERE " + where + " ORDER BY " + orderby + " OFFSET " + offset + " ROWS " + " FETCH NEXT " + limit + " ROWS ONLY";
+            var sql = "SELECT " + fields + " FROM " + from + " WHERE " + where + " ORDER BY " + orderby + " OFFSET " + offset + " ROWS " + " FETCH NEXT " + limit + " ROWS ONLY";
             result = this.arrayp(sql, where_params);
         }
         else if (this.dbtype == DB.DBTYPE_MYSQL)
         {
             // for MySQL
-            var sql = "SELECT "+ fields + " FROM " + from + " WHERE " + where + " ORDER BY " + orderby + " LIMIT " + offset + ", " + limit;
+            var sql = "SELECT " + fields + " FROM " + from + " WHERE " + where + " ORDER BY " + orderby + " LIMIT " + offset + ", " + limit;
             result = this.arrayp(sql, where_params);
         }
         else if (this.dbtype == DB.DBTYPE_OLE)
         {
             // OLE - for Access - emulate using TOP and return just a limit portion (bad perfomance, but no way)
-            var sql = "SELECT TOP " + (offset + limit) + " "+ fields + " FROM " + from + " WHERE " + where + " ORDER BY " + orderby;
+            var sql = "SELECT TOP " + (offset + limit) + " " + fields + " FROM " + from + " WHERE " + where + " ORDER BY " + orderby;
             var rows = this.arrayp(sql, where_params);
             if (offset >= rows.Count)
                 // offset too far
@@ -984,9 +989,21 @@ public class DB : IDisposable
         }
         else
         {
-            result = Regex.Replace(sql, @"^(select )",@"$1 TOP "+limit+" ", RegexOptions.IgnoreCase);
+            result = Regex.Replace(sql, @"^(select )", @"$1 TOP " + limit + " ", RegexOptions.IgnoreCase);
         }
         return result;
+    }
+
+    /// <summary>
+    /// returns sql string with function for current database time according to Server type
+    /// </summary>
+    /// <returns></returns>
+    public string sqlNOW()
+    {
+        if (dbtype == DBTYPE_SQLSRV)
+            return "GETDATE()";
+        else
+            return "NOW()"; //MySQL, Access, Postgres
     }
 
     /// <summary>
@@ -1060,16 +1077,28 @@ public class DB : IDisposable
                     sql += "(" + (sql_params.Count > 0 ? string.Join(",", sql_params) : "NULL") + ")";
                 }
                 else
-                {
-                    @params[param_name] = dbop.value;
-                    sql += "@" + param_name;
+                {                    
+                    if (dbop.value == DB.NOW)
+                    {
+                        // if value is NOW object - don't add it to params, just use NOW()/GETDATE() in sql
+                        sql += sqlNOW();
+                    }
+                    else
+                    {
+                        @params[param_name] = dbop.value;
+                        sql += "@" + param_name;
+                    }
                 }
                 fields_list.Add(fname); // only if field has a parameter - include in the list
             }
+            else
+            {
+                sql += dbop.sql; //if no value - add operation's raw sql if any
+            }
             params_sqls.Add(sql);
         }
-        // logger(LogLevel.DEBUG, "fields:", fields_with_param_names)
-        // logger(LogLevel.DEBUG, "params:", params)
+        //logger(LogLevel.DEBUG, "fields:", fields);
+        //logger(LogLevel.DEBUG, "params:", params_sqls);
 
         return new DBQueryAndParams()
         {
@@ -1098,7 +1127,7 @@ public class DB : IDisposable
         return field2Op(table, field_name, dbop, is_for_where);
     }
 
-    // returnDBOperation class with value converted to type appropriate for the db field
+    // return DBOperation class with value converted to type appropriate for the db field
     public DBOperation field2Op(string table, string field_name, DBOperation dbop, bool is_for_where = false)
     {
         connect();
@@ -1155,6 +1184,10 @@ public class DB : IDisposable
         {
             //result is DBNull
         }
+        else if (field_value == NOW)
+        {
+            result = field_value; // special case for NOW
+        }
         else
         {
             if (Regex.IsMatch(field_type, "int"))
@@ -1178,10 +1211,7 @@ public class DB : IDisposable
             else if (field_type == "datetime")
             {
                 result = this.qd(field_value);
-                if (result == null)
-                {
-                    result = DBNull.Value;
-                }
+                result ??= DBNull.Value;
             }
             else if (field_type == "float")
                 result = Utils.f2float(field_value);
