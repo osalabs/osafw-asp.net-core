@@ -1,5 +1,7 @@
 Properties/
-upload/
+
+upload/*
+!upload/.gitkeep
 
 #VS
 .vs/
