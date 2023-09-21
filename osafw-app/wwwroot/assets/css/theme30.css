@@ -1,14 +1,6 @@
 /*blue theme*/
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500&display=swap');
 
-input, button, select, optgroup, textarea, label, .alert, .badgeX, .blockquote-footer, .btn, [data-list] .page, .tox .tox-menu__footer .tox-button:last-child, .tox .tox-dialog__footer .tox-button:last-child, .tox .tox-menu__footer .tox-button--secondary, .tox .tox-dialog__footer .tox-button--secondary, .navbar, .sidebar, .pagination, .valid-feedback, .invalid-feedback {
-    font-family: "Poppins",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
-}
-
-.badge {
-  font-family: var(--bs-font-monospace);
-}
-
 :root,
 [data-bs-theme=light]{
   --theme-color: #2c7be5;
@@ -20,6 +12,20 @@ input, button, select, optgroup, textarea, label, .alert, .badgeX, .blockquote-f
   --bs-emphasis-color-rgb: rgb(94, 110, 130); /*#5e6e82*/
   /*--bs-link-color-rgb: rgb(44, 123, 229);*/ /*#2c7be5*/
   --bs-nav-pills-link-active-color: #5e6e82;
+  --theme-font-family: "Poppins",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
+}
+
+input, button, select, optgroup, textarea, label, .alert, .badgeX, .blockquote-footer, .btn, [data-list] .page, .tox .tox-menu__footer .tox-button:last-child, .tox .tox-dialog__footer .tox-button:last-child, .tox .tox-menu__footer .tox-button--secondary, .tox .tox-dialog__footer .tox-button--secondary, .navbar, .sidebar, .pagination, .valid-feedback, .invalid-feedback {
+  font-family: var(--theme-font-family);
+}
+
+input::placeholder{
+  opacity: 0.75 !important;
+  /* font-size: 0.75rem !important; */
+}
+
+.badge {
+  font-family: var(--bs-font-monospace);
 }
 
 .table {
@@ -85,6 +91,10 @@ body {
   background-color: var(--fw-body-bg) !important;
   /*padding: 0px !important;*/
 }
+  .sidebar > div > div.dropdown:last-child {
+    margin-left: 0.5rem;
+  }
+
 .sidebar .nav{
   background-color: #fff;
   padding: 0.5rem 0 0.5rem 0;
@@ -210,6 +220,7 @@ table.list > thead > tr > th[data-sort] {
   color: var(--bs-link-color);
   text-decoration: none;
   cursor: pointer;
+  white-space: nowrap;
 }
 table.list > thead > tr > th[data-sort]:not(.active-sort):after {
   height: 1rem;
@@ -232,13 +243,38 @@ table.list > thead > tr > th[data-sort]:not(.active-sort):after {
 } */
 
 .pagination .page-link {
-  padding: .25rem .5rem;
+  padding: .1875rem .75rem;
   font-size: 0.875rem !important;
+}
+
+.pagination .page-item:nth-child(1):not(.active) .page-link,
+.pagination .page-item:nth-last-child(2):not(.active) .page-link{
+ width: 4rem !important;
+}
+
+.pagination select {
+  margin-left: calc(var(--bs-border-width) * -1);
+  border-top-left-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+  border-top-right-radius: var(--bs-pagination-border-radius) !important;
+  border-bottom-right-radius: var(--bs-pagination-border-radius) !important;
+  padding-right: 1.85rem !important;
 }
 
 #list-btn-multi {
   border-radius: .375rem;
   background-color: transparent;
+}
+
+/* Bootstrap Select adjustments */
+.bootstrap-select .dropdown-item {
+  font-weight: 400;
+  color: var(--bs-body-color);
+  font-family: var(--theme-font-family);
+}
+
+.bootstrap-select .dropdown-item.active {
+  color: #fff;
 }
 
 /* Markdown Editor adjustments*/
