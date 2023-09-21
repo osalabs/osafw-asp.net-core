@@ -1,0 +1,15 @@
+<form class="p-4 p-md-5 border rounded-3 bg-body-tertiary form-login" method="post" action="<~../url>/(SaveMFA)">
+  <input type="hidden" name="XSS" value="<~session[XSS]>">
+
+  <fieldset>
+    <div class="form-floating mb-3">
+      <input type="input" id="login" class="form-control form-control-lg filled" name="item[code]" value="" autocomplete="off" autofocus>
+      <label for="login">`MFA or Recovery Code`</label>
+    </div>
+
+    <div class="d-grid">
+      <button class="btn btn-lg btn-primary w-100" type="submit">`Log Me In`</button>
+    </div>
+
+  </fieldset>
+</form>

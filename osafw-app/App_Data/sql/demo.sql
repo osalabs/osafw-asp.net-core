@@ -123,7 +123,7 @@ SELECT TOP 100
   DATEFROMPARTS(2023, ABS(CHECKSUM(NEWID())) % 12 + 1, ABS(CHECKSUM(NEWID())) % 28 + 1), -- random fdate_pop between Jan 1, 2023 and Dec 31, 2023
   DATEADD(MINUTE, ABS(CHECKSUM(NEWID())) % 1440, CONVERT(DATETIME2, GETDATE())), -- random fdatetime within 24 hours of current datetime
   ABS(CHECKSUM(NEWID())) % 86400, -- random ftime between 0 and 86400 (seconds in a day)
-  ABS(CHECKSUM(NEWID())) % 10 + 1, -- random att_id between 1 and 10
+  NULL, -- NULL for att_id due to foreign key
   0, -- status = 0 (ok)
   GETDATE(), -- current datetime for add_time
   1 -- add_users_id = 1 (arbitrary user ID)

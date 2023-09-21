@@ -11,10 +11,20 @@ public class MainController : FwController
 {
     public static new int access_level = Users.ACL_MEMBER;
 
-    public override void init(FW fw)
+public override void init(FW fw)
     {
         base.init(fw);
         base_url = "/Main";
+    }
+
+    public override void checkAccess()
+    {
+        // add custom actions to permissions mapping
+        access_actions_to_permissions = new() {
+            { "UITheme", Permissions.PERMISSION_LIST },
+            { "UIMode", Permissions.PERMISSION_LIST },
+        };
+        base.checkAccess();
     }
 
     public Hashtable IndexAction()

@@ -256,6 +256,7 @@ public class Utils
 
         return 0;
     }
+
     public static long f2long(object AField)
     {
         if (AField == null) return 0;
@@ -264,6 +265,24 @@ public class Utils
             return result;
 
         return 0;
+    }
+
+    public static decimal f2decimal(object AField)
+    {
+        if (AField == null) return decimal.Zero;
+        if (decimal.TryParse(AField.ToString(), out decimal result))
+            return result;
+
+        return decimal.Zero;
+    }
+
+    public static Single f2single(object AField)
+    {
+        if (AField == null) return 0f;
+        if (Single.TryParse(AField.ToString(), out Single result))
+            return result;
+
+        return 0f;
     }
 
     // convert to double, optionally throw error
@@ -285,6 +304,26 @@ public class Utils
     public static bool isFloat(object o)
     {
         return o != null && double.TryParse(o.ToString(), out double _);
+    }
+
+    /// <summary>
+    /// just return false if input cannot be converted to int
+    /// </summary>
+    /// <param name="o"></param>
+    /// <returns></returns>
+    public static bool isInt(object o)
+    {
+        return o != null && int.TryParse(o.ToString(), out int _);
+    }
+
+    /// <summary>
+    /// just return false if input cannot be converted to long
+    /// </summary>
+    /// <param name="o"></param>
+    /// <returns></returns>
+    public static bool isLong(object o)
+    {
+        return o != null && long.TryParse(o.ToString(), out long _);
     }
 
     /// <summary>
@@ -511,7 +550,8 @@ public class Utils
     /// <param name="csv_export_headers">comma-separated names for headers in specific order</param>
     /// <param name="csv_export_fields">qw-string(space separated) list of fields to match headers</param>
     /// <param name="rows">db array of rows</param>
-    public static void writeXLSExport(FW fw, string filename, string csv_export_headers, string csv_export_fields, ArrayList rows)
+    /// <param name="tpl_dir">template directory</param>
+    public static void writeXLSExport(FW fw, string filename, string csv_export_headers, string csv_export_fields, ArrayList rows, string tpl_dir = "/common/list/export")
     {
         Hashtable ps = new();
 
@@ -524,7 +564,6 @@ public class Utils
         }
         ps["headers"] = headers;
 
-        string tpl_dir = "/common/list/export";
         filename = filename.Replace("\"", "_");
 
         fw.response.Headers.Add("Content-type", "application/vnd.ms-excel");

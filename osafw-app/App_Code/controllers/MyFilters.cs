@@ -61,7 +61,7 @@ public class MyFiltersController : FwAdminController
         this.form_new_defaults = new();
         this.form_new_defaults["icode"] = related_id;
         var ps = base.ShowFormAction(id);
-        ps["is_admin"] = Utils.f2int(fw.Session("access_level")) == Users.ACL_ADMIN;
+        ps["is_admin"] = fw.userAccessLevel == Users.ACL_ADMIN;
         return ps;
     }
 

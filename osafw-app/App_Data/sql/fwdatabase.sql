@@ -103,6 +103,9 @@ CREATE TABLE users (
   login_time            DATETIME2,
   pwd_reset             NVARCHAR(255) NULL,
   pwd_reset_time        datetime2 NULL,
+  mfa_secret            NVARCHAR(64), -- mfa secret code, if empty - no mfa for the user configured
+  mfa_recovery          NVARCHAR(1024), -- mfa recovery hashed codes, space-separated
+  mfa_added             DATETIME2,    -- last datetime when mfa setup or resynced
 
   status                TINYINT NOT NULL DEFAULT 0,        /*0-ok, 127-deleted*/
   add_time              DATETIME2 NOT NULL DEFAULT getdate(),
@@ -355,5 +358,7 @@ CREATE TABLE user_filters (
   upd_time              DATETIME2,
   upd_users_id          INT DEFAULT 0
 );
+
+-- run roles.sql if roles support required and also uncomment #define isRoles in Users model
 
 -- after this file - run lookups.sql

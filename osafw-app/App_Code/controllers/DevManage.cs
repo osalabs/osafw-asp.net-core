@@ -1842,9 +1842,9 @@ public class DevManageController : FwController
                         { "label", Utils.name2human(table_name_linked) },
                         { "type", "multi" },
                         { "lookup_model", _tablename2model(table_name_linked) },
-                        { "table_link", table_name_link },
-                        { "table_link_id_name", table_name + "_id" },
-                        { "table_link_linked_id_name", table_name_linked + "_id" }
+                        //{ "table_link", table_name_link },
+                        //{ "table_link_id_name", table_name + "_id" },
+                        //{ "table_link_linked_id_name", table_name_linked + "_id" }
                     };
                     Hashtable sfflink = new()
                     {
@@ -1852,9 +1852,9 @@ public class DevManageController : FwController
                         { "label", Utils.name2human(table_name_linked) },
                         { "type", "multicb" },
                         { "lookup_model", _tablename2model(table_name_linked) },
-                        { "table_link", table_name_link },
-                        { "table_link_id_name", table_name + "_id" },
-                        { "table_link_linked_id_name", table_name_linked + "_id" }
+                        //{ "table_link", table_name_link },
+                        //{ "table_link_id_name", table_name + "_id" },
+                        //{ "table_link_linked_id_name", table_name_linked + "_id" }
                     };
 
                     showFieldsLeft.Add(sflink);

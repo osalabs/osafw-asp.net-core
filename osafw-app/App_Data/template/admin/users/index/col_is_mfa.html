@@ -1,0 +1,6 @@
+<~colmfa if="row[mfa_secret]" inline>
+ <span class="badge text-bg-success">Yes</span>
+</~colmfa>
+<~colnomfa unless="row[mfa_secret]" inline>
+ <span class="badge text-bg-warning">No</span>
+</~colnomfa>

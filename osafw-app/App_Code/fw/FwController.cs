@@ -13,10 +13,11 @@ namespace osafw;
 
 public abstract class FwController
 {
-    public static int access_level = Users.ACL_VISITOR; // access level for the controller. fw.config("access_levels") overrides this. -1 (public access), 0(min logged level), 100(max admin level)
+    public static int access_level = Users.ACL_VISITOR; // access level for the controller. fw.config("access_levels") overrides this. -1 (public access), 0(min logged level), 100(max admin level)    
 
     public static string route_default_action = ""; // supported values - "" (use Default Parser for unknown actions), Index (use IndexAction for unknown actions), Show (assume action is id and use ShowAction)
-    public string route_onerror = ""; //route redirect action name in case ApplicationException occurs in current route, if empty - 500 error page returned
+    public string route_onerror = ""; //route redirect action name in case ApplicationException occurs in current route, if empty - 500 error page returned   
+
     public string base_url; // base url for the controller
     public string base_url_suffix; // additional base url suffix
 
@@ -30,6 +31,7 @@ public abstract class FwController
     protected DB db;
     protected FwModel model0;
     protected Hashtable config;                  // controller config, loaded from template dir/config.json
+    protected Hashtable access_actions_to_permissions; // optional, controller-level custom actions to permissions mapping for role-based access checks, e.g. "UIMain" => Permissions.PERMISSION_VIEW . Can also be used to override default actions to permissions
 
     protected string list_view;                  // table/view to use in list sql, if empty model0.table_name used
     protected string list_orderby;               // orderby for the list screen
@@ -501,6 +503,8 @@ public abstract class FwController
                                 list_where_params[param_name] = Utils.f2long(s);
                             else if (ft == "float")
                                 list_where_params[param_name] = Utils.f2float(s);
+                            else if (ft == "decimal")
+                                list_where_params[param_name] = Utils.f2decimal(s);
                             else
                                 list_where_params[param_name] = s;
                         }
@@ -542,10 +546,11 @@ public abstract class FwController
 
     /// <summary>
     /// set list_where based on search[] filter
-    ///      - exact: "=term"
-    ///      - Not equals "!=term"
+    ///      - exact: "=term" or just "=" - mean empty
+    ///      - Not equals "!=term" or just "!=" - means not empty
     ///      - Not contains: "!term"
     ///      - more/less: <=, <, >=, >"
+    ///      - and support search by date if search value looks like date in format MM/DD/YYYY
     /// </summary>
     public virtual void setListSearchAdvanced()
     {
@@ -554,50 +559,77 @@ public abstract class FwController
         foreach (string fieldname in hsearch.Keys)
         {
             string value = (string)hsearch[fieldname];
-            if (!string.IsNullOrEmpty(value) && (!is_dynamic_index || view_list_map.ContainsKey(fieldname)))
-            {
-                string str;
-                var fieldname_sql = "ISNULL(CAST(" + db.qid(fieldname) + " as NVARCHAR(255)), '')"; //255 need as SQL Server by default makes only 30
-                var fieldname_sql2 = "TRY_CONVERT(DECIMAL(18,1),CAST(" + db.qid(fieldname) + " as NVARCHAR))"; // SQL Server 2012+ only
-                if (value.Length > 1 && value.Substring(0, 1) == "=")
-                {
-                    str = " = " + db.q(value[1..]);
-                }
-                else if (value.Length > 2 && value.Substring(0, 2) == "!=")
-                {
-                    str = " <> " + db.q(value[2..]);
-                }
-                else if (value.Length > 2 && value.Substring(0, 2) == "<=")
-                {
-                    fieldname_sql = fieldname_sql2;
-                    str = " <= " + db.q(value[2..]);
-                }
-                else if (value.Length >= 1 && value.Substring(0, 1) == "<")
-                {
-                    fieldname_sql = fieldname_sql2;
-                    str = " < " + db.q(value[1..]);
-                }
-                else if (value.Length > 2 && value.Substring(0, 2) == ">=")
-                {
-                    fieldname_sql = fieldname_sql2;
-                    str = " >= " + db.q(value[2..]);
-                }
-                else if (value.Length > 1 && value.Substring(0, 1) == ">")
-                {
-                    fieldname_sql = fieldname_sql2;
-                    str = " > " + db.q(value[1..]);
-                }
-                else if (value.Length > 1 && value.Substring(0, 1) == "!")
-                {
-                    str = " NOT LIKE " + db.q("%" + value[1..] + "%");
-                }
-                else
-                {
-                    str = " LIKE " + db.q("%" + value + "%");
-                }
+            if (string.IsNullOrEmpty(value) || (is_dynamic_index && !view_list_map.ContainsKey(fieldname)))
+                continue;
 
-                this.list_where += " and " + fieldname_sql + " " + str;
+            
+            var qfieldname = db.qid(fieldname);
+            var fieldname_sql = $"ISNULL(CAST({qfieldname} as NVARCHAR(255)), '')"; //255 need as SQL Server by default makes only 30
+            var fieldname_sql_num = $"TRY_CONVERT(DECIMAL(18,1),CAST({qfieldname} as NVARCHAR))"; // SQL Server 2012+ only
+            var fieldname_sql_date = $"TRY_CONVERT(DATE, {qfieldname})"; //for date search
+
+            string op = value[..1];
+            string op2 = value.Length >= 2 ? value[..2] : null;
+
+            string v = value[1..];
+            if (op2 == "!=" || op2 == "<=" || op2 == ">=")
+                v = value[2..];
+
+            var qv = db.q(v); // quoted value
+            if (DateUtils.isDateStr(v))
+            {
+                //if input looks like a date - compare as date
+                fieldname_sql = fieldname_sql_date;
+                qv = db.q(DateUtils.Str2SQL(v));
             }
+            else
+            {
+                if (op2 == "<=" || op == "<" || op2 == ">=" || op == ">")
+                {
+                    //numerical comparison
+                    fieldname_sql = fieldname_sql_num;
+                    qv = Utils.f2str(db.qdec(v));
+                }
+            }
+
+            string op_value;
+            switch (op2)
+            {
+                // first - check for 2-char operators
+                case "!=":
+                    op_value = $" <> {qv}";
+                    break;
+                case "<=":
+                    op_value = $" <= {qv}";
+                    break;
+                case ">=":
+                    op_value = $" >= {qv}";
+                    break;
+                default:
+                    // then check for 1-char operators
+                    switch (op)
+                    {
+                        case "=":
+                            op_value = $" = {qv}";
+                            break;
+                        case "<":
+                            op_value = $" < {qv}";
+                            break;
+                        case ">":
+                            op_value = $" > {qv}";
+                            break;
+                        case "!":
+                            op_value = $" NOT LIKE {db.q($"%{v}%")}";
+                            break;
+                        default:
+                            //default is just LIKE/contains
+                            op_value = $" LIKE {db.q($"%{value}%")}";
+                            break;
+                    }
+                    break;
+            }
+
+            list_where += $" AND {fieldname_sql} {op_value}";
         }
     }
 
@@ -614,7 +646,7 @@ public abstract class FwController
             {
                 var status = Utils.f2int(this.list_filter["status"]);
                 // if want to see trashed and not admin - just show active
-                if (status == FwModel.STATUS_DELETED & !fw.model<Users>().isAccess(Users.ACL_SITEADMIN))
+                if (status == FwModel.STATUS_DELETED & !fw.model<Users>().isAccessLevel(Users.ACL_SITEADMIN))
                     status = 0;
                 this.list_where += " and " + db.qid(model0.field_status) + "=@status";
                 this.list_where_params["status"] = status;
@@ -764,6 +796,10 @@ public abstract class FwController
         else
             url = this.base_url;
 
+        //preserve return url if present
+        if (!string.IsNullOrEmpty(return_url))
+            url_q += "&return_url=" + Utils.urlescape(return_url);
+
         //add base_url_suffix if any
         if (!string.IsNullOrEmpty(base_url_suffix))
             url_q += "&" + base_url_suffix;
@@ -849,6 +885,22 @@ public abstract class FwController
     public virtual Hashtable afterSave(bool success, Hashtable more_json)
     {
         return afterSave(success, "", false, "no_action", "", more_json);
+    }
+
+    // called before each controller action (init() already called), check access to current fw.route
+    // throw exception if no access
+    public virtual void checkAccess()
+    {
+        //var id = fw.route.id;
+
+        // if user is logged and not SiteAdmin(can access everything)
+        // and user's access level is enough for the controller - check access by roles (if enabled)                
+        int current_user_level = fw.userAccessLevel;
+        if (current_user_level > 0 && current_user_level < 100)
+        {
+            if (!fw.model<Users>().isAccessByRolesResourceAction(fw.userId, fw.route.controller, fw.route.action, fw.route.action_more, access_actions_to_permissions))
+                throw new AuthException("Bad access - Not authorized (3)");
+        }
     }
 
     //called when unhandled error happens in action

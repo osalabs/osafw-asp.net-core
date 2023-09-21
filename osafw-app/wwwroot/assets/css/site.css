@@ -216,6 +216,10 @@ table.list {
   table.list > tbody > tr.selected {
     background-color: var(--fw-hiliter) !important;
   }
+  table.list.table-dense > :not(caption) > * > * {
+    padding: 0 !important;
+    font-size: 0.7rem !important;
+  }
 
 /*for .scrollable tables with fixed header*/
 .data-header {

@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections;
+using System.Collections.Generic;
 
 namespace osafw;
 
@@ -26,7 +27,7 @@ public class MyPasswordController : FwController
 
     public void IndexAction()
     {
-        fw.redirect(base_url+"/new");
+        fw.redirect(base_url + "/new");
     }
 
     public Hashtable ShowFormAction()
@@ -127,4 +128,5 @@ public class MyPasswordController : FwController
 
         this.validateCheckResult();
     }
+
 }

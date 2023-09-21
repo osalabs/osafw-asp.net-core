@@ -13,19 +13,19 @@ public class DemosItems : FwModel
     public DemosItems() : base()
     {
         db_config = "";
-        table_name = "demos_items";        
+        table_name = "demos_items";
     }
 
     public override void init(FW fw)
     {
         base.init(fw);
-        linked_model_main = fw.model<Demos>();
-        linked_field_main_id = "demos_id";
+        junction_model_main = fw.model<Demos>();
+        junction_field_main_id = "demos_id";
     }
 
-    public override ArrayList listByRelatedId(int demos_id, Hashtable def = null)
+    public override ArrayList listByMainId(int demos_id, Hashtable def = null)
     {
-        return db.array(table_name, DB.h(linked_field_main_id, demos_id));
+        return db.array(table_name, DB.h(junction_field_main_id, demos_id));
     }
 
     public override void prepareSubtable(ArrayList list_rows, int related_id, Hashtable def = null)

@@ -222,7 +222,7 @@ public class Spages : FwModel
         ps["pages"] = getPagesTreeList(pages_tree, 0);
 
         Hashtable item = oneByFullUrl(full_url);
-        if (item.Count == 0 || Utils.f2int(item["status"]) == FwModel.STATUS_DELETED && !fw.model<Users>().isAccess(Users.ACL_ADMIN))
+        if (item.Count == 0 || Utils.f2int(item["status"]) == FwModel.STATUS_DELETED && !fw.model<Users>().isAccessLevel(Users.ACL_ADMIN))
         {
             ps["hide_std_sidebar"] = true;
             fw.parser("/error/404", ps);

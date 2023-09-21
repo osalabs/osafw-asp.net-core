@@ -45,6 +45,10 @@ public class AdminUsersController : FwDynamicController
         var ps = base.ShowFormAction(id);
         Hashtable item = (Hashtable)ps["i"];
         ps["att"] = fw.model<Att>().one(Utils.f2int(item["att_id"]));
+
+        ps["is_roles"] = model.isRoles();
+        ps["roles_link"] = model.listLinkedRoles(id);
+
         return ps;
     }
 
@@ -80,6 +84,8 @@ public class AdminUsersController : FwDynamicController
             itemdb.Remove("pwd");
 
         id = this.modelAddOrUpdate(id, itemdb);
+
+        model.updateLinkedRoles(id, reqh("roles_link"));        
 
         if (fw.userId == id)
             model.reloadSession(id);
@@ -126,13 +132,14 @@ public class AdminUsersController : FwDynamicController
         Hashtable user = model.one(id);
         if (user.Count == 0)
             throw new NotFoundException("Wrong User ID");
-        if (Utils.f2int(user["access_level"]) >= Utils.f2int(fw.Session("access_level")))
+        if (Utils.f2int(user["access_level"]) >= fw.userAccessLevel)
             throw new AuthException("Access Denied. Cannot simulate user with higher access level");
 
         fw.logEvent("simulate", id, fw.userId);
 
-        if (model.doLogin(id))
-            fw.redirect((string)fw.config("LOGGED_DEFAULT_URL"));
+        model.doLogin(id);
+        
+        fw.redirect((string)fw.config("LOGGED_DEFAULT_URL"));
     }
 
     public Hashtable SendPwdAction(int id)
@@ -158,5 +165,12 @@ public class AdminUsersController : FwDynamicController
             db.update(model.table_name, new Hashtable() { { "pwd", hashed } }, new Hashtable() { { "id", row["id"] } });
         }
         rw("done");
+    }
+
+    public void ResetMFAAction(int id)
+    {
+        model.update(id, DB.h("mfa_secret", null));
+        //fw.flash("success", "Multi-Factor Authentication ");
+        fw.redirect($"{base_url}/ShowForm/{id}/edit");
     }
 }
