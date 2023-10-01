@@ -1,4 +1,4 @@
-var mode = '<~f[mode]>';
+    var mode = '<~f[mode]>';
 var is_readonly = '<~is_readonly>';
 if (is_readonly=='True') return;
 
@@ -35,7 +35,7 @@ if (mode){
         window.location.reload();
     });
 
-    $tedit.on('keyup', ':input', function (e) {
+    $tedit.on('keyup change', ':input', function (e) {
         $('#DataF .btn-primary').prop('disabled', false);
     });
     $tedit.on('click', 'input[type=checkbox]', function (e) {
@@ -67,10 +67,17 @@ function add_new_row(){
     $tpl.data('id', nextid);
     $tpl.data('isnew', true);
     $tpl.find('input.rowid').prop('name', 'new['+nextid+']');
-    $tpl.find('input[name^=fnew0]').each(function(index, el) {
+    $tpl.find(':input[name^=fnew0]').each(function(index, el) {
         el.name = el.name.replace(/fnew0/,'fnew'+nextid);
     });
     $tedit.find('tbody').append($tpl);
 
     $tpl.find('input[type=text]:visible:first').focus();
+
+    //calendar (datepicker) component
+    $tpl.find('.date').datepicker({format: 'mm/dd/yyyy'})
+        .on('changeDate', function (e) {
+            if (e.viewMode=='years' || e.viewMode=='months') return; //do not trigger change yet, while user selecting year/month
+            $(this).find('input').trigger('change');
+        });
 }

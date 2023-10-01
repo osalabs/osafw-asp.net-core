@@ -81,13 +81,19 @@ public class LookupManager : FwModel
                 item["add_users_id"] = Utils.f2str(fw.userId);
         }
 
+        var field_prio = fw.model<LookupManagerTables>().getColumnPrio(defs);
+        var prio = !Utils.isEmpty(field_prio) ? (!Utils.isEmpty(item[field_prio]) ? item[field_prio] : null) : null;
+
+        //prevent exception if prio column doesn't allow NULLs
+        if (!Utils.isEmpty(field_prio) && prio == null)
+            item[field_prio] = 0;
+
         int id = db.insert(tname, item);
         fw.logEvent(tname + "_add", id);
 
-        var field_prio = fw.model<LookupManagerTables>().getColumnPrio(defs);
-        if (!string.IsNullOrEmpty(field_prio))
+        //if priority field defined and its value is not passed - update it with newly added id to allow proper re/ordering
+        if (!Utils.isEmpty(field_prio) && prio == null)
         {
-            //if priority field defined - update it with newly added id to allow proper re/ordering
             var field_id = fw.model<LookupManagerTables>().getColumnId(defs);
             db.update(tname, DB.h(field_prio, id), DB.h(field_id, id));
         }
