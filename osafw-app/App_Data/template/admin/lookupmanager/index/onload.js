@@ -30,6 +30,18 @@ if (mode){
         $('#DataF .btn-primary').prop('disabled', false);
     });
 
+    //submit checkbox unchecked/off value
+    $tedit.on('change', 'input[type=checkbox]', function (e) {
+        var $this = $(this);
+        var name = $this.attr('name')
+        if (name.startsWith('fnew')) return; //not needed for new items
+
+        if (!$this.prop('checked'))
+            $this.after('<input type="hidden" name="'+name+'" value="0">');
+        else
+            $this.next('input[name="'+name+'"]').remove();
+    });
+
     $(document).on('click', '.on-cancel', function (e) {
         //just re-read page
         window.location.reload();

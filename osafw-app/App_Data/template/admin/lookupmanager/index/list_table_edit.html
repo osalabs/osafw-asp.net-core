@@ -39,7 +39,7 @@
                 </~type_input>
                 <~type_readonly ifeq="type" value="readonly" inline><input name="f<~id>[<~colname>]" type="text" value="<~value>" maxlength="<~maxlen>" class="form-control" <~/common/disabled if="id">>
                 </~type_readonly>
-                <~type_checkbox ifeq="type" value="checkbox" inline><div class="checkbox"><label><input name="f<~id>[<~colname>]" value="1" type="checkbox" <~/common/checked ifeq="value"> ></label></div>
+                <~type_checkbox ifeq="type" value="checkbox" inline><div class="text-center pt-1"><input name="f<~id>[<~colname>]" value="1" type="checkbox" class="form-check-input" <~/common/checked ifeq="value">></div>
                 </~type_checkbox>
                 <~type_input ifeq="type" value="date" inline>
                     <div class="input-group date">
@@ -74,7 +74,7 @@
                 </~type_input>
                 <~type_readonly ifeq="type" value="readonly" inline><input name="fnew0[<~colname>]" type="text" value="" maxlength="<~maxlen>" class="form-control">
                 </~type_readonly>
-                <~type_checkbox ifeq="type" value="checkbox" inline><div class="checkbox"><label><input name="fnew0[<~colname>]" value="1" type="checkbox" ></label></div>
+                <~type_checkbox ifeq="type" value="checkbox" inline><div class="text-center pt-1"><input name="fnew0[<~colname>]" value="1" type="checkbox" class="form-check-input"></div>
                 </~type_checkbox>
                 <~type_input ifeq="type" value="date" inline>
                     <div class="input-group date">
