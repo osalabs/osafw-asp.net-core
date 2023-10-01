@@ -4,7 +4,7 @@
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
 //if you use Roles - uncomment define isRoles here
-#define isRoles
+//#define isRoles
 
 using System;
 using Microsoft.VisualBasic;
@@ -227,7 +227,7 @@ public class Users : FwModel
 
         var IMG_SIZE = 5;
         return $"data:image/png;base64,{Convert.ToBase64String(PngByteQRCodeHelper.GetQRCode(uriString, QRCodeGenerator.ECCLevel.Q, IMG_SIZE))}";
-    }
+    }   
 
     /// <summary>
     /// check if code is valid against provided MFA secret
@@ -410,7 +410,7 @@ public class Users : FwModel
     /// <param name="users_id">usually currently logged user - fw.userId</param>
     /// <param name="resource_icode">resource code like controller name 'AdminUsers'</param>
     /// <param name="resource_action">resource action like controller's action 'Index' or '' </param>
-    /// <param name="resource_action_more">optional additional action string, usually route.action_more to help distinguish sub-actions</param>
+    /// <param name="resource_action_more">optional additional action string, usually route.action_more to help distinguish sub-actions</param>  
     /// <returns></returns>
     public bool isAccessByRolesResourceAction(int users_id, string resource_icode, string resource_action, string resource_action_more = "", Hashtable access_actions_to_permissions = null)
     {
@@ -490,7 +490,7 @@ public class Users : FwModel
     public void updateLinkedRoles(int users_id, Hashtable linked_keys)
     {
 #if isRoles
-        fw.model<UsersRoles>().updateJunctionByMainId(users_id, linked_keys);
+        fw.model<UsersRoles>().updateJunctionByMainId(users_id, linked_keys);        
 #endif
     }
 
