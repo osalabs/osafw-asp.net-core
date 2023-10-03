@@ -1186,7 +1186,7 @@ public class FW : IDisposable
         }
 
         FwController controller = (FwController)Activator.CreateInstance(controllerClass);
-        controller.init(this);        
+        controller.init(this);
         Hashtable ps = null;
         try
         {
