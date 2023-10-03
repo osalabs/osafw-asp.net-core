@@ -75,7 +75,7 @@ public class MyMFAController : FwController
             var code = Utils.getRandStr(8);
             hashed_codes.Add(model.hashPwd(code));
             recovery_codes.Add(DB.h("code", code));
-        }            
+        }
 
         // save to db
         model.update(user_id, new Hashtable {

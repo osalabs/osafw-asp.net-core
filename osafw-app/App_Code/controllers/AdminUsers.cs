@@ -85,7 +85,7 @@ public class AdminUsersController : FwDynamicController
 
         id = this.modelAddOrUpdate(id, itemdb);
 
-        model.updateLinkedRoles(id, reqh("roles_link"));        
+        model.updateLinkedRoles(id, reqh("roles_link"));
 
         if (fw.userId == id)
             model.reloadSession(id);
@@ -138,7 +138,7 @@ public class AdminUsersController : FwDynamicController
         fw.logEvent("simulate", id, fw.userId);
 
         model.doLogin(id);
-        
+
         fw.redirect((string)fw.config("LOGGED_DEFAULT_URL"));
     }
 

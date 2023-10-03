@@ -13,10 +13,10 @@ namespace osafw;
 
 public abstract class FwController
 {
-    public static int access_level = Users.ACL_VISITOR; // access level for the controller. fw.config("access_levels") overrides this. -1 (public access), 0(min logged level), 100(max admin level)    
+    public static int access_level = Users.ACL_VISITOR; // access level for the controller. fw.config("access_levels") overrides this. -1 (public access), 0(min logged level), 100(max admin level)
 
     public static string route_default_action = ""; // supported values - "" (use Default Parser for unknown actions), Index (use IndexAction for unknown actions), Show (assume action is id and use ShowAction)
-    public string route_onerror = ""; //route redirect action name in case ApplicationException occurs in current route, if empty - 500 error page returned   
+    public string route_onerror = ""; //route redirect action name in case ApplicationException occurs in current route, if empty - 500 error page returned
 
     public string base_url; // base url for the controller
     public string base_url_suffix; // additional base url suffix
@@ -562,7 +562,7 @@ public abstract class FwController
             if (string.IsNullOrEmpty(value) || (is_dynamic_index && !view_list_map.ContainsKey(fieldname)))
                 continue;
 
-            
+
             var qfieldname = db.qid(fieldname);
             var fieldname_sql = $"ISNULL(CAST({qfieldname} as NVARCHAR(255)), '')"; //255 need as SQL Server by default makes only 30
             var fieldname_sql_num = $"TRY_CONVERT(DECIMAL(18,1),CAST({qfieldname} as NVARCHAR))"; // SQL Server 2012+ only
@@ -894,7 +894,7 @@ public abstract class FwController
         //var id = fw.route.id;
 
         // if user is logged and not SiteAdmin(can access everything)
-        // and user's access level is enough for the controller - check access by roles (if enabled)                
+        // and user's access level is enough for the controller - check access by roles (if enabled)
         int current_user_level = fw.userAccessLevel;
         if (current_user_level > 0 && current_user_level < 100)
         {
