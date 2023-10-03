@@ -46,6 +46,7 @@
       "field": "users_link",
       "type": "multi",
       "model": "UsersRoles",
+      "is_by_linked": true,
       "label": "Members"
     },
     {
