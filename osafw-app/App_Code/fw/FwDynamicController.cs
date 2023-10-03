@@ -332,7 +332,7 @@ public class FwDynamicController : FwController
                 var model_name = (string)def["model"];
                 var sub_model = fw.model(model_name);
 
-                var save_fields = (string)def["required_fields"];
+                var save_fields = (string)def["required_fields"] ?? "";
                 var save_fields_checkboxes = (string)def["save_fields_checkboxes"];
 
                 //check if we delete specific row
@@ -409,7 +409,7 @@ public class FwDynamicController : FwController
     protected virtual bool validateSubtableRowDynamic(string row_id, Hashtable item, Hashtable def)
     {
         var result = true;
-        var required_fields = Utils.qw((string)def["required_fields"]);
+        var required_fields = Utils.qw((string)def["required_fields"] ?? "");
         if (required_fields.Length == 0)
             return result; //nothing to validate
 
