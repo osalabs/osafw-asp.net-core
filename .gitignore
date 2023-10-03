@@ -2,7 +2,8 @@
 /osafw-app/obj
 /osafw-app/bin
 *.log
-/osafw-app/upload
+/osafw-app/upload/*
+!/osafw-app/upload/.gitkeep
 /osafw-tests/obj
 /osafw-tests/bin
 /TestsProject/obj
