@@ -237,7 +237,7 @@ public class FW : IDisposable
     }
 
 
-    // FLASH - used to pass something to the next request (and only on this request)
+    // FLASH - used to pass something to the next request (and only on this request and only if this request does not expect json)
     // get flash value by name
     // set flash value by name - return fw in this case
     public object flash(string name, object value = null)
@@ -249,10 +249,13 @@ public class FW : IDisposable
         }
         else
         {
-            // write for the next request
-            Hashtable _flash = SessionHashtable("_flash") ?? new();
-            _flash[name] = value;
-            SessionHashtable("_flash", _flash);
+            if (!isJsonExpected())
+            {
+                // write for the next request
+                Hashtable _flash = SessionHashtable("_flash") ?? new();
+                _flash[name] = value;
+                SessionHashtable("_flash", _flash);
+            }
             return this; // for chaining
         }
     }

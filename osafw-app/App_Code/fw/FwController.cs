@@ -3,11 +3,11 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
+using Microsoft.VisualBasic;
 using System;
 using System.Collections;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Microsoft.VisualBasic;
 
 namespace osafw;
 
@@ -741,14 +741,12 @@ public abstract class FwController
         if (id > 0)
         {
             model0.update(id, fields);
-            if (!fw.isJsonExpected())
-                fw.flash("record_updated", 1);
+            fw.flash("record_updated", 1);
         }
         else
         {
             id = model0.add(fields);
-            if (!fw.isJsonExpected())
-                fw.flash("record_added", 1);
+            fw.flash("record_added", 1);
         }
         return id;
     }
