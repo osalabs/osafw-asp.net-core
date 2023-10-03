@@ -203,7 +203,7 @@ public class DB : IDisposable
     //special value for current db time in queries (GETDATE() or NOW()) can be used as a value like this:
     // db.insert("table", DB.h("idatetime", DB.NOW)); - insert a row with current datetime
     // db.array("demos", DB.h("upd_time", db.opGT(DB.NOW))); - get all rows with upd_time > current datetime
-    public static readonly object NOW = new(); 
+    public static readonly object NOW = new();
 
     private static Hashtable schemafull_cache; // cache for the full schema, lifetime = app lifetime
     private static Hashtable schema_cache; // cache for the schema, lifetime = app lifetime
@@ -1086,7 +1086,7 @@ public class DB : IDisposable
                     sql += "(" + (sql_params.Count > 0 ? string.Join(",", sql_params) : "NULL") + ")";
                 }
                 else
-                {                    
+                {
                     if (dbop.value == DB.NOW)
                     {
                         // if value is NOW object - don't add it to params, just use NOW()/GETDATE() in sql

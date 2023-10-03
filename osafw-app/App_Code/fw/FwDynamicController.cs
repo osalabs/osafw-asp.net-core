@@ -653,7 +653,7 @@ public class FwDynamicController : FwController
                 // subtable functionality
                 var model_name = (string)def["model"];
                 var sub_model = fw.model(model_name);
-                var list_rows = sub_model.listByMainId(id, def); //list related rows from db                        
+                var list_rows = sub_model.listByMainId(id, def); //list related rows from db
                 sub_model.prepareSubtable(list_rows, id, def);
 
                 def["list_rows"] = list_rows;
@@ -775,7 +775,7 @@ public class FwDynamicController : FwController
                 {
                     if (id > 0)
                     {
-                        list_rows = sub_model.listByMainId(id, def); //list related rows from db                        
+                        list_rows = sub_model.listByMainId(id, def); //list related rows from db
                     }
                     else
                         sub_model.prepareSubtableAddNew(list_rows, id, def); //add at least one row
@@ -944,7 +944,7 @@ public class FwDynamicController : FwController
                     else
                         //by main id
                         fw.model((string)def["model"]).updateJunctionByMainId(id, reqh(def["field"] + "_multi")); // junction model
-                }                    
+                }
             }
             else if (type == "multicb_prio")
                 fw.model((string)def["model"]).updateJunctionByMainId(id, reqh(def["field"] + "_multi")); // junction model

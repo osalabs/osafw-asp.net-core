@@ -281,7 +281,7 @@ public class FwSelfTest
 
                 if (ex.InnerException != null)
                 {
-                    if (ex.InnerException is RedirectException 
+                    if (ex.InnerException is RedirectException
                         || ex.InnerException.Message.Contains("Cannot redirect after HTTP headers have been sent.")
                         || ex is TargetInvocationException && ex.InnerException is InvalidOperationException && ex.InnerException.Message.Contains("StatusCode cannot be set because the response has already started.")
                         )

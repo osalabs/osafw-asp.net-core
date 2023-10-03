@@ -198,5 +198,5 @@ public class AdminDBController : FwController
     {
         return Regex.Replace(sql, @"/\*.+?\*/", " ", RegexOptions.Singleline);
     }
- 
+
 }

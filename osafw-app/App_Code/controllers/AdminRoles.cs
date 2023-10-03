@@ -71,7 +71,7 @@ public class AdminRolesController : FwDynamicController
         id = base.modelAddOrUpdate(id, fields);
 
         // update roles_resources_permissions matrix
-        var hresources_permissions = reqh("rp"); // contains checked items only        
+        var hresources_permissions = reqh("rp"); // contains checked items only
         fw.model<RolesResourcesPermissions>().updateMatrixByRole(id, hresources_permissions);
 
         return id;

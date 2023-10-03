@@ -1037,7 +1037,7 @@ public class ParsePage
 
     // if attrs["multi") ]efined - attrs["select") ]an contain strings with separator in attrs["multi") ]default ",") for multiple select
     private string _attr_select(string tag, string tpl_name, ref Hashtable hf, Hashtable attrs)
-    {        
+    {
         StringBuilder result = new();
 
         string sel_value = Utils.f2str(hfvalue((string)attrs["select"] ?? "", hf));

@@ -102,7 +102,7 @@ public abstract class FwModel : IDisposable
         if (!isAccess(id, action))
         {
             throw new AuthException();
-        }       
+        }
     }
 
     #region basic CRUD one, list, multi, add, update, delete and related helpers
@@ -546,7 +546,7 @@ public abstract class FwModel : IDisposable
     }
 
     /// <summary>
-    /// sort lookup rows so checked values will be at the top (is_checked desc) 
+    /// sort lookup rows so checked values will be at the top (is_checked desc)
     ///   AND then by [_link]prio field (if junction table has any) - using LINQ
     /// </summary>
     /// <returns></returns>
