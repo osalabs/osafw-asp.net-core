@@ -8,7 +8,8 @@
     <~/common/list/tbody>
   </table>
 
-  <~/common/list/table_under>
+  <~/common/list/empty unless="list_rows">
+  <~/common/list/table_under if="list_rows">
 </form>
 
-<hr>
+<hr class="d-print-none">

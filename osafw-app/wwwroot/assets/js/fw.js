@@ -196,6 +196,7 @@ window.fw={
 
     //make list multi buttons floating if at least one row checked
     $(document).on('click', '.on-list-chkall, .multicb', function (e) {
+      e.stopPropagation();//prevent tr click handler
       var $this = $(this);
       var $bm = $('#list-btn-multi');
       var len = $('.multicb:checked').length;
@@ -215,6 +216,16 @@ window.fw={
           $this.closest("tr").removeClass("selected");
         }
       }
+    });
+
+    //click on row - select/unselect row
+    $(document).on('click', 'table.list > tbody > tr', function (e) {
+      var $this = $(this);
+      var tag_name = e.target.tagName.toLowerCase();
+      if (tag_name === 'a'||tag_name === 'button'){
+        return; // do not process if link/button clicked
+      }
+      $this.find('.multicb:first').click();
     });
 
     $(document).on('click', '.on-delete-list-row', function (e){

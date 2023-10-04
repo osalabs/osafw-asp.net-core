@@ -213,7 +213,7 @@ table.list {
   table.list tbody a {
     text-decoration: none;
   }
-  table.list > tbody > tr.selected {
+  table.list > tbody > tr.selected > td {
     background-color: var(--fw-hiliter) !important;
   }
   table.list.table-dense > :not(caption) > * > * {
