@@ -9,6 +9,7 @@
   --theme-hover-bg: #e7effb;
   --theme-table-striped-bg: #f4f5fb;
   --fw-body-bg: #edf2f9;
+  --fw-pane-bg: #fff;
   --bs-emphasis-color-rgb: rgb(94, 110, 130); /*#5e6e82*/
   /*--bs-link-color-rgb: rgb(44, 123, 229);*/ /*#2c7be5*/
   --bs-nav-pills-link-active-color: #5e6e82;
@@ -26,12 +27,6 @@ input::placeholder{
 
 .badge {
   font-family: var(--bs-font-monospace);
-}
-
-.table {
-  --bs-table-hover-bg: #e7effb;
-  --bs-table-striped-bg: var(--theme-table-striped-bg);
-  --bs-table-header-bg: var(--fw-body-bg);
 }
 
 .dropdown-menu {
@@ -61,6 +56,7 @@ h1, h3, .h3{
 }
 h1 {
   color: var(--theme-color);
+  font-size: 1.2rem; /*smaller title screens*/
 }
 h3, .h3 {
   color: #344050;
@@ -81,10 +77,6 @@ body {
 #FDel.fw-card
 {
   border: none;
-}
-
-.table > :not(caption) > * > * {
-  border-bottom-width: 1px;
 }
 
 .sidebar > div {
@@ -150,6 +142,7 @@ body {
 }
 
 .card {
+  color: var(--theme-body-color);
   border-radius: .375rem;
   border: 0px solid;
   box-shadow: 0 7px 14px 0 rgba(65, 69, 88, 0.1), 0 3px 6px 0 rgba(0, 0, 0, 0.07);
@@ -193,7 +186,14 @@ label {
 
 .table {
   color: var(--theme-body-color);
+  --bs-table-hover-bg: #e7effb;
+  --bs-table-striped-bg: var(--theme-table-striped-bg);
+  --bs-table-header-bg: var(--fw-body-bg);
 }
+  .table > :not(caption) > * > * {
+    border-bottom-width: 1px;
+    color: var(--theme-body-color);
+  }
   .table thead{
     color: #344050;
     background-color: var(--bs-table-header-bg) !important;

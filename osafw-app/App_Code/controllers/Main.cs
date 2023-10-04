@@ -41,6 +41,9 @@ public class MainController : FwController
         one["title"] = "Pages";
         one["url"] = "/Admin/Spages";
         one["value"] = fw.model<Spages>().getCount(new int[] { FwModel.STATUS_ACTIVE });
+        one["value_class"] = "text-warning";
+        one["badge_value"] = "+10%"; //TODO
+        one["badge_class"] = "text-bg-warning";
         panes["plate1"] = one;
 
         one = new Hashtable();
@@ -48,6 +51,9 @@ public class MainController : FwController
         one["title"] = "Uploads";
         one["url"] = "/Admin/Att";
         one["value"] = fw.model<Att>().getCount(new int[] { FwModel.STATUS_ACTIVE });
+        one["value_class"] = "text-info";
+        one["badge_value"] = "+20%"; //TODO
+        one["badge_class"] = "text-bg-info";
         panes["plate2"] = one;
 
         one = new Hashtable();
@@ -55,6 +61,9 @@ public class MainController : FwController
         one["title"] = "Users";
         one["url"] = "/Admin/Users";
         one["value"] = fw.model<Users>().getCount(new int[] { FwModel.STATUS_ACTIVE });
+        one["value_class"] = "text-success";
+        one["badge_value"] = "+30%"; //TODO
+        one["badge_class"] = "text-bg-success";
         panes["plate3"] = one;
 
         one = new Hashtable();
@@ -62,6 +71,9 @@ public class MainController : FwController
         one["title"] = "Events";
         one["url"] = "/Admin/DemosDynamic";
         one["value"] = fw.model<Demos>().getCount(new int[] { FwModel.STATUS_ACTIVE });
+        one["value_class"] = "";
+        one["badge_value"] = "+50%"; //TODO
+        one["badge_class"] = "text-bg-secondary";
         panes["plate4"] = one;
 
         one = new Hashtable();

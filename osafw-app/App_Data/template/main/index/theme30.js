@@ -1,71 +1,56 @@
-var is_dark_mode = document.documentElement.getAttribute('data-bs-theme')=='dark';
+//blue theme
 window.Chart.defaults = $.extend(true, window.Chart.defaults, {
-    responsive: true,
-    maintainAspectRatio: false,
-    color: '#999999',
+    color: '#748194',
     font: {
-        color: '#999999',
-        size: 15,
+        color: '#748194',
+        size: 13,
         family: '',
-    },
-    layout: {
-        padding: 0
-    },
-    plugins:{
-        legend: {
-            display: false,
-            position: "bottom",
-            labels: {
-                usePointStyle: true,
-                padding: 16
-            }
-        },
     },
     elements: {
         point: {
             radius: 0,
-            backgroundColor: '#333333'
+            backgroundColor: '#0b1727'
         },
         bar: {
-            backgroundColor: '#007bff'
+            backgroundColor: '#2c7be5'
         },
         line: {
             tension: 0.4,
             borderWidth: 3,
-            borderColor: '#007bff',
-            backgroundColor: '#007bff',
+            borderColor: '#2c7be5',
+            backgroundColor: '#2c7be5',
             fill: false,
             borderCapStyle: "rounded"
         },
         rectangle: {
-            backgroundColor: '#007bff'
+            backgroundColor: '#2c7be5'
         },
         arc: {
-            backgroundColor: '#333333',
-            borderColor: (is_dark_mode ? '#222' : '#fff'),
-            borderWidth: 2
+            backgroundColor: '#0b1727',
+            borderColor: '#ffffff',
+            borderWidth: 4
         }
     },
-
     doughnut: {
+        cutoutPercentage: 80,
         backgroundColor: [
-            '#007bff',
-            '#3295FF',
-            '#66AFFF',
-            '#99CAFF',
-            '#B2D7FF',
-            '#CCE4FF',
-            '#E5F1FF',
-            '#F2F8FF'
+            '#2c7be5',
+            '#27bcfd',
+            '#00d27a',
+            '#adb4c1',
+            '#6ab1f2',
+            '#63dbfe',
+            '#00e8b1',
+            '#d2d7de'
         ]
-    },
+    }
 });
 
 window.Chart.overrides = $.extend(true, window.Chart.overrides, {
     bar: {
-        maxBarThickness: 10,
+        maxBarThickness: 14,
         scales: {
-            x: {
+            x: [{
                 grid: {
                     drawBorder: false,
                     drawOnChartArea: false,
@@ -74,30 +59,35 @@ window.Chart.overrides = $.extend(true, window.Chart.overrides, {
                 ticks: {
                     padding: 10
                 }
-            },
-            y: {
+            }],
+            y: [{
                 grid: {
                     borderDash: [3],
                     borderDashOffset: [2],
                     color: '#dddddd',
                     drawBorder: false,
                     drawTicks: false,
-                    lineWidth: 1,
+                    lineWidth: 0,
+                    zeroLineWidth: 0,
+                    zeroLineColor: '#dddddd',
+                    zeroLineBorderDash: [3],
+                    zeroLineBorderDashOffset: [2]
                 },
-                beginAtZero: true,
                 ticks: {
+                    beginAtZero: true,
                     padding: 5,
                     callback: function(a) {
                         if ((a % 10)===0)
                             return a;
                     }
                 }
-            }
+            }]
         }
     },
     line: {
+        maxBarThickness: 10,
         scales: {
-            x: {
+            x: [{
                 grid: {
                     drawBorder: false,
                     drawOnChartArea: false,
@@ -105,32 +95,30 @@ window.Chart.overrides = $.extend(true, window.Chart.overrides, {
                 },
                 ticks: {
                     padding: 10
-                }
-            },
-            y: {
+                },
+            }],
+            y: [{
                 grid: {
                     borderDash: [3],
                     borderDashOffset: [2],
                     color: '#dddddd',
                     drawBorder: false,
                     drawTicks: false,
-                    lineWidth: 1,
+                    lineWidth: 0,
+                    zeroLineWidth: 0,
+                    zeroLineColor: '#dddddd',
+                    zeroLineBorderDash: [3],
+                    zeroLineBorderDashOffset: [2]
                 },
-                beginAtZero: true,
                 ticks: {
+                    beginAtZero: true,
                     padding: 5,
                     callback: function(a) {
                         if ((a % 10)===0)
                             return a;
                     }
                 }
-            }
+            }]
         }
     }
 });
-
-<~theme1.js ifeq="SESSION[ui_theme]" value="1">
-<~theme2.js ifeq="SESSION[ui_theme]" value="2">
-<~theme30.js ifeq="SESSION[ui_theme]" value="30">
-
-//console.log(window.Chart.defaults);
