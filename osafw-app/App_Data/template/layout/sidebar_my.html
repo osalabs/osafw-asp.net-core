@@ -31,11 +31,13 @@
         <~/common/icons/key> `Change Password`
       </a>
     </li>
+    <~feedback_menu if="GLOBAL[feedback_email]" inline>
     <li>
       <a href="#" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#modal-my-feedback">
         <~/common/icons/bug> <~/my/feedback/showform/title>
       </a>
     </li>
+    </~feedback_menu>
     <li><hr class="dropdown-divider"></li>
     <li>
       <a class="dropdown-item" href="<~/login/url_logoff>">

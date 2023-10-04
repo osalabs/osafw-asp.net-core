@@ -1,7 +1,9 @@
 <div class="float-end d-none d-lg-block">
   <span class="form-saved-status"></span>
-  <button type="submit" class="btn btn-primary">`Save`</button>
-  <button type="submit" class="btn btn-secondary" name="route_return" value="New">`Save and Add New`</button>
-  <button type="button" class="btn btn-default on-cancel" data-href="<~/common/form/cancel_url>">`Cancel`</button>
+  <~nonautosave_buttons unless="id" inline>
+    <button type="submit" class="btn btn-primary">`Save`</button>
+    <button type="submit" class="btn btn-secondary" name="route_return" value="New">`Save and Add New`</button>
+    <button type="button" class="btn btn-default on-cancel" data-href="<~/common/form/cancel_url>">`Cancel`</button>
+  </~nonautosave_buttons>
 </div>
 <p class="form-control-plaintext"><~value if="value"><~/common/form/idnew unless="value"></p>
