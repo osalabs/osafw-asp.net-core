@@ -28,6 +28,7 @@ public class ReportSample : FwReports
             f["is_dates"] = true;
 
         result["select_events"] = fw.model<FwEvents>().listSelectOptions();
+        result["select_users"] = fw.model<Users>().listSelectOptions();
 
         return result;
     }
@@ -54,6 +55,20 @@ public class ReportSample : FwReports
         {
             where += " and el.events_id=@events_id";
             where_params["@events_id"] = f["events_id"];
+        }
+
+        if (!Utils.isEmpty(f["users_id"]))
+        {
+            where += " and el.add_users_id=@users_id";
+            where_params["@users_id"] = f["users_id"];
+        }
+
+        if (!Utils.isEmpty(f["s"]))
+        {
+            //search in item_id, iname, fields
+            where += " and (el.item_id=@item_id OR el.iname like @slike OR el.fields like @slike)";
+            where_params["@item_id"] = Utils.f2int(f["s"]);
+            where_params["@slike"] = "%" + f["s"] + "%";
         }
 
         // define query

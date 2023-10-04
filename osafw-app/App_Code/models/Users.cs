@@ -6,13 +6,13 @@
 //if you use Roles - uncomment define isRoles here
 //#define isRoles
 
-using System;
 using Microsoft.VisualBasic;
-using System.Collections;
-using static BCrypt.Net.BCrypt;
-using System.Text.RegularExpressions;
 using OtpNet;
 using QRCoder;
+using System;
+using System.Collections;
+using System.Text.RegularExpressions;
+using static BCrypt.Net.BCrypt;
 
 namespace osafw;
 
@@ -93,14 +93,14 @@ public class Users : FwModel
     // return standard list of id,iname where status=0 order by iname
     public override DBList list()
     {
-        string sql = "select id, fname+' '+lname as iname from " + db.qid(table_name) + " where status=0 order by fname, lname";
-        return db.arrayp(sql);
+        string sql = "select id, fname+' '+lname as iname from " + db.qid(table_name) + " where status=@status order by fname, lname";
+        return db.arrayp(sql, DB.h("status", STATUS_ACTIVE));
     }
 
     public override ArrayList listSelectOptions(Hashtable def = null)
     {
-        string sql = "select id, fname+' '+lname as iname from " + db.qid(table_name) + " where status=0 order by fname, lname";
-        return db.arrayp(sql);
+        string sql = "select id, fname+' '+lname as iname from " + db.qid(table_name) + " where status=@status order by fname, lname";
+        return db.arrayp(sql, DB.h("status", STATUS_ACTIVE));
     }
     #endregion
 
@@ -221,7 +221,7 @@ public class Users : FwModel
         return Base32Encoding.ToString(KeyGeneration.GenerateRandomKey());
     }
 
-    public string generateMFAQRCode(string mfa_secret, string user="user@company", string issuer="osafw")
+    public string generateMFAQRCode(string mfa_secret, string user = "user@company", string issuer = "osafw")
     {
         var uriString = new OtpUri(OtpType.Totp, mfa_secret, user, issuer).ToString();
 
