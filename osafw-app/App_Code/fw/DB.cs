@@ -387,9 +387,40 @@ public class DB : IDisposable
         conn.Close();
     }
 
+    /// <summary>
+    /// query database with sql and optional parameters, return DbDataReader to read results from
+    /// </summary>
+    /// <param name="sql"></param>
+    /// <param name="params">param => value, value can be IList (example: new int[] {1,2,3}) - then sql query has something like "id IN (@ids)"</param>
+    /// <returns></returns>
+    /// <exception cref="ApplicationException"></exception>
     public DbDataReader query(string sql, Hashtable @params = null)
     {
         connect();
+
+        //in case @params contains an IList (example: new int[] {1,2,3}) - then sql query has something like "id IN (@ids)"
+        //need to expand array into single params
+        if (@params != null)
+        {
+            foreach (string p in @params.Keys.Cast<string>().ToList())
+            {
+                if (@params[p] is IList)
+                {
+                    var arr = (IList)@params[p];
+                    var arrstr = new StringBuilder();
+                    for (var i = 0; i <= arr.Count - 1; i++)
+                    {
+                        var pnew = p + "_" + i.ToString();
+                        @params[pnew] = arr[i];
+                        if (i > 0) arrstr.Append(',');
+                        arrstr.Append("@" + pnew);
+                    }
+                    sql = sql.Replace("@" + p, arrstr.ToString());
+                    @params.Remove(p);
+                }
+            }
+        }
+
         if (@params != null && @params.Count > 0)
             logger(LogLevel.INFO, "DB:", db_name, " ", sql, @params);
         else
