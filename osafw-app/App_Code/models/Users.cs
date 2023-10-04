@@ -90,16 +90,22 @@ public class Users : FwModel
         return base.update(id, item);
     }
 
-    // return standard list of id,iname where status=0 order by iname
-    public override DBList list()
+    protected override string getOrderBy()
     {
-        string sql = "select id, fname+' '+lname as iname from " + db.qid(table_name) + " where status=@status order by fname, lname";
-        return db.arrayp(sql, DB.h("status", STATUS_ACTIVE));
+        return "fname, lname";
+    }
+
+    // return standard list of id,iname where status=0 order by iname
+    public override DBList list(IList statuses = null)
+    {
+        if (statuses == null)
+            statuses = new ArrayList() { STATUS_ACTIVE };
+        return base.list(statuses);
     }
 
     public override ArrayList listSelectOptions(Hashtable def = null)
     {
-        string sql = "select id, fname+' '+lname as iname from " + db.qid(table_name) + " where status=@status order by fname, lname";
+        string sql = "select id, fname+' '+lname as iname from " + db.qid(table_name) + " where status=@status order by " + getOrderBy();
         return db.arrayp(sql, DB.h("status", STATUS_ACTIVE));
     }
     #endregion

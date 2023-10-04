@@ -11,7 +11,7 @@ public class MainController : FwController
 {
     public static new int access_level = Users.ACL_MEMBER;
 
-public override void init(FW fw)
+    public override void init(FW fw)
     {
         base.init(fw);
         base_url = "/Main";
@@ -40,28 +40,28 @@ public override void init(FW fw)
         one["type"] = "bignum";
         one["title"] = "Pages";
         one["url"] = "/Admin/Spages";
-        one["value"] = fw.model<Spages>().getCount();
+        one["value"] = fw.model<Spages>().getCount(new int[] { FwModel.STATUS_ACTIVE });
         panes["plate1"] = one;
 
         one = new Hashtable();
         one["type"] = "bignum";
         one["title"] = "Uploads";
         one["url"] = "/Admin/Att";
-        one["value"] = fw.model<Att>().getCount();
+        one["value"] = fw.model<Att>().getCount(new int[] { FwModel.STATUS_ACTIVE });
         panes["plate2"] = one;
 
         one = new Hashtable();
         one["type"] = "bignum";
         one["title"] = "Users";
         one["url"] = "/Admin/Users";
-        one["value"] = fw.model<Users>().getCount();
+        one["value"] = fw.model<Users>().getCount(new int[] { FwModel.STATUS_ACTIVE });
         panes["plate3"] = one;
 
         one = new Hashtable();
         one["type"] = "bignum";
         one["title"] = "Events";
         one["url"] = "/Admin/DemosDynamic";
-        one["value"] = fw.model<Demos>().getCount();
+        one["value"] = fw.model<Demos>().getCount(new int[] { FwModel.STATUS_ACTIVE });
         panes["plate4"] = one;
 
         one = new Hashtable();
@@ -71,7 +71,7 @@ public override void init(FW fw)
         // one["url") ] "/Admin/Reports/sample"
         one["rows"] = db.arrayp("with zzz as ("
             + db.limit("select CAST(el.add_time as date) as idate, count(*) as ivalue from events ev, event_log el where ev.icode='login' and el.events_id=ev.id"
-            + " group by CAST(el.add_time as date) order by CAST(el.add_time as date) desc",14)
+            + " group by CAST(el.add_time as date) order by CAST(el.add_time as date) desc", 14)
             + ")"
             + " select CONCAT(MONTH(idate),'/',DAY(idate)) as ilabel, ivalue from zzz order by idate", DB.h());
         panes["barchart"] = one;
@@ -81,7 +81,7 @@ public override void init(FW fw)
         one["title"] = "Users by Type";
         one["id"] = "user_types";
         // one["url") ] "/Admin/Reports/sample"
-        ArrayList rows = db.arrayp("select access_level, count(*) as ivalue from users group by access_level order by count(*) desc", DB.h());
+        ArrayList rows = db.arrayp("select access_level, count(*) as ivalue from users where status=0 group by access_level order by count(*) desc", DB.h());
         one["rows"] = rows;
         foreach (Hashtable row in rows)
             row["ilabel"] = FormUtils.selectTplName("/common/sel/access_level.sel", (string)row["access_level"]);
@@ -91,7 +91,7 @@ public override void init(FW fw)
         one["type"] = "table";
         one["title"] = "Last Events";
         // one["url") ] "/Admin/Reports/sample"
-        rows = db.arrayp(db.limit("select el.add_time as "+db.qid("On")+", ev.iname as Event from events ev, event_log el where el.events_id=ev.id order by el.id desc",10), DB.h());
+        rows = db.arrayp(db.limit("select el.add_time as " + db.qid("On") + ", ev.iname as Event from events ev, event_log el where el.events_id=ev.id order by el.id desc", 10), DB.h());
         one["rows"] = rows;
         var headers = new ArrayList();
         one["headers"] = headers;
@@ -99,7 +99,7 @@ public override void init(FW fw)
         {
             var keys = ((Hashtable)rows[0]).Keys;
             var fields = new string[keys.Count];
-            keys.CopyTo(fields,0);
+            keys.CopyTo(fields, 0);
             foreach (var key in fields)
                 headers.Add(new Hashtable() { { "field_name", key } });
             foreach (Hashtable row in rows)
@@ -127,7 +127,7 @@ public override void init(FW fw)
         // one["url") ] "/Admin/Reports/sample"
         one["rows"] = db.arrayp("with zzz as ("
             + db.limit("select CAST(el.add_time as date) as idate, count(*) as ivalue from events ev, event_log el where el.events_id=ev.id"
-            + " group by CAST(el.add_time as date) order by CAST(el.add_time as date) desc",14)
+            + " group by CAST(el.add_time as date) order by CAST(el.add_time as date) desc", 14)
             + ")"
             + " select CONCAT(MONTH(idate),'/',DAY(idate)) as ilabel, ivalue from zzz order by idate", DB.h());
         panes["linechart"] = one;

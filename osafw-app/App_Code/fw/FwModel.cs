@@ -3,13 +3,13 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
+using Microsoft.VisualBasic;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using Microsoft.VisualBasic;
 
 namespace osafw;
 
@@ -240,21 +240,31 @@ public abstract class FwModel : IDisposable
         return result;
     }
 
-    // return standard list of id,iname where status=0 order by iname
-    public virtual DBList list()
+    // return standard list of id,iname for all non-deleted OR wtih specified statuses order by by getOrderBy
+    public virtual DBList list(IList statuses = null)
     {
         Hashtable where = new();
         if (!string.IsNullOrEmpty(field_status))
-            where[field_status] = db.opNOT(STATUS_DELETED);
+        {
+            if (statuses != null && statuses.Count > 0)
+                where[field_status] = db.opIN(statuses);
+            else
+                where[field_status] = db.opNOT(STATUS_DELETED);
+        }
         return db.array(table_name, where, getOrderBy());
     }
 
-    // return count of all non-deleted
-    public long getCount()
+    // return count of all non-deleted or with specified statuses
+    public long getCount(IList statuses = null)
     {
         Hashtable where = new();
         if (!string.IsNullOrEmpty(field_status))
-            where[field_status] = db.opNOT(STATUS_DELETED);
+        {
+            if (statuses != null && statuses.Count > 0)
+                where[field_status] = db.opIN(statuses);
+            else
+                where[field_status] = db.opNOT(STATUS_DELETED);
+        }
         return Utils.f2long(db.value(table_name, where, "count(*)"));
     }
 
