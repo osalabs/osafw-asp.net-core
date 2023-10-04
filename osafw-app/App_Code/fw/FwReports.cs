@@ -97,32 +97,34 @@ public class FwReports
         switch (this.format)
         {
             case "pdf":
-            {
-                ((Hashtable)ps["f"])["edit"] = false; // force any edit modes off
-                ps["IS_EXPORT_PDF"] = true; //use as <~PARSEPAGE.TOP[IS_EXPORT_PDF]> in templates
-                ConvUtils.parsePagePdf(fw, base_dir, (string)fw.config("PAGE_LAYOUT_PRINT"), ps, report_code, render_options);
-                break;
-            }
+                {
+                    ((Hashtable)ps["f"])["edit"] = false; // force any edit modes off
+                    ps["IS_EXPORT_PDF"] = true; //use as <~PARSEPAGE.TOP[IS_EXPORT_PDF]> in templates
+                    ConvUtils.parsePagePdf(fw, base_dir, (string)fw.config("PAGE_LAYOUT_PRINT"), ps, report_code, render_options);
+                    break;
+                }
 
             case "xls":
-            {
-                ps["IS_EXPORT_XLS"] = true; //use as <~PARSEPAGE.TOP[IS_EXPORT_XLS]> in templates
-                ConvUtils.parsePageExcelSimple(fw, base_dir, "/admin/reports/common/xls.html", ps, report_code);
-                break;
-            }
+                {
+                    ps["IS_EXPORT_XLS"] = true; //use as <~PARSEPAGE.TOP[IS_EXPORT_XLS]> in templates
+                    ConvUtils.parsePageExcelSimple(fw, base_dir, "/admin/reports/common/xls.html", ps, report_code);
+                    break;
+                }
 
             case "csv":
-            {
-                throw new NotImplementedException("CSV format not yet supported");
-            }
+                {
+                    var rep = (Hashtable)ps["rep"];
+                    Utils.writeCSVExport(fw.response, report_code + ".csv", "", "", (ArrayList)rep["rows"]);
+                    break;
+                }
 
             default:
-            {
-                // html
-                // show report using templates from related report dir
-                fw.parser(base_dir, ps);
-                break;
-            }
+                {
+                    // html
+                    // show report using templates from related report dir
+                    fw.parser(base_dir, ps);
+                    break;
+                }
         }
     }
 
