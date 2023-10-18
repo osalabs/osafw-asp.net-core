@@ -27,15 +27,15 @@
 //    ]
 //}
 
+// uncomment line below to enable S3 storage
 //#define is_S3
-#if is_S3
 
-using System;
-using Microsoft.VisualBasic;
+#if is_S3
 using Amazon.S3;
 using Amazon.S3.Model;
+using System;
 using System.Text.RegularExpressions;
-using Microsoft.AspNetCore.Http;
+#endif
 
 namespace osafw;
 
@@ -45,6 +45,9 @@ public class S3 : FwModel
     public string bucket = "";
     public string root = "";
 
+    // const for simple check from other code if S3 is enabled
+#if is_S3
+    public const bool IS_ENABLED = true;
     public AmazonS3Client client;
     // params defined in web.config:
     // fw.config("AWSAccessKey") - access key
@@ -52,6 +55,9 @@ public class S3 : FwModel
     // fw.config("AWSRegion") - region "us-west-2"
     // fw.config("S3Bucket") - bucket name "xyz"
     // fw.config("S3Root") - root folder under bucket, default ""
+#else
+    public const bool IS_ENABLED = false;
+#endif
 
     public override void init(FW fw)
     {
@@ -61,6 +67,49 @@ public class S3 : FwModel
         initClient(); // automatically init client on start
     }
 
+#if !is_S3
+    //S3 disabled - just use a stub methods
+    public object initClient(string access_key = "", string secret_key = "", string region = "", string bucket = "", string root = "")
+    {
+        return null;
+    }
+
+    public object createFolder(string foldername)
+    {
+        fw.logger(LogLevel.WARN, "S3 storage is not enabled");
+        return null;
+    }
+
+    public string getSignedUrl(string key, int expires_minutes = 10, int max_age = 31536000)
+    {
+        fw.logger(LogLevel.WARN, "S3 storage is not enabled");
+        return "";
+    }
+
+    public bool uploadLocalFile(string key, string filepath, string disposition = "", string filename = "", object storage_class = null)
+    {
+        fw.logger(LogLevel.WARN, "S3 storage is not enabled");
+        return false;
+    }
+
+    public object deleteObject(string key)
+    {
+        fw.logger(LogLevel.WARN, "S3 storage is not enabled");
+        return null;
+    }
+
+    public string download(string key, string filepath)
+    {
+        fw.logger(LogLevel.WARN, "S3 storage is not enabled");
+        return "";
+    }
+
+    public object uploadPostedFile(string key, object file, string disposition = "", string filename = "")
+    {
+        throw new System.ApplicationException("S3 storage is not enabled");
+    }
+
+#else
     // initialize client
     // root should end with "/" if non-empty
     public AmazonS3Client initClient(string access_key = "", string secret_key = "", string region = "", string bucket = "", string root = "")
@@ -72,6 +121,10 @@ public class S3 : FwModel
         this.region = (string)(!string.IsNullOrEmpty(region) ? region : fw.config("AWSRegion"));
         this.bucket = (string)(!string.IsNullOrEmpty(bucket) ? bucket : fw.config("S3Bucket"));
         this.root = (string)(!string.IsNullOrEmpty(root) ? root : fw.config("S3Root"));
+
+        //throw exception if region/bucket/akey/skey is not defined
+        if (string.IsNullOrEmpty(this.region) || string.IsNullOrEmpty(this.bucket) || string.IsNullOrEmpty(akey) || string.IsNullOrEmpty(skey))
+            throw new System.ApplicationException("S3 storage is not configured");
 
         client = new AmazonS3Client(akey, skey, Amazon.RegionEndpoint.GetBySystemName(this.region)); // , Amazon.RegionEndpoint.USWest2
 
@@ -114,7 +167,7 @@ public class S3 : FwModel
     /// <param name="filename">optional filename to include in disposition header</param>
     /// <param name="storage_class">S3 Storage Class, default is Amazon.S3.S3StorageClass.Standard, use 5 times cheaper Amazon.S3.S3StorageClass.GlacierInstantRetrieval for warm archive files.</param>
     /// <returns></returns>
-    public PutObjectResponse uploadLocalFile(string key, string filepath, string disposition = "", string filename = "", S3StorageClass storage_class = null)
+    public bool uploadLocalFile(string key, string filepath, string disposition = "", string filename = "", S3StorageClass storage_class = null)
     {
         logger("uploading to S3: key=[" + key + "], filepath=[" + filepath + "]");
 
@@ -130,7 +183,7 @@ public class S3 : FwModel
         if (!string.IsNullOrEmpty(disposition))
         {
             if (filename == "") filename = System.IO.Path.GetFileName(filepath);
-            filename = Strings.Replace(filename, "\"", "'"); // replace quotes
+            filename = filename.Replace("\"", "'"); // replace quotes
             request.Headers["Content-Disposition"] = disposition + "; filename=\"" + filename + "\"";
         }
 
@@ -138,7 +191,8 @@ public class S3 : FwModel
         task.Wait();
         // logger("uploaded to: " & request.Key)
         if (task.Result.HttpStatusCode != System.Net.HttpStatusCode.OK) logger(LogLevel.WARN, "HttpStatusCode=" + task.Result.HttpStatusCode);
-        return task.Result;
+
+        return (task.Result.HttpStatusCode == System.Net.HttpStatusCode.OK);
     }
 
     /// <summary>
@@ -150,7 +204,7 @@ public class S3 : FwModel
     /// <param name="filename">optional filename to include in disposition header</param>
     /// <returns></returns>
     /// alternative way for disposition - in get https://docs.aws.amazon.com/AmazonS3/latest/dev/RetrievingObjectUsingNetSDK.html
-    public PutObjectResponse uploadPostedFile(string key, IFormFile file, string disposition = "", string filename = "")
+    public PutObjectResponse uploadPostedFile(string key, Microsoft.AspNetCore.Http.IFormFile file, string disposition = "", string filename = "")
     {
         var request = new PutObjectRequest()
         {
@@ -177,6 +231,38 @@ public class S3 : FwModel
     // alternative hi-level way to upload - use TransferUtility
     // Dim fileTransferUtility = New Amazon.S3.Transfer.TransferUtility(client)
     // fileTransferUtility.Upload()
+
+    /// <summary>
+    /// download file from S3 to specific local filepath
+    /// </summary>
+    /// <param name="key"></param>
+    /// <param name="filepath">filepath to download file to</param>
+    /// <returns>downloaded file filepath or empty string if not success</returns>
+    public string download(string key, string filepath)
+    {
+        logger($"downloading from S3: key=[{key}], filepath=[{filepath}]");
+
+        GetObjectRequest request = new()
+        {
+            BucketName = this.bucket,
+            Key = this.root + key
+        };
+
+        var task = client.GetObjectAsync(request);
+        task.Wait();
+        GetObjectResponse response = task.Result;
+
+        // check response code and return empty string if not 200
+        if (response.HttpStatusCode != System.Net.HttpStatusCode.OK)
+        {
+            logger($"S3 download failed: {response.HttpStatusCode}");
+            return string.Empty;
+        }
+
+        response.WriteResponseStreamToFileAsync(filepath, false, default).Wait();
+
+        return filepath;
+    }
 
 
     /// <summary>
@@ -223,7 +309,7 @@ public class S3 : FwModel
     public DeleteObjectResponse deleteObject(string key)
     {
         logger("S3 deleteObject: [" + key + "]");
-        if (Strings.Right(key, 1) == "/")
+        if (key.EndsWith("/"))
         {
             // it's subfolder - delete all content first
             ListObjectsRequest listrequest = new()
@@ -252,7 +338,5 @@ public class S3 : FwModel
         task2.Wait();
         return task2.Result;
     }
-}
-
-
 #endif
+}

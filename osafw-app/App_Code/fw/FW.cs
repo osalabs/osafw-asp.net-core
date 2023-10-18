@@ -1200,7 +1200,11 @@ public class FW : IDisposable
         {
             Exception iex = null;
             if (ex.InnerException != null)
+            {
                 iex = ex.InnerException;
+                if (iex.InnerException != null)
+                    iex = iex.InnerException;
+            }
 
             if (iex != null && !(iex is ApplicationException))
             {

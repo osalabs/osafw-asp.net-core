@@ -3,8 +3,6 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
-//#define is_S3
-
 using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections;
@@ -69,9 +67,7 @@ public class Att : FwModel
             fields["filepath"] = filepath;
             result = fields;
 
-#if is_S3
-              moveToS3(id);
-#endif
+            moveToS3(id);
         }
         return result;
     }
@@ -197,12 +193,10 @@ public class Att : FwModel
         if (item.Count == 0)
             return "";
 
-        string result = "";
+        string result;
         if (item["is_s3"] == "1")
         {
-#if is_S3
             result = fw.model<S3>().getSignedUrl(getS3KeyByID(item["id"], size));
-#endif
         }
         else
         {
@@ -221,12 +215,10 @@ public class Att : FwModel
         if (item.Count == 0)
             return "";
 
-        string result = "";
+        string result;
         if (item["is_s3"] == "1")
         {
-#if is_S3
             result = fw.model<S3>().getSignedUrl(getS3KeyByID(item["id"], size));
-#endif
         }
         else
         {
@@ -238,12 +230,10 @@ public class Att : FwModel
     // if you already have item, must contain: item("id"), item("ext")
     public string getUrlDirect(Hashtable item, string size = "")
     {
-        string result = "";
+        string result;
         if (Utils.f2int(item["is_s3"]) == 1)
         {
-#if is_S3
-            result = fw.model<S3>().getSignedUrl(getS3KeyByID(item["id"], size));
-#endif
+            result = fw.model<S3>().getSignedUrl(getS3KeyByID(Utils.f2str(item["id"]), size));
         }
         else
         {
@@ -282,11 +272,7 @@ public class Att : FwModel
         var item = one(id);
         if (Utils.f2int(item["is_s3"]) == 1)
         {
-#if is_S3
             fw.model<S3>().deleteObject(table_name + "/" + item["id"]);
-#else
-            fw.logger(LogLevel.WARN, "Att record has S3 flag, but S3 storage is not enabled");
-#endif
         }
         else
         {
@@ -403,7 +389,7 @@ public class Att : FwModel
             @params["@is_image"] = is_image;
         }
 
-        return db.arrayp("select a.* " + " from " + db.qid(att_table_link) + " atl, "+ db.qid(this.table_name)+" a "
+        return db.arrayp("select a.* " + " from " + db.qid(att_table_link) + " atl, " + db.qid(this.table_name) + " a "
             + " where atl.table_name=@link_table_name"
             + " and atl.item_id=@item_id"
             + " and a.id=atl.att_id" + where
@@ -418,12 +404,12 @@ public class Att : FwModel
             {"@table", linked_table_name},
             {"@item_id", id},
         };
-        return db.rowp(db.limit("SELECT a.* from " + db.qid(att_table_link) + " atl, " + db.qid(this.table_name) + " a"+
+        return db.rowp(db.limit("SELECT a.* from " + db.qid(att_table_link) + " atl, " + db.qid(this.table_name) + " a" +
             @" WHERE atl.table_name=@table_name
                      and atl.item_id=@item_id
                      and a.id=atl.att_id
                      and a.is_image=1
-                order by a.id",1), @params);
+                order by a.id", 1), @params);
     }
 
     // return all att images linked via att_table_link
@@ -513,15 +499,10 @@ public class Att : FwModel
         if (fw.userId == 0)
             throw new AuthException(); // denied for non-logged
 
-#if is_S3
         var url = fw.model<S3>().getSignedUrl(getS3KeyByID((string)item["id"], size));
         fw.redirect(url);
-#else
-        logger(LogLevel.WARN, "redirectS3 - S3 not enabled");
-#endif
     }
 
-#if is_S3
     /// <summary>
     /// move file from local file storage to S3
     /// </summary>
@@ -529,6 +510,9 @@ public class Att : FwModel
     /// <returns></returns>
     public bool moveToS3(int id)
     {
+        if (!S3.IS_ENABLED)
+            return false;
+
         var result = true;
         var item = one(id);
         if (Utils.f2int(item["is_s3"]) == 1)
@@ -541,16 +525,13 @@ public class Att : FwModel
         foreach (string size1 in Utils.qw("&nbsp; s m l"))
         {
             var size = size1.Trim();
-            string filepath = getUploadImgPath(id, size, (string)item["ext"]);
+            string filepath = getUploadImgPath(id, size, item["ext"]);
             if (!System.IO.File.Exists(filepath))
                 continue;
 
-            var res = model_s3.uploadFilepath(getS3KeyByID(id.ToString(), size), filepath, "inline");
-            if (res.HttpStatusCode != System.Net.HttpStatusCode.OK)
-            {
-                result = false;
+            result = model_s3.uploadLocalFile(getS3KeyByID(id.ToString(), size), filepath, "inline");
+            if (!result)
                 break;
-            }
         }
 
         if (result)
@@ -561,7 +542,31 @@ public class Att : FwModel
             deleteLocalFiles(id);
         }
 
-        return true;
+        return result;
+    }
+
+    /// <summary>
+    /// download file from S3 to filepath, if filepath is empty - download to tmp file and return full path
+    /// </summary>
+    /// <param name="id">att.id</param>
+    /// <param name="size">optional size for images</param>
+    /// <param name="filepath">filepath, if filepath is empty - download to tmp file and return full path</param>
+    /// <returns>downloaded file filepath or empty string if not success</returns>
+    public string downloadFromS3(int id, string size = "", string filepath = "")
+    {
+        var item = one(id);
+        if (item["is_s3"] != "1")
+        {
+            logger("att file not in S3");
+            return string.Empty;
+        }
+
+        if (Utils.isEmpty(filepath))
+        {
+            filepath = Utils.getTmpFilename() + item["ext"];
+        }
+
+        return fw.model<S3>().download(getS3KeyByID(id.ToString(), size), filepath);
     }
 
 
@@ -615,7 +620,7 @@ public class Att : FwModel
         foreach (IFormFile file in afiles)
         {
             // first - save to db so we can get att_id
-            Hashtable attitem = new ();
+            Hashtable attitem = new();
             attitem["att_categories_id"] = att_categories_id;
             attitem["table_name"] = att_table_name;
             attitem["item_id"] = Utils.f2str(item_id);
@@ -628,7 +633,7 @@ public class Att : FwModel
 
             try
             {
-                var response = model_s3.uploadPostedFile(getS3KeyByID(att_id.ToString()), file, "inline");
+                model_s3.uploadPostedFile(getS3KeyByID(att_id.ToString()), file, "inline");
 
                 // TODO check response for 200 and if not - error/delete?
                 // once uploaded - mark in db as uploaded
@@ -636,7 +641,7 @@ public class Att : FwModel
 
                 result += 1;
             }
-            catch (Amazon.S3.AmazonS3Exception ex)
+            catch (Exception ex)
             {
                 logger(ex.Message);
                 logger(ex);
@@ -648,5 +653,4 @@ public class Att : FwModel
 
         return result;
     }
-#endif
 }
