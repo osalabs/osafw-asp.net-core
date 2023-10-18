@@ -3,15 +3,15 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021  Oleg Savchuk www.osalabs.com
 
+using Microsoft.VisualBasic;
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Data;
 using System.IO;
 using System.Linq;
-using Microsoft.VisualBasic;
-using System.Collections;
-using System.Text.RegularExpressions;
 using System.Text.Json;
-using System.Data;
+using System.Text.RegularExpressions;
 
 namespace osafw;
 
@@ -1126,8 +1126,8 @@ public class DevManageController : FwController
                     if (!field.Contains("default"))
                     {
                         field["default"] = null;
-                        // no default set - then for nvarchar set empty string gdefault
-                        if (Utils.f2str(field["fw_type"]) == "varchar")
+                        // no default set and field is NOT NULLable - then for nvarchar set empty string default
+                        if (Utils.f2int(field["is_nullable"]) == 0 && Utils.f2str(field["fw_type"]) == "varchar")
                             field["default"] = "";
                     }
                 }
@@ -1805,7 +1805,7 @@ public class DevManageController : FwController
                 //non-system fields
                 if (Utils.f2str(sf["type"]) == "att"
                     || Utils.f2str(sf["type"]) == "att_links"
-                    || Utils.f2str(sff["type"]) == "textarea" && fields.Count>=10)
+                    || Utils.f2str(sff["type"]) == "textarea" && fields.Count >= 10)
                 {
                     //add to the right: attachments, textareas (only if many fields)
                     showFieldsRight.Add(sf);
@@ -1885,7 +1885,7 @@ public class DevManageController : FwController
         config["related_field_name"] = ""; // TODO?
 
         // list_view
-        if (foreign_keys.Count>0)
+        if (foreign_keys.Count > 0)
         {
             //we have foreign keys, so for the list screen we need to read FK entites names - build subquery
 
@@ -1911,7 +1911,7 @@ public class DevManageController : FwController
                     sql_join = $"INNER JOIN {db.qid(pk_table)} {alias} ON ({alias}.{pk_column}=t.{tcolumn})";
                 }
                 fk_joins.Add(sql_join);
-                fk_inames.Add($"{alias}.iname as "+db.qid(tcolumn + "_iname")); //TODO detect non-iname for non-fw tables?
+                fk_inames.Add($"{alias}.iname as " + db.qid(tcolumn + "_iname")); //TODO detect non-iname for non-fw tables?
             }
             var inames = string.Join(", ", fk_inames.Cast<string>().ToArray());
             var joins = string.Join(" ", fk_joins.Cast<string>().ToArray());
@@ -1934,7 +1934,7 @@ public class DevManageController : FwController
                          && !(Utils.f2str(fld["fw_type"]) == "varchar" && Utils.f2int(fld["maxlen"]) <= 0)
                          && !(sys_fields.Contains(fld["name"]) && Utils.f2str(fld["name"]) != "status")
                        orderby (Utils.f2str(fld["is_nullable"]) == "0" && fld["default"] == null) descending
-                      select fld);
+                       select fld);
         foreach (Hashtable field in rfields)
         {
             var fname = (string)field["name"];
@@ -2121,7 +2121,7 @@ public class DevManageController : FwController
                     if (Utils.f2str(entity["fw_subtype"]) == "currency")
                         result = "DECIMAL(18,2)";
                     else if (Utils.f2str(entity["fw_subtype"]) == "decimal")
-                        result = "DECIMAL(18,"+ Utils.f2int(entity["numeric_precision"]) + ")";
+                        result = "DECIMAL(18," + Utils.f2int(entity["numeric_precision"]) + ")";
                     else
                         result = "FLOAT";
                     break;

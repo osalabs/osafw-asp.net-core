@@ -106,9 +106,6 @@ body {
 }
 .sidebar .nav-link.disabled {
   color: var(--bs-gray-dark) !important;
-  margin-top: 0.75rem;
-  text-transform: uppercase;
-  font-size: 1rem;
 }
 .sidebar .nav-link.active {
   background-color: var(--theme-color);
