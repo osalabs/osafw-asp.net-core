@@ -6,7 +6,6 @@
 //if you use Roles - uncomment define isRoles here
 //#define isRoles
 
-using Microsoft.VisualBasic;
 using OtpNet;
 using QRCoder;
 using System;
@@ -118,7 +117,7 @@ public class Users : FwModel
     /// <returns>clean plain pwd</returns>
     public string cleanPwd(string plain_pwd)
     {
-        return Strings.Trim(Strings.Left(plain_pwd, 32));
+        return plain_pwd[..Math.Min(32, plain_pwd.Length)].Trim();
     }
 
     /// <summary>
@@ -319,19 +318,19 @@ public class Users : FwModel
         var user = one(id);
 
         fw.Session("user_id", Utils.f2str(id));
-        fw.Session("login", (string)user["email"]);
-        fw.Session("access_level", (string)user["access_level"]); //note, set as string
-        fw.Session("lang", (string)user["lang"]);
-        fw.Session("ui_theme", (string)user["ui_theme"]);
-        fw.Session("ui_mode", (string)user["ui_mode"]);
+        fw.Session("login", user["email"]);
+        fw.Session("access_level", user["access_level"]); //note, set as string
+        fw.Session("lang", user["lang"]);
+        fw.Session("ui_theme", user["ui_theme"]);
+        fw.Session("ui_mode", user["ui_mode"]);
         // fw.SESSION("user", hU)
 
-        var fname = ((string)user["fname"]).Trim();
-        var lname = ((string)user["lname"]).Trim();
+        var fname = user["fname"].Trim();
+        var lname = user["lname"].Trim();
         if (!string.IsNullOrEmpty(fname) || !string.IsNullOrEmpty(lname))
-            fw.Session("user_name", fname + Interaction.IIf(!string.IsNullOrEmpty(fname), " ", "") + lname);
+            fw.Session("user_name", string.Join(" ", fname, lname).Trim());
         else
-            fw.Session("user_name", (string)user["email"]);
+            fw.Session("user_name", user["email"]);
 
         var avatar_link = "";
         if (Utils.f2int(user["att_id"]) > 0)

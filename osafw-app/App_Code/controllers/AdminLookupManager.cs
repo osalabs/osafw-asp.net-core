@@ -6,7 +6,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using Microsoft.VisualBasic;
 
 namespace osafw;
 
@@ -117,7 +116,8 @@ public class AdminLookupManagerController : FwController
         if (Utils.isEmpty(f["sortby"]))
         {
             var is_prio_exists = false;
-            foreach (Hashtable col in cols) {
+            foreach (Hashtable col in cols)
+            {
                 if (Utils.f2str(col["name"]) == "prio")
                 {
                     is_prio_exists = true;
@@ -228,11 +228,11 @@ public class AdminLookupManagerController : FwController
             if ((string)f["sortdir"] == "desc")
             {
                 if (orderby.Contains(","))
-                    orderby = Strings.Replace(orderby, ",", " desc,");
+                    orderby = orderby.Replace(",", " desc,");
                 orderby += " desc";
             }
 
-            ArrayList list_rows  = db.selectRaw("*", db.qid(list_table_name), list_where, list_where_params, orderby, offset, limit);
+            ArrayList list_rows = db.selectRaw("*", db.qid(list_table_name), list_where, list_where_params, orderby, offset, limit);
             ps["list_rows"] = list_rows;
 
             ps["count_from"] = pagenum * pagesize + 1;

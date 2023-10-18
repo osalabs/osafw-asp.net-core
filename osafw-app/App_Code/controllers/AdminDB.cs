@@ -4,11 +4,10 @@
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
 using System;
-using Microsoft.VisualBasic;
-using System.Data.Common;
-using System.Data;
-using System.Text.RegularExpressions;
 using System.Collections;
+using System.Data;
+using System.Data.Common;
+using System.Text.RegularExpressions;
 
 namespace osafw;
 
@@ -158,7 +157,7 @@ public class AdminDBController : FwController
         foreach (DataRow row in dataTable.Rows)
         {
             string tblname = row["TABLE_NAME"].ToString();
-            if (Strings.InStr(tblname, "MSys", CompareMethod.Binary) == 0)
+            if (tblname.IndexOf("MSys", StringComparison.Ordinal) == -1)
             {
                 Hashtable tblrow = new();
                 var fields = new ArrayList();

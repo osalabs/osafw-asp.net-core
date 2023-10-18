@@ -1,5 +1,4 @@
 ﻿using System.Collections;
-using Microsoft.VisualBasic;
 
 namespace osafw;
 
@@ -35,7 +34,7 @@ public class HomeController : FwController
 
     public void ShowAction(string id = "")
     {
-        var page_name = Strings.LCase(id);
+        var page_name = id.ToLower();
 
         string tpl_name = (string)fw.G["PAGE_LAYOUT"];
         //override layout for specific pages - TODO control via Spages
@@ -57,7 +56,7 @@ public class HomeController : FwController
 
     public void TestAction(string id = "")
     {
-        Hashtable hf = new ();
+        Hashtable hf = new();
         logger("in the TestAction");
         rw("here it is Test");
         rw("id=" + id);

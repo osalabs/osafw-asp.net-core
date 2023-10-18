@@ -3,7 +3,6 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
-using Microsoft.VisualBasic;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -211,7 +210,7 @@ public abstract class FwModel : IDisposable
     public virtual int findOrAddByIname(string iname, out bool is_added)
     {
         is_added = false;
-        iname = Strings.Trim(iname);
+        iname = iname.Trim();
         if (iname.Length == 0)
             return 0;
         int result;
@@ -694,7 +693,7 @@ public abstract class FwModel : IDisposable
     /// <returns></returns>
     public virtual ArrayList listWithChecked(string sel_ids, Hashtable def = null)
     {
-        List<string> ids = new(Strings.Split(sel_ids, ","));
+        List<string> ids = new(sel_ids.Split(","));
         return this.listWithChecked(ids, def);
     }
 

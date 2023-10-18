@@ -2,7 +2,6 @@
 //
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
-using Microsoft.VisualBasic;
 using System;
 using System.Collections;
 using System.Text.RegularExpressions;
@@ -36,7 +35,7 @@ public class FwReports
     public static string repcodeToClass(string repcode)
     {
         string result = "";
-        string[] pieces = Strings.Split(repcode, "-");
+        string[] pieces = repcode.Split("-");
         foreach (string piece in pieces)
             result += Utils.capitalize(piece);
         return "Report" + result;

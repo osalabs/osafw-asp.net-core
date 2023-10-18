@@ -9,7 +9,6 @@ using System.Collections;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using Microsoft.VisualBasic;
 
 namespace osafw;
 
@@ -141,7 +140,7 @@ public class FwSelfTest
             {
                 try
                 {
-                    db.valuep(db.limit("select * from " + db.qid(table),1));
+                    db.valuep(db.limit("select * from " + db.qid(table), 1));
                     plus_ok();
                     echo("table " + table, "OK");
                 }
@@ -161,7 +160,7 @@ public class FwSelfTest
 
         // get all classes ending with "Controller" and not starting with "Fw"
         var aControllers = System.Reflection.Assembly.GetExecutingAssembly().GetTypes()
-            .Where(t => t.Name != "AdminSelfTestController" && Strings.Right(t.Name, 10) == "Controller" && Strings.Left(t.Name, 2) != "Fw")
+            .Where(t => t.Name != "AdminSelfTestController" && t.Name.EndsWith("Controller") && !t.Name.StartsWith("Fw"))
             .OrderBy(t => t.Name)
             .ToList();
 
@@ -175,7 +174,7 @@ public class FwSelfTest
 
         foreach (var t in aControllers)
         {
-            string controller_name = Strings.Replace(t.Name, "Controller", "");
+            string controller_name = t.Name.Replace("Controller", "");
             // omit controllers we don't need to test
             if (hexclude.ContainsKey(controller_name))
                 continue;

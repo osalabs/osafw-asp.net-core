@@ -4,9 +4,8 @@
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
 using System;
-using System.Text;
-using Microsoft.VisualBasic;
 using System.Collections;
+using System.Text;
 
 namespace osafw;
 
@@ -59,7 +58,7 @@ public class ContactController : FwController
         }
 
         // ip address
-        msg_body.AppendLine(Constants.vbCrLf + Constants.vbCrLf);
+        msg_body.Append(Environment.NewLine + Environment.NewLine);
         // https://stackoverflow.com/questions/28664686/how-do-i-get-client-ip-address-in-asp-net-core
         var ip = fw.context.Connection.RemoteIpAddress;
         msg_body.AppendLine("IP: " + ip);

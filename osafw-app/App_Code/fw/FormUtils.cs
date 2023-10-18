@@ -5,10 +5,9 @@
 
 using System;
 using System.Collections;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using Microsoft.VisualBasic;
-using System.Linq;
 using static osafw.Utils;
 
 namespace osafw;
@@ -39,7 +38,7 @@ public class FormUtils
     {
         StringBuilder result = new();
 
-        isel = Strings.Trim(isel);
+        isel = isel.Trim();
         int i = 0;
         string[] av;
         string val;
@@ -48,7 +47,7 @@ public class FormUtils
         {
             if (item.Contains('|'))
             {
-                av = Strings.Split(item, "|");
+                av = item.Split('|');
                 val = av[0];
                 text = av[1];
             }
@@ -59,9 +58,9 @@ public class FormUtils
             }
 
             result.Append("<label><input type=\"radio\" name=\"" + iname + "\" id=\"" + iname + i + "\" value=\"" + val + "\"");
-            if (isel == Strings.Trim(val))
+            if (isel == val.Trim())
                 result.Append(" checked ");
-            result.Append(">" + text + "</label>" + separator + Constants.vbCrLf);
+            result.Append(">" + text + "</label>" + separator + Environment.NewLine);
             i += 1;
         }
 
@@ -78,7 +77,7 @@ public class FormUtils
 
         string[] asel;
         if (is_multi)
-            asel = Strings.Split(isel, ",");
+            asel = isel.Split(",");
         else
         {
             asel = new string[1];
@@ -86,9 +85,10 @@ public class FormUtils
         }
 
         int i;
-        // trim all elements, so it would be simplier to compare
-        for (i = Information.LBound(asel); i <= Information.UBound(asel); i++)
-            asel[i] = Strings.Trim(asel[i]);
+        // trim all asel elements, so it would be simplier to compare
+        for (i = 0; i < asel.Length; i++)
+            asel[i] = asel[i].Trim();
+
         string val;
         string text;
         StringBuilder result = new();
@@ -103,9 +103,9 @@ public class FormUtils
             result.Append("<option value=\"").Append(Utils.htmlescape(val)).Append('"');
             if (item.ContainsKey("class"))
                 result.Append(" class=\"" + item["class"] + "\"");
-            if (Array.IndexOf(asel, Strings.Trim(val)) != -1)
+            if (Array.IndexOf(asel, val.Trim()) != -1)
                 result.Append(" selected ");
-            result.Append('>').Append(text).Append("</option>" + Constants.vbCrLf);
+            result.Append('>').Append(text).Append("</option>" + Environment.NewLine);
         }
 
         return result.ToString();
@@ -132,7 +132,7 @@ public class FormUtils
             if (line.Length < 2)
                 continue;
 
-            string[] arr = Strings.Split(line, "|", 2);
+            string[] arr = line.Split("|", 2);
             string value = arr[0];
             string desc = arr[1];
 
@@ -158,7 +158,7 @@ public class FormUtils
             if (line.Length < 2)
                 continue;
 
-            string[] arr = Strings.Split(line, "|", 2);
+            string[] arr = line.Split("|", 2);
             string value = arr[0];
             string desc = arr[1];
 
@@ -357,9 +357,9 @@ public class FormUtils
     public static ArrayList comma_str2col(string str)
     {
         ArrayList result;
-        str = Strings.Trim(str);
+        str = str.Trim();
         if (!string.IsNullOrEmpty(str))
-            result = new ArrayList(Strings.Split(str, ","));
+            result = new ArrayList(str.Split(","));
         else
             result = new ArrayList();
         return result;
@@ -419,7 +419,7 @@ public class FormUtils
     // output: 0-86400 (daily time in seconds)
     public static int timeStrToInt(string hhmm)
     {
-        string[] a = Strings.Split(hhmm, ":", 2);
+        string[] a = hhmm.Split(":", 2);
         int result = 0;
         try
         {
@@ -433,16 +433,12 @@ public class FormUtils
 
     public static int getIdFromAutocomplete(string s)
     {
-        int result = 0;
-        string[] a = Strings.Split(s, " - ", 2);
-        try
-        {
-            result = (int)Conversion.Val(a[0]);
-        }
-        catch (Exception)
-        {
-        }
-        return result;
+        if (string.IsNullOrEmpty(s))
+            return 0;
+
+        var idPart = s.Split(new[] { " - " }, StringSplitOptions.None).FirstOrDefault();
+
+        return int.TryParse(idPart, out int result) ? result : 0;
     }
 
     // convert time from field to 2 form fields with HH and MM suffixes

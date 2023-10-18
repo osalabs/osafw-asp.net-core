@@ -7,9 +7,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Policy;
 using System.Text.RegularExpressions;
-using Microsoft.VisualBasic;
 
 namespace osafw;
 
@@ -580,7 +578,7 @@ public class FwDynamicController : FwController
             List<string> anames = new();
             foreach (var el in ordered)
                 anames.Add((string)el.Key);
-            var fields = Strings.Join(anames.ToArray(), " ");
+            var fields = string.Join(" ", anames);
 
             if (!string.IsNullOrEmpty(iname))
             {

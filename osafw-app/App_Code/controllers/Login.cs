@@ -6,7 +6,6 @@
 using System;
 using System.Collections;
 using System.Text.RegularExpressions;
-using Microsoft.VisualBasic;
 
 namespace osafw;
 
@@ -58,7 +57,7 @@ public class LoginController : FwController
             // if use field with masked chars - read masked field
             if ((string)item["chpwd"] == "1")
                 pwd = (string)item["pwd"];
-            pwd = Strings.Trim(pwd);
+            pwd = pwd.Trim();
 
             // for dev config only - login as first admin
             var is_dev_login = false;

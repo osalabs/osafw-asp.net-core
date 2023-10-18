@@ -3,7 +3,6 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
-using Microsoft.VisualBasic;
 using System;
 using System.Collections;
 using System.Linq;
@@ -424,16 +423,16 @@ public abstract class FwController
         this.list_filter["sortby"] = sortby;
         this.list_filter["sortdir"] = sortdir;
 
+        string[] aorderby = orderby.Split(",");
         if (sortdir == "desc")
         {
             // if sortdir is desc, i.e. opposite to default - invert order for orderby fields
-            // go thru each order field
-            string[] aorderby = Strings.Split(orderby, ",");
+            // go thru each order field            
             for (int i = 0; i <= aorderby.Length - 1; i++)
             {
                 string field = null;
                 string order = null;
-                Utils.split2(@"\s+", Strings.Trim(aorderby[i]), ref field, ref order);
+                Utils.split2(@"\s+", aorderby[i].Trim(), ref field, ref order);
 
                 if (order == "desc")
                     order = "asc";
@@ -441,22 +440,19 @@ public abstract class FwController
                     order = "desc";
                 aorderby[i] = db.qid(field) + " " + order;
             }
-            orderby = Strings.Join(aorderby, ", ");
         }
         else
         {
             // quote
-            string[] aorderby = Strings.Split(orderby, ",");
             for (int i = 0; i <= aorderby.Length - 1; i++)
             {
                 string field = null;
                 string order = null;
-                Utils.split2(@"\s+", Strings.Trim(aorderby[i]), ref field, ref order);
+                Utils.split2(@"\s+", aorderby[i].Trim(), ref field, ref order);
                 aorderby[i] = db.qid(field) + " " + order;
             }
-            orderby = Strings.Join(aorderby, ", ");
         }
-        this.list_orderby = orderby;
+        this.list_orderby = string.Join(", ", aorderby);
     }
 
     /// <summary>
@@ -481,7 +477,7 @@ public abstract class FwController
             string[] afields = Utils.qw(this.search_fields); // OR fields delimited by space
             for (int i = 0; i <= afields.Length - 1; i++)
             {
-                string[] afieldsand = Strings.Split(afields[i], ","); // AND fields delimited by comma
+                string[] afieldsand = afields[i].Split(","); // AND fields delimited by comma
 
                 for (int j = 0; j <= afieldsand.Length - 1; j++)
                 {
@@ -517,9 +513,9 @@ public abstract class FwController
                         list_where_params[param_name] = like_s;
                     }
                 }
-                afields[i] = Strings.Join(afieldsand, " and ");
+                afields[i] = string.Join(" and ", afieldsand);
             }
-            list_where += " and (" + Strings.Join(afields, " or ") + ")";
+            list_where += " and (" + string.Join(" or ", afields) + ")";
         }
 
         setListSearchUserList();
