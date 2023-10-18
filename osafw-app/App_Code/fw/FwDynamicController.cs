@@ -715,7 +715,7 @@ public class FwDynamicController : FwController
         var id = Utils.f2int(item["id"]);
 
         var subtable_add = reqh("subtable_add");
-        //var subtable_del = reqh("subtable_del");
+        var subtable_del = reqh("subtable_del");
 
         var fields = (ArrayList)this.config["showform_fields"];
         if (fields == null)
@@ -785,6 +785,9 @@ public class FwDynamicController : FwController
                 }
                 else
                 {
+                    //check if we deleted specific row
+                    var del_id = (string)subtable_del[model_name] ?? "";
+
                     //copy list related rows from the form
                     // row ids submitted as: item-<~model>[<~id>]
                     // input name format: item-<~model>#<~id>[field_name]
@@ -793,6 +796,8 @@ public class FwDynamicController : FwController
                     var sorted_keys = hids.Keys.Cast<string>().OrderBy(x => x.StartsWith("new-") ? 1 : 0).ThenBy(x => x).ToList();
                     foreach (string row_id in sorted_keys)
                     {
+                        if (row_id == del_id) continue; //skip deleted row
+
                         var row_item = reqh("item-" + model_name + "#" + row_id);
                         row_item["id"] = row_id;
 
