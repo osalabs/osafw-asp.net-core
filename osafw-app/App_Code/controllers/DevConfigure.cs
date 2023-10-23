@@ -29,7 +29,9 @@ public class DevConfigureController : FwController
         Hashtable ps = new();
 
         ps["hide_sidebar"] = true;
+        ps["ASPNETCORE_ENVIRONMENT"] = Utils.f2str(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"));
         ps["config_file_name"] = fw.config("config_override");
+        ps["is_config_env"] = Utils.f2str(ps["ASPNETCORE_ENVIRONMENT"]) == Utils.f2str(ps["config_file_name"]);
 
         ps["is_db_config"] = false;
         var configdb = (Hashtable)fw.config("db");
@@ -88,7 +90,7 @@ public class DevConfigureController : FwController
         var result = false;
         try
         {
-            var path = dir_or_filepath + (is_dir ? "": "osafw_writable_check.txt");
+            var path = dir_or_filepath + (is_dir ? "" : "osafw_writable_check.txt");
             string V = "osafw";
             FW.setFileContent(path, ref V);
             File.Delete(path);

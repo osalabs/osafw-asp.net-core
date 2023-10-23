@@ -9,9 +9,15 @@
         </tr>
     </thead>
     <tbody>
+
+        <tr>
+            <td>Environment</td>
+            <td><~ok if="is_config_env"><~fail unless="is_config_env"></td>
+            <td><~ASPNETCORE_ENVIRONMENT></td>
+        </tr>
         <tr>
             <td>Config file</td>
-            <td><~ok></td>
+            <td><~ok if="is_config_env"><~fail unless="is_config_env"></td>
             <td><~config_file_name></td>
         </tr>
         <tr>
