@@ -1,0 +1,30 @@
+<div class="row form-row">
+  <label class="col-form-label col-md-3 required" for="from">`From`</label>
+  <div class="col-md-6">
+    <input id="from" name="item[from]" maxlength="255" value="<~i[from]>" type="text" class="form-control" required placeholder="Name &lt;address@domain.tld&gt;">
+  </div>
+</div>
+<div class="row form-row">
+  <label class="col-form-label col-md-3 required" for="to">`To`</label>
+  <div class="col">
+    <input id="to" name="item[to]" maxlength="255" value="<~i[to]>" type="text" class="form-control" required placeholder="one or multiple email addresses (separated by ;)">
+    <~test_block if="GLOBAL[is_test]" inline>
+      <small class="text-danger form-text">
+        <b>Test mode ON</b> all emails will be sent to <i><~GLOBAL[test_email] default="-"></i>
+      </small>
+    </~test_block>
+  </div>
+</div>
+<div class="row form-row">
+  <label class="col-form-label col-md-3 required" for="subject">`Subject`</label>
+  <div class="col">
+    <input id="subject" name="item[subject]" maxlength="255" value="<~i[subject]>" type="text" class="form-control" required>
+  </div>
+</div>
+<div class="row form-row">
+  <label class="col-form-label col-md-3" for="body">`Message Body`</label>
+  <div class="col">
+    <textarea id="body" name="item[body]" rows="10" class="form-control autoresize"><~i[body]></textarea>
+    <small class="form-text">start with <code>&lt;!DOCTYPE&gt;</code> or <code>&lt;html&gt;</code> to make a html email</small>
+  </div>
+</div>

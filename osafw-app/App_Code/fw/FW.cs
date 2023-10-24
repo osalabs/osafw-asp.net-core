@@ -251,10 +251,10 @@ public class FW : IDisposable
         {
             if (!isJsonExpected())
             {
-                // write for the next request
-                Hashtable _flash = SessionHashtable("_flash") ?? new();
-                _flash[name] = value;
-                SessionHashtable("_flash", _flash);
+            // write for the next request
+            Hashtable _flash = SessionHashtable("_flash") ?? new();
+            _flash[name] = value;
+            SessionHashtable("_flash", _flash);
             }
             return this; // for chaining
         }
@@ -1239,7 +1239,8 @@ public class FW : IDisposable
     // aCC - arraylist of CC addresses (strings)
     // reply_to - optional reply to email
     // options - hashtable with options:
-    // "read-receipt"
+    //   "read-receipt"
+    //   "smtp" - hashtable with smtp settings (host, port, is_ssl, username, password)
     // RETURN:
     // true if sent successfully
     // false if some problem occured (see log)
@@ -1247,8 +1248,7 @@ public class FW : IDisposable
     {
         bool result = true;
         MailMessage message = null;
-        if (options == null)
-            options = new Hashtable();
+        options ??= new Hashtable();
 
         try
         {
@@ -1303,7 +1303,13 @@ public class FW : IDisposable
                         foreach (string cc in aCC)
                         {
                             logger(LogLevel.INFO, "TEST SEND. PASSED CC=[", cc, "]");
-                            message.CC.Add(new MailAddress(mail_to));
+                            foreach (string email1 in amail_to)
+                            {
+                                string email = email1.Trim();
+                                if (string.IsNullOrEmpty(email))
+                                    continue;
+                                message.CC.Add(new MailAddress(email));
+                            }
                         }
                     }
                     else
@@ -1339,6 +1345,11 @@ public class FW : IDisposable
                 using (SmtpClient client = new())
                 {
                     Hashtable mailSettings = (Hashtable)this.config("mail");
+                    if (options.ContainsKey("smtp"))
+                    {
+                        //override mailSettings from smtp options
+                        Utils.mergeHash(mailSettings, options["smtp"] as Hashtable);
+                    }
                     if (mailSettings.Count > 0)
                     {
                         client.Host = Utils.f2str(mailSettings["host"]);
