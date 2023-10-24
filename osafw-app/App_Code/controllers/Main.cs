@@ -36,44 +36,52 @@ public class MainController : FwController
         Hashtable panes = new();
         ps["panes"] = panes;
 
+        const int DIFF_DAYS = -7;
+        // init const int[] STATUSES with single value FwModel.STATUS_ACTIVE
+        var STATUSES = new int[] { FwModel.STATUS_ACTIVE };
+
         one = new Hashtable();
         one["type"] = "bignum";
         one["title"] = "Pages";
         one["url"] = "/Admin/Spages";
-        one["value"] = fw.model<Spages>().getCount(new int[] { FwModel.STATUS_ACTIVE });
+        one["value"] = fw.model<Spages>().getCount(STATUSES);
         one["value_class"] = "text-warning";
-        one["badge_value"] = "+10%"; //TODO
+        one["badge_value"] = Utils.percentChange(fw.model<Spages>().getCount(STATUSES, DIFF_DAYS), fw.model<Spages>().getCount(STATUSES, DIFF_DAYS * 2));
         one["badge_class"] = "text-bg-warning";
+        one["icon"] = "pages";
         panes["plate1"] = one;
 
         one = new Hashtable();
         one["type"] = "bignum";
         one["title"] = "Uploads";
         one["url"] = "/Admin/Att";
-        one["value"] = fw.model<Att>().getCount(new int[] { FwModel.STATUS_ACTIVE });
+        one["value"] = fw.model<Att>().getCount(STATUSES);
         one["value_class"] = "text-info";
-        one["badge_value"] = "+20%"; //TODO
+        one["badge_value"] = Utils.percentChange(fw.model<Att>().getCount(STATUSES, DIFF_DAYS), fw.model<Att>().getCount(STATUSES, DIFF_DAYS * 2));
         one["badge_class"] = "text-bg-info";
+        one["icon"] = "uploads";
         panes["plate2"] = one;
 
         one = new Hashtable();
         one["type"] = "bignum";
         one["title"] = "Users";
         one["url"] = "/Admin/Users";
-        one["value"] = fw.model<Users>().getCount(new int[] { FwModel.STATUS_ACTIVE });
+        one["value"] = fw.model<Users>().getCount(STATUSES);
         one["value_class"] = "text-success";
-        one["badge_value"] = "+30%"; //TODO
+        one["badge_value"] = Utils.percentChange(fw.model<Users>().getCount(STATUSES, DIFF_DAYS), fw.model<FwEvents>().getCount(STATUSES, DIFF_DAYS * 2));
         one["badge_class"] = "text-bg-success";
+        one["icon"] = "users";
         panes["plate3"] = one;
 
         one = new Hashtable();
         one["type"] = "bignum";
         one["title"] = "Events";
-        one["url"] = "/Admin/DemosDynamic";
-        one["value"] = fw.model<Demos>().getCount(new int[] { FwModel.STATUS_ACTIVE });
+        one["url"] = "/Admin/Reports/sample";
+        one["value"] = fw.model<FwEvents>().getCount(STATUSES);
         one["value_class"] = "";
-        one["badge_value"] = "+50%"; //TODO
+        one["badge_value"] = Utils.percentChange(fw.model<FwEvents>().getCountLog(DIFF_DAYS), fw.model<FwEvents>().getCountLog(DIFF_DAYS * 2));
         one["badge_class"] = "text-bg-secondary";
+        one["icon"] = "events";
         panes["plate4"] = one;
 
         one = new Hashtable();
@@ -150,7 +158,14 @@ public class MainController : FwController
     public void UIThemeAction(string form_id)
     {
         fw.Session("ui_theme", form_id);
-        fw.model<Users>().update(fw.userId, new Hashtable() { { "ui_theme", form_id } });
+        var fields = new Hashtable() { { "ui_theme", form_id } };
+        if (form_id == "30")
+        {
+            fields["ui_mode"] = "10"; //for blue theme - enforce light color mode
+            fw.Session("ui_mode", "10");
+        }
+
+        fw.model<Users>().update(fw.userId, fields);
 
         fw.redirect(base_url);
     }

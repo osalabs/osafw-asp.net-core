@@ -3,7 +3,6 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
-using System;
 using System.Collections;
 
 namespace osafw;
@@ -66,6 +65,12 @@ public class MySettingsController : FwController
         // Dim itemold As Hashtable = model.one(id)
 
         Hashtable itemdb = FormUtils.filter(item, save_fields);
+
+        if (Utils.f2str(itemdb["ui_theme"]) == "30")
+        {
+            itemdb["ui_mode"] = "10"; //for blue theme - enforce light color mode
+        }
+
         model.update(id, itemdb);
         fw.flash("record_updated", 1);
 

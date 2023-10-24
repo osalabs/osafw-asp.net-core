@@ -35,6 +35,7 @@ public abstract class FwModel : IDisposable
     public string field_status = "status";
     public string field_add_users_id = "add_users_id";
     public string field_upd_users_id = "upd_users_id";
+    public string field_add_time = "add_time";
     public string field_upd_time = "upd_time";
     public string field_prio = "";
     public bool is_normalize_names = false; // if true - Utils.name2fw() will be called for all fetched rows to normalize names (no spaces or special chars)
@@ -254,7 +255,7 @@ public abstract class FwModel : IDisposable
     }
 
     // return count of all non-deleted or with specified statuses
-    public long getCount(IList statuses = null)
+    public virtual long getCount(IList statuses = null, int? since_days = null)
     {
         Hashtable where = new();
         if (!string.IsNullOrEmpty(field_status))
@@ -263,6 +264,10 @@ public abstract class FwModel : IDisposable
                 where[field_status] = db.opIN(statuses);
             else
                 where[field_status] = db.opNOT(STATUS_DELETED);
+        }
+        if (!string.IsNullOrEmpty(field_add_time) && since_days != null)
+        {
+            where[field_add_time] = db.opGT(DateTime.Now.AddDays((int)since_days));
         }
         return Utils.f2long(db.value(table_name, where, "count(*)"));
     }

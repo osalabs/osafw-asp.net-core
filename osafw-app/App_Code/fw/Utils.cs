@@ -1182,6 +1182,22 @@ public class Utils
         };
     }
 
+    // for num (within total) and total - return string "+XXX%" or "-XXX%" depends if num is bigger or smaller than previous period (num-total)
+    public static string percentChange(long num, long total)
+    {
+        string result = "";
+
+        long prev_num = total - num;
+        if (prev_num == 0)
+            return (num == 0) ? "0%" : "+100%";
+
+        double percent = ((double)num - prev_num) / prev_num * 100;
+        if (percent >= 0)
+            result = "+";
+
+        return result + Math.Round(percent, 2) + "%";
+    }
+
     // truncate  - This truncates a variable to a character length, the default is 80.
     // trchar    - As an optional second parameter, you can specify a string of text to display at the end if the variable was truncated.
     // The characters in the string are included with the original truncation length.

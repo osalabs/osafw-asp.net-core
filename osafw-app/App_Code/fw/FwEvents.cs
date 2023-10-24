@@ -12,6 +12,18 @@ public class FwEvents : FwModel
         table_name = "events";
     }
 
+    // return count of all non-deleted or with specified statuses
+    public long getCountLog(int? since_days = null)
+    {
+        Hashtable where = new();
+
+        if (since_days != null)
+        {
+            where[field_add_time] = db.opGT(DateTime.Now.AddDays((int)since_days));
+        }
+        return Utils.f2long(db.value(log_table_name, where, "count(*)"));
+    }
+
     // just return first row by icode field (you may want to make it unique)
     public override DBRow oneByIcode(string icode)
     {
@@ -23,7 +35,7 @@ public class FwEvents : FwModel
     public void log(string ev_icode, int item_id = 0, int item_id2 = 0, string iname = "", int records_affected = 0, Hashtable changed_fields = null)
     {
         Hashtable ev = oneByIcode(ev_icode);
-        if (ev.Count==0)
+        if (ev.Count == 0)
         {
             fw.logger(LogLevel.WARN, "No event defined for icode=[", ev_icode, "], auto-creating");
             ev = new Hashtable
