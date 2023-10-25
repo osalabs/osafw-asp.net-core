@@ -87,6 +87,21 @@ window.fw={
     $el.addClass(arr_classes[nextClassIndex]);
   },
 
+  //debounce helper
+  debounce(func, wait_msecs) {
+    let timeout;
+
+    return function executedFunction(...args) {
+      const later = () => {
+          clearTimeout(timeout);
+          func(...args);
+      };
+
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait_msecs);
+    };
+  },
+
   //called on document ready
   setup_handlers: function (){
     //list screen init
@@ -281,7 +296,7 @@ window.fw={
         if (!title) title='Are you sure?';
         fw.confirm(title, function (e) {
             $('#FTmpSubmit').remove();
-            $('body').append('<form id="FTmpSubmit" method="POST" action="'+url+'"></form>');
+            $(document.body).append('<form id="FTmpSubmit" method="POST" action="'+url+'"></form>');
             $('#FTmpSubmit').submit();
         });
     });
@@ -335,10 +350,10 @@ window.fw={
     var $forms=$('form[data-check-changes]');
     if (!$forms.length) return; //skip if no forms found
 
-    $('body').on('change', 'form[data-check-changes]', function(){
+    $(document.body).on('change', 'form[data-check-changes]', function(){
       $(this).data('is-changed', true);
     });
-    $('body').on('submit', 'form[data-check-changes]', function(){
+    $(document.body).on('submit', 'form[data-check-changes]', function(){
       //on form submit - disable check for
       $(this).data('is-changed-submit', true);
     });
@@ -404,54 +419,59 @@ window.fw={
       $f.data('is-submitting',true); //tell autosave not to trigger
     });
 
-    $('body').on('change', 'form[data-autosave]', function(e){
+    //when some input into the form happens - trigger autosave in 30s
+    var to_autosave;
+    $(document.body).on('input', 'form[data-autosave]', function(e){
+      var $control = $(e.target);
+      if ($control.is('[data-noautosave]')) {
+        e.preventDefault();
+        return;
+      }
+
+      var $f = $(this);
+      //console.log('on form input', $f, e);
+      set_saved_status($f, true);
+
+      //refresh timeout
+      clearTimeout(to_autosave);
+      to_autosave = setTimeout(function(){
+        //console.log('triggering autosave after 30s idle');
+        trigger_autosave_if_changed($f);
+      }, 3000);
+    });
+
+    //when change or blur happens - trigger autosave now(debounced)
+    $(document.body).on('change', 'form[data-autosave]', function(e){
       if ($(e.target).is('[data-noautosave]')) {
         e.preventDefault();
         return;
       }
       var $f = $(this);
       //console.log('on form change', $f, e);
-      $f.data('is-changed', true);
-
-      set_status($f, 1);
-      // checkboxes trigger autosave instantly
-      if ($(e.target).is('input[type=checkbox]:not([data-noautosave])')) $f.trigger('autosave');
+      $f.trigger('autosave');
     });
-
-    $('body').on('keyup', 'form[data-autosave] :input:not([data-noautosave])', function(e){
-      var $inp = $(this);
-      //console.log('on keyup');
-      if ($inp.data('oldval')!==$inp.val()) {
-          var $f = $(this.form);
-          $f.data('is-changed', true);
-          set_status($f, 1);
-      }
-    });
-
-    $('body').on('focus', 'form[data-autosave] :input:not([data-noautosave])', function(e){
-      var $inp = $(this);
-      // console.log('on form input focus');
-      $inp.data('oldval', $inp.val());
-    });
-
     // "*:not(.bs-searchbox)" - exclude search input in the bs selectpicker container
-    $('body').on('blur', 'form[data-autosave] *:not(.bs-searchbox) > :input:not(button,[data-noautosave])', function(e){
+    $(document.body).on('blur', 'form[data-autosave] *:not(.bs-searchbox) > :input:not(button,[data-noautosave])', function(e){
       var $f = $(this.form);
-      // console.log('on form input blur', $f);
-      if ($f.data('is-changed')===true){
-          //form changed, need autosave
-          $f.trigger('autosave');
-      }
+      //console.log('on form input blur', $f);
+      trigger_autosave_if_changed($f);
     });
 
-    $('body').on('autosave', 'form[data-autosave]', function (e) {
+    $(document.body).on('autosave', 'form[data-autosave]', function(e){
+      //debounced autosave
       var $f = $(this);
+      clearTimeout($f[0]._to_autosave);
+      $f[0]._to_autosave = setTimeout(function(){
+        //console.log('triggering autosave after 50ms');
+        form_autosave($f);
+      }, 500);
+    });
+
+    function form_autosave($f) {
       if ($f.data('is-submitting')===true || $f.data('is-ajaxsubmit')===true){
           //console.log('on autosave - ALREADY SUBMITTING');
           //if form already submitting by user intput - schedule autosave again later
-          setTimeout(function() {
-            $f.trigger('autosave');
-          }, 500)
+          $f.trigger('autosave');
           return false;
       }
       //console.log('on autosave', $f);
@@ -471,8 +491,7 @@ window.fw={
               $('#fw-form-msg').hide();
               fw.clean_form_errors($f);
               if (data.success){
-                  $f.data('is-changed', false);
-                  set_status($f, 2);
+                  set_saved_status($f, false);
                   if (data.is_new && data.location) {
                       window.location = data.location; //reload screen for new items
                   }else{
@@ -482,7 +501,7 @@ window.fw={
                   $f.data('is-ajaxsubmit',false);
                   //auto-save error - highlight errors
                   if (data.ERR) fw.process_form_errors($f, data.ERR);
-                  fw.error(data.err_msg ? data.err_msg : 'Auto-save error. Press Save manually.', hint_options);
+                  fw.error(data.err_msg ? data.err_msg : 'Auto-save error. Try again later.', hint_options);
               }
               if (data.msg) fw.ok(data.msg, hint_options);
               $f.trigger('autosave-success',[data]);
@@ -495,19 +514,30 @@ window.fw={
               fw.error(e.responseJSON !== undefined && e.responseJSON.err_msg !== undefined ? e.responseJSON.err_msg : 'Auto-save error. Server error occured.', hint_options);
           }
       });
-    });
+    }
 
-    function set_status($f, status){
+    function trigger_autosave_if_changed($f){
+      if ($f.data('is-changed')===true){
+          //form changed, need autosave
+          $f.trigger('autosave');
+      }
+    }
+
+    function set_saved_status($f, is_changed){
       $f=$($f);
+      if ($f.data('is-changed')===is_changed){
+        return;//no changes
+      }
+
       var $html = $('<span>').append($f[0]._saved_status);
       var spinner = $('<span>').append($html.find('.spinner-border').clone()).html();
       var cls='', txt='';
-      if (status==0){
-          //nothing
-      }else if (status==1){ //not saved
+      if (is_changed==true){ //not saved
+          $f.data('is-changed', true);
           cls='bg-danger';
           txt='not saved';
-      }else if (status==2){ //saved
+      }else if (is_changed==false){ //saved
+          $f.data('is-changed', false);
           cls='bg-success';
           txt='saved';
       }
@@ -634,13 +664,9 @@ window.fw={
     });
 
     //make table header freeze if scrolled too far below
-    $(window).bind('resize, scroll', function (e) {
-        //debounce
-        clearTimeout(window.to_scrollable);
-        window.to_scrollable=setTimeout(function (e) {
-            fw.apply_scrollable_table($tbl);
-        }, 10);
-    });
+    $(window).on('resize, scroll', this.debounce(function() {
+        fw.apply_scrollable_table($tbl);
+      }, 10));
   },
 
   //make table in pane scrollable with fixed header

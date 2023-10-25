@@ -738,7 +738,7 @@ public class FwDynamicController : FwController
             else if (dtype == "multicb")
             {
                 if (def.ContainsKey("lookup_model"))
-                    def["multi_datarow"] = fw.model((string)def["lookup_model"]).listWithChecked((string)item[field], def);
+                    def["multi_datarow"] = fw.model((string)def["lookup_model"]).listWithChecked(Utils.f2str(item[field]), def);
                 else
                 {
                     if (Utils.f2bool(def["is_by_linked"]))
