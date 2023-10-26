@@ -149,7 +149,7 @@ public class FW : IDisposable
     // begin processing one request
     public static void run(HttpContext context, IConfiguration configuration)
     {
-        FW fw = new(context, configuration);
+        using FW fw = new(context, configuration);
 
         FwHooks.initRequest(fw);
         fw.dispatch();
