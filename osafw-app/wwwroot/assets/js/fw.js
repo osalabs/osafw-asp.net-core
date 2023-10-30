@@ -496,6 +496,19 @@ window.fw={
       }, 500);
     });
 
+    function form_reset_state($f) {
+      set_progress($f, false);
+      $f.data('is-ajaxsubmit', false);
+    }
+
+    function form_handle_errors($f, data, hint_options){
+      if (data.ERR) {
+        //auto-save error - highlight errors
+        fw.process_form_errors($f, data.ERR);
+      }
+      fw.error(data.err_msg || 'Auto-save error. Server error occurred. Try again later.', hint_options);
+    }
+
     function form_autosave($f) {
       if ($f.data('is-submitting')===true || $f.data('is-ajaxsubmit')===true){
           //console.log('on autosave - ALREADY SUBMITTING');
@@ -515,7 +528,7 @@ window.fw={
       $f.ajaxSubmit({
           dataType: 'json',
           success: function (data) {
-              set_progress($f, false);
+              form_reset_state($f);
               //console.log('ajaxSubmit success', data);
               $('#fw-form-msg').hide();
               fw.clean_form_errors($f);
@@ -523,24 +536,19 @@ window.fw={
                   set_saved_status($f, false);
                   if (data.is_new && data.location) {
                       window.location = data.location; //reload screen for new items
-                  }else{
-                      $f.data('is-ajaxsubmit',false);
                   }
               }else{
-                  $f.data('is-ajaxsubmit',false);
-                  //auto-save error - highlight errors
-                  if (data.ERR) fw.process_form_errors($f, data.ERR);
-                  fw.error(data.err_msg ? data.err_msg : 'Auto-save error. Try again later.', hint_options);
+                  form_handle_errors($f, data, hint_options);
               }
               if (data.msg) fw.ok(data.msg, hint_options);
               $f.trigger('autosave-success',[data]);
           },
           error: function (e) {
-              set_progress($f, false);
-              //console.log('ajaxSubmit error', e);
-              $f.data('is-ajaxsubmit',false);
+              form_reset_state($f);
+              // console.log('ajaxSubmit error', e);
+              let data = e.responseJSON??{};
+              form_handle_errors($f, data, hint_options);
               $f.trigger('autosave-error',[e]);
-              fw.error(e.responseJSON !== undefined && e.responseJSON.err_msg !== undefined ? e.responseJSON.err_msg : 'Auto-save error. Server error occured.', hint_options);
           }
       });
     }

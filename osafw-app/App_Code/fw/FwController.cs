@@ -904,7 +904,7 @@ public abstract class FwController
         Hashtable ps = null;
         if (fw.isJsonExpected())
         {
-            throw ex; //re-throw exception
+            throw ex; //exception will be handled in fw.dispatch() and fw.errMsg() called
         }
         else
         {
