@@ -318,7 +318,7 @@ public abstract class FwModel : IDisposable
     {
         // item("add_time") = Now() 'not necessary because add_time field in db should have default value now() or getdate()
         if (!string.IsNullOrEmpty(field_add_users_id) && !item.ContainsKey(field_add_users_id) && fw.isLogged)
-            item[field_add_users_id] = fw.Session("user_id");
+            item[field_add_users_id] = fw.userId;
         int id = db.insert(table_name, item);
 
         if (is_log_changes)
@@ -353,7 +353,7 @@ public abstract class FwModel : IDisposable
         if (!string.IsNullOrEmpty(field_upd_time))
             item[field_upd_time] = DB.NOW;
         if (!string.IsNullOrEmpty(field_upd_users_id) && !item.ContainsKey(field_upd_users_id) && fw.isLogged)
-            item[field_upd_users_id] = fw.Session("user_id");
+            item[field_upd_users_id] = fw.userId;
 
         Hashtable where = new();
         where[this.field_id] = id;

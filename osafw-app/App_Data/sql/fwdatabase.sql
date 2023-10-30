@@ -280,6 +280,7 @@ CREATE TABLE user_views (
   iname                 NVARCHAR(255) NOT NULL DEFAULT '', -- if empty - it's a "default" view
   is_system             TINYINT NOT NULL DEFAULT 0, -- 1 - system - visible for all
   is_shared             TINYINT NOT NULL DEFAULT 0, -- 1 if shared/published
+  density               NVARCHAR(16) NOT NULL DEFAULT '', -- list table density class: table-sm(or empty - default), table-dense, table-normal
 
   status                TINYINT NOT NULL DEFAULT 0,
   add_time              DATETIME2 NOT NULL DEFAULT getdate(),

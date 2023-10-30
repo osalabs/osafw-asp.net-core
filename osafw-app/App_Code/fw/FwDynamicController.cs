@@ -554,18 +554,27 @@ public class FwDynamicController : FwController
         fw.parser("/common/list/userviews", ps);
     }
 
-    public virtual void SaveUserViewsAction()
+    public virtual Hashtable SaveUserViewsAction()
     {
         var fld = reqh("fld");
         var load_id = reqi("load_id");
         var is_reset = reqi("is_reset");
+        var density = reqs("density");
 
         if (load_id > 0)
-        {
+            // set fields from specific view
             fw.model<UserViews>().setViewForIcode(base_url, load_id);
-        }
         else if (is_reset == 1)
-            fw.model<UserViews>().updateByIcode(base_url, view_list_defaults);
+            // reset fields to defaults
+            fw.model<UserViews>().updateByIcodeFields(base_url, view_list_defaults);
+        else if (density.Length > 0)
+        {
+            // save density
+            // validate density can be only table-sm, table-dense, table-normal, otherwise - set empty
+            if (!"table-sm table-dense table-normal".Contains(density))
+                density = "";
+            fw.model<UserViews>().updateByIcode(base_url, DB.h("density", density));
+        }
         else
         {
             var item = reqh("item");
@@ -586,10 +595,10 @@ public class FwDynamicController : FwController
                 fw.model<UserViews>().addOrUpdateByUK(base_url, fields, iname);
             }
             // update default view with fields
-            fw.model<UserViews>().updateByIcode(base_url, fields);
+            fw.model<UserViews>().updateByIcodeFields(base_url, fields);
         }
 
-        fw.redirect(return_url);
+        return afterSave(true, null, false, "no_action", return_url);
     }
 
     //********************* support for sortable rows

@@ -13,6 +13,7 @@ public class UserViews : FwModel
     public UserViews() : base()
     {
         table_name = "user_views";
+        is_log_changes = false; //no need to log changes for user views
     }
 
     // return default screen record for logged user
@@ -48,13 +49,14 @@ public class UserViews : FwModel
     }
 
     // add view for logged user with icode, fields, iname
-    public int addSimple(string icode, string fields, string iname)
+    public int addSimple(string icode, string fields, string iname, string density = "")
     {
         return add(new Hashtable()
         {
             { field_icode, icode },
             { field_iname, iname },
             { "fields", fields },
+            { "density", density },
             { field_add_users_id, fw.userId },
         });
     }
@@ -83,7 +85,7 @@ public class UserViews : FwModel
     /// <param name="fields">comma-separated fields</param>
     /// <param name="iname">view title (for save new view)</param>
     /// <returns>user_views.id</returns>
-    public int updateByIcode(string icode, string fields)
+    public int updateByIcode(string icode, Hashtable itemdb)
     {
         var item = oneByIcode(icode);
         int result;
@@ -91,14 +93,29 @@ public class UserViews : FwModel
         {
             // exists
             result = Utils.f2int(item[field_id]);
-            update(result, DB.h("fields", fields));
+            update(result, itemdb);
         }
         else
         {
-            // new
-            result = addSimple(icode, fields, "");
+            // new - add key fields
+            var itemdb_add = (Hashtable)itemdb.Clone();
+            itemdb_add[field_icode] = icode;
+            itemdb_add[field_add_users_id] = fw.userId;
+            result = add(itemdb_add);
         }
         return result;
+    }
+
+    /// <summary>
+    /// update default screen fields for logged user
+    /// </summary>
+    /// <param name="icode">screen url</param>
+    /// <param name="fields">comma-separated fields</param>
+    /// <param name="iname">view title (for save new view)</param>
+    /// <returns>user_views.id</returns>
+    public int updateByIcodeFields(string icode, string fields)
+    {
+        return updateByIcode(icode, DB.h("fields", fields));
     }
 
     /// <summary>
@@ -140,6 +157,6 @@ public class UserViews : FwModel
         var item = oneByIcodeId(icode, id);
         if (item.Count == 0) return;
 
-        updateByIcode(icode, item["fields"]);
+        updateByIcodeFields(icode, item["fields"]);
     }
 }

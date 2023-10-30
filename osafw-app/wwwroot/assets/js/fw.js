@@ -140,7 +140,36 @@ window.fw={
 
     //list table density switch
     var on_toggle_density = function (e) {
-      fw.toggleClasses($(this).closest('table.list'), ['table-sm', 'table-dense', 'table-normal']);
+      const $this=$(this);
+      const $tbl = $this.closest('table.list');
+      const $wrapper = $tbl.closest('.table-list-wrapper');
+      const classes = ['table-sm', 'table-dense', 'table-normal'];
+
+      fw.toggleClasses($tbl, classes);
+      if ($tbl.is('.table-dense')){
+        $wrapper.addClass('table-dense');
+      }else{
+        $wrapper.removeClass('table-dense');
+      }
+      let density_class = classes.find(cls => $tbl.hasClass(cls)) || '';
+
+      //ajax post to save user preference to current url/(SaveUserViews) or custom url
+      const url = $this.data('url') || (window.location.pathname.replace(/\/$/, "") + "/(SaveUserViews)");
+      $.ajax({
+          url: url,
+          type: 'POST',
+          dataType: 'json',
+          data: {
+              density: density_class,
+              XSS: $this.closest('form').find("input[name=XSS]").val()
+          },
+          success: function (data) {
+            //console.log(data);
+          },
+          error: function (e) {
+            console.error("An error occurred while saving user preferences:", e.statusText);
+          }
+      });
     };
     $(document).on('click', '.on-toggle-density', on_toggle_density);
 
@@ -164,7 +193,7 @@ window.fw={
             var html=[];
             $('table.list:first .search :input').each(function (i, el) {
               if (el.value>''){
-                html.push( '<input class="osafw-list-search" type="hidden" name="'+el.name.replace(/"/g,'&quot;')+'" value="'+el.value.replace(/"/g,'&quot;')+'">');
+                html.push('<input class="osafw-list-search" type="hidden" name="'+el.name.replace(/"/g,'&quot;')+'" value="'+el.value.replace(/"/g,'&quot;')+'">');
               }
             });
             $f.append(html.join(''));
@@ -641,7 +670,9 @@ window.fw={
     var sortdir=$sh.data('sortdir');
 
     var sort_img= (sortdir=='desc') ? fw.ICON_SORT_DESC : fw.ICON_SORT_ASC;
-    $sh.find('th[data-sort="'+sortby+'"]').addClass('active-sort').append('<span class="ms-1">'+sort_img+'</span>');
+    var $th = $sh.find('th[data-sort="'+sortby+'"]').addClass('active-sort');
+    var $thcont = !$tbl.is('.table-dense') && $th.find('div').length>0 ? $th.find('div') : $th;
+    $thcont.append('<span class="ms-1">'+sort_img+'</span>');
 
     $sh.on('click', 'th[data-sort]', function() {
       var $td=$(this);

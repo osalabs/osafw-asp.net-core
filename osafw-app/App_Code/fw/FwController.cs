@@ -1097,6 +1097,9 @@ public abstract class FwController
     // model.setViewList(ps, list_filter_search)
     public virtual void setViewList(Hashtable ps, Hashtable hsearch, bool is_cols = true)
     {
+        var user_view = fw.model<UserViews>().oneByIcode(base_url);
+        ps["user_view"] = user_view;
+
         var fields = getViewListUserFields();
 
         var headers = getViewListArr(fields);

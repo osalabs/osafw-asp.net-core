@@ -3,10 +3,14 @@
   <input type="hidden" name="_method" value="PUT">
   <~/common/form/relid>
 
-  <table class="table table-stripedX table-sm table-hover list">
-    <~/common/list/thead>
-    <~/common/list/tbody>
-  </table>
+  <div class="table-list-wrapper">
+    <div class="table-list-hscroll-hint"><~/common/icons/info-circle-fill> use <kbd>Shift+Mouse Wheel</kbd> for an easy horizontal scrolling
+    </div>
+    <table class="table table-stripedX table-hover list <~user_view[density] default="table-sm">">
+      <~/common/list/thead>
+      <~/common/list/tbody>
+    </table>
+  </div>
 
   <~/common/list/empty unless="list_rows">
   <~/common/list/table_under if="list_rows">
