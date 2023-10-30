@@ -936,6 +936,9 @@ public class FW : IDisposable
     {
         if (!this.response.HasStarted) this.response.Headers["Cache-Control"] = cache_control;
 
+        if (this.FormErrors.Count > 0 && !ps.ContainsKey("ERR"))
+            ps["ERR"] = this.FormErrors; // add errors if any
+
         string format = this.getResponseExpectedFormat();
         if (format == "json")
         {
@@ -973,9 +976,6 @@ public class FW : IDisposable
             this.redirect((string)ps["_redirect"]);
             return; // no further processing
         }
-
-        if (this.FormErrors.Count > 0 && !ps.ContainsKey("ERR"))
-            ps["ERR"] = this.FormErrors; // add errors if any
 
         string layout;
         if (format == "pjax")

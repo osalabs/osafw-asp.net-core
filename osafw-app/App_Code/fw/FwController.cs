@@ -904,16 +904,7 @@ public abstract class FwController
         Hashtable ps = null;
         if (fw.isJsonExpected())
         {
-            //for json response - just respond success=false with any errors
-            var _json = new Hashtable()
-            {
-                {"success",false},
-                {"err_msg", ex.Message}
-            };
-            // add ERR field errors to response if any
-            if (fw.FormErrors.Count > 0)
-                _json["ERR"] = fw.FormErrors;
-            ps = new Hashtable() { { "_json", _json } };
+            throw ex; //re-throw exception
         }
         else
         {
