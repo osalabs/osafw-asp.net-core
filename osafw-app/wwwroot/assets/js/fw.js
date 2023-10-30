@@ -466,7 +466,7 @@ window.fw={
       to_autosave = setTimeout(function(){
         //console.log('triggering autosave after 30s idle');
         trigger_autosave_if_changed($f);
-      }, 3000);
+      }, 30000);
     });
 
     //when change or blur happens - trigger autosave now(debounced)

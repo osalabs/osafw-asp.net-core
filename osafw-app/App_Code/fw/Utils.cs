@@ -1318,7 +1318,7 @@ public class Utils
     // comma-delimited str to newline-delimited str
     public static string commastr2nlstr(string str)
     {
-        return str.Replace(",", "\r\n");
+        return (str ?? "").Replace(",", "\r\n");
     }
 
     // newline-delimited str to comma-delimited str

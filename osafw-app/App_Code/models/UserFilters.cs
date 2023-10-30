@@ -12,6 +12,7 @@ public class UserFilters : FwModel
     public UserFilters() : base()
     {
         table_name = "user_filters";
+        is_log_changes = false; // no need to log changes here
     }
 
     // list for select by icode and only for logged user OR active system filters

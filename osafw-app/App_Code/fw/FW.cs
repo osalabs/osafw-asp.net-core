@@ -251,10 +251,10 @@ public class FW : IDisposable
         {
             if (!isJsonExpected())
             {
-            // write for the next request
-            Hashtable _flash = SessionHashtable("_flash") ?? new();
-            _flash[name] = value;
-            SessionHashtable("_flash", _flash);
+                // write for the next request
+                Hashtable _flash = SessionHashtable("_flash") ?? new();
+                _flash[name] = value;
+                SessionHashtable("_flash", _flash);
             }
             return this; // for chaining
         }

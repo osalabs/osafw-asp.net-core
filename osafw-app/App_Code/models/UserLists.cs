@@ -14,6 +14,7 @@ public class UserLists : FwModel
     public UserLists() : base()
     {
         table_name = "user_lists";
+        is_log_changes = false; // no need to log changes here
     }
 
     public int countItems(int id)

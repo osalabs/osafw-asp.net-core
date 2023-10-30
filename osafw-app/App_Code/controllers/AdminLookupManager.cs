@@ -402,7 +402,7 @@ public class AdminLookupManagerController : FwController
         return hf;
     }
 
-    public void SaveAction(int id = 0)
+    public Hashtable SaveAction(int id = 0)
     {
         route_onerror = FW.ACTION_SHOW_FORM; //set route to go if error happens
 
@@ -437,7 +437,8 @@ public class AdminLookupManagerController : FwController
 
         // redirect to list as we don't have id on insert
         // fw.redirect(base_url + "/" + id + "/edit")
-        fw.redirect(base_url + "/?d=" + dict);
+        var return_url = base_url + "/?d=" + dict;
+        return afterSave(true, null, id == 0, "no_action", return_url);
     }
 
     public void Validate(int id, Hashtable item)
