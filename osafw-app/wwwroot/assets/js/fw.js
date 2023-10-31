@@ -337,14 +337,14 @@ window.fw={
   // <form data-check-changes>
   setup_cancel_form_handlers: function() {
     //on submit buttons handler
-    // <button type="button" data-target="#form" class="on-submit" [data-refresh] [name="route_return" value="New"]>Submit</button>
+    // <button type="button" data-target="#form" class="on-submit" [data-delay="300"] [data-refresh] [name="route_return" value="New"]>Submit</button>
     $(document).on('click', '.on-submit', function (e) {
       e.preventDefault();
       var $this=$(this);
       var target = $this.data('target');
       var $form = (target) ? $(target) : $(this.form);
 
-      //if has data-refresh - ser refresh
+      //if has data-refresh - set refresh
       if ($this.data().hasOwnProperty('refresh')){
         $form.find('input[name=refresh]').val(1);
       }
@@ -360,7 +360,16 @@ window.fw={
         $input.val(bvalue);
       }
 
-      $form.submit();
+      //if button has data-delay - submit with delay (in milliseconds)
+      var delay = $this.data('delay');
+      if (delay) {
+         setTimeout(function () {
+             $form.submit();
+         }, delay);
+        }
+      else {
+        $form.submit();
+      }
     });
 
     //on cancel buttons handler
@@ -627,7 +636,7 @@ window.fw={
           if ($input.length){
             var $p=$input.parent();
             if ($p.is('.input-group,.custom-control,.dropdown,.twitter-typeahead')) $p = $p.parent();
-            if (!$p.is('td,th')){//does not apply to inputs in subtables
+            if (!$p.closest('form, table').is('table')){//does not apply to inputs in subtables
               $input.closest('.form-group, .form-row').not('.noerr').addClass('has-danger'); //highlight whole row (unless .noerr exists)
             }
             $input.addClass('is-invalid'); //mark input itself
