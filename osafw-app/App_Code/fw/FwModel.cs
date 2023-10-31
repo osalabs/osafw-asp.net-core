@@ -906,7 +906,7 @@ public abstract class FwModel : IDisposable
     // override in your specific models when necessary, add defaults for new record
     public virtual void prepareSubtableAddNew(ArrayList list_rows, int related_id, Hashtable def = null)
     {
-        var id = "new-" + Utils.nanoid();
+        var id = "new-" + DateTimeOffset.Now.ToUnixTimeMilliseconds(); //generate unique id based on time for sequental adding
         var item = new Hashtable()
         {
             { "id", id }
