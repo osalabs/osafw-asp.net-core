@@ -7,18 +7,17 @@ using System.Collections;
 
 namespace osafw;
 
-public class ReportSample : FwReports
+public class SampleReport : FwReports
 {
-    public ReportSample() : base()
+    public SampleReport() : base()
     {
-
         // override report render options if necessary
         render_options["landscape"] = false;
     }
 
     // define report filters in Me.f (available in report templates as f[...])
     // filter defaults can be Set here
-    public override Hashtable getReportFilters()
+    public override Hashtable getFilters()
     {
         Hashtable result = new();
         if (!f.ContainsKey("from_date") && !f.ContainsKey("to_date"))
@@ -33,7 +32,7 @@ public class ReportSample : FwReports
         return result;
     }
 
-    public override Hashtable getReportData()
+    public override Hashtable getData()
     {
         Hashtable ps = new();
 

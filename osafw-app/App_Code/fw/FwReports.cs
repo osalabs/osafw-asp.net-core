@@ -4,7 +4,6 @@
 
 using System;
 using System.Collections;
-using System.Text.RegularExpressions;
 
 namespace osafw;
 
@@ -24,21 +23,31 @@ public class FwReports
 
     public static string cleanupRepcode(string repcode)
     {
-        return Regex.Replace(repcode, @"[^\w-]", "").ToLower();
+        return Utils.routeFixChars(repcode);
     }
+
     /// <summary>
     /// Convert report code into class name
     /// </summary>
-    /// <param name="repcode">pax-something-summary</param>
-    /// <returns>ReportPaxSomethingSummary</returns>
+    /// <param name="repcode">pax-something-summary or Sample</param>
+    /// <returns>code with "Report" suffix - PaxSomethingSummaryReport or SampleReport</returns>
     /// <remarks></remarks>
     public static string repcodeToClass(string repcode)
     {
         string result = "";
-        string[] pieces = repcode.Split("-");
-        foreach (string piece in pieces)
-            result += Utils.capitalize(piece);
-        return "Report" + result;
+        if (repcode.Contains('-'))
+        {
+            //if repcode contains "-" then use code below (compatibility with legacy reports)
+            string[] pieces = repcode.Split("-");
+            foreach (string piece in pieces)
+                result += Utils.capitalize(piece);
+        }
+        else
+        {
+            result = repcode;
+        }
+
+        return result + "Report";
     }
 
     /// <summary>
@@ -53,13 +62,15 @@ public class FwReports
         if (string.IsNullOrEmpty(report_class_name))
             throw new UserException("Wrong Report Code");
 
-        FwReports report = (FwReports)Activator.CreateInstance(Type.GetType(FW.FW_NAMESPACE_PREFIX + report_class_name, true));
+        var reportType = Type.GetType(FW.FW_NAMESPACE_PREFIX + report_class_name, true, true);
+        FwReports report = (FwReports)Activator.CreateInstance(reportType);
         report.init(fw, repcode, f);
         return report;
     }
 
     public FwReports()
     {
+        // constructor
     }
 
     public virtual void init(FW fw, string report_code, Hashtable f)
@@ -71,19 +82,22 @@ public class FwReports
         this.format = (string)f["format"];
     }
 
-    public virtual Hashtable getReportData()
-    {
-        Hashtable ps = new();
-        return ps;
-    }
-
-    public virtual Hashtable getReportFilters()
+    //override to define info for report filters like dropdown options, etc
+    public virtual Hashtable getFilters()
     {
         Hashtable result = new();
         // result("select_something")=fw.model(of Something).listSelectOptions()
         return result;
     }
 
+    //override to define report data
+    public virtual Hashtable getData()
+    {
+        Hashtable ps = new();
+        return ps;
+    }
+
+    //override if report has inputs that needs to be saved to db
     public virtual bool saveChanges()
     {
         return false;
