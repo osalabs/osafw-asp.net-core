@@ -72,12 +72,17 @@ public class ReportSample : FwReports
         }
 
         // define query
+        // REMEMBER to filter out deleted items for each table, i.e. add call andNotDeleted([alias])
         string sql;
-
-        sql = @"select el.*, e.iname  as event_name, u.fname, u.lname from events e, event_log el
-                         LEFT OUTER JOIN users u ON (u.id=el.add_users_id)
-                     where el.events_id=e.id" + where +
-              " order by el.id desc";
+        sql = @$"select el.*
+                , e.iname as event_name
+                , u.fname
+                , u.lname 
+                from events e, event_log el
+                     LEFT OUTER JOIN users u ON (u.id=el.add_users_id {andNotDeleted("u.")})
+                where el.events_id=e.id 
+                {where}
+                order by el.id desc";
         sql = db.limit(sql, 20); //limit to first results only
         var rows = db.arrayp(sql, where_params).toArrayList();
         ps["rows"] = rows;

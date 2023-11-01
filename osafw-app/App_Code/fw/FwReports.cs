@@ -142,4 +142,14 @@ public class FwReports
         }
         return total_ctr;
     }
+
+    /// <summary>
+    /// add " and status<>127" to reports where
+    /// </summary>
+    /// <param name="alias"></param>
+    /// <returns></returns>
+    protected string andNotDeleted(string alias = "")
+    {
+        return $" and {alias}status<>{db.qi(FwModel.STATUS_DELETED)}";
+    }
 }
