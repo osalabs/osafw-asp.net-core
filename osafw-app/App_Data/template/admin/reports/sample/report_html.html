@@ -18,7 +18,7 @@ Dates: <strong><~f[from_date]>-<~f[to_date]></strong>
         </tr>
     </thead>
     <tbody>
-        <~rep[rows] repeat inline>
+        <~list_rows repeat inline>
             <tr>
                 <td><~add_time date="sql"></td>
                 <td><~event_name></td>
@@ -28,8 +28,7 @@ Dates: <strong><~f[from_date]>-<~f[to_date]></strong>
                 <td><~fields truncate></td>
                 <td><~fname> <~lname></td>
             </tr>
-        </~rep[rows]>
-
+        </~list_rows>
     </tbody>
 </table>
 </div>

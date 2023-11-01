@@ -9,17 +9,28 @@ namespace osafw;
 
 public class FwReports
 {
-    protected FW fw;
-    protected DB db;
+    //template paths
+    public const string TPL_BASE_DIR = "/admin/reports";
+    public const string TPL_EXPORT_XLS = "/admin/reports/common/xls.html";
+
     public string report_code;
     public string format; // report format, if empty - html, other options: html, csv, pdf, xls
     public Hashtable f; // report filters/options
                         // render options for html to pdf/xls/etc... convertor
+    public Hashtable f_data = new(); //filters data, like dropdown options
+
     public Hashtable render_options = new()
     {
         {"cmd", "--page-size Letter --print-media-type"},
         {"landscape", true}
     };
+
+    protected FW fw;
+    protected DB db;
+    protected Hashtable ps = new(); // final data for template rendering
+    protected long list_count;      // count of list rows returned from db
+    protected ArrayList list_rows;  // list rows returned from db (array of hashes)
+
 
     public static string cleanupRepcode(string repcode)
     {
@@ -82,19 +93,23 @@ public class FwReports
         this.format = (string)f["format"];
     }
 
-    //override to define info for report filters like dropdown options, etc
-    public virtual Hashtable getFilters()
+    /// <summary>
+    /// override to define info for report filters like dropdown options, etc
+    /// </summary>
+    public virtual void setFilters()
     {
-        Hashtable result = new();
-        // result("select_something")=fw.model(of Something).listSelectOptions()
-        return result;
+        // f_data("select_something")=fw.model(of Something).listSelectOptions()
     }
 
-    //override to define report data
-    public virtual Hashtable getData()
+    /// <summary>
+    /// override to define report data
+    /// </summary>
+    /// <returns></returns>
+    public virtual void getData()
     {
-        Hashtable ps = new();
-        return ps;
+        // list_rows =db.array("select * from something where 1=1 " & where & " order by something")
+        // list_count = list_rows.Count();
+        // ps["totals"] = 123;
     }
 
     //override if report has inputs that needs to be saved to db
@@ -103,10 +118,24 @@ public class FwReports
         return false;
     }
 
-    // render report according to format
-    public virtual void render(Hashtable ps)
+    /// <summary>
+    /// render report according to format
+    /// </summary>
+    /// <param name="ps_more">additional data for the template</param>
+    public virtual void render(Hashtable ps_more)
     {
-        string base_dir = "/admin/reports/" + this.report_code;
+        ps["f"] = f; // filter values
+        ps["filter"] = f_data; // filter data
+        ps["count"] = list_count;
+        ps["list_rows"] = list_rows;
+
+        // merge ps_more into ps
+        Utils.mergeHash(ps, ps_more);
+
+        ps["IS_EXPORT_PDF"] = false;
+        ps["IS_EXPORT_XLS"] = false;
+
+        string base_dir = TPL_BASE_DIR + '/' + report_code.ToLower();
         switch (this.format)
         {
             case "pdf":
@@ -120,7 +149,7 @@ public class FwReports
             case "xls":
                 {
                     ps["IS_EXPORT_XLS"] = true; //use as <~PARSEPAGE.TOP[IS_EXPORT_XLS]> in templates
-                    ConvUtils.parsePageExcelSimple(fw, base_dir, "/admin/reports/common/xls.html", ps, report_code);
+                    ConvUtils.parsePageExcelSimple(fw, base_dir, TPL_EXPORT_XLS, ps, report_code);
                     break;
                 }
 

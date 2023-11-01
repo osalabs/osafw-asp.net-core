@@ -17,7 +17,7 @@ public class SampleReport : FwReports
 
     // define report filters in Me.f (available in report templates as f[...])
     // filter defaults can be Set here
-    public override Hashtable getFilters()
+    public override void setFilters()
     {
         Hashtable result = new();
         if (!f.ContainsKey("from_date") && !f.ContainsKey("to_date"))
@@ -26,13 +26,11 @@ public class SampleReport : FwReports
         if (!Utils.isEmpty(f["from_date"]) || !Utils.isEmpty(f["to_date"]))
             f["is_dates"] = true;
 
-        result["select_events"] = fw.model<FwEvents>().listSelectOptions();
-        result["select_users"] = fw.model<Users>().listSelectOptions();
-
-        return result;
+        f_data["select_events"] = fw.model<FwEvents>().listSelectOptions();
+        f_data["select_users"] = fw.model<Users>().listSelectOptions();
     }
 
-    public override Hashtable getData()
+    public override void getData()
     {
         Hashtable ps = new();
 
@@ -83,17 +81,14 @@ public class SampleReport : FwReports
                 {where}
                 order by el.id desc";
         sql = db.limit(sql, 20); //limit to first results only
-        var rows = db.arrayp(sql, where_params).toArrayList();
-        ps["rows"] = rows;
-        ps["count"] = rows.Count;
+        list_rows = db.arrayp(sql, where_params);
+        list_count = list_rows.Count;
 
         // perform calculations and add additional info for each result row
-        foreach (Hashtable row in rows)
+        foreach (Hashtable row in list_rows)
         {
             //row["event"] = fw.model<FwEvents>().one(Utils.f2int(row["events_id"]));
-            ps["total_ctr"] = _calcPerc(rows); //if you need calculate "perc" for each row based on row["ctr"]
+            ps["total_ctr"] = _calcPerc(list_rows); //if you need calculate "perc" for each row based on row["ctr"]
         }
-
-        return ps;
     }
 }

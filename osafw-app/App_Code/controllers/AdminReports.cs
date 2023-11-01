@@ -43,11 +43,10 @@ public class AdminReportsController : FwController
 
         var report = FwReports.createInstance(fw, repcode, list_filter);
 
-        ps["filter"] = report.getFilters(); // filter data like select/lookups
-        ps["f"] = report.f; // filter values
+        report.setFilters(); // set filters data like select/lookups
 
         if (is_run)
-            ps["rep"] = report.getData();
+            report.getData();
 
         // show or output report according format
         report.render(ps);
