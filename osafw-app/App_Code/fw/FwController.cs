@@ -1053,6 +1053,13 @@ public abstract class FwController
         return (fields.Length > 0 ? fields : view_list_defaults);
     }
 
+    /// <summary>
+    /// Called from setViewList to get conversions for fields. 
+    /// Currently supports only "date" conversion - i.e. date only fields will be formatted as date only (without time)
+    /// Override to add more custom conversions
+    /// </summary>
+    /// <param name="afields"></param>
+    /// <returns></returns>
     public virtual Hashtable getViewListConversions(string[] afields)
     {
         // load schema info to perform specific conversions
@@ -1065,8 +1072,9 @@ public abstract class FwController
         var table_schema = db.tableSchemaFull(list_view_name);
         foreach (var fieldname in afields)
         {
-            if (!table_schema.ContainsKey(fieldname)) continue;
-            var field_schema = (Hashtable)table_schema[fieldname];
+            var fieldname_lc = fieldname.ToLower();
+            if (!table_schema.ContainsKey(fieldname_lc)) continue;
+            var field_schema = (Hashtable)table_schema[fieldname_lc];
 
             //if field is exactly DATE - show only date part without time
             if ((string)field_schema["fw_subtype"] == "date")
@@ -1077,6 +1085,24 @@ public abstract class FwController
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Apply conversions to data for a single view list field
+    /// Override to add custom conversions.
+    /// </summary>
+    /// <param name="fieldname">field name to apply conversion to</param>
+    /// <param name="row">data row from db</param>
+    /// <param name="hconversions">standard conversion rules from getViewListConversions</param>
+    /// <returns></returns>
+    public virtual string applyViewListConversions(string fieldname, Hashtable row, Hashtable hconversions)
+    {
+        var data = (string)row[fieldname];
+        if (hconversions.ContainsKey(fieldname))
+        {
+            data = DateUtils.Str2DateOnly(data);
+        }
+        return data;
     }
 
     // add to ps:
@@ -1115,11 +1141,7 @@ public abstract class FwController
                 ArrayList cols = new();
                 foreach (var fieldname in afields)
                 {
-                    var data = (string)row[fieldname];
-                    if (hconversions.ContainsKey(fieldname))
-                    {
-                        data = DateUtils.Str2DateOnly(data);
-                    }
+                    var data = applyViewListConversions(fieldname, row, hconversions);
 
                     cols.Add(new Hashtable()
                     {
