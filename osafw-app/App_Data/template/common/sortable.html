@@ -3,7 +3,23 @@
     $(document).ready(function() {
         //sort by drag & drop
         var $rows = $(".fw-sortable");
-        $rows.sortable();
+
+        $rows.sortable({
+          //https://api.jqueryui.com/sortable/#option-helper
+          helper: function(e, $el) {
+              var $helper = $el.clone();
+
+              //for table rows we need to set fixed width to retain the hoverable element size
+              if ($el.is("tr")) {
+                var $el_children = $el.children();
+                $helper.children().each(function(index) {
+                  $(this).width($el_children.eq(index).outerWidth());
+                });
+              }
+
+              return $helper;
+            }
+        });
 
         //in list mode we have sortable rows
         $(document).on('sortupdate', '.fw-sortable', function( e, ui ) {

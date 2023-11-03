@@ -1,24 +1,27 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿//disable warning that some imaging functions are only available on Windows
+#pragma warning disable CA1416
+
+using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Data.Common;
 using System.Data.OleDb;
+using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Runtime.Versioning;
+using System.Security.Authentication;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Web;
-using System.Drawing;
-using System.Drawing.Imaging;
-using System.Drawing.Drawing2D;
-using System.Runtime.Versioning;
-using System.Collections.Generic;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
-using System.Security.Authentication;
 
 namespace osafw;
 
@@ -267,6 +270,15 @@ public class Utils
         return 0;
     }
 
+    public static decimal f2decimal(object AField)
+    {
+        if (AField == null) return decimal.Zero;
+        if (decimal.TryParse(AField.ToString(), out decimal result))
+            return result;
+
+        return decimal.Zero;
+    }
+
     public static Single f2single(object AField)
     {
         if (AField == null) return 0f;
@@ -295,6 +307,26 @@ public class Utils
     public static bool isFloat(object o)
     {
         return o != null && double.TryParse(o.ToString(), out double _);
+    }
+
+    /// <summary>
+    /// just return false if input cannot be converted to int
+    /// </summary>
+    /// <param name="o"></param>
+    /// <returns></returns>
+    public static bool isInt(object o)
+    {
+        return o != null && int.TryParse(o.ToString(), out int _);
+    }
+
+    /// <summary>
+    /// just return false if input cannot be converted to long
+    /// </summary>
+    /// <param name="o"></param>
+    /// <returns></returns>
+    public static bool isLong(object o)
+    {
+        return o != null && long.TryParse(o.ToString(), out long _);
     }
 
     /// <summary>
@@ -521,7 +553,8 @@ public class Utils
     /// <param name="csv_export_headers">comma-separated names for headers in specific order</param>
     /// <param name="csv_export_fields">qw-string(space separated) list of fields to match headers</param>
     /// <param name="rows">db array of rows</param>
-    public static void writeXLSExport(FW fw, string filename, string csv_export_headers, string csv_export_fields, ArrayList rows)
+    /// <param name="tpl_dir">template directory</param>
+    public static void writeXLSExport(FW fw, string filename, string csv_export_headers, string csv_export_fields, ArrayList rows, string tpl_dir = "/common/list/export")
     {
         Hashtable ps = new();
 
@@ -534,7 +567,6 @@ public class Utils
         }
         ps["headers"] = headers;
 
-        string tpl_dir = "/common/list/export";
         filename = filename.Replace("\"", "_");
 
         fw.response.Headers.Add("Content-type", "application/vnd.ms-excel");
@@ -1150,6 +1182,22 @@ public class Utils
         };
     }
 
+    // for num (within total) and total - return string "+XXX%" or "-XXX%" depends if num is bigger or smaller than previous period (num-total)
+    public static string percentChange(long num, long total)
+    {
+        string result = "";
+
+        long prev_num = total - num;
+        if (prev_num == 0)
+            return (num == 0) ? "0%" : "+100%";
+
+        double percent = ((double)num - prev_num) / prev_num * 100;
+        if (percent >= 0)
+            result = "+";
+
+        return result + Math.Round(percent, 2) + "%";
+    }
+
     // truncate  - This truncates a variable to a character length, the default is 80.
     // trchar    - As an optional second parameter, you can specify a string of text to display at the end if the variable was truncated.
     // The characters in the string are included with the original truncation length.
@@ -1270,7 +1318,7 @@ public class Utils
     // comma-delimited str to newline-delimited str
     public static string commastr2nlstr(string str)
     {
-        return str.Replace(",", "\r\n");
+        return (str ?? "").Replace(",", "\r\n");
     }
 
     // newline-delimited str to comma-delimited str

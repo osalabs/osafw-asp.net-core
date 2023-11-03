@@ -6,7 +6,6 @@
 using System.Collections;
 using System.Text;
 using System.Text.RegularExpressions;
-using Microsoft.VisualBasic;
 
 namespace osafw;
 
@@ -34,7 +33,7 @@ public class Spages : FwModel
         where["id"] = db.opNOT(not_id);
 
         int val = Utils.f2int(db.value(table_name, where, "id"));
-        if (val>0)
+        if (val > 0)
             return true;
         else
             return false;
@@ -54,7 +53,7 @@ public class Spages : FwModel
     // return one latest record by full_url (i.e. relative url from root, without domain)
     public Hashtable oneByFullUrl(string full_url)
     {
-        string[] url_parts = Strings.Split(full_url, "/");
+        string[] url_parts = full_url.Split("/");
         int parent_id = 0;
         Hashtable item = new();
         for (int i = 1; i <= url_parts.GetUpperBound(0); i++)
@@ -75,7 +74,7 @@ public class Spages : FwModel
 
         // page[top_url] used in templates navigation
         if (url_parts.GetUpperBound(0) >= 1)
-            item["top_url"] = Strings.LCase(url_parts[1]);
+            item["top_url"] = url_parts[1].ToLower();
 
         // columns
         if (!Utils.isEmpty(item["idesc_left"]))
@@ -187,7 +186,7 @@ public class Spages : FwModel
         {
             foreach (Hashtable row in pages_tree)
             {
-                result.AppendLine("<option value=\"" + row["id"] + "\"" + ((string)row["id"] == selected_id? " selected=\"selected\" ": "") + ">" + Utils.strRepeat("&#8212; ", level) + row["iname"] + "</option>");
+                result.AppendLine("<option value=\"" + row["id"] + "\"" + ((string)row["id"] == selected_id ? " selected=\"selected\" " : "") + ">" + Utils.strRepeat("&#8212; ", level) + row["iname"] + "</option>");
                 // subpages
                 result.Append(getPagesTreeSelectHtml(selected_id, (ArrayList)row["children"], level + 1));
             }
@@ -222,7 +221,7 @@ public class Spages : FwModel
         ps["pages"] = getPagesTreeList(pages_tree, 0);
 
         Hashtable item = oneByFullUrl(full_url);
-        if (item.Count == 0 || Utils.f2int(item["status"]) == FwModel.STATUS_DELETED && !fw.model<Users>().isAccess(Users.ACL_ADMIN))
+        if (item.Count == 0 || Utils.f2int(item["status"]) == FwModel.STATUS_DELETED && !fw.model<Users>().isAccessLevel(Users.ACL_ADMIN))
         {
             ps["hide_std_sidebar"] = true;
             fw.parser("/error/404", ps);
@@ -266,7 +265,7 @@ public class Spages : FwModel
     // TODO
     public static string str2icode(string str)
     {
-        str = Strings.Trim(str);
+        str = str.Trim();
         str = Regex.Replace(str, @"[^\w ]", " ");
         str = Regex.Replace(str, " +", "-");
         return str;

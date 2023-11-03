@@ -3,7 +3,6 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
-using System;
 using System.Collections;
 
 namespace osafw;
@@ -130,8 +129,7 @@ public class AdminAttController : FwAdminController
         else
             ps["success"] = false;
 
-        if (!fw.isJsonExpected())
-            fw.flash("success", "File uploaded");
+        fw.flash("success", "File uploaded");
 
         return this.afterSave(true, id, is_new, FW.ACTION_SHOW_FORM, "", ps);
     }

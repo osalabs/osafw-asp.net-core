@@ -37,10 +37,22 @@
                 <td>
                 <~type_input unless="type" inline><input name="f<~id>[<~colname>]" type="text" value="<~value>" maxlength="<~maxlen>" class="form-control">
                 </~type_input>
-                <~type_readonly ifeq="type" value="readonly" inline><input value="<~value>" type="text" readonly class="form-control-plaintext ml-1">
+                <~type_readonly ifeq="type" value="readonly" inline><input name="f<~id>[<~colname>]" type="text" value="<~value>" maxlength="<~maxlen>" class="form-control" <~/common/disabled if="id">>
                 </~type_readonly>
-                <~type_checkbox ifeq="type" value="checkbox" inline><div class="checkbox"><label><input name="f<~id>[<~colname>]" value="1" type="checkbox" <~/common/checked ifeq="value"> ></label></div>
+                <~type_checkbox ifeq="type" value="checkbox" inline><div class="text-center pt-1"><input name="f<~id>[<~colname>]" value="1" type="checkbox" class="form-check-input" <~/common/checked ifeq="value">></div>
                 </~type_checkbox>
+                <~type_input ifeq="type" value="date" inline>
+                    <div class="input-group date">
+                        <input name="f<~id>[<~colname>]" type="text" value="<~value date>" maxlength="10" class="form-control" autocomplete="off">
+                        <button class="btn btn-outline-secondary border-secondary-subtle rounded-0 border-top-0 border-bottom-0" type="button"><~/common/icons/calendar3></button>
+                    </div>
+                </~type_input>
+                <~type_status ifeq="type" value="status" inline>
+                    <select name="f<~id>[<~colname>]" class="form-select">
+                        <option value="">`- select -`</option>
+                        <~/common/sel/status.sel select="value">
+                    </select>
+                </~type_status>
                 <~type_lookup ifeq="type" value="lookup" inline>
                     <select name="f<~id>[<~colname>]" class="form-select">
                         <option value="">`- select -`</option>
@@ -60,10 +72,22 @@
                 <td>
                 <~type_input unless="type" inline><input name="fnew0[<~colname>]" type="text" value="" maxlength="<~maxlen>" class="form-control">
                 </~type_input>
-                <~type_readonly ifeq="type" value="readonly" inline><input value="" type="text" readonly class="form-control-plaintext">
+                <~type_readonly ifeq="type" value="readonly" inline><input name="fnew0[<~colname>]" type="text" value="" maxlength="<~maxlen>" class="form-control">
                 </~type_readonly>
-                <~type_checkbox ifeq="type" value="checkbox" inline><div class="checkbox"><label><input name="fnew0[<~colname>]" value="1" type="checkbox" ></label></div>
+                <~type_checkbox ifeq="type" value="checkbox" inline><div class="text-center pt-1"><input name="fnew0[<~colname>]" value="1" type="checkbox" class="form-check-input"></div>
                 </~type_checkbox>
+                <~type_input ifeq="type" value="date" inline>
+                    <div class="input-group date">
+                        <input name="fnew0[<~colname>]" type="text" value="" maxlength="10" class="form-control" autocomplete="off">
+                        <button class="btn btn-outline-secondary border-secondary-subtle rounded-0 border-top-0 border-bottom-0" type="button"><~/common/icons/calendar3></button>
+                    </div>
+                </~type_input>
+                <~type_status ifeq="type" value="status" inline>
+                    <select name="fnew0[<~colname>]" class="form-select">
+                        <option value="">`- select -`</option>
+                        <~/common/sel/status.sel select>
+                    </select>
+                </~type_status>
                 <~type_lookup ifeq="type" value="lookup" inline>
                     <select name="fnew0[<~colname>]" class="form-select">
                         <option value="">`- select -`</option>

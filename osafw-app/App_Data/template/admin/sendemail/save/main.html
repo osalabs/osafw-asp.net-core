@@ -1,0 +1,16 @@
+<h1><~title></h1>
+
+  <div>
+    <~as if="is_sent" inline>
+      <div class="alert alert-success"><b>Sent Successfully</b></div>
+    </~as>
+    <~ad unless="is_sent" inline>
+      <div class="alert alert-danger"><b>Sent Error</b>
+        <pre class="text-wrap">
+          <~last_error_send_email nl2br>
+        </pre>
+      </div>
+    </~ad>
+  </div>
+
+<a href="<~../url>">`Return Back to Send Email`</a>

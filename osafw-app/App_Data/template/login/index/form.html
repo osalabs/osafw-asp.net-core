@@ -1,9 +1,9 @@
-<form class="p-4 p-md-5 border rounded-3 bg-body-tertiary form-login" method="post" action="<~ROOT_URL>/Login">
+<form class="p-4 p-md-5 border rounded-3 bg-body-tertiary form-login" method="post" action="<~/login/url>">
   <input type="hidden" name="err_ctr" value="<~GLOBAL[err_ctr]>" >
 
   <fieldset>
     <div class="form-floating mb-3">
-      <input type="email" id="login" class="form-control form-control-lg filled" autofocusX name="item[login]" value="<~i[login]>" placeholder="name@example.com" autofocus>
+      <input type="email" id="login" class="form-control form-control-lg filled" name="item[login]" value="<~i[login]>" placeholder="name@example.com" autofocus>
       <label for="login">`Your Email`</label>
     </div>
 

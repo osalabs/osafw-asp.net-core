@@ -22,6 +22,16 @@ public class DateUtils
         return d.Month + "/" + d.Day + "/" + d.Year;
     }
 
+    /// <summary>
+    /// return true if string is date in format MM/DD/YYYY
+    /// </summary>
+    /// <param name="str"></param>
+    /// <returns></returns>
+    public static bool isDateStr(string str)
+    {
+        return Regex.IsMatch(str, @"^\d{1,2}/\d{1,2}/\d{4}$");
+    }
+
     public static DateTime? SQL2Date(string str)
     {
         DateTime? result = null;
@@ -96,6 +106,13 @@ public class DateUtils
         {
             return d;
         }
+    }
+
+    // return utc unix timestamp
+    public static long UnixTimestamp()
+    {
+        DateTime currentTime = DateTime.UtcNow;
+        return ((DateTimeOffset)currentTime).ToUnixTimeSeconds();
     }
 
     public static DateTime Unix2Date(double unixTimeStamp)

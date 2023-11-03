@@ -126,7 +126,7 @@ public class FwAdminController : FwController
         // checkXSS() 'no need to check in standard SaveAction, but add to your custom actions that modifies data
         if (this.save_fields == null)
             throw new Exception("No fields to save defined, define in Controller.save_fields");
-        
+
         fw.model<Users>().checkReadOnly();
         if (reqi("refresh") == 1)
         {

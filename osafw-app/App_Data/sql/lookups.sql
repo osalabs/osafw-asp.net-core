@@ -1,9 +1,9 @@
 -- fill initial data for lookups here
 
 -- lookup manager table definitions
-insert into lookup_manager_tables (tname, iname) VALUES
-('events','Events')
-, ('att_categories','Upload Categories')
+insert into lookup_manager_tables (tname, iname, access_level) VALUES
+('events','Events', 100)
+, ('att_categories','Upload Categories', NULL)
 ;
 
 -- att_categories

@@ -78,11 +78,23 @@ public class FW : IDisposable
     public const string ACTION_INDEX = "Index";
     public const string ACTION_SHOW = "Show";
     public const string ACTION_SHOW_FORM = "ShowForm";
-    public const string ACTION_SHOW_FORM_NEW = "New"; //not actual action, just a const
+    public const string ACTION_SHOW_FORM_NEW = "New"; // not actual action, just a const
     public const string ACTION_SAVE = "Save";
     public const string ACTION_SAVE_MULTI = "SaveMulti";
     public const string ACTION_SHOW_DELETE = "ShowDelete";
     public const string ACTION_DELETE = "Delete";
+    //additional actions used across controllers
+    public const string ACTION_DELETE_RESTORE = "RestoreDeleted";
+    public const string ACTION_NEXT = "Next"; // prev/next on view/edit forms
+    public const string ACTION_AUTOCOMPLETE = "Autocomplete"; // autocomplete json
+    public const string ACTION_USER_VIEWS = "UserViews"; // custom user views modal
+    public const string ACTION_SAVE_USER_VIEWS = "SaveUserViews"; // custom user views sacve changes
+    public const string ACTION_SAVE_SORT = "SaveSort"; // sort rows on list screen
+
+    //helpers for route.action_more
+    public const string ACTION_MORE_NEW = "new";
+    public const string ACTION_MORE_EDIT = "edit";
+    public const string ACTION_MORE_DELETE = "delete";
 
     public const string FW_NAMESPACE_PREFIX = "osafw.";
     public static Hashtable METHOD_ALLOWED = Utils.qh("GET POST PUT DELETE");
@@ -122,6 +134,11 @@ public class FW : IDisposable
         get { return Utils.f2int(Session("user_id")); }
     }
 
+    public int userAccessLevel
+    {
+        get { return Utils.f2int(Session("access_level")); }
+    }
+
     // shortcut to obtain if we working under logged in user
     // usage: fw.isLogged
     public bool isLogged
@@ -132,7 +149,7 @@ public class FW : IDisposable
     // begin processing one request
     public static void run(HttpContext context, IConfiguration configuration)
     {
-        FW fw = new(context, configuration);
+        using FW fw = new(context, configuration);
 
         FwHooks.initRequest(fw);
         fw.dispatch();
@@ -220,7 +237,7 @@ public class FW : IDisposable
     }
 
 
-    // FLASH - used to pass something to the next request (and only on this request)
+    // FLASH - used to pass something to the next request (and only on this request and only if this request does not expect json)
     // get flash value by name
     // set flash value by name - return fw in this case
     public object flash(string name, object value = null)
@@ -232,10 +249,13 @@ public class FW : IDisposable
         }
         else
         {
-            // write for the next request
-            Hashtable _flash = SessionHashtable("_flash") ?? new();
-            _flash[name] = value;
-            SessionHashtable("_flash", _flash);
+            if (!isJsonExpected())
+            {
+                // write for the next request
+                Hashtable _flash = SessionHashtable("_flash") ?? new();
+                _flash[name] = value;
+                SessionHashtable("_flash", _flash);
+            }
             return this; // for chaining
         }
     }
@@ -391,8 +411,8 @@ public class FW : IDisposable
                 route.action_more = m.Groups[5].Value;
                 if (!string.IsNullOrEmpty(m.Groups[2].Value))
                 {
-                    if (m.Groups[2].Value == "new")
-                        route.action_more = "new";
+                    if (m.Groups[2].Value == ACTION_MORE_NEW)
+                        route.action_more = ACTION_MORE_NEW;
                     else
                         route.format = m.Groups[2].Value.Substring(1);
                 }
@@ -400,11 +420,11 @@ public class FW : IDisposable
                 // match to method (GET/POST)
                 if (route.method == "GET")
                 {
-                    if (route.action_more == "new")
+                    if (route.action_more == ACTION_MORE_NEW)
                         route.action_raw = ACTION_SHOW_FORM;
-                    else if (!string.IsNullOrEmpty(route.id) & route.action_more == "edit")
+                    else if (!string.IsNullOrEmpty(route.id) & route.action_more == ACTION_MORE_EDIT)
                         route.action_raw = ACTION_SHOW_FORM;
-                    else if (!string.IsNullOrEmpty(route.id) & route.action_more == "delete")
+                    else if (!string.IsNullOrEmpty(route.id) & route.action_more == ACTION_MORE_DELETE)
                         route.action_raw = ACTION_SHOW_DELETE;
                     else if (!string.IsNullOrEmpty(route.id))
                         route.action_raw = ACTION_SHOW;
@@ -588,7 +608,7 @@ public class FW : IDisposable
         string path2 = "/" + controller;
 
         // pre-check controller's access level by url
-        int current_level = Utils.f2int(Session("access_level"));
+        int current_level = userAccessLevel;
 
         Hashtable rules = (Hashtable)config("access_levels");
         if (rules != null && rules.ContainsKey(path))
@@ -827,7 +847,7 @@ public class FW : IDisposable
         string result = "";
 
         //For Windows - replace Unix-style separators / to \
-        if(path_separator == '\\')
+        if (path_separator == '\\')
             filename = filename.Replace('/', path_separator);
 
         if (!File.Exists(filename))
@@ -914,7 +934,10 @@ public class FW : IDisposable
     // TODO - create another func and call it from call_controller for processing _redirect, ... (non-parsepage) instead of calling parser?
     public void parser(string bdir, Hashtable ps)
     {
-        if (!this.response.HasStarted) this.response.Headers["Cache-Control"]= cache_control;
+        if (!this.response.HasStarted) this.response.Headers["Cache-Control"] = cache_control;
+
+        if (this.FormErrors.Count > 0 && !ps.ContainsKey("ERR"))
+            ps["ERR"] = this.FormErrors; // add errors if any
 
         string format = this.getResponseExpectedFormat();
         if (format == "json")
@@ -953,9 +976,6 @@ public class FW : IDisposable
             this.redirect((string)ps["_redirect"]);
             return; // no further processing
         }
-
-        if (this.FormErrors.Count > 0 && !ps.ContainsKey("ERR"))
-            ps["ERR"] = this.FormErrors; // add errors if any
 
         string layout;
         if (format == "pjax")
@@ -1071,14 +1091,15 @@ public class FW : IDisposable
             // controller found
             if (auth_check_controller == 1)
             {
-                // but need's check access level on controller level
+                // but need's check access level on controller level, logged level will be 0 for visitors
                 var field = controllerClass.GetField("access_level", BindingFlags.Public | BindingFlags.Static);
                 if (field != null)
                 {
-                    int current_level = Utils.f2int(Session("access_level")); //will be 0 for visitors
-                    if (current_level < Utils.f2int(field.GetValue(null)))
+                    if (userAccessLevel < Utils.f2int(field.GetValue(null)))
                         throw new AuthException("Bad access - Not authorized (2)");
                 }
+
+                //note, Role-Based Access - checked in callController right before calling action
             }
         }
 
@@ -1172,13 +1193,18 @@ public class FW : IDisposable
         Hashtable ps = null;
         try
         {
+            controller.checkAccess();
             ps = (Hashtable)actionMethod.Invoke(controller, parameters);
         }
         catch (TargetInvocationException ex)
         {
             Exception iex = null;
             if (ex.InnerException != null)
+            {
                 iex = ex.InnerException;
+                if (iex.InnerException != null)
+                    iex = iex.InnerException;
+            }
 
             if (iex != null && !(iex is ApplicationException))
             {
@@ -1213,7 +1239,8 @@ public class FW : IDisposable
     // aCC - arraylist of CC addresses (strings)
     // reply_to - optional reply to email
     // options - hashtable with options:
-    // "read-receipt"
+    //   "read-receipt"
+    //   "smtp" - hashtable with smtp settings (host, port, is_ssl, username, password)
     // RETURN:
     // true if sent successfully
     // false if some problem occured (see log)
@@ -1221,8 +1248,7 @@ public class FW : IDisposable
     {
         bool result = true;
         MailMessage message = null;
-        if (options == null)
-            options = new Hashtable();
+        options ??= new Hashtable();
 
         try
         {
@@ -1277,7 +1303,13 @@ public class FW : IDisposable
                         foreach (string cc in aCC)
                         {
                             logger(LogLevel.INFO, "TEST SEND. PASSED CC=[", cc, "]");
-                            message.CC.Add(new MailAddress(mail_to));
+                            foreach (string email1 in amail_to)
+                            {
+                                string email = email1.Trim();
+                                if (string.IsNullOrEmpty(email))
+                                    continue;
+                                message.CC.Add(new MailAddress(email));
+                            }
                         }
                     }
                     else
@@ -1313,6 +1345,11 @@ public class FW : IDisposable
                 using (SmtpClient client = new())
                 {
                     Hashtable mailSettings = (Hashtable)this.config("mail");
+                    if (options.ContainsKey("smtp"))
+                    {
+                        //override mailSettings from smtp options
+                        Utils.mergeHash(mailSettings, options["smtp"] as Hashtable);
+                    }
                     if (mailSettings.Count > 0)
                     {
                         client.Host = Utils.f2str(mailSettings["host"]);
@@ -1370,7 +1407,7 @@ public class FW : IDisposable
             ps["is_dump"] = true;
             if (Ex != null)
                 ps["DUMP_STACK"] = Ex.ToString();
-            
+
             ps["DUMP_SQL"] = DB.last_sql;
             ps["DUMP_FORM"] = dumper(FORM);
             ps["DUMP_SESSION"] = dumper(context.Session);
@@ -1471,13 +1508,12 @@ public class FW : IDisposable
                 if (sentryClient != null)
                     sentryClient.Dispose();
 #endif
+                db.Dispose(); // this will return db connections to pool
             }
 
             // free unmanaged resources (unmanaged objects) and override Finalize() below.
             try
             {
-                db.Dispose(); // this will return db connections to pool
-
                 // check if log file too large and need to be rotated
                 string log_file = (string)config("log");
                 if (!string.IsNullOrEmpty(log_file))

@@ -7,7 +7,6 @@ using System;
 using System.Collections;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Microsoft.VisualBasic;
 
 namespace osafw;
 
@@ -17,6 +16,7 @@ public abstract class FwController
 
     public static string route_default_action = ""; // supported values - "" (use Default Parser for unknown actions), Index (use IndexAction for unknown actions), Show (assume action is id and use ShowAction)
     public string route_onerror = ""; //route redirect action name in case ApplicationException occurs in current route, if empty - 500 error page returned
+
     public string base_url; // base url for the controller
     public string base_url_suffix; // additional base url suffix
 
@@ -30,6 +30,7 @@ public abstract class FwController
     protected DB db;
     protected FwModel model0;
     protected Hashtable config;                  // controller config, loaded from template dir/config.json
+    protected Hashtable access_actions_to_permissions; // optional, controller-level custom actions to permissions mapping for role-based access checks, e.g. "UIMain" => Permissions.PERMISSION_VIEW . Can also be used to override default actions to permissions
 
     protected string list_view;                  // table/view to use in list sql, if empty model0.table_name used
     protected string list_orderby;               // orderby for the list screen
@@ -422,16 +423,16 @@ public abstract class FwController
         this.list_filter["sortby"] = sortby;
         this.list_filter["sortdir"] = sortdir;
 
+        string[] aorderby = orderby.Split(",");
         if (sortdir == "desc")
         {
             // if sortdir is desc, i.e. opposite to default - invert order for orderby fields
-            // go thru each order field
-            string[] aorderby = Strings.Split(orderby, ",");
+            // go thru each order field            
             for (int i = 0; i <= aorderby.Length - 1; i++)
             {
                 string field = null;
                 string order = null;
-                Utils.split2(@"\s+", Strings.Trim(aorderby[i]), ref field, ref order);
+                Utils.split2(@"\s+", aorderby[i].Trim(), ref field, ref order);
 
                 if (order == "desc")
                     order = "asc";
@@ -439,22 +440,19 @@ public abstract class FwController
                     order = "desc";
                 aorderby[i] = db.qid(field) + " " + order;
             }
-            orderby = Strings.Join(aorderby, ", ");
         }
         else
         {
             // quote
-            string[] aorderby = Strings.Split(orderby, ",");
             for (int i = 0; i <= aorderby.Length - 1; i++)
             {
                 string field = null;
                 string order = null;
-                Utils.split2(@"\s+", Strings.Trim(aorderby[i]), ref field, ref order);
+                Utils.split2(@"\s+", aorderby[i].Trim(), ref field, ref order);
                 aorderby[i] = db.qid(field) + " " + order;
             }
-            orderby = Strings.Join(aorderby, ", ");
         }
-        this.list_orderby = orderby;
+        this.list_orderby = string.Join(", ", aorderby);
     }
 
     /// <summary>
@@ -479,7 +477,7 @@ public abstract class FwController
             string[] afields = Utils.qw(this.search_fields); // OR fields delimited by space
             for (int i = 0; i <= afields.Length - 1; i++)
             {
-                string[] afieldsand = Strings.Split(afields[i], ","); // AND fields delimited by comma
+                string[] afieldsand = afields[i].Split(","); // AND fields delimited by comma
 
                 for (int j = 0; j <= afieldsand.Length - 1; j++)
                 {
@@ -501,6 +499,8 @@ public abstract class FwController
                                 list_where_params[param_name] = Utils.f2long(s);
                             else if (ft == "float")
                                 list_where_params[param_name] = Utils.f2float(s);
+                            else if (ft == "decimal")
+                                list_where_params[param_name] = Utils.f2decimal(s);
                             else
                                 list_where_params[param_name] = s;
                         }
@@ -513,9 +513,9 @@ public abstract class FwController
                         list_where_params[param_name] = like_s;
                     }
                 }
-                afields[i] = Strings.Join(afieldsand, " and ");
+                afields[i] = string.Join(" and ", afieldsand);
             }
-            list_where += " and (" + Strings.Join(afields, " or ") + ")";
+            list_where += " and (" + string.Join(" or ", afields) + ")";
         }
 
         setListSearchUserList();
@@ -542,10 +542,11 @@ public abstract class FwController
 
     /// <summary>
     /// set list_where based on search[] filter
-    ///      - exact: "=term"
-    ///      - Not equals "!=term"
+    ///      - exact: "=term" or just "=" - mean empty
+    ///      - Not equals "!=term" or just "!=" - means not empty
     ///      - Not contains: "!term"
     ///      - more/less: <=, <, >=, >"
+    ///      - and support search by date if search value looks like date in format MM/DD/YYYY
     /// </summary>
     public virtual void setListSearchAdvanced()
     {
@@ -554,50 +555,77 @@ public abstract class FwController
         foreach (string fieldname in hsearch.Keys)
         {
             string value = (string)hsearch[fieldname];
-            if (!string.IsNullOrEmpty(value) && (!is_dynamic_index || view_list_map.ContainsKey(fieldname)))
-            {
-                string str;
-                var fieldname_sql = "ISNULL(CAST(" + db.qid(fieldname) + " as NVARCHAR(255)), '')"; //255 need as SQL Server by default makes only 30
-                var fieldname_sql2 = "TRY_CONVERT(DECIMAL(18,1),CAST(" + db.qid(fieldname) + " as NVARCHAR))"; // SQL Server 2012+ only
-                if (value.Length > 1 && value.Substring(0, 1) == "=")
-                {
-                    str = " = " + db.q(value[1..]);
-                }
-                else if (value.Length > 2 && value.Substring(0, 2) == "!=")
-                {
-                    str = " <> " + db.q(value[2..]);
-                }
-                else if (value.Length > 2 && value.Substring(0, 2) == "<=")
-                {
-                    fieldname_sql = fieldname_sql2;
-                    str = " <= " + db.q(value[2..]);
-                }
-                else if (value.Length >= 1 && value.Substring(0, 1) == "<")
-                {
-                    fieldname_sql = fieldname_sql2;
-                    str = " < " + db.q(value[1..]);
-                }
-                else if (value.Length > 2 && value.Substring(0, 2) == ">=")
-                {
-                    fieldname_sql = fieldname_sql2;
-                    str = " >= " + db.q(value[2..]);
-                }
-                else if (value.Length > 1 && value.Substring(0, 1) == ">")
-                {
-                    fieldname_sql = fieldname_sql2;
-                    str = " > " + db.q(value[1..]);
-                }
-                else if (value.Length > 1 && value.Substring(0, 1) == "!")
-                {
-                    str = " NOT LIKE " + db.q("%" + value[1..] + "%");
-                }
-                else
-                {
-                    str = " LIKE " + db.q("%" + value + "%");
-                }
+            if (string.IsNullOrEmpty(value) || (is_dynamic_index && !view_list_map.ContainsKey(fieldname)))
+                continue;
 
-                this.list_where += " and " + fieldname_sql + " " + str;
+
+            var qfieldname = db.qid(fieldname);
+            var fieldname_sql = $"ISNULL(CAST({qfieldname} as NVARCHAR(255)), '')"; //255 need as SQL Server by default makes only 30
+            var fieldname_sql_num = $"TRY_CONVERT(DECIMAL(18,1),CAST({qfieldname} as NVARCHAR))"; // SQL Server 2012+ only
+            var fieldname_sql_date = $"TRY_CONVERT(DATE, {qfieldname})"; //for date search
+
+            string op = value[..1];
+            string op2 = value.Length >= 2 ? value[..2] : null;
+
+            string v = value[1..];
+            if (op2 == "!=" || op2 == "<=" || op2 == ">=")
+                v = value[2..];
+
+            var qv = db.q(v); // quoted value
+            if (DateUtils.isDateStr(v))
+            {
+                //if input looks like a date - compare as date
+                fieldname_sql = fieldname_sql_date;
+                qv = db.q(DateUtils.Str2SQL(v));
             }
+            else
+            {
+                if (op2 == "<=" || op == "<" || op2 == ">=" || op == ">")
+                {
+                    //numerical comparison
+                    fieldname_sql = fieldname_sql_num;
+                    qv = Utils.f2str(db.qdec(v));
+                }
+            }
+
+            string op_value;
+            switch (op2)
+            {
+                // first - check for 2-char operators
+                case "!=":
+                    op_value = $" <> {qv}";
+                    break;
+                case "<=":
+                    op_value = $" <= {qv}";
+                    break;
+                case ">=":
+                    op_value = $" >= {qv}";
+                    break;
+                default:
+                    // then check for 1-char operators
+                    switch (op)
+                    {
+                        case "=":
+                            op_value = $" = {qv}";
+                            break;
+                        case "<":
+                            op_value = $" < {qv}";
+                            break;
+                        case ">":
+                            op_value = $" > {qv}";
+                            break;
+                        case "!":
+                            op_value = $" NOT LIKE {db.q($"%{v}%")}";
+                            break;
+                        default:
+                            //default is just LIKE/contains
+                            op_value = $" LIKE {db.q($"%{value}%")}";
+                            break;
+                    }
+                    break;
+            }
+
+            list_where += $" AND {fieldname_sql} {op_value}";
         }
     }
 
@@ -614,7 +642,7 @@ public abstract class FwController
             {
                 var status = Utils.f2int(this.list_filter["status"]);
                 // if want to see trashed and not admin - just show active
-                if (status == FwModel.STATUS_DELETED & !fw.model<Users>().isAccess(Users.ACL_SITEADMIN))
+                if (status == FwModel.STATUS_DELETED & !fw.model<Users>().isAccessLevel(Users.ACL_SITEADMIN))
                     status = 0;
                 this.list_where += " and " + db.qid(model0.field_status) + "=@status";
                 this.list_where_params["status"] = status;
@@ -709,14 +737,12 @@ public abstract class FwController
         if (id > 0)
         {
             model0.update(id, fields);
-            if (!fw.isJsonExpected())
-                fw.flash("record_updated", 1);
+            fw.flash("record_updated", 1);
         }
         else
         {
             id = model0.add(fields);
-            if (!fw.isJsonExpected())
-                fw.flash("record_added", 1);
+            fw.flash("record_added", 1);
         }
         return id;
     }
@@ -855,6 +881,22 @@ public abstract class FwController
         return afterSave(success, "", false, "no_action", "", more_json);
     }
 
+    // called before each controller action (init() already called), check access to current fw.route
+    // throw exception if no access
+    public virtual void checkAccess()
+    {
+        //var id = fw.route.id;
+
+        // if user is logged and not SiteAdmin(can access everything)
+        // and user's access level is enough for the controller - check access by roles (if enabled)
+        int current_user_level = fw.userAccessLevel;
+        if (current_user_level > 0 && current_user_level < 100)
+        {
+            if (!fw.model<Users>().isAccessByRolesResourceAction(fw.userId, fw.route.controller, fw.route.action, fw.route.action_more, access_actions_to_permissions))
+                throw new AuthException("Bad access - Not authorized (3)");
+        }
+    }
+
     //called when unhandled error happens in action
     public virtual Hashtable actionError(Exception ex, object[] args)
     {
@@ -862,16 +904,7 @@ public abstract class FwController
         Hashtable ps = null;
         if (fw.isJsonExpected())
         {
-            //for json response - just respond success=false with any errors
-            var _json = new Hashtable()
-            {
-                {"success",false},
-                {"err_msg", ex.Message}
-            };
-            // add ERR field errors to response if any
-            if (fw.FormErrors.Count > 0)
-                _json["ERR"] = fw.FormErrors;
-            ps = new Hashtable() { { "_json", _json } };
+            throw ex; //exception will be handled in fw.dispatch() and fw.errMsg() called
         }
         else
         {
@@ -1020,6 +1053,13 @@ public abstract class FwController
         return (fields.Length > 0 ? fields : view_list_defaults);
     }
 
+    /// <summary>
+    /// Called from setViewList to get conversions for fields. 
+    /// Currently supports only "date" conversion - i.e. date only fields will be formatted as date only (without time)
+    /// Override to add more custom conversions
+    /// </summary>
+    /// <param name="afields"></param>
+    /// <returns></returns>
     public virtual Hashtable getViewListConversions(string[] afields)
     {
         // load schema info to perform specific conversions
@@ -1032,8 +1072,9 @@ public abstract class FwController
         var table_schema = db.tableSchemaFull(list_view_name);
         foreach (var fieldname in afields)
         {
-            if (!table_schema.ContainsKey(fieldname)) continue;
-            var field_schema = (Hashtable)table_schema[fieldname];
+            var fieldname_lc = fieldname.ToLower();
+            if (!table_schema.ContainsKey(fieldname_lc)) continue;
+            var field_schema = (Hashtable)table_schema[fieldname_lc];
 
             //if field is exactly DATE - show only date part without time
             if ((string)field_schema["fw_subtype"] == "date")
@@ -1046,6 +1087,24 @@ public abstract class FwController
         return result;
     }
 
+    /// <summary>
+    /// Apply conversions to data for a single view list field
+    /// Override to add custom conversions.
+    /// </summary>
+    /// <param name="fieldname">field name to apply conversion to</param>
+    /// <param name="row">data row from db</param>
+    /// <param name="hconversions">standard conversion rules from getViewListConversions</param>
+    /// <returns></returns>
+    public virtual string applyViewListConversions(string fieldname, Hashtable row, Hashtable hconversions)
+    {
+        var data = (string)row[fieldname];
+        if (hconversions.ContainsKey(fieldname))
+        {
+            data = DateUtils.Str2DateOnly(data);
+        }
+        return data;
+    }
+
     // add to ps:
     // headers
     // headers_search
@@ -1055,6 +1114,9 @@ public abstract class FwController
     // model.setViewList(ps, list_filter_search)
     public virtual void setViewList(Hashtable ps, Hashtable hsearch, bool is_cols = true)
     {
+        var user_view = fw.model<UserViews>().oneByIcode(base_url);
+        ps["user_view"] = user_view;
+
         var fields = getViewListUserFields();
 
         var headers = getViewListArr(fields);
@@ -1079,11 +1141,7 @@ public abstract class FwController
                 ArrayList cols = new();
                 foreach (var fieldname in afields)
                 {
-                    var data = (string)row[fieldname];
-                    if (hconversions.ContainsKey(fieldname))
-                    {
-                        data = DateUtils.Str2DateOnly(data);
-                    }
+                    var data = applyViewListConversions(fieldname, row, hconversions);
 
                     cols.Add(new Hashtable()
                     {

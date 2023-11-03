@@ -66,6 +66,42 @@ window.fw={
     });
   },
 
+  //toggle on element between mutliple classes in order
+  toggleClasses($el, arr_classes){
+    let cur_index = -1;
+
+    for (let i = 0; i < arr_classes.length; i++) {
+        if ($el.hasClass(arr_classes[i])) {
+            cur_index = i;
+            break;
+        }
+    }
+
+    // Remove the current class
+    if (cur_index !== -1) {
+        $el.removeClass(arr_classes[cur_index]);
+    }
+
+    // Add the next class in the array or go back to the start if we're at the end
+    let nextClassIndex = (cur_index + 1) % arr_classes.length;
+    $el.addClass(arr_classes[nextClassIndex]);
+  },
+
+  //debounce helper
+  debounce(func, wait_msecs) {
+    let timeout;
+
+    return function executedFunction(...args) {
+      const later = () => {
+          clearTimeout(timeout);
+          func(...args);
+      };
+
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait_msecs);
+    };
+  },
+
   //called on document ready
   setup_handlers: function (){
     //list screen init
@@ -85,18 +121,57 @@ window.fw={
           $el.show();
           $fis.val('1');
           //show search tooltip
-          $.jGrowl("WORD to search for contains word<br>=WORD to search for equals word<br>!=WORD to search for NOT equals word<br>!WORD to search for NOT contains word",
+          $.jGrowl("WORD to search for contains word<br>"+
+            "!WORD to search for NOT contains word<br>"+
+            "=WORD to search for equals word<br>"+
+            "!=WORD to search for NOT equals word<br>"+
+            "&lt;=N, &lt;N, &gt;=N, &gt;N - compare numbers",
             {header: 'Search hints', theme: 'hint_info', sticky: true});
       }
     };
     $(document).on('click', '.on-toggle-search', on_toggle_search);
     //open search if there is something
     var is_search = $('table.list .search input').filter(function () {
-      return this.value.length > 0
+      return this.value.length > 0;
     }).length>0;
     if (is_search){
       on_toggle_search();
     }
+
+    //list table density switch
+    var on_toggle_density = function (e) {
+      const $this=$(this);
+      const $tbl = $this.closest('table.list');
+      const $wrapper = $tbl.closest('.table-list-wrapper');
+      const classes = ['table-sm', 'table-dense', 'table-normal'];
+
+      fw.toggleClasses($tbl, classes);
+      if ($tbl.is('.table-dense')){
+        $wrapper.addClass('table-dense');
+      }else{
+        $wrapper.removeClass('table-dense');
+      }
+      let density_class = classes.find(cls => $tbl.hasClass(cls)) || '';
+
+      //ajax post to save user preference to current url/(SaveUserViews) or custom url
+      const url = $this.data('url') || (window.location.pathname.replace(/\/$/, "") + "/(SaveUserViews)");
+      $.ajax({
+          url: url,
+          type: 'POST',
+          dataType: 'json',
+          data: {
+              density: density_class,
+              XSS: $this.closest('form').find("input[name=XSS]").val()
+          },
+          success: function (data) {
+            //console.log(data);
+          },
+          error: function (e) {
+            console.error("An error occurred while saving user preferences:", e.statusText);
+          }
+      });
+    };
+    $(document).on('click', '.on-toggle-density', on_toggle_density);
 
     $('table.list').on('keypress','.search :input', function(e) {
       if (e.which == 13) {// on Enter press
@@ -118,7 +193,7 @@ window.fw={
             var html=[];
             $('table.list:first .search :input').each(function (i, el) {
               if (el.value>''){
-                html.push( '<input class="osafw-list-search" type="hidden" name="'+el.name.replace(/"/g,'&quot;')+'" value="'+el.value.replace(/"/g,'&quot;')+'">');
+                html.push('<input class="osafw-list-search" type="hidden" name="'+el.name.replace(/"/g,'&quot;')+'" value="'+el.value.replace(/"/g,'&quot;')+'">');
               }
             });
             $f.append(html.join(''));
@@ -165,6 +240,7 @@ window.fw={
 
     //make list multi buttons floating if at least one row checked
     $(document).on('click', '.on-list-chkall, .multicb', function (e) {
+      e.stopPropagation();//prevent tr click handler
       var $this = $(this);
       var $bm = $('#list-btn-multi');
       var len = $('.multicb:checked').length;
@@ -184,6 +260,16 @@ window.fw={
           $this.closest("tr").removeClass("selected");
         }
       }
+    });
+
+    //click on row - select/unselect row
+    $(document).on('click', 'table.list > tbody > tr', function (e) {
+      var $this = $(this);
+      var tag_name = e.target.tagName.toLowerCase();
+      if (tag_name === 'a'||tag_name === 'button'){
+        return; // do not process if link/button clicked
+      }
+      $this.find('.multicb:first').click();
     });
 
     $(document).on('click', '.on-delete-list-row', function (e){
@@ -239,7 +325,7 @@ window.fw={
         if (!title) title='Are you sure?';
         fw.confirm(title, function (e) {
             $('#FTmpSubmit').remove();
-            $('body').append('<form id="FTmpSubmit" method="POST" action="'+url+'"></form>');
+            $(document.body).append('<form id="FTmpSubmit" method="POST" action="'+url+'"></form>');
             $('#FTmpSubmit').submit();
         });
     });
@@ -251,14 +337,14 @@ window.fw={
   // <form data-check-changes>
   setup_cancel_form_handlers: function() {
     //on submit buttons handler
-    // <button type="button" data-target="#form" class="on-submit" [data-refresh] [name="route_return" value="New"]>Submit</button>
+    // <button type="button" data-target="#form" class="on-submit" [data-delay="300"] [data-refresh] [name="route_return" value="New"]>Submit</button>
     $(document).on('click', '.on-submit', function (e) {
       e.preventDefault();
       var $this=$(this);
       var target = $this.data('target');
       var $form = (target) ? $(target) : $(this.form);
 
-      //if has data-refresh - ser refresh
+      //if has data-refresh - set refresh
       if ($this.data().hasOwnProperty('refresh')){
         $form.find('input[name=refresh]').val(1);
       }
@@ -274,7 +360,16 @@ window.fw={
         $input.val(bvalue);
       }
 
-      $form.submit();
+      //if button has data-delay - submit with delay (in milliseconds)
+      var delay = $this.data('delay');
+      if (delay) {
+         setTimeout(function () {
+             $form.submit();
+         }, delay);
+        }
+      else {
+        $form.submit();
+      }
     });
 
     //on cancel buttons handler
@@ -293,10 +388,10 @@ window.fw={
     var $forms=$('form[data-check-changes]');
     if (!$forms.length) return; //skip if no forms found
 
-    $('body').on('change', 'form[data-check-changes]', function(){
+    $(document.body).on('change', 'form[data-check-changes]', function(){
       $(this).data('is-changed', true);
     });
-    $('body').on('submit', 'form[data-check-changes]', function(){
+    $(document.body).on('submit', 'form[data-check-changes]', function(){
       //on form submit - disable check for
       $(this).data('is-changed-submit', true);
     });
@@ -362,54 +457,72 @@ window.fw={
       $f.data('is-submitting',true); //tell autosave not to trigger
     });
 
-    $('body').on('change', 'form[data-autosave]', function(e){
+    //when some input into the form happens - trigger autosave in 30s
+    var to_autosave;
+    $(document.body).on('input', 'form[data-autosave]', function(e){
+      var $control = $(e.target);
+      if ($control.is('[data-noautosave]')) {
+        e.preventDefault();
+        return;
+      }
+
+      var $f = $(this);
+      //console.log('on form input', $f, e);
+      set_saved_status($f, true);
+
+      //refresh timeout
+      clearTimeout(to_autosave);
+      to_autosave = setTimeout(function(){
+        //console.log('triggering autosave after 30s idle');
+        trigger_autosave_if_changed($f);
+      }, 30000);
+    });
+
+    //when change or blur happens - trigger autosave now(debounced)
+    $(document.body).on('change', 'form[data-autosave]', function(e){
       if ($(e.target).is('[data-noautosave]')) {
         e.preventDefault();
         return;
       }
       var $f = $(this);
       //console.log('on form change', $f, e);
-      $f.data('is-changed', true);
-
-      set_status($f, 1);
-      // checkboxes trigger autosave instantly
-      if ($(e.target).is('input[type=checkbox]:not([data-noautosave])')) $f.trigger('autosave');
+      $f.trigger('autosave');
     });
-
-    $('body').on('keyup', 'form[data-autosave] :input:not([data-noautosave])', function(e){
-      var $inp = $(this);
-      //console.log('on keyup');
-      if ($inp.data('oldval')!==$inp.val()) {
-          var $f = $(this.form);
-          $f.data('is-changed', true);
-          set_status($f, 1);
-      }
-    });
-
-    $('body').on('focus', 'form[data-autosave] :input:not([data-noautosave])', function(e){
-      var $inp = $(this);
-      // console.log('on form input focus');
-      $inp.data('oldval', $inp.val());
-    });
-
     // "*:not(.bs-searchbox)" - exclude search input in the bs selectpicker container
-    $('body').on('blur', 'form[data-autosave] *:not(.bs-searchbox) > :input:not(button,[data-noautosave])', function(e){
+    $(document.body).on('blur', 'form[data-autosave] *:not(.bs-searchbox) > :input:not(button,[data-noautosave])', function(e){
       var $f = $(this.form);
-      // console.log('on form input blur', $f);
-      if ($f.data('is-changed')===true){
-          //form changed, need autosave
-          $f.trigger('autosave');
-      }
+      //console.log('on form input blur', $f);
+      trigger_autosave_if_changed($f);
     });
 
-    $('body').on('autosave', 'form[data-autosave]', function (e) {
+    $(document.body).on('autosave', 'form[data-autosave]', function(e){
+      //debounced autosave
       var $f = $(this);
+      clearTimeout($f[0]._to_autosave);
+      $f[0]._to_autosave = setTimeout(function(){
+        //console.log('triggering autosave after 50ms');
+        form_autosave($f);
+      }, 500);
+    });
+
+    function form_reset_state($f) {
+      set_progress($f, false);
+      $f.data('is-ajaxsubmit', false);
+    }
+
+    function form_handle_errors($f, data, hint_options){
+      if (data.ERR) {
+        //auto-save error - highlight errors
+        fw.process_form_errors($f, data.ERR);
+      }
+      fw.error(data.err_msg || 'Auto-save error. Server error occurred. Try again later.', hint_options);
+    }
+
+    function form_autosave($f) {
       if ($f.data('is-submitting')===true || $f.data('is-ajaxsubmit')===true){
           //console.log('on autosave - ALREADY SUBMITTING');
           //if form already submitting by user intput - schedule autosave again later
-          setTimeout(function() {
-            $f.trigger('autosave');
-          }, 500)
+          $f.trigger('autosave');
           return false;
       }
       //console.log('on autosave', $f);
@@ -424,48 +537,53 @@ window.fw={
       $f.ajaxSubmit({
           dataType: 'json',
           success: function (data) {
-              set_progress($f, false);
+              form_reset_state($f);
               //console.log('ajaxSubmit success', data);
               $('#fw-form-msg').hide();
               fw.clean_form_errors($f);
               if (data.success){
-                  $f.data('is-changed', false);
-                  set_status($f, 2);
+                  set_saved_status($f, false);
                   if (data.is_new && data.location) {
                       window.location = data.location; //reload screen for new items
-                  }else{
-                      $f.data('is-ajaxsubmit',false);
                   }
               }else{
-                  $f.data('is-ajaxsubmit',false);
-                  //auto-save error - highlight errors
-                  if (data.ERR) fw.process_form_errors($f, data.ERR);
-                  fw.error(data.err_msg ? data.err_msg : 'Auto-save error. Press Save manually.', hint_options);
+                  form_handle_errors($f, data, hint_options);
               }
               if (data.msg) fw.ok(data.msg, hint_options);
               $f.trigger('autosave-success',[data]);
           },
           error: function (e) {
-              set_progress($f, false);
-              //console.log('ajaxSubmit error', e);
-              $f.data('is-ajaxsubmit',false);
+              form_reset_state($f);
+              // console.log('ajaxSubmit error', e);
+              let data = e.responseJSON??{};
+              form_handle_errors($f, data, hint_options);
               $f.trigger('autosave-error',[e]);
-              fw.error(e.responseJSON !== undefined && e.responseJSON.err_msg !== undefined ? e.responseJSON.err_msg : 'Auto-save error. Server error occured.', hint_options);
           }
       });
-    });
+    }
 
-    function set_status($f, status){
+    function trigger_autosave_if_changed($f){
+      if ($f.data('is-changed')===true){
+          //form changed, need autosave
+          $f.trigger('autosave');
+      }
+    }
+
+    function set_saved_status($f, is_changed){
       $f=$($f);
+      if ($f.data('is-changed')===is_changed){
+        return;//no changes
+      }
+
       var $html = $('<span>').append($f[0]._saved_status);
       var spinner = $('<span>').append($html.find('.spinner-border').clone()).html();
       var cls='', txt='';
-      if (status==0){
-          //nothing
-      }else if (status==1){ //not saved
+      if (is_changed==true){ //not saved
+          $f.data('is-changed', true);
           cls='bg-danger';
           txt='not saved';
-      }else if (status==2){ //saved
+      }else if (is_changed==false){ //saved
+          $f.data('is-changed', false);
           cls='bg-success';
           txt='saved';
       }
@@ -518,7 +636,7 @@ window.fw={
           if ($input.length){
             var $p=$input.parent();
             if ($p.is('.input-group,.custom-control,.dropdown,.twitter-typeahead')) $p = $p.parent();
-            if (!$p.is('td,th')){//does not apply to inputs in subtables
+            if (!$p.closest('form, table').is('table')){//does not apply to inputs in subtables
               $input.closest('.form-group, .form-row').not('.noerr').addClass('has-danger'); //highlight whole row (unless .noerr exists)
             }
             $input.addClass('is-invalid'); //mark input itself
@@ -569,7 +687,9 @@ window.fw={
     var sortdir=$sh.data('sortdir');
 
     var sort_img= (sortdir=='desc') ? fw.ICON_SORT_DESC : fw.ICON_SORT_ASC;
-    $sh.find('th[data-sort="'+sortby+'"]').addClass('active-sort').append('<span class="ms-1">'+sort_img+'</span>');
+    var $th = $sh.find('th[data-sort="'+sortby+'"]').addClass('active-sort');
+    var $thcont = !$tbl.is('.table-dense') && $th.find('div').length>0 ? $th.find('div') : $th;
+    $thcont.append('<span class="ms-1">'+sort_img+'</span>');
 
     $sh.on('click', 'th[data-sort]', function() {
       var $td=$(this);
@@ -592,13 +712,9 @@ window.fw={
     });
 
     //make table header freeze if scrolled too far below
-    $(window).bind('resize, scroll', function (e) {
-        //debounce
-        clearTimeout(window.to_scrollable);
-        window.to_scrollable=setTimeout(function (e) {
-            fw.apply_scrollable_table($tbl);
-        }, 10);
-    });
+    $(window).on('resize, scroll', this.debounce(function() {
+        fw.apply_scrollable_table($tbl);
+      }, 10));
   },
 
   //make table in pane scrollable with fixed header

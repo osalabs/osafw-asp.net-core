@@ -7,18 +7,17 @@ using System.Collections;
 
 namespace osafw;
 
-public class ReportSample : FwReports
+public class SampleReport : FwReports
 {
-    public ReportSample() : base()
+    public SampleReport() : base()
     {
-
         // override report render options if necessary
         render_options["landscape"] = false;
     }
 
     // define report filters in Me.f (available in report templates as f[...])
     // filter defaults can be Set here
-    public override Hashtable getReportFilters()
+    public override void setFilters()
     {
         Hashtable result = new();
         if (!f.ContainsKey("from_date") && !f.ContainsKey("to_date"))
@@ -27,12 +26,11 @@ public class ReportSample : FwReports
         if (!Utils.isEmpty(f["from_date"]) || !Utils.isEmpty(f["to_date"]))
             f["is_dates"] = true;
 
-        result["select_events"] = fw.model<FwEvents>().listSelectOptions();
-
-        return result;
+        f_data["select_events"] = fw.model<FwEvents>().listSelectOptions();
+        f_data["select_users"] = fw.model<Users>().listSelectOptions();
     }
 
-    public override Hashtable getReportData()
+    public override void getData()
     {
         Hashtable ps = new();
 
@@ -56,25 +54,41 @@ public class ReportSample : FwReports
             where_params["@events_id"] = f["events_id"];
         }
 
-        // define query
-        string sql;
-
-        sql = @"select el.*, e.iname  as event_name, u.fname, u.lname from events e, event_log el
-                         LEFT OUTER JOIN users u ON (u.id=el.add_users_id)
-                     where el.events_id=e.id" + where +
-              " order by el.id desc";
-        sql = db.limit(sql, 20); //limit to first results only
-        var rows = db.arrayp(sql, where_params).toArrayList();
-        ps["rows"] = rows;
-        ps["count"] = rows.Count;
-
-        // perform calculations and add additional info for each result row
-        foreach (Hashtable row in rows)
+        if (!Utils.isEmpty(f["users_id"]))
         {
-            //row["event"] = fw.model<FwEvents>().one(Utils.f2int(row["events_id"]));
-            ps["total_ctr"] = _calcPerc(rows); //if you need calculate "perc" for each row based on row["ctr"]
+            where += " and el.add_users_id=@users_id";
+            where_params["@users_id"] = f["users_id"];
         }
 
-        return ps;
+        if (!Utils.isEmpty(f["s"]))
+        {
+            //search in item_id, iname, fields
+            where += " and (el.item_id=@item_id OR el.iname like @slike OR el.fields like @slike)";
+            where_params["@item_id"] = Utils.f2int(f["s"]);
+            where_params["@slike"] = "%" + f["s"] + "%";
+        }
+
+        // define query
+        // REMEMBER to filter out deleted items for each table, i.e. add call andNotDeleted([alias])
+        string sql;
+        sql = @$"select el.*
+                , e.iname as event_name
+                , u.fname
+                , u.lname 
+                from events e, event_log el
+                     LEFT OUTER JOIN users u ON (u.id=el.add_users_id {andNotDeleted("u.")})
+                where el.events_id=e.id 
+                {where}
+                order by el.id desc";
+        sql = db.limit(sql, 20); //limit to first results only
+        list_rows = db.arrayp(sql, where_params);
+        list_count = list_rows.Count;
+
+        // perform calculations and add additional info for each result row
+        foreach (Hashtable row in list_rows)
+        {
+            //row["event"] = fw.model<FwEvents>().one(Utils.f2int(row["events_id"]));
+            ps["total_ctr"] = _calcPerc(list_rows); //if you need calculate "perc" for each row based on row["ctr"]
+        }
     }
 }

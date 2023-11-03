@@ -1,9 +1,9 @@
-<form method="post" data-check-changes <~das if="id" inline>data-autosave</~das> action="<~../url><~uu1 if="id" inline>/<~id></~uu1>" data-errors="<~ERR json>">
+<form method="post" data-check-changes <~/common/form/data_autosave if="id"> action="<~../url><~uu1 if="id" inline>/<~id></~uu1>" data-errors="<~ERR json>">
  <input type="hidden" name="XSS" value="<~session[XSS]>">
  <input type="hidden" name="return_url" value="<~return_url>">
 
     <div class="row">
-      <div class="col">
+      <div class="col btn-std">
         <div class="btn-group">
           <a class="btn btn-default" href="<~../url><~/common/list/relid>"><~/common/icons/arrow-left-circle><span class="d-none d-lg-inline"> `Back to list`</span></a>
           <a class="btn btn-default" href="<~../url>/new<~/common/list/relid>" <~/common/disabled if="is_readonly">><~/common/icons/plusb><span class="d-none d-lg-inline"> `Add New`</span></a>
@@ -23,8 +23,10 @@
       <div class="col">
         <div class="float-end text-end ps-3 pb-3" style="min-width:240px;">
             <span class="form-saved-status"></span>
-            <button type="submit" class="btn btn-primary" <~/common/disabled if="is_readonly">>`Save`</button>
-            <button type="button" class="btn btn-default on-cancel" data-href="<~/common/form/cancel_url>">`Cancel`</button>
+            <~nonautosave_buttons unless="id" inline>
+              <button type="submit" class="btn btn-primary" <~/common/disabled if="is_readonly">>`Save`</button>
+              <button type="button" class="btn btn-default on-cancel" data-href="<~/common/form/cancel_url>">`Cancel`</button>
+            </~nonautosave_buttons>
         </div>
       </div>
     </div>

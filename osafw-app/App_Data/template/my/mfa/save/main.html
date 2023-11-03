@@ -1,0 +1,22 @@
+<h1><~title></h1>
+
+
+<h4>`Important!`</h4>
+<p>
+    Please print/copy the following MFA recovery codes and store in a safe place. <b>This is the only time you can see these codes</b>.<br>
+    You can use these codes to restore access to your account in case you won't be able to use Authenticator application.<br>
+    Each recovery code can be used just once.<br>
+</p>
+
+<div class="alert alert-info" role="alert">
+    <ul>
+        <~recovery_codes repeat inline>
+        <li>
+            <i><~code></i>
+        </li>
+        </~recovery_codes>
+    </ul>
+</div>
+
+<button type="button" class="btn btn-default d-print-none on-print"><~/common/icons/print> `Print`</button>
+<a href="<~/main/url>" class="btn btn-primary d-print-none"><~/common/icons/grid-fill> `Continue`</a>

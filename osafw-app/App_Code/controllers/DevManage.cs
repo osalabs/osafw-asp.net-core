@@ -4,14 +4,13 @@
 // (c) 2009-2021  Oleg Savchuk www.osalabs.com
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Data;
 using System.IO;
 using System.Linq;
-using Microsoft.VisualBasic;
-using System.Collections;
-using System.Text.RegularExpressions;
 using System.Text.Json;
-using System.Data;
+using System.Text.RegularExpressions;
 
 namespace osafw;
 
@@ -600,7 +599,7 @@ public class DevManageController : FwController
         var tables = db.tables();
         foreach (string tblname in tables)
         {
-            if (Strings.InStr(tblname, "MSys", CompareMethod.Binary) == 1)
+            if (tblname.IndexOf("MSys", StringComparison.Ordinal) == 0)
                 continue;
 
             // get table schema
@@ -715,7 +714,7 @@ public class DevManageController : FwController
     private static string _tablename2model(string table_name)
     {
         string result = "";
-        string[] pieces = Strings.Split(table_name, "_");
+        string[] pieces = table_name.Split('_');
         foreach (string piece in pieces)
             result += Utils.capitalize(piece);
         return result;
@@ -1126,8 +1125,8 @@ public class DevManageController : FwController
                     if (!field.Contains("default"))
                     {
                         field["default"] = null;
-                        // no default set - then for nvarchar set empty string gdefault
-                        if (Utils.f2str(field["fw_type"]) == "varchar")
+                        // no default set and field is NOT NULLable - then for nvarchar set empty string default
+                        if (Utils.f2int(field["is_nullable"]) == 0 && Utils.f2str(field["fw_type"]) == "varchar")
                             field["default"] = "";
                     }
                 }
@@ -1193,9 +1192,9 @@ public class DevManageController : FwController
             // only create App_Data/database.sql
             // add drop
             if (entity.ContainsKey("comments"))
-                database_sql += "-- " + entity["comments"] + Constants.vbCrLf;
-            database_sql += "DROP TABLE IF EXISTS " + q_ident((string)entity["table"]) + ";" + Constants.vbCrLf;
-            database_sql += sql + ";" + Constants.vbCrLf + Constants.vbCrLf;
+                database_sql += "-- " + entity["comments"] + Environment.NewLine;
+            database_sql += "DROP TABLE IF EXISTS " + q_ident((string)entity["table"]) + ";" + Environment.NewLine;
+            database_sql += sql + ";" + Environment.NewLine + Environment.NewLine;
         }
 
         var sql_file = fw.config("site_root") + DB_SQL_PATH;
@@ -1280,24 +1279,24 @@ public class DevManageController : FwController
                 fld_iname = fld_identity;
 
             if (fld_identity != null && (string)fld_identity["name"] != "id")
-                codegen += "        field_id = \"" + fld_identity["name"] + "\";" + Constants.vbCrLf;
+                codegen += "        field_id = \"" + fld_identity["name"] + "\";" + Environment.NewLine;
             if (fld_iname != null && (string)fld_iname["name"] != "iname")
-                codegen += "        field_iname = \"" + fld_iname["name"] + "\";" + Constants.vbCrLf;
+                codegen += "        field_iname = \"" + fld_iname["name"] + "\";" + Environment.NewLine;
 
             // also reset fw fields if such not exists
             if (!fields.ContainsKey("status"))
-                codegen += "        field_status = \"\";" + Constants.vbCrLf;
+                codegen += "        field_status = \"\";" + Environment.NewLine;
             if (!fields.ContainsKey("add_users_id"))
-                codegen += "        field_add_users_id = \"\";" + Constants.vbCrLf;
+                codegen += "        field_add_users_id = \"\";" + Environment.NewLine;
             if (!fields.ContainsKey("upd_users_id"))
-                codegen += "        field_upd_users_id = \"\";" + Constants.vbCrLf;
+                codegen += "        field_upd_users_id = \"\";" + Environment.NewLine;
             if (!fields.ContainsKey("upd_time"))
-                codegen += "        field_upd_time = \"\";" + Constants.vbCrLf;
+                codegen += "        field_upd_time = \"\";" + Environment.NewLine;
             if (fields.ContainsKey("prio"))
-                codegen += "        field_prio = \"prio\";" + Constants.vbCrLf;
+                codegen += "        field_prio = \"prio\";" + Environment.NewLine;
 
             if (is_normalize_names || !Utils.f2bool(entity["is_fw"]))
-                codegen += "        is_normalize_names = true;" + Constants.vbCrLf;
+                codegen += "        is_normalize_names = true;" + Environment.NewLine;
         }
 
 
@@ -1656,7 +1655,7 @@ public class DevManageController : FwController
                         sff["is_option0"] = true;
                         //sff["class_contents"] = "col-md-4";
                     }
-                    else if (Utils.f2str(fld["fw_subtype"]) == "boolean" || Utils.f2str(entity["fw_subtype"]) == "bit" || Strings.Left(fld_name, 3) == "is_" || Regex.IsMatch(fld_name, @"^Is[A-Z]"))
+                    else if (Utils.f2str(fld["fw_subtype"]) == "boolean" || Utils.f2str(entity["fw_subtype"]) == "bit" || fld_name.StartsWith("is_") || Regex.IsMatch(fld_name, @"^Is[A-Z]"))
                     {
                         // make it as yes/no radio
                         sff["type"] = "yesno";
@@ -1667,7 +1666,7 @@ public class DevManageController : FwController
                     {
                         sff["type"] = "number";
                         sff["class_contents"] = "col-md-4";
-                        if (!(fld_name == "id" || Strings.Right(fld_name, 3) == "_id") || fld_name == "status")
+                        if (!(fld_name == "id" || fld_name.EndsWith("_id")) || fld_name == "status")
                         {
                             //for number non-ids - add min/max
                             sff["min"] = 0;
@@ -1805,7 +1804,7 @@ public class DevManageController : FwController
                 //non-system fields
                 if (Utils.f2str(sf["type"]) == "att"
                     || Utils.f2str(sf["type"]) == "att_links"
-                    || Utils.f2str(sff["type"]) == "textarea" && fields.Count>=10)
+                    || Utils.f2str(sff["type"]) == "textarea" && fields.Count >= 10)
                 {
                     //add to the right: attachments, textareas (only if many fields)
                     showFieldsRight.Add(sf);
@@ -1842,9 +1841,9 @@ public class DevManageController : FwController
                         { "label", Utils.name2human(table_name_linked) },
                         { "type", "multi" },
                         { "lookup_model", _tablename2model(table_name_linked) },
-                        { "table_link", table_name_link },
-                        { "table_link_id_name", table_name + "_id" },
-                        { "table_link_linked_id_name", table_name_linked + "_id" }
+                        //{ "table_link", table_name_link },
+                        //{ "table_link_id_name", table_name + "_id" },
+                        //{ "table_link_linked_id_name", table_name_linked + "_id" }
                     };
                     Hashtable sfflink = new()
                     {
@@ -1852,9 +1851,9 @@ public class DevManageController : FwController
                         { "label", Utils.name2human(table_name_linked) },
                         { "type", "multicb" },
                         { "lookup_model", _tablename2model(table_name_linked) },
-                        { "table_link", table_name_link },
-                        { "table_link_id_name", table_name + "_id" },
-                        { "table_link_linked_id_name", table_name_linked + "_id" }
+                        //{ "table_link", table_name_link },
+                        //{ "table_link_id_name", table_name + "_id" },
+                        //{ "table_link_linked_id_name", table_name_linked + "_id" }
                     };
 
                     showFieldsLeft.Add(sflink);
@@ -1885,7 +1884,7 @@ public class DevManageController : FwController
         config["related_field_name"] = ""; // TODO?
 
         // list_view
-        if (foreign_keys.Count>0)
+        if (foreign_keys.Count > 0)
         {
             //we have foreign keys, so for the list screen we need to read FK entites names - build subquery
 
@@ -1911,7 +1910,7 @@ public class DevManageController : FwController
                     sql_join = $"INNER JOIN {db.qid(pk_table)} {alias} ON ({alias}.{pk_column}=t.{tcolumn})";
                 }
                 fk_joins.Add(sql_join);
-                fk_inames.Add($"{alias}.iname as "+db.qid(tcolumn + "_iname")); //TODO detect non-iname for non-fw tables?
+                fk_inames.Add($"{alias}.iname as " + db.qid(tcolumn + "_iname")); //TODO detect non-iname for non-fw tables?
             }
             var inames = string.Join(", ", fk_inames.Cast<string>().ToArray());
             var joins = string.Join(" ", fk_joins.Cast<string>().ToArray());
@@ -1934,7 +1933,7 @@ public class DevManageController : FwController
                          && !(Utils.f2str(fld["fw_type"]) == "varchar" && Utils.f2int(fld["maxlen"]) <= 0)
                          && !(sys_fields.Contains(fld["name"]) && Utils.f2str(fld["name"]) != "status")
                        orderby (Utils.f2str(fld["is_nullable"]) == "0" && fld["default"] == null) descending
-                      select fld);
+                       select fld);
         foreach (Hashtable field in rfields)
         {
             var fname = (string)field["name"];
@@ -2023,7 +2022,7 @@ public class DevManageController : FwController
         // remove all commented items - name start with "#"
         foreach (var key in config.Keys.Cast<string>().ToArray())
         {
-            if (Strings.Left(key, 1) == "#")
+            if (key.StartsWith("#"))
                 config.Remove(key);
         }
     }
@@ -2045,7 +2044,7 @@ public class DevManageController : FwController
     private string entity2SQL(Hashtable entity)
     {
         var table_name = (string)entity["table"];
-        var result = "CREATE TABLE " + q_ident(table_name) + " (" + Constants.vbCrLf;
+        var result = "CREATE TABLE " + q_ident(table_name) + " (" + Environment.NewLine;
 
         var i = 1;
         var fields = (ArrayList)entity["fields"];
@@ -2054,7 +2053,7 @@ public class DevManageController : FwController
             var fsql = "";
             var field_name = Utils.f2str(field["name"]);
             if (field_name == "status")
-                fsql += Constants.vbCrLf; // add empty line before system fields starting with "status"
+                fsql += Environment.NewLine; // add empty line before system fields starting with "status"
 
             fsql += "  " + q_ident(field_name).PadRight(21, ' ') + " " + entityfield2dbtype(field);
             if (Utils.f2int(field["is_identity"]) == 1)
@@ -2066,7 +2065,7 @@ public class DevManageController : FwController
             if (field.ContainsKey("comments"))
                 fsql = fsql.PadRight(64, ' ') + "-- " + field["comments"];
 
-            result += fsql + Constants.vbCrLf;
+            result += fsql + Environment.NewLine;
             i += 1;
         }
 
@@ -2090,7 +2089,7 @@ public class DevManageController : FwController
                 }
 
                 isql += "(" + indexes[index_prefix] + ")";
-                result += isql + Constants.vbCrLf;
+                result += isql + Environment.NewLine;
             }
         }
 
@@ -2121,7 +2120,7 @@ public class DevManageController : FwController
                     if (Utils.f2str(entity["fw_subtype"]) == "currency")
                         result = "DECIMAL(18,2)";
                     else if (Utils.f2str(entity["fw_subtype"]) == "decimal")
-                        result = "DECIMAL(18,"+ Utils.f2int(entity["numeric_precision"]) + ")";
+                        result = "DECIMAL(18," + Utils.f2int(entity["numeric_precision"]) + ")";
                     else
                         result = "FLOAT";
                     break;
@@ -2462,7 +2461,7 @@ public class DevManageController : FwController
         {
             {"url",controller_url},
             {"iname",controller_title},
-            {"controller",Strings.Replace(controller_url, "/", "")}
+            {"controller",controller_url.Replace("/", "")}
         };
 
         var mitem = db.row("menu_items", DB.h("url", controller_url));

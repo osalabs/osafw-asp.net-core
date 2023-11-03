@@ -8,8 +8,10 @@
     .table-edit > tbody > tr > td.pad {
         padding: 5px;
     }
-    .table-edit .form-control {
+    .table-edit .form-control,
+    .table-edit .form-select {
         border: none;
+        border-radius: 0;
     }
     .table-edit .checkbox {
         margin: 5px 0 0 10px;

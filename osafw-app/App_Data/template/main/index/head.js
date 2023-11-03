@@ -129,7 +129,8 @@ window.Chart.overrides = $.extend(true, window.Chart.overrides, {
     }
 });
 
-<~theme1.js ifeq="SESSION[theme]" value="1">
-<~theme2.js ifeq="SESSION[theme]" value="2">
+<~theme1.js ifeq="SESSION[ui_theme]" value="1">
+<~theme2.js ifeq="SESSION[ui_theme]" value="2">
+<~theme30.js ifeq="SESSION[ui_theme]" value="30">
 
 //console.log(window.Chart.defaults);

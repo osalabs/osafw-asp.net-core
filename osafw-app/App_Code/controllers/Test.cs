@@ -27,7 +27,7 @@ public class TestController : FwController
     {
 
         String uuid = Utils.uuid();
-        UploadParams up = new (fw, "file1", Path.GetTempPath(), uuid, ".xls .xlsm .xlsx");
+        UploadParams up = new(fw, "file1", Path.GetTempPath(), uuid, ".xls .xlsm .xlsx");
         //is_uploaded = UploadUtils.uploadSimple(up);
 
         rw("!@!@!!@!@!@");
@@ -89,5 +89,13 @@ public class TestController : FwController
         ps["success"] = true;
         return new Hashtable { { "_json", ps } };
     }
+
+    public void PercentAction()
+    {
+        rw(Utils.percentChange(150, 250));
+        rw(Utils.percentChange(80, 250));
+        rw("done");
+    }
+
 
 }

@@ -24,16 +24,19 @@ namespace osafw.Tests
             db = new DB(connstr, "SQL", "main");
             db.connect();
             // create tables for testing
-            db.exec("DROP TABLE IF EXISTS " + table_name + ";");
-            db.exec("CREATE TABLE " + table_name + " (  id INT,iname NVARCHAR(64) NOT NULL default '')");
-
-            db.exec("INSERT INTO " + table_name + "(id, iname) VALUES(1,'test1'),(2,'test2'),(3,'test3');");
-
+            db.exec($"DROP TABLE IF EXISTS {table_name}");
+            db.exec($@"CREATE TABLE {table_name} (
+                        id              INT,
+                        iname           NVARCHAR(64) NOT NULL default '',
+                        idatetime       DATETIME2
+                    )");
+            db.exec($"INSERT INTO {table_name} (id, iname) VALUES (1,'test1'),(2,'test2'),(3,'test3')");
         }
+
         [TestCleanup()]
         public void Cleanup()
         {
-            db.exec("DROP TABLE " + table_name + ";");
+            db.exec($"DROP TABLE {table_name}");
             db.disconnect();
         }
 
@@ -47,7 +50,7 @@ namespace osafw.Tests
             Assert.AreEqual(4, h["DDD"]);
         }
 
-     
+
         [TestMethod()]
         public void loggerTest()
         {
@@ -119,7 +122,8 @@ namespace osafw.Tests
         {
             DBList rows = db.arrayp("SELECT * FROM " + table_name + ";");
 
-            foreach (var row in rows) {
+            foreach (var row in rows)
+            {
                 Assert.IsTrue(row.Count > 0);
                 Assert.IsTrue(row.ContainsKey("id"));
                 Assert.IsTrue(row.ContainsKey("iname"));
@@ -153,19 +157,58 @@ namespace osafw.Tests
         [TestMethod()]
         public void insqlTest()
         {
-            string r = db.insql("test1,test2,test3");
-            Assert.AreEqual(" IN ('test1', 'test2', 'test3')", r);
+            // Test with comma-separated string
+            string result1 = db.insql("test1,test2,test3");
+            Assert.AreEqual(" IN ('test1', 'test2', 'test3')", result1);
+
+            // Test with empty string
+            string result2 = db.insql("");
+            Assert.AreEqual(" IN ('')", result2);
+
+            // Test with string array
+            string[] strArray = new string[] { "a", "b", "c" };
+            string result3 = db.insql(strArray);
+            Assert.AreEqual(" IN ('a', 'b', 'c')", result3);
+
+            // Test with ArrayList
+            ArrayList list = new ArrayList() { "a", "b", "c" };
+            string result4 = db.insql(list);
+            Assert.AreEqual(" IN ('a', 'b', 'c')", result4);
+
+            // Test with empty ArrayList
+            ArrayList emptyList = new ArrayList();
+            string result5 = db.insql(emptyList);
+            Assert.AreEqual(" IN (NULL)", result5);
         }
 
-        
         [TestMethod()]
         public void insqliTest()
         {
-            string r = db.insqli("1,2,3");
-            Assert.AreEqual(" IN (1, 2, 3)", r);
+            // Test with comma-separated string
+            string result1 = db.insqli("test1,test2,test3");
+            Assert.AreEqual(" IN (0, 0, 0)", result1);
 
-            r = db.insqli("test1,test2,test3");
-            Assert.AreEqual(" IN (0, 0, 0)", r);
+            string result2 = db.insqli("1,2,3");
+            Assert.AreEqual(" IN (1, 2, 3)", result2);
+
+            // Test with empty string
+            string result3 = db.insqli("");
+            Assert.AreEqual(" IN (0)", result3);
+
+            // Test with string array
+            string[] strArray = new string[] { "1", "2", "3" };
+            string result4 = db.insqli(strArray);
+            Assert.AreEqual(" IN (1, 2, 3)", result4);
+
+            // Test with ArrayList
+            ArrayList list = new ArrayList() { "1", "2", "3" };
+            string result5 = db.insqli(list);
+            Assert.AreEqual(" IN (1, 2, 3)", result5);
+
+            // Test with empty ArrayList
+            ArrayList emptyList = new ArrayList();
+            string result6 = db.insqli(emptyList);
+            Assert.AreEqual(" IN (NULL)", result6);
         }
 
         [TestMethod()]
@@ -184,7 +227,7 @@ namespace osafw.Tests
             r = db.q("test'test");
             Assert.AreEqual("'test''test'", r);
         }
-        
+
 
         [TestMethod()]
         public void qqTest()
@@ -371,7 +414,18 @@ namespace osafw.Tests
         }
 
         [TestMethod()]
-        public void update_or_insertTest()
+        public void sqlNOWTest()
+        {
+            // test NOW/GETDATE via update table record (assuming select and update will happen in the same second)
+            //var rnow = db.rowp($"SELECT {db.sqlNOW()} as [now]");
+            var now_time = db.Now();
+            db.insert(table_name, DB.h("id", 6, "iname", "test6", "idatetime", DB.NOW));
+            var r = db.row(table_name, DB.h("id", 6));
+            Assert.AreEqual(now_time.ToString(), r["idatetime"], "");
+        }
+
+        [TestMethod()]
+        public void updateOrInsertTest()
         {
             db.updateOrInsert(table_name, DB.h("iname", "test5"), DB.h("id", 5));
             var r = db.row(table_name, DB.h("id", 5));
@@ -436,6 +490,47 @@ namespace osafw.Tests
         public void clear_schema_cacheTest()
         {
             throw new NotImplementedException();
+        }
+
+        [TestMethod()]
+        public void prepareParams()
+        {
+            // 1. Test Insert
+            var fields = new Hashtable {
+                { "iname", "John" },
+                { "email", "john@example.com" }
+            };
+            var result = db.prepareParams("demos", fields, "insert");
+            Assert.IsTrue(result.sql.Contains("@iname"));
+            Assert.IsTrue(result.sql.Contains("@email"));
+
+            // 2. Test Update
+            fields["iname"] = "Jane";
+            result = db.prepareParams("demos", fields, "update");
+            Assert.IsTrue(result.sql.Contains("iname = @iname"));
+            Assert.IsTrue(result.sql.Contains("email = @email"));
+
+            // 3. Test WHERE
+            result = db.prepareParams("demos", fields);
+            // separate as order of fields is not guaranteed
+            Assert.IsTrue(result.sql.Contains(" AND "), "failed result: " + result.sql);
+            Assert.IsTrue(result.sql.Contains("iname = @iname"), "failed result: " + result.sql);
+            Assert.IsTrue(result.sql.Contains("email = @email"), "failed result: " + result.sql);
+
+            // 4. Test Empty Fields
+            fields.Clear();
+            result = db.prepareParams("demos", fields);
+            Assert.AreEqual("", result.sql);
+
+            // 5. Test Special Operations (BETWEEN, IN)
+            fields["fint"] = db.opIN(new[] { 1, 2, 3 }); // Assuming this will be interpreted as an IN operation
+            result = db.prepareParams("demos", fields);
+            Assert.IsTrue(result.sql.Contains("fint IN (@fint_1,@fint_2,@fint_3)"), "failed result: "+ result.sql);
+
+            fields.Clear();
+            fields["fdate_pop"] = db.opBETWEEN(DateTime.Today , DateTime.Today.AddDays(1));
+            result = db.prepareParams("demos", fields);
+            Assert.IsTrue(result.sql.Contains("fdate_pop BETWEEN @fdate_pop_1 AND @fdate_pop_2"), "failed result: " + result.sql);
         }
     }
 }

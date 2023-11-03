@@ -214,11 +214,7 @@
                     "field": "demo_dicts_link",
                     "label": "DemoDicts via Link Table",
                     "type": "multi",
-                    "lookup_model": "DemoDicts",
-                    "lookup_params": "some optional params",
-                    "table_link": "demos_demo_dicts",
-                    "table_link_id_name": "demos_id",
-                    "table_link_linked_id_name": "demo_dicts_id"
+                    "model": "DemosDemoDicts"
                 },
                 {
                     "field": "demos_items_subtable",
@@ -456,11 +452,7 @@
                     "field": "demo_dicts_link",
                     "label": "DemoDicts via Link Table",
                     "type": "multicb",
-                    "lookup_model": "DemoDicts",
-                    "lookup_params": "some optional params",
-                    "table_link": "demos_demo_dicts",
-                    "table_link_id_name": "demos_id",
-                    "table_link_linked_id_name": "demo_dicts_id"
+                    "model": "DemosDemoDicts"
                 },
                 {
                     "field": "demos_items_subtable",

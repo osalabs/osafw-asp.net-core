@@ -184,6 +184,21 @@ main {
   margin-bottom: var(--fw-spacer);
 }
 
+.table-list-wrapper {
+ position: relative;
+}
+  .table-list-hscroll-hint {
+    position: absolute;
+    top:0;
+    left:0;
+    font-size:small;
+    display: none;
+    opacity: 0.6;
+  }
+  .table-dense > .table-list-hscroll-hint {
+    display: block;
+  }
+
 table.list {
 }
   table.list > thead {
@@ -213,9 +228,32 @@ table.list {
   table.list tbody a {
     text-decoration: none;
   }
-  table.list > tbody > tr.selected {
+  table.list > tbody > tr.selected > td {
     background-color: var(--fw-hiliter) !important;
   }
+  table.list.table-dense > :not(caption) > * > * {
+    padding: 0 1px !important;
+    font-size: 0.7rem !important;
+  }
+
+  table.list.table-dense th.rotate {
+    /* height to fit longest name */
+    height: 140px;
+    white-space: nowrap;
+  }
+
+  table.list.table-dense th.rotate > div {
+    transform:
+      translate(0px, -8px)
+      /* 45 is really 360 - 45 */
+      rotate(315deg);
+    width: 30px;
+  }
+  table.list.table-dense th.rotate > div > span {
+    border-bottom: 1px solid #ccc;
+    padding: 5px 10px;
+  }
+
 
 /*for .scrollable tables with fixed header*/
 .data-header {

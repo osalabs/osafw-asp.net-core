@@ -6,7 +6,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using Microsoft.VisualBasic;
 
 namespace osafw;
 
@@ -37,7 +36,7 @@ public class AdminLookupManagerController : FwController
         {
             //don't allow access to tables with access_level higher than current user
             var acl = Utils.f2int(defs["access_level"]);
-            if (!fw.model<Users>().isAccess(acl))
+            if (!fw.model<Users>().isAccessLevel(acl))
                 dict = "";
         }
     }
@@ -67,7 +66,7 @@ public class AdminLookupManagerController : FwController
         {
             //do not show tables with access_level higher than current user
             var acl = Utils.f2int(table["access_level"]);
-            if (!fw.model<Users>().isAccess(acl))
+            if (!fw.model<Users>().isAccessLevel(acl))
                 continue;
 
             if (cols.Count <= curcol)
@@ -117,7 +116,8 @@ public class AdminLookupManagerController : FwController
         if (Utils.isEmpty(f["sortby"]))
         {
             var is_prio_exists = false;
-            foreach (Hashtable col in cols) {
+            foreach (Hashtable col in cols)
+            {
                 if (Utils.f2str(col["name"]) == "prio")
                 {
                     is_prio_exists = true;
@@ -228,11 +228,11 @@ public class AdminLookupManagerController : FwController
             if ((string)f["sortdir"] == "desc")
             {
                 if (orderby.Contains(","))
-                    orderby = Strings.Replace(orderby, ",", " desc,");
+                    orderby = orderby.Replace(",", " desc,");
                 orderby += " desc";
             }
 
-            ArrayList list_rows  = db.selectRaw("*", db.qid(list_table_name), list_where, list_where_params, orderby, offset, limit);
+            ArrayList list_rows = db.selectRaw("*", db.qid(list_table_name), list_where, list_where_params, orderby, offset, limit);
             ps["list_rows"] = list_rows;
 
             ps["count_from"] = pagenum * pagesize + 1;
@@ -402,7 +402,7 @@ public class AdminLookupManagerController : FwController
         return hf;
     }
 
-    public void SaveAction(int id = 0)
+    public Hashtable SaveAction(int id = 0)
     {
         route_onerror = FW.ACTION_SHOW_FORM; //set route to go if error happens
 
@@ -437,7 +437,8 @@ public class AdminLookupManagerController : FwController
 
         // redirect to list as we don't have id on insert
         // fw.redirect(base_url + "/" + id + "/edit")
-        fw.redirect(base_url + "/?d=" + dict);
+        var return_url = base_url + "/?d=" + dict;
+        return afterSave(true, null, id == 0, "no_action", return_url);
     }
 
     public void Validate(int id, Hashtable item)

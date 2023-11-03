@@ -155,7 +155,7 @@ public class AdminSpagesController : FwAdminController
 
         // if no publish time defined - publish it now
         if ((string)itemdb["pub_time"] == "")
-            itemdb["pub_time"] = DateTime.Now;
+            itemdb["pub_time"] = DB.NOW;
 
         id = this.modelAddOrUpdate(id, itemdb);
 

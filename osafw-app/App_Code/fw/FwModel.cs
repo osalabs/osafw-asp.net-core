@@ -9,7 +9,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using Microsoft.VisualBasic;
 
 namespace osafw;
 
@@ -36,6 +35,7 @@ public abstract class FwModel : IDisposable
     public string field_status = "status";
     public string field_add_users_id = "add_users_id";
     public string field_upd_users_id = "upd_users_id";
+    public string field_add_time = "add_time";
     public string field_upd_time = "upd_time";
     public string field_prio = "";
     public bool is_normalize_names = false; // if true - Utils.name2fw() will be called for all fetched rows to normalize names (no spaces or special chars)
@@ -43,11 +43,11 @@ public abstract class FwModel : IDisposable
     public bool is_log_changes = true; // if true - event_log record added on add/update/delete
     public bool is_log_fields_changed = true; // if true - event_log.fields filled with changes
 
-    // for linked models ex UsersCompanies that link 2 tables
-    public FwModel linked_model_main;
-    public string linked_field_main_id; // ex users_id
-    public FwModel linked_model_link;
-    public string linked_field_link_id; // ex companies_id
+    // for junction models like UsersCompanies that link 2 tables via junction table, ex users_companies
+    public FwModel junction_model_main;   // main model (first entity), initialize in init(), ex fw.model<Users>()
+    public string junction_field_main_id; // id field name for main, ex users_id
+    public FwModel junction_model_linked;   // linked model (second entity), initialize in init()
+    public string junction_field_linked_id; // id field name for linked, ex companies_id
 
     protected string cache_prefix = "fwmodel.one."; // default cache prefix for caching items
 
@@ -80,6 +80,32 @@ public abstract class FwModel : IDisposable
         return db;
     }
 
+    /// <summary>
+    /// standard stub for check access for particular record
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="action">specific action code to check like view or edit</param>
+    /// <exception cref="NotImplementedException"></exception>
+    public virtual bool isAccess(int id = 0, string action = "")
+    {
+        throw new NotImplementedException();
+    }
+
+    /// <summary>
+    /// shortcut for isAccess with throwing AuthException if no access
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="action"></param>
+    /// <exception cref="AuthException"></exception>
+    public virtual void checkAccess(int id = 0, string action = "")
+    {
+        if (!isAccess(id, action))
+        {
+            throw new AuthException();
+        }
+    }
+
+    #region basic CRUD one, list, multi, add, update, delete and related helpers
     public virtual DBRow one(int id)
     {
         var cache_key = this.cache_prefix + id;
@@ -182,6 +208,28 @@ public abstract class FwModel : IDisposable
         return id;
     }
 
+    public virtual int findOrAddByIname(string iname, out bool is_added)
+    {
+        is_added = false;
+        iname = iname.Trim();
+        if (iname.Length == 0)
+            return 0;
+        int result;
+        Hashtable item = this.oneByIname(iname);
+        if (item.ContainsKey(this.field_id))
+            // exists
+            result = Utils.f2int(item[this.field_id]);
+        else
+        {
+            // not exists - add new
+            item = new();
+            item[field_iname] = iname;
+            result = this.add(item);
+            is_added = true;
+        }
+        return result;
+    }
+
     //default order is iname asc
     //or if prio column exists - prio asc, iname asc
     protected virtual string getOrderBy()
@@ -192,84 +240,35 @@ public abstract class FwModel : IDisposable
         return result;
     }
 
-    // return standard list of id,iname where status=0 order by iname
-    public virtual DBList list()
+    // return standard list of id,iname for all non-deleted OR wtih specified statuses order by by getOrderBy
+    public virtual DBList list(IList statuses = null)
     {
         Hashtable where = new();
         if (!string.IsNullOrEmpty(field_status))
-            where[field_status] = db.opNOT(STATUS_DELETED);
+        {
+            if (statuses != null && statuses.Count > 0)
+                where[field_status] = db.opIN(statuses);
+            else
+                where[field_status] = db.opNOT(STATUS_DELETED);
+        }
         return db.array(table_name, where, getOrderBy());
     }
 
-    // override in your specific models when necessary
-    public virtual ArrayList listByRelatedId(int related_id, Hashtable def = null)
+    // return count of all non-deleted or with specified statuses
+    public virtual long getCount(IList statuses = null, int? since_days = null)
     {
-        if (string.IsNullOrEmpty(linked_field_main_id))
-            throw new NotImplementedException();
-        else
-            return db.array(table_name, DB.h(linked_field_main_id, related_id));
-    }
-
-    // override in your specific models when necessary
-    public virtual void prepareSubtable(ArrayList list_rows, int related_id, Hashtable def = null)
-    {
-        var model_name = def != null ? (string)def["model"] : this.GetType().Name;
-        foreach (Hashtable row in list_rows)
+        Hashtable where = new();
+        if (!string.IsNullOrEmpty(field_status))
         {
-            row["model"] = model_name;
-            //if row_id starts with "new-" - set flag is_new
-            row["is_new"] = row["id"].ToString().StartsWith("new-");
+            if (statuses != null && statuses.Count > 0)
+                where[field_status] = db.opIN(statuses);
+            else
+                where[field_status] = db.opNOT(STATUS_DELETED);
         }
-    }
-
-    // override in your specific models when necessary, add defaults for new record
-    public virtual void prepareSubtableAddNew(ArrayList list_rows, int related_id, Hashtable def = null)
-    {
-        var id = "new-" + Utils.nanoid();
-        var item = new Hashtable()
+        if (!string.IsNullOrEmpty(field_add_time) && since_days != null)
         {
-            { "id", id }
-        };
-        list_rows.Add(item);
-    }
-
-    // override if id/iname differs in table
-    // def - in dynamic controller - field definition (also contains "i" and "ps", "lookup_params", ...) or you could use it to pass additional params
-    public virtual ArrayList listSelectOptions(Hashtable def = null)
-    {
-        Hashtable where = new();
-        if (!string.IsNullOrEmpty(field_status))
-            where[field_status] = db.opNOT(STATUS_DELETED);
-
-        ArrayList select_fields = new()
-        {
-            new Hashtable() { { "field", field_id }, { "alias", "id" } },
-            new Hashtable() { { "field", field_iname }, { "alias", "iname" } }
-        };
-        return db.array(table_name, where, getOrderBy(), select_fields);
-    }
-
-    // similar to listSelectOptions but returns iname/iname
-    public virtual ArrayList listSelectOptionsName(Hashtable def = null)
-    {
-        Hashtable where = new();
-        if (!string.IsNullOrEmpty(field_status))
-            where[field_status] = db.opNOT(STATUS_DELETED);
-
-        ArrayList select_fields = new()
-        {
-            new Hashtable() { { "field", field_iname }, { "alias", "id" } },
-            new Hashtable() { { "field", field_iname }, { "alias", "iname" } }
-        };
-        return db.array(table_name, where, getOrderBy(), select_fields);
-    }
-
-    // return count of all non-deleted
-    public long getCount()
-    {
-        Hashtable where = new();
-        if (!string.IsNullOrEmpty(field_status))
-            where[field_status] = db.opNOT(STATUS_DELETED);
+            where[field_add_time] = db.opGT(DateTime.Now.AddDays((int)since_days));
+        }
         return Utils.f2long(db.value(table_name, where, "count(*)"));
     }
 
@@ -319,7 +318,7 @@ public abstract class FwModel : IDisposable
     {
         // item("add_time") = Now() 'not necessary because add_time field in db should have default value now() or getdate()
         if (!string.IsNullOrEmpty(field_add_users_id) && !item.ContainsKey(field_add_users_id) && fw.isLogged)
-            item[field_add_users_id] = fw.Session("user_id");
+            item[field_add_users_id] = fw.userId;
         int id = db.insert(table_name, item);
 
         if (is_log_changes)
@@ -352,9 +351,9 @@ public abstract class FwModel : IDisposable
         }
 
         if (!string.IsNullOrEmpty(field_upd_time))
-            item[field_upd_time] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            item[field_upd_time] = DB.NOW;
         if (!string.IsNullOrEmpty(field_upd_users_id) && !item.ContainsKey(field_upd_users_id) && fw.isLogged)
-            item[field_upd_users_id] = fw.Session("user_id");
+            item[field_upd_users_id] = fw.userId;
 
         Hashtable where = new();
         where[this.field_id] = id;
@@ -390,7 +389,7 @@ public abstract class FwModel : IDisposable
             Hashtable vars = new();
             vars[field_status] = STATUS_DELETED;
             if (!string.IsNullOrEmpty(field_upd_time))
-                vars[field_upd_time] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                vars[field_upd_time] = DB.NOW;
             if (!string.IsNullOrEmpty(field_upd_users_id) && fw.isLogged)
                 vars[field_upd_users_id] = fw.userId;
 
@@ -403,15 +402,16 @@ public abstract class FwModel : IDisposable
     public virtual void deleteWithPermanentCheck(int id)
     {
         // if record already deleted and we are admin - perform permanent delete
-        if (fw.model<Users>().isAccess(Users.ACL_ADMIN)
+        if (fw.model<Users>().isAccessLevel(Users.ACL_ADMIN)
             && !string.IsNullOrEmpty(field_status)
             && Utils.f2int(one(id)[field_status]) == FwModel.STATUS_DELETED)
             delete(id, true);
         else
             delete(id);
     }
+    #endregion
 
-
+    #region cache
     public virtual void removeCache(int id)
     {
         var cache_key = this.cache_prefix + id;
@@ -422,8 +422,9 @@ public abstract class FwModel : IDisposable
     {
         fw.cache.requestRemoveWithPrefix(this.cache_prefix);
     }
+    #endregion
 
-    // upload utils
+    #region upload utils
     public virtual bool uploadFile(int id, out string filepath, string input_name = "file1", bool is_skip_check = false)
     {
         return UploadUtils.uploadFile(fw, table_name, id, out filepath, input_name, is_skip_check);
@@ -467,7 +468,9 @@ public abstract class FwModel : IDisposable
     {
         return UploadUtils.getUploadImgPath(fw, table_name, id, size, ext);
     }
+    #endregion
 
+    #region logger
     // methods from fw - just for a covenience, so no need to use "fw.", as they are used quite frequently
     public void logger(params object[] args)
     {
@@ -481,8 +484,41 @@ public abstract class FwModel : IDisposable
             return;
         fw._logger(level, ref args);
     }
+    #endregion
 
+    #region select options and autocomplete
+    // override if id/iname differs in table
+    // def - in dynamic controller - field definition (also contains "i" and "ps", "lookup_params", ...) or you could use it to pass additional params
+    public virtual ArrayList listSelectOptions(Hashtable def = null)
+    {
+        Hashtable where = new();
+        if (!string.IsNullOrEmpty(field_status))
+            where[field_status] = db.opNOT(STATUS_DELETED);
 
+        ArrayList select_fields = new()
+        {
+            new Hashtable() { { "field", field_id }, { "alias", "id" } },
+            new Hashtable() { { "field", field_iname }, { "alias", "iname" } }
+        };
+        return db.array(table_name, where, getOrderBy(), select_fields);
+    }
+
+    // similar to listSelectOptions but returns iname/iname
+    public virtual ArrayList listSelectOptionsName(Hashtable def = null)
+    {
+        Hashtable where = new();
+        if (!string.IsNullOrEmpty(field_status))
+            where[field_status] = db.opNOT(STATUS_DELETED);
+
+        ArrayList select_fields = new()
+        {
+            new Hashtable() { { "field", field_iname }, { "alias", "id" } },
+            new Hashtable() { { "field", field_iname }, { "alias", "iname" } }
+        };
+        return db.array(table_name, where, getOrderBy(), select_fields);
+    }
+
+    [ObsoleteAttribute("This method is deprecated. Use listSelectOptions instead.", true)]
     public virtual string getSelectOptions(string sel_id)
     {
         return FormUtils.selectOptions(this.listSelectOptions(), sel_id);
@@ -496,15 +532,64 @@ public abstract class FwModel : IDisposable
             where[field_status] = db.opNOT(STATUS_DELETED);
         return db.col(table_name, where, field_iname);
     }
+    #endregion
 
-    // called from withing link model like UsersCompanies that links 2 tables By Main ID (like users_id)
-    // id - main table id
-    // def - in dynamic controller - field definition (also contains "i" and "ps", "lookup_params", ...) or you could use it to pass additional params
-    public virtual ArrayList getMultiListLinkedRows(object id, Hashtable def = null)
+    #region support for junction models/tables
+    // override in your specific models when necessary
+
+    /// <summary>
+    /// list records from junction table by main_id
+    /// </summary>
+    /// <param name="main_id"></param>
+    /// <param name="def"></param>
+    /// <returns></returns>
+    /// <exception cref="NotImplementedException"></exception>
+    public virtual ArrayList listByMainId(int main_id, Hashtable def = null)
     {
-        ArrayList linked_rows = db.array(table_name, DB.h(linked_field_main_id, id));
+        if (string.IsNullOrEmpty(junction_field_main_id))
+            throw new NotImplementedException();
+        return db.array(table_name, DB.h(junction_field_main_id, main_id));
+    }
 
-        ArrayList lookup_rows = linked_model_link.list();
+    //similar to listByMainId but by linked_id
+    public virtual ArrayList listByLinkedId(int linked_id, Hashtable def = null)
+    {
+        if (string.IsNullOrEmpty(junction_field_linked_id))
+            throw new NotImplementedException();
+        return db.array(table_name, DB.h(junction_field_linked_id, linked_id));
+    }
+
+    /// <summary>
+    /// sort lookup rows so checked values will be at the top (is_checked desc)
+    ///   AND then by [_link]prio field (if junction table has any) - using LINQ
+    /// </summary>
+    /// <returns></returns>
+    public virtual ArrayList sortByCheckedPrio(ArrayList lookup_rows)
+    {
+        ArrayList result = new();
+        if (!string.IsNullOrEmpty(field_prio))
+            result.AddRange((from Hashtable h in lookup_rows
+                             orderby ((Hashtable)h["_link"])[field_prio], h["is_checked"] descending
+                             select h).ToList());
+        else
+            result.AddRange((from Hashtable h in lookup_rows
+                             orderby h["is_checked"] descending
+                             select h).ToList());
+        return result;
+    }
+
+    /// <summary>
+    /// list LINKED (from junction_model_linked model) records by main id
+    /// called from withing junction model like UsersCompanies that links 2 tables
+    /// </summary>
+    /// <param name="id">main table id</param>
+    /// <param name="def">in dynamic controller - field definition (also contains "i" and "ps", "lookup_params", ...) or you could use it to pass additional params</param>
+    /// <returns></returns>
+    public virtual ArrayList listLinkedByMainId(int main_id, Hashtable def = null)
+    {
+        ArrayList linked_rows = listByMainId(main_id, def);
+
+        ArrayList lookup_rows = junction_model_linked.list();
         if (linked_rows != null && linked_rows.Count > 0)
         {
             foreach (Hashtable row in lookup_rows)
@@ -514,7 +599,8 @@ public abstract class FwModel : IDisposable
                 row["_link"] = new Hashtable();
                 foreach (Hashtable lrow in linked_rows)
                 {
-                    if (Utils.f2str(row[linked_model_link.field_id]) == Utils.f2str(lrow[linked_field_link_id]))
+                    // compare LINKED ids
+                    if (Utils.f2str(row[junction_model_linked.field_id]) == Utils.f2str(lrow[junction_field_linked_id]))
                     {
                         row["is_checked"] = true;
                         row["_link"] = lrow;
@@ -523,29 +609,23 @@ public abstract class FwModel : IDisposable
                 }
             }
 
-            // now sort so checked values will be at the top AND then by prio field (if any) - using LINQ
-            ArrayList result = new();
-            if (!string.IsNullOrEmpty(field_prio))
-                result.AddRange((from Hashtable h in lookup_rows
-                                 orderby ((Hashtable)h["_link"])[field_prio], h["is_checked"] descending
-                                 select h).ToList());
-            else
-                result.AddRange((from Hashtable h in lookup_rows
-                                 orderby h["is_checked"] descending
-                                 select h).ToList());
-            lookup_rows = result;
+            lookup_rows = sortByCheckedPrio(lookup_rows);
         }
         return lookup_rows;
     }
 
-    // called from withing link model like UsersCompanies that links 2 tables By Linked ID (like companies_id)
-    // id - linked table id
-    // def - in dynamic controller - field definition (also contains "i" and "ps", "lookup_params", ...) or you could use it to pass additional params
-    public virtual ArrayList getMultiListLinkedRowsByLinkedId(object id, Hashtable def = null)
+    /// <summary>
+    /// list MAIN (from junction_model_main model) records by linked id
+    /// called from withing junction model like UsersCompanies that links 2 tables
+    /// </summary>
+    /// <param name="linked_id">linked table id</param>
+    /// <param name="def">in dynamic controller - field definition (also contains "i" and "ps", "lookup_params", ...) or you could use it to pass additional params</param>
+    /// <returns></returns>
+    public virtual ArrayList listMainByLinkedId(int linked_id, Hashtable def = null)
     {
-        ArrayList linked_rows = db.array(table_name, DB.h(linked_field_link_id, id));
+        ArrayList linked_rows = listByLinkedId(linked_id, def);
 
-        ArrayList lookup_rows = linked_model_main.list();
+        ArrayList lookup_rows = junction_model_main.list();
         if (linked_rows != null && linked_rows.Count > 0)
         {
             foreach (Hashtable row in lookup_rows)
@@ -555,7 +635,8 @@ public abstract class FwModel : IDisposable
                 row["_link"] = new Hashtable();
                 foreach (Hashtable lrow in linked_rows)
                 {
-                    if (Utils.f2str(row[linked_model_main.field_id]) == Utils.f2str(lrow[linked_field_main_id]))
+                    // compare MAIN ids
+                    if (Utils.f2str(row[junction_model_main.field_id]) == Utils.f2str(lrow[junction_field_main_id]))
                     {
                         row["is_checked"] = true;
                         row["_link"] = lrow;
@@ -564,31 +645,24 @@ public abstract class FwModel : IDisposable
                 }
             }
 
-            // now sort so checked values will be at the top AND then by prio field (if any) - using LINQ
-            ArrayList result = new();
-            if (!string.IsNullOrEmpty(field_prio))
-                result.AddRange((from Hashtable h in lookup_rows
-                                 orderby ((Hashtable)h["_link"])[field_prio], h["is_checked"] descending
-                                 select h).ToList());
-            else
-                result.AddRange((from Hashtable h in lookup_rows
-                                 orderby h["is_checked"] descending
-                                 select h).ToList());
-            lookup_rows = result;
+            lookup_rows = sortByCheckedPrio(lookup_rows);
         }
         return lookup_rows;
     }
 
-    protected void setMultiListChecked(ref ArrayList rows, List<string> ids, Hashtable def = null)
+    protected ArrayList setMultiListChecked(ArrayList rows, List<string> ids, Hashtable def = null)
     {
+        var result = rows;
+
         var is_checked_only = (def != null && Utils.f2bool(def["lookup_checked_only"]));
 
         if (ids != null && ids.Count > 0)
         {
             foreach (Hashtable row in rows)
                 row["is_checked"] = ids.Contains(row[this.field_id]);
+
             // now sort so checked values will be at the top - using LINQ
-            ArrayList result = new();
+            result = new ArrayList();
             if (is_checked_only)
                 result.AddRange((from Hashtable h in rows
                                  where (bool)h["is_checked"]
@@ -597,71 +671,70 @@ public abstract class FwModel : IDisposable
                 result.AddRange((from Hashtable h in rows
                                  orderby h["is_checked"] descending
                                  select h).ToList());
-            rows = result;
         }
         else if (is_checked_only)
             // return no items if no checked
-            rows = new ArrayList();
-    }
-
-    // sel_ids - selected ids in the list()
-    // def - in dynamic controller - field definition (also contains "i" and "ps", "lookup_params", ...) or you could use it to pass additional params
-    public virtual ArrayList getMultiListAL(List<string> ids, Hashtable def = null)
-    {
-        ArrayList rows = this.list();
-        setMultiListChecked(ref rows, ids, def);
-        return rows;
-    }
-
-    // overloaded version for string comma-separated ids
-    // sel_ids - comma-separated ids
-    // def - in dynamic controller - field definition (also contains "i" and "ps", "lookup_params", ...) or you could use it to pass additional params
-    public virtual ArrayList getMultiList(string sel_ids, Hashtable def = null)
-    {
-        List<string> ids = new(Strings.Split(sel_ids, ","));
-        return this.getMultiListAL(ids, def);
-    }
-
-    /// <summary>
-    ///     return array of ids of linked elements
-    /// </summary>
-    /// <param name="link_table_name">link table name that contains id_name and link_id_name fields</param>
-    /// <param name="id">main id</param>
-    /// <param name="id_name">field name for main id</param>
-    /// <param name="link_id_name">field name for linked id</param>
-    /// <returns></returns>
-    public virtual List<string> getLinkedIds(string link_table_name, int id, string id_name, string link_id_name)
-    {
-        Hashtable where = new();
-        where[id_name] = id;
-        DBList rows = db.array(link_table_name, where);
-        List<string> result = new();
-        foreach (DBRow row in rows)
-            result.Add(row[link_id_name]);
-
+            result = new ArrayList();
         return result;
     }
 
-    // shortcut for getLinkedIds based on dynamic controller definition
-    public virtual List<string> getLinkedIdsByDef(int id, Hashtable def)
+    /// <summary>
+    /// list rows and add is_checked=True flag for selected ids, sort by is_checked desc
+    /// </summary>
+    /// <param name="ids">selected ids from the list()</param>
+    /// <param name="def">def - in dynamic controller - field definition (also contains "i" and "ps", "lookup_params", ...) or you could use it to pass additional params</param>
+    /// <returns></returns>
+    public virtual ArrayList listWithChecked(List<string> ids, Hashtable def = null)
     {
-        return getLinkedIds((string)def["table_link"], id, (string)def["table_link_id_name"], (string)def["table_link_linked_id_name"]);
+        var rows = setMultiListChecked(this.list(), ids, def);
+        return rows;
     }
 
-    public virtual void setUnderUpdate(int related_id)
+    /// <summary>
+    /// list rows and add is_checked=True flag for selected ids, sort by is_checked desc
+    /// </summary>
+    /// <param name="sel_ids">comma-separated selected ids from the list()</param>
+    /// <param name="def">def - in dynamic controller - field definition (also contains "i" and "ps", "lookup_params", ...) or you could use it to pass additional params</param>
+    /// <returns></returns>
+    public virtual ArrayList listWithChecked(string sel_ids, Hashtable def = null)
     {
-        if (string.IsNullOrEmpty(field_status) || string.IsNullOrEmpty(linked_field_main_id)) return; //if no status or linked field - do nothing
-
-        db.update(table_name, DB.h(field_status, STATUS_UNDER_UPDATE), DB.h(linked_field_main_id, related_id));
+        List<string> ids = new(sel_ids.Split(","));
+        return this.listWithChecked(ids, def);
     }
 
-    public virtual void deleteUnderUpdate(int related_id)
+    /// <summary>
+    ///     return array of LINKED ids for the MAIN id in junction table
+    /// </summary>
+    /// <param name="main_id">main id</param>
+    /// <returns></returns>
+    public virtual List<string> colLinkedIdsByMainId(int main_id)
     {
-        if (string.IsNullOrEmpty(field_status) || string.IsNullOrEmpty(linked_field_main_id)) return; //if no status or linked field - do nothing
+        return db.col(table_name, DB.h(junction_field_main_id, main_id), db.qid(junction_field_linked_id));
+    }
+    /// <summary>
+    ///     return array of MAIN ids for the LINKED id in junction table
+    /// </summary>
+    /// <param name="linked_id">linked id</param>
+    /// <returns></returns>
+    public virtual List<string> colMainIdsByLinkedId(int linked_id)
+    {
+        return db.col(table_name, DB.h(junction_field_linked_id, linked_id), db.qid(junction_field_linked_id));
+    }
+
+    public virtual void setUnderUpdateByMainId(int main_id)
+    {
+        if (string.IsNullOrEmpty(field_status) || string.IsNullOrEmpty(junction_field_main_id)) return; //if no status or linked field - do nothing
+
+        db.update(table_name, DB.h(field_status, STATUS_UNDER_UPDATE), DB.h(junction_field_main_id, main_id));
+    }
+
+    public virtual void deleteUnderUpdateByMainId(int main_id)
+    {
+        if (string.IsNullOrEmpty(field_status) || string.IsNullOrEmpty(junction_field_main_id)) return; //if no status or linked field - do nothing
 
         var where = new Hashtable()
         {
-            {linked_field_main_id, related_id},
+            {junction_field_main_id, main_id},
             {field_status, STATUS_UNDER_UPDATE},
         };
         db.del(table_name, where);
@@ -669,14 +742,14 @@ public abstract class FwModel : IDisposable
 
 
     /// <summary>
-    ///  update (and add/del) linked table
+    ///  generic update (and add/del) for junction table
     /// </summary>
-    /// <param name="link_table_name">link table name that contains id_name and link_id_name fields</param>
-    /// <param name="id">main id</param>
-    /// <param name="id_name">field name for main id</param>
-    /// <param name="link_id_name">field name for linked id</param>
+    /// <param name="junction_table_name">junction table name that contains id_name and link_id_name fields</param>
+    /// <param name="main_id">main id</param>
+    /// <param name="main_id_name">field name for main id</param>
+    /// <param name="linked_id_name">field name for linked id</param>
     /// <param name="linked_keys">hashtable with keys as link id (as passed from web)</param>
-    public virtual void updateLinked(string link_table_name, int id, string id_name, string link_id_name, Hashtable linked_keys)
+    public virtual void updateJunction(string junction_table_name, int main_id, string main_id_name, string linked_id_name, Hashtable linked_keys)
     {
         Hashtable fields = new();
         Hashtable where = new();
@@ -684,47 +757,55 @@ public abstract class FwModel : IDisposable
 
         // set all fields as under update
         fields[link_table_field_status] = STATUS_UNDER_UPDATE;
-        where[id_name] = id;
-        db.update(link_table_name, fields, where);
+        where[main_id_name] = main_id;
+        db.update(junction_table_name, fields, where);
 
         if (linked_keys != null)
         {
-            foreach (string link_id in linked_keys.Keys)
+            foreach (string linked_id in linked_keys.Keys)
             {
                 fields = new Hashtable();
-                fields[id_name] = id;
-                fields[link_id_name] = link_id;
+                fields[main_id_name] = main_id;
+                fields[linked_id_name] = linked_id;
                 fields[link_table_field_status] = STATUS_ACTIVE;
 
                 where = new Hashtable();
-                where[id_name] = id;
-                where[link_id_name] = link_id;
-                db.updateOrInsert(link_table_name, fields, where);
+                where[main_id_name] = main_id;
+                where[linked_id_name] = linked_id;
+                db.updateOrInsert(junction_table_name, fields, where);
             }
         }
 
         // remove those who still not updated (so removed)
         where = new Hashtable();
-        where[id_name] = id;
-        where[link_table_field_status] = 1;
-        db.del(link_table_name, where);
+        where[main_id_name] = main_id;
+        where[link_table_field_status] = STATUS_UNDER_UPDATE;
+        db.del(junction_table_name, where);
     }
 
     // override to add set more additional fields
-    public virtual void updateLinkedRowsAdditional(Hashtable linked_keys, string link_id, Hashtable fields)
+    public virtual void updateJunctionByMainIdAdditional(Hashtable linked_keys, string link_id, Hashtable fields)
     {
         if (!string.IsNullOrEmpty(field_prio) && linked_keys.Contains(field_prio + "_" + link_id))
             fields[field_prio] = Utils.f2int(linked_keys[field_prio + "_" + link_id]);// get value from prio_ID
     }
-    // called from withing link model like UsersCompanies that links 2 tables
-    public virtual void updateLinkedRows(int main_id, Hashtable linked_keys)
+
+    /// <summary>
+    /// updates junction table by MAIN id and linked keys (existing in db, but not present keys will be removed)
+    /// called from withing junction model like UsersCompanies that links 2 tables
+    /// usage example: fw.model<UsersCompanies>().updateJunctionByMainId(id, reqh("companies"));
+    /// html: <input type="checkbox" name="companies[123]" value="1" checked>
+    /// </summary>
+    /// <param name="main_id">main id</param>
+    /// <param name="linked_keys">hashtable with keys as linked_id (as passed from web)</param>
+    public virtual void updateJunctionByMainId(int main_id, Hashtable linked_keys)
     {
         Hashtable fields = new();
         Hashtable where = new();
         var link_table_field_status = this.field_status;
 
         // set all rows as under update
-        setUnderUpdate(main_id);
+        setUnderUpdateByMainId(main_id);
 
         if (linked_keys != null)
         {
@@ -734,32 +815,40 @@ public abstract class FwModel : IDisposable
                     continue; // skip non-id, ex prio_ID
 
                 fields = new Hashtable();
-                fields[linked_field_main_id] = main_id;
-                fields[linked_field_link_id] = link_id;
+                fields[junction_field_main_id] = main_id;
+                fields[junction_field_linked_id] = link_id;
                 fields[link_table_field_status] = STATUS_ACTIVE;
 
                 // additional fields here
-                updateLinkedRowsAdditional(linked_keys, link_id, fields);
+                updateJunctionByMainIdAdditional(linked_keys, link_id, fields);
 
                 where = new Hashtable();
-                where[linked_field_main_id] = main_id;
-                where[linked_field_link_id] = link_id;
+                where[junction_field_main_id] = main_id;
+                where[junction_field_linked_id] = link_id;
                 db.updateOrInsert(table_name, fields, where);
             }
         }
 
         // remove those who still not updated (so removed)
-        deleteUnderUpdate(main_id);
+        deleteUnderUpdateByMainId(main_id);
     }
 
     // override to add set more additional fields
-    public virtual void updateLinkedRowsByLinkedIdAdditional(Hashtable linked_keys, string main_id, Hashtable fields)
+    public virtual void updateJunctionByLinkedIdAdditional(Hashtable linked_keys, string main_id, Hashtable fields)
     {
         if (string.IsNullOrEmpty(field_prio) && linked_keys.ContainsKey(field_prio + "_" + main_id))
             fields[field_prio] = Utils.f2int(linked_keys[field_prio + "_" + main_id]);// get value from prio_ID
     }
-    // called from withing link model like UsersCompanies that links 2 tables
-    public virtual void updateLinkedRowsByLinkedId(int linked_id, Hashtable linked_keys)
+
+    /// <summary>
+    /// updates junction table by LINKED id and linked keys (existing in db, but not present keys will be removed)
+    /// called from withing junction model like UsersCompanies that links 2 tables
+    /// usage example: fw.model<UsersCompanies>().updateJunctionByLinkedId(id, reqh("users"));
+    /// html: <input type="checkbox" name="users[123]" value="1" checked>
+    /// </summary>
+    /// <param name="linked_id">linked id</param>
+    /// <param name="main_keys">hashtable with keys as main_id (as passed from web)</param>
+    public virtual void updateJunctionByLinkedId(int linked_id, Hashtable main_keys)
     {
         Hashtable fields = new();
         Hashtable where = new();
@@ -767,76 +856,66 @@ public abstract class FwModel : IDisposable
 
         // set all fields as under update
         fields[link_table_field_status] = STATUS_UNDER_UPDATE;
-        where[linked_field_link_id] = linked_id;
+        where[junction_field_linked_id] = linked_id;
         db.update(table_name, fields, where);
 
-        if (linked_keys != null)
+        if (main_keys != null)
         {
-            foreach (string main_id in linked_keys.Keys)
+            foreach (string main_id in main_keys.Keys)
             {
                 if (Utils.f2int(main_id) == 0)
                     continue; // skip non-id, ex prio_ID
 
                 fields = new Hashtable();
-                fields[linked_field_link_id] = Utils.f2str(linked_id);
-                fields[linked_field_main_id] = main_id;
+                fields[junction_field_linked_id] = Utils.f2str(linked_id);
+                fields[junction_field_main_id] = main_id;
                 fields[link_table_field_status] = STATUS_ACTIVE;
 
                 // additional fields here
-                updateLinkedRowsByLinkedIdAdditional(linked_keys, main_id, fields);
+                updateJunctionByLinkedIdAdditional(main_keys, main_id, fields);
 
                 where = new Hashtable();
-                where[linked_field_link_id] = linked_id;
-                where[linked_field_main_id] = main_id;
-                logger(fields);
+                where[junction_field_linked_id] = linked_id;
+                where[junction_field_main_id] = main_id;
+                //logger(fields);
                 db.updateOrInsert(table_name, fields, where);
             }
         }
 
         // remove those who still not updated (so removed)
         where = new Hashtable();
-        where[linked_field_link_id] = linked_id;
+        where[junction_field_linked_id] = linked_id;
         where[link_table_field_status] = STATUS_UNDER_UPDATE;
         db.del(table_name, where);
     }
+    #endregion
 
-    public virtual int findOrAddByIname(string iname, out bool is_added)
+    #region dynamic subtable component
+    // override in your specific models when necessary
+    public virtual void prepareSubtable(ArrayList list_rows, int related_id, Hashtable def = null)
     {
-        is_added = false;
-        iname = Strings.Trim(iname);
-        if (iname.Length == 0)
-            return 0;
-        int result;
-        Hashtable item = this.oneByIname(iname);
-        if (item.ContainsKey(this.field_id))
-            // exists
-            result = Utils.f2int(item[this.field_id]);
-        else
+        var model_name = def != null ? (string)def["model"] : this.GetType().Name;
+        foreach (Hashtable row in list_rows)
         {
-            // not exists - add new
-            item = new();
-            item[field_iname] = iname;
-            result = this.add(item);
-            is_added = true;
+            row["model"] = model_name;
+            //if row_id starts with "new-" - set flag is_new
+            row["is_new"] = row["id"].ToString().StartsWith("new-");
         }
-        return result;
     }
 
-    public virtual StringBuilder getCSVExport()
+    // override in your specific models when necessary, add defaults for new record
+    public virtual void prepareSubtableAddNew(ArrayList list_rows, int related_id, Hashtable def = null)
     {
-        Hashtable where = new();
-        if (!string.IsNullOrEmpty(field_status))
-            where[field_status] = STATUS_ACTIVE;
-
-        string[] aselect_fields = Array.Empty<string>();
-        if (!string.IsNullOrEmpty(csv_export_fields))
-            aselect_fields = Utils.qw(csv_export_fields);
-
-        var rows = db.array(table_name, where, "", aselect_fields);
-        return Utils.getCSVExport(csv_export_headers, csv_export_fields, rows);
+        var id = "new-" + DateTimeOffset.Now.ToUnixTimeMilliseconds(); //generate unique id based on time for sequental adding
+        var item = new Hashtable()
+        {
+            { "id", id }
+        };
+        list_rows.Add(item);
     }
+    #endregion
 
-    // ********************* support for sortable records
+    #region support for sortable records
     public int updatePrioRange(int inc_value, int from_prio, int to_prio)
     {
         var field_prioq = db.qid(field_prio);
@@ -944,6 +1023,21 @@ public abstract class FwModel : IDisposable
             return false;
 
         return true;
+    }
+    #endregion
+
+    public virtual StringBuilder getCSVExport()
+    {
+        Hashtable where = new();
+        if (!string.IsNullOrEmpty(field_status))
+            where[field_status] = STATUS_ACTIVE;
+
+        string[] aselect_fields = Array.Empty<string>();
+        if (!string.IsNullOrEmpty(csv_export_fields))
+            aselect_fields = Utils.qw(csv_export_fields);
+
+        var rows = db.array(table_name, where, "", aselect_fields);
+        return Utils.getCSVExport(csv_export_headers, csv_export_fields, rows);
     }
 
     public void Dispose()

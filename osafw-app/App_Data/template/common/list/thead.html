@@ -1,9 +1,9 @@
 <thead>
     <tr data-sortby="<~f[sortby]>" data-sortdir="<~f[sortdir]>">
-        <~/common/list/th_chkall>            
+        <~/common/list/th_chkall>
         <~/common/list/th_filter_customize if="GLOBAL[is_list_btn_left]">
         <~headers repeat inline>
-            <th <~dsort if="is_sortable" inline>data-sort="<~field_name>"</~dsort>><~field_name_visible></th>
+            <th class="rotate" <~dsort if="is_sortable" inline>data-sort="<~field_name>"</~dsort>><div><span><~field_name_visible></span></div></th>
         </~headers>
         <~/common/list/th_filter_customize unless="GLOBAL[is_list_btn_left]">
     </tr>

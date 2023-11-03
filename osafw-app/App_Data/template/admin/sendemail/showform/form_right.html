@@ -1,0 +1,36 @@
+<div class="text-end mb-4">
+  <a href="#smtp_settings" data-bs-toggle="collapse" class="dropdown-toggle">Override SMTP Settings (optional)</a>
+</div>
+
+<div class="collapse" id="smtp_settings">
+<div class="row form-row">
+  <label class="col-form-label col-md-3" for="host">`Host`</label>
+  <div class="col">
+    <input id="host" name="item[host]" maxlength="255" value="<~i[host]>" type="text" class="form-control">
+  </div>
+</div>
+<div class="row form-row">
+  <label class="col-form-label col-md-3" for="port">`Port`</label>
+  <div class="col-md-3">
+    <input id="port" name="item[port]" maxlength="5" value="<~i[port]>" type="text" class="form-control">
+  </div>
+  <div class="col-md-3">
+    <div class="form-check form-check-inline">
+      <input class="form-check-input" type="checkbox" id="is_ssl" name="item[is_ssl]" value="1" <~/common/checked if="i[is_ssl]">>
+      <label class="form-check-label" for="is_ssl">`SSL?`</label>
+    </div>
+  </div>
+</div>
+<div class="row form-row">
+  <label class="col-form-label col-md-3" for="username">`Username`</label>
+  <div class="col-md-6">
+    <input id="username" name="item[username]" maxlength="255" value="<~i[username]>" type="text" class="form-control">
+  </div>
+</div>
+<div class="row form-row">
+  <label class="col-form-label col-md-3" for="password">`Password`</label>
+  <div class="col-md-6">
+    <input id="password" name="item[password]" maxlength="255" value="<~i[password]>" type="text" class="form-control">
+  </div>
+</div>
+</div>

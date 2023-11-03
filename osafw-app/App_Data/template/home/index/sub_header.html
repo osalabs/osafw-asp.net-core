@@ -7,7 +7,8 @@
       </div>
       <div class="col-md-10 mx-auto col-lg-5">
 
-        <~/login/index/form>
+        <~/login/index/form unless="SESSION[user_id]">
+        <~/login/index/form_logged if="SESSION[user_id]">
 
       </div>
     </div>
