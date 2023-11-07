@@ -34,7 +34,8 @@ public class AdminDemosController : FwAdminController
         related_field_name = "demo_dicts_id";
         model_related = fw.model<DemoDicts>();
 
-        is_userlists = true;
+        is_userlists = true; //enable work with user lists
+        is_activity_logs = true;  //enable work with activity_logs (comments, history)
     }
 
     public override void getListRows()
@@ -48,6 +49,8 @@ public class AdminDemosController : FwAdminController
 
     public override Hashtable ShowAction(int id)
     {
+        initFilter();
+
         Hashtable ps = base.ShowAction(id);
         var item = (Hashtable)ps["i"];
         //var id = Utils.f2int(item["id"]);
@@ -59,6 +62,13 @@ public class AdminDemosController : FwAdminController
         ps["multi_datarow_link"] = fw.model<DemosDemoDicts>().listLinkedByMainId(id);
         ps["att"] = fw.model<Att>().one(Utils.f2int(item["att_id"]));
         ps["att_links"] = fw.model<Att>().getAllLinked(model.table_name, id);
+
+        if (is_activity_logs)
+        {
+            list_filter["tab_activity"] = Utils.f2str(list_filter["tab_activity"] ?? ActivityLogs.TAB_COMMENTS);
+            ps["list_filter"] = list_filter;
+            ps["activity_rows"] = fw.model<ActivityLogs>().listByEntityForUI(model.table_name, id, (string)list_filter["tab_activity"]);
+        }
 
         return ps;
     }

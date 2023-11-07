@@ -280,6 +280,7 @@ DROP TABLE IF EXISTS activity_logs;
 CREATE TABLE activity_logs (
   id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
   reply_id              INT NULL,                         -- for hierarcy, if needed
+  log_types_id          INT NOT NULL CONSTRAINT FK_activity_logs_log_types FOREIGN KEY REFERENCES log_types(id), -- log type
   fwentities_id         INT NOT NULL CONSTRAINT FK_activity_logs_fwentities FOREIGN KEY REFERENCES fwentities(id), -- related to entity
   item_id               INT NULL,                         -- related item id in the entity table
 
@@ -295,6 +296,7 @@ CREATE TABLE activity_logs (
   upd_users_id          INT DEFAULT 0,
 
   INDEX IX_activity_logs_reply_id (reply_id),
+  INDEX IX_activity_logs_log_types_id (log_types_id),
   INDEX IX_activity_logs_fwentities_id (fwentities_id),
   INDEX IX_activity_logs_item_id (item_id),
   INDEX IX_activity_logs_idate (idate),

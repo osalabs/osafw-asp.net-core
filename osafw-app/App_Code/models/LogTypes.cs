@@ -13,6 +13,17 @@ namespace osafw;
 
 public class LogTypes : FwModel
 {
+    public const string ICODE_ADDED = "added";
+    public const string ICODE_UPDATED = "updated";
+    public const string ICODE_DELETED = "deleted";
+    public const string ICODE_COMMENT = "comment";
+    //users login audit realted
+    public const string ICODE_USERS_SIMULATE = "simulate";
+    public const string ICODE_USERS_LOGIN = "login";
+    public const string ICODE_USERS_LOGIN_FAIL = "login_fail";
+    public const string ICODE_USERS_LOGOFF = "logoff";
+    public const string ICODE_USERS_CHPWD = "chpwd";
+
     public LogTypes() : base()
     {
         table_name = "log_types";

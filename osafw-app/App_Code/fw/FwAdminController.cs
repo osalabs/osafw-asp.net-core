@@ -68,6 +68,7 @@ public class FwAdminController : FwController
         ps["base_url"] = base_url;
         ps["is_userlists"] = is_userlists;
         ps["is_readonly"] = is_readonly;
+        ps["is_activity_logs"] = is_activity_logs;
 
         return ps;
     }

@@ -59,6 +59,7 @@ public abstract class FwController
     protected bool is_dynamic_showform = false;  // true if controller has dynamic ShowFormAction, requires "showform_fields" to be defined in config.json
 
     protected bool is_userlists = false;         // true if controller should support UserLists
+    protected bool is_activity_logs = false;     // true if controller should support ActivityLogs
 
     protected bool is_readonly = false;          // true if user is readonly, no actions modifying data allowed
 
