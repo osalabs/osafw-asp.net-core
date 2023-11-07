@@ -13,6 +13,9 @@ namespace osafw;
 
 public class LogTypes : FwModel
 {
+    public const int ITYPE_SYSTEM = 0;
+    public const int ITYPE_USER = 10;
+
     public const string ICODE_ADDED = "added";
     public const string ICODE_UPDATED = "updated";
     public const string ICODE_DELETED = "deleted";
