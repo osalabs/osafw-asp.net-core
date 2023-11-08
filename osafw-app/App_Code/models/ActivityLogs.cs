@@ -41,7 +41,7 @@ public class ActivityLogs : FwModel
             {"fwentities_id", fwentities_id },
             {"item_id", id }
         };
-        if (log_types_icodes != null)
+        if (log_types_icodes != null && log_types_icodes.Count > 0)
         {
             var log_types_ids = new ArrayList();
             foreach (string icode in log_types_icodes)
@@ -81,8 +81,14 @@ public class ActivityLogs : FwModel
         ArrayList result = listByEntity(entity_icode, id, log_types_icodes);
         foreach (Hashtable row in result)
         {
+            row["tab"] = tab;
             row["log_type"] = fw.model<LogTypes>().one(row["log_types_id"]);
-            row["user"] = fw.model<Users>().one(row["users_id"]);
+            var user = fw.model<Users>().one(row["users_id"]);
+            row["user"] = user;
+            if (Utils.f2int(user["att_id"]) > 0)
+                row["avatar_link"] = fw.model<Att>().getUrl(Utils.f2int(user["att_id"]), "s");
+            if (!Utils.isEmpty(row["upd_users_id"]))
+                row["upd_user"] = fw.model<Users>().one(row["upd_users_id"]);
         }
         return result;
     }
