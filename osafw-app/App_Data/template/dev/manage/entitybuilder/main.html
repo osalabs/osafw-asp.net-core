@@ -27,7 +27,7 @@
     - fieldname<b>.id</b> means foreign key<br>
     - fieldname <b>required</b> means NOT NULL required field, otherwise <em>NOT NULL default ''</em> applied<br>
     - fieldname <b>NULL</b> means no default applied and field can be null<br>
-    - fieldname <b>default (VALUE_HERE)</b> - apply default value<br>
+    - fieldname <b>default(VALUE_HERE)</b> - apply default value<br>
     - fieldname <b>FK lookuptablename.id</b> means foreign key if field name needs to be different, sample: <em>- birth_countries_id FK countries.id</em><br>
     - <b>prefix^lookuptablename.id</b> creates <em>prefix_lookuptablename_id</em> field and FK to lookuptablename.id<br>
     - fieldname <b>multiple</b> creates link subtable, sample: under products table <em>- categories multiple</em> - creates <em>products_categories</em> link table with related multi-checkboxes UI<br>
