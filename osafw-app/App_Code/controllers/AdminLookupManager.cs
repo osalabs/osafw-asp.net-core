@@ -270,7 +270,7 @@ public class AdminLookupManagerController : FwController
                     fh["colname"] = colname;
                     fh["iname"] = col["iname"];
                     fh["value"] = row[colname];
-                    if (list_cols.Count == 0 && (colname == "status" || colname == "iname" || colname == "prio")
+                    if (list_cols.Count == 0 && (colname == "status" || colname == "iname" || colname == "prio"))
                         fh["is_custom"] = true;
 
                     fh["id"] = row["id"];
