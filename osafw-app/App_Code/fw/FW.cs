@@ -914,9 +914,11 @@ public class FW : IDisposable
         }
     }
 
-    public async void responseWrite(string str)
+    public void responseWrite(string str)
     {
-        await HttpResponseWritingExtensions.WriteAsync(this.response, str);
+        // TODO debug - async/await disabled as with large response it can fail with "cannot write to the response body, response has completed"
+        //await HttpResponseWritingExtensions.WriteAsync(this.response, str);
+        HttpResponseWritingExtensions.WriteAsync(this.response, str).Wait();
     }
 
     // show page from template  /route.controller/route.action = parser('/route.controller/route.action/', $ps)
