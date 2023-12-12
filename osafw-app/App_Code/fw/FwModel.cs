@@ -109,7 +109,8 @@ public abstract class FwModel : IDisposable
     public virtual DBRow one(int id)
     {
         var cache_key = this.cache_prefix + id;
-        var item = (DBRow)fw.cache.getRequestValue(cache_key);
+        Hashtable cached_value = (Hashtable)fw.cache.getRequestValue(cache_key);
+        var item = (DBRow)cached_value;
         if (item == null)
         {
             Hashtable where = new();

@@ -298,19 +298,19 @@ public class DB : IDisposable
     /// <returns></returns>
     public DbConnection connect()
     {
-        var cache_key = "DB#" + connstr;
+        //var cache_key = "DB#" + connstr;
 
-        // first, try to get connection from request cache (so we will use only one connection per db server - TBD make configurable?)
-        if (conn == null && fw != null && fw.cache.getRequestValue(cache_key) != null)
-            conn = (DbConnection)fw.cache.getRequestValue(cache_key);
+        //// first, try to get connection from request cache (so we will use only one connection per db server - TBD make configurable?)
+        //if (conn == null && fw != null && fw.cache.getRequestValue(cache_key) != null)
+        //    conn = (DbConnection)fw.cache.getRequestValue(cache_key);
 
         // if still no connection - re-make it
         if (conn == null)
         {
             schema = new Hashtable(); // reset schema cache
             conn = createConnection(connstr, (string)conf["type"]);
-            if (fw != null)
-                fw.cache.setRequestValue(cache_key, conn);
+            //if (fw != null)
+            //    fw.cache.setRequestValue(cache_key, conn);
         }
 
         // if it's disconnected - re-connect
