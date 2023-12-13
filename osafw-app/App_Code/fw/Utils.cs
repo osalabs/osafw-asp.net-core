@@ -539,8 +539,8 @@ public class Utils
     {
         filename = filename.Replace("\"", "'"); // quote doublequotes
 
-        response.Headers.Add("Content-type", "text/csv");
-        response.Headers.Add("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+        response.Headers.Append("Content-type", "text/csv");
+        response.Headers.Append("Content-Disposition", "attachment; filename=\"" + filename + "\"");
 
         await HttpResponseWritingExtensions.WriteAsync(response, Utils.getCSVExport(csv_export_headers, csv_export_fields, rows).ToString());
     }
@@ -569,8 +569,8 @@ public class Utils
 
         filename = filename.Replace("\"", "_");
 
-        fw.response.Headers.Add("Content-type", "application/vnd.ms-excel");
-        fw.response.Headers.Add("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+        fw.response.Headers.Append("Content-type", "application/vnd.ms-excel");
+        fw.response.Headers.Append("Content-Disposition", "attachment; filename=\"" + filename + "\"");
 
         //output headers
         ParsePage parser = new(fw);
@@ -932,7 +932,7 @@ public class Utils
     * convert JSON string into data structure
     * </summary>
     * <param name="str">JSON string</param>
-    * <returns>value or hashtable or arraylist or null if cannot be converted</returns>
+    * <returns>value or Hashtable (objects) or ArrayList (arrays) or null if cannot be converted</returns>
     * <remarks></remarks>
     */
     public static object jsonDecode(string str)
