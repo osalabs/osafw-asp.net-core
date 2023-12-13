@@ -107,6 +107,11 @@ namespace osafw.Tests
             ArrayList r3 = (ArrayList)cache.getRequestValue("testCacheKey4");
             Assert.AreEqual(r3[0], "1");
             Assert.AreEqual(r3[1], "2");
+
+            // test object that cannot be serialized to json, so it's stored as is
+            cache.setRequestValue("testCacheKey5", new System.IO.MemoryStream());
+            var result = cache.getRequestValue("testCacheKey5");
+            Assert.IsInstanceOfType(result, typeof(System.IO.MemoryStream));
         }
 
         [TestMethod()]
