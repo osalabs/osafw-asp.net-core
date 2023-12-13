@@ -1229,9 +1229,9 @@ public class FW : IDisposable
     {
         logger(LogLevel.DEBUG, "sending file response  = ", filepath, " as ", attname);
         attname = Regex.Replace(attname, @"[^\w. \-]+", "_");
-        response.Headers.Add("Content-type", ContentType);
-        response.Headers.Add("Content-Length", Utils.fileSize(filepath).ToString());
-        response.Headers.Add("Content-Disposition", ContentDisposition + "; filename=\"" + attname + "\"");
+        response.Headers.Append("Content-type", ContentType);
+        response.Headers.Append("Content-Length", Utils.fileSize(filepath).ToString());
+        response.Headers.Append("Content-Disposition", ContentDisposition + "; filename=\"" + attname + "\"");
         response.SendFileAsync(filepath).Wait();
     }
 
