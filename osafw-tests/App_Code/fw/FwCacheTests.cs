@@ -1,11 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using osafw;
-using System;
 using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace osafw.Tests
 {
@@ -70,10 +64,24 @@ namespace osafw.Tests
         public void getRequestValueTest()
         {
             FwCache cache = new();
+
+            // test serialization of string
             cache.setRequestValue("testCacheKey", "testing");
             Assert.AreEqual(cache.getRequestValue("testCacheKey").ToString(), "testing");
 
-            // test serialization
+            // test serialization of int
+            cache.setRequestValue("testCacheKey2", 123);
+            Assert.AreEqual(cache.getRequestValue("testCacheKey2"), (System.Int64)123);
+
+            // test serialization of decimal
+            cache.setRequestValue("testCacheKey3", 123.456);
+            Assert.AreEqual(cache.getRequestValue("testCacheKey3"), (System.Decimal)123.456);
+
+            // test serialization of bool
+            cache.setRequestValue("testCacheKey4", true);
+            Assert.AreEqual(cache.getRequestValue("testCacheKey4"), true);
+
+            // test serialization of Hashtable
             Hashtable h = new();
             h["AAA"] = "1";
             h["BBB"] = "2";
@@ -81,6 +89,24 @@ namespace osafw.Tests
             Hashtable r = (Hashtable)cache.getRequestValue("testCacheKey2");
             Assert.AreEqual(r["AAA"], "1");
             Assert.AreEqual(r["BBB"], "2");
+
+            // test serialization of DBRow
+            DBRow row = new();
+            row["AAA"] = "1";
+            row["BBB"] = "2";
+            cache.setRequestValue("testCacheKey3", row);
+            DBRow r2 = (DBRow)(Hashtable)cache.getRequestValue("testCacheKey3");
+            Assert.AreEqual(r2["AAA"], "1");
+            Assert.AreEqual(r2["BBB"], "2");
+
+            // test serialization of IList (arrays)
+            ArrayList a = new();
+            a.Add("1");
+            a.Add("2");
+            cache.setRequestValue("testCacheKey4", a);
+            ArrayList r3 = (ArrayList)cache.getRequestValue("testCacheKey4");
+            Assert.AreEqual(r3[0], "1");
+            Assert.AreEqual(r3[1], "2");
         }
 
         [TestMethod()]

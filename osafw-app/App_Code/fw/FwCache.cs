@@ -47,17 +47,16 @@ public class FwCache
         if (data == null)
             return null;
 
-        //TODO DEBUG exceptions
-        //try
-        //{
-        // serialize in cache because when read - need object clone, not original object
-        return Utils.serialize(data);
-        //}
-        //catch (Exception)
-        //{
-        //    // If serialization fails, store the original value.
-        //    return value;
-        //}
+        try
+        {
+            // serialize in cache because when read - need object clone, not original object
+            return Utils.serialize(data);
+        }
+        catch (Exception)
+        {
+            // If serialization fails, store the original value.
+            return data;
+        }
     }
 
     protected static object deserialize(object data)
@@ -85,6 +84,11 @@ public class FwCache
 
     // ******** request-level cache ***********
 
+    /// <summary>
+    /// get value from request cache
+    /// </summary>
+    /// <param name="key"></param>
+    /// <returns>Hashtable, ArrayList, other value or null - since objects in cache serialized using json when stored</returns>
     public object getRequestValue(string key)
     {
         var result = request_cache[key];

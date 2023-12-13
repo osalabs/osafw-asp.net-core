@@ -73,7 +73,7 @@ public class DBRow : Dictionary<string, string>
     }
     public static explicit operator DBRow(Hashtable row)
     {
-        return new DBRow(row);
+        return row == null ? null : new DBRow(row);
     }
     public Hashtable toHashtable()
     {

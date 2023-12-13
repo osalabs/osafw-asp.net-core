@@ -932,7 +932,7 @@ public class Utils
     * convert JSON string into data structure
     * </summary>
     * <param name="str">JSON string</param>
-    * <returns>value or hashtable or arraylist or null if cannot be converted</returns>
+    * <returns>value or Hashtable (objects) or ArrayList (arrays) or null if cannot be converted</returns>
     * <remarks></remarks>
     */
     public static object jsonDecode(string str)
