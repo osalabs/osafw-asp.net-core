@@ -1,13 +1,9 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using osafw;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace osafw.Tests
 {
@@ -147,11 +143,45 @@ namespace osafw.Tests
         }
 
         [TestMethod()]
-        public void valueTest()
+        public void valuepTest()
         {
             string value = (string)db.valuep("SELECT iname FROM " + table_name + " WHERE id=1;");
             Assert.AreEqual("test1", value);
-            // TODO test all methods types
+        }
+
+        [TestMethod()]
+        public void valueTest()
+        {
+            // 1. value("table", where)
+            string value = db.value(table_name, DB.h("id", 1)).ToString();
+            Assert.AreEqual("1", value);
+
+            // 2. value("table", where, "field1")
+            value = (string)db.value(table_name, DB.h("id", 1), "iname");
+            Assert.AreEqual("test1", value);
+
+            // 3. value("table", where, "1") 'just return 1, useful for exists queries
+            value = (string)db.value(table_name, DB.h("id", 1), "1").ToString();
+            Assert.AreEqual("1", value);
+
+            // 4. value("table", where, "count(*)", "id asc")
+            value = (string)db.value(table_name, [], "count(*)").ToString();
+            Assert.AreEqual("3", value);
+
+            // 5. value("table", where, "MAX(id)")
+            value = (string)db.value(table_name, [], "MAX(id)").ToString();
+            Assert.AreEqual("3", value);
+
+            //fail test with using bad aggregate function
+            try
+            {
+                value = (string)db.value(table_name, [], "BAD(id)").ToString();
+                Assert.Fail("Expected exception not thrown");
+            }
+            catch (Exception ex)
+            {
+                Assert.AreEqual("'BAD' is not a recognized built-in function name.", ex.Message);
+            }
         }
 
         [TestMethod()]
@@ -525,10 +555,10 @@ namespace osafw.Tests
             // 5. Test Special Operations (BETWEEN, IN)
             fields["fint"] = db.opIN(new[] { 1, 2, 3 }); // Assuming this will be interpreted as an IN operation
             result = db.prepareParams("demos", fields);
-            Assert.IsTrue(result.sql.Contains("fint IN (@fint_1,@fint_2,@fint_3)"), "failed result: "+ result.sql);
+            Assert.IsTrue(result.sql.Contains("fint IN (@fint_1,@fint_2,@fint_3)"), "failed result: " + result.sql);
 
             fields.Clear();
-            fields["fdate_pop"] = db.opBETWEEN(DateTime.Today , DateTime.Today.AddDays(1));
+            fields["fdate_pop"] = db.opBETWEEN(DateTime.Today, DateTime.Today.AddDays(1));
             result = db.prepareParams("demos", fields);
             Assert.IsTrue(result.sql.Contains("fdate_pop BETWEEN @fdate_pop_1 AND @fdate_pop_2"), "failed result: " + result.sql);
         }

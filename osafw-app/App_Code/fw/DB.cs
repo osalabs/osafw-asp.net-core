@@ -815,11 +815,12 @@ public class DB : IDisposable
     /// value("table", where)
     /// value("table", where, "field1")
     /// value("table", where, "1") 'just return 1, useful for exists queries
-    /// value("table", where, "count(*)", "id asc")
+    /// value("table", where, "count(*)")
+    /// value("table", where, "MAX(id)")
     /// </summary>
     /// <param name="table"></param>
     /// <param name="where"></param>
-    /// <param name="field_name">field name, special cases: "1", "count(*)"</param>
+    /// <param name="field_name">(if not set - first selected field used) field name, special cases: "1", "count(*)", "SUM(field)", AVG/MAX/MIN,...</param>
     /// <param name="order_by"></param>
     /// <returns></returns>
     public object value(string table, Hashtable where, string field_name = "", string order_by = "")
@@ -828,11 +829,19 @@ public class DB : IDisposable
 
         if (string.IsNullOrEmpty(field_name))
             field_name = "*";
-        else if (field_name == "count(*)" || field_name == "1")
+        else if (field_name.ToLower() == "count(*)" || field_name == "1")
         {
+            //special case for count(*) and exists queries
         }
         else
-            field_name = qid(field_name);
+        {
+            // if special functions like MAX(id), AVG(price) - extract function and field name and quote field name
+            var match = Regex.Match(field_name, @"^(\w+)\((\w+)\)$", RegexOptions.Compiled);
+            if (match.Success)
+                field_name = match.Groups[1].Value + "(" + qid(match.Groups[2].Value) + ")";
+            else
+                field_name = qid(field_name);
+        }
         var qp = buildSelect(table, where, order_by, select_fields: field_name);
         return valuep(qp.sql, qp.@params);
     }
