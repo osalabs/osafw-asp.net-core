@@ -90,12 +90,4 @@ public class TestController : FwController
         return new Hashtable { { "_json", ps } };
     }
 
-    public void PercentAction()
-    {
-        rw(Utils.percentChange(150, 250));
-        rw(Utils.percentChange(80, 250));
-        rw("done");
-    }
-
-
 }
