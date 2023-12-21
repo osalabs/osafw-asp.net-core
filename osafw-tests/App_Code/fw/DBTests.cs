@@ -1,9 +1,11 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Amazon.Runtime;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Threading;
 
 namespace osafw.Tests
 {
@@ -50,7 +52,19 @@ namespace osafw.Tests
         [TestMethod()]
         public void loggerTest()
         {
-            throw new NotImplementedException();
+            try
+            {
+                db.logger(LogLevel.OFF, "test db.logger(LogLevel.OFF)");
+                db.logger(LogLevel.DEBUG, "test db.logger(LogLevel.DEBUG)");
+                db.logger(LogLevel.ERROR, "test db.logger(LogLevel.ERROR)");
+                db.logger(LogLevel.FATAL, "test db.logger(LogLevel.FATAL)");
+                db.logger(LogLevel.INFO, "test db.logger(LogLevel.INFO)");
+                db.logger(LogLevel.TRACE, "test db.logger(LogLevel.TRACE)");
+                db.logger(LogLevel.WARN, "test db.logger(LogLevel.WARN)");
+            } catch (Exception e)
+            {
+                Assert.Fail();
+            }
         }
 
         [TestMethod()]
@@ -80,25 +94,34 @@ namespace osafw.Tests
         [TestMethod()]
         public void createConnectionTest()
         {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod()]
-        public void check_create_mdbTest()
-        {
-            throw new NotImplementedException();
+            var result = db.createConnection(connstr);
+            Assert.IsTrue(result.State == System.Data.ConnectionState.Open);
         }
 
         [TestMethod()]
         public void queryTest()
         {
-            throw new NotImplementedException();
+            DbDataReader dbread = db.query("SELECT * FROM " + table_name + " WHERE id=1;");
+
+            dbread.Read();
+            Assert.IsTrue(dbread.HasRows);
+            Assert.IsTrue(dbread.FieldCount > 0);
+
+            dbread.Close();
         }
 
         [TestMethod()]
         public void execTest()
         {
-            throw new NotImplementedException();
+            ArrayList tables = db.tables();
+            if (tables.Contains("exec_unit_testing"))
+            {
+                db.exec("DROP TABLE exec_unit_testing");
+            }
+            db.exec("CREATE TABLE exec_unit_testing(id INT)");
+            tables = db.tables();
+            Assert.IsTrue(tables.Contains("exec_unit_testing"));
+            db.exec("DROP TABLE exec_unit_testing");
         }
 
         [TestMethod()]
@@ -419,7 +442,7 @@ namespace osafw.Tests
             DBOperation r = db.opBETWEEN("test_value", "test_value2");
             Assert.IsTrue(r.is_value);
             Assert.AreEqual(DBOps.BETWEEN, r.op);
-            Assert.IsNull(r.opstr);
+            Assert.AreEqual(r.opstr, DBOps.BETWEEN.ToString());
             Assert.AreEqual("test_value", (string)((object[])r.value)[0]);
             Assert.AreEqual("test_value2", (string)((object[])r.value)[1]);
         }
@@ -457,11 +480,11 @@ namespace osafw.Tests
         [TestMethod()]
         public void updateOrInsertTest()
         {
-            db.updateOrInsert(table_name, DB.h("iname", "test5"), DB.h("id", 5));
+            db.updateOrInsert(table_name, DB.h("iname", "test5", "id", 5), DB.h("id", 5));
             var r = db.row(table_name, DB.h("id", 5));
             Assert.AreEqual("test5", r["iname"]);
 
-            db.updateOrInsert(table_name, DB.h("iname", "test5"), DB.h("id", 3));
+            db.updateOrInsert(table_name, DB.h("iname", "test5", "id", 3), DB.h("id", 3));
             r = db.row(table_name, DB.h("id", 3));
             Assert.AreEqual("test5", r["iname"]);
         }
@@ -475,51 +498,53 @@ namespace osafw.Tests
         }
 
         [TestMethod()]
-        public void _join_hashTest()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod()]
-        public void hash2sql_uTest()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod()]
-        public void tablesTest()
-        {
-            throw new NotImplementedException();
+        public void tablesTest() {
+            string[] tablesToCheck = Utils.qw("users att settings lookup_manager_tables menu_items att_categories fwsessions");
+            ArrayList tables = db.tables();
+            foreach( var tableName in tablesToCheck)
+            {
+                Assert.IsTrue(tables.IndexOf(tableName) >= 0);
+            }
         }
 
         [TestMethod()]
         public void viewsTest()
         {
-            throw new NotImplementedException();
+            db.exec("CREATE VIEW view_for_unit_tests AS SELECT * FROM users");
+            ArrayList views = db.views();
+            db.exec("DROP VIEW view_for_unit_tests");
+            Assert.IsTrue(views.IndexOf("view_for_unit_tests") >= 0);
         }
 
         [TestMethod()]
-        public void load_table_schema_fullTest()
+        public void tableSchemaFullTest()
         {
-            throw new NotImplementedException();
+            Hashtable schema = db.tableSchemaFull("users");
+            Assert.IsTrue(schema.ContainsKey("id"));
+            Assert.IsTrue(schema.ContainsKey("status"));
+            Assert.IsTrue(schema.ContainsKey("add_users_id"));
+            Assert.IsTrue(schema.ContainsKey("add_time"));
+            Assert.IsTrue(schema.ContainsKey("upd_users_id"));
+            Assert.IsTrue(schema.ContainsKey("upd_time"));
         }
 
         [TestMethod()]
-        public void get_foreign_keysTest()
+        public void clearchemaCacheTest()
         {
-            throw new NotImplementedException();
+            Hashtable schema = db.loadTableSchema("users");
+            Assert.IsTrue(db.isSchemaCacheEmpty() == false);
+            db.clearSchemaCache();
+            Assert.IsTrue(db.isSchemaCacheEmpty());
         }
 
         [TestMethod()]
-        public void load_table_schemaTest()
+        public void splitMultiSQLTest()
         {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod()]
-        public void clear_schema_cacheTest()
-        {
-            throw new NotImplementedException();
+            string sql1 = "CREATE TABLE test(id INT)";
+            string sql2 = "INSERT INTO test(id) VALUES(0)";
+            string[] queries = DB.splitMultiSQL(sql1 + ";\n\r" + sql2 + ";\n\r");
+            Assert.AreEqual(queries[0], sql1);
+            Assert.AreEqual(queries[1], sql2);
         }
 
         [TestMethod()]

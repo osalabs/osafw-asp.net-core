@@ -1933,6 +1933,12 @@ public class DB : IDisposable
         schema?.Clear();
     }
 
+    // This method for unit tests
+    public bool isSchemaCacheEmpty()
+    {
+        return schemafull_cache.Count == 0 && schema_cache.Count == 0 && schema.Count == 0;
+    }
+
     // map SQL Server type to FW's
     private static string mapTypeSQL2Fw(string mstype)
     {
