@@ -1,0 +1,44 @@
+<form class="fw-card" action="<~../url>" method="post">
+  <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
+  <input type="hidden" name="_method" value="PUT">
+  <~/common/form/relid>
+
+  <div class="table-list-wrapper">
+    <div class="table-list-hscroll-hint"><~/common/icons/info-circle-fill> use <kbd>Shift+Mouse Wheel</kbd> for an easy horizontal scrolling
+    </div>
+    <table class="table table-stripedX table-hover list <~user_view[density] default="table-sm">">
+<thead>
+    <tr data-sortby="<~f[sortby]>" data-sortdir="<~f[sortdir]>">        
+        <th>Name</th>
+        <th>Status</th>
+        <th>Applied Date</th>
+        <th></th>
+    </tr>
+</thead>
+
+    <tbody class="table-group-divider">
+<~list_rows repeat inline>
+        <tr data-bs-toggle="collapse" data-bs-target="#order<~id>">
+            <~/common/list/list_row_td_btn if="GLOBAL[is_list_btn_left]">
+            <~cols repeat inline><td><~data var unless="is_custom"><~col_custom if="is_custom"></td></~cols>
+            <td class="text-nowrap d-print-none <~/common/text_end unless="GLOBAL[is_list_btn_left]">">
+              <~is_applied_blk ifeq="is_applied" value="0" inline>
+                <a href="#" data-id="<~id>" class="btn btn-sm btn-success on-apply-update">`Apply`</a>
+              </~is_applied_blk>
+            </td>
+        </tr>
+        <tr class="collapse" id="order<~id>">
+          <td colspan="4">
+            <pre><code class="language-sql"><~idesc></code></pre>
+          </td>
+        </tr>
+</~list_rows>
+    </tbody>
+
+    </table>
+  </div>
+
+  <~/common/list/empty unless="list_rows">
+</form>
+
+<hr class="d-print-none">                         

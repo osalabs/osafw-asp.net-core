@@ -1,0 +1,15 @@
+﻿<h4>
+<a href="<~../url>" class="btn btn-sm btn-secondary"><~/common/icons/chevron-left>`Back`</a>
+Query results:</h4>
+<hr/>
+<~processedQueries repeat inline>
+  <pre><code class="language-sql"><~query></code></pre>
+  <hr/>
+</~processedQueries>
+
+<~ist_error if="no_errors" inline>
+    <span style='color:green'>Success</span>
+</~ist_error>
+<~is_error unless="no_errors" inline>
+  <span style='color:red'><~error>. Transaction was rolled back.</span>
+</~is_error>
