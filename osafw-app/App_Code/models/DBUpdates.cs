@@ -30,12 +30,12 @@ public class DBUpdates : FwModel
             foreach (string file in files)
             {
                 var filename = System.IO.Path.GetFileName(file);
-                var row = model.oneByIcode(filename);
+                var row = oneByIcode(filename);
                 if (row.Count == 0)
                 {
                     var filepath = updates_root + @"\" + filename;
                     var content = FW.getFileContent(filepath);
-                    model.add(new Hashtable() {
+                    add(new Hashtable() {
                         { "icode", filename },
                         { "iname", filename },
                         { "idesc", content }
