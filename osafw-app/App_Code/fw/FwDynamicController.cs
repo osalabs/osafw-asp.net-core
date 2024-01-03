@@ -24,9 +24,9 @@ public class FwDynamicController : FwController
 
     /// <summary>
     /// contains logic to display list screen
-    /// IMPORTANT! if query contains "export" - it will export list and return null - so if override - check for null
+    /// Note! if query contains "export" - early empty result returned and FW will call exportList() after this
     /// </summary>
-    /// <returns>Hashtable - related template will be parsed, null - no templates parsed (used for export)</returns>
+    /// <returns>Hashtable - related template will be parsed, null - no templates parsed (if action did all the output)</returns>
     public virtual Hashtable IndexAction()
     {
         // get filters from the search form
@@ -47,6 +47,10 @@ public class FwDynamicController : FwController
         // row["field") ] "value"
         // Next
 
+        // if export - no need to parse templates and prep for them - just return empty hashtable asap
+        if (export_format.Length > 0)
+            return []; // return empty hashtable just in case action overriden to avoid check for null
+
         // set standard output parse strings
         var ps = this.setPS();
 
@@ -60,13 +64,7 @@ public class FwDynamicController : FwController
             // customizable headers
             setViewList(ps, list_filter_search);
 
-        if (reqs("export").Length > 0)
-        {
-            exportList();
-            return null;
-        }
-        else
-            return ps;
+        return ps;
     }
 
     //Prev/Next navigation

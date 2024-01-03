@@ -75,6 +75,7 @@ public class FwRoute
 public class FW : IDisposable
 {
     //controller standard actions
+    public const string ACTION_SUFFIX = "Action";
     public const string ACTION_INDEX = "Index";
     public const string ACTION_SHOW = "Show";
     public const string ACTION_SHOW_FORM = "ShowForm";
@@ -1107,7 +1108,7 @@ public class FW : IDisposable
 
         logger(LogLevel.TRACE, "TRY controller.action=", route.controller, ".", route.action);
 
-        MethodInfo actionMethod = controllerClass.GetMethod(route.action + "Action");
+        MethodInfo actionMethod = controllerClass.GetMethod(route.action + ACTION_SUFFIX);
         if (actionMethod == null)
         {
             logger(LogLevel.DEBUG, "No method found for controller.action=[", route.controller, ".", route.action, "], checking route_default_action");
@@ -1120,7 +1121,7 @@ public class FW : IDisposable
                 {
                     // = index - use IndexAction for unknown actions
                     route.action = ACTION_INDEX;
-                    actionMethod = controllerClass.GetMethod(route.action + "Action");
+                    actionMethod = controllerClass.GetMethod(route.action + ACTION_SUFFIX);
                 }
                 else if (pvalue == ACTION_SHOW)
                 {
@@ -1134,7 +1135,7 @@ public class FW : IDisposable
                     args[0] = route.id;
 
                     route.action = ACTION_SHOW;
-                    actionMethod = controllerClass.GetMethod(route.action + "Action");
+                    actionMethod = controllerClass.GetMethod(route.action + ACTION_SUFFIX);
                 }
             }
         }
@@ -1197,6 +1198,13 @@ public class FW : IDisposable
         {
             controller.checkAccess();
             ps = (Hashtable)actionMethod.Invoke(controller, parameters);
+
+            //special case for export - IndexAction+export_format is set - call exportList without parser
+            if (actionMethod.Name == (ACTION_INDEX + ACTION_SUFFIX) && controller.export_format.Length > 0)
+            {
+                controller.exportList();
+                ps = null; //disable parser
+            }
         }
         catch (TargetInvocationException ex)
         {
