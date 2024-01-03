@@ -22,6 +22,11 @@ public class FwDynamicController : FwController
         base.init(fw);
     }
 
+    /// <summary>
+    /// contains logic to display list screen
+    /// IMPORTANT! if query contains "export" - it will export list and return null - so if override - check for null
+    /// </summary>
+    /// <returns>Hashtable - related template will be parsed, null - no templates parsed (used for export)</returns>
     public virtual Hashtable IndexAction()
     {
         // get filters from the search form
