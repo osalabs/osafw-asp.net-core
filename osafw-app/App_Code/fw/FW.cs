@@ -183,6 +183,10 @@ public class FW : IDisposable
         // override default lang with user's lang
         if (!string.IsNullOrEmpty(Session("lang"))) G["lang"] = Session("lang");
 
+        // override default ui_theme/ui_mode with user's settings
+        if (!string.IsNullOrEmpty(Session("ui_theme"))) G["ui_theme"] = Session("ui_theme");
+        if (!string.IsNullOrEmpty(Session("ui_mode"))) G["ui_mode"] = Session("ui_mode");
+
         FormErrors = new Hashtable(); // reset errors
         parseForm();
 
