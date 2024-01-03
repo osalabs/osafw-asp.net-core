@@ -1261,9 +1261,12 @@ public class FW : IDisposable
             bool is_test = Utils.f2bool(this.config("is_test"));
             if (is_test)
             {
-                string test_email = (string)this.config("test_email");
+                string test_email = this.Session("login") ?? ""; //in test mode - try logged user email (if logged)
+                if (test_email.Length == 0)
+                    test_email = (string)this.config("test_email"); //try test_email from config
+
                 mail_body = "TEST SEND. PASSED MAIL_TO=[" + mail_to + "]" + System.Environment.NewLine + mail_body;
-                mail_to = (string)this.config("test_email");
+                mail_to = test_email;
                 logger(LogLevel.INFO, "EMAIL SENT TO TEST EMAIL [", mail_to, "] - TEST ENABLED IN web.config");
             }
 

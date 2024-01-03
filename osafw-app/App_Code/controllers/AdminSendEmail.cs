@@ -43,6 +43,13 @@ public class AdminSendEmailController : FwAdminController
         return null;
     }
 
+    public override Hashtable ShowFormAction(int id = 0)
+    {
+        var ps = base.ShowFormAction(id);
+        ps["test_email"] = fw.Session("login"); // in test mode send to current user
+        return ps;
+    }
+
     public override Hashtable SaveAction(int id = 0)
     {
         route_onerror = FW.ACTION_SHOW_FORM; //set route to go if error happens
