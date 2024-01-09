@@ -3,8 +3,6 @@
 using Pomelo.Extensions.Caching.MySql;
 #endif
 
-using System;
-using System.Collections;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -13,7 +11,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Net.Http.Headers;
-using System.Text.RegularExpressions;
+using System;
+using System.Collections;
 
 namespace osafw;
 
@@ -114,7 +113,8 @@ public class Startup
     // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
     {
-        if (env.IsDevelopment()) {
+        if (env.IsDevelopment())
+        {
             app.UseDeveloperExceptionPage();
         }
         else
@@ -138,12 +138,13 @@ public class Startup
         });
         app.UseSession();
 
-        //set stricter cookie policy
+        //set cookie policy
         app.UseCookiePolicy(new CookiePolicyOptions
         {
             CheckConsentNeeded = _ => false,
             HttpOnly = Microsoft.AspNetCore.CookiePolicy.HttpOnlyPolicy.Always,
-            MinimumSameSitePolicy = Microsoft.AspNetCore.Http.SameSiteMode.Strict,
+            MinimumSameSitePolicy = Microsoft.AspNetCore.Http.SameSiteMode.Strict, // with Strict setting, external links to app won't keep session
+            //MinimumSameSitePolicy = Microsoft.AspNetCore.Http.SameSiteMode.Lax, // Lax - external links to app will keep session
             Secure = CookieSecurePolicy.SameAsRequest,
             OnAppendCookie = (context) =>
             {
@@ -168,7 +169,8 @@ public class Startup
 
         // Create branch to the MyHandlerMiddleware.
         // All requests will follow this branch.
-        app.MapWhen(context => context.Request != null,appBranch => {
+        app.MapWhen(context => context.Request != null, appBranch =>
+        {
             appBranch.UseMyHandler();
         });
     }

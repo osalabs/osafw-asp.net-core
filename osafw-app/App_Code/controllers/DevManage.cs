@@ -1082,9 +1082,13 @@ public class DevManageController : FwController
                         field["fw_type"] = "float";
                         field["fw_subtype"] = "decimal";
                     }
-                    else if (Regex.IsMatch(line, @"\bdecimal\b", RegexOptions.IgnoreCase))
+                    else if (Regex.IsMatch(line, @"\bdecimal(?:\(\d+\))?\b", RegexOptions.IgnoreCase))
                     {
-                        field["numeric_precision"] = 2;
+                        var numeric_precision = 2; // default precision
+                        m = Regex.Match(line, @"\bdecimal\((\d+)\)"); // decimal(PRECISION_HERE)
+                        if (m.Success)
+                            numeric_precision = Utils.f2int(m.Groups[1].Value);
+                        field["numeric_precision"] = numeric_precision;
                         field["fw_type"] = "float";
                         field["fw_subtype"] = "decimal";
                     }
@@ -1118,7 +1122,7 @@ public class DevManageController : FwController
                         field["maxlen"] = 255;
 
                     // default
-                    m = Regex.Match(line, @"\bdefault\s+\((.+)\)"); // default (VALUE_HERE)
+                    m = Regex.Match(line, @"\bdefault\s*\((.+)\)"); // default(VALUE_HERE)
                     if (m.Success)
                         field["default"] = m.Groups[1].Value;
 

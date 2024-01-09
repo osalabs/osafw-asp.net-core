@@ -29,6 +29,8 @@ public class Utils
 {
     public const string OLEDB_PROVIDER = "Microsoft.ACE.OLEDB.12.0"; // used for import from CSV/Excel, change it to your provider if necessary
 
+    public const string TMP_PREFIX = "osafw"; // prefix for temp directory where framework stores temporary files
+
     // convert "space" delimited string to an array
     // WARN! replaces all "&nbsp;" to spaces (after convert)
     public static string[] qw(string str)
@@ -539,8 +541,8 @@ public class Utils
     {
         filename = filename.Replace("\"", "'"); // quote doublequotes
 
-        response.Headers.Add("Content-type", "text/csv");
-        response.Headers.Add("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+        response.Headers.Append("Content-type", "text/csv");
+        response.Headers.Append("Content-Disposition", "attachment; filename=\"" + filename + "\"");
 
         await HttpResponseWritingExtensions.WriteAsync(response, Utils.getCSVExport(csv_export_headers, csv_export_fields, rows).ToString());
     }
@@ -569,8 +571,8 @@ public class Utils
 
         filename = filename.Replace("\"", "_");
 
-        fw.response.Headers.Add("Content-type", "application/vnd.ms-excel");
-        fw.response.Headers.Add("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+        fw.response.Headers.Append("Content-type", "application/vnd.ms-excel");
+        fw.response.Headers.Append("Content-Disposition", "attachment; filename=\"" + filename + "\"");
 
         //output headers
         ParsePage parser = new(fw);
@@ -932,7 +934,7 @@ public class Utils
     * convert JSON string into data structure
     * </summary>
     * <param name="str">JSON string</param>
-    * <returns>value or hashtable or arraylist or null if cannot be converted</returns>
+    * <returns>value or Hashtable (objects) or ArrayList (arrays) or null if cannot be converted</returns>
     * <remarks></remarks>
     */
     public static object jsonDecode(string str)
@@ -1106,16 +1108,25 @@ public class Utils
         }
     }
 
-    // return path to tmp filename WITHOUT extension
-    public static string getTmpFilename(string prefix = "osafw")
+    public static string getTmpDir(string prefix = TMP_PREFIX)
     {
-        return Path.GetTempPath() + "\\" + prefix + Utils.uuid();
+        var systemTmp = Path.GetTempPath();
+        string appTmp = Path.Combine(systemTmp, prefix);
+        if (!Directory.Exists(appTmp))
+            Directory.CreateDirectory(appTmp); // create if not exists
+        return appTmp;
+    }
+
+    // return path to tmp filename WITHOUT extension
+    public static string getTmpFilename(string prefix = TMP_PREFIX)
+    {
+        return Utils.getTmpDir(prefix) + "\\" + Utils.uuid();
     }
 
     // scan tmp directory, find all tmp files created by website and delete older than 1 hour
-    public static void cleanupTmpFiles(string prefix = "osafw")
+    public static void cleanupTmpFiles(string prefix = TMP_PREFIX)
     {
-        string[] files = Directory.GetFiles(Path.GetTempPath(), prefix + "*");
+        string[] files = Directory.GetFiles(Utils.getTmpDir(prefix), "*");
         foreach (string file in files)
         {
             FileInfo fi = new(file);
@@ -1128,7 +1139,6 @@ public class Utils
                 }
                 catch (Exception)
                 {
-
                     //throw; //ignore errors as it just cleanup, should not affect main logic, could be access denied
                 }
             }

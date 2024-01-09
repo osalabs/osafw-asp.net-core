@@ -365,8 +365,8 @@ public class Att : FwModel
                 string filename = ((string)item["fname"]).Replace("\"", "'");
                 string ext = UploadUtils.getUploadFileExt(filename);
 
-                fw.response.Headers.Add("Content-type", getMimeForExt(ext));
-                fw.response.Headers.Add("Content-Disposition", disposition + "; filename=\"" + filename + "\"");
+                fw.response.Headers.Append("Content-type", getMimeForExt(ext));
+                fw.response.Headers.Append("Content-Disposition", disposition + "; filename=\"" + filename + "\"");
                 fw.response.SendFileAsync(filepath).Wait();
             }
         }

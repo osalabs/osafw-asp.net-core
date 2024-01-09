@@ -45,7 +45,8 @@ public abstract class FwController
     protected Hashtable list_sortmap;            // required for Index, sortmap fields
     protected string search_fields;              // optional, search fields, space-separated
                                                  // fields to search via $s=list_filter["s"), ] - means exact match, not "like"
-                                                 // format: "field1 field2,!field3 field4" => field1 LIKE '%$s%' or (field2 LIKE '%$s%' and field3='$s') or field4 LIKE '%$s%'
+
+    public string export_format = "";            // empty or "csv" or "xls" (set from query string "export") - export format for IndexAction
     protected string export_filename = "export"; // default filename for export, without extension
 
     // support of customizable view list
@@ -87,6 +88,7 @@ public abstract class FwController
 
         return_url = reqs("return_url");
         related_id = reqs("related_id");
+        export_format = reqs("export");
     }
 
     // load controller config from json in template dir (based on base_url)
@@ -676,13 +678,12 @@ public abstract class FwController
         int pagenum = Utils.f2int(list_filter["pagenum"]);
         int pagesize = Utils.f2int(list_filter["pagesize"]);
         // if export requested - start with first page and have a high limit (still better to have a limit just for the case)
-        if (reqs("export").Length > 0)
+        if (export_format.Length > 0)
         {
             is_export = true;
             pagenum = 0;
             pagesize = 100000;
         }
-
 
         if (string.IsNullOrEmpty(list_view))
             list_view = model0.table_name;
@@ -973,7 +974,7 @@ public abstract class FwController
 
         string csv_export_headers = string.Join(",", headers.ToArray());
 
-        if (reqs("export") == "xls")
+        if (export_format == "xls")
             Utils.writeXLSExport(fw, export_filename + ".xls", csv_export_headers, fields, list_rows);
         else
             Utils.writeCSVExport(fw.response, export_filename + ".csv", csv_export_headers, fields, list_rows);

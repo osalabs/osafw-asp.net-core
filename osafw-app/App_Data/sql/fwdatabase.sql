@@ -59,7 +59,7 @@ CREATE TABLE att (
   is_image              TINYINT DEFAULT 0, /* 1 if this is supported image */
 
   fname                 NVARCHAR(255) NOT NULL DEFAULT '',              /*original file name*/
-  fsize                 INT DEFAULT 0,                   /*file size*/
+  fsize                 BIGINT DEFAULT 0,                   /*file size*/
   ext                   NVARCHAR(16) NOT NULL DEFAULT '',                 /*extension*/
   iname                 NVARCHAR(255) NOT NULL DEFAULT '',   /*attachment name*/
 
