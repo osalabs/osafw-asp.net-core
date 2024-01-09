@@ -1,11 +1,18 @@
 <a name="activity">
 <h3>`Activity`
-  <a class="btn btn-default btn-sm" data-bs-toggle="collapse" href="#FActivityComment" role="button" aria-expanded="false" aria-controls="FActivityComment"><~/common/icons/plus> `Add Comment`</a>
+  <a class="btn btn-default btn-sm"
+    data-bs-toggle="collapse"
+    href="#FActivityComment"
+    role="button"
+    aria-expanded="false"
+    aria-controls="FActivityComment">
+      <~/common/icons/plus> `Add Comment`
+  </a>
 </h3>
 
 <form id="FActivityComment" method="post" action="<~/admin/activitylogs/url>" class="fw-card mb-4 collapse">
   <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
-  <input type="hidden" name="return_url" value="<~../url>/<~id>">
+  <input type="hidden" name="return_url" value="<~../url>/<~id>#activity">
   <input type="hidden" name="item[log_type]" value="comment">
   <input type="hidden" name="item[entity]" value="<~activity_entity>">
   <input type="hidden" name="item[item_id]" value="<~id>">
@@ -40,7 +47,7 @@
 </~activity_rows_none>
 
 <~activity_rows repeat inline>
-  <div class="d-flex align-items-start mb-2">
+  <div class="d-flex align-items-start mb-2 border-bottom">
     <div class="flex-shrink-0">
       <div class="user-list-avatar">
         <~/common/activitylogs/avatar if="avatar_link">
@@ -49,7 +56,7 @@
     </div>
     <div class="flex-grow-1 ms-3">
       <h6 class="mb-1"><b><~user[iname]></b><~/common/activitylogs/logtype ifne="tab" value="comments"></h6>
-      <p class="text-muted"><small><~idate date="short"><~/common/activitylogs/edited if="upd_time"></small></p>
+      <p class="text-muted mb-1"><small><~idate date="short"><~/common/activitylogs/edited if="upd_time"></small></p>
       <~idesc markdown nl2br>
     </div>
   </div>
