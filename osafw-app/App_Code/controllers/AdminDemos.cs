@@ -65,9 +65,9 @@ public class AdminDemosController : FwAdminController
 
         if (is_activity_logs)
         {
-            list_filter["tab_activity"] = Utils.f2str(list_filter["tab_activity"] ?? ActivityLogs.TAB_COMMENTS);
+            list_filter["tab_activity"] = Utils.f2str(list_filter["tab_activity"] ?? FwActivityLogs.TAB_COMMENTS);
             ps["list_filter"] = list_filter;
-            ps["activity_rows"] = fw.model<ActivityLogs>().listByEntityForUI(model.table_name, id, (string)list_filter["tab_activity"]);
+            ps["activity_rows"] = fw.model<FwActivityLogs>().listByEntityForUI(model.table_name, id, (string)list_filter["tab_activity"]);
         }
 
         return ps;

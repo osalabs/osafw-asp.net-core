@@ -324,9 +324,9 @@ public abstract class FwModel : IDisposable
         if (is_log_changes)
         {
             if (is_log_fields_changed)
-                fw.logEvent(table_name + "_add", id, 0, "", 0, item);
+                fw.logAction(FwLogTypes.ICODE_ADDED, table_name, id, "", item);
             else
-                fw.logEvent(table_name + "_add", id);
+                fw.logAction(FwLogTypes.ICODE_ADDED, table_name, id);
         }
 
         this.removeCache(id);
@@ -347,7 +347,7 @@ public abstract class FwModel : IDisposable
         if (is_log_changes)
         {
             Hashtable item_old = this.one(id);
-            item_changes = fw.model<FwEvents>().changes_only(item, item_old);
+            item_changes = fw.model<FwActivityLogs>().changesOnly(item, item_old);
         }
 
         if (!string.IsNullOrEmpty(field_upd_time))
@@ -364,9 +364,9 @@ public abstract class FwModel : IDisposable
         if (is_log_changes && item_changes.Count > 0)
         {
             if (is_log_fields_changed)
-                fw.logEvent(table_name + "_upd", id, 0, "", 0, item_changes);
+                fw.logAction(FwLogTypes.ICODE_UPDATED, table_name, id, "", item_changes);
             else
-                fw.logEvent(table_name + "_upd", id);
+                fw.logAction(FwLogTypes.ICODE_UPDATED, table_name, id);
         }
 
         return true;
@@ -396,7 +396,7 @@ public abstract class FwModel : IDisposable
             db.update(table_name, vars, where);
         }
         if (is_log_changes)
-            fw.logEvent(table_name + "_del", id);
+            fw.logAction(FwLogTypes.ICODE_DELETED, table_name, id);
     }
 
     public virtual void deleteWithPermanentCheck(int id)

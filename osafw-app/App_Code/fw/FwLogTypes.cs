@@ -7,11 +7,11 @@
 //   - example: user comments, user events
 // 
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
-// (c) 2009-2023 Oleg Savchuk www.osalabs.com
+// (c) 2009-2024 Oleg Savchuk www.osalabs.com
 
 namespace osafw;
 
-public class LogTypes : FwModel
+public class FwLogTypes : FwModel
 {
     public const int ITYPE_SYSTEM = 0;
     public const int ITYPE_USER = 10;
@@ -27,7 +27,7 @@ public class LogTypes : FwModel
     public const string ICODE_USERS_LOGOFF = "logoff";
     public const string ICODE_USERS_CHPWD = "chpwd";
 
-    public LogTypes() : base()
+    public FwLogTypes() : base()
     {
         table_name = "log_types";
     }

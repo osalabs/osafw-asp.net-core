@@ -21,7 +21,7 @@ public class DevManageController : FwController
     const string DB_SQL_PATH = "/App_Data/sql/database.sql"; // relative to site_root
     const string DB_JSON_PATH = "/dev/db.json";
     const string ENTITIES_PATH = "/dev/entities.txt";
-    const string FW_TABLES = "att_categories att att_table_link users settings spages events event_log lookup_manager_tables user_views user_lists user_lists_items menu_items";
+    const string FW_TABLES = "fwsessions fwentities att_categories att att_table_link users settings spages log_types activity_logs lookup_manager_tables user_views user_lists user_lists_items menu_items";
 
     public override void init(FW fw)
     {

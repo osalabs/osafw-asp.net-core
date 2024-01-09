@@ -33,7 +33,7 @@ public class FwSelfTest
     }
 
     public string test_email = ""; // if empty, will use "test"+mail_from
-    public string existing_tables = "users settings spages att att_table_link att_categories events event_log lookup_manager_tables user_views user_lists user_lists_items"; // check if these tables exists
+    public string existing_tables = "fwsessions fwentities users settings spages att att_table_link att_categories log_types activity_logs lookup_manager_tables user_views user_lists user_lists_items"; // check if these tables exists
     public string exclude_controllers = "";
 
     public FwSelfTest(FW fw)
@@ -134,7 +134,7 @@ public class FwSelfTest
         {
             echo("<strong>DB Tables</strong>");
             // fw core db tables exists and we can read from it
-            // (select count(*) from: users, settings, spages, att, att_table_link, att_categories, events, event_log)
+            // (select count(*) from: users, settings, spages, att, att_table_link, att_categories)
             string[] tables = Utils.qw(existing_tables);
             foreach (var table in tables)
             {

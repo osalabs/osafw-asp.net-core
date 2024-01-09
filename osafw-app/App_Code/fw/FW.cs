@@ -1497,11 +1497,16 @@ public class FW : IDisposable
         return (FwModel)models[model_name];
     }
 
-    public void logEvent(string ev_icode, int item_id = 0, int item_id2 = 0, string iname = "", int records_affected = 0, Hashtable changed_fields = null)
+    public void logAction(string log_types_icode, string entity_icode, int item_id = 0, string iname = "", Hashtable changed_fields = null)
     {
         if (!is_log_events)
             return;
-        this.model<FwEvents>().log(ev_icode, item_id, item_id2, iname, records_affected, changed_fields);
+
+        var payload = new Hashtable()
+        {
+            {"fields", changed_fields}
+        };
+        this.model<FwActivityLogs>().addSimple(log_types_icode, entity_icode, item_id, iname, payload);
     }
 
     public void rw(string str)

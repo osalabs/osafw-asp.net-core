@@ -10,6 +10,9 @@ namespace osafw;
 
 public class FwEntities : FwModel
 {
+    //constants for standard entities
+    public const string ICODE_USERS = "users";
+
     public FwEntities() : base()
     {
         table_name = "fwentities";

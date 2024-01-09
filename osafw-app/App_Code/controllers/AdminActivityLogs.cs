@@ -4,7 +4,7 @@
 // - redirect back to entity page
 //
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
-// (c) 2009-2023 Oleg Savchuk www.osalabs.com
+// (c) 2009-2024 Oleg Savchuk www.osalabs.com
 
 using System.Collections;
 
@@ -14,13 +14,13 @@ public class AdminActivityLogsController : FwController
 {
     public static new int access_level = Users.ACL_MEMBER; // any logged in user can add comments
 
-    protected ActivityLogs model;
+    protected FwActivityLogs model;
 
     public override void init(FW fw)
     {
         base.init(fw);
-        model0 = fw.model<ActivityLogs>();
-        model = model0 as ActivityLogs;
+        model0 = fw.model<FwActivityLogs>();
+        model = model0 as FwActivityLogs;
 
         base_url = "/Admin/ActivityLogs";
         db = model.getDB();
@@ -74,8 +74,8 @@ public class AdminActivityLogsController : FwController
         //for new items - convert log_type and entity to ids
         if (is_new)
         {
-            var log_type = fw.model<LogTypes>().oneByIcode(Utils.f2str(item["log_type"]));
-            if (log_type.Count == 0 || Utils.f2int(log_type["itype"]) != LogTypes.ITYPE_USER)
+            var log_type = fw.model<FwLogTypes>().oneByIcode(Utils.f2str(item["log_type"]));
+            if (log_type.Count == 0 || Utils.f2int(log_type["itype"]) != FwLogTypes.ITYPE_USER)
                 throw new UserException("Invalid log_type");
 
             var fwentity = fw.model<FwEntities>().oneByIcode(Utils.f2str(item["entity"]));

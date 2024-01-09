@@ -135,7 +135,7 @@ public class AdminUsersController : FwDynamicController
         if (Utils.f2int(user["access_level"]) >= fw.userAccessLevel)
             throw new AuthException("Access Denied. Cannot simulate user with higher access level");
 
-        fw.logEvent("simulate", id, fw.userId);
+        fw.logAction(FwLogTypes.ICODE_USERS_SIMULATE, FwEntities.ICODE_USERS, id);
 
         model.doLogin(id);
 

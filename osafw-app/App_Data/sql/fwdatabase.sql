@@ -25,7 +25,9 @@ CREATE TABLE fwentities (
   add_time              DATETIME2 NOT NULL DEFAULT getdate(),
   add_users_id          INT DEFAULT 0,
   upd_time              DATETIME2,
-  upd_users_id          INT DEFAULT 0
+  upd_users_id          INT DEFAULT 0,
+
+  INDEX UX_fwentities_icode UNIQUE (icode)
 );
 
 
@@ -211,50 +213,6 @@ INSERT INTO spages (parent_id, url, iname) VALUES
 ;
 update spages set is_home=1 where id=1;
 
-
-
-/*event types for log*/
-DROP TABLE IF EXISTS events;
-CREATE TABLE events (
-  id INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
-  icode                 NVARCHAR(64) NOT NULL default '',
-
-  iname                 NVARCHAR(255) NOT NULL default '',
-  idesc                 NVARCHAR(MAX),
-
-  status                TINYINT NOT NULL DEFAULT 0,        /*0-ok, 127-deleted*/
-  add_time              DATETIME2 NOT NULL DEFAULT getdate(),
-  add_users_id          INT DEFAULT 0,
-  upd_time              DATETIME2,
-  upd_users_id          INT DEFAULT 0
-);
-CREATE UNIQUE INDEX events_icode_idx ON events (icode);
-
-/* log of all user-initiated events */
-DROP TABLE IF EXISTS event_log;
-CREATE TABLE event_log (
-  id BIGINT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
-  events_id             INT NOT NULL FOREIGN KEY REFERENCES events(id),           /* event id */
-
-  item_id               INT NOT NULL DEFAULT 0,           /*related id*/
-  item_id2              INT NOT NULL DEFAULT 0,           /*related id (if another)*/
-
-  iname                 NVARCHAR(255) NOT NULL DEFAULT '', /*short description of what's happened or additional data*/
-
-  records_affected      INT NOT NULL DEFAULT 0,
-  fields                NVARCHAR(MAX),       /*serialized json with related fields data (for history) in form {fieldname: data, fieldname: data}*/
-
-  add_time              DATETIME2 NOT NULL DEFAULT getdate(),  /*date record added*/
-  add_users_id          INT DEFAULT 0,                        /*user added record, 0 if sent by cron module*/
-
-  INDEX IX_event_log_events_id (events_id),
-  INDEX IX_event_log_item_id (item_id),
-  INDEX IX_event_log_item_id2 (item_id2),
-  INDEX IX_event_log_add_users_id (add_users_id),
-  INDEX IX_event_log_add_time (add_time)
-);
-
-
 /*Logs types*/
 DROP TABLE IF EXISTS log_types;
 CREATE TABLE log_types (
@@ -284,7 +242,7 @@ CREATE TABLE activity_logs (
   fwentities_id         INT NOT NULL CONSTRAINT FK_activity_logs_fwentities FOREIGN KEY REFERENCES fwentities(id), -- related to entity
   item_id               INT NULL,                         -- related item id in the entity table
 
-  idate                 DATETIME2,                        -- default now, but can be different for user types if activity added at a different date/time
+  idate                 DATETIME2 NOT NULL DEFAULT getdate(), -- default now, but can be different for user types if activity added at a different date/time
   users_id              INT NULL CONSTRAINT FK_activity_logs_users FOREIGN KEY REFERENCES users(id), -- default logged user, but can be different if adding "on behalf of"
   idesc                 NVARCHAR(MAX),
   payload               NVARCHAR(MAX), -- serialized/json - arbitrary payload, should be {fields:{fieldname1: data1, fieldname2: data2,..}} for added/updated/deleted
