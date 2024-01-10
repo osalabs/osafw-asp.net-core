@@ -126,6 +126,27 @@ public class FwActivityLogs : FwModel
         return result;
     }
 
+    public long getCountByLogIType(int log_itype, IList statuses = null, int? since_days = null)
+    {
+        var sql = $@"SELECT count(*) 
+                    from {db.qid(table_name)} al 
+                        INNER JOIN {fw.model<FwLogTypes>().table_name} lt on (lt.id=al.log_types_id)
+                    where lt.itype=@itype
+                     and al.status IN (@statuses)
+            ";
+        var p = new Hashtable()
+        {
+            {"itype", log_itype},
+            {"statuses", statuses}
+        };
+        if (since_days != null)
+        {
+            sql += " and al.add_time > DATEADD(day, @since_days, GETDATE())";
+            p["since_days"] = since_days;
+        }
+
+        return Utils.f2long(db.valuep(sql, p));
+    }
 
     /// ****** helpers to detect changes
 

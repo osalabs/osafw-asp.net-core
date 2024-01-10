@@ -1502,10 +1502,12 @@ public class FW : IDisposable
         if (!is_log_events)
             return;
 
-        var payload = new Hashtable()
-        {
-            {"fields", changed_fields}
-        };
+        Hashtable payload = null;
+        if (changed_fields != null)
+            payload = new Hashtable()
+            {
+                {"fields", changed_fields}
+            };
         this.model<FwActivityLogs>().addSimple(log_types_icode, entity_icode, item_id, iname, payload);
     }
 
