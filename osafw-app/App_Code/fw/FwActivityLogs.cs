@@ -138,7 +138,7 @@ public class FwActivityLogs : FwModel
                     {
                         //if key is password, pass, pwd - hide value
                         var value = fields[key];
-                        if (payload.Contains("pass") || payload.Contains("pwd"))
+                        if (key.Contains("pass") || key.Contains("pwd"))
                             value = "********";
 
                         frows.Add(new Hashtable()
