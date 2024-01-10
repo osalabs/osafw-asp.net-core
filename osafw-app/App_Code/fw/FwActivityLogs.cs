@@ -115,13 +115,40 @@ public class FwActivityLogs : FwModel
         foreach (Hashtable row in result)
         {
             row["tab"] = tab;
-            row["log_type"] = fw.model<FwLogTypes>().one(row["log_types_id"]);
+            var log_type = fw.model<FwLogTypes>().one(row["log_types_id"]);
+            row["log_type"] = log_type;
             var user = fw.model<Users>().one(row["users_id"]);
             row["user"] = user;
             if (Utils.f2int(user["att_id"]) > 0)
                 row["avatar_link"] = fw.model<Att>().getUrl(Utils.f2int(user["att_id"]), "s");
             if (!Utils.isEmpty(row["upd_users_id"]))
                 row["upd_user"] = fw.model<Users>().one(row["upd_users_id"]);
+
+            //for system types - fill fields from payload
+            if (Utils.f2int(log_type["itype"]) == FwLogTypes.ITYPE_SYSTEM)
+            {
+                ArrayList frows = [];
+                row["fields"] = frows;
+
+                Hashtable payload = (Hashtable)Utils.jsonDecode(row["payload"]);
+                Hashtable fields = (Hashtable)payload["fields"] ?? null;
+                if (fields != null)
+                {
+                    foreach (string key in fields.Keys)
+                    {
+                        //if key is password, pass, pwd - hide value
+                        var value = fields[key];
+                        if (payload.Contains("pass") || payload.Contains("pwd"))
+                            value = "********";
+
+                        frows.Add(new Hashtable()
+                        {
+                            {"key",key},
+                            {"value",value}
+                        });
+                    }
+                }
+            }
         }
         return result;
     }

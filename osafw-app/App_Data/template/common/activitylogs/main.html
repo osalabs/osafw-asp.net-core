@@ -47,7 +47,7 @@
 </~activity_rows_none>
 
 <~activity_rows repeat inline>
-  <div class="d-flex align-items-start mb-2 border-bottom">
+  <div class="d-flex align-items-start pt-2 pb-2 border-bottom">
     <div class="flex-shrink-0">
       <div class="user-list-avatar">
         <~/common/activitylogs/avatar if="avatar_link">
@@ -58,6 +58,7 @@
       <h6 class="mb-1"><b><~user[iname]></b><~/common/activitylogs/logtype ifne="tab" value="comments"></h6>
       <p class="text-muted mb-1"><small><~idate date="short"><~/common/activitylogs/edited if="upd_time"></small></p>
       <~idesc markdown nl2br>
+      <~/common/activitylogs/fields if="fields">
     </div>
   </div>
 </~activity_rows>

@@ -99,6 +99,10 @@ public class SampleReport : FwReports
         {
             //row["entity"] = fw.model<FwEntities>().one(Utils.f2int(row["fwentities_id"]));
             ps["total_ctr"] = _calcPerc(list_rows); //if you need calculate "perc" for each row based on row["ctr"]
+            //if row["payload"] contains password/pass/pwd - hide it
+            var payload = Utils.f2str(row["payload"]);
+            if (payload.Contains("pass") || payload.Contains("pwd"))
+                row["payload"] = "********";
         }
     }
 }
