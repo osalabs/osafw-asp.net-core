@@ -3,13 +3,13 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Configuration;
 
 namespace osafw;
 
@@ -57,7 +57,7 @@ public class FwConfig
 
         if (string.IsNullOrEmpty(hostname))
             hostname = context.Request.Host.ToString();
-            //hostname = context.GetServerVariable("HTTP_HOST") ?? "";
+        //hostname = context.GetServerVariable("HTTP_HOST") ?? "";
         settings["hostname"] = hostname;
 
         string ApplicationPath = req.PathBase;
@@ -82,7 +82,7 @@ public class FwConfig
 
         settings["log"] = settings["site_root"] + $@"{path_separator}App_Data{path_separator}logs{path_separator}main.log";
         settings["log_max_size"] = 100 * 1024 * 1024; // 100 MB is max log size
-        settings["tmp"] = Path.GetTempPath();
+        settings["tmp"] = Utils.getTmpDir(); // TODO not used? remove?
 
         string http = "http://";
         if (context.GetServerVariable("HTTPS") == "on")

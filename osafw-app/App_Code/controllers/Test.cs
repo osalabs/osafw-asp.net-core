@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections;
-using System.IO;
 
 namespace osafw;
 
@@ -27,7 +26,7 @@ public class TestController : FwController
     {
 
         String uuid = Utils.uuid();
-        UploadParams up = new(fw, "file1", Path.GetTempPath(), uuid, ".xls .xlsm .xlsx");
+        UploadParams up = new(fw, "file1", Utils.getTmpDir(), uuid, ".xls .xlsm .xlsx");
         //is_uploaded = UploadUtils.uploadSimple(up);
 
         rw("!@!@!!@!@!@");

@@ -75,6 +75,7 @@ public class FwRoute
 public class FW : IDisposable
 {
     //controller standard actions
+    public const string ACTION_SUFFIX = "Action";
     public const string ACTION_INDEX = "Index";
     public const string ACTION_SHOW = "Show";
     public const string ACTION_SHOW_FORM = "ShowForm";
@@ -181,6 +182,10 @@ public class FW : IDisposable
 
         // override default lang with user's lang
         if (!string.IsNullOrEmpty(Session("lang"))) G["lang"] = Session("lang");
+
+        // override default ui_theme/ui_mode with user's settings
+        if (!string.IsNullOrEmpty(Session("ui_theme"))) G["ui_theme"] = Session("ui_theme");
+        if (!string.IsNullOrEmpty(Session("ui_mode"))) G["ui_mode"] = Session("ui_mode");
 
         FormErrors = new Hashtable(); // reset errors
         parseForm();
@@ -1107,7 +1112,7 @@ public class FW : IDisposable
 
         logger(LogLevel.TRACE, "TRY controller.action=", route.controller, ".", route.action);
 
-        MethodInfo actionMethod = controllerClass.GetMethod(route.action + "Action");
+        MethodInfo actionMethod = controllerClass.GetMethod(route.action + ACTION_SUFFIX);
         if (actionMethod == null)
         {
             logger(LogLevel.DEBUG, "No method found for controller.action=[", route.controller, ".", route.action, "], checking route_default_action");
@@ -1120,7 +1125,7 @@ public class FW : IDisposable
                 {
                     // = index - use IndexAction for unknown actions
                     route.action = ACTION_INDEX;
-                    actionMethod = controllerClass.GetMethod(route.action + "Action");
+                    actionMethod = controllerClass.GetMethod(route.action + ACTION_SUFFIX);
                 }
                 else if (pvalue == ACTION_SHOW)
                 {
@@ -1134,7 +1139,7 @@ public class FW : IDisposable
                     args[0] = route.id;
 
                     route.action = ACTION_SHOW;
-                    actionMethod = controllerClass.GetMethod(route.action + "Action");
+                    actionMethod = controllerClass.GetMethod(route.action + ACTION_SUFFIX);
                 }
             }
         }
@@ -1197,6 +1202,13 @@ public class FW : IDisposable
         {
             controller.checkAccess();
             ps = (Hashtable)actionMethod.Invoke(controller, parameters);
+
+            //special case for export - IndexAction+export_format is set - call exportList without parser
+            if (actionMethod.Name == (ACTION_INDEX + ACTION_SUFFIX) && controller.export_format.Length > 0)
+            {
+                controller.exportList();
+                ps = null; //disable parser
+            }
         }
         catch (TargetInvocationException ex)
         {
@@ -1261,9 +1273,12 @@ public class FW : IDisposable
             bool is_test = Utils.f2bool(this.config("is_test"));
             if (is_test)
             {
-                string test_email = (string)this.config("test_email");
+                string test_email = this.Session("login") ?? ""; //in test mode - try logged user email (if logged)
+                if (test_email.Length == 0)
+                    test_email = (string)this.config("test_email"); //try test_email from config
+
                 mail_body = "TEST SEND. PASSED MAIL_TO=[" + mail_to + "]" + System.Environment.NewLine + mail_body;
-                mail_to = (string)this.config("test_email");
+                mail_to = test_email;
                 logger(LogLevel.INFO, "EMAIL SENT TO TEST EMAIL [", mail_to, "] - TEST ENABLED IN web.config");
             }
 
