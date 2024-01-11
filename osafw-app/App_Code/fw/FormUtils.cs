@@ -523,39 +523,29 @@ public class FormUtils
     /// </summary>
     /// <param name="item"></param>
     /// <param name="itemold"></param>
+    /// TODO: if itemold has a bit field, it returned from db as "True", but item from the form as "1" - so it's always different
     public static Hashtable changesOnly(Hashtable item, Hashtable itemold)
     {
-        Hashtable result = [];
-        object datenew;
-        object dateold;
-        object vnew;
-        object vold;
+        var result = new Hashtable();
+
         foreach (var key in item.Keys)
         {
-            vnew = item[key];
-            vold = itemold[key];
+            object vnew = item[key];
+            object vold = itemold[key];
 
-            datenew = Utils.f2date(vnew);
-            dateold = Utils.f2date(vold);
-            if (datenew != null && dateold != null)
+            // If both are dates, compare only the date part.
+            if (Utils.f2date(vnew) is DateTime dtNew && Utils.f2date(vold) is DateTime dtOld)
             {
-                // it's dates - only compare DATE part, not time as all form inputs are dates without times
-                vnew = System.Convert.ToDateTime(datenew).ToShortDateString();
-                vold = System.Convert.ToDateTime(dateold).ToShortDateString();
+                if (dtNew.Date != dtOld.Date)
+                    result[key] = vnew;
             }
-
-            // If Not itemold.ContainsKey(key) _
-            // OrElse vnew Is Nothing AndAlso vold IsNot Nothing _
-            // OrElse vnew IsNot Nothing AndAlso vold Is Nothing _
-            // OrElse vnew IsNot Nothing AndAlso vold IsNot Nothing _
-            // AndAlso vnew.ToString() <> vold.ToString() _
-            // Then
-            if (!itemold.ContainsKey(key) || Utils.f2str(vnew) != Utils.f2str(vold))
-                // logger("****:" & key)
-                // logger(TypeName(vnew) & " - " & vnew & " - " & datenew)
-                // logger(TypeName(vold) & " - " & vold & " - " & dateold)
-                result[key] = item[key];
+            // Handle non-date values and the case where one value is a date and the other is not.
+            else if (!itemold.ContainsKey(key) || Utils.f2str(vnew) != Utils.f2str(vold))
+            {
+                result[key] = vnew;
+            }
         }
+
         return result;
     }
 
