@@ -309,6 +309,16 @@ public class Users : FwModel
         Hashtable fields = new();
         fields["login_time"] = DB.NOW;
         this.update(id, fields);
+
+        if (id == 0)
+            id = fw.userId;
+        var user = one(id);
+        if (Utils.f2int(user["access_level"]) == Users.ACL_SITEADMIN)
+        {
+            // Update list of updates 
+            fw.model<DBUpdates>().parseUpdates();
+            fw.G["IS_HAVE_DB_UPDATES"] = fw.model<DBUpdates>().getNotAppliedCount();
+        }
     }
 
     public bool reloadSession(int id = 0)

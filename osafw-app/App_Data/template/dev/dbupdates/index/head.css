@@ -1,3 +1,7 @@
 ﻿tr.collapse.in {
   display: table-row !important;
 }
+
+.sql-keyword { color: #06C0F7; font-weight: bold; }
+.sql-string { color: #04BB43; }
+.sql-comment { color: #ccc; font-style: italic; }

@@ -29,10 +29,6 @@ public sealed class FwHooks
         // also force set XSS
         if (string.IsNullOrEmpty(fw.Session("XSS"))) fw.Session("XSS", Utils.getRandStr(16));
         if (fw.userId > 0) fw.model<Users>().loadMenuItems();
-
-        // Update list of updates 
-        fw.model<DBUpdates>().parseUpdates();
-        fw.G["IS_HAVE_DB_UPDATES"] = fw.model<DBUpdates>().getNotAppliedCount();
     }
 
     // called from FW.run before fw.Finalize()

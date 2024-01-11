@@ -83,12 +83,14 @@
           <~/common/icons/tools> `Direct DB Access`
         </a>
       </li>
-      <~dev_menu if="GLOBAL[IS_DEV]" inline>
+      <~is_have_db_updates if="GLOBAL[IS_HAVE_DB_UPDATES]" inline>
       <li class="nav-item" >
         <a href="<~/dev/url>/DBUpdates" class="nav-link link-body-emphasis <~/common/active ifeq="GLOBAL[controller]" value="DevDBUpdates">">
           <~/common/icons/tools> `DB Updates` <~is_have_updates if="GLOBAL[IS_HAVE_DB_UPDATES]"><span class="badge bg-danger"><~GLOBAL[IS_HAVE_DB_UPDATES]></span></~is_have_updates>
         </a>
       </li>
+      </~is_have_db_updates>
+      <~dev_menu if="GLOBAL[IS_DEV]" inline>
       <li class="nav-item" >
         <a href="<~/dev/url>/Manage" class="nav-link link-body-emphasis <~/common/active ifeq="GLOBAL[controller]" value="DevManage">">
           <~/common/icons/tools> `Developer Tools`

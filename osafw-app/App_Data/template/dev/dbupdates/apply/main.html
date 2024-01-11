@@ -8,8 +8,8 @@ Query results:</h4>
 </~processedQueries>
 
 <~ist_error if="no_errors" inline>
-    <span style='color:green'>Success</span>
+    <span class='text-success'>Success</span>
 </~ist_error>
 <~is_error unless="no_errors" inline>
-  <span style='color:red'><~error>. Transaction was rolled back.</span>
+  <span class='text-danger'><~error>. Transaction was rolled back.</span>
 </~is_error>

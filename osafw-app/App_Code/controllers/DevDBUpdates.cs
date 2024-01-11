@@ -5,11 +5,6 @@
 
 using System;
 using System.Collections;
-using System.Data.SqlTypes;
-using System.Drawing.Imaging;
-using System.Runtime.ConstrainedExecution;
-using static osafw.FwSelfTest;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace osafw;
 
@@ -22,23 +17,23 @@ public class DevDBUpdatesController : FwDynamicController
     public override void init(FW fw)
     {
         base.init(fw);
-        // use if config doesn't contains model name
-        // model0 = fw.model(Of DBUpdates)()
-        // model = model0
 
         base_url = "/Dev/DBUpdates";
         this.loadControllerConfig();
         model = model0 as DBUpdates;
         db = model.getDB(); // model-based controller works with model's db
 
-        model_related = fw.model<DBUpdates>();
-        is_userlists = true;
-
-        // override sortmap for date fields
-        // list_sortmap["fdate_pop_str"] = "fdate_pop";
+        // Update list of updates 
+        fw.model<DBUpdates>().parseUpdates();
+        fw.G["IS_HAVE_DB_UPDATES"] = fw.model<DBUpdates>().getNotAppliedCount();
     }
 
-    public Hashtable ApplyAction(int id = 0)
+    public override Hashtable IndexAction()
+    {
+        return base.IndexAction();
+    }
+
+    public override Hashtable SaveAction(int id = 0)
     {
         Hashtable ps = new Hashtable();
         var row = model.one(id);
@@ -139,11 +134,56 @@ public class DevDBUpdatesController : FwDynamicController
             }
         }
 
-
         ps["processedQueries"] = processedQueries;
         ps["error"] = error;
         ps["no_errors"] = string.IsNullOrEmpty(error);
 
         fw.parser(base_url + "/apply", ps);
+    }
+
+    public override Hashtable AutocompleteAction()
+    {
+        throw new ApplicationException("Not Imlemented");
+    }
+
+    public override Hashtable DeleteAction(int id)
+    {
+        throw new ApplicationException("Not Imlemented");
+    }
+
+    public override Hashtable RestoreDeletedAction(int id)
+    {
+        throw new ApplicationException("Not Imlemented");
+    }
+
+    public override Hashtable SaveMultiAction()
+    {
+        throw new ApplicationException("Not Imlemented");
+    }
+
+    public override Hashtable SaveUserViewsAction()
+    {
+        throw new ApplicationException("Not Imlemented");
+    }
+
+    public override Hashtable ShowAction(int id = 0)
+    {
+        throw new ApplicationException("Not Imlemented");
+    }
+
+    public override void ShowDeleteAction(int id)
+    {
+        throw new ApplicationException("Not Imlemented");
+    }
+
+    public override Hashtable ShowFormAction(int id = 0)
+    {
+        throw new ApplicationException("Not Imlemented");
+    }
+
+
+    public override void UserViewsAction(int id = 0)
+    {
+        throw new ApplicationException("Not Imlemented");
     }
 }
