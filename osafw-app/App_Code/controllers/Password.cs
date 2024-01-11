@@ -120,7 +120,7 @@ public class PasswordController : FwController
         itemdb["pwd_reset"] = ""; // also reset token
         model.update(id, itemdb);
 
-        fw.logAction(FwLogTypes.ICODE_USERS_CHPWD, FwEntities.ICODE_USERS);
+        fw.logActivity(FwLogTypes.ICODE_USERS_CHPWD, FwEntities.ICODE_USERS);
         fw.flash("success", "Password updated");
 
         fw.redirect("/Login");

@@ -311,7 +311,7 @@ public class Users : FwModel
 
         reloadSession(id);
 
-        fw.logAction(FwLogTypes.ICODE_USERS_LOGIN, FwEntities.ICODE_USERS, id);
+        fw.logActivity(FwLogTypes.ICODE_USERS_LOGIN, FwEntities.ICODE_USERS, id);
         // update login info
         Hashtable fields = new();
         fields["login_time"] = DB.NOW;

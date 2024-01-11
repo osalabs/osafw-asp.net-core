@@ -1497,7 +1497,7 @@ public class FW : IDisposable
         return (FwModel)models[model_name];
     }
 
-    public void logAction(string log_types_icode, string entity_icode, int item_id = 0, string iname = "", Hashtable changed_fields = null)
+    public void logActivity(string log_types_icode, string entity_icode, int item_id = 0, string iname = "", Hashtable changed_fields = null)
     {
         if (!is_log_events)
             return;

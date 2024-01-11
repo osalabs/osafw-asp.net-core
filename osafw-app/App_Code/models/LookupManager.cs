@@ -89,7 +89,7 @@ public class LookupManager : FwModel
             item[field_prio] = 0;
 
         int id = db.insert(tname, item);
-        fw.logAction(FwLogTypes.ICODE_ADDED, tname, id);
+        fw.logActivity(FwLogTypes.ICODE_ADDED, tname, id);
 
         //if priority field defined and its value is not passed - update it with newly added id to allow proper re/ordering
         if (!Utils.isEmpty(field_prio) && prio == null)
@@ -163,7 +163,7 @@ public class LookupManager : FwModel
 
             db.update(tname, item_save, where);
 
-            fw.logAction(FwLogTypes.ICODE_UPDATED, tname, id);
+            fw.logActivity(FwLogTypes.ICODE_UPDATED, tname, id);
             return true;
         }
         else
@@ -193,7 +193,7 @@ public class LookupManager : FwModel
         where[id_fname] = id;
         db.del(tname, where);
 
-        fw.logAction(FwLogTypes.ICODE_DELETED, tname, id);
+        fw.logActivity(FwLogTypes.ICODE_DELETED, tname, id);
     }
 
     // calculate md5 for all values from hashtable

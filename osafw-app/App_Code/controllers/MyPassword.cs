@@ -77,7 +77,7 @@ public class MyPasswordController : FwController
         {
             model.update(id, itemdb);
 
-            fw.logAction(FwLogTypes.ICODE_USERS_CHPWD, FwEntities.ICODE_USERS);
+            fw.logActivity(FwLogTypes.ICODE_USERS_CHPWD, FwEntities.ICODE_USERS);
             fw.flash("record_updated", 1);
         }
 

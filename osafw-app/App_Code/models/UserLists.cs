@@ -83,7 +83,7 @@ public class UserLists : FwModel
         Hashtable where = new();
         where["id"] = id;
         db.del(table_items, where);
-        fw.logAction(FwLogTypes.ICODE_DELETED, table_items, id);
+        fw.logActivity(FwLogTypes.ICODE_DELETED, table_items, id);
     }
 
     // add new record and return new record id
@@ -95,7 +95,7 @@ public class UserLists : FwModel
         item["add_users_id"] = fw.userId;
 
         int id = db.insert(table_items, item);
-        fw.logAction(FwLogTypes.ICODE_ADDED, table_items, id);
+        fw.logActivity(FwLogTypes.ICODE_ADDED, table_items, id);
         return id;
     }
 
