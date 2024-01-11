@@ -111,24 +111,39 @@ public class FwActivityLogs : FwModel
                 break;
         }
 
-        ArrayList result = listByEntity(entity_icode, id, log_types_icodes);
-        foreach (Hashtable row in result)
+        // prepare list of activity records for UI
+        // group system consequential changes from the same user within 10 minutes into one fields row
+        Hashtable last_fields = null;
+        var last_add_time = DateTime.MinValue;
+        var last_users_id = -1;
+        var last_log_types_id = -1;
+
+        var result = new ArrayList();
+        var rows = listByEntity(entity_icode, id, log_types_icodes);
+        foreach (DBRow row in rows)
         {
-            row["tab"] = tab;
-            var log_type = fw.model<FwLogTypes>().one(row["log_types_id"]);
-            row["log_type"] = log_type;
-            var user = fw.model<Users>().one(row["users_id"]);
-            row["user"] = user;
-            if (Utils.f2int(user["att_id"]) > 0)
-                row["avatar_link"] = fw.model<Att>().getUrl(Utils.f2int(user["att_id"]), "s");
-            if (!Utils.isEmpty(row["upd_users_id"]))
-                row["upd_user"] = fw.model<Users>().one(row["upd_users_id"]);
+            var add_time = (DateTime)Utils.f2date(row["add_time"]);
+            var users_id = Utils.f2int(row["users_id"]);
+            var log_types_id = Utils.f2int(row["log_types_id"]);
+            var log_type = fw.model<FwLogTypes>().one(log_types_id);
 
             //for system types - fill fields from payload
+            var is_merged = false;
             if (Utils.f2int(log_type["itype"]) == FwLogTypes.ITYPE_SYSTEM)
             {
-                ArrayList frows = [];
-                row["fields"] = frows;
+                if (last_fields != null
+                    && last_log_types_id == log_types_id
+                    && last_users_id == users_id
+                    && add_time.Subtract(last_add_time).TotalMinutes < 10)
+                {
+                    // same user and short time between updates - merge with last_fields
+                    is_merged = true;
+                }
+                else
+                {
+                    // new row
+                    last_fields = [];
+                }
 
                 Hashtable payload = (Hashtable)Utils.jsonDecode(row["payload"]);
                 Hashtable fields = (Hashtable)payload["fields"] ?? null;
@@ -141,15 +156,62 @@ public class FwActivityLogs : FwModel
                         if (key.Contains("pass") || key.Contains("pwd"))
                             value = "********";
 
-                        frows.Add(new Hashtable()
-                        {
-                            {"key",key},
-                            {"value",value}
-                        });
+                        // deduplicate - if key already exists - skip, because we merging older row into newer
+                        if (!last_fields.ContainsKey(key))
+                            last_fields[key] = value;
                     }
                 }
             }
+            else
+            {
+                last_fields = null; // reset fields for user types
+            }
+
+            last_users_id = users_id;
+            last_add_time = add_time;
+            last_log_types_id = log_types_id;
+
+            if (is_merged)
+                continue; // skip this row as it's merged with previous
+
+            var new_row = new Hashtable();
+            new_row["idesc"] = row["idesc"];
+            new_row["idate"] = row["idate"];
+            new_row["add_time"] = row["add_time"];
+            new_row["upd_time"] = row["upd_time"];
+            new_row["tab"] = tab;
+            new_row["log_type"] = log_type;
+            var user = fw.model<Users>().one(users_id);
+            new_row["user"] = user;
+            if (Utils.f2int(user["att_id"]) > 0)
+                new_row["avatar_link"] = fw.model<Att>().getUrl(Utils.f2int(user["att_id"]), "s");
+            if (!Utils.isEmpty(row["upd_users_id"]))
+                new_row["upd_user"] = fw.model<Users>().one(row["upd_users_id"]);
+            if (last_fields != null)
+                new_row["fields"] = last_fields;
+
+            result.Add(new_row);
         }
+
+        //and now for each result row with fields - convert fields from Hashtable to ArrayList for ParsePage
+        foreach (Hashtable row in result)
+        {
+            if (!row.ContainsKey("fields"))
+                continue;
+
+            var fields = (Hashtable)row["fields"];
+            var fields_list = new ArrayList();
+            foreach (string key in fields.Keys)
+            {
+                fields_list.Add(new Hashtable()
+                    {
+                        {"key",key},
+                        {"value",fields[key]}
+                    });
+            }
+            row["fields"] = fields_list;
+        }
+
         return result;
     }
 

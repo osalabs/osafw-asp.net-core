@@ -49,8 +49,6 @@ public class AdminDemosController : FwAdminController
 
     public override Hashtable ShowAction(int id)
     {
-        initFilter();
-
         Hashtable ps = base.ShowAction(id);
         var item = (Hashtable)ps["i"];
         //var id = Utils.f2int(item["id"]);
@@ -65,8 +63,11 @@ public class AdminDemosController : FwAdminController
 
         if (is_activity_logs)
         {
+            initFilter();
+
             list_filter["tab_activity"] = Utils.f2str(list_filter["tab_activity"] ?? FwActivityLogs.TAB_COMMENTS);
             ps["list_filter"] = list_filter;
+            ps["activity_entity"] = model0.table_name;
             ps["activity_rows"] = fw.model<FwActivityLogs>().listByEntityForUI(model.table_name, id, (string)list_filter["tab_activity"]);
         }
 

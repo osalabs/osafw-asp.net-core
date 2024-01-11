@@ -88,7 +88,7 @@ WHERE NOT EXISTS (
 GROUP BY extracted_icode;
 
 -- event_log+events -> activity_logs
-INSERT INTO activity_logs (log_types_id, fwentities_id, item_id, idate, users_id, idesc, payload, status, add_users_id, upd_time)
+INSERT INTO activity_logs (log_types_id, fwentities_id, item_id, idate, users_id, idesc, payload, status, add_users_id, add_time)
 SELECT
   -- Determine log_types_id
   CASE
@@ -111,7 +111,7 @@ SELECT
   el.fields AS payload,
   0 AS status, -- Assuming default status
   el.add_users_id,
-  el.add_time AS upd_time -- Using add_time in place of upd_users_id
+  el.add_time
 FROM event_log el
 INNER JOIN events ev ON el.events_id = ev.id;
 

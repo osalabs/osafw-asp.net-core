@@ -243,7 +243,7 @@ public abstract class FwController
     // sample in IndexAction: me.get_filter()
     public virtual Hashtable initFilter(string session_key = null)
     {
-        Hashtable f = (Hashtable)fw.FORM["f"] ?? new();
+        Hashtable f = reqh("f");
 
         if (session_key == null)
             session_key = "_filter_" + fw.G["controller.action"];

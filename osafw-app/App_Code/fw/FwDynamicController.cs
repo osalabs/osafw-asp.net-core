@@ -161,12 +161,23 @@ public class FwDynamicController : FwController
         if (this.is_userlists)
             this.setUserLists(ps, id);
 
+        if (is_activity_logs)
+        {
+            initFilter();
+
+            list_filter["tab_activity"] = Utils.f2str(list_filter["tab_activity"] ?? FwActivityLogs.TAB_COMMENTS);
+            ps["list_filter"] = list_filter;
+            ps["activity_entity"] = model0.table_name;
+            ps["activity_rows"] = fw.model<FwActivityLogs>().listByEntityForUI(model0.table_name, id, (string)list_filter["tab_activity"]);
+        }
+
         ps["id"] = id;
         ps["i"] = item;
         ps["return_url"] = return_url;
         ps["related_id"] = related_id;
         ps["base_url"] = base_url;
         ps["is_userlists"] = is_userlists;
+        ps["is_activity_logs"] = is_activity_logs;
         ps["is_readonly"] = is_readonly;
 
         return ps;
