@@ -134,7 +134,8 @@ public class FwActivityLogs : FwModel
                 if (last_fields != null
                     && last_log_types_id == log_types_id
                     && last_users_id == users_id
-                    && add_time.Subtract(last_add_time).TotalMinutes < 10)
+                    && last_add_time.Subtract(add_time).TotalMinutes < 10
+                    )
                 {
                     // same user and short time between updates - merge with last_fields
                     is_merged = true;
@@ -237,94 +238,4 @@ public class FwActivityLogs : FwModel
         return Utils.f2long(db.valuep(sql, p));
     }
 
-    /// ****** helpers to detect changes
-
-    /// <summary>
-    /// leave in only those item keys, which are apsent/different from itemold
-    /// </summary>
-    /// <param name="item"></param>
-    /// <param name="itemold"></param>
-    public Hashtable changesOnly(Hashtable item, Hashtable itemold)
-    {
-        Hashtable result = new();
-        object datenew;
-        object dateold;
-        object vnew;
-        object vold;
-        foreach (var key in item.Keys)
-        {
-            vnew = item[key];
-            vold = itemold[key];
-
-            datenew = Utils.f2date(vnew);
-            dateold = Utils.f2date(vold);
-            if (datenew != null && dateold != null)
-            {
-                // it's dates - only compare DATE part, not time as all form inputs are dates without times
-                vnew = System.Convert.ToDateTime(datenew).ToShortDateString();
-                vold = System.Convert.ToDateTime(dateold).ToShortDateString();
-            }
-
-            // If Not itemold.ContainsKey(key) _
-            // OrElse vnew Is Nothing AndAlso vold IsNot Nothing _
-            // OrElse vnew IsNot Nothing AndAlso vold Is Nothing _
-            // OrElse vnew IsNot Nothing AndAlso vold IsNot Nothing _
-            // AndAlso vnew.ToString() <> vold.ToString() _
-            // Then
-            if (!itemold.ContainsKey(key) || Utils.f2str(vnew) != Utils.f2str(vold))
-                // logger("****:" & key)
-                // logger(TypeName(vnew) & " - " & vnew & " - " & datenew)
-                // logger(TypeName(vold) & " - " & vold & " - " & dateold)
-                result[key] = item[key];
-        }
-        return result;
-    }
-
-    /// <summary>
-    /// return true if any of passed fields changed
-    /// </summary>
-    /// <param name="item1"></param>
-    /// <param name="item2"></param>
-    /// <param name="fields">qw-list of fields</param>
-    /// <returns>false if no chagnes in passed fields or fields are empty</returns>
-    public bool isChanged(Hashtable item1, Hashtable item2, string fields)
-    {
-        var result = false;
-        var afields = Utils.qw(fields);
-        foreach (var fld in afields)
-        {
-            if (item1.ContainsKey(fld) && item2.ContainsKey(fld) && Utils.f2str(item1[fld]) != Utils.f2str(item2[fld]))
-            {
-                result = true;
-                break;
-            }
-        }
-
-        return result;
-    }
-
-    // check if 2 dates (without time) chagned
-    public bool isChangedDate(object date1, object date2)
-    {
-        var dt1 = Utils.f2date(date1);
-        var dt2 = Utils.f2date(date2);
-
-        if (dt1 != null || dt2 != null)
-        {
-            if (dt1 != null && dt2 != null)
-            {
-                // both set - compare dates
-                if (DateUtils.Date2SQL((DateTime)dt1) != DateUtils.Date2SQL((DateTime)dt2))
-                    return true;
-            }
-            else
-                // one set, one no - chagned
-                return true;
-        }
-        else
-        {
-        }
-
-        return false;
-    }
 }
