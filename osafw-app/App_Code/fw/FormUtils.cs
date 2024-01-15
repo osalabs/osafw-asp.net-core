@@ -323,7 +323,7 @@ public class FormUtils
     }
 
 
-    // join ids from form to comma-separated string
+    // join ids from the FORM to comma-separated string (return sorted to keep order consistent)
     // sample:
     // many <input name="dict_link_multi[<~id>]"...>
     // itemdb("dict_link_multi") = FormUtils.multi2ids(reqh("dict_link_multi"))
@@ -332,11 +332,7 @@ public class FormUtils
         if (items == null || items.Count == 0)
             return "";
 
-        var keys = items.Keys;
-        var zzz = new string[keys.Count];
-        keys.CopyTo(zzz, 0);
-        return string.Join(",", zzz);
-        //return string.Join(",", new ArrayList(items.Keys).ToArray());
+        return string.Join(",", [.. items.Keys.Cast<string>().OrderBy(key => key)]);
     }
 
     // input: comma separated string
@@ -518,5 +514,86 @@ public class FormUtils
         return new ArrayList((from Hashtable h in rows
                               orderby (bool)h["is_checked"] descending, (int)h["prio"] ascending, h["iname"] ascending
                               select h).ToList());
+    }
+
+    /// ****** helpers to detect changes
+
+    /// <summary>
+    /// leave in only those item keys, which are apsent/different from itemold
+    /// </summary>
+    /// <param name="item"></param>
+    /// <param name="itemold"></param>
+    /// TODO: if itemold has a bit field, it returned from db as "True", but item from the form as "1" - so it's always different
+    public static Hashtable changesOnly(Hashtable item, Hashtable itemold)
+    {
+        var result = new Hashtable();
+
+        foreach (var key in item.Keys)
+        {
+            object vnew = item[key];
+            object vold = itemold[key];
+
+            // If both are dates, compare only the date part.
+            if (Utils.f2date(vnew) is DateTime dtNew && Utils.f2date(vold) is DateTime dtOld)
+            {
+                if (dtNew.Date != dtOld.Date)
+                    result[key] = vnew;
+            }
+            // Handle non-date values and the case where one value is a date and the other is not.
+            else if (!itemold.ContainsKey(key) || Utils.f2str(vnew) != Utils.f2str(vold))
+            {
+                result[key] = vnew;
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// return true if any of passed fields changed
+    /// </summary>
+    /// <param name="item1"></param>
+    /// <param name="item2"></param>
+    /// <param name="fields">qw-list of fields</param>
+    /// <returns>false if no chagnes in passed fields or fields are empty</returns>
+    public static bool isChanged(Hashtable item1, Hashtable item2, string fields)
+    {
+        var result = false;
+        var afields = Utils.qw(fields);
+        foreach (var fld in afields)
+        {
+            if (item1.ContainsKey(fld) && item2.ContainsKey(fld) && Utils.f2str(item1[fld]) != Utils.f2str(item2[fld]))
+            {
+                result = true;
+                break;
+            }
+        }
+
+        return result;
+    }
+
+    // check if 2 dates (without time) chagned
+    public static bool isChangedDate(object date1, object date2)
+    {
+        var dt1 = Utils.f2date(date1);
+        var dt2 = Utils.f2date(date2);
+
+        if (dt1 != null || dt2 != null)
+        {
+            if (dt1 != null && dt2 != null)
+            {
+                // both set - compare dates
+                if (DateUtils.Date2SQL((DateTime)dt1) != DateUtils.Date2SQL((DateTime)dt2))
+                    return true;
+            }
+            else
+                // one set, one no - chagned
+                return true;
+        }
+        else
+        {
+        }
+
+        return false;
     }
 }

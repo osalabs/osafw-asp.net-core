@@ -88,7 +88,7 @@ public class LoginController : FwController
             {
                 if (user.Count == 0 || (string)user["status"] != "0" || !model.checkPwd(pwd, (string)user["pwd"]))
                 {
-                    fw.logEvent("login_fail", 0, 0, login);
+                    fw.logActivity(FwLogTypes.ICODE_USERS_LOGIN_FAIL, FwEntities.ICODE_USERS, 0, login);
                     throw new AuthException("User Authentication Error");
                 }
 
@@ -124,7 +124,7 @@ public class LoginController : FwController
 
     public void DeleteAction()
     {
-        fw.logEvent("logoff", fw.userId);
+        fw.logActivity(FwLogTypes.ICODE_USERS_LOGOFF, FwEntities.ICODE_USERS, fw.userId);
         fw.model<Users>().removePermCookie(fw.userId);
         fw.context.Session.Clear();
         fw.redirect((string)fw.config("UNLOGGED_DEFAULT_URL"));
@@ -177,7 +177,7 @@ public class LoginController : FwController
             if (!model.checkMFARecovery(users_id, mfs_code))
             {
                 fw.flash("error", "Invalid MFA code, try again");
-                fw.logEvent("login_fail", users_id, 0, "mfa fail");
+                fw.logActivity(FwLogTypes.ICODE_USERS_LOGIN_FAIL, FwEntities.ICODE_USERS, users_id, "mfa fail");
                 fw.redirect(base_url + "/(MFA)");
             }
         }

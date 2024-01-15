@@ -220,18 +220,16 @@ public class Utils
         return false;
     }
 
-    public static DateTime? f2date(object AField)
+    public static DateTime? f2date(object field)
     {
-        DateTime? result = null;
-        if (AField == null) return result;
-        if (AField is DateTime) return (DateTime?)AField;
-        if (DateTime.TryParse(AField.ToString().Trim(), out DateTime dt))
-        {
-            result = dt;
-        }
-        return result;
-    }
+        if (field is DateTime dateTimeValue)
+            return dateTimeValue;
 
+        if (DateTime.TryParse(field?.ToString().Trim(), out DateTime parsedDate))
+            return parsedDate;
+
+        return null;
+    }
 
     /// <summary>
     /// return true if field is date
@@ -244,12 +242,10 @@ public class Utils
     }
 
     // guarantee to return string (if cannot convert to string - just return empty string)
-    public static string f2str(object AField)
+    public static string f2str(object field)
     {
-        if (AField == null) return "";
-        if (AField is string s) return s;
-        string result = Convert.ToString(AField);
-        return result;
+        if (field == null) return "";
+        return field.ToString();
     }
 
     public static int f2int(object AField)
