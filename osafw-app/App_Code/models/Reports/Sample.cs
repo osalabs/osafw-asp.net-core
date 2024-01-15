@@ -26,7 +26,8 @@ public class SampleReport : FwReports
         if (!Utils.isEmpty(f["from_date"]) || !Utils.isEmpty(f["to_date"]))
             f["is_dates"] = true;
 
-        f_data["select_events"] = fw.model<FwEvents>().listSelectOptions();
+        f_data["select_events"] = fw.model<FwLogTypes>().listSelectOptions();
+        f_data["select_fwentities"] = fw.model<FwEntities>().listSelectOptions();
         f_data["select_users"] = fw.model<Users>().listSelectOptions();
     }
 
@@ -39,31 +40,37 @@ public class SampleReport : FwReports
         Hashtable where_params = new();
         if (!Utils.isEmpty(f["from_date"]))
         {
-            where += " and el.add_time>=@from_date";
+            where += " and al.add_time>=@from_date";
             where_params["@from_date"] = f["from_date"];
         }
         if (System.DateTime.TryParse((string)f["to_date"], out DateTime to_date))
         {
-            where += " and el.add_time<@to_date";
+            where += " and al.add_time<@to_date";
             where_params["@to_date"] = to_date.AddDays(1);
         }
 
         if (!Utils.isEmpty(f["events_id"]))
         {
-            where += " and el.events_id=@events_id";
+            where += " and al.log_types_id=@events_id";
             where_params["@events_id"] = f["events_id"];
+        }
+
+        if (!Utils.isEmpty(f["fwentities_id"]))
+        {
+            where += " and al.fwentities_id=@fwentities_id";
+            where_params["@fwentities_id"] = f["fwentities_id"];
         }
 
         if (!Utils.isEmpty(f["users_id"]))
         {
-            where += " and el.add_users_id=@users_id";
+            where += " and al.add_users_id=@users_id";
             where_params["@users_id"] = f["users_id"];
         }
 
         if (!Utils.isEmpty(f["s"]))
         {
-            //search in item_id, iname, fields
-            where += " and (el.item_id=@item_id OR el.iname like @slike OR el.fields like @slike)";
+            //search in item_id, idesc, payload
+            where += " and (al.item_id=@item_id OR al.idesc like @slike OR al.payload like @slike)";
             where_params["@item_id"] = Utils.f2int(f["s"]);
             where_params["@slike"] = "%" + f["s"] + "%";
         }
@@ -71,15 +78,18 @@ public class SampleReport : FwReports
         // define query
         // REMEMBER to filter out deleted items for each table, i.e. add call andNotDeleted([alias])
         string sql;
-        sql = @$"select el.*
-                , e.iname as event_name
+        sql = @$"select al.*
+                , lt.iname as event_name
+                , et.iname as entity_name
                 , u.fname
                 , u.lname 
-                from events e, event_log el
-                     LEFT OUTER JOIN users u ON (u.id=el.add_users_id {andNotDeleted("u.")})
-                where el.events_id=e.id 
+                from activity_logs al
+                     INNER JOIN log_types lt ON (lt.id=al.log_types_id)
+                     INNER JOIN fwentities et ON (et.id=al.fwentities_id)
+                     LEFT OUTER JOIN users u ON (u.id=al.add_users_id {andNotDeleted("u.")})
+                where 1=1 
                 {where}
-                order by el.id desc";
+                order by al.id desc";
         sql = db.limit(sql, 20); //limit to first results only
         list_rows = db.arrayp(sql, where_params);
         list_count = list_rows.Count;
@@ -87,8 +97,12 @@ public class SampleReport : FwReports
         // perform calculations and add additional info for each result row
         foreach (Hashtable row in list_rows)
         {
-            //row["event"] = fw.model<FwEvents>().one(Utils.f2int(row["events_id"]));
+            //row["entity"] = fw.model<FwEntities>().one(Utils.f2int(row["fwentities_id"]));
             ps["total_ctr"] = _calcPerc(list_rows); //if you need calculate "perc" for each row based on row["ctr"]
+            //if row["payload"] contains password/pass/pwd - hide it
+            var payload = Utils.f2str(row["payload"]);
+            if (payload.Contains("pass") || payload.Contains("pwd"))
+                row["payload"] = "********";
         }
     }
 }

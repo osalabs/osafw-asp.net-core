@@ -30,7 +30,7 @@ public class AdminAttController : FwAdminController
 
     public override void setListSearch()
     {
-        list_where = " table_name='' "; //only show uploads directly from user (not linked to specific table)
+        list_where = " fwentities_id IS NULL "; //only show uploads directly from user (not linked to specific entity)
 
         base.setListSearch();
 

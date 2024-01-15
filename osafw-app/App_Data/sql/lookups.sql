@@ -3,6 +3,7 @@
 -- lookup manager table definitions
 insert into lookup_manager_tables (tname, iname, access_level) VALUES
 ('events','Events', 100)
+, ('log_types','Log Types', 100)
 , ('att_categories','Upload Categories', NULL)
 ;
 
@@ -14,11 +15,17 @@ INSERT INTO att_categories (icode, iname) VALUES
 ,('spage_banner', 'Page banners')
 ;
 
--- events
-INSERT INTO events (icode, iname) VALUES ('login',    'User login');
-INSERT INTO events (icode, iname) VALUES ('logoff',   'User logoff');
-INSERT INTO events (icode, iname) VALUES ('login_fail', 'Login failed');
-INSERT INTO events (icode, iname) VALUES ('chpwd',    'User changed login/pwd');
-INSERT INTO events (icode, iname) VALUES ('users_add',    'New user added');
-INSERT INTO events (icode, iname) VALUES ('users_upd',    'User updated');
-INSERT INTO events (icode, iname) VALUES ('users_del',    'User deleted');
+-- log_types
+-- for tracking changes
+INSERT INTO log_types (itype, icode, iname) VALUES (0, 'added', 'Record Added');
+INSERT INTO log_types (itype, icode, iname) VALUES (0, 'updated', 'Record Updated');
+INSERT INTO log_types (itype, icode, iname) VALUES (0, 'deleted', 'Record Deleted');
+-- for user login audit
+INSERT INTO log_types (itype, icode, iname) VALUES (0, 'login', 'User Login');
+INSERT INTO log_types (itype, icode, iname) VALUES (0, 'logoff', 'User Logoff');
+INSERT INTO log_types (itype, icode, iname) VALUES (0, 'login_fail', 'Login Failed');
+INSERT INTO log_types (itype, icode, iname) VALUES (0, 'chpwd', 'User changed login/pwd');
+-- user selectable types
+INSERT INTO log_types (itype, icode, iname) VALUES (10, 'comment', 'Comment');
+
+update log_types set prio=id; -- set default priority

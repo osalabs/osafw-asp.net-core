@@ -1835,7 +1835,7 @@ public class DB : IDisposable
                             AND col2.ORDINAL_POSITION = col1.ORDINAL_POSITION)" +
                 where, where_params);
         }
-        if (dbtype == DBTYPE_MYSQL)
+        else if (dbtype == DBTYPE_MYSQL)
         {
             var where = "";
             var where_params = new Hashtable();

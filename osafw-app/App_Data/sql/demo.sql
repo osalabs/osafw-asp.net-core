@@ -60,7 +60,7 @@ CREATE TABLE demos (
   INDEX IX_demos_dict_link_auto_id (dict_link_auto_id)
 );
 
-/*multi link table*/
+/*junction table*/
 DROP TABLE IF EXISTS demos_demo_dicts;
 CREATE TABLE demos_demo_dicts (
   demos_id              INT NULL FOREIGN KEY REFERENCES demos(id),

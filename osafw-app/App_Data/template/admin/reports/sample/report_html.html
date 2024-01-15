@@ -10,8 +10,8 @@ Dates: <strong><~f[from_date]>-<~f[to_date]></strong>
         <tr>
             <th>Date/Time</th>
             <th>Event</th>
+            <th>Entity</th>
             <th class="text-end">Related ID</th>
-            <th class="text-end">Related ID 2</th>
             <th>Note</th>
             <th>Fields</th>
             <th>User</th>
@@ -22,10 +22,10 @@ Dates: <strong><~f[from_date]>-<~f[to_date]></strong>
             <tr>
                 <td><~add_time date="sql"></td>
                 <td><~event_name></td>
+                <td><~entity_name></td>
                 <td class="text-end"><~item_id></td>
-                <td class="text-end"><~item_id2></td>
-                <td><~iname></td>
-                <td><~fields truncate></td>
+                <td><~idesc></td>
+                <td><~payload truncate></td>
                 <td><~fname> <~lname></td>
             </tr>
         </~list_rows>
