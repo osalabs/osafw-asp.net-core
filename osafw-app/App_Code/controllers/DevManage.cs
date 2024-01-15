@@ -1,4 +1,4 @@
-﻿// Manage  controller for Developers
+// Manage  controller for Developers
 //
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021  Oleg Savchuk www.osalabs.com
@@ -1058,6 +1058,12 @@ public class DevManageController : FwController
                         field["fw_type"] = "int";
                         field["fw_subtype"] = "int";
                     }
+                    else if (Regex.IsMatch(line, @"\bsmallint\b", RegexOptions.IgnoreCase))
+                    {
+                        field["numeric_precision"] = 5;
+                        field["fw_type"] = "int";
+                        field["fw_subtype"] = "smallint";
+                    }
                     else if (Regex.IsMatch(line, @"\btinyint\b", RegexOptions.IgnoreCase))
                     {
                         field["numeric_precision"] = 3;
@@ -1078,17 +1084,29 @@ public class DevManageController : FwController
                     }
                     else if (Regex.IsMatch(line, @"\bcurrency\b", RegexOptions.IgnoreCase))
                     {
-                        field["numeric_precision"] = 2;
+                        field["numeric_precision"] = 18;
+                        field["numeric_scale"] = 2;
                         field["fw_type"] = "float";
                         field["fw_subtype"] = "decimal";
                     }
-                    else if (Regex.IsMatch(line, @"\bdecimal(?:\(\d+\))?\b", RegexOptions.IgnoreCase))
+                    else if (Regex.IsMatch(line, @"\bdecimal\b", RegexOptions.IgnoreCase))
                     {
-                        var numeric_precision = 2; // default precision
-                        m = Regex.Match(line, @"\bdecimal\((\d+)\)"); // decimal(PRECISION_HERE)
+                        field["numeric_precision"] = 18; //default precision
+                        field["numeric_scale"] = 2; //default scale
+
+                        m = Regex.Match(line, @"\bdecimal\((\d+),(\d+)\)"); // decimal(PRECISION,SCALE)
                         if (m.Success)
-                            numeric_precision = Utils.f2int(m.Groups[1].Value);
-                        field["numeric_precision"] = numeric_precision;
+                        {
+                            field["numeric_precision"] = Utils.f2int(m.Groups[1].Value);
+                            field["numeric_scale"] = Utils.f2int(m.Groups[2].Value);
+                        } else {
+                            m = Regex.Match(line, @"\bdecimal\((\d+)\)"); // decimal(PRECISION)
+                            if (m.Success)
+                            {
+                                field["numeric_precision"] = Utils.f2int(m.Groups[1].Value);
+                                field["numeric_scale"] = 0;
+                            }
+                        }
                         field["fw_type"] = "float";
                         field["fw_subtype"] = "decimal";
                     }
@@ -2114,6 +2132,8 @@ public class DevManageController : FwController
                         result = "BIT";
                     else if (Utils.f2int(entity["numeric_precision"]) == 3)
                         result = "TINYINT";
+                    else if (Utils.f2int(entity["numeric_precision"]) == 5)
+                        result = "SMALLINT";
                     else
                         result = "INT";
                     break;
@@ -2124,7 +2144,7 @@ public class DevManageController : FwController
                     if (Utils.f2str(entity["fw_subtype"]) == "currency")
                         result = "DECIMAL(18,2)";
                     else if (Utils.f2str(entity["fw_subtype"]) == "decimal")
-                        result = "DECIMAL(18," + Utils.f2int(entity["numeric_precision"]) + ")";
+                        result = "DECIMAL("+ Utils.f2int(entity["numeric_precision"]) + "," + Utils.f2int(entity["numeric_scale"]) + ")";
                     else
                         result = "FLOAT";
                     break;
