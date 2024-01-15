@@ -214,22 +214,24 @@ public class Att : FwModel
         // also delete from related tables:
         // users.att_id -> null?
         // spages.head_att_id -> null?
-        if (is_perm)
+        if (is_perm) 
+        {
             // delete from att_links only if perm
             fw.model<AttLinks>().deleteByAtt(id);
 
-        // remove files first
-        var item = one(id);
-        if (Utils.f2int(item["is_s3"]) == 1)
-        {
-            fw.model<S3>().deleteObject(table_name + "/" + item["id"]);
+            // remove files first
+            var item = one(id);
+            if (Utils.f2int(item["is_s3"]) == 1)
+            {
+                fw.model<S3>().deleteObject(table_name + "/" + item["id"]);
+            }
+            else
+            {
+                // local storage
+                deleteLocalFiles(id);
+            }
         }
-        else
-        {
-            // local storage
-            deleteLocalFiles(id);
-        }
-
+        
         base.delete(id, is_perm);
     }
 
