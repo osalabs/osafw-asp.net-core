@@ -673,7 +673,7 @@ public class FwDynamicController : FwController
             else if (dtype == "att")
                 def["att"] = fw.model<Att>().one(Utils.f2int((string)item[field]));
             else if (dtype == "att_links")
-                def["att_links"] = fw.model<Att>().getAllLinked(model0.table_name, Utils.f2int(id));
+                def["att_links"] = fw.model<Att>().listLinked(model0.table_name, Utils.f2int(id));
             else if (dtype == "subtable")
             {
                 // subtable functionality
@@ -788,7 +788,7 @@ public class FwDynamicController : FwController
                 def["value"] = item[field];
             }
             else if (dtype == "att_links_edit")
-                def["att_links"] = fw.model<Att>().getAllLinked(model0.table_name, Utils.f2int(id));
+                def["att_links"] = fw.model<Att>().listLinked(model0.table_name, Utils.f2int(id));
 
             else if (dtype == "subtable_edit")
             {
@@ -962,7 +962,7 @@ public class FwDynamicController : FwController
         {
             string type = (string)def["type"];
             if (type == "att_links_edit")
-                fw.model<Att>().updateAttLinks(model0.table_name, id, reqh("att")); // TODO make att configurable
+                fw.model<AttLinks>().updateJunction(model0.table_name, id, reqh("att")); // TODO make att configurable
             else if (type == "multicb")
             {
                 if (Utils.isEmpty(def["model"]))

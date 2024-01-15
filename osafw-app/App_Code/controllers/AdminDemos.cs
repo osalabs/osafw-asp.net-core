@@ -59,7 +59,7 @@ public class AdminDemosController : FwAdminController
         ps["multi_datarow"] = model_related.listWithChecked((string)item["dict_link_multi"]);
         ps["multi_datarow_link"] = fw.model<DemosDemoDicts>().listLinkedByMainId(id);
         ps["att"] = fw.model<Att>().one(Utils.f2int(item["att_id"]));
-        ps["att_links"] = fw.model<Att>().getAllLinked(model.table_name, id);
+        ps["att_links"] = fw.model<Att>().listLinked(model.table_name, id);
 
         if (is_activity_logs)
         {
@@ -91,7 +91,7 @@ public class AdminDemosController : FwAdminController
         FormUtils.comboForDate((string)item["fdate_combo"], ps, "fdate_combo");
 
         ps["att"] = fw.model<Att>().one(Utils.f2int(item["att_id"])).toHashtable();
-        ps["att_links"] = fw.model<Att>().getAllLinked(model.table_name, id);
+        ps["att_links"] = fw.model<Att>().listLinked(model.table_name, id);
 
         return ps;
     }
@@ -128,7 +128,7 @@ public class AdminDemosController : FwAdminController
         id = this.modelAddOrUpdate(id, itemdb);
 
         fw.model<DemosDemoDicts>().updateJunctionByMainId(id, reqh("demo_dicts_link"));
-        fw.model<Att>().updateAttLinks(model.table_name, id, reqh("att"));
+        fw.model<AttLinks>().updateJunction(model.table_name, id, reqh("att"));
 
         return this.afterSave(success, id, is_new);
     }

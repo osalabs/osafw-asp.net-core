@@ -48,13 +48,14 @@ CREATE TABLE att_categories (
   upd_users_id          INT DEFAULT 0
 );
 
+/* attachments - file uploads */
 DROP TABLE IF EXISTS att;
 CREATE TABLE att (
   id int IDENTITY(1,1) PRIMARY KEY CLUSTERED, /* files stored on disk under 0/0/0/id.dat */
-  att_categories_id       INT NULL FOREIGN KEY REFERENCES att_categories(id),
+  att_categories_id     INT NULL FOREIGN KEY REFERENCES att_categories(id),
 
-  table_name            NVARCHAR(128) NOT NULL DEFAULT '',
-  item_id               INT NOT NULL DEFAULT 0,
+  fwentities_id         INT NULL CONSTRAINT FK_att_fwentities FOREIGN KEY REFERENCES fwentities(id), -- related to entity (optional)
+  item_id               INT NULL,
 
   is_s3                 TINYINT DEFAULT 0, /* 1 if file is in S3 - see config: $S3Bucket/$S3Root/att/att_id */
   is_inline             TINYINT DEFAULT 0, /* if uploaded with wysiwyg */
@@ -71,24 +72,40 @@ CREATE TABLE att (
   upd_time              DATETIME2,
   upd_users_id          INT DEFAULT 0,
 
-  INDEX IX_att_table_name_item_id (table_name, item_id)
+  INDEX IX_att_categories (att_categories_id),
+  INDEX IX_att_fwentities (fwentities_id, item_id)
 );
 
-/* link att files to table items*/
-DROP TABLE IF EXISTS att_table_link;
-CREATE TABLE att_table_link (
-  id int IDENTITY(1,1) PRIMARY KEY CLUSTERED,
-  att_id                INT NOT NULL,
-
-  table_name            NVARCHAR(128) NOT NULL DEFAULT '',
+/*junction to link multiple att files to multiple entity items*/
+DROP TABLE IF EXISTS att_links;
+CREATE TABLE att_links (
+  att_id                INT NOT NULL CONSTRAINT FK_att_links_att FOREIGN KEY REFERENCES att(id),
+  fwentities_id         INT NOT NULL CONSTRAINT FK_att_links_fwentities FOREIGN KEY REFERENCES fwentities(id), -- related to entity
   item_id               INT NOT NULL,
 
-  status                TINYINT NOT NULL DEFAULT 0,        /*0-ok, 1-under update*/
+  status                TINYINT NOT NULL DEFAULT 0,        /*0-ok, 1-under change, deleted instantly*/
   add_time              DATETIME2 NOT NULL DEFAULT getdate(),
   add_users_id          INT DEFAULT 0,
 
-  INDEX UX_att_table_link UNIQUE (table_name, item_id, att_id)
+  INDEX UX_att_links UNIQUE (fwentities_id, item_id, att_id),
+  INDEX IX_att_links_att (att_id, fwentities_id, item_id)
 );
+
+
+-- DROP TABLE IF EXISTS att_table_link;
+-- CREATE TABLE att_table_link (
+--   id int IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+--   att_id                INT NOT NULL,
+
+--   table_name            NVARCHAR(128) NOT NULL DEFAULT '',
+--   item_id               INT NOT NULL,
+
+--   status                TINYINT NOT NULL DEFAULT 0,        /*0-ok, 1-under update*/
+--   add_time              DATETIME2 NOT NULL DEFAULT getdate(),
+--   add_users_id          INT DEFAULT 0,
+
+--   INDEX UX_att_table_link UNIQUE (table_name, item_id, att_id)
+-- );
 
 
 DROP TABLE IF EXISTS users;
