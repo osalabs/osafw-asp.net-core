@@ -11,15 +11,21 @@ public class SampleReport : FwReports
 {
     public SampleReport() : base()
     {
+        //access_level = Users.ACL_MANAGER; //override if necessay
+
         // override report render options if necessary
         render_options["landscape"] = false;
+
+        // setup sorting for each column
+        list_sortdef = "idate desc";
+        list_sortmap = Utils.qh("id|id idate|idate event_name|event_name entity_name|entity_name item_id|item_id idesc|idesc payload|payload user|fname,lname");
     }
 
     // define report filters in Me.f (available in report templates as f[...])
     // filter defaults can be Set here
     public override void setFilters()
     {
-        Hashtable result = new();
+        Hashtable result = [];
         if (!f.ContainsKey("from_date") && !f.ContainsKey("to_date"))
             // set default filters
             f["from_date"] = DateUtils.Date2Str(DateTime.Now.AddDays(-30));// last 30 days
@@ -33,11 +39,13 @@ public class SampleReport : FwReports
 
     public override void getData()
     {
-        Hashtable ps = new();
+        Hashtable ps = [];
+
+        setListSorting();
 
         // apply filters from Me.f
         string where = " ";
-        Hashtable where_params = new();
+        Hashtable where_params = [];
         if (!Utils.isEmpty(f["from_date"]))
         {
             where += " and al.add_time>=@from_date";
@@ -89,7 +97,7 @@ public class SampleReport : FwReports
                      LEFT OUTER JOIN users u ON (u.id=al.add_users_id {andNotDeleted("u.")})
                 where 1=1 
                 {where}
-                order by al.id desc";
+                order by {list_orderby}";
         sql = db.limit(sql, 20); //limit to first results only
         list_rows = db.arrayp(sql, where_params);
         list_count = list_rows.Count;

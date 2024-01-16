@@ -7,20 +7,20 @@ Dates: <strong><~f[from_date]>-<~f[to_date]></strong>
 <div class="fw-card">
 <table class="table table-sm table-bordered table-hover list">
     <thead>
-        <tr>
-            <th>Date/Time</th>
-            <th>Event</th>
-            <th>Entity</th>
-            <th class="text-end">Related ID</th>
-            <th>Note</th>
-            <th>Fields</th>
-            <th>User</th>
+        <tr data-sortby="<~f[sortby]>" data-sortdir="<~f[sortdir]>">
+            <th data-sort="idate">Date/Time</th>
+            <th data-sort="event_name">Event</th>
+            <th data-sort="entity_name">Entity</th>
+            <th data-sort="item_id" class="text-end">Related ID</th>
+            <th data-sort="idesc">Note</th>
+            <th data-sort="payload">Fields</th>
+            <th data-sort="user">User</th>
         </tr>
     </thead>
     <tbody>
         <~list_rows repeat inline>
             <tr>
-                <td><~add_time date="sql"></td>
+                <td><~idate date="sql"></td>
                 <td><~event_name></td>
                 <td><~entity_name></td>
                 <td class="text-end"><~item_id></td>

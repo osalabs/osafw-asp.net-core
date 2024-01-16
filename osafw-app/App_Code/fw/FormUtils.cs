@@ -596,4 +596,51 @@ public class FormUtils
 
         return false;
     }
+
+    /// <summary>
+    /// return sql for order by clause for the passed form name (sortby) and direction (sortdir) using defined mapping (sortmap)
+    /// </summary>
+    /// <param name="db">fw.db</param>
+    /// <param name="sortby">form_name field to sort by</param>
+    /// <param name="sortdir">desc|[asc]</param>
+    /// <param name="sortmap">mapping form_name => field_name</param>
+    /// <returns></returns>
+    /// <exception cref="Exception"></exception>
+    public static string sqlOrderBy(DB db, string sortby, string sortdir, Hashtable sortmap)
+    {
+        string orderby = ((string)sortmap[sortby] ?? "").Trim();
+        if (string.IsNullOrEmpty(orderby))
+            throw new Exception("No orderby defined for [" + sortby + "], define in list_sortmap");
+
+        string[] aorderby = orderby.Split(",");
+        if (sortdir == "desc")
+        {
+            // if sortdir is desc, i.e. opposite to default - invert order for orderby fields
+            // go thru each order field            
+            for (int i = 0; i <= aorderby.Length - 1; i++)
+            {
+                string field = null;
+                string order = null;
+                Utils.split2(@"\s+", aorderby[i].Trim(), ref field, ref order);
+
+                if (order == "desc")
+                    order = "asc";
+                else
+                    order = "desc";
+                aorderby[i] = db.qid(field) + " " + order;
+            }
+        }
+        else
+        {
+            // quote
+            for (int i = 0; i <= aorderby.Length - 1; i++)
+            {
+                string field = null;
+                string order = null;
+                Utils.split2(@"\s+", aorderby[i].Trim(), ref field, ref order);
+                aorderby[i] = db.qid(field) + " " + order;
+            }
+        }
+        return string.Join(", ", aorderby);
+    }
 }
