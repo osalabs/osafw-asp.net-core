@@ -11,6 +11,7 @@ public class FwReports
 {
     //template paths
     public const string TPL_BASE_DIR = "/admin/reports";
+    public const string TPL_EXPORT_PDF = "/admin/reports/common/pdf.html";
     public const string TPL_EXPORT_XLS = "/admin/reports/common/xls.html";
 
     public string report_code;
@@ -142,7 +143,7 @@ public class FwReports
                 {
                     ((Hashtable)ps["f"])["edit"] = false; // force any edit modes off
                     ps["IS_EXPORT_PDF"] = true; //use as <~PARSEPAGE.TOP[IS_EXPORT_PDF]> in templates
-                    ConvUtils.parsePagePdf(fw, base_dir, (string)fw.config("PAGE_LAYOUT_PRINT"), ps, report_code, render_options);
+                    ConvUtils.parsePagePdf(fw, base_dir, TPL_EXPORT_PDF, ps, report_code, render_options);
                     break;
                 }
 
@@ -189,7 +190,7 @@ public class FwReports
     /// <summary>
     /// add " and status<>127" to reports where
     /// </summary>
-    /// <param name="alias"></param>
+    /// <param name="alias">table alias with a dot, example: "t."</param>
     /// <returns></returns>
     protected string andNotDeleted(string alias = "")
     {
