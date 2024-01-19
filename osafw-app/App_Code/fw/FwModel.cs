@@ -308,6 +308,22 @@ public abstract class FwModel : IDisposable
             return false;
     }
 
+    // check if item exists for a given fields and their values, commonly used in junction tables
+    public bool isExistsByFields(Hashtable fields, int not_id)
+    {
+        Hashtable where = new();
+        foreach (DictionaryEntry de in fields)
+            where[de.Key] = de.Value;
+
+        if (!string.IsNullOrEmpty(field_id))
+            where[field_id] = db.opNOT(not_id);
+        string val = Utils.f2str(db.value(table_name, where, "1"));
+        if (val == "1")
+            return true;
+        else
+            return false;
+    }
+
     // check if item exists for a given iname
     public virtual bool isExists(object uniq_key, int not_id)
     {
@@ -753,6 +769,14 @@ public abstract class FwModel : IDisposable
         is_under_bulk_update = false;
     }
 
+    // used when the main record must be permanently deleted
+    public virtual void deleteByMainId(int main_id)
+    {
+        if (string.IsNullOrEmpty(junction_field_main_id)) return; //if no linked field - do nothing
+
+        var where = new Hashtable() { { junction_field_main_id, main_id } };
+        db.del(table_name, where);
+    }
 
     /// <summary>
     ///  generic update (and add/del) for junction table
