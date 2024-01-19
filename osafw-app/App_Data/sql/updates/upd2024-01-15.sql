@@ -91,8 +91,7 @@ GO
 INSERT INTO fwentities (icode, iname)
 SELECT DISTINCT
     atl.table_name
-    UPPER(LEFT(atl.table_name, 1)) + LOWER(SUBSTRING(atl.table_name, 2, LEN(atl.table_name)))
-    , atl.table_name
+    , UPPER(LEFT(atl.table_name, 1)) + LOWER(SUBSTRING(atl.table_name, 2, LEN(atl.table_name)))
 FROM
     att_table_link atl
 WHERE

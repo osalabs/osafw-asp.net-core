@@ -63,6 +63,18 @@ CREATE TABLE activity_logs (
   INDEX IX_activity_logs_users_id (users_id)
 );
 
+
+-- for tracking changes
+INSERT INTO log_types (itype, icode, iname) VALUES (0, 'added', 'Record Added');
+INSERT INTO log_types (itype, icode, iname) VALUES (0, 'updated', 'Record Updated');
+INSERT INTO log_types (itype, icode, iname) VALUES (0, 'deleted', 'Record Deleted');
+-- for user login audit
+INSERT INTO log_types (itype, icode, iname) VALUES (0, 'login', 'User Login');
+INSERT INTO log_types (itype, icode, iname) VALUES (0, 'logoff', 'User Logoff');
+INSERT INTO log_types (itype, icode, iname) VALUES (0, 'login_fail', 'Login Failed');
+INSERT INTO log_types (itype, icode, iname) VALUES (0, 'chpwd', 'User changed login/pwd');
+
+
 -- migrate data from events/event_log
 -- events -> fwentities
 INSERT INTO fwentities (icode, iname, add_users_id, upd_users_id)
