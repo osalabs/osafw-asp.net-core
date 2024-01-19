@@ -1,7 +1,7 @@
-﻿using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Builder;
+﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace osafw;
 
@@ -24,7 +24,7 @@ public class MyHandlerMiddleware
             response.Clear();
 
             // Set allowed method And headers
-            response.Headers.Add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+            response.Headers.Append("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
 
             // allow any custom headers
             Microsoft.Extensions.Primitives.StringValues access_control_request_headers = new("");
@@ -39,7 +39,7 @@ public class MyHandlerMiddleware
             // response.AppendHeader("Access-Control-Expose-Headers", "*")
 
             // allow credentials
-            response.Headers.Add("Access-Control-Allow-Credentials", "true");
+            response.Headers.Append("Access-Control-Allow-Credentials", "true");
 
             // Set allowed origin
             /*Dim origin = context.Request.Headers("Origin")
@@ -52,7 +52,8 @@ public class MyHandlerMiddleware
             // end request
             //context.RequestServices.CompleteRequest()
         }
-        await Task.Run(() => {
+        await Task.Run(() =>
+        {
             FW.run(context, Startup.Configuration);
         });
     }

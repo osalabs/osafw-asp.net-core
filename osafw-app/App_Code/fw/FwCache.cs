@@ -13,37 +13,14 @@ public class FwCache
     public static object getValue(string key)
     {
         var result = cache[key];
-        if (result != null)
-        {
-            var t = result.GetType();
-            if (t.IsSerializable)
-            {
-
-                result = Utils.deserialize((string)result);
-            }
-        }
-        return result;
+        return deserialize(result);
     }
 
     public static void setValue(string key, object value)
     {
         lock (locker)
         {
-            if (value == null)
-                cache[key] = value;
-            else
-            {
-                var t = value.GetType();
-                if (t.IsSerializable)
-                {
-                    // serialize in cache because when read - need object clone, not original object
-                    cache[key] = Utils.serialize(value);
-                }
-                else
-                {
-                    cache[key] = value;
-                }
-            }
+            cache[key] = serialize(value);
         }
     }
 
@@ -65,38 +42,61 @@ public class FwCache
         }
     }
 
+    protected static object serialize(object data)
+    {
+        if (data == null)
+            return null;
+
+        try
+        {
+            // serialize in cache because when read - need object clone, not original object
+            return Utils.serialize(data);
+        }
+        catch (Exception)
+        {
+            // If serialization fails, store the original value.
+            return data;
+        }
+    }
+
+    protected static object deserialize(object data)
+    {
+        if (data == null)
+        {
+            return null;
+        }
+        // Check if the result is a string - it might be a serialized object.
+        if (data is string serialized_string)
+        {
+            try
+            {
+                // Attempt to deserialize the string back into an object.
+                return Utils.deserialize(serialized_string);
+            }
+            catch (Exception)
+            {
+                // If deserialization fails, return the serialized string as is.
+                return serialized_string;
+            }
+        }
+        return data;
+    }
+
     // ******** request-level cache ***********
 
+    /// <summary>
+    /// get value from request cache
+    /// </summary>
+    /// <param name="key"></param>
+    /// <returns>Hashtable, ArrayList, other value or null - since objects in cache serialized using json when stored</returns>
     public object getRequestValue(string key)
     {
         var result = request_cache[key];
-        if (result != null)
-        {
-            var t = result.GetType();
-            if (t.IsSerializable)
-            {
-                result = Utils.deserialize((string)result);
-            }
-        }
-        return result;
+        return deserialize(result);
     }
     public void setRequestValue(string key, object value)
     {
-        if (value == null)
-            request_cache[key] = value;
-        else
-        {
-            var t = value.GetType();
-            if (t.IsSerializable)
-            {
-                // serialize in cache because when read - need object clone, not original object
-                request_cache[key] = Utils.serialize(value);
-            }
-            else
-            {
-                request_cache[key] = value;
-            }
-        }
+        request_cache[key] = serialize(value);
     }
     // remove one key from request cache
     public void requestRemove(string key)

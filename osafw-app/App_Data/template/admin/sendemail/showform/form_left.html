@@ -10,7 +10,7 @@
     <input id="to" name="item[to]" maxlength="255" value="<~i[to]>" type="text" class="form-control" required placeholder="one or multiple email addresses (separated by ;)">
     <~test_block if="GLOBAL[is_test]" inline>
       <small class="text-danger form-text">
-        <b>Test mode ON</b> all emails will be sent to <i><~GLOBAL[test_email] default="-"></i>
+        <b>Test mode ON</b> all emails will be sent to <i><~test_email default="-"></i>
       </small>
     </~test_block>
   </div>

@@ -67,6 +67,7 @@ public class FwAdminController : FwController
         ps["related_id"] = related_id;
         ps["base_url"] = base_url;
         ps["is_userlists"] = is_userlists;
+        ps["is_activity_logs"] = is_activity_logs;
         ps["is_readonly"] = is_readonly;
 
         return ps;

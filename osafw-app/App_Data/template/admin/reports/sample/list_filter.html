@@ -1,6 +1,8 @@
 <form method="GET" id="FFilter" name="FFilter" class="fw-card form-horizontal d-print-none" data-list-filter data-autosubmit>
   <input type="hidden" name="dofilter" value="1">
   <input type="hidden" name="f[pagesize]" value="<~f[pagesize]>">
+  <input type="hidden" name="f[sortby]" value="<~f[sortby]>">
+  <input type="hidden" name="f[sortdir]" value="<~f[sortdir]>">
 
     <div class="row form-row">
         <~/admin/reports/common/filter_dates>
@@ -17,6 +19,15 @@
             <select name="f[events_id]" id="fevents_id" class="form-select">
                 <option value="">- all -</option>
                 <~filter[select_events] select="f[events_id]">
+            </select>
+        </div>
+    </div>
+    <div class="row form-row">
+        <label class="col-form-label col-md-3 col-lg-2" for="ffwentities_id">`Entity`</label>
+        <div class="col col-lg-4">
+            <select name="f[fwentities_id]" id="ffwentities_id" class="form-select">
+                <option value="">- all -</option>
+                <~filter[select_fwentities] select="f[fwentities_id]">
             </select>
         </div>
     </div>

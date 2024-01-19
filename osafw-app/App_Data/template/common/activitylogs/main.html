@@ -1,0 +1,66 @@
+<a name="activity">
+<h3>`Activity`
+  <a class="btn btn-default btn-sm"
+    data-bs-toggle="collapse"
+    href="#FActivityComment"
+    role="button"
+    aria-expanded="false"
+    aria-controls="FActivityComment">
+      <~/common/icons/plus> `Add Comment`
+  </a>
+</h3>
+
+<form id="FActivityComment" method="post" action="<~/admin/activitylogs/url>" class="fw-card mb-4 collapse">
+  <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
+  <input type="hidden" name="return_url" value="<~../url>/<~id>#activity">
+  <input type="hidden" name="item[log_type]" value="comment">
+  <input type="hidden" name="item[entity]" value="<~activity_entity>">
+  <input type="hidden" name="item[item_id]" value="<~id>">
+
+  <div class="row">
+    <div class="col-12 col-lg">
+      <textarea name="item[idesc]" class="form-control mb-2" rows="5" placeholder="`Type your markdown comment or notes ...`" required></textarea>
+    </div>
+    <div class="col-12 col-lg">
+      <button type="submit" class="btn btn-primary">`Save`</button>
+      <button type="button" class="btn btn-default" data-bs-toggle="collapse" data-bs-target="#FActivityComment" aria-expanded="false" aria-controls="FActivityComment">`Cancel`</button>
+    </div>
+  </div>
+</form>
+
+<ul class="nav nav-tabs mb-2">
+  <li class="nav-item">
+    <a class="nav-link <~/common/active ifeq="list_filter[tab_activity]" value="all">" href="?f[tab_activity]=all#activity">`All`</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link <~/common/active ifeq="list_filter[tab_activity]" value="comments">" aria-current="page" href="?f[tab_activity]=comments#activity">`Comments`/`Notes`</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link <~/common/active ifeq="list_filter[tab_activity]" value="history">" href="?f[tab_activity]=history#activity">`History`</a>
+  </li>
+</ul>
+
+<~activity_rows_none unless="activity_rows" inline>
+  <div class="py-4">
+    <span><~/common/icons/0-circle> `No Activity Records`</span>
+  </div>
+</~activity_rows_none>
+
+<~activity_rows repeat inline>
+  <div class="d-flex align-items-start pt-2 pb-2 border-bottom">
+    <div class="flex-shrink-0">
+      <div class="user-list-avatar">
+        <~/common/activitylogs/avatar if="avatar_link">
+        <~/common/activitylogs/initials unless="avatar_link">
+      </div>
+    </div>
+    <div class="flex-grow-1 ms-3">
+      <h6 class="mb-1"><b><~user[iname]></b><~/common/activitylogs/logtype ifne="tab" value="comments"></h6>
+      <p class="text-muted mb-1"><small><~idate date="short"><~/common/activitylogs/edited if="upd_time"></small></p>
+      <~idesc markdown nl2br>
+      <~/common/activitylogs/fields if="fields">
+    </div>
+  </div>
+</~activity_rows>
+
+<div class="mb-5"></div>

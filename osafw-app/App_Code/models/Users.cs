@@ -79,6 +79,13 @@ public class Users : FwModel
         if (!item.ContainsKey("pwd"))
             item["pwd"] = Utils.getRandStr(8); // generate password
         item["pwd"] = this.hashPwd((string)item["pwd"]);
+
+        // set ui_theme/ui_mode form the config if not set
+        if (!item.ContainsKey("ui_theme"))
+            item["ui_theme"] = Utils.f2int(fw.config("ui_theme"));
+        if (!item.ContainsKey("ui_mode"))
+            item["ui_mode"] = Utils.f2int(fw.config("ui_mode"));
+
         return base.add(item);
     }
 
@@ -304,7 +311,7 @@ public class Users : FwModel
 
         reloadSession(id);
 
-        fw.logEvent("login", id);
+        fw.logActivity(FwLogTypes.ICODE_USERS_LOGIN, FwEntities.ICODE_USERS, id);
         // update login info
         Hashtable fields = new();
         fields["login_time"] = DB.NOW;

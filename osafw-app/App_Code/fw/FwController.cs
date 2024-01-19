@@ -12,7 +12,7 @@ namespace osafw;
 
 public abstract class FwController
 {
-    public static int access_level = Users.ACL_VISITOR; // access level for the controller. fw.config("access_levels") overrides this. -1 (public access), 0(min logged level), 100(max admin level)
+    public static int access_level = Users.ACL_VISITOR; // access level for the controller. fw.config("access_levels") overrides this. 0 (public access), 1(min logged level), 100(max admin level)
 
     public static string route_default_action = ""; // supported values - "" (use Default Parser for unknown actions), Index (use IndexAction for unknown actions), Show (assume action is id and use ShowAction)
     public string route_onerror = ""; //route redirect action name in case ApplicationException occurs in current route, if empty - 500 error page returned
@@ -45,7 +45,8 @@ public abstract class FwController
     protected Hashtable list_sortmap;            // required for Index, sortmap fields
     protected string search_fields;              // optional, search fields, space-separated
                                                  // fields to search via $s=list_filter["s"), ] - means exact match, not "like"
-                                                 // format: "field1 field2,!field3 field4" => field1 LIKE '%$s%' or (field2 LIKE '%$s%' and field3='$s') or field4 LIKE '%$s%'
+
+    public string export_format = "";            // empty or "csv" or "xls" (set from query string "export") - export format for IndexAction
     protected string export_filename = "export"; // default filename for export, without extension
 
     // support of customizable view list
@@ -59,6 +60,7 @@ public abstract class FwController
     protected bool is_dynamic_showform = false;  // true if controller has dynamic ShowFormAction, requires "showform_fields" to be defined in config.json
 
     protected bool is_userlists = false;         // true if controller should support UserLists
+    protected bool is_activity_logs = false;     // true if controller should support ActivityLogs
 
     protected bool is_readonly = false;          // true if user is readonly, no actions modifying data allowed
 
@@ -86,6 +88,7 @@ public abstract class FwController
 
         return_url = reqs("return_url");
         related_id = reqs("related_id");
+        export_format = reqs("export");
     }
 
     // load controller config from json in template dir (based on base_url)
@@ -240,7 +243,7 @@ public abstract class FwController
     // sample in IndexAction: me.get_filter()
     public virtual Hashtable initFilter(string session_key = null)
     {
-        Hashtable f = (Hashtable)fw.FORM["f"] ?? new();
+        Hashtable f = reqh("f");
 
         if (session_key == null)
             session_key = "_filter_" + fw.G["controller.action"];
@@ -399,9 +402,9 @@ public abstract class FwController
     public virtual void setListSorting()
     {
         if (this.list_sortdef == null)
-            throw new Exception("No default sort order defined, define in list_sortdef ");
+            throw new Exception("No default sort order defined, define in list_sortdef");
         if (this.list_sortmap == null)
-            throw new Exception("No sort order mapping defined, define in list_sortmap ");
+            throw new Exception("No sort order mapping defined, define in list_sortmap");
 
         string sortby = (string)this.list_filter["sortby"] ?? "";
         string sortdir = (string)this.list_filter["sortdir"] ?? "";
@@ -423,36 +426,7 @@ public abstract class FwController
         this.list_filter["sortby"] = sortby;
         this.list_filter["sortdir"] = sortdir;
 
-        string[] aorderby = orderby.Split(",");
-        if (sortdir == "desc")
-        {
-            // if sortdir is desc, i.e. opposite to default - invert order for orderby fields
-            // go thru each order field            
-            for (int i = 0; i <= aorderby.Length - 1; i++)
-            {
-                string field = null;
-                string order = null;
-                Utils.split2(@"\s+", aorderby[i].Trim(), ref field, ref order);
-
-                if (order == "desc")
-                    order = "asc";
-                else
-                    order = "desc";
-                aorderby[i] = db.qid(field) + " " + order;
-            }
-        }
-        else
-        {
-            // quote
-            for (int i = 0; i <= aorderby.Length - 1; i++)
-            {
-                string field = null;
-                string order = null;
-                Utils.split2(@"\s+", aorderby[i].Trim(), ref field, ref order);
-                aorderby[i] = db.qid(field) + " " + order;
-            }
-        }
-        this.list_orderby = string.Join(", ", aorderby);
+        this.list_orderby = FormUtils.sqlOrderBy(db, sortby, sortdir, list_sortmap);
     }
 
     /// <summary>
@@ -675,13 +649,12 @@ public abstract class FwController
         int pagenum = Utils.f2int(list_filter["pagenum"]);
         int pagesize = Utils.f2int(list_filter["pagesize"]);
         // if export requested - start with first page and have a high limit (still better to have a limit just for the case)
-        if (reqs("export").Length > 0)
+        if (export_format.Length > 0)
         {
             is_export = true;
             pagenum = 0;
             pagesize = 100000;
         }
-
 
         if (string.IsNullOrEmpty(list_view))
             list_view = model0.table_name;
@@ -890,7 +863,7 @@ public abstract class FwController
         // if user is logged and not SiteAdmin(can access everything)
         // and user's access level is enough for the controller - check access by roles (if enabled)
         int current_user_level = fw.userAccessLevel;
-        if (current_user_level > 0 && current_user_level < 100)
+        if (current_user_level > Users.ACL_VISITOR && current_user_level < Users.ACL_SITEADMIN)
         {
             if (!fw.model<Users>().isAccessByRolesResourceAction(fw.userId, fw.route.controller, fw.route.action, fw.route.action_more, access_actions_to_permissions))
                 throw new AuthException("Bad access - Not authorized (3)");
@@ -972,7 +945,7 @@ public abstract class FwController
 
         string csv_export_headers = string.Join(",", headers.ToArray());
 
-        if (reqs("export") == "xls")
+        if (export_format == "xls")
             Utils.writeXLSExport(fw, export_filename + ".xls", csv_export_headers, fields, list_rows);
         else
             Utils.writeCSVExport(fw.response, export_filename + ".csv", csv_export_headers, fields, list_rows);

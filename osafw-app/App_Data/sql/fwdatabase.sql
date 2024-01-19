@@ -12,6 +12,25 @@ CREATE TABLE fwsessions (
   INDEX IX_ExpiresAtTime (ExpiresAtTime)
 );
 
+/*application entities lookup - autofilled on demand*/
+DROP TABLE IF EXISTS fwentities;
+CREATE TABLE fwentities (
+  id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+
+  icode                 NVARCHAR(128) NOT NULL default '', -- basically table name
+  iname                 NVARCHAR(128) NOT NULL default '', -- human readable name
+  idesc                 NVARCHAR(MAX),
+
+  status                TINYINT NOT NULL DEFAULT 0,        /*0-ok, 1-under upload, 127-deleted*/
+  add_time              DATETIME2 NOT NULL DEFAULT getdate(),
+  add_users_id          INT DEFAULT 0,
+  upd_time              DATETIME2,
+  upd_users_id          INT DEFAULT 0,
+
+  INDEX UX_fwentities_icode UNIQUE (icode)
+);
+
+
 /* upload categories */
 DROP TABLE IF EXISTS att_categories;
 CREATE TABLE att_categories (
@@ -29,20 +48,21 @@ CREATE TABLE att_categories (
   upd_users_id          INT DEFAULT 0
 );
 
+/* attachments - file uploads */
 DROP TABLE IF EXISTS att;
 CREATE TABLE att (
   id int IDENTITY(1,1) PRIMARY KEY CLUSTERED, /* files stored on disk under 0/0/0/id.dat */
-  att_categories_id       INT NULL FOREIGN KEY REFERENCES att_categories(id),
+  att_categories_id     INT NULL FOREIGN KEY REFERENCES att_categories(id),
 
-  table_name            NVARCHAR(128) NOT NULL DEFAULT '',
-  item_id               INT NOT NULL DEFAULT 0,
+  fwentities_id         INT NULL CONSTRAINT FK_att_fwentities FOREIGN KEY REFERENCES fwentities(id), -- related to entity (optional)
+  item_id               INT NULL,
 
   is_s3                 TINYINT DEFAULT 0, /* 1 if file is in S3 - see config: $S3Bucket/$S3Root/att/att_id */
   is_inline             TINYINT DEFAULT 0, /* if uploaded with wysiwyg */
   is_image              TINYINT DEFAULT 0, /* 1 if this is supported image */
 
   fname                 NVARCHAR(255) NOT NULL DEFAULT '',              /*original file name*/
-  fsize                 INT DEFAULT 0,                   /*file size*/
+  fsize                 BIGINT DEFAULT 0,                   /*file size*/
   ext                   NVARCHAR(16) NOT NULL DEFAULT '',                 /*extension*/
   iname                 NVARCHAR(255) NOT NULL DEFAULT '',   /*attachment name*/
 
@@ -52,24 +72,40 @@ CREATE TABLE att (
   upd_time              DATETIME2,
   upd_users_id          INT DEFAULT 0,
 
-  INDEX IX_att_table_name_item_id (table_name, item_id)
+  INDEX IX_att_categories (att_categories_id),
+  INDEX IX_att_fwentities (fwentities_id, item_id)
 );
 
-/* link att files to table items*/
-DROP TABLE IF EXISTS att_table_link;
-CREATE TABLE att_table_link (
-  id int IDENTITY(1,1) PRIMARY KEY CLUSTERED,
-  att_id                INT NOT NULL,
-
-  table_name            NVARCHAR(128) NOT NULL DEFAULT '',
+/*junction to link multiple att files to multiple entity items*/
+DROP TABLE IF EXISTS att_links;
+CREATE TABLE att_links (
+  att_id                INT NOT NULL CONSTRAINT FK_att_links_att FOREIGN KEY REFERENCES att(id),
+  fwentities_id         INT NOT NULL CONSTRAINT FK_att_links_fwentities FOREIGN KEY REFERENCES fwentities(id), -- related to entity
   item_id               INT NOT NULL,
 
-  status                TINYINT NOT NULL DEFAULT 0,        /*0-ok, 1-under update*/
+  status                TINYINT NOT NULL DEFAULT 0,        /*0-ok, 1-under change, deleted instantly*/
   add_time              DATETIME2 NOT NULL DEFAULT getdate(),
   add_users_id          INT DEFAULT 0,
 
-  INDEX UX_att_table_link UNIQUE (table_name, item_id, att_id)
+  INDEX UX_att_links UNIQUE (fwentities_id, item_id, att_id),
+  INDEX IX_att_links_att (att_id, fwentities_id, item_id)
 );
+
+
+-- DROP TABLE IF EXISTS att_table_link;
+-- CREATE TABLE att_table_link (
+--   id int IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+--   att_id                INT NOT NULL,
+
+--   table_name            NVARCHAR(128) NOT NULL DEFAULT '',
+--   item_id               INT NOT NULL,
+
+--   status                TINYINT NOT NULL DEFAULT 0,        /*0-ok, 1-under update*/
+--   add_time              DATETIME2 NOT NULL DEFAULT getdate(),
+--   add_users_id          INT DEFAULT 0,
+
+--   INDEX UX_att_table_link UNIQUE (table_name, item_id, att_id)
+-- );
 
 
 DROP TABLE IF EXISTS users;
@@ -194,48 +230,54 @@ INSERT INTO spages (parent_id, url, iname) VALUES
 ;
 update spages set is_home=1 where id=1;
 
-
-
-/*event types for log*/
-DROP TABLE IF EXISTS events;
-CREATE TABLE events (
-  id INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
-  icode                 NVARCHAR(64) NOT NULL default '',
+/*Logs types*/
+DROP TABLE IF EXISTS log_types;
+CREATE TABLE log_types (
+  id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+  itype                 TINYINT NOT NULL DEFAULT 0,       -- 0-system, 10-user selectable
+  icode                 NVARCHAR(64) NOT NULL default '', -- added/updated/deleted /comment /simulate/login_fail/login/logoff/chpwd
 
   iname                 NVARCHAR(255) NOT NULL default '',
   idesc                 NVARCHAR(MAX),
+  prio                  INT NOT NULL DEFAULT 0,     /*0-on insert, then =id, default order by prio asc,iname*/
 
-  status                TINYINT NOT NULL DEFAULT 0,        /*0-ok, 127-deleted*/
+  status                TINYINT NOT NULL DEFAULT 0,        /*0-ok, 1-under upload, 127-deleted*/
   add_time              DATETIME2 NOT NULL DEFAULT getdate(),
   add_users_id          INT DEFAULT 0,
   upd_time              DATETIME2,
-  upd_users_id          INT DEFAULT 0
+  upd_users_id          INT DEFAULT 0,
+
+  INDEX IX_log_types_icode (icode)
 );
-CREATE UNIQUE INDEX events_icode_idx ON events (icode);
 
-/* log of all user-initiated events */
-DROP TABLE IF EXISTS event_log;
-CREATE TABLE event_log (
-  id BIGINT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
-  events_id             INT NOT NULL FOREIGN KEY REFERENCES events(id),           /* event id */
+/*Activity Logs*/
+DROP TABLE IF EXISTS activity_logs;
+CREATE TABLE activity_logs (
+  id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+  reply_id              INT NULL,                         -- for hierarcy, if needed
+  log_types_id          INT NOT NULL CONSTRAINT FK_activity_logs_log_types FOREIGN KEY REFERENCES log_types(id), -- log type
+  fwentities_id         INT NOT NULL CONSTRAINT FK_activity_logs_fwentities FOREIGN KEY REFERENCES fwentities(id), -- related to entity
+  item_id               INT NULL,                         -- related item id in the entity table
 
-  item_id               INT NOT NULL DEFAULT 0,           /*related id*/
-  item_id2              INT NOT NULL DEFAULT 0,           /*related id (if another)*/
+  idate                 DATETIME2 NOT NULL DEFAULT getdate(), -- default now, but can be different for user types if activity added at a different date/time
+  users_id              INT NULL CONSTRAINT FK_activity_logs_users FOREIGN KEY REFERENCES users(id), -- default logged user, but can be different if adding "on behalf of"
+  idesc                 NVARCHAR(MAX),
+  payload               NVARCHAR(MAX), -- serialized/json - arbitrary payload, should be {fields:{fieldname1: data1, fieldname2: data2,..}} for added/updated/deleted
 
-  iname                 NVARCHAR(255) NOT NULL DEFAULT '', /*short description of what's happened or additional data*/
+  status                TINYINT NOT NULL DEFAULT 0,       -- 0-active, 10-inactive/hidden, 20-draft(for user types, private to user added), 127-deleted
+  add_time              DATETIME2 NOT NULL DEFAULT getdate(),
+  add_users_id          INT DEFAULT 0,
+  upd_time              DATETIME2,
+  upd_users_id          INT DEFAULT 0,
 
-  records_affected      INT NOT NULL DEFAULT 0,
-  fields                NVARCHAR(MAX),       /*serialized json with related fields data (for history) in form {fieldname: data, fieldname: data}*/
-
-  add_time              DATETIME2 NOT NULL DEFAULT getdate(),  /*date record added*/
-  add_users_id          INT DEFAULT 0,                        /*user added record, 0 if sent by cron module*/
-
-  INDEX IX_event_log_events_id (events_id),
-  INDEX IX_event_log_item_id (item_id),
-  INDEX IX_event_log_item_id2 (item_id2),
-  INDEX IX_event_log_add_users_id (add_users_id),
-  INDEX IX_event_log_add_time (add_time)
+  INDEX IX_activity_logs_reply_id (reply_id),
+  INDEX IX_activity_logs_log_types_id (log_types_id),
+  INDEX IX_activity_logs_fwentities_id (fwentities_id),
+  INDEX IX_activity_logs_item_id (item_id),
+  INDEX IX_activity_logs_idate (idate),
+  INDEX IX_activity_logs_users_id (users_id)
 );
+
 
 /*Lookup Manager Tables*/
 DROP TABLE IF EXISTS lookup_manager_tables;

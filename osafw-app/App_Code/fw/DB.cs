@@ -73,7 +73,7 @@ public class DBRow : Dictionary<string, string>
     }
     public static explicit operator DBRow(Hashtable row)
     {
-        return new DBRow(row);
+        return row == null ? null : new DBRow(row);
     }
     public Hashtable toHashtable()
     {
@@ -211,15 +211,15 @@ public class DB : IDisposable
     public static string last_sql = ""; // last executed sql
     public static int SQL_QUERY_CTR = 0; // counter for SQL queries during request
 
-    private readonly FW fw; // for now only used for: fw.logger and fw.cache (for request-level cacheing of multi-db connections)
+    private readonly FW fw; // for now only used for: fw.logger and fw.context (for request-level cacheing of multi-db connections)
 
     public string db_name = "";
     public string dbtype = DBTYPE_SQLSRV; // SQL=SQL Server, OLE=OleDB, MySQL=MySQL
     public int sql_command_timeout = 30; // default command timeout, override in model for long queries (in reports or export, for example)
-    private readonly Hashtable conf = new();  // config contains: connection_string, type
+    private readonly Hashtable conf = [];  // config contains: connection_string, type
     private readonly string connstr = "";
 
-    private Hashtable schema = new(); // schema for currently connected db
+    private Hashtable schema = []; // schema for currently connected db
     private DbConnection conn; // actual db connection - SqlConnection or OleDbConnection
 
     private bool is_check_ole_types = false; // if true - checks for unsupported OLE types during readRow
@@ -233,7 +233,7 @@ public class DB : IDisposable
     ///  <returns></returns>
     public static Hashtable h(params object[] args)
     {
-        if (args.Length == 0) return new Hashtable();
+        if (args.Length == 0) return [];
         if (args.Length % 2 != 0)
             throw new ArgumentException("h() accepts even number of arguments");
 
@@ -301,16 +301,24 @@ public class DB : IDisposable
         var cache_key = "DB#" + connstr;
 
         // first, try to get connection from request cache (so we will use only one connection per db server - TBD make configurable?)
-        if (conn == null && fw != null && fw.cache.getRequestValue(cache_key) != null)
-            conn = (DbConnection)fw.cache.getRequestValue(cache_key);
+        if (conn == null && fw != null)
+        {
+            var db_cache = (Hashtable)fw.context.Items["DB"] ?? [];
+            conn = (DbConnection)db_cache[cache_key];
+        }
 
         // if still no connection - re-make it
         if (conn == null)
         {
-            schema = new Hashtable(); // reset schema cache
+            schema = []; // reset schema cache
             conn = createConnection(connstr, (string)conf["type"]);
+            //if fw defined - store connection in request cache
             if (fw != null)
-                fw.cache.setRequestValue(cache_key, conn);
+            {
+                var db_cache = (Hashtable)fw.context.Items["DB"] ?? [];
+                db_cache[cache_key] = conn;
+                fw.context.Items["DB"] = db_cache;
+            }
         }
 
         // if it's disconnected - re-connect
@@ -327,8 +335,7 @@ public class DB : IDisposable
 
     public void disconnect()
     {
-        if (this.conn != null)
-            this.conn.Close();
+        this.conn?.Close();
     }
 
     /// <summary>
@@ -380,8 +387,10 @@ public class DB : IDisposable
 
         string connstr = "Provider=Microsoft.Jet.OLEDB.4.0;Data Source=" + filepath;
 
-        OleDbConnection conn = new();
-        conn.ConnectionString = connstr;
+        OleDbConnection conn = new()
+        {
+            ConnectionString = connstr
+        };
         // Exception must be checked in method there check_create_mdb is called.
         conn.Open();
         conn.Close();
@@ -404,9 +413,8 @@ public class DB : IDisposable
         {
             foreach (string p in @params.Keys.Cast<string>().ToList())
             {
-                if (@params[p] is IList)
+                if (@params[p] is IList arr)
                 {
-                    var arr = (IList)@params[p];
                     var arrstr = new StringBuilder();
                     for (var i = 0; i <= arr.Count - 1; i++)
                     {
@@ -432,8 +440,10 @@ public class DB : IDisposable
         DbDataReader dbread;
         if (dbtype == DBTYPE_SQLSRV)
         {
-            var dbcomm = new SqlCommand(sql, (SqlConnection)conn);
-            dbcomm.CommandTimeout = sql_command_timeout;
+            var dbcomm = new SqlCommand(sql, (SqlConnection)conn)
+            {
+                CommandTimeout = sql_command_timeout
+            };
             if (@params != null)
                 foreach (string p in @params.Keys)
                     dbcomm.Parameters.AddWithValue(p, @params[p]);
@@ -484,8 +494,10 @@ public class DB : IDisposable
                 //TODO test with OLE
                 sql += ";SELECT SCOPE_IDENTITY()";
             }
-            var dbcomm = new SqlCommand(sql, (SqlConnection)conn);
-            dbcomm.CommandTimeout = sql_command_timeout;
+            var dbcomm = new SqlCommand(sql, (SqlConnection)conn)
+            {
+                CommandTimeout = sql_command_timeout
+            };
             if (@params != null)
                 foreach (string p in @params.Keys)
                     dbcomm.Parameters.AddWithValue(p, @params[p]);
@@ -568,7 +580,7 @@ public class DB : IDisposable
     private DBRow readRow(DbDataReader dbread)
     {
         if (!dbread.HasRows)
-            return new DBRow(); //if no rows - return empty row
+            return []; //if no rows - return empty row
 
         int fieldCount = dbread.FieldCount;
         DBRow result = new(fieldCount); //pre-allocate capacity
@@ -720,7 +732,7 @@ public class DB : IDisposable
             var rows = this.arrayp(sql, where_params);
             if (offset >= rows.Count)
                 // offset too far
-                result = new DBList();
+                result = [];
             else
                 result = (DBList)rows.GetRange(offset, Math.Min(limit, rows.Count - offset));
         }
@@ -767,7 +779,7 @@ public class DB : IDisposable
     /// <returns></returns>
     public List<string> col(string table, Hashtable where, string field_name, string order_by = "")
     {
-        if (field_name == null) field_name = "";
+        field_name ??= "";
 
         if (string.IsNullOrEmpty(field_name))
             field_name = "*";
@@ -803,24 +815,33 @@ public class DB : IDisposable
     /// value("table", where)
     /// value("table", where, "field1")
     /// value("table", where, "1") 'just return 1, useful for exists queries
-    /// value("table", where, "count(*)", "id asc")
+    /// value("table", where, "count(*)")
+    /// value("table", where, "MAX(id)")
     /// </summary>
     /// <param name="table"></param>
     /// <param name="where"></param>
-    /// <param name="field_name">field name, special cases: "1", "count(*)"</param>
+    /// <param name="field_name">(if not set - first selected field used) field name, special cases: "1", "count(*)", "SUM(field)", AVG/MAX/MIN,...</param>
     /// <param name="order_by"></param>
     /// <returns></returns>
     public object value(string table, Hashtable where, string field_name = "", string order_by = "")
     {
-        if (field_name == null) field_name = "";
+        field_name ??= "";
 
         if (string.IsNullOrEmpty(field_name))
             field_name = "*";
-        else if (field_name == "count(*)" || field_name == "1")
+        else if (field_name.ToLower() == "count(*)" || field_name == "1")
         {
+            //special case for count(*) and exists queries
         }
         else
-            field_name = qid(field_name);
+        {
+            // if special functions like MAX(id), AVG(price) - extract function and field name and quote field name
+            var match = Regex.Match(field_name, @"^(\w+)\((\w+)\)$", RegexOptions.Compiled);
+            if (match.Success)
+                field_name = match.Groups[1].Value + "(" + qid(match.Groups[2].Value) + ")";
+            else
+                field_name = qid(field_name);
+        }
         var qp = buildSelect(table, where, order_by, select_fields: field_name);
         return valuep(qp.sql, qp.@params);
     }
@@ -830,7 +851,7 @@ public class DB : IDisposable
     public string left(string str, int length)
     {
         if (string.IsNullOrEmpty(str)) return "";
-        return str.TrimStart().Substring(0, length);
+        return str.TrimStart()[..length];
     }
 
     // create "IN (1,2,3)" sql or IN (NULL) if empty params passed
@@ -849,9 +870,7 @@ public class DB : IDisposable
 
         string[] result = new string[parameters.Count];
         for (int i = 0; i < parameters.Count; i++)
-        {
             result[i] = this.q(parameters[i]);
-        }
 
         StringBuilder sb = new();
         sb.Append(" IN (");
@@ -874,9 +893,7 @@ public class DB : IDisposable
 
         string[] result = new string[parameters.Count];
         for (int i = 0; i < parameters.Count; i++)
-        {
             result[i] = this.qi(parameters[i]).ToString();
-        }
 
         StringBuilder sb = new();
         sb.Append(" IN (");
@@ -891,7 +908,7 @@ public class DB : IDisposable
     // table => `table` (MySQL)
     public string qid(string str)
     {
-        if (str == null) str = "";
+        str ??= "";
 
         if (dbtype == DBTYPE_MYSQL)
         {
@@ -910,7 +927,7 @@ public class DB : IDisposable
     [Obsolete("use qid() instead")]
     public string q_ident(string str)
     {
-        if (str == null) str = "";
+        str ??= "";
 
         str = str.Replace("[", "");
         str = str.Replace("]", "");
@@ -925,19 +942,17 @@ public class DB : IDisposable
     // if length defined - string will be Left(Trim(str),length) before quoted
     public string q(string str, int length = 0)
     {
-        if (str == null) str = "";
+        str ??= "";
 
         if (length > 0)
-        {
             str = this.left(str, length);
-        }
         return "'" + str.Replace("'", "''") + "'";
     }
 
     // simple just replace quotes, don't add start/end single quote - for example, for use with LIKE
     public string qq(string str)
     {
-        if (str == null) str = "";
+        str ??= "";
 
         return str.Replace("'", "''");
     }
@@ -982,25 +997,17 @@ public class DB : IDisposable
         if (dbtype == DBTYPE_SQLSRV)
         {
             if (DateTime.TryParse(str.ToString(), out DateTime tmpdate))
-            {
                 result = "convert(DATETIME2, '" + tmpdate.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.DateTimeFormatInfo.InvariantInfo) + "', 120)";
-            }
             else
-            {
                 result = "NULL";
-            }
         }
         else
         {
             result = Regex.Replace(str.ToString(), @"['""\]\[]", "");
             if (Regex.IsMatch(result, @"\D"))
-            {
                 result = "'" + str + "'";
-            }
             else
-            {
                 result = "NULL";
-            }
         }
         return result;
     }
@@ -1013,15 +1020,11 @@ public class DB : IDisposable
     /// <returns></returns>
     public string limit(string sql, int limit)
     {
-        var result = "";
+        string result;
         if (dbtype == DBTYPE_MYSQL)
-        {
             result = sql + " LIMIT " + limit;
-        }
         else
-        {
             result = Regex.Replace(sql, @"^(select )", @"$1 TOP " + limit + " ", RegexOptions.IgnoreCase);
-        }
         return result;
     }
 
@@ -1059,15 +1062,13 @@ public class DB : IDisposable
         connect();
         loadTableSchema(table);
         if (!schema.ContainsKey(table))
-        {
             throw new ApplicationException("table [" + table + "] does not defined in FW.config(\"schema\")");
-        }
 
         if (fields.Count == 0)
             return new DBQueryAndParams()
             {
                 sql = "",
-                @params = new Hashtable()
+                @params = []
             };
 
         var is_for_insert = (join_type == "insert");
@@ -1076,7 +1077,7 @@ public class DB : IDisposable
         var join_delimiter = is_for_where ? " AND " : ",";
 
         ArrayList fields_list = new(fields.Keys.Count);
-        List<string> params_sqls = new();
+        List<string> params_sqls = [];
 
         Hashtable @params = new(fields.Keys.Count);
         var reW = new Regex(@"\W"); //pre-compile regex
@@ -1503,7 +1504,7 @@ public class DB : IDisposable
     /// <returns>number of affected rows</returns>
     public int del(string table, Hashtable where = null)
     {
-        if (where == null) where = new Hashtable();
+        where ??= [];
         var qp = buildDelete(table, where);
         return exec(qp.sql, qp.@params);
     }
@@ -1519,8 +1520,10 @@ public class DB : IDisposable
     /// <returns></returns>
     private DBQueryAndParams buildSelect(string table, Hashtable where, string order_by = "", int limit = -1, string select_fields = "*")
     {
-        DBQueryAndParams result = new();
-        result.sql = "SELECT";
+        DBQueryAndParams result = new()
+        {
+            sql = "SELECT"
+        };
 
         if (limit > -1 && (dbtype == DBTYPE_SQLSRV || dbtype == DBTYPE_OLE))
         {
@@ -1547,8 +1550,10 @@ public class DB : IDisposable
 
     private DBQueryAndParams buildUpdate(string table, Hashtable fields, Hashtable where)
     {
-        DBQueryAndParams result = new();
-        result.sql = "UPDATE " + qid(table) + " " + " SET ";
+        DBQueryAndParams result = new()
+        {
+            sql = "UPDATE " + qid(table) + " " + " SET "
+        };
 
         //logger(LogLevel.DEBUG, "buildUpdate:", table, fields);
 
@@ -1581,8 +1586,10 @@ public class DB : IDisposable
 
     private DBQueryAndParams buildDelete(string table, Hashtable where)
     {
-        DBQueryAndParams result = new();
-        result.sql = "DELETE FROM " + qid(table) + " ";
+        DBQueryAndParams result = new()
+        {
+            sql = "DELETE FROM " + qid(table) + " "
+        };
 
         if (where.Count > 0)
         {
@@ -1673,8 +1680,7 @@ public class DB : IDisposable
     public ArrayList loadTableSchemaFull(string table)
     {
         // check if full schema already there
-        if (schemafull_cache == null)
-            schemafull_cache = new Hashtable();
+        schemafull_cache ??= [];
         if (!schemafull_cache.ContainsKey(connstr))
             schemafull_cache[connstr] = new Hashtable();
 
@@ -1683,7 +1689,7 @@ public class DB : IDisposable
             return (ArrayList)cache[table];
 
         // cache miss
-        ArrayList result = new();
+        ArrayList result = [];
         if (dbtype == DBTYPE_SQLSRV)
         {
             // fw.logger("cache MISS " & current_db & "." & table)
@@ -1798,7 +1804,7 @@ public class DB : IDisposable
     // return database foreign keys, optionally filtered by table (that contains foreign keys)
     public ArrayList listForeignKeys(string table = "")
     {
-        ArrayList result = new();
+        ArrayList result = [];
         if (dbtype == DBTYPE_SQLSRV)
         {
             var where = "";
@@ -1829,7 +1835,7 @@ public class DB : IDisposable
                             AND col2.ORDINAL_POSITION = col1.ORDINAL_POSITION)" +
                 where, where_params);
         }
-        if (dbtype == DBTYPE_MYSQL)
+        else if (dbtype == DBTYPE_MYSQL)
         {
             var where = "";
             var where_params = new Hashtable();
@@ -1897,8 +1903,7 @@ public class DB : IDisposable
         if (schema.ContainsKey(table))
             return (Hashtable)schema[table];
 
-        if (schema_cache == null)
-            schema_cache = new();
+        schema_cache ??= [];
         if (!schema_cache.ContainsKey(connstr))
             schema_cache[connstr] = new Hashtable();
 
@@ -1923,12 +1928,15 @@ public class DB : IDisposable
 
     public void clearSchemaCache()
     {
-        if (schemafull_cache != null)
-            schemafull_cache.Clear();
-        if (schema_cache != null)
-            schema_cache.Clear();
-        if (schema != null)
-            schema.Clear();
+        schemafull_cache?.Clear();
+        schema_cache?.Clear();
+        schema?.Clear();
+    }
+
+    // This method for unit tests
+    public bool isSchemaCacheEmpty()
+    {
+        return schemafull_cache.Count == 0 && schema_cache.Count == 0 && schema.Count == 0;
     }
 
     // map SQL Server type to FW's

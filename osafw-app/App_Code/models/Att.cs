@@ -24,7 +24,6 @@ public class Att : FwModel
     const int MAX_THUMB_H_L = 1200;
 
     public string MIME_MAP = "doc|application/msword docx|application/msword xls|application/vnd.ms-excel xlsx|application/vnd.ms-excel ppt|application/vnd.ms-powerpoint pptx|application/vnd.ms-powerpoint csv|text/csv pdf|application/pdf html|text/html zip|application/x-zip-compressed jpg|image/jpeg jpeg|image/jpeg gif|image/gif png|image/png wmv|video/x-ms-wmv avi|video/x-msvideo mp4|video/mp4";
-    public string att_table_link = "att_table_link";
 
     public Att() : base()
     {
@@ -104,12 +103,20 @@ public class Att : FwModel
         return result;
     }
 
-    public bool updateTmpUploads(string files_code, string att_table_name, int item_id)
+    // when uploading tmp files - use this function to make them linked to specific entity id
+    public bool updateTmpUploads(string entity_icode, int item_id)
     {
+        var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
+
         Hashtable where = new();
-        where["table_name"] = "tmp_" + att_table_name + "_" + files_code;
-        where["item_id"] = 0;
-        db.update(table_name, new Hashtable() { { "table_name", att_table_name }, { "item_id", Utils.f2str(item_id) } }, where);
+        where["fwentities_id"] = fwentities_id;
+        where["iname"] = db.opLIKE("TMP#%");
+        where["status"] = STATUS_DELETED;
+        where["item_id"] = db.opISNULL();
+        db.update(table_name, new Hashtable() {
+            { "status", STATUS_ACTIVE },
+            { "item_id", Utils.f2str(item_id) }
+        }, where);
         return true;
     }
 
@@ -119,70 +126,13 @@ public class Att : FwModel
     /// <returns>number of uploads deleted</returns>
     public int cleanupTmpUploads()
     {
-        var rows = db.arrayp("select * from " + db.qid(table_name) + " where add_time<DATEADD(hour, -48, getdate()) and (status=1 or table_name like 'tmp[_]%')", DB.h());
+        var rows = db.arrayp("select * from " + db.qid(table_name) +
+            @$" where add_time<DATEADD(hour, -48, getdate()) 
+                 and (status={db.qi(STATUS_UNDER_UPDATE)} or status={db.qi(STATUS_DELETED)} and iname like 'TMP#%')", DB.h());
         foreach (var row in rows)
             this.delete(Utils.f2int(row["id"]), true);
         return rows.Count;
     }
-
-    // add/update att_table_links
-    public void updateAttLinks(string att_table_name, int id, Hashtable form_att)
-    {
-        if (form_att == null)
-            return;
-
-        int me_id = fw.userId;
-
-        // 1. set status=1 (under update)
-        Hashtable fields = new();
-        fields["status"] = "1";
-        Hashtable where = new();
-        where["table_name"] = att_table_name;
-        where["item_id"] = id;
-        db.update(att_table_link, fields, where);
-
-        // 2. add new items or update old to status =0
-        foreach (string form_att_id in form_att.Keys)
-        {
-            int att_id = Utils.f2int(form_att_id);
-            if (att_id == 0)
-                continue;
-
-            where = new();
-            where["table_name"] = att_table_name;
-            where["item_id"] = id;
-            where["att_id"] = att_id;
-            var row = db.row(att_table_link, where);
-
-            if (Utils.f2int(row["id"]) > 0)
-            {
-                // existing link
-                fields = new();
-                fields["status"] = "0";
-                where = new();
-                where["id"] = row["id"];
-                db.update(att_table_link, fields, where);
-            }
-            else
-            {
-                // new link
-                fields = new();
-                fields["att_id"] = Utils.f2str(att_id);
-                fields["table_name"] = att_table_name;
-                fields["item_id"] = Utils.f2str(id);
-                fields["add_users_id"] = Utils.f2str(me_id);
-                db.insert(att_table_link, fields);
-            }
-        }
-
-        // 3. remove not updated atts (i.e. user removed them)
-        where = new();
-        where["table_name"] = att_table_name;
-        where["item_id"] = id;
-        where["status"] = 1;
-        db.del(att_table_link, where);
-    }
-
 
     // return correct url
     public string getUrl(int id, string size = "")
@@ -264,22 +214,24 @@ public class Att : FwModel
         // also delete from related tables:
         // users.att_id -> null?
         // spages.head_att_id -> null?
-        if (is_perm)
-            // delete from att_table_link only if perm
-            db.del(att_table_link, DB.h("att_id", id));
-
-        // remove files first
-        var item = one(id);
-        if (Utils.f2int(item["is_s3"]) == 1)
+        if (is_perm) 
         {
-            fw.model<S3>().deleteObject(table_name + "/" + item["id"]);
-        }
-        else
-        {
-            // local storage
-            deleteLocalFiles(id);
-        }
+            // delete from att_links only if perm
+            fw.model<AttLinks>().deleteByAtt(id);
 
+            // remove files first
+            var item = one(id);
+            if (Utils.f2int(item["is_s3"]) == 1)
+            {
+                fw.model<S3>().deleteObject(table_name + "/" + item["id"]);
+            }
+            else
+            {
+                // local storage
+                deleteLocalFiles(id);
+            }
+        }
+        
         base.delete(id, is_perm);
     }
 
@@ -365,8 +317,8 @@ public class Att : FwModel
                 string filename = ((string)item["fname"]).Replace("\"", "'");
                 string ext = UploadUtils.getUploadFileExt(filename);
 
-                fw.response.Headers.Add("Content-type", getMimeForExt(ext));
-                fw.response.Headers.Add("Content-Disposition", disposition + "; filename=\"" + filename + "\"");
+                fw.response.Headers.Append("Content-type", getMimeForExt(ext));
+                fw.response.Headers.Append("Content-Disposition", disposition + "; filename=\"" + filename + "\"");
                 fw.response.SendFileAsync(filepath).Wait();
             }
         }
@@ -374,110 +326,117 @@ public class Att : FwModel
             throw new UserException("No file specified");
     }
 
-    // return all att files linked via att_table_link
-    // is_image = -1 (all - files and images), 0 (files only), 1 (images only)
-    public ArrayList getAllLinked(string link_table_name, int id, int is_image = -1)
+    /// <summary>
+    /// list all files linked to item_id via att_links, optionally filtered by is_image and category_icode
+    /// </summary>
+    /// <param name="entity_icode"></param>
+    /// <param name="item_id"></param>
+    /// <param name="is_image"></param>
+    /// <param name="category_icode"></param>
+    /// <returns></returns>
+    public ArrayList listLinked(string entity_icode, int item_id, int is_image = -1, string category_icode = "")
     {
+        var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
+
         string where = "";
         Hashtable @params = new();
-        @params["@link_table_name"] = link_table_name;
-        @params["@item_id"] = id;
+        @params["@fwentities_id"] = fwentities_id;
+        @params["@item_id"] = item_id;
 
         if (is_image > -1)
         {
             where += " and a.is_image=@is_image";
             @params["@is_image"] = is_image;
         }
+        if (category_icode != "")
+        {
+            var att_category = fw.model<AttCategories>().oneByIcode(category_icode);
+            if (att_category.Count > 0)
+            {
+                where += " and a.att_categories_id=@att_categories_id";
+                @params["@att_categories_id"] = Utils.f2int(att_category["id"]);
+            }
+        }
 
-        return db.arrayp("select a.* " + " from " + db.qid(att_table_link) + " atl, " + db.qid(this.table_name) + " a "
-            + " where atl.table_name=@link_table_name"
-            + " and atl.item_id=@item_id"
-            + " and a.id=atl.att_id" + where
-            + " order by a.id ", @params);
+        return db.arrayp("select a.* " + " from " + db.qid(fw.model<AttLinks>().table_name) + " al, " + db.qid(table_name) + " a " +
+            $@" where al.fwentities_id=@fwentities_id
+                  and al.item_id=@item_id
+                  and a.id=al.att_id 
+                  {where}
+                order by a.id", @params);
     }
 
-    // return first att image linked via att_table_link
-    public Hashtable getFirstLinkedImage(string linked_table_name, int id)
+    /// <summary>
+    /// return first linked file (or image) to item_id via att_links
+    /// </summary>
+    /// <param name="entity_icode"></param>
+    /// <param name="item_id"></param>
+    /// <param name="is_image"></param>
+    /// <returns></returns>
+    public Hashtable oneFirstLinked(string entity_icode, int item_id, int is_image = -1)
     {
+        var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
+
+        string where = "";
         Hashtable @params = new()
         {
-            {"@table", linked_table_name},
-            {"@item_id", id},
+            {"@fwentities_id", fwentities_id},
+            {"@item_id", item_id},
         };
-        return db.rowp(db.limit("SELECT a.* from " + db.qid(att_table_link) + " atl, " + db.qid(this.table_name) + " a" +
-            @" WHERE atl.table_name=@table_name
-                     and atl.item_id=@item_id
-                     and a.id=atl.att_id
-                     and a.is_image=1
+        if (is_image > -1)
+        {
+            where += " and a.is_image=@is_image";
+            @params["@is_image"] = is_image;
+        }
+
+        return db.rowp(db.limit("SELECT a.* from " + db.qid(fw.model<AttLinks>().table_name) + " al, " + db.qid(table_name) + " a" +
+            @$" WHERE al.fwentities_id=@fwentities_id
+                  and al.item_id=@item_id
+                  and a.id=al.att_id 
+                  {where}
                 order by a.id", 1), @params);
     }
 
-    // return all att images linked via att_table_link
-    public ArrayList getAllLinkedImages(string link_table_name, int id)
+    // return all att images linked via att_links
+    public ArrayList listLinkedImages(string link_table_name, int id)
     {
-        return getAllLinked(link_table_name, id, 1);
+        return listLinked(link_table_name, id, 1);
     }
 
-    // return all att files linked via att.table_name and att.item_id
+    // return all att files linked via att.fwentities_id and att.item_id
     // is_image = -1 (all - files and images), 0 (files only), 1 (images only)
-    public ArrayList getAllByTableName(string att_table_name, int item_id, int is_image = -1)
+    public ArrayList listByEntity(string entity_icode, int item_id, int is_image = -1)
     {
+        var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
+
         Hashtable where = new();
         where["status"] = STATUS_ACTIVE;
-        where["table_name"] = att_table_name;
+        where["fwentities_id"] = fwentities_id;
         where["item_id"] = item_id;
         if (is_image > -1)
             where["is_image"] = is_image;
         return db.array(table_name, where, "id");
     }
 
-    public ArrayList getAllLinkedByCategory(string att_table_name, int item_id, int is_image = -1, string category_name = "")
+    // return one att record with additional check by entity
+    public Hashtable oneWithEntityCheck(int id, string entity_icode)
     {
-        var results = new ArrayList();
-        var rows = getAllLinked(att_table_name, item_id, is_image);
-        foreach (Hashtable row in rows)
-        {
-            var att_category = fw.model<AttCategories>().oneByIcode(category_name);
-            if (att_category.Count > 0)
-            {
-                var att_categories_id = Utils.f2int(row["att_categories_id"]);
-                if (att_categories_id == Utils.f2int(att_category["id"]))
-                {
-                    results.Add(row);
-                }
-            }
-        }
-        return results;
-    }
+        var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
 
-    // like getAllByTableName, but also fills att_categories hash
-    public ArrayList getAllByTableNameWithCategories(string att_table_name, int item_id, int is_image = -1)
-    {
-        var rows = getAllByTableName(att_table_name, item_id, is_image);
-        foreach (Hashtable row in rows)
-        {
-            var att_categories_id = Utils.f2int(row["att_categories_id"]);
-            if (att_categories_id > 0)
-                row["att_categories"] = fw.model<AttCategories>().one(att_categories_id);
-        }
-        return rows;
-    }
-
-    // return one att record with additional check by table_name
-    public Hashtable oneWithTableName(int id, string att_table_name)
-    {
         var row = one(id).toHashtable();
-        if ((string)row["table_name"] != att_table_name)
+        if (Utils.f2int(row["fwentities_id"]) != fwentities_id)
             row.Clear();
         return row;
     }
 
     // return one att record by table_name and item_id
-    public Hashtable oneByTableName(string att_table_name, int item_id)
+    public Hashtable oneByEntity(string entity_icode, int item_id)
     {
+        var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
+
         return db.row(table_name, new Hashtable()
         {
-            {"table_name",att_table_name},
+            {"fwentities_id",fwentities_id},
             {"item_id",item_id}
         });
     }
@@ -573,16 +532,16 @@ public class Att : FwModel
     /// <summary>
     /// upload all posted files (fw.request.Form.Files) to S3 for the table
     /// </summary>
-    /// <param name="att_table_name"></param>
+    /// <param name="entity_icode"></param>
     /// <param name="item_id"></param>
     /// <param name="att_categories_id"></param>
     /// <param name="fieldnames">qw string of ONLY field names to upload</param>
     /// <returns>number of successuflly uploaded files</returns>
     /// <remarks>also set FLASH error if some files not uploaded</remarks>
-    public int uploadPostedFilesS3(string att_table_name, int item_id, string att_categories_id = null, string fieldnames = "")
+    public int uploadPostedFilesS3(string entity_icode, int item_id, string att_categories_id = null, string fieldnames = "")
     {
         var result = 0;
-
+        var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
         var honlynames = Utils.qh(fieldnames);
 
         // create list of eligible file uploads, check for the ContentLength as any 'input type = "file"' creates a System.Web.HttpPostedFile object even if the file was not attached to the input
@@ -622,7 +581,7 @@ public class Att : FwModel
             // first - save to db so we can get att_id
             Hashtable attitem = new();
             attitem["att_categories_id"] = att_categories_id;
-            attitem["table_name"] = att_table_name;
+            attitem["fwentities_id"] = fwentities_id;
             attitem["item_id"] = Utils.f2str(item_id);
             attitem["is_s3"] = "1";
             attitem["status"] = "1";

@@ -68,7 +68,7 @@ public class MainController : FwController
         one["url"] = "/Admin/Users";
         one["value"] = fw.model<Users>().getCount(STATUSES);
         one["value_class"] = "text-success";
-        one["badge_value"] = Utils.percentChange(fw.model<Users>().getCount(STATUSES, DIFF_DAYS), fw.model<FwEvents>().getCount(STATUSES, DIFF_DAYS * 2));
+        one["badge_value"] = Utils.percentChange(fw.model<Users>().getCount(STATUSES, DIFF_DAYS), fw.model<Users>().getCount(STATUSES, DIFF_DAYS * 2));
         one["badge_class"] = "text-bg-success";
         one["icon"] = "users";
         panes["plate3"] = one;
@@ -77,9 +77,9 @@ public class MainController : FwController
         one["type"] = "bignum";
         one["title"] = "Events";
         one["url"] = "/Admin/Reports/sample";
-        one["value"] = fw.model<FwEvents>().getCount(STATUSES);
+        one["value"] = fw.model<FwActivityLogs>().getCountByLogIType(FwLogTypes.ITYPE_SYSTEM, STATUSES);
         one["value_class"] = "";
-        one["badge_value"] = Utils.percentChange(fw.model<FwEvents>().getCountLog(DIFF_DAYS), fw.model<FwEvents>().getCountLog(DIFF_DAYS * 2));
+        one["badge_value"] = Utils.percentChange(fw.model<FwActivityLogs>().getCountByLogIType(FwLogTypes.ITYPE_SYSTEM, STATUSES, DIFF_DAYS), fw.model<FwActivityLogs>().getCountByLogIType(FwLogTypes.ITYPE_SYSTEM, STATUSES, DIFF_DAYS * 2));
         one["badge_class"] = "text-bg-secondary";
         one["icon"] = "events";
         panes["plate4"] = one;

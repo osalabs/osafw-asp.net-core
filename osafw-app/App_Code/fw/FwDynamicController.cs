@@ -22,6 +22,11 @@ public class FwDynamicController : FwController
         base.init(fw);
     }
 
+    /// <summary>
+    /// contains logic to display list screen
+    /// Note! if query contains "export" - early empty result returned and FW will call exportList() after this
+    /// </summary>
+    /// <returns>Hashtable - related template will be parsed, null - no templates parsed (if action did all the output)</returns>
     public virtual Hashtable IndexAction()
     {
         // get filters from the search form
@@ -42,6 +47,10 @@ public class FwDynamicController : FwController
         // row["field") ] "value"
         // Next
 
+        // if export - no need to parse templates and prep for them - just return empty hashtable asap
+        if (export_format.Length > 0)
+            return []; // return empty hashtable just in case action overriden to avoid check for null
+
         // set standard output parse strings
         var ps = this.setPS();
 
@@ -55,13 +64,7 @@ public class FwDynamicController : FwController
             // customizable headers
             setViewList(ps, list_filter_search);
 
-        if (reqs("export").Length > 0)
-        {
-            exportList();
-            return null;
-        }
-        else
-            return ps;
+        return ps;
     }
 
     //Prev/Next navigation
@@ -158,12 +161,23 @@ public class FwDynamicController : FwController
         if (this.is_userlists)
             this.setUserLists(ps, id);
 
+        if (is_activity_logs)
+        {
+            initFilter();
+
+            list_filter["tab_activity"] = Utils.f2str(list_filter["tab_activity"] ?? FwActivityLogs.TAB_COMMENTS);
+            ps["list_filter"] = list_filter;
+            ps["activity_entity"] = model0.table_name;
+            ps["activity_rows"] = fw.model<FwActivityLogs>().listByEntityForUI(model0.table_name, id, (string)list_filter["tab_activity"]);
+        }
+
         ps["id"] = id;
         ps["i"] = item;
         ps["return_url"] = return_url;
         ps["related_id"] = related_id;
         ps["base_url"] = base_url;
         ps["is_userlists"] = is_userlists;
+        ps["is_activity_logs"] = is_activity_logs;
         ps["is_readonly"] = is_readonly;
 
         return ps;
@@ -659,7 +673,7 @@ public class FwDynamicController : FwController
             else if (dtype == "att")
                 def["att"] = fw.model<Att>().one(Utils.f2int((string)item[field]));
             else if (dtype == "att_links")
-                def["att_links"] = fw.model<Att>().getAllLinked(model0.table_name, Utils.f2int(id));
+                def["att_links"] = fw.model<Att>().listLinked(model0.table_name, Utils.f2int(id));
             else if (dtype == "subtable")
             {
                 // subtable functionality
@@ -774,7 +788,7 @@ public class FwDynamicController : FwController
                 def["value"] = item[field];
             }
             else if (dtype == "att_links_edit")
-                def["att_links"] = fw.model<Att>().getAllLinked(model0.table_name, Utils.f2int(id));
+                def["att_links"] = fw.model<Att>().listLinked(model0.table_name, Utils.f2int(id));
 
             else if (dtype == "subtable_edit")
             {
@@ -948,7 +962,7 @@ public class FwDynamicController : FwController
         {
             string type = (string)def["type"];
             if (type == "att_links_edit")
-                fw.model<Att>().updateAttLinks(model0.table_name, id, reqh("att")); // TODO make att configurable
+                fw.model<AttLinks>().updateJunction(model0.table_name, id, reqh("att")); // TODO make att configurable
             else if (type == "multicb")
             {
                 if (Utils.isEmpty(def["model"]))

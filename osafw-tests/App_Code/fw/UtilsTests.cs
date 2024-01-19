@@ -1,12 +1,10 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using osafw;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace osafw.Tests
 {
@@ -179,9 +177,9 @@ namespace osafw.Tests
             Assert.IsFalse(Utils.f2bool("N"));
             Assert.IsFalse(Utils.f2bool("f"));
             Assert.IsFalse(Utils.f2bool("F"));
-            Assert.IsFalse(Utils.f2bool("ABC"));            
+            Assert.IsFalse(Utils.f2bool("ABC"));
             Assert.IsFalse(Utils.f2bool("yes"));
-            Assert.IsFalse(Utils.f2bool("on"));            
+            Assert.IsFalse(Utils.f2bool("on"));
             Assert.IsFalse(Utils.f2bool(new ArrayList())); //empty arraylist false
 
             Assert.IsTrue(Utils.f2bool("true"));
@@ -313,7 +311,7 @@ namespace osafw.Tests
             Assert.IsInstanceOfType(Utils.f2long("123"), typeof(long));
             Assert.AreEqual(Utils.f2long("100M"), 0);
             Assert.AreEqual(Utils.f2long(100M), 100M);
-            Assert.AreEqual(Utils.f2long("123"),123);
+            Assert.AreEqual(Utils.f2long("123"), 123);
             Assert.AreEqual(Utils.f2long(123), 123);
             Assert.AreEqual(Utils.f2long("123"), 123.0);
             Assert.AreEqual(Utils.f2long("123.123b"), 0);
@@ -535,13 +533,13 @@ namespace osafw.Tests
         [TestMethod()]
         public void getTmpFilenameTest()
         {
-            string tmp_path = Path.GetTempPath();
-            string prefix = "osafw";
+            string prefix = Utils.TMP_PREFIX;
+            string tmp_path = Utils.getTmpDir(prefix);
             string r = Utils.getTmpFilename(prefix);
 
             Assert.IsTrue(r.IndexOf(tmp_path) == 0);
             Assert.IsTrue(r.Contains(prefix));
-            Assert.AreEqual(r.Length, tmp_path.Length + prefix.Length + 1 + 36);
+            Assert.AreEqual(r.Length, tmp_path.Length + prefix.Length + 1 + 31);
         }
 
         [TestMethod()]
