@@ -584,7 +584,39 @@ namespace osafw.Tests
         [TestMethod()]
         public void str2truncateTest()
         {
-            throw new NotImplementedException();
+            // test for Utils.str2truncate - truncate string to specified length
+            // truncate  - This truncates a variable to a character length, the default is 80.
+            // trchar    - As an optional second parameter, you can specify a string of text to display at the end if the variable was truncated.
+            // The characters in the string are included with the original truncation length.
+            // trword    - 0/1. By default, truncate will attempt to cut off at a word boundary =1.
+            // trend     - 0/1. If you want to cut off at the exact character length, pass the optional third parameter of 1.
+            //<~tag truncate="80" trchar="..." trword="1" trend="1">
+            string s = "1234567890";
+
+            //test for truncate
+            Hashtable hattrs = new();
+            hattrs["truncate"] = "5";
+            hattrs["trword"] = "0";
+            hattrs["trchar"] = "";
+            string r = Utils.str2truncate(s, hattrs);
+            Assert.AreEqual("12345",r);
+
+            // test for trchar
+            hattrs.Clear();
+            hattrs["truncate"] = "5";
+            hattrs["trword"] = "0";
+            hattrs["trchar"] = "...";
+            r = Utils.str2truncate(s, hattrs);
+            Assert.AreEqual("12345...",r);
+
+            // test for trword
+            hattrs.Clear();
+            hattrs["truncate"] = "5";
+            hattrs["trword"] = "1";
+            hattrs["trchar"] = "";
+            r = Utils.str2truncate(s, hattrs);
+            Assert.AreEqual("1234567890", r);
+
         }
 
         [TestMethod()]
