@@ -47,7 +47,7 @@ public class AdminActivityLogsController : FwController
     }
 
     //save new comment/note or custom event
-    //requires 
+    //requires
     public virtual Hashtable SaveAction(int id = 0)
     {
         route_onerror = FW.ACTION_INDEX;

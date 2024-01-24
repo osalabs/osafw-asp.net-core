@@ -90,12 +90,12 @@ public class SampleReport : FwReports
                 , lt.iname as event_name
                 , et.iname as entity_name
                 , u.fname
-                , u.lname 
+                , u.lname
                 from activity_logs al
                      INNER JOIN log_types lt ON (lt.id=al.log_types_id)
                      INNER JOIN fwentities et ON (et.id=al.fwentities_id)
                      LEFT OUTER JOIN users u ON (u.id=al.add_users_id {andNotDeleted("u.")})
-                where 1=1 
+                where 1=1
                 {where}
                 order by {list_orderby}";
         sql = db.limit(sql, 20); //limit to first results only

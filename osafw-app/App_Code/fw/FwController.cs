@@ -1027,7 +1027,7 @@ public abstract class FwController
     }
 
     /// <summary>
-    /// Called from setViewList to get conversions for fields. 
+    /// Called from setViewList to get conversions for fields.
     /// Currently supports only "date" conversion - i.e. date only fields will be formatted as date only (without time)
     /// Override to add more custom conversions
     /// </summary>
