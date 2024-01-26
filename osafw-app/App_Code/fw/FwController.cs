@@ -825,6 +825,7 @@ public abstract class FwController
                 {"id",id},
                 {"is_new",is_new},
                 {"location",location},
+                {"return_url",return_url},
                 {"err_msg",fw.G["err_msg"]}
             };
             // add ERR field errors to response if any
