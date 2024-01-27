@@ -1010,7 +1010,8 @@ public class FwDynamicController : FwController
                     Hashtable itemdb = FormUtils.filter(row_item, save_fields);
                     FormUtils.filterCheckboxes(itemdb, row_item, save_fields_checkboxes);
 
-                    itemdb["status"] = FwModel.STATUS_ACTIVE; // mark new and updated existing rows as active
+                    var junction_field_status = sub_model.getJunctionFieldStatus();
+                    itemdb[junction_field_status] = FwModel.STATUS_ACTIVE; // mark new and updated existing rows as active
 
                     modelAddOrUpdateSubtableDynamic(id, row_id, itemdb, def, sub_model);
                 }
