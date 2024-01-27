@@ -1,6 +1,13 @@
 <h1><~title> (<~count>)</h1>
-
-<button class="btn btn-info ms-2 on-views-update">Refresh Views only</button>
+<form method="POST" action="<~../url>/(UpdateViews)">
+ <input type="hidden" name="XSS" value="<~session[XSS]>">
+ <button type="submit" class="btn btn-info ms-2">Refresh Views only</button>
+</form>
 <~/common/form/msg>
 
+<form id="FApplyUpdate" method="POST" action="<~../url>/(Save)">
+ <input type="hidden" name="XSS" value="<~session[XSS]>">
+ <input type="hidden" name="id" value="">
+</form>
 <~list_table>
+

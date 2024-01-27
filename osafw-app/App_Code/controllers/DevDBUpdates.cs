@@ -36,6 +36,7 @@ public class DevDBUpdatesController : FwDynamicController
     public override Hashtable SaveAction(int id = 0)
     {
         Hashtable ps = new Hashtable();
+        id = reqi("id");
         var row = model.one(id);
         if (row.Count == 0) return ps;
         if (Utils.f2int(row["status"]) == DBUpdates.STATUS_APPLIED)

@@ -1,12 +1,3 @@
-$('.on-apply-update').on('click', function(e) {
-  e.preventDefault();
-  e.stopPropagation();  
-  const id = $(this).data("id");
-  const form = $('#FApplyUpdate');
-  form.find("[name='id']").val(id);
-  form.submit();
-});
-
 function highlightSQL() {
     $('.sql-code').each(function(i, el){
        var sqlCode = $(this).text();

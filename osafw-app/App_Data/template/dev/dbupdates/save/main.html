@@ -3,7 +3,7 @@
 Query results:</h4>
 <hr/>
 <~processedQueries repeat inline>
-  <pre><code class="language-sql"><~query></code></pre>
+  <pre><code class="sql-code"><~query></code></pre>
   <hr/>
 </~processedQueries>
 
@@ -11,5 +11,5 @@ Query results:</h4>
     <span class='text-success'>Success</span>
 </~ist_error>
 <~is_error unless="no_errors" inline>
-  <span class='text-danger'><~error>. Transaction was rolled back.</span>
+  <span class='text-danger'><~error>. <br/>Transaction was rolled back.</span>
 </~is_error>
