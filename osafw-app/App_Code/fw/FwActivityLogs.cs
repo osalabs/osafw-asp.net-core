@@ -49,7 +49,7 @@ public class FwActivityLogs : FwModel
             ["log_types_id"] = lt["id"],
             ["fwentities_id"] = et_id,
             ["idesc"] = idesc,
-            ["users_id"] = fw.userId
+            ["users_id"] = fw.userId > 0 ? fw.userId : null
         };
         if (item_id != 0)
             fields["item_id"] = item_id;
