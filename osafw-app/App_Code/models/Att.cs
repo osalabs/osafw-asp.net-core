@@ -472,7 +472,9 @@ public class Att : FwModel
         if (!S3.IS_ENABLED)
             return false;
 
+#pragma warning disable CS0162 // Unreachable code detected - disable as this code only used with enabled S3
         var result = true;
+#pragma warning restore CS0162 // Unreachable code detected
         var item = one(id);
         if (Utils.f2int(item["is_s3"]) == 1)
             return true; // already in S3
