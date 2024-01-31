@@ -73,7 +73,10 @@ INSERT INTO log_types (itype, icode, iname) VALUES (0, 'login', 'User Login');
 INSERT INTO log_types (itype, icode, iname) VALUES (0, 'logoff', 'User Logoff');
 INSERT INTO log_types (itype, icode, iname) VALUES (0, 'login_fail', 'Login Failed');
 INSERT INTO log_types (itype, icode, iname) VALUES (0, 'chpwd', 'User changed login/pwd');
+-- user selectable types
+INSERT INTO log_types (itype, icode, iname) VALUES (10, 'comment', 'Comment');
 
+update log_types set prio=id; -- set default priority
 
 -- migrate data from events/event_log
 -- events -> fwentities
