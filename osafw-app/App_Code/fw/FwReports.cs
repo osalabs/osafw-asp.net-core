@@ -210,9 +210,8 @@ public class FwReports
                 }
 
             case "csv":
-                {
-                    var rep = (Hashtable)ps["rep"];
-                    Utils.writeCSVExport(fw.response, report_code + ".csv", "", "", (ArrayList)rep["rows"]);
+                {                    
+                    Utils.writeCSVExport(fw.response, report_code + ".csv", "", "", list_rows);
                     break;
                 }
 
