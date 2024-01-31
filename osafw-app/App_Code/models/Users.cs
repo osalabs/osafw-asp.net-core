@@ -91,6 +91,8 @@ public class Users : FwModel
 
     public override bool update(int id, Hashtable item)
     {
+        if (id == 0) return false;//no anonymous updates
+
         if (item.ContainsKey("pwd"))
             item["pwd"] = this.hashPwd((string)item["pwd"]);
         return base.update(id, item);

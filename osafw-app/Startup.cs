@@ -108,6 +108,11 @@ public class Startup
                 options.Cookie.HttpOnly = (bool)Startup.Configuration.GetValue(typeof(bool), "cookieHttpOnly");
             }
         });
+
+        // Windows Active Directory authentication support
+        // https://learn.microsoft.com/en-us/aspnet/core/security/authentication/windowsauth?view=aspnetcore-7.0&tabs=visual-studio#iisiis-express
+        // first, install package Microsoft.AspNetCore.Authentication.Negotiate
+        // services.AddAuthentication(Microsoft.AspNetCore.Authentication.Negotiate.NegotiateDefaults.AuthenticationScheme).AddNegotiate();
     }
 
     // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -161,9 +166,9 @@ public class Startup
             //TODO FIX if set ContentType here, then responseWrite fails with "cannot write to the response body, response has completed"
             //context.Response.ContentType = "text/html; charset=utf-8"; //default content type
             //context.Response.Headers.Add("X-Content-Type-Options", "NOSNIFF"); //TODO FIX cannot set this header till fix issue with ContentType
-            context.Response.Headers.Add("X-Frame-Options", "DENY"); // SAMEORIGIN allows site iframes
-            context.Response.Headers.Add("X-Permitted-Cross-Domain-Policies", "master-only");
-            context.Response.Headers.Add("X-XSS-Protection", "1; mode=block");
+            context.Response.Headers.Append("X-Frame-Options", "DENY"); // SAMEORIGIN allows site iframes
+            context.Response.Headers.Append("X-Permitted-Cross-Domain-Policies", "master-only");
+            context.Response.Headers.Append("X-XSS-Protection", "1; mode=block");
             await next();
         });
 

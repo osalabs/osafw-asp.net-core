@@ -1002,6 +1002,7 @@ public class FwDynamicController : FwController
                 var hids = reqh("item-" + model_name);
                 // sort hids.Keys, so numerical keys - first and keys staring with "new-" will be last
                 var sorted_keys = hids.Keys.Cast<string>().OrderBy(x => x.StartsWith("new-") ? 1 : 0).ThenBy(x => x).ToList();
+                var junction_field_status = sub_model.getJunctionFieldStatus();
                 foreach (string row_id in sorted_keys)
                 {
                     if (row_id == del_id) continue; //skip deleted row
@@ -1010,7 +1011,6 @@ public class FwDynamicController : FwController
                     Hashtable itemdb = FormUtils.filter(row_item, save_fields);
                     FormUtils.filterCheckboxes(itemdb, row_item, save_fields_checkboxes);
 
-                    var junction_field_status = sub_model.getJunctionFieldStatus();
                     itemdb[junction_field_status] = FwModel.STATUS_ACTIVE; // mark new and updated existing rows as active
 
                     modelAddOrUpdateSubtableDynamic(id, row_id, itemdb, def, sub_model);
