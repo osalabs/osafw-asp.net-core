@@ -211,7 +211,7 @@ public class FwReports
 
             case "csv":
                 {                    
-                    Utils.writeCSVExport(fw.response, report_code + ".csv", "", "", ((ArrayList)ps["list_rows"]));
+                    Utils.writeCSVExport(fw.response, report_code + ".csv", "", "", list_rows);
                     break;
                 }
 
