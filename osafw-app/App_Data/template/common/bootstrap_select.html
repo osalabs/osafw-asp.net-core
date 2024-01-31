@@ -61,7 +61,8 @@
       if (!$this.prop('multiple') && $this.nextAll('.dropdown-menu.show').length > 0) $this.selectpicker('toggle')
 
       // FFilter auto submit
-      $this.closest('form[data-list-filter][data-autosubmit]').trigger('submit')
+      if ($this.is(':not([data-nosubmit])'))
+        $this.closest('form[data-list-filter][data-autosubmit]').trigger('submit')
     })
 
     // form changes & autosave

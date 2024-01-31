@@ -116,7 +116,7 @@ public class MainController : FwController
         rows = db.arrayp(db.limit("select al.idate as " + db.qid("On") + ", CONCAT(fe.iname, ' ', lt.iname, ' ', al.idesc) as Event " +
             " from activity_logs al, log_types lt, fwentities fe " +
             " where al.log_types_id=lt.id" +
-            "   and fe.id=al.fwentities_id" + 
+            "   and fe.id=al.fwentities_id" +
             " order by al.id desc", 10), DB.h());
         one["rows"] = rows;
         var headers = new ArrayList();

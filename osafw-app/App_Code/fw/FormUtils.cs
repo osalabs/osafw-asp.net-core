@@ -616,7 +616,7 @@ public class FormUtils
         if (sortdir == "desc")
         {
             // if sortdir is desc, i.e. opposite to default - invert order for orderby fields
-            // go thru each order field            
+            // go thru each order field
             for (int i = 0; i <= aorderby.Length - 1; i++)
             {
                 string field = null;
