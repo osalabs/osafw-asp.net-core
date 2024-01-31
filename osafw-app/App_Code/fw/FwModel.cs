@@ -49,6 +49,7 @@ public abstract class FwModel : IDisposable
     public string junction_field_main_id; // id field name for main, ex users_id
     public FwModel junction_model_linked;   // linked model (second entity), initialize in init()
     public string junction_field_linked_id; // id field name for linked, ex companies_id
+    public string junction_field_status; // custom junction status field name, using this.field_status if not set
 
     protected string cache_prefix = "fwmodel.one."; // default cache prefix for caching items
 
@@ -730,23 +731,32 @@ public abstract class FwModel : IDisposable
         return db.col(table_name, DB.h(junction_field_linked_id, linked_id), db.qid(junction_field_linked_id));
     }
 
+    public virtual string getJunctionFieldStatus()
+    {
+        return !string.IsNullOrEmpty(junction_field_status) ? junction_field_status : field_status;
+    }
+
     public virtual void setUnderUpdateByMainId(int main_id)
     {
-        if (string.IsNullOrEmpty(field_status) || string.IsNullOrEmpty(junction_field_main_id)) return; //if no status or linked field - do nothing
+        var junction_field_status = getJunctionFieldStatus();
+
+        if (string.IsNullOrEmpty(junction_field_status) || string.IsNullOrEmpty(junction_field_main_id)) return; //if no status or linked field - do nothing
 
         is_under_bulk_update = true;
 
-        db.update(table_name, DB.h(field_status, STATUS_UNDER_UPDATE), DB.h(junction_field_main_id, main_id));
+        db.update(table_name, DB.h(junction_field_status, STATUS_UNDER_UPDATE), DB.h(junction_field_main_id, main_id));
     }
 
     public virtual void deleteUnderUpdateByMainId(int main_id)
     {
-        if (string.IsNullOrEmpty(field_status) || string.IsNullOrEmpty(junction_field_main_id)) return; //if no status or linked field - do nothing
+        var junction_field_status = getJunctionFieldStatus();
+
+        if (string.IsNullOrEmpty(junction_field_status) || string.IsNullOrEmpty(junction_field_main_id)) return; //if no status or linked field - do nothing
 
         var where = new Hashtable()
         {
             {junction_field_main_id, main_id},
-            {field_status, STATUS_UNDER_UPDATE},
+            {junction_field_status, STATUS_UNDER_UPDATE},
         };
         db.del(table_name, where);
 
@@ -766,7 +776,7 @@ public abstract class FwModel : IDisposable
     {
         Hashtable fields = new();
         Hashtable where = new();
-        var link_table_field_status = "status";
+        var link_table_field_status = getJunctionFieldStatus();
 
         // set all fields as under update
         fields[link_table_field_status] = STATUS_UNDER_UPDATE;
@@ -815,7 +825,7 @@ public abstract class FwModel : IDisposable
     {
         Hashtable fields = new();
         Hashtable where = new();
-        var link_table_field_status = this.field_status;
+        var link_table_field_status = getJunctionFieldStatus();
 
         // set all rows as under update
         setUnderUpdateByMainId(main_id);
@@ -865,7 +875,7 @@ public abstract class FwModel : IDisposable
     {
         Hashtable fields = new();
         Hashtable where = new();
-        var link_table_field_status = this.field_status;
+        var link_table_field_status = getJunctionFieldStatus();
 
         // set all fields as under update
         fields[link_table_field_status] = STATUS_UNDER_UPDATE;
