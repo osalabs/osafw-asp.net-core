@@ -152,9 +152,28 @@ public class FW : IDisposable
     {
         using FW fw = new(context, configuration);
 
-        FwHooks.initRequest(fw);
+        try
+        {
+            FwHooks.initRequest(fw);
+        }
+        catch (Exception ex)
+        {
+            fw.logger(LogLevel.ERROR, "FwHooks.initRequest Exception: ", ex.Message);
+            fw.errMsg("FwHooks.initRequest Exception", ex);
+            throw;
+        }
+
         fw.dispatch();
-        FwHooks.finalizeRequest(fw);
+
+        try
+        {
+            FwHooks.finalizeRequest(fw);
+        }
+        catch (Exception ex)
+        {
+            //for finalize - just log error, no need to show to user
+            fw.logger(LogLevel.ERROR, "FwHooks.finalizeRequest Exception: ", ex.ToString());
+        }
     }
 
     public FW(HttpContext context, IConfiguration configuration)
