@@ -22,7 +22,7 @@
             <~/common/list/list_row_td_btn if="GLOBAL[is_list_btn_left]">
             <~cols repeat inline><td><~data var unless="is_custom"><~col_custom if="is_custom"></td></~cols>
             <td class="text-nowrap d-print-none <~/common/text_end unless="GLOBAL[is_list_btn_left]">">
-              <~is_applied_blk ifeq="is_applied" value="0" inline>
+              <~is_applied_blk ifne="status" value="20" inline>
                 <a href="#" data-id="<~id>" class="btn btn-sm btn-success on-apply-update">`Apply`</a>
               </~is_applied_blk>
             </td>

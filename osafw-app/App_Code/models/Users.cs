@@ -323,8 +323,8 @@ public class Users : FwModel
         if (Utils.f2int(user["access_level"]) == Users.ACL_SITEADMIN)
         {
             // Update list of updates 
-            fw.model<DBUpdates>().parseUpdates();
-            fw.G["IS_HAVE_DB_UPDATES"] = fw.model<DBUpdates>().getNotAppliedCount();
+            fw.model<FwUpdates>().parseUpdates();
+            fw.G["IS_HAVE_DB_UPDATES"] = fw.model<FwUpdates>().getNotAppliedCount();
         }
     }
 

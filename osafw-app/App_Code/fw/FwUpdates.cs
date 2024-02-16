@@ -1,22 +1,20 @@
-// DBUpdates model class
+// FwUpdates model class
 //
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2023 Oleg Savchuk www.osalabs.com
 
 using System.Collections;
-using System.ComponentModel.DataAnnotations;
-using System.Reflection;
 
 namespace osafw;
 
-public class DBUpdates : FwModel
+public class FwUpdates : FwModel
 {
-    public const int STATUS_APPLIED = 50;
-    public DBUpdates() : base()
+    public const int STATUS_FAILED_DB_UPDATE = 20;
+    public const int STATUS_APPLIED = 30;
+    public FwUpdates() : base()
     {
         db_config = "";
-        table_name = "db_updates";
-        
+        table_name = "fwupdates";
     }
 
     public void parseUpdates()
@@ -47,19 +45,25 @@ public class DBUpdates : FwModel
 
     public void markAsApplied(int id)
     {
-        var where = new Hashtable();
-        where["id"] = id;
-
         var fields = new Hashtable();
-        fields["is_applied"] = 1;
         fields["status"] = STATUS_APPLIED;
         fields["applied_time"] = DB.NOW;
-        
-        db.update(table_name, fields, where);
+
+        this.update(id, fields);
+    }
+
+    public void markAsFailed(int id, string error)
+    {
+        var fields = new Hashtable();
+        fields["status"] = STATUS_FAILED_DB_UPDATE;
+        fields["idesc"] = error;
+
+        this.update(id, fields);
     }
 
     public int getNotAppliedCount()
     {
-        return Utils.f2int(db.valuep("SELECT COUNT(*) FROM " + db.qid(table_name) + " WHERE status=@status", DB.h("@status", STATUS_ACTIVE)));
+        var value = db.value(table_name, DB.h("status", STATUS_ACTIVE), "count(*)");
+        return Utils.f2int(value);
     }
 }

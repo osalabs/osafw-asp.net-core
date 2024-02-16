@@ -3,8 +3,9 @@ $('.on-apply-update').on('click', function(e) {
   e.stopPropagation();  
   const id = $(this).data("id");
   const form = $('#FApplyUpdate');
-  form.find("[name='id']").val(id);
+  form.attr('action',"<~../url>/(Save)/" + id);
   form.submit();
+
 });
 
 function highlightSQL() {

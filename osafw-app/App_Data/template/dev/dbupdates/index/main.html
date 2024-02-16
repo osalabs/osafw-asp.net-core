@@ -1,11 +1,11 @@
 <h1><~title> (<~count>)</h1>
-<form method="POST" action="<~../url>/(UpdateViews)">
+<form method="POST" action="<~../url>/(Save)">
  <input type="hidden" name="XSS" value="<~session[XSS]>">
  <button type="submit" class="btn btn-info ms-2">Refresh Views only</button>
 </form>
 <~/common/form/msg>
 
-<form id="FApplyUpdate" method="POST" action="<~../url>/(Save)">
+<form id="FApplyUpdate" method="POST">
  <input type="hidden" name="XSS" value="<~session[XSS]>">
  <input type="hidden" name="id" value="">
 </form>
