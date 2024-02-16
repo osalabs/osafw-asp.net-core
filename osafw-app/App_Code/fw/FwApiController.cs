@@ -3,6 +3,7 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
+using Microsoft.AspNetCore.Http;
 using System;
 
 namespace osafw;
@@ -40,14 +41,14 @@ public class FwApiController : FwController
         // logger(fw.req.Headers)
 
         var origin = "";
-        if (!string.IsNullOrEmpty(fw.request.Headers["Origin"].ToString()))
-            origin = fw.request.Headers["Origin"];
+        if (!string.IsNullOrEmpty(fw.request.Headers.Origin.ToString()))
+            origin = fw.request.Headers.Origin;
         else
         {
             // try referrer
-            if (!string.IsNullOrEmpty(fw.request.Headers["Referer"].ToString()))
+            if (!string.IsNullOrEmpty(fw.request.Headers.Referer.ToString()))
             {
-                var uri = new Uri(fw.request.Headers["Referer"]);
+                var uri = new Uri(fw.request.Headers.Referer);
                 origin = uri.GetLeftPart(UriPartial.Authority);
             }
         }
@@ -62,13 +63,13 @@ public class FwApiController : FwController
 
         // create headers
         fw.response.Headers.Remove("Access-Control-Allow-Origin");
-        fw.response.Headers.Add("Access-Control-Allow-Origin", origin);
+        fw.response.Headers.Append("Access-Control-Allow-Origin", origin);
 
         fw.response.Headers.Remove("Access-Control-Allow-Credentials");
-        fw.response.Headers.Add("Access-Control-Allow-Credentials", "true");
+        fw.response.Headers.Append("Access-Control-Allow-Credentials", "true");
 
         fw.response.Headers.Remove("Access-Control-Allow-Methods");
-        fw.response.Headers.Add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+        fw.response.Headers.Append("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
 
         // check auth
         if (isAuth)

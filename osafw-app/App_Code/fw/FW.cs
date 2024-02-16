@@ -152,9 +152,28 @@ public class FW : IDisposable
     {
         using FW fw = new(context, configuration);
 
-        FwHooks.initRequest(fw);
+        try
+        {
+            FwHooks.initRequest(fw);
+        }
+        catch (Exception ex)
+        {
+            fw.logger(LogLevel.ERROR, "FwHooks.initRequest Exception: ", ex.Message);
+            fw.errMsg("FwHooks.initRequest Exception", ex);
+            throw;
+        }
+
         fw.dispatch();
-        FwHooks.finalizeRequest(fw);
+
+        try
+        {
+            FwHooks.finalizeRequest(fw);
+        }
+        catch (Exception ex)
+        {
+            //for finalize - just log error, no need to show to user
+            fw.logger(LogLevel.ERROR, "FwHooks.finalizeRequest Exception: ", ex.ToString());
+        }
     }
 
     public FW(HttpContext context, IConfiguration configuration)
@@ -1497,11 +1516,18 @@ public class FW : IDisposable
         return (FwModel)models[model_name];
     }
 
-    public void logEvent(string ev_icode, int item_id = 0, int item_id2 = 0, string iname = "", int records_affected = 0, Hashtable changed_fields = null)
+    public void logActivity(string log_types_icode, string entity_icode, int item_id = 0, string iname = "", Hashtable changed_fields = null)
     {
         if (!is_log_events)
             return;
-        this.model<FwEvents>().log(ev_icode, item_id, item_id2, iname, records_affected, changed_fields);
+
+        Hashtable payload = null;
+        if (changed_fields != null)
+            payload = new Hashtable()
+            {
+                {"fields", changed_fields}
+            };
+        this.model<FwActivityLogs>().addSimple(log_types_icode, entity_icode, item_id, iname, payload);
     }
 
     public void rw(string str)

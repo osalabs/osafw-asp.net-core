@@ -161,12 +161,23 @@ public class FwDynamicController : FwController
         if (this.is_userlists)
             this.setUserLists(ps, id);
 
+        if (is_activity_logs)
+        {
+            initFilter();
+
+            list_filter["tab_activity"] = Utils.f2str(list_filter["tab_activity"] ?? FwActivityLogs.TAB_COMMENTS);
+            ps["list_filter"] = list_filter;
+            ps["activity_entity"] = model0.table_name;
+            ps["activity_rows"] = fw.model<FwActivityLogs>().listByEntityForUI(model0.table_name, id, (string)list_filter["tab_activity"]);
+        }
+
         ps["id"] = id;
         ps["i"] = item;
         ps["return_url"] = return_url;
         ps["related_id"] = related_id;
         ps["base_url"] = base_url;
         ps["is_userlists"] = is_userlists;
+        ps["is_activity_logs"] = is_activity_logs;
         ps["is_readonly"] = is_readonly;
 
         return ps;
@@ -662,7 +673,7 @@ public class FwDynamicController : FwController
             else if (dtype == "att")
                 def["att"] = fw.model<Att>().one(Utils.f2int((string)item[field]));
             else if (dtype == "att_links")
-                def["att_links"] = fw.model<Att>().getAllLinked(model0.table_name, Utils.f2int(id));
+                def["att_links"] = fw.model<Att>().listLinked(model0.table_name, Utils.f2int(id));
             else if (dtype == "subtable")
             {
                 // subtable functionality
@@ -777,7 +788,7 @@ public class FwDynamicController : FwController
                 def["value"] = item[field];
             }
             else if (dtype == "att_links_edit")
-                def["att_links"] = fw.model<Att>().getAllLinked(model0.table_name, Utils.f2int(id));
+                def["att_links"] = fw.model<Att>().listLinked(model0.table_name, Utils.f2int(id));
 
             else if (dtype == "subtable_edit")
             {
@@ -951,7 +962,7 @@ public class FwDynamicController : FwController
         {
             string type = (string)def["type"];
             if (type == "att_links_edit")
-                fw.model<Att>().updateAttLinks(model0.table_name, id, reqh("att")); // TODO make att configurable
+                fw.model<AttLinks>().updateJunction(model0.table_name, id, reqh("att")); // TODO make att configurable
             else if (type == "multicb")
             {
                 if (Utils.isEmpty(def["model"]))
@@ -991,6 +1002,7 @@ public class FwDynamicController : FwController
                 var hids = reqh("item-" + model_name);
                 // sort hids.Keys, so numerical keys - first and keys staring with "new-" will be last
                 var sorted_keys = hids.Keys.Cast<string>().OrderBy(x => x.StartsWith("new-") ? 1 : 0).ThenBy(x => x).ToList();
+                var junction_field_status = sub_model.getJunctionFieldStatus();
                 foreach (string row_id in sorted_keys)
                 {
                     if (row_id == del_id) continue; //skip deleted row
@@ -999,7 +1011,7 @@ public class FwDynamicController : FwController
                     Hashtable itemdb = FormUtils.filter(row_item, save_fields);
                     FormUtils.filterCheckboxes(itemdb, row_item, save_fields_checkboxes);
 
-                    itemdb["status"] = FwModel.STATUS_ACTIVE; // mark new and updated existing rows as active
+                    itemdb[junction_field_status] = FwModel.STATUS_ACTIVE; // mark new and updated existing rows as active
 
                     modelAddOrUpdateSubtableDynamic(id, row_id, itemdb, def, sub_model);
                 }

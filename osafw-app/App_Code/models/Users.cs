@@ -91,6 +91,8 @@ public class Users : FwModel
 
     public override bool update(int id, Hashtable item)
     {
+        if (id == 0) return false;//no anonymous updates
+
         if (item.ContainsKey("pwd"))
             item["pwd"] = this.hashPwd((string)item["pwd"]);
         return base.update(id, item);
@@ -311,7 +313,7 @@ public class Users : FwModel
 
         reloadSession(id);
 
-        fw.logEvent("login", id);
+        fw.logActivity(FwLogTypes.ICODE_USERS_LOGIN, FwEntities.ICODE_USERS, id);
         // update login info
         Hashtable fields = new();
         fields["login_time"] = DB.NOW;

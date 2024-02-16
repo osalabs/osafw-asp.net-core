@@ -223,7 +223,7 @@ public class ParsePage
 
     private string _parse_page(string tpl_name, Hashtable hf, string page, ref Hashtable parent_hf)
     {
-        if (tpl_name.Length>0 && tpl_name.Substring(0, 1) != "/")
+        if (tpl_name.Length > 0 && tpl_name.Substring(0, 1) != "/")
             tpl_name = basedir + "/" + tpl_name;
 
         //fw.logger("DEBUG", $"ParsePage - Parsing template = {tpl_name}, pagelen={page.Length}");
@@ -398,7 +398,7 @@ public class ParsePage
         string modtime = "";
         string file_data = "";
         //For Windows - replace Unix-style separators / to \
-        if(path_separator == '\\')
+        if (path_separator == '\\')
             filename = filename.Replace('/', path_separator);
         // fw.logger("preacaching [" & filename & "]")
 
@@ -886,7 +886,7 @@ public class ParsePage
                     var precision = (!string.IsNullOrEmpty((string)hattrs["number_format"]) ? Utils.f2int(hattrs["number_format"]) : 2);
                     bool groupdigits = !hattrs.ContainsKey("nfthousands") || !string.IsNullOrEmpty((string)hattrs["nfthousands"]); // default - group digits, but if nfthousands empty - don't
 
-                    value = Utils.f2float(value).ToString("N"+precision, CultureInfo.InvariantCulture);
+                    value = Utils.f2float(value).ToString("N" + precision, CultureInfo.InvariantCulture);
                     if (!groupdigits)
                     {
                         value = value.Replace(NumberFormatInfo.InvariantInfo.NumberGroupSeparator, "");
@@ -894,7 +894,7 @@ public class ParsePage
 
                     attr_count -= 1;
                 }
-                if (attr_count> 0 && hattrs.ContainsKey("currency"))
+                if (attr_count > 0 && hattrs.ContainsKey("currency"))
                 {
                     value = Utils.f2float(value).ToString("C2");
                     attr_count -= 1;

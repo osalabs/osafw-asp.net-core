@@ -12,7 +12,7 @@ namespace osafw;
 
 public abstract class FwController
 {
-    public static int access_level = Users.ACL_VISITOR; // access level for the controller. fw.config("access_levels") overrides this. -1 (public access), 0(min logged level), 100(max admin level)
+    public static int access_level = Users.ACL_VISITOR; // access level for the controller. fw.config("access_levels") overrides this. 0 (public access), 1(min logged level), 100(max admin level)
 
     public static string route_default_action = ""; // supported values - "" (use Default Parser for unknown actions), Index (use IndexAction for unknown actions), Show (assume action is id and use ShowAction)
     public string route_onerror = ""; //route redirect action name in case ApplicationException occurs in current route, if empty - 500 error page returned
@@ -60,6 +60,7 @@ public abstract class FwController
     protected bool is_dynamic_showform = false;  // true if controller has dynamic ShowFormAction, requires "showform_fields" to be defined in config.json
 
     protected bool is_userlists = false;         // true if controller should support UserLists
+    protected bool is_activity_logs = false;     // true if controller should support ActivityLogs
 
     protected bool is_readonly = false;          // true if user is readonly, no actions modifying data allowed
 
@@ -242,7 +243,7 @@ public abstract class FwController
     // sample in IndexAction: me.get_filter()
     public virtual Hashtable initFilter(string session_key = null)
     {
-        Hashtable f = (Hashtable)fw.FORM["f"] ?? new();
+        Hashtable f = reqh("f");
 
         if (session_key == null)
             session_key = "_filter_" + fw.G["controller.action"];
@@ -401,9 +402,9 @@ public abstract class FwController
     public virtual void setListSorting()
     {
         if (this.list_sortdef == null)
-            throw new Exception("No default sort order defined, define in list_sortdef ");
+            throw new Exception("No default sort order defined, define in list_sortdef");
         if (this.list_sortmap == null)
-            throw new Exception("No sort order mapping defined, define in list_sortmap ");
+            throw new Exception("No sort order mapping defined, define in list_sortmap");
 
         string sortby = (string)this.list_filter["sortby"] ?? "";
         string sortdir = (string)this.list_filter["sortdir"] ?? "";
@@ -425,36 +426,7 @@ public abstract class FwController
         this.list_filter["sortby"] = sortby;
         this.list_filter["sortdir"] = sortdir;
 
-        string[] aorderby = orderby.Split(",");
-        if (sortdir == "desc")
-        {
-            // if sortdir is desc, i.e. opposite to default - invert order for orderby fields
-            // go thru each order field            
-            for (int i = 0; i <= aorderby.Length - 1; i++)
-            {
-                string field = null;
-                string order = null;
-                Utils.split2(@"\s+", aorderby[i].Trim(), ref field, ref order);
-
-                if (order == "desc")
-                    order = "asc";
-                else
-                    order = "desc";
-                aorderby[i] = db.qid(field) + " " + order;
-            }
-        }
-        else
-        {
-            // quote
-            for (int i = 0; i <= aorderby.Length - 1; i++)
-            {
-                string field = null;
-                string order = null;
-                Utils.split2(@"\s+", aorderby[i].Trim(), ref field, ref order);
-                aorderby[i] = db.qid(field) + " " + order;
-            }
-        }
-        this.list_orderby = string.Join(", ", aorderby);
+        this.list_orderby = FormUtils.sqlOrderBy(db, sortby, sortdir, list_sortmap);
     }
 
     /// <summary>
@@ -891,7 +863,7 @@ public abstract class FwController
         // if user is logged and not SiteAdmin(can access everything)
         // and user's access level is enough for the controller - check access by roles (if enabled)
         int current_user_level = fw.userAccessLevel;
-        if (current_user_level > 0 && current_user_level < 100)
+        if (current_user_level > Users.ACL_VISITOR && current_user_level < Users.ACL_SITEADMIN)
         {
             if (!fw.model<Users>().isAccessByRolesResourceAction(fw.userId, fw.route.controller, fw.route.action, fw.route.action_more, access_actions_to_permissions))
                 throw new AuthException("Bad access - Not authorized (3)");
@@ -1055,7 +1027,7 @@ public abstract class FwController
     }
 
     /// <summary>
-    /// Called from setViewList to get conversions for fields. 
+    /// Called from setViewList to get conversions for fields.
     /// Currently supports only "date" conversion - i.e. date only fields will be formatted as date only (without time)
     /// Override to add more custom conversions
     /// </summary>

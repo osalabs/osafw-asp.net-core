@@ -42,12 +42,14 @@ public abstract class FwModel : IDisposable
 
     public bool is_log_changes = true; // if true - event_log record added on add/update/delete
     public bool is_log_fields_changed = true; // if true - event_log.fields filled with changes
+    public bool is_under_bulk_update = false; // true when perform bulk updates like modelAddOrUpdateSubtableDynamic (disables log changes for status)
 
     // for junction models like UsersCompanies that link 2 tables via junction table, ex users_companies
     public FwModel junction_model_main;   // main model (first entity), initialize in init(), ex fw.model<Users>()
     public string junction_field_main_id; // id field name for main, ex users_id
     public FwModel junction_model_linked;   // linked model (second entity), initialize in init()
     public string junction_field_linked_id; // id field name for linked, ex companies_id
+    public string junction_field_status; // custom junction status field name, using this.field_status if not set
 
     protected string cache_prefix = "fwmodel.one."; // default cache prefix for caching items
 
@@ -307,6 +309,22 @@ public abstract class FwModel : IDisposable
             return false;
     }
 
+    // check if item exists for a given fields and their values, commonly used in junction tables
+    public bool isExistsByFields(Hashtable fields, int not_id)
+    {
+        Hashtable where = new();
+        foreach (DictionaryEntry de in fields)
+            where[de.Key] = de.Value;
+
+        if (!string.IsNullOrEmpty(field_id))
+            where[field_id] = db.opNOT(not_id);
+        string val = Utils.f2str(db.value(table_name, where, "1"));
+        if (val == "1")
+            return true;
+        else
+            return false;
+    }
+
     // check if item exists for a given iname
     public virtual bool isExists(object uniq_key, int not_id)
     {
@@ -324,9 +342,9 @@ public abstract class FwModel : IDisposable
         if (is_log_changes)
         {
             if (is_log_fields_changed)
-                fw.logEvent(table_name + "_add", id, 0, "", 0, item);
+                fw.logActivity(FwLogTypes.ICODE_ADDED, table_name, id, "", item);
             else
-                fw.logEvent(table_name + "_add", id);
+                fw.logActivity(FwLogTypes.ICODE_ADDED, table_name, id);
         }
 
         this.removeCache(id);
@@ -343,11 +361,19 @@ public abstract class FwModel : IDisposable
     // update exising record
     public virtual bool update(int id, Hashtable item)
     {
-        Hashtable item_changes = new();
+        Hashtable item_changes = [];
         if (is_log_changes)
         {
             Hashtable item_old = this.one(id);
-            item_changes = fw.model<FwEvents>().changes_only(item, item_old);
+            Hashtable item_compare = item;
+            if (is_under_bulk_update)
+            {
+                // when under bulk update - as existing items updated from status=1 to 0
+                // so we only need to check if other fields changed, not status
+                item_compare = (Hashtable)item.Clone();
+                item_compare.Remove(field_status);
+            }
+            item_changes = FormUtils.changesOnly(item_compare, item_old);
         }
 
         if (!string.IsNullOrEmpty(field_upd_time))
@@ -355,7 +381,7 @@ public abstract class FwModel : IDisposable
         if (!string.IsNullOrEmpty(field_upd_users_id) && !item.ContainsKey(field_upd_users_id) && fw.isLogged)
             item[field_upd_users_id] = fw.userId;
 
-        Hashtable where = new();
+        Hashtable where = [];
         where[this.field_id] = id;
         db.update(table_name, item, where);
 
@@ -364,9 +390,9 @@ public abstract class FwModel : IDisposable
         if (is_log_changes && item_changes.Count > 0)
         {
             if (is_log_fields_changed)
-                fw.logEvent(table_name + "_upd", id, 0, "", 0, item_changes);
+                fw.logActivity(FwLogTypes.ICODE_UPDATED, table_name, id, "", item_changes);
             else
-                fw.logEvent(table_name + "_upd", id);
+                fw.logActivity(FwLogTypes.ICODE_UPDATED, table_name, id);
         }
 
         return true;
@@ -396,7 +422,7 @@ public abstract class FwModel : IDisposable
             db.update(table_name, vars, where);
         }
         if (is_log_changes)
-            fw.logEvent(table_name + "_del", id);
+            fw.logActivity(FwLogTypes.ICODE_DELETED, table_name, id);
     }
 
     public virtual void deleteWithPermanentCheck(int id)
@@ -721,25 +747,46 @@ public abstract class FwModel : IDisposable
         return db.col(table_name, DB.h(junction_field_linked_id, linked_id), db.qid(junction_field_linked_id));
     }
 
+    public virtual string getJunctionFieldStatus()
+    {
+        return !string.IsNullOrEmpty(junction_field_status) ? junction_field_status : field_status;
+    }
+
     public virtual void setUnderUpdateByMainId(int main_id)
     {
-        if (string.IsNullOrEmpty(field_status) || string.IsNullOrEmpty(junction_field_main_id)) return; //if no status or linked field - do nothing
+        var junction_field_status = getJunctionFieldStatus();
 
-        db.update(table_name, DB.h(field_status, STATUS_UNDER_UPDATE), DB.h(junction_field_main_id, main_id));
+        if (string.IsNullOrEmpty(junction_field_status) || string.IsNullOrEmpty(junction_field_main_id)) return; //if no status or linked field - do nothing
+
+        is_under_bulk_update = true;
+
+        db.update(table_name, DB.h(junction_field_status, STATUS_UNDER_UPDATE), DB.h(junction_field_main_id, main_id));
     }
 
     public virtual void deleteUnderUpdateByMainId(int main_id)
     {
-        if (string.IsNullOrEmpty(field_status) || string.IsNullOrEmpty(junction_field_main_id)) return; //if no status or linked field - do nothing
+        var junction_field_status = getJunctionFieldStatus();
+
+        if (string.IsNullOrEmpty(junction_field_status) || string.IsNullOrEmpty(junction_field_main_id)) return; //if no status or linked field - do nothing
 
         var where = new Hashtable()
         {
             {junction_field_main_id, main_id},
-            {field_status, STATUS_UNDER_UPDATE},
+            {junction_field_status, STATUS_UNDER_UPDATE},
         };
         db.del(table_name, where);
+
+        is_under_bulk_update = false;
     }
 
+    // used when the main record must be permanently deleted
+    public virtual void deleteByMainId(int main_id)
+    {
+        if (string.IsNullOrEmpty(junction_field_main_id)) return; //if no linked field - do nothing
+
+        var where = new Hashtable() { { junction_field_main_id, main_id } };
+        db.del(table_name, where);
+    }
 
     /// <summary>
     ///  generic update (and add/del) for junction table
@@ -753,7 +800,7 @@ public abstract class FwModel : IDisposable
     {
         Hashtable fields = new();
         Hashtable where = new();
-        var link_table_field_status = "status";
+        var link_table_field_status = getJunctionFieldStatus();
 
         // set all fields as under update
         fields[link_table_field_status] = STATUS_UNDER_UPDATE;
@@ -802,7 +849,7 @@ public abstract class FwModel : IDisposable
     {
         Hashtable fields = new();
         Hashtable where = new();
-        var link_table_field_status = this.field_status;
+        var link_table_field_status = getJunctionFieldStatus();
 
         // set all rows as under update
         setUnderUpdateByMainId(main_id);
@@ -852,7 +899,7 @@ public abstract class FwModel : IDisposable
     {
         Hashtable fields = new();
         Hashtable where = new();
-        var link_table_field_status = this.field_status;
+        var link_table_field_status = getJunctionFieldStatus();
 
         // set all fields as under update
         fields[link_table_field_status] = STATUS_UNDER_UPDATE;

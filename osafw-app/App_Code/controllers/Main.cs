@@ -68,7 +68,7 @@ public class MainController : FwController
         one["url"] = "/Admin/Users";
         one["value"] = fw.model<Users>().getCount(STATUSES);
         one["value_class"] = "text-success";
-        one["badge_value"] = Utils.percentChange(fw.model<Users>().getCount(STATUSES, DIFF_DAYS), fw.model<FwEvents>().getCount(STATUSES, DIFF_DAYS * 2));
+        one["badge_value"] = Utils.percentChange(fw.model<Users>().getCount(STATUSES, DIFF_DAYS), fw.model<Users>().getCount(STATUSES, DIFF_DAYS * 2));
         one["badge_class"] = "text-bg-success";
         one["icon"] = "users";
         panes["plate3"] = one;
@@ -77,9 +77,9 @@ public class MainController : FwController
         one["type"] = "bignum";
         one["title"] = "Events";
         one["url"] = "/Admin/Reports/sample";
-        one["value"] = fw.model<FwEvents>().getCount(STATUSES);
+        one["value"] = fw.model<FwActivityLogs>().getCountByLogIType(FwLogTypes.ITYPE_SYSTEM, STATUSES);
         one["value_class"] = "";
-        one["badge_value"] = Utils.percentChange(fw.model<FwEvents>().getCountLog(DIFF_DAYS), fw.model<FwEvents>().getCountLog(DIFF_DAYS * 2));
+        one["badge_value"] = Utils.percentChange(fw.model<FwActivityLogs>().getCountByLogIType(FwLogTypes.ITYPE_SYSTEM, STATUSES, DIFF_DAYS), fw.model<FwActivityLogs>().getCountByLogIType(FwLogTypes.ITYPE_SYSTEM, STATUSES, DIFF_DAYS * 2));
         one["badge_class"] = "text-bg-secondary";
         one["icon"] = "events";
         panes["plate4"] = one;
@@ -90,8 +90,10 @@ public class MainController : FwController
         one["id"] = "logins_per_day";
         // one["url") ] "/Admin/Reports/sample"
         one["rows"] = db.arrayp("with zzz as ("
-            + db.limit("select CAST(el.add_time as date) as idate, count(*) as ivalue from events ev, event_log el where ev.icode='login' and el.events_id=ev.id"
-            + " group by CAST(el.add_time as date) order by CAST(el.add_time as date) desc", 14)
+            + db.limit("select CAST(al.idate as date) as idate, count(*) as ivalue "
+            + " from activity_logs al, log_types lt "
+            + " where lt.icode='login' and al.log_types_id=lt.id"
+            + " group by CAST(al.idate as date) order by CAST(al.idate as date) desc", 14)
             + ")"
             + " select CONCAT(MONTH(idate),'/',DAY(idate)) as ilabel, ivalue from zzz order by idate", DB.h());
         panes["barchart"] = one;
@@ -111,7 +113,11 @@ public class MainController : FwController
         one["type"] = "table";
         one["title"] = "Last Events";
         // one["url") ] "/Admin/Reports/sample"
-        rows = db.arrayp(db.limit("select el.add_time as " + db.qid("On") + ", ev.iname as Event from events ev, event_log el where el.events_id=ev.id order by el.id desc", 10), DB.h());
+        rows = db.arrayp(db.limit("select al.idate as " + db.qid("On") + ", CONCAT(fe.iname, ' ', lt.iname, ' ', al.idesc) as Event " +
+            " from activity_logs al, log_types lt, fwentities fe " +
+            " where al.log_types_id=lt.id" +
+            "   and fe.id=al.fwentities_id" +
+            " order by al.id desc", 10), DB.h());
         one["rows"] = rows;
         var headers = new ArrayList();
         one["headers"] = headers;
@@ -146,8 +152,10 @@ public class MainController : FwController
         one["id"] = "eventsctr";
         // one["url") ] "/Admin/Reports/sample"
         one["rows"] = db.arrayp("with zzz as ("
-            + db.limit("select CAST(el.add_time as date) as idate, count(*) as ivalue from events ev, event_log el where el.events_id=ev.id"
-            + " group by CAST(el.add_time as date) order by CAST(el.add_time as date) desc", 14)
+            + db.limit("select CAST(al.idate as date) as idate, count(*) as ivalue "
+            + " from activity_logs al, log_types lt "
+            + "where al.log_types_id=lt.id"
+            + " group by CAST(al.idate as date) order by CAST(al.idate as date) desc", 14)
             + ")"
             + " select CONCAT(MONTH(idate),'/',DAY(idate)) as ilabel, ivalue from zzz order by idate", DB.h());
         panes["linechart"] = one;

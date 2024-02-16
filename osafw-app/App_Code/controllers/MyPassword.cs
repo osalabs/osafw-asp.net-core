@@ -3,9 +3,7 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
-using System;
 using System.Collections;
-using System.Collections.Generic;
 
 namespace osafw;
 
@@ -79,7 +77,7 @@ public class MyPasswordController : FwController
         {
             model.update(id, itemdb);
 
-            fw.logEvent("chpwd");
+            fw.logActivity(FwLogTypes.ICODE_USERS_CHPWD, FwEntities.ICODE_USERS);
             fw.flash("record_updated", 1);
         }
 
