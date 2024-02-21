@@ -1,7 +1,9 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Amazon.Runtime.Internal.Util;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -321,6 +323,226 @@ namespace osafw.Tests
             Assert.AreEqual(Utils.f2long(null), 0);
         }
 
+        [TestMethod]
+        public void f2decimalTest()
+        {
+            // Test cases for different representations of decimals
+            Assert.AreEqual(decimal.Zero, Utils.f2decimal("100M"));
+            Assert.AreEqual(100m, Utils.f2decimal(100m));
+            Assert.AreEqual(123m, Utils.f2decimal("123"));
+            Assert.AreEqual(123m, Utils.f2decimal(123));
+            Assert.AreEqual(123m, Utils.f2decimal("123.0"));
+            Assert.AreEqual(decimal.Zero, Utils.f2decimal("123.123b"));
+            Assert.AreEqual(decimal.Zero, Utils.f2decimal("b123.123"));
+            Assert.AreEqual(decimal.Zero, Utils.f2decimal("ABC"));
+            Assert.AreEqual(decimal.Zero, Utils.f2decimal(""));
+
+            // Test case: Input is null
+            object inputNull = null;
+            Assert.AreEqual(decimal.Zero, Utils.f2decimal(inputNull));
+
+            // Test case: Input is a valid decimal string
+            object inputValidDecimal = "123.45";
+            Assert.AreEqual(123.45m, Utils.f2decimal(inputValidDecimal));
+
+            // Test case: Input is not a valid decimal string
+            object inputInvalidDecimal = "not a decimal";
+            Assert.AreEqual(decimal.Zero, Utils.f2decimal(inputInvalidDecimal));
+
+            // Test case: Input is decimal overflow (max value)
+            object inputDecimalOverflowMax = "79228162514264337593543950336"; // Max value of decimal + 1
+            Assert.AreEqual(decimal.Zero, Utils.f2decimal(inputDecimalOverflowMax));
+
+            // Test case: Input is negative decimal overflow (min value)
+            object inputDecimalOverflowMin = "-79228162514264337593543950336"; // Min value of decimal - 1
+            Assert.AreEqual(decimal.Zero, Utils.f2decimal(inputDecimalOverflowMin));
+
+            // Test case: Input is decimal max value
+            object inputDecimalMaxValue = decimal.MaxValue.ToString();
+            Assert.AreEqual(decimal.MaxValue, Utils.f2decimal(inputDecimalMaxValue));
+
+            // Test case: Input is decimal min value
+            object inputDecimalMinValue = decimal.MinValue.ToString();
+            Assert.AreEqual(decimal.MinValue, Utils.f2decimal(inputDecimalMinValue));
+        }
+
+        [TestMethod()]
+        public void f2singleTest()
+        {
+            // Case 1: Convert valid float string to Single
+            object field1 = "123.45";
+            Single result1 = Utils.f2single(field1);
+            Assert.AreEqual(123.45f, result1, "Result should be converted Single from valid float string");
+
+            // Case 2: Convert valid integer string to Single
+            object field2 = "123";
+            Single result2 = Utils.f2single(field2);
+            Assert.AreEqual(123f, result2, "Result should be converted Single from valid integer string");
+
+            // Case 3: Convert null to Single
+            object field3 = null;
+            Single result3 = Utils.f2single(field3);
+            Assert.AreEqual(0f, result3, "Result should be 0 for null input");
+
+            // Case 4: Convert empty string to Single
+            object field4 = "";
+            Single result4 = Utils.f2single(field4);
+            Assert.AreEqual(0f, result4, "Result should be 0 for empty string input");
+
+            // Case 5: Convert invalid string to Single
+            object field5 = "abc";
+            Single result5 = Utils.f2single(field5);
+            Assert.AreEqual(0f, result5, "Result should be 0 for invalid string input");
+
+            // Case 6: Convert Single to Single
+            object field6 = 123.45f;
+            Single result6 = Utils.f2single(field6);
+            Assert.AreEqual(123.45f, result6, "Result should be same Single for Single input");
+
+            // Case 7: Convert integer to Single
+            object field7 = 123;
+            Single result7 = Utils.f2single(field7);
+            Assert.AreEqual(123f, result7, "Result should be converted Single from integer");
+
+            // Case 8: Convert negative float string to Single
+            object field8 = "-123.45";
+            Single result8 = Utils.f2single(field8);
+            Assert.AreEqual(-123.45f, result8, "Result should be converted Single from negative float string");
+
+            // Case 9: Convert negative integer string to Single
+            object field9 = "-123";
+            Single result9 = Utils.f2single(field9);
+            Assert.AreEqual(-123f, result9, "Result should be converted Single from negative integer string");
+        }
+
+        [TestMethod]
+        public void IsFloatTests()
+        {
+            // Case 1: Test valid float string
+            object input1 = "123.45";
+            bool result1 = Utils.isFloat(input1);
+            Assert.IsTrue(result1, "Result should be true for valid float string");
+
+            // Case 2: Test valid integer string
+            object input2 = "123";
+            bool result2 = Utils.isFloat(input2);
+            Assert.IsTrue(result2, "Result should be true for valid integer string");
+
+            // Case 3: Test null input
+            object input3 = null;
+            bool result3 = Utils.isFloat(input3);
+            Assert.IsFalse(result3, "Result should be false for null input");
+
+            // Case 4: Test empty string input
+            object input4 = "";
+            bool result4 = Utils.isFloat(input4);
+            Assert.IsFalse(result4, "Result should be false for empty string input");
+
+            // Case 5: Test invalid string input
+            object input5 = "abc";
+            bool result5 = Utils.isFloat(input5);
+            Assert.IsFalse(result5, "Result should be false for invalid string input");
+
+            // Case 6: Test float input
+            object input6 = 123.45f;
+            bool result6 = Utils.isFloat(input6);
+            Assert.IsTrue(result6, "Result should be true for float input");
+
+            // Case 7: Test integer input
+            object input7 = 123;
+            bool result7 = Utils.isFloat(input7);
+            Assert.IsTrue(result7, "Result should be true for integer input");
+
+            // Case 8: Test negative float string
+            object input8 = "-123.45";
+            bool result8 = Utils.isFloat(input8);
+            Assert.IsTrue(result8, "Result should be true for negative float string");
+
+            // Case 9: Test negative integer string
+            object input9 = "-123";
+            bool result9 = Utils.isFloat(input9);
+            Assert.IsTrue(result9, "Result should be true for negative integer string");
+
+        }
+
+        [TestMethod]
+        public void isIntTest()
+        {
+            // Case 1: Test valid integer string
+            object input1 = "123";
+            bool result1 = Utils.isInt(input1);
+            Assert.IsTrue(result1, "Result should be true for valid integer string");
+
+            // Case 2: Test valid negative integer string
+            object input2 = "-123";
+            bool result2 = Utils.isInt(input2);
+            Assert.IsTrue(result2, "Result should be true for valid negative integer string");
+
+            // Case 3: Test null input
+            object input3 = null;
+            bool result3 = Utils.isInt(input3);
+            Assert.IsFalse(result3, "Result should be false for null input");
+
+            // Case 4: Test empty string input
+            object input4 = "";
+            bool result4 = Utils.isInt(input4);
+            Assert.IsFalse(result4, "Result should be false for empty string input");
+
+            // Case 5: Test invalid string input
+            object input5 = "abc";
+            bool result5 = Utils.isInt(input5);
+            Assert.IsFalse(result5, "Result should be false for invalid string input");
+
+            // Case 6: Test float input
+            object input6 = 123.45f;
+            bool result6 = Utils.isInt(input6);
+            Assert.IsFalse(result6, "Result should be false for float input");
+
+            // Case 7: Test float string input
+            object input7 = "123.45";
+            bool result7 = Utils.isInt(input7);
+            Assert.IsFalse(result7, "Result should be false for float string input");
+        }
+
+        [TestMethod()]
+        public void isLongTest()
+        {
+            // Case 1: Test valid long string
+            object input1 = "1234567890123456789";
+            bool result1 = Utils.isLong(input1);
+            Assert.IsTrue(result1, "Result should be true for valid long string");
+
+            // Case 2: Test valid negative long string
+            object input2 = "-1234567890123456789";
+            bool result2 = Utils.isLong(input2);
+            Assert.IsTrue(result2, "Result should be true for valid negative long string");
+
+            // Case 3: Test null input
+            object input3 = null;
+            bool result3 = Utils.isLong(input3);
+            Assert.IsFalse(result3, "Result should be false for null input");
+
+            // Case 4: Test empty string input
+            object input4 = "";
+            bool result4 = Utils.isLong(input4);
+            Assert.IsFalse(result4, "Result should be false for empty string input");
+
+            // Case 5: Test invalid string input
+            object input5 = "abc";
+            bool result5 = Utils.isLong(input5);
+            Assert.IsFalse(result5, "Result should be false for invalid string input");
+
+            // Case 6: Test float input
+            object input6 = 123.45f;
+            bool result6 = Utils.isLong(input6);
+            Assert.IsFalse(result6, "Result should be false for float input");
+
+            // Case 7: Test float string input
+            object input7 = "123.45";
+            bool result7 = Utils.isLong(input7);
+            Assert.IsFalse(result7, "Result should be false for float string input");
+        }
+
         [TestMethod()]
         public void importCSVTest()
         {
@@ -530,6 +752,31 @@ namespace osafw.Tests
             Assert.AreEqual(r.Length, 36);
         }
 
+        [TestMethod]
+        public void NanoidTest()
+        {
+            // Case 1: Test default size
+            string result1 = Utils.nanoid();
+            Assert.AreEqual(21, result1.Length, "Result should have default length of 21 characters");
+
+            // Case 2: Test custom size
+            string result2 = Utils.nanoid(10);
+            Assert.AreEqual(10, result2.Length, "Result should have custom length of 10 characters");
+
+            // Case 3: Test large custom size
+            string result3 = Utils.nanoid(100);
+            Assert.AreEqual(100, result3.Length, "Result should have custom length of 100 characters");
+
+            // Case 4: Test uniqueness of generated IDs
+            HashSet<string> idSet = new HashSet<string>();
+            for (int i = 0; i < 100000; i++)
+            {
+                string id = Utils.nanoid();
+                Assert.IsFalse(idSet.Contains(id), "Generated ID should be unique");
+                idSet.Add(id);
+            }
+        }
+
         [TestMethod()]
         public void getTmpFilenameTest()
         {
@@ -582,6 +829,14 @@ namespace osafw.Tests
         }
 
         [TestMethod()]
+        public void percentChangeTest()
+        {
+            //TODO
+            //how does it works
+        }
+
+
+        [TestMethod()]
         public void str2truncateTest()
         {
             // test for Utils.str2truncate - truncate string to specified length
@@ -622,37 +877,182 @@ namespace osafw.Tests
         [TestMethod()]
         public void orderbyApplySortdirTest()
         {
-            throw new NotImplementedException();
+            //TODO
+
+            // Case 1: Test ascending orderby with sortdir "asc"
+            string result1 = Utils.orderbyApplySortdir("id", "asc");
+            Assert.AreEqual("id", result1, "Result should remain unchanged for ascending orderby with sortdir 'asc'");
+
+            // Case 2: Test ascending orderby with sortdir "desc"
+            string result2 = Utils.orderbyApplySortdir("id", "desc");
+            Assert.AreEqual("id desc", result2, "Result should be 'id desc' for ascending orderby with sortdir 'desc'");
+
+            // Case 3: Test descending orderby with sortdir "asc"
+            string result3 = Utils.orderbyApplySortdir("id desc", "asc");
+            Assert.AreEqual("id asc", result3, "Result should be 'id asc' for descending orderby with sortdir 'asc'");
+
+            // Case 4: Test descending orderby with sortdir "desc"
+            string result4 = Utils.orderbyApplySortdir("id desc", "desc");
+            Assert.AreEqual("id", result4, "Result should remain unchanged for descending orderby with sortdir 'desc'");
+
+            // Case 5: Test multiple fields orderby with sortdir "asc"
+            string result5 = Utils.orderbyApplySortdir("prio desc, id", "asc");
+            Assert.AreEqual("prio asc, id asc", result5, "Result should be 'prio asc, id asc' for multiple fields orderby with sortdir 'asc'");
+
+            // Case 6: Test multiple fields orderby with sortdir "desc"
+            string result6 = Utils.orderbyApplySortdir("prio desc, id", "desc");
+            Assert.AreEqual("prio asc, id desc", result6, "Result should be 'prio asc, id desc' for multiple fields orderby with sortdir 'desc'");
         }
 
         [TestMethod()]
         public void html2textTest()
         {
-            throw new NotImplementedException();
+            //TODO bug?
+
+            // Case 1: Test empty input
+            string input1 = "";
+            string result1 = Utils.html2text(input1);
+            Assert.AreEqual("", result1, "Result should be empty for empty input");
+
+            // Case 2: Test input with line breaks converted to spaces
+            string input2 = "This is a\nmultiline\nstring.";
+            string result2 = Utils.html2text(input2);
+            Assert.AreEqual("This is a multiline string.", result2, "Line breaks should be converted to spaces");
+
+            // Case 3: Test input with HTML line breaks converted to line breaks
+            string input3 = "This is a<br/>multiline<br>string.";
+            string result3 = Utils.html2text(input3);
+            Assert.AreEqual("This is a\nmultiline\nstring.", result3, "HTML line breaks should be converted to line breaks");
+
+            // Case 4: Test input with HTML tags removed
+            string input4 = "<p>This is <b>bold</b> <i>italic</i> text</p>";
+            string result4 = Utils.html2text(input4);
+            Assert.AreEqual("This is bold italic text", result4, "HTML tags should be removed");
+
+            // Case 5: Test input with multiple HTML tags
+            string input5 = "<div><h1>Title</h1><p>Paragraph</p></div>";
+            string result5 = Utils.html2text(input5);
+            Assert.AreEqual("Title Paragraph", result5, "Multiple HTML tags should be removed and spaces preserved");
         }
 
         [TestMethod()]
         public void commastr2hashTest()
         {
+            //TODO 
+            //how does it works
+
             throw new NotImplementedException();
         }
 
         [TestMethod()]
         public void commastr2nlstrTest()
         {
-            throw new NotImplementedException();
+            // Case 1: Test with empty input
+            string input1 = "";
+            string result1 = Utils.commastr2nlstr(input1);
+            Assert.AreEqual("", result1, "Result should be empty for empty input");
+
+            // Case 2: Test with input containing single item
+            string input2 = "item";
+            string result2 = Utils.commastr2nlstr(input2);
+            Assert.AreEqual("item", result2, "Result should be same as input for single item");
+
+            // Case 3: Test with input containing multiple items
+            string input3 = "item1,item2,item3";
+            string result3 = Utils.commastr2nlstr(input3);
+            Assert.AreEqual("item1\r\nitem2\r\nitem3", result3, "Result should be newline-delimited string for multiple items");
+
+            // Case 4: Test with input containing no items
+            string input4 = ",";
+            string result4 = Utils.commastr2nlstr(input4);
+            Assert.AreEqual("\r\n", result4, "Result should be two newline characters for no items");
         }
 
         [TestMethod()]
         public void arrayInjectTest()
         {
-            throw new NotImplementedException();
+            // Case 1: Empty rows and empty fields
+            ArrayList rows1 = new ArrayList();
+            Hashtable fields1 = new Hashtable();
+            Utils.arrayInject(rows1, fields1);
+            Assert.AreEqual(0, rows1.Count, "Empty rows and fields should result in no changes");
+
+            // Case 2: Rows with values and empty fields
+            ArrayList rows2 = new ArrayList();
+            rows2.Add(new Hashtable { { "key1", "value1" } });
+            rows2.Add(new Hashtable { { "key2", "value2" } });
+            Hashtable fields2 = new Hashtable();
+            Utils.arrayInject(rows2, fields2);
+            Assert.AreEqual(2, rows2.Count, "Rows with values and empty fields should result in no changes");
+            Assert.AreEqual("value1", ((Hashtable)rows2[0])["key1"]);
+            Assert.AreEqual("value2", ((Hashtable)rows2[1])["key2"]);
+
+            // Case 3: Rows with values and fields with some new and some existing keys
+            ArrayList rows3 = new ArrayList();
+            rows3.Add(new Hashtable { { "key1", "value1" } });
+            rows3.Add(new Hashtable { { "key2", "value2" } });
+            Hashtable fields3 = new Hashtable { { "key1", "newValue1" }, { "key3", "newValue3" } };
+            Utils.arrayInject(rows3, fields3);
+            Assert.AreEqual(2, rows3.Count, "Rows with values and fields with some new and some existing keys should merge properly");
+            Assert.AreEqual("newValue1", ((Hashtable)rows3[0])["key1"]);
+            Assert.AreEqual("value2", ((Hashtable)rows3[1])["key2"]);
+            Assert.AreEqual("newValue3", ((Hashtable)rows3[0])["key3"]);
+            Assert.AreEqual("newValue3", ((Hashtable)rows3[1])["key3"]);
+
+            // Case 4: Null rows and null fields
+            Assert.ThrowsException<NullReferenceException>(() => Utils.arrayInject(null, new Hashtable()), "Null rows should throw ArgumentNullException");
+            Assert.ThrowsException<ArgumentNullException>(() => Utils.arrayInject(new ArrayList(), null), "Null fields should throw ArgumentNullException");
         }
 
         [TestMethod()]
         public void urlescapeTest()
         {
-            throw new NotImplementedException();
+            //TODO
+
+            // Case 1: Empty string
+            string emptyString = "";
+            string result1 = Utils.urlescape(emptyString);
+            Assert.AreEqual("", result1, "Empty string should return empty string");
+
+            // Case 2: String with no special characters
+            string stringWithoutSpecialChars = "hello";
+            string result2 = Utils.urlescape(stringWithoutSpecialChars);
+            Assert.AreEqual("hello", result2, "String with no special characters should return same string");
+
+            // Case 3: String with special characters
+            string stringWithSpecialChars = "hello world!";
+            string result3 = Utils.urlescape(stringWithSpecialChars);
+            Assert.AreEqual("hello+world!", result3, "String with special characters should be properly encoded");
+
+            // Case 4: String with space
+            string stringWithSpace = "hello world";
+            string result4 = Utils.urlescape(stringWithSpace);
+            Assert.AreEqual("hello+world", result4, "Space should be encoded as '+'");
+
+            // Case 5: String with null value
+            string nullString = null;
+            var x = Utils.urlescape(nullString);
+            Assert.ThrowsException<ArgumentNullException>(() => Utils.urlescape(nullString), "Null string should throw ArgumentNullException");
+
+            // Case 6: String with non-ASCII characters
+            string stringWithNonAscii = "résumé";
+            string result6 = Utils.urlescape(stringWithNonAscii);
+            Assert.AreEqual("r%C3%A9sum%C3%A9", result6, "Non-ASCII characters should be properly encoded");
+
+            // Case 7: String with all special characters
+            string stringWithAllSpecialChars = "!@#$%^&*()_+-=[]{};:'\"\\|,.<>?/~`";
+            string result7 = Utils.urlescape(stringWithAllSpecialChars);
+            Assert.AreEqual("%21%40%23%24%25%5E%26*()_%2B-%3D%5B%5D%7B%7D%3B%3A'%22%5C%7C%2C.%3C%3E%3F~%2F%60", result7, "All special characters should be properly encoded");
+
+            // Case 8: String with extended ASCII characters
+            string stringWithExtendedAscii = "ü";
+            string result8 = Utils.urlescape(stringWithExtendedAscii);
+            Assert.AreEqual("%C3%BC", result8, "Extended ASCII characters should be properly encoded");
+
+            // Case 9: String with multiple spaces
+            string stringWithMultipleSpaces = "hello  world";
+            string result9 = Utils.urlescape(stringWithMultipleSpaces);
+            Assert.AreEqual("hello++world", result9, "Multiple spaces should be encoded as multiple '+'");
         }
 
         [TestMethod()]
@@ -675,17 +1075,101 @@ namespace osafw.Tests
         [TestMethod()]
         public void name2humanTest()
         {
-            throw new NotImplementedException();
+            // Case 1: Convert system names to human-friendly names
+            Assert.AreEqual("First Name", Utils.name2human("fname"));
+            Assert.AreEqual("Last Name", Utils.name2human("lname"));
+            Assert.AreEqual("Middle Name", Utils.name2human("midname"));
+
+            // Case 2: Handling different cases and underscores
+            Assert.AreEqual("Code", Utils.name2human("iCode"));
+            Assert.AreEqual("Description", Utils.name2human("idesc"));
+            Assert.AreEqual("First Name", Utils.name2human("first_name"));
+            Assert.AreEqual("System Name", Utils.name2human("SYSTEM_NAME"));
+
+            // Case 3: Removing prefixes
+            Assert.AreEqual("Name", Utils.name2human("tbl_name"));
+            Assert.AreEqual("Type", Utils.name2human("dbo_type"));
+
+            // Case 4: Singularizing plural forms and removing "id"
+            Assert.AreEqual("Person", Utils.name2human("person_id"));
+
+            // Case 5: Proper capitalization and spacing
+            Assert.AreEqual("Customer Order", Utils.name2human("customer_order"));
+            Assert.AreEqual("Order Items Desc", Utils.name2human("order_items_DESC"));
+
+            // Case 6: Empty input
+            Assert.AreEqual("", Utils.name2human(""));
+
+            // Case 1: Singularize plural forms containing "id"
+            Assert.AreEqual("User", Utils.name2human("user_ids"));
+            Assert.AreEqual("Country", Utils.name2human("country_ids"));
+
+            // Case 2: Singularize plural forms containing "Id"
+            Assert.AreEqual("User", Utils.name2human("user_Ids"));
+            Assert.AreEqual("Country", Utils.name2human("country_Ids"));
+
+            // Case 3: Singularize plural forms containing "ID"
+            Assert.AreEqual("User", Utils.name2human("user_IDs"));
+            Assert.AreEqual("Country", Utils.name2human("country_IDs"));
+
+            // Case 4: Singularize plural forms containing "id" in different positions
+            Assert.AreEqual("User Role", Utils.name2human("user_roles_id"));
+            Assert.AreEqual("Country Code", Utils.name2human("country_codes_id"));
+
+            // Case 5: Singularize plural forms containing "id" with other characters
+            Assert.AreEqual("User Profile", Utils.name2human("user_profiles_id"));
+            Assert.AreEqual("Country Information", Utils.name2human("country_informations_id"));
+
+            // Case 6: Singularize plural forms with different endings
+            Assert.AreEqual("Penny", Utils.name2human("pennies"));
+            Assert.AreEqual("Category", Utils.name2human("categories"));
+
+            // Case 7: Singularize plural forms with mixed case
+            Assert.AreEqual("User", Utils.name2human("user_Ids"));
+            Assert.AreEqual("Category", Utils.name2human("CATEGORIES"));
+
+            // Case 8: Singularize plural forms with irregular plural forms
+            Assert.AreEqual("Person", Utils.name2human("people"));
+            Assert.AreEqual("Child", Utils.name2human("children"));
+
+            // Case 7: Null input
+            Assert.ThrowsException<System.ArgumentNullException>(() => Utils.name2human(null));
         }
 
         [TestMethod()]
         public void nameCamelCaseTest()
         {
-            throw new NotImplementedException();
+            //TODO
+            //bug ?
+
+            // Case 1: Test with empty input
+            string input1 = "";
+            string result1 = Utils.nameCamelCase(input1);
+            Assert.AreEqual("", result1, "Result should be empty for empty input");
+
+            // Case 2: Test with single word input
+            string input2 = "system";
+            string result2 = Utils.nameCamelCase(input2);
+            Assert.AreEqual("System", result2, "Result should be 'System' for single word input");
+
+            // Case 3: Test with snake case input
+            string input3 = "system_name";
+            string result3 = Utils.nameCamelCase(input3);
+            Assert.AreEqual("SystemName", result3, "Result should be 'SystemName' for snake case input");
+
+            // Case 4: Test with mixed case input
+            string input4 = "System_name";
+            string result4 = Utils.nameCamelCase(input4);
+            Assert.AreEqual("SystemName", result4, "Result should be 'SystemName' for mixed case input");
+
+            // Case 5: Test with input containing non-alphanumeric characters
+            string input5 = "system_name_123";
+            string result5 = Utils.nameCamelCase(input5);
+            Assert.AreEqual("SystemName123", result5, "Result should be 'SystemName123' for input containing non-alphanumeric characters");
         }
 
         [TestMethod()]
-        public void isEmptyTest()
+        public void isEmptyTestOld()
         {
             // test for Utils.isEmpty - null, empty string, space-only string, integers, long, double, bool, arraylist, hashtable
             Assert.IsTrue(Utils.isEmpty(null));
