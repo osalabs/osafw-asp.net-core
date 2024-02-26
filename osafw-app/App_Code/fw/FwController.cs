@@ -907,7 +907,7 @@ public abstract class FwController
         ps["is_readonly"] = is_readonly;
 
         //implement "Showing FROM to TO of TOTAL records"
-        if (this.list_rows.Count > 0)
+        if (this.list_rows != null && this.list_rows.Count > 0)
         {
             int pagenum = Utils.f2int(list_filter["pagenum"]);
             int pagesize = Utils.f2int(list_filter["pagesize"]);

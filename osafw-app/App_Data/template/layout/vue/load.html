@@ -1,0 +1,23 @@
+<~test_libs if="GLOBAL[is_test]" inline>
+ <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+ <script src="https://unpkg.com/vue-demi"></script>
+ <script src="https://unpkg.com/pinia"></script>
+ <script src="https://unpkg.com/mande"></script>
+</~test_libs>
+<~prod_libs unless="GLOBAL[is_test]" inline>
+ <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+ <script src="https://unpkg.com/vue-demi@0.14.7/lib/index.iife.js"></script>
+ <script src="https://unpkg.com/pinia@2.1.7/dist/pinia.iife.prod.js"></script>
+ <script src="https://unpkg.com/mande@2.0.8/dist/mande.iife.prod.js"></script>
+</~prod_libs>
+
+
+<!--
+https://unpkg.com/pinia@2.1.7/index.js
+  https://unpkg.com/pinia/dist/pinia.prod.cjs
+  https://unpkg.com/pinia/dist/pinia.cjs
+
+https://unpkg.com/pinia -> https://unpkg.com/pinia@2.1.7/dist/pinia.iife.js
+https://unpkg.com/pinia@2.1.7/dist/pinia.iife.prod.js
+
+-->
