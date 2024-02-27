@@ -78,6 +78,28 @@
         "dist/chart.min.js"
       ]
     },
+    {
+      "provider": "cdnjs",
+      "library": "typeahead.js@0.9.3",
+      "destination": "wwwroot/assets/lib/typeahead",
+      "files": [
+        "typeahead.min.js"
+      ]
+    },
+    {
+      "library": "turndown@7.1.2",
+      "destination": "wwwroot/assets/lib/turndown",
+      "files": [
+        "dist/turndown.js"
+      ]
+    },
+    {
+      "library": "markdown-it@14.0.0",
+      "destination": "wwwroot/assets/lib/markdown-it",
+      "files": [
+        "dist/markdown-it.min.js"
+      ]
+    },
 
 
     {
