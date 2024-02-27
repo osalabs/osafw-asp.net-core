@@ -1,0 +1,100 @@
+{
+  "version": "1.0",
+  "defaultProvider": "unpkg",
+  "defaultDestination": "wwwroot/assets/lib",
+  "libraries": [
+    {
+      "library": "bootstrap@5.3.3",
+      "destination": "wwwroot/assets/lib/bootstrap",
+      "files": [
+        "dist/css/bootstrap.min.css",
+        "dist/css/bootstrap.min.css.map",
+        "dist/js/bootstrap.bundle.min.js",
+        "dist/js/bootstrap.bundle.min.js.map"
+      ]
+    },
+    {
+      "library": "bootstrap-select@1.14.0-beta2",
+      "destination": "wwwroot/assets/lib/bootstrap-select",
+      "files": [
+        "dist/css/bootstrap-select.min.css",
+        "dist/css/bootstrap-select.css.map",
+        "dist/js/bootstrap-select.min.js",
+        "dist/js/bootstrap-select.min.js.map"
+      ]
+    },
+    {
+      "library": "bootstrap-markdown@2.10.0",
+      "destination": "wwwroot/assets/lib/bootstrap-markdown",
+      "files": [
+        "js/bootstrap-markdown.js",
+        "css/bootstrap-markdown.min.css"
+      ]
+    },
+    {
+      "library": "jquery@3.7.1",
+      "destination": "wwwroot/assets/lib/jquery",
+      "files": [
+        "dist/jquery.min.js",
+        "dist/jquery.min.map"
+      ]
+    },
+    {
+      "library": "jgrowl@1.4.9",
+      "destination": "wwwroot/assets/lib/jgrowl",
+      "files": [
+        "jquery.jgrowl.min.js",
+        "jquery.jgrowl.map",
+        "jquery.jgrowl.min.css"
+      ]
+    },
+    {
+      "library": "jquery-form@4.3.0",
+      "destination": "wwwroot/assets/lib/jquery-form",
+      "files": [
+        "dist/jquery.form.min.js",
+        "dist/jquery.form.min.js.map"
+      ]
+    },
+    {
+      "library": "jquery-ui@1.13.2",
+      "destination": "wwwroot/assets/lib/jquery-ui",
+      "files": [
+        "dist/jquery-ui.min.js"
+      ]
+    },
+    {
+      "library": "jquery-hotkeys@0.2.2",
+      "destination": "wwwroot/assets/lib/jquery-hotkeys",
+      "files": [
+        "jquery-hotkeys.js"
+      ]
+    },
+    {
+      "provider": "jsdelivr",
+      "library": "chart.js@3.9.1",
+      "destination": "wwwroot/assets/lib/chartjs",
+      "files": [
+        "dist/chart.min.js"
+      ]
+    },
+
+
+    {
+      "library": "vue@3.4.20",
+      "destination": "wwwroot/assets/lib/vue"
+    },
+    {
+      "library": "vue-demi@0.14.7",
+      "destination": "wwwroot/assets/lib/vue-demi"
+    },
+    {
+      "library": "pinia@2.1.7",
+      "destination": "wwwroot/assets/lib/pinia"
+    },
+    {
+      "library": "mande@2.0.8",
+      "destination": "wwwroot/assets/lib/mande"
+    }
+  ]
+}
