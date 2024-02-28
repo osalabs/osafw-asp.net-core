@@ -1,9 +1,7 @@
-import { pinia } from 'pinia';
-import { mande } from 'mande';
-
+// define apis via mande
 const apiUsers = mande('/api/users');
 
-const useMainStore = pinia.defineStore('main', {
+const useMainStore = defineStore('main', {
   state() {
     return {
       count: 0 //sample store value

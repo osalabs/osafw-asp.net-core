@@ -13,11 +13,13 @@
 <~load_script>
 
 <script type="module">
+ import { createApp } from 'vue';
+ import { createPinia, defineStore } from 'pinia';
+ import { mande } from 'mande';
+
  console.log("before store");
  <~store.js>
- console.log("before initialized");
-</script>
-<script type="module">
+
  console.log("before app");
  <~app.js>
 </script>

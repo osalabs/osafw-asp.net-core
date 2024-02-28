@@ -115,7 +115,7 @@
       ]
     },
     {
-      "library": "@vue/devtools-api@6.1.4",
+      "library": "@vue/devtools-api@6.6.1",
       "destination": "wwwroot/assets/lib/vue-devtools-api"
     },
     {

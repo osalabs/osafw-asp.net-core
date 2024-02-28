@@ -1,10 +1,7 @@
-//load store.js first
-
-import { createApp } from 'vue';
-import { createPinia } from 'pinia';
+//load store.js first with const useMainStore
 
 const mainApp = {
-  store: mainStore,
+  store: useMainStore,
   // data() {
   //   return {
   //     counter: 0,
