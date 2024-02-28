@@ -26,16 +26,15 @@ const mainApp = {
   }
 };
 
-const pinia = createPinia();
 const app = createApp(mainApp);
+window.app = app;
 
+const pinia = createPinia();
 app.use(pinia);
 
 // https://github.com/vueform/multiselect
 //app.component('multiselect', VueformMultiselect);
 
-//components - see separte vue templates
+//components - add load to vue_components
 
-//mount
-app.mount('#app');
-console.log("app mounted");
+//mount in /layout/vue/sys_footer
