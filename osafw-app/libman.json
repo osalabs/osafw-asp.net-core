@@ -23,14 +23,7 @@
         "dist/js/bootstrap-select.min.js.map"
       ]
     },
-    {
-      "library": "bootstrap-markdown@2.10.0",
-      "destination": "wwwroot/assets/lib/bootstrap-markdown",
-      "files": [
-        "js/bootstrap-markdown.js",
-        "css/bootstrap-markdown.min.css"
-      ]
-    },
+
     {
       "library": "jquery@3.7.1",
       "destination": "wwwroot/assets/lib/jquery",
@@ -86,6 +79,15 @@
         "typeahead.min.js"
       ]
     },
+
+    {
+      "library": "bootstrap-markdown@2.10.0",
+      "destination": "wwwroot/assets/lib/bootstrap-markdown",
+      "files": [
+        "js/bootstrap-markdown.js",
+        "css/bootstrap-markdown.min.css"
+      ]
+    },
     {
       "library": "turndown@7.1.2",
       "destination": "wwwroot/assets/lib/turndown",
@@ -104,19 +106,47 @@
 
     {
       "library": "vue@3.4.20",
-      "destination": "wwwroot/assets/lib/vue"
+      "destination": "wwwroot/assets/lib/vue",
+      "files": [
+        "dist/vue.global.js",
+        "dist/vue.global.prod.js",
+        "dist/vue.esm-browser.js",
+        "dist/vue.esm-browser.prod.js"
+      ]
+    },
+    {
+      "library": "@vue/devtools-api@6.1.4",
+      "destination": "wwwroot/assets/lib/vue-devtools-api"
     },
     {
       "library": "vue-demi@0.14.7",
-      "destination": "wwwroot/assets/lib/vue-demi"
+      "destination": "wwwroot/assets/lib/vue-demi",
+      "files": [
+        "lib/index.mjs"
+      ]
     },
     {
       "library": "pinia@2.1.7",
-      "destination": "wwwroot/assets/lib/pinia"
+      "destination": "wwwroot/assets/lib/pinia",
+      "files": [
+        "dist/pinia.esm-browser.js",
+        "dist/pinia.mjs"
+      ]
     },
     {
       "library": "mande@2.0.8",
-      "destination": "wwwroot/assets/lib/mande"
+      "destination": "wwwroot/assets/lib/mande",
+      "files": [
+        "dist/mande.mjs",
+        "dist/mande.prod.mjs"
+      ]
+    },
+    {
+      "library": "@vueform/multiselect@2.4.2",
+      "destination": "wwwroot/assets/lib/vueform-multiselect",
+      "files": [
+        "dist/multiselect.js"
+      ]
     }
   ]
 }

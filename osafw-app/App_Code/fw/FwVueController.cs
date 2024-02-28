@@ -16,6 +16,7 @@ public class FwVueController : FwController
     public override void init(FW fw)
     {
         base.init(fw);
+        fw.G["PAGE_LAYOUT"] = fw.config("PAGE_LAYOUT_VUE"); // layout for Vue pages
     }
 
     /// <summary>

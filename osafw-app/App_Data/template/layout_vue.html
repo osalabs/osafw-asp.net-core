@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en" <~/layout/ui_mode>>
+  <head>
+    <~/layout/sys_head>
+  </head>
+  <body class="<~body_class>">
+    <~/layout/header>
+
+    <div class="sidebar" id="sidebar">
+      <div class="d-flex flex-column flex-shrink-0 p-3 bg-body-tertiary w-100 d-print-none">
+        <~/layout/sidebar unless="hide_std_sidebar">
+        <~sidebar>
+        <~/layout/sidebar_my>
+        <~#/layout/footer>
+      </div>
+    </div>
+    <main>
+      <div class="container-fluid">
+        <~main>
+      </div>
+    </main>
+
+    <~/layout/vue/sys_footer>
+  </body>
+</html>

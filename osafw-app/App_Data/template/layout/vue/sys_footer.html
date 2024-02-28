@@ -1,0 +1,27 @@
+<~/my/feedback/showform/modal>
+
+<!-- Placed at the end of the document so the pages load faster -->
+<!--script src="<~GLOBAL[ASSETS_URL]>/js/lng/<~GLOBAL[LANG]>.js"></script-->
+
+<~/layout/vue/importmaps>
+<script src="<~GLOBAL[ASSETS_URL]>/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+ <~/layout/vue/apputils.js>
+ console.log("after utils");
+</script>
+
+<~load_script>
+
+<script type="module">
+ console.log("before store");
+ <~store.js>
+ console.log("before initialized");
+</script>
+<script type="module">
+ console.log("before app");
+ <~app.js>
+</script>
+
+<~footer_script>
+
+<~#/layout/counters/ga>

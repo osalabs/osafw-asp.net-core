@@ -1,0 +1,21 @@
+<script type="importmap">
+{
+ "imports": {
+   <~test_libs if="GLOBAL[is_test]" inline>
+     "vue": "<~GLOBAL[ASSETS_URL]>/lib/vue/dist/vue.esm-browser.js",
+     "pinia": "<~GLOBAL[ASSETS_URL]>/lib/pinia/dist/pinia.esm-browser.js",
+     "vue-demi": "<~GLOBAL[ASSETS_URL]>/lib/vue-demi/lib/index.mjs",
+     "@vue/devtools-api": "<~GLOBAL[ASSETS_URL]>/lib/vue-devtools-api/lib/esm/index.js",
+     "mande": "<~GLOBAL[ASSETS_URL]>/lib/mande/dist/mande.mjs",
+     "Multiselect": "<~GLOBAL[ASSETS_URL]>/lib/vueform-multiselect/dist/multiselect.js"
+   </~test_libs>
+   <~prod_libs unless="GLOBAL[is_test]" inline>
+     "vue": "<~GLOBAL[ASSETS_URL]>/lib/vue/dist/vue.esm-browser.prod.js",
+     "pinia": "<~GLOBAL[ASSETS_URL]>/lib/pinia/dist/pinia.esm-browser.js",
+     "vue-demi": "<~GLOBAL[ASSETS_URL]>/lib/vue-demi/lib/index.mjs",
+     "mande": "<~GLOBAL[ASSETS_URL]>/lib/mande/dist/mande.prod.mjs",
+     "Multiselect": "<~GLOBAL[ASSETS_URL]>/lib/vueform-multiselect/dist/multiselect.js"
+   </~prod_libs>
+ }
+}
+</script>

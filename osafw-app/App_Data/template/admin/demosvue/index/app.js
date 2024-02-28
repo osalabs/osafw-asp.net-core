@@ -1,5 +1,8 @@
 //load store.js first
 
+import { createApp } from 'vue';
+import { createPinia } from 'pinia';
+
 const mainApp = {
   store: mainStore,
   // data() {
@@ -27,12 +30,15 @@ const mainApp = {
 };
 
 const pinia = createPinia();
-const app = Vue.createApp(mainApp);
+const app = createApp(mainApp);
+
 app.use(pinia);
 
 // https://github.com/vueform/multiselect
 //app.component('multiselect', VueformMultiselect);
 
 //components - see separte vue templates
-//
-//mount - in head.js
+
+//mount
+app.mount('#app');
+console.log("app mounted");
