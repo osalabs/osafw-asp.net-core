@@ -2,11 +2,17 @@
 const apiUsers = mande('/api/users');
 
 const useMainStore = defineStore('main', {
-  state() {
-    return {
-      count: 0 //sample store value
-    };
-  },
+  state: () => ({
+    count: 0, //total list rows count
+    list_rows: [],
+    pager: [],
+    f: [], //list filter
+    related_id: 0,
+    base_url: '',
+    is_userlists: false,
+    is_readonly: false,
+    return_url: ''
+  }),
   getters: {
     doubleCount: (state) => state.count * 2, //sample getter
   },
@@ -27,3 +33,4 @@ const useMainStore = defineStore('main', {
     },
   }
 });
+window.useMainStore=useMainStore;
