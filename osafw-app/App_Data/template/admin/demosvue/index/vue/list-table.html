@@ -14,12 +14,12 @@
       </table>
     </div>
 
-    <div class="text-center py-4" v-if="!mainStore.list_rows">
+    <div class="text-center py-4" v-if="!fwStore.list_rows">
       <h3><~/common/icons/0-square> `No results`</h3>
       Try to <a href="<~/common/list/reset_filter_relid>">reset</a> all filters.
     </div>
 
-    <div v-if="mainStore.list_rows">
+    <div v-if="fwStore.list_rows">
       <div class="float-md-end pt-2 mb-3 d-print-none">
         <span class="badge"></span><br>
         <div class="d-flex justify-content-md-end">
@@ -42,14 +42,14 @@
 <script type="module">
 import { mapStores } from 'pinia';
 
-window.app.component('list-table', {
+fwApp.component('list-table', {
   template: '#list-table-template',
   props: [],
   state: () => ({
     zzz: ''
   }),
   computed: {
-    ...mapStores(window.useMainStore) //accessible via this.mainStore
+    ...mapStores(useFwStore) //accessible via this.fwStore
   }
 });
 </script>

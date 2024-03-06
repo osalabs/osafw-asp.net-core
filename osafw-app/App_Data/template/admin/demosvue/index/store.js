@@ -1,7 +1,7 @@
 // define apis via mande
 const apiUsers = mande('/api/users');
 
-const useMainStore = defineStore('main', {
+const useFwStore = defineStore('fw', {
   state: () => ({
     count: 0, //total list rows count
     list_rows: [],
@@ -33,4 +33,4 @@ const useMainStore = defineStore('main', {
     },
   }
 });
-window.useMainStore=useMainStore;
+window.useFwStore=useFwStore; //make store available for components in html below

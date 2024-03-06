@@ -1,7 +1,6 @@
-//load store.js first with const useMainStore
+//load store.js first with const useFwStore
 
 const mainApp = {
-  store: useMainStore,
   // data() {
   //   return {
   //     counter: 0,
@@ -27,7 +26,7 @@ const mainApp = {
 };
 
 const app = createApp(mainApp);
-window.app = app;
+window.fwApp = app; //make app available for components below in html
 
 const pinia = createPinia();
 app.use(pinia);
@@ -37,4 +36,4 @@ app.use(pinia);
 
 //components - add load to vue_components
 
-//mount in /layout/vue/sys_footer
+//mounted to #fw-app in /layout/vue/sys_footer
