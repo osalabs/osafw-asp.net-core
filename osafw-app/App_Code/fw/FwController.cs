@@ -1109,7 +1109,7 @@ public abstract class FwController
 
             var hconversions = getViewListConversions(afields);
 
-            foreach (Hashtable row in (ArrayList)ps["list_rows"])
+            foreach (Hashtable row in list_rows)
             {
                 ArrayList cols = new();
                 foreach (var fieldname in afields)

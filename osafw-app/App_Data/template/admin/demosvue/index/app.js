@@ -1,5 +1,7 @@
 //load store.js first with const useFwStore
 
+
+
 const mainApp = {
   // data() {
   //   return {
@@ -10,10 +12,11 @@ const mainApp = {
   computed:{
   },
   mounted() {
-    //console.log('mainApp mounted');
-    //TODO this.$store.commit('setBaseUrl', this.$el.parentElement.dataset.baseUrl );
-    //TODO this.$store.commit('setRelatedId', this.$el.parentElement.dataset.relatedId );
-    //TODO this.$store.dispatch('loadAll');
+    console.log('mainApp mounted');
+    const fwStore = useFwStore();
+    fwStore.base_url = this.$el.parentElement.dataset.baseUrl;
+    fwStore.related_id = this.$el.parentElement.dataset.relatedId;
+    fwStore.loadIndex();
   },
   updated() {
     //console.log('mainApp updated');

@@ -26,10 +26,25 @@ public class FwVueController : FwController
     public virtual Hashtable IndexAction()
     {
         // get filters from the search form
-        this.initFilter();
+        initFilter();
 
-        // set standard output
-        var ps = this.setPS();
+        // set standard output - load html with Vue app
+        Hashtable ps = [];
+
+        if (fw.isJsonExpected())
+        {
+            // if json expected - return data only as json
+            ps["_json"] = true;
+            setListSorting();
+
+            setListSearch();
+            setListSearchStatus();
+            getListRows();
+            //TODO filter rows for json output
+            //TODO setViewList(ps, list_filter_search);
+        }
+
+        ps = setPS(ps);
 
         return ps;
     }

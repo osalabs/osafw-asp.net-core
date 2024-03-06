@@ -10,7 +10,37 @@
       </div>
       <table class="table table-stripedX table-hover list <~user_view[density] default="table-sm">">
         <~/common/list/thead>
-        <~/common/list/tbody>
+        <tbody class="table-group-divider">
+          <template v-for="row in fwStore.list_rows" :key="row.id">
+            <tr data-url="<~row_click_url>" :data-id="row.id">
+                <td><input class="multicb" type="checkbox" :name="'cb['+row.id+']'" value="1"></td>
+                <!--TODO make common component for row btn-->
+                <td :class="'text-nowrap d-print-none '+(fwStore.global.is_list_btn_left?'':'text-end')" v-if="fwStore.global.is_list_btn_left">
+                  <a href="<~../url>/<~id><~/common/list/relid>">`View`</a>
+                  <~/common/dot><a href="<~row_click_url>">`Edit`</a>
+                  <~/common/dot> <a href="<~../url>/<~id>/delete<~/common/list/relid>"
+                                    class="text-danger on-delete-list-row"
+                                    :disabled="fwStore.is_readonly"><~/common/icons/x></a>
+                </td>
+
+                <template v-for="(value, key) in row" :key="key">
+                  <td>{{key}}={{value}}
+                    <~data var unless="is_custom"><~col_custom if="is_custom">
+                  </td>
+                </template>
+
+                <!--TODO make common component for row btn-->
+                <td :class="'text-nowrap d-print-none '+(fwStore.global.is_list_btn_left?'':'text-end')" v-if="!fwStore.global.is_list_btn_left">
+                  <a href="<~../url>/<~id><~/common/list/relid>">`View`</a>
+                  <~/common/dot><a href="<~row_click_url>">`Edit`</a>
+                  <~/common/dot> <a href="<~../url>/<~id>/delete<~/common/list/relid>"
+                                    class="text-danger on-delete-list-row"
+                                    :disabled="fwStore.is_readonly"><~/common/icons/x></a>
+                </td>
+            </tr>
+          </template>
+        </tbody>
+
       </table>
     </div>
 

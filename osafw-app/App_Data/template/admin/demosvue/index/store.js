@@ -3,6 +3,7 @@ const apiUsers = mande('/api/users');
 
 const useFwStore = defineStore('fw', {
   state: () => ({
+    global: {}, //global config
     count: 0, //total list rows count
     list_rows: [],
     pager: [],
@@ -21,6 +22,27 @@ const useFwStore = defineStore('fw', {
     increment(state) {
       this.count++;
     },
+    // load data
+    async loadIndex() {
+      try {
+        const apiIndex = mande(this.base_url);
+
+        const data = await apiIndex.get();
+        console.log('loadIndex data', data);
+
+        //save to store each key from data if such key exists in store
+        Object.keys(data).forEach(key => {
+            if (this.$state[key] !== undefined) this.$state[key] = data[key];
+        });
+
+      } catch (error) {
+        console.error('loadIndex error:', error.body.err_msg??'server error');
+        console.error(error);
+        //fw.error(error);
+        return error;
+      }
+    },
+
     // sample async action
     async registerUser(login, password) {
       try {
