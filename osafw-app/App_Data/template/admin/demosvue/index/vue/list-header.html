@@ -1,6 +1,8 @@
 <script type="text/x-template" id="list-header-template">
  <div>
-  <h1><~title> (<~count>)</h1>
+  <h1><~title>
+    <span class="badge badge-outline-secondary rounded-pill">{{fwStore.count}}</span>
+  </h1>
 
   <~/common/list/btn_std>
   <~/common/form/msg>
@@ -8,13 +10,16 @@
 </script>
 
 <script type="module">
+import { mapStores } from 'pinia';
+
 fwApp.component('list-header', {
   template: '#list-header-template',
   props: [],
-  data() {
-    return {
-      zzz: ''
-    }
+  data: () => ({
+    zzz: ''
+  }),
+  computed: {
+    ...mapStores(useFwStore) //accessible via this.fwStore
   },
 });
 </script>

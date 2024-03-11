@@ -9,11 +9,43 @@
       <div class="table-list-hscroll-hint"><~/common/icons/info-circle-fill> use <kbd>Shift+Mouse Wheel</kbd> for an easy horizontal scrolling
       </div>
       <table class="table table-stripedX table-hover list <~user_view[density] default="table-sm">">
-        <~/common/list/thead>
+        <thead>
+            <tr>
+              <~/common/list/th_chkall>
+              <~/common/list/th_filter_customize if="GLOBAL[is_list_btn_left]">
+              <template v-for="header in fwStore.headers">
+                <th :class="'rotate'+(header.is_sortable && fwStore.f.sortby==header.field_name ? ' active-sort' : '')" :data-sort="header.is_sortable">
+                  <div>
+                    <span>{{header.field_name_visible}}</span>
+                    <span class="ms-1" v-if="header.is_sortable && fwStore.f.sortby==header.field_name">
+                      <template v-if="fwStore.f.sortdif=='desc'">
+                        <!-- desc icon -->
+                        <svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-arrow-up" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M8 15a.5.5 0 0 0 .5-.5V2.707l3.146 3.147a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 1 0 .708.708L7.5 2.707V14.5a.5.5 0 0 0 .5.5z"/></svg>
+                      </template>
+                      <template v-else>
+                        <!-- asc icon -->
+                        <svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-arrow-down" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M8 1a.5.5 0 0 1 .5.5v11.793l3.146-3.147a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 .708-.708L7.5 13.293V1.5A.5.5 0 0 1 8 1z"/></svg>
+                      </template>
+                    </span>
+                  </div>
+                </th>
+              </template>
+              <~/common/list/th_filter_customize unless="GLOBAL[is_list_btn_left]">
+            </tr>
+            <tr class="search">
+              <th></th>
+              <~/common/list/th_empty if="GLOBAL[is_list_btn_left]">
+              <~headers_search repeat inline>
+                  <th><input type="text" name="search[<~field_name>]" value="<~search_value>" class="form-control form-control-sm"></th>
+              </~headers_search>
+              <~/common/list/th_empty unless="GLOBAL[is_list_btn_left]">
+            </tr>
+        </thead>
+
         <tbody class="table-group-divider">
-          <template v-for="row in fwStore.list_rows" :key="row.id">
-            <tr data-url="<~row_click_url>" :data-id="row.id">
-                <td><input class="multicb" type="checkbox" :name="'cb['+row.id+']'" value="1"></td>
+          <template v-for="row in fwStore.list_rows" :key="row[fwStore.field_id]">
+            <tr data-url="<~row_click_url>" :data-id="row[fwStore.field_id]" :title="row_title">
+                <td><input class="multicb" type="checkbox" :name="'cb['+row[fwStore.field_id]+']'" value="1"></td>
                 <!--TODO make common component for row btn-->
                 <td :class="'text-nowrap d-print-none '+(fwStore.global.is_list_btn_left?'':'text-end')" v-if="fwStore.global.is_list_btn_left">
                   <a href="<~../url>/<~id><~/common/list/relid>">`View`</a>
@@ -23,10 +55,8 @@
                                     :disabled="fwStore.is_readonly"><~/common/icons/x></a>
                 </td>
 
-                <template v-for="(value, key) in row" :key="key">
-                  <td>{{key}}={{value}}
-                    <~data var unless="is_custom"><~col_custom if="is_custom">
-                  </td>
+                <template v-for="(header, key) in fwStore.headers" :key="key">
+                  <td>{{fieldValueByName(row, header.field_name)}}</td>
                 </template>
 
                 <!--TODO make common component for row btn-->
@@ -75,11 +105,21 @@ import { mapStores } from 'pinia';
 fwApp.component('list-table', {
   template: '#list-table-template',
   props: [],
-  state: () => ({
-    zzz: ''
+  data: () => ({
+    row_title: 'Double click to Edit'
   }),
   computed: {
     ...mapStores(useFwStore) //accessible via this.fwStore
+  },
+  mounted() {
+    console.log('list-table mounted');
+  },
+  methods: {
+    fieldValueByName(row, field_name) {
+      //return value by field_name in row associative array
+      //add here any additional processing if needed
+      return row[field_name];
+    }
   }
 });
 </script>

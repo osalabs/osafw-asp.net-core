@@ -33,6 +33,7 @@ public abstract class FwController
     protected Hashtable access_actions_to_permissions; // optional, controller-level custom actions to permissions mapping for role-based access checks, e.g. "UIMain" => Permissions.PERMISSION_VIEW . Can also be used to override default actions to permissions
 
     protected string list_view;                  // table/view to use in list sql, if empty model0.table_name used
+    protected string list_fields = "*";          // comma-separated and quoted list of fields to select in list sql
     protected string list_orderby;               // orderby for the list screen
     protected Hashtable list_filter;             // filter values for the list screen
     protected Hashtable list_filter_search;      // filter for the search columns from reqh("search")
@@ -666,7 +667,7 @@ public abstract class FwController
             int offset = pagenum * pagesize;
             int limit = pagesize;
 
-            this.list_rows = db.selectRaw("*", list_view_name, list_where, list_where_params, list_orderby, offset, limit);
+            this.list_rows = db.selectRaw(list_fields, list_view_name, list_where, list_where_params, list_orderby, offset, limit);
 
             model0.normalizeNames(this.list_rows);
 
@@ -1100,10 +1101,10 @@ public abstract class FwController
         ps["headers"] = headers;
         ps["headers_search"] = headers;
 
-        var hcustom = Utils.qh(view_list_custom);
-
         if (is_cols)
         {
+            var hcustom = Utils.qh(view_list_custom);
+
             // dynamic cols
             var afields = Utils.qw(fields);
 

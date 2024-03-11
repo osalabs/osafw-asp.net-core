@@ -1,0 +1,12 @@
+.badge-outline-secondary {
+    color: #6c757d;
+    background-color: transparent;
+    background-image: none;
+    border-color: #6c757d;
+    border: 1px solid;
+}
+
+h1 .badge {
+ font-size: 1.25rem;
+ vertical-align: middle;
+}

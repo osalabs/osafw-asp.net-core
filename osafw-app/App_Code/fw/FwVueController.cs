@@ -39,9 +39,29 @@ public class FwVueController : FwController
 
             setListSearch();
             setListSearchStatus();
+
+            setViewList(ps, list_filter_search, false);
+
+            //only select from db visible fields + id, save as comma-separated string into list_fields
+            //TODO refactor into method setListFields?
+            var headers = (ArrayList)ps["headers"]; //arraylist of hashtables, we need header["field_name"]
+            var quoted_fields = new ArrayList();
+            var is_id_in_fields = false;
+            foreach (Hashtable header in headers)
+            {
+                var field_name = (string)header["field_name"];
+                quoted_fields.Add(db.qid(field_name));
+                if (field_name == model0.field_id)
+                    is_id_in_fields = true;
+            }
+            //always include id field
+            if (!is_id_in_fields && !Utils.isEmpty(model0.field_id))
+                quoted_fields.Add(db.qid(model0.field_id));
+            //join quoted_fields arraylist into comma-separated string
+            list_fields = string.Join(",", quoted_fields.ToArray());
+
             getListRows();
             //TODO filter rows for json output
-            //TODO setViewList(ps, list_filter_search);
         }
 
         ps = setPS(ps);

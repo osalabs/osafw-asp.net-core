@@ -4,6 +4,9 @@ const apiUsers = mande('/api/users');
 const useFwStore = defineStore('fw', {
   state: () => ({
     global: {}, //global config
+    field_id: 'id',
+    headers: [], //list headers
+    headers_search: [], //list of search values for headers filter
     count: 0, //total list rows count
     list_rows: [],
     pager: [],
