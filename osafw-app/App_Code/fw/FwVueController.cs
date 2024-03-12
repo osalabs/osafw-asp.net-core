@@ -4,6 +4,8 @@
 // (c) 2009-2024 Oleg Savchuk www.osalabs.com
 
 using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace osafw;
 
@@ -62,11 +64,63 @@ public class FwVueController : FwController
 
             getListRows();
             //TODO filter rows for json output
+
+            ps["XSS"] = fw.Session("XSS");
+            //TODO only specific from global ps["global"] = fw.G;
         }
 
         ps = setPS(ps);
 
         return ps;
+    }
+
+
+    //TODO refactor with FwDynamicController same method to deduplicate code
+    public virtual Hashtable SaveUserViewsAction()
+    {
+        var fld = reqh("fld");
+        var load_id = reqi("load_id");
+        var is_reset = reqi("is_reset");
+        var density = reqs("density");
+
+        if (load_id > 0)
+            // set fields from specific view
+            fw.model<UserViews>().setViewForIcode(base_url, load_id);
+        else if (is_reset == 1)
+            // reset fields to defaults
+            fw.model<UserViews>().updateByIcodeFields(base_url, view_list_defaults);
+        else if (density.Length > 0)
+        {
+            // save density
+            // validate density can be only table-sm, table-dense, table-normal, otherwise - set empty
+            if (!"table-sm table-dense table-normal".Contains(density))
+                density = "";
+            fw.model<UserViews>().updateByIcode(base_url, DB.h("density", density));
+        }
+        else
+        {
+            var item = reqh("item");
+            var iname = Utils.f2str(item["iname"]);
+
+            // save fields
+            // order by value
+            var ordered = fld.Cast<DictionaryEntry>().OrderBy(entry => Utils.f2int(entry.Value)).ToList();
+            // and then get ordered keys
+            List<string> anames = new();
+            foreach (var el in ordered)
+                anames.Add((string)el.Key);
+            var fields = string.Join(" ", anames);
+
+            if (!string.IsNullOrEmpty(iname))
+            {
+                // create new view by name or update if this name exists
+                fw.model<UserViews>().addOrUpdateByUK(base_url, fields, iname);
+            }
+            // update default view with fields
+            fw.model<UserViews>().updateByIcodeFields(base_url, fields);
+        }
+
+        return afterSave(true, null, false, "no_action", return_url);
     }
 
 }

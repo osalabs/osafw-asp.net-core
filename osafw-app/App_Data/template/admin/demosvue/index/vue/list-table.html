@@ -5,14 +5,21 @@
     <input type="hidden" name="_method" value="PUT">
     <~/common/form/relid>
 
-    <div class="table-list-wrapper">
+    <div :class="'table-list-wrapper ' + fwStore.user_view.density">
       <div class="table-list-hscroll-hint"><~/common/icons/info-circle-fill> use <kbd>Shift+Mouse Wheel</kbd> for an easy horizontal scrolling
       </div>
-      <table class="table table-stripedX table-hover list <~user_view[density] default="table-sm">">
+      <table :class="'table table-stripedX table-hover list ' + fwStore.user_view.density">
         <thead>
             <tr>
               <~/common/list/th_chkall>
-              <~/common/list/th_filter_customize if="GLOBAL[is_list_btn_left]">
+
+              <!--TODO make common component for these buttons-->
+              <th class="fw-normal text-nowrap d-print-none" v-if="fwStore.global.is_list_btn_left">
+                <a href="#" class="px-1 me-1" title="`Filter Columns`" @click="onToggleSearch"><~/common/icons/funnel></a>
+                <a href="#" class="px-1 me-1" title="`Customize Columns`" @click="onCustomCols"><~/common/icons/table></a>
+                <a href="#" class="px-1" title="`Density`" @click="onToggleDensity"><~/common/icons/grid-3x2-gap></a>
+              </th>
+
               <template v-for="header in fwStore.headers">
                 <th :class="'rotate'+(header.is_sortable && fwStore.f.sortby==header.field_name ? ' active-sort' : '')" :data-sort="header.is_sortable">
                   <div>
@@ -30,7 +37,14 @@
                   </div>
                 </th>
               </template>
-              <~/common/list/th_filter_customize unless="GLOBAL[is_list_btn_left]">
+
+              <!--TODO make common component for these buttons-->
+              <th class="fw-normal text-nowrap d-print-none text-end" v-if="!fwStore.global.is_list_btn_left">
+                <a href="#" class="px-1 me-1" title="`Filter Columns`" @click="onToggleSearch"><~/common/icons/funnel></a>
+                <a href="#" class="px-1 me-1" title="`Customize Columns`" @click="onCustomCols"><~/common/icons/table></a>
+                <a href="#" class="px-1" title="`Density`" @click="onToggleDensity"><~/common/icons/grid-3x2-gap></a>
+              </th>
+
             </tr>
             <tr class="search">
               <th></th>
@@ -123,6 +137,19 @@ fwApp.component('list-table', {
       //return value by field_name in row associative array
       //add here any additional processing if needed
       return row[field_name];
+    },
+    onToggleSearch(ev){
+      console.log("TODO onToggleSearch", ev);
+    },
+    onCustomCols(ev){
+      console.log("TODO onCustomCols", ev);
+    },
+    onToggleDensity(ev) {
+      const classes = ['table-sm', 'table-dense', 'table-normal'];
+      const current_density = this.fwStore.user_view.density;
+      //get next density class
+      const next_density = classes[(classes.indexOf(current_density) + 1) % classes.length];
+      this.fwStore.setListDensity(next_density);
     },
   }
 });

@@ -10,7 +10,6 @@ using System.IO;
 using System.Net.Mail;
 using System.Reflection;
 using System.Text;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 
 namespace osafw;
@@ -701,20 +700,22 @@ public class FW : IDisposable
             f[s] = SQ[s];
 
         // also parse json in request body if any
-        if (request.ContentType != null && request.ContentType.Substring(0, "application/json".Length) == "application/json")
+        if (request.ContentType?[.."application/json".Length] == "application/json")
         {
             try
             {
-                // also could try this with Utils.json_decode
-                request.Body.Position = 0;
-                var json = new System.IO.StreamReader(request.Body).ReadToEnd();
-                Hashtable h = JsonSerializer.Deserialize<Hashtable>(json);
-                logger(LogLevel.TRACE, "REQUESTED JSON:", h);
-                Utils.mergeHash(f, h);
+                //read json from request body
+                using (StreamReader reader = new(request.Body, Encoding.UTF8))
+                {
+                    string json = reader.ReadToEndAsync().Result; // TODO await
+                    Hashtable h = (Hashtable)Utils.jsonDecode(json);
+                    Utils.mergeHash(f, h);
+                    logger(LogLevel.TRACE, "REQUESTED JSON:", h);
+                }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                logger(LogLevel.WARN, "Request JSON parse error");
+                logger(LogLevel.WARN, "Request JSON parse error", ex);
             }
         }
 

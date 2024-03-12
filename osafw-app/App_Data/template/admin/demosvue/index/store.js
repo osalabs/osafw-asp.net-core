@@ -1,12 +1,14 @@
 // define apis via mande
-const apiUsers = mande('/api/users');
+const apiUsers = mande('/api/users'); // TODO REMOVE sample
 
 const useFwStore = defineStore('fw', {
   state: () => ({
     global: {}, //global config
+    XSS: '', // token
     base_url: '', // base url for the controller
     is_userlists: false,
     is_readonly: false,
+    user_view: {}, // UserViews record for current controller
 
     // list filter, can contain: {pagenum:N, pagesize:N, sortby:'', sortdir:'asc|desc'}
     f: {
@@ -36,11 +38,27 @@ const useFwStore = defineStore('fw', {
         //merge filters into state.f
         this.$state.f = { ...this.$state.f, ...filters };
         this.loadIndex();
+      },
+    //save user view settings (density)
+    async setListDensity(density) {
+      this.user_view.density = density;
+      //save to backend
+      const apiBase = mande(this.base_url);
+      const req = { density: density, XSS: this.XSS };
+
+      try {
+          const data = await apiBase.post('/(SaveUserViews)', req);
+      } catch (error) {
+        console.error('setListDensity error:', error.body.err_msg ?? 'server error');
+        console.error(error);
+        //fw.error(error);
+        return error;
+      }
     },
     // load data
     async loadIndex() {
       try {
-        const apiIndex = mande(this.base_url);
+        const apiBase = mande(this.base_url);
 
         // build request query from state.f, each parameter name should be int form "f[name]"
         let req = { dofilter: 1 };
@@ -51,13 +69,16 @@ const useFwStore = defineStore('fw', {
         if (this.related_id) req.related_id = this.related_id;
         console.log('loadIndex req', req);
 
-        const data = await apiIndex.get('', { query: req });
+        const data = await apiBase.get('', { query: req });
         console.log('loadIndex data', data);
 
         //save to store each key from data if such key exists in store
         Object.keys(data).forEach(key => {
             if (this.$state[key] !== undefined) this.$state[key] = data[key];
         });
+
+        // set defaults
+        this.user_view.density = this.user_view.density ?? 'table-sm';
 
       } catch (error) {
         console.error('loadIndex error:', error.body.err_msg??'server error');

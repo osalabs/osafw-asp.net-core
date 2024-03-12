@@ -5,17 +5,17 @@
       <li class="page-item" v-if="page.is_show_first">
         <a class="page-link" href="#" @click.prevent="page_click(0)">`First`</a>
       </li>
-      <li class="page-item" v-if="page.is_show_prev">
+      <li class="page-item" title="`Previous Page`" v-if="page.is_show_prev">
         <a class="page-link text-center" href="#" @click.prevent="page_click(page.pagenum_prev)" style="width:80px;">&laquo;</a>
       </li>
       <li :class="'page-item'+(page.is_cur_page?' active':'')">
         <a class="page-link" href="#" @click.prevent="page_click(page.pagenum)">{{page.pagenum_show}}</a>
       </li>
-      <li class="page-item" v-if="page.is_show_next">
+      <li class="page-item" title="`Next Page`" v-if="page.is_show_next">
         <a class="page-link text-center" href="#" @click.prevent="page_click(page.pagenum_next)" style="width:80px;">&raquo;</a>
       </li>
     </template>
-    <li class="page-item"><select class="d-inline-block w-auto align-top form-select" v-model="pagesize_selected" @change="$emit('on-pagesize', pagesize_selected)">
+    <li class="page-item" title="`Page Size`"><select class="d-inline-block w-auto align-top form-select" v-model="pagesize_selected" @change="$emit('on-pagesize', pagesize_selected)">
         <option v-for="psize in pagesize_options" :key="psize" :value="psize" :selectedX="pagesize_selected==psize">{{psize}}</option>
       </select>
     </li>
