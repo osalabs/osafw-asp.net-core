@@ -83,7 +83,11 @@
       <div class="float-md-end pt-2 mb-3 d-print-none">
         <span class="badge"></span><br>
         <div class="d-flex justify-content-md-end">
-          <list-pagination :pager="fwStore.pager" :pagesize="fwStore.f.pagesize" @on-page="TODO" @on-pagesize="TODO"></list-pagination>
+          <list-pagination
+            :pager="fwStore.pager"
+            :pagesize="fwStore.f.pagesize"
+            @on-page="(ev) => fwStore.setFilters({pagenum:ev})"
+            @on-pagesize="(ev) => fwStore.setFilters({pagesize:ev})"></list-pagination>
         </div>
       </div>
 
@@ -119,7 +123,7 @@ fwApp.component('list-table', {
       //return value by field_name in row associative array
       //add here any additional processing if needed
       return row[field_name];
-    }
+    },
   }
 });
 </script>

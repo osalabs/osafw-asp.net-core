@@ -3,16 +3,16 @@
   <ul class="pagination mb-0">
     <template v-for="page in pager">
       <li class="page-item" v-if="page.is_show_first">
-        <a class="page-link" :href="'?f[pagenum]=0'+more_pager_url" data-pagenum="0">`First`</a>
+        <a class="page-link" href="#" @click.prevent="page_click(0)">`First`</a>
       </li>
       <li class="page-item" v-if="page.is_show_prev">
-        <a class="page-link text-center" :href="'?f[pagenum]='+page.pagenum_prev+more_pager_url" :data-pagenum="page.pagenum_prev" style="width:80px;">&laquo;</a>
+        <a class="page-link text-center" href="#" @click.prevent="page_click(page.pagenum_prev)" style="width:80px;">&laquo;</a>
       </li>
       <li :class="'page-item'+(page.is_cur_page?' active':'')">
-        <a class="page-link" :href="'?f[pagenum]='+page.pagenum+more_pager_url" :data-pagenum="page.pagenum">{{page.pagenum_show}}</a>
+        <a class="page-link" href="#" @click.prevent="page_click(page.pagenum)">{{page.pagenum_show}}</a>
       </li>
       <li class="page-item" v-if="page.is_show_next">
-        <a class="page-link text-center" :href="'?f[pagenum]='+page.pagenum_next+more_pager_url" :data-pagenum="page.pagenum_next" style="width:80px;">&raquo;</a>
+        <a class="page-link text-center" href="#" @click.prevent="page_click(page.pagenum_next)" style="width:80px;">&raquo;</a>
       </li>
     </template>
     <li class="page-item"><select class="d-inline-block w-auto align-top form-select" v-model="pagesize_selected" @change="$emit('on-pagesize', pagesize_selected)">
@@ -26,19 +26,19 @@
 <script type="module">
 fwApp.component('list-pagination', {
   template: '#list-pagination-template',
-  props: ['pager', 'pagesize', 'pager_url'],
+  props: ['pager', 'pagesize'],
   emits: ['on-page', 'on-pagesize'],
   data: () => ({
     pagesize_options: [10,20,25,30,40,50,100,150,200],
     pagesize_selected: null,
   }),
-  mounted(){
-    this.pagesize_selected=this.pagesize;
+  updated(){
+    this.pagesize_selected = this.pagesize ? this.pagesize : 25;
   },
-  computed: {
-    more_pager_url() {
-      return this.pager_url ? this.pager_url : '';
+  methods: {
+    page_click(pagenum) {
+      this.$emit('on-page', pagenum);
     }
-  },
+  }
 });
 </script>
