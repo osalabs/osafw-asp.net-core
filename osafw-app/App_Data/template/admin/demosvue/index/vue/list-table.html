@@ -46,13 +46,13 @@
               </th>
 
             </tr>
-            <tr class="search">
+            <tr class="search" :style="fwStore.is_list_search_open ? 'display: table-row' : ''">
               <th></th>
-              <~/common/list/th_empty if="GLOBAL[is_list_btn_left]">
-              <~headers_search repeat inline>
-                  <th><input type="text" name="search[<~field_name>]" value="<~search_value>" class="form-control form-control-sm"></th>
-              </~headers_search>
-              <~/common/list/th_empty unless="GLOBAL[is_list_btn_left]">
+              <th v-if="fwStore.global.is_list_btn_left"></th>
+              <th v-for="header in fwStore.headers">
+                <input type="text" :v-model="header.search_value" class="form-control form-control-sm">
+              </th>
+              <th v-if="!fwStore.global.is_list_btn_left"></th>
             </tr>
         </thead>
 
@@ -139,12 +139,22 @@ fwApp.component('list-table', {
       return row[field_name];
     },
     onToggleSearch(ev){
-      console.log("TODO onToggleSearch", ev);
+      this.fwStore.is_list_search_open = !this.fwStore.is_list_search_open;
+      if (this.fwStore.is_list_search_open){
+        //show search tooltip
+        // TODO get rid of jquery/jGrowl
+        Toast("WORD to search for contains word<br>"+
+          "!WORD to search for NOT contains word<br>"+
+          "=WORD to search for equals word<br>"+
+          "!=WORD to search for NOT equals word<br>"+
+          "&lt;=N, &lt;N, &gt;=N, &gt;N - compare numbers",
+          {header: 'Search hints', theme: 'text-bg-info', html:true, autohide: false});
+      }
     },
     onCustomCols(ev){
       console.log("TODO onCustomCols", ev);
     },
-    onToggleDensity(ev) {
+    onToggleDensity(ev){
       const classes = ['table-sm', 'table-dense', 'table-normal'];
       const current_density = this.fwStore.user_view.density;
       //get next density class

@@ -10,3 +10,8 @@ h1 .badge {
  font-size: 1.25rem;
  vertical-align: middle;
 }
+
+.btn-close {
+ width: 0.7em;
+ height: 0.7em;
+}

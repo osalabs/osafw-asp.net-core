@@ -21,14 +21,16 @@ const useFwStore = defineStore('fw', {
     return_url: '', // return url if controller called from other place expecting user's return
     field_id: 'id', // model's id field name
     headers: [], // list headers, array of {field_name:"", field_name_visible:"", is_sortable:true|false, is_checked:true, search_value:null|""}
-    headers_search: [], // list of search values for headers filter TODO REMOVE
+    is_list_search_open: false, // true if list search is open by user
     count: 0, // total list rows count
     list_rows: [],
     pager: [] // array of { pagenum:N, pagenum_show:N, is_cur_page:0|1, is_show_first:0|1, is_show_prev:0|1, is_show_next:0|1, pagenum_next:N}
   }),
 
   getters: {
-    doubleCount: (state) => state.count * 2, //sample getter
+      doubleCount: (state) => state.count * 2, //sample getter
+      //return true if state.headers contains at least one non-empty search_value
+      isListSearch: (state) => state.headers.some(h => h.search_value)
   },
 
   actions: {
