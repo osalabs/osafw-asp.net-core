@@ -83,7 +83,7 @@
       <div class="float-md-end pt-2 mb-3 d-print-none">
         <span class="badge"></span><br>
         <div class="d-flex justify-content-md-end">
-          <~/common/list/pagination>
+          <list-pagination :pager="fwStore.pager" :pagesize="fwStore.f.pagesize" @on-page="TODO" @on-pagesize="TODO"></list-pagination>
         </div>
       </div>
 

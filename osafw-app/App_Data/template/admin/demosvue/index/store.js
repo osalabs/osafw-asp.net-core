@@ -9,7 +9,7 @@ const useFwStore = defineStore('fw', {
     headers_search: [], //list of search values for headers filter
     count: 0, //total list rows count
     list_rows: [],
-    pager: [],
+    pager: [], // array of { pagenum:N, pagenum_show:N, is_cur_page:0|1, is_show_first:0|1, is_show_prev:0|1, is_show_next:0|1, pagenum_next:N}
     f: [], //list filter
     related_id: 0,
     base_url: '',
