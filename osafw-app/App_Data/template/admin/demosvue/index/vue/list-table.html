@@ -1,9 +1,7 @@
 <script type="text/x-template" id="list-table-template">
  <div>
-  <form class="fw-card" action="<~../url>" method="post" @submit.prevent>
-    <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
+  <form class="fw-card" @submit.prevent>
     <input type="hidden" name="_method" value="PUT">
-    <~/common/form/relid>
 
     <div :class="'table-list-wrapper ' + fwStore.user_view.density">
       <div class="table-list-hscroll-hint"><~/common/icons/info-circle-fill> use <kbd>Shift+Mouse Wheel</kbd> for an easy horizontal scrolling
@@ -21,11 +19,13 @@
               </th>
 
               <template v-for="header in fwStore.headers">
-                <th :class="'rotate'+(header.is_sortable && fwStore.f.sortby==header.field_name ? ' active-sort' : '')" :data-sort="header.is_sortable">
+                <th :class="'rotate'+(header.is_sortable && fwStore.f.sortby==header.field_name ? ' active-sort' : '')"
+                  :data-sort="header.is_sortable"
+                  @click="(event) => onSortHeader(event, header)">
                   <div>
                     <span>{{header.field_name_visible}}</span>
                     <span class="ms-1" v-if="header.is_sortable && fwStore.f.sortby==header.field_name">
-                      <template v-if="fwStore.f.sortdif=='desc'">
+                      <template v-if="fwStore.f.sortdir=='desc'">
                         <!-- desc icon -->
                         <svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-arrow-up" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M8 15a.5.5 0 0 0 .5-.5V2.707l3.146 3.147a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 1 0 .708.708L7.5 2.707V14.5a.5.5 0 0 0 .5.5z"/></svg>
                       </template>
@@ -91,12 +91,12 @@
       </table>
     </div>
 
-    <div class="text-center py-4" v-if="!fwStore.list_rows">
+    <div class="text-center py-4" v-if="!fwStore.list_rows.length">
       <h3><~/common/icons/0-square> `No results`</h3>
-      Try to <a href="<~/common/list/reset_filter_relid>">reset</a> all filters.
+      Try to <a :href="'?dofilter=1'+(fwStore.related_id ? '&related_id='+fwStore.related_id : '')">reset</a> all filters.
     </div>
 
-    <div v-if="fwStore.list_rows">
+    <div v-if="fwStore.list_rows.length">
       <div class="float-md-end pt-2 mb-3 d-print-none">
         <span class="badge"></span><br>
         <div class="d-flex justify-content-md-end">
@@ -127,41 +127,53 @@ fwApp.component('list-table', {
   template: '#list-table-template',
   props: [],
   data: () => ({
-    row_title: 'Double click to Edit'
+        row_title: 'Double click to Edit'
   }),
   computed: {
-    ...mapStores(useFwStore) //accessible via this.fwStore
+        ...mapStores(useFwStore) //accessible via this.fwStore
   },
   mounted() {
-    console.log('list-table mounted');
+        console.log('list-table mounted');
   },
   methods: {
     fieldValueByName(row, field_name) {
-      //return value by field_name in row associative array
-      //add here any additional processing if needed
-      return row[field_name];
+        //return value by field_name in row associative array
+        //add here any additional processing if needed
+        return row[field_name];
     },
-    onToggleSearch(ev){
-      this.fwStore.is_list_search_open = !this.fwStore.is_list_search_open;
-      if (this.fwStore.is_list_search_open){
-        //show search hints
-        Toast("WORD to search for contains word<br>"+
-          "!WORD to search for NOT contains word<br>"+
-          "=WORD to search for equals word<br>"+
-          "!=WORD to search for NOT equals word<br>"+
-          "&lt;=N, &lt;N, &gt;=N, &gt;N - compare numbers",
-          {header: 'Search hints', theme: 'text-bg-info', html:true, autohide: false});
-      }
+    onToggleSearch(e){
+        this.fwStore.is_list_search_open = !this.fwStore.is_list_search_open;
+        if (this.fwStore.is_list_search_open){
+            //show search hints
+            Toast("WORD to search for contains word<br>"+
+                "!WORD to search for NOT contains word<br>"+
+                "=WORD to search for equals word<br>"+
+                "!=WORD to search for NOT equals word<br>"+
+                "&lt;=N, &lt;N, &gt;=N, &gt;N - compare numbers",
+                {header: 'Search hints', theme: 'text-bg-info', html:true, autohide: false});
+        }
     },
-    onCustomCols(ev){
-      console.log("TODO onCustomCols", ev);
+    onCustomCols(e){
+        console.log("TODO onCustomCols", e);
     },
-    onToggleDensity(ev){
-      const classes = ['table-sm', 'table-dense', 'table-normal'];
-      const current_density = this.fwStore.user_view.density;
-      //get next density class
-      const next_density = classes[(classes.indexOf(current_density) + 1) % classes.length];
-      this.fwStore.setListDensity(next_density);
+    onToggleDensity(e){
+        const classes = ['table-sm', 'table-dense', 'table-normal'];
+        const current_density = this.fwStore.user_view.density;
+        //get next density class
+        const next_density = classes[(classes.indexOf(current_density) + 1) % classes.length];
+
+        this.fwStore.setListDensity(next_density);
+    },
+    onSortHeader(e, header) {
+        if (!header.is_sortable) return;
+
+        let new_sortdir = 'asc'; //default sort
+        if (this.fwStore.f.sortby == header.field_name) {
+            //active column - change sort dir
+            new_sortdir = this.fwStore.f.sortdir == 'asc' ? 'desc' : 'asc';
+        }
+
+        this.fwStore.setFilters({sortby: header.field_name, sortdir: new_sortdir});
     },
   }
 });
