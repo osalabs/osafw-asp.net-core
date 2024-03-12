@@ -1,6 +1,6 @@
 <script type="text/x-template" id="list-table-template">
  <div>
-  <form class="fw-card" action="<~../url>" method="post">
+  <form class="fw-card" action="<~../url>" method="post" @submit.prevent>
     <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
     <input type="hidden" name="_method" value="PUT">
     <~/common/form/relid>
@@ -50,7 +50,10 @@
               <th></th>
               <th v-if="fwStore.global.is_list_btn_left"></th>
               <th v-for="header in fwStore.headers">
-                <input type="text" :v-model="header.search_value" class="form-control form-control-sm">
+                <input type="text" class="form-control form-control-sm"
+                  v-model="header.search_value"
+                  @change="fwStore.loadIndexDebounced"
+                  @keyup.enter.stop="fwStore.loadIndexDebounced">
               </th>
               <th v-if="!fwStore.global.is_list_btn_left"></th>
             </tr>
@@ -141,8 +144,7 @@ fwApp.component('list-table', {
     onToggleSearch(ev){
       this.fwStore.is_list_search_open = !this.fwStore.is_list_search_open;
       if (this.fwStore.is_list_search_open){
-        //show search tooltip
-        // TODO get rid of jquery/jGrowl
+        //show search hints
         Toast("WORD to search for contains word<br>"+
           "!WORD to search for NOT contains word<br>"+
           "=WORD to search for equals word<br>"+

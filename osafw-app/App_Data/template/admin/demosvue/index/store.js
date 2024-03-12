@@ -24,13 +24,16 @@ const useFwStore = defineStore('fw', {
     is_list_search_open: false, // true if list search is open by user
     count: 0, // total list rows count
     list_rows: [],
-    pager: [] // array of { pagenum:N, pagenum_show:N, is_cur_page:0|1, is_show_first:0|1, is_show_prev:0|1, is_show_next:0|1, pagenum_next:N}
+    pager: [], // array of { pagenum:N, pagenum_show:N, is_cur_page:0|1, is_show_first:0|1, is_show_prev:0|1, is_show_next:0|1, pagenum_next:N}
+
+    //work vars
+    loadIndexDebouncedTimeout: null
   }),
 
   getters: {
       doubleCount: (state) => state.count * 2, //sample getter
       //return true if state.headers contains at least one non-empty search_value
-      isListSearch: (state) => state.headers.some(h => h.search_value)
+      isListSearch: (state) => state.headers.some(h => h.search_value?.length)
   },
 
   actions: {
@@ -39,66 +42,79 @@ const useFwStore = defineStore('fw', {
         console.log('setFilters', filters);
         //merge filters into state.f
         this.$state.f = { ...this.$state.f, ...filters };
-        this.loadIndex();
+        this.loadIndexDebounced();
       },
     //save user view settings (density)
     async setListDensity(density) {
-      this.user_view.density = density;
-      //save to backend
-      const apiBase = mande(this.base_url);
-      const req = { density: density, XSS: this.XSS };
+        this.user_view.density = density;
+        //save to backend
+        const apiBase = mande(this.base_url);
+        const req = { density: density, XSS: this.XSS };
 
-      try {
-          const data = await apiBase.post('/(SaveUserViews)', req);
-      } catch (error) {
-        console.error('setListDensity error:', error.body.err_msg ?? 'server error');
-        console.error(error);
-        //fw.error(error);
-        return error;
-      }
+        try {
+            const data = await apiBase.post('/(SaveUserViews)', req);
+        } catch (error) {
+            console.error('setListDensity error:', error.body.err_msg ?? 'server error');
+            console.error(error);
+            //fw.error(error);
+            return error;
+        }
+    },
+    // load data debounced
+    async loadIndexDebounced() {
+        // debounce loadIndex
+        if (this.loadIndexDebouncedTimeout) clearTimeout(this.loadIndexDebouncedTimeout);
+        this.loadIndexDebouncedTimeout = setTimeout(() => {
+            this.loadIndex();
+        }, 300);
     },
     // load data
     async loadIndex() {
-      try {
-        const apiBase = mande(this.base_url);
+        try {
+            const apiBase = mande(this.base_url);
 
-        // build request query from state.f, each parameter name should be int form "f[name]"
-        let req = { dofilter: 1 };
-        Object.keys(this.f).forEach(key => {
-            req['f['+key+']'] = this.f[key];
-        });
-        // add related_id to request
-        if (this.related_id) req.related_id = this.related_id;
-        console.log('loadIndex req', req);
+            // build request query from state.f, each parameter name should be int form "f[name]"
+            let req = { dofilter: 1 };
+            Object.keys(this.f).forEach(key => {
+                req['f['+key+']'] = this.f[key];
+            });
+            // add related_id to request
+            if (this.related_id) req.related_id = this.related_id;
 
-        const data = await apiBase.get('', { query: req });
-        console.log('loadIndex data', data);
+            //add search values from headers
+            this.headers.forEach(h => {
+                if (h.search_value?.length) req['search['+h.field_name+']'] = h.search_value;                
+            });
 
-        //save to store each key from data if such key exists in store
-        Object.keys(data).forEach(key => {
-            if (this.$state[key] !== undefined) this.$state[key] = data[key];
-        });
+            console.log('loadIndex req', req);
+            const data = await apiBase.get('', { query: req });
+            console.log('loadIndex data', data);
 
-        // set defaults
-        this.user_view.density = this.user_view.density ?? 'table-sm';
+            //save to store each key from data if such key exists in store
+            Object.keys(data).forEach(key => {
+                if (this.$state[key] !== undefined) this.$state[key] = data[key];
+            });
 
-      } catch (error) {
-        console.error('loadIndex error:', error.body.err_msg??'server error');
-        console.error(error);
-        //fw.error(error);
-        return error;
-      }
+            // set defaults
+            this.user_view.density = this.user_view.density ?? 'table-sm';
+
+        } catch (error) {
+            console.error('loadIndex error:', error.body.err_msg??'server error');
+            console.error(error);
+            //fw.error(error);
+            return error;
+        }
     },
 
     // sample async action TODO REMOVE
     async registerUser(login, password) {
-      try {
-        this.userData = await apiUsers.post({ login, password });
-        fw.ok(`"Welcome back ${this.userData.name}!"`);
-      } catch (error) {
-        fw.error(error);
-        return error;
-      }
+        try {
+            this.userData = await apiUsers.post({ login, password });
+            fw.ok(`"Welcome back ${this.userData.name}!"`);
+        } catch (error) {
+            fw.error(error);
+            return error;
+        }
     },
   }
 });

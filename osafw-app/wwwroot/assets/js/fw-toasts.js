@@ -1,5 +1,5 @@
 /**
- * Toaster - Bootstrap 5 Toast Manager Library v0.9.2024.03.12
+ * Toaster - Bootstrap 5 Toast Manager Library v0.23.0312
  *
  * A lightweight and customizable toast notification library built on top of Bootstrap 5.
  *
@@ -31,6 +31,7 @@
 
 (function(window){
     let toastContainer;
+    let debounceTimer;
 
     function createToastContainer() {
         if (!toastContainer) {
