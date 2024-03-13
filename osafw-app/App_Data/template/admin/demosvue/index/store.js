@@ -5,6 +5,7 @@ const useFwStore = defineStore('fw', {
   state: () => ({
     global: {}, //global config
     XSS: '', // token
+    access_level: 0, // user access level
     base_url: '', // base url for the controller
     is_userlists: false,
     is_readonly: false,
@@ -16,6 +17,8 @@ const useFwStore = defineStore('fw', {
         pagesize: 25,
         sortby: '',
         sortdir: '',
+        s: '',
+        status: '',
     }, 
     related_id: 0, // related model id
     return_url: '', // return url if controller called from other place expecting user's return
@@ -27,6 +30,20 @@ const useFwStore = defineStore('fw', {
     pager: [], // array of { pagenum:N, pagenum_show:N, is_cur_page:0|1, is_show_first:0|1, is_show_prev:0|1, is_show_next:0|1, pagenum_next:N}
     hchecked_rows: {}, // array of checked rows {row.id => 1}
 
+    //common lookups
+    lookups: {
+        statusf: [
+            { id: '', iname: '- all -' },
+            { id: 0, iname: 'Active' },
+            { id: 10, iname: 'Inactive' }
+        ],
+        statusf_admin: [
+            { id: '', iname: '- all -' },
+            { id: 0, iname: 'Active' },
+            { id: 10, iname: 'Inactive' },
+            { id: 127, iname: '[Deleted]' }
+        ]
+    },
     //work vars
     loadIndexDebouncedTimeout: null
   }),
@@ -69,7 +86,7 @@ const useFwStore = defineStore('fw', {
         if (this.loadIndexDebouncedTimeout) clearTimeout(this.loadIndexDebouncedTimeout);
         this.loadIndexDebouncedTimeout = setTimeout(() => {
             this.loadIndex();
-        }, 300);
+        }, 100);
     },
     // load data
     async loadIndex() {
@@ -84,10 +101,12 @@ const useFwStore = defineStore('fw', {
             // add related_id to request
             if (this.related_id) req.related_id = this.related_id;
 
-            //add search values from headers
-            this.headers.forEach(h => {
-                if (h.search_value?.length) req['search['+h.field_name+']'] = h.search_value;                
-            });
+            //add search values from headers if search is open
+            if (this.is_list_search_open) {
+                this.headers.forEach(h => {
+                    if (h.search_value?.length) req['search[' + h.field_name + ']'] = h.search_value;
+                });
+            }
 
             console.log('loadIndex req', req);
             const data = await apiBase.get('', { query: req });

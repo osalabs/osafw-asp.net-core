@@ -72,7 +72,7 @@
                 <td :class="'text-nowrap d-print-none '+(fwStore.global.is_list_btn_left?'':'text-end')" v-if="fwStore.global.is_list_btn_left">
                   <a href="<~../url>/<~id><~/common/list/relid>">`View`</a>
                   <~/common/dot><a href="<~row_click_url>">`Edit`</a>
-                  <~/common/dot> <a href="<~../url>/<~id>/delete<~/common/list/relid>"
+                  <~/common/dot><a href="<~../url>/<~id>/delete<~/common/list/relid>"
                                     class="text-danger on-delete-list-row"
                                     :disabled="fwStore.is_readonly"><~/common/icons/x></a>
                 </td>
@@ -85,7 +85,7 @@
                 <td :class="'text-nowrap d-print-none '+(fwStore.global.is_list_btn_left?'':'text-end')" v-if="!fwStore.global.is_list_btn_left">
                   <a href="<~../url>/<~id><~/common/list/relid>">`View`</a>
                   <~/common/dot><a href="<~row_click_url>">`Edit`</a>
-                  <~/common/dot> <a href="<~../url>/<~id>/delete<~/common/list/relid>"
+                  <~/common/dot><a href="<~../url>/<~id>/delete<~/common/list/relid>"
                                     class="text-danger on-delete-list-row"
                                     :disabled="fwStore.is_readonly"><~/common/icons/x></a>
                 </td>

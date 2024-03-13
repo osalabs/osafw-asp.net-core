@@ -66,6 +66,7 @@ public class FwVueController : FwController
             //TODO filter rows for json output
 
             ps["XSS"] = fw.Session("XSS");
+            ps["access_level"] = fw.userAccessLevel;
             //TODO only specific from global ps["global"] = fw.G;
         }
 
