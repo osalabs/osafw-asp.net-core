@@ -8,6 +8,8 @@ const useFwStore = defineStore('fw', {
     access_level: 0, // user access level
     base_url: '', // base url for the controller
     is_userlists: false,
+    select_userlists: [],
+    my_userlists: [],
     is_readonly: false,
     user_view: {}, // UserViews record for current controller
 
@@ -19,6 +21,7 @@ const useFwStore = defineStore('fw', {
         sortdir: '',
         s: '',
         status: '',
+        userlist: '',
     }, 
     related_id: 0, // related model id
     return_url: '', // return url if controller called from other place expecting user's return
@@ -54,6 +57,25 @@ const useFwStore = defineStore('fw', {
       isListSearch: (state) => state.headers.some(h => h.search_value?.length),
       //count of hchecked_rows but only true values
       countCheckedRows: (state) => Object.values(state.hchecked_rows).filter(v => v).length,
+      listRequestQuery: (state) => {
+          // build request query from state.f, each parameter name should be int form "f[name]"
+          let req = { dofilter: 1 };
+          Object.keys(state.f).forEach(key => {
+              if ((state.f[key]??'') !== '') {
+                  req['f[' + key + ']'] = state.f[key];
+              }              
+          });
+          // add related_id to request
+          if (state.related_id) req.related_id = state.related_id;
+
+          //add search values from headers if search is open
+          if (state.is_list_search_open) {
+              state.headers.forEach(h => {
+                  if (h.search_value?.length) req['search[' + h.field_name + ']'] = h.search_value;
+              });
+          }
+          return req;
+      }
   },
 
   actions: {
@@ -74,7 +96,7 @@ const useFwStore = defineStore('fw', {
         try {
             const data = await apiBase.post('/(SaveUserViews)', req);
         } catch (error) {
-            console.error('setListDensity error:', error.body.err_msg ?? 'server error');
+            console.error('setListDensity error:', error.body?.err_msg ?? 'server error');
             console.error(error);
             //fw.error(error);
             return error;
@@ -93,21 +115,7 @@ const useFwStore = defineStore('fw', {
         try {
             const apiBase = mande(this.base_url);
 
-            // build request query from state.f, each parameter name should be int form "f[name]"
-            let req = { dofilter: 1 };
-            Object.keys(this.f).forEach(key => {
-                req['f['+key+']'] = this.f[key];
-            });
-            // add related_id to request
-            if (this.related_id) req.related_id = this.related_id;
-
-            //add search values from headers if search is open
-            if (this.is_list_search_open) {
-                this.headers.forEach(h => {
-                    if (h.search_value?.length) req['search[' + h.field_name + ']'] = h.search_value;
-                });
-            }
-
+            const req = this.listRequestQuery;
             console.log('loadIndex req', req);
             const data = await apiBase.get('', { query: req });
             console.log('loadIndex data', data);
@@ -121,7 +129,7 @@ const useFwStore = defineStore('fw', {
             this.user_view.density = this.user_view.density ?? 'table-sm';
 
         } catch (error) {
-            console.error('loadIndex error:', error.body.err_msg??'server error');
+            console.error('loadIndex error:', error.body?.err_msg??'server error');
             console.error(error);
             //fw.error(error);
             return error;

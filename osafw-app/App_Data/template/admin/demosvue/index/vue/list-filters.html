@@ -23,7 +23,7 @@
       <label class="col-form-label col-md-2 col-xl-1" for="fstatus">`Status`</label>
       <div class="col-md-3 col-lg-2">
         <select class="form-select" v-model="fwStore.f.status">
-          <option v-for="status in lookup_statusf" :value="status.id" :selected="status.id==fwStore.f.status">{{status.iname}}</option>
+          <option v-for="option in lookup_statusf" :value="option.id" :selected="option.id==fwStore.f.status">{{option.iname}}</option>
         </select>
       </div>
 
@@ -31,22 +31,22 @@
         <label class="col-form-label col-md-2 col-xl-1" for="fuserlist">`My List`</label>
         <div class="col-md-3 col-lg-2">
           <select id="fuserlist" name="f[userlist]" class="form-select">
-            <option value="">`- all -`</option>
-            <~select_userlists select="f[userlist]">
+            <option value="" :selected="!fwStore.f.userlist">`- all -`</option>
+            <option v-for="option in fwStore.select_userlists" :value="option.id" :selected="option.id==fwStore.f.userlist">{{option.iname}}</option>
           </select>
         </div>
       </template>
 
       <div class="col text-end d-print-none">
         <div class="btn-group">
-          <button type="submit" name="export" value="csv" class="btn btn-outline-secondary"><~/common/icons/cloud-download> `Export`</button>
+          <a class="btn btn-outline-secondary" :href="urlExport('csv')"><~/common/icons/cloud-download> `Export`</a>
           <button type="button" class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
             <span class="visually-hidden">`Toggle Dropdown`</span>
           </button>
           <div class="dropdown-menu dropdown-menu-right">
-            <button type="submit" name="export" value="xls" class="dropdown-item" title="Export to Excel">
+            <a class="dropdown-item" title="Export to Excel" :href="urlExport('xls')">
               <~/common/icons/cloud-download-fill> `Export as .xls`
-            </button>
+            </a>
           </div>
         </div>
       </div>
@@ -70,10 +70,19 @@ fwApp.component('list-filters', {
         ...mapStores(useFwStore), //accessible via this.fwStore
         lookup_statusf() {
           return this.fwStore.access_level<100 ? this.fwStore.lookups.statusf : this.fwStore.lookups.statusf_admin;
-        }
+        },
   },
   mounted() {
         console.log('list-filters mounted');
   },
+  methods: {
+      urlExport(type) {
+          let req = this.fwStore.listRequestQuery;
+          req.export = type;
+          //convert req object to query string - TODO move to utils
+          let query = Object.keys(req).map(key => encodeURIComponent(key) + '=' + encodeURIComponent(req[key])).join('&');
+          return this.fwStore.base_url + '?' + query;
+      }
+  }
 });
 </script>

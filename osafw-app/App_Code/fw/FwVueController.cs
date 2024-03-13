@@ -33,8 +33,10 @@ public class FwVueController : FwController
         // set standard output - load html with Vue app
         Hashtable ps = [];
 
-        if (fw.isJsonExpected())
+        if (fw.isJsonExpected() || export_format.Length > 0)
         {
+            //do db work only if json or export expected
+
             // if json expected - return data only as json
             ps["_json"] = true;
             setListSorting();
@@ -63,7 +65,17 @@ public class FwVueController : FwController
             list_fields = string.Join(",", quoted_fields.ToArray());
 
             getListRows();
+
+            // if export - no need to parse templates and prep for them - just return empty hashtable asap
+            if (export_format.Length > 0)
+                return []; // return empty hashtable just in case action overriden to avoid check for null
+
+
             //TODO filter rows for json output
+
+            // userlists support if necessary
+            if (this.is_userlists)
+                this.setUserLists(ps);
 
             ps["XSS"] = fw.Session("XSS");
             ps["access_level"] = fw.userAccessLevel;
