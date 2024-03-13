@@ -25,6 +25,7 @@ const useFwStore = defineStore('fw', {
     count: 0, // total list rows count
     list_rows: [],
     pager: [], // array of { pagenum:N, pagenum_show:N, is_cur_page:0|1, is_show_first:0|1, is_show_prev:0|1, is_show_next:0|1, pagenum_next:N}
+    hchecked_rows: {}, // array of checked rows {row.id => 1}
 
     //work vars
     loadIndexDebouncedTimeout: null
@@ -33,7 +34,9 @@ const useFwStore = defineStore('fw', {
   getters: {
       doubleCount: (state) => state.count * 2, //sample getter
       //return true if state.headers contains at least one non-empty search_value
-      isListSearch: (state) => state.headers.some(h => h.search_value?.length)
+      isListSearch: (state) => state.headers.some(h => h.search_value?.length),
+      //count of hchecked_rows but only true values
+      countCheckedRows: (state) => Object.values(state.hchecked_rows).filter(v => v).length,
   },
 
   actions: {

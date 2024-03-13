@@ -61,8 +61,13 @@
 
         <tbody class="table-group-divider">
           <template v-for="row in fwStore.list_rows" :key="row[fwStore.field_id]">
-            <tr data-url="<~row_click_url>" :data-id="row[fwStore.field_id]" :title="row_title">
-                <td><input class="multicb" type="checkbox" :name="'cb['+row[fwStore.field_id]+']'" value="1"></td>
+            <tr data-url="<~row_click_url>"
+                :data-id="row[fwStore.field_id]"
+                :title="row_title"
+                :class="fwStore.hchecked_rows[row[fwStore.field_id]] ? 'selected' : ''"
+                @click="(event) => onClickRow(event,row)">
+
+                <td><input class="multicb" type="checkbox" v-model="fwStore.hchecked_rows[row[fwStore.field_id]]"></td>
                 <!--TODO make common component for row btn-->
                 <td :class="'text-nowrap d-print-none '+(fwStore.global.is_list_btn_left?'':'text-end')" v-if="fwStore.global.is_list_btn_left">
                   <a href="<~../url>/<~id><~/common/list/relid>">`View`</a>
@@ -96,7 +101,7 @@
       Try to <a :href="'?dofilter=1'+(fwStore.related_id ? '&related_id='+fwStore.related_id : '')">reset</a> all filters.
     </div>
 
-    <div v-if="fwStore.list_rows.length">
+    <template v-if="fwStore.list_rows.length">
       <div class="float-md-end pt-2 mb-3 d-print-none">
         <span class="badge"></span><br>
         <div class="d-flex justify-content-md-end">
@@ -108,8 +113,14 @@
         </div>
       </div>
 
-      <~/common/list/btn_multidel>
-    </div>
+      <!-- TODO make as a separate extenable component -->
+      <div id="list-btn-multi" :class="'mb-3 d-print-none '+(fwStore.countCheckedRows ? 'position-sticky' : '')">
+        `with <span class="badge bg-secondary rows-num" v-if="fwStore.countCheckedRows">{{fwStore.countCheckedRows}}</span> checked rows:`<br>
+        <input type="submit" name="delete" value="`Delete`" class="btn btn-danger on-delete-multi" <~/common/disabled if="is_readonly">>
+        <~/common/list/btn_userlists if="is_userlists">
+        <~btn_multidel_more>
+      </div>
+    </template>
 
   </form>
 
@@ -175,6 +186,18 @@ fwApp.component('list-table', {
 
         this.fwStore.setFilters({sortby: header.field_name, sortdir: new_sortdir});
     },
+    //click on row - select/unselect row
+    onClickRow(e, row){
+      console.log('onClickRow',e);
+      var tag_name = e.target.tagName.toLowerCase();
+      if (tag_name === 'a'||tag_name === 'button'){
+        return; // do not process if link/button clicked
+      }
+
+      const row_id = row[this.fwStore.field_id];
+      this.fwStore.hchecked_rows[row_id] = !this.fwStore.hchecked_rows[row_id];
+    }
+
   }
 });
 </script>
