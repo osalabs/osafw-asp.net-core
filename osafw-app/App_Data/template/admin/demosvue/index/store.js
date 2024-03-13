@@ -46,7 +46,7 @@ const useFwStore = defineStore('fw', {
         //merge filters into state.f
         this.$state.f = { ...this.$state.f, ...filters };
         this.loadIndexDebounced();
-      },
+    },
     //save user view settings (density)
     async setListDensity(density) {
         this.user_view.density = density;

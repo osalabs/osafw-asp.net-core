@@ -9,7 +9,7 @@
       <table :class="'table table-stripedX table-hover list ' + fwStore.user_view.density">
         <thead>
             <tr>
-              <~/common/list/th_chkall>
+              <th><input type="checkbox" name="all" v-model="cb_check_all" @change="onCheckAll"></th>
 
               <!--TODO make common component for these buttons-->
               <th class="fw-normal text-nowrap d-print-none" v-if="fwStore.global.is_list_btn_left">
@@ -108,8 +108,8 @@
           <list-pagination
             :pager="fwStore.pager"
             :pagesize="fwStore.f.pagesize"
-            @on-page="(ev) => fwStore.setFilters({pagenum:ev})"
-            @on-pagesize="(ev) => fwStore.setFilters({pagesize:ev})"></list-pagination>
+            @on-page="onClickPage"
+            @on-pagesize="onChangePagesize"></list-pagination>
         </div>
       </div>
 
@@ -138,7 +138,8 @@ fwApp.component('list-table', {
   template: '#list-table-template',
   props: [],
   data: () => ({
-        row_title: 'Double click to Edit'
+        row_title: 'Double click to Edit',
+        cb_check_all: false
   }),
   computed: {
         ...mapStores(useFwStore) //accessible via this.fwStore
@@ -147,10 +148,14 @@ fwApp.component('list-table', {
         console.log('list-table mounted');
   },
   methods: {
-    fieldValueByName(row, field_name) {
+    fieldValueByName(row, field_name){
         //return value by field_name in row associative array
         //add here any additional processing if needed
         return row[field_name];
+    },
+    resetCheckedRows() {
+        this.fwStore.hchecked_rows = [];
+        this.cb_check_all = false;
     },
     onToggleSearch(e){
         this.fwStore.is_list_search_open = !this.fwStore.is_list_search_open;
@@ -175,7 +180,8 @@ fwApp.component('list-table', {
 
         this.fwStore.setListDensity(next_density);
     },
-    onSortHeader(e, header) {
+    // sorting handlers
+    onSortHeader(e, header){
         if (!header.is_sortable) return;
 
         let new_sortdir = 'asc'; //default sort
@@ -184,18 +190,40 @@ fwApp.component('list-table', {
             new_sortdir = this.fwStore.f.sortdir == 'asc' ? 'desc' : 'asc';
         }
 
+        this.resetCheckedRows();
         this.fwStore.setFilters({sortby: header.field_name, sortdir: new_sortdir});
+    },
+    // pagination handlers
+    onClickPage(e){
+      this.resetCheckedRows();
+      this.fwStore.setFilters({pagenum:e});
+    },
+    onChangePagesize(e){
+      this.resetCheckedRows();
+      this.fwStore.setFilters({pagesize:e});
     },
     //click on row - select/unselect row
     onClickRow(e, row){
-      console.log('onClickRow',e);
-      var tag_name = e.target.tagName.toLowerCase();
-      if (tag_name === 'a'||tag_name === 'button'){
-        return; // do not process if link/button clicked
-      }
+        console.log('onClickRow',e);
+        var tag_name = e.target.tagName.toLowerCase();
+        if (tag_name === 'a'||tag_name === 'button'){
+          return; // do not process if link/button clicked
+        }
 
-      const row_id = row[this.fwStore.field_id];
-      this.fwStore.hchecked_rows[row_id] = !this.fwStore.hchecked_rows[row_id];
+        const row_id = row[this.fwStore.field_id];
+        this.fwStore.hchecked_rows[row_id] = !this.fwStore.hchecked_rows[row_id];
+    },
+    //check all/none rows
+    onCheckAll(e){
+        if (e.target.checked){
+            // for each row.id in fwStore.list_rows - add to hchecked_rows
+            this.fwStore.hchecked_rows = this.fwStore.list_rows.reduce((acc, row) => {
+                acc[row[this.fwStore.field_id]] = true;
+                return acc;
+            }, {});
+        }else{
+          this.fwStore.hchecked_rows=[];
+        }
     }
 
   }

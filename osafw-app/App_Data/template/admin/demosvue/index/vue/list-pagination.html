@@ -32,6 +32,9 @@ fwApp.component('list-pagination', {
     pagesize_options: [10,20,25,30,40,50,100,150,200],
     pagesize_selected: null,
   }),
+  mounted(){
+    this.pagesize_selected = this.pagesize ? this.pagesize : 25;
+  },
   updated(){
     this.pagesize_selected = this.pagesize ? this.pagesize : 25;
   },
