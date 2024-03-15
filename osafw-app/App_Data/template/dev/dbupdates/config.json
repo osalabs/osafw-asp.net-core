@@ -12,13 +12,13 @@
     "iname": "Name",
     "idesc": "Description",
     "status": "Status",
-    "applied_time": "Applied Time",
+    "applied_time": "Applied Date/Time",
     "add_users_id_iname": "Add User",
     "upd_users_id_iname": "Upd User",
     "add_time": "Add Time",
     "upd_time": "Upd Time"
   },
-  "view_list_custom": "status is_applied applied_time",
+  "view_list_custom": "status is_applied",
   "is_dynamic_show": false,
   "is_dynamic_showform": false,
   "form_new_defaults": {

@@ -8,10 +8,10 @@
     </div>
     <table class="table table-stripedX table-hover list <~user_view[density] default="table-sm">">
 <thead>
-    <tr data-sortby="<~f[sortby]>" data-sortdir="<~f[sortdir]>">        
-        <th>Name</th>
-        <th>Status</th>
-        <th>Applied Date</th>
+    <tr>        
+        <~headers repeat inline>
+            <th class="rotate"><div><span><~field_name_visible></span></div></th>
+        </~headers>
         <th></th>
     </tr>
 </thead>
