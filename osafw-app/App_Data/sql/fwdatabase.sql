@@ -402,6 +402,21 @@ CREATE TABLE user_filters (
   upd_users_id          INT DEFAULT 0
 );
 
+DROP TABLE IF EXISTS fwupdates;
+CREATE TABLE fwupdates (
+  id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+  icode                 NVARCHAR(MAX) NOT NULL, -- update filename
+
+  iname                 NVARCHAR(255) NOT NULL, -- update filename
+  idesc                 NVARCHAR(MAX), -- update file content
+  applied_time          DATETIME2,
+
+  status                TINYINT DEFAULT 0,
+  add_time              DATETIME2 NOT NULL DEFAULT getdate(),
+  add_users_id          INT DEFAULT 0, -- related owner user
+  upd_time              DATETIME2,
+  upd_users_id          INT DEFAULT 0
+);
 -- run roles.sql if roles support required and also uncomment #define isRoles in Users model
 
 -- after this file - run lookups.sql
