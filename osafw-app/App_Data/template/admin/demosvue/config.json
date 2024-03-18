@@ -40,6 +40,7 @@
     "related_field_name": "demo_dicts_id",
 
     "is_dynamic_index": true,
+    "is_dynamic_index_edit_inline": true,
     "list_view": "(select d.*, dd.iname as demo_dicts_iname, FORMAT(d.fdate_pop, 'MM/dd/yyyy') as fdate_pop_str from demos d LEFT OUTER JOIN demo_dicts dd ON dd.id=d.demo_dicts_id) t",
     "view_list_defaults": "demo_dicts_iname iname email add_time status",
     "###view_list_map": "demo_dicts_iname|DemoDicts iname|Title email|Email add_time|Added&nbsp;on status|Status id|id",

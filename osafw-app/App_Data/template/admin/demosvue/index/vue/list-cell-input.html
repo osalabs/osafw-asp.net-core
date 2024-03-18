@@ -1,0 +1,22 @@
+<script type="text/x-template" id="list-cell-input">
+ <div>
+      <input type="text" class="form-control"
+        :value="row[col.field_name]">
+  </div>
+</script>
+
+<script type="module">
+fwApp.component('list-cell-input', {
+  template: '#list-cell-input',
+  props: ['row', 'col'],
+  data: () => ({
+    xxx: null,
+  }),
+  mounted(){
+  },
+  updated(){
+  },
+  methods: {
+  }
+});
+</script>

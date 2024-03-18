@@ -80,6 +80,26 @@ public class FwVueController : FwController
             ps["XSS"] = fw.Session("XSS");
             ps["access_level"] = fw.userAccessLevel;
             //TODO only specific from global ps["global"] = fw.G;
+            ps["is_dynamic_index_edit_inline"] = Utils.f2bool(config["is_dynamic_index_edit_inline"]);
+
+            //editable list support - read from config
+            Hashtable hfields = _fieldsToHash((ArrayList)this.config["showform_fields"]);
+            //add to headers data for editable list: is_ro, input_type
+            var editable_types = Utils.qh("input email number textarea date_popup datetime_popup autocomplete select cb radio yesno");
+            foreach (Hashtable header in headers)
+            {
+                var field_name = (string)header["field_name"];
+                var def = (Hashtable)hfields[field_name] ?? null;
+                if (def == null)
+                    continue;
+
+                var def_type = Utils.f2str(def["type"]);
+                header["input_type"] = def_type;
+                if (!editable_types.ContainsKey(def_type))
+                {
+                    header["is_ro"] = true; // TODO make ability to override in controller as some edit type fields might not be editable due to access level or other conditions
+                }
+            }
         }
 
         ps = setPS(ps);
@@ -134,6 +154,20 @@ public class FwVueController : FwController
         }
 
         return afterSave(true, null, false, "no_action", return_url);
+    }
+
+    // TODO refactor with FwDynamicController 
+    // convert config's fields list into hashtable as field => {}
+    // if there are more than one field - just first field added to the hash
+    protected Hashtable _fieldsToHash(ArrayList fields)
+    {
+        Hashtable result = new();
+        foreach (Hashtable fldinfo in fields)
+        {
+            if (fldinfo.ContainsKey("field") && !result.ContainsKey((string)fldinfo["field"]))
+                result[(string)fldinfo["field"]] = fldinfo;
+        }
+        return result;
     }
 
 }

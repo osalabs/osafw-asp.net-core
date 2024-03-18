@@ -1,0 +1,28 @@
+<script type="text/x-template" id="list-cell-select">
+ <div>
+      <select class="form-control">
+        <option></option>
+        <option v-for="lrow in options"
+            :key="col.field_name+'#'+lrow.id"
+            :value="lrow.id"
+            :selected="lrow.id==row[col.field_name]"
+        >{{lrow.iname}}</option>
+      </select>
+  </div>
+</script>
+
+<script type="module">
+fwApp.component('list-cell-select', {
+  template: '#list-cell-select',
+  props: ['row', 'col', 'options'],
+  data: () => ({
+    xxx: null,
+  }),
+  mounted(){
+  },
+  updated(){
+  },
+  methods: {
+  }
+});
+</script>

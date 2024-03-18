@@ -1,0 +1,19 @@
+<script type="text/x-template" id="list-cell-ro">
+ <div class="text-body-secondary">{{row[col.field_name]}}</div>
+</script>
+
+<script type="module">
+fwApp.component('list-cell-ro', {
+  template: '#list-cell-ro',
+  props: ['row', 'col'],
+  data: () => ({
+    xxx: null,
+  }),
+  mounted(){
+  },
+  updated(){
+  },
+  methods: {
+  }
+});
+</script>

@@ -78,7 +78,18 @@
                 </td>
 
                 <template v-for="(header, key) in fwStore.headers" :key="key">
-                  <td>{{fieldValueByName(row, header.field_name)}}</td>
+                  <td v-if="!fwStore.is_dynamic_index_edit_inline">{{fieldValueByName(row, header.field_name)}}</td>
+                  <td v-else class="editable">
+                      <!-- editable mode -->
+                      <!-- readonly row or column -->
+                      <list-cell-ro v-if="header.is_ro || row._meta?.is_ro || row._meta?.ro_fields?.includes(header.field_name)" :row="row" :col="header"></list-cell-ro>
+                      <!-- editable row or column -->
+                      <list-cell-input v-else-if="header.input_type=='input'" :row="row" :col="header"></list-cell-input>
+                      <list-cell-select v-else-if="header.input_type=='select'" :row="row" :col="header"></list-cell-select>
+                      <list-cell-date v-else-if="header.input_type=='date'" :row="row" :col="header"></list-cell-date>
+                      <list-cell-email v-else-if="header.input_type=='email'" :row="row" :col="header"></list-cell-email>
+                      <td v-else class="text-danger">{{fieldValueByName(row, header.field_name)}}</td>
+                  </td>
                 </template>
 
                 <!--TODO make common component for row btn-->

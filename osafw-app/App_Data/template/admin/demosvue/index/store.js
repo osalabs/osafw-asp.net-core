@@ -12,6 +12,7 @@ const useFwStore = defineStore('fw', {
     my_userlists: [],
     is_readonly: false,
     user_view: {}, // UserViews record for current controller
+    is_dynamic_index_edit_inline: false, //true if list rows inline-editable 
 
     // list filter, can contain: {pagenum:N, pagesize:N, sortby:'', sortdir:'asc|desc'}
     f: {
@@ -26,10 +27,10 @@ const useFwStore = defineStore('fw', {
     related_id: 0, // related model id
     return_url: '', // return url if controller called from other place expecting user's return
     field_id: 'id', // model's id field name
-    headers: [], // list headers, array of {field_name:"", field_name_visible:"", is_sortable:true|false, is_checked:true, search_value:null|""}
+    headers: [], // list headers, array of {field_name:"", field_name_visible:"", is_sortable:bool, is_checked:bool, search_value:null|"", is_ro:bool, input_type:"input|select|date"}
     is_list_search_open: false, // true if list search is open by user
     count: 0, // total list rows count
-    list_rows: [],
+    list_rows: [], // array of row objects to display, row can contain _meta object {is_ro:bool, ro_fields:[read only field names]}
     pager: [], // array of { pagenum:N, pagenum_show:N, is_cur_page:0|1, is_show_first:0|1, is_show_prev:0|1, is_show_next:0|1, pagenum_next:N}
     hchecked_rows: {}, // array of checked rows {row.id => 1}
 

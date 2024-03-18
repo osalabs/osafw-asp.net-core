@@ -1,0 +1,25 @@
+<script type="text/x-template" id="list-cell-date">
+ <div>
+      <div class="input-group date">
+        <input type="text" maxlength="10" class="form-control"
+          :value="{{row[col.field_name]}}">
+        <button class="btn btn-outline-secondary" type="button"><~/common/icons/calendar3></button>
+      </div>
+  </div>
+</script>
+
+<script type="module">
+fwApp.component('list-cell-date', {
+  template: '#list-cell-date',
+  props: ['row', 'col'],
+  data: () => ({
+    xxx: null,
+  }),
+  mounted(){
+  },
+  updated(){
+  },
+  methods: {
+  }
+});
+</script>

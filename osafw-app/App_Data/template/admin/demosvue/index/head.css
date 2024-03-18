@@ -15,3 +15,29 @@ h1 .badge {
  width: 0.7em;
  height: 0.7em;
 }
+
+
+table tbody td.editable {
+ padding: 0;
+}
+
+/*
+table tbody td.editable > div {
+ display: block;
+ max-width: 100%;
+}
+*/
+
+/*
+table tbody td.editable > div > input {
+ border: 0px;
+ line-height: 1.3rem;
+}
+*/
+table tbody td.editable > div > select {
+ appearance: auto;
+ /*
+ border: 0px;
+ height: 1.48rem;
+ */
+}
