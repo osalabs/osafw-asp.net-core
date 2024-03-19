@@ -38,7 +38,7 @@
       </template>
 
       <div class="col text-end d-print-none">
-        <div class="btn-group">
+        <div class="btn-group me-2">
           <a class="btn btn-outline-secondary" :href="urlExport('csv')"><~/common/icons/cloud-download> `Export`</a>
           <button type="button" class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
             <span class="visually-hidden">`Toggle Dropdown`</span>
@@ -48,6 +48,11 @@
               <~/common/icons/cloud-download-fill> `Export as .xls`
             </a>
           </div>
+        </div>
+        <div class="btn-group">
+          <a href="#" class="btn btn-outline-secondary" title="`Filter Columns`" @click="onToggleSearch"><~/common/icons/funnel></a>
+          <a href="#" class="btn btn-outline-secondary" title="`Customize Columns`" @click="onCustomCols"><~/common/icons/table></a>
+          <a href="#" class="btn btn-outline-secondary" title="`Density`" @click="onToggleDensity"><~/common/icons/grid-3x2-gap></a>
         </div>
       </div>
 
@@ -76,6 +81,30 @@ fwApp.component('list-filters', {
         console.log('list-filters mounted');
   },
   methods: {
+      onToggleSearch(e){
+          this.fwStore.is_list_search_open = !this.fwStore.is_list_search_open;
+          if (this.fwStore.is_list_search_open){
+              //show search hints
+              Toast("WORD to search for contains word<br>"+
+                  "!WORD to search for NOT contains word<br>"+
+                  "=WORD to search for equals word<br>"+
+                  "!=WORD to search for NOT equals word<br>"+
+                  "&lt;=N, &lt;N, &gt;=N, &gt;N - compare numbers",
+                  {header: 'Search hints', theme: 'text-bg-info', html:true, autohide: false});
+          }
+      },
+      onCustomCols(e){
+          console.log("TODO onCustomCols", e);
+      },
+      onToggleDensity(e){
+          const classes = ['table-sm', 'table-dense', 'table-normal'];
+          const current_density = this.fwStore.user_view.density;
+          //get next density class
+          const next_density = classes[(classes.indexOf(current_density) + 1) % classes.length];
+
+          this.fwStore.setListDensity(next_density);
+      },
+
       urlExport(type) {
           let req = {...this.fwStore.listRequestQuery}; //{...} because of getters caching?
           req.export = type;

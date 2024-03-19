@@ -10,13 +10,7 @@
         <thead>
             <tr>
               <th><input type="checkbox" name="all" v-model="cb_check_all" @change="onCheckAll"></th>
-
-              <!--TODO make common component for these buttons-->
-              <th class="fw-normal text-nowrap d-print-none" v-if="fwStore.global.is_list_btn_left">
-                <a href="#" class="px-1 me-1" title="`Filter Columns`" @click="onToggleSearch"><~/common/icons/funnel></a>
-                <a href="#" class="px-1 me-1" title="`Customize Columns`" @click="onCustomCols"><~/common/icons/table></a>
-                <a href="#" class="px-1" title="`Density`" @click="onToggleDensity"><~/common/icons/grid-3x2-gap></a>
-              </th>
+              <th v-if="fwStore.global.is_list_btn_left"></th>
 
               <template v-for="header in fwStore.headers">
                 <th :class="'rotate'+(header.is_sortable && fwStore.f.sortby==header.field_name ? ' active-sort' : '')"
@@ -38,13 +32,7 @@
                 </th>
               </template>
 
-              <!--TODO make common component for these buttons-->
-              <th class="fw-normal text-nowrap d-print-none text-end" v-if="!fwStore.global.is_list_btn_left">
-                <a href="#" class="px-1 me-1" title="`Filter Columns`" @click="onToggleSearch"><~/common/icons/funnel></a>
-                <a href="#" class="px-1 me-1" title="`Customize Columns`" @click="onCustomCols"><~/common/icons/table></a>
-                <a href="#" class="px-1" title="`Density`" @click="onToggleDensity"><~/common/icons/grid-3x2-gap></a>
-              </th>
-
+              <th v-if="!fwStore.global.is_list_btn_left"></th>
             </tr>
             <tr class="search" :style="fwStore.is_list_search_open ? 'display: table-row' : ''">
               <th></th>
@@ -177,29 +165,6 @@ fwApp.component('list-table', {
     resetCheckedRows() {
         this.fwStore.hchecked_rows = [];
         this.cb_check_all = false;
-    },
-    onToggleSearch(e){
-        this.fwStore.is_list_search_open = !this.fwStore.is_list_search_open;
-        if (this.fwStore.is_list_search_open){
-            //show search hints
-            Toast("WORD to search for contains word<br>"+
-                "!WORD to search for NOT contains word<br>"+
-                "=WORD to search for equals word<br>"+
-                "!=WORD to search for NOT equals word<br>"+
-                "&lt;=N, &lt;N, &gt;=N, &gt;N - compare numbers",
-                {header: 'Search hints', theme: 'text-bg-info', html:true, autohide: false});
-        }
-    },
-    onCustomCols(e){
-        console.log("TODO onCustomCols", e);
-    },
-    onToggleDensity(e){
-        const classes = ['table-sm', 'table-dense', 'table-normal'];
-        const current_density = this.fwStore.user_view.density;
-        //get next density class
-        const next_density = classes[(classes.indexOf(current_density) + 1) % classes.length];
-
-        this.fwStore.setListDensity(next_density);
     },
     // sorting handlers
     onSortHeader(e, header){
