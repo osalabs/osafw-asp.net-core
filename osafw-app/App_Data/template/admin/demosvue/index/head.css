@@ -16,28 +16,50 @@ h1 .badge {
  height: 0.7em;
 }
 
-
-table tbody td.editable {
- padding: 0;
+table.list-edit tbody td {
+  padding: 0;
+  border-width: 1px;
 }
 
-/*
-table tbody td.editable > div {
- display: block;
- max-width: 100%;
-}
-*/
 
-/*
-table tbody td.editable > div > input {
- border: 0px;
- line-height: 1.3rem;
+  table.list-edit tbody td.list-row-cb {
+    padding: 0.4rem 0.5rem;
+  }
+  table.list-edit tbody td.list-row-controls {
+    padding: 0.4rem 0.5rem;
+  }
+/**/
+
+  /*
+  table.list-edit tbody td > div {
+   display: block;
+   max-width: 100%;
+  }
+  */
+
+  table.list-edit tbody td > div.ro {
+    --bs-text-opacity: 1;
+    color: var(--bs-secondary-color) !important;
+    padding: 0.4rem 0.5rem;
+  }
+
+  table.list-edit tbody td > div > .form-control {
+   border: 0;
+   border-radius: 0;
+/*   line-height: 1.3rem;*/
+  }
+  table.list-edit tbody td > div > .form-select {
+    border: 0px;
+    border-radius: 0;
+   /*
+   appearance: auto;
+   height: 1.48rem;
+   */
+  }
+
+/* table-sm overrides */
+table.list-edit.table-sm tbody td > div.ro {
+  padding: 0.25rem 0.25rem;
 }
-*/
-table tbody td.editable > div > select {
- appearance: auto;
- /*
- border: 0px;
- height: 1.48rem;
- */
-}
+
+/* table-dense overrides */

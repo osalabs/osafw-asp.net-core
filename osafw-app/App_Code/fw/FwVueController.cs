@@ -27,78 +27,106 @@ public class FwVueController : FwController
     /// <returns>Hashtable - related template will be parsed, null - no templates parsed (if action did all the output)</returns>
     public virtual Hashtable IndexAction()
     {
+        var scope = reqs("scope");
+        var scopes = scope.Length > 0 ? Utils.commastr2hash(scope, "1") : [];
+        if (export_format.Length > 0)
+            scopes["list_rows"] = "1";
+
         // get filters from the search form
         initFilter();
 
         // set standard output - load html with Vue app
         Hashtable ps = [];
 
-        if (fw.isJsonExpected() || export_format.Length > 0)
+        if (fw.isJsonExpected())
         {
-            //do db work only if json or export expected
-
             // if json expected - return data only as json
             ps["_json"] = true;
-            setListSorting();
-
-            setListSearch();
-            setListSearchStatus();
-
-            setViewList(ps, list_filter_search, false);
-
-            //only select from db visible fields + id, save as comma-separated string into list_fields
-            //TODO refactor into method setListFields?
-            var headers = (ArrayList)ps["headers"]; //arraylist of hashtables, we need header["field_name"]
-            var quoted_fields = new ArrayList();
-            var is_id_in_fields = false;
-            foreach (Hashtable header in headers)
-            {
-                var field_name = (string)header["field_name"];
-                quoted_fields.Add(db.qid(field_name));
-                if (field_name == model0.field_id)
-                    is_id_in_fields = true;
-            }
-            //always include id field
-            if (!is_id_in_fields && !Utils.isEmpty(model0.field_id))
-                quoted_fields.Add(db.qid(model0.field_id));
-            //join quoted_fields arraylist into comma-separated string
-            list_fields = string.Join(",", quoted_fields.ToArray());
-
-            getListRows();
-
-            // if export - no need to parse templates and prep for them - just return empty hashtable asap
-            if (export_format.Length > 0)
-                return []; // return empty hashtable just in case action overriden to avoid check for null
-
-
-            //TODO filter rows for json output
-
-            // userlists support if necessary
-            if (this.is_userlists)
-                this.setUserLists(ps);
-
-            ps["XSS"] = fw.Session("XSS");
-            ps["access_level"] = fw.userAccessLevel;
-            //TODO only specific from global ps["global"] = fw.G;
-            ps["is_dynamic_index_edit_inline"] = Utils.f2bool(config["is_dynamic_index_edit_inline"]);
-
-            //editable list support - read from config
             Hashtable hfields = _fieldsToHash((ArrayList)this.config["showform_fields"]);
-            //add to headers data for editable list: is_ro, input_type
-            var editable_types = Utils.qh("input email number textarea date_popup datetime_popup autocomplete select cb radio yesno");
-            foreach (Hashtable header in headers)
-            {
-                var field_name = (string)header["field_name"];
-                var def = (Hashtable)hfields[field_name] ?? null;
-                if (def == null)
-                    continue;
 
-                var def_type = Utils.f2str(def["type"]);
-                header["input_type"] = def_type;
-                if (!editable_types.ContainsKey(def_type))
+            //do db work only if json or export expected
+            if (scopes.Count == 0 || scopes.ContainsKey("list_rows"))
+            {
+                setListSorting();
+
+                setListSearch();
+                setListSearchStatus();
+
+                setViewList(ps, list_filter_search, false);
+
+                //only select from db visible fields + id, save as comma-separated string into list_fields
+                setListFields(ps);
+                var headers = (ArrayList)ps["headers"];
+
+                getListRows();
+
+                // if export - no need to parse templates and prep for them - just return empty hashtable asap
+                if (export_format.Length > 0)
+                    return []; // return empty hashtable just in case action overriden to avoid check for null
+
+
+                //TODO filter rows for json output
+
+
+                ps["XSS"] = fw.Session("XSS");
+                ps["access_level"] = fw.userAccessLevel;
+                //TODO only specific from global ps["global"] = fw.G;            
+
+                //editable list support - read from config                
+                //add to headers data for editable list: is_ro, input_type, lookup_model, lookup_tpl
+                var editable_types = Utils.qh("input email number textarea date_popup datetime_popup autocomplete select cb radio yesno");
+                foreach (Hashtable header in headers)
                 {
-                    header["is_ro"] = true; // TODO make ability to override in controller as some edit type fields might not be editable due to access level or other conditions
+                    var field_name = (string)header["field_name"];
+                    var def = (Hashtable)hfields[field_name] ?? null;
+                    if (def == null)
+                        continue;
+
+                    var def_type = Utils.f2str(def["type"]);
+                    header["input_type"] = def_type;
+                    if (!editable_types.ContainsKey(def_type))
+                        header["is_ro"] = true; // TODO make ability to override in controller as some edit type fields might not be editable due to access level or other conditions
+
+                    var lookup_model = Utils.f2str(def["lookup_model"]);
+                    if (lookup_model.Length > 0)
+                        header["lookup_model"] = lookup_model;
+
+                    var lookup_tpl = Utils.f2str(def["lookup_tpl"]);
+                    if (lookup_tpl.Length > 0)
+                        header["lookup_tpl"] = lookup_tpl;
                 }
+            }
+
+            if (scopes.Count == 0 || scopes.ContainsKey("lookups"))
+            {
+                // userlists support if necessary
+                if (this.is_userlists)
+                    this.setUserLists(ps);
+
+                // extract lookups from config and add to ps
+                var lookups = new Hashtable();
+                var headers = (ArrayList)ps["headers"];
+                foreach (Hashtable header in headers)
+                {
+                    var field_name = (string)header["field_name"];
+                    var def = (Hashtable)hfields[field_name] ?? null;
+                    if (def == null)
+                        continue;
+
+                    var lookup_model = Utils.f2str(def["lookup_model"]);
+                    if (lookup_model.Length > 0)
+                    {
+                        lookups[lookup_model] = fw.model(lookup_model).listSelectOptions();
+                    }
+
+                    var lookup_tpl = Utils.f2str(def["lookup_tpl"]);
+                    if (lookup_tpl.Length > 0)
+                    {
+                        lookups[lookup_tpl] = FormUtils.selectTplOptions(lookup_tpl);
+                    }
+                }
+
+                ps["lookups"] = lookups;
             }
         }
 
@@ -168,6 +196,26 @@ public class FwVueController : FwController
                 result[(string)fldinfo["field"]] = fldinfo;
         }
         return result;
+    }
+
+    protected void setListFields(Hashtable ps)
+    {
+        //TODO have headers as controller class property
+        var headers = (ArrayList)ps["headers"]; //arraylist of hashtables, we need header["field_name"]
+        var quoted_fields = new ArrayList();
+        var is_id_in_fields = false;
+        foreach (Hashtable header in headers)
+        {
+            var field_name = (string)header["field_name"];
+            quoted_fields.Add(db.qid(field_name));
+            if (field_name == model0.field_id)
+                is_id_in_fields = true;
+        }
+        //always include id field
+        if (!is_id_in_fields && !Utils.isEmpty(model0.field_id))
+            quoted_fields.Add(db.qid(model0.field_id));
+        //join quoted_fields arraylist into comma-separated string
+        list_fields = string.Join(",", quoted_fields.ToArray());
     }
 
 }

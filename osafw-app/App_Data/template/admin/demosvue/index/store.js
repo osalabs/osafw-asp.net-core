@@ -12,7 +12,9 @@ const useFwStore = defineStore('fw', {
     my_userlists: [],
     is_readonly: false,
     user_view: {}, // UserViews record for current controller
-    is_dynamic_index_edit_inline: false, //true if list rows inline-editable 
+
+    // list edit support
+    is_dynamic_index_edit: false, //true if list rows inline-editable 
 
     // list filter, can contain: {pagenum:N, pagesize:N, sortby:'', sortdir:'asc|desc'}
     f: {
@@ -34,8 +36,8 @@ const useFwStore = defineStore('fw', {
     pager: [], // array of { pagenum:N, pagenum_show:N, is_cur_page:0|1, is_show_first:0|1, is_show_prev:0|1, is_show_next:0|1, pagenum_next:N}
     hchecked_rows: {}, // array of checked rows {row.id => 1}
 
-    //common lookups
-    lookups: {
+    //standard lookups
+    lookups_std: {
         statusf: [
             { id: '', iname: '- all -' },
             { id: 0, iname: 'Active' },
@@ -47,7 +49,9 @@ const useFwStore = defineStore('fw', {
             { id: 10, iname: 'Inactive' },
             { id: 127, iname: '[Deleted]' }
         ]
-    },
+        },
+    //entity-related lookups
+    lookups: {},
     //work vars
     loadIndexDebouncedTimeout: null
   }),
@@ -61,6 +65,9 @@ const useFwStore = defineStore('fw', {
       listRequestQuery: (state) => {
           // build request query from state.f, each parameter name should be int form "f[name]"
           let req = { dofilter: 1 };
+          if (state.is_dynamic_index_edit) {
+              req.is_list_edit = 1;
+          }
           Object.keys(state.f).forEach(key => {
               if ((state.f[key]??'') !== '') {
                   req['f[' + key + ']'] = state.f[key];

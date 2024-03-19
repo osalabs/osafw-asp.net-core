@@ -6,7 +6,7 @@
     <div :class="'table-list-wrapper ' + fwStore.user_view.density">
       <div class="table-list-hscroll-hint"><~/common/icons/info-circle-fill> use <kbd>Shift+Mouse Wheel</kbd> for an easy horizontal scrolling
       </div>
-      <table :class="'table table-stripedX table-hover list ' + fwStore.user_view.density">
+      <table :class="'table table-stripedX table-hover list ' + (fwStore.is_dynamic_index_edit?'list-edit ':'') + fwStore.user_view.density">
         <thead>
             <tr>
               <th><input type="checkbox" name="all" v-model="cb_check_all" @change="onCheckAll"></th>
@@ -67,9 +67,9 @@
                 :class="fwStore.hchecked_rows[row[fwStore.field_id]] ? 'selected' : ''"
                 @click="(event) => onClickRow(event,row)">
 
-                <td><input class="multicb" type="checkbox" v-model="fwStore.hchecked_rows[row[fwStore.field_id]]"></td>
+                <td class="list-row-cb"><input class="multicb" type="checkbox" v-model="fwStore.hchecked_rows[row[fwStore.field_id]]"></td>
                 <!--TODO make common component for row btn-->
-                <td :class="'text-nowrap d-print-none '+(fwStore.global.is_list_btn_left?'':'text-end')" v-if="fwStore.global.is_list_btn_left">
+                <td :class="'list-row-controls text-nowrap d-print-none '+(fwStore.global.is_list_btn_left?'':'text-end')" v-if="fwStore.global.is_list_btn_left">
                   <a href="<~../url>/<~id><~/common/list/relid>">`View`</a>
                   <~/common/dot><a href="<~row_click_url>">`Edit`</a>
                   <~/common/dot><a href="<~../url>/<~id>/delete<~/common/list/relid>"
@@ -78,14 +78,14 @@
                 </td>
 
                 <template v-for="(header, key) in fwStore.headers" :key="key">
-                  <td v-if="!fwStore.is_dynamic_index_edit_inline">{{fieldValueByName(row, header.field_name)}}</td>
-                  <td v-else class="editable">
+                  <td v-if="!fwStore.is_dynamic_index_edit">{{fieldValueByName(row, header.field_name)}}</td>
+                  <td v-else>
                       <!-- editable mode -->
                       <!-- readonly row or column -->
                       <list-cell-ro v-if="header.is_ro || row._meta?.is_ro || row._meta?.ro_fields?.includes(header.field_name)" :row="row" :col="header"></list-cell-ro>
                       <!-- editable row or column -->
                       <list-cell-input v-else-if="header.input_type=='input'" :row="row" :col="header"></list-cell-input>
-                      <list-cell-select v-else-if="header.input_type=='select'" :row="row" :col="header"></list-cell-select>
+                      <list-cell-select v-else-if="header.input_type=='select'" :row="row" :col="header" :options="lookupByHeader(header)"></list-cell-select>
                       <list-cell-date v-else-if="header.input_type=='date'" :row="row" :col="header"></list-cell-date>
                       <list-cell-email v-else-if="header.input_type=='email'" :row="row" :col="header"></list-cell-email>
                       <td v-else class="text-danger">{{fieldValueByName(row, header.field_name)}}</td>
@@ -93,7 +93,7 @@
                 </template>
 
                 <!--TODO make common component for row btn-->
-                <td :class="'text-nowrap d-print-none '+(fwStore.global.is_list_btn_left?'':'text-end')" v-if="!fwStore.global.is_list_btn_left">
+                <td :class="'list-row-controls text-nowrap d-print-none '+(fwStore.global.is_list_btn_left?'':'text-end')" v-if="!fwStore.global.is_list_btn_left">
                   <a href="<~../url>/<~id><~/common/list/relid>">`View`</a>
                   <~/common/dot><a href="<~row_click_url>">`Edit`</a>
                   <~/common/dot><a href="<~../url>/<~id>/delete<~/common/list/relid>"
@@ -164,6 +164,16 @@ fwApp.component('list-table', {
         //add here any additional processing if needed
         return row[field_name];
     },
+    lookupByHeader(header){
+      var lookup_model = header.lookup_model;
+      if (lookup_model){
+        return this.fwStore.lookups[lookup_model]??[];
+      }
+      var lookup_tpl = header.lookup_tpl;
+      if (lookup_tpl){
+        return this.fwStore.lookups[lookup_tpl]??[];
+      }
+    },
     resetCheckedRows() {
         this.fwStore.hchecked_rows = [];
         this.cb_check_all = false;
@@ -217,8 +227,8 @@ fwApp.component('list-table', {
     onClickRow(e, row){
         console.log('onClickRow',e);
         var tag_name = e.target.tagName.toLowerCase();
-        if (tag_name === 'a'||tag_name === 'button'){
-          return; // do not process if link/button clicked
+        if (tag_name === 'a'||tag_name === 'button'||tag_name === 'input'||tag_name === 'textarea'||tag_name === 'select'){
+          return; // do not process if link/button/input clicked
         }
 
         const row_id = row[this.fwStore.field_id];

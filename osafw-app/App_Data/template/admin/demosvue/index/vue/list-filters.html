@@ -69,7 +69,7 @@ fwApp.component('list-filters', {
   computed: {
         ...mapStores(useFwStore), //accessible via this.fwStore
         lookup_statusf() {
-          return this.fwStore.access_level<100 ? this.fwStore.lookups.statusf : this.fwStore.lookups.statusf_admin;
+          return this.fwStore.access_level<100 ? this.fwStore.lookups_std.statusf : this.fwStore.lookups_std.statusf_admin;
         },
   },
   mounted() {
@@ -77,7 +77,7 @@ fwApp.component('list-filters', {
   },
   methods: {
       urlExport(type) {
-          let req = this.fwStore.listRequestQuery;
+          let req = {...this.fwStore.listRequestQuery}; //{...} because of getters caching?
           req.export = type;
           //convert req object to query string - TODO move to utils
           let query = Object.keys(req).map(key => encodeURIComponent(key) + '=' + encodeURIComponent(req[key])).join('&');

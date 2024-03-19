@@ -47,6 +47,10 @@ public abstract class FwController
     protected string search_fields;              // optional, search fields, space-separated
                                                  // fields to search via $s=list_filter["s"), ] - means exact match, not "like"
 
+    // editable list support
+    protected bool is_dynamic_index_edit = false;
+    protected bool is_list_edit = false;         // true if requested list edit mode and it's allowed by is_dynamic_index_edit
+
     public string export_format = "";            // empty or "csv" or "xls" (set from query string "export") - export format for IndexAction
     protected string export_filename = "export"; // default filename for export, without extension
 
@@ -90,6 +94,7 @@ public abstract class FwController
         return_url = reqs("return_url");
         related_id = reqs("related_id");
         export_format = reqs("export");
+        is_list_edit = reqb("is_list_edit") && is_dynamic_index_edit;
     }
 
     // load controller config from json in template dir (based on base_url)
@@ -171,6 +176,30 @@ public abstract class FwController
                 search_fields = getViewListUserFields(); // just search in all visible fields if no specific fields defined
         }
 
+        is_dynamic_index_edit = Utils.f2bool(this.config["is_dynamic_index_edit"]);
+        if (is_dynamic_index_edit)
+        {
+            //list edit is on - override view used for list
+            var list_edit = Utils.f2str(config["list_edit"]);
+            if (!Utils.isEmpty(list_edit))
+                list_view = list_edit;
+
+            //override list defaults if set
+            if (!Utils.isEmpty(config["edit_list_defaults"]))
+                view_list_defaults = Utils.f2str(config["edit_list_defaults"]);
+
+            //override list map if set
+            // since edit_list_map could be defined as qw string or as hashtable - check and convert
+            if (!Utils.isEmpty(config["edit_list_map"]))
+            {
+                var raw_edit_list_map = config["edit_list_map"];
+                if (raw_edit_list_map is IDictionary)
+                    view_list_map = (Hashtable)raw_edit_list_map;
+                else
+                    view_list_map = Utils.qh((string)raw_edit_list_map);
+            }
+        }
+
         is_dynamic_show = Utils.f2bool(this.config["is_dynamic_show"]);
         is_dynamic_showform = Utils.f2bool(this.config["is_dynamic_showform"]);
 
@@ -211,6 +240,10 @@ public abstract class FwController
     public object reqd(string iname)
     {
         return Utils.f2date(fw.FORM[iname]);
+    }
+    public bool reqb(string iname)
+    {
+        return Utils.f2bool(fw.FORM[iname]);
     }
 
     public void rw(string str)
@@ -906,6 +939,7 @@ public abstract class FwController
         ps["base_url"] = this.base_url;
         ps["is_userlists"] = this.is_userlists;
         ps["is_readonly"] = is_readonly;
+        ps["is_dynamic_index_edit"] = is_dynamic_index_edit;
 
         //implement "Showing FROM to TO of TOTAL records"
         if (this.list_rows != null && this.list_rows.Count > 0)
@@ -1022,7 +1056,7 @@ public abstract class FwController
 
     public virtual string getViewListUserFields()
     {
-        var item = fw.model<UserViews>().oneByIcode(base_url); // base_url is screen identifier
+        var item = fw.model<UserViews>().oneByIcode(base_url + (is_list_edit ? "/edit" : "")); // base_url is screen identifier
         var fields = (string)item["fields"] ?? "";
         return (fields.Length > 0 ? fields : view_list_defaults);
     }
@@ -1088,7 +1122,7 @@ public abstract class FwController
     // model.setViewList(ps, list_filter_search)
     public virtual void setViewList(Hashtable ps, Hashtable hsearch, bool is_cols = true)
     {
-        var user_view = fw.model<UserViews>().oneByIcode(base_url);
+        var user_view = fw.model<UserViews>().oneByIcode(base_url + (is_list_edit ? "/edit" : ""));
         ps["user_view"] = user_view;
 
         var fields = getViewListUserFields();
