@@ -52,8 +52,10 @@ const useFwStore = defineStore('fw', {
         },
     //entity-related lookups
     lookups: {},
+
     //work vars
-    loadIndexDebouncedTimeout: null
+    loadIndexDebouncedTimeout: null,
+    is_initial_load: true //reset after initial load
   }),
 
   getters: {
@@ -67,6 +69,9 @@ const useFwStore = defineStore('fw', {
           let req = { dofilter: 1 };
           if (state.is_dynamic_index_edit) {
               req.is_list_edit = 1;
+          }
+          if (!state.is_initial_load) {
+              req.scope = 'list_rows'; // after initial load we only need list_rows
           }
           Object.keys(state.f).forEach(key => {
               if ((state.f[key]??'') !== '') {
@@ -89,7 +94,9 @@ const useFwStore = defineStore('fw', {
   actions: {
     // set one or multiple filter values and reload list
     setFilters(filters) {
-        console.log('setFilters', filters);
+        console.log('setFilters', filters);       
+        //whenever filters changed - reset page to first (if no specific page set)
+        if (filters.pagenum === undefined) filters.pagenum = 0;        
         //merge filters into state.f
         this.$state.f = { ...this.$state.f, ...filters };
         this.loadIndexDebounced();
@@ -135,6 +142,8 @@ const useFwStore = defineStore('fw', {
 
             // set defaults
             this.user_view.density = this.user_view.density ?? 'table-sm';
+            
+            this.is_initial_load = false; // reset initial load flag
 
         } catch (error) {
             console.error('loadIndex error:', error.body?.err_msg??'server error');

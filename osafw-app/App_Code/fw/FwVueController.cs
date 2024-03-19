@@ -56,6 +56,7 @@ public class FwVueController : FwController
 
                 //only select from db visible fields + id, save as comma-separated string into list_fields
                 setListFields(ps);
+                ps.Remove("headers_search"); // TODO refactor to not include in ps at all even for ParsePage controllers
                 var headers = (ArrayList)ps["headers"];
 
                 getListRows();

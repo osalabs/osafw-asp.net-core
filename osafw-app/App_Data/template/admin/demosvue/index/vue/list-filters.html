@@ -1,6 +1,6 @@
 <script type="text/x-template" id="list-filters-template">
  <div>
-  <form class="fw-card" data-list-filter @submit.prevent @change="fwStore.loadIndexDebounced">
+  <form class="fw-card" data-list-filter @submit.prevent @change="fwStore.setFilters({})">
     <div class="row form-row">
       <label class="col-form-label col-md-2 col-xl-1" for="fs">`Search`</label>
       <div class="col">
