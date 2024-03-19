@@ -21,21 +21,12 @@ table.list-edit tbody td {
   border-width: 1px;
 }
 
-
   table.list-edit tbody td.list-row-cb {
     padding: 0.4rem 0.5rem;
   }
   table.list-edit tbody td.list-row-controls {
     padding: 0.4rem 0.5rem;
   }
-/**/
-
-  /*
-  table.list-edit tbody td > div {
-   display: block;
-   max-width: 100%;
-  }
-  */
 
   table.list-edit tbody td > div.ro {
     --bs-text-opacity: 1;
@@ -46,20 +37,52 @@ table.list-edit tbody td {
   table.list-edit tbody td > div > .form-control {
    border: 0;
    border-radius: 0;
-/*   line-height: 1.3rem;*/
   }
   table.list-edit tbody td > div > .form-select {
     border: 0px;
     border-radius: 0;
-   /*
-   appearance: auto;
-   height: 1.48rem;
-   */
   }
 
 /* table-sm overrides */
+table.list-edit.table-sm tbody td.list-row-cb {
+  padding: 0.25rem 0.25rem;
+}
+table.list-edit.table-sm tbody td.list-row-controls {
+  padding: 0.25rem 0.25rem;
+}
 table.list-edit.table-sm tbody td > div.ro {
   padding: 0.25rem 0.25rem;
 }
+table.list-edit.table-sm tbody td > div > .form-control {
+  min-height: calc(1.5em + .5rem + calc(var(--bs-border-width) * 2));
+  padding: .25rem .5rem;
+  font-size: .875rem;
+}
+table.list-edit.table-sm tbody td > div > .form-select {
+  padding-top: .31rem;
+  padding-bottom: .32rem;
+  padding-left: .5rem;
+  font-size: .875rem;
+}
 
 /* table-dense overrides */
+table.list-edit.table-dense tbody td.list-row-cb {
+  padding: 0 0.1rem;
+}
+table.list-edit.table-dense tbody td.list-row-controls {
+  padding: 0 0.1rem;
+}
+table.list-edit.table-dense tbody td > div.ro {
+  padding: 0 0.1rem;
+}
+table.list-edit.table-dense tbody td > div > .form-control {
+  min-height: auto;
+  padding: 0 .5rem;
+  font-size: .7rem;
+}
+table.list-edit.table-dense tbody td > div > .form-select {
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: .5rem;
+  font-size: .7rem;
+}
