@@ -715,7 +715,7 @@ public class FW : IDisposable
             }
             catch (Exception ex)
             {
-                logger(LogLevel.WARN, "Request JSON parse error", ex);
+                logger(LogLevel.WARN, "Request JSON parse error", ex.ToString());
             }
         }
 

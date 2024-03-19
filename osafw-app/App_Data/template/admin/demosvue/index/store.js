@@ -14,7 +14,7 @@ const useFwStore = defineStore('fw', {
     user_view: {}, // UserViews record for current controller
 
     // list edit support
-    is_dynamic_index_edit: false, //true if list rows inline-editable 
+    is_list_edit: false, //true if list rows inline-editable 
 
     // list filter, can contain: {pagenum:N, pagesize:N, sortby:'', sortdir:'asc|desc'}
     f: {
@@ -66,10 +66,7 @@ const useFwStore = defineStore('fw', {
       countCheckedRows: (state) => Object.values(state.hchecked_rows).filter(v => v).length,
       listRequestQuery: (state) => {
           // build request query from state.f, each parameter name should be int form "f[name]"
-          let req = { dofilter: 1 };
-          if (state.is_dynamic_index_edit) {
-              req.is_list_edit = 1;
-          }
+          let req = { dofilter: 1, is_list_edit: state.is_list_edit };
           if (!state.is_initial_load) {
               req.scope = 'list_rows'; // after initial load we only need list_rows
           }

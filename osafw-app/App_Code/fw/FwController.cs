@@ -94,7 +94,6 @@ public abstract class FwController
         return_url = reqs("return_url");
         related_id = reqs("related_id");
         export_format = reqs("export");
-        is_list_edit = reqb("is_list_edit") && is_dynamic_index_edit;
     }
 
     // load controller config from json in template dir (based on base_url)
@@ -179,24 +178,33 @@ public abstract class FwController
         is_dynamic_index_edit = Utils.f2bool(this.config["is_dynamic_index_edit"]);
         if (is_dynamic_index_edit)
         {
-            //list edit is on - override view used for list
-            var list_edit = Utils.f2str(config["list_edit"]);
-            if (!Utils.isEmpty(list_edit))
-                list_view = list_edit;
+            //combine with request param
+            if (Utils.isEmpty(req("is_list_edit")))
+                is_list_edit = is_dynamic_index_edit;
+            else
+                is_list_edit = reqb("is_list_edit") && is_dynamic_index_edit;
 
-            //override list defaults if set
-            if (!Utils.isEmpty(config["edit_list_defaults"]))
-                view_list_defaults = Utils.f2str(config["edit_list_defaults"]);
-
-            //override list map if set
-            // since edit_list_map could be defined as qw string or as hashtable - check and convert
-            if (!Utils.isEmpty(config["edit_list_map"]))
+            if (is_list_edit)
             {
-                var raw_edit_list_map = config["edit_list_map"];
-                if (raw_edit_list_map is IDictionary)
-                    view_list_map = (Hashtable)raw_edit_list_map;
-                else
-                    view_list_map = Utils.qh((string)raw_edit_list_map);
+                //list edit is on - override view used for list
+                var list_edit = Utils.f2str(config["list_edit"]);
+                if (!Utils.isEmpty(list_edit))
+                    list_view = list_edit;
+
+                //override list defaults if set
+                if (!Utils.isEmpty(config["edit_list_defaults"]))
+                    view_list_defaults = Utils.f2str(config["edit_list_defaults"]);
+
+                //override list map if set
+                // since edit_list_map could be defined as qw string or as hashtable - check and convert
+                if (!Utils.isEmpty(config["edit_list_map"]))
+                {
+                    var raw_edit_list_map = config["edit_list_map"];
+                    if (raw_edit_list_map is IDictionary)
+                        view_list_map = (Hashtable)raw_edit_list_map;
+                    else
+                        view_list_map = Utils.qh((string)raw_edit_list_map);
+                }
             }
         }
 
@@ -939,7 +947,7 @@ public abstract class FwController
         ps["base_url"] = this.base_url;
         ps["is_userlists"] = this.is_userlists;
         ps["is_readonly"] = is_readonly;
-        ps["is_dynamic_index_edit"] = is_dynamic_index_edit;
+        ps["is_list_edit"] = is_list_edit;
 
         //implement "Showing FROM to TO of TOTAL records"
         if (this.list_rows != null && this.list_rows.Count > 0)
