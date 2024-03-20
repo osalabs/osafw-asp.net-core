@@ -3,6 +3,7 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2024 Oleg Savchuk www.osalabs.com
 
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -136,6 +137,161 @@ public class FwVueController : FwController
         return ps;
     }
 
+    public virtual Hashtable SaveAction(int id = 0)
+    {
+        if (this.save_fields == null)
+            throw new Exception("No fields to save defined, define in Controller.save_fields");
+        if (reqi("refresh") == 1)
+            throw new Exception("Wrong use refresh=1 on Vue Controller");
+
+        fw.model<Users>().checkReadOnly();
+
+        Hashtable item = reqh("item");
+        var success = true;
+        var is_new = (id == 0);
+
+        Validate(id, item);
+        // load old record if necessary
+        // Dim item_old As Hashtable = model0.one(id)
+
+        Hashtable itemdb = FormUtils.filter(item, this.save_fields);
+        FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes);
+        FormUtils.filterNullable(itemdb, save_fields_nullable);
+
+        id = this.modelAddOrUpdate(id, itemdb);
+
+        return this.afterSave(success, id, is_new);
+    }
+
+    /// <summary>
+    /// Performs submitted form validation for required field and simple validations: exits, isemail, isphone, isdate, isfloat.
+    /// If more complex validation required - just override this and call just necessary validation
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="item"></param>
+    public virtual void Validate(int id, Hashtable item)
+    {
+        bool result = validateRequiredDynamic(item);
+
+        if (result && is_dynamic_showform)
+            validateSimpleDynamic(id, item);
+
+        // If result AndAlso Not SomeOtherValidation() Then
+        // FW.FERR("other field name") = "HINT_ERR_CODE"
+        // End If
+
+        this.validateCheckResult();
+    }
+
+    protected virtual bool validateRequiredDynamic(Hashtable item)
+    {
+        var result = true;
+        if (string.IsNullOrEmpty(this.required_fields) && is_dynamic_showform)
+        {
+            // if required_fields not defined - fill from showform_fields
+            ArrayList fields = (ArrayList)this.config["showform_fields"];
+            ArrayList req = new();
+            foreach (Hashtable def in fields)
+            {
+                if (Utils.f2bool(def["required"]))
+                    req.Add(def["field"]);
+            }
+
+            if (req.Count > 0)
+                result = this.validateRequired(item, req.ToArray());
+        }
+        else
+            result = this.validateRequired(item, this.required_fields);
+        return result;
+    }
+
+    // simple validation via showform_fields
+    protected virtual bool validateSimpleDynamic(int id, Hashtable item)
+    {
+        bool result = true;
+
+        var subtable_del = reqh("subtable_del");
+
+        ArrayList fields = (ArrayList)this.config["showform_fields"];
+        foreach (Hashtable def in fields)
+        {
+            string field = (string)def["field"];
+            if (string.IsNullOrEmpty(field))
+                continue;
+
+            string type = (string)def["type"];
+
+            if (type == "subtable_edit")
+            {
+                //validate subtable rows
+                var model_name = (string)def["model"];
+                var sub_model = fw.model(model_name);
+
+                var save_fields = (string)def["required_fields"] ?? "";
+                var save_fields_checkboxes = (string)def["save_fields_checkboxes"];
+
+                //check if we delete specific row
+                var del_id = (string)subtable_del[model_name] ?? "";
+
+                // row ids submitted as: item-<~model>[<~id>]
+                // input name format: item-<~model>#<~id>[field_name]
+                var hids = reqh("item-" + model_name);
+                // sort hids.Keys, so numerical keys - first and keys staring with "new-" will be last
+                var sorted_keys = hids.Keys.Cast<string>().OrderBy(x => x.StartsWith("new-") ? 1 : 0).ThenBy(x => x).ToList();
+                foreach (string row_id in sorted_keys)
+                {
+                    if (row_id == del_id) continue; //skip deleted row
+
+                    var row_item = reqh("item-" + model_name + "#" + row_id);
+                    Hashtable itemdb = FormUtils.filter(row_item, save_fields);
+                    FormUtils.filterCheckboxes(itemdb, row_item, save_fields_checkboxes);
+
+                    if (row_id.StartsWith("new-"))
+                        itemdb[sub_model.junction_field_main_id] = id;
+
+                    //VAILIDATE itemdb
+                    //TODO VUE var is_valid = validateSubtableRowDynamic(row_id, itemdb, def);
+                }
+            }
+            else
+            {
+                // other types - use "validate" field
+                var val = Utils.qh((string)def["validate"]);
+                if (val.Count > 0)
+                {
+                    string field_value = (string)item[field];
+
+                    if (val.ContainsKey("exists") && model0.isExistsByField(field_value, id, field))
+                    {
+                        fw.FormErrors[field] = "EXISTS";
+                        result = false;
+                    }
+                    if (val.ContainsKey("isemail") && !FormUtils.isEmail(field_value))
+                    {
+                        fw.FormErrors[field] = "WRONG";
+                        result = false;
+                    }
+                    if (val.ContainsKey("isphone") && !FormUtils.isPhone(field_value))
+                    {
+                        fw.FormErrors[field] = "WRONG";
+                        result = false;
+                    }
+                    if (val.ContainsKey("isdate") && !Utils.isDate(field_value))
+                    {
+                        fw.FormErrors[field] = "WRONG";
+                        result = false;
+                    }
+                    if (val.ContainsKey("isfloat") && !Utils.isFloat(field_value))
+                    {
+                        fw.FormErrors[field] = "WRONG";
+                        result = false;
+                    }
+                }
+            }
+
+        }
+        return result;
+    }
 
     //TODO refactor with FwDynamicController same method to deduplicate code
     public virtual Hashtable SaveUserViewsAction()

@@ -458,7 +458,7 @@ public class FW : IDisposable
                 {
                     if (!string.IsNullOrEmpty(route.id))
                     {
-                        if (request.Form.Count > 0 || request.ContentLength > 0)
+                        if (request.HasFormContentType && request.Form.Count > 0 || request.ContentLength > 0)
                             route.action_raw = ACTION_SAVE;
                         else
                             route.action_raw = ACTION_DELETE;

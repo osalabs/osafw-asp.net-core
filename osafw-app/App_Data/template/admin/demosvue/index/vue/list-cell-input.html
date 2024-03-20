@@ -1,7 +1,11 @@
 <script type="text/x-template" id="list-cell-input">
  <div>
       <input type="text" class="form-control"
-        :value="row[col.field_name]">
+        v-model="row[col.field_name]"
+        @focus="onFocus"
+        @blur="$emit('blur', $event)"
+        @keydown.esc.prevent="onCancel"
+        >
   </div>
 </script>
 
@@ -9,14 +13,23 @@
 fwApp.component('list-cell-input', {
   template: '#list-cell-input',
   props: ['row', 'col'],
+  emits: ['focus', 'blur'],
   data: () => ({
-    xxx: null,
+    initial_value: '', //value before change
   }),
   mounted(){
   },
   updated(){
   },
   methods: {
+    onFocus(e){
+      this.initial_value = this.row[this.col.field_name];
+      this.$emit('focus', e);
+    },
+    onCancel(e){
+      this.row[this.col.field_name] = this.initial_value;
+      console.log('changes cancelled');
+    }
   }
 });
 </script>

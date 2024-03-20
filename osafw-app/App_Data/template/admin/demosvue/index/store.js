@@ -149,6 +149,28 @@ const useFwStore = defineStore('fw', {
             return error;
         }
     },
+    async saveCell(row, col){
+        let id = row.id;
+        let field_name = col.field_name;
+        let value = row[field_name];
+
+        let item = { [field_name]: value };
+
+        try{
+          const apiBase = mande(this.base_url);
+            
+          const req = { item: item, XSS: this.XSS };
+          console.log('saveCell req', id, req);
+          const response = await apiBase.post(id, req);
+          console.log('saveCell response', response);
+
+        } catch (error) {
+            console.error('saveCell error:', error.body?.err_msg??'server error');
+            console.error(error);
+            //fw.error(error);
+            return error;
+        }
+    },
 
     // sample async action TODO REMOVE
     async registerUser(login, password) {

@@ -72,7 +72,11 @@
                       <!-- readonly row or column -->
                       <list-cell-ro v-if="header.is_ro || row._meta?.is_ro || row._meta?.ro_fields?.includes(header.field_name)" :row="row" :col="header"></list-cell-ro>
                       <!-- editable row or column -->
-                      <list-cell-input v-else-if="header.input_type=='input'" :row="row" :col="header"></list-cell-input>
+                      <list-cell-input v-else-if="header.input_type=='input'" :row="row" :col="header"
+                        @input="onCellInput($event, row, header)"
+                        @change="onCellChange($event, row, header)"
+                        @keydown.enter.prevent="onCellKeyEnter($event, row, header)"
+                        ></list-cell-input>
                       <list-cell-select v-else-if="header.input_type=='select'" :row="row" :col="header" :options="lookupByHeader(header)"></list-cell-select>
                       <list-cell-date v-else-if="header.input_type=='date'" :row="row" :col="header"></list-cell-date>
                       <list-cell-email v-else-if="header.input_type=='email'" :row="row" :col="header"></list-cell-email>
@@ -210,8 +214,19 @@ fwApp.component('list-table', {
         }else{
           this.fwStore.hchecked_rows=[];
         }
-    }
+    },
 
+    // work with a cell
+    onCellInput(e, row, col){
+
+    },
+    onCellChange(e, row, col){
+      this.fwStore.saveCell(row, col);
+    },
+    onCellKeyEnter(e, row, col){
+      //user clicked Enter on cell input - save changes to server
+      this.fwStore.saveCell(row, col);
+    }
   }
 });
 </script>

@@ -434,7 +434,11 @@ public abstract class FwController
         }
 
         if (!result)
+        {
+            logger(LogLevel.DEBUG, "Validation failed:", fw.FormErrors);
             throw new ValidationException();
+        }
+
     }
 
     /// <summary>
