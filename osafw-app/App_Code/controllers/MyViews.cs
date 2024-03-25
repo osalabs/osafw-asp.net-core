@@ -84,18 +84,18 @@ public class MyViewsController : FwAdminController
         var success = true;
         var is_new = (id == 0);
 
-            Validate(id, item);
-            // load old record if necessary
-            // Dim item_old As Hashtable = model0.one(id)
+        Validate(id, item);
+        // load old record if necessary
+        // Dim item_old As Hashtable = model0.one(id)
 
-            Hashtable itemdb = FormUtils.filter(item, this.save_fields);
-            FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes);
+        Hashtable itemdb = FormUtils.filter(item, this.save_fields);
+        FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
 
-            if (is_new)
-                // read new filter data from session
-                itemdb["idesc"] = Utils.jsonEncode(fw.Session("_filter_" + item["icode"]));
+        if (is_new)
+            // read new filter data from session
+            itemdb["idesc"] = Utils.jsonEncode(fw.Session("_filter_" + item["icode"]));
 
-            id = this.modelAddOrUpdate(id, itemdb);
+        id = this.modelAddOrUpdate(id, itemdb);
 
         if (!string.IsNullOrEmpty(return_url))
             fw.redirect(return_url);

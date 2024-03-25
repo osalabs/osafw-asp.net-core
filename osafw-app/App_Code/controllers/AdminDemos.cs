@@ -118,7 +118,7 @@ public class AdminDemosController : FwAdminController
         // Dim item_old As Hashtable = model.one(id)
 
         Hashtable itemdb = FormUtils.filter(item, this.save_fields);
-        FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes);
+        FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
         itemdb["dict_link_auto_id"] = model_related.findOrAddByIname((string)item["dict_link_auto_id_iname"], out _);
         itemdb["dict_link_multi"] = FormUtils.multi2ids(reqh("dict_link_multi"));
         itemdb["fdate_combo"] = FormUtils.dateForCombo(item, "fdate_combo");

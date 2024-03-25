@@ -155,7 +155,7 @@ public class FwVueController : FwController
         // Dim item_old As Hashtable = model0.one(id)
 
         Hashtable itemdb = FormUtils.filter(item, this.save_fields);
-        FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes);
+        FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
         FormUtils.filterNullable(itemdb, save_fields_nullable);
 
         id = this.modelAddOrUpdate(id, itemdb);
@@ -210,6 +210,7 @@ public class FwVueController : FwController
     {
         bool result = true;
 
+        var is_new = (id == 0);
         var subtable_del = reqh("subtable_del");
 
         ArrayList fields = (ArrayList)this.config["showform_fields"];
@@ -244,7 +245,7 @@ public class FwVueController : FwController
 
                     var row_item = reqh("item-" + model_name + "#" + row_id);
                     Hashtable itemdb = FormUtils.filter(row_item, save_fields);
-                    FormUtils.filterCheckboxes(itemdb, row_item, save_fields_checkboxes);
+                    FormUtils.filterCheckboxes(itemdb, row_item, save_fields_checkboxes, isPatch());
 
                     if (row_id.StartsWith("new-"))
                         itemdb[sub_model.junction_field_main_id] = id;
@@ -259,7 +260,11 @@ public class FwVueController : FwController
                 var val = Utils.qh((string)def["validate"]);
                 if (val.Count > 0)
                 {
-                    string field_value = (string)item[field];
+                    //for existing records only validate submitted fields
+                    if (!is_new && !item.ContainsKey(field))
+                        continue;
+
+                    string field_value = Utils.f2str(item[field]);
 
                     if (val.ContainsKey("exists") && model0.isExistsByField(field_value, id, field))
                     {

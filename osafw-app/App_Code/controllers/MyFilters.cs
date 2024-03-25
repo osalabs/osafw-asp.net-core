@@ -88,7 +88,7 @@ public class MyFiltersController : FwAdminController
             throw new UserException("Cannot overwrite system filter");
 
         Hashtable itemdb = FormUtils.filter(item, this.save_fields);
-        FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes);
+        FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
 
         if (is_new || is_overwrite)
             // read new filter data from session

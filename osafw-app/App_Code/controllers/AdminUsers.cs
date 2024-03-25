@@ -76,7 +76,7 @@ public class AdminUsersController : FwDynamicController
         // Dim item_old As Hashtable = model0.one(id)
 
         Hashtable itemdb = FormUtils.filter(item, this.save_fields);
-        FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes);
+        FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
         FormUtils.filterNullable(itemdb, save_fields_nullable);
 
         itemdb["pwd"] = itemdb["pwd"].ToString().Trim();

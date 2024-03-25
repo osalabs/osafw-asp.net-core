@@ -161,7 +161,7 @@ const useFwStore = defineStore('fw', {
             
           const req = { item: item, XSS: this.XSS };
           console.log('saveCell req', id, req);
-          const response = await apiBase.post(id, req);
+          const response = await apiBase.patch(id, req);
           console.log('saveCell response', response);
 
         } catch (error) {

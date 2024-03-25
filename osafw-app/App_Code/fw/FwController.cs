@@ -223,6 +223,15 @@ public abstract class FwController
         return (fw.route.method == "GET");
     }
 
+    /// <summary>
+    /// return true if current request is PATCH request
+    /// </summary>
+    /// <returns></returns>
+    public bool isPatch()
+    {
+        return (fw.route.method == "PATCH");
+    }
+
     // set of helper functions to return string, integer, date values from request (fw.FORM)
     public object req(string iname)
     {

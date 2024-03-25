@@ -97,7 +97,7 @@ public class FW : IDisposable
     public const string ACTION_MORE_DELETE = "delete";
 
     public const string FW_NAMESPACE_PREFIX = "osafw.";
-    public static Hashtable METHOD_ALLOWED = Utils.qh("GET POST PUT DELETE");
+    public static Hashtable METHOD_ALLOWED = Utils.qh("GET POST PUT PATCH DELETE");
 
     private readonly Hashtable models = new();
     public FwCache cache = new(); // request level cache
@@ -367,7 +367,7 @@ public class FW : IDisposable
                 if (url == route_key)
                 {
                     string rdest = (string)routes[route_key];
-                    Match m1 = Regex.Match(rdest, "^(?:(GET|POST|PUT|DELETE) )?(.+)");
+                    Match m1 = Regex.Match(rdest, "^(?:(GET|POST|PUT|PATCH|DELETE) )?(.+)");
                     if (m1.Success)
                     {
                         // override method
@@ -416,8 +416,10 @@ public class FW : IDisposable
             // GET   /controller/{id}[.format]   Show     (show in format - not for editing)
             // GET   /controller/{id}/edit       ShowForm (show edit form - ShowEdit)
             // GET   /controller/{id}/delete     ShowDelete
-            // POST/PUT  /controller/{id}        Save     (save changes to exisitng record - Update    Note:Request.Form should contain data
-            // POST/DELETE  /controller/{id}            Delete    Note:Request.Form should NOT contain any data
+            // POST/PUT  /controller/{id}        Save     (save changes to exisitng record - Update    Note:Request.Form should contain data. Assumes whole form submit. I.e. unchecked checkboxe treated as empty value)
+            // PATCH /controller                 SaveMulti (partial update multiple records)
+            // PATCH /controller/{id}            Save     (save partial changes to exisitng record - Update. Can be used to update single/specific fields without affecting any other fields.)
+            // POST/DELETE  /controller/{id}     Delete    Note:Request.Form should NOT contain any data
             //
             // /controller/(Action)              Action    call for arbitrary action from the controller
             Match m = Regex.Match(url, @"^/([^/]+)(?:/(new|\.\w+)|/([\d\w_-]+)(?:\.(\w+))?(?:/(edit|delete))?)?/?$");
@@ -467,6 +469,13 @@ public class FW : IDisposable
                         route.action_raw = ACTION_SAVE;
                 }
                 else if (route.method == "PUT")
+                {
+                    if (!string.IsNullOrEmpty(route.id))
+                        route.action_raw = ACTION_SAVE;
+                    else
+                        route.action_raw = ACTION_SAVE_MULTI;
+                }
+                else if (route.method == "PATCH")
                 {
                     if (!string.IsNullOrEmpty(route.id))
                         route.action_raw = ACTION_SAVE;
@@ -605,12 +614,13 @@ public class FW : IDisposable
     {
         int result = 0;
 
-        // integrated XSS check - only for POST/PUT/DELETE requests
+        // integrated XSS check - only for POST/PUT/PATCH/DELETE requests
         // OR for standard actions: Save, Delete, SaveMulti
         // OR if it contains XSS param
         if ((FORM.ContainsKey("XSS")
             || route.method == "POST"
             || route.method == "PUT"
+            || route.method == "PATCH"
             || route.method == "DELETE"
             || action == ACTION_SAVE
             || action == ACTION_DELETE

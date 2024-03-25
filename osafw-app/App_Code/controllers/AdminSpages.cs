@@ -150,7 +150,7 @@ public class AdminSpagesController : FwAdminController
         // load old record if necessary
 
         Hashtable itemdb = FormUtils.filter(item, save_fields2);
-        FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes);
+        FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
         itemdb["prio"] = Utils.f2int(itemdb["prio"]);
 
         // if no publish time defined - publish it now
