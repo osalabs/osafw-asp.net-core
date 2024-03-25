@@ -80,12 +80,16 @@
                         :row="row" :col="header"
                         @change="onCellChange($event, row, header)"
                         ></list-cell-email>
+                      <list-cell-number v-else-if="header.input_type=='number'"
+                        :row="row" :col="header"
+                        @change="onCellChange($event, row, header)"
+                        ></list-cell-number>
                       <list-cell-select v-else-if="header.input_type=='select'"
                         :row="row" :col="header"
                         :options="lookupByHeader(header)"
                         @change="onCellChange($event, row, header)"
                         ></list-cell-select>
-                      <list-cell-checkbox v-else-if="header.input_type=='cb'"
+                      <list-cell-checkbox v-else-if="header.input_type=='cb' || header.input_type=='yesno'"
                         :row="row" :col="header"
                         @change="onCellChange($event, row, header)"
                         ></list-cell-checkbox>
