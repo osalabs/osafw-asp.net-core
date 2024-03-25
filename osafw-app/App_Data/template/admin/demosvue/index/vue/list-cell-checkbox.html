@@ -1,19 +1,19 @@
-<script type="text/x-template" id="list-cell-input">
+<script type="text/x-template" id="list-cell-checkbox">
   <div>
-      <input type="text" class="form-control"
+      <input class="form-check-input" type="checkbox"
         v-model="row[col.field_name]"
+        true-value="1"
+        false-value="0"
         @focus="onFocus"
         @blur="$emit('blur', $event)"
         @change="$emit('change', $event)"
-        @keydown.esc.prevent="onCancel"
-        @keydown.enter.prevent="$emit('change', $event)"
         >
   </div>
 </script>
 
 <script type="module">
-fwApp.component('list-cell-input', {
-  template: '#list-cell-input',
+fwApp.component('list-cell-checkbox', {
+  template: '#list-cell-checkbox',
   props: ['row', 'col'],
   emits: ['focus', 'blur', 'change'],
   data: () => ({
@@ -28,9 +28,6 @@ fwApp.component('list-cell-input', {
       this.initial_value = this.row[this.col.field_name];
       this.$emit('focus', e);
     },
-    onCancel(e){
-      this.row[this.col.field_name] = this.initial_value;
-    }
   }
 });
 </script>

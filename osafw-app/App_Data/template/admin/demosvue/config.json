@@ -57,14 +57,17 @@
 
     "is_dynamic_index_edit": true,
     "list_edit" : "demos",
-    "edit_list_defaults": "demo_dicts_id iname email add_time status",
+    "edit_list_defaults": "demo_dicts_id iname email fdate_pop is_checkbox fyesno fradio add_time status",
     "edit_list_map": {
         "demo_dicts_id": "DemoDicts",
         "iname": "Title",
         "email": "Email",
         "add_time": "Added on",
         "status": "Status",
-        "fdate_pop_str": "Date popup",
+        "fdate_pop": "Date",
+        "is_checkbox": "Checkbox",
+        "fyesno": "Yes/No",
+        "fradio": "Radio",
         "id": "id"
     },
 

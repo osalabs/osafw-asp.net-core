@@ -85,7 +85,11 @@
                         :options="lookupByHeader(header)"
                         @change="onCellChange($event, row, header)"
                         ></list-cell-select>
-                      <list-cell-date v-else-if="header.input_type=='date'" :row="row" :col="header"></list-cell-date>
+                      <list-cell-checkbox v-else-if="header.input_type=='cb'"
+                        :row="row" :col="header"
+                        @change="onCellChange($event, row, header)"
+                        ></list-cell-checkbox>
+                      <list-cell-date v-else-if="header.input_type=='date_popup'" :row="row" :col="header"></list-cell-date>
 
                       <td v-else class="text-danger">{{fieldValueByName(row, header.field_name)}}</td>
                   </td>

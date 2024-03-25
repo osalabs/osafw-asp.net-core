@@ -42,6 +42,9 @@ table.list-edit tbody td {
     border: 0px;
     border-radius: 0;
   }
+  table.list-edit tbody td > div > .form-check-input {
+   margin:0.5rem 0.4rem;
+  }
 
 /* table-sm overrides */
 table.list-edit.table-sm tbody td.list-row-cb {
@@ -85,4 +88,7 @@ table.list-edit.table-dense tbody td > div > .form-select {
   padding-bottom: 0;
   padding-left: .5rem;
   font-size: .7rem;
+}
+table.list-edit tbody td > div > .form-check-input {
+  font-size: .875rem;
 }
