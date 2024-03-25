@@ -87,7 +87,7 @@ public class MyPasswordController : FwController
     public void Validate(int id, Hashtable item)
     {
         bool result = true;
-        result &= validateRequired(item, Utils.qw("email old_pwd pwd pwd2"));
+        result &= validateRequired(id, item, Utils.qw("email old_pwd pwd pwd2"));
         if (!result)
             fw.FormErrors["REQ"] = 1;
 

@@ -171,7 +171,7 @@ public class FwVueController : FwController
     /// <param name="item"></param>
     public virtual void Validate(int id, Hashtable item)
     {
-        bool result = validateRequiredDynamic(item);
+        bool result = validateRequiredDynamic(id, item);
 
         if (result && is_dynamic_showform)
             validateSimpleDynamic(id, item);
@@ -183,14 +183,14 @@ public class FwVueController : FwController
         this.validateCheckResult();
     }
 
-    protected virtual bool validateRequiredDynamic(Hashtable item)
+    protected virtual bool validateRequiredDynamic(int id, Hashtable item)
     {
         var result = true;
         if (string.IsNullOrEmpty(this.required_fields) && is_dynamic_showform)
         {
             // if required_fields not defined - fill from showform_fields
             ArrayList fields = (ArrayList)this.config["showform_fields"];
-            ArrayList req = new();
+            ArrayList req = [];
             foreach (Hashtable def in fields)
             {
                 if (Utils.f2bool(def["required"]))
@@ -198,10 +198,10 @@ public class FwVueController : FwController
             }
 
             if (req.Count > 0)
-                result = this.validateRequired(item, req.ToArray());
+                result = this.validateRequired(id, item, req.ToArray());
         }
         else
-            result = this.validateRequired(item, this.required_fields);
+            result = this.validateRequired(id, item, this.required_fields);
         return result;
     }
 

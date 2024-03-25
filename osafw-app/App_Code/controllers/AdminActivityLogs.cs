@@ -100,7 +100,7 @@ public class AdminActivityLogsController : FwController
 
     public virtual void Validate(int id, Hashtable item)
     {
-        bool result = this.validateRequired(item, this.required_fields);
+        bool result = this.validateRequired(id, item, this.required_fields);
 
         // comment or user event should be related to some item
         if (result && Utils.f2int(item["item_id"]) == 0)

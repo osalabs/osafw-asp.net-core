@@ -167,7 +167,7 @@ public class AdminSpagesController : FwAdminController
 
     public override void Validate(int id, Hashtable item)
     {
-        bool result = this.validateRequired(item, this.required_fields);
+        bool result = this.validateRequired(id, item, this.required_fields);
 
         if (result && model.isExistsByUrl((string)item["url"], Utils.f2int(item["parent_id"]), id))
             fw.FormErrors["url"] = "EXISTS";

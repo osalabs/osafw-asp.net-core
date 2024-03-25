@@ -135,7 +135,7 @@ public class AdminDemosController : FwAdminController
 
     public override void Validate(int id, Hashtable item)
     {
-        bool result = this.validateRequired(item, this.required_fields);
+        bool result = this.validateRequired(id, item, this.required_fields);
 
         if (result && model.isExists(item["email"], id))
             fw.FormErrors["email"] = "EXISTS";

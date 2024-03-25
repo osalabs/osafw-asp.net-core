@@ -935,18 +935,22 @@ public class Utils
     */
     public static object jsonDecode(string str)
     {
+        if (string.IsNullOrEmpty(str))
+            return null;
+
         ReadOnlySpan<byte> jsonUtf8 = Encoding.UTF8.GetBytes(str);
         var options = new JsonReaderOptions
         {
             AllowTrailingCommas = true,
             CommentHandling = JsonCommentHandling.Skip
         };
-        var reader = new Utf8JsonReader(jsonUtf8, options);
-        reader.Read(); //initial read
 
         object result;
         try
         {
+            var reader = new Utf8JsonReader(jsonUtf8, options);
+            reader.Read(); //initial read
+
             result = jsonDecodeRead(ref reader);
         }
         catch (Exception)

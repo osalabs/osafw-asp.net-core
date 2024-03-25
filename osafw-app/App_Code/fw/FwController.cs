@@ -373,28 +373,35 @@ public abstract class FwController
     /// <summary>
     /// Validate required fields are non-empty and set global fw.ERR[field] values in case of errors
     /// </summary>
+    /// <param name="id">id of the record, 0 if new record to add (for existing records - do not require fields not present in item)</param>
     /// <param name="item">fields/values to validate</param>
     /// <param name="fields">field names required to be non-empty (trim used)</param>
     /// <param name="form_errors">optional - form errors to fill</param>
     /// <returns>true if all required field names non-empty</returns>
     /// <remarks>also set global fw.FormErrors[REQUIRED]=true in case of validation error if no form_errors defined</remarks>
-    public virtual bool validateRequired(Hashtable item, Array fields, Hashtable form_errors = null)
+    public virtual bool validateRequired(int id, Hashtable item, Array fields, Hashtable form_errors = null)
     {
         bool result = true;
 
-        var is_gloabl_errors = false;
+        var is_global_errors = false;
         if (form_errors == null)
         {
             //if no form_errors passed - use global fw.FormErrors
             form_errors = fw.FormErrors;
-            is_gloabl_errors = true;
+            is_global_errors = true;
         }
 
-        if (item != null && fields.Length > 0)
+        if (fields.Length > 0)
         {
+            item ??= []; // if item is null - make it empty hash
+            var is_new = (id == 0);
             foreach (string fld in fields)
             {
-                if (!string.IsNullOrEmpty(fld) && (!item.ContainsKey(fld) || ((string)item[fld]).Trim() == ""))
+                var is_fld_exists = item.ContainsKey(fld);
+                if (!is_new && !is_fld_exists)
+                    continue; // for existing records - do not require fields not present in item (so we can update only some fields)
+
+                if (!string.IsNullOrEmpty(fld) && (!is_fld_exists || ((string)item[fld]).Trim() == ""))
                 {
                     result = false;
                     form_errors[fld] = true;
@@ -402,17 +409,17 @@ public abstract class FwController
             }
         }
         else
-            result = false;
+            result = false; //TODO check
 
-        if (!result && is_gloabl_errors)
+        if (!result && is_global_errors)
             form_errors["REQUIRED"] = true; // set global error
 
         return result;
     }
     // same as above but fields param passed as a qw string
-    public virtual bool validateRequired(Hashtable item, string fields)
+    public virtual bool validateRequired(int id, Hashtable item, string fields)
     {
-        return validateRequired(item, Utils.qw(fields));
+        return validateRequired(id, item, Utils.qw(fields));
     }
 
     /// <summary>

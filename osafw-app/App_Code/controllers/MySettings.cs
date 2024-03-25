@@ -82,7 +82,7 @@ public class MySettingsController : FwController
     public void Validate(int id, Hashtable item)
     {
         bool result = true;
-        result &= validateRequired(item, Utils.qw(required_fields));
+        result &= validateRequired(id, item, Utils.qw(required_fields));
         if (!result)
             fw.FormErrors["REQ"] = 1;
 

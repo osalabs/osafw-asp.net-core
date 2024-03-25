@@ -154,7 +154,7 @@ public class FwAdminController : FwController
 
     public virtual void Validate(int id, Hashtable item)
     {
-        bool result = this.validateRequired(item, this.required_fields);
+        bool result = this.validateRequired(id, item, this.required_fields);
 
         // If result AndAlso model0.isExists(item("iname"), id) Then
         // fw.FERR("iname") = "EXISTS"

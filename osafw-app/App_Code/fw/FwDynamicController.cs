@@ -289,7 +289,7 @@ public class FwDynamicController : FwController
     /// <param name="item"></param>
     public virtual void Validate(int id, Hashtable item)
     {
-        bool result = validateRequiredDynamic(item);
+        bool result = validateRequiredDynamic(id, item);
 
         if (result && is_dynamic_showform)
             validateSimpleDynamic(id, item);
@@ -301,14 +301,14 @@ public class FwDynamicController : FwController
         this.validateCheckResult();
     }
 
-    protected virtual bool validateRequiredDynamic(Hashtable item)
+    protected virtual bool validateRequiredDynamic(int id, Hashtable item)
     {
         var result = true;
         if (string.IsNullOrEmpty(this.required_fields) && is_dynamic_showform)
         {
             // if required_fields not defined - fill from showform_fields
             ArrayList fields = (ArrayList)this.config["showform_fields"];
-            ArrayList req = new();
+            ArrayList req = [];
             foreach (Hashtable def in fields)
             {
                 if (Utils.f2bool(def["required"]))
@@ -316,10 +316,10 @@ public class FwDynamicController : FwController
             }
 
             if (req.Count > 0)
-                result = this.validateRequired(item, req.ToArray());
+                result = this.validateRequired(id, item, req.ToArray());
         }
         else
-            result = this.validateRequired(item, this.required_fields);
+            result = this.validateRequired(id, item, this.required_fields);
         return result;
     }
 
@@ -427,7 +427,8 @@ public class FwDynamicController : FwController
             return result; //nothing to validate
 
         var row_errors = new Hashtable();
-        result = this.validateRequired(item, required_fields, row_errors);
+        var id = Utils.f2int(row_id.StartsWith("new-") ? 0 : row_id);
+        result = this.validateRequired(id, item, required_fields, row_errors);
         if (!result)
         {
             //fill global fw.FormErrors with row errors

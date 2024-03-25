@@ -53,7 +53,7 @@
           <a href="#" class="btn btn-outline-secondary" title="`Filter Columns`" @click="onToggleSearch"><~/common/icons/funnel></a>
           <a href="#" class="btn btn-outline-secondary" title="`Customize Columns`" @click="onCustomCols"><~/common/icons/table></a>
           <a href="#" class="btn btn-outline-secondary" title="`Density`" @click="onToggleDensity"><~/common/icons/grid-3x2-gap></a>
-          <a href="#" class="btn btn-outline-secondary" title="`Toggle Edit`" @click="onToggleEdit"><~/common/icons/pencil-square></a>
+          <a href="#" :class="'btn '+(fwStore.is_list_edit ? 'btn-info' : 'btn-outline-secondary')" title="`Toggle Edit`" @click="onToggleEdit"><~/common/icons/pencil-square></a>
         </div>
       </div>
 

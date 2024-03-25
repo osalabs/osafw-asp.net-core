@@ -142,7 +142,7 @@ public class AdminAttController : FwAdminController
         if (id > 0)
         {
             itemdb = model.one(id);
-            validateRequired(item, Utils.qw(required_fields));
+            validateRequired(id, item, Utils.qw(required_fields));
         }
         else
         {

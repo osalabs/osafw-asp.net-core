@@ -78,7 +78,7 @@ public class SignupController : FwController
     {
         string msg = "";
         bool result = true;
-        result &= validateRequired(item, Utils.qw(required_fields));
+        result &= validateRequired(0, item, Utils.qw(required_fields));
         if (!result)
             msg = "Please fill in all required fields";
 

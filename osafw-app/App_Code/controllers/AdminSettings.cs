@@ -90,7 +90,7 @@ public class AdminSettingsController : FwAdminController
 
     public override void Validate(int id, Hashtable item)
     {
-        bool result = this.validateRequired(item, this.required_fields);
+        bool result = this.validateRequired(id, item, this.required_fields);
 
         if (id == 0)
             throw new UserException("Wrong Settings ID");
