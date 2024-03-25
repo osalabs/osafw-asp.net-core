@@ -1,11 +1,13 @@
 <script type="text/x-template" id="list-cell-select">
  <div>
-      <select class="form-select">
+      <select class="form-select" v-model="row[col.field_name]"
+        @focus="onFocus"
+        @blur="$emit('blur', $event)"
+      >
         <option></option>
         <option v-for="lrow in options"
             :key="col.field_name+'#'+lrow.id"
             :value="lrow.id"
-            :selected="lrow.id==row[col.field_name]"
         >{{lrow.iname}}</option>
       </select>
   </div>
@@ -15,14 +17,19 @@
 fwApp.component('list-cell-select', {
   template: '#list-cell-select',
   props: ['row', 'col', 'options'],
+  emits: ['focus', 'blur'],
   data: () => ({
-    xxx: null,
+    initial_value: '', //value before change
   }),
   mounted(){
   },
   updated(){
   },
   methods: {
+    onFocus(e){
+      this.initial_value = this.row[this.col.field_name];
+      this.$emit('focus', e);
+    },
   }
 });
 </script>

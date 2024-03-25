@@ -80,7 +80,11 @@
                         :row="row" :col="header"
                         @change="onCellChange($event, row, header)"
                         ></list-cell-email>
-                      <list-cell-select v-else-if="header.input_type=='select'" :row="row" :col="header" :options="lookupByHeader(header)"></list-cell-select>
+                      <list-cell-select v-else-if="header.input_type=='select'"
+                        :row="row" :col="header"
+                        :options="lookupByHeader(header)"
+                        @change="onCellChange($event, row, header)"
+                        ></list-cell-select>
                       <list-cell-date v-else-if="header.input_type=='date'" :row="row" :col="header"></list-cell-date>
 
                       <td v-else class="text-danger">{{fieldValueByName(row, header.field_name)}}</td>
@@ -199,7 +203,7 @@ fwApp.component('list-table', {
     onClickRow(e, row){
         console.log('onClickRow',e);
         var tag_name = e.target.tagName.toLowerCase();
-        if (tag_name === 'a'||tag_name === 'button'||tag_name === 'input'||tag_name === 'textarea'||tag_name === 'select'){
+        if (tag_name === 'a'||tag_name === 'button'||tag_name === 'input'||tag_name === 'textarea'||tag_name === 'select'||tag_name === 'option'){
           return; // do not process if link/button/input clicked
         }
 
