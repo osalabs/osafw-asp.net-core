@@ -13,26 +13,30 @@
 <script type="module">
 fwApp.component('date-picker', {
   template: '#date-picker-template',
-  props: ['modelValue','placeholder', 'required'],
+  props: ['modelValue', 'placeholder', 'required'],
   emits: ['update:modelValue'],
   data: () => ({
       dateStr: this.modelValue
   }),
   watch: {
     dateStr (val) {
+      console.log('date-picker watch dateStr', val);
       $(this.$el).datepicker("update", new Date(val));
       this.$emit('update:modelValue', val);
     }
   },  
   mounted() {
+    console.log('date-picker mounted:', this.value, this.$el);
     if (this.value) {
       this.dateStr = this.value;
     }
     $(this.$el).datepicker({
-        format: '<~GLOBAL[datepicker_default_format]>',
-        todayHighlight:'TRUE',
-    	autoclose: true
+        format: 'mm/dd/yyyy',
+    	  autoclose: true
     }).on('changeDate', (e) => {
+      console.log('date-picker changeDate', e);
+      if (e.viewMode=='years' || e.viewMode=='months') return; //do not trigger change yet, while user selecting year/month
+
       const dateObj = e.date;
       // Add +1 to month since js getMonth() return zero based value
       const month = String(dateObj.getMonth() + 1).padStart(2, '0');

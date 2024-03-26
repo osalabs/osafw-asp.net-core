@@ -84,7 +84,7 @@
                         :row="row" :col="header"
                         @change="onCellChange($event, row, header)"
                         ></list-cell-number>
-                      <list-cell-select v-else-if="header.input_type=='select'"
+                      <list-cell-select v-else-if="header.input_type=='select' || header.input_type=='radio'"
                         :row="row" :col="header"
                         :options="lookupByHeader(header)"
                         @change="onCellChange($event, row, header)"
