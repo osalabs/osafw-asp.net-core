@@ -145,7 +145,8 @@
       "library": "@vueform/multiselect@2.4.2",
       "destination": "wwwroot/assets/lib/vueform-multiselect",
       "files": [
-        "dist/multiselect.js"
+        "dist/multiselect.js",
+        "themes/default.css"
       ]
     }
   ]

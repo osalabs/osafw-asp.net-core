@@ -1,10 +1,13 @@
 <script type="text/x-template" id="list-cell-date">
- <div>
-      <div class="input-group date">
-        <input type="text" maxlength="10" class="form-control"
-          v-model="row[col.field_name]">
-        <button class="btn btn-outline-secondary" type="button"><~/common/icons/calendar3></button>
-      </div>
+  <div>
+      <input type="date" class="form-control"
+        v-model="row[col.field_name]"
+        @focus="onFocus"
+        @blur="$emit('blur', $event)"
+        @change="$emit('change', $event)"
+        @keydown.esc.prevent="onCancel"
+        @keydown.enter.prevent="$emit('change', $event)"
+        >
   </div>
 </script>
 
@@ -12,14 +15,22 @@
 fwApp.component('list-cell-date', {
   template: '#list-cell-date',
   props: ['row', 'col'],
+  emits: ['focus', 'blur', 'change'],
   data: () => ({
-    xxx: null,
+    initial_value: '', //value before change
   }),
   mounted(){
   },
   updated(){
   },
   methods: {
+    onFocus(e){
+      this.initial_value = this.row[this.col.field_name];
+      this.$emit('focus', e);
+    },
+    onCancel(e){
+      this.row[this.col.field_name] = this.initial_value;
+    }
   }
 });
 </script>
