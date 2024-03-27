@@ -74,27 +74,33 @@
                       <list-cell-input v-else-if="header.input_type=='input' || header.input_type=='textarea'"
                         :row="row" :col="header" :error="fwStore.cells_errors[row.id+'_'+header.field_name]"
                         @change="onCellChange($event, row, header)"
+                        @navigate="onCellNavigate($event)"
                         ></list-cell-input>
                       <list-cell-email v-else-if="header.input_type=='email'"
                         :row="row" :col="header" :error="fwStore.cells_errors[row.id+'_'+header.field_name]"
                         @change="onCellChange($event, row, header)"
+                        @navigate="onCellNavigate($event)"
                         ></list-cell-email>
                       <list-cell-number v-else-if="header.input_type=='number'"
                         :row="row" :col="header" :error="fwStore.cells_errors[row.id+'_'+header.field_name]"
                         @change="onCellChange($event, row, header)"
+                        @navigate="onCellNavigate($event)"
                         ></list-cell-number>
                       <list-cell-select v-else-if="header.input_type=='select' || header.input_type=='radio'"
                         :row="row" :col="header" :error="fwStore.cells_errors[row.id+'_'+header.field_name]"
                         :options="lookupByHeader(header)"
                         @change="onCellChange($event, row, header)"
+                        @navigate="onCellNavigate($event)"
                         ></list-cell-select>
                       <list-cell-checkbox v-else-if="header.input_type=='cb' || header.input_type=='yesno'"
                         :row="row" :col="header"
                         @change="onCellChange($event, row, header)"
+                        @navigate="onCellNavigate($event)"
                         ></list-cell-checkbox>
                       <list-cell-date v-else-if="header.input_type=='date_popup'"
                         :row="row" :col="header" :error="fwStore.cells_errors[row.id+'_'+header.field_name]"
                         @change="onCellChange($event, row, header)"
+                        @navigate="onCellNavigate($event)"
                         ></list-cell-date>
 
                       <td v-else class="text-danger">{{fieldValueByName(row, header.field_name)}}</td>
@@ -237,9 +243,27 @@ fwApp.component('list-table', {
     onCellChange(e, row, col){
         this.fwStore.saveCell(row, col);
         if (e.keyCode==13){
-          //TODO TBD if enter - move to next cell under this one
+          //if enter - move to next cell under this one
+          this.onCellNavigate({dir:'down', row, col});
         }
     },
+    onCellNavigate({ dir, row, col }) {
+        const cur_row_index = this.fwStore.list_rows.findIndex(r => r.id === row.id);
+        const next_row_index = (dir === 'up' ? cur_row_index - 1 : cur_row_index + 1);
+        if (next_row_index < 0 || next_row_index >= this.fwStore.list_rows.length) {
+          return; //no row to go
+        }
+
+        const next_row = this.fwStore.list_rows[next_row_index];
+        this.$nextTick(() => {
+            const el = this.findCell(next_row, col);
+            el?.focus();
+        });
+    },
+    findCell(row, col) {
+        const cell_id = 'cell-'+row.id+'-'+col.field_name;
+        return document.getElementById(cell_id);
+    }
   }
 });
 </script>

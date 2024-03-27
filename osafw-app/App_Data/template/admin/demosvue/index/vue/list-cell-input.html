@@ -2,6 +2,7 @@
   <div>
       <input type="text"
         :class="'form-control'+(error?' is-invalid':'')"
+        :id="'cell-'+row.id+'-'+col.field_name"
         v-model="row[col.field_name]"
         :maxlength="col.maxlength"
         :pattern="col.pattern"
@@ -14,6 +15,8 @@
         @change="$emit('change', $event)"
         @keydown.esc.prevent="onCancel"
         @keydown.enter.prevent="$emit('change', $event)"
+        @keydown.up.prevent="onNavigate('up')"
+        @keydown.down.prevent="onNavigate('down')"
         >
       <div class="invalid-tooltip">{{error}}</div>
   </div>
@@ -23,7 +26,7 @@
 fwApp.component('list-cell-input', {
   template: '#list-cell-input',
   props: ['row', 'col', 'error'],
-  emits: ['focus', 'blur', 'change'],
+  emits: ['focus', 'blur', 'change', 'navigate'],
   data: () => ({
     initial_value: '', //value before change
   }),
@@ -38,7 +41,10 @@ fwApp.component('list-cell-input', {
     },
     onCancel(e){
       this.row[this.col.field_name] = this.initial_value;
-    }
+    },
+    onNavigate(dir) {
+      this.$emit('navigate', { dir, row: this.row, col: this.col });
+    },
   }
 });
 </script>

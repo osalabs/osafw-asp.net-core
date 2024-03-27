@@ -158,8 +158,8 @@ const useFwStore = defineStore('fw', {
         }
     },
       async saveCell(row, col) {
-        this.cells_saving[row.id + '_' + col.field_name] = true; //set saving flag
-        delete this.cells_errors[row.id + '_' + col.field_name]; //clear errors if any
+        this.cells_saving[row.id + '-' + col.field_name] = true; //set saving flag
+        delete this.cells_errors[row.id + '-' + col.field_name]; //clear errors if any
 
         let id = row.id;
         let field_name = col.field_name;
@@ -177,11 +177,11 @@ const useFwStore = defineStore('fw', {
 
             //remove saving flag after 5sec
             setTimeout(() => {
-                delete this.cells_saving[row.id+'_'+col.field_name];
+                delete this.cells_saving[row.id+'-'+col.field_name];
             }, 5000);
 
         } catch (error) {
-            delete this.cells_saving[row.id + '_' + col.field_name];
+            delete this.cells_saving[row.id + '-' + col.field_name];
 
             let err_msg = error.body?.err_msg ?? 'Server Error';
 
@@ -197,7 +197,7 @@ const useFwStore = defineStore('fw', {
                 err_msg = this.ERR_CODES_MAP[field_err_code] ?? 'Invalid';
             }
 
-            this.cells_errors[row.id + '_' + col.field_name] = err_msg;
+            this.cells_errors[row.id + '-' + col.field_name] = err_msg;
             console.error('saveCell error:', err_msg);
             //console.error(error);
             //fw.error(error);
