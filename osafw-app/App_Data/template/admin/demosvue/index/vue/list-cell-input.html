@@ -1,4 +1,4 @@
-<script type="text/x-template" id="list-cell-input">
+<script type="text/x-template" id="list-cell-input-template">
   <div>
       <input :type="inputType"
         :class="'form-control'+(error?' is-invalid':'')"
@@ -27,7 +27,7 @@
 
 <script type="module">
 fwApp.component('list-cell-input', {
-  template: '#list-cell-input',
+  template: '#list-cell-input-template',
   props: ['type', 'row', 'col', 'error'],
   emits: ['focus', 'blur', 'change', 'navigate'],
   data: () => ({

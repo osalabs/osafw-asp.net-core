@@ -1,4 +1,4 @@
-<script type="text/x-template" id="list-cell-checkbox">
+<script type="text/x-template" id="list-cell-checkbox-template">
   <div>
       <input class="form-check-input" type="checkbox"
         :id="'cell-'+row.id+'-'+col.field_name"
@@ -17,7 +17,7 @@
 
 <script type="module">
 fwApp.component('list-cell-checkbox', {
-  template: '#list-cell-checkbox',
+  template: '#list-cell-checkbox-template',
   props: ['row', 'col'],
   emits: ['focus', 'blur', 'change', 'navigate'],
   data: () => ({

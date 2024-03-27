@@ -1,4 +1,4 @@
-<script type="text/x-template" id="list-cell-select">
+<script type="text/x-template" id="list-cell-select-template">
  <div>
       <select
         :class="'form-select'+(error?' is-invalid':'')"
@@ -23,7 +23,7 @@
 
 <script type="module">
 fwApp.component('list-cell-select', {
-  template: '#list-cell-select',
+  template: '#list-cell-select-template',
   props: ['row', 'col', 'options', 'error'],
   emits: ['focus', 'blur'],
   data: () => ({
