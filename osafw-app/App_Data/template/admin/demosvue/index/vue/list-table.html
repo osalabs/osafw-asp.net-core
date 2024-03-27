@@ -68,17 +68,17 @@
                 <template v-for="(header, key) in fwStore.headers" :key="key">
                   <td v-if="!fwStore.is_list_edit">{{fieldValueByName(row, header.field_name)}}</td>
                   <td v-else
-                      :class="(fwStore.cells_saving[row.id+'_'+header.field_name]?'cell-success-fade':'')+(fwStore.cells_errors[row.id+'_'+header.field_name]?' cell-invalid':'')">
+                      :class="(fwStore.cells_saving[row.id+'-'+header.field_name]?'cell-success-fade':'')+(fwStore.cells_errors[row.id+'-'+header.field_name]?' cell-invalid':'')">
                       <list-cell-ro v-if="header.is_ro || row._meta?.is_ro || row._meta?.ro_fields?.includes(header.field_name)" :row="row" :col="header"></list-cell-ro>
 
                       <list-cell-input v-else-if="['input','email','number','date_popup','textarea'].includes(header.input_type)"
                         :row="row" :col="header"
-                        :error="fwStore.cells_errors[row.id+'_'+header.field_name]"
+                        :error="fwStore.cells_errors[row.id+'-'+header.field_name]"
                         @change="onCellChange($event, row, header)"
                         @navigate="onCellNavigate($event)"
                         ></list-cell-input>
                       <list-cell-select v-else-if="header.input_type=='select' || header.input_type=='radio'"
-                        :row="row" :col="header" :error="fwStore.cells_errors[row.id+'_'+header.field_name]"
+                        :row="row" :col="header" :error="fwStore.cells_errors[row.id+'-'+header.field_name]"
                         :options="lookupByHeader(header)"
                         @change="onCellChange($event, row, header)"
                         ></list-cell-select>
