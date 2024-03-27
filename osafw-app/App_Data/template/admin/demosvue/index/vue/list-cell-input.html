@@ -2,6 +2,12 @@
   <div>
       <input type="text" class="form-control"
         v-model="row[col.field_name]"
+        :maxlength="col.maxlength"
+        :pattern="col.pattern"
+        :required="col.required"
+        :placeholder="col.placeholder"
+        :readonly="col.readonly"
+        :disabled="col.disabled"
         @focus="onFocus"
         @blur="$emit('blur', $event)"
         @change="$emit('change', $event)"

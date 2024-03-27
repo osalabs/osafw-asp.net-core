@@ -4,6 +4,7 @@
         v-model="row[col.field_name]"
         true-value="1"
         false-value="0"
+        :disabled="col.disabled"
         @focus="onFocus"
         @blur="$emit('blur', $event)"
         @change="$emit('change', $event)"
