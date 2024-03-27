@@ -1,6 +1,7 @@
 <script type="text/x-template" id="list-cell-select">
  <div>
-      <select class="form-select"
+      <select
+        :class="'form-select'+(error?' is-invalid':'')"
         v-model="row[col.field_name]"
         :required="col.required"
         :readonly="col.readonly"
@@ -8,19 +9,21 @@
         @focus="onFocus"
         @blur="$emit('blur', $event)"
       >
-        <option></option>
+        <option v-if="col.is_option0" value="0"></option>
+        <option v-if="col.is_option_empty" value=""></option>
         <option v-for="lrow in options"
             :key="col.field_name+'#'+lrow.id"
             :value="lrow.id"
         >{{lrow.iname}}</option>
       </select>
+      <div class="invalid-tooltip">{{error}}</div>
   </div>
 </script>
 
 <script type="module">
 fwApp.component('list-cell-select', {
   template: '#list-cell-select',
-  props: ['row', 'col', 'options'],
+  props: ['row', 'col', 'options', 'error'],
   emits: ['focus', 'blur'],
   data: () => ({
     initial_value: '', //value before change

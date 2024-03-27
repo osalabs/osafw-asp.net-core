@@ -14,7 +14,13 @@ const useFwStore = defineStore('fw', {
     user_view: {}, // UserViews record for current controller
 
     // list edit support
-    is_list_edit: false, //true if list rows inline-editable 
+    is_list_edit: false, //true if list rows inline-editable
+
+    ERR_CODES_MAP: {
+        REQUIRED: 'Required field',
+        EXISTS: 'This name already exists in our database',
+        WRONG: 'Invalid',
+    },
 
     // list filter, can contain: {pagenum:N, pagesize:N, sortby:'', sortdir:'asc|desc'}
     f: {
@@ -55,7 +61,9 @@ const useFwStore = defineStore('fw', {
 
     //work vars
     loadIndexDebouncedTimeout: null,
-    is_initial_load: true //reset after initial load
+    is_initial_load: true, //reset after initial load
+    cells_saving: {}, // cells saving status {row.id_field => true}
+    cells_errors: {} // cells saving status {row.id_field => true}
   }),
 
   getters: {
@@ -149,7 +157,10 @@ const useFwStore = defineStore('fw', {
             return error;
         }
     },
-    async saveCell(row, col){
+      async saveCell(row, col) {
+        this.cells_saving[row.id + '_' + col.field_name] = true; //set saving flag
+        delete this.cells_errors[row.id + '_' + col.field_name]; //clear errors if any
+
         let id = row.id;
         let field_name = col.field_name;
         let value = row[field_name];
@@ -157,16 +168,38 @@ const useFwStore = defineStore('fw', {
         let item = { [field_name]: value };
 
         try{
-          const apiBase = mande(this.base_url);
+            const apiBase = mande(this.base_url);
             
-          const req = { item: item, XSS: this.XSS };
-          console.log('saveCell req', id, req);
-          const response = await apiBase.patch(id, req);
-          console.log('saveCell response', response);
+            const req = { item: item, XSS: this.XSS };
+            console.log('saveCell req', id, req);
+            const response = await apiBase.patch(id, req);
+            console.log('saveCell response', response);
+
+            //remove saving flag after 5sec
+            setTimeout(() => {
+                delete this.cells_saving[row.id+'_'+col.field_name];
+            }, 5000);
 
         } catch (error) {
-            console.error('saveCell error:', error.body?.err_msg??'server error');
-            console.error(error);
+            delete this.cells_saving[row.id + '_' + col.field_name];
+
+            let err_msg = error.body?.err_msg ?? 'Server Error';
+
+            //check if we got required field error
+            let is_required = error.body?.ERR?.REQUIRED ?? false;
+            if (is_required) {
+                err_msg = 'Required field';
+            }
+
+            //check if we got specific field error code
+            let field_err_code = error.body?.ERR?.[col.field_name] ?? '';
+            if (field_err_code && field_err_code!==true) {
+                err_msg = this.ERR_CODES_MAP[field_err_code] ?? 'Invalid';
+            }
+
+            this.cells_errors[row.id + '_' + col.field_name] = err_msg;
+            console.error('saveCell error:', err_msg);
+            //console.error(error);
             //fw.error(error);
             return error;
         }

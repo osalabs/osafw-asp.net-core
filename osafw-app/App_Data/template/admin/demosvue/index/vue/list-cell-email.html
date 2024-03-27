@@ -1,6 +1,7 @@
 <script type="text/x-template" id="list-cell-email">
   <div>
-      <input type="email" class="form-control"
+      <input type="email"
+        :class="'form-control'+(error?' is-invalid':'')"
         v-model="row[col.field_name]"
         :maxlength="col.maxlength"
         :pattern="col.pattern"
@@ -14,13 +15,14 @@
         @keydown.esc.prevent="onCancel"
         @keydown.enter.prevent="$emit('change', $event)"
         >
+      <div class="invalid-tooltip">{{error}}</div>
   </div>
 </script>
 
 <script type="module">
 fwApp.component('list-cell-email', {
   template: '#list-cell-email',
-  props: ['row', 'col'],
+  props: ['row', 'col', 'error'],
   emits: ['focus', 'blur', 'change'],
   data: () => ({
     initial_value: '', //value before change

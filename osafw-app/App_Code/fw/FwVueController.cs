@@ -102,7 +102,7 @@ public class FwVueController : FwController
                         header["lookup_tpl"] = lookup_tpl;
 
                     //add to headers, if exists in def: maxlength, min, max, step, placeholder, pattern, required, readonly, disabled
-                    foreach (string attr in Utils.qw("maxlength min max step placeholder pattern required readonly disabled"))
+                    foreach (string attr in Utils.qw("is_option0 is_option_empty maxlength min max step placeholder pattern required readonly disabled"))
                     {
                         if (def.ContainsKey(attr))
                             header[attr] = def[attr];

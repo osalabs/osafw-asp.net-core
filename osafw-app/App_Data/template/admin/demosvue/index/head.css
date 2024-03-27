@@ -28,6 +28,10 @@ table.list-edit tbody td {
     padding: 0.4rem 0.5rem;
   }
 
+  table.list-edit tbody td > div {
+    position: relative;
+  }
+
   table.list-edit tbody td > div.ro {
     --bs-text-opacity: 1;
     color: var(--bs-secondary-color) !important;
@@ -92,4 +96,24 @@ table.list-edit.table-dense tbody td > div > .form-select {
 }
 table.list-edit tbody td > div > .form-check-input {
   font-size: .875rem;
+}
+
+.cell-success-fade
+, .cell-success-fade input
+, .cell-success-fade select
+, .cell-success-fade textarea
+{
+  animation: fadeOutBackground 2s forwards;
+}
+/* Animation for fading out the border */
+@keyframes fadeOutBackground {
+  from {
+    background-color: var(--bs-success);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+.cell-invalid {
+  border-color: var(--bs-danger);
 }

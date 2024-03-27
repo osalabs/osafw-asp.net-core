@@ -1,6 +1,7 @@
 <script type="text/x-template" id="list-cell-number">
   <div>
-      <input type="number" class="form-control"
+      <input type="number"
+        :class="'form-control'+(error?' is-invalid':'')"
         v-model="row[col.field_name]"
         :min="col.min"
         :max="col.max"
@@ -16,13 +17,14 @@
         @keydown.esc.prevent="onCancel"
         @keydown.enter.prevent="$emit('change', $event)"
         >
+      <div class="invalid-tooltip">{{error}}</div>
   </div>
 </script>
 
 <script type="module">
 fwApp.component('list-cell-number', {
   template: '#list-cell-number',
-  props: ['row', 'col'],
+  props: ['row', 'col', 'error'],
   emits: ['focus', 'blur', 'change'],
   data: () => ({
     initial_value: '', //value before change
