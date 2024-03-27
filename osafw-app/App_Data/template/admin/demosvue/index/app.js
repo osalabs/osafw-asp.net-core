@@ -1,12 +1,9 @@
 //load store.js first with const useFwStore
 
 const mainApp = {
-  // data() {
-  //   return {
-  //     counter: 0,
-  //     layout: 1
-  //   }
-  // },
+  //data: () => ({
+  //    counter: 0
+  //}),
   computed:{
   },
   mounted() {
@@ -25,7 +22,7 @@ const mainApp = {
   methods:{
     reload(){
       window.location.reload();
-    }
+    },
   }
 };
 

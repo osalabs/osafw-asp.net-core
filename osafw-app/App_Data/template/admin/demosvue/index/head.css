@@ -94,8 +94,8 @@ table.list-edit.table-dense tbody td > div > .form-select {
   padding-left: .5rem;
   font-size: .7rem;
 }
-table.list-edit tbody td > div > .form-check-input {
-  font-size: .875rem;
+table.list-edit.table-dense tbody td > div > .form-check-input {
+  margin: 0.17rem 0.4rem;
 }
 
 .cell-success-fade
@@ -116,4 +116,20 @@ table.list-edit tbody td > div > .form-check-input {
 }
 .cell-invalid {
   border-color: var(--bs-danger);
+}
+
+.edit-pane {
+  position: fixed;
+  z-index: 50;
+  right: -100%; /* Start offscreen */
+  top: 0;
+  bottom: 0;
+  width: 50%;
+  transition: right 0.3s ease;
+  padding: var(--fw-spacer);
+  background-color: var(--fw-pane-bg);
+  box-shadow: -2px 0 5px rgba(0,0,0,0.5);
+}
+.edit-pane.is-visible {
+  right: 0; /* Slide in */
 }

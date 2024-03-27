@@ -7,6 +7,7 @@ const useFwStore = defineStore('fw', {
     XSS: '', // token
     access_level: 0, // user access level
     base_url: '', // base url for the controller
+    list_title: '', //list screen title
     is_userlists: false,
     select_userlists: [],
     my_userlists: [],
@@ -40,7 +41,7 @@ const useFwStore = defineStore('fw', {
     count: 0, // total list rows count
     list_rows: [], // array of row objects to display, row can contain _meta object {is_ro:bool, ro_fields:[read only field names]}
     pager: [], // array of { pagenum:N, pagenum_show:N, is_cur_page:0|1, is_show_first:0|1, is_show_prev:0|1, is_show_next:0|1, pagenum_next:N}
-    hchecked_rows: {}, // array of checked rows {row.id => 1}
+    showform_fields: [], // edit form fields configuration
 
     //standard lookups
     lookups_std: {
@@ -60,10 +61,13 @@ const useFwStore = defineStore('fw', {
     lookups: {},
 
     //work vars
+    hchecked_rows: {}, // array of checked rows {row.id => 1}
     loadIndexDebouncedTimeout: null,
     is_initial_load: true, //reset after initial load
     cells_saving: {}, // cells saving status {row.id_field => true}
-    cells_errors: {} // cells saving status {row.id_field => true}
+    cells_errors: {}, // cells saving status {row.id_field => true}
+    is_edit_pane: false, // true if edit pane is open
+    edit_pane_row: null, // row object for edit pane
   }),
 
   getters: {
@@ -93,6 +97,35 @@ const useFwStore = defineStore('fw', {
               });
           }
           return req;
+      },
+      //TODO implement
+      treeShowFormFields: (state) => {
+          //return hierarchial array of showform_fields:
+          // type=row - top level
+          // type=col - then
+          // then other types (can also contain row/col/etc recursively)
+          // on type=row_end or col_end - return to parent level accordingly
+          let tree = [];
+          let level = 0;
+          let parent = tree;
+          state.showform_fields.forEach(f => {
+                if (f.type == 'row') {
+                    parent.push(f);
+                    f.children = [];
+                    parent = f.children;
+                    level++;
+                } else if (f.type == 'row_end') {
+                    parent = tree;
+                    level--;
+                } else if (f.type == 'col') {
+                    parent.push(f);
+                } else if (f.type == 'col_end') {
+                    //do nothing
+                } else {
+                    parent.push(f);
+                }
+            });
+          return tree;
       }
   },
 

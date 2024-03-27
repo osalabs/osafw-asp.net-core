@@ -140,6 +140,12 @@ public class FwVueController : FwController
                 }
 
                 ps["lookups"] = lookups;
+
+                //TODO TBD :
+                // - return as is or filter out something?
+                // - return for lookups scope or separate scope?
+                // - Also if we return showform_fields to frontend, enrich headers on frontend side?
+                ps["showform_fields"] = (ArrayList)this.config["showform_fields"];
             }
         }
 

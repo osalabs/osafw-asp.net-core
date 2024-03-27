@@ -95,7 +95,7 @@
                 <!--TODO make common component for row btn-->
                 <td :class="'list-row-controls text-nowrap d-print-none '+(fwStore.global.is_list_btn_left?'':'text-end')" v-if="!fwStore.global.is_list_btn_left">
                   <a href="<~../url>/<~id><~/common/list/relid>">`View`</a>
-                  <~/common/dot><a href="<~row_click_url>">`Edit`</a>
+                  <~/common/dot><a href="#" @click.prevent="openEditPane(row)">`Edit`</a>
                   <~/common/dot><a href="<~../url>/<~id>/delete<~/common/list/relid>"
                                     class="text-danger on-delete-list-row"
                                     :disabled="fwStore.is_readonly"><~/common/icons/x></a>
@@ -248,6 +248,10 @@ fwApp.component('list-table', {
     findCell(row, col) {
         const cell_id = 'cell-'+row.id+'-'+col.field_name;
         return document.getElementById(cell_id);
+    },
+    openEditPane(row) {
+      this.fwStore.edit_pane_row=row;
+      this.fwStore.is_edit_pane=true;
     }
   }
 });
