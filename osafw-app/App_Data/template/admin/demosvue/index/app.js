@@ -1,7 +1,5 @@
 //load store.js first with const useFwStore
 
-
-
 const mainApp = {
   // data() {
   //   return {

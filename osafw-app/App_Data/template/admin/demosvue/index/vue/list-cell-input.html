@@ -1,10 +1,13 @@
 <script type="text/x-template" id="list-cell-input">
   <div>
-      <input type="text"
+      <input :type="inputType"
         :class="'form-control'+(error?' is-invalid':'')"
         :id="'cell-'+row.id+'-'+col.field_name"
         v-model="row[col.field_name]"
         :maxlength="col.maxlength"
+        :min="col.min"
+        :max="col.max"
+        :step="col.step"
         :pattern="col.pattern"
         :required="col.required"
         :placeholder="col.placeholder"
@@ -12,7 +15,7 @@
         :disabled="col.disabled"
         @focus="onFocus"
         @blur="$emit('blur', $event)"
-        @change="$emit('change', $event)"
+        @change="console.log($event);$emit('change', $event)"
         @keydown.esc.prevent="onCancel"
         @keydown.enter.prevent="$emit('change', $event)"
         @keydown.up.prevent="onNavigate('up')"
@@ -25,11 +28,26 @@
 <script type="module">
 fwApp.component('list-cell-input', {
   template: '#list-cell-input',
-  props: ['row', 'col', 'error'],
+  props: ['type', 'row', 'col', 'error'],
   emits: ['focus', 'blur', 'change', 'navigate'],
   data: () => ({
     initial_value: '', //value before change
   }),
+  computed: {
+    inputType: function () {
+      const TYPE_MAP={
+        text: 'text',
+        email: 'email',
+        number: 'number',
+        date: 'date',
+        date_popup: 'date',
+        password: 'password',
+        textarea: 'text'
+      };
+      let type = this.type ?? this.col.input_type ?? 'text';
+      return TYPE_MAP[type]??'text';
+    },
+  },
   mounted(){
   },
   updated(){
@@ -43,6 +61,10 @@ fwApp.component('list-cell-input', {
       this.row[this.col.field_name] = this.initial_value;
     },
     onNavigate(dir) {
+      if (this.inputType=='date'){
+        console.log('cancel for date to:', this.initial_value);
+        this.onCancel();
+      }
       this.$emit('navigate', { dir, row: this.row, col: this.col });
     },
   }

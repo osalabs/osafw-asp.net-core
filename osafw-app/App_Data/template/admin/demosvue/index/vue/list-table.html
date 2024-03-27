@@ -71,37 +71,22 @@
                       :class="(fwStore.cells_saving[row.id+'_'+header.field_name]?'cell-success-fade':'')+(fwStore.cells_errors[row.id+'_'+header.field_name]?' cell-invalid':'')">
                       <list-cell-ro v-if="header.is_ro || row._meta?.is_ro || row._meta?.ro_fields?.includes(header.field_name)" :row="row" :col="header"></list-cell-ro>
 
-                      <list-cell-input v-else-if="header.input_type=='input' || header.input_type=='textarea'"
-                        :row="row" :col="header" :error="fwStore.cells_errors[row.id+'_'+header.field_name]"
+                      <list-cell-input v-else-if="['input','email','number','date_popup','textarea'].includes(header.input_type)"
+                        :row="row" :col="header"
+                        :error="fwStore.cells_errors[row.id+'_'+header.field_name]"
                         @change="onCellChange($event, row, header)"
                         @navigate="onCellNavigate($event)"
                         ></list-cell-input>
-                      <list-cell-email v-else-if="header.input_type=='email'"
-                        :row="row" :col="header" :error="fwStore.cells_errors[row.id+'_'+header.field_name]"
-                        @change="onCellChange($event, row, header)"
-                        @navigate="onCellNavigate($event)"
-                        ></list-cell-email>
-                      <list-cell-number v-else-if="header.input_type=='number'"
-                        :row="row" :col="header" :error="fwStore.cells_errors[row.id+'_'+header.field_name]"
-                        @change="onCellChange($event, row, header)"
-                        @navigate="onCellNavigate($event)"
-                        ></list-cell-number>
                       <list-cell-select v-else-if="header.input_type=='select' || header.input_type=='radio'"
                         :row="row" :col="header" :error="fwStore.cells_errors[row.id+'_'+header.field_name]"
                         :options="lookupByHeader(header)"
                         @change="onCellChange($event, row, header)"
-                        @navigate="onCellNavigate($event)"
                         ></list-cell-select>
                       <list-cell-checkbox v-else-if="header.input_type=='cb' || header.input_type=='yesno'"
                         :row="row" :col="header"
                         @change="onCellChange($event, row, header)"
                         @navigate="onCellNavigate($event)"
                         ></list-cell-checkbox>
-                      <list-cell-date v-else-if="header.input_type=='date_popup'"
-                        :row="row" :col="header" :error="fwStore.cells_errors[row.id+'_'+header.field_name]"
-                        @change="onCellChange($event, row, header)"
-                        @navigate="onCellNavigate($event)"
-                        ></list-cell-date>
 
                       <td v-else class="text-danger">{{fieldValueByName(row, header.field_name)}}</td>
                   </td>

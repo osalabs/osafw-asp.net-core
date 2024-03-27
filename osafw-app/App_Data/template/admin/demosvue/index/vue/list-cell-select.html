@@ -2,6 +2,7 @@
  <div>
       <select
         :class="'form-select'+(error?' is-invalid':'')"
+        :id="'cell-'+row.id+'-'+col.field_name"
         v-model="row[col.field_name]"
         :required="col.required"
         :readonly="col.readonly"
