@@ -24,6 +24,7 @@ public abstract class FwModel : IDisposable
     protected string db_config = ""; // if empty(default) - fw.db used, otherwise - new db connection created based on this config name
 
     public string table_name = ""; // must be assigned in child class
+    protected Hashtable table_schema; // table schema cache (fields, types, etc) - filled on demand
     public string csv_export_fields = ""; // all or Utils.qw format
     public string csv_export_headers = ""; // comma-separated format
 
@@ -447,6 +448,13 @@ public abstract class FwModel : IDisposable
     public virtual void removeCacheAll()
     {
         fw.cache.requestRemoveWithPrefix(this.cache_prefix);
+    }
+
+    public Hashtable getTableSchema()
+    {
+        if (table_schema == null)
+            table_schema = db.tableSchemaFull(table_name);
+        return table_schema;
     }
     #endregion
 
@@ -1073,6 +1081,51 @@ public abstract class FwModel : IDisposable
     }
     #endregion
 
+
+    #region frontend(json) output support and export
+    /// <summary>
+    /// to filter item for json output - remove sensitive fields, add calculated fields, etc
+    /// </summary>
+    /// <param name="item"></param>
+    public virtual void filterForJson(Hashtable item)
+    {
+        //first, remove sensitive fields
+        foreach (string fieldname in Utils.qw("pwd password pwd_reset mfa_secret mfa_recovery"))
+            if (item.ContainsKey(fieldname))
+                item.Remove(fieldname);
+
+        //then perform necessary transformations
+        var table_schema = getTableSchema();
+        //iterate over item.Keys, but make it static array to avoid "collection was modified" error
+        var keys = item.Keys.Cast<string>().ToArray();
+        foreach (string fieldname in keys)
+        {
+            var fieldname_lc = fieldname.ToLower();
+            if (!table_schema.ContainsKey(fieldname_lc)) continue;
+
+            var field_schema = (Hashtable)table_schema[fieldname_lc];
+
+            var fw_type = (string)field_schema["fw_type"];
+            var fw_subtype = (string)field_schema["fw_subtype"];
+            if (fw_subtype == "date")
+            {
+                //if field is exactly DATE - show only date part without time - in YYYY-MM-DD format
+                item[fieldname] = DateUtils.Str2SQL((string)item[fieldname]);
+            }
+            else if (fw_type == "datetime")
+            {
+                //if field is exactly DATETIME - show in YYYY-MM-DD HH:MM:SS format
+                item[fieldname] = DateUtils.Str2SQL((string)item[fieldname], true);
+            }
+            else if (fw_subtype == "bit")
+            {
+                //if field is exactly BIT - convert from True/False to 1/0
+                item[fieldname] = Utils.f2bool(item[fieldname]) ? 1 : 0;
+            }
+            // ADD OTHER CONVERSIONS HERE if necessary
+        }
+    }
+
     public virtual StringBuilder getCSVExport()
     {
         Hashtable where = new();
@@ -1086,6 +1139,7 @@ public abstract class FwModel : IDisposable
         var rows = db.array(table_name, where, "", aselect_fields);
         return Utils.getCSVExport(csv_export_headers, csv_export_fields, rows);
     }
+    #endregion
 
     public void Dispose()
     {

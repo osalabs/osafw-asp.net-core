@@ -168,11 +168,6 @@ public abstract class FwController
                 view_list_map = Utils.qh((string)raw_view_list_map);
 
             view_list_custom = Utils.f2str(this.config["view_list_custom"]);
-
-            if (list_sortmap.Count == 0)
-                list_sortmap = getViewListSortmap(); // just add all fields from view_list_map if no list_sortmap in config
-            if (search_fields == "")
-                search_fields = getViewListUserFields(); // just search in all visible fields if no specific fields defined
         }
 
         is_dynamic_index_edit = Utils.f2bool(this.config["is_dynamic_index_edit"]);
@@ -206,6 +201,15 @@ public abstract class FwController
                         view_list_map = Utils.qh((string)raw_edit_list_map);
                 }
             }
+        }
+
+        //common for both dynamic index and index_edit
+        if (is_dynamic_index || is_dynamic_index_edit && is_list_edit)
+        {
+            if (list_sortmap.Count == 0)
+                list_sortmap = getViewListSortmap(); // just add all fields from view_list_map if no list_sortmap in config
+            if (search_fields == "")
+                search_fields = getViewListUserFields(); // just search in all visible fields if no specific fields defined
         }
 
         is_dynamic_show = Utils.f2bool(this.config["is_dynamic_show"]);
@@ -1134,7 +1138,7 @@ public abstract class FwController
     public virtual string applyViewListConversions(string fieldname, Hashtable row, Hashtable hconversions)
     {
         var data = (string)row[fieldname];
-        if (hconversions.ContainsKey(fieldname))
+        if ((string)(hconversions[fieldname] ?? "") == "date")
         {
             data = DateUtils.Str2DateOnly(data);
         }

@@ -67,7 +67,11 @@ public class FwVueController : FwController
                     return []; // return empty hashtable just in case action overriden to avoid check for null
 
 
-                //TODO filter rows for json output
+                //filter rows for json output - TODO make filterListForJson controller method
+                foreach (Hashtable row in list_rows)
+                {
+                    model0.filterForJson(row);
+                }
 
 
                 ps["XSS"] = fw.Session("XSS");

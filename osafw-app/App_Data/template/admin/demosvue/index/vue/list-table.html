@@ -93,7 +93,10 @@
                         :row="row" :col="header"
                         @change="onCellChange($event, row, header)"
                         ></list-cell-checkbox>
-                      <list-cell-date v-else-if="header.input_type=='date_popup'" :row="row" :col="header"></list-cell-date>
+                      <list-cell-date v-else-if="header.input_type=='date_popup'"
+                        :row="row" :col="header"
+                        @change="onCellChange($event, row, header)"
+                        ></list-cell-date>
 
                       <td v-else class="text-danger">{{fieldValueByName(row, header.field_name)}}</td>
                   </td>
