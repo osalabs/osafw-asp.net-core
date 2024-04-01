@@ -1,16 +1,19 @@
 <script type="text/x-template" id="form-one-def-template">
   <form-one-row v-if="def.type=='row'"
-    v-model="modelValue"
+    :modelValue="modelValue"
+    @update:modelValue="$emit('update:modelValue', $event)"
     :def="def"
     :lookups="lookups"
   />
   <form-one-col v-else-if="def.type=='col'"
-    v-model="modelValue"
+    :modelValue="modelValue"
+    @update:modelValue="$emit('update:modelValue', $event)"
     :def="def"
     :lookups="lookups"
   />
   <form-one-group v-else
-    v-model="modelValue"
+    :modelValue="modelValue"
+    @update:modelValue="$emit('update:modelValue', $event)"
     :def="def"
     :lookups="lookups"
   />

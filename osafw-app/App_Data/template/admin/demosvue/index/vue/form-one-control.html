@@ -14,8 +14,8 @@
   </div>
   <p v-else-if="def.type=='date'" class="form-control-plaintext">{{formatDate(value)}}</p>
   <p v-else-if="def.type=='date_long'" class="form-control-plaintext">{{formatDateLong(value)}}</p>
-  <p v-else-if="def.type=='added'" class="form-control-plaintext">{{item.add_time}} by {{data.add_users_id_name}}</p>
-  <p v-else-if="def.type=='updated'" class="form-control-plaintext"><template v-if="data.upd_users_id_name">{{item.upd_time}} by {{data.upd_users_id_name}}</template></p>
+  <p v-else-if="def.type=='added'" class="form-control-plaintext">{{item.add_time}} by {{form.add_users_id_name}}</p>
+  <p v-else-if="def.type=='updated'" class="form-control-plaintext"><template v-if="form.upd_users_id_name">{{item.upd_time}} by {{form.upd_users_id_name}}</template></p>
 
 
   <div v-else-if="def.type=='group_id' || def.type=='group_id_addnew'">
@@ -35,7 +35,8 @@
 
   <template v-else-if="def.type=='select'">
     <select class="form-select"
-      v-model="value"
+      :value="value"
+      @input="$emit('update:form', $event.target.value)"
       :class="def.class_control"
       :multiple="def.multiple"
       :required="def.required"
@@ -54,7 +55,8 @@
   <template v-else-if="['input','email','number','date_popup'].includes(def.type)">
     <input class="form-control"
       :type="inputType"
-      v-model="value"
+      :value="value"
+      @input="$emit('update:form', $event.target.value)"
       :class="def.class_control"
       :maxlength="def.maxlength"
       :required="def.required"
@@ -71,7 +73,7 @@
 
   <template v-else-if="def.type=='textarea'">
     <textarea class="form-control"
-      v-model="value"
+      @input="$emit('update:form', $event.target.value)"
       :class="def.class_control"
       :rows="def.rows"
       :maxlength="def.maxlength"
@@ -118,16 +120,23 @@
 <script type="module">
 fwApp.component('form-one-control', {
   template: '#form-one-control-template',
-  props: ['def', 'lookups', 'data'],
-  emits: ['update:data'],
+  props: ['def', 'lookups', 'form'],
+  emits: ['update:form'],
   data: () => ({
   }),
   computed:{
     item: function(){
-      return this.data.i;
+      return this.form.i;
     },
-    value: function(){
-      return this.data.i[this.def.field];
+    value: {
+      get() {
+        console.log('value get', this.def.field, this.form.i);
+        return this.form.i[this.def.field] ?? null;
+      },
+      set(new_value) {
+        console.log('value set', this.def.field, new_value);
+        this.form.i[this.def.field] = new_value;
+      }
     },
     inputType: function(){
       const TYPE_MAP={

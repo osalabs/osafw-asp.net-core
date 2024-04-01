@@ -6,7 +6,8 @@
     </label>
     <div :class="def.class_contents ? def.class_contents : 'col'">
       <form-one-control
-        v-model:data="modelValue"
+        :form="modelValue"
+        @update:form="$emit('update:modelValue', $event)"
         :def="def"
         :lookups="lookups"
       />
