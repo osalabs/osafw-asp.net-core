@@ -1,0 +1,56 @@
+<script type="text/x-template" id="list-edit-pane-template">
+  <div ref="pane" class="list-edit-pane" :class="{ 'is-visible': fwStore.is_list_edit_pane }">
+    <button type="button" class="btn-close float-end" aria-label="Close" @click="closePane"></button>
+    <h2>Edit Record</h2>
+    <form v-if="fwStore.list_edit_pane_row"
+      class="fw-card"
+      @submit.prevent="saveChanges">
+      <fieldset>
+        <form-one-def v-for="def in fwStore.treeShowFormFields" :def="def" v-model="fwStore.list_edit_pane_row" />
+      </fieldset>
+      <!-- Form fields go here. Bind them to the `list_edit_pane_row` object. -->
+      <!-- <input v-model="fwStore.list_edit_pane_row.iname" type="text" placeholder="Name"> -->
+      <!-- <input v-model="fwStore.list_edit_pane_row.idesc" type="text" placeholder="Description"> -->
+      <!-- More fields as needed... -->
+      <button type="submit">Save Changes</button>
+    </form>
+  </div>
+</script>
+
+<script type="module">
+import { mapStores } from 'pinia';
+
+fwApp.component('list-edit-pane', {
+  template: '#list-edit-pane-template',
+  props: [],
+  computed: {
+    ...mapStores(useFwStore) //accessible via this.fwStore
+  },
+  mounted() {
+    console.log('list-edit-pane mounted');
+    // document.addEventListener('click', this.handleClickOutside);
+  },
+  beforeUnmount() {
+    console.log('list-edit-pane beforeUnmount');
+    // document.removeEventListener('click', this.handleClickOutside);
+  },
+  methods: {
+    // TOOD
+    // handleClickOutside(e) {
+    //   console.log('handleClickOutside', e.target, this.$refs.pane, this.fwStore.is_list_edit_pane);
+    //   if (this.$refs.pane && !this.$refs.pane.contains(e.target) && this.fwStore.is_list_edit_pane && this.$refs.pane.classList.contains('is-visible')) {
+    //     console.log('closing...');
+    //     //this.closePane();
+    //   }
+    // },
+    saveChanges() {
+      // Implement save logic here
+      console.log('list-edit-pane saveChanges');
+      //this.$emit('update', this.list_edit_pane_row);
+    },
+    closePane() {
+      this.fwStore.is_list_edit_pane=false;
+    }
+  }
+});
+</script>

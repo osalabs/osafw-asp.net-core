@@ -250,8 +250,8 @@ fwApp.component('list-table', {
         return document.getElementById(cell_id);
     },
     openEditPane(row) {
-      this.fwStore.edit_pane_row=row;
-      this.fwStore.is_edit_pane=true;
+      this.fwStore.list_edit_pane_row=row;
+      this.fwStore.is_list_edit_pane=true;
     }
   }
 });

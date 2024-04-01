@@ -41,7 +41,11 @@ const useFwStore = defineStore('fw', {
     count: 0, // total list rows count
     list_rows: [], // array of row objects to display, row can contain _meta object {is_ro:bool, ro_fields:[read only field names]}
     pager: [], // array of { pagenum:N, pagenum_show:N, is_cur_page:0|1, is_show_first:0|1, is_show_prev:0|1, is_show_next:0|1, pagenum_next:N}
-    showform_fields: [], // edit form fields configuration
+
+    // edit form fields configuration
+    showform_fields: [],
+    is_list_edit_pane: false, // true if edit pane is open
+    list_edit_pane_row: null, // row object for edit pane
 
     //standard lookups
     lookups_std: {
@@ -66,8 +70,6 @@ const useFwStore = defineStore('fw', {
     is_initial_load: true, //reset after initial load
     cells_saving: {}, // cells saving status {row.id_field => true}
     cells_errors: {}, // cells saving status {row.id_field => true}
-    is_edit_pane: false, // true if edit pane is open
-    edit_pane_row: null, // row object for edit pane
   }),
 
   getters: {
@@ -98,34 +100,34 @@ const useFwStore = defineStore('fw', {
           }
           return req;
       },
-      //TODO implement
       treeShowFormFields: (state) => {
           //return hierarchial array of showform_fields:
-          // type=row - top level
-          // type=col - then
-          // then other types (can also contain row/col/etc recursively)
-          // on type=row_end or col_end - return to parent level accordingly
-          let tree = [];
-          let level = 0;
-          let parent = tree;
-          state.showform_fields.forEach(f => {
-                if (f.type == 'row') {
-                    parent.push(f);
-                    f.children = [];
-                    parent = f.children;
-                    level++;
-                } else if (f.type == 'row_end') {
-                    parent = tree;
-                    level--;
-                } else if (f.type == 'col') {
-                    parent.push(f);
-                } else if (f.type == 'col_end') {
-                    //do nothing
-                } else {
-                    parent.push(f);
-                }
-            });
-          return tree;
+          let root = []; // This will hold the top-level elements
+          let stack = [root]; // Stack to manage hierarchy, starting with the root
+
+          state.showform_fields.forEach(item => {
+              if (item.type === 'row' || item.type === 'col') {
+                  // If the item is a row or column, it's a new parent, so create a children array in it
+                  item.children = [];
+
+                  // Get the current parent from the stack and add this item to its children
+                  let parent = stack[stack.length - 1];
+                  parent.push(item);
+
+                  // Push this item onto the stack so it becomes the new current parent
+                  stack.push(item.children);
+              } else if (item.type === 'row_end' || item.type === 'col_end') {
+                  // If it's an end marker, just pop the last parent from the stack
+                  stack.pop();
+              } else {
+                  // If it's any other item, it's a child of the current parent
+                  let parent = stack[stack.length - 1];
+                  parent.push(item);
+              }
+          });
+
+          console.log('treeShowFormFields', root);
+          return root;          
       }
   },
 

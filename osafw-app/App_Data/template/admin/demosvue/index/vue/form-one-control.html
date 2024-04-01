@@ -1,0 +1,127 @@
+<script type="text/x-template" id="form-one-control-template">
+  <p v-if="def.type=='id'" class="form-control-plaintext">{{value}}<template v-if="!value">(`new`)</template></p>
+
+  <p v-elseif="def.type=='plaintext'" class="form-control-plaintext" style="white-space: pre-line">{{value}}</p>
+  <p v-elseif="def.type=='plaintext_link'" class="form-control-plaintext">
+    <a href="TODO: <~admin_url>/<~lookup_id>?return_url=<~GLOBAL[request_url] urlencode noescape>">{{value}}<template if="!value">{{value}}</template></a>
+  </p>
+  <p v-elseif="def.type=='markdown'" class="form-control-plaintext" style="white-space: pre-line">{{value}} TODO markdown</p>
+  <p v-elseif="def.type=='noescape'" class="form-control-plaintext" v-html="value"></p>
+  <p v-elseif="def.type=='float'" class="form-control-plaintext">{{Number(value).toFixed(2)}}</p>
+  <div v-elseif="def.type=='checkbox'" class="form-check">
+    <input type="checkbox" class="form-check-input" :checked="value" disabled="disabled">
+    <label class="form-check-label">`Yes`</label>
+  </div>
+  <p v-elseif="def.type=='date'" class="form-control-plaintext">{{formatDate(value)}}</p>
+  <p v-elseif="def.type=='date_long'" class="form-control-plaintext">{{formatDateLong(value)}}</p>
+  <p v-elseif="def.type=='added'" class="form-control-plaintext">{{item.add_time}} by TODOadd_users_id_name</p>
+  <p v-elseif="def.type=='updated'" class="form-control-plaintext"><template v-if="TODOupd_users_id_name">{{item.upd_time}} by TODOupd_users_id_name</template></p>
+
+
+  <div v-else-if="def.type=='group_id' || def.type=='group_id_addnew'">
+    <div class="float-end d-none d-lg-block">
+      <span class="form-saved-status"></span>
+      <template v-if="!item.id">
+        <button type="submit" class="btn btn-primary">`Save`</button>
+        <button v-if="def.type=='group_id_addnew'" type="submit" class="btn btn-secondary" name="route_return" value="New">`Save and Add New`</button>
+        <button type="button" class="btn btn-default on-cancel" data-href="<~/common/form/cancel_urlTODO>">`Cancel`</button>
+      </template>
+    </div>
+    <p class="form-control-plaintext">
+      <template v-if="value">{{value}}</template>
+      <template v-if="!value">(`new`)</template>
+    </p>
+  </div>
+
+  <template v-else-if="def.type=='select'">
+    <select class="form-select"
+      v-model="value"
+      :class="def.class_control"
+      :multiple="def.multiple"
+      :required="def.required"
+    >
+      <option v-if="def.is_option0" value="0">{{def.option0_title ?? '- select -'}}</option>
+      <option v-if="def.is_option_empty" value="">{{def.option0_title ?? '- select -'}}</option>
+      <option v-for="lrow in options" TODO
+          :key="def.field_name+'#'+lrow.id"
+          :value="lrow.id"
+      >{{lrow.iname}}</option>
+    </select>
+    <p class="err-EXISTS">{{def.err_exists_msg ? def.err_exists_msg : 'This name already exists in our database'}}</p>
+    <form-control-help-block :text="def.help_text" />
+  </template>
+
+  <template v-else-if="['input','email','number','date_popup'].includes(def.type)">
+    <input class="form-control"
+      :type="inputType"
+      v-model="value"
+      :class="def.class_control"
+      :maxlength="def.maxlength"
+      :required="def.required"
+      :placeholder="def.placeholder"
+      :min="def.min"
+      :max="def.max"
+      :step="def.step"
+      :pattern="def.pattern"
+    >
+    <p class="err-EXISTS">{{def.err_exists_msg ? def.err_exists_msg : 'This name already exists in our database'}}</p>
+    <p class="err-WRONG">`Invalid Email`</p>
+    <form-control-help-block :text="def.help_text" />
+  </template>
+
+  <template v-else-if="def.type=='textarea'">
+    <textarea class="form-control"
+      v-model="value"
+      :class="def.class_control"
+      :rows="def.rows"
+      :maxlength="def.maxlength"
+      :required="def.required"
+      :placeholder="def.placeholder"
+    >{{value}}</textarea>
+    <form-control-help-block :text="def.help_text" />
+  </template>
+
+</script>
+
+<script type="module">
+fwApp.component('form-one-control', {
+  template: '#form-one-control-template',
+  props: ['def', 'item'],
+  emits: ['update:item'],
+  data: () => ({
+  }),
+  computed:{
+    value: function(){
+      return this.item[this.def.field];
+    },
+    inputType: function () {
+      const TYPE_MAP={
+        text: 'text',
+        email: 'email',
+        number: 'number',
+        date: 'date',
+        date_popup: 'date',
+        password: 'password',
+        textarea: 'text'
+      };
+      let type = this.def.type ?? 'text';
+      return TYPE_MAP[type]??'text';
+    },
+  },
+  mounted(){
+    console.log("form-one-control mounted", this.def);
+  },
+  updated(){
+  },
+  methods: {
+    formatDate(str){
+      //return date as MM/dd/yyyy
+      return new Date(str).toLocaleDateString("en-US", { month: 'numeric', day: 'numeric', year: 'numeric' });
+    },
+    formatDateLong(str){
+      //return date as MM/dd/yyyy hh:mm:ss
+      return new Date(dateString).toLocaleDateString("en-US", { month: 'numeric', day: 'numeric', year: 'numeric' }) + " " + new Date(dateString).toLocaleTimeString("en-US", { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+  }
+});
+</script>

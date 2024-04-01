@@ -1,0 +1,22 @@
+<script type="text/x-template" id="form-one-row-template">
+  <div class="row" :class="def.class">
+    <form-one-def v-for="child_def in def.children" :def="child_def" v-model="modelValue" />
+  </div>
+</script>
+
+<script type="module">
+fwApp.component('form-one-row', {
+  template: '#form-one-row-template',
+  props: ['def', 'modelValue'],
+  emits: ['update:modelValue'],
+  data: () => ({
+  }),
+  mounted(){
+    console.log("form-one-row mounted", this.def);
+  },
+  updated(){
+  },
+  methods: {
+  }
+});
+</script>

@@ -118,18 +118,19 @@ table.list-edit.table-dense tbody td > div > .form-check-input {
   border-color: var(--bs-danger);
 }
 
-.edit-pane {
+.list-edit-pane {
   position: fixed;
   z-index: 50;
   right: -100%; /* Start offscreen */
   top: 0;
   bottom: 0;
   width: 50%;
+  overflow: auto;
   transition: right 0.3s ease;
   padding: var(--fw-spacer);
   background-color: var(--fw-pane-bg);
   box-shadow: -2px 0 5px rgba(0,0,0,0.5);
 }
-.edit-pane.is-visible {
+.list-edit-pane.is-visible {
   right: 0; /* Slide in */
 }
