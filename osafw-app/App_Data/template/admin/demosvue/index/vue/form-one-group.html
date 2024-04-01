@@ -5,7 +5,11 @@
       <small v-if="def.help_label_html" class="d-block form-text fw-normal" :class="def.help_label_class" v-html="def.help_label_html"></small>
     </label>
     <div :class="def.class_contents ? def.class_contents : 'col'">
-      <form-one-control :def="def" v-model:item="modelValue"/>
+      <form-one-control
+        v-model:data="modelValue"
+        :def="def"
+        :lookups="lookups"
+      />
     </div>
   </div>
 </script>
@@ -13,12 +17,12 @@
 <script type="module">
 fwApp.component('form-one-group', {
   template: '#form-one-group-template',
-  props: ['def', 'modelValue'],
+  props: ['def', 'lookups', 'modelValue'],
   emits: ['update:modelValue'],
   data: () => ({
   }),
   mounted(){
-    console.log("form-one-group mounted", this.def);
+    //console.log("form-one-group mounted", this.def);
   },
   updated(){
   },

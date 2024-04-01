@@ -154,6 +154,24 @@ public class FwVueController : FwController
         return ps;
     }
 
+    public virtual Hashtable ShowAction(int id = 0)
+    {
+        Hashtable ps = [];
+        Hashtable item = model0.one(id);
+        if (item.Count == 0)
+            throw new NotFoundException();
+
+        // added/updated should be filled before dynamic fields
+        setAddUpdUser(ps, item);
+
+        model0.filterForJson(item);
+
+        ps["id"] = id;
+        ps["i"] = item;
+        ps["_json"] = true;
+        return ps;
+    }
+
     public virtual Hashtable SaveAction(int id = 0)
     {
         if (this.save_fields == null)

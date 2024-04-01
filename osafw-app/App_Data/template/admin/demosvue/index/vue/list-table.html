@@ -79,7 +79,7 @@
                         ></list-cell-input>
                       <list-cell-select v-else-if="header.input_type=='select' || header.input_type=='radio'"
                         :row="row" :col="header" :error="fwStore.cells_errors[row.id+'-'+header.field_name]"
-                        :options="lookupByHeader(header)"
+                        :options="fwStore.lookupByDef(header)"
                         @change="onCellChange($event, row, header)"
                         ></list-cell-select>
                       <list-cell-checkbox v-else-if="header.input_type=='cb' || header.input_type=='yesno'"
@@ -164,16 +164,6 @@ fwApp.component('list-table', {
         //add here any additional processing if needed
         return row[field_name];
     },
-    lookupByHeader(header){
-      var lookup_model = header.lookup_model;
-      if (lookup_model){
-        return this.fwStore.lookups[lookup_model]??[];
-      }
-      var lookup_tpl = header.lookup_tpl;
-      if (lookup_tpl){
-        return this.fwStore.lookups[lookup_tpl]??[];
-      }
-    },
     resetCheckedRows() {
         this.fwStore.hchecked_rows = [];
         this.cb_check_all = false;
@@ -249,9 +239,10 @@ fwApp.component('list-table', {
         const cell_id = 'cell-'+row.id+'-'+col.field_name;
         return document.getElementById(cell_id);
     },
-    openEditPane(row) {
-      this.fwStore.list_edit_pane_row=row;
-      this.fwStore.is_list_edit_pane=true;
+    async openEditPane(row) {
+        this.fwStore.edit_item = null;
+        this.fwStore.is_list_edit_pane = true;
+        await this.fwStore.loadItem(row.id); //load into fwStore.edit_item   
     }
   }
 });

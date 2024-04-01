@@ -127,7 +127,6 @@ table.list-edit.table-dense tbody td > div > .form-check-input {
   width: 50%;
   overflow: auto;
   transition: right 0.3s ease;
-  padding: var(--fw-spacer);
   background-color: var(--fw-pane-bg);
   box-shadow: -2px 0 5px rgba(0,0,0,0.5);
 }

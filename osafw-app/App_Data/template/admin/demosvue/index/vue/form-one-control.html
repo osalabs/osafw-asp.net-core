@@ -1,30 +1,30 @@
 <script type="text/x-template" id="form-one-control-template">
   <p v-if="def.type=='id'" class="form-control-plaintext">{{value}}<template v-if="!value">(`new`)</template></p>
 
-  <p v-elseif="def.type=='plaintext'" class="form-control-plaintext" style="white-space: pre-line">{{value}}</p>
-  <p v-elseif="def.type=='plaintext_link'" class="form-control-plaintext">
+  <p v-else-if="def.type=='plaintext'" class="form-control-plaintext" style="white-space: pre-line">{{value}}</p>
+  <p v-else-if="def.type=='plaintext_link'" class="form-control-plaintext">
     <a href="TODO: <~admin_url>/<~lookup_id>?return_url=<~GLOBAL[request_url] urlencode noescape>">{{value}}<template if="!value">{{value}}</template></a>
   </p>
-  <p v-elseif="def.type=='markdown'" class="form-control-plaintext" style="white-space: pre-line">{{value}} TODO markdown</p>
-  <p v-elseif="def.type=='noescape'" class="form-control-plaintext" v-html="value"></p>
-  <p v-elseif="def.type=='float'" class="form-control-plaintext">{{Number(value).toFixed(2)}}</p>
-  <div v-elseif="def.type=='checkbox'" class="form-check">
+  <p v-else-if="def.type=='markdown'" class="form-control-plaintext" style="white-space: pre-line">{{value}} TODO markdown</p>
+  <p v-else-if="def.type=='noescape'" class="form-control-plaintext" v-html="value"></p>
+  <p v-else-if="def.type=='float'" class="form-control-plaintext">{{Number(value).toFixed(2)}}</p>
+  <div v-else-if="def.type=='checkbox'" class="form-check">
     <input type="checkbox" class="form-check-input" :checked="value" disabled="disabled">
     <label class="form-check-label">`Yes`</label>
   </div>
-  <p v-elseif="def.type=='date'" class="form-control-plaintext">{{formatDate(value)}}</p>
-  <p v-elseif="def.type=='date_long'" class="form-control-plaintext">{{formatDateLong(value)}}</p>
-  <p v-elseif="def.type=='added'" class="form-control-plaintext">{{item.add_time}} by TODOadd_users_id_name</p>
-  <p v-elseif="def.type=='updated'" class="form-control-plaintext"><template v-if="TODOupd_users_id_name">{{item.upd_time}} by TODOupd_users_id_name</template></p>
+  <p v-else-if="def.type=='date'" class="form-control-plaintext">{{formatDate(value)}}</p>
+  <p v-else-if="def.type=='date_long'" class="form-control-plaintext">{{formatDateLong(value)}}</p>
+  <p v-else-if="def.type=='added'" class="form-control-plaintext">{{item.add_time}} by {{data.add_users_id_name}}</p>
+  <p v-else-if="def.type=='updated'" class="form-control-plaintext"><template v-if="data.upd_users_id_name">{{item.upd_time}} by {{data.upd_users_id_name}}</template></p>
 
 
   <div v-else-if="def.type=='group_id' || def.type=='group_id_addnew'">
     <div class="float-end d-none d-lg-block">
       <span class="form-saved-status"></span>
       <template v-if="!item.id">
-        <button type="submit" class="btn btn-primary">`Save`</button>
-        <button v-if="def.type=='group_id_addnew'" type="submit" class="btn btn-secondary" name="route_return" value="New">`Save and Add New`</button>
-        <button type="button" class="btn btn-default on-cancel" data-href="<~/common/form/cancel_urlTODO>">`Cancel`</button>
+        <button type="submit" class="btn btn-primary">Save</button>
+        <button v-if="def.type=='group_id_addnew'" type="submit" class="btn btn-secondary" name="route_return" value="New">Save and Add New</button>
+        <button type="button" class="btn btn-default on-cancel" data-href="<~/common/form/cancel_urlTODO>">Cancel</button>
       </template>
     </div>
     <p class="form-control-plaintext">
@@ -42,7 +42,7 @@
     >
       <option v-if="def.is_option0" value="0">{{def.option0_title ?? '- select -'}}</option>
       <option v-if="def.is_option_empty" value="">{{def.option0_title ?? '- select -'}}</option>
-      <option v-for="lrow in options" TODO
+      <option v-for="lrow in lookupOptions"
           :key="def.field_name+'#'+lrow.id"
           :value="lrow.id"
       >{{lrow.iname}}</option>
@@ -81,20 +81,55 @@
     <form-control-help-block :text="def.help_text" />
   </template>
 
+  <template v-else-if="def.type=='cb'">
+    <div class="form-check form-check-inline">
+      <input class="form-check-input" :id="'list-edit-pane-cb-'+def.field"
+        type="checkbox"
+        v-model="value"
+        true-value="1"
+        false-value="0"
+      >
+      <label class="form-check-label" :for="'list-edit-pane-cb-'+def.field">Yes</label>
+    </div>
+  </template>
+
+  <template v-else-if="def.type=='radio'">
+    <div v-for="(lrow, index) in lookupOptions"
+      class="form-check"
+      :class="def.is_inline ? 'form-check-inline' : ''"
+    >
+      <input type="radio" :id="'list-edit-pane-'+def.field+'$'+index" class="form-check-input" :value="lrow.id" v-model="value">
+      <label class="form-check-label" :for="'list-edit-pane-'+def.field+'$'+index">{{lrow.iname}}</label>
+    </div>
+  </template>
+
+  <template v-else-if="def.type=='yesno'">
+    <div v-for="(lrow, index) in [{id:0, iname:'No'},{id:1, iname:'Yes'}]"
+      class="form-check"
+      :class="def.is_inline ? 'form-check-inline' : ''"
+    >
+      <input type="radio" :id="'list-edit-pane-'+def.field+'$'+index" class="form-check-input" :value="lrow.id" v-model="value">
+      <label class="form-check-label" :for="'list-edit-pane-'+def.field+'$'+index">{{lrow.iname}}</label>
+    </div>
+  </template>
+
 </script>
 
 <script type="module">
 fwApp.component('form-one-control', {
   template: '#form-one-control-template',
-  props: ['def', 'item'],
-  emits: ['update:item'],
+  props: ['def', 'lookups', 'data'],
+  emits: ['update:data'],
   data: () => ({
   }),
   computed:{
-    value: function(){
-      return this.item[this.def.field];
+    item: function(){
+      return this.data.i;
     },
-    inputType: function () {
+    value: function(){
+      return this.data.i[this.def.field];
+    },
+    inputType: function(){
       const TYPE_MAP={
         text: 'text',
         email: 'email',
@@ -107,9 +142,20 @@ fwApp.component('form-one-control', {
       let type = this.def.type ?? 'text';
       return TYPE_MAP[type]??'text';
     },
+    lookupOptions: function(){
+      var lookup_model = this.def.lookup_model;
+      if (lookup_model) {
+          return this.lookups[lookup_model] ?? [];
+      }
+      var lookup_tpl = this.def.lookup_tpl;
+      if (lookup_tpl) {
+          return this.lookups[lookup_tpl] ?? [];
+      }
+      return [];
+    },
   },
   mounted(){
-    console.log("form-one-control mounted", this.def);
+    //console.log("form-one-control mounted", this.def);
   },
   updated(){
   },
@@ -121,7 +167,7 @@ fwApp.component('form-one-control', {
     formatDateLong(str){
       //return date as MM/dd/yyyy hh:mm:ss
       return new Date(dateString).toLocaleDateString("en-US", { month: 'numeric', day: 'numeric', year: 'numeric' }) + " " + new Date(dateString).toLocaleTimeString("en-US", { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    }
+    },
   }
 });
 </script>

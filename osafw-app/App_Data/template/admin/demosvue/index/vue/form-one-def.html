@@ -1,18 +1,30 @@
 <script type="text/x-template" id="form-one-def-template">
- <form-one-row v-if="def.type=='row'" :def="def" v-model="modelValue" />
- <form-one-col v-else-if="def.type=='col'" :def="def" v-model="modelValue" />
- <form-one-group v-else :def="def" v-model="modelValue" />
+  <form-one-row v-if="def.type=='row'"
+    v-model="modelValue"
+    :def="def"
+    :lookups="lookups"
+  />
+  <form-one-col v-else-if="def.type=='col'"
+    v-model="modelValue"
+    :def="def"
+    :lookups="lookups"
+  />
+  <form-one-group v-else
+    v-model="modelValue"
+    :def="def"
+    :lookups="lookups"
+  />
 </script>
 
 <script type="module">
 fwApp.component('form-one-def', {
   template: '#form-one-def-template',
-  props: ['def', 'modelValue'],
+  props: ['def', 'lookups', 'modelValue'],
   emits: ['update:modelValue'],
   data: () => ({
   }),
   mounted(){
-    console.log("form-one-def mounted", this.def);
+    //console.log("form-one-def mounted", this.def);
   },
   updated(){
   },

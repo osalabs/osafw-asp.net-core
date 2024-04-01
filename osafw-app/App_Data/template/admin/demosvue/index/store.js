@@ -45,7 +45,7 @@ const useFwStore = defineStore('fw', {
     // edit form fields configuration
     showform_fields: [],
     is_list_edit_pane: false, // true if edit pane is open
-    list_edit_pane_row: null, // row object for edit pane
+    edit_data: null, // object for single item edit form {id:X, i:{}, add_users_id_name:'', upd_users_id_name:''}}
 
     //standard lookups
     lookups_std: {
@@ -99,6 +99,17 @@ const useFwStore = defineStore('fw', {
               });
           }
           return req;
+      },
+      lookupByDef: (state) => (def) => {
+          //return lookup array options by field definition
+          var lookup_model = def.lookup_model;
+          if (lookup_model) {
+              return state.lookups[lookup_model] ?? [];
+          }
+          var lookup_tpl = def.lookup_tpl;
+          if (lookup_tpl) {
+              return state.lookups[lookup_tpl] ?? [];
+          }
       },
       treeShowFormFields: (state) => {
           //return hierarchial array of showform_fields:
@@ -192,7 +203,23 @@ const useFwStore = defineStore('fw', {
             return error;
         }
     },
-      async saveCell(row, col) {
+    async loadItem(id) {
+        try {
+            const apiBase = mande(this.base_url);
+
+            const data = await apiBase.get(id);
+            console.log('loadItem data', data);
+
+            this.edit_data = data;
+
+        } catch (error) {
+            console.error('loadItem error:', error.body?.err_msg ?? 'server error');
+            console.error(error);
+            //fw.error(error);
+            return error;
+        }
+    },
+    async saveCell(row, col) {
         this.cells_saving[row.id + '-' + col.field_name] = true; //set saving flag
         delete this.cells_errors[row.id + '-' + col.field_name]; //clear errors if any
 
@@ -202,7 +229,7 @@ const useFwStore = defineStore('fw', {
 
         let item = { [field_name]: value };
 
-        try{
+        try {
             const apiBase = mande(this.base_url);
             
             const req = { item: item, XSS: this.XSS };
