@@ -303,7 +303,7 @@
                     "type": "select",
                     "is_option0": true,
                     "option0_title": "- none -",
-                    "class_contents": "col-md-3",
+                    "class_contents": "col-md-6",
                     "attrs_control": "data-noautosave=\"true\""
                 },
                 {
@@ -312,7 +312,7 @@
                     "lookup_model": "DemoDicts",
                     "type": "select",
                     "is_option_empty": true,
-                    "class_contents": "col-md-3",
+                    "class_contents": "col-md-6",
                     "class_control": "on-refresh"
                 },
                 {
@@ -368,7 +368,7 @@
                             "min": 0,
                             "max": 999999,
                             "class_label": "col-6",
-                            "class_contents": "col-md-4"
+                            "class_contents": "col-md-6"
                         },
                     {
                         "type": "col_end"
@@ -397,7 +397,7 @@
                     "label": "Combo",
                     "type": "select",
                     "lookup_tpl": "/common/sel/fcombo.sel",
-                    "class_contents": "col-md-3"
+                    "class_contents": "col-md-6"
                 },
                 {
                     "field": "fradio",
@@ -429,7 +429,7 @@
                     "field": "fdate_pop",
                     "label": "Date popup",
                     "type": "date_popup",
-                    "class_contents": "col-md-3"
+                    "class_contents": "col-md-4"
                 },
                 {
                     "field": "fdatetime",
@@ -505,7 +505,7 @@
                     "label": "Status",
                     "type": "select",
                     "lookup_tpl": "/common/sel/status.sel",
-                    "class_contents": "col-md-3"
+                    "class_contents": "col-md-6"
                 },
                 {
                     "field": "add_time",

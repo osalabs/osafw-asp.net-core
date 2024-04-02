@@ -35,7 +35,7 @@
   <template v-else-if="def.type=='select'">
     <select class="form-select"
       v-model="value"
-      :class="def.class_control"
+      :class="class_control"
       :multiple="def.multiple"
       :required="def.required"
     >
@@ -54,7 +54,7 @@
     <input class="form-control"
       :type="inputType"
       v-model="value"
-      :class="def.class_control+(is_invalid?' is-invalid':'')"
+      :class="class_control+(is_invalid?' is-invalid':'')"
       :maxlength="def.maxlength"
       :required="def.required"
       :placeholder="def.placeholder"
@@ -71,7 +71,7 @@
   <template v-else-if="def.type=='textarea'">
     <textarea class="form-control"
       v-model="value"
-      :class="def.class_control"
+      :class="class_control"
       :rows="def.rows"
       :maxlength="def.maxlength"
       :required="def.required"
@@ -146,6 +146,9 @@ fwApp.component('form-one-control', {
     is_invalid_true() {
       return this.error===true;
     },
+    class_control() {
+      return (this.def.class_control ?? '')+(this.is_invalid?' is-invalid':'');
+    },
     inputType: function(){
       const TYPE_MAP={
         text: 'text',
@@ -172,7 +175,7 @@ fwApp.component('form-one-control', {
     },
   },
   mounted(){
-    //console.log("form-one-control mounted", this.def);
+    console.log("form-one-control mounted", this.def);
   },
   updated(){
   },

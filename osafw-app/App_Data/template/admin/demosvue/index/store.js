@@ -7,6 +7,7 @@ window.fwConst = {
         REQUIRED: 'Required field',
         EXISTS: 'This name already exists in our database',
         WRONG: 'Invalid',
+        EMAIL: 'Invalid Email',
     },
 };
 
