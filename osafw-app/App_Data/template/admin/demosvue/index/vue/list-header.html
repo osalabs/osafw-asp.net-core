@@ -4,7 +4,14 @@
     <span class="badge badge-outline-secondary rounded-pill">{{fwStore.count}}</span>
   </h1>
 
-  <~/common/list/btn_std>
+  <div class="btn-std d-print-none">
+   <div class="btn-group">
+      <a class="btn btn-default" href="#" @click="onAddNew" :disabled="fwStore.is_readonly"><~/common/icons/plusb> `Add New`</a>
+      <slot name="group"></slot>
+   </div>
+   <slot></slot>
+  </div>
+
  </div>
 </script>
 
@@ -15,10 +22,14 @@ fwApp.component('list-header', {
   template: '#list-header-template',
   props: [],
   data: () => ({
-    zzz: ''
   }),
   computed: {
     ...mapStores(useFwStore) //accessible via this.fwStore
   },
+  methods: {
+    onAddNew(e){
+      console.log('TODO list-header onAddNew');
+    }
+  }
 });
 </script>

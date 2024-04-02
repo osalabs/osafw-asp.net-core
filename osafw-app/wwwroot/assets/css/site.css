@@ -103,6 +103,19 @@ a[disabled]
     min-height: 100%;
   }
 
+.badge-outline-secondary {
+    color: #6c757d;
+    background-color: transparent;
+    background-image: none;
+    border-color: #6c757d;
+    border: 1px solid;
+}
+
+h1 .badge {
+ font-size: 1.25rem;
+ vertical-align: middle;
+}
+
 /*fixes for twitter-typeahead*/
 .twitter-typeahead {
   width:100%
@@ -253,6 +266,125 @@ table.list {
     border-bottom: 1px solid #ccc;
     padding: 5px 10px;
   }
+
+/*** editable list*/
+table.list-edit tbody td {
+  padding: 0;
+  border-width: 1px;
+}
+
+  table.list-edit tbody td.list-row-cb {
+    padding: 0.4rem 0.5rem;
+  }
+  table.list-edit tbody td.list-row-controls {
+    padding: 0.4rem 0.5rem;
+  }
+
+  table.list-edit tbody td > div {
+    position: relative;
+  }
+
+  table.list-edit tbody td > div.ro {
+    --bs-text-opacity: 1;
+    color: var(--bs-secondary-color) !important;
+    padding: 0.4rem 0.5rem;
+    white-space: nowrap;
+  }
+
+  table.list-edit tbody td > div > .form-control {
+   border: 0;
+   border-radius: 0;
+  }
+  table.list-edit tbody td > div > .form-select {
+    border: 0px;
+    border-radius: 0;
+  }
+  table.list-edit tbody td > div > .form-check-input {
+   margin:0.5rem 0.4rem;
+  }
+
+  /* table-sm overrides */
+  table.list-edit.table-sm tbody td.list-row-cb {
+    padding: 0.25rem 0.25rem;
+  }
+  table.list-edit.table-sm tbody td.list-row-controls {
+    padding: 0.25rem 0.25rem;
+  }
+  table.list-edit.table-sm tbody td > div.ro {
+    padding: 0.25rem 0.25rem;
+  }
+  table.list-edit.table-sm tbody td > div > .form-control {
+    min-height: calc(1.5em + .5rem + calc(var(--bs-border-width) * 2));
+    padding: .25rem .5rem;
+    font-size: .875rem;
+  }
+  table.list-edit.table-sm tbody td > div > .form-select {
+    padding-top: .31rem;
+    padding-bottom: .32rem;
+    padding-left: .5rem;
+    font-size: .875rem;
+  }
+
+  /* table-dense overrides */
+  table.list-edit.table-dense tbody td.list-row-cb {
+    padding: 0 0.1rem;
+  }
+  table.list-edit.table-dense tbody td.list-row-controls {
+    padding: 0 0.1rem;
+  }
+  table.list-edit.table-dense tbody td > div.ro {
+    padding: 0 0.1rem;
+  }
+  table.list-edit.table-dense tbody td > div > .form-control {
+    min-height: auto;
+    padding: 0 .5rem;
+    font-size: .7rem;
+  }
+  table.list-edit.table-dense tbody td > div > .form-select {
+    padding-top: 0;
+    padding-bottom: 0;
+    padding-left: .5rem;
+    font-size: .7rem;
+  }
+  table.list-edit.table-dense tbody td > div > .form-check-input {
+    margin: 0.17rem 0.4rem;
+  }
+
+.cell-success-fade
+, .cell-success-fade input
+, .cell-success-fade select
+, .cell-success-fade textarea
+{
+  animation: fadeOutBackground 2s forwards;
+}
+/* Animation for fading out the border */
+@keyframes fadeOutBackground {
+  from {
+    background-color: var(--bs-success);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+.cell-invalid {
+  border-color: var(--bs-danger);
+}
+
+.list-edit-pane {
+  position: fixed;
+  z-index: 50;
+  right: -100%; /* Start offscreen */
+  top: 0;
+  bottom: 0;
+  width: 50%;
+  overflow: auto;
+  transition: right 0.3s ease;
+  background-color: var(--fw-pane-bg);
+  box-shadow: -2px 0 5px rgba(0,0,0,0.5);
+}
+.list-edit-pane.is-visible {
+  right: 0; /* Slide in */
+}
 
 
 /*for .scrollable tables with fixed header*/
