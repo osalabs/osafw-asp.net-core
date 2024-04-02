@@ -20,7 +20,6 @@
 
   <div v-else-if="def.type=='group_id' || def.type=='group_id_addnew'">
     <div class="float-end d-none d-lg-block">
-      <span class="form-saved-status"></span>
       <template v-if="!item.id">
         <button type="submit" class="btn btn-primary">Save</button>
         <button v-if="def.type=='group_id_addnew'" type="submit" class="btn btn-secondary" name="route_return" value="New">Save and Add New</button>
@@ -35,8 +34,7 @@
 
   <template v-else-if="def.type=='select'">
     <select class="form-select"
-      :value="value"
-      @input="$emit('update:form', $event.target.value)"
+      v-model="value"
       :class="def.class_control"
       :multiple="def.multiple"
       :required="def.required"
@@ -55,9 +53,8 @@
   <template v-else-if="['input','email','number','date_popup'].includes(def.type)">
     <input class="form-control"
       :type="inputType"
-      :value="value"
-      @input="$emit('update:form', $event.target.value)"
-      :class="def.class_control"
+      v-model="value"
+      :class="def.class_control+(is_invalid?' is-invalid':'')"
       :maxlength="def.maxlength"
       :required="def.required"
       :placeholder="def.placeholder"
@@ -73,7 +70,7 @@
 
   <template v-else-if="def.type=='textarea'">
     <textarea class="form-control"
-      @input="$emit('update:form', $event.target.value)"
+      v-model="value"
       :class="def.class_control"
       :rows="def.rows"
       :maxlength="def.maxlength"
@@ -115,13 +112,14 @@
     </div>
   </template>
 
+  <div v-if="is_invalid && !is_invalid_true" class="invalid-feedback">{{error_text}}</div>
 </script>
 
 <script type="module">
 fwApp.component('form-one-control', {
   template: '#form-one-control-template',
   props: ['def', 'lookups', 'form'],
-  emits: ['update:form'],
+  emits: ['update-form-field'],
   data: () => ({
   }),
   computed:{
@@ -130,13 +128,23 @@ fwApp.component('form-one-control', {
     },
     value: {
       get() {
-        console.log('value get', this.def.field, this.form.i);
-        return this.form.i[this.def.field] ?? null;
+        return this.form.i[this.def.field];
       },
       set(new_value) {
-        console.log('value set', this.def.field, new_value);
-        this.form.i[this.def.field] = new_value;
+        this.$emit('update-form-field', { field: this.def.field, value: new_value });
       }
+    },
+    error() {
+      return this.form.save_result?.ERR?.[this.def.field] ?? false;
+    },
+    error_text() {
+      return window.fwConst.ERR_CODES_MAP[this.error];
+    },
+    is_invalid() {
+      return !!this.error;
+    },
+    is_invalid_true() {
+      return this.error===true;
     },
     inputType: function(){
       const TYPE_MAP={

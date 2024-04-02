@@ -6,8 +6,8 @@
     </label>
     <div :class="def.class_contents ? def.class_contents : 'col'">
       <form-one-control
-        :form="modelValue"
-        @update:form="$emit('update:modelValue', $event)"
+        :form="form"
+        @update-form-field="$emit('update-form-field', $event)"
         :def="def"
         :lookups="lookups"
       />
@@ -18,8 +18,8 @@
 <script type="module">
 fwApp.component('form-one-group', {
   template: '#form-one-group-template',
-  props: ['def', 'lookups', 'modelValue'],
-  emits: ['update:modelValue'],
+  props: ['def', 'lookups', 'form'],
+  emits: ['update-form-field'],
   data: () => ({
   }),
   mounted(){

@@ -1,15 +1,21 @@
 <script type="text/x-template" id="list-edit-pane-template">
   <div ref="pane" class="container-fluid list-edit-pane" :class="{ 'is-visible': fwStore.is_list_edit_pane }">
     <button type="button" class="btn-close float-end mt-2" aria-label="Close" @click="closePane"></button>
+    <span v-if="save_result" class="form-saved-status float-end mt-1 me-2">
+      <span v-if="save_result.success" class="badge bg-success">saved</span>
+      <span v-if="!save_result.success" class="badge bg-danger">not saved</span>
+    </span>
     <h2>Edit Record</h2>
-    <form v-if="fwStore.edit_data"
+    <div v-if="save_result && !save_result.success" class="alert alert-danger">{{save_result.err_msg}}</div>
+    <form v-if="fwStore.edit_data !== null"
       class="fw-card"
       @submit.prevent="saveChanges"
       @change.prevent="onChange"
     >
       <fieldset>
         <form-one-def v-for="def in fwStore.treeShowFormFields"
-          v-model="fwStore.edit_data"
+          :form="fwStore.edit_data"
+          @update-form-field="onUpdateFormField"
           :def="def"
           :lookups="fwStore.lookups"
         />
@@ -25,7 +31,10 @@ fwApp.component('list-edit-pane', {
   template: '#list-edit-pane-template',
   props: [],
   computed: {
-    ...mapStores(useFwStore) //accessible via this.fwStore
+    ...mapStores(useFwStore), //accessible via this.fwStore
+    save_result() {
+      return this.fwStore.edit_data?.save_result;
+    },
   },
   mounted() {
     console.log('list-edit-pane mounted');
@@ -44,16 +53,22 @@ fwApp.component('list-edit-pane', {
     //     //this.closePane();
     //   }
     // },
+    onUpdateFormField({ field, value }) {
+      //console.log('list-edit-pane updateFormField', { field, value });
+      this.fwStore.edit_data.i[field] = value;
+    },
     onChange() {
-      console.log('list-edit-pane onChange');
+      //console.log('list-edit-pane onChange');
+      this.saveChanges(); //save changes whenever form changed
     },
     saveChanges() {
       // Implement save logic here
       console.log('list-edit-pane saveChanges');
-      //this.$emit('update', this.edit_data);
+      this.fwStore.saveEditDataDebounced();
     },
     closePane() {
       this.fwStore.is_list_edit_pane=false;
+      this.fwStore.clearEditData();
     }
   }
 });

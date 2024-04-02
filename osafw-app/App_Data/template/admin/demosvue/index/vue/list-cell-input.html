@@ -21,7 +21,7 @@
         @keydown.up.prevent="onNavigate('up')"
         @keydown.down.prevent="onNavigate('down')"
         >
-      <div class="invalid-tooltip">{{error}}</div>
+      <div v-if="error" class="invalid-tooltip">{{error}}</div>
   </div>
 </script>
 

@@ -1,6 +1,15 @@
 // define apis via mande
 const apiUsers = mande('/api/users'); // TODO REMOVE sample
 
+// define some global constants
+window.fwConst = {
+    ERR_CODES_MAP: {
+        REQUIRED: 'Required field',
+        EXISTS: 'This name already exists in our database',
+        WRONG: 'Invalid',
+    },
+};
+
 const useFwStore = defineStore('fw', {
   state: () => ({
     global: {}, //global config
@@ -16,12 +25,6 @@ const useFwStore = defineStore('fw', {
 
     // list edit support
     is_list_edit: false, //true if list rows inline-editable
-
-    ERR_CODES_MAP: {
-        REQUIRED: 'Required field',
-        EXISTS: 'This name already exists in our database',
-        WRONG: 'Invalid',
-    },
 
     // list filter, can contain: {pagenum:N, pagesize:N, sortby:'', sortdir:'asc|desc'}
     f: {
@@ -45,7 +48,7 @@ const useFwStore = defineStore('fw', {
     // edit form fields configuration
     showform_fields: [],
     is_list_edit_pane: false, // true if edit pane is open
-    edit_data: null, // object for single item edit form {id:X, i:{}, add_users_id_name:'', upd_users_id_name:''}}
+    edit_data: null, // object for single item edit form {id:X, i:{}, add_users_id_name:'', upd_users_id_name:'', save_result:{}}}
 
     //standard lookups
     lookups_std: {
@@ -67,6 +70,7 @@ const useFwStore = defineStore('fw', {
     //work vars
     hchecked_rows: {}, // array of checked rows {row.id => 1}
     loadIndexDebouncedTimeout: null,
+    saveEditDataDebouncedTimeout: null,
     is_initial_load: true, //reset after initial load
     cells_saving: {}, // cells saving status {row.id_field => true}
     cells_errors: {}, // cells saving status {row.id_field => true}
@@ -164,7 +168,6 @@ const useFwStore = defineStore('fw', {
         } catch (error) {
             console.error('setListDensity error:', error.body?.err_msg ?? 'server error');
             console.error(error);
-            //fw.error(error);
             return error;
         }
     },
@@ -197,9 +200,8 @@ const useFwStore = defineStore('fw', {
             this.is_initial_load = false; // reset initial load flag
 
         } catch (error) {
-            console.error('loadIndex error:', error.body?.err_msg??'server error');
+            console.error('loadIndex error:', error.body?.err_msg ?? 'server error');
             console.error(error);
-            //fw.error(error);
             return error;
         }
     },
@@ -215,7 +217,6 @@ const useFwStore = defineStore('fw', {
         } catch (error) {
             console.error('loadItem error:', error.body?.err_msg ?? 'server error');
             console.error(error);
-            //fw.error(error);
             return error;
         }
     },
@@ -256,13 +257,44 @@ const useFwStore = defineStore('fw', {
             //check if we got specific field error code
             let field_err_code = error.body?.ERR?.[col.field_name] ?? '';
             if (field_err_code && field_err_code!==true) {
-                err_msg = this.ERR_CODES_MAP[field_err_code] ?? 'Invalid';
+                err_msg = window.fwConst.ERR_CODES_MAP[field_err_code] ?? 'Invalid';
             }
 
             this.cells_errors[row.id + '-' + col.field_name] = err_msg;
             console.error('saveCell error:', err_msg);
             //console.error(error);
-            //fw.error(error);
+            return error;
+        }
+    },
+    clearEditData() {
+        this.edit_data = null;
+    },
+    // save edit form data debounced
+    async saveEditDataDebounced() {
+        // debounce saveEditData
+        if (this.saveEditDataDebouncedTimeout) clearTimeout(this.saveEditDataDebouncedTimeout);
+        this.saveEditDataDebouncedTimeout = setTimeout(() => {
+            this.saveEditData();
+        }, 500);
+    },
+    //save edit form data
+    async saveEditData() {
+        try {
+            const apiBase = mande(this.base_url);
+    
+            const req = { item: this.edit_data.i, XSS: this.XSS };
+            console.log('saveEditData req', req);
+            const response = await apiBase.post(this.edit_data.id, req);
+            console.log('saveEditData response', response);
+            this.edit_data.save_result = response;
+    
+            //reload list to show changes
+            this.loadIndex();
+    
+        } catch (error) {
+            this.edit_data.save_result = error.body ?? { success:false, err_msg: 'server error' };
+            console.error('saveEditData error:', error.body?.err_msg ?? 'server error');
+            //console.error(error);
             return error;
         }
     },

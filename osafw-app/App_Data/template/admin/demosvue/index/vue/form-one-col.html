@@ -1,8 +1,8 @@
 <script type="text/x-template" id="form-one-col-template">
   <div class="col-12" :class="def.class">
     <form-one-def v-for="child_def in def.children"
-      :modelValue="modelValue"
-      @update:modelValue="$emit('update:modelValue', $event)"
+      :form="form"
+      @update-form-field="$emit('update-form-field', $event)"
       :def="child_def"
       :lookups="lookups"
     />
@@ -12,8 +12,8 @@
 <script type="module">
 fwApp.component('form-one-col', {
   template: '#form-one-col-template',
-  props: ['def', 'lookups', 'modelValue'],
-  emits: ['update:modelValue'],
+  props: ['def', 'lookups', 'form'],
+  emits: ['update-form-field'],
   data: () => ({
   }),
   mounted(){

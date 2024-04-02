@@ -53,12 +53,14 @@
                 :data-id="row[fwStore.field_id]"
                 :title="row_title"
                 :class="fwStore.hchecked_rows[row[fwStore.field_id]] ? 'selected' : ''"
-                @click="(event) => onClickRow(event,row)">
+                @click="(event) => onClickRow(event,row)"
+                @dblclick="(event) => onDblClickRow(event,row)"
+            >
 
                 <td class="list-row-cb"><input class="multicb" type="checkbox" v-model="fwStore.hchecked_rows[row[fwStore.field_id]]"></td>
                 <!--TODO make common component for row btn-->
                 <td :class="'list-row-controls text-nowrap d-print-none '+(fwStore.global.is_list_btn_left?'':'text-end')" v-if="fwStore.global.is_list_btn_left">
-                  <a href="<~../url>/<~id><~/common/list/relid>">`View`</a>
+                  <a href="#" @click.prevent="openEditPane(row)">`View`</a>
                   <~/common/dot><a href="<~row_click_url>">`Edit`</a>
                   <~/common/dot><a href="<~../url>/<~id>/delete<~/common/list/relid>"
                                     class="text-danger on-delete-list-row"
@@ -94,7 +96,7 @@
 
                 <!--TODO make common component for row btn-->
                 <td :class="'list-row-controls text-nowrap d-print-none '+(fwStore.global.is_list_btn_left?'':'text-end')" v-if="!fwStore.global.is_list_btn_left">
-                  <a href="<~../url>/<~id><~/common/list/relid>">`View`</a>
+                  <a href="#" @click.prevent="openEditPane(row)">`View`</a>
                   <~/common/dot><a href="#" @click.prevent="openEditPane(row)">`Edit`</a>
                   <~/common/dot><a href="<~../url>/<~id>/delete<~/common/list/relid>"
                                     class="text-danger on-delete-list-row"
@@ -200,6 +202,10 @@ fwApp.component('list-table', {
 
         const row_id = row[this.fwStore.field_id];
         this.fwStore.hchecked_rows[row_id] = !this.fwStore.hchecked_rows[row_id];
+    },
+    async onDblClickRow(e, row){
+      console.log('onDblClickRow',e);
+      await this.openEditPane(row);
     },
     //check all/none rows
     onCheckAll(e){
