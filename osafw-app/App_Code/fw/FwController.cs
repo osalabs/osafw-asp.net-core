@@ -41,9 +41,11 @@ public abstract class FwController
     protected string list_where = " 1=1 ";       // where to use in list sql, default is non-deleted records (see setListSearch() )
     protected long list_count;                    // count of list rows returned from db
     protected ArrayList list_rows;               // list rows returned from db (array of hashes)
+    protected ArrayList list_headers;            // list headers with misc meta info per column
     protected ArrayList list_pager;              // pager for the list from FormUtils.getPager
     protected string list_sortdef;               // required for Index, default list sorting: name asc|desc
     protected Hashtable list_sortmap;            // required for Index, sortmap fields
+    protected Hashtable list_user_view;          // optional, user view settings for the list screen from UserViews model
     protected string search_fields;              // optional, search fields, space-separated
                                                  // fields to search via $s=list_filter["s"), ] - means exact match, not "like"
 
@@ -702,6 +704,16 @@ public abstract class FwController
     }
 
     /// <summary>
+    /// set list fields for db select, based on user-selected headers from config
+    /// so we fetch from db only fields that are visible in the list + id field
+    /// </summary>
+    /// <param name="ps"></param>
+    protected virtual void setListFields(Hashtable ps)
+    {
+        // default is "*", override in controller
+    }
+
+    /// <summary>
     /// Perform 2 queries to get list of rows.
     /// Set variables:
     /// Me.list_count - count of rows obtained from db
@@ -963,6 +975,8 @@ public abstract class FwController
         if (ps == null)
             ps = new Hashtable();
 
+        ps["list_user_view"] = this.list_user_view;
+        ps["list_headers"] = this.list_headers;
         ps["list_rows"] = this.list_rows;
         ps["count"] = this.list_count;
         ps["pager"] = this.list_pager;
@@ -1145,27 +1159,20 @@ public abstract class FwController
         return data;
     }
 
-    // add to ps:
-    // headers
-    // headers_search
-    // depends on ps("list_rows")
+    // set list_headers and update list_rows with cols
     // use is_cols=false when return ps as json
     // usage:
-    // model.setViewList(ps, list_filter_search)
-    public virtual void setViewList(Hashtable ps, Hashtable hsearch, bool is_cols = true)
+    // model.setViewList(list_filter_search)
+    public virtual void setViewList(Hashtable hsearch, bool is_cols = true)
     {
-        var user_view = fw.model<UserViews>().oneByIcode(base_url + (is_list_edit ? "/edit" : ""));
-        ps["user_view"] = user_view;
+        list_user_view = fw.model<UserViews>().oneByIcode(base_url + (is_list_edit ? "/edit" : ""));
 
         var fields = getViewListUserFields();
 
-        var headers = getViewListArr(fields);
+        list_headers = getViewListArr(fields);
         // add search from user's submit
-        foreach (Hashtable header in headers)
+        foreach (Hashtable header in list_headers)
             header["search_value"] = hsearch[header["field_name"]];
-
-        ps["headers"] = headers;
-        ps["headers_search"] = headers;
 
         if (is_cols)
         {
@@ -1178,7 +1185,7 @@ public abstract class FwController
 
             foreach (Hashtable row in list_rows)
             {
-                ArrayList cols = new();
+                ArrayList cols = [];
                 foreach (var fieldname in afields)
                 {
                     var data = applyViewListConversions(fieldname, row, hconversions);

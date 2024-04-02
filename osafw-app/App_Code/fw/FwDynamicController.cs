@@ -52,6 +52,10 @@ public class FwDynamicController : FwController
         if (export_format.Length > 0)
             return []; // return empty hashtable just in case action overriden to avoid check for null
 
+        if (is_dynamic_index)
+            // customizable headers
+            setViewList(list_filter_search);
+
         // set standard output parse strings
         var ps = this.setPS();
 
@@ -60,10 +64,6 @@ public class FwDynamicController : FwController
             this.setUserLists(ps);
 
         ps["select_userfilters"] = fw.model<UserFilters>().listSelectByIcode((string)fw.G["controller.action"]);
-
-        if (is_dynamic_index)
-            // customizable headers
-            setViewList(ps, list_filter_search);
 
         return ps;
     }

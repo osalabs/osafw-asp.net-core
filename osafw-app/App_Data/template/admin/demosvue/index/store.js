@@ -13,6 +13,7 @@ const useFwStore = defineStore('fw', {
   state: () => ({
     global: {}, //global config
     XSS: '', // token
+    me_id: 0, // current user id
     access_level: 0, // user access level
     base_url: '', // base url for the controller
     list_title: '', //list screen title
@@ -20,7 +21,7 @@ const useFwStore = defineStore('fw', {
     select_userlists: [],
     my_userlists: [],
     is_readonly: false,
-    user_view: {}, // UserViews record for current controller
+    list_user_view: {}, // UserViews record for current controller
 
     // list edit support
     is_list_edit: false, //true if list rows inline-editable
@@ -38,7 +39,7 @@ const useFwStore = defineStore('fw', {
     related_id: 0, // related model id
     return_url: '', // return url if controller called from other place expecting user's return
     field_id: 'id', // model's id field name
-    headers: [], // list headers, array of {field_name:"", field_name_visible:"", is_sortable:bool, is_checked:bool, search_value:null|"", is_ro:bool, input_type:"input|select|date"}
+    list_headers: [], // list headers, array of {field_name:"", field_name_visible:"", is_sortable:bool, is_checked:bool, search_value:null|"", is_ro:bool, input_type:"input|select|date"}
     is_list_search_open: false, // true if list search is open by user
     count: 0, // total list rows count
     list_rows: [], // array of row objects to display, row can contain _meta object {is_ro:bool, ro_fields:[read only field names]}
@@ -78,8 +79,8 @@ const useFwStore = defineStore('fw', {
 
   getters: {
       doubleCount: (state) => state.count * 2, //sample getter
-      //return true if state.headers contains at least one non-empty search_value
-      isListSearch: (state) => state.headers.some(h => h.search_value?.length),
+      //return true if state.list_headers contains at least one non-empty search_value
+      isListSearch: (state) => state.list_headers.some(h => h.search_value?.length),
       //count of hchecked_rows but only true values
       countCheckedRows: (state) => Object.values(state.hchecked_rows).filter(v => v).length,
       listRequestQuery: (state) => {
@@ -98,7 +99,7 @@ const useFwStore = defineStore('fw', {
 
           //add search values from headers if search is open
           if (state.is_list_search_open) {
-              state.headers.forEach(h => {
+              state.list_headers.forEach(h => {
                   if (h.search_value?.length) req['search[' + h.field_name + ']'] = h.search_value;
               });
           }
@@ -158,7 +159,7 @@ const useFwStore = defineStore('fw', {
     },
     //save user view settings (density)
     async setListDensity(density) {
-        this.user_view.density = density;
+        this.list_user_view.density = density;
         //save to backend
         const apiBase = mande(this.base_url);
         const req = { density: density, XSS: this.XSS };
@@ -196,7 +197,7 @@ const useFwStore = defineStore('fw', {
             });
 
             // set defaults
-            this.user_view.density = this.user_view.density ?? 'table-sm';
+            this.list_user_view.density = this.list_user_view.density ?? 'table-sm';
             
             this.is_initial_load = false; // reset initial load flag
             this.is_loading_index = false;

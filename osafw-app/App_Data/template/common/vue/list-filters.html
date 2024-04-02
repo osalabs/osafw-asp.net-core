@@ -102,7 +102,7 @@ fwApp.component('list-filters', {
       },
       onToggleDensity(e){
           const classes = ['table-sm', 'table-dense', 'table-normal'];
-          const current_density = this.fwStore.user_view.density;
+          const current_density = this.fwStore.list_user_view.density;
           //get next density class
           const next_density = classes[(classes.indexOf(current_density) + 1) % classes.length];
 

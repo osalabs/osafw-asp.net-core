@@ -3,16 +3,16 @@
   <form class="fw-card" @submit.prevent>
     <input type="hidden" name="_method" value="PUT">
 
-    <div :class="'table-list-wrapper ' + fwStore.user_view.density">
+    <div :class="'table-list-wrapper ' + fwStore.list_user_view.density">
       <div class="table-list-hscroll-hint"><~/common/icons/info-circle-fill> use <kbd>Shift+Mouse Wheel</kbd> for an easy horizontal scrolling
       </div>
-      <table :class="'table table-stripedX table-hover list ' + (fwStore.is_list_edit?'list-edit ':'') + fwStore.user_view.density">
+      <table :class="'table table-stripedX table-hover list ' + (fwStore.is_list_edit?'list-edit ':'') + fwStore.list_user_view.density">
         <thead>
             <tr>
               <th><input type="checkbox" name="all" v-model="cb_check_all" @change="onCheckAll"></th>
               <th v-if="fwStore.global.is_list_btn_left"></th>
 
-              <template v-for="header in fwStore.headers">
+              <template v-for="header in fwStore.list_headers">
                 <th :class="'rotate'+(header.is_sortable && fwStore.f.sortby==header.field_name ? ' active-sort' : '')"
                   :data-sort="header.is_sortable"
                   @click="(event) => onSortHeader(event, header)">
@@ -37,7 +37,7 @@
             <tr class="search" :style="fwStore.is_list_search_open ? 'display: table-row' : ''">
               <th></th>
               <th v-if="fwStore.global.is_list_btn_left"></th>
-              <th v-for="header in fwStore.headers">
+              <th v-for="header in fwStore.list_headers">
                 <input type="text" class="form-control form-control-sm"
                   v-model="header.search_value"
                   @change="fwStore.loadIndexDebounced"
@@ -59,7 +59,7 @@
                 <td class="list-row-cb"><input class="multicb" type="checkbox" v-model="fwStore.hchecked_rows[row[fwStore.field_id]]"></td>
                 <list-row-btn v-if="fwStore.global.is_list_btn_left" :row="row" />
 
-                <template v-for="(header, key) in fwStore.headers" :key="key">
+                <template v-for="(header, key) in fwStore.list_headers" :key="key">
                   <td v-if="!fwStore.is_list_edit">{{fieldValueByName(row, header.field_name)}}</td>
                   <td v-else
                       :class="(fwStore.cells_saving[row.id+'-'+header.field_name]?'cell-success-fade':'')+(fwStore.cells_errors[row.id+'-'+header.field_name]?' cell-invalid':'')">

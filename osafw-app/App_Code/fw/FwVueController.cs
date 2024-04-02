@@ -19,17 +19,15 @@ public class FwVueController : FwDynamicController
     }
 
     /// <summary>
-    /// set list fields for db select, based on user-selected headers from config
+    /// set list fields for db select, based on user-selected headers in list_headers
     /// so we fetch from db only fields that are visible in the list + id field
     /// </summary>
     /// <param name="ps"></param>
-    protected virtual void setListFields(Hashtable ps)
+    protected override void setListFields(Hashtable ps)
     {
-        //TODO have headers as controller class property
-        var headers = (ArrayList)ps["headers"]; //arraylist of hashtables, we need header["field_name"]
         var quoted_fields = new ArrayList();
         var is_id_in_fields = false;
-        foreach (Hashtable header in headers)
+        foreach (Hashtable header in list_headers)
         {
             var field_name = (string)header["field_name"];
             quoted_fields.Add(db.qid(field_name));
@@ -74,12 +72,10 @@ public class FwVueController : FwDynamicController
                 setListSearch();
                 setListSearchStatus();
 
-                setViewList(ps, list_filter_search, false);
+                setViewList(list_filter_search, false);
 
                 //only select from db visible fields + id, save as comma-separated string into list_fields
                 setListFields(ps);
-                ps.Remove("headers_search"); // TODO refactor to not include in ps at all even for ParsePage controllers
-                var headers = (ArrayList)ps["headers"];
 
                 getListRows();
 
@@ -97,18 +93,19 @@ public class FwVueController : FwDynamicController
 
                 ps["XSS"] = fw.Session("XSS");
                 ps["access_level"] = fw.userAccessLevel;
+                ps["me_id"] = fw.userId;
                 //some specific from global fw.G;            
                 var global = new Hashtable();
-                foreach (var key in Utils.qw("is_list_btn_left"))
+                foreach (var key in Utils.qw("ROOT_URL is_list_btn_left"))
                 {
                     global[key] = fw.G[key];
                 }
                 ps["global"] = global;
 
                 //editable list support - read from config                
-                //add to headers data for editable list: is_ro, input_type, lookup_model, lookup_tpl
+                //add to list_headers data for editable list: is_ro, input_type, lookup_model, lookup_tpl
                 var editable_types = Utils.qh("input email number textarea date_popup datetime_popup autocomplete select cb radio yesno");
-                foreach (Hashtable header in headers)
+                foreach (Hashtable header in list_headers)
                 {
                     var field_name = (string)header["field_name"];
                     var def = (Hashtable)hfields[field_name] ?? null;
@@ -128,7 +125,7 @@ public class FwVueController : FwDynamicController
                     if (lookup_tpl.Length > 0)
                         header["lookup_tpl"] = lookup_tpl;
 
-                    //add to headers, if exists in def: maxlength, min, max, step, placeholder, pattern, required, readonly, disabled
+                    //add to header, if exists in def: maxlength, min, max, step, placeholder, pattern, required, readonly, disabled
                     foreach (string attr in Utils.qw("is_option0 is_option_empty maxlength min max step placeholder pattern required readonly disabled"))
                     {
                         if (def.ContainsKey(attr))
@@ -145,8 +142,7 @@ public class FwVueController : FwDynamicController
 
                 // extract lookups from config and add to ps
                 var lookups = new Hashtable();
-                var headers = (ArrayList)ps["headers"];
-                foreach (Hashtable header in headers)
+                foreach (Hashtable header in list_headers)
                 {
                     var field_name = (string)header["field_name"];
                     var def = (Hashtable)hfields[field_name] ?? null;
