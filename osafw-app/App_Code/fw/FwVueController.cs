@@ -76,7 +76,13 @@ public class FwVueController : FwController
 
                 ps["XSS"] = fw.Session("XSS");
                 ps["access_level"] = fw.userAccessLevel;
-                //TODO only specific from global ps["global"] = fw.G;            
+                //some specific from global fw.G;            
+                var global = new Hashtable();
+                foreach (var key in Utils.qw("is_list_btn_left"))
+                {
+                    global[key] = fw.G[key];
+                }
+                ps["global"] = global;
 
                 //editable list support - read from config                
                 //add to headers data for editable list: is_ro, input_type, lookup_model, lookup_tpl

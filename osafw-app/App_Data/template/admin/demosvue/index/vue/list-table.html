@@ -58,14 +58,7 @@
             >
 
                 <td class="list-row-cb"><input class="multicb" type="checkbox" v-model="fwStore.hchecked_rows[row[fwStore.field_id]]"></td>
-                <!--TODO make common component for row btn-->
-                <td :class="'list-row-controls text-nowrap d-print-none '+(fwStore.global.is_list_btn_left?'':'text-end')" v-if="fwStore.global.is_list_btn_left">
-                  <a href="#" @click.prevent="openEditPane(row)">`View`</a>
-                  <~/common/dot><a href="<~row_click_url>">`Edit`</a>
-                  <~/common/dot><a href="<~../url>/<~id>/delete<~/common/list/relid>"
-                                    class="text-danger on-delete-list-row"
-                                    :disabled="fwStore.is_readonly"><~/common/icons/x></a>
-                </td>
+                <list-row-btn v-if="fwStore.global.is_list_btn_left" :row="row" />
 
                 <template v-for="(header, key) in fwStore.headers" :key="key">
                   <td v-if="!fwStore.is_list_edit">{{fieldValueByName(row, header.field_name)}}</td>
@@ -94,14 +87,7 @@
                   </td>
                 </template>
 
-                <!--TODO make common component for row btn-->
-                <td :class="'list-row-controls text-nowrap d-print-none '+(fwStore.global.is_list_btn_left?'':'text-end')" v-if="!fwStore.global.is_list_btn_left">
-                  <a href="#" @click.prevent="openEditPane(row)">`View`</a>
-                  <~/common/dot><a href="#" @click.prevent="openEditPane(row)">`Edit`</a>
-                  <~/common/dot><a href="<~../url>/<~id>/delete<~/common/list/relid>"
-                                    class="text-danger on-delete-list-row"
-                                    :disabled="fwStore.is_readonly"><~/common/icons/x></a>
-                </td>
+                <list-row-btn v-if="!fwStore.global.is_list_btn_left" :row="row" />
             </tr>
           </template>
         </tbody>
@@ -205,7 +191,7 @@ fwApp.component('list-table', {
     },
     async onDblClickRow(e, row){
       console.log('onDblClickRow',e);
-      await this.openEditPane(row);
+      await this.fwStore.openEditPane(row.id);
     },
     //check all/none rows
     onCheckAll(e){
@@ -244,11 +230,6 @@ fwApp.component('list-table', {
     findCell(row, col) {
         const cell_id = 'cell-'+row.id+'-'+col.field_name;
         return document.getElementById(cell_id);
-    },
-    async openEditPane(row) {
-        this.fwStore.edit_item = null;
-        this.fwStore.is_list_edit_pane = true;
-        await this.fwStore.loadItem(row.id); //load into fwStore.edit_item   
     }
   }
 });

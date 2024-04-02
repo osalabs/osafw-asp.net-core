@@ -1,0 +1,35 @@
+<script type="text/x-template" id="list-row-btn-template">
+  <td class="list-row-controls text-nowrap d-print-none"
+    :class="(fwStore.global.is_list_btn_left?'':'text-end')">
+    <a href="#" @click.prevent="fwStore.openEditPane(row.id)">`View`</a>
+    &nbsp;&#183;&nbsp;<a href="#" @click.prevent="fwStore.openEditPane(row.id)">`Edit`</a>
+    &nbsp;&#183;&nbsp;<a href="#" data-TODO="<~../url>/<~id>/delete<~/common/list/relid>"
+                      class="text-danger"
+                      @click.prevent="onDelete()"
+                      :disabled="fwStore.is_readonly"><~/common/icons/x></a>
+  </td>
+</script>
+
+<script type="module">
+import { mapStores } from 'pinia';
+
+fwApp.component('list-row-btn', {
+  template: '#list-row-btn-template',
+  props: ['row'],
+  emits: [],
+  data: () => ({
+  }),
+  computed: {
+    ...mapStores(useFwStore) //accessible via this.fwStore
+  },
+  mounted(){
+  },
+  updated(){
+  },
+  methods: {
+    onDelete(e){
+      console.log("TODO list-row-btn onDelete", this.row.id);
+    },
+  }
+});
+</script>

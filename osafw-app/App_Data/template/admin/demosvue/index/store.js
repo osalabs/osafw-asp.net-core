@@ -267,8 +267,14 @@ const useFwStore = defineStore('fw', {
             return error;
         }
     },
+
     clearEditData() {
+        this.edit_data = null; 
+    },
+    async openEditPane(id) {
         this.edit_data = null;
+        this.is_list_edit_pane = true;
+        await this.loadItem(id); //load into fwStore.edit_data
     },
     // save edit form data debounced
     async saveEditDataDebounced() {
