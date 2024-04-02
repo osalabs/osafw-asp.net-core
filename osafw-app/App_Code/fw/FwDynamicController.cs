@@ -69,7 +69,7 @@ public class FwDynamicController : FwController
     }
 
     //Prev/Next navigation
-    public void NextAction(string form_id)
+    public virtual void NextAction(string form_id)
     {
         var id = Utils.f2int(form_id);
         if (id == 0)

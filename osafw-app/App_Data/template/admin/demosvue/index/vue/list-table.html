@@ -49,8 +49,7 @@
 
         <tbody class="table-group-divider">
           <template v-for="row in fwStore.list_rows" :key="row[fwStore.field_id]">
-            <tr data-url="<~row_click_url>"
-                :data-id="row[fwStore.field_id]"
+            <tr :data-id="row[fwStore.field_id]"
                 :title="row_title"
                 :class="fwStore.hchecked_rows[row[fwStore.field_id]] ? 'selected' : ''"
                 @click="(event) => onClickRow(event,row)"
@@ -118,9 +117,6 @@
   </form>
 
   <hr class="d-print-none">
-  <form id="FOneDelete" action="<~../url>/%id%?XSS=<~SESSION[XSS]>" method="post" class="d-none">
-  </form>
-
  </div>
 </script>
 

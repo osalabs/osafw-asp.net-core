@@ -1,5 +1,3 @@
-// define apis via mande
-const apiUsers = mande('/api/users'); // TODO REMOVE sample
 
 // define some global constants
 window.fwConst = {
@@ -271,7 +269,25 @@ const useFwStore = defineStore('fw', {
             return error;
         }
     },
+    async deleteRow(id) {
+        try {
+            const apiBase = mande(this.base_url);
+            const req = { XSS: this.XSS };
+            console.log('deleteRow req', req);
+            const response = await apiBase.delete(id, { query: req });
+            console.log('deleteRow response', response);
 
+            //reload list to show changes
+            this.loadIndex();
+
+        } catch (error) {
+            console.error('deleteRow error:', error.body?.err_msg ?? 'server error');
+            console.error(error);
+            return error;
+        }
+    },
+
+    // *** list edit pane support ***
     clearEditData() {
         this.edit_data = null; 
     },
@@ -306,17 +322,6 @@ const useFwStore = defineStore('fw', {
             this.edit_data.save_result = error.body ?? { success:false, err_msg: 'server error' };
             console.error('saveEditData error:', error.body?.err_msg ?? 'server error');
             //console.error(error);
-            return error;
-        }
-    },
-
-    // sample async action TODO REMOVE
-    async registerUser(login, password) {
-        try {
-            this.userData = await apiUsers.post({ login, password });
-            fw.ok(`"Welcome back ${this.userData.name}!"`);
-        } catch (error) {
-            fw.error(error);
             return error;
         }
     },

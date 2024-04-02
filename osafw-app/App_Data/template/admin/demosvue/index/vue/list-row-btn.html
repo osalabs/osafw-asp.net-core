@@ -3,10 +3,7 @@
     :class="(fwStore.global.is_list_btn_left?'':'text-end')">
     <a href="#" @click.prevent="fwStore.openEditPane(row.id)">`View`</a>
     &nbsp;&#183;&nbsp;<a href="#" @click.prevent="fwStore.openEditPane(row.id)">`Edit`</a>
-    &nbsp;&#183;&nbsp;<a href="#" data-TODO="<~../url>/<~id>/delete<~/common/list/relid>"
-                      class="text-danger"
-                      @click.prevent="onDelete()"
-                      :disabled="fwStore.is_readonly"><~/common/icons/x></a>
+    &nbsp;&#183;&nbsp;<a href="#" class="text-danger" @click.prevent="onDelete()" :disabled="fwStore.is_readonly"><~/common/icons/x></a>
   </td>
 </script>
 
@@ -27,8 +24,9 @@ fwApp.component('list-row-btn', {
   updated(){
   },
   methods: {
-    onDelete(e){
-      console.log("TODO list-row-btn onDelete", this.row.id);
+    async onDelete(e){
+      console.log("TODO confirm modal list-row-btn onDelete", this.row.id);
+      await this.fwStore.deleteRow(this.row.id);
     },
   }
 });
