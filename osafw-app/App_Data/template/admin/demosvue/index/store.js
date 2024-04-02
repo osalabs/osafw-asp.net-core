@@ -73,6 +73,7 @@ const useFwStore = defineStore('fw', {
     loadIndexDebouncedTimeout: null,
     saveEditDataDebouncedTimeout: null,
     is_initial_load: true, //reset after initial load
+    is_loading_index: false, //true while loading index data
     cells_saving: {}, // cells saving status {row.id_field => true}
     cells_errors: {}, // cells saving status {row.id_field => true}
   }),
@@ -183,6 +184,7 @@ const useFwStore = defineStore('fw', {
     // load data
     async loadIndex() {
         try {
+            this.is_loading_index = true;
             const apiBase = mande(this.base_url);
 
             const req = this.listRequestQuery;
@@ -199,8 +201,10 @@ const useFwStore = defineStore('fw', {
             this.user_view.density = this.user_view.density ?? 'table-sm';
             
             this.is_initial_load = false; // reset initial load flag
+            this.is_loading_index = false;
 
         } catch (error) {
+            this.is_loading_index = false;
             console.error('loadIndex error:', error.body?.err_msg ?? 'server error');
             console.error(error);
             return error;

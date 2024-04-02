@@ -9,7 +9,10 @@
             :placeholder="s_placeholder"
             v-model="fwStore.f.s">
           <button class="btn btn-outline-secondary w100"
-            @click="fwStore.loadIndexDebounced"><~/common/icons/search></button>
+            @click="fwStore.loadIndexDebounced">
+              <span v-if="fwStore.is_loading_index" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+              <template v-if="!fwStore.is_loading_index"><~/common/icons/search></template>
+          </button>
           <a class="btn btn-outline-secondary w100 on-filter-reset"
             :href="'?dofilter=1'+(fwStore.related_id ? '&related_id='+fwStore.related_id : '')" >`Reset`</a>
         </div>
