@@ -3,7 +3,7 @@
 
   <p v-else-if="def.type=='plaintext'" class="form-control-plaintext" style="white-space: pre-line">{{value}}</p>
   <p v-else-if="def.type=='plaintext_link'" class="form-control-plaintext">
-    <a href="TODO: <~admin_url>/<~lookup_id>?return_url=<~GLOBAL[request_url] urlencode noescape>">{{value}}<template if="!value">{{value}}</template></a>
+    <a :href="def.admin_url ? def.admin_url : '/Admin/'+def.lookup_model+'/'+value">{{lookupValue}}<template if="!value">{{value}}</template></a>
   </p>
   <p v-else-if="def.type=='markdown'" class="form-control-plaintext" style="white-space: pre-line">{{value}} TODO markdown</p>
   <p v-else-if="def.type=='noescape'" class="form-control-plaintext" v-html="value"></p>
@@ -23,7 +23,7 @@
       <template v-if="!item.id">
         <button type="submit" class="btn btn-primary">Save</button>
         <button v-if="def.type=='group_id_addnew'" type="submit" class="btn btn-secondary" name="route_return" value="New">Save and Add New</button>
-        <button type="button" class="btn btn-default on-cancel" data-href="<~/common/form/cancel_urlTODO>">Cancel</button>
+        <button type="button" class="btn btn-default" @click="$emit('cancel-form')">Cancel</button>
       </template>
     </div>
     <p class="form-control-plaintext">
@@ -119,7 +119,7 @@
 fwApp.component('form-one-control', {
   template: '#form-one-control-template',
   props: ['def', 'lookups', 'form'],
-  emits: ['update-form-field'],
+  emits: ['update-form-field', 'cancel-form'],
   data: () => ({
   }),
   computed:{
@@ -173,6 +173,15 @@ fwApp.component('form-one-control', {
       }
       return [];
     },
+    lookupValue: function () {
+      //return from lookupOptions an iname by id=value
+      for (var i = 0; i < this.lookupOptions.length; i++) {
+        if (this.lookupOptions[i].id == this.value) {
+            return this.lookupOptions[i].iname;
+        }
+      }
+      return '';
+    }
   },
   mounted(){
     //console.log("form-one-control mounted", this.def);

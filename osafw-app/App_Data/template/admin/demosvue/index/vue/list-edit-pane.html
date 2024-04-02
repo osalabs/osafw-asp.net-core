@@ -16,6 +16,7 @@
         <form-one-def v-for="def in fwStore.treeShowFormFields"
           :form="fwStore.edit_data"
           @update-form-field="onUpdateFormField"
+          @cancel-form="onCancelForm"
           :def="def"
           :lookups="fwStore.lookups"
         />
@@ -65,6 +66,9 @@ fwApp.component('list-edit-pane', {
       // Implement save logic here
       console.log('list-edit-pane saveChanges');
       this.fwStore.saveEditDataDebounced();
+    },
+    onCancelForm() {
+      this.closePane();
     },
     closePane() {
       this.fwStore.is_list_edit_pane=false;
