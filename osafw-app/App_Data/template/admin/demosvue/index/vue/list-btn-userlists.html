@@ -1,0 +1,49 @@
+<script type="text/x-template" id="list-btn-userlists-template">
+  <div class="btn-group">
+    <div class="btn-group">
+      <button type="button" class="btn btn-default dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        <~/common/icons/flag> `Add to List`
+      </button>
+      <div class="dropdown-menu">
+        <a class="dropdown-item" href="#" @click="onCreateNewList">`Create New List`</a>
+        <div class="dropdown-divider"></div>
+        <button v-for="list in fwStore.my_userlists"
+          type="submit" class="dropdown-item" name="addtolist"
+          @click="onAddToList(list.id)">{{list.iname}}</button>
+      </div>
+    </div>
+    <button v-if="fwStore.f.userlist"
+      type="submit" class="btn btn-default" name="removefromlist"
+      @click="onRemoveFromList">`Remove from List`</button>
+  </div>
+</script>
+
+<script type="module">
+import { mapStores } from 'pinia';
+
+fwApp.component('list-btn-userlists', {
+  template: '#list-btn-userlists-template',
+  props: [],
+  emits: [],
+  data: () => ({
+  }),
+  computed: {
+    ...mapStores(useFwStore) //accessible via this.fwStore
+  },
+  mounted(){
+  },
+  updated(){
+  },
+  methods: {
+    onCreateNewList(e){
+      console.log("TODO list-btn-userlists onCreateNewList");
+    },
+    onAddToList(e){
+      console.log("TODO list-btn-userlists onAddToList");
+    },
+    onRemoveFromList(e){
+      console.log("TODO list-btn-userlists onRemoveFromList");
+    },
+  }
+});
+</script>

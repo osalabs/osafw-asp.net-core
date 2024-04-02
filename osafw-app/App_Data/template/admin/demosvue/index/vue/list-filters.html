@@ -14,10 +14,10 @@
             :href="'?dofilter=1'+(fwStore.related_id ? '&related_id='+fwStore.related_id : '')" >`Reset`</a>
         </div>
       </div>
-      <~list_filter_search_moreTODO>
+      <slot name="search"></slot>
     </div>
 
-    <~list_filter_moreTODO>
+    <slot></slot>
 
     <div class="row form-row">
       <label class="col-form-label col-md-2 col-xl-1" for="fstatus">`Status`</label>

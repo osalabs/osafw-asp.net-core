@@ -1,0 +1,33 @@
+<script type="text/x-template" id="list-btn-multi-template">
+  <div id="list-btn-multi" class="mb-3 d-print-none"
+    :class="(fwStore.countCheckedRows ? 'position-sticky' : '')">
+    with <span class="badge bg-secondary rows-num" v-if="fwStore.countCheckedRows">{{fwStore.countCheckedRows}}</span> checked rows:<br>
+    <button class="btn btn-danger me-2" @click="onDelete" :disabled="fwStore.is_readonly">`Delete`</button>
+    <list-btn-userlists v-if="fwStore.is_userlists" />
+    <slot></slot>
+  </div>
+</script>
+
+<script type="module">
+import { mapStores } from 'pinia';
+
+fwApp.component('list-btn-multi', {
+  template: '#list-btn-multi-template',
+  props: [],
+  emits: [],
+  data: () => ({
+  }),
+  computed: {
+    ...mapStores(useFwStore) //accessible via this.fwStore
+  },
+  mounted(){
+  },
+  updated(){
+  },
+  methods: {
+    onDelete(e){
+      console.log("TODO list-btn-multi onDelete");
+    },
+  }
+});
+</script>
