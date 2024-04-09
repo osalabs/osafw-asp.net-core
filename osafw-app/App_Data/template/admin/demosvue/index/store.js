@@ -48,6 +48,12 @@ const useFwStore = defineStore('fw', {
     count: 0, // total list rows count
     list_rows: [], // array of row objects to display, row can contain _meta object {is_ro:bool, ro_fields:[read only field names]}
     pager: [], // array of { pagenum:N, pagenum_show:N, is_cur_page:0|1, is_show_first:0|1, is_show_prev:0|1, is_show_next:0|1, pagenum_next:N}
+    list_row_buttons: { // list row buttons configuration, can be set to false to hide all buttons
+        view: true,
+        edit: true,
+        quickedit: true,
+        delete: true
+    },
 
     // edit form fields configuration
     list_editable_def_types: ['input', 'email', 'number', 'textarea', 'date_popup', 'datetime_popup', 'autocomplete', 'select', 'cb', 'radio', 'yesno'],

@@ -10,7 +10,7 @@
         <thead>
             <tr>
               <th><input type="checkbox" name="all" v-model="cb_check_all" @change="onCheckAll"></th>
-              <th v-if="fwStore.global.is_list_btn_left"></th>
+              <th v-if="fwStore.global.is_list_btn_left && fwStore.list_row_buttons!==false"></th>
 
               <template v-for="header in fwStore.list_headers">
                 <th :class="'rotate'+(header.is_sortable && fwStore.f.sortby==header.field_name ? ' active-sort' : '')"
@@ -32,18 +32,18 @@
                 </th>
               </template>
 
-              <th v-if="!fwStore.global.is_list_btn_left"></th>
+              <th v-if="!fwStore.global.is_list_btn_left && fwStore.list_row_buttons!==false"></th>
             </tr>
             <tr class="search" :style="fwStore.is_list_search_open ? 'display: table-row' : ''">
               <th></th>
-              <th v-if="fwStore.global.is_list_btn_left"></th>
+              <th v-if="fwStore.global.is_list_btn_left && fwStore.list_row_buttons!==false"></th>
               <th v-for="header in fwStore.list_headers">
                 <input type="text" class="form-control form-control-sm"
                   v-model="header.search_value"
                   @change="fwStore.loadIndexDebounced"
                   @keyup.enter.stop="fwStore.loadIndexDebounced">
               </th>
-              <th v-if="!fwStore.global.is_list_btn_left"></th>
+              <th v-if="!fwStore.global.is_list_btn_left && fwStore.list_row_buttons!==false"></th>
             </tr>
         </thead>
 
@@ -57,7 +57,15 @@
             >
 
                 <td class="list-row-cb"><input class="multicb" type="checkbox" v-model="fwStore.hchecked_rows[row[fwStore.field_id]]"></td>
-                <list-row-btn v-if="fwStore.global.is_list_btn_left" :row="row">
+                <list-row-btn v-if="fwStore.global.is_list_btn_left && fwStore.list_row_buttons!==false"
+                  :row="row"
+                  :is_left="fwStore.global.is_list_btn_left"
+                  :is_readonly="fwStore.is_readonly"
+                  :buttons="fwStore.list_row_buttons"
+                  @view="onRowView(row)"
+                  @edit="onRowEdit(row)"
+                  @quickedit="onRowQuickEdit(row)"
+                  @delete="onRowDelete(row)">
                   <template #btn-prepend><slot name="list-row-btn-prepend"></slot></template>
                   <template #btn-append><slot name="list-row-btn-append"></slot></template>
                 </list-row-btn>
@@ -89,7 +97,15 @@
                   </td>
                 </template>
 
-                <list-row-btn v-if="!fwStore.global.is_list_btn_left" :row="row">
+                <list-row-btn v-if="!fwStore.global.is_list_btn_left && fwStore.list_row_buttons!==false"
+                  :row="row"
+                  :is_left="fwStore.global.is_list_btn_left"
+                  :is_readonly="fwStore.is_readonly"
+                  :buttons="fwStore.list_row_buttons"
+                  @view="onRowView(row)"
+                  @edit="onRowEdit(row)"
+                  @quickedit="onRowQuickEdit(row)"
+                  @delete="onRowDelete(row)">
                   <template #btn-prepend><slot name="list-row-btn-prepend"></slot></template>
                   <template #btn-append><slot name="list-row-btn-append"></slot></template>
                 </list-row-btn>
@@ -174,6 +190,19 @@ fwApp.component('list-table', {
       this.resetCheckedRows();
       this.fwStore.setFilters({pagesize:e});
     },
+
+    //check all/none rows
+    onCheckAll(e){
+        if (e.target.checked){
+            // for each row.id in fwStore.list_rows - add to hchecked_rows
+            this.fwStore.hchecked_rows = this.fwStore.list_rows.reduce((acc, row) => {
+                acc[row[this.fwStore.field_id]] = true;
+                return acc;
+            }, {});
+        }else{
+          this.fwStore.hchecked_rows=[];
+        }
+    },
     //click on row - select/unselect row
     onClickRow(e, row){
         console.log('onClickRow',e);
@@ -189,17 +218,18 @@ fwApp.component('list-table', {
       console.log('onDblClickRow',e);
       //await this.fwStore.openEditPane(row.id);
     },
-    //check all/none rows
-    onCheckAll(e){
-        if (e.target.checked){
-            // for each row.id in fwStore.list_rows - add to hchecked_rows
-            this.fwStore.hchecked_rows = this.fwStore.list_rows.reduce((acc, row) => {
-                acc[row[this.fwStore.field_id]] = true;
-                return acc;
-            }, {});
-        }else{
-          this.fwStore.hchecked_rows=[];
-        }
+    async onRowView(row){
+      console.log("TODO open View list-table onRowView", row.id);
+    },
+    async onRowEdit(row){
+      console.log("TODO open Edit list-table onRowEdit", row.id);
+    },
+    async onRowQuickEdit(row){
+      await this.fwStore.openEditPane(row.id);
+    },
+    async onRowDelete(row){
+      console.log("TODO confirm modal list-table onRowDelete", row.id);
+      await this.fwStore.deleteRow(row.id);
     },
 
     // work with a cell

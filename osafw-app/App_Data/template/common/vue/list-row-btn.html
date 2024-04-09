@@ -1,44 +1,40 @@
 <script type="text/x-template" id="list-row-btn-template">
   <td class="list-row-controls text-nowrap d-print-none"
-    :class="(fwStore.global.is_list_btn_left?'':'text-end')">
+    :class="(is_left?'':'text-end')">
     <slot name="btn-prepend"></slot>
 
-    <a href="#" @click.prevent="onView">`View`</a>
-    &nbsp;&#183;&nbsp;<a href="#" @click.prevent="onEdit">`Edit`</a>
-    &nbsp;&#183;&nbsp;<a href="#" @click.prevent="fwStore.openEditPane(row.id)">`Quick Edit`</a>
-    &nbsp;&#183;&nbsp;<a href="#" class="text-danger" @click.prevent="onDelete()" :disabled="fwStore.is_readonly"><~/common/icons/x></a>
+    <a v-if="buttons.view" href="#" @click.prevent="$emit('view', $event)">`View`</a>
+    <template v-if="buttons.edit">
+      <template v-if="buttons.view">&nbsp;&#183;&nbsp;</template>
+      <a href="#" @click.prevent="$emit('edit', $event)">`Edit`</a>
+    </template>
+    <template v-if="buttons.quickedit">
+      <template v-if="buttons.view || buttons.edit">&nbsp;&#183;&nbsp;</template>
+      <a href="#" @click.prevent="$emit('quickedit', $event)">`Quick Edit`</a>
+    </template>
+    <template v-if="buttons.delete">
+      <template v-if="buttons.view || buttons.edit || buttons.quickedit">&nbsp;&#183;&nbsp;</template>
+      <a href="#" class="text-danger" @click.prevent="$emit('delete', $event)" :disabled="is_readonly"><~/common/icons/x></a>
+    </template>
 
     <slot name="btn-append"></slot>
   </td>
 </script>
 
 <script type="module">
-import { mapStores } from 'pinia';
-
 fwApp.component('list-row-btn', {
   template: '#list-row-btn-template',
-  props: ['row'],
-  emits: [],
+  props: ['row', 'buttons', 'is_left', 'is_readonly'],
+  emits: ['view', 'edit', 'quickedit', 'delete'],
   data: () => ({
   }),
   computed: {
-    ...mapStores(useFwStore) //accessible via this.fwStore
   },
   mounted(){
   },
   updated(){
   },
   methods: {
-    async onView(e){
-      console.log("TODO open View list-row-btn onDelete", this.row.id);
-    },
-    async onEdit(e){
-      console.log("TODO open Edit list-row-btn onDelete", this.row.id);
-    },
-    async onDelete(e){
-      console.log("TODO confirm modal list-row-btn onDelete", this.row.id);
-      await this.fwStore.deleteRow(this.row.id);
-    },
   }
 });
 </script>
