@@ -391,7 +391,7 @@ public class FwDynamicController : FwController
                     }
                     if (val.ContainsKey("isemail") && !FormUtils.isEmail(field_value))
                     {
-                        fw.FormErrors[field] = "WRONG";
+                        fw.FormErrors[field] = "EMAIL";
                         result = false;
                     }
                     if (val.ContainsKey("isphone") && !FormUtils.isPhone(field_value))

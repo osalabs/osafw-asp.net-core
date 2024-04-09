@@ -64,7 +64,8 @@
       :pattern="def.pattern"
     >
     <p class="err-EXISTS">{{def.err_exists_msg ? def.err_exists_msg : 'This name already exists in our database'}}</p>
-    <p class="err-WRONG">`Invalid Email`</p>
+    <p class="err-EMAIL">`Invalid Email`</p>
+    <p class="err-WRONG">`Invalid`</p>
     <form-control-help-block :text="def.help_text" />
   </template>
 

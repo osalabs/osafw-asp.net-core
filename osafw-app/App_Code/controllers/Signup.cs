@@ -90,7 +90,7 @@ public class SignupController : FwController
         if (result && !FormUtils.isEmail((string)item["email"]))
         {
             result = false;
-            fw.FormErrors["email"] = "WRONG";
+            fw.FormErrors["email"] = "EMAIL";
         }
 
         if (result && (string)item["pwd"] != (string)item["pwd2"])

@@ -140,7 +140,7 @@ public class AdminDemosController : FwAdminController
         if (result && model.isExists(item["email"], id))
             fw.FormErrors["email"] = "EXISTS";
         if (result && !FormUtils.isEmail((string)item["email"]))
-            fw.FormErrors["email"] = "WRONG";
+            fw.FormErrors["email"] = "EMAIL";
 
         //if (result && !SomeOtherValidation())
         //{

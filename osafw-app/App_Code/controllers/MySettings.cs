@@ -94,7 +94,7 @@ public class MySettingsController : FwController
         if (result && !FormUtils.isEmail((string)item["email"]))
         {
             result = false;
-            fw.FormErrors["email"] = "WRONG";
+            fw.FormErrors["email"] = "EMAIL";
         }
 
         //if (result && !SomeOtherValidation())

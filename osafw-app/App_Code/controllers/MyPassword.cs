@@ -99,7 +99,7 @@ public class MyPasswordController : FwController
         if (result && !FormUtils.isEmail((string)item["email"]))
         {
             result = false;
-            fw.FormErrors["email"] = "WRONG";
+            fw.FormErrors["email"] = "EMAIL";
         }
 
         if (result && model.cleanPwd((string)item["pwd"]) != model.cleanPwd((string)item["pwd2"]))

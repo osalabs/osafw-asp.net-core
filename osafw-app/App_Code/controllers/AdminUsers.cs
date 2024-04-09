@@ -108,7 +108,7 @@ public class AdminUsersController : FwDynamicController
         if (result && !FormUtils.isEmail((string)item["email"]))
         {
             result = false;
-            fw.FormErrors["ehack"] = "WRONG";
+            fw.FormErrors["ehack"] = "EMAIL";
         }
 
         // uncomment if project requires good password strength
