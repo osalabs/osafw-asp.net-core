@@ -10,7 +10,7 @@
     </template>
     <template v-if="buttons.quickedit">
       <template v-if="buttons.view || buttons.edit">&nbsp;&#183;&nbsp;</template>
-      <a href="#" @click.prevent="$emit('quickedit', $event)">`Quick Edit`</a>
+      <a href="#" @click.prevent="$emit('quickedit', $event)" class="on-quickedit">`Quick Edit`</a>
     </template>
     <template v-if="buttons.delete">
       <template v-if="buttons.view || buttons.edit || buttons.quickedit">&nbsp;&#183;&nbsp;</template>
