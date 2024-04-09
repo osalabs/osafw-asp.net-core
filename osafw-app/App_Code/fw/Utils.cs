@@ -1034,6 +1034,43 @@ public class Utils
         }
     }
 
+    // convert all values in hierarchical Hashtable/ArrayList json structure to strings
+    // returns new object
+    // RECURSIVE
+    public static object jsonStringifyValues(object json)
+    {
+        if (json is Hashtable ht)
+        {
+            var result = new Hashtable();
+            foreach (string key in ht.Keys)
+                result[key] = jsonStringifyValues(ht[key]);
+            return result;
+        }
+        else if (json is ArrayList al)
+        {
+            var result = new ArrayList();
+            for (int i = 0; i < al.Count; i++)
+                result.Add(jsonStringifyValues(al[i]));
+            return result;
+        }
+        else if (json is string str)
+        {
+            return str;
+        }
+        else if (json is bool b)
+        {
+            return b ? "true" : "false";
+        }
+        else if (json is null)
+        {
+            return "null";
+        }
+        else
+        {
+            return json.ToString();
+        }
+    }
+
     // serialize using BinaryFormatter.Serialize
     // return as base64 string
     public static string serialize(object data)

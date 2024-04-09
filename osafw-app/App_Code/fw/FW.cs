@@ -103,6 +103,7 @@ public class FW : IDisposable
     public FwCache cache = new(); // request level cache
 
     public Hashtable FORM;
+    public Hashtable requestJson; // parsed JSON from request body
     public Hashtable G; // for storing global vars - used in template engine, also stores "_flash"
     public Hashtable FormErrors; // for storing form id's with error messages, put to hf("ERR") for parser
     public Exception last_file_exception; // set by getFileContent, getFileLines in case of exception
@@ -718,9 +719,12 @@ public class FW : IDisposable
                 using (StreamReader reader = new(request.Body, Encoding.UTF8))
                 {
                     string json = reader.ReadToEndAsync().Result; // TODO await
-                    Hashtable h = (Hashtable)Utils.jsonDecode(json);
-                    Utils.mergeHash(f, h);
-                    logger(LogLevel.TRACE, "REQUESTED JSON:", h);
+                    Hashtable requestJson = (Hashtable)Utils.jsonDecode(json);
+                    logger(LogLevel.TRACE, "REQUESTED JSON:", requestJson);
+
+                    if (requestJson != null)
+                        // merge json into FORM, but all values should be stingified in FORM
+                        Utils.mergeHash(f, (Hashtable)Utils.jsonStringifyValues(requestJson));
                 }
             }
             catch (Exception ex)
