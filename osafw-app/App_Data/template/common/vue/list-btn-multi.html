@@ -2,7 +2,7 @@
   <div id="list-btn-multi" class="mb-3 d-print-none"
     :class="(fwStore.countCheckedRows ? 'position-sticky' : '')">
     with <span class="badge bg-secondary rows-num" v-if="fwStore.countCheckedRows">{{fwStore.countCheckedRows}}</span> checked rows:<br>
-    <button class="btn btn-danger me-2" @click="onDelete" :disabled="fwStore.is_readonly">`Delete`</button>
+    <button type="button" class="btn btn-danger me-2" @click="onDelete" :disabled="fwStore.is_readonly">`Delete`</button>
     <list-btn-userlists v-if="fwStore.is_userlists" />
     <slot></slot>
   </div>
@@ -26,7 +26,7 @@ fwApp.component('list-btn-multi', {
   },
   methods: {
     onDelete(e){
-      console.log("TODO list-btn-multi onDelete");
+      this.fwStore.deleteCheckedRows();
     },
   }
 });

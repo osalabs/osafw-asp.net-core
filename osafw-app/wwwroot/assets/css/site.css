@@ -294,10 +294,12 @@ table.list-edit tbody td {
   table.list-edit tbody td > div > .form-control {
    border: 0;
    border-radius: 0;
+   background: transparent;
   }
   table.list-edit tbody td > div > .form-select {
     border: 0px;
     border-radius: 0;
+    background: transparent;
   }
   table.list-edit tbody td > div > .form-check-input {
    margin:0.5rem 0.4rem;

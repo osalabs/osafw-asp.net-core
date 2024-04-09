@@ -85,6 +85,14 @@ const useFwStore = defineStore('fw', {
       isListSearch: (state) => state.list_headers.some(h => h.search_value?.length),
       //count of hchecked_rows but only true values
       countCheckedRows: (state) => Object.values(state.hchecked_rows).filter(v => v).length,
+      // get checked rows for request as [id] => 1
+      checkedRows: (state) => {
+          let checked = {};
+          Object.keys(state.hchecked_rows).forEach(id => {
+              if (state.hchecked_rows[id]) checked[id] = 1;
+          });
+          return checked;
+      },
       listRequestQuery: (state) => {
           // build request query from state.f, each parameter name should be int form "f[name]"
           let req = { dofilter: 1, is_list_edit: state.is_list_edit };
@@ -325,6 +333,29 @@ const useFwStore = defineStore('fw', {
 
         } catch (error) {
             console.error('deleteRow error:', error.body?.err_msg ?? 'server error');
+            console.error(error);
+            return error;
+        }
+    },
+    async deleteCheckedRows() {
+        try {
+            const apiBase = mande(this.base_url);
+            const req = { XSS: this.XSS, delete: true };
+            req.cb = this.checkedRows;
+            if (!Object.keys(req.cb).length) return; //no checked rows
+
+            console.log('deleteCheckedRows req', req);
+            const response = await apiBase.put(req);
+            console.log('deleteCheckedRows response', response);
+
+            //clear checked rows
+            this.hchecked_rows = {};
+
+            //reload list to show changes
+            this.loadIndex();
+
+        } catch (error) {
+            console.error('deleteCheckedRows error:', error.body?.err_msg ?? 'server error');
             console.error(error);
             return error;
         }

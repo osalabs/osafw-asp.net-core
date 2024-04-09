@@ -430,7 +430,13 @@ public class DB : IDisposable
         }
 
         if (@params != null && @params.Count > 0)
-            logger(LogLevel.INFO, "DB:", db_name, " ", sql, @params);
+            if (@params.Count == 1) // one param - just include inline for easier log reading
+            {
+                var pname = @params.Keys.Cast<string>().First();
+                logger(LogLevel.INFO, "DB:", db_name, " ", sql, " { ", pname, "=", @params[pname], " }");
+            }
+            else
+                logger(LogLevel.INFO, "DB:", db_name, " ", sql, @params);
         else
             logger(LogLevel.INFO, "DB:", db_name, " ", sql);
 
