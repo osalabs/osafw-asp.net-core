@@ -707,8 +707,7 @@ public abstract class FwController
     /// set list fields for db select, based on user-selected headers from config
     /// so we fetch from db only fields that are visible in the list + id field
     /// </summary>
-    /// <param name="ps"></param>
-    protected virtual void setListFields(Hashtable ps)
+    protected virtual void setListFields()
     {
         // default is "*", override in controller
     }
@@ -1159,11 +1158,12 @@ public abstract class FwController
         return data;
     }
 
-    // set list_headers and update list_rows with cols
-    // use is_cols=false when return ps as json
-    // usage:
-    // model.setViewList(list_filter_search)
-    public virtual void setViewList(Hashtable hsearch, bool is_cols = true)
+    /// <summary>
+    /// set list_headers (and add search_value from list_filter_search) 
+    /// and 
+    /// </summary>
+    /// <param name="is_cols">if true - update list_rows with cols, use false for json responses</param>
+    public virtual void setViewList(bool is_cols = true)
     {
         list_user_view = fw.model<UserViews>().oneByIcode(base_url + (is_list_edit ? "/edit" : ""));
 
@@ -1172,7 +1172,7 @@ public abstract class FwController
         list_headers = getViewListArr(fields);
         // add search from user's submit
         foreach (Hashtable header in list_headers)
-            header["search_value"] = hsearch[header["field_name"]];
+            header["search_value"] = list_filter_search[header["field_name"]];
 
         if (is_cols)
         {

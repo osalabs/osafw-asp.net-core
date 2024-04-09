@@ -41,6 +41,9 @@ public abstract class FwModel : IDisposable
     public string field_prio = "";
     public bool is_normalize_names = false; // if true - Utils.name2fw() will be called for all fetched rows to normalize names (no spaces or special chars)
 
+    // default list of sensitive fields to filter out from json output
+    public string json_fields_exclude = "pwd password pwd_reset mfa_secret mfa_recovery";
+
     public bool is_log_changes = true; // if true - event_log record added on add/update/delete
     public bool is_log_fields_changed = true; // if true - event_log.fields filled with changes
     public bool is_under_bulk_update = false; // true when perform bulk updates like modelAddOrUpdateSubtableDynamic (disables log changes for status)
@@ -1090,7 +1093,7 @@ public abstract class FwModel : IDisposable
     public virtual void filterForJson(Hashtable item)
     {
         //first, remove sensitive fields
-        foreach (string fieldname in Utils.qw("pwd password pwd_reset mfa_secret mfa_recovery"))
+        foreach (string fieldname in Utils.qw(json_fields_exclude))
             if (item.ContainsKey(fieldname))
                 item.Remove(fieldname);
 

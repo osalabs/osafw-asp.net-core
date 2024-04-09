@@ -12,6 +12,13 @@ public class FwVueController : FwDynamicController
 {
     public static new int access_level = Users.ACL_SITEADMIN;
 
+    // list of keys from fw.G to pass to Vue
+    protected string global_keys = "ROOT_URL is_list_btn_left";
+    // definition types for editable list
+    protected string list_editable_def_types = "input email number textarea date_popup datetime_popup autocomplete select cb radio yesno";
+    // list of attributes allowed to pass from field definition to Vue
+    protected string allowed_def_attrs = "is_option0 is_option_empty maxlength min max step placeholder pattern required readonly disabled";
+
     public override void init(FW fw)
     {
         base.init(fw);
@@ -22,8 +29,7 @@ public class FwVueController : FwDynamicController
     /// set list fields for db select, based on user-selected headers in list_headers
     /// so we fetch from db only fields that are visible in the list + id field
     /// </summary>
-    /// <param name="ps"></param>
-    protected override void setListFields(Hashtable ps)
+    protected override void setListFields()
     {
         var quoted_fields = new ArrayList();
         var is_id_in_fields = false;
@@ -39,6 +45,158 @@ public class FwVueController : FwDynamicController
             quoted_fields.Add(db.qid(model0.field_id));
         //join quoted_fields arraylist into comma-separated string
         list_fields = string.Join(",", quoted_fields.ToArray());
+    }
+
+    /// <summary>
+    /// filter list rows for json output using model's filterForJson
+    /// </summary>
+    protected virtual void filterListForJson()
+    {
+        foreach (Hashtable row in list_rows)
+        {
+            model0.filterForJson(row);
+        }
+    }
+
+    /// <summary>
+    /// set data for initial scope for Vue controller
+    /// </summary>
+    /// <param name="ps"></param>
+    protected virtual void setScopeInitial(Hashtable ps)
+    {
+        ps["XSS"] = fw.Session("XSS");
+        ps["access_level"] = fw.userAccessLevel;
+        ps["me_id"] = fw.userId;
+        //some specific from global fw.G;            
+        var global = new Hashtable();
+        foreach (var key in Utils.qw(global_keys))
+        {
+            global[key] = fw.G[key];
+        }
+        ps["global"] = global;
+
+        setViewList(false); // initialize list_headers and related
+
+        //TODO TBD :
+        // - return as is or filter out something?
+        // - return for lookups scope or separate scope?
+        // - Also if we return showform_fields to frontend, enrich headers on frontend side?
+        ArrayList showform_fields = (ArrayList)this.config["showform_fields"];
+        Hashtable hfields = _fieldsToHash(showform_fields);
+
+        //editable list support - read from config                
+        //add to list_headers data for editable list: is_ro, input_type, lookup_model, lookup_tpl
+        var editable_types = Utils.qh(list_editable_def_types);
+        foreach (Hashtable header in list_headers)
+        {
+            var field_name = (string)header["field_name"];
+            var def = (Hashtable)hfields[field_name] ?? null;
+            if (def == null)
+                continue;
+
+            var def_type = Utils.f2str(def["type"]);
+            header["input_type"] = def_type;
+            if (!editable_types.ContainsKey(def_type))
+                header["is_ro"] = true; // TODO make ability to override in controller as some edit type fields might not be editable due to access level or other conditions
+
+            var lookup_model = Utils.f2str(def["lookup_model"]);
+            if (lookup_model.Length > 0)
+                header["lookup_model"] = lookup_model;
+
+            var lookup_tpl = Utils.f2str(def["lookup_tpl"]);
+            if (lookup_tpl.Length > 0)
+                header["lookup_tpl"] = lookup_tpl;
+
+            //add to header, if exists in def: maxlength, min, max, step, placeholder, pattern, required, readonly, disabled
+            foreach (string attr in Utils.qw(allowed_def_attrs))
+            {
+                if (def.ContainsKey(attr))
+                    header[attr] = def[attr];
+            }
+        }
+
+        ps["showform_fields"] = showform_fields;
+
+        ps["list_user_view"] = this.list_user_view;
+        ps["list_headers"] = this.list_headers;
+
+        // other static params
+        ps["related_id"] = this.related_id;
+        ps["base_url"] = this.base_url;
+        ps["is_userlists"] = this.is_userlists;
+        ps["is_readonly"] = is_readonly;
+        ps["is_list_edit"] = is_list_edit;
+        ps["return_url"] = this.return_url;
+    }
+
+    /// <summary>
+    /// set data for list_rows scope for Vue controller
+    /// </summary>
+    /// <param name="ps"></param>
+    protected virtual void setScopeListRows(Hashtable ps)
+    {
+        setListSorting();
+
+        setListSearch();
+        setListSearchStatus();
+
+        if (list_headers == null)
+            setViewList(false); // initialize list_headers and related (can already be initialized in setScopeInitial)
+
+        //only select from db visible fields + id, save as comma-separated string into list_fields
+        setListFields();
+
+        getListRows();
+        filterListForJson();
+
+        // if export - no need further processing - just return asap
+        if (export_format.Length > 0)
+            return;
+
+        ps["list_rows"] = this.list_rows;
+        ps["count"] = this.list_count;
+        ps["pager"] = this.list_pager;
+    }
+
+    /// <summary>
+    /// set data for lookups scope for Vue controller
+    /// </summary>
+    /// <param name="ps"></param>
+    protected virtual void setScopeLookups(Hashtable ps)
+    {
+        // userlists support if necessary
+        if (this.is_userlists)
+            this.setUserLists(ps);
+
+        if (list_headers == null)
+            setViewList(false); // initialize list_headers and related (can already be initialized in setScopeInitial)
+
+        ArrayList showform_fields = (ArrayList)this.config["showform_fields"];
+        Hashtable hfields = _fieldsToHash(showform_fields);
+
+        // extract lookups from config and add to ps
+        var lookups = new Hashtable();
+        foreach (Hashtable header in list_headers)
+        {
+            var field_name = (string)header["field_name"];
+            var def = (Hashtable)hfields[field_name] ?? null;
+            if (def == null)
+                continue;
+
+            var lookup_model = Utils.f2str(def["lookup_model"]);
+            if (lookup_model.Length > 0)
+            {
+                lookups[lookup_model] = fw.model(lookup_model).listSelectOptions();
+            }
+
+            var lookup_tpl = Utils.f2str(def["lookup_tpl"]);
+            if (lookup_tpl.Length > 0)
+            {
+                lookups[lookup_tpl] = FormUtils.selectTplOptions(lookup_tpl);
+            }
+        }
+
+        ps["lookups"] = lookups;
     }
 
     /// <summary>
@@ -62,124 +220,32 @@ public class FwVueController : FwDynamicController
         {
             // if json expected - return data only as json
             ps["_json"] = true;
-            Hashtable hfields = _fieldsToHash((ArrayList)this.config["showform_fields"]);
 
-            //do db work only if json or export expected
+            if (scopes.Count == 0)
+            {
+                setScopeInitial(ps);
+            }
+
+            // prepare data for list_rows scope
             if (scopes.Count == 0 || scopes.ContainsKey("list_rows"))
             {
-                setListSorting();
+                setScopeListRows(ps);
 
-                setListSearch();
-                setListSearchStatus();
-
-                setViewList(list_filter_search, false);
-
-                //only select from db visible fields + id, save as comma-separated string into list_fields
-                setListFields(ps);
-
-                getListRows();
-
-                // if export - no need to parse templates and prep for them - just return empty hashtable asap
                 if (export_format.Length > 0)
                     return []; // return empty hashtable just in case action overriden to avoid check for null
-
-
-                //filter rows for json output - TODO make filterListForJson controller method
-                foreach (Hashtable row in list_rows)
-                {
-                    model0.filterForJson(row);
-                }
-
-
-                ps["XSS"] = fw.Session("XSS");
-                ps["access_level"] = fw.userAccessLevel;
-                ps["me_id"] = fw.userId;
-                //some specific from global fw.G;            
-                var global = new Hashtable();
-                foreach (var key in Utils.qw("ROOT_URL is_list_btn_left"))
-                {
-                    global[key] = fw.G[key];
-                }
-                ps["global"] = global;
-
-                //editable list support - read from config                
-                //add to list_headers data for editable list: is_ro, input_type, lookup_model, lookup_tpl
-                var editable_types = Utils.qh("input email number textarea date_popup datetime_popup autocomplete select cb radio yesno");
-                foreach (Hashtable header in list_headers)
-                {
-                    var field_name = (string)header["field_name"];
-                    var def = (Hashtable)hfields[field_name] ?? null;
-                    if (def == null)
-                        continue;
-
-                    var def_type = Utils.f2str(def["type"]);
-                    header["input_type"] = def_type;
-                    if (!editable_types.ContainsKey(def_type))
-                        header["is_ro"] = true; // TODO make ability to override in controller as some edit type fields might not be editable due to access level or other conditions
-
-                    var lookup_model = Utils.f2str(def["lookup_model"]);
-                    if (lookup_model.Length > 0)
-                        header["lookup_model"] = lookup_model;
-
-                    var lookup_tpl = Utils.f2str(def["lookup_tpl"]);
-                    if (lookup_tpl.Length > 0)
-                        header["lookup_tpl"] = lookup_tpl;
-
-                    //add to header, if exists in def: maxlength, min, max, step, placeholder, pattern, required, readonly, disabled
-                    foreach (string attr in Utils.qw("is_option0 is_option_empty maxlength min max step placeholder pattern required readonly disabled"))
-                    {
-                        if (def.ContainsKey(attr))
-                            header[attr] = def[attr];
-                    }
-                }
             }
 
+            // prepare data for lookups scope
             if (scopes.Count == 0 || scopes.ContainsKey("lookups"))
             {
-                // userlists support if necessary
-                if (this.is_userlists)
-                    this.setUserLists(ps);
-
-                // extract lookups from config and add to ps
-                var lookups = new Hashtable();
-                foreach (Hashtable header in list_headers)
-                {
-                    var field_name = (string)header["field_name"];
-                    var def = (Hashtable)hfields[field_name] ?? null;
-                    if (def == null)
-                        continue;
-
-                    var lookup_model = Utils.f2str(def["lookup_model"]);
-                    if (lookup_model.Length > 0)
-                    {
-                        lookups[lookup_model] = fw.model(lookup_model).listSelectOptions();
-                    }
-
-                    var lookup_tpl = Utils.f2str(def["lookup_tpl"]);
-                    if (lookup_tpl.Length > 0)
-                    {
-                        lookups[lookup_tpl] = FormUtils.selectTplOptions(lookup_tpl);
-                    }
-                }
-
-                ps["lookups"] = lookups;
-
-                //TODO TBD :
-                // - return as is or filter out something?
-                // - return for lookups scope or separate scope?
-                // - Also if we return showform_fields to frontend, enrich headers on frontend side?
-                ps["showform_fields"] = (ArrayList)this.config["showform_fields"];
+                setScopeLookups(ps);
             }
         }
+        // else - this is initial non-json page load - return layout/js to the browser, then Vue will load data via API
 
-        ps = setPS(ps);
+        ps["f"] = this.list_filter;
 
         return ps;
-    }
-
-    public override void NextAction(string form_id)
-    {
-        throw new NotImplementedException(); // N/A for Vue controllers
     }
 
     public override Hashtable ShowAction(int id = 0)
@@ -198,11 +264,6 @@ public class FwVueController : FwDynamicController
         ps["i"] = item;
         ps["_json"] = true;
         return ps;
-    }
-
-    public override Hashtable ShowFormAction(int id = 0)
-    {
-        throw new NotImplementedException(); // N/A for Vue controllers
     }
 
     public override Hashtable SaveAction(int id = 0)
@@ -229,6 +290,17 @@ public class FwVueController : FwDynamicController
         id = this.modelAddOrUpdate(id, itemdb);
 
         return this.afterSave(success, id, is_new);
+    }
+
+    // override/disable actions not used in Vue
+    public override void NextAction(string form_id)
+    {
+        throw new NotImplementedException(); // N/A for Vue controllers
+    }
+
+    public override Hashtable ShowFormAction(int id = 0)
+    {
+        throw new NotImplementedException(); // N/A for Vue controllers
     }
 
     public override void ShowDeleteAction(int id)

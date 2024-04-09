@@ -54,7 +54,7 @@ public class FwDynamicController : FwController
 
         if (is_dynamic_index)
             // customizable headers
-            setViewList(list_filter_search);
+            setViewList();
 
         // set standard output parse strings
         var ps = this.setPS();
