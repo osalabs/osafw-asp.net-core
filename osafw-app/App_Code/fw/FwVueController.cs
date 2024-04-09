@@ -14,10 +14,6 @@ public class FwVueController : FwDynamicController
 
     // list of keys from fw.G to pass to Vue
     protected string global_keys = "ROOT_URL is_list_btn_left";
-    // definition types for editable list
-    protected string list_editable_def_types = "input email number textarea date_popup datetime_popup autocomplete select cb radio yesno";
-    // list of attributes allowed to pass from field definition to Vue
-    protected string allowed_def_attrs = "is_option0 is_option_empty maxlength min max step placeholder pattern required readonly disabled";
 
     public override void init(FW fw)
     {
@@ -77,44 +73,8 @@ public class FwVueController : FwDynamicController
 
         setViewList(false); // initialize list_headers and related
 
-        //TODO TBD :
-        // - return as is or filter out something?
-        // - return for lookups scope or separate scope?
-        // - Also if we return showform_fields to frontend, enrich headers on frontend side?
+        //return editable fields definitions
         ArrayList showform_fields = (ArrayList)this.config["showform_fields"];
-        Hashtable hfields = _fieldsToHash(showform_fields);
-
-        //editable list support - read from config                
-        //add to list_headers data for editable list: is_ro, input_type, lookup_model, lookup_tpl
-        var editable_types = Utils.qh(list_editable_def_types);
-        foreach (Hashtable header in list_headers)
-        {
-            var field_name = (string)header["field_name"];
-            var def = (Hashtable)hfields[field_name] ?? null;
-            if (def == null)
-                continue;
-
-            var def_type = Utils.f2str(def["type"]);
-            header["input_type"] = def_type;
-            if (!editable_types.ContainsKey(def_type))
-                header["is_ro"] = true; // TODO make ability to override in controller as some edit type fields might not be editable due to access level or other conditions
-
-            var lookup_model = Utils.f2str(def["lookup_model"]);
-            if (lookup_model.Length > 0)
-                header["lookup_model"] = lookup_model;
-
-            var lookup_tpl = Utils.f2str(def["lookup_tpl"]);
-            if (lookup_tpl.Length > 0)
-                header["lookup_tpl"] = lookup_tpl;
-
-            //add to header, if exists in def: maxlength, min, max, step, placeholder, pattern, required, readonly, disabled
-            foreach (string attr in Utils.qw(allowed_def_attrs))
-            {
-                if (def.ContainsKey(attr))
-                    header[attr] = def[attr];
-            }
-        }
-
         ps["showform_fields"] = showform_fields;
 
         ps["list_user_view"] = this.list_user_view;

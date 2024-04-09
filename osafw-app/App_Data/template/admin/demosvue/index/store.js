@@ -46,6 +46,8 @@ const useFwStore = defineStore('fw', {
     pager: [], // array of { pagenum:N, pagenum_show:N, is_cur_page:0|1, is_show_first:0|1, is_show_prev:0|1, is_show_next:0|1, pagenum_next:N}
 
     // edit form fields configuration
+    list_editable_def_types: ['input', 'email', 'number', 'textarea', 'date_popup', 'datetime_popup', 'autocomplete', 'select', 'cb', 'radio', 'yesno'],
+    list_editable_def_attrs: ['is_option0', 'is_option_empty', 'maxlength', 'min', 'max', 'step', 'placeholder', 'pattern', 'required', 'readonly', 'disabled'],
     showform_fields: [],
     is_list_edit_pane: false, // true if edit pane is open
     edit_data: null, // object for single item edit form {id:X, i:{}, add_users_id_name:'', upd_users_id_name:'', save_result:{}}}
@@ -148,6 +150,42 @@ const useFwStore = defineStore('fw', {
   },
 
   actions: {
+    // update list_headers from showform_fields after loadIndex
+    enrichEditableListHeaders() {
+        if (!this.showform_fields) return;
+
+        // convert showform_fields array to lookup hashtable with keys as field
+        let hfields = {};
+        this.showform_fields.forEach(def => {
+            if (def.field && !hfields[def.field]) {
+                hfields[def.field] = def;
+            }
+        });
+
+        this.list_headers = this.list_headers.map(header => {
+            let field_name = header.field_name;
+            let def = hfields[field_name] ?? null;
+            if (!def) return header;
+
+            let def_type = def.type;
+            header.input_type = def_type;
+            if (!this.list_editable_def_types.includes(def_type)) header.is_ro = true;
+
+            let lookup_model = def.lookup_model;
+            if (lookup_model) header.lookup_model = lookup_model;
+
+            let lookup_tpl = def.lookup_tpl;
+            if (lookup_tpl) header.lookup_tpl = lookup_tpl;
+
+            //add edit-related attributes to header, if exists in def: 
+            this.list_editable_def_attrs.forEach(attr => {
+                if (def[attr]) header[attr] = def[attr];
+            });
+
+            return header;
+        });
+    },
+
     // set one or multiple filter values and reload list
     setFilters(filters) {
         console.log('setFilters', filters);       
@@ -201,6 +239,10 @@ const useFwStore = defineStore('fw', {
             
             this.is_initial_load = false; // reset initial load flag
             this.is_loading_index = false;
+
+            if (data.showform_fields) {
+                this.enrichEditableListHeaders();
+            }
 
         } catch (error) {
             this.is_loading_index = false;
