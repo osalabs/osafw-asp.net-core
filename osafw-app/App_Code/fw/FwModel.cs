@@ -56,6 +56,7 @@ public abstract class FwModel : IDisposable
     public string junction_field_status; // custom junction status field name, using this.field_status if not set
 
     protected string cache_prefix = "fwmodel.one."; // default cache prefix for caching items
+    protected string cache_prefix_byicode = "fwmodel.onebyicode."; // default cache prefix for caching items by icode
 
     protected FwModel(FW fw = null)
     {
@@ -286,17 +287,31 @@ public abstract class FwModel : IDisposable
 
         Hashtable where = new();
         where[field_iname] = iname;
-        return db.row(table_name, where);
+        var item = db.row(table_name, where);
+        normalizeNames(item);
+        return item;
     }
 
     public virtual DBRow oneByIcode(string icode)
     {
         if (field_icode == "")
-            return new DBRow();
+            return [];
 
-        Hashtable where = new();
-        where[field_icode] = icode;
-        return db.row(table_name, where);
+        var cache_key = this.cache_prefix_byicode + icode;
+        var item = (DBRow)(Hashtable)fw.cache.getRequestValue(cache_key);
+        if (item == null)
+        {
+            Hashtable where = new();
+            where[field_icode] = icode;
+            item = db.row(table_name, where);
+            normalizeNames(item);
+            fw.cache.setRequestValue(cache_key, item);
+
+            // if found by icode - cache by id too
+            if (!string.IsNullOrEmpty(field_id) && item.Count > 0)
+                fw.cache.setRequestValue(this.cache_prefix + item[field_id], item);
+        }
+        return item;
     }
 
     // check if item exists for a given field
@@ -446,11 +461,14 @@ public abstract class FwModel : IDisposable
     {
         var cache_key = this.cache_prefix + id;
         fw.cache.requestRemove(cache_key);
+        //also remove all by icode caches as they may contain this id
+        fw.cache.requestRemoveWithPrefix(this.cache_prefix_byicode);
     }
 
     public virtual void removeCacheAll()
     {
         fw.cache.requestRemoveWithPrefix(this.cache_prefix);
+        fw.cache.requestRemoveWithPrefix(this.cache_prefix_byicode);
     }
 
     public Hashtable getTableSchema()

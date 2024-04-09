@@ -1101,8 +1101,9 @@ public abstract class FwController
 
     public virtual string getViewListUserFields()
     {
-        var item = fw.model<UserViews>().oneByIcode(base_url + (is_list_edit ? "/edit" : "")); // base_url is screen identifier
-        var fields = (string)item["fields"] ?? "";
+        if (list_user_view == null)
+            list_user_view = fw.model<UserViews>().oneByIcode(base_url + (is_list_edit ? "/edit" : "")); // base_url is screen identifier
+        var fields = (string)list_user_view["fields"] ?? "";
         return (fields.Length > 0 ? fields : view_list_defaults);
     }
 
