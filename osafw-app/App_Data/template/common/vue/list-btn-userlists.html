@@ -1,7 +1,9 @@
 <script type="text/x-template" id="list-btn-userlists-template">
   <div class="btn-group">
     <div class="btn-group">
-      <button type="button" class="btn btn-default dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+      <button type="button" class="btn btn-default dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
+       :disabled="!fwStore.countCheckedRows"
+      >
         <~/common/icons/flag> `Add to List`
       </button>
       <div class="dropdown-menu">
@@ -9,13 +11,42 @@
         <div class="dropdown-divider"></div>
         <button v-for="list in fwStore.my_userlists"
           type="submit" class="dropdown-item" name="addtolist"
-          @click="onAddToList(list.id)">{{list.iname}}</button>
+          @click.prevent="onAddToList(list.id)">{{list.iname}}</button>
       </div>
     </div>
     <button v-if="fwStore.f.userlist"
       type="submit" class="btn btn-default" name="removefromlist"
-      @click="onRemoveFromList">`Remove from List`</button>
+      :disabled="!fwStore.countCheckedRows"
+      @click.prevent="onRemoveFromList">`Remove from List`</button>
   </div>
+
+  <div class="modal fade" ref="modal_create">
+    <div class="modal-dialog modal-lg">
+      <form @submit.prevent="onCreateSubmit">
+
+      <div class="modal-content">
+          <div class="modal-header">
+              <h5 class="modal-title">Create New List</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body modal-overflowed">
+              <div class="row">
+                <label class="control-label col-sm-2" for="userlists-iname">New List Title</label>
+                <div class="col-sm-10">
+                  <input id="userlists-iname" ref="list_iname" v-model="fwStore.userlists_new_name" maxlength="255" type="text" class="form-control">
+                </div>
+              </div>
+          </div>
+          <div class="modal-footer">
+              <button type="submit" class="btn btn-primary">`Save`</button>
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">`Close`</button>
+          </div>
+      </div>
+
+      </form>
+    </div>
+  </div>
+
 </script>
 
 <script type="module">
@@ -26,6 +57,7 @@ fwApp.component('list-btn-userlists', {
   props: [],
   emits: [],
   data: () => ({
+    modal: null
   }),
   computed: {
     ...mapStores(useFwStore) //accessible via this.fwStore
@@ -36,13 +68,26 @@ fwApp.component('list-btn-userlists', {
   },
   methods: {
     onCreateNewList(e){
-      console.log("TODO list-btn-userlists onCreateNewList");
+      if (!this.modal){
+        this.modal = new bootstrap.Modal(this.$refs.modal_create);
+      }
+      this.modal.show();
+      let list_iname = this.$refs.list_iname;
+      this.$refs.modal_create.addEventListener('shown.bs.modal', e => {
+        list_iname.focus();
+      }, { once: true });
     },
-    onAddToList(e){
-      console.log("TODO list-btn-userlists onAddToList");
+    onCreateSubmit(e){
+      if (this.fwStore.userlists_new_name>''){
+        this.fwStore.saveCreateUserList();
+      }
+      this.modal.hide();
+    },
+    onAddToList(id){
+      this.fwStore.saveAddToUserList(id);
     },
     onRemoveFromList(e){
-      console.log("TODO list-btn-userlists onRemoveFromList");
+      this.fwStore.saveRemoveFromUserList();
     },
   }
 });

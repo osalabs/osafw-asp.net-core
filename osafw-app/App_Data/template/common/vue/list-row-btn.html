@@ -1,10 +1,14 @@
 <script type="text/x-template" id="list-row-btn-template">
   <td class="list-row-controls text-nowrap d-print-none"
     :class="(fwStore.global.is_list_btn_left?'':'text-end')">
+    <slot name="btn-prepend"></slot>
+
     <a href="#" @click.prevent="onView">`View`</a>
     &nbsp;&#183;&nbsp;<a href="#" @click.prevent="onEdit">`Edit`</a>
     &nbsp;&#183;&nbsp;<a href="#" @click.prevent="fwStore.openEditPane(row.id)">`Quick Edit`</a>
     &nbsp;&#183;&nbsp;<a href="#" class="text-danger" @click.prevent="onDelete()" :disabled="fwStore.is_readonly"><~/common/icons/x></a>
+
+    <slot name="btn-append"></slot>
   </td>
 </script>
 

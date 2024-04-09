@@ -411,6 +411,7 @@ table.list-edit tbody td {
     background-color: rgba(var(--bs-tertiary-bg-rgb),0.5);
     left: var(--fw-sidebar-width);
     padding-bottom: var(--fw-spacer);
+    z-index: 1055;
   }
 .pagination .active a {font-weight:bold}
 .pagination select {

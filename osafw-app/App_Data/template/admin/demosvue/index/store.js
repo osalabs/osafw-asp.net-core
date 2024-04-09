@@ -15,13 +15,17 @@ const useFwStore = defineStore('fw', {
     XSS: '', // token
     me_id: 0, // current user id
     access_level: 0, // user access level
-    base_url: '', // base url for the controller
+    base_url: '', // base url for the controller    
     list_title: '', //list screen title
+    is_readonly: false,
+    list_user_view: {}, // UserViews record for current controller
+
+    // my lists
     is_userlists: false,
     select_userlists: [],
     my_userlists: [],
-    is_readonly: false,
-    list_user_view: {}, // UserViews record for current controller
+    userlists_url : '/My/Lists',
+    userlists_new_name: '', // v-model name for creating new list
 
     // list edit support
     is_list_edit: false, //true if list rows inline-editable
@@ -93,6 +97,10 @@ const useFwStore = defineStore('fw', {
           });
           return checked;
       },
+      // get checked rows as comma-separated string
+      checkedRowsCommas: (state) => {
+            return Object.keys(state.hchecked_rows).filter(id => state.hchecked_rows[id]).join(',');
+      },
       listRequestQuery: (state) => {
           // build request query from state.f, each parameter name should be int form "f[name]"
           let req = { dofilter: 1, is_list_edit: state.is_list_edit };
@@ -100,9 +108,7 @@ const useFwStore = defineStore('fw', {
               req.scope = 'list_rows'; // after initial load we only need list_rows
           }
           Object.keys(state.f).forEach(key => {
-              if ((state.f[key]??'') !== '') {
                   req['f[' + key + ']'] = state.f[key];
-              }              
           });
           // add related_id to request
           if (state.related_id) req.related_id = state.related_id;
@@ -399,6 +405,69 @@ const useFwStore = defineStore('fw', {
             return error;
         }
     },
+
+    // *** userlists support ***
+    async saveCreateUserList() {
+        try {
+            const apiBase = mande(this.userlists_url);
+            const req = { XSS: this.XSS, item: { entity: this.base_url, iname: this.userlists_new_name, item_id: this.checkedRowsCommas } };
+            console.log('saveCreateUserList req', req);
+            const response = await apiBase.post('', req);
+            console.log('saveCreateUserList response', response);
+
+            Toast("List created", { theme: 'text-bg-success' });
+
+            //reload userslists (in initial load)
+            this.is_initial_load = true;
+            this.loadIndex();
+
+        } catch (error) {
+            console.error('saveCreateUserList error:', error.body?.err_msg ?? 'server error');
+            console.error(error);
+            return error;
+        }
+    },
+    async saveAddToUserList(userlists_id) {
+        try {
+            const apiBase = mande(this.userlists_url);
+            const req = { XSS: this.XSS, item_id: this.checkedRowsCommas };
+            console.log('saveAddToUserList req', req);
+            const response = await apiBase.post('/(AddToList)/' + userlists_id, req);
+            console.log('saveAddToUserList response', response);
+
+            Toast("Added to List", { theme: 'text-bg-success' });
+
+            //clear checked rows
+            this.hchecked_rows = {};
+            this.loadIndex();
+
+        } catch (error) {
+            console.error('saveAddToUserList error:', error.body?.err_msg ?? 'server error');
+            console.error(error);
+            return error;
+        }
+    },
+    //remove checked rows from currently loaded userlist
+    async saveRemoveFromUserList() {
+        try {
+            const apiBase = mande(this.userlists_url);
+            const req = { XSS: this.XSS, item_id: this.checkedRowsCommas };
+            console.log('saveRemoveFromUserList req', req);
+            const response = await apiBase.post('/(RemoveFromList)/' + this.f.userlist, req);
+            console.log('saveRemoveFromUserList response', response);
+
+            Toast("Removed from List", { theme: 'text-bg-success' });
+
+            //clear checked rows
+            this.hchecked_rows = {};
+            this.loadIndex();
+
+        } catch (error) {
+            console.error('saveRemoveFromUserList error:', error.body?.err_msg ?? 'server error');
+            console.error(error);
+            return error;
+        }
+    }
   }
 });
 window.useFwStore=useFwStore; //make store available for components in html below

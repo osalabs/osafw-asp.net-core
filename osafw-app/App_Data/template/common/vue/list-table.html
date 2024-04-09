@@ -57,7 +57,10 @@
             >
 
                 <td class="list-row-cb"><input class="multicb" type="checkbox" v-model="fwStore.hchecked_rows[row[fwStore.field_id]]"></td>
-                <list-row-btn v-if="fwStore.global.is_list_btn_left" :row="row" />
+                <list-row-btn v-if="fwStore.global.is_list_btn_left" :row="row">
+                  <template #btn-prepend><slot name="list-row-btn-prepend"></slot></template>
+                  <template #btn-append><slot name="list-row-btn-append"></slot></template>
+                </list-row-btn>
 
                 <template v-for="(header, key) in fwStore.list_headers" :key="key">
                   <td v-if="!fwStore.is_list_edit">{{fieldValueByName(row, header.field_name)}}</td>
@@ -86,7 +89,10 @@
                   </td>
                 </template>
 
-                <list-row-btn v-if="!fwStore.global.is_list_btn_left" :row="row" />
+                <list-row-btn v-if="!fwStore.global.is_list_btn_left" :row="row">
+                  <template #btn-prepend><slot name="list-row-btn-prepend"></slot></template>
+                  <template #btn-append><slot name="list-row-btn-append"></slot></template>
+                </list-row-btn>
             </tr>
           </template>
         </tbody>
@@ -111,7 +117,7 @@
         </div>
       </div>
 
-      <list-btn-multi />
+      <list-btn-multi><slot name="list-btn-multi"></slot></list-btn-multi>
     </template>
 
   </form>

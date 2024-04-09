@@ -2,10 +2,10 @@
  <div>
   <form class="fw-card" data-list-filter @submit.prevent @change="fwStore.setFilters({})">
     <div class="row form-row">
-      <label class="col-form-label col-md-2 col-xl-1" for="fs">`Search`</label>
+      <label class="col-form-label col-md-2 col-xl-1" for="list-filters-s">`Search`</label>
       <div class="col">
         <div class="input-group">
-          <input type="text" maxlength="255" class="form-control"
+          <input id="list-filters-s" type="text" maxlength="255" class="form-control"
             :placeholder="s_placeholder"
             v-model="fwStore.f.s">
           <button class="btn btn-outline-secondary w100"
@@ -23,19 +23,19 @@
     <slot></slot>
 
     <div class="row form-row">
-      <label class="col-form-label col-md-2 col-xl-1" for="fstatus">`Status`</label>
+      <label class="col-form-label col-md-2 col-xl-1" for="list-filters-status">`Status`</label>
       <div class="col-md-3 col-lg-2">
-        <select class="form-select" v-model="fwStore.f.status">
-          <option v-for="option in lookup_statusf" :value="option.id" :selected="option.id==fwStore.f.status">{{option.iname}}</option>
+        <select id="list-filters-status" class="form-select" v-model="fwStore.f.status">
+          <option v-for="option in lookup_statusf" :value="option.id">{{option.iname}}</option>
         </select>
       </div>
 
       <template v-if="fwStore.is_userlists">
-        <label class="col-form-label col-md-2 col-xl-1" for="fuserlist">`My List`</label>
+        <label class="col-form-label col-md-2 col-xl-1" for="list-filters-userlist">`My List`</label>
         <div class="col-md-3 col-lg-2">
-          <select id="fuserlist" name="f[userlist]" class="form-select">
-            <option value="" :selected="!fwStore.f.userlist">`- all -`</option>
-            <option v-for="option in fwStore.select_userlists" :value="option.id" :selected="option.id==fwStore.f.userlist">{{option.iname}}</option>
+          <select id="list-filters-userlist" v-model="fwStore.f.userlist" class="form-select">
+            <option value="">`- all -`</option>
+            <option v-for="option in fwStore.select_userlists" :value="option.id">{{option.iname}}</option>
           </select>
         </div>
       </template>
