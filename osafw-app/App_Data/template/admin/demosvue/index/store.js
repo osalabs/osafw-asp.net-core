@@ -22,7 +22,8 @@ const useFwStore = defineStore('fw', {
     // user views
     all_list_columns: [], // list of all available columns
     list_user_view: {}, // UserViews record for current controller
-    userviews_new_name: '', // v-model name for creating new view
+    select_userviews: [], // list of available user views
+    userviews_url: '/My/Views',
 
     // my lists
     is_userlists: false,
@@ -230,16 +231,7 @@ const useFwStore = defineStore('fw', {
     //save user view settings (density)
     async setListDensity(density) {
         this.list_user_view.density = density;
-        //save to backend
-        const apiBase = mande(this.base_url);
-        const req = { XSS: this.XSS, density: density, is_list_edit: this.is_list_edit };
-
-        try {
-            const data = await apiBase.post('/(SaveUserViews)', req);
-        } catch (error) {
-            this.handleError(error, 'setListDensity');
-            return error;
-        }
+        return this.saveUserViews({ density: density });
     },
     async reloadIndex() {
         if (this.loadIndexDebouncedTimeout) clearTimeout(this.loadIndexDebouncedTimeout);
@@ -491,8 +483,9 @@ const useFwStore = defineStore('fw', {
             const response = await apiBase.post('/(SaveUserViews)', req);
             console.log('saveUserViews response', response);
 
-            Toast("View saved", { theme: 'text-bg-success' });
-
+            if (!params.is_reset && !params.density && !params.load_id) {
+                Toast("View saved", { theme: 'text-bg-success' });
+            }
             //reload as whole as columns can be changed
             this.reloadIndex();
 
@@ -500,8 +493,25 @@ const useFwStore = defineStore('fw', {
             this.handleError(error, 'saveUserViews');
             return error;
         }
-    }
+    },
+    async deleteUserViews(id) {
+        try {
+            const apiBase = mande(this.userlists_url);
+            const req = { XSS: this.XSS };
 
+            console.log('deleteUserViews req', req);
+            const response = await apiBase.delete(id, { query: req });
+            console.log('deleteUserViews response', response);
+
+            Toast("View deleted", { theme: 'text-bg-success' });
+            //reload as whole as columns can be changed
+            this.reloadIndex();
+
+        } catch (error) {
+            this.handleError(error, 'deleteUserViews');
+            return error;
+        }
+    }
   },
 });
 window.useFwStore=useFwStore; //make store available for components in html below

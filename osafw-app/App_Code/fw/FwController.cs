@@ -1102,7 +1102,7 @@ public abstract class FwController
     public virtual string getViewListUserFields()
     {
         if (list_user_view == null)
-            list_user_view = fw.model<UserViews>().oneByIcode(base_url + (is_list_edit ? "/edit" : "")); // base_url is screen identifier
+            list_user_view = fw.model<UserViews>().oneByIcode(UserViews.icodeByUrl(base_url, is_list_edit)); // base_url is screen identifier
         var fields = (string)list_user_view["fields"] ?? "";
         return (fields.Length > 0 ? fields : view_list_defaults);
     }
@@ -1166,7 +1166,7 @@ public abstract class FwController
     /// <param name="is_cols">if true - update list_rows with cols, use false for json responses</param>
     public virtual void setViewList(bool is_cols = true)
     {
-        list_user_view = fw.model<UserViews>().oneByIcode(base_url + (is_list_edit ? "/edit" : ""));
+        list_user_view = fw.model<UserViews>().oneByIcode(UserViews.icodeByUrl(base_url, is_list_edit));
 
         var fields = getViewListUserFields();
 
