@@ -38,11 +38,11 @@ fwApp.component('list-edit-pane', {
     },
   },
   mounted() {
-    //console.log('list-edit-pane mounted');
+    console.log('list-edit-pane mounted');
     document.addEventListener('click', this.handleClickOutside);
   },
   beforeUnmount() {
-    //console.log('list-edit-pane beforeUnmount');
+    console.log('list-edit-pane beforeUnmount');
     document.removeEventListener('click', this.handleClickOutside);
   },
   methods: {
