@@ -1,0 +1,153 @@
+<script type="text/x-template" id="list-customize-columns-template">
+  <div class="modal fade" tabindex="-1" role="dialog" ref="modal_customize" data-load-url="<~../url>/(UserViews)<~/common/list/relid>">
+    <div class="modal-dialog modal-lg" role="document">
+    <form @submit.prevent action="<~../url>/(SaveUserViews)">
+      <input type="hidden" name="load_id" value="">
+      <input type="hidden" name="item[iname]" value="">
+
+      <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">`Customize Columns`</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body modal-overflowed">
+
+            <p class="float-end text-muted">`drag&drop to sort`</p>
+            <div class="form-check">
+              <input type="checkbox" class="form-check-input" id="custom-cols-checkall" v-model="cb_check_all" @change="onCheckAll">
+              <label class="form-check-label" for="custom-cols-checkall">`check all/none`</label>
+            </div>
+            <p></p>
+
+            <div class="col-rows">
+              <div v-for="(column, index) in fwStore.all_list_columns"
+                class="form-check cb-row">
+                <input type="checkbox" class="form-check-input"
+                  :checked="column.is_checked"
+                  :value="index+1"
+                  @input="e => column.is_checked = e.target.checked"
+                  :id="'custom-cols-fld-$'+column.field_name"
+                  :name="'fld['+column.field_name+']'">
+                <label class="form-check-label" :for="'custom-cols-fld-$'+column.field_name">{{column.field_name_visible}}</label>
+                index={{index}}, checked={{column.is_checked}}
+              </div>
+            </div>
+
+          </div>
+          <div class="modal-footer">
+            <button name="is_reset" value="1" class="btn btn-info me-auto">Reset to Defaults</button>
+
+            <div class="dropdown">
+              <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                Saved Views
+              </button>
+              <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownMenuButton">
+                <a class="dropdown-item on-create-userviews" href="#">Save as New View</a>
+                <~userviews_selected if="userviews_id" inline>
+                    <a class="dropdown-item on-del-userviews" data-id="<~userviews_id>" href="#">Delete View</a>
+                </~userviews_selected>
+                <div class="dropdown-divider"></div>
+                <~select_userviews repeat inline>
+                    <a class="dropdown-item on-set-userviews" data-id="<~id>" href="#"><~iname></a>
+                </~select_userviews>
+              </div>
+            </div>
+
+
+            <button class="btn btn-primary">Save changes</button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          </div>
+      </div>
+
+    </form>
+    </div>
+  </div>
+
+  <div class="modal fade" ref="modal_create">
+    <div class="modal-dialog modal-lg">
+      <form @submit.prevent="onCreateSubmit">
+
+      <div class="modal-content">
+          <div class="modal-header">
+              <h5 class="modal-title">`Save as New View`</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body modal-overflowed">
+              <div class="row">
+                <label class="control-label col-sm-2" for="userviews-iname">`Title`</label>
+                <div class="col-sm-10">
+                  <input id="userviews-iname" ref="list_iname" v-model="fwStore.userviews_new_name" maxlength="255" type="text" class="form-control">
+                </div>
+              </div>
+          </div>
+          <div class="modal-footer">
+              <button type="submit" class="btn btn-primary">`Save`</button>
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">`Close`</button>
+          </div>
+      </div>
+
+      </form>
+    </div>
+  </div>
+
+</script>
+
+<script type="module">
+import { mapStores } from 'pinia';
+
+fwApp.component('list-customize-columns', {
+  template: '#list-customize-columns-template',
+  props: [],
+  emits: ['hidden'],
+  data: () => ({
+    modal: null,
+    cb_check_all: false
+  }),
+  computed: {
+    ...mapStores(useFwStore) //accessible via this.fwStore
+  },
+  mounted(){
+    console.log('customize columns mounted');
+    this.showModal();
+  },
+  unmounted(){
+    console.log('customize columns unmounted');
+  },
+  methods: {
+    //check all/none rows
+    onCheckAll(e){
+      this.fwStore.all_list_columns.forEach( el => el.is_checked = e.target.checked);
+    },
+
+    showModal(e){
+      if (!this.modal){
+        this.modal = new bootstrap.Modal(this.$refs.modal_customize);
+      }
+      this.modal.show();
+      this.$refs.modal_customize.addEventListener('hidden.bs.modal', e => {
+        this.$emit('hidden', e);
+      }, { once: true });
+    },
+    onCreateNewView(e){
+      if (!this.modal){
+        this.modal = new bootstrap.Modal(this.$refs.modal_create);
+      }
+      this.modal.show();
+      let list_iname = this.$refs.list_iname;
+      this.$refs.modal_create.addEventListener('shown.bs.modal', e => {
+        list_iname.focus();
+      }, { once: true });
+    },
+    onCreateSubmit(e){
+      //TODO
+      if (this.fwStore.userviews_new_name>''){
+        this.fwStore.saveCreateUserView();
+      }
+      this.modal.hide();
+    },
+    onLoadView(id){
+      //TODO
+    },
+  }
+});
+</script>

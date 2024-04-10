@@ -64,6 +64,7 @@
   </form>
 
  </div>
+ <list-customize-columns v-if="is_show_customize_columns" @hidden="is_show_customize_columns=false"></list-customize-columns>
 </script>
 
 <script type="module">
@@ -73,7 +74,7 @@ fwApp.component('list-filters', {
   template: '#list-filters-template',
   props: ['s_placeholder'],
   data: () => ({
-        zzz: ''
+    is_show_customize_columns: false
   }),
   computed: {
         ...mapStores(useFwStore), //accessible via this.fwStore
@@ -98,7 +99,7 @@ fwApp.component('list-filters', {
           }
       },
       onCustomCols(e){
-          console.log("TODO onCustomCols", e);
+        this.is_show_customize_columns=true;
       },
       onToggleDensity(e){
           const classes = ['table-sm', 'table-dense', 'table-normal'];

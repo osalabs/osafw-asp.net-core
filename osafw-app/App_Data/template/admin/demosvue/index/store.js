@@ -18,7 +18,11 @@ const useFwStore = defineStore('fw', {
     base_url: '', // base url for the controller    
     list_title: '', //list screen title
     is_readonly: false,
+
+    // user views
+    all_list_columns: [], // list of all available columns
     list_user_view: {}, // UserViews record for current controller
+    userviews_new_name: '', // v-model name for creating new view
 
     // my lists
     is_userlists: false,
