@@ -174,6 +174,14 @@ const useFwStore = defineStore('fw', {
   },
 
   actions: {
+    handleError(error, caller, is_silent) {
+        let err_msg = error.body?.err_msg ?? 'server error';
+        console.error('handleError for', caller,":", err_msg);        
+        if (!is_silent) {
+            console.error(error);
+            Toast(err_msg, { theme: 'text-bg-danger' });
+        }
+    },
     // update list_headers from showform_fields after loadIndex
     enrichEditableListHeaders() {
         if (!this.showform_fields) return;
@@ -224,13 +232,12 @@ const useFwStore = defineStore('fw', {
         this.list_user_view.density = density;
         //save to backend
         const apiBase = mande(this.base_url);
-        const req = { density: density, XSS: this.XSS };
+        const req = { XSS: this.XSS, density: density, is_list_edit: this.is_list_edit };
 
         try {
             const data = await apiBase.post('/(SaveUserViews)', req);
         } catch (error) {
-            console.error('setListDensity error:', error.body?.err_msg ?? 'server error');
-            console.error(error);
+            this.handleError(error, 'setListDensity');
             return error;
         }
     },
@@ -275,8 +282,7 @@ const useFwStore = defineStore('fw', {
 
         } catch (error) {
             this.is_loading_index = false;
-            console.error('loadIndex error:', error.body?.err_msg ?? 'server error');
-            console.error(error);
+            this.handleError(error, 'loadIndex');
             return error;
         }
     },
@@ -290,8 +296,7 @@ const useFwStore = defineStore('fw', {
             this.edit_data = data;
 
         } catch (error) {
-            console.error('loadItem error:', error.body?.err_msg ?? 'server error');
-            console.error(error);
+            this.handleError(error, 'loadItem');
             return error;
         }
     },
@@ -336,8 +341,7 @@ const useFwStore = defineStore('fw', {
             }
 
             this.cells_errors[row.id + '-' + col.field_name] = err_msg;
-            console.error('saveCell error:', err_msg);
-            //console.error(error);
+            this.handleError(error, 'saveCell', true);
             return error;
         }
     },
@@ -353,8 +357,7 @@ const useFwStore = defineStore('fw', {
             this.loadIndex();
 
         } catch (error) {
-            console.error('deleteRow error:', error.body?.err_msg ?? 'server error');
-            console.error(error);
+            this.handleError(error, 'deleteRow');
             return error;
         }
     },
@@ -376,8 +379,7 @@ const useFwStore = defineStore('fw', {
             this.loadIndex();
 
         } catch (error) {
-            console.error('deleteCheckedRows error:', error.body?.err_msg ?? 'server error');
-            console.error(error);
+            this.handleError(error, 'deleteCheckedRows');
             return error;
         }
     },
@@ -414,9 +416,8 @@ const useFwStore = defineStore('fw', {
             this.loadIndex();
     
         } catch (error) {
-            this.edit_data.save_result = error.body ?? { success:false, err_msg: 'server error' };
-            console.error('saveEditData error:', error.body?.err_msg ?? 'server error');
-            //console.error(error);
+            this.edit_data.save_result = error.body ?? { success: false, err_msg: 'server error' };
+            this.handleError(error, 'saveEditData', true);
             return error;
         }
     },
@@ -436,8 +437,7 @@ const useFwStore = defineStore('fw', {
             this.reloadIndex();
 
         } catch (error) {
-            console.error('saveCreateUserList error:', error.body?.err_msg ?? 'server error');
-            console.error(error);
+            this.handleError(error, 'saveCreateUserList');
             return error;
         }
     },
@@ -456,8 +456,7 @@ const useFwStore = defineStore('fw', {
             this.loadIndex();
 
         } catch (error) {
-            console.error('saveAddToUserList error:', error.body?.err_msg ?? 'server error');
-            console.error(error);
+            this.handleError(error, 'saveAddToUserList');
             return error;
         }
     },
@@ -477,8 +476,7 @@ const useFwStore = defineStore('fw', {
             this.reloadIndex();
 
         } catch (error) {
-            console.error('saveRemoveFromUserList error:', error.body?.err_msg ?? 'server error');
-            console.error(error);
+            this.handleError(error, 'saveRemoveFromUserList');
             return error;
         }
     },
@@ -499,8 +497,7 @@ const useFwStore = defineStore('fw', {
             this.reloadIndex();
 
         } catch (error) {
-            console.error('saveUserViews error:', error.body?.err_msg ?? 'server error');
-            console.error(error);
+            this.handleError(error, 'saveUserViews');
             return error;
         }
     }
