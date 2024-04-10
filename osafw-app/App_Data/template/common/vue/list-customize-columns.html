@@ -1,5 +1,5 @@
 <script type="text/x-template" id="list-customize-columns-template">
-  <div class="modal fade" tabindex="-1" role="dialog" ref="modal_customize" data-load-url="<~../url>/(UserViews)<~/common/list/relid>">
+  <div id="modal-custom-cols" class="modal fade" tabindex="-1" role="dialog" ref="modal_customize" data-load-url="<~../url>/(UserViews)<~/common/list/relid>">
     <div class="modal-dialog modal-lg" role="document">
     <form @submit.prevent="onSave">
 
@@ -18,17 +18,19 @@
             <p></p>
 
             <div class="col-rows">
-              <div v-for="(column, index) in fwStore.all_list_columns"
-                class="form-check cb-row">
-                <input type="checkbox" class="form-check-input"
-                  :checked="column.is_checked"
-                  :value="index+1"
-                  @input="e => column.is_checked = e.target.checked"
-                  :id="'custom-cols-fld-$'+column.field_name"
-                  :name="'fld['+column.field_name+']'">
-                <label class="form-check-label" :for="'custom-cols-fld-$'+column.field_name">{{column.field_name_visible}}</label>
-                index={{index}}, checked={{column.is_checked}}
-              </div>
+              <draggable v-model="fwStore.all_list_columns">
+                <div v-for="(column, index) in fwStore.all_list_columns"
+                  :key="column.field_name"
+                  class="form-check cb-row">
+                  <input type="checkbox" class="form-check-input"
+                    :checked="column.is_checked"
+                    :value="index+1"
+                    @input="e => column.is_checked = e.target.checked"
+                    :id="'custom-cols-fld-$'+column.field_name"
+                    :name="'fld['+column.field_name+']'">
+                  <label class="form-check-label" :for="'custom-cols-fld-$'+column.field_name">{{column.field_name_visible}}</label>
+                </div>
+              </draggable>
             </div>
 
           </div>
@@ -88,11 +90,15 @@
 
 <script type="module">
 import { mapStores } from 'pinia';
+import { VueDraggableNext } from 'vue-draggable-next';
 
 fwApp.component('list-customize-columns', {
   template: '#list-customize-columns-template',
   props: [],
   emits: ['hidden'],
+  components: {
+    draggable: VueDraggableNext,
+  },
   data: () => ({
     modal: null,
     modal_create: null,

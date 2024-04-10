@@ -148,6 +148,13 @@
         "dist/multiselect.js",
         "themes/default.css"
       ]
+    },
+    {
+      "library": "vue-draggable-next@2.2.1",
+      "destination": "wwwroot/assets/lib/vue-draggable-next",
+      "files": [
+        "dist/vue-draggable-next.esm-browser.js"
+      ]
     }
   ]
 }
