@@ -578,22 +578,24 @@ public class FwDynamicController : FwController
     {
         var fld = reqh("fld");
         var load_id = reqi("load_id");
-        var is_reset = reqi("is_reset");
+        var is_reset = reqb("is_reset");
         var density = reqs("density");
+        var is_list_edit = reqb("is_list_edit");
+        var icode = base_url + (is_list_edit ? "/edit" : "");
 
         if (load_id > 0)
             // set fields from specific view
-            fw.model<UserViews>().setViewForIcode(base_url, load_id);
-        else if (is_reset == 1)
+            fw.model<UserViews>().setViewForIcode(icode, load_id);
+        else if (is_reset)
             // reset fields to defaults
-            fw.model<UserViews>().updateByIcodeFields(base_url, view_list_defaults);
+            fw.model<UserViews>().updateByIcodeFields(icode, view_list_defaults);
         else if (density.Length > 0)
         {
             // save density
             // validate density can be only table-sm, table-dense, table-normal, otherwise - set empty
             if (!"table-sm table-dense table-normal".Contains(density))
                 density = "";
-            fw.model<UserViews>().updateByIcode(base_url, DB.h("density", density));
+            fw.model<UserViews>().updateByIcode(icode, DB.h("density", density));
         }
         else
         {
@@ -612,10 +614,10 @@ public class FwDynamicController : FwController
             if (!string.IsNullOrEmpty(iname))
             {
                 // create new view by name or update if this name exists
-                fw.model<UserViews>().addOrUpdateByUK(base_url, fields, iname);
+                fw.model<UserViews>().addOrUpdateByUK(icode, fields, iname);
             }
             // update default view with fields
-            fw.model<UserViews>().updateByIcodeFields(base_url, fields);
+            fw.model<UserViews>().updateByIcodeFields(icode, fields);
         }
 
         return afterSave(true, null, false, "no_action", return_url);

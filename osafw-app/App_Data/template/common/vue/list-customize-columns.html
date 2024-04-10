@@ -1,9 +1,7 @@
 <script type="text/x-template" id="list-customize-columns-template">
   <div class="modal fade" tabindex="-1" role="dialog" ref="modal_customize" data-load-url="<~../url>/(UserViews)<~/common/list/relid>">
     <div class="modal-dialog modal-lg" role="document">
-    <form @submit.prevent action="<~../url>/(SaveUserViews)">
-      <input type="hidden" name="load_id" value="">
-      <input type="hidden" name="item[iname]" value="">
+    <form @submit.prevent="onSave">
 
       <div class="modal-content">
           <div class="modal-header">
@@ -35,7 +33,7 @@
 
           </div>
           <div class="modal-footer">
-            <button name="is_reset" value="1" class="btn btn-info me-auto">Reset to Defaults</button>
+            <button type="button" class="btn btn-info me-auto" @click="onResetDefaults">Reset to Defaults</button>
 
             <div class="dropdown">
               <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
@@ -128,6 +126,23 @@ fwApp.component('list-customize-columns', {
         this.$emit('hidden', e);
       }, { once: true });
     },
+
+    async onResetDefaults(e){
+      await this.fwStore.saveUserViews({is_reset:true});
+      this.modal.hide();
+    },
+    async onSave(e){
+      // build as "fld[filed_name]"=index ,"fld[filed_name]"=index, ...
+      const fld = {};
+      this.fwStore.all_list_columns.forEach( (el, index) => {
+        if (el.is_checked){
+           fld[el.field_name] = index+1;
+        }
+      });
+      await this.fwStore.saveUserViews({ fld: fld });
+      this.modal.hide();
+    },
+
     onCreateNewView(e){
       if (!this.modal){
         this.modal = new bootstrap.Modal(this.$refs.modal_create);

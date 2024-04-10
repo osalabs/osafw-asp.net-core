@@ -234,6 +234,11 @@ const useFwStore = defineStore('fw', {
             return error;
         }
     },
+    async reloadIndex() {
+        if (this.loadIndexDebouncedTimeout) clearTimeout(this.loadIndexDebouncedTimeout);
+        this.is_initial_load = true;
+        await this.loadIndex();
+    },
     // load data debounced
     async loadIndexDebounced() {
         // debounce loadIndex
@@ -427,9 +432,8 @@ const useFwStore = defineStore('fw', {
 
             Toast("List created", { theme: 'text-bg-success' });
 
-            //reload userslists (in initial load)
-            this.is_initial_load = true;
-            this.loadIndex();
+            //reload userslists via simply whole index reload
+            this.reloadIndex();
 
         } catch (error) {
             console.error('saveCreateUserList error:', error.body?.err_msg ?? 'server error');
@@ -470,14 +474,37 @@ const useFwStore = defineStore('fw', {
 
             //clear checked rows
             this.hchecked_rows = {};
-            this.loadIndex();
+            this.reloadIndex();
 
         } catch (error) {
             console.error('saveRemoveFromUserList error:', error.body?.err_msg ?? 'server error');
             console.error(error);
             return error;
         }
+    },
+
+    // *** userviews support ***
+    async saveUserViews(params) {
+        try {
+            const apiBase = mande(this.base_url);
+            const req = { XSS: this.XSS, is_list_edit: this.is_list_edit, ...params };
+
+            console.log('saveUserViews req', req);
+            const response = await apiBase.post('/(SaveUserViews)', req);
+            console.log('saveUserViews response', response);
+
+            Toast("View saved", { theme: 'text-bg-success' });
+
+            //reload as whole as columns can be changed
+            this.reloadIndex();
+
+        } catch (error) {
+            console.error('saveUserViews error:', error.body?.err_msg ?? 'server error');
+            console.error(error);
+            return error;
+        }
     }
-  }
+
+  },
 });
 window.useFwStore=useFwStore; //make store available for components in html below
