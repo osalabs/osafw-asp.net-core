@@ -112,13 +112,16 @@ const useFwStore = defineStore('fw', {
       },
       listRequestQuery: (state) => {
           // build request query from state.f, each parameter name should be int form "f[name]"
-          let req = { dofilter: 1, is_list_edit: state.is_list_edit };
-          if (!state.is_initial_load) {
+          let req = { is_list_edit: state.is_list_edit };
+          if (state.is_initial_load) {
+              // initial load - don't set filters, we'll get them from backend
+          } else {
+              req.dofilter = 1;
               req.scope = 'list_rows'; // after initial load we only need list_rows
+              Object.keys(state.f).forEach(key => {
+                  req['f[' + key + ']'] = state.f[key] ?? ''; //null to empty string
+              });
           }
-          Object.keys(state.f).forEach(key => {
-                  req['f[' + key + ']'] = state.f[key]??''; //null to empty string
-          });
           // add related_id to request
           if (state.related_id) req.related_id = state.related_id;
 
@@ -167,7 +170,7 @@ const useFwStore = defineStore('fw', {
               }
           });
 
-          console.log('treeShowFormFields', root);
+          //console.log('treeShowFormFields', root);
           return root;          
       }
   },
@@ -219,7 +222,7 @@ const useFwStore = defineStore('fw', {
 
     // set one or multiple filter values and reload list
     setFilters(filters) {
-        console.log('setFilters', filters);       
+        //console.log('setFilters', filters);       
         //whenever filters changed - reset page to first (if no specific page set)
         if (filters.pagenum === undefined) filters.pagenum = 0;        
         //merge filters into state.f
@@ -251,9 +254,9 @@ const useFwStore = defineStore('fw', {
             const apiBase = mande(this.base_url);
 
             const req = this.listRequestQuery;
-            console.log('loadIndex req', req);
+            //console.log('loadIndex req', req);
             const data = await apiBase.get('', { query: req });
-            console.log('loadIndex data', data);
+            //console.log('loadIndex data', data);
 
             //save to store each key from data if such key exists in store
             Object.keys(data).forEach(key => {
@@ -281,7 +284,7 @@ const useFwStore = defineStore('fw', {
             const apiBase = mande(this.base_url);
 
             const data = await apiBase.get(id);
-            console.log('loadItem data', data);
+            //console.log('loadItem data', data);
 
             this.edit_data = data;
 
@@ -304,9 +307,9 @@ const useFwStore = defineStore('fw', {
             const apiBase = mande(this.base_url);
             
             const req = { item: item, XSS: this.XSS };
-            console.log('saveCell req', id, req);
+            //console.log('saveCell req', id, req);
             const response = await apiBase.patch(id, req);
-            console.log('saveCell response', response);
+            //console.log('saveCell response', response);
 
             //remove saving flag after 5sec
             setTimeout(() => {
@@ -339,9 +342,9 @@ const useFwStore = defineStore('fw', {
         try {
             const apiBase = mande(this.base_url);
             const req = { XSS: this.XSS };
-            console.log('deleteRow req', req);
+            //console.log('deleteRow req', req);
             const response = await apiBase.delete(id, { query: req });
-            console.log('deleteRow response', response);
+            //console.log('deleteRow response', response);
 
             //reload list to show changes
             this.loadIndex();
@@ -358,9 +361,9 @@ const useFwStore = defineStore('fw', {
             req.cb = this.checkedRows;
             if (!Object.keys(req.cb).length) return; //no checked rows
 
-            console.log('deleteCheckedRows req', req);
+            //console.log('deleteCheckedRows req', req);
             const response = await apiBase.put(req);
-            console.log('deleteCheckedRows response', response);
+            //console.log('deleteCheckedRows response', response);
 
             //clear checked rows
             this.hchecked_rows = {};
@@ -397,9 +400,9 @@ const useFwStore = defineStore('fw', {
             const apiBase = mande(this.base_url);
     
             const req = { item: this.edit_data.i, XSS: this.XSS };
-            console.log('saveEditData req', req);
+            //console.log('saveEditData req', req);
             const response = await apiBase.post(this.edit_data.id, req);
-            console.log('saveEditData response', response);
+            //console.log('saveEditData response', response);
             this.edit_data.save_result = response;
     
             //reload list to show changes
@@ -417,9 +420,9 @@ const useFwStore = defineStore('fw', {
         try {
             const apiBase = mande(this.userlists_url);
             const req = { XSS: this.XSS, item: { entity: this.base_url, iname: this.userlists_new_name, item_id: this.checkedRowsCommas } };
-            console.log('saveCreateUserList req', req);
+            //console.log('saveCreateUserList req', req);
             const response = await apiBase.post('', req);
-            console.log('saveCreateUserList response', response);
+            //console.log('saveCreateUserList response', response);
 
             Toast("List created", { theme: 'text-bg-success' });
 
@@ -435,9 +438,9 @@ const useFwStore = defineStore('fw', {
         try {
             const apiBase = mande(this.userlists_url);
             const req = { XSS: this.XSS, item_id: this.checkedRowsCommas };
-            console.log('saveAddToUserList req', req);
+            //console.log('saveAddToUserList req', req);
             const response = await apiBase.post('/(AddToList)/' + userlists_id, req);
-            console.log('saveAddToUserList response', response);
+            //console.log('saveAddToUserList response', response);
 
             Toast("Added to List", { theme: 'text-bg-success' });
 
@@ -455,9 +458,9 @@ const useFwStore = defineStore('fw', {
         try {
             const apiBase = mande(this.userlists_url);
             const req = { XSS: this.XSS, item_id: this.checkedRowsCommas };
-            console.log('saveRemoveFromUserList req', req);
+            //console.log('saveRemoveFromUserList req', req);
             const response = await apiBase.post('/(RemoveFromList)/' + this.f.userlist, req);
-            console.log('saveRemoveFromUserList response', response);
+            //console.log('saveRemoveFromUserList response', response);
 
             Toast("Removed from List", { theme: 'text-bg-success' });
 
@@ -477,9 +480,9 @@ const useFwStore = defineStore('fw', {
             const apiBase = mande(this.base_url);
             const req = { XSS: this.XSS, is_list_edit: this.is_list_edit, ...params };
 
-            console.log('saveUserViews req', req);
+            //console.log('saveUserViews req', req);
             const response = await apiBase.post('/(SaveUserViews)', req);
-            console.log('saveUserViews response', response);
+            //console.log('saveUserViews response', response);
 
             if (!params.is_reset && !params.density && !params.load_id) {
                 Toast("View saved", { theme: 'text-bg-success' });
@@ -497,9 +500,9 @@ const useFwStore = defineStore('fw', {
             const apiBase = mande(this.userlists_url);
             const req = { XSS: this.XSS };
 
-            console.log('deleteUserViews req', req);
+            //console.log('deleteUserViews req', req);
             const response = await apiBase.delete(id, { query: req });
-            console.log('deleteUserViews response', response);
+            //console.log('deleteUserViews response', response);
 
             Toast("View deleted", { theme: 'text-bg-success' });
             //reload as whole as columns can be changed

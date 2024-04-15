@@ -368,7 +368,7 @@
                 },
                 {
                     "field": "email",
-                    "label": "Email (uniq)",
+                    "label": "Email (unique)",
                     "type": "email",
                     "required": true,
                     "validate": "exists isemail",

@@ -8,7 +8,6 @@
 <script src="<~GLOBAL[ASSETS_URL]>/js/fw-toasts.js"></script>
 <script>
  <~/layout/vue/apputils.js>
- console.log("after utils");
 </script>
 
 <~load_script>
@@ -18,10 +17,8 @@
  import { createPinia, defineStore } from 'pinia';
  import { mande } from 'mande';
 
- console.log("before store");
  <~store.js>
 
- console.log("before app");
  <~app.js>
 </script>
 
@@ -29,7 +26,6 @@
 
 <script type="module">
  fwApp.mount('#fw-app');
- console.log("app mounted");
 </script>
 
 
