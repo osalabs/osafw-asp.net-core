@@ -25,18 +25,27 @@
     <div class="row form-row">
       <label class="col-form-label col-md-2 col-xl-1" for="list-filters-status">`Status`</label>
       <div class="col-md-3 col-lg-2">
-        <select id="list-filters-status" class="form-select" v-model="fwStore.f.status">
-          <option v-for="option in lookup_statusf" :value="option.id">{{option.iname}}</option>
-        </select>
+          <Multiselect
+            v-model="fwStore.f.status"
+            :options="lookup_statusf"
+            valueProp="id"
+            label="iname"
+            placeholder="`- all -`"
+            @change="fwStore.setFilters({})"
+          />
       </div>
 
       <template v-if="fwStore.is_userlists">
-        <label class="col-form-label col-md-2 col-xl-1" for="list-filters-userlist">`My List`</label>
+        <label class="col-form-label col-md-2 col-xl-1">`My List`</label>
         <div class="col-md-3 col-lg-2">
-          <select id="list-filters-userlist" v-model="fwStore.f.userlist" class="form-select">
-            <option value="">`- all -`</option>
-            <option v-for="option in fwStore.select_userlists" :value="option.id">{{option.iname}}</option>
-          </select>
+          <Multiselect
+            v-model="fwStore.f.userlist"
+            :options="fwStore.select_userlists"
+            valueProp="id"
+            label="iname"
+            placeholder="`- all -`"
+            @change="fwStore.setFilters({})"
+          />
         </div>
       </template>
 
@@ -69,10 +78,14 @@
 
 <script type="module">
 import { mapStores } from 'pinia';
+import Multiselect from 'Multiselect';
 
 fwApp.component('list-filters', {
   template: '#list-filters-template',
   props: ['s_placeholder'],
+  components: {
+    Multiselect
+  },
   data: () => ({
     is_show_customize_columns: false
   }),

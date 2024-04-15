@@ -19,6 +19,16 @@
   /*--fw-pane-bg: var(--bs-tertiary-bg);*/
   --fw-btn-default-bg: var(--bs-light-bg-subtle);
   --fw-btn-default-border: var(--bs-light-border-subtle);
+  /* for vue multiselect */
+  --ms-bg: var(--bs-body-bg);
+  --ms-dropdown-bg: var(--bs-body-bg);
+  --ms-border-width: var(--bs-border-width);
+  --ms-border-color: var(--bs-border-color);
+  --ms-placeholder-color: var(--bs-body-color);
+  --ms-dropdown-border-width:var(--bs-border-width);
+  --ms-dropdown-border-color: var(--bs-border-color);
+  --ms-option-bg-pointed: #52525E;
+  --ms-option-color-pointed: var(--bs-body-color);
 }
 
 body {

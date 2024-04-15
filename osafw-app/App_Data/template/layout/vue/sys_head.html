@@ -7,6 +7,7 @@
 <meta name="description" content="<~meta_description> <~/site_name>" />
 
 <link href="<~GLOBAL[ASSETS_URL]>/lib/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="<~GLOBAL[ASSETS_URL]>/lib/vueform-multiselect/themes/default.css" rel="stylesheet" >
 <link href="<~GLOBAL[ASSETS_URL]>/css/site.css?v<~GLOBAL[SITE_VERSION]>" rel="stylesheet">
 <~/layout/theme_link if="GLOBAL[ui_theme]">
 
@@ -23,9 +24,6 @@
 </style>
 
 <script type="text/javascript">
- var ROOT_URL="<~ROOT_URL>";
- var me_id=<~SESSION[user_id]>+0;
- var lng;
  <~/layout/head_common.js>
 </script>
 

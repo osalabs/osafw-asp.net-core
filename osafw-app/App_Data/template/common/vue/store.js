@@ -70,12 +70,10 @@ const useFwStore = defineStore('fw', {
     //standard lookups
     lookups_std: {
         statusf: [
-            { id: '', iname: '- all -' },
             { id: 0, iname: 'Active' },
             { id: 10, iname: 'Inactive' }
         ],
         statusf_admin: [
-            { id: '', iname: '- all -' },
             { id: 0, iname: 'Active' },
             { id: 10, iname: 'Inactive' },
             { id: 127, iname: '[Deleted]' }
@@ -119,7 +117,7 @@ const useFwStore = defineStore('fw', {
               req.scope = 'list_rows'; // after initial load we only need list_rows
           }
           Object.keys(state.f).forEach(key => {
-                  req['f[' + key + ']'] = state.f[key];
+                  req['f[' + key + ']'] = state.f[key]??''; //null to empty string
           });
           // add related_id to request
           if (state.related_id) req.related_id = state.related_id;
