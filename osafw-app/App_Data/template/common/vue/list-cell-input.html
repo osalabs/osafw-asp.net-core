@@ -1,5 +1,6 @@
 <script type="text/x-template" id="list-cell-input-template">
-  <div>
+  <div :class="$slots.prepend || $slots.append ? 'input-group' : ''">
+      <slot name="prepend"></slot>
       <input :type="inputType"
         :class="'form-control'+(error?' is-invalid':'')"
         :id="'cell-'+row.id+'-'+col.field_name"
@@ -21,6 +22,7 @@
         @keydown.up.prevent="onNavigate('up')"
         @keydown.down.prevent="onNavigate('down')"
         >
+      <slot name="append"></slot>
       <div v-if="error" class="invalid-tooltip">{{error}}</div>
   </div>
 </script>
