@@ -148,7 +148,7 @@ import { mapStores } from 'pinia';
 
 fwApp.component('list-table', {
   template: '#list-table-template',
-  props: [],
+  props: ['dblclick'], //dblclick: ''(none)/'view'/'edit'/'quickedit'
   emit: [],
   data: () => ({
         row_title: 'Double click to Edit',
@@ -217,8 +217,15 @@ fwApp.component('list-table', {
         this.fwStore.hchecked_rows[row_id] = !this.fwStore.hchecked_rows[row_id];
     },
     async onDblClickRow(e, row){
-      console.log('onDblClickRow',e);
-      //await this.fwStore.openEditPane(row.id);
+      if (this.dblclick=='view'){
+        this.onRowView(row);
+      }else if (this.dblclick=='edit'){
+        this.onRowEdit(row);
+      }else if (this.dblclick=='quickedit'){
+        this.onRowQuickEdit(row);
+      }else{
+        //default - do nothing
+      }
     },
     async onRowView(row){
       console.log("TODO open View list-table onRowView", row.id);
