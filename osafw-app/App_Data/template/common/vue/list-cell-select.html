@@ -29,10 +29,6 @@ fwApp.component('list-cell-select', {
   data: () => ({
     initial_value: '', //value before change
   }),
-  mounted(){
-  },
-  updated(){
-  },
   methods: {
     onFocus(e){
       this.initial_value = this.row[this.col.field_name];

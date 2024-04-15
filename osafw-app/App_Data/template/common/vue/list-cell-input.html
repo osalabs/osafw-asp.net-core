@@ -50,10 +50,6 @@ fwApp.component('list-cell-input', {
       return TYPE_MAP[type]??'text';
     },
   },
-  mounted(){
-  },
-  updated(){
-  },
   methods: {
     onFocus(e){
       this.initial_value = this.row[this.col.field_name];

@@ -93,7 +93,7 @@
                         @navigate="onCellNavigate($event)"
                         ></list-cell-checkbox>
 
-                      <td v-else class="text-danger">{{fieldValueByName(row, header.field_name)}}</td>
+                      <div v-else class="text-danger">{{fieldValueByName(row, header.field_name)}}</div>
                   </td>
                 </template>
 
