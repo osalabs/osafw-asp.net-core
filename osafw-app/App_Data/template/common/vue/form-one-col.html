@@ -1,5 +1,5 @@
 <script type="text/x-template" id="form-one-col-template">
-  <div class="col-12" :class="def.class">
+  <div :class="def.class ? def.class : 'col-12'">
     <form-one-def v-for="child_def in def.children"
       :form="form"
       @update-form-field="$emit('update-form-field', $event)"

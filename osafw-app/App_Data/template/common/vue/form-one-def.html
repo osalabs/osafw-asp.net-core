@@ -13,6 +13,13 @@
     :def="def"
     :lookups="lookups"
   />
+  <form-one-form-row v-else-if="def.class!==false"
+    :form="form"
+    @update-form-field="$emit('update-form-field', $event)"
+    @cancel-form="$emit('cancel-form', $event)"
+    :def="def"
+    :lookups="lookups"
+  />
   <form-one-group v-else
     :form="form"
     @update-form-field="$emit('update-form-field', $event)"
