@@ -773,7 +773,7 @@ public abstract class FwModel : IDisposable
     /// <returns></returns>
     public virtual List<string> colMainIdsByLinkedId(int linked_id)
     {
-        return db.col(table_name, DB.h(junction_field_linked_id, linked_id), db.qid(junction_field_linked_id));
+        return db.col(table_name, DB.h(junction_field_linked_id, linked_id), db.qid(junction_field_main_id));
     }
 
     public virtual string getJunctionFieldStatus()
