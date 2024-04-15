@@ -226,6 +226,9 @@ table.list {
 }
   table.list > thead {
     background-color: var(--bs-secondary-bg);
+    position: sticky;
+    top: 0;
+    z-index: 10;
   }
 /*
     table.list > thead > tr:first-child th:first-child {
