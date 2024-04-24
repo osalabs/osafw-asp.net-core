@@ -67,13 +67,13 @@ existing DB &rarr; db.json &rarr; models &rarr; controllers
         <form method="post" action="<~../url>/(CreateModel)" class="row row-cols-auto g-2">
             <input type="hidden" name="XSS" value="<~session[XSS]>">
             <div class="col">
-                <select name="item[table_name]" class="form-select" style="width:200px">
+                <select name="item[table_name]" class="form-select on-change-table" style="width:200px">
                   <option value="">- select table -</option>
                   <~select_tables select="i[table_name]">
                 </select>
             </div>
             <div class="col">
-                <input name="item[model_name]" maxlength="255" value="<~i[model_name]>" type="text" class="form-control ms-2" placeholder="Model name (plural)" style="width:300px">
+                <input id="model_name" name="item[model_name]" maxlength="255" value="<~i[model_name]>" type="text" class="form-control ms-2" placeholder="Model name (plural)" style="width:300px">
             </div>
             <div class="col">
                 <button class="btn btn-default ms-2">Create Model</button>
@@ -84,16 +84,21 @@ existing DB &rarr; db.json &rarr; models &rarr; controllers
         <form method="post" action="<~../url>/(CreateController)" class="row row-cols-auto g-2">
             <input type="hidden" name="XSS" value="<~session[XSS]>">
             <div class="col">
-                <select name="item[model_name]" class="form-select" style="width:200px">
+                <select name="item[model_name]" class="form-select on-change-model" style="width:200px">
                   <option value="">- select model -</option>
                   <~select_models select="i[model_name]">
                 </select>
             </div>
             <div class="col">
-                <input name="item[controller_url]" maxlength="255" value="<~i[controller_url]>" type="text" class="form-control ms-2" placeholder="Controller URL (ex: /Admin/Demos)" style="width:300px">
+                <input id="controller_url" name="item[controller_url]" maxlength="255" value="<~i[controller_url]>" type="text" class="form-control ms-2" placeholder="Controller URL (ex: /Admin/Demos)" style="width:300px">
             </div>
             <div class="col">
-                <input name="item[controller_title]" maxlength="255" value="<~i[controller_title]>" type="text" class="form-control ms-2" placeholder="Title (singular)" style="width:300px">
+                <input id="controller_title" name="item[controller_title]" maxlength="255" value="<~i[controller_title]>" type="text" class="form-control ms-2" placeholder="Title (singular)" style="width:300px">
+            </div>
+            <div class="col">
+                <select name="item[controller_type]" class="form-select">
+                  <~ctype.sel select="i[controller_type]">
+                </select>
             </div>
             <div class="col">
                 <button class="btn btn-default ms-2">Create Controller</button>

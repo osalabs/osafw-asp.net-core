@@ -1,5 +1,11 @@
 <script type="text/x-template" id="list-cell-select-template">
- <div>
+  <div :class="$slots.prepend || $slots.append || col.append || col.prepend ? 'input-group' : ''">
+      <template v-if="col.prepend" v-for="el in col.prepend">
+        <button type="button" :class="el.class ? el.class : 'btn btn-default btn-sm'" :title="el.hint" @click.stop="onBtnClick(el.event)">
+          <i v-if="el.icon" :class="el.icon"></i> {{el.label}}
+        </button>
+      </template>
+      <slot name="prepend"></slot>
       <select
         :class="'form-select'+(error?' is-invalid':'')"
         :id="'cell-'+row.id+'-'+col.field_name"
@@ -17,6 +23,12 @@
             :value="lrow.id"
         >{{lrow.iname}}</option>
       </select>
+      <slot name="append"></slot>
+      <template v-if="col.append" v-for="el in col.append">
+        <button type="button" :class="el.class ? el.class : 'btn btn-default btn-sm'" :title="el.hint" @click.stop="onBtnClick(el.event)">
+          <i v-if="el.icon" :class="el.icon"></i> {{el.label}}
+        </button>
+      </template>
       <div class="invalid-tooltip">{{error}}</div>
   </div>
 </script>
@@ -25,7 +37,7 @@
 fwApp.component('list-cell-select', {
   template: '#list-cell-select-template',
   props: ['row', 'col', 'options', 'error'],
-  emits: ['focus', 'blur'],
+  emits: ['focus', 'blur', 'btnClick'],
   data: () => ({
     initial_value: '', //value before change
   }),
@@ -34,6 +46,9 @@ fwApp.component('list-cell-select', {
       this.initial_value = this.row[this.col.field_name];
       this.$emit('focus', e);
     },
+    onBtnClick(icode){
+      this.$emit('btnClick', { event: icode, row: this.row, col: this.col});
+    }
   }
 });
 </script>

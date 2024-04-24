@@ -1,0 +1,41 @@
+<script type="text/x-template" id="_sample-template">
+ <div>
+  <h1>This is sample Vue component, use it as a template to create your own components</h1>
+  <p>
+    Value: {{sample_value}}
+  </p>
+  <div>
+    <button type="button" @click="sample_method">Button</button>
+  </div>
+ </div>
+</script>
+
+<script type="module">
+import { mapStores } from 'pinia';
+
+fwApp.component('_sample', {
+  template: '#_sample-template',
+  props: ['sample_prop'],
+  emits: ['on-sample-event'],
+  data: () => ({
+    sample_value: 0,
+  }),
+  computed: {
+    ...mapStores(useFwStore) //accessible via this.fwStore
+  },
+  mounted(){
+    console.log('_sample mounted');
+  },
+  unmounted(){
+    console.log('_sample unmounted');
+  },
+  updated(){
+    console.log('_sample updated');
+  },
+  methods: {
+    sample_method(e) {
+      this.$emit('on-sample-event', e);
+    }
+  }
+});
+</script>

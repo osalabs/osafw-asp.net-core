@@ -9,13 +9,12 @@ window.fwConst = {
     },
 };
 
-const useFwStore = defineStore('fw', {
-  state: () => ({
+let state = {
     global: {}, //global config
     XSS: '', // token
     me_id: 0, // current user id
     access_level: 0, // user access level
-    base_url: '', // base url for the controller    
+    base_url: '', // base url for the controller
     list_title: '', //list screen title
     is_readonly: false,
 
@@ -44,7 +43,7 @@ const useFwStore = defineStore('fw', {
         s: '',
         status: '',
         userlist: '',
-    }, 
+    },
     related_id: 0, // related model id
     return_url: '', // return url if controller called from other place expecting user's return
     field_id: 'id', // model's id field name
@@ -62,7 +61,6 @@ const useFwStore = defineStore('fw', {
 
     // edit form fields configuration
     list_editable_def_types: ['input', 'email', 'number', 'textarea', 'date_popup', 'datetime_popup', 'autocomplete', 'select', 'cb', 'radio', 'yesno'],
-    list_editable_def_attrs: ['is_option0', 'is_option_empty', 'maxlength', 'min', 'max', 'step', 'placeholder', 'pattern', 'required', 'readonly', 'disabled'],
     showform_fields: [],
     is_list_edit_pane: false, // true if edit pane is open
     edit_data: null, // object for single item edit form {id:X, i:{}, add_users_id_name:'', upd_users_id_name:'', save_result:{}}}
@@ -90,95 +88,105 @@ const useFwStore = defineStore('fw', {
     is_loading_index: false, //true while loading index data
     cells_saving: {}, // cells saving status {row.id_field => true}
     cells_errors: {}, // cells saving status {row.id_field => true}
-  }),
+  };
 
-  getters: {
-      doubleCount: (state) => state.count * 2, //sample getter
-      //return true if state.list_headers contains at least one non-empty search_value
-      isListSearch: (state) => state.list_headers.some(h => h.search_value?.length),
-      //count of hchecked_rows but only true values
-      countCheckedRows: (state) => Object.values(state.hchecked_rows).filter(v => v).length,
-      // get checked rows for request as [id] => 1
-      checkedRows: (state) => {
-          let checked = {};
-          Object.keys(state.hchecked_rows).forEach(id => {
-              if (state.hchecked_rows[id]) checked[id] = 1;
-          });
-          return checked;
-      },
-      // get checked rows as comma-separated string
-      checkedRowsCommas: (state) => {
-            return Object.keys(state.hchecked_rows).filter(id => state.hchecked_rows[id]).join(',');
-      },
-      listRequestQuery: (state) => {
-          // build request query from state.f, each parameter name should be int form "f[name]"
-          let req = { is_list_edit: state.is_list_edit };
-          if (state.is_initial_load) {
-              // initial load - don't set filters, we'll get them from backend
-          } else {
-              req.dofilter = 1;
-              req.scope = 'list_rows'; // after initial load we only need list_rows
-              Object.keys(state.f).forEach(key => {
-                  req['f[' + key + ']'] = state.f[key] ?? ''; //null to empty string
-              });
-          }
-          // add related_id to request
-          if (state.related_id) req.related_id = state.related_id;
+// merge in fwStoreState if defined
+if (typeof fwStoreState !== 'undefined') {
+    state = { ...state, ...fwStoreState };
+}
 
-          //add search values from headers if search is open
-          if (state.is_list_search_open) {
-              state.list_headers.forEach(h => {
-                  if (h.search_value?.length) req['search[' + h.field_name + ']'] = h.search_value;
-              });
-          }
-          return req;
-      },
-      lookupByDef: (state) => (def) => {
-          //return lookup array options by field definition
-          var lookup_model = def.lookup_model;
-          if (lookup_model) {
-              return state.lookups[lookup_model] ?? [];
-          }
-          var lookup_tpl = def.lookup_tpl;
-          if (lookup_tpl) {
-              return state.lookups[lookup_tpl] ?? [];
-          }
-      },
-      treeShowFormFields: (state) => {
-          //return hierarchial array of showform_fields:
-          let root = []; // This will hold the top-level elements
-          let stack = [root]; // Stack to manage hierarchy, starting with the root
+let getters = {
+    doubleCount: (state) => state.count * 2, //sample getter
+    //return true if state.list_headers contains at least one non-empty search_value
+    isListSearch: (state) => state.list_headers.some(h => h.search_value?.length),
+    //count of hchecked_rows but only true values
+    countCheckedRows: (state) => Object.values(state.hchecked_rows).filter(v => v).length,
+    // get checked rows for request as [id] => 1
+    checkedRows: (state) => {
+        let checked = {};
+        Object.keys(state.hchecked_rows).forEach(id => {
+            if (state.hchecked_rows[id]) checked[id] = 1;
+        });
+        return checked;
+    },
+    // get checked rows as comma-separated string
+    checkedRowsCommas: (state) => {
+        return Object.keys(state.hchecked_rows).filter(id => state.hchecked_rows[id]).join(',');
+    },
+    listRequestQuery: (state) => {
+        // build request query from state.f, each parameter name should be int form "f[name]"
+        let req = { is_list_edit: state.is_list_edit };
+        if (state.is_initial_load) {
+            // initial load - don't set filters, we'll get them from backend
+        } else {
+            req.dofilter = 1;
+            req.scope = 'list_rows'; // after initial load we only need list_rows
+            Object.keys(state.f).forEach(key => {
+                req['f[' + key + ']'] = state.f[key] ?? ''; //null to empty string
+            });
+        }
+        // add related_id to request
+        if (state.related_id) req.related_id = state.related_id;
 
-          state.showform_fields.forEach(item => {
-              if (item.type === 'row' || item.type === 'col') {
-                  // If the item is a row or column, it's a new parent, so create a children array in it
-                  item.children = [];
+        //add search values from headers if search is open
+        if (state.is_list_search_open) {
+            state.list_headers.forEach(h => {
+                if (h.search_value?.length) req['search[' + h.field_name + ']'] = h.search_value;
+            });
+        }
+        return req;
+    },
+    lookupByDef: (state) => (def) => {
+        //return lookup array options by field definition
+        var lookup_model = def.lookup_model;
+        if (lookup_model) {
+            return state.lookups[lookup_model] ?? [];
+        }
+        var lookup_tpl = def.lookup_tpl;
+        if (lookup_tpl) {
+            return state.lookups[lookup_tpl] ?? [];
+        }
+    },
+    treeShowFormFields: (state) => {
+        //return hierarchial array of showform_fields:
+        let root = []; // This will hold the top-level elements
+        let stack = [root]; // Stack to manage hierarchy, starting with the root
 
-                  // Get the current parent from the stack and add this item to its children
-                  let parent = stack[stack.length - 1];
-                  parent.push(item);
+        state.showform_fields.forEach(item => {
+            if (item.type === 'row' || item.type === 'col') {
+                // If the item is a row or column, it's a new parent, so create a children array in it
+                item.children = [];
 
-                  // Push this item onto the stack so it becomes the new current parent
-                  stack.push(item.children);
-              } else if (item.type === 'row_end' || item.type === 'col_end') {
-                  // If it's an end marker, just pop the last parent from the stack
-                  stack.pop();
-              } else {
-                  // If it's any other item, it's a child of the current parent
-                  let parent = stack[stack.length - 1];
-                  parent.push(item);
-              }
-          });
+                // Get the current parent from the stack and add this item to its children
+                let parent = stack[stack.length - 1];
+                parent.push(item);
 
-          //console.log('treeShowFormFields', root);
-          return root;          
-      }
-  },
+                // Push this item onto the stack so it becomes the new current parent
+                stack.push(item.children);
+            } else if (item.type === 'row_end' || item.type === 'col_end') {
+                // If it's an end marker, just pop the last parent from the stack
+                stack.pop();
+            } else {
+                // If it's any other item, it's a child of the current parent
+                let parent = stack[stack.length - 1];
+                parent.push(item);
+            }
+        });
 
-  actions: {
+        //console.log('treeShowFormFields', root);
+        return root;
+    }
+};
+
+//merge in fwStoreGetters if defined
+if (typeof fwStoreGetters !== 'undefined') {
+    getters = { ...getters, ...fwStoreGetters };
+}
+
+let actions = {
     handleError(error, caller, is_silent) {
         let err_msg = error.body?.err_msg ?? 'server error';
-        console.error('handleError for', caller,":", err_msg);        
+        console.error('handleError for', caller, ":", err_msg);
         if (!is_silent) {
             console.error(error);
             Toast(err_msg, { theme: 'text-bg-danger' });
@@ -205,15 +213,9 @@ const useFwStore = defineStore('fw', {
             header.input_type = def_type;
             if (!this.list_editable_def_types.includes(def_type)) header.is_ro = true;
 
-            let lookup_model = def.lookup_model;
-            if (lookup_model) header.lookup_model = lookup_model;
-
-            let lookup_tpl = def.lookup_tpl;
-            if (lookup_tpl) header.lookup_tpl = lookup_tpl;
-
-            //add edit-related attributes to header, if exists in def: 
-            this.list_editable_def_attrs.forEach(attr => {
-                if (def[attr]) header[attr] = def[attr];
+            //add all other def attributes to header (if not exists in header yet)
+            Object.keys(def).forEach(attr => {
+                if (header[attr] === undefined) header[attr] = def[attr];
             });
 
             return header;
@@ -224,7 +226,7 @@ const useFwStore = defineStore('fw', {
     setFilters(filters) {
         //console.log('setFilters', filters);       
         //whenever filters changed - reset page to first (if no specific page set)
-        if (filters.pagenum === undefined) filters.pagenum = 0;        
+        if (filters.pagenum === undefined) filters.pagenum = 0;
         //merge filters into state.f
         this.$state.f = { ...this.$state.f, ...filters };
         this.loadIndexDebounced();
@@ -265,7 +267,7 @@ const useFwStore = defineStore('fw', {
 
             // set defaults
             this.list_user_view.density = this.list_user_view.density ?? 'table-sm';
-            
+
             this.is_initial_load = false; // reset initial load flag
             this.is_loading_index = false;
 
@@ -293,6 +295,10 @@ const useFwStore = defineStore('fw', {
             return error;
         }
     },
+    //when custom cell button clicked
+    async onCellBtnClick({ event, row, col }) {
+        console.log('onCellBtnClick:', event, row.id, col.field);
+    },
     async saveCell(row, col) {
         this.cells_saving[row.id + '-' + col.field_name] = true; //set saving flag
         delete this.cells_errors[row.id + '-' + col.field_name]; //clear errors if any
@@ -305,7 +311,7 @@ const useFwStore = defineStore('fw', {
 
         try {
             const apiBase = mande(this.base_url);
-            
+
             const req = { item: item, XSS: this.XSS };
             //console.log('saveCell req', id, req);
             const response = await apiBase.patch(id, req);
@@ -313,7 +319,7 @@ const useFwStore = defineStore('fw', {
 
             //remove saving flag after 5sec
             setTimeout(() => {
-                delete this.cells_saving[row.id+'-'+col.field_name];
+                delete this.cells_saving[row.id + '-' + col.field_name];
             }, 5000);
 
         } catch (error) {
@@ -329,7 +335,7 @@ const useFwStore = defineStore('fw', {
 
             //check if we got specific field error code
             let field_err_code = error.body?.ERR?.[col.field_name] ?? '';
-            if (field_err_code && field_err_code!==true) {
+            if (field_err_code && field_err_code !== true) {
                 err_msg = window.fwConst.ERR_CODES_MAP[field_err_code] ?? 'Invalid';
             }
 
@@ -379,7 +385,7 @@ const useFwStore = defineStore('fw', {
 
     // *** list edit pane support ***
     clearEditData() {
-        this.edit_data = null; 
+        this.edit_data = null;
     },
     async openEditPane(id) {
         this.edit_data = null;
@@ -398,16 +404,16 @@ const useFwStore = defineStore('fw', {
     async saveEditData() {
         try {
             const apiBase = mande(this.base_url);
-    
+
             const req = { item: this.edit_data.i, XSS: this.XSS };
             //console.log('saveEditData req', req);
             const response = await apiBase.post(this.edit_data.id, req);
             //console.log('saveEditData response', response);
             this.edit_data.save_result = response;
-    
+
             //reload list to show changes
             this.loadIndex();
-    
+
         } catch (error) {
             this.edit_data.save_result = error.body ?? { success: false, err_msg: 'server error' };
             this.handleError(error, 'saveEditData', true);
@@ -513,6 +519,16 @@ const useFwStore = defineStore('fw', {
             return error;
         }
     }
-  },
+};
+
+//merge in fwStoreActions if defined
+if (typeof fwStoreActions !== 'undefined') {
+    actions = { ...actions, ...fwStoreActions };
+}
+
+const useFwStore = defineStore('fw', {
+  state: () => (state),
+  getters: getters,
+  actions: actions,
 });
 window.useFwStore=useFwStore; //make store available for components in html below

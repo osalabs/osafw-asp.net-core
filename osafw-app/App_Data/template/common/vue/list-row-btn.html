@@ -3,17 +3,17 @@
     :class="(is_left?'':'text-end')">
     <slot name="btn-prepend"></slot>
 
-    <a v-if="buttons.view" href="#" @click.prevent="$emit('view', $event)">`View`</a>
-    <template v-if="buttons.edit">
-      <template v-if="buttons.view">&nbsp;&#183;&nbsp;</template>
+    <a v-if="co_buttons.view" href="#" @click.prevent="$emit('view', $event)">`View`</a>
+    <template v-if="co_buttons.edit">
+      <template v-if="co_buttons.view">&nbsp;&#183;&nbsp;</template>
       <a href="#" @click.prevent="$emit('edit', $event)">`Edit`</a>
     </template>
-    <template v-if="buttons.quickedit">
-      <template v-if="buttons.view || buttons.edit">&nbsp;&#183;&nbsp;</template>
+    <template v-if="co_buttons.quickedit">
+      <template v-if="co_buttons.view || co_buttons.edit">&nbsp;&#183;&nbsp;</template>
       <a href="#" @click.prevent="$emit('quickedit', $event)" class="on-quickedit">`Quick Edit`</a>
     </template>
-    <template v-if="buttons.delete">
-      <template v-if="buttons.view || buttons.edit || buttons.quickedit">&nbsp;&#183;&nbsp;</template>
+    <template v-if="co_buttons.delete">
+      <template v-if="co_buttons.view || co_buttons.edit || co_buttons.quickedit">&nbsp;&#183;&nbsp;</template>
       <a href="#" class="text-danger" @click.prevent="$emit('delete', $event)" :disabled="is_readonly"><~/common/icons/x></a>
     </template>
 
@@ -26,5 +26,10 @@ fwApp.component('list-row-btn', {
   template: '#list-row-btn-template',
   props: ['row', 'buttons', 'is_left', 'is_readonly'],
   emits: ['view', 'edit', 'quickedit', 'delete'],
+  computed: {
+        co_buttons(){
+          return this.buttons === undefined ? false : this.buttons;
+        }
+  },
 });
 </script>

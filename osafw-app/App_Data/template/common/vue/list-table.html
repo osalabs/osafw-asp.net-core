@@ -14,6 +14,7 @@
 
               <template v-for="header in fwStore.list_headers">
                 <th :class="'rotate'+(header.is_sortable && fwStore.f.sortby==header.field_name ? ' active-sort' : '')"
+                  :style="header.list_min_width ? 'min-width:'+header.list_min_width: null"
                   :data-sort="header.is_sortable"
                   @click="(event) => onSortHeader(event, header)">
                   <div>
@@ -81,16 +82,19 @@
                         :error="fwStore.cells_errors[row.id+'-'+header.field_name]"
                         @change="onCellChange($event, row, header)"
                         @navigate="onCellNavigate($event)"
+                        @btnClick="fwStore.onCellBtnClick($event)"
                         ></list-cell-input>
                       <list-cell-select v-else-if="header.input_type=='select' || header.input_type=='radio'"
                         :row="row" :col="header" :error="fwStore.cells_errors[row.id+'-'+header.field_name]"
                         :options="fwStore.lookupByDef(header)"
                         @change="onCellChange($event, row, header)"
+                        @btnClick="fwStore.onCellBtnClick($event)"
                         ></list-cell-select>
                       <list-cell-checkbox v-else-if="header.input_type=='cb' || header.input_type=='yesno'"
                         :row="row" :col="header"
                         @change="onCellChange($event, row, header)"
                         @navigate="onCellNavigate($event)"
+                        @btnClick="fwStore.onCellBtnClick($event)"
                         ></list-cell-checkbox>
 
                       <div v-else class="text-danger">{{fieldValueByName(row, header.field_name)}}</div>
@@ -128,8 +132,11 @@
           <list-pagination
             :pager="fwStore.pager"
             :pagesize="fwStore.f.pagesize"
+            :count="fwStore.count"
+            :is_show_count="pagination_is_show_count"
             @on-page="onClickPage"
-            @on-pagesize="onChangePagesize"></list-pagination>
+            @on-pagesize="onChangePagesize"
+          ></list-pagination>
         </div>
       </div>
 
@@ -148,7 +155,7 @@ import { mapStores } from 'pinia';
 
 fwApp.component('list-table', {
   template: '#list-table-template',
-  props: ['dblclick'], //dblclick: ''(none)/'view'/'edit'/'quickedit'
+  props: ['dblclick', 'pagination_is_show_count'], //dblclick: ''(none)/'view'/'edit'/'quickedit'
   emit: [],
   data: () => ({
         row_title: 'Double click to Edit',

@@ -1,5 +1,10 @@
 <script type="text/x-template" id="list-cell-input-template">
-  <div :class="$slots.prepend || $slots.append ? 'input-group' : ''">
+  <div :class="$slots.prepend || $slots.append || col.append || col.prepend ? 'input-group' : ''">
+      <template v-if="col.prepend" v-for="el in col.prepend">
+        <button type="button" :class="el.class ? el.class : 'btn btn-default btn-sm'" :title="el.hint" @click.stop="onBtnClick(el.event)">
+          <i v-if="el.icon" :class="el.icon"></i> {{el.label}}
+        </button>
+      </template>
       <slot name="prepend"></slot>
       <input :type="inputType"
         :class="'form-control'+(error?' is-invalid':'')"
@@ -23,6 +28,11 @@
         @keydown.down.prevent="onNavigate('down')"
         >
       <slot name="append"></slot>
+      <template v-if="col.append" v-for="el in col.append">
+        <button type="button" :class="el.class ? el.class : 'btn btn-default btn-sm'" :title="el.hint" @click.stop="onBtnClick(el.event)">
+          <i v-if="el.icon" :class="el.icon"></i> {{el.label}}
+        </button>
+      </template>
       <div v-if="error" class="invalid-tooltip">{{error}}</div>
   </div>
 </script>
@@ -31,7 +41,7 @@
 fwApp.component('list-cell-input', {
   template: '#list-cell-input-template',
   props: ['type', 'row', 'col', 'error'],
-  emits: ['focus', 'blur', 'change', 'navigate'],
+  emits: ['focus', 'blur', 'change', 'navigate', 'btnClick'],
   data: () => ({
     initial_value: '', //value before change
   }),
@@ -60,11 +70,13 @@ fwApp.component('list-cell-input', {
     },
     onNavigate(dir) {
       if (this.inputType=='date'){
-        console.log('cancel for date to:', this.initial_value);
         this.onCancel();
       }
       this.$emit('navigate', { dir, row: this.row, col: this.col });
     },
+    onBtnClick(icode){
+      this.$emit('btnClick', { event: icode, row: this.row, col: this.col});
+    }
   }
 });
 </script>

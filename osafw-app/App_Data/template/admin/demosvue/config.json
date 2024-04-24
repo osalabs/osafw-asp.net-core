@@ -334,7 +334,16 @@
                     "type": "select",
                     "is_option_empty": true,
                     "class_contents": "col-md-6",
-                    "class_control": "on-refresh"
+                    "class_control": "on-refresh",
+                    "append": [
+                      {
+                        "event": "add",
+                        "class": "",
+                        "icon": "bi bi-plus",
+                        "label": "",
+                        "hint": "Add New"
+                      }
+                    ]
                 },
                 {
                     "field": "iname",
@@ -386,7 +395,16 @@
                         "max": 999999,
                         "class_label": "col-3",
                         "class_contents": "col-md-3",
-                        "class": false
+                        "class": false,
+                        "prepend": [
+                          {
+                            "event": "check",
+                            "class": "",
+                            "icon": "bi bi-check",
+                            "label": "",
+                            "hint": "Check"
+                          }
+                        ]
                     },
                     {
                         "field": "ffloat",

@@ -14,6 +14,15 @@
       ]
     },
     {
+      "library": "bootstrap-icons@1.11.3",
+      "destination": "wwwroot/assets/lib/bootstrap-icons",
+      "files": [
+        "font/fonts/bootstrap-icons.woff2",
+        "font/fonts/bootstrap-icons.woff",
+        "font/bootstrap-icons.min.css"
+      ]
+    },
+    {
       "library": "bootstrap-select@1.14.0-beta2",
       "destination": "wwwroot/assets/lib/bootstrap-select",
       "files": [

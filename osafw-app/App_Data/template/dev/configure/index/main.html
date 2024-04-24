@@ -13,12 +13,12 @@
         <tr>
             <td>Environment</td>
             <td><~ok if="is_config_env"><~fail unless="is_config_env"></td>
-            <td><~ASPNETCORE_ENVIRONMENT></td>
+            <td><~ASPNETCORE_ENVIRONMENT default="-"></td>
         </tr>
         <tr>
             <td>Config file</td>
             <td><~ok if="is_config_env"><~fail unless="is_config_env"></td>
-            <td><~config_file_name></td>
+            <td><~config_file_name default="-"></td>
         </tr>
         <tr>
             <td>DB configured</td>

@@ -150,7 +150,7 @@ public class FwVueController : FwDynamicController
             var lookup_model = Utils.f2str(def["lookup_model"]);
             if (lookup_model.Length > 0)
             {
-                lookups[lookup_model] = fw.model(lookup_model).listSelectOptions();
+                lookups[lookup_model] = fw.model(lookup_model).listSelectOptions(def);
             }
 
             var lookup_tpl = Utils.f2str(def["lookup_tpl"]);

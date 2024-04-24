@@ -1,6 +1,9 @@
 <script type="text/x-template" id="list-pagination-template">
  <div>
   <ul class="pagination mb-0">
+    <template v-if="is_show_count">
+      <li class="p-1 pe-3"><span class="badge badge-outline-secondary rounded-pill">{{count}}</span></li>
+    </template>
     <template v-for="page in pager">
       <li class="page-item" v-if="page.is_show_first">
         <a class="page-link" href="#" @click.prevent="page_click(0)">`First`</a>
@@ -26,7 +29,7 @@
 <script type="module">
 fwApp.component('list-pagination', {
   template: '#list-pagination-template',
-  props: ['pager', 'pagesize'],
+  props: ['pager', 'pagesize', 'count', 'is_show_count'],
   emits: ['on-page', 'on-pagesize'],
   data: () => ({
     pagesize_options: [10,20,25,30,40,50,100,150,200],
