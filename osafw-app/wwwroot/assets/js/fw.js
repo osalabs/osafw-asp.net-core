@@ -295,6 +295,7 @@ window.fw={
     fw.setup_cancel_form_handlers();
     fw.setup_autosave_form_handlers();
     fw.process_form_errors();
+    fw.setup_file_drop_area();
 
     $(document).on('change', '.on-refresh', function (e) {
       var $f = $(this).closest('form');
@@ -646,6 +647,42 @@ window.fw={
           }
         });
       }
+    });
+  },
+
+  /* structure:
+    <div class="file-drop-area">
+        <span class="fake-btn">Choose files or drag and drop your files here</span>
+        <input class="d-none" type="file" multiple >
+    </div>
+  */
+  setup_file_drop_area: function (){
+    document.querySelectorAll('.file-drop-area').forEach(dropArea => {
+        const fileInput = dropArea.querySelector('input[type="file"]');
+        const fakeBtn = dropArea.querySelector('.fake-btn');
+
+        fakeBtn.onclick = () => fileInput.click();
+        fileInput.onchange = () => {
+            fakeBtn.innerHTML = fileInput.files.length + ' file(s) selected';
+        };
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (eventName === 'dragenter' || eventName === 'dragover') {
+                    dropArea.classList.add('highlight');
+                } else {
+                    dropArea.classList.remove('highlight');
+                }
+            }, false);
+        });
+
+        dropArea.ondrop = (e) => {
+            let files = e.dataTransfer.files;
+            fileInput.files = files;
+            fileInput.onchange();
+        };
     });
   },
 

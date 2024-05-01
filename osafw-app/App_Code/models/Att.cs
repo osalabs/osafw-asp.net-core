@@ -88,7 +88,7 @@ public class Att : FwModel
             {
                 // add att db record
                 Hashtable itemdb = new(item);
-                itemdb["status"] = "1"; // under upload
+                itemdb["status"] = STATUS_UNDER_UPDATE; // under upload
                 var id = this.add(itemdb);
 
                 var resone = this.uploadOne(id, i, true);
@@ -127,7 +127,7 @@ public class Att : FwModel
     public int cleanupTmpUploads()
     {
         var rows = db.arrayp("select * from " + db.qid(table_name) +
-            @$" where add_time<DATEADD(hour, -48, getdate())
+            @$" where add_time<DATEADD(hour, -48, getdate()) 
                  and (status={db.qi(STATUS_UNDER_UPDATE)} or status={db.qi(STATUS_DELETED)} and iname like 'TMP#%')", DB.h());
         foreach (var row in rows)
             this.delete(Utils.f2int(row["id"]), true);
@@ -392,7 +392,7 @@ public class Att : FwModel
         return db.rowp(db.limit("SELECT a.* from " + db.qid(fw.model<AttLinks>().table_name) + " al, " + db.qid(table_name) + " a" +
             @$" WHERE al.fwentities_id=@fwentities_id
                   and al.item_id=@item_id
-                  and a.id=al.att_id
+                  and a.id=al.att_id 
                   {where}
                 order by a.id", 1), @params);
     }
@@ -472,7 +472,7 @@ public class Att : FwModel
         if (!S3.IS_ENABLED)
             return false;
 
-#pragma warning disable CS0162 // Unreachable code detected - disable as this code only used with enabled S3
+#pragma warning disable CS0162 // Unreachable code detected
         var result = true;
 #pragma warning restore CS0162 // Unreachable code detected
         var item = one(id);

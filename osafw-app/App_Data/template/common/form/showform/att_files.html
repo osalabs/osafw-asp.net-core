@@ -1,0 +1,20 @@
+<div class="file-drop-area">
+  <span class="fake-btn"><~/common/icons/cloud-upload> Choose files or drag and drop your files here</span>
+  <input class="d-none" type="file" name="item[files]" <~/common/multiple if="multiple">>
+</div>
+
+<div class="row att-list mt-5">
+  <~att_files repeat inline>
+    <div class="col">
+      <div class="card att-info">
+        <input type="hidden" name="att[<~id>]" value="1">
+        <img class="card-img-top" src="<~/att/url>/<~id>?preview=1&size=s" alt="">
+        <div class="card-body text-truncate">
+          <p class="card-text att-iname"><~iname></p>
+          <a href="<~/att/url>/<~id>" target="_blank" class="btn btn-default" title="`Download`"><~/common/icons/cloud-download-fill></a>
+          <!--button type="button" class="btn btn-default on-remove-att" title="`Remove`"><~/common/icons/x-circle-fill></button-->
+        </div>
+      </div>
+    </div>
+  </~att_files>
+</div>

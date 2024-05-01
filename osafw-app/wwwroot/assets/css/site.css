@@ -113,6 +113,21 @@ a[disabled]
     min-height: 100%;
   }
 
+.file-drop-area {
+    border: 2px dashed #ccc;
+    border-radius: 20px;
+    position: relative;
+    padding: 20px;
+    text-align: center;
+}
+  .file-drop-area.highlight {
+      background-color: var(--fw-hiliter);
+      border-color: var(--bs-primary);
+  }
+  .file-drop-area .fake-btn {
+      cursor: pointer;
+  }
+
 .badge-outline-secondary {
     color: #6c757d;
     background-color: transparent;
@@ -165,6 +180,7 @@ h1 .badge {
   left: 0;
   bottom: 0;
   top: 0;
+  overflow:auto;
   padding: 0;
   color: #000;
 }

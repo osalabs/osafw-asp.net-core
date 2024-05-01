@@ -689,6 +689,9 @@ public class FwDynamicController : FwController
                 def["att"] = fw.model<Att>().one(Utils.f2int((string)item[field]));
             else if (dtype == "att_links")
                 def["att_links"] = fw.model<Att>().listLinked(model0.table_name, Utils.f2int(id));
+            else if (dtype == "att_files")
+                def["att_files"] = fw.model<Att>().listByEntity(model0.table_name, Utils.f2int(id));
+
             else if (dtype == "subtable")
             {
                 // subtable functionality
@@ -758,6 +761,7 @@ public class FwDynamicController : FwController
         var fields = (ArrayList)this.config["showform_fields"];
         if (fields == null)
             throw new ApplicationException("Controller config.json doesn't contain 'showform_fields'");
+
         foreach (Hashtable def in fields)
         {
             // logger(def)
@@ -804,6 +808,8 @@ public class FwDynamicController : FwController
             }
             else if (dtype == "att_links_edit")
                 def["att_links"] = fw.model<Att>().listLinked(model0.table_name, Utils.f2int(id));
+            else if (dtype == "att_files_edit")
+                def["att_files"] = fw.model<Att>().listByEntity(model0.table_name, Utils.f2int(id));
 
             else if (dtype == "subtable_edit")
             {
@@ -978,6 +984,17 @@ public class FwDynamicController : FwController
             string type = (string)def["type"];
             if (type == "att_links_edit")
                 fw.model<AttLinks>().updateJunction(model0.table_name, id, reqh("att")); // TODO make att configurable
+
+            else if (type == "att_files_edit")
+            {
+                //table_name, item_id
+                var itemdb = new Hashtable {
+                    { "fwentities_id", fw.model<FwEntities>().idByIcodeOrAdd(model0.table_name) },
+                    { "item_id", id }
+                };
+                var addedAtt = fw.model<Att>().uploadMulti(itemdb);
+
+            }
             else if (type == "multicb")
             {
                 if (Utils.isEmpty(def["model"]))
