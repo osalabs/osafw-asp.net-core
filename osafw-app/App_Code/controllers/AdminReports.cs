@@ -27,7 +27,9 @@ public class AdminReportsController : FwController
 
     public void ShowAction(string id)
     {
-        Hashtable ps = new();
+        Hashtable ps = [];
+        ps["return_url"] = return_url;
+
         var repcode = FwReports.cleanupRepcode(id);
 
         var is_run = reqs("dofilter").Length > 0 || reqs("is_run").Length > 0;

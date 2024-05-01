@@ -910,23 +910,37 @@ public class DB : IDisposable
     }
 
     // quote identifier:
-    // table => [table] (SQL Server)
-    // table => `table` (MySQL)
+    // (SQL Server)
+    //   table => [table] 
+    //   schema.table => [schema].[table]
+    // (MySQL)
+    //   table => `table` 
+    //   schema.table => `schema`.`table`
     public string qid(string str)
     {
         str ??= "";
 
         if (dbtype == DBTYPE_MYSQL)
         {
-            str = str.Replace("`", "");
-            str = str.Replace("`", "");
-            return "`" + str + "`";
+            if (str.Contains('.'))
+            {
+                string[] parts = str.Split(".");
+                return "`" + string.Join("`.`", parts) + "`";
+            }
+            else
+                return "`" + str + "`";
         }
         else
         {
             str = str.Replace("[", "");
             str = str.Replace("]", "");
-            return "[" + str + "]";
+            if (str.Contains('.'))
+            {
+                string[] parts = str.Split(".");
+                return "[" + string.Join("].[", parts) + "]";
+            }
+            else
+                return "[" + str + "]";
         }
     }
 

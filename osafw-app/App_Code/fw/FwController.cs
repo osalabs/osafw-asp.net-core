@@ -76,6 +76,8 @@ public abstract class FwController
     protected string related_id;                 // related id, passed via request. Controller should limit view to items related to this id
     protected string related_field_name;         // if set (in Controller) and $related_id passed - list will be filtered on this field
 
+    protected Hashtable rbac = [];               // RBAC for the current user, read in init()
+
 
     protected FwController(FW fw = null)
     {
@@ -96,6 +98,8 @@ public abstract class FwController
         return_url = reqs("return_url");
         related_id = reqs("related_id");
         export_format = reqs("export");
+
+        rbac = fw.model<Users>().getRBAC();
     }
 
     // load controller config from json in template dir (based on base_url)
@@ -940,7 +944,7 @@ public abstract class FwController
         // if user is logged and not SiteAdmin(can access everything)
         // and user's access level is enough for the controller - check access by roles (if enabled)
         int current_user_level = fw.userAccessLevel;
-        if (current_user_level > Users.ACL_VISITOR && current_user_level < Users.ACL_SITEADMIN)
+        if (current_user_level >= Users.ACL_VISITOR && current_user_level < Users.ACL_SITEADMIN)
         {
             if (!fw.model<Users>().isAccessByRolesResourceAction(fw.userId, fw.route.controller, fw.route.action, fw.route.action_more, access_actions_to_permissions))
                 throw new AuthException("Bad access - Not authorized (3)");
@@ -985,6 +989,9 @@ public abstract class FwController
         ps["is_userlists"] = this.is_userlists;
         ps["is_readonly"] = is_readonly;
         ps["is_list_edit"] = is_list_edit;
+
+        //for RBAC
+        ps["rbac"] = rbac;
 
         //implement "Showing FROM to TO of TOTAL records"
         if (this.list_rows != null && this.list_rows.Count > 0)

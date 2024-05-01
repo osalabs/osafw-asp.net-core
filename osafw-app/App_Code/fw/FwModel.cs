@@ -138,8 +138,11 @@ public abstract class FwModel : IDisposable
             return new DBRow();
     }
 
-    public virtual ArrayList multi(ICollection ids)
+    public virtual DBList multi(ICollection ids)
     {
+        if (ids.Count == 0)
+            return [];
+
         object[] arr = new object[ids.Count - 1 + 1];
         ids.CopyTo(arr, 0);
         return db.array(table_name, new Hashtable() { { "id", db.opIN(arr) } });

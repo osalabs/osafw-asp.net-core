@@ -181,6 +181,9 @@ public class FwDynamicController : FwController
         ps["is_activity_logs"] = is_activity_logs;
         ps["is_readonly"] = is_readonly;
 
+        //for RBAC
+        ps["rbac"] = rbac;
+
         return ps;
     }
 
@@ -231,6 +234,10 @@ public class FwDynamicController : FwController
         ps["return_url"] = return_url;
         ps["related_id"] = related_id;
         ps["is_readonly"] = is_readonly;
+
+        //for RBAC
+        ps["rbac"] = rbac;
+
         if (fw.FormErrors.Count > 0)
             logger(fw.FormErrors);
 
