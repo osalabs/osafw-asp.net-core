@@ -1,0 +1,47 @@
+<script type="text/x-template" id="edit-header-template">
+ <div>
+  <h1>This is sample Vue component, use it as a template to create your own components</h1>
+  <p>
+    Value: {{sample_value}}
+  </p>
+  <div>
+    <button type="button" @click="sampleMethod">Button</button>
+  </div>
+ </div>
+</script>
+
+<script type="module">
+import { mapStores } from 'pinia';
+
+fwApp.component('edit-header', {
+  template: '#edit-header-template',
+  props: {
+    sampleProp: {
+      type: String,
+      required: false,
+      default: ''
+    }
+  },
+  emits: ['on-sample-event'],
+  data: () => ({
+    sample_value: 0,
+  }),
+  computed: {
+    ...mapStores(useFwStore) //accessible via this.fwStore
+  },
+  mounted(){
+    console.log('edit-header mounted');
+  },
+  unmounted(){
+    console.log('edit-header unmounted');
+  },
+  updated(){
+    console.log('edit-header updated');
+  },
+  methods: {
+    sampleMethod(e) {
+      this.$emit('on-edit-header-event', e);
+    }
+  }
+});
+</script>

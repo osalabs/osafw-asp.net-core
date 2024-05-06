@@ -176,7 +176,8 @@ fwApp.component('list-table', {
         ...mapStores(useFwStore) //accessible via this.fwStore
   },
   mounted() {
-        console.log('list-table mounted');
+    console.log('list-table mounted');
+    this.fwStore.loadIndex();
   },
   methods: {
     fieldValueByName(row, field_name){

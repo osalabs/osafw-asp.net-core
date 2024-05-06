@@ -14,7 +14,6 @@ const mainApp = {
           console.log("data key:", key,"=", this.$el.parentElement.dataset[key]);
         if (fwStore[key] !== undefined) fwStore[key] = this.$el.parentElement.dataset[key];
     });
-    fwStore.loadIndex();
   },
   updated() {
     //console.log('mainApp updated');

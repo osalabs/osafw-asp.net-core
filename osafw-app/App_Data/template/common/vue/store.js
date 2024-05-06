@@ -17,6 +17,7 @@ let state = {
     base_url: '', // base url for the controller
     list_title: '', //list screen title
     is_readonly: false,
+    is_activity_logs: false, //true if activity logs enabled
 
     // user views
     all_list_columns: [], // list of all available columns
@@ -81,6 +82,9 @@ let state = {
     lookups: {},
 
     //work vars
+    current_screen: '', // current screen name - list/view/edit
+    current_id: 0, // current item id for view/edit screens
+
     hchecked_rows: {}, // array of checked rows {row.id => 1}
     loadIndexDebouncedTimeout: null,
     saveEditDataDebouncedTimeout: null,
@@ -191,6 +195,10 @@ let actions = {
             console.error(error);
             Toast(err_msg, { theme: 'text-bg-danger' });
         }
+    },
+    setCurrentScreen(screen, id) {
+        this.current_screen = screen;
+        this.current_id = id;
     },
     // update list_headers from showform_fields after loadIndex
     enrichEditableListHeaders() {

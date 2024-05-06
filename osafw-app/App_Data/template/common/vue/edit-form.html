@@ -1,0 +1,47 @@
+<script type="text/x-template" id="edit-form-template">
+ <div>
+  <h1>This is sample Vue component, use it as a template to create your own components</h1>
+  <p>
+    Value: {{sample_value}}
+  </p>
+  <div>
+    <button type="button" @click="sampleMethod">Button</button>
+  </div>
+ </div>
+</script>
+
+<script type="module">
+import { mapStores } from 'pinia';
+
+fwApp.component('edit-form', {
+  template: '#edit-form-template',
+  props: {
+    sampleProp: {
+      type: String,
+      required: false,
+      default: ''
+    }
+  },
+  emits: ['on-sample-event'],
+  data: () => ({
+    sample_value: 0,
+  }),
+  computed: {
+    ...mapStores(useFwStore) //accessible via this.fwStore
+  },
+  mounted(){
+    console.log('edit-form mounted');
+  },
+  unmounted(){
+    console.log('edit-form unmounted');
+  },
+  updated(){
+    console.log('edit-form updated');
+  },
+  methods: {
+    sampleMethod(e) {
+      this.$emit('on-edit-form-event', e);
+    }
+  }
+});
+</script>

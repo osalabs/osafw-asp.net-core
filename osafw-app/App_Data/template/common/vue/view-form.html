@@ -1,0 +1,47 @@
+<script type="text/x-template" id="view-form-template">
+ <div>
+  <h1>This is sample Vue component, use it as a template to create your own components</h1>
+  <p>
+    Value: {{sample_value}}
+  </p>
+  <div>
+    <button type="button" @click="sampleMethod">Button</button>
+  </div>
+ </div>
+</script>
+
+<script type="module">
+import { mapStores } from 'pinia';
+
+fwApp.component('view-form', {
+  template: '#view-form-template',
+  props: {
+    sampleProp: {
+      type: String,
+      required: false,
+      default: ''
+    }
+  },
+  emits: ['on-sample-event'],
+  data: () => ({
+    sample_value: 0,
+  }),
+  computed: {
+    ...mapStores(useFwStore) //accessible via this.fwStore
+  },
+  mounted(){
+    console.log('view-form mounted');
+  },
+  unmounted(){
+    console.log('view-form unmounted');
+  },
+  updated(){
+    console.log('view-form updated');
+  },
+  methods: {
+    sampleMethod(e) {
+      this.$emit('on-view-form-event', e);
+    }
+  }
+});
+</script>
