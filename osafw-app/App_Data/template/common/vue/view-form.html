@@ -1,12 +1,13 @@
 <script type="text/x-template" id="view-form-template">
   <div v-if="save_result && !save_result.success" class="alert alert-danger">{{save_result.err_msg}}</div>
   <form v-if="fwStore.edit_data !== null"
+    id="FView"
     class="fw-card"
     @submit.prevent="saveChanges"
     @change.prevent="onChange"
   >
     <fieldset>
-      <form-one-def v-for="(def,index) in fwStore.treeShowFormFields"
+      <form-one-def v-for="(def,index) in fwStore.treeShowFields"
         :key="index"
         :form="fwStore.edit_data"
         @update-form-field="onUpdateFormField"

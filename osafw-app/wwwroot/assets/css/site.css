@@ -480,6 +480,10 @@ form .has-danger label {
     display: block;
   }
 
+#FView.fw-card label {
+  font-weight: bold;
+}
+
 .field-multi-value {
   height: calc(var(--bs-body-font-size)*13);
   overflow: auto;

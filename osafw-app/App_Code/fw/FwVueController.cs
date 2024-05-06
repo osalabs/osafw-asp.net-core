@@ -77,9 +77,10 @@ public class FwVueController : FwDynamicController
         ps["all_list_columns"] = getViewListArr(getViewListUserFields(), true); // list all fields
         ps["select_userviews"] = fw.model<UserViews>().listSelectByIcode(UserViews.icodeByUrl(base_url, is_list_edit));
 
+        //return view form definitions
+        ps["show_fields"] = this.config["show_fields"];
         //return editable fields definitions
-        ArrayList showform_fields = (ArrayList)this.config["showform_fields"];
-        ps["showform_fields"] = showform_fields;
+        ps["showform_fields"] = this.config["showform_fields"];
 
         ps["list_user_view"] = this.list_user_view;
         ps["list_headers"] = this.list_headers;

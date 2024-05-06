@@ -1,6 +1,7 @@
 <script type="text/x-template" id="edit-form-template">
   <div v-if="save_result && !save_result.success && save_result.err_msg>''" class="alert alert-danger">{{save_result.err_msg}}</div>
   <form v-if="fwStore.edit_data !== null"
+    id="FEdit"
     class="fw-card"
     @submit.prevent="saveChanges"
     @change.prevent="onChange"

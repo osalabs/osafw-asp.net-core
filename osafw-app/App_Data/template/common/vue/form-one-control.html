@@ -210,7 +210,7 @@ fwApp.component('form-one-control', {
     },
     formatDateLong(str){
       //return date as MM/dd/yyyy hh:mm:ss
-      return new Date(dateString).toLocaleDateString("en-US", { month: 'numeric', day: 'numeric', year: 'numeric' }) + " " + new Date(dateString).toLocaleTimeString("en-US", { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      return new Date(str).toLocaleDateString("en-US", { month: 'numeric', day: 'numeric', year: 'numeric' }) + " " + new Date(str).toLocaleTimeString("en-US", { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
     },
   }
 });

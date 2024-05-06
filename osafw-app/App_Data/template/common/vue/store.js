@@ -65,6 +65,7 @@ let state = {
 
     // edit form fields configuration
     list_editable_def_types: ['input', 'email', 'number', 'textarea', 'date_popup', 'datetime_popup', 'autocomplete', 'select', 'cb', 'radio', 'yesno'],
+    show_fields: [],
     showform_fields: [],
     is_list_edit_pane: false, // true if edit pane is open
     edit_data: null, // object for single item edit form {id:X, i:{}, add_users_id_name:'', upd_users_id_name:'', save_result:{}}}
@@ -154,12 +155,12 @@ let getters = {
             return state.lookups[lookup_tpl] ?? [];
         }
     },
-    treeShowFormFields: (state) => {
-        //return hierarchial array of showform_fields:
+    fieldsToTree: () => (arr) => {
+        //return hierarchial array of plain array of fields:
         let root = []; // This will hold the top-level elements
         let stack = [root]; // Stack to manage hierarchy, starting with the root
 
-        state.showform_fields.forEach(item => {
+        arr.forEach(item => {
             if (item.type === 'row' || item.type === 'col') {
                 // If the item is a row or column, it's a new parent, so create a children array in it
                 item.children = [];
@@ -180,8 +181,14 @@ let getters = {
             }
         });
 
-        //console.log('treeShowFormFields', root);
+        //console.log('arrayToTree', root);
         return root;
+    },
+    treeShowFields: (state) => {
+        return state.fieldsToTree(state.show_fields);
+    },
+    treeShowFormFields: (state) => {
+        return state.fieldsToTree(state.showform_fields);
     }
 };
 
