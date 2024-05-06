@@ -203,23 +203,25 @@ let actions = {
     setCurrentScreen(screen, id) {
         this.current_screen = screen;
         this.current_id = id;
+        let suffix = '';
+        if (screen == 'view') {
+            suffix = '/' + id;
+            this.edit_data = null;
+        } else if (screen == 'edit') {
+            suffix = '/' + (id ? id + '/edit' : 'new');
+            this.edit_data = { i: {} };
+        }
+        window.history.pushState({ screen: screen, id: id }, '', this.base_url + suffix);
+        this.is_list_edit_pane = false;
     },
     async openListScreen() {
-        this.setCurrentScreen('list');
+        this.setCurrentScreen('list');        
     },
     async openViewScreen(id) {
         this.setCurrentScreen('view', id);
-        this.edit_data = null;
-        this.is_list_edit_pane = false;
-        await this.loadItem(id);
     },
     async openEditScreen(id) {
         this.setCurrentScreen('edit', id);
-        this.edit_data = {
-            i: {}
-        };
-        this.is_list_edit_pane = false;
-        if (id) await this.loadItem(id);
     },
     // update list_headers from showform_fields after loadIndex
     enrichEditableListHeaders() {

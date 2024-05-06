@@ -9,7 +9,7 @@
       <a v-if="!disableAddNew"
         class="btn btn-default"
         href="#"
-        @click="onAddNew"
+        @click.prevent="onAddNew"
         :disabled="fwStore.is_readonly"
       ><~/common/icons/plusb> `Add New`</a>
       <slot name="group"></slot>

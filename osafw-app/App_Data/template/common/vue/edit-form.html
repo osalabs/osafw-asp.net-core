@@ -40,8 +40,9 @@ fwApp.component('edit-form', {
       return this.fwStore.edit_data?.save_result;
     },
   },
-  mounted(){
+  async mounted(){
     console.log('edit-form mounted');
+    if (this.fwStore.current_id) await this.fwStore.loadItem(this.fwStore.current_id);
   },
   unmounted(){
     console.log('edit-form unmounted');

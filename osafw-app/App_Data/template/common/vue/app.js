@@ -14,6 +14,14 @@ const mainApp = {
           console.log("data key:", key,"=", this.$el.parentElement.dataset[key]);
         if (fwStore[key] !== undefined) fwStore[key] = this.$el.parentElement.dataset[key];
     });
+
+    //handle back/forward browser nav
+    window.addEventListener('popstate', (e) => {
+      let state = window.history.state;
+      if (state?.screen){
+        fwStore.setCurrentScreen(state.screen, state.id);
+      }
+    })
   },
   updated() {
     //console.log('mainApp updated');
