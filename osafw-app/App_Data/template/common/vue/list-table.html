@@ -12,7 +12,7 @@
               <th><input type="checkbox" name="all" v-model="cb_check_all" @change="onCheckAll"></th>
               <th v-if="fwStore.global.is_list_btn_left && fwStore.list_row_buttons!==false"></th>
 
-              <template v-for="header in fwStore.list_headers">
+              <template v-for="header in fwStore.list_headers" :key="header.field_name">
                 <th :class="'rotate'+(header.is_sortable && fwStore.f.sortby==header.field_name ? ' active-sort' : '')"
                   :style="header.list_min_width ? 'min-width:'+header.list_min_width: null"
                   :data-sort="header.is_sortable"
@@ -38,7 +38,7 @@
             <tr class="search" :style="fwStore.is_list_search_open ? 'display: table-row' : ''">
               <th></th>
               <th v-if="fwStore.global.is_list_btn_left && fwStore.list_row_buttons!==false"></th>
-              <th v-for="header in fwStore.list_headers">
+              <th v-for="header in fwStore.list_headers" :key="header.field_name">
                 <input type="text" class="form-control form-control-sm"
                   v-model="header.search_value"
                   @change="fwStore.loadIndexDebounced"
@@ -71,7 +71,7 @@
                   <template #btn-append><slot name="list-row-btn-append"></slot></template>
                 </list-row-btn>
 
-                <template v-for="(header, key) in fwStore.list_headers" :key="key">
+                <template v-for="header in fwStore.list_headers" :key="header.field_name">
                   <td v-if="!fwStore.is_list_edit">{{fieldValueByName(row, header.field_name)}}</td>
                   <td v-else
                       :class="(fwStore.cells_saving[row.id+'-'+header.field_name]?'cell-success-fade':'')+(fwStore.cells_errors[row.id+'-'+header.field_name]?' cell-invalid':'')">

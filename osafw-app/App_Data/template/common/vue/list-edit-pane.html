@@ -13,7 +13,7 @@
       @change.prevent="onChange"
     >
       <fieldset>
-        <form-one-def v-for="def in fwStore.treeShowFormFields"
+        <form-one-def v-for="(def,index) in fwStore.treeShowFormFields" :key="index"
           :form="fwStore.edit_data"
           @update-form-field="onUpdateFormField"
           @cancel-form="onCancelForm"

@@ -1,6 +1,6 @@
 <script type="text/x-template" id="list-cell-select-template">
   <div :class="$slots.prepend || $slots.append || col.append || col.prepend ? 'input-group' : ''">
-      <template v-if="col.prepend" v-for="el in col.prepend">
+      <template v-if="col.prepend" v-for="(el,index) in col.prepend" :key="index">
         <button type="button" :class="el.class ? el.class : 'btn btn-default btn-sm'" :title="el.hint" @click.stop="onBtnClick(el.event)">
           <i v-if="el.icon" :class="el.icon"></i> {{el.label}}
         </button>
@@ -24,7 +24,7 @@
         >{{lrow.iname}}</option>
       </select>
       <slot name="append"></slot>
-      <template v-if="col.append" v-for="el in col.append">
+      <template v-if="col.append" v-for="(el,index) in col.append" :key="index">
         <button type="button" :class="el.class ? el.class : 'btn btn-default btn-sm'" :title="el.hint" @click.stop="onBtnClick(el.event)">
           <i v-if="el.icon" :class="el.icon"></i> {{el.label}}
         </button>

@@ -94,7 +94,7 @@
   </template>
 
   <template v-else-if="def.type=='radio'">
-    <div v-for="(lrow, index) in lookupOptions"
+    <div v-for="(lrow, index) in lookupOptions" :key="lrow.id"
       class="form-check"
       :class="def.is_inline ? 'form-check-inline' : ''"
     >
@@ -104,7 +104,7 @@
   </template>
 
   <template v-else-if="def.type=='yesno'">
-    <div v-for="(lrow, index) in [{id:0, iname:'No'},{id:1, iname:'Yes'}]"
+    <div v-for="(lrow, index) in [{id:0, iname:'No'},{id:1, iname:'Yes'}]" :key="lrow.id"
       class="form-check"
       :class="def.is_inline ? 'form-check-inline' : ''"
     >

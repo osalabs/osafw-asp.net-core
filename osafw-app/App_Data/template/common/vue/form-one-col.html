@@ -1,6 +1,6 @@
 <script type="text/x-template" id="form-one-col-template">
   <div :class="def.class ? def.class : 'col-12'">
-    <form-one-def v-for="child_def in def.children"
+    <form-one-def v-for="(child_def, index) in def.children" :key="index"
       :form="form"
       @update-form-field="$emit('update-form-field', $event)"
       @cancel-form="$emit('cancel-form', $event)"

@@ -4,7 +4,7 @@
     <template v-if="is_show_count">
       <li class="p-1 pe-3"><span class="badge badge-outline-secondary rounded-pill">{{count}}</span></li>
     </template>
-    <template v-for="page in pager">
+    <template v-for="page in pager" :key="page.pagenum">
       <li class="page-item" v-if="page.is_show_first">
         <a class="page-link" href="#" @click.prevent="page_click(0)">`First`</a>
       </li>
