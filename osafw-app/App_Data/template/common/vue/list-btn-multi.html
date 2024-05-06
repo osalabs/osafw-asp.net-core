@@ -1,8 +1,13 @@
 <script type="text/x-template" id="list-btn-multi-template">
-  <div id="list-btn-multi" class="mb-3 d-print-none"
-    :class="(fwStore.countCheckedRows ? 'position-sticky' : '')">
+  <div id="list-btn-multi"
+    class="mb-3 d-print-none"
+    :class="(fwStore.countCheckedRows ? 'position-sticky' : '')"
+  >
     with <span class="badge bg-secondary rows-num" v-if="fwStore.countCheckedRows">{{fwStore.countCheckedRows}}</span> checked rows:<br>
-    <button type="button" class="btn btn-danger me-2" @click="onDelete" :disabled="fwStore.is_readonly || !fwStore.countCheckedRows">`Delete`</button>
+    <button type="button"
+      class="btn btn-danger me-2"
+      @click="onDelete"
+      :disabled="fwStore.is_readonly || !fwStore.countCheckedRows">`Delete`</button>
     <list-btn-userlists v-if="fwStore.is_userlists" />
     <slot></slot>
   </div>

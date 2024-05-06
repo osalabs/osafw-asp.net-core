@@ -44,7 +44,8 @@
               <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownMenuButton">
                 <a class="dropdown-item" href="#" @click.prevent="onCreateNewView">Save as New View</a>
                 <div class="dropdown-divider"></div>
-                <a v-for="userview in fwStore.select_userviews" :key="userview.id"
+                <a v-for="userview in fwStore.select_userviews"
+                  :key="userview.id"
                   @click.prevent="onLoadView(userview.id)"
                   class="dropdown-item" href="#" >{{userview.iname}}</a>
               </div>

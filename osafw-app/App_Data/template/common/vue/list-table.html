@@ -133,7 +133,7 @@
             :pager="fwStore.pager"
             :pagesize="fwStore.f.pagesize"
             :count="fwStore.count"
-            :is_show_count="pagination_is_show_count"
+            :isShowCount="paginationIsShowCount"
             @on-page="onClickPage"
             @on-pagesize="onChangePagesize"
           ></list-pagination>
@@ -155,7 +155,18 @@ import { mapStores } from 'pinia';
 
 fwApp.component('list-table', {
   template: '#list-table-template',
-  props: ['dblclick', 'pagination_is_show_count'], //dblclick: ''(none)/'view'/'edit'/'quickedit'
+  props: {
+    rowDblClick: {
+      type: String,
+      default: '',
+      validator: value => {
+        return ['','view','edit','quickedit'].includes(value)
+      }
+    },
+    paginationIsShowCount: {
+      type: Boolean
+    }
+  },
   emit: [],
   data: () => ({
         row_title: 'Double click to Edit',
@@ -214,7 +225,7 @@ fwApp.component('list-table', {
     },
     //click on row - select/unselect row
     onClickRow(e, row){
-        console.log('onClickRow',e);
+        //console.log('onClickRow',e);
         var tag_name = e.target.tagName.toLowerCase();
         if (tag_name === 'a'||tag_name === 'button'||tag_name === 'input'||tag_name === 'textarea'||tag_name === 'select'||tag_name === 'option'){
           return; // do not process if link/button/input clicked
@@ -224,11 +235,11 @@ fwApp.component('list-table', {
         this.fwStore.hchecked_rows[row_id] = !this.fwStore.hchecked_rows[row_id];
     },
     async onDblClickRow(e, row){
-      if (this.dblclick=='view'){
+      if (this.rowDblClick=='view'){
         this.onRowView(row);
-      }else if (this.dblclick=='edit'){
+      }else if (this.rowDblClick=='edit'){
         this.onRowEdit(row);
-      }else if (this.dblclick=='quickedit'){
+      }else if (this.rowDblClick=='quickedit'){
         this.onRowQuickEdit(row);
       }else{
         //default - do nothing

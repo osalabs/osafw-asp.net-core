@@ -1,6 +1,6 @@
 <script type="text/x-template" id="list-row-btn-template">
   <td class="list-row-controls text-nowrap d-print-none"
-    :class="(is_left?'':'text-end')">
+    :class="(isLeft?'':'text-end')">
     <slot name="btn-prepend"></slot>
 
     <a v-if="co_buttons.view" href="#" @click.prevent="$emit('view', $event)">`View`</a>
@@ -14,7 +14,7 @@
     </template>
     <template v-if="co_buttons.delete">
       <template v-if="co_buttons.view || co_buttons.edit || co_buttons.quickedit">&nbsp;&#183;&nbsp;</template>
-      <a href="#" class="text-danger" @click.prevent="$emit('delete', $event)" :disabled="is_readonly"><~/common/icons/x></a>
+      <a href="#" class="text-danger" @click.prevent="$emit('delete', $event)" :disabled="isReadonly"><~/common/icons/x></a>
     </template>
 
     <slot name="btn-append"></slot>
@@ -24,7 +24,23 @@
 <script type="module">
 fwApp.component('list-row-btn', {
   template: '#list-row-btn-template',
-  props: ['row', 'buttons', 'is_left', 'is_readonly'],
+  props: {
+    row: {
+      type: Object
+    },
+    buttons: {
+      type: [Object, Boolean],
+      default: false
+    },
+    isLeft: {
+      type: Boolean,
+      default: false
+    },
+    isReadonly: {
+      type: Boolean,
+      default: false
+    },
+  },
   emits: ['view', 'edit', 'quickedit', 'delete'],
   computed: {
         co_buttons(){

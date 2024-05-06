@@ -13,7 +13,20 @@
 <script type="module">
 fwApp.component('form-one-form-row', {
   template: '#form-one-form-row-template',
-  props: ['def', 'lookups', 'form'],
+  props: {
+    def: {
+      type: Object,
+      required: true
+    },
+    lookups: {
+      type: Object,
+      required: true
+    },
+    form: {
+      type: Object,
+      required: true
+    }
+  },
   emits: ['update-form-field', 'cancel-form'],
   data: () => ({
   }),

@@ -6,7 +6,7 @@
       <div class="col">
         <div class="input-group">
           <input id="list-filters-s" type="text" maxlength="255" class="form-control"
-            :placeholder="s_placeholder"
+            :placeholder="sPlaceholder"
             v-model="fwStore.f.s">
           <button class="btn btn-outline-secondary w100"
             @click="fwStore.loadIndexDebounced">
@@ -76,7 +76,11 @@ import Multiselect from 'Multiselect';
 
 fwApp.component('list-filters', {
   template: '#list-filters-template',
-  props: ['s_placeholder'],
+  props: {
+    sPlaceholder: {
+      type: String
+    }
+  },
   components: {
     Multiselect
   },

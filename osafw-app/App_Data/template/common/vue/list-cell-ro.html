@@ -5,6 +5,15 @@
 <script type="module">
 fwApp.component('list-cell-ro', {
   template: '#list-cell-ro-template',
-  props: ['row', 'col'],
+  props: {
+    row: {
+      type: Object,
+      required: true
+    },
+    col: {
+      type: Object,
+      required: true
+    }
+  },
 });
 </script>

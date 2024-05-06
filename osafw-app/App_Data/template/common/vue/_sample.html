@@ -5,7 +5,7 @@
     Value: {{sample_value}}
   </p>
   <div>
-    <button type="button" @click="sample_method">Button</button>
+    <button type="button" @click="sampleMethod">Button</button>
   </div>
  </div>
 </script>
@@ -15,7 +15,13 @@ import { mapStores } from 'pinia';
 
 fwApp.component('_sample', {
   template: '#_sample-template',
-  props: ['sample_prop'],
+  props: {
+    sampleProp: {
+      type: String,
+      required: false,
+      default: ''
+    }
+  },
   emits: ['on-sample-event'],
   data: () => ({
     sample_value: 0,
@@ -33,7 +39,7 @@ fwApp.component('_sample', {
     console.log('_sample updated');
   },
   methods: {
-    sample_method(e) {
+    sampleMethod(e) {
       this.$emit('on-sample-event', e);
     }
   }

@@ -17,7 +17,20 @@
 <script type="module">
 fwApp.component('form-one-group', {
   template: '#form-one-group-template',
-  props: ['def', 'lookups', 'form'],
+  props: {
+    def: {
+      type: Object,
+      required: true
+    },
+    lookups: {
+      type: Object,
+      required: true
+    },
+    form: {
+      type: Object,
+      required: true
+    }
+  },
   emits: ['update-form-field', 'cancel-form'],
   data: () => ({
   }),

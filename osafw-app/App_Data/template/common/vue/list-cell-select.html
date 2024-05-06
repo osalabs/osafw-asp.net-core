@@ -1,7 +1,14 @@
 <script type="text/x-template" id="list-cell-select-template">
   <div :class="$slots.prepend || $slots.append || col.append || col.prepend ? 'input-group' : ''">
-      <template v-if="col.prepend" v-for="(el,index) in col.prepend" :key="index">
-        <button type="button" :class="el.class ? el.class : 'btn btn-default btn-sm'" :title="el.hint" @click.stop="onBtnClick(el.event)">
+      <template v-if="col.prepend"
+        v-for="(el,index) in col.prepend"
+        :key="index"
+      >
+        <button type="button"
+          :class="el.class ? el.class : 'btn btn-default btn-sm'"
+          :title="el.hint"
+          @click.stop="onBtnClick(el.event)"
+        >
           <i v-if="el.icon" :class="el.icon"></i> {{el.label}}
         </button>
       </template>
@@ -24,19 +31,42 @@
         >{{lrow.iname}}</option>
       </select>
       <slot name="append"></slot>
-      <template v-if="col.append" v-for="(el,index) in col.append" :key="index">
-        <button type="button" :class="el.class ? el.class : 'btn btn-default btn-sm'" :title="el.hint" @click.stop="onBtnClick(el.event)">
+      <template v-if="col.append"
+        v-for="(el,index) in col.append"
+        :key="index"
+      >
+        <button type="button"
+          :class="el.class ? el.class : 'btn btn-default btn-sm'"
+          :title="el.hint"
+          @click.stop="onBtnClick(el.event)"
+        >
           <i v-if="el.icon" :class="el.icon"></i> {{el.label}}
         </button>
       </template>
-      <div class="invalid-tooltip">{{error}}</div>
+      <div v-if="error" class="invalid-tooltip">{{error}}</div>
   </div>
 </script>
 
 <script type="module">
 fwApp.component('list-cell-select', {
   template: '#list-cell-select-template',
-  props: ['row', 'col', 'options', 'error'],
+  props: {
+    row: {
+      type: Object,
+      required: true
+    },
+    col: {
+      type: Object,
+      required: true
+    },
+    options: {
+      type: Array,
+      required: true
+    },
+    error: {
+      type: String
+    },
+  },
   emits: ['focus', 'blur', 'btnClick'],
   data: () => ({
     initial_value: '', //value before change

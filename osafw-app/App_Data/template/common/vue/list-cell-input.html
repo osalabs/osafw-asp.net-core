@@ -1,7 +1,11 @@
 <script type="text/x-template" id="list-cell-input-template">
   <div :class="$slots.prepend || $slots.append || col.append || col.prepend ? 'input-group' : ''">
       <template v-if="col.prepend" v-for="(el,index) in col.prepend" :key="index">
-        <button type="button" :class="el.class ? el.class : 'btn btn-default btn-sm'" :title="el.hint" @click.stop="onBtnClick(el.event)">
+        <button type="button"
+          :class="el.class ? el.class : 'btn btn-default btn-sm'"
+          :title="el.hint"
+          @click.stop="onBtnClick(el.event)"
+        >
           <i v-if="el.icon" :class="el.icon"></i> {{el.label}}
         </button>
       </template>
@@ -29,7 +33,11 @@
         >
       <slot name="append"></slot>
       <template v-if="col.append" v-for="(el,index) in col.append" :key="index">
-        <button type="button" :class="el.class ? el.class : 'btn btn-default btn-sm'" :title="el.hint" @click.stop="onBtnClick(el.event)">
+        <button type="button"
+          :class="el.class ? el.class : 'btn btn-default btn-sm'"
+          :title="el.hint"
+          @click.stop="onBtnClick(el.event)"
+        >
           <i v-if="el.icon" :class="el.icon"></i> {{el.label}}
         </button>
       </template>
@@ -40,7 +48,22 @@
 <script type="module">
 fwApp.component('list-cell-input', {
   template: '#list-cell-input-template',
-  props: ['type', 'row', 'col', 'error'],
+  props: {
+    type: {
+      type: [String, null]
+    },
+    row: {
+      type: Object,
+      required: true
+    },
+    col: {
+      type: Object,
+      required: true
+    },
+    error: {
+      type: String
+    }
+  },
   emits: ['focus', 'blur', 'change', 'navigate', 'btnClick'],
   data: () => ({
     initial_value: '', //value before change

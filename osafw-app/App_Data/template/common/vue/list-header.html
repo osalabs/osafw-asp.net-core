@@ -1,12 +1,17 @@
 <script type="text/x-template" id="list-header-template">
  <div>
   <h1>{{fwStore.list_title}}
-    <span v-if="!disable_count" class="badge badge-outline-secondary rounded-pill">{{fwStore.count}}</span>
+    <span v-if="!disableCount" class="badge badge-outline-secondary rounded-pill">{{fwStore.count}}</span>
   </h1>
 
   <div class="btn-std d-print-none">
-   <div class="btn-group" v-if="!disable_add_new || $slots.group">
-      <a class="btn btn-default" href="#" v-if="!disable_add_new" @click="onAddNew" :disabled="fwStore.is_readonly"><~/common/icons/plusb> `Add New`</a>
+   <div class="btn-group" v-if="!disableAddNew || $slots.group">
+      <a v-if="!disableAddNew"
+        class="btn btn-default"
+        href="#"
+        @click="onAddNew"
+        :disabled="fwStore.is_readonly"
+      ><~/common/icons/plusb> `Add New`</a>
       <slot name="group"></slot>
    </div>
    <slot></slot>
@@ -20,7 +25,16 @@ import { mapStores } from 'pinia';
 
 fwApp.component('list-header', {
   template: '#list-header-template',
-  props: ['disable_add_new', 'disable_count'],
+  props: {
+    disableAddNew: {
+      type: Boolean,
+      default: false
+    },
+    disableCount: {
+      type: Boolean,
+      default: false
+    },
+  },
   data: () => ({
   }),
   computed: {

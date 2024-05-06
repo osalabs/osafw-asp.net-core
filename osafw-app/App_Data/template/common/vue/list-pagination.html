@@ -1,7 +1,7 @@
 <script type="text/x-template" id="list-pagination-template">
  <div>
   <ul class="pagination mb-0">
-    <template v-if="is_show_count">
+    <template v-if="isShowCount">
       <li class="p-1 pe-3"><span class="badge badge-outline-secondary rounded-pill">{{count}}</span></li>
     </template>
     <template v-for="page in pager" :key="page.pagenum">
@@ -29,7 +29,23 @@
 <script type="module">
 fwApp.component('list-pagination', {
   template: '#list-pagination-template',
-  props: ['pager', 'pagesize', 'count', 'is_show_count'],
+  props: {
+    pager: {
+      type: Array,
+      required: true
+    },
+    pagesize: {
+      type: Number,
+      default: 25
+    },
+    count: {
+      type: Number
+    },
+    isShowCount: {
+      type: Boolean,
+      default: false
+    }
+  },
   emits: ['on-page', 'on-pagesize'],
   data: () => ({
     pagesize_options: [10,20,25,30,40,50,100,150,200],

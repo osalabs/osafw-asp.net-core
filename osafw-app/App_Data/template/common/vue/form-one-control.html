@@ -83,7 +83,8 @@
 
   <template v-else-if="def.type=='cb'">
     <div class="form-check form-check-inline">
-      <input class="form-check-input" :id="'list-edit-pane-cb-'+def.field"
+      <input class="form-check-input"
+        :id="'list-edit-pane-cb-'+def.field"
         type="checkbox"
         v-model="value"
         true-value="1"
@@ -94,7 +95,8 @@
   </template>
 
   <template v-else-if="def.type=='radio'">
-    <div v-for="(lrow, index) in lookupOptions" :key="lrow.id"
+    <div v-for="(lrow, index) in lookupOptions"
+      :key="lrow.id"
       class="form-check"
       :class="def.is_inline ? 'form-check-inline' : ''"
     >
@@ -104,7 +106,8 @@
   </template>
 
   <template v-else-if="def.type=='yesno'">
-    <div v-for="(lrow, index) in [{id:0, iname:'No'},{id:1, iname:'Yes'}]" :key="lrow.id"
+    <div v-for="(lrow, index) in [{id:0, iname:'No'},{id:1, iname:'Yes'}]"
+      :key="lrow.id"
       class="form-check"
       :class="def.is_inline ? 'form-check-inline' : ''"
     >
@@ -119,7 +122,20 @@
 <script type="module">
 fwApp.component('form-one-control', {
   template: '#form-one-control-template',
-  props: ['def', 'lookups', 'form'],
+  props: {
+    def: {
+      type: Object,
+      required: true
+    },
+    lookups: {
+      type: Object,
+      required: true
+    },
+    form: {
+      type: Object,
+      required: true
+    }
+  },
   emits: ['update-form-field', 'cancel-form'],
   data: () => ({
   }),
