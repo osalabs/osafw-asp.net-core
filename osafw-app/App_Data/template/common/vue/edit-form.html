@@ -1,13 +1,21 @@
 <script type="text/x-template" id="edit-form-template">
- <div>
-  <h1>This is sample Vue component, use it as a template to create your own components</h1>
-  <p>
-    Value: {{sample_value}}
-  </p>
-  <div>
-    <button type="button" @click="sampleMethod">Button</button>
-  </div>
- </div>
+  <div v-if="save_result && !save_result.success && save_result.err_msg>''" class="alert alert-danger">{{save_result.err_msg}}</div>
+  <form v-if="fwStore.edit_data !== null"
+    class="fw-card"
+    @submit.prevent="saveChanges"
+    @change.prevent="onChange"
+  >
+    <fieldset>
+      <form-one-def v-for="(def,index) in fwStore.treeShowFormFields"
+        :key="index"
+        :form="fwStore.edit_data"
+        @update-form-field="onUpdateFormField"
+        @cancel-form="onCancelForm"
+        :def="def"
+        :lookups="fwStore.lookups"
+      />
+    </fieldset>
+  </form>
 </script>
 
 <script type="module">
@@ -27,7 +35,10 @@ fwApp.component('edit-form', {
     sample_value: 0,
   }),
   computed: {
-    ...mapStores(useFwStore) //accessible via this.fwStore
+    ...mapStores(useFwStore), //accessible via this.fwStore
+    save_result() {
+      return this.fwStore.edit_data?.save_result;
+    },
   },
   mounted(){
     console.log('edit-form mounted');
@@ -39,9 +50,22 @@ fwApp.component('edit-form', {
     console.log('edit-form updated');
   },
   methods: {
-    sampleMethod(e) {
-      this.$emit('on-edit-form-event', e);
-    }
+    onUpdateFormField({ field, value }) {
+      //console.log('edit-form updateFormField', { field, value });
+      this.fwStore.edit_data.i[field] = value;
+    },
+    onChange() {
+      //console.log('edit-form onChange');
+      this.saveChanges(); //save changes whenever form changed
+    },
+    saveChanges() {
+      // Implement save logic here
+      // console.log('edit-form saveChanges');
+      this.fwStore.saveEditDataDebounced();
+    },
+    onCancelForm() {
+      this.fwStore.openListScreen();
+    },
   }
 });
 </script>

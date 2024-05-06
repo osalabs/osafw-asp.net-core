@@ -247,10 +247,16 @@ fwApp.component('list-table', {
       }
     },
     async onRowView(row){
-      console.log("TODO open View list-table onRowView", row.id);
+      this.fwStore.setCurrentScreen('view', row.id);
+      this.fwStore.edit_data = null;
+      this.fwStore.is_list_edit_pane = false;
+      await this.fwStore.loadItem(row.id);
     },
     async onRowEdit(row){
-      console.log("TODO open Edit list-table onRowEdit", row.id);
+      this.fwStore.setCurrentScreen('edit', row.id);
+      this.fwStore.edit_data = null;
+      this.fwStore.is_list_edit_pane = false;
+      await this.fwStore.loadItem(row.id);
     },
     async onRowQuickEdit(row){
       await this.fwStore.openEditPane(row.id);

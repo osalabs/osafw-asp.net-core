@@ -1,13 +1,54 @@
 <script type="text/x-template" id="view-header-template">
- <div>
-  <h1>This is sample Vue component, use it as a template to create your own components</h1>
-  <p>
-    Value: {{sample_value}}
-  </p>
-  <div>
-    <button type="button" @click="sampleMethod">Button</button>
+  <div class="float-end pt-1 d-print-none">
+    <a href="<~../url>/(Next)/<~id>?prev=1<~/common/form/ret_url>" class="btn btn-link"><~/common/icons/arrow-left-circle> `Prev`</a>
+    <a href="<~../url>/(Next)/<~id>?<~/common/form/ret_url>" class="btn btn-link">`Next` <~/common/icons/arrow-right-circle></a>
   </div>
- </div>
+
+  <nav class="d-print-none">
+    <a href="#" @click.prevent="fwStore.openListScreen">{{fwStore.list_title}}</a> <span class="text-muted">/</span>
+  </nav>
+  <h1>{{fwStore.view_title}}</h1>
+
+  <div class="btn-std d-print-none">
+    <div class="btn-group" v-if="!disableAddNew || $slots.group || fwStore.return_url">
+      <a v-if="fwStore.return_url"
+        class="btn btn-default"
+        :href="fwStore.return_url"
+      ><~/common/icons/arrow-left-circle> `Return Back`</a>
+      <a v-if="!disableAddNew"
+        class="btn btn-default"
+        href="#"
+        @click.prevent="onAddNew"
+        :disabled="fwStore.is_readonly"
+      ><~/common/icons/plusb> `Add New`</a>
+      <a v-if="fwStore.edit_data?.id"
+        class="btn btn-default"
+        href="#"
+        @click.prevent="onEdit"
+        :disabled="fwStore.is_readonly"
+      ><~/common/icons/pencil-fill> `Edit`</a>
+      <slot name="group"></slot>
+    </div>
+    <!--TODO /common/form/btn_userlists if="is_userlists"-->
+
+    <a v-if="item.status!=127"
+      class="btn btn-default float-end ms-1"
+      href="#TODO"
+    ><span class="text-danger"><~/common/icons/x-circle-fill></span> `Delete`</a>
+    <template v-if="item.status==127">
+      <a v-if="fwStore.access_level==100"
+        class="btn btn-danger float-end ms-1"
+        href="#TODO"
+      ><~/common/icons/x-square-fill> `Permanent Delete`</a>
+      <a v-if="fwStore.access_level!=100"
+        class="btn btn-default float-end ms-1"
+        href="<~../url>/(RestoreDeleted)/<~id><~/common/list/relid>"
+      ><span class="text-success"><~/common/icons/check-circle-fill></span> `Restore Deleted`</a>
+    </template>
+
+   <slot></slot>
+  </div>
+
 </script>
 
 <script type="module">
@@ -16,31 +57,25 @@ import { mapStores } from 'pinia';
 fwApp.component('view-header', {
   template: '#view-header-template',
   props: {
-    sampleProp: {
-      type: String,
-      required: false,
-      default: ''
-    }
+    disableAddNew: {
+      type: Boolean,
+      default: false
+    },
   },
-  emits: ['on-view-header-event'],
   data: () => ({
-    sample_value: 0,
   }),
   computed: {
-    ...mapStores(useFwStore) //accessible via this.fwStore
-  },
-  mounted(){
-    console.log('view-header mounted');
-  },
-  unmounted(){
-    console.log('view-header unmounted');
-  },
-  updated(){
-    console.log('view-header updated');
+    ...mapStores(useFwStore), //accessible via this.fwStore
+    item(){
+      return this.fwStore.edit_data?.i ?? [];
+    }
   },
   methods: {
-    sampleMethod(e) {
-      this.$emit('on-view-header-event', e);
+    onAddNew(e){
+      this.fwStore.openEditScreen(0);
+    },
+    onEdit(e){
+      this.fwStore.openEditScreen(this.fwStore.edit_data?.id);
     }
   }
 });

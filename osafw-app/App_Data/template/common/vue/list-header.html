@@ -42,7 +42,7 @@ fwApp.component('list-header', {
   },
   methods: {
     onAddNew(e){
-      console.log('TODO list-header onAddNew');
+      this.fwStore.openEditScreen(0);
     }
   }
 });

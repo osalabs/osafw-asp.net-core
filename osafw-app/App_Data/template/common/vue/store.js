@@ -16,6 +16,9 @@ let state = {
     access_level: 0, // user access level
     base_url: '', // base url for the controller
     list_title: '', //list screen title
+    view_title: '',
+    edit_title: '',
+    add_new_title: '',
     is_readonly: false,
     is_activity_logs: false, //true if activity logs enabled
 
@@ -196,9 +199,27 @@ let actions = {
             Toast(err_msg, { theme: 'text-bg-danger' });
         }
     },
+    // screen navigation
     setCurrentScreen(screen, id) {
         this.current_screen = screen;
         this.current_id = id;
+    },
+    async openListScreen() {
+        this.setCurrentScreen('list');
+    },
+    async openViewScreen(id) {
+        this.setCurrentScreen('view', id);
+        this.edit_data = null;
+        this.is_list_edit_pane = false;
+        await this.loadItem(id);
+    },
+    async openEditScreen(id) {
+        this.setCurrentScreen('edit', id);
+        this.edit_data = {
+            i: {}
+        };
+        this.is_list_edit_pane = false;
+        if (id) await this.loadItem(id);
     },
     // update list_headers from showform_fields after loadIndex
     enrichEditableListHeaders() {
@@ -403,6 +424,7 @@ let actions = {
     // save edit form data debounced
     async saveEditDataDebounced() {
         // debounce saveEditData
+        this.edit_data.save_result = { success: false };
         if (this.saveEditDataDebouncedTimeout) clearTimeout(this.saveEditDataDebouncedTimeout);
         this.saveEditDataDebouncedTimeout = setTimeout(() => {
             this.saveEditData();
@@ -419,8 +441,10 @@ let actions = {
             //console.log('saveEditData response', response);
             this.edit_data.save_result = response;
 
-            //reload list to show changes
-            this.loadIndex();
+            if (this.current_screen == 'list') {
+                //reload list to show changes
+                this.loadIndex();
+            }
 
         } catch (error) {
             this.edit_data.save_result = error.body ?? { success: false, err_msg: 'server error' };
