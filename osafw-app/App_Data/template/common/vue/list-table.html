@@ -158,7 +158,7 @@ fwApp.component('list-table', {
   props: {
     rowDblClick: {
       type: String,
-      default: '',
+      default: 'edit',
       validator: value => {
         return ['','view','edit','quickedit'].includes(value)
       }
@@ -169,11 +169,13 @@ fwApp.component('list-table', {
   },
   emit: [],
   data: () => ({
-        row_title: 'Double click to Edit',
         cb_check_all: false
   }),
   computed: {
-        ...mapStores(useFwStore) //accessible via this.fwStore
+    ...mapStores(useFwStore), //accessible via this.fwStore
+    row_title(){
+      return this.fwStore.is_list_edit ? '' : 'Double click to Edit';
+    }
   },
   mounted() {
     console.log('list-table mounted');
@@ -236,14 +238,15 @@ fwApp.component('list-table', {
         this.fwStore.hchecked_rows[row_id] = !this.fwStore.hchecked_rows[row_id];
     },
     async onDblClickRow(e, row){
+      if (this.fwStore.is_list_edit){
+        return; //no double click if in edit mode to avoid misclicks
+      }
       if (this.rowDblClick=='view'){
         this.onRowView(row);
       }else if (this.rowDblClick=='edit'){
         this.onRowEdit(row);
       }else if (this.rowDblClick=='quickedit'){
         this.onRowQuickEdit(row);
-      }else{
-        //default - do nothing
       }
     },
     async onRowView(row){
@@ -258,6 +261,7 @@ fwApp.component('list-table', {
     async onRowDelete(row){
       console.log("TODO confirm modal list-table onRowDelete", row.id);
       await this.fwStore.deleteRow(row.id);
+      await this.fwStore.loadIndexDebounced(); //reload list to show changes
     },
 
     // work with a cell

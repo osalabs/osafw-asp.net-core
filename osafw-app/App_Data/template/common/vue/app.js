@@ -6,14 +6,18 @@ const mainApp = {
   //}),
   computed:{
   },
-  mounted() {
+  async mounted() {
     console.log('mainApp mounted');
     const fwStore = useFwStore();
     // assign all data from this.$el.parentElement.dataset to keys existing in fwStore
-      Object.keys(this.$el.parentElement.dataset).forEach(key => {
-          console.log("data key:", key,"=", this.$el.parentElement.dataset[key]);
-        if (fwStore[key] !== undefined) fwStore[key] = this.$el.parentElement.dataset[key];
-    });
+    fwStore.saveToStore(this.$el.parentElement.dataset);
+
+    if (fwStore.current_screen){
+      await fwStore.loadInitial();
+      await fwStore.setCurrentScreen(fwStore.current_screen, fwStore.current_id);
+    }else{
+      fwStore.current_screen='list';
+    }
 
     //handle back/forward browser nav
     window.addEventListener('popstate', (e) => {

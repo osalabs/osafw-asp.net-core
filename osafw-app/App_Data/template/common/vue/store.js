@@ -225,7 +225,7 @@ let actions = {
         }
     },
     async openListScreen() {
-        await this.setCurrentScreen('list');        
+        await this.setCurrentScreen('list');
     },
     async openViewScreen(id) {
         await this.setCurrentScreen('view', id);
@@ -261,6 +261,36 @@ let actions = {
 
             return header;
         });
+    },
+
+    //save to store each key from data if such key exists in store
+    saveToStore(data) {
+        Object.keys(data).forEach(key => {
+            if (this.$state[key] !== undefined) this.$state[key] = data[key];
+        });
+    },
+
+    // load init and lookup scopes only
+    async loadInitial() {
+        try {
+            const apiBase = mande(this.base_url);
+
+            const data = await apiBase.get('', { query: { scope: 'init,lookups' } });
+            //console.log('loadInitial data', data);
+
+            this.saveToStore(data);
+
+            // set defaults
+            this.list_user_view.density = this.list_user_view.density ?? 'table-sm';
+            this.is_initial_load = false; // reset initial load flag
+            if (data.showform_fields) {
+                this.enrichEditableListHeaders();
+            }
+
+        } catch (error) {
+            this.handleError(error, 'loadInitial');
+            return error;
+        }
     },
 
     // set one or multiple filter values and reload list
@@ -300,18 +330,13 @@ let actions = {
             //console.log('loadIndex req', req);
             const data = await apiBase.get('', { query: req });
             //console.log('loadIndex data', data);
+            this.is_loading_index = false;
 
-            //save to store each key from data if such key exists in store
-            Object.keys(data).forEach(key => {
-                if (this.$state[key] !== undefined) this.$state[key] = data[key];
-            });
+            this.saveToStore(data);
 
             // set defaults
             this.list_user_view.density = this.list_user_view.density ?? 'table-sm';
-
             this.is_initial_load = false; // reset initial load flag
-            this.is_loading_index = false;
-
             if (data.showform_fields) {
                 this.enrichEditableListHeaders();
             }
@@ -407,9 +432,6 @@ let actions = {
             const response = await apiBase.delete(id, { query: req });
             //console.log('deleteRow response', response);
 
-            //reload list to show changes
-            this.loadIndex();
-
         } catch (error) {
             this.handleError(error, 'deleteRow');
             return error;
@@ -434,6 +456,16 @@ let actions = {
 
         } catch (error) {
             this.handleError(error, 'deleteCheckedRows');
+            return error;
+        }
+    },
+    async restoreRow(id) {
+        try {
+            const apiBase = mande(this.base_url);
+            const req = { XSS: this.XSS };
+            const response = await apiBase.post('/(RestoreDeleted)/' + id, req);
+        } catch (error) {
+            this.handleError(error, 'restoreRow');
             return error;
         }
     },

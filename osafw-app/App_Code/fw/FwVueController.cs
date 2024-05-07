@@ -186,7 +186,7 @@ public class FwVueController : FwDynamicController
             // if json expected - return data only as json
             ps["_json"] = true;
 
-            if (scopes.Count == 0)
+            if (scopes.Count == 0 || scopes.ContainsKey("init"))
             {
                 setScopeInitial(ps);
             }
@@ -206,7 +206,27 @@ public class FwVueController : FwDynamicController
                 setScopeLookups(ps);
             }
         }
-        // else - this is initial non-json page load - return layout/js to the browser, then Vue will load data via API
+        else
+        {
+            // else - this is initial non-json page load - return layout/js to the browser, then Vue will load data via API
+            // if url is /ID or /ID/edit or /new - add screen, id to ps so Vue app will switch to related screen
+            var route = fw.getRoute(fw.request.Path);
+            if (route.action == FW.ACTION_SHOW_FORM)
+            {
+                ps["screen"] = "edit";
+                ps["id"] = route.id;
+            }
+            else if (route.action == FW.ACTION_SHOW_FORM_NEW)
+            {
+                ps["screen"] = "edit";
+            }
+            else if (route.action == FW.ACTION_SHOW)
+            {
+                ps["screen"] = "view";
+                ps["id"] = route.id;
+            }
+        }
+
 
         ps["f"] = this.list_filter;
 
@@ -215,6 +235,13 @@ public class FwVueController : FwDynamicController
 
     public override Hashtable ShowAction(int id = 0)
     {
+        if (!fw.isJsonExpected())
+        {
+            //direct access to show page - redirect to index
+            fw.routeRedirect("Index");
+            return null;
+        }
+
         Hashtable ps = [];
         Hashtable item = model0.one(id);
         if (item.Count == 0)
@@ -266,6 +293,13 @@ public class FwVueController : FwDynamicController
 
     public override Hashtable ShowFormAction(int id = 0)
     {
+        if (!fw.isJsonExpected())
+        {
+            //direct access to show page - redirect to index
+            fw.routeRedirect("Index");
+            return null;
+        }
+
         throw new NotImplementedException(); // N/A for Vue controllers
     }
 

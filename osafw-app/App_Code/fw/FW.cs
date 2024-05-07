@@ -324,19 +324,36 @@ public class FW : IDisposable
         return getResponseExpectedFormat() == "json";
     }
 
-    public void getRoute()
+    /// <summary>
+    /// parse request URL and return controller, action, id, format, method
+    /// if url is empty - use current request url and also set request_url property
+    /// 
+    /// </summary>
+    /// <param name="url"></param>
+    /// <returns></returns>
+    /// <exception cref="Exception"></exception>
+    /// <exception cref="UserException"></exception>
+    public FwRoute getRoute(string url = "")
     {
-        string url = request.Path;
+        var is_url_param = !string.IsNullOrEmpty(url);
+        if (!is_url_param)
+        {
+            url = request.Path;
+        }
+
         //TODO MIGRATE test
         // cut the App path from the begin
         if (request.PathBase.Value.Length > 1) url = url.Replace(request.PathBase, "");
         url = Regex.Replace(url, @"\/$", ""); // cut last / if any
-        this.request_url = url;
 
-        logger(LogLevel.TRACE, "REQUESTING ", url);
+        if (!is_url_param)
+        {
+            this.request_url = url;
+            logger(LogLevel.TRACE, "REQUESTING ", url);
+        }
 
         // init defaults
-        route = new FwRoute()
+        var route = new FwRoute()
         {
             controller = "Home",
             action = ACTION_INDEX,
@@ -348,13 +365,16 @@ public class FW : IDisposable
             @params = new ArrayList()
         };
 
-        // check if method override exits
-        if (FORM.ContainsKey("_method"))
+        if (!is_url_param)
         {
-            if (METHOD_ALLOWED.ContainsKey(FORM["_method"]))
-                route.method = (string)FORM["_method"];
+            // check if method override exits
+            if (FORM.ContainsKey("_method"))
+            {
+                if (METHOD_ALLOWED.ContainsKey(FORM["_method"]))
+                    route.method = (string)FORM["_method"];
+            }
+            if (route.method == "HEAD") route.method = "GET"; // for website processing HEAD is same as GET, IIS will send just headers
         }
-        if (route.method == "HEAD") route.method = "GET"; // for website processing HEAD is same as GET, IIS will send just headers
 
         string controller_prefix = "";
 
@@ -517,6 +537,8 @@ public class FW : IDisposable
         route.action = Utils.routeFixChars(route.action_raw);
         if (string.IsNullOrEmpty(route.action))
             route.action = ACTION_INDEX;
+
+        return route;
     }
 
     public void dispatch()
@@ -525,10 +547,10 @@ public class FW : IDisposable
 
         try
         {
-            this.getRoute();
+            route = getRoute();
             logger(LogLevel.INFO, "REQUEST START [", route.method, " ", request_url, "] => ", route.controller, ".", route.action);
 
-            this.callRoute();
+            callRoute();
         }
         catch (RedirectException)
         {
@@ -539,7 +561,7 @@ public class FW : IDisposable
         {
             logger(LogLevel.DEBUG, Ex.Message);
             // if not logged - just redirect to login
-            if (!this.isLogged)
+            if (!isLogged)
                 redirect((string)config("UNLOGGED_DEFAULT_URL"), false);
             else
                 errMsg(Ex.Message);
@@ -624,8 +646,9 @@ public class FW : IDisposable
             || route.method == "PATCH"
             || route.method == "DELETE"
             || action == ACTION_SAVE
+            || action == ACTION_SAVE_MULTI
             || action == ACTION_DELETE
-            || action == ACTION_SAVE_MULTI)
+            || action == ACTION_DELETE_RESTORE)
             && !string.IsNullOrEmpty(Session("XSS")) && Session("XSS") != (string)FORM["XSS"])
         {
             // XSS validation failed - check if we are under xss-excluded controller
