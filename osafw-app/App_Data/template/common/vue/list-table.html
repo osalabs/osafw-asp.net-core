@@ -248,14 +248,10 @@ fwApp.component('list-table', {
     },
     async onRowView(row){
       this.fwStore.setCurrentScreen('view', row.id);
-      this.fwStore.edit_data = null;
-      this.fwStore.is_list_edit_pane = false;
       await this.fwStore.loadItem(row.id);
     },
     async onRowEdit(row){
       this.fwStore.setCurrentScreen('edit', row.id);
-      this.fwStore.edit_data = null;
-      this.fwStore.is_list_edit_pane = false;
       await this.fwStore.loadItem(row.id);
     },
     async onRowQuickEdit(row){

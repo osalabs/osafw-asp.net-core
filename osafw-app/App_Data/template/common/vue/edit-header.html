@@ -7,12 +7,19 @@
   <nav class="d-print-none">
     <a href="#" @click.prevent="fwStore.openListScreen">{{fwStore.list_title}}</a> <span class="text-muted">/</span>
   </nav>
-  <h1 v-if="!fwStore.edit_data?.id">{{fwStore.add_new_title}}</h1>
-  <h1 v-if="fwStore.edit_data?.id">{{fwStore.edit_title}}</h1>
+  <h1 v-if="!current_id">{{fwStore.add_new_title}}</h1>
+  <h1 v-if="current_id">{{fwStore.edit_title}}</h1>
 
-  <div v-if="save_result" class="form-saved-status float-end mt-1 me-2">
-    <span v-if="save_result.success" class="badge bg-success">saved</span>
-    <span v-if="!save_result.success" class="badge bg-danger">not saved</span>
+  <div class="float-end">
+    <span v-if="save_result" class="form-saved-status-global mt-1 me-2">
+      <span v-if="save_result.success" class="badge bg-success">saved</span>
+      <span v-if="!save_result.success" class="badge bg-danger">not saved</span>
+    </span>
+    <template v-if="!current_id" inline>
+      <button type="button" class="btn btn-primary me-1" :disabled="fwStore.is_readonly" @click="saveChanges">`Save`</button>
+      <button type="button" class="btn btn-secondary me-1" :disabled="fwStore.is_readonly" @click="saveChanges('New')">`Save and Add New`</button>
+      <button type="button" class="btn btn-default" @click="onCancelForm">`Cancel`</button>
+    </template>
   </div>
 
   <div class="btn-std d-print-none">
@@ -27,7 +34,7 @@
         @click.prevent="onAddNew"
         :disabled="fwStore.is_readonly"
       ><~/common/icons/plusb> `Add New`</a>
-      <a v-if="fwStore.edit_data?.id"
+      <a v-if="current_id"
         class="btn btn-default"
         href="#"
         @click.prevent="onView"
@@ -36,7 +43,6 @@
    </div>
    <slot></slot>
   </div>
-
 </script>
 
 <script type="module">
@@ -54,6 +60,12 @@ fwApp.component('edit-header', {
   }),
   computed: {
     ...mapStores(useFwStore), //accessible via this.fwStore
+    current_id() {
+      return this.fwStore.current_id ?? 0;
+    },
+    id() {
+      return this.fwStore.edit_data?.id ?? 0;
+    },
     save_result() {
       return this.fwStore.edit_data?.save_result;
     },
@@ -63,8 +75,17 @@ fwApp.component('edit-header', {
       this.fwStore.openEditScreen(0);
     },
     onView(e){
-      this.fwStore.openViewScreen(this.fwStore.edit_data?.id);
-    }
+      this.fwStore.openViewScreen(this.id);
+    },
+    saveChanges(route_return) {
+      if (route_return){
+        this.fwStore.edit_data.route_return=route_return;
+      }
+      this.fwStore.saveEditDataDebounced();
+    },
+    onCancelForm() {
+      this.fwStore.openListScreen();
+    },
   }
 });
 </script>

@@ -62,7 +62,7 @@ public class AdminSettingsController : FwAdminController
         route_return = FW.ACTION_INDEX;
 
         if (this.save_fields == null)
-            throw new Exception("No fields to save defined, define in save_fields ");
+            throw new Exception("No fields to save defined, define in save_fields");
 
         Hashtable item = reqh("item");
         var success = true;

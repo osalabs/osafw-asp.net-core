@@ -452,7 +452,24 @@ let actions = {
 
             if (this.current_screen == 'list') {
                 //reload list to show changes
-                this.loadIndex();
+                await this.loadIndex();
+            } else {                
+                //after edit form saved - process route_return
+                const rr = this.edit_data.route_return ?? '';
+                if (rr == 'New') {
+                    Toast("Saved", { theme: 'text-bg-success' });
+                    this.openEditScreen(0);
+                } else if (rr == 'Show') {
+                    this.openViewScreen(response.id);
+                } else if (rr == 'Index') {
+                    this.openListScreen();
+                } else {
+                    if (response.success && response.id && !this.edit_data.id) {
+                        //just reload edit after add new
+                        this.openEditScreen(response.id);
+                        await this.loadItem(response.id);
+                    }
+                }
             }
 
         } catch (error) {
