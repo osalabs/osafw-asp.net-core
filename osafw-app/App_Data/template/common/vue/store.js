@@ -207,28 +207,31 @@ let actions = {
         }
     },
     // screen navigation
-    setCurrentScreen(screen, id) {
+    async setCurrentScreen(screen, id) {
+        // console.log("setCurrentScreen:", screen, id);
         this.current_screen = screen;
         this.current_id = id;
         let suffix = '';
         if (screen == 'view') {
             suffix = '/' + id;
-            this.edit_data = null;
         } else if (screen == 'edit') {
             suffix = '/' + (id ? id + '/edit' : 'new');
-            this.edit_data = { i: {} };
+            if (!id) this.edit_data = { i: {} };
         }
         window.history.pushState({ screen: screen, id: id }, '', this.base_url + suffix);
         this.is_list_edit_pane = false;
+        if (id && (screen == 'view' || screen == 'edit')) {
+            await this.loadItem(id);
+        }
     },
     async openListScreen() {
-        this.setCurrentScreen('list');        
+        await this.setCurrentScreen('list');        
     },
     async openViewScreen(id) {
-        this.setCurrentScreen('view', id);
+        await this.setCurrentScreen('view', id);
     },
     async openEditScreen(id) {
-        this.setCurrentScreen('edit', id);
+        await this.setCurrentScreen('edit', id);
     },
     // update list_headers from showform_fields after loadIndex
     enrichEditableListHeaders() {
@@ -330,6 +333,20 @@ let actions = {
 
         } catch (error) {
             this.handleError(error, 'loadItem');
+            return error;
+        }
+    },
+    // load next/prev id related to id from current list
+    async getNextID(id, is_prev) {
+        try {
+            const apiBase = mande(this.base_url);
+
+            const data = await apiBase.get('/(Next)/' + id, { query: { prev: is_prev?1:0 } });
+
+            return data.id;
+
+        } catch (error) {
+            this.handleError(error, 'getNext');
             return error;
         }
     },
@@ -466,8 +483,7 @@ let actions = {
                 } else {
                     if (response.success && response.id && !this.edit_data.id) {
                         //just reload edit after add new
-                        this.openEditScreen(response.id);
-                        await this.loadItem(response.id);
+                        await this.openEditScreen(response.id);
                     }
                 }
             }

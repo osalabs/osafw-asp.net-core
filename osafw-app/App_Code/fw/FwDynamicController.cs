@@ -69,11 +69,11 @@ public class FwDynamicController : FwController
     }
 
     //Prev/Next navigation
-    public virtual void NextAction(string form_id)
+    public virtual Hashtable NextAction(string form_id)
     {
         var id = Utils.f2int(form_id);
         if (id == 0)
-            fw.redirect(base_url);
+            return new Hashtable { { "_redirect", base_url } };
 
         var is_prev = (reqi("prev") == 1);
         var is_edit = (reqi("edit") == 1);
@@ -91,7 +91,7 @@ public class FwDynamicController : FwController
         var sql = "SELECT id FROM " + list_view + " WHERE " + this.list_where + " ORDER BY " + this.list_orderby;
         var ids = db.colp(sql, list_where_params);
         if (ids.Count == 0)
-            fw.redirect(base_url);
+            return new Hashtable { { "_redirect", base_url } };
 
         var go_id = 0;
         if (is_prev)
@@ -110,7 +110,7 @@ public class FwDynamicController : FwController
             else if (ids.Count > 0)
                 go_id = Utils.f2int(ids[ids.Count - 1]);
             else
-                fw.redirect(base_url);
+                return new Hashtable { { "_redirect", base_url } };
         }
         else
         {
@@ -128,7 +128,7 @@ public class FwDynamicController : FwController
             else if (ids.Count > 0)
                 go_id = Utils.f2int(ids[0]);
             else
-                fw.redirect(base_url);
+                return new Hashtable { { "_redirect", base_url } };
         }
 
         var url = base_url + "/" + go_id;
@@ -141,7 +141,7 @@ public class FwDynamicController : FwController
         if (return_url.Length > 0)
             url += "&return_url=" + Utils.urlescape(return_url);
 
-        fw.redirect(url);
+        return new Hashtable { { "_redirect", url }, { "id", go_id } };
     }
 
     public virtual Hashtable ShowAction(int id = 0)

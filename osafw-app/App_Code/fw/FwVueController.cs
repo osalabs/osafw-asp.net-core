@@ -257,10 +257,11 @@ public class FwVueController : FwDynamicController
         return this.afterSave(success, id, is_new);
     }
 
-    // override/disable actions not used in Vue
-    public override void NextAction(string form_id)
+    public override Hashtable NextAction(string form_id)
     {
-        throw new NotImplementedException(); // N/A for Vue controllers
+        var ps = base.NextAction(form_id);
+        ps["_json"] = true;
+        return ps;
     }
 
     public override Hashtable ShowFormAction(int id = 0)

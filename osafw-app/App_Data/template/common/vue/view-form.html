@@ -43,7 +43,6 @@ fwApp.component('view-form', {
   },
   async mounted(){
     console.log('view-form mounted');
-    await this.fwStore.loadItem(this.fwStore.current_id);
   },
   unmounted(){
     console.log('view-form unmounted');

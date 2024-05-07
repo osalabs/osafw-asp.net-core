@@ -1,7 +1,7 @@
 <script type="text/x-template" id="view-header-template">
   <div class="float-end pt-1 d-print-none">
-    <a href="<~../url>/(Next)/<~id>?prev=1<~/common/form/ret_url>" class="btn btn-link"><~/common/icons/arrow-left-circle> `Prev`</a>
-    <a href="<~../url>/(Next)/<~id>?<~/common/form/ret_url>" class="btn btn-link">`Next` <~/common/icons/arrow-right-circle></a>
+    <a @click.prevent="onNext(true)" href="#" class="btn btn-link"><~/common/icons/arrow-left-circle> `Prev`</a>
+    <a @click.prevent="onNext()" href="#" class="btn btn-link">`Next` <~/common/icons/arrow-right-circle></a>
   </div>
 
   <nav class="d-print-none">
@@ -66,6 +66,9 @@ fwApp.component('view-header', {
   }),
   computed: {
     ...mapStores(useFwStore), //accessible via this.fwStore
+    current_id() {
+      return this.fwStore.current_id ?? 0;
+    },
     item(){
       return this.fwStore.edit_data?.i ?? [];
     }
@@ -76,6 +79,10 @@ fwApp.component('view-header', {
     },
     onEdit(e){
       this.fwStore.openEditScreen(this.fwStore.edit_data?.id);
+    },
+    async onNext(is_prev){
+      const id = await this.fwStore.getNextID(this.current_id, is_prev);
+      await this.fwStore.openViewScreen(id);
     }
   }
 });
