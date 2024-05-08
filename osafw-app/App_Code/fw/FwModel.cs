@@ -576,6 +576,24 @@ public abstract class FwModel : IDisposable
         return db.array(table_name, where, getOrderBy(), select_fields);
     }
 
+    // like listSelectOptions, but for autocomplete by search string q
+    public virtual ArrayList listSelectOptionsAutocomplete(string q, Hashtable def = null)
+    {
+        Hashtable where = [];
+        where[field_iname] = db.opLIKE("%" + q + "%");
+
+        if (!string.IsNullOrEmpty(field_status))
+            where[field_status] = db.opNOT(STATUS_DELETED);
+
+        ArrayList select_fields = new()
+        {
+            new Hashtable() { { "field", field_id }, { "alias", "id" } },
+            new Hashtable() { { "field", field_iname }, { "alias", "iname" } }
+        };
+        return db.array(table_name, where, getOrderBy(), select_fields);
+    }
+
+
     [ObsoleteAttribute("This method is deprecated. Use listSelectOptions instead.", true)]
     public virtual string getSelectOptions(string sel_id)
     {

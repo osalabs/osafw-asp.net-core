@@ -480,13 +480,14 @@ let actions = {
         await this.loadItem(id); //load into fwStore.edit_data
     },
     // save edit form data debounced
-    async saveEditDataDebounced() {
+    async saveEditDataDebounced(delay) {
+        if (!delay) delay = 500;
         // debounce saveEditData
         this.edit_data.save_result = { success: false };
         if (this.saveEditDataDebouncedTimeout) clearTimeout(this.saveEditDataDebouncedTimeout);
         this.saveEditDataDebouncedTimeout = setTimeout(() => {
             this.saveEditData();
-        }, 500);
+        }, delay);
     },
     //save edit form data
     async saveEditData() {
@@ -622,6 +623,25 @@ let actions = {
 
         } catch (error) {
             this.handleError(error, 'deleteUserViews');
+            return error;
+        }
+    },
+
+    async autocompleteOptions(q, url, model_name, id) {
+        try {
+            if (!url) url = this.base_url + '/(Autocomplete)';
+
+            const apiBase = mande(url);
+            const req = { q: q };
+            if (model_name) req.model = model_name;
+            if (id) req.id = id;
+
+            const response = await apiBase.get('', { query: req });
+
+            return response;
+
+        } catch (error) {
+            this.handleError(error, 'autocompleteOptions');
             return error;
         }
     }

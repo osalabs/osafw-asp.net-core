@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections;
+using System.Collections.Generic;
 
 namespace osafw;
 
@@ -141,16 +142,19 @@ public class FwVueController : FwDynamicController
 
         // extract lookups from config and add to ps
         var lookups = new Hashtable();
-        foreach (Hashtable header in list_headers)
+        //foreach (Hashtable header in list_headers) // only for headers
+        foreach (Hashtable def in showform_fields)
         {
-            var field_name = (string)header["field_name"];
-            var def = (Hashtable)hfields[field_name] ?? null;
+            //var field_name = (string)header["field_name"];
+            //var def = (Hashtable)hfields[field_name] ?? null;
             if (def == null)
                 continue;
 
+            var dtype = Utils.f2str(def["type"]);
             var lookup_model = Utils.f2str(def["lookup_model"]);
-            if (lookup_model.Length > 0)
+            if (lookup_model.Length > 0 && dtype != "autocomplete")
             {
+                //all lookup_models, except autocomplete (for those it could be too large)
                 lookups[lookup_model] = fw.model(lookup_model).listSelectOptions(def);
             }
 
@@ -307,5 +311,51 @@ public class FwVueController : FwDynamicController
     {
         throw new NotImplementedException(); // N/A for Vue controllers
     }
+
+    public override Hashtable AutocompleteAction()
+    {
+        var id = reqi("id"); //specific id, if just need iname for it (used to preload existing id/label for edit form)
+        var q = reqs("q");
+        var model_name = reqs("model");
+        FwModel ac_model = null;
+        if (string.IsNullOrEmpty(model_name))
+        {
+            //if no model passed - use model_related
+            ac_model = model_related;
+        }
+        else
+        {
+            //only allow models from showform_fields type=autocomplete
+            var fields = (ArrayList)this.config["showform_fields"];
+            foreach (Hashtable def in fields)
+            {
+                if (Utils.f2str(def["type"]) == "autocomplete" && Utils.f2str(def["lookup_model"]) == model_name)
+                {
+                    ac_model = fw.model(model_name);
+                    break;
+                }
+            }
+        }
+
+        if (ac_model == null)
+            throw new UserException("No model defined");
+
+        //ArrayList items;
+        List<string> items;
+        if (id > 0)
+        {
+            //var item = ac_model.one(id);
+            //items = [new Hashtable() { { "id", id }, { "iname", item["iname"] } }];
+            items = [ac_model.iname(id)];
+        }
+        else
+        {
+            //items = ac_model.listSelectOptionsAutocomplete(q);
+            items = ac_model.getAutocompleteList(q);
+        }
+
+        return new Hashtable() { { "_json", items } };
+    }
+
 
 }

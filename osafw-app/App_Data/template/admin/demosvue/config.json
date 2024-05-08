@@ -115,7 +115,7 @@
                     "lookup_model": "Demos",
                     "lookup_field": "iname",
                     "type": "plaintext_link",
-                    "admin_url": "/Admin/DemosDynamic"
+                    "admin_url": "/Admin/DemosVue"
                 },
                 {
                     "field": "demo_dicts_id",
@@ -185,13 +185,6 @@
                     "type": "row_end"
                 },
                 {
-                    "field": "dict_link_auto_id",
-                    "label": "DemoDicts Autocomplete",
-                    "type": "plaintext",
-                    "lookup_model": "DemoDicts",
-                    "lookup_field": "iname"
-                },
-                {
                     "field": "fcombo",
                     "label": "Combo",
                     "type": "plaintext",
@@ -247,6 +240,13 @@
                     "field": "id",
                     "label": "ID",
                     "type": "plaintext"
+                },
+                {
+                    "field": "dict_link_auto_id",
+                    "label": "DemoDicts Autocomplete",
+                    "type": "plaintext",
+                    "lookup_model": "DemoDicts",
+                    "lookup_field": "iname"
                 },
                 {
                     "field": "dict_link_multi",
@@ -487,7 +487,7 @@
                     "field": "dict_link_auto_id",
                     "label": "DemoDicts Autocomplete",
                     "type": "autocomplete",
-                    "autocomplete_url": "/Admin/Demos/(Autocomplete)",
+                    "autocomplete_url": "/Admin/DemosVue/(Autocomplete)",
                     "lookup_model": "DemoDicts",
                     "lookup_field": "iname",
                     "help_text": "will add new items to DemoDicts"

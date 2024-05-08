@@ -31,7 +31,7 @@ fwApp.component('list-pagination', {
   template: '#list-pagination-template',
   props: {
     pager: {
-      type: Array,
+      type: [Array,null],
       required: true
     },
     pagesize: {

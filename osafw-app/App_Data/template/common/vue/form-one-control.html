@@ -1,9 +1,11 @@
 <script type="text/x-template" id="form-one-control-template">
   <p v-if="def.type=='id'" class="form-control-plaintext">{{value}}<template v-if="!value">(`new`)</template></p>
 
-  <p v-else-if="def.type=='plaintext'" class="form-control-plaintext" style="white-space: pre-line">{{value}}</p>
+  <p v-else-if="def.type=='plaintext'" class="form-control-plaintext" style="white-space: pre-line">
+    {{def.lookup_model && def.type!='autocomplete' ! ? lookupValue : value}}
+  </p>
   <p v-else-if="def.type=='plaintext_link'" class="form-control-plaintext">
-    <a :href="def.admin_url ? def.admin_url : '/Admin/'+def.lookup_model+'/'+value">{{lookupValue}}<template if="!value">{{value}}</template></a>
+    <a :href="(def.admin_url ? def.admin_url : '/Admin/'+def.lookup_model)+'/'+value">{{lookupValue}}<template if="!lookupValue">{{value}}</template></a>
   </p>
   <p v-else-if="def.type=='markdown'" class="form-control-plaintext" style="white-space: pre-line">{{value}} TODO markdown</p>
   <p v-else-if="def.type=='noescape'" class="form-control-plaintext" v-html="value"></p>
@@ -116,10 +118,30 @@
     </div>
   </template>
 
+  <template v-else-if="def.type=='autocomplete'">
+    <Multiselect
+      v-model="value"
+      :placeholder="def.placeholder"
+      :filter-results="false"
+      :min-chars="1"
+      :resolve-on-load="true"
+      :delay="0"
+      :searchable="true"
+      :create-option="true"
+      :options="autocompleteOptions"
+      valueProp="id"
+      label="iname"
+    />
+    <form-control-help-block :text="def.help_text" />
+  </template>
+
   <div v-if="is_invalid && !is_invalid_true" class="invalid-feedback">{{error_text}}</div>
 </script>
 
 <script type="module">
+import { mapStores } from 'pinia';
+import Multiselect from 'Multiselect';
+
 fwApp.component('form-one-control', {
   template: '#form-one-control-template',
   props: {
@@ -137,9 +159,13 @@ fwApp.component('form-one-control', {
     }
   },
   emits: ['update-form-field', 'cancel-form'],
+  components: {
+    Multiselect
+  },
   data: () => ({
   }),
   computed:{
+    ...mapStores(useFwStore), //accessible via this.fwStore
     item: function(){
       return this.form.i;
     },
@@ -212,6 +238,20 @@ fwApp.component('form-one-control', {
       //return date as MM/dd/yyyy hh:mm:ss
       return new Date(str).toLocaleDateString("en-US", { month: 'numeric', day: 'numeric', year: 'numeric' }) + " " + new Date(str).toLocaleTimeString("en-US", { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
     },
+    async autocompleteOptions(query, select$){
+      let id = 0;
+      if (query === null){
+        //initial load
+        id = this.value;
+      }
+      return await this.fwStore.autocompleteOptions(query, this.def.autocomplete_url, this.def.lookup_model, id);
+
+      // return [
+      //   { value: 'value1', label: 'label1' },
+      //   { value: 'value2', label: 'label2' },
+      //   { value: 'value3', label: 'label3' },
+      // ];
+    }
   }
 });
 </script>

@@ -140,13 +140,6 @@
                     "type": "row_end"
                 },
                 {
-                    "field": "dict_link_auto_id",
-                    "label": "DemoDicts Autocomplete",
-                    "type": "plaintext",
-                    "lookup_model": "DemoDicts",
-                    "lookup_field": "iname"
-                },
-                {
                     "field": "fcombo",
                     "label": "Combo",
                     "type": "plaintext",
@@ -202,6 +195,13 @@
                     "field": "id",
                     "label": "ID",
                     "type": "plaintext"
+                },
+                {
+                    "field": "dict_link_auto_id",
+                    "label": "DemoDicts Autocomplete",
+                    "type": "plaintext",
+                    "lookup_model": "DemoDicts",
+                    "lookup_field": "iname"
                 },
                 {
                     "field": "dict_link_multi",

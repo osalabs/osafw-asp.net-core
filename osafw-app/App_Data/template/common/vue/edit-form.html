@@ -82,14 +82,15 @@ fwApp.component('edit-form', {
   methods: {
     onUpdateFormField({ field, value }) {
       this.fwStore.edit_data.i[field] = value;
+      this.saveChanges(3000); //if just value updated - longer debounce delay
     },
     onChange() {
       if (this.current_id){
         this.saveChanges(); //only auto-save if edit
       }
     },
-    saveChanges() {
-      this.fwStore.saveEditDataDebounced();
+    saveChanges(delay) {
+      this.fwStore.saveEditDataDebounced(delay);
     },
     onCancelForm() {
       this.fwStore.openListScreen();
