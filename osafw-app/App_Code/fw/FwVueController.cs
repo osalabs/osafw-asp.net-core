@@ -251,7 +251,24 @@ public class FwVueController : FwDynamicController
         if (item.Count == 0)
             throw new NotFoundException();
 
-        // added/updated should be filled before dynamic fields
+        // addtionally, if we have autocomplete fields - preload their values
+        var fields = (ArrayList)this.config["showform_fields"];
+        foreach (Hashtable def in fields)
+        {
+            if (Utils.f2str(def["type"]) == "autocomplete")
+            {
+                var model_name = Utils.f2str(def["lookup_model"]);
+                var ac_model = fw.model(model_name);
+                if (ac_model != null)
+                {
+                    var field_name = Utils.f2str(def["field"]);
+                    var ac_item = ac_model.one(item[field_name]);
+                    item[field_name + "_iname"] = ac_item["iname"];
+                }
+            }
+        }
+
+        // fill added/updated too
         setAddUpdUser(ps, item);
 
         model0.filterForJson(item);

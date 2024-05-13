@@ -2,10 +2,13 @@
   <p v-if="def.type=='id'" class="form-control-plaintext">{{value}}<template v-if="!value">(`new`)</template></p>
 
   <p v-else-if="def.type=='plaintext'" class="form-control-plaintext" style="white-space: pre-line">
-    {{def.lookup_model && def.type!='autocomplete' ! ? lookupValue : value}}
+    {{def.lookup_model ? lookupValue : value}}
   </p>
   <p v-else-if="def.type=='plaintext_link'" class="form-control-plaintext">
     <a :href="(def.admin_url ? def.admin_url : '/Admin/'+def.lookup_model)+'/'+value">{{lookupValue}}<template if="!lookupValue">{{value}}</template></a>
+  </p>
+  <p v-else-if="def.type=='plaintext_autocomplete'" class="form-control-plaintext" style="white-space: pre-line">
+    {{item[def.field+'_iname']??'-'}}
   </p>
   <p v-else-if="def.type=='markdown'" class="form-control-plaintext" style="white-space: pre-line">{{value}} TODO markdown</p>
   <p v-else-if="def.type=='noescape'" class="form-control-plaintext" v-html="value"></p>
@@ -120,7 +123,7 @@
 
   <template v-else-if="def.type=='autocomplete'">
     <Multiselect
-      v-model="value"
+      v-model="value_autocomplete"
       :placeholder="def.placeholder"
       :filter-results="false"
       :min-chars="1"
@@ -129,8 +132,6 @@
       :searchable="true"
       :create-option="true"
       :options="autocompleteOptions"
-      valueProp="id"
-      label="iname"
     />
     <form-control-help-block :text="def.help_text" />
   </template>
@@ -175,6 +176,14 @@ fwApp.component('form-one-control', {
       },
       set(new_value) {
         this.$emit('update-form-field', { field: this.def.field, value: new_value });
+      }
+    },
+    value_autocomplete: {
+      get() {
+        return this.form.i[this.def.field+'_iname'];
+      },
+      set(new_value) {
+        this.$emit('update-form-field', { field: this.def.field+'_iname', value: new_value });
       }
     },
     error() {
@@ -241,16 +250,10 @@ fwApp.component('form-one-control', {
     async autocompleteOptions(query, select$){
       let id = 0;
       if (query === null){
-        //initial load
-        id = this.value;
+        //initial load - return preloaded name
+        return [ this.item[this.def.field+'_iname']??'' ];
       }
       return await this.fwStore.autocompleteOptions(query, this.def.autocomplete_url, this.def.lookup_model, id);
-
-      // return [
-      //   { value: 'value1', label: 'label1' },
-      //   { value: 'value2', label: 'label2' },
-      //   { value: 'value3', label: 'label3' },
-      // ];
     }
   }
 });

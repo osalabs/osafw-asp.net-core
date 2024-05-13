@@ -244,7 +244,7 @@
                 {
                     "field": "dict_link_auto_id",
                     "label": "DemoDicts Autocomplete",
-                    "type": "plaintext",
+                    "type": "plaintext_autocomplete",
                     "lookup_model": "DemoDicts",
                     "lookup_field": "iname"
                 },
