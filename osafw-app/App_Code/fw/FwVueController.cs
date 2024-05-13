@@ -92,7 +92,6 @@ public class FwVueController : FwDynamicController
         ps["is_userlists"] = this.is_userlists;
         ps["is_readonly"] = is_readonly;
         ps["is_list_edit"] = is_list_edit;
-        ps["return_url"] = this.return_url;
     }
 
     /// <summary>
@@ -229,8 +228,9 @@ public class FwVueController : FwDynamicController
                 ps["screen"] = "view";
                 ps["id"] = route.id;
             }
-        }
 
+            ps = setPS(ps);
+        }
 
         ps["f"] = this.list_filter;
 

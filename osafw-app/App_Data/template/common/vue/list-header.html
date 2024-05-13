@@ -5,7 +5,12 @@
   </h1>
 
   <div class="btn-std d-print-none">
-   <div class="btn-group" v-if="!disableAddNew || $slots.group">
+   <div class="btn-group" v-if="!disableAddNew || $slots.group || $slots.groupPrepend || fwStore.return_url">
+      <a v-if="fwStore.return_url"
+        class="btn btn-default"
+        :href="fwStore.return_url"
+      ><~/common/icons/arrow-left-circle> `Return Back`</a>
+      <slot name="group-prepend"></slot>
       <a v-if="!disableAddNew"
         class="btn btn-default"
         href="#"
