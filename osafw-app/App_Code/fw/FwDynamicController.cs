@@ -562,9 +562,47 @@ public class FwDynamicController : FwController
     // ********************* support for autocomlete related items
     public virtual Hashtable AutocompleteAction()
     {
-        if (model_related == null)
-            throw new ApplicationException("No model_related defined");
-        List<string> items = model_related.getAutocompleteList(reqs("q"));
+        var q = reqs("q"); //required - query string
+
+        //optional params
+        var id = reqi("id"); //specific id, if just need iname for it (used to preload existing id/label for edit form)
+        var model_name = reqs("model");
+        FwModel ac_model = null;
+        if (string.IsNullOrEmpty(model_name))
+        {
+            //if no model passed - use model_related
+            ac_model = model_related;
+        }
+        else
+        {
+            //validation - only allow models from showform_fields type=autocomplete
+            var fields = (ArrayList)this.config["showform_fields"];
+            foreach (Hashtable def in fields)
+            {
+                if (Utils.f2str(def["type"]) == "autocomplete" && Utils.f2str(def["lookup_model"]) == model_name)
+                {
+                    ac_model = fw.model(model_name);
+                    break;
+                }
+            }
+        }
+
+        if (ac_model == null)
+            throw new UserException("No model defined");
+
+        //ArrayList items;
+        List<string> items;
+        if (id > 0)
+        {
+            //var item = ac_model.one(id);
+            //items = [new Hashtable() { { "id", id }, { "iname", item["iname"] } }];
+            items = [ac_model.iname(id)];
+        }
+        else
+        {
+            //items = ac_model.listSelectOptionsAutocomplete(q);
+            items = ac_model.getAutocompleteList(q);
+        }
 
         return new Hashtable() { { "_json", items } };
     }
@@ -888,28 +926,41 @@ public class FwDynamicController : FwController
                 }
                 else if (def.ContainsKey("lookup_model"))
                 {
+                    var lookup_model = fw.model((string)def["lookup_model"]);
+
                     if (dtype == "select" || dtype == "radio")
                     {
                         // lookup select
-                        def["select_options"] = fw.model((string)def["lookup_model"]).listSelectOptions(def);
+                        def["select_options"] = lookup_model.listSelectOptions(def);
                         def["value"] = item[field];
                     }
                     else
                     {
                         // single value from lookup
-                        var lookup_model = fw.model((string)def["lookup_model"]);
-                        def["lookup_id"] = Utils.f2int(item[field]);
-                        var lookup_row = lookup_model.one(Utils.f2int(def["lookup_id"]));
-                        def["lookup_row"] = lookup_row;
+                        if (isGet())
+                        {
+                            def["lookup_id"] = Utils.f2int(item[field]);
+                            var lookup_row = lookup_model.one(Utils.f2int(def["lookup_id"]));
+                            def["lookup_row"] = lookup_row;
 
-                        string lookup_field = Utils.f2str(def["lookup_field"]);
-                        if (lookup_field == "")
-                            lookup_field = lookup_model.field_iname;
+                            string lookup_field = Utils.f2str(def["lookup_field"]);
+                            if (lookup_field == "")
+                                lookup_field = lookup_model.field_iname;
 
-                        def["value"] = lookup_row[lookup_field];
-                        if (!def.ContainsKey("admin_url"))
-                            def["admin_url"] = "/Admin/" + def["lookup_model"]; // default admin url from model name
+                            def["value"] = lookup_row[lookup_field];
+                        }
+                        else
+                        {
+                            //when form refreshed - get value from the form
+                            if (dtype == "autocomplete")
+                                def["value"] = item[field + "_iname"]; //for autocomplete get from _iname
+                            else
+                                def["value"] = item[field];
+                        }
                     }
+
+                    if (!def.ContainsKey("admin_url"))
+                        def["admin_url"] = "/Admin/" + def["lookup_model"]; // default admin url from model name
                 }
                 else if (def.ContainsKey("lookup_tpl"))
                 {
@@ -953,8 +1004,11 @@ public class FwDynamicController : FwController
                 var def = (Hashtable)showform_fields[field];
                 string type = (string)def["type"];
                 if (type == "autocomplete")
-                    fields[field] = Utils.f2str(fw.model((string)def["lookup_model"]).findOrAddByIname((string)fields[field], out _));
-
+                {
+                    var lookup_model = fw.model((string)def["lookup_model"]);
+                    var field_value = Utils.f2str(item[field + "_iname"]); // autocomplete value is in "${field}_iname"
+                    fields[field] = Utils.f2str(lookup_model.findOrAddByIname(field_value, out _));
+                }
                 else if (type == "date_combo")
                     fields[field] = FormUtils.dateForCombo(item, field).ToString();
                 else if (type == "time")
