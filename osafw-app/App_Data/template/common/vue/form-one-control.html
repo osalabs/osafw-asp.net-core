@@ -20,8 +20,18 @@
   <p v-else-if="def.type=='date'" class="form-control-plaintext">{{formatDate(value)}}</p>
   <p v-else-if="def.type=='date_long'" class="form-control-plaintext">{{formatDateLong(value)}}</p>
   <p v-else-if="def.type=='added'" class="form-control-plaintext">{{item.add_time}} by {{form.add_users_id_name}}</p>
-  <p v-else-if="def.type=='updated'" class="form-control-plaintext"><template v-if="form.upd_users_id_name">{{item.upd_time}} by {{form.upd_users_id_name}}</template></p>
-
+  <p v-else-if="def.type=='updated'" class="form-control-plaintext">
+    <template v-if="form.upd_users_id_name">{{item.upd_time}} by {{form.upd_users_id_name}}</template>
+  </p>
+  <template v-else-if="def.type=='multi'">
+    <div :class="'field-multi-value'+(def.lookup_checked_only?'h-auto':'')">
+      <div v-for="(row, index) in multi_datarow" :key="index" class="form-check">
+        <input type="checkbox" class="form-check-input" disabled :checked="row.is_checked">
+        <label class="form-check-label">{{row.iname}}</label>
+      </div>
+    </div>
+    <form-control-help-block :text="def.help_text" />
+  </template>
 
   <div v-else-if="def.type=='group_id' || def.type=='group_id_addnew'">
     <div class="float-end d-none d-lg-block">
@@ -136,6 +146,26 @@
     <form-control-help-block :text="def.help_text" />
   </template>
 
+  <template v-else-if="def.type=='multicb'">
+    <div class="field-multi-value">
+      <input v-model="multi_search"
+        @keyup="onMultiSearch"
+        type="input" class="form-control form-control-sm mb-1" placeholder="type to filter...">
+        <div v-for="row in multi_datarow" :key="row.id"
+          class="form-check" data-s="<~id upper> - <~iname upper>">
+          <input type="checkbox"
+            class="form-check-input"
+            value="1"
+            :id="def.field+'$'+row.id"
+            :value="form.i[ this.def.field+'_multi['+row.id+']' ] ?? (row.is_checked?1:0)"
+            @change="$e => form.i[ this.def.field+'_multi['+row.id+']' ] = $e.target.value"
+          >
+          <label class="form-check-label" for="def.field+'$'+row.id">{{row.iname}}</label>
+        </div>
+    </div>
+    <form-control-help-block :text="def.help_text" />
+  </template>
+
   <div v-if="is_invalid && !is_invalid_true" class="invalid-feedback">{{error_text}}</div>
 </script>
 
@@ -164,12 +194,14 @@ fwApp.component('form-one-control', {
     Multiselect
   },
   data: () => ({
+    multi_search: ''
   }),
   computed:{
     ...mapStores(useFwStore), //accessible via this.fwStore
     item: function(){
       return this.form.i;
     },
+
     value: {
       get() {
         return this.form.i[this.def.field];
@@ -186,6 +218,18 @@ fwApp.component('form-one-control', {
         this.$emit('update-form-field', { field: this.def.field+'_iname', value: new_value });
       }
     },
+    multi_datarow(){
+      return this.form[this.def.field+'_multi'];
+    },
+    value_multi_datarowXXX: {
+      get() {
+        return this.form.i[this.def.field+'_multi'];
+      },
+      set(new_value) {
+        this.$emit('update-form-field', { field: this.def.field+'_multi['+XX+']', value: new_value });
+      }
+    },
+
     error() {
       return this.form.save_result?.ERR?.[this.def.field] ?? false;
     },
@@ -254,6 +298,9 @@ fwApp.component('form-one-control', {
         return [ this.item[this.def.field+'_iname']??'' ];
       }
       return await this.fwStore.autocompleteOptions(query, this.def.autocomplete_url, this.def.lookup_model, id);
+    },
+    onMultiSearch($e){
+      console.log('onMultiSearch TODO', $e);
     }
   }
 });

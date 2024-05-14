@@ -254,16 +254,34 @@ public class FwVueController : FwDynamicController
         var fields = (ArrayList)this.config["showform_fields"];
         foreach (Hashtable def in fields)
         {
-            if (Utils.f2str(def["type"]) == "autocomplete")
+            var field_name = Utils.f2str(def["field"] ?? "");
+            var model_name = Utils.f2str(def["lookup_model"] ?? "");
+            var dtype = Utils.f2str(def["type"]);
+            if (dtype == "autocomplete")
             {
-                var model_name = Utils.f2str(def["lookup_model"]);
                 var ac_model = fw.model(model_name);
                 if (ac_model != null)
                 {
-                    var field_name = Utils.f2str(def["field"]);
                     var ac_item = ac_model.one(item[field_name]);
                     item[field_name + "_iname"] = ac_item["iname"];
                 }
+            }
+            else if (dtype == "multi" || dtype == "multicb")
+            {
+                //multiple values either from lookup model or junction model
+                var multi_name = field_name + "_multi";
+                if (def.ContainsKey("lookup_model"))
+                    ps[multi_name] = fw.model(model_name).listWithChecked(Utils.f2str(item[field_name]), def);
+                else
+                {
+                    if (Utils.f2bool(def["is_by_linked"]))
+                        // list main items by linked id from junction model (i.e. list of Users(with checked) for Company from UsersCompanies model)
+                        ps[multi_name] = fw.model((string)def["model"]).listMainByLinkedId(id, def); //junction model
+                    else
+                        // list linked items by main id from junction model (i.e. list of Companies(with checked) for User from UsersCompanies model)
+                        ps[multi_name] = fw.model((string)def["model"]).listLinkedByMainId(id, def); //junction model
+                }
+                logger("here", multi_name, ", ", item[multi_name]);
             }
         }
 
