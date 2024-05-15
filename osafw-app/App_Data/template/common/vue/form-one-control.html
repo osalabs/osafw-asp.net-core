@@ -164,6 +164,11 @@
     <form-control-help-block :text="def.help_text" />
   </template>
 
+  <template v-else-if="def.type=='subtable' || def.type=='subtable_edit'">
+    <component :is="'subtable_'+def.field" :def="def" :lookups="lookups" :form="form"></component>
+    <form-control-help-block :text="def.help_text" />
+  </template>
+
   <div v-if="is_invalid && !is_invalid_true" class="invalid-feedback">{{error_text}}</div>
 </script>
 

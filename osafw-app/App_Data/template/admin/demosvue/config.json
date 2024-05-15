@@ -262,7 +262,7 @@
                     "model": "DemosDemoDicts"
                 },
                 {
-                    "field": "demos_items_subtable",
+                    "field": "demos_items",
                     "label": "Subtable",
                     "class_label": "col-12 text-start",
                     "type": "subtable",
@@ -506,7 +506,7 @@
                     "model": "DemosDemoDicts"
                 },
                 {
-                    "field": "demos_items_subtable",
+                    "field": "demos_items",
                     "label": "Subtable",
                     "class_label": "col-12 text-start",
                     "type": "subtable_edit",

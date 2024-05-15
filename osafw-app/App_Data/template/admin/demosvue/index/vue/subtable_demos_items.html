@@ -1,0 +1,165 @@
+<script type="text/x-template" id="subtable_demos_items-template">
+    <div class="border rounded p-3">
+        <!-- view subtable -->
+        <table v-if="def.type=='subtable'" class="table table-sm">
+            <thead>
+                <tr>
+                    <th class="col">ID</th>
+                    <th class="col">Demo Dict</th>
+                    <th class="col">Title</th>
+                    <th class="col">Notes</th>
+                    <th class="col">Y/N</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="row in list_rows" :key="row.id">
+                    <td>{{row.id}}</td>
+                    <td>{{lookupIname('DemoDicts', row.demo_dicts_id)}}</td>
+                    <td>{{row.iname}}</td>
+                    <td style="white-space: pre;">{{row.idesc}}</td>
+                    <td>
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" :checked="row.is_checkbox==1" disabled>
+                            <label class="form-check-label"></label>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <template v-else-if="def.type=='subtable_edit'">
+            <table class="mb-3 w-100">
+                <thead>
+                    <tr>
+                        <th class="col">ID</th>
+                        <th class="col">Demo Dict</th>
+                        <th class="col">Title</th>
+                        <th class="col">Notes</th>
+                        <th class="col">Y/N</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="row in list_rows" :key="row.id">
+                        <td>
+                            <template v-if="!row.is_new">
+                                {{row.id}}
+                            </template>
+                            <template v-if="row.is_new">
+                                (new)
+                            </template>
+                            <input type="hidden" name="item-<~model>TODO[<~id>]" value="1">
+                        </td>
+                        <td>
+                            <select v-model="row.demo_dicts_id" class="form-control">
+                                <option value="">- select -</option>
+                                <option v-for="lookup in fwStore.lookups.DemoDicts" :value="lookup.id">{{lookup.iname}}</option>
+                            </select>
+                        </td>
+                        <td>
+                            <input v-model="row.iname"
+                                   type="input"
+                                   class="form-control"
+                                   data-autocompleteTODO="<~/admin/demos/url>/(Autocomplete)?q=%QUERY">
+                        </td>
+                        <td>
+                            <textarea v-model="row.idesc" class="form-control" rows="1"></textarea>
+                        </td>
+                        <td>
+                            <div class="form-check form-check-inline">
+                                <input v-model="row.is_checkbox"
+                                       class="form-check-input"
+                                       type="checkbox"
+                                       value="1"
+                                       :id="'is_checkbox-'+row.model+'#'+row.id">
+                                <label class="form-check-label" :for="'is_checkbox-'+row.model+'#'+row.id">Yes</label>
+                            </div>
+                        </td>
+                        <td class="text-end">
+                            <button type="button" class="btn btn-link text-danger" title="Delete" @click="onDeleteRow(row.id)"><~/common/icons/x></button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <button type="button" class="btn btn-sm btn-secondary" @click="onAdd"><~/common/icons/plus-circle> Add More</button>
+
+        </template>
+
+    </div>
+</script>
+
+<script type="module">
+    import { mapStores } from 'pinia';
+    import Multiselect from 'Multiselect';
+
+    fwApp.component('subtable_demos_items', {
+        template: '#subtable_demos_items-template',
+        props: {
+            def: {
+                type: Object,
+                required: true
+            },
+            lookups: {
+                type: Object,
+                required: true
+            },
+            form: {
+                type: Object,
+                required: true
+            }
+        },
+        emits: ['on-sample-event'],
+        components: {
+            Multiselect
+        },
+        data: () => ({
+            sample_value: 0,
+        }),
+        computed: {
+            ...mapStores(useFwStore), //accessible via this.fwStore
+            list_rows() {
+                return this.form.subtables?.[this.def.field] ?? [];
+            },
+        },
+        mounted() {
+            console.log('subtable-demos_items mounted');
+        },
+        unmounted() {
+            console.log('subtable-demos_items unmounted');
+        },
+        updated() {
+            console.log('subtable-demos_items updated');
+        },
+        methods: {
+            lookupIname(lookup, id) {
+                var options = this.fwStore.lookups[lookup] ?? [];
+                var option = options.find(option => option.id == id);
+                return option?.iname ?? '';
+            },
+            async onAdd() {
+                //add to list_rows
+                this.list_rows.push({
+                    id: 'new-' + Date.now(),
+                    demo_dicts_id: '',
+                    iname: '',
+                    idesc: '',
+                    is_checkbox: 0,
+                    is_new: true
+                });
+                //focus on the last rows first input
+                this.$nextTick(() => {
+                    var lastRow = this.$el.querySelector('table tbody tr:last-child');
+                    var firstInput = lastRow.querySelector('input:not([type=hidden]), select, textarea');
+                    if (firstInput) firstInput.focus();
+                });
+            },
+            async onDeleteRow(id) {
+                console.log('onDeleteRow TODO', id);
+            },
+            sampleMethod(e) {
+                this.$emit('on-sample-event', e);
+            }
+        }
+    });
+</script>
