@@ -68,7 +68,7 @@ let state = {
     show_fields: [],
     showform_fields: [],
     is_list_edit_pane: false, // true if edit pane is open
-    edit_data: null, // object for single item edit form {id:X, i:{}, add_users_id_name:'', upd_users_id_name:'', save_result:{}}}
+    edit_data: null, // object for single item edit form {id:X, i:{}, multi_rows:{}, add_users_id_name:'', upd_users_id_name:'', save_result:{}}}
 
     //standard lookups
     lookups_std: {
@@ -495,6 +495,18 @@ let actions = {
             const apiBase = mande(this.base_url);
 
             const req = { item: this.edit_data.i, XSS: this.XSS };
+            // also submit checked multi_rows, if form has any
+            Object.keys(this.edit_data.multi_rows ?? {}).forEach(field => {
+                let rows = this.edit_data.multi_rows[field] ?? [];
+                let checked_rows = rows.filter(row => row.is_checked);
+                if (checked_rows.length) {
+                    req[field + '_multi'] = {};
+                    checked_rows.forEach(row => {
+                        req[field + '_multi'][row.id] = 1;
+                    });
+                };
+            });
+
             //console.log('saveEditData req', req);
             const response = await apiBase.post(this.edit_data.id, req);
             //console.log('saveEditData response', response);

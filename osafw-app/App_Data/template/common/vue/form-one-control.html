@@ -25,7 +25,7 @@
   </p>
   <template v-else-if="def.type=='multi'">
     <div :class="'field-multi-value'+(def.lookup_checked_only?'h-auto':'')">
-      <div v-for="(row, index) in multi_datarow" :key="index" class="form-check">
+      <div v-for="row in multi_rows" :key="row.id" class="form-check">
         <input type="checkbox" class="form-check-input" disabled :checked="row.is_checked">
         <label class="form-check-label">{{row.iname}}</label>
       </div>
@@ -149,19 +149,17 @@
   <template v-else-if="def.type=='multicb'">
     <div class="field-multi-value">
       <input v-model="multi_search"
-        @keyup="onMultiSearch"
         type="input" class="form-control form-control-sm mb-1" placeholder="type to filter...">
-        <div v-for="row in multi_datarow" :key="row.id"
-          class="form-check" data-s="<~id upper> - <~iname upper>">
-          <input type="checkbox"
-            class="form-check-input"
-            value="1"
-            :id="def.field+'$'+row.id"
-            :value="form.i[ this.def.field+'_multi['+row.id+']' ] ?? (row.is_checked?1:0)"
-            @change="$e => form.i[ this.def.field+'_multi['+row.id+']' ] = $e.target.value"
-          >
-          <label class="form-check-label" for="def.field+'$'+row.id">{{row.iname}}</label>
-        </div>
+      <div v-for="row in multi_rows" :key="row.id"
+        class="form-check" data-s="<~id upper> - <~iname upper>">
+        <input type="checkbox"
+          v-model="row.is_checked"
+          class="form-check-input"
+          value="1"
+          :id="def.field+'$'+row.id"
+        >
+        <label class="form-check-label" :for="def.field+'$'+row.id">{{row.iname}}</label>
+      </div>
     </div>
     <form-control-help-block :text="def.help_text" />
   </template>
@@ -218,15 +216,12 @@ fwApp.component('form-one-control', {
         this.$emit('update-form-field', { field: this.def.field+'_iname', value: new_value });
       }
     },
-    multi_datarow(){
-      return this.form[this.def.field+'_multi'];
-    },
-    value_multi_datarowXXX: {
-      get() {
-        return this.form.i[this.def.field+'_multi'];
-      },
-      set(new_value) {
-        this.$emit('update-form-field', { field: this.def.field+'_multi['+XX+']', value: new_value });
+    multi_rows(){
+      const rows = this.form.multi_rows[this.def.field]??[];
+      if (this.multi_search > '') {
+        return rows.filter(row => row.iname.toLowerCase().includes(this.multi_search.toLowerCase()));
+      } else {
+        return rows;
       }
     },
 
@@ -299,9 +294,6 @@ fwApp.component('form-one-control', {
       }
       return await this.fwStore.autocompleteOptions(query, this.def.autocomplete_url, this.def.lookup_model, id);
     },
-    onMultiSearch($e){
-      console.log('onMultiSearch TODO', $e);
-    }
   }
 });
 </script>

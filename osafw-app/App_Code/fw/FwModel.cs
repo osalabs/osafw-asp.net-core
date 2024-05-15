@@ -1168,6 +1168,29 @@ public abstract class FwModel : IDisposable
         }
     }
 
+    /// <summary>
+    /// filter list of items for json output for list options, leave only keys:
+    ///   id, iname, is_checked (if exists), prio (if exists)
+    /// </summary>
+    /// <param name="rows">list of Hashtables</param>
+    /// <returns></returns>
+    public virtual ArrayList filterListOptionsForJson(IList rows)
+    {
+        ArrayList result = [];
+        foreach (Hashtable row in rows)
+        {
+            Hashtable item = [];
+            item[field_id] = row[field_id];
+            item[field_iname] = row[field_iname];
+            if (row.ContainsKey("is_checked"))
+                item["is_checked"] = row["is_checked"];
+            if (row.ContainsKey(field_prio))
+                item[field_prio] = row[field_prio];
+            result.Add(item);
+        }
+        return result;
+    }
+
     public virtual StringBuilder getCSVExport()
     {
         Hashtable where = new();

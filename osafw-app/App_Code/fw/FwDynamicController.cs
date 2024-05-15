@@ -999,28 +999,28 @@ public class FwDynamicController : FwController
         // special auto-processing for fields of particular types - use .Cast<string>().ToArray() to make a copy of keys as we modify fields
         foreach (string field in fields.Keys.Cast<string>().ToArray())
         {
-            if (showform_fields.ContainsKey(field))
+            if (!showform_fields.ContainsKey(field))
+                continue;
+
+            var def = (Hashtable)showform_fields[field];
+            string type = (string)def["type"];
+            if (type == "autocomplete")
             {
-                var def = (Hashtable)showform_fields[field];
-                string type = (string)def["type"];
-                if (type == "autocomplete")
-                {
-                    var lookup_model = fw.model((string)def["lookup_model"]);
-                    var field_value = Utils.f2str(item[field + "_iname"]); // autocomplete value is in "${field}_iname"
-                    fields[field] = Utils.f2str(lookup_model.findOrAddByIname(field_value, out _));
-                }
-                else if (type == "date_combo")
-                    fields[field] = FormUtils.dateForCombo(item, field).ToString();
-                else if (type == "time")
-                    fields[field] = Utils.f2str(FormUtils.timeStrToInt((string)fields[field])); // ftime - convert from HH:MM to int (0-24h in seconds)
-                else if (type == "number")
-                {
-                    if (fnullable.ContainsKey(field) && string.IsNullOrEmpty((string)fields[field]))
-                        // if field nullable and empty - pass NULL
-                        fields[field] = null;
-                    else
-                        fields[field] = Utils.f2str(Utils.f2float(fields[field]));// number - convert to number (if field empty or non-number - it will become 0)
-                }
+                var lookup_model = fw.model((string)def["lookup_model"]);
+                var field_value = Utils.f2str(item[field + "_iname"]); // autocomplete value is in "${field}_iname"
+                fields[field] = Utils.f2str(lookup_model.findOrAddByIname(field_value, out _));
+            }
+            else if (type == "date_combo")
+                fields[field] = FormUtils.dateForCombo(item, field).ToString();
+            else if (type == "time")
+                fields[field] = Utils.f2str(FormUtils.timeStrToInt((string)fields[field])); // ftime - convert from HH:MM to int (0-24h in seconds)
+            else if (type == "number")
+            {
+                if (fnullable.ContainsKey(field) && string.IsNullOrEmpty((string)fields[field]))
+                    // if field nullable and empty - pass NULL
+                    fields[field] = null;
+                else
+                    fields[field] = Utils.f2str(Utils.f2float(fields[field]));// number - convert to number (if field empty or non-number - it will become 0)
             }
         }
     }
@@ -1052,9 +1052,13 @@ public class FwDynamicController : FwController
             else if (type == "multicb")
             {
                 if (Utils.isEmpty(def["model"]))
-                    fields_update[def["field"]] = FormUtils.multi2ids(reqh(def["field"] + "_multi")); // multiple checkboxes -> single comma-delimited field
+                {
+                    // multiple checkboxes -> non-junction model single comma-delimited field                    
+                    fields_update[def["field"]] = FormUtils.multi2ids(reqh(def["field"] + "_multi"));
+                }
                 else
                 {
+                    //junction model based
                     if (Utils.f2bool(def["is_by_linked"]))
                         //by linked id
                         fw.model((string)def["model"]).updateJunctionByLinkedId(id, reqh(def["field"] + "_multi")); // junction model

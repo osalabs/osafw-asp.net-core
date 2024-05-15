@@ -251,6 +251,8 @@ public class FwVueController : FwDynamicController
             throw new NotFoundException();
 
         // addtionally, if we have autocomplete fields - preload their values
+        var multi_rows = new Hashtable();
+
         var fields = (ArrayList)this.config["showform_fields"];
         foreach (Hashtable def in fields)
         {
@@ -266,24 +268,34 @@ public class FwVueController : FwDynamicController
                     item[field_name + "_iname"] = ac_item["iname"];
                 }
             }
-            else if (dtype == "multi" || dtype == "multicb")
+            else if (dtype == "multi" || dtype == "multicb" || dtype == "multicb_prio")
             {
                 //multiple values either from lookup model or junction model
-                var multi_name = field_name + "_multi";
+                FwModel multi_model;
+                ArrayList rows;
                 if (def.ContainsKey("lookup_model"))
-                    ps[multi_name] = fw.model(model_name).listWithChecked(Utils.f2str(item[field_name]), def);
+                {
+                    //use comma-separated values in field from lookup_model
+                    multi_model = fw.model(model_name);
+                    rows = multi_model.listWithChecked(Utils.f2str(item[field_name]), def);
+                }
                 else
                 {
+                    //use junction model
+                    multi_model = fw.model(Utils.f2str(def["model"]));
                     if (Utils.f2bool(def["is_by_linked"]))
                         // list main items by linked id from junction model (i.e. list of Users(with checked) for Company from UsersCompanies model)
-                        ps[multi_name] = fw.model((string)def["model"]).listMainByLinkedId(id, def); //junction model
+                        rows = multi_model.listMainByLinkedId(id, def); //junction model
                     else
                         // list linked items by main id from junction model (i.e. list of Companies(with checked) for User from UsersCompanies model)
-                        ps[multi_name] = fw.model((string)def["model"]).listLinkedByMainId(id, def); //junction model
+                        rows = multi_model.listLinkedByMainId(id, def); //junction model
                 }
-                logger("here", multi_name, ", ", item[multi_name]);
+                multi_rows[field_name] = multi_model.filterListOptionsForJson(rows);
             }
         }
+
+        if (multi_rows.Count > 0)
+            ps["multi_rows"] = multi_rows;
 
         // fill added/updated too
         setAddUpdUser(ps, item);
