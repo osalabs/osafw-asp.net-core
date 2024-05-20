@@ -110,7 +110,6 @@
                 required: true
             }
         },
-        //emits: ['on-sample-event'],
         components: {
             Multiselect
         },
@@ -156,11 +155,12 @@
                 });
             },
             async onDeleteRow(id) {
-                console.log('onDeleteRow TODO', id);
+                //can't modify this.list_rows directly as it's readonly computed property
+                // update fwStore.edit_data.subtables.<field> instead - TODO refactor better
+                this.fwStore.edit_data.subtables[this.def.field] = this.list_rows.filter(row => row.id != id);
+                // and trigger form change for the this.$el form
+                this.$el.dispatchEvent(new Event('change', { bubbles: true }));
             },
-            // sampleMethod(e) {
-            //     this.$emit('on-sample-event', e);
-            // }
         }
     });
 </script>
