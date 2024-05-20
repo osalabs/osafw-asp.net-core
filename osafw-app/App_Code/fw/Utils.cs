@@ -1063,7 +1063,7 @@ public class Utils
         }
         else if (json is null)
         {
-            return "null";
+            return ""; // null is empty string
         }
         else
         {

@@ -24,7 +24,7 @@
   --ms-dropdown-bg: var(--bs-body-bg);
   --ms-border-width: var(--bs-border-width);
   --ms-border-color: var(--bs-border-color);
-  --ms-placeholder-color: var(--bs-body-color);
+  --ms-placeholder-color: var(--bs-secondary-color);
   --ms-dropdown-border-width:var(--bs-border-width);
   --ms-dropdown-border-color: var(--bs-border-color);
   --ms-option-bg-pointed: #52525E;

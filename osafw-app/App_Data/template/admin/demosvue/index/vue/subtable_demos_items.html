@@ -51,17 +51,32 @@
                         </td>
                         <td>
                             <select v-model="row.demo_dicts_id"
-                                    :class="'form-control'+(error(row, 'demo_dicts_id')?' is-invalid':'')">
+                                    :class="'form-select'+(error(row, 'demo_dicts_id')?' is-invalid':'')">
                                 <option value="">- select -</option>
                                 <option v-for="lookup in fwStore.lookups.DemoDicts" :value="lookup.id">{{lookup.iname}}</option>
                             </select>
                             <div v-if="error(row, 'demo_dicts_id')" class="invalid-tooltip">{{error_text(row, 'demo_dicts_id')}}</div>
                         </td>
-                        <td>
-                            <input v-model="row.iname"
+                        <td style="min-width:150px">
+                            <!--simple input sample-->
+                            <!--input v-model="row.iname"
                                    type="input"
-                                   :class="'form-control'+(error(row, 'iname')?' is-invalid':'')"
-                                   data-autocompleteTODO="<~/admin/demos/url>/(Autocomplete)?q=%QUERY">
+                                   :class="'form-control'+(error(row, 'iname')?' is-invalid':'')"-->
+
+                            <!-- autocomplete -->
+                            <Multiselect
+                              v-model="row.iname"
+                              placeholder="Start typing..."
+                              :class="(error(row, 'iname')?' cell-invalid':'')"
+                              :filter-results="false"
+                              :min-chars="1"
+                              :resolve-on-load="true"
+                              :delay="0"
+                              :searchable="true"
+                              :create-option="true"
+                              :options="(query, select$) => autocompleteOptions(row, query, select$)"
+                              @change="triggerChange"
+                            />
                             <div v-if="error(row, 'iname')" class="invalid-tooltip">{{error_text(row, 'iname')}}</div>
                         </td>
                         <td>
@@ -171,7 +186,21 @@
                 // update fwStore.edit_data.subtables.<field> instead - TODO refactor better
                 this.fwStore.edit_data.subtables[this.def.field] = this.list_rows.filter(row => row.id != id);
                 // and trigger form change for the this.$el form
-                this.$el.dispatchEvent(new Event('change', { bubbles: true }));
+                this.triggerChange();
+            },
+            triggerChange(){
+              this.$el.dispatchEvent(new Event('change', { bubbles: true }));
+            },
+            //autocomplete for iname field
+            async autocompleteOptions(row, query, select$){
+              let id = 0;
+              if (query === null){
+                //initial load - return preloaded name
+                return [ row.iname??'' ];
+              }
+              const autocomplete_url = "/Admin/Demos/(Autocomplete)";
+              const lookup_model = '';
+              return await this.fwStore.autocompleteOptions(query, autocomplete_url, lookup_model, id);
             },
         }
     });
