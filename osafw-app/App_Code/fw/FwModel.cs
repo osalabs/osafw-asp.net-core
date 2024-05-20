@@ -991,10 +991,9 @@ public abstract class FwModel : IDisposable
     // override in your specific models when necessary
     public virtual void prepareSubtable(ArrayList list_rows, int related_id, Hashtable def = null)
     {
-        var model_name = def != null ? (string)def["model"] : this.GetType().Name;
         foreach (Hashtable row in list_rows)
         {
-            row["model"] = model_name;
+            row["def"] = def;
             //if row_id starts with "new-" - set flag is_new
             row["is_new"] = row["id"].ToString().StartsWith("new-");
         }

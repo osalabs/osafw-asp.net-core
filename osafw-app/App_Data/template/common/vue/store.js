@@ -507,6 +507,24 @@ let actions = {
                 };
             });
 
+            //also submit subtables
+            // row ids submitted as: item-FIELD[ID]=1
+            // input name format: item-FIELD#ID[field_name]=value
+            Object.keys(this.edit_data.subtables ?? {}).forEach(field => {
+                let rows = this.edit_data.subtables[field] ?? [];
+                if (rows.length) {
+                    req['item-' + field] = {};
+                }
+                rows.forEach(row => {
+                    req['item-' + field + '#' + row.id] = {};
+                    Object.keys(row).forEach(col => {
+                        if (col == 'id') return; //skip id
+                        req['item-' + field + '#' + row.id][col] = row[col];
+                    });
+                    req['item-' + field][row.id] = 1;
+                });
+            });
+
             //console.log('saveEditData req', req);
             const response = await apiBase.post(this.edit_data.id, req);
             //console.log('saveEditData response', response);
@@ -534,6 +552,7 @@ let actions = {
             }
 
         } catch (error) {
+            console.log(error);
             this.edit_data.save_result = error.body ?? { success: false, err_msg: 'server error' };
             this.handleError(error, 'saveEditData', true);
             return error;

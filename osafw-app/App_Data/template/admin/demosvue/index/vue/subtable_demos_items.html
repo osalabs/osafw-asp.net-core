@@ -67,7 +67,8 @@
                         </td>
                         <td>
                             <div class="form-check form-check-inline">
-                                <input v-model="row.is_checkbox"
+                                <input :checked="row.is_checkbox===true || row.is_checkbox==='1'"
+                                       @change="$e => row.is_checkbox = $e.target.checked"
                                        class="form-check-input"
                                        type="checkbox"
                                        value="1"
@@ -109,7 +110,7 @@
                 required: true
             }
         },
-        emits: ['on-sample-event'],
+        //emits: ['on-sample-event'],
         components: {
             Multiselect
         },
@@ -129,7 +130,7 @@
             console.log('subtable-demos_items unmounted');
         },
         updated() {
-            console.log('subtable-demos_items updated');
+            //console.log('subtable-demos_items updated');
         },
         methods: {
             lookupIname(lookup, id) {
@@ -157,9 +158,9 @@
             async onDeleteRow(id) {
                 console.log('onDeleteRow TODO', id);
             },
-            sampleMethod(e) {
-                this.$emit('on-sample-event', e);
-            }
+            // sampleMethod(e) {
+            //     this.$emit('on-sample-event', e);
+            // }
         }
     });
 </script>

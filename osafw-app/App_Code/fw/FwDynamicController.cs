@@ -350,25 +350,24 @@ public class FwDynamicController : FwController
             if (type == "subtable_edit")
             {
                 //validate subtable rows
-                var model_name = (string)def["model"];
-                var sub_model = fw.model(model_name);
+                var sub_model = fw.model((string)def["model"]);
 
                 var save_fields = (string)def["required_fields"] ?? "";
                 var save_fields_checkboxes = (string)def["save_fields_checkboxes"];
 
                 //check if we delete specific row
-                var del_id = (string)subtable_del[model_name] ?? "";
+                var del_id = (string)subtable_del[field] ?? "";
 
-                // row ids submitted as: item-<~model>[<~id>]
-                // input name format: item-<~model>#<~id>[field_name]
-                var hids = reqh("item-" + model_name);
+                // row ids submitted as: item-<~field>[<~id>]
+                // input name format: item-<~field>#<~id>[field_name]
+                var hids = reqh("item-" + field);
                 // sort hids.Keys, so numerical keys - first and keys staring with "new-" will be last
                 var sorted_keys = hids.Keys.Cast<string>().OrderBy(x => x.StartsWith("new-") ? 1 : 0).ThenBy(x => x).ToList();
                 foreach (string row_id in sorted_keys)
                 {
                     if (row_id == del_id) continue; //skip deleted row
 
-                    var row_item = reqh("item-" + model_name + "#" + row_id);
+                    var row_item = reqh("item-" + field + "#" + row_id);
                     Hashtable itemdb = FormUtils.filter(row_item, save_fields);
                     FormUtils.filterCheckboxes(itemdb, row_item, save_fields_checkboxes, isPatch());
 
@@ -444,11 +443,11 @@ public class FwDynamicController : FwController
         if (!result)
         {
             //fill global fw.FormErrors with row errors
-            var model_name = (string)def["model"];
+            var field = (string)def["field"];
             foreach (var field_name in row_errors.Keys)
             {
-                // row input names format: item-<~model>#<~id>[field_name]
-                fw.FormErrors[$"item-{model_name}#{row_id}[{field_name}]"] = true;
+                // row input names format: item-<~field>#<~id>[field_name]
+                fw.FormErrors[$"item-{field}#{row_id}[{field_name}]"] = true;
             }
             fw.FormErrors["REQUIRED"] = true; // also set global error
         }
@@ -733,8 +732,7 @@ public class FwDynamicController : FwController
             else if (dtype == "subtable")
             {
                 // subtable functionality
-                var model_name = (string)def["model"];
-                var sub_model = fw.model(model_name);
+                var sub_model = fw.model((string)def["model"]);
                 var list_rows = sub_model.listByMainId(id, def); //list related rows from db
                 sub_model.prepareSubtable(list_rows, id, def);
 
@@ -802,7 +800,7 @@ public class FwDynamicController : FwController
 
         foreach (Hashtable def in fields)
         {
-            // logger(def)
+            //logger(def);
             def["i"] = item; // ref to item
             def["ps"] = ps; // ref to whole ps
             string dtype = (string)def["type"]; // type is required
@@ -852,8 +850,7 @@ public class FwDynamicController : FwController
             else if (dtype == "subtable_edit")
             {
                 // subtable functionality
-                var model_name = (string)def["model"];
-                var sub_model = fw.model(model_name);
+                var sub_model = fw.model((string)def["model"]);
                 var list_rows = new ArrayList();
 
                 if (isGet())
@@ -868,19 +865,19 @@ public class FwDynamicController : FwController
                 else
                 {
                     //check if we deleted specific row
-                    var del_id = (string)subtable_del[model_name] ?? "";
+                    var del_id = (string)subtable_del[field] ?? "";
 
                     //copy list related rows from the form
-                    // row ids submitted as: item-<~model>[<~id>]
-                    // input name format: item-<~model>#<~id>[field_name]
-                    var hids = reqh("item-" + model_name);
+                    // row ids submitted as: item-<~field>[<~id>]
+                    // input name format: item-<~field>#<~id>[field_name]
+                    var hids = reqh("item-" + field);
                     // sort hids.Keys, so numerical keys - first and keys staring with "new-" will be last
                     var sorted_keys = hids.Keys.Cast<string>().OrderBy(x => x.StartsWith("new-") ? 1 : 0).ThenBy(x => x).ToList();
                     foreach (string row_id in sorted_keys)
                     {
                         if (row_id == del_id) continue; //skip deleted row
 
-                        var row_item = reqh("item-" + model_name + "#" + row_id);
+                        var row_item = reqh("item-" + field + "#" + row_id);
                         row_item["id"] = row_id;
 
                         list_rows.Add(row_item);
@@ -888,9 +885,9 @@ public class FwDynamicController : FwController
                 }
 
                 //delete row clicked
-                //if (subtable_del.ContainsKey(model_name))
+                //if (subtable_del.ContainsKey(field))
                 //{
-                //    var del_id = (string)subtable_del[model_name];
+                //    var del_id = (string)subtable_del[field];
                 //    // delete with LINQ from the form list (actual delete from db will be on save)
                 //    list_rows = new ArrayList((from Hashtable d in list_rows
                 //                               where (string)d["id"] != del_id
@@ -898,7 +895,7 @@ public class FwDynamicController : FwController
                 //}
 
                 //add new clicked
-                if (subtable_add.ContainsKey(model_name))
+                if (subtable_add.ContainsKey(field))
                     sub_model.prepareSubtableAddNew(list_rows, id, def);
 
                 //prepare rows for display (add selects, etc..)
@@ -1035,6 +1032,7 @@ public class FwDynamicController : FwController
         // for now we just look if we have att_links_edit field and update att links
         foreach (Hashtable def in (ArrayList)this.config["showform_fields"])
         {
+            string field = (string)def["field"];
             string type = (string)def["type"];
             if (type == "att_links_edit")
                 fw.model<AttLinks>().updateJunction(model0.table_name, id, reqh("att")); // TODO make att configurable
@@ -1054,42 +1052,41 @@ public class FwDynamicController : FwController
                 if (Utils.isEmpty(def["model"]))
                 {
                     // multiple checkboxes -> non-junction model single comma-delimited field                    
-                    fields_update[def["field"]] = FormUtils.multi2ids(reqh(def["field"] + "_multi"));
+                    fields_update[field] = FormUtils.multi2ids(reqh(field + "_multi"));
                 }
                 else
                 {
                     //junction model based
                     if (Utils.f2bool(def["is_by_linked"]))
                         //by linked id
-                        fw.model((string)def["model"]).updateJunctionByLinkedId(id, reqh(def["field"] + "_multi")); // junction model
+                        fw.model((string)def["model"]).updateJunctionByLinkedId(id, reqh(field + "_multi")); // junction model
                     else
                         //by main id
-                        fw.model((string)def["model"]).updateJunctionByMainId(id, reqh(def["field"] + "_multi")); // junction model
+                        fw.model((string)def["model"]).updateJunctionByMainId(id, reqh(field + "_multi")); // junction model
                 }
             }
             else if (type == "multicb_prio")
-                fw.model((string)def["model"]).updateJunctionByMainId(id, reqh(def["field"] + "_multi")); // junction model
+                fw.model((string)def["model"]).updateJunctionByMainId(id, reqh(field + "_multi")); // junction model
 
             else if (type == "subtable_edit")
             {
                 //save subtable
-                var model_name = (string)def["model"];
-                var sub_model = fw.model(model_name);
+                var sub_model = fw.model((string)def["model"]);
 
                 var save_fields = (string)def["save_fields"];
                 var save_fields_checkboxes = (string)def["save_fields_checkboxes"];
 
                 //check if we delete specific row
-                var del_id = (string)subtable_del[model_name] ?? "";
+                var del_id = (string)subtable_del[field] ?? "";
 
                 //mark all related records as under update (status=1)
                 sub_model.setUnderUpdateByMainId(id);
 
                 //update and add new rows
 
-                // row ids submitted as: item-<~model>[<~id>]
-                // input name format: item-<~model>#<~id>[field_name]
-                var hids = reqh("item-" + model_name);
+                // row ids submitted as: item-<~field>[<~id>]
+                // input name format: item-<~field>#<~id>[field_name]
+                var hids = reqh("item-" + field);
                 // sort hids.Keys, so numerical keys - first and keys staring with "new-" will be last
                 var sorted_keys = hids.Keys.Cast<string>().OrderBy(x => x.StartsWith("new-") ? 1 : 0).ThenBy(x => x).ToList();
                 var junction_field_status = sub_model.getJunctionFieldStatus();
@@ -1097,7 +1094,7 @@ public class FwDynamicController : FwController
                 {
                     if (row_id == del_id) continue; //skip deleted row
 
-                    var row_item = reqh("item-" + model_name + "#" + row_id);
+                    var row_item = reqh("item-" + field + "#" + row_id);
                     Hashtable itemdb = FormUtils.filter(row_item, save_fields);
                     FormUtils.filterCheckboxes(itemdb, row_item, save_fields_checkboxes, isPatch());
 
