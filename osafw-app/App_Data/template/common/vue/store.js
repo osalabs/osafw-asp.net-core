@@ -202,7 +202,7 @@ let actions = {
         let err_msg = error.body?.err_msg ?? 'server error';
         console.error('handleError for', caller, ":", err_msg);
         if (!is_silent) {
-            console.error(error);
+            //console.error(error);
             Toast(err_msg, { theme: 'text-bg-danger' });
         }
     },
@@ -552,9 +552,8 @@ let actions = {
             }
 
         } catch (error) {
-            console.log(error);
             this.edit_data.save_result = error.body ?? { success: false, err_msg: 'server error' };
-            this.handleError(error, 'saveEditData', true);
+            this.handleError(error, 'saveEditData');
             return error;
         }
     },

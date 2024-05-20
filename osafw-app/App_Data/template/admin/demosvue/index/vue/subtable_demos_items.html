@@ -48,22 +48,27 @@
                             <template v-if="row.is_new">
                                 (new)
                             </template>
-                            <input type="hidden" name="item-<~model>TODO[<~id>]" value="1">
                         </td>
                         <td>
-                            <select v-model="row.demo_dicts_id" class="form-control">
+                            <select v-model="row.demo_dicts_id"
+                                    :class="'form-control'+(error(row, 'demo_dicts_id')?' is-invalid':'')">
                                 <option value="">- select -</option>
                                 <option v-for="lookup in fwStore.lookups.DemoDicts" :value="lookup.id">{{lookup.iname}}</option>
                             </select>
+                            <div v-if="error(row, 'demo_dicts_id')" class="invalid-tooltip">{{error_text(row, 'demo_dicts_id')}}</div>
                         </td>
                         <td>
                             <input v-model="row.iname"
                                    type="input"
-                                   class="form-control"
+                                   :class="'form-control'+(error(row, 'iname')?' is-invalid':'')"
                                    data-autocompleteTODO="<~/admin/demos/url>/(Autocomplete)?q=%QUERY">
+                            <div v-if="error(row, 'iname')" class="invalid-tooltip">{{error_text(row, 'iname')}}</div>
                         </td>
                         <td>
-                            <textarea v-model="row.idesc" class="form-control" rows="1"></textarea>
+                            <textarea v-model="row.idesc"
+                                      :class="'form-control'+(error(row, 'idesc')?' is-invalid':'')"
+                                      rows="1"></textarea>
+                            <div v-if="error(row, 'idesc')" class="invalid-tooltip">{{error_text(row, 'idesc')}}</div>
                         </td>
                         <td>
                             <div class="form-check form-check-inline">
@@ -132,9 +137,16 @@
             //console.log('subtable-demos_items updated');
         },
         methods: {
+            error(row, field_name) {
+              const key = 'item-'+this.def.field+'#'+row.id+'['+field_name+']';
+              return this.form.save_result?.ERR?.[key] ?? false;
+            },
+            error_text(row, field_name) {
+              return window.fwConst.ERR_CODES_MAP[this.error(row.id, field_name)];
+            },
             lookupIname(lookup, id) {
-                var options = this.fwStore.lookups[lookup] ?? [];
-                var option = options.find(option => option.id == id);
+                const options = this.fwStore.lookups[lookup] ?? [];
+                const option = options.find(option => option.id == id);
                 return option?.iname ?? '';
             },
             async onAdd() {

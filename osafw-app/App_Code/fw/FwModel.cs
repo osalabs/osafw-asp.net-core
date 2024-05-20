@@ -993,9 +993,14 @@ public abstract class FwModel : IDisposable
     {
         foreach (Hashtable row in list_rows)
         {
-            row["def"] = def;
             //if row_id starts with "new-" - set flag is_new
             row["is_new"] = row["id"].ToString().StartsWith("new-");
+
+            // for non-Vue - add def to each row
+            if (!fw.isJsonExpected())
+            {
+                row["def"] = def;
+            }
         }
     }
 
