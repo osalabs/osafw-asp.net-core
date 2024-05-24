@@ -383,22 +383,22 @@ public class FwDynamicController : FwController
                         fw.FormErrors[field] = "EXISTS";
                         result = false;
                     }
-                    if (val.ContainsKey("isemail") && !FormUtils.isEmail(field_value))
+                    if (val.ContainsKey("isemail") && !Utils.isEmpty(field_value) && !FormUtils.isEmail(field_value))
                     {
                         fw.FormErrors[field] = "WRONG";
                         result = false;
                     }
-                    if (val.ContainsKey("isphone") && !FormUtils.isPhone(field_value))
+                    if (val.ContainsKey("isphone") && !Utils.isEmpty(field_value) && !FormUtils.isPhone(field_value))
                     {
                         fw.FormErrors[field] = "WRONG";
                         result = false;
                     }
-                    if (val.ContainsKey("isdate") && !Utils.isDate(field_value))
+                    if (val.ContainsKey("isdate") && !Utils.isEmpty(field_value) && !Utils.isDate(field_value))
                     {
                         fw.FormErrors[field] = "WRONG";
                         result = false;
                     }
-                    if (val.ContainsKey("isfloat") && !Utils.isFloat(field_value))
+                    if (val.ContainsKey("isfloat") && !Utils.isEmpty(field_value) && !Utils.isFloat(field_value))
                     {
                         fw.FormErrors[field] = "WRONG";
                         result = false;
