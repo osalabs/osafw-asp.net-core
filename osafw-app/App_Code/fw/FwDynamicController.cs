@@ -244,6 +244,9 @@ public class FwDynamicController : FwController
         id = base.modelAddOrUpdate(id, fields);
 
         if (is_dynamic_showform)
+            processSaveFiles(id, fields);
+
+        if (is_dynamic_showform)
             processSaveShowFormFieldsAfter(id, fields);
 
         return id;
@@ -497,6 +500,72 @@ public class FwDynamicController : FwController
         return this.afterSave(true, id);
     }
 
+    public virtual Hashtable deleteFileByAttField(int id, bool is_perm = false)
+    {
+        var att_field = reqs("att_field");
+        var att_id = Utils.f2int(model0.one(id)[att_field]);
+        Hashtable att = new();
+
+        var success = true;
+        if (att_id > 0)
+        {
+            att = fw.model<Att>().one(att_id);
+            model0.update(id, DB.h(att_field, null));
+            fw.model<Att>().delete(att_id, is_perm);
+
+            fw.flash("success", "File deleted");
+        }
+        else
+        {
+            success = false;
+            fw.flash("error", "Can't find file for deletion. Record [id:" + id + "], field [att_field: " + att_field);
+        }
+
+        return new Hashtable() {
+            {"success", success},
+            {"att", att},
+        };
+    }
+
+    public virtual Hashtable DeleteFileByAttFieldAction(int id)
+    {
+        var results = this.deleteFileByAttField(id);
+        return this.afterSave((bool)results["success"]);
+    }
+
+    public virtual Hashtable deleteFileByAttId(int id, bool is_perm = false)
+    {
+        var att_id = reqi("att_id");
+        var atts = fw.model<Att>().listByEntity(model0.table_name, id);
+        Hashtable att = new();
+
+        //additional check if the att to delete belongs to this record
+        var success = false;
+        foreach (Hashtable att_row in atts)
+            if (Utils.f2int(att_row["id"]) == att_id)
+            {
+                success = true;
+                att = att_row;
+                break;
+            }
+
+        if (!success) throw new ApplicationException(String.Format("Wrong att_id [{0}] passed for the record [{1}]", att_id, id));
+
+        fw.model<Att>().delete(att_id, is_perm);
+        fw.flash("success", "File deleted");
+
+        return new Hashtable() {
+            {"success", success},
+            {"att", att},
+        };
+    }
+
+    public virtual Hashtable DeleteFileByAttIdAction(int id)
+    {
+        var results = this.deleteFileByAttId(id);
+        return this.afterSave((bool)results["success"]);
+    }
+
     public virtual Hashtable SaveMultiAction()
     {
         route_onerror = FW.ACTION_INDEX;
@@ -670,10 +739,15 @@ public class FwDynamicController : FwController
             else if (dtype == "multi_prio")
                 // complex field with prio
                 def["multi_datarow"] = fw.model((string)def["model"]).listLinkedByMainId(id, def); //junction model
-            else if (dtype == "att")
+            else if (dtype == "att" || dtype == "att_file")
                 def["att"] = fw.model<Att>().one(Utils.f2int((string)item[field]));
             else if (dtype == "att_links")
                 def["att_links"] = fw.model<Att>().listLinked(model0.table_name, Utils.f2int(id));
+            else if (dtype == "att_files")
+            {
+                var att_categories_id = Utils.f2int(fw.model<AttCategories>().oneByIcode((string)def["att_categories_icode"])["id"]);
+                def["atts"] = fw.model<Att>().listByEntity(model0.table_name, Utils.f2int(id), -1, att_categories_id > 0 ? att_categories_id : -1);
+            }
             else if (dtype == "subtable")
             {
                 // subtable functionality
@@ -782,14 +856,18 @@ public class FwDynamicController : FwController
                 foreach (Hashtable row in (ArrayList)def["multi_datarow"]) // contains id, iname, is_checked, _link[prio]
                     row["field"] = def["field"];
             }
-            else if (dtype == "att_edit")
+            else if (dtype == "att_edit" || dtype == "att_file_edit")
             {
                 def["att"] = fw.model<Att>().one(Utils.f2int(item[field]));
                 def["value"] = item[field];
             }
             else if (dtype == "att_links_edit")
                 def["att_links"] = fw.model<Att>().listLinked(model0.table_name, Utils.f2int(id));
-
+            else if (dtype == "att_files_edit")
+            {
+                var att_categories_id = Utils.f2int(fw.model<AttCategories>().oneByIcode((string)def["att_categories_icode"])["id"]);
+                def["atts"] = fw.model<Att>().listByEntity(model0.table_name, Utils.f2int(id), -1, att_categories_id > 0 ? att_categories_id : -1);
+            }
             else if (dtype == "subtable_edit")
             {
                 // subtable functionality
@@ -1027,6 +1105,91 @@ public class FwDynamicController : FwController
         }
     }
 
+    protected virtual Hashtable processSaveFiles(int id, Hashtable fields)
+    {
+        if (fw.request.Form.Files.Count == 0) return null;
+
+        var files_cnt = 0;
+        //List instead of common ArrayList, because of LINQ .Select
+        var files_success = new List<Hashtable>();
+        var files_error = new List<Hashtable>();
+        var files_success_msg = "";
+        var files_error_msg = "";
+
+        for (var i = 0; i <= fw.request.Form.Files.Count - 1; i++)
+        {
+            var file = fw.request.Form.Files[i];
+            if (file.Length == 0 || !(file.Name.StartsWith("file[") || file.Name.StartsWith("files["))) continue;
+
+            Hashtable item_att = new() { { "fwentities_id", fw.model<FwEntities>().idByIcodeOrAdd(model0.table_name) }, { "item_id", id } };
+            Hashtable file_info = new() { { "fname", file.FileName }, { "fsize", Utils.bytes2str(file.Length) } };
+
+            if (file.Name.StartsWith("file["))
+            {
+                // One file only: file[ATT_REFERENCE_FIELD;ATT_CATEGORIES_ICODE], i.e "Name": "file[att_id;general]",
+                var att_field = "";
+                var att_categories_icode = "";
+                Utils.split2(";", file.Name.Substring(5, file.Name.Length - 5 - 1), ref att_field, ref att_categories_icode);
+
+                if (att_categories_icode != "")
+                {
+                    var att_categories_id = Utils.f2int(fw.model<AttCategories>().oneByIcode(att_categories_icode)["id"]);
+                    if (att_categories_id > 0) item_att["att_categories_id"] = att_categories_id;
+                }
+
+                var att_id = Utils.f2int(model0.one(id)[att_field]);
+                if (att_id == 0)
+                    att_id = fw.model<Att>().add(item_att);
+
+                if (fw.model<Att>().uploadOne(att_id, i) != null)
+                {
+                    model0.update(id, DB.h(att_field, att_id));
+                    files_success.Add(file_info);
+                }
+                else
+                {
+                    files_error.Add(file_info);
+                }
+
+            }
+            else if (file.Name.StartsWith("files["))
+            {
+                // Mutiple files possible: files[ATT_CATEGORIES_ICODE], i.e "Name": "files[general]",
+                var att_categories_icode = file.Name.Substring(6, file.Name.Length - 6 - 1);
+                var att_categories_id = Utils.f2int(fw.model<AttCategories>().oneByIcode(att_categories_icode)["id"]);
+                if (att_categories_id > 0) item_att["att_categories_id"] = att_categories_id;
+
+                var att_id = fw.model<Att>().add(item_att);
+
+                if (fw.model<Att>().uploadOne(att_id, i, false) != null)
+                    files_success.Add(file_info);
+                else
+                    files_error.Add(file_info);
+            }
+
+            files_cnt++;
+        }
+
+        if (files_success.Count > 0)
+        {
+            files_success_msg = files_success.Count + " file" + (files_success.Count > 1 ? "s" : "") + " uploaded";
+            fw.flash("file_uploaded", files_success_msg);
+        }
+
+        if (files_error.Count > 0)
+        {
+            files_error_msg = files_error.Count + " file" + (files_error.Count > 1 ? "s" : "") + " failed to upload";
+            fw.flash("file_upload_failed", files_error_msg);
+        }
+
+        return new Hashtable() {
+            {"files_cnt", files_cnt},
+            {"files_success", files_success},
+            {"files_success_msg", files_success_msg},
+            {"files_error", files_error},
+            {"files_error_msg", files_error_msg},
+        };
+    }
 
     /// <summary>
     /// modelAddOrUpdate for subtable with dynamic model

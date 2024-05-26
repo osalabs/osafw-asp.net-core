@@ -405,16 +405,21 @@ public class Att : FwModel
 
     // return all att files linked via att.fwentities_id and att.item_id
     // is_image = -1 (all - files and images), 0 (files only), 1 (images only)
-    public ArrayList listByEntity(string entity_icode, int item_id, int is_image = -1)
+    public ArrayList listByEntity(string entity_icode, int item_id, int is_image = -1, int att_categories_id = -1)
     {
         var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
 
         Hashtable where = new();
-        where["status"] = STATUS_ACTIVE;
         where["fwentities_id"] = fwentities_id;
         where["item_id"] = item_id;
+        where["status"] = STATUS_ACTIVE;
+
         if (is_image > -1)
             where["is_image"] = is_image;
+
+        if (att_categories_id > -1)
+            where["att_categories_id"] = att_categories_id;
+
         return db.array(table_name, where, "id");
     }
 
