@@ -235,6 +235,15 @@
                     "type": "att_links"
                 },
                 {
+                    "field": "att_id",
+                    "type": "att_file",
+                    "label": "File"
+                },
+                {
+                    "type": "att_files",
+                    "label": "Files"
+                },
+                {
                     "field": "status",
                     "label": "Status",
                     "type": "plaintext",
@@ -475,6 +484,17 @@
                     "field": "_att_links",
                     "label": "Multiple Attachments",
                     "type": "att_links_edit"
+                },
+                {
+                    "field": "att_id",
+                    "type": "att_file_edit",
+                    "label": "File",
+                    "att_categories_icode": "files"
+                },
+                {
+                    "type": "att_files_edit",
+                    "label": "Files",
+                    "att_categories_icode": "files"
                 },
                 {
                     "field": "status",

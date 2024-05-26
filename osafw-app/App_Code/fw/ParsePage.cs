@@ -104,6 +104,7 @@
         <~var date="sql">   output "yyyy-MM-dd hh:mm:ss" - sql date and time
   url           - add http:// to begin of string if absent
   number_format - FormatNumber(value, 2) => 12345.12
+  size_human    - bytes size in human format (B/KiB/MiB/GiB)
   currency      - FormatCurrency(value, 2) => $12,345.12
   truncate      - truncate with options <~tag truncate="80" trchar="..." trword="1" trend="1">
   strip_tags
@@ -893,6 +894,10 @@ public class ParsePage
                     }
 
                     attr_count -= 1;
+                }
+                if (attr_count > 0 && hattrs.ContainsKey("size_human"))
+                {
+                    value = Utils.bytes2str(Utils.f2long(value));
                 }
                 if (attr_count > 0 && hattrs.ContainsKey("currency"))
                 {

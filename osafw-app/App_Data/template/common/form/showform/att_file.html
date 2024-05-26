@@ -1,0 +1,9 @@
+<input id="<~field>" name="file[<~field>;<~att_categories_icode>]" type="file" class="form-control <~class_control>" <~/common/required if="required"> <~attrs_control noescape>>
+<~./help_block if="help_text">
+
+<~if_att if="att" inline>
+<div class="mt-1">
+  <a href="<~/att/url>/<~att[id]>?<~att[upd_time] date="yyyyMMddHHmmss">" class="text-decoration-none" target="_blank" title="Open"><~att[iname]></a>
+  <a href="#" class="text-danger on-fw-submit" data-url="<~../url>/(DeleteFileByAttField)/<~i[id]>?att_field=<~field>&XSS=<~SESSION[XSS]>&return_url=<~GLOBAL[request_url] urlencode>" title="Delete"><~/common/icons/x></a>
+</div>
+</~if_att>
