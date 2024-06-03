@@ -7,7 +7,7 @@
         <~/common/icons/flag> `Add to List`
       </button>
       <div class="dropdown-menu">
-        <a class="dropdown-item" href="#" @click="onCreateNewList">`Create New List`</a>
+        <a class="dropdown-item" href="#" @click.prevent="onCreateNewList">`Create New List`</a>
         <div class="dropdown-divider"></div>
         <button v-for="list in fwStore.my_userlists"
           :key="list.id"
