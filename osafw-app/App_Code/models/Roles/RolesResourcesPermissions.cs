@@ -81,6 +81,17 @@ public class RolesResourcesPermissions : FwModel
     }
 
     /// <summary>
+    /// list of records for given MULTIPLE roles and resources
+    /// </summary>
+    /// <param name="roles_ids"></param>
+    /// <param name="resources_ids"></param>
+    /// <returns></returns>
+    public DBList listByRolesResources(IList roles_ids, IList resources_ids)
+    {
+        return db.array(table_name, DB.h("roles_id", db.opIN(roles_ids), "resources_id", db.opIN(resources_ids)));
+    }
+
+    /// <summary>
     /// return hashtable of [resources_id#permissions_id => row] for given role and resource
     /// </summary>
     /// <param name="roles_id"></param>

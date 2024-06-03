@@ -946,7 +946,14 @@ public abstract class FwController
         int current_user_level = fw.userAccessLevel;
         if (current_user_level >= Users.ACL_VISITOR && current_user_level < Users.ACL_SITEADMIN)
         {
-            if (!fw.model<Users>().isAccessByRolesResourceAction(fw.userId, fw.route.controller, fw.route.action, fw.route.action_more, access_actions_to_permissions))
+            var action_more = fw.route.action_more;
+            if ((fw.route.action == FW.ACTION_SAVE || fw.route.action == FW.ACTION_SHOW_FORM) && Utils.isEmpty(fw.route.id))
+            {
+                //if save/showform and no id - it's add new - check for Add permission
+                action_more = FW.ACTION_MORE_NEW;
+            }
+
+            if (!fw.model<Users>().isAccessByRolesResourceAction(fw.userId, fw.route.controller, fw.route.action, action_more, access_actions_to_permissions))
                 throw new AuthException("Bad access - Not authorized (3)");
         }
     }

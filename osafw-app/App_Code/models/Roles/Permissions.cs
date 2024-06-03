@@ -23,6 +23,7 @@ public class Permissions : FwModel
         { FW.ACTION_SHOW_FORM + '/' + FW.ACTION_MORE_NEW, PERMISSION_ADD }, //to distinguish between add and edit
         { FW.ACTION_SHOW_FORM + '/' + FW.ACTION_MORE_EDIT, PERMISSION_EDIT }, // necessary for show edit form
         { FW.ACTION_SHOW_FORM, PERMISSION_EDIT },
+        { FW.ACTION_SAVE + '/' + FW.ACTION_MORE_NEW, PERMISSION_ADD },// to distinguish save new and save existing
         { FW.ACTION_SAVE, PERMISSION_EDIT },
         { FW.ACTION_SAVE_MULTI, PERMISSION_EDIT },
         { FW.ACTION_SHOW_DELETE, PERMISSION_DELETE },
