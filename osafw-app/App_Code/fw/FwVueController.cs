@@ -254,6 +254,7 @@ public class FwVueController : FwDynamicController
         var multi_rows = new Hashtable();
         var subtables = new Hashtable();
         var attachments = new Hashtable(); //att_id => att item
+        var att_links = new ArrayList(); //linked att ids
 
         var fields = (ArrayList)this.config["showform_fields"];
         foreach (Hashtable def in fields)
@@ -315,6 +316,16 @@ public class FwVueController : FwDynamicController
                     }
                 }
             }
+            else if (dtype == "att_links" || dtype == "att_links_edit")
+            {
+                var att_items = fw.model<Att>().listLinked(model0.table_name, id);
+                foreach (Hashtable att_item in att_items)
+                {
+                    fw.model<Att>().filterForJson(att_item);
+                    attachments[att_item["id"]] = att_item;
+                    att_links.Add(att_item["id"]);
+                }
+            }
         }
 
         if (multi_rows.Count > 0)
@@ -323,6 +334,8 @@ public class FwVueController : FwDynamicController
             ps["subtables"] = subtables;
         if (attachments.Count > 0)
             ps["attachments"] = attachments;
+        if (att_links.Count > 0)
+            ps["att_links"] = att_links;
 
         // fill added/updated too
         setAddUpdUser(ps, item);

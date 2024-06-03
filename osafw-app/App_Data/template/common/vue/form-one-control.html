@@ -41,6 +41,19 @@
       </div>
     </div>
   </template>
+  <template v-else-if="def.type=='att_links'">
+    <div class="row att-list">
+        <div v-for="att_id in att_links" :key="att_id" class="col">
+          <div class="card att-info">
+            <img class="card-img-top" :src="'/Att/'+att_id+'?preview=1&size=s'" alt="">
+            <div class="card-body text-truncate">
+                <p class="card-text att-iname">{{attachments[att_id]?.iname??''}}</p>
+                <a :href="'/Att/'+att_id" target="_blank" class="btn btn-default"><~/common/icons/cloud-download-fill> `Download`</a>
+            </div>
+          </div>
+        </div>
+    </div>
+  </template>
 
   <div v-else-if="def.type=='group_id' || def.type=='group_id_addnew'">
     <div class="float-end d-none d-lg-block">
@@ -239,7 +252,10 @@ fwApp.component('form-one-control', {
       }
     },
     attachments() {
-      return this.form.attachments??[];
+      return this.form.attachments ?? {};
+    },
+    att_links() {
+      return this.form.att_links ?? [];
     },
 
     error() {
