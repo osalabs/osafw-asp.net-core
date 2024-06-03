@@ -68,7 +68,7 @@ let state = {
     show_fields: [],
     showform_fields: [],
     is_list_edit_pane: false, // true if edit pane is open
-    edit_data: null, // object for single item edit form {id:X, i:{}, multi_rows:{}, subtables:{}, add_users_id_name:'', upd_users_id_name:'', save_result:{}}}
+    edit_data: null, // object for single item edit form {id:X, i:{}, multi_rows:{}, subtables:{}, attachments:{}, add_users_id_name:'', upd_users_id_name:'', save_result:{}}}
 
     //standard lookups
     lookups_std: {

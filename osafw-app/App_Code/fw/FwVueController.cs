@@ -253,6 +253,7 @@ public class FwVueController : FwDynamicController
         // addtionally, if we have autocomplete fields - preload their values
         var multi_rows = new Hashtable();
         var subtables = new Hashtable();
+        var attachments = new Hashtable(); //att_id => att item
 
         var fields = (ArrayList)this.config["showform_fields"];
         foreach (Hashtable def in fields)
@@ -301,12 +302,27 @@ public class FwVueController : FwDynamicController
 
                 subtables[field_name] = list_rows;
             }
+            else if (dtype == "att" || dtype == "att_edit")
+            {
+                var att_id = Utils.f2int(item[field_name]);
+                if (att_id > 0)
+                {
+                    var att_item = fw.model<Att>().one(att_id);
+                    if (att_item.Count > 0)
+                    {
+                        fw.model<Att>().filterForJson(att_item);
+                        attachments[att_id] = att_item;
+                    }
+                }
+            }
         }
 
         if (multi_rows.Count > 0)
             ps["multi_rows"] = multi_rows;
         if (subtables.Count > 0)
             ps["subtables"] = subtables;
+        if (attachments.Count > 0)
+            ps["attachments"] = attachments;
 
         // fill added/updated too
         setAddUpdUser(ps, item);

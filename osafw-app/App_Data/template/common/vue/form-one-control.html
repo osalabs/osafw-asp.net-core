@@ -32,6 +32,15 @@
     </div>
     <form-control-help-block :text="def.help_text" />
   </template>
+  <template v-else-if="def.type=='att'">
+    <div v-if="value>0" class="card text-center att-info">
+      <img :src="'/Att/'+value+'?preview=1&size=s'">
+      <div class="card-body">
+        <p class="card-text att-iname">{{attachments[value]?.iname??''}}</p>
+          <a :href="'/Att/'+value" target="_blank" class="btn btn-default"><~/common/icons/cloud-download-fill> `Download`</a>
+      </div>
+    </div>
+  </template>
 
   <div v-else-if="def.type=='group_id' || def.type=='group_id_addnew'">
     <div class="float-end d-none d-lg-block">
@@ -228,6 +237,9 @@ fwApp.component('form-one-control', {
       } else {
         return rows;
       }
+    },
+    attachments() {
+      return this.form.attachments??[];
     },
 
     error() {
