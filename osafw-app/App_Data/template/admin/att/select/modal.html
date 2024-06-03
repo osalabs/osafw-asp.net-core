@@ -30,7 +30,8 @@ function modal_att_open($att_category, on_select_callback){
             var $attinfo;
             if ($att_list.length){//multi att
                 $attinfo = $att_list.find('.tpl').clone().removeClass('tpl d-none').appendTo($att_list);
-                $attinfo.find(':input:hidden').prop('name', 'att['+id+']');
+                var att_name_prefix = $attinfo.find(':input:hidden').prop('name');
+                $attinfo.find(':input:hidden').prop('name', att_name_prefix+'['+id+']');
             }else{
                 $attinfo = $fg.find('.att-info').show();
                 $attinfo.find(':input:hidden').val(id);

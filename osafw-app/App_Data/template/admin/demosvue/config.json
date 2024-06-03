@@ -525,7 +525,8 @@
                 {
                     "field": "_att_links",
                     "label": "Multiple Attachments",
-                    "type": "att_links_edit"
+                    "type": "att_links_edit",
+                    "att_post_prefix": "att"
                 },
                 {
                     "field": "status",

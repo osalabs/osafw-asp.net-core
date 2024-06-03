@@ -1035,8 +1035,12 @@ public class FwDynamicController : FwController
             string field = (string)def["field"];
             string type = (string)def["type"];
             if (type == "att_links_edit")
-                fw.model<AttLinks>().updateJunction(model0.table_name, id, reqh("att")); // TODO make att configurable
-
+            {
+                var att_post_param = "att";
+                if (def.ContainsKey("att_post_prefix"))
+                    att_post_param = (string)def["att_post_prefix"];
+                fw.model<AttLinks>().updateJunction(model0.table_name, id, reqh(att_post_param));
+            }
             else if (type == "att_files_edit")
             {
                 //table_name, item_id
