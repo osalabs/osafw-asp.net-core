@@ -1334,7 +1334,7 @@ public class FW : IDisposable
                 if (test_email.Length == 0)
                     test_email = (string)this.config("test_email"); //try test_email from config
 
-                mail_body = "TEST SEND. PASSED MAIL_TO=[" + mail_to + "]" + System.Environment.NewLine + mail_body;
+                mail_body = mail_body + System.Environment.NewLine + "TEST SEND. PASSED MAIL_TO=[" + mail_to + "]"; //add to the end of the body to preserve html
                 mail_to = test_email;
                 logger(LogLevel.INFO, "EMAIL SENT TO TEST EMAIL [", mail_to, "] - TEST ENABLED IN web.config");
             }
