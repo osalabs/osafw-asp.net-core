@@ -41,6 +41,27 @@
       </div>
     </div>
   </template>
+  <template v-else-if="def.type=='att_edit'">
+    <div class="row">
+        <div class="col-3 col-lg-5">
+            <p><button type="button" class="btn btn-default" @click="is_att_select_modal=true"><~/common/icons/file-earmark-image> `Select/Upload`</button></p>
+            <att-select v-if="is_att_select_modal"
+
+              @hidden="is_att_select_modal=false"
+            ></att-select>
+        </div>
+        <div class="col">
+            <div v-if="value>0" class="card text-center att-info">
+              <img class="card-img-top" :src="'/Att/'+value+'?preview=1&size=s'" alt="">
+              <div class="card-body text-truncate">
+                <p class="card-text att-iname">{{attachments[value]?.iname??''}}</p>
+                <a :href="'/Att/'+value" target="_blank" class="btn btn-default" title="`Download`"><~/common/icons/cloud-download-fill></a>
+                <button type="button" class="btn btn-default ms-1" @click="this.value=''" title="`Remove`"><~/common/icons/x-circle-fill></button>
+              </div>
+            </div>
+        </div>
+    </div>
+  </template>
   <template v-else-if="def.type=='att_links'">
     <div class="row att-list">
         <div v-for="att_id in att_links" :key="att_id" class="col">
@@ -219,7 +240,8 @@ fwApp.component('form-one-control', {
     Multiselect
   },
   data: () => ({
-    multi_search: ''
+    multi_search: '',
+    is_att_select_modal: false
   }),
   computed:{
     ...mapStores(useFwStore), //accessible via this.fwStore

@@ -187,6 +187,7 @@ public class AdminAttController : FwAdminController
         ps["att_dr"] = rows;
         ps["select_att_categories_id"] = fw.model<AttCategories>().listSelectOptions();
         ps["att_categories_id"] = att_categories_id;
+        ps["_json"] = true; // enable json for Vue
 
         return ps;
     }
