@@ -221,7 +221,7 @@ let actions = {
         window.history.pushState({ screen: screen, id: id }, '', this.base_url + suffix);
         this.is_list_edit_pane = false;
         if (id && (screen == 'view' || screen == 'edit')) {
-            await this.loadItem(id);
+            await this.loadItem(id, screen);
         }
     },
     async openListScreen() {
@@ -347,11 +347,16 @@ let actions = {
             return error;
         }
     },
-    async loadItem(id) {
+    //load single item for view/edit
+    async loadItem(id, mode) {
         try {
             const apiBase = mande(this.base_url);
+            let q = {};
+            if (mode == 'edit') {
+                q = { query: {mode: mode} };
+            }
 
-            const data = await apiBase.get(id);
+            const data = await apiBase.get(id, q);
             //console.log('loadItem data', data);
 
             this.edit_data = data;
@@ -477,7 +482,7 @@ let actions = {
     async openEditPane(id) {
         this.edit_data = null;
         this.is_list_edit_pane = true;
-        await this.loadItem(id); //load into fwStore.edit_data
+        await this.loadItem(id, 'edit'); //load into fwStore.edit_data
     },
     // save edit form data debounced
     async saveEditDataDebounced(delay) {

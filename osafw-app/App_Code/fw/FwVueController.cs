@@ -245,6 +245,8 @@ public class FwVueController : FwDynamicController
             return null;
         }
 
+        var mode = reqs("mode"); // view or edit
+
         Hashtable ps = [];
         Hashtable item = model0.one(id);
         if (item.Count == 0)
@@ -256,7 +258,7 @@ public class FwVueController : FwDynamicController
         var attachments = new Hashtable(); //att_id => att item
         var att_links = new ArrayList(); //linked att ids
 
-        var fields = (ArrayList)this.config["showform_fields"];
+        var fields = (ArrayList)this.config[mode == "edit" ? "showform_fields" : "show_fields"];
         foreach (Hashtable def in fields)
         {
             var field_name = Utils.f2str(def["field"] ?? "");
