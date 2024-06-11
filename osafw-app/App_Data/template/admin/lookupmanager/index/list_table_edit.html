@@ -31,7 +31,7 @@
         <tr data-id="<~id>">
             <input type="hidden" name="row[<~id>]" value="<~row_md5>" class="rowid">
             <td class="text-nowrap pad">
-                <a href="#" class="on-row-del text-danger"><~/common/icons/x-circle></a>
+                <a href="#" class="on-row-del text-danger"><i class="bi bi-x-circle"></i></a>
             </td>
             <~fields_values repeat inline>
                 <td>
@@ -44,7 +44,7 @@
                 <~type_input ifeq="type" value="date" inline>
                     <div class="input-group date">
                         <input name="f<~id>[<~colname>]" type="text" value="<~value date>" maxlength="10" class="form-control" autocomplete="off">
-                        <button class="btn btn-outline-secondary border-secondary-subtle rounded-0 border-top-0 border-bottom-0" type="button"><~/common/icons/calendar3></button>
+                        <button class="btn btn-outline-secondary border-secondary-subtle rounded-0 border-top-0 border-bottom-0" type="button"><i class="bi bi-calendar3"></i></button>
                     </div>
                 </~type_input>
                 <~type_status ifeq="type" value="status" inline>
@@ -66,7 +66,7 @@
         <tr data-id="0" class="tpl d-none">
             <input type="hidden" name="new[0]" value="" class="rowid">
             <td class="text-nowrap pad">
-                <a href="#" class="on-row-del text-danger"><~/common/icons/x-circle></a>
+                <a href="#" class="on-row-del text-danger"><i class="bi bi-x-circle"></i></a>
             </td>
             <~fields_headers repeat inline xxx>
                 <td>
@@ -79,7 +79,7 @@
                 <~type_input ifeq="type" value="date" inline>
                     <div class="input-group date">
                         <input name="fnew0[<~colname>]" type="text" value="" maxlength="10" class="form-control" autocomplete="off">
-                        <button class="btn btn-outline-secondary border-secondary-subtle rounded-0 border-top-0 border-bottom-0" type="button"><~/common/icons/calendar3></button>
+                        <button class="btn btn-outline-secondary border-secondary-subtle rounded-0 border-top-0 border-bottom-0" type="button"><i class="bi bi-calendar3"></i></button>
                     </div>
                 </~type_input>
                 <~type_status ifeq="type" value="status" inline>

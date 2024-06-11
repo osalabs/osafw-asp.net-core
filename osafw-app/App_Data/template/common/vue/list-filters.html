@@ -11,7 +11,7 @@
           <button class="btn btn-outline-secondary w100"
             @click="fwStore.loadIndexDebounced">
               <span v-if="fwStore.is_loading_index" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-              <template v-if="!fwStore.is_loading_index"><~/common/icons/search></template>
+              <template v-if="!fwStore.is_loading_index"><i class="bi bi-search"></i></template>
           </button>
           <a class="btn btn-outline-secondary w100 on-filter-reset"
             :href="'?dofilter=1'+(fwStore.related_id ? '&related_id='+fwStore.related_id : '')" >`Reset`</a>
@@ -51,13 +51,13 @@
 
       <div class="col text-end d-print-none">
         <div class="btn-group me-2">
-          <a class="btn btn-outline-secondary" :href="urlExport('csv')"><~/common/icons/cloud-download> `Export`</a>
+          <a class="btn btn-outline-secondary" :href="urlExport('csv')"><i class="bi bi-cloud-download"></i> `Export`</a>
           <button type="button" class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
             <span class="visually-hidden">`Toggle Dropdown`</span>
           </button>
           <div class="dropdown-menu dropdown-menu-right">
             <a class="dropdown-item" title="Export to Excel" :href="urlExport('xls')">
-              <~/common/icons/cloud-download-fill> `Export as .xls`
+              <i class="bi bi-cloud-download-fill"></i> `Export as .xls`
             </a>
           </div>
         </div>

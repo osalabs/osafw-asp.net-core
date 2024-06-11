@@ -4,7 +4,7 @@
     <input type="hidden" name="_method" value="PUT">
 
     <div :class="'table-list-wrapper ' + fwStore.list_user_view.density">
-      <div class="table-list-hscroll-hint"><~/common/icons/info-circle-fill> use <kbd>Shift+Mouse Wheel</kbd> for an easy horizontal scrolling
+      <div class="table-list-hscroll-hint"><i class="bi bi-info-circle-fill"></i> use <kbd>Shift+Mouse Wheel</kbd> for an easy horizontal scrolling
       </div>
       <table :class="'table table-stripedX table-hover list ' + (fwStore.is_list_edit?'list-edit ':'') + fwStore.list_user_view.density">
         <thead>
@@ -121,7 +121,7 @@
     </div>
 
     <div class="text-center py-4" v-if="!fwStore.list_rows.length">
-      <h3><~/common/icons/0-square> `No results`</h3>
+      <h3><i class="bi bi-0-square"></i> `No results`</h3>
       Try to <a :href="'?dofilter=1'+(fwStore.related_id ? '&related_id='+fwStore.related_id : '')">reset</a> all filters.
     </div>
 

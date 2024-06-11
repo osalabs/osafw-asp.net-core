@@ -1,7 +1,7 @@
 <script type="text/x-template" id="view-header-template">
   <div class="float-end pt-1 d-print-none">
-    <a @click.prevent="onNext(true)" href="#" class="btn btn-link"><~/common/icons/arrow-left-circle> `Prev`</a>
-    <a @click.prevent="onNext()" href="#" class="btn btn-link">`Next` <~/common/icons/arrow-right-circle></a>
+    <a @click.prevent="onNext(true)" href="#" class="btn btn-link"><i class="bi bi-arrow-left-circle"></i> `Prev`</a>
+    <a @click.prevent="onNext()" href="#" class="btn btn-link">`Next` <i class="bi bi-arrow-right-circle"></i></a>
   </div>
 
   <nav class="d-print-none">
@@ -14,7 +14,7 @@
       <a v-if="fwStore.return_url"
         class="btn btn-default"
         :href="fwStore.return_url"
-      ><~/common/icons/arrow-left-circle> `Return Back`</a>
+      ><i class="bi bi-arrow-left-circle"></i> `Return Back`</a>
       <a v-if="!disableAddNew"
         class="btn btn-default"
         href="#"
@@ -26,7 +26,7 @@
         href="#"
         @click.prevent="onEdit"
         :disabled="fwStore.is_readonly"
-      ><~/common/icons/pencil-fill> `Edit`</a>
+      ><i class="bi bi-pencil-fill"></i> `Edit`</a>
       <slot name="group"></slot>
     </div>
     <!--TODO /common/form/btn_userlists if="is_userlists"-->
@@ -35,17 +35,17 @@
       class="btn btn-default float-end ms-1"
       href="#"
       @click.prevent="onDelete"
-    ><span class="text-danger"><~/common/icons/x-circle-fill></span> `Delete`</a>
+    ><span class="text-danger"><i class="bi bi-x-circle-fill"></i></span> `Delete`</a>
     <template v-if="item.status==127">
       <a v-if="fwStore.access_level==100"
         class="btn btn-danger float-end ms-1"
         href="#"
         @click.prevent="onDelete"
-      ><~/common/icons/x-square-fill> `Permanent Delete`</a>
+      ><i class="bi bi-x-square-fill"></i> `Permanent Delete`</a>
       <a class="btn btn-default float-end ms-1"
         href="#"
         @click.prevent="onRestore"
-      ><span class="text-success"><~/common/icons/check-circle-fill></span> `Restore Deleted`</a>
+      ><span class="text-success"><i class="bi bi-check-circle-fill"></i></span> `Restore Deleted`</a>
     </template>
 
    <slot></slot>

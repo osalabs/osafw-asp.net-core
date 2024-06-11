@@ -1,6 +1,6 @@
 <div class="row">
     <div class="col-3 col-lg-5">
-        <p><button id="<~field>" type="button" class="btn btn-default on-select-att" data-att-category="<~att_category default="general">"><~/common/icons/file-earmark-image> `Select/Upload`</button></p>
+        <p><button id="<~field>" type="button" class="btn btn-default on-select-att" data-att-category="<~att_category default="general">"><i class="bi bi-file-earmark-image"></i> `Select/Upload`</button></p>
     </div>
     <div class="col-6 col-lg">
         <div class="card text-center att-info" <~/common/display_none unless="att">>
@@ -8,8 +8,8 @@
           <img class="card-img-top" src="<~/att/url>/<~value>?preview=1&size=s" alt="">
           <div class="card-body text-truncate">
             <p class="card-text att-iname"><~att[iname]></p>
-            <a href="<~/att/url>/<~value>" target="_blank" class="btn btn-default" title="`Download`"><~/common/icons/cloud-download-fill></a>
-            <button type="button" class="btn btn-default on-remove-att" title="`Remove`"><~/common/icons/x-circle-fill></button>
+            <a href="<~/att/url>/<~value>" target="_blank" class="btn btn-default" title="`Download`"><i class="bi bi-cloud-download-fill"></i></a>
+            <button type="button" class="btn btn-default on-remove-att" title="`Remove`"><i class="bi bi-x-circle-fill"></i></button>
           </div>
         </div>
     </div>

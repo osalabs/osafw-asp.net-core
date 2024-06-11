@@ -8,10 +8,10 @@
   <~mode_switch if="is_two_modes" inline>
     <div class="btn-group" role="group">
       <input type="radio" class="on-mode-switch btn-check" value="" id="mode_browse" autocomplete="off" <~/common/checked unless="f[mode]">>
-      <label class="btn btn-light border-1 border-light-subtle <~/common/active unless="f[mode]">" for="mode_browse"><~/common/icons/card-list> `Browse`</label>
+      <label class="btn btn-light border-1 border-light-subtle <~/common/active unless="f[mode]">" for="mode_browse"><i class="bi bi-card-list"></i> `Browse`</label>
 
       <input type="radio" class="on-mode-switch btn-check" value="edit" id="mode_edit" autocomplete="off" <~/common/checked if="f[mode]">>
-      <label class="btn btn-light border-1 border-light-subtle <~/common/active if="f[mode]">" for="mode_edit"><~/common/icons/pencil-square> `Table Edit`</label>
+      <label class="btn btn-light border-1 border-light-subtle <~/common/active if="f[mode]">" for="mode_edit"><i class="bi bi-pencil-square"></i> `Table Edit`</label>
     </div>
   </~mode_switch>
 

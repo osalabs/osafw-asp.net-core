@@ -14,7 +14,7 @@
     </template>
     <template v-if="co_buttons.delete">
       <template v-if="co_buttons.view || co_buttons.edit || co_buttons.quickedit">&nbsp;&#183;&nbsp;</template>
-      <a href="#" class="text-danger" @click.prevent="$emit('delete', $event)" :disabled="isReadonly"><~/common/icons/x></a>
+      <a href="#" class="text-danger" @click.prevent="$emit('delete', $event)" :disabled="isReadonly"><i class="bi bi-x"></i></a>
     </template>
 
     <slot name="btn-append"></slot>

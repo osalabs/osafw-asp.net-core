@@ -8,40 +8,40 @@
   <ul class="dropdown-menu text-small shadow">
     <!--li>
         <a href="<~/my/filters/url>" class="dropdown-item <~/common/active ifeq="GLOBAL[controller]" value="MyFilters">">
-            <~/common/icons/funnel> <~/my/filters/index/title>
+            <i class="bi bi-funnel"></i> <~/my/filters/index/title>
         </a>
     </li-->
     <li>
       <a href="<~/my/views/url>" class="dropdown-item <~/common/active ifeq="GLOBAL[controller]" value="MyViews">">
-        <~/common/icons/list-stars> <~/my/views/index/title>
+        <i class="bi bi-list-stars"></i> <~/my/views/index/title>
       </a>
     </li>
     <li>
       <a href="<~/my/lists/url>" class="dropdown-item <~/common/active ifeq="GLOBAL[controller]" value="MyLists">">
-        <~/common/icons/flag-fill> <~/my/lists/index/title>
+        <i class="bi bi-flag-fill"></i> <~/my/lists/index/title>
       </a>
     </li>
     <li>
       <a href="<~/my/settings/url>" class="dropdown-item <~/common/active ifeq="GLOBAL[controller]" value="MySettings">">
-        <~/common/icons/file-person> <~/my/settings/showform/title>
+        <i class="bi bi-file-person"></i> <~/my/settings/showform/title>
       </a>
     </li>
     <li>
       <a href="<~/my/password/url>" class="dropdown-item <~/common/active ifeq="GLOBAL[controller]" value="MyPassword">">
-        <~/common/icons/key> `Change Password`
+        <i class="bi bi-key"></i> `Change Password`
       </a>
     </li>
     <~feedback_menu if="GLOBAL[feedback_email]" inline>
     <li>
       <a href="#" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#modal-my-feedback">
-        <~/common/icons/bug> <~/my/feedback/showform/title>
+        <i class="bi bi-bug"></i> <~/my/feedback/showform/title>
       </a>
     </li>
     </~feedback_menu>
     <li><hr class="dropdown-divider"></li>
     <li>
       <a class="dropdown-item" href="<~/login/url_logoff>">
-        <~/common/icons/box-arrow-right> `Logoff`
+        <i class="bi bi-box-arrow-right"></i> `Logoff`
       </a>
     </li>
   </ul>

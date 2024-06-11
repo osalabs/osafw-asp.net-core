@@ -1,7 +1,7 @@
 <script type="text/x-template" id="edit-header-template">
   <div class="float-end pt-1 d-print-none">
-    <a @click.prevent="onNext(true)" href="#" class="btn btn-link"><~/common/icons/arrow-left-circle> `Prev`</a>
-    <a @click.prevent="onNext()" href="#" class="btn btn-link">`Next` <~/common/icons/arrow-right-circle></a>
+    <a @click.prevent="onNext(true)" href="#" class="btn btn-link"><i class="bi bi-arrow-left-circle"></i> `Prev`</a>
+    <a @click.prevent="onNext()" href="#" class="btn btn-link">`Next` <i class="bi bi-arrow-right-circle"></i></a>
   </div>
 
   <nav class="d-print-none">
@@ -27,7 +27,7 @@
       <a v-if="fwStore.return_url"
         class="btn btn-default"
         :href="fwStore.return_url"
-      ><~/common/icons/arrow-left-circle> `Return Back`</a>
+      ><i class="bi bi-arrow-left-circle"></i> `Return Back`</a>
       <a v-if="!disableAddNew"
         class="btn btn-default"
         href="#"
@@ -38,7 +38,7 @@
         class="btn btn-default"
         href="#"
         @click.prevent="onView"
-      ><~/common/icons/eye> `View`</a>
+      ><i class="bi bi-eye"></i> `View`</a>
       <slot name="group"></slot>
    </div>
    <slot></slot>

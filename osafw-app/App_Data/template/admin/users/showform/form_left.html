@@ -11,13 +11,13 @@
   <div class="col-6 col-md-5">
     <input id="pwd" type="password" name="item[pwd]" maxlength="32" value="<~i[pwd] unless="id">" class="form-control d-none" autocomplete="new-password">
     <~chpwd_block if="i[id]" inline>
-        <button type="button" class="btn btn-default on-change-pwd"><~/common/icons/key-fill> `Change password`</button>
+        <button type="button" class="btn btn-default on-change-pwd"><i class="bi bi-key-fill"></i> `Change password`</button>
     </~chpwd_block>
     <p class="err-BAD">`Password too weak`</p>
   </div>
   <~pwd_block if="i[id]" inline>
     <div class="col-6 col-md">
-        <button type="button" class="btn btn-default on-send-pwd"><~/common/icons/unlock-fill> `Send reset link`</button>
+        <button type="button" class="btn btn-default on-send-pwd"><i class="bi bi-unlock-fill"></i> `Send reset link`</button>
     </div>
     </~pwd_block>
 </div>
@@ -31,7 +31,7 @@
     </~mfa_no>
     <~mfa_yes if="i[mfa_secret]" inline>
       <span class="badge text-bg-success">`Multi-Factor Authentication Enabled`</span>
-      <button type="button" class="btn btn-default on-fw-submit" data-url="<~../url>/(ResetMFA)/<~id>?XSS=<~SESSION[XSS]>" data-title="`Reset MFA. User will need to re-setup codes on login`"><~/common/icons/unlock> `Reset MFA`</button>
+      <button type="button" class="btn btn-default on-fw-submit" data-url="<~../url>/(ResetMFA)/<~id>?XSS=<~SESSION[XSS]>" data-title="`Reset MFA. User will need to re-setup codes on login`"><i class="bi bi-unlock"></i> `Reset MFA`</button>
     </~mfa_yes>
     </p>
   </div>
@@ -112,7 +112,7 @@
 <div class="row form-row">
   <label class="col-form-label col-md-3" for="att_id">`Picture`</label>
   <div class="col">
-    <p><button id="att_id" type="button" class="btn btn-default on-select-att" data-att-category="users"><~/common/icons/person-badge> `Select/Upload`</button></p>
+    <p><button id="att_id" type="button" class="btn btn-default on-select-att" data-att-category="users"><i class="bi bi-person-badge"></i> `Select/Upload`</button></p>
   </div>
   <div class="col-6 col-sm-4 col-md-3 col-lg-4 col-xl-3">
     <div class="card text-center att-info" <~/common/display_none unless="att">>
@@ -120,8 +120,8 @@
       <img class="card-img-top" src="<~/att/url>/<~att[id]>?preview=1&size=s" alt="">
       <div class="card-body text-truncate">
         <p class="card-text att-iname"><~att[iname]></p>
-        <a href="<~/att/url>/<~att[id]>" target="_blank" class="btn btn-default btn-sm" title="`Download`"><~/common/icons/cloud-download-fill></a>
-        <button type="button" class="btn btn-default btn-sm on-remove-att text-danger" title="`Remove`"><~/common/icons/x-circle-fill></button>
+        <a href="<~/att/url>/<~att[id]>" target="_blank" class="btn btn-default btn-sm" title="`Download`"><i class="bi bi-cloud-download-fill"></i></a>
+        <button type="button" class="btn btn-default btn-sm on-remove-att text-danger" title="`Remove`"><i class="bi bi-x-circle-fill"></i></button>
       </div>
     </div>
   </div>

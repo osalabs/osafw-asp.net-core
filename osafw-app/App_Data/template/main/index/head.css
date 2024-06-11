@@ -5,17 +5,14 @@
 }
   .svg-container {
     position: absolute;
-    top: 0%;
-    right: -22%;
+    top: -24%;
+    right: -40%;
 
     width: 240px;
     height: 120%;
     z-index: 0; /* Places the SVG below the card content */
     opacity: 0.3;
-  }
-  .svg-container svg {
-    width: 100%;
-    height: 100%;
+    font-size: 137px;
   }
   .card-body {
    z-index: 1;
