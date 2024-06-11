@@ -273,7 +273,7 @@ public class FormUtils
     }
 
     /// <summary>
-    /// similar to form2dbhash, but for checkboxes (as unchecked checkboxes doesn't passed from the form submit)
+    /// similar to filter, but for checkboxes (as unchecked checkboxes doesn't passed from the form submit)
     /// </summary>
     /// <param name="itemdb"></param>
     /// <param name="item"></param>
@@ -283,6 +283,9 @@ public class FormUtils
     /// <returns>by ref itemdb - add fields with default_value or form value</returns>
     public static bool filterCheckboxes(Hashtable itemdb, Hashtable item, IList fields, bool is_existing_fields_only = false, string default_value = "0")
     {
+        if (fields.Count.Equals(0))
+            return false;
+
         if (item != null)
         {
             foreach (string fld in fields)
@@ -300,7 +303,7 @@ public class FormUtils
     }
 
     /// <summary>
-    /// similar to form2dbhash, but for checkboxes (as unchecked checkboxes doesn't passed from the form submit)
+    /// similar to filter, but for checkboxes (as unchecked checkboxes doesn't passed from the form submit)
     /// </summary>
     /// <param name="itemdb"></param>
     /// <param name="item"></param>
@@ -310,23 +313,7 @@ public class FormUtils
     /// <returns>by ref itemdb - add fields with default_value or form value</returns>
     public static bool filterCheckboxes(Hashtable itemdb, Hashtable item, string fields, bool is_existing_fields_only = false, string default_value = "0")
     {
-        if (string.IsNullOrEmpty(fields)) return false;
-
-        if (item != null)
-        {
-            Hashtable hfields = Utils.qh(fields, default_value);
-            foreach (string fld in hfields.Keys)
-            {
-                if (item.ContainsKey(fld))
-                    itemdb[fld] = item[fld];
-                else
-                {
-                    if (!is_existing_fields_only)
-                        itemdb[fld] = hfields[fld];// default value
-                }
-            }
-        }
-        return true;
+        return filterCheckboxes(itemdb, item, Utils.qw(fields), is_existing_fields_only, default_value);
     }
 
     // fore each name in $name - check if value is empty '' and make it null
