@@ -662,6 +662,7 @@ window.fw={
               $input.closest('.form-group, .form-row').not('.noerr').addClass('has-danger'); //highlight whole row (unless .noerr exists)
             }
             $input.addClass('is-invalid'); //mark input itself
+            $input.parent('.input-group,.dropdown,.twitter-typeahead').addClass('is-invalid'); //mark input group container
             if (errcode!==true && errcode.length){
               $p.find('.err-'+errcode).addClass('invalid-feedback'); //find/show specific error message
             }
