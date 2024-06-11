@@ -38,7 +38,7 @@ function modal_att_open($att_category, on_select_callback){
             }
 
             $attinfo.find('img').show().prop('src', '/Att/'+id+'?preview=1&size='+att_preview_size);
-            $attinfo.find('a').prop('href', '/Att/'+id);
+            $attinfo.find('a').prop('href', url);
             $attinfo.find('.att-iname').text(iname);
             $form.trigger('autosave');
         });

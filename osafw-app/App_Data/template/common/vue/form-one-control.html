@@ -46,8 +46,9 @@
         <div class="col-3 col-lg-5">
             <p><button type="button" class="btn btn-default" @click="is_att_select_modal=true"><~/common/icons/file-earmark-image> `Select/Upload`</button></p>
             <att-select v-if="is_att_select_modal"
-
+              :category="def.att_category"
               @hidden="is_att_select_modal=false"
+              @selected="(att) => value = att.id"
             ></att-select>
         </div>
         <div class="col">

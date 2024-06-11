@@ -49,10 +49,9 @@ public class AdminAttController : FwAdminController
             row["fsize_human"] = Utils.bytes2str(Utils.f2long(row["fsize"]));
             if (Utils.f2int(row["is_image"]) == 1)
             {
+                row["url"] = model.getUrl(Utils.f2int(row["id"]));
                 row["url_s"] = model.getUrl(Utils.f2int(row["id"]), "s");
-                row["url_direct_s"] = model.getUrlDirect(Utils.f2int(row["id"]), "s");
             }
-            row["url_direct"] = model.getUrlDirect(Utils.f2int(row["id"]));
 
             var att_categories_id = Utils.f2int(row["att_categories_id"]);
             if (att_categories_id > 0)
@@ -122,7 +121,7 @@ public class AdminAttController : FwAdminController
         {
             item = model.one(id);
             ps["success"] = true;
-            ps["url"] = model.getUrlDirect(id);
+            ps["url"] = model.getUrl(id);
             ps["iname"] = item["iname"];
             ps["is_image"] = item["is_image"];
         }
@@ -181,9 +180,15 @@ public class AdminAttController : FwAdminController
         if (att_categories_id > 0)
             where["att_categories_id"] = att_categories_id;
 
-        var rows = db.array(model.table_name, where, "add_time desc");
-        foreach (var row in rows)
-            row["direct_url"] = model.getUrlDirect(row);
+        var is_json = fw.isJsonExpected();
+        ArrayList rows = db.array(model.table_name, where, "add_time desc");
+        foreach (Hashtable row in rows)
+        {
+            row["url"] = model.getUrl(row);
+            row["url_preview"] = model.getUrl(row, "s") + "&preview=1";
+            if (is_json)
+                model.filterForJson(row);
+        }
         ps["att_dr"] = rows;
         ps["select_att_categories_id"] = fw.model<AttCategories>().listSelectOptions();
         ps["att_categories_id"] = att_categories_id;

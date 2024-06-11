@@ -16,6 +16,8 @@ public class Att : FwModel
     public const string IMGURL_0 = "/img/0.gif";
     public const string IMGURL_FILE = "/img/att_file.png";
 
+    const string URL_PREFIX = "/Att";
+
     const int MAX_THUMB_W_S = 180;
     const int MAX_THUMB_H_S = 180;
     const int MAX_THUMB_W_M = 512;
@@ -134,62 +136,45 @@ public class Att : FwModel
         return rows.Count;
     }
 
-    // return correct url
-    public string getUrl(int id, string size = "")
+    /// <summary>
+    /// return url of the uploaded file (by item)
+    ///   IMPORTANT! call checkAccess before this function to check if user has access to the file
+    ///   because if case of S3 url - it's a direct url without additional checks
+    /// </summary>
+    /// <param name="item"></param>
+    /// <param name="size">s,m,l or empty(original size)</param>
+    /// <returns></returns>
+    public string getUrl(Hashtable item, string size = "")
     {
-        // Dim item As Hashtable = one(id)
-        // Return get_upload_url(id, item("ext"), size)
-        var item = one(id);
-        if (item.Count == 0)
-            return "";
-
         string result;
-        if (item["is_s3"] == "1")
+        if ((string)item["is_s3"] == "1")
         {
-            result = fw.model<S3>().getSignedUrl(getS3KeyByID(item["id"], size));
+            result = fw.model<S3>().getSignedUrl(getS3KeyByID((string)item["id"], size));
         }
         else
         {
-            // if /Att need to be on offline folder
-            result = fw.config("ROOT_URL") + "/Att/" + item["id"];
+            result = fw.config("ROOT_URL") + URL_PREFIX + "/" + item["id"];
             if (!string.IsNullOrEmpty(size))
                 result += "?size=" + size;
         }
         return result;
     }
 
-    // return correct url - direct, i.e. not via /Att
-    public string getUrlDirect(int id, string size = "")
+    /// <summary>
+    /// return url of the uploaded file (by id)
+    ///   IMPORTANT! call checkAccess before this function to check if user has access to the file
+    ///   because if case of S3 url - it's a direct url without additional checks
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="size">s,m,l or empty(original size)</param>
+    /// <returns></returns>
+    public string getUrl(int id, string size = "")
     {
         var item = one(id);
         if (item.Count == 0)
             return "";
 
-        string result;
-        if (item["is_s3"] == "1")
-        {
-            result = fw.model<S3>().getSignedUrl(getS3KeyByID(item["id"], size));
-        }
-        else
-        {
-            result = getUrlDirect(item, size);
-        }
-        return result;
-    }
-
-    // if you already have item, must contain: item("id"), item("ext")
-    public string getUrlDirect(Hashtable item, string size = "")
-    {
-        string result;
-        if (Utils.f2int(item["is_s3"]) == 1)
-        {
-            result = fw.model<S3>().getSignedUrl(getS3KeyByID(Utils.f2str(item["id"]), size));
-        }
-        else
-        {
-            result = getUploadUrl(Utils.f2long(item["id"]), Utils.f2str(item["ext"]), size);
-        }
-        return result;
+        return getUrl(item, size);
     }
 
     // IN: extension - doc, jpg, ... (dot is optional)
@@ -613,5 +598,16 @@ public class Att : FwModel
         }
 
         return result;
+    }
+
+    public override void filterForJson(Hashtable item)
+    {
+        //leave only specific keys
+        var keys = Utils.qh("id att_categories_id iname is_image ext url url_preview");
+        foreach (var key in new ArrayList(item.Keys))
+        {
+            if (!keys.ContainsKey(key))
+                item.Remove(key);
+        }
     }
 }

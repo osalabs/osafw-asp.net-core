@@ -310,7 +310,7 @@ public class FwVueController : FwDynamicController
                 var att_id = Utils.f2int(item[field_name]);
                 if (att_id > 0)
                 {
-                    var att_item = fw.model<Att>().one(att_id);
+                    Hashtable att_item = fw.model<Att>().one(att_id);
                     if (att_item.Count > 0)
                     {
                         fw.model<Att>().filterForJson(att_item);

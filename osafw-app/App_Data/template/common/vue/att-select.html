@@ -29,9 +29,9 @@
                 <a v-for="att in att_rows"
                   class="float-start thumbnail text-truncate"
                   href="#"
-                  data-id="<~id>"
-                  title="<~iname>">
-                    <img :src="'/Att/'+att.id+'?preview=1&size=s'" :alt="att.iname" data-url="att.direct_url" data-is_image="att.is_image">
+                  :title="att.iname"
+                  @click.prevent="onSelect(att)">
+                    <img :src="att.url_preview" :alt="att.iname">
                     <span class="title">{{att.iname}}</span>
                 </a>
             </div>
@@ -55,7 +55,7 @@ fwApp.component('att-select', {
       default: 'general'
     }
   },
-  emits: ['hidden'],
+  emits: ['selected','hidden'],
   data: () => ({
     att_select_url: '/Admin/Att/(Select)',
     att_category: '',
@@ -99,7 +99,6 @@ fwApp.component('att-select', {
       }
 
       const data = await apiBase.get('', { query: q });
-      console.log('loadData data', data);
 
       this.att_categories = data.select_att_categories_id;
       this.att_categories_id = data.att_categories_id;
@@ -114,6 +113,11 @@ fwApp.component('att-select', {
     async onSave(e){
       console.log("TODO att select onSave - upload new file");
     },
+
+    onSelect(att){
+      this.$emit('selected', att);
+      this.modal.hide();
+    }
 
   }
 });
