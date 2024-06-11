@@ -88,13 +88,6 @@ a[disabled]
   color: var(--bs-btn-disabled-color);
 }
 
-.bi {
-  display: inline-block;
-  vertical-align: -2px;
-  height: 1em;
-  width: 1em;
-}
-
 .btn-fileinput {
   overflow: hidden;
   position: relative;
