@@ -24,14 +24,20 @@ public class DevConfigureController : FwController
         base_url = "/Dev/Configure"; // base url for the controller
     }
 
+    public override void checkAccess()
+    {
+        //true - allow access to all, including visitors
+    }
+
     public Hashtable IndexAction()
     {
         Hashtable ps = new();
 
         ps["hide_sidebar"] = true;
-        ps["ASPNETCORE_ENVIRONMENT"] = Utils.f2str(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"));
+        var aspnet_env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+        ps["ASPNETCORE_ENVIRONMENT"] = aspnet_env;
         ps["config_file_name"] = fw.config("config_override");
-        ps["is_config_env"] = Utils.f2str(ps["ASPNETCORE_ENVIRONMENT"]) == Utils.f2str(ps["config_file_name"]);
+        ps["is_config_env"] = String.IsNullOrEmpty(aspnet_env) || aspnet_env == Utils.f2str(ps["config_file_name"]);
 
         ps["is_db_config"] = false;
         var configdb = (Hashtable)fw.config("db");

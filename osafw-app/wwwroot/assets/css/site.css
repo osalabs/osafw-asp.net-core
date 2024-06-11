@@ -19,6 +19,16 @@
   /*--fw-pane-bg: var(--bs-tertiary-bg);*/
   --fw-btn-default-bg: var(--bs-light-bg-subtle);
   --fw-btn-default-border: var(--bs-light-border-subtle);
+  /* for vue multiselect */
+  --ms-bg: var(--bs-body-bg);
+  --ms-dropdown-bg: var(--bs-body-bg);
+  --ms-border-width: var(--bs-border-width);
+  --ms-border-color: var(--bs-border-color);
+  --ms-placeholder-color: var(--bs-secondary-color);
+  --ms-dropdown-border-width:var(--bs-border-width);
+  --ms-dropdown-border-color: var(--bs-border-color);
+  --ms-option-bg-pointed: #52525E;
+  --ms-option-color-pointed: var(--bs-body-color);
 }
 
 body {
@@ -103,6 +113,34 @@ a[disabled]
     min-height: 100%;
   }
 
+.file-drop-area {
+    border: 2px dashed #ccc;
+    border-radius: 20px;
+    position: relative;
+    padding: 20px;
+    text-align: center;
+}
+  .file-drop-area.highlight {
+      background-color: var(--fw-hiliter);
+      border-color: var(--bs-primary);
+  }
+  .file-drop-area .fake-btn {
+      cursor: pointer;
+  }
+
+.badge-outline-secondary {
+    color: #6c757d;
+    background-color: transparent;
+    background-image: none;
+    border-color: #6c757d;
+    border: 1px solid;
+}
+
+h1 .badge {
+ font-size: 1.25rem;
+ vertical-align: middle;
+}
+
 /*fixes for twitter-typeahead*/
 .twitter-typeahead {
   width:100%
@@ -142,6 +180,7 @@ a[disabled]
   left: 0;
   bottom: 0;
   top: 0;
+  overflow:auto;
   padding: 0;
   color: #000;
 }
@@ -203,6 +242,9 @@ table.list {
 }
   table.list > thead {
     background-color: var(--bs-secondary-bg);
+    position: sticky;
+    top: 0;
+    z-index: 10;
   }
 /*
     table.list > thead > tr:first-child th:first-child {
@@ -254,6 +296,127 @@ table.list {
     padding: 5px 10px;
   }
 
+/*** editable list*/
+table.list-edit tbody td {
+  padding: 0;
+  border-width: 1px;
+}
+
+  table.list-edit tbody td.list-row-cb {
+    padding: 0.4rem 0.5rem;
+  }
+  table.list-edit tbody td.list-row-controls {
+    padding: 0.4rem 0.5rem;
+  }
+
+  table.list-edit tbody td > div {
+    position: relative;
+  }
+
+  table.list-edit tbody td > div.ro {
+    --bs-text-opacity: 1;
+    color: var(--bs-secondary-color) !important;
+    padding: 0.4rem 0.5rem;
+    white-space: nowrap;
+  }
+
+  table.list-edit tbody td > div > .form-control {
+   border: 0;
+   border-radius: 0;
+   background: transparent;
+  }
+  table.list-edit tbody td > div > .form-select {
+    border: 0px;
+    border-radius: 0;
+    /*background: transparent;*/
+  }
+  table.list-edit tbody td > div > .form-check-input {
+   margin:0.5rem 0.4rem;
+  }
+
+  /* table-sm overrides */
+  table.list-edit.table-sm tbody td.list-row-cb {
+    padding: 0.25rem 0.25rem;
+  }
+  table.list-edit.table-sm tbody td.list-row-controls {
+    padding: 0.25rem 0.25rem;
+  }
+  table.list-edit.table-sm tbody td > div.ro {
+    padding: 0.25rem 0.25rem;
+  }
+  table.list-edit.table-sm tbody td > div > .form-control {
+    min-height: calc(1.5em + .5rem + calc(var(--bs-border-width) * 2));
+    padding: .25rem .5rem;
+    font-size: .875rem;
+  }
+  table.list-edit.table-sm tbody td > div > .form-select {
+    padding-top: .31rem;
+    padding-bottom: .32rem;
+    padding-left: .5rem;
+    font-size: .875rem;
+  }
+
+  /* table-dense overrides */
+  table.list-edit.table-dense tbody td.list-row-cb {
+    padding: 0 0.1rem;
+  }
+  table.list-edit.table-dense tbody td.list-row-controls {
+    padding: 0 0.1rem;
+  }
+  table.list-edit.table-dense tbody td > div.ro {
+    padding: 0 0.1rem;
+  }
+  table.list-edit.table-dense tbody td > div > .form-control {
+    min-height: auto;
+    padding: 0 .5rem;
+    font-size: .7rem;
+  }
+  table.list-edit.table-dense tbody td > div > .form-select {
+    padding-top: 0;
+    padding-bottom: 0;
+    padding-left: .5rem;
+    font-size: .7rem;
+  }
+  table.list-edit.table-dense tbody td > div > .form-check-input {
+    margin: 0.17rem 0.4rem;
+  }
+
+.cell-success-fade
+, .cell-success-fade input
+, .cell-success-fade select
+, .cell-success-fade textarea
+{
+  animation: fadeOutBackground 2s forwards;
+}
+/* Animation for fading out the border */
+@keyframes fadeOutBackground {
+  from {
+    background-color: var(--bs-success);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+.cell-invalid {
+  border-color: var(--bs-danger);
+}
+
+.list-edit-pane {
+  position: fixed;
+  z-index: 50;
+  right: -100%; /* Start offscreen */
+  top: 0;
+  bottom: 0;
+  width: 50%;
+  overflow: auto;
+  transition: right 0.3s ease;
+  background-color: var(--fw-pane-bg);
+  box-shadow: -2px 0 5px rgba(0,0,0,0.5);
+}
+.list-edit-pane.is-visible {
+  right: 0; /* Slide in */
+}
+
 
 /*for .scrollable tables with fixed header*/
 .data-header {
@@ -277,6 +440,7 @@ table.list {
     background-color: rgba(var(--bs-tertiary-bg-rgb),0.5);
     left: var(--fw-sidebar-width);
     padding-bottom: var(--fw-spacer);
+    z-index: 1055;
   }
 .pagination .active a {font-weight:bold}
 .pagination select {
@@ -316,6 +480,10 @@ form .has-danger label {
     display: block;
   }
 
+#FView.fw-card label {
+  font-weight: bold;
+}
+
 .field-multi-value {
   height: calc(var(--bs-body-font-size)*13);
   overflow: auto;
@@ -328,6 +496,44 @@ form .has-danger label {
   width: calc(var(--fw-spacer)*10);
   text-align: center;
   margin-bottom: var(--fw-spacer05);
+}
+
+/*att select modal thumbnails*/
+.thumbnail {
+    display: block;
+    margin-bottom: var(--fw-spacer);
+    line-height: 1.42857143;
+    background-color: var(--bs-secondary-bg);
+    color: var(--bs-body-color);
+    border: var(--bs-border-width) var(--bs-border-style) var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+    position: relative;
+}
+.thumbnail a > img, .thumbnail > img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin-right: auto;
+    margin-left: auto;
+}
+
+.thumbnail .title {
+    display: block;
+    padding: var(--fw-spacer05);
+    position: absolute;
+    bottom: 0;
+    left: 0;
+}
+
+a.thumbnail:hover {
+    border: var(--bs-border-width) var(--bs-border-style) var(--bs-border-color-translucent);
+    color: var(--bs-emphasis-color);
+}
+
+.thumbs .thumbnail {
+    width: 138px;
+    height: 140px;
+    margin-right: var(--fw-spacer05);
 }
 
 .user-list-avatar {

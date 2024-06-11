@@ -58,7 +58,7 @@ public class MyFeedbackController : FwController
 
     public virtual void Validate(int id, Hashtable item)
     {
-        bool result = this.validateRequired(item, this.required_fields);
+        bool result = this.validateRequired(id, item, this.required_fields);
 
         this.validateCheckResult();
     }

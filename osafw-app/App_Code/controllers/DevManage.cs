@@ -31,7 +31,7 @@ public class DevManageController : FwController
 
     public Hashtable IndexAction()
     {
-        Hashtable ps = new();
+        Hashtable ps = [];
 
         // table and views list
         var tables = db.tables();
@@ -91,7 +91,7 @@ public class DevManageController : FwController
     {
         fw.flash("success", "Menu Items cleared");
 
-        db.del("menu_items", new Hashtable());
+        db.del("menu_items", []);
         FwCache.remove("menu_items");
 
         fw.redirect(base_url);
@@ -108,7 +108,7 @@ public class DevManageController : FwController
 
     public Hashtable ShowDBUpdatesAction()
     {
-        Hashtable ps = new();
+        Hashtable ps = [];
 
         // show list of available db updates
         var updates_root = fw.config("site_root") + @"\App_Data\sql\updates";
@@ -116,7 +116,7 @@ public class DevManageController : FwController
         {
             string[] files = System.IO.Directory.GetFiles(updates_root);
 
-            ArrayList rows = new();
+            ArrayList rows = [];
             foreach (string file in files)
                 rows.Add(new Hashtable() { { "filename", System.IO.Path.GetFileName(file) } });
             ps["rows"] = rows;
@@ -241,6 +241,7 @@ public class DevManageController : FwController
         var model_name = Utils.f2str(item["model_name"]).Trim();
         var controller_url = Utils.f2str(item["controller_url"]).Trim();
         var controller_title = Utils.f2str(item["controller_title"]).Trim();
+        var controller_type = Utils.f2str(item["controller_type"]).Trim(); // empty("dynamic") or "vue"
 
         var config_file = fw.config("template") + DB_JSON_PATH;
         var entities = loadJson<ArrayList>(config_file);
@@ -251,6 +252,7 @@ public class DevManageController : FwController
             {"model_name",model_name},
             {"controller_url",controller_url},
             {"controller_title",controller_title},
+            {"controller_type",controller_type},
             {"table",fw.model(model_name).table_name}
         };
         // table = Utils.name2fw(model_name) - this is not always ok
@@ -281,12 +283,14 @@ public class DevManageController : FwController
 
         // extract ShowAction
         config["is_dynamic_show"] = false;
-        Hashtable fitem = new();
-        var fields = cInstance.prepareShowFields(fitem, new Hashtable());
+        Hashtable fitem = [];
+        var fields = cInstance.prepareShowFields(fitem, []);
         _makeValueTags(fields);
 
-        Hashtable ps = new();
-        ps["fields"] = fields;
+        Hashtable ps = new()
+        {
+            ["fields"] = fields
+        };
         ParsePage parser = new(fw);
         string content = parser.parse_page(tpl_to + "/show", "/common/form/show/extract/form.html", ps);
         content = Regex.Replace(content, @"^(?:[\t ]*(?:\r?\n|\r))+", "", RegexOptions.Multiline); // remove empty lines
@@ -294,10 +298,12 @@ public class DevManageController : FwController
 
         // extract ShowAction
         config["is_dynamic_showform"] = false;
-        fields = cInstance.prepareShowFormFields(fitem, new Hashtable());
+        fields = cInstance.prepareShowFormFields(fitem, []);
         _makeValueTags(fields);
-        ps = new();
-        ps["fields"] = fields;
+        ps = new()
+        {
+            ["fields"] = fields
+        };
         parser = new ParsePage(fw);
         content = parser.parse_page(tpl_to + "/show", "/common/form/showform/extract/form.html", ps);
         content = Regex.Replace(content, @"^(?:[\t ]*(?:\r?\n|\r))+", "", RegexOptions.Multiline); // remove empty lines
@@ -319,7 +325,7 @@ public class DevManageController : FwController
     // analyse database tables and create db.json describing entities, fields and relationships
     public Hashtable AnalyseDBAction()
     {
-        Hashtable ps = new();
+        Hashtable ps = [];
         var item = reqh("item");
         string connstr = item["connstr"] + "";
 
@@ -353,8 +359,8 @@ public class DevManageController : FwController
     // ************************* DB Analyzer
     public Hashtable DBAnalyzerAction()
     {
-        Hashtable ps = new();
-        ArrayList dbsources = new();
+        Hashtable ps = [];
+        ArrayList dbsources = [];
 
         foreach (string dbname in ((Hashtable)fw.config("db")).Keys)
             dbsources.Add(new Hashtable()
@@ -383,11 +389,13 @@ public class DevManageController : FwController
 
     public Hashtable EntityBuilderAction()
     {
-        Hashtable ps = new();
+        Hashtable ps = [];
 
         var entities_file = fw.config("template") + ENTITIES_PATH;
-        Hashtable item = new();
-        item["entities"] = FW.getFileContent(entities_file);
+        Hashtable item = new()
+        {
+            ["entities"] = FW.getFileContent(entities_file)
+        };
         ps["i"] = item;
 
         return ps;
@@ -432,7 +440,7 @@ public class DevManageController : FwController
 
     public Hashtable DBInitializerAction()
     {
-        Hashtable ps = new();
+        Hashtable ps = [];
 
         var config_file = fw.config("template") + DB_JSON_PATH;
         var entities = loadJson<ArrayList>(config_file);
@@ -468,7 +476,7 @@ public class DevManageController : FwController
         if (reqs("reload").Length > 0)
             fw.model<Users>().reloadSession();
 
-        Hashtable ps = new();
+        Hashtable ps = [];
 
         // tables
         var config_file = fw.config("template") + DB_JSON_PATH;
@@ -581,7 +589,7 @@ public class DevManageController : FwController
 
     private static ArrayList dbschema2entities(DB db)
     {
-        ArrayList result = new();
+        ArrayList result = [];
         // Access System tables:
         // MSysAccessStorage
         // MSysAccessXML
@@ -606,13 +614,15 @@ public class DevManageController : FwController
             var tblschema = db.loadTableSchemaFull(tblname);
             // logger(tblschema)
 
-            Hashtable table_entity = new();
-            table_entity["db_config"] = db.db_name;
-            table_entity["table"] = tblname;
-            table_entity["fw_name"] = Utils.name2fw(tblname); // new table name using fw standards
-            table_entity["iname"] = Utils.name2human(tblname); // human table name
-            table_entity["fields"] = tableschema2fields(tblschema);
-            table_entity["foreign_keys"] = db.listForeignKeys(tblname);
+            Hashtable table_entity = new()
+            {
+                ["db_config"] = db.db_name,
+                ["table"] = tblname,
+                ["fw_name"] = Utils.name2fw(tblname), // new table name using fw standards
+                ["iname"] = Utils.name2human(tblname), // human table name
+                ["fields"] = tableschema2fields(tblschema),
+                ["foreign_keys"] = db.listForeignKeys(tblname)
+            };
 
             table_entity["model_name"] = _tablename2model((string)table_entity["fw_name"]); // potential Model Name
             table_entity["controller_url"] = "/Admin/" + table_entity["model_name"]; // potential Controller URL/Name/Title
@@ -659,7 +669,7 @@ public class DevManageController : FwController
     // convert array of hashtables to hashtable of hashtables using key
     private static Hashtable array2hashtable(ArrayList arr, string key)
     {
-        Hashtable result = new();
+        Hashtable result = [];
         foreach (Hashtable item in arr)
             result[item[key]] = item;
         return result;
@@ -800,7 +810,7 @@ public class DevManageController : FwController
                     ((ArrayList)table_entity["fields"]).AddRange(defaultFieldsAfter());
 
                 // new entity
-                table_entity = new Hashtable();
+                table_entity = [];
                 entities.Add(table_entity);
 
                 line = Regex.Replace(line, @"^-\s*", ""); // remove prefix 'human table name
@@ -896,13 +906,13 @@ public class DevManageController : FwController
                     continue;
                 }
 
-                Hashtable field = new();
+                Hashtable field = [];
 
                 // check if field is foreign key like lookuptablename.id or prefix^lookuptablename.id
                 if (field_name.Substring(field_name.Length - 3) == ".id")
                 {
                     // this is foreign key field
-                    Hashtable fk = new();
+                    Hashtable fk = [];
                     ((ArrayList)table_entity["foreign_keys"]).Add(fk);
 
                     if (field_name.Contains('^'))
@@ -937,7 +947,7 @@ public class DevManageController : FwController
                     if (hparts.Contains("FK"))
                     {
                         // this is foreign key field
-                        Hashtable fk = new();
+                        Hashtable fk = [];
                         ((ArrayList)table_entity["foreign_keys"]).Add(fk);
 
                         var fk_table_field = parts[(int)hparts["FK"] + 1]; //table.id next to FK
@@ -956,12 +966,14 @@ public class DevManageController : FwController
                         //this is many to many link table
                         var linked_tblname = Utils.name2fw(field_name);
                         var link_tblname = table_entity["table"] + "_" + linked_tblname;
-                        var link_entity = new Hashtable();
-                        link_entity["db_config"] = table_entity["db_config"];
-                        link_entity["table"] = link_tblname;
-                        link_entity["fw_name"] = Utils.name2fw(link_tblname); // new table name using fw standards
-                        link_entity["iname"] = Utils.name2human(link_tblname); // human table name
-                        link_entity["is_fw"] = true;
+                        var link_entity = new Hashtable
+                        {
+                            ["db_config"] = table_entity["db_config"],
+                            ["table"] = link_tblname,
+                            ["fw_name"] = Utils.name2fw(link_tblname), // new table name using fw standards
+                            ["iname"] = Utils.name2human(link_tblname), // human table name
+                            ["is_fw"] = true
+                        };
 
                         //2 link fields - one to main table, another - to lookup table
                         var link_fields = new ArrayList();
@@ -998,19 +1010,21 @@ public class DevManageController : FwController
                         link_entity["fields"] = link_fields;
 
                         //2 foreign keys - to main table and lookup table
-                        var link_fk = new ArrayList();
-                        link_fk.Add(new Hashtable()
+                        var link_fk = new ArrayList
+                        {
+                            new Hashtable()
                                 {
                                     {"pk_table", table_entity["table"]},
                                     {"pk_column", "id"},
                                     {"column", field_name1}
-                                });
-                        link_fk.Add(new Hashtable()
+                                },
+                            new Hashtable()
                                 {
                                     {"pk_table", linked_tblname},
                                     {"pk_column", "id"},
                                     {"column", field_name2}
-                                });
+                                }
+                        };
                         link_entity["foreign_keys"] = link_fk;
                         //automatic PK on both link fields
                         link_entity["indexes"] = new Hashtable()
@@ -1099,7 +1113,9 @@ public class DevManageController : FwController
                         {
                             field["numeric_precision"] = Utils.f2int(m.Groups[1].Value);
                             field["numeric_scale"] = Utils.f2int(m.Groups[2].Value);
-                        } else {
+                        }
+                        else
+                        {
                             m = Regex.Match(line, @"\bdecimal\((\d+)\)"); // decimal(PRECISION)
                             if (m.Success)
                             {
@@ -1402,6 +1418,7 @@ public class DevManageController : FwController
         string model_name = (string)entity["model_name"];
         string controller_url = (string)entity["controller_url"];
         string controller_title = (string)entity["controller_title"];
+        string controller_type = (string)entity["controller_type"];
 
         if (controller_url == "")
         {
@@ -1433,22 +1450,33 @@ public class DevManageController : FwController
             return;
         }
 
+        // determine controller type used as a template
+        var controller_from_class = "AdminDemosDynamic";
+        var controller_from_url = "/Admin/DemosDynamic";
+        var controller_from_title = "Demo Dynamic";
+        if (controller_type == "vue")
+        {
+            controller_from_class = "AdminDemosVue";
+            controller_from_url = "/Admin/DemosVue";
+            controller_from_title = "Demo Vue";
+        };
+
         // copy DemoDicts.cs to model_name.cs
         var path = fw.config("site_root") + @"\App_Code\controllers";
-        var mdemo = FW.getFileContent(path + @"\AdminDemosDynamic.cs");
+        var mdemo = FW.getFileContent(path + @$"\{controller_from_class}.cs");
         if (mdemo == "")
-            throw new ApplicationException("Can't open AdminDemosDynamic.cs");
+            throw new ApplicationException($"Can't open {controller_from_class}.cs");
 
         // replace: DemoDicts => ModelName, demo_dicts => table_name
-        mdemo = mdemo.Replace("AdminDemosDynamic", controller_name);
-        mdemo = mdemo.Replace("/Admin/DemosDynamic", controller_url);
+        mdemo = mdemo.Replace(controller_from_class, controller_name);
+        mdemo = mdemo.Replace(controller_from_url, controller_url);
         mdemo = mdemo.Replace("DemoDicts", model_name);
         mdemo = mdemo.Replace("Demos", model_name);
 
         FW.setFileContent(path + @"\" + controller_name + ".cs", ref mdemo);
 
         // copy templates from /admin/demosdynamic to /controller/url
-        var tpl_from = fw.config("template") + "/admin/demosdynamic";
+        var tpl_from = fw.config("template") + controller_from_url.ToLower();
         var tpl_to = fw.config("template") + controller_url.ToLower();
         Utils.CopyDirectory(tpl_from, tpl_to, true);
 
@@ -1456,8 +1484,8 @@ public class DevManageController : FwController
         // replace in url.html /Admin/DemosDynamic to controller_url
         Hashtable replacements = new()
         {
-            { "/Admin/DemosDynamic", controller_url },
-            { "Demo Dynamic", controller_title }
+            { controller_from_url, controller_url },
+            { controller_from_title, controller_title }
         };
         replaceInFiles(tpl_to, replacements);
 
@@ -1493,14 +1521,15 @@ public class DevManageController : FwController
     {
         string model_name = (string)entity["model_name"];
         string table_name = (string)entity["table"];
-        logger("updating config for controller=", entity["controller_url"]);
+        string controller_type = (string)entity["controller_type"];
+        logger($"updating config for controller({controller_type})=", entity["controller_url"]);
 
         var sys_fields = Utils.qh("id status add_time add_users_id upd_time upd_users_id");
 
 
 
 
-        Hashtable tables = new(); // hindex by table name to entities
+        Hashtable tables = []; // hindex by table name to entities
         ArrayList fields = (ArrayList)entity["fields"];
         if (fields == null)
         {
@@ -1524,39 +1553,44 @@ public class DevManageController : FwController
         var is_fw = Utils.f2bool(entity["is_fw"]);
 
         //build index by field name
-        Hashtable hfields = new(); // name => fld index
+        Hashtable hfields = []; // name => fld index
         foreach (Hashtable fld in fields)
             hfields[Utils.f2str(fld["name"])] = fld;
 
-        var foreign_keys = (ArrayList)entity["foreign_keys"] ?? new ArrayList();
+        var foreign_keys = (ArrayList)entity["foreign_keys"] ?? [];
         //add system user fields to fake foreign keys, so it can generate list query with user names
         var hforeign_keys = array2hashtable(foreign_keys, "column"); // column -> fk info
         if (hfields.ContainsKey("add_users_id") && !hforeign_keys.ContainsKey("add_users_id"))
         {
-            Hashtable fk = new();
-            fk["pk_column"] = "id";
-            fk["pk_table"] = "users";
-            fk["column"] = "add_users_id";
+            Hashtable fk = new()
+            {
+                ["pk_column"] = "id",
+                ["pk_table"] = "users",
+                ["column"] = "add_users_id"
+            };
             foreign_keys.Add(fk);
         }
         if (hfields.ContainsKey("upd_users_id") && !hforeign_keys.ContainsKey("add_users_id"))
         {
-            Hashtable fk = new();
-            fk["pk_column"] = "id";
-            fk["pk_table"] = "users";
-            fk["column"] = "upd_users_id";
+            Hashtable fk = new()
+            {
+                ["pk_column"] = "id",
+                ["pk_table"] = "users",
+                ["column"] = "upd_users_id"
+            };
             foreign_keys.Add(fk);
         }
         hforeign_keys = array2hashtable(foreign_keys, "column"); // refresh in case new foreign keys added above
 
-        ArrayList saveFields = new();
-        ArrayList saveFieldsNullable = new();
-        Hashtable hFieldsMap = new();   // name => iname - map for the view_list_map
-        Hashtable hFieldsMapFW = new(); // fw_name => name
-        ArrayList showFieldsLeft = new();
-        ArrayList showFieldsRight = new();
-        ArrayList showFormFieldsLeft = new();
-        ArrayList showFormFieldsRight = new(); // system fields - to the right
+        ArrayList saveFields = [];
+        ArrayList saveFieldsNullable = [];
+        Hashtable hFieldsMap = [];   // name => iname - map for the view_list_map
+        Hashtable hFieldsMapEdit = []; // for Vue editable list
+        Hashtable hFieldsMapFW = []; // fw_name => name
+        ArrayList showFieldsLeft = [];
+        ArrayList showFieldsRight = [];
+        ArrayList showFormFieldsLeft = [];
+        ArrayList showFormFieldsRight = []; // system fields - to the right
 
         foreach (Hashtable fld in fields)
         {
@@ -1571,10 +1605,11 @@ public class DevManageController : FwController
             var is_field_fk = hforeign_keys.ContainsKey(fld_name);
             var fk_field_name = "";
 
+            hFieldsMapEdit[fld_name] = fld["iname"]; //use regular field for Vue editable list
             if (is_field_fk)
             {
                 fk_field_name = (string)((Hashtable)hforeign_keys[fld_name])["column"] + "_iname";
-                hFieldsMap[fk_field_name] = fld["iname"]; //if FK field - add as column_id_iname
+                hFieldsMap[fk_field_name] = fld["iname"]; //if FK field - add as column_id_iname                
             }
             else
                 hFieldsMap[fld_name] = fld["iname"]; //regular field
@@ -1585,8 +1620,8 @@ public class DevManageController : FwController
                 hFieldsMapFW[fld["fw_name"]] = fld_name;
             }
 
-            Hashtable sf = new();  // show fields
-            Hashtable sff = new(); // showform fields
+            Hashtable sf = [];  // show fields
+            Hashtable sff = []; // showform fields
             var is_skip = false;
             sf["field"] = fld_name;
             sf["label"] = fld["iname"];
@@ -1677,7 +1712,7 @@ public class DevManageController : FwController
                         sff["is_option0"] = true;
                         //sff["class_contents"] = "col-md-4";
                     }
-                    else if (Utils.f2str(fld["fw_subtype"]) == "boolean" || Utils.f2str(entity["fw_subtype"]) == "bit" || fld_name.StartsWith("is_") || Regex.IsMatch(fld_name, @"^Is[A-Z]"))
+                    else if (Utils.f2str(fld["fw_subtype"]) == "boolean" || Utils.f2str(fld["fw_subtype"]) == "bit" || fld_name.StartsWith("is_") || Regex.IsMatch(fld_name, @"^Is[A-Z]"))
                     {
                         // make it as yes/no radio
                         sff["type"] = "yesno";
@@ -1949,6 +1984,7 @@ public class DevManageController : FwController
 
         // show first 6 fields (priority to required) +status, except identity, large text and system fields
         config["view_list_defaults"] = "";
+        var edit_list_defaults = "";
         int defaults_ctr = 0;
         var rfields = (from Hashtable fld in fields
                        where Utils.f2str(fld["is_identity"]) != "1"
@@ -1962,11 +1998,12 @@ public class DevManageController : FwController
             if (defaults_ctr > 5 && fname != "status")
                 continue;
 
+            edit_list_defaults += (defaults_ctr == 0 ? "" : " ") + fname; //for edit list we need real field names only
+
             if (hforeign_keys.ContainsKey(fname))
             {
                 fname = (string)((Hashtable)hforeign_keys[fname])["column"] + "_iname";
             }
-
             if (!is_fw)
             {
                 fname = (string)field["fw_name"];
@@ -2012,12 +2049,22 @@ public class DevManageController : FwController
         config["view_list_map"] = hFieldsMap; // fields to names
         config["view_list_custom"] = "status";
 
+        if (controller_type == "vue")
+        {
+            config["is_dynamic_index_edit"] = false; // by default disable list editing        
+            config["list_edit"] = table_name;
+            config["edit_list_defaults"] = edit_list_defaults;
+            config["edit_list_map"] = hFieldsMapEdit;
+        }
+
         config["is_dynamic_show"] = entity.ContainsKey("controller_is_dynamic_show") ? entity["controller_is_dynamic_show"] : true;
         if ((bool)config["is_dynamic_show"])
         {
-            var showFields = new ArrayList();
-            showFields.Add(Utils.qh("type|row"));
-            showFields.Add(Utils.qh("type|col class|col-lg-6"));
+            var showFields = new ArrayList
+            {
+                Utils.qh("type|row"),
+                Utils.qh("type|col class|col-lg-6")
+            };
             showFields.AddRange(showFieldsLeft);
             showFields.Add(Utils.qh("type|col_end"));
             showFields.Add(Utils.qh("type|col class|col-lg-6"));
@@ -2029,9 +2076,11 @@ public class DevManageController : FwController
         config["is_dynamic_showform"] = entity.ContainsKey("controller_is_dynamic_showform") ? entity["controller_is_dynamic_showform"] : true;
         if ((bool)config["is_dynamic_showform"])
         {
-            var showFormFields = new ArrayList();
-            showFormFields.Add(Utils.qh("type|row"));
-            showFormFields.Add(Utils.qh("type|col class|col-lg-6"));
+            var showFormFields = new ArrayList
+            {
+                Utils.qh("type|row"),
+                Utils.qh("type|col class|col-lg-6")
+            };
             showFormFields.AddRange(showFormFieldsLeft);
             showFormFields.Add(Utils.qh("type|col_end"));
             showFormFields.Add(Utils.qh("type|col class|col-lg-6"));
@@ -2044,7 +2093,7 @@ public class DevManageController : FwController
         // remove all commented items - name start with "#"
         foreach (var key in config.Keys.Cast<string>().ToArray())
         {
-            if (key.StartsWith("#"))
+            if (key.StartsWith('#'))
                 config.Remove(key);
         }
     }
@@ -2144,7 +2193,7 @@ public class DevManageController : FwController
                     if (Utils.f2str(entity["fw_subtype"]) == "currency")
                         result = "DECIMAL(18,2)";
                     else if (Utils.f2str(entity["fw_subtype"]) == "decimal")
-                        result = "DECIMAL("+ Utils.f2int(entity["numeric_precision"]) + "," + Utils.f2int(entity["numeric_scale"]) + ")";
+                        result = "DECIMAL(" + Utils.f2int(entity["numeric_precision"]) + "," + Utils.f2int(entity["numeric_scale"]) + ")";
                     else
                         result = "FLOAT";
                     break;
@@ -2269,8 +2318,8 @@ public class DevManageController : FwController
 
     private static ArrayList defaultFieldsAdded()
     {
-        return new ArrayList()
-        {
+        return
+        [
             new Hashtable()
             {
                 {"name","add_time"},
@@ -2297,13 +2346,13 @@ public class DevManageController : FwController
                 {"fw_type","int"},
                 {"fw_subtype","int"}
             }
-        };
+        ];
     }
 
     private static ArrayList defaultFieldsUpdated()
     {
-        return new ArrayList()
-        {
+        return
+        [
             new Hashtable()
             {
                 {"name","upd_time"},
@@ -2330,7 +2379,7 @@ public class DevManageController : FwController
                 {"fw_type","int"},
                 {"fw_subtype","int"}
             }
-        };
+        ];
     }
 
 
@@ -2351,8 +2400,8 @@ public class DevManageController : FwController
         // {"fw_subtype", "nvarchar"}
         // },
 
-        return new ArrayList()
-        {
+        return
+        [
             defaultFieldID(),
             new Hashtable()
             {
@@ -2380,13 +2429,15 @@ public class DevManageController : FwController
                 {"fw_type","varchar"},
                 {"fw_subtype","nvarchar"}
             }
-        };
+        ];
     }
 
     private static ArrayList defaultFieldsAfter()
     {
-        var result = new ArrayList();
-        result.Add(defaultFieldStatus());
+        var result = new ArrayList
+        {
+            defaultFieldStatus()
+        };
         result.AddRange(defaultFieldsAdded());
         result.AddRange(defaultFieldsUpdated());
         return result;
@@ -2408,8 +2459,8 @@ public class DevManageController : FwController
             //country_name = prefix + "Country";
         }
 
-        return new ArrayList()
-        {
+        return
+        [
             new Hashtable()
             {
                 {"name",field_name},
@@ -2475,7 +2526,7 @@ public class DevManageController : FwController
                 {"fw_type","varchar"},
                 {"fw_subtype","nvarchar"}
             }
-        };
+        ];
     }
 
     // update by url
@@ -2504,7 +2555,7 @@ public class DevManageController : FwController
 
 public class ConfigJsonConverter : System.Text.Json.Serialization.JsonConverter<Hashtable>
 {
-    readonly string ordered_keys = "model is_dynamic_index list_view list_sortdef search_fields related_field_name view_list_defaults view_list_map view_list_custom is_dynamic_show show_fields is_dynamic_showform showform_fields form_new_defaults required_fields save_fields save_fields_checkboxes save_fields_nullable field type lookup_model label class class_control class_label class_contents required validate maxlength min max lookup_tpl is_option_empty option0_title table fields foreign_keys is_fw name iname fw_name fw_type fw_subtype maxlen is_nullable is_identity numeric_precision default db_config model_name controller_title controller_url controller_is_lookup";
+    readonly string ordered_keys = "model is_dynamic_index list_view list_sortdef search_fields related_field_name view_list_defaults view_list_map view_list_custom is_dynamic_index_edit list_edit edit_list_defaults edit_list_map is_dynamic_show show_fields is_dynamic_showform showform_fields form_new_defaults required_fields save_fields save_fields_checkboxes save_fields_nullable field type lookup_model label class class_control class_label class_contents required validate maxlength min max lookup_tpl is_option_empty option0_title table fields foreign_keys is_fw name iname fw_name fw_type fw_subtype maxlen is_nullable is_identity numeric_precision default db_config model_name controller_title controller_url controller_is_lookup";
     public override Hashtable Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         throw new NotImplementedException();
@@ -2514,7 +2565,7 @@ public class ConfigJsonConverter : System.Text.Json.Serialization.JsonConverter<
     {
         writer.WriteStartObject();
 
-        Hashtable hwritten = new();
+        Hashtable hwritten = [];
         //write specific keys first
         foreach (var key in Utils.qw(ordered_keys))
         {

@@ -1,42 +1,3 @@
-<style>
-.thumbnail {
-    display: block;
-    margin-bottom: var(--fw-spacer);
-    line-height: 1.42857143;
-    background-color: var(--bs-secondary-bg);
-    color: var(--bs-body-color);
-    border: var(--bs-border-width) var(--bs-border-style) var(--bs-border-color);
-    border-radius: var(--bs-border-radius);
-    position: relative;
-}
-.thumbnail a > img, .thumbnail > img {
-    display: block;
-    max-width: 100%;
-    height: auto;
-    margin-right: auto;
-    margin-left: auto;
-}
-
-.thumbnail .title {
-    display: block;
-    padding: var(--fw-spacer05);
-    position: absolute;
-    bottom: 0;
-    left: 0;
-}
-
-a.thumbnail:hover {
-    border: var(--bs-border-width) var(--bs-border-style) var(--bs-border-color-translucent);
-    color: var(--bs-emphasis-color);
-}
-
-.thumbs .thumbnail {
-    width: 138px;
-    height: 140px;
-    margin-right: var(--fw-spacer05);
-}
-</style>
-
 <div class="modal-header">
     <h5 class="modal-title"><~./title></h5>
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -65,7 +26,7 @@ a.thumbnail:hover {
     <div class="thumbs clearfix">
         <~att_dr repeat inline>
             <a class="float-start thumbnail text-truncate" href="#" data-id="<~id>" title="<~iname>">
-                <img src="<~/att/url>/<~id>?preview=1&size=s" alt="<~iname>" data-url="<~direct_url>" data-is_image="<~is_image>">
+                <img src="<~url_preview>" alt="<~iname>" data-url="<~url>" data-is_image="<~is_image>">
                 <span class="title"><~iname></span>
             </a>
         </~att_dr>

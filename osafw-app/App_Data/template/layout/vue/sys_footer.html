@@ -1,0 +1,34 @@
+<~#/my/feedback/showform/modal>
+
+<!-- Placed at the end of the document so the pages load faster -->
+<!--script src="<~GLOBAL[ASSETS_URL]>/js/lng/<~GLOBAL[LANG]>.js"></script-->
+
+<~/layout/vue/importmaps>
+<script src="<~GLOBAL[ASSETS_URL]>/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script src="<~GLOBAL[ASSETS_URL]>/js/fw-toasts.js"></script>
+<script>
+ <~/layout/vue/apputils.js>
+</script>
+
+<~load_script>
+
+<script type="module">
+ import { createApp } from 'vue';
+ import { createPinia, defineStore } from 'pinia';
+ import { mande } from 'mande';
+
+ <~store.js>
+
+ <~app.js>
+</script>
+
+<~vue_components>
+
+<script type="module">
+ fwApp.mount('#fw-app');
+</script>
+
+
+<~footer_script>
+
+<~#/layout/counters/ga>

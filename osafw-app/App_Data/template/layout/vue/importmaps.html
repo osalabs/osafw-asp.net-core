@@ -1,0 +1,19 @@
+<script type="importmap">
+{
+ "imports": {
+   <~test_libs if="GLOBAL[is_test]" inline>
+     "vue": "<~GLOBAL[ASSETS_URL]>/lib/vue/dist/vue.esm-browser.js",
+     "mande": "<~GLOBAL[ASSETS_URL]>/lib/mande/dist/mande.mjs",
+   </~test_libs>
+   <~prod_libs unless="GLOBAL[is_test]" inline>
+     "vue": "<~GLOBAL[ASSETS_URL]>/lib/vue/dist/vue.esm-browser.prod.js",
+     "mande": "<~GLOBAL[ASSETS_URL]>/lib/mande/dist/mande.prod.mjs",
+   </~prod_libs>
+     "pinia": "<~GLOBAL[ASSETS_URL]>/lib/pinia/dist/pinia.esm-browser.js",
+     "vue-demi": "<~GLOBAL[ASSETS_URL]>/lib/vue-demi/lib/index.mjs",
+     "@vue/devtools-api": "<~GLOBAL[ASSETS_URL]>/lib/vue-devtools-api/lib/esm/index.js", 
+     "vue-draggable-next": "<~GLOBAL[ASSETS_URL]>/lib/vue-draggable-next/dist/vue-draggable-next.esm-browser.js",
+     "Multiselect": "<~GLOBAL[ASSETS_URL]>/lib/vueform-multiselect/dist/multiselect.js"
+ }
+}
+</script>

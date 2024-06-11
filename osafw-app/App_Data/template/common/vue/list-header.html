@@ -1,0 +1,54 @@
+<script type="text/x-template" id="list-header-template">
+ <div>
+  <h1>{{fwStore.list_title}}
+    <span v-if="!disableCount" class="badge badge-outline-secondary rounded-pill">{{fwStore.count}}</span>
+  </h1>
+
+  <div class="btn-std d-print-none">
+   <div class="btn-group" v-if="!disableAddNew || $slots.group || $slots.groupPrepend || fwStore.return_url">
+      <a v-if="fwStore.return_url"
+        class="btn btn-default"
+        :href="fwStore.return_url"
+      ><~/common/icons/arrow-left-circle> `Return Back`</a>
+      <slot name="group-prepend"></slot>
+      <a v-if="!disableAddNew"
+        class="btn btn-default"
+        href="#"
+        @click.prevent="onAddNew"
+        :disabled="fwStore.is_readonly"
+      ><~/common/icons/plusb> `Add New`</a>
+      <slot name="group"></slot>
+   </div>
+   <slot></slot>
+  </div>
+
+ </div>
+</script>
+
+<script type="module">
+import { mapStores } from 'pinia';
+
+fwApp.component('list-header', {
+  template: '#list-header-template',
+  props: {
+    disableAddNew: {
+      type: Boolean,
+      default: false
+    },
+    disableCount: {
+      type: Boolean,
+      default: false
+    },
+  },
+  data: () => ({
+  }),
+  computed: {
+    ...mapStores(useFwStore) //accessible via this.fwStore
+  },
+  methods: {
+    onAddNew(e){
+      this.fwStore.openEditScreen(0);
+    }
+  }
+});
+</script>

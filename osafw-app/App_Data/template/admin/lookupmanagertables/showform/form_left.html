@@ -3,7 +3,7 @@
       <label class="col-form-label col-md-3 required" for="tname">`Table Name`</label>
       <div class="col">
         <input id="tname" name="item[tname]" maxlength="255" value="<~i[tname]>" type="text" class="form-control">
-        <~err_tname_EXISTS ifeq="ERR[tname]" value="EXISTS" inline><p class="form-text">`Such table already exists in definitions`</p></~err_tname_EXISTS>
+        <~err_tname_EXISTS ifeq="ERR[tname]" value="EXISTS" inline><p class="form-text">`This table already exists in definitions`</p></~err_tname_EXISTS>
       </div>
     </div>
 

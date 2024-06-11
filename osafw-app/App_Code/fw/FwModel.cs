@@ -24,6 +24,7 @@ public abstract class FwModel : IDisposable
     protected string db_config = ""; // if empty(default) - fw.db used, otherwise - new db connection created based on this config name
 
     public string table_name = ""; // must be assigned in child class
+    protected Hashtable table_schema; // table schema cache (fields, types, etc) - filled on demand
     public string csv_export_fields = ""; // all or Utils.qw format
     public string csv_export_headers = ""; // comma-separated format
 
@@ -40,6 +41,9 @@ public abstract class FwModel : IDisposable
     public string field_prio = "";
     public bool is_normalize_names = false; // if true - Utils.name2fw() will be called for all fetched rows to normalize names (no spaces or special chars)
 
+    // default list of sensitive fields to filter out from json output
+    public string json_fields_exclude = "pwd password pwd_reset mfa_secret mfa_recovery";
+
     public bool is_log_changes = true; // if true - event_log record added on add/update/delete
     public bool is_log_fields_changed = true; // if true - event_log.fields filled with changes
     public bool is_under_bulk_update = false; // true when perform bulk updates like modelAddOrUpdateSubtableDynamic (disables log changes for status)
@@ -52,6 +56,7 @@ public abstract class FwModel : IDisposable
     public string junction_field_status; // custom junction status field name, using this.field_status if not set
 
     protected string cache_prefix = "fwmodel.one."; // default cache prefix for caching items
+    protected string cache_prefix_byicode = "fwmodel.onebyicode."; // default cache prefix for caching items by icode
 
     protected FwModel(FW fw = null)
     {
@@ -133,8 +138,11 @@ public abstract class FwModel : IDisposable
             return new DBRow();
     }
 
-    public virtual ArrayList multi(ICollection ids)
+    public virtual DBList multi(ICollection ids)
     {
+        if (ids.Count == 0)
+            return [];
+
         object[] arr = new object[ids.Count - 1 + 1];
         ids.CopyTo(arr, 0);
         return db.array(table_name, new Hashtable() { { "id", db.opIN(arr) } });
@@ -282,17 +290,31 @@ public abstract class FwModel : IDisposable
 
         Hashtable where = new();
         where[field_iname] = iname;
-        return db.row(table_name, where);
+        var item = db.row(table_name, where);
+        normalizeNames(item);
+        return item;
     }
 
     public virtual DBRow oneByIcode(string icode)
     {
         if (field_icode == "")
-            return new DBRow();
+            return [];
 
-        Hashtable where = new();
-        where[field_icode] = icode;
-        return db.row(table_name, where);
+        var cache_key = this.cache_prefix_byicode + icode;
+        var item = (DBRow)(Hashtable)fw.cache.getRequestValue(cache_key);
+        if (item == null)
+        {
+            Hashtable where = new();
+            where[field_icode] = icode;
+            item = db.row(table_name, where);
+            normalizeNames(item);
+            fw.cache.setRequestValue(cache_key, item);
+
+            // if found by icode - cache by id too
+            if (!string.IsNullOrEmpty(field_id) && item.Count > 0)
+                fw.cache.setRequestValue(this.cache_prefix + item[field_id], item);
+        }
+        return item;
     }
 
     // check if item exists for a given field
@@ -442,11 +464,21 @@ public abstract class FwModel : IDisposable
     {
         var cache_key = this.cache_prefix + id;
         fw.cache.requestRemove(cache_key);
+        //also remove all by icode caches as they may contain this id
+        fw.cache.requestRemoveWithPrefix(this.cache_prefix_byicode);
     }
 
     public virtual void removeCacheAll()
     {
         fw.cache.requestRemoveWithPrefix(this.cache_prefix);
+        fw.cache.requestRemoveWithPrefix(this.cache_prefix_byicode);
+    }
+
+    public Hashtable getTableSchema()
+    {
+        if (table_schema == null)
+            table_schema = db.tableSchemaFull(table_name);
+        return table_schema;
     }
     #endregion
 
@@ -543,6 +575,24 @@ public abstract class FwModel : IDisposable
         };
         return db.array(table_name, where, getOrderBy(), select_fields);
     }
+
+    // like listSelectOptions, but for autocomplete by search string q
+    public virtual ArrayList listSelectOptionsAutocomplete(string q, Hashtable def = null)
+    {
+        Hashtable where = [];
+        where[field_iname] = db.opLIKE("%" + q + "%");
+
+        if (!string.IsNullOrEmpty(field_status))
+            where[field_status] = db.opNOT(STATUS_DELETED);
+
+        ArrayList select_fields = new()
+        {
+            new Hashtable() { { "field", field_id }, { "alias", "id" } },
+            new Hashtable() { { "field", field_iname }, { "alias", "iname" } }
+        };
+        return db.array(table_name, where, getOrderBy(), select_fields);
+    }
+
 
     [ObsoleteAttribute("This method is deprecated. Use listSelectOptions instead.", true)]
     public virtual string getSelectOptions(string sel_id)
@@ -744,7 +794,7 @@ public abstract class FwModel : IDisposable
     /// <returns></returns>
     public virtual List<string> colMainIdsByLinkedId(int linked_id)
     {
-        return db.col(table_name, DB.h(junction_field_linked_id, linked_id), db.qid(junction_field_linked_id));
+        return db.col(table_name, DB.h(junction_field_linked_id, linked_id), db.qid(junction_field_main_id));
     }
 
     public virtual string getJunctionFieldStatus()
@@ -941,12 +991,16 @@ public abstract class FwModel : IDisposable
     // override in your specific models when necessary
     public virtual void prepareSubtable(ArrayList list_rows, int related_id, Hashtable def = null)
     {
-        var model_name = def != null ? (string)def["model"] : this.GetType().Name;
         foreach (Hashtable row in list_rows)
         {
-            row["model"] = model_name;
             //if row_id starts with "new-" - set flag is_new
             row["is_new"] = row["id"].ToString().StartsWith("new-");
+
+            // for non-Vue - add def to each row
+            if (!fw.isJsonExpected())
+            {
+                row["def"] = def;
+            }
         }
     }
 
@@ -1073,6 +1127,74 @@ public abstract class FwModel : IDisposable
     }
     #endregion
 
+
+    #region frontend(json) output support and export
+    /// <summary>
+    /// to filter item for json output - remove sensitive fields, add calculated fields, etc
+    /// </summary>
+    /// <param name="item"></param>
+    public virtual void filterForJson(Hashtable item)
+    {
+        //first, remove sensitive fields
+        foreach (string fieldname in Utils.qw(json_fields_exclude))
+            if (item.ContainsKey(fieldname))
+                item.Remove(fieldname);
+
+        //then perform necessary transformations
+        var table_schema = getTableSchema();
+        //iterate over item.Keys, but make it static array to avoid "collection was modified" error
+        var keys = item.Keys.Cast<string>().ToArray();
+        foreach (string fieldname in keys)
+        {
+            var fieldname_lc = fieldname.ToLower();
+            if (!table_schema.ContainsKey(fieldname_lc)) continue;
+
+            var field_schema = (Hashtable)table_schema[fieldname_lc];
+
+            var fw_type = (string)field_schema["fw_type"];
+            var fw_subtype = (string)field_schema["fw_subtype"];
+            if (fw_subtype == "date")
+            {
+                //if field is exactly DATE - show only date part without time - in YYYY-MM-DD format
+                item[fieldname] = DateUtils.Str2SQL((string)item[fieldname]);
+            }
+            else if (fw_type == "datetime")
+            {
+                //if field is exactly DATETIME - show in YYYY-MM-DD HH:MM:SS format
+                item[fieldname] = DateUtils.Str2SQL((string)item[fieldname], true);
+            }
+            else if (fw_subtype == "bit")
+            {
+                //if field is exactly BIT - convert from True/False to 1/0
+                item[fieldname] = Utils.f2bool(item[fieldname]) ? 1 : 0;
+            }
+            // ADD OTHER CONVERSIONS HERE if necessary
+        }
+    }
+
+    /// <summary>
+    /// filter list of items for json output for list options, leave only keys:
+    ///   id, iname, is_checked (if exists), prio (if exists)
+    /// </summary>
+    /// <param name="rows">list of Hashtables</param>
+    /// <returns></returns>
+    public virtual ArrayList filterListOptionsForJson(IList rows)
+    {
+        ArrayList result = [];
+        foreach (Hashtable row in rows)
+        {
+            Hashtable item = [];
+            item[field_id] = row[field_id];
+            item[field_iname] = row[field_iname];
+            if (row.ContainsKey("is_checked"))
+                item["is_checked"] = row["is_checked"];
+            if (row.ContainsKey(field_prio))
+                item[field_prio] = row[field_prio];
+            result.Add(item);
+        }
+        return result;
+    }
+
     public virtual StringBuilder getCSVExport()
     {
         Hashtable where = new();
@@ -1086,6 +1208,7 @@ public abstract class FwModel : IDisposable
         var rows = db.array(table_name, where, "", aselect_fields);
         return Utils.getCSVExport(csv_export_headers, csv_export_fields, rows);
     }
+    #endregion
 
     public void Dispose()
     {

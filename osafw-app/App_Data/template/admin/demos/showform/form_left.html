@@ -24,7 +24,7 @@
   <label class="col-form-label col-md-3 required" for="iname">`Title`</label>
   <div class="col">
     <input id="iname" name="item[iname]" maxlength="64" value="<~i[iname]>" type="text" class="form-control" required>
-    <p class="err-EXISTS">`Such title already exists in our database`</p>
+    <p class="err-EXISTS">`This title already exists in our database`</p>
   </div>
 </div>
 <div class="row form-row">
@@ -54,8 +54,8 @@
   <label class="col-form-label col-md-3 required" for="email">`Email` (unique field)</label>
   <div class="col">
     <input id="email" name="item[email]" maxlength="128" value="<~i[email]>" type="email" class="form-control" required>
-    <p class="err-EXISTS">`Such email already exists in our database`</p>
-    <p class="err-WRONG">`Invalid Email`</p>
+    <p class="err-EXISTS">`This email already exists in our database`</p>
+    <p class="err-EMAIL">`Invalid Email`</p>
   </div>
 </div>
 

@@ -239,15 +239,30 @@ Renders:
 |admin_url|For type="plaintext_link", controller url, final URL will be: "<~admin_url>/<~lookup_id>"|/Admin/SomeController|
 |lookup_id|to use with admin_url, if link to specific ID required|123|
 |att_category|For type="att_edit", att category new upload will be related to|"general"(default)|
+|att_post_prefix|For type="att_edit", name prefix for the inputs with ids `att[<~id>]`|"att"(default)|
 |validate|Simple validation codes: exists, isemail, isphone, isdate, isfloat|"exists isemail" - input value validated if such value already exists, validate if value is an email|
+|append|to use with `FwVueController`, array of buttons to append to the cell in list edit mode|[{
+                        "event": "add",
+                        "class": "",
+                        "icon": "bi bi-plus",
+                        "label": "",
+                        "hint": "Add New"
+                      }]|
+|prepend|to use with `FwVueController`, array of buttons to prepend to the cell in list edit mode|same as for `append`|
 
 ##### type values
 
 |Type|Description|
 |---|---|
+|_for defining rows/cols layout_||
+|row|start of the `div.row`|
+|col|start of the `div.col`|
+|col_end|end of the `div.col`|
+|row_end|end of the `div.row`|
 |_available for both show_fields and showform_fields_||
-|plaintext|Plain text|
+|plaintext|Plain text value|
 |plaintext_link|Plain text with a link to "admin_url"|
+|plaintext_autocomplete|Plain text name from "lookup_model" by id in field|
 |markdown|Markdown text (server-side rendered)|
 |noescape|Value without htmlescape|
 |float|Value formatted with 2 decimal digits|
@@ -257,6 +272,8 @@ Renders:
 |multi|Multi-selection list with checkboxes (read-only)|
 |att|Block for displaying one attachment/file|
 |att_links|Block for displaying multiple attachments/files|
+|att_files|Block for displaying multiple attachments/files|
+|subtable|Block for viewing related records in a subtable|
 |added|Added on date/user block|
 |updated|Updated on date/user block|
 |_available only showform_fields_||
@@ -273,8 +290,11 @@ Renders:
 |yesno|radio options block with Yes(1)/No(2) only|
 |cb|single checkbox block|
 |date_popup|date selection input with popup calendar block|
+|datetime_popup|date and time selection input with popup calendar block|
 |att_edit|Block for selection/upload one attachment/file|
-|att_links_edit|Block for selection/upload multiple attachments/files|
+|att_links_edit|Block for selection/upload multiple attachments/files (select existing or upload via Att modal)|
+|att_files_edit|Block for selection/upload multiple attachments/files (direct upload)|
+|subtable_edit|Block for editing related records in a subtable|
 
 ### How to Debug
 

@@ -111,7 +111,7 @@ Delete ===
 checked rows === 
 My Profile === 
 Site Name === 
-Such email already exists in our database === 
+This email already exists in our database === 
 Invalid Email === 
 Address 1 === 
 Address 2 === 

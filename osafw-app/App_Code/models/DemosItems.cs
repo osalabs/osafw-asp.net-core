@@ -3,7 +3,6 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2023 Oleg Savchuk www.osalabs.com
 
-using System;
 using System.Collections;
 
 namespace osafw;
@@ -23,32 +22,15 @@ public class DemosItems : FwModel
         junction_field_main_id = "demos_id";
     }
 
-    public override ArrayList listByMainId(int demos_id, Hashtable def = null)
-    {
-        return db.array(table_name, DB.h(junction_field_main_id, demos_id));
-    }
-
     public override void prepareSubtable(ArrayList list_rows, int related_id, Hashtable def = null)
     {
-        var model_name = def != null ? (string)def["model"] : this.GetType().Name;
+        base.prepareSubtable(list_rows, related_id, def);
+
+        // add select options
         var select_demo_dicts = fw.model<DemoDicts>().listSelectOptions();
         foreach (Hashtable row in list_rows)
         {
-            row["model"] = model_name;
-            //if row_id starts with "new-" - set flag is_new
-            row["is_new"] = row["id"].ToString().StartsWith("new-");
-
             row["select_demo_dicts"] = select_demo_dicts;
         }
-    }
-
-    public override void prepareSubtableAddNew(ArrayList list_rows, int related_id, Hashtable def = null)
-    {
-        var id = "new-" + DateTimeOffset.Now.ToUnixTimeMilliseconds(); // new item not in db yet - mark it with sequental id starting with "new-"
-        var item = new Hashtable()
-        {
-            {"id", id},
-        };
-        list_rows.Add(item);
     }
 }

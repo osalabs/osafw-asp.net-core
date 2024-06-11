@@ -935,18 +935,22 @@ public class Utils
     */
     public static object jsonDecode(string str)
     {
+        if (string.IsNullOrEmpty(str))
+            return null;
+
         ReadOnlySpan<byte> jsonUtf8 = Encoding.UTF8.GetBytes(str);
         var options = new JsonReaderOptions
         {
             AllowTrailingCommas = true,
             CommentHandling = JsonCommentHandling.Skip
         };
-        var reader = new Utf8JsonReader(jsonUtf8, options);
-        reader.Read(); //initial read
 
         object result;
         try
         {
+            var reader = new Utf8JsonReader(jsonUtf8, options);
+            reader.Read(); //initial read
+
             result = jsonDecodeRead(ref reader);
         }
         catch (Exception)
@@ -1027,6 +1031,43 @@ public class Utils
                     return reader.GetDecimal();
             default:
                 throw new JsonException("Not supported TokenType: " + reader.TokenType);
+        }
+    }
+
+    // convert all values in hierarchical Hashtable/ArrayList json structure to strings
+    // returns new object
+    // RECURSIVE
+    public static object jsonStringifyValues(object json)
+    {
+        if (json is Hashtable ht)
+        {
+            var result = new Hashtable();
+            foreach (string key in ht.Keys)
+                result[key] = jsonStringifyValues(ht[key]);
+            return result;
+        }
+        else if (json is ArrayList al)
+        {
+            var result = new ArrayList();
+            for (int i = 0; i < al.Count; i++)
+                result.Add(jsonStringifyValues(al[i]));
+            return result;
+        }
+        else if (json is string str)
+        {
+            return str;
+        }
+        else if (json is bool b)
+        {
+            return b ? "true" : "false";
+        }
+        else if (json is null)
+        {
+            return ""; // null is empty string
+        }
+        else
+        {
+            return json.ToString();
         }
     }
 

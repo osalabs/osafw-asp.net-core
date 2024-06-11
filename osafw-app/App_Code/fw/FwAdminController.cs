@@ -144,7 +144,7 @@ public class FwAdminController : FwController
         // Dim item_old As Hashtable = model0.one(id)
 
         Hashtable itemdb = FormUtils.filter(item, this.save_fields);
-        FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes);
+        FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
         FormUtils.filterNullable(itemdb, save_fields_nullable);
 
         id = this.modelAddOrUpdate(id, itemdb);
@@ -154,7 +154,7 @@ public class FwAdminController : FwController
 
     public virtual void Validate(int id, Hashtable item)
     {
-        bool result = this.validateRequired(item, this.required_fields);
+        bool result = this.validateRequired(id, item, this.required_fields);
 
         // If result AndAlso model0.isExists(item("iname"), id) Then
         // fw.FERR("iname") = "EXISTS"
