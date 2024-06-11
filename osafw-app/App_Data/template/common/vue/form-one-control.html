@@ -48,7 +48,7 @@
             <att-select v-if="is_att_select_modal"
               :category="def.att_category"
               @hidden="is_att_select_modal=false"
-              @selected="(att) => value = att.id"
+              @selected="onAttSelected"
             ></att-select>
         </div>
         <div class="col">
@@ -350,6 +350,13 @@ fwApp.component('form-one-control', {
       }
       return await this.fwStore.autocompleteOptions(query, this.def.autocomplete_url, this.def.lookup_model, id);
     },
+    onAttSelected(att) {
+      //add to this.attachments[att.id] if not present
+      if (!this.attachments[att.id]){
+         this.attachments[att.id] = att;
+      }
+      this.value = att.id;
+    }
   }
 });
 </script>

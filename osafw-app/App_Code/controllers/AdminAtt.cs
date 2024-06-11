@@ -122,8 +122,10 @@ public class AdminAttController : FwAdminController
             item = model.one(id);
             ps["success"] = true;
             ps["url"] = model.getUrl(id);
+            ps["url_preview"] = model.getUrlPreview(id);
             ps["iname"] = item["iname"];
             ps["is_image"] = item["is_image"];
+            ps["ext"] = item["ext"];
         }
         else
             ps["success"] = false;
@@ -185,13 +187,14 @@ public class AdminAttController : FwAdminController
         foreach (Hashtable row in rows)
         {
             row["url"] = model.getUrl(row);
-            row["url_preview"] = model.getUrl(row, "s") + "&preview=1";
+            row["url_preview"] = model.getUrlPreview(row);
             if (is_json)
                 model.filterForJson(row);
         }
         ps["att_dr"] = rows;
         ps["select_att_categories_id"] = fw.model<AttCategories>().listSelectOptions();
         ps["att_categories_id"] = att_categories_id;
+        ps["XSS"] = fw.Session("XSS");
         ps["_json"] = true; // enable json for Vue
 
         return ps;

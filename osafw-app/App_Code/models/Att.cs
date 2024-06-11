@@ -177,6 +177,15 @@ public class Att : FwModel
         return getUrl(item, size);
     }
 
+    public string getUrlPreview(int id, string size = "s")
+    {
+        return getUrl(id, size) + "&preview=1";
+    }
+    public string getUrlPreview(Hashtable item, string size = "s")
+    {
+        return getUrl(item, size) + "&preview=1";
+    }
+
     // IN: extension - doc, jpg, ... (dot is optional)
     // OUT: mime type or application/octetstream if not found
     public string getMimeForExt(string ext)
