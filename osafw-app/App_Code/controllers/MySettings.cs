@@ -82,7 +82,7 @@ public class MySettingsController : FwController
     public void Validate(int id, Hashtable item)
     {
         bool result = true;
-        result &= validateRequired(item, Utils.qw(required_fields));
+        result &= validateRequired(id, item, Utils.qw(required_fields));
         if (!result)
             fw.FormErrors["REQ"] = 1;
 
@@ -94,7 +94,7 @@ public class MySettingsController : FwController
         if (result && !FormUtils.isEmail((string)item["email"]))
         {
             result = false;
-            fw.FormErrors["email"] = "WRONG";
+            fw.FormErrors["email"] = "EMAIL";
         }
 
         //if (result && !SomeOtherValidation())

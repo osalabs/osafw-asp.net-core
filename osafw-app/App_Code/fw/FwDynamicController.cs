@@ -36,10 +36,11 @@ public class FwDynamicController : FwController
 
         this.setListSearch();
         this.setListSearchStatus(); // status field is not always in table, so keep it separate
-                                    // set here non-standard search
-                                    // If f("field") > "" Then
-                                    // Me.list_where &= " and field=" & db.q(f("field"))
-                                    // End If
+
+        // set here non-standard search
+        // If f("field") > "" Then
+        // Me.list_where &= " and field=" & db.q(f("field"))
+        // End If
 
         this.getListRows();
         // add/modify rows from db if necessary
@@ -51,6 +52,10 @@ public class FwDynamicController : FwController
         if (export_format.Length > 0)
             return []; // return empty hashtable just in case action overriden to avoid check for null
 
+        if (is_dynamic_index)
+            // customizable headers
+            setViewList();
+
         // set standard output parse strings
         var ps = this.setPS();
 
@@ -60,19 +65,15 @@ public class FwDynamicController : FwController
 
         ps["select_userfilters"] = fw.model<UserFilters>().listSelectByIcode((string)fw.G["controller.action"]);
 
-        if (is_dynamic_index)
-            // customizable headers
-            setViewList(ps, list_filter_search);
-
         return ps;
     }
 
     //Prev/Next navigation
-    public void NextAction(string form_id)
+    public virtual Hashtable NextAction(string form_id)
     {
         var id = Utils.f2int(form_id);
         if (id == 0)
-            fw.redirect(base_url);
+            return new Hashtable { { "_redirect", base_url } };
 
         var is_prev = (reqi("prev") == 1);
         var is_edit = (reqi("edit") == 1);
@@ -90,7 +91,7 @@ public class FwDynamicController : FwController
         var sql = "SELECT id FROM " + list_view + " WHERE " + this.list_where + " ORDER BY " + this.list_orderby;
         var ids = db.colp(sql, list_where_params);
         if (ids.Count == 0)
-            fw.redirect(base_url);
+            return new Hashtable { { "_redirect", base_url } };
 
         var go_id = 0;
         if (is_prev)
@@ -109,7 +110,7 @@ public class FwDynamicController : FwController
             else if (ids.Count > 0)
                 go_id = Utils.f2int(ids[ids.Count - 1]);
             else
-                fw.redirect(base_url);
+                return new Hashtable { { "_redirect", base_url } };
         }
         else
         {
@@ -127,7 +128,7 @@ public class FwDynamicController : FwController
             else if (ids.Count > 0)
                 go_id = Utils.f2int(ids[0]);
             else
-                fw.redirect(base_url);
+                return new Hashtable { { "_redirect", base_url } };
         }
 
         var url = base_url + "/" + go_id;
@@ -140,7 +141,7 @@ public class FwDynamicController : FwController
         if (return_url.Length > 0)
             url += "&return_url=" + Utils.urlescape(return_url);
 
-        fw.redirect(url);
+        return new Hashtable { { "_redirect", url }, { "id", go_id } };
     }
 
     public virtual Hashtable ShowAction(int id = 0)
@@ -179,6 +180,9 @@ public class FwDynamicController : FwController
         ps["is_userlists"] = is_userlists;
         ps["is_activity_logs"] = is_activity_logs;
         ps["is_readonly"] = is_readonly;
+
+        //for RBAC
+        ps["rbac"] = rbac;
 
         return ps;
     }
@@ -230,6 +234,10 @@ public class FwDynamicController : FwController
         ps["return_url"] = return_url;
         ps["related_id"] = related_id;
         ps["is_readonly"] = is_readonly;
+
+        //for RBAC
+        ps["rbac"] = rbac;
+
         if (fw.FormErrors.Count > 0)
             logger(fw.FormErrors);
 
@@ -272,7 +280,7 @@ public class FwDynamicController : FwController
         // Dim item_old As Hashtable = model0.one(id)
 
         Hashtable itemdb = FormUtils.filter(item, this.save_fields);
-        FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes);
+        FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
         FormUtils.filterNullable(itemdb, save_fields_nullable);
 
         id = this.modelAddOrUpdate(id, itemdb);
@@ -288,7 +296,7 @@ public class FwDynamicController : FwController
     /// <param name="item"></param>
     public virtual void Validate(int id, Hashtable item)
     {
-        bool result = validateRequiredDynamic(item);
+        bool result = validateRequiredDynamic(id, item);
 
         if (result && is_dynamic_showform)
             validateSimpleDynamic(id, item);
@@ -300,14 +308,14 @@ public class FwDynamicController : FwController
         this.validateCheckResult();
     }
 
-    protected virtual bool validateRequiredDynamic(Hashtable item)
+    protected virtual bool validateRequiredDynamic(int id, Hashtable item)
     {
         var result = true;
         if (string.IsNullOrEmpty(this.required_fields) && is_dynamic_showform)
         {
             // if required_fields not defined - fill from showform_fields
             ArrayList fields = (ArrayList)this.config["showform_fields"];
-            ArrayList req = new();
+            ArrayList req = [];
             foreach (Hashtable def in fields)
             {
                 if (Utils.f2bool(def["required"]))
@@ -315,10 +323,10 @@ public class FwDynamicController : FwController
             }
 
             if (req.Count > 0)
-                result = this.validateRequired(item, req.ToArray());
+                result = this.validateRequired(id, item, req.ToArray());
         }
         else
-            result = this.validateRequired(item, this.required_fields);
+            result = this.validateRequired(id, item, this.required_fields);
         return result;
     }
 
@@ -327,6 +335,7 @@ public class FwDynamicController : FwController
     {
         bool result = true;
 
+        var is_new = (id == 0);
         var subtable_del = reqh("subtable_del");
 
         ArrayList fields = (ArrayList)this.config["showform_fields"];
@@ -341,27 +350,26 @@ public class FwDynamicController : FwController
             if (type == "subtable_edit")
             {
                 //validate subtable rows
-                var model_name = (string)def["model"];
-                var sub_model = fw.model(model_name);
+                var sub_model = fw.model((string)def["model"]);
 
                 var save_fields = (string)def["required_fields"] ?? "";
                 var save_fields_checkboxes = (string)def["save_fields_checkboxes"];
 
                 //check if we delete specific row
-                var del_id = (string)subtable_del[model_name] ?? "";
+                var del_id = (string)subtable_del[field] ?? "";
 
-                // row ids submitted as: item-<~model>[<~id>]
-                // input name format: item-<~model>#<~id>[field_name]
-                var hids = reqh("item-" + model_name);
+                // row ids submitted as: item-<~field>[<~id>]
+                // input name format: item-<~field>#<~id>[field_name]
+                var hids = reqh("item-" + field);
                 // sort hids.Keys, so numerical keys - first and keys staring with "new-" will be last
                 var sorted_keys = hids.Keys.Cast<string>().OrderBy(x => x.StartsWith("new-") ? 1 : 0).ThenBy(x => x).ToList();
                 foreach (string row_id in sorted_keys)
                 {
                     if (row_id == del_id) continue; //skip deleted row
 
-                    var row_item = reqh("item-" + model_name + "#" + row_id);
+                    var row_item = reqh("item-" + field + "#" + row_id);
                     Hashtable itemdb = FormUtils.filter(row_item, save_fields);
-                    FormUtils.filterCheckboxes(itemdb, row_item, save_fields_checkboxes);
+                    FormUtils.filterCheckboxes(itemdb, row_item, save_fields_checkboxes, isPatch());
 
                     if (row_id.StartsWith("new-"))
                         itemdb[sub_model.junction_field_main_id] = id;
@@ -376,6 +384,10 @@ public class FwDynamicController : FwController
                 var val = Utils.qh((string)def["validate"]);
                 if (val.Count > 0)
                 {
+                    //for existing records only validate submitted fields
+                    if (!is_new && !item.ContainsKey(field))
+                        continue;
+
                     string field_value = (string)item[field];
 
                     if (val.ContainsKey("exists") && model0.isExistsByField(field_value, id, field))
@@ -383,22 +395,22 @@ public class FwDynamicController : FwController
                         fw.FormErrors[field] = "EXISTS";
                         result = false;
                     }
-                    if (val.ContainsKey("isemail") && !FormUtils.isEmail(field_value))
+                    if (val.ContainsKey("isemail") && !Utils.isEmpty(field_value) && !FormUtils.isEmail(field_value))
+                    {
+                        fw.FormErrors[field] = "EMAIL";
+                        result = false;
+                    }
+                    if (val.ContainsKey("isphone") && !Utils.isEmpty(field_value) && !FormUtils.isPhone(field_value))
                     {
                         fw.FormErrors[field] = "WRONG";
                         result = false;
                     }
-                    if (val.ContainsKey("isphone") && !FormUtils.isPhone(field_value))
+                    if (val.ContainsKey("isdate") && !Utils.isEmpty(field_value) && !Utils.isDate(field_value))
                     {
                         fw.FormErrors[field] = "WRONG";
                         result = false;
                     }
-                    if (val.ContainsKey("isdate") && !Utils.isDate(field_value))
-                    {
-                        fw.FormErrors[field] = "WRONG";
-                        result = false;
-                    }
-                    if (val.ContainsKey("isfloat") && !Utils.isFloat(field_value))
+                    if (val.ContainsKey("isfloat") && !Utils.isEmpty(field_value) && !Utils.isFloat(field_value))
                     {
                         fw.FormErrors[field] = "WRONG";
                         result = false;
@@ -426,15 +438,16 @@ public class FwDynamicController : FwController
             return result; //nothing to validate
 
         var row_errors = new Hashtable();
-        result = this.validateRequired(item, required_fields, row_errors);
+        var id = Utils.f2int(row_id.StartsWith("new-") ? 0 : row_id);
+        result = this.validateRequired(id, item, required_fields, row_errors);
         if (!result)
         {
             //fill global fw.FormErrors with row errors
-            var model_name = (string)def["model"];
+            var field = (string)def["field"];
             foreach (var field_name in row_errors.Keys)
             {
-                // row input names format: item-<~model>#<~id>[field_name]
-                fw.FormErrors[$"item-{model_name}#{row_id}[{field_name}]"] = true;
+                // row input names format: item-<~field>#<~id>[field_name]
+                fw.FormErrors[$"item-{field}#{row_id}[{field_name}]"] = true;
             }
             fw.FormErrors["REQUIRED"] = true; // also set global error
         }
@@ -500,7 +513,6 @@ public class FwDynamicController : FwController
     public virtual Hashtable SaveMultiAction()
     {
         route_onerror = FW.ACTION_INDEX;
-
         Hashtable cbses = reqh("cb");
         bool is_delete = fw.FORM.ContainsKey("delete");
         if (is_delete)
@@ -549,9 +561,47 @@ public class FwDynamicController : FwController
     // ********************* support for autocomlete related items
     public virtual Hashtable AutocompleteAction()
     {
-        if (model_related == null)
-            throw new ApplicationException("No model_related defined");
-        List<string> items = model_related.getAutocompleteList(reqs("q"));
+        var q = reqs("q"); //required - query string
+
+        //optional params
+        var id = reqi("id"); //specific id, if just need iname for it (used to preload existing id/label for edit form)
+        var model_name = reqs("model");
+        FwModel ac_model = null;
+        if (string.IsNullOrEmpty(model_name))
+        {
+            //if no model passed - use model_related
+            ac_model = model_related;
+        }
+        else
+        {
+            //validation - only allow models from showform_fields type=autocomplete
+            var fields = (ArrayList)this.config["showform_fields"];
+            foreach (Hashtable def in fields)
+            {
+                if (Utils.f2str(def["type"]) == "autocomplete" && Utils.f2str(def["lookup_model"]) == model_name)
+                {
+                    ac_model = fw.model(model_name);
+                    break;
+                }
+            }
+        }
+
+        if (ac_model == null)
+            throw new UserException("No model defined");
+
+        //ArrayList items;
+        List<string> items;
+        if (id > 0)
+        {
+            //var item = ac_model.one(id);
+            //items = [new Hashtable() { { "id", id }, { "iname", item["iname"] } }];
+            items = [ac_model.iname(id)];
+        }
+        else
+        {
+            //items = ac_model.listSelectOptionsAutocomplete(q);
+            items = ac_model.getAutocompleteList(q);
+        }
 
         return new Hashtable() { { "_json", items } };
     }
@@ -572,22 +622,24 @@ public class FwDynamicController : FwController
     {
         var fld = reqh("fld");
         var load_id = reqi("load_id");
-        var is_reset = reqi("is_reset");
+        var is_reset = reqb("is_reset");
         var density = reqs("density");
+        var is_list_edit = reqb("is_list_edit");
+        var icode = base_url + (is_list_edit ? "/edit" : "");
 
         if (load_id > 0)
             // set fields from specific view
-            fw.model<UserViews>().setViewForIcode(base_url, load_id);
-        else if (is_reset == 1)
+            fw.model<UserViews>().setViewForIcode(icode, load_id);
+        else if (is_reset)
             // reset fields to defaults
-            fw.model<UserViews>().updateByIcodeFields(base_url, view_list_defaults);
+            fw.model<UserViews>().updateByIcodeFields(icode, view_list_defaults);
         else if (density.Length > 0)
         {
             // save density
             // validate density can be only table-sm, table-dense, table-normal, otherwise - set empty
             if (!"table-sm table-dense table-normal".Contains(density))
                 density = "";
-            fw.model<UserViews>().updateByIcode(base_url, DB.h("density", density));
+            fw.model<UserViews>().updateByIcode(icode, DB.h("density", density));
         }
         else
         {
@@ -606,10 +658,10 @@ public class FwDynamicController : FwController
             if (!string.IsNullOrEmpty(iname))
             {
                 // create new view by name or update if this name exists
-                fw.model<UserViews>().addOrUpdateByUK(base_url, fields, iname);
+                fw.model<UserViews>().addOrUpdateByUK(icode, fields, iname);
             }
             // update default view with fields
-            fw.model<UserViews>().updateByIcodeFields(base_url, fields);
+            fw.model<UserViews>().updateByIcodeFields(icode, fields);
         }
 
         return afterSave(true, null, false, "no_action", return_url);
@@ -674,11 +726,13 @@ public class FwDynamicController : FwController
                 def["att"] = fw.model<Att>().one(Utils.f2int((string)item[field]));
             else if (dtype == "att_links")
                 def["att_links"] = fw.model<Att>().listLinked(model0.table_name, Utils.f2int(id));
+            else if (dtype == "att_files")
+                def["att_files"] = fw.model<Att>().listByEntity(model0.table_name, Utils.f2int(id));
+
             else if (dtype == "subtable")
             {
                 // subtable functionality
-                var model_name = (string)def["model"];
-                var sub_model = fw.model(model_name);
+                var sub_model = fw.model((string)def["model"]);
                 var list_rows = sub_model.listByMainId(id, def); //list related rows from db
                 sub_model.prepareSubtable(list_rows, id, def);
 
@@ -743,9 +797,10 @@ public class FwDynamicController : FwController
         var fields = (ArrayList)this.config["showform_fields"];
         if (fields == null)
             throw new ApplicationException("Controller config.json doesn't contain 'showform_fields'");
+
         foreach (Hashtable def in fields)
         {
-            // logger(def)
+            //logger(def);
             def["i"] = item; // ref to item
             def["ps"] = ps; // ref to whole ps
             string dtype = (string)def["type"]; // type is required
@@ -789,12 +844,13 @@ public class FwDynamicController : FwController
             }
             else if (dtype == "att_links_edit")
                 def["att_links"] = fw.model<Att>().listLinked(model0.table_name, Utils.f2int(id));
+            else if (dtype == "att_files_edit")
+                def["att_files"] = fw.model<Att>().listByEntity(model0.table_name, Utils.f2int(id));
 
             else if (dtype == "subtable_edit")
             {
                 // subtable functionality
-                var model_name = (string)def["model"];
-                var sub_model = fw.model(model_name);
+                var sub_model = fw.model((string)def["model"]);
                 var list_rows = new ArrayList();
 
                 if (isGet())
@@ -809,19 +865,19 @@ public class FwDynamicController : FwController
                 else
                 {
                     //check if we deleted specific row
-                    var del_id = (string)subtable_del[model_name] ?? "";
+                    var del_id = (string)subtable_del[field] ?? "";
 
                     //copy list related rows from the form
-                    // row ids submitted as: item-<~model>[<~id>]
-                    // input name format: item-<~model>#<~id>[field_name]
-                    var hids = reqh("item-" + model_name);
+                    // row ids submitted as: item-<~field>[<~id>]
+                    // input name format: item-<~field>#<~id>[field_name]
+                    var hids = reqh("item-" + field);
                     // sort hids.Keys, so numerical keys - first and keys staring with "new-" will be last
                     var sorted_keys = hids.Keys.Cast<string>().OrderBy(x => x.StartsWith("new-") ? 1 : 0).ThenBy(x => x).ToList();
                     foreach (string row_id in sorted_keys)
                     {
                         if (row_id == del_id) continue; //skip deleted row
 
-                        var row_item = reqh("item-" + model_name + "#" + row_id);
+                        var row_item = reqh("item-" + field + "#" + row_id);
                         row_item["id"] = row_id;
 
                         list_rows.Add(row_item);
@@ -829,9 +885,9 @@ public class FwDynamicController : FwController
                 }
 
                 //delete row clicked
-                //if (subtable_del.ContainsKey(model_name))
+                //if (subtable_del.ContainsKey(field))
                 //{
-                //    var del_id = (string)subtable_del[model_name];
+                //    var del_id = (string)subtable_del[field];
                 //    // delete with LINQ from the form list (actual delete from db will be on save)
                 //    list_rows = new ArrayList((from Hashtable d in list_rows
                 //                               where (string)d["id"] != del_id
@@ -839,7 +895,7 @@ public class FwDynamicController : FwController
                 //}
 
                 //add new clicked
-                if (subtable_add.ContainsKey(model_name))
+                if (subtable_add.ContainsKey(field))
                     sub_model.prepareSubtableAddNew(list_rows, id, def);
 
                 //prepare rows for display (add selects, etc..)
@@ -867,28 +923,41 @@ public class FwDynamicController : FwController
                 }
                 else if (def.ContainsKey("lookup_model"))
                 {
+                    var lookup_model = fw.model((string)def["lookup_model"]);
+
                     if (dtype == "select" || dtype == "radio")
                     {
                         // lookup select
-                        def["select_options"] = fw.model((string)def["lookup_model"]).listSelectOptions(def);
+                        def["select_options"] = lookup_model.listSelectOptions(def);
                         def["value"] = item[field];
                     }
                     else
                     {
                         // single value from lookup
-                        var lookup_model = fw.model((string)def["lookup_model"]);
-                        def["lookup_id"] = Utils.f2int(item[field]);
-                        var lookup_row = lookup_model.one(Utils.f2int(def["lookup_id"]));
-                        def["lookup_row"] = lookup_row;
+                        if (isGet())
+                        {
+                            def["lookup_id"] = Utils.f2int(item[field]);
+                            var lookup_row = lookup_model.one(Utils.f2int(def["lookup_id"]));
+                            def["lookup_row"] = lookup_row;
 
-                        string lookup_field = Utils.f2str(def["lookup_field"]);
-                        if (lookup_field == "")
-                            lookup_field = lookup_model.field_iname;
+                            string lookup_field = Utils.f2str(def["lookup_field"]);
+                            if (lookup_field == "")
+                                lookup_field = lookup_model.field_iname;
 
-                        def["value"] = lookup_row[lookup_field];
-                        if (!def.ContainsKey("admin_url"))
-                            def["admin_url"] = "/Admin/" + def["lookup_model"]; // default admin url from model name
+                            def["value"] = lookup_row[lookup_field];
+                        }
+                        else
+                        {
+                            //when form refreshed - get value from the form
+                            if (dtype == "autocomplete")
+                                def["value"] = item[field + "_iname"]; //for autocomplete get from _iname
+                            else
+                                def["value"] = item[field];
+                        }
                     }
+
+                    if (!def.ContainsKey("admin_url"))
+                        def["admin_url"] = "/Admin/" + def["lookup_model"]; // default admin url from model name
                 }
                 else if (def.ContainsKey("lookup_tpl"))
                 {
@@ -927,25 +996,28 @@ public class FwDynamicController : FwController
         // special auto-processing for fields of particular types - use .Cast<string>().ToArray() to make a copy of keys as we modify fields
         foreach (string field in fields.Keys.Cast<string>().ToArray())
         {
-            if (showform_fields.ContainsKey(field))
-            {
-                var def = (Hashtable)showform_fields[field];
-                string type = (string)def["type"];
-                if (type == "autocomplete")
-                    fields[field] = Utils.f2str(fw.model((string)def["lookup_model"]).findOrAddByIname((string)fields[field], out _));
+            if (!showform_fields.ContainsKey(field))
+                continue;
 
-                else if (type == "date_combo")
-                    fields[field] = FormUtils.dateForCombo(item, field).ToString();
-                else if (type == "time")
-                    fields[field] = Utils.f2str(FormUtils.timeStrToInt((string)fields[field])); // ftime - convert from HH:MM to int (0-24h in seconds)
-                else if (type == "number")
-                {
-                    if (fnullable.ContainsKey(field) && string.IsNullOrEmpty((string)fields[field]))
-                        // if field nullable and empty - pass NULL
-                        fields[field] = null;
-                    else
-                        fields[field] = Utils.f2str(Utils.f2float(fields[field]));// number - convert to number (if field empty or non-number - it will become 0)
-                }
+            var def = (Hashtable)showform_fields[field];
+            string type = (string)def["type"];
+            if (type == "autocomplete")
+            {
+                var lookup_model = fw.model((string)def["lookup_model"]);
+                var field_value = Utils.f2str(item[field + "_iname"]); // autocomplete value is in "${field}_iname"
+                fields[field] = Utils.f2str(lookup_model.findOrAddByIname(field_value, out _));
+            }
+            else if (type == "date_combo")
+                fields[field] = FormUtils.dateForCombo(item, field).ToString();
+            else if (type == "time")
+                fields[field] = Utils.f2str(FormUtils.timeStrToInt((string)fields[field])); // ftime - convert from HH:MM to int (0-24h in seconds)
+            else if (type == "number")
+            {
+                if (fnullable.ContainsKey(field) && string.IsNullOrEmpty((string)fields[field]))
+                    // if field nullable and empty - pass NULL
+                    fields[field] = null;
+                else
+                    fields[field] = Utils.f2str(Utils.f2float(fields[field]));// number - convert to number (if field empty or non-number - it will become 0)
             }
         }
     }
@@ -960,46 +1032,65 @@ public class FwDynamicController : FwController
         // for now we just look if we have att_links_edit field and update att links
         foreach (Hashtable def in (ArrayList)this.config["showform_fields"])
         {
+            string field = (string)def["field"];
             string type = (string)def["type"];
             if (type == "att_links_edit")
-                fw.model<AttLinks>().updateJunction(model0.table_name, id, reqh("att")); // TODO make att configurable
+            {
+                var att_post_param = "att";
+                if (def.ContainsKey("att_post_prefix"))
+                    att_post_param = (string)def["att_post_prefix"];
+                fw.model<AttLinks>().updateJunction(model0.table_name, id, reqh(att_post_param));
+            }
+            else if (type == "att_files_edit")
+            {
+                //table_name, item_id
+                var itemdb = new Hashtable {
+                    { "fwentities_id", fw.model<FwEntities>().idByIcodeOrAdd(model0.table_name) },
+                    { "item_id", id }
+                };
+                var addedAtt = fw.model<Att>().uploadMulti(itemdb);
+
+            }
             else if (type == "multicb")
             {
                 if (Utils.isEmpty(def["model"]))
-                    fields_update[def["field"]] = FormUtils.multi2ids(reqh(def["field"] + "_multi")); // multiple checkboxes -> single comma-delimited field
+                {
+                    // multiple checkboxes -> non-junction model single comma-delimited field                    
+                    fields_update[field] = FormUtils.multi2ids(reqh(field + "_multi"));
+                }
                 else
                 {
+                    //junction model based
                     if (Utils.f2bool(def["is_by_linked"]))
                         //by linked id
-                        fw.model((string)def["model"]).updateJunctionByLinkedId(id, reqh(def["field"] + "_multi")); // junction model
+                        fw.model((string)def["model"]).updateJunctionByLinkedId(id, reqh(field + "_multi")); // junction model
                     else
                         //by main id
-                        fw.model((string)def["model"]).updateJunctionByMainId(id, reqh(def["field"] + "_multi")); // junction model
+                        fw.model((string)def["model"]).updateJunctionByMainId(id, reqh(field + "_multi")); // junction model
                 }
             }
             else if (type == "multicb_prio")
-                fw.model((string)def["model"]).updateJunctionByMainId(id, reqh(def["field"] + "_multi")); // junction model
+                fw.model((string)def["model"]).updateJunctionByMainId(id, reqh(field + "_multi")); // junction model
 
             else if (type == "subtable_edit")
             {
                 //save subtable
-                var model_name = (string)def["model"];
-                var sub_model = fw.model(model_name);
+                var sub_model = fw.model((string)def["model"]);
 
                 var save_fields = (string)def["save_fields"];
                 var save_fields_checkboxes = (string)def["save_fields_checkboxes"];
 
                 //check if we delete specific row
-                var del_id = (string)subtable_del[model_name] ?? "";
+                var del_id = (string)subtable_del[field] ?? "";
 
                 //mark all related records as under update (status=1)
                 sub_model.setUnderUpdateByMainId(id);
 
                 //update and add new rows
 
-                // row ids submitted as: item-<~model>[<~id>]
-                // input name format: item-<~model>#<~id>[field_name]
-                var hids = reqh("item-" + model_name);
+                // row ids submitted as: item-<~field>[<~id>]
+                // input name format: item-<~field>#<~id>[field_name]
+                var hids = reqh("item-" + field);
                 // sort hids.Keys, so numerical keys - first and keys staring with "new-" will be last
                 var sorted_keys = hids.Keys.Cast<string>().OrderBy(x => x.StartsWith("new-") ? 1 : 0).ThenBy(x => x).ToList();
                 var junction_field_status = sub_model.getJunctionFieldStatus();
@@ -1007,9 +1098,9 @@ public class FwDynamicController : FwController
                 {
                     if (row_id == del_id) continue; //skip deleted row
 
-                    var row_item = reqh("item-" + model_name + "#" + row_id);
+                    var row_item = reqh("item-" + field + "#" + row_id);
                     Hashtable itemdb = FormUtils.filter(row_item, save_fields);
-                    FormUtils.filterCheckboxes(itemdb, row_item, save_fields_checkboxes);
+                    FormUtils.filterCheckboxes(itemdb, row_item, save_fields_checkboxes, isPatch());
 
                     itemdb[junction_field_status] = FwModel.STATUS_ACTIVE; // mark new and updated existing rows as active
 

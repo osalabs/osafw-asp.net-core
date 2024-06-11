@@ -76,7 +76,7 @@ public class AdminUsersController : FwDynamicController
         // Dim item_old As Hashtable = model0.one(id)
 
         Hashtable itemdb = FormUtils.filter(item, this.save_fields);
-        FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes);
+        FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
         FormUtils.filterNullable(itemdb, save_fields_nullable);
 
         itemdb["pwd"] = itemdb["pwd"].ToString().Trim();
@@ -96,7 +96,7 @@ public class AdminUsersController : FwDynamicController
     public override void Validate(int id, Hashtable item)
     {
         bool result = true;
-        result &= validateRequired(item, Utils.qw(required_fields));
+        result &= validateRequired(id, item, Utils.qw(required_fields));
         if (!result)
             fw.FormErrors["REQ"] = 1;
 
@@ -108,7 +108,7 @@ public class AdminUsersController : FwDynamicController
         if (result && !FormUtils.isEmail((string)item["email"]))
         {
             result = false;
-            fw.FormErrors["ehack"] = "WRONG";
+            fw.FormErrors["ehack"] = "EMAIL";
         }
 
         // uncomment if project requires good password strength

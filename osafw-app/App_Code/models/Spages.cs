@@ -67,9 +67,7 @@ public class Spages : FwModel
         if (item.Count > 0)
         {
             if (!Utils.isEmpty(item["head_att_id"]))
-                // item["head_att_id_url_s") ] fw.model(Of Att).get_url_direct(item["head_att_id"), ]s")
-                // item["head_att_id_url_m") ] fw.model(Of Att).get_url_direct(item["head_att_id"), ]m")
-                item["head_att_id_url"] = fw.model<Att>().getUrlDirect(Utils.f2int(item["head_att_id"]));
+                item["head_att_id_url"] = fw.model<Att>().getUrl(Utils.f2int(item["head_att_id"]));
         }
 
         // page[top_url] used in templates navigation

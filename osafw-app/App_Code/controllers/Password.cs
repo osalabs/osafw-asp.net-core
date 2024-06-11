@@ -129,7 +129,7 @@ public class PasswordController : FwController
     public void ValidateReset(int id, Hashtable item)
     {
         bool result = true;
-        result &= validateRequired(item, Utils.qw("pwd pwd2"));
+        result &= validateRequired(id, item, Utils.qw("pwd pwd2"));
         if (!result)
             fw.FormErrors["REQ"] = 1;
 

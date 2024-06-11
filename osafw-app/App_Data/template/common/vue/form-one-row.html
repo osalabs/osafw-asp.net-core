@@ -1,0 +1,40 @@
+<script type="text/x-template" id="form-one-row-template">
+  <div :class="def.class ? def.class : 'row'">
+    <form-one-def v-for="(child_def, index) in def.children"
+      :key="index"
+      :form="form"
+      @update-form-field="$emit('update-form-field', $event)"
+      @cancel-form="$emit('cancel-form', $event)"
+      :def="child_def"
+      :lookups="lookups"
+    />
+  </div>
+</script>
+
+<script type="module">
+fwApp.component('form-one-row', {
+  template: '#form-one-row-template',
+  props: {
+    def: {
+      type: Object,
+      required: true
+    },
+    lookups: {
+      type: Object,
+      required: true
+    },
+    form: {
+      type: Object,
+      required: true
+    }
+  },
+  emits: ['update-form-field', 'cancel-form'],
+  data: () => ({
+  }),
+  mounted(){
+    //console.log("form-one-row mounted", this.def);
+  },
+  methods: {
+  }
+});
+</script>

@@ -272,10 +272,20 @@ public class FormUtils
         return filter(item, Utils.qw(fields), is_exists);
     }
 
-    // similar to form2dbhash, but for checkboxes (as unchecked checkboxes doesn't passed from form)
-    // RETURN: by ref itemdb - add fields with default_value or form value
-    public static bool filterCheckboxes(Hashtable itemdb, Hashtable item, Array fields, string default_value = "0")
+    /// <summary>
+    /// similar to filter, but for checkboxes (as unchecked checkboxes doesn't passed from the form submit)
+    /// </summary>
+    /// <param name="itemdb"></param>
+    /// <param name="item"></param>
+    /// <param name="fields"></param>
+    /// <param name="is_existing_fields_only">if true, then only process fields existing in the item. Usually used with PATCH requests</param>
+    /// <param name="default_value">default value for non-exsiting fields in item</param>
+    /// <returns>by ref itemdb - add fields with default_value or form value</returns>
+    public static bool filterCheckboxes(Hashtable itemdb, Hashtable item, IList fields, bool is_existing_fields_only = false, string default_value = "0")
     {
+        if (fields.Count.Equals(0))
+            return false;
+
         if (item != null)
         {
             foreach (string fld in fields)
@@ -283,29 +293,27 @@ public class FormUtils
                 if (item.ContainsKey(fld))
                     itemdb[fld] = item[fld];
                 else
-                    itemdb[fld] = default_value;
+                {
+                    if (!is_existing_fields_only)
+                        itemdb[fld] = default_value;
+                }
             }
         }
         return true;
     }
-    // same as above, but fields is qw string with default values: "field|def_value field2|def_value2"
-    // default value = "0"
-    public static bool filterCheckboxes(Hashtable itemdb, Hashtable item, string fields)
-    {
-        if (string.IsNullOrEmpty(fields)) return false;
 
-        if (item != null)
-        {
-            Hashtable hfields = Utils.qh(fields, "0");
-            foreach (string fld in hfields.Keys)
-            {
-                if (item.ContainsKey(fld))
-                    itemdb[fld] = item[fld];
-                else
-                    itemdb[fld] = hfields[fld];// default value
-            }
-        }
-        return true;
+    /// <summary>
+    /// similar to filter, but for checkboxes (as unchecked checkboxes doesn't passed from the form submit)
+    /// </summary>
+    /// <param name="itemdb"></param>
+    /// <param name="item"></param>
+    /// <param name="fields">qw string with default values: "field|def_value field2|def_value2"</param>
+    /// <param name="is_existing_fields_only">if true, then only process fields existing in the item. Usually used with PATCH requests</param>
+    /// <param name="default_value">default value for non-exsiting fields in item, if default not defined in fields qw string</param>
+    /// <returns>by ref itemdb - add fields with default_value or form value</returns>
+    public static bool filterCheckboxes(Hashtable itemdb, Hashtable item, string fields, bool is_existing_fields_only = false, string default_value = "0")
+    {
+        return filterCheckboxes(itemdb, item, Utils.qw(fields), is_existing_fields_only, default_value);
     }
 
     // fore each name in $name - check if value is empty '' and make it null

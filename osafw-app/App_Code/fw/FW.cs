@@ -10,7 +10,6 @@ using System.IO;
 using System.Net.Mail;
 using System.Reflection;
 using System.Text;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 
 namespace osafw;
@@ -98,12 +97,13 @@ public class FW : IDisposable
     public const string ACTION_MORE_DELETE = "delete";
 
     public const string FW_NAMESPACE_PREFIX = "osafw.";
-    public static Hashtable METHOD_ALLOWED = Utils.qh("GET POST PUT DELETE");
+    public static Hashtable METHOD_ALLOWED = Utils.qh("GET POST PUT PATCH DELETE");
 
     private readonly Hashtable models = new();
     public FwCache cache = new(); // request level cache
 
     public Hashtable FORM;
+    public Hashtable requestJson; // parsed JSON from request body
     public Hashtable G; // for storing global vars - used in template engine, also stores "_flash"
     public Hashtable FormErrors; // for storing form id's with error messages, put to hf("ERR") for parser
     public Exception last_file_exception; // set by getFileContent, getFileLines in case of exception
@@ -324,19 +324,36 @@ public class FW : IDisposable
         return getResponseExpectedFormat() == "json";
     }
 
-    public void getRoute()
+    /// <summary>
+    /// parse request URL and return controller, action, id, format, method
+    /// if url is empty - use current request url and also set request_url property
+    /// 
+    /// </summary>
+    /// <param name="url"></param>
+    /// <returns></returns>
+    /// <exception cref="Exception"></exception>
+    /// <exception cref="UserException"></exception>
+    public FwRoute getRoute(string url = "")
     {
-        string url = request.Path;
+        var is_url_param = !string.IsNullOrEmpty(url);
+        if (!is_url_param)
+        {
+            url = request.Path;
+        }
+
         //TODO MIGRATE test
         // cut the App path from the begin
         if (request.PathBase.Value.Length > 1) url = url.Replace(request.PathBase, "");
         url = Regex.Replace(url, @"\/$", ""); // cut last / if any
-        this.request_url = url;
 
-        logger(LogLevel.TRACE, "REQUESTING ", url);
+        if (!is_url_param)
+        {
+            this.request_url = url;
+            logger(LogLevel.TRACE, "REQUESTING ", url);
+        }
 
         // init defaults
-        route = new FwRoute()
+        var route = new FwRoute()
         {
             controller = "Home",
             action = ACTION_INDEX,
@@ -348,13 +365,16 @@ public class FW : IDisposable
             @params = new ArrayList()
         };
 
-        // check if method override exits
-        if (FORM.ContainsKey("_method"))
+        if (!is_url_param)
         {
-            if (METHOD_ALLOWED.ContainsKey(FORM["_method"]))
-                route.method = (string)FORM["_method"];
+            // check if method override exits
+            if (FORM.ContainsKey("_method"))
+            {
+                if (METHOD_ALLOWED.ContainsKey(FORM["_method"]))
+                    route.method = (string)FORM["_method"];
+            }
+            if (route.method == "HEAD") route.method = "GET"; // for website processing HEAD is same as GET, IIS will send just headers
         }
-        if (route.method == "HEAD") route.method = "GET"; // for website processing HEAD is same as GET, IIS will send just headers
 
         string controller_prefix = "";
 
@@ -368,7 +388,7 @@ public class FW : IDisposable
                 if (url == route_key)
                 {
                     string rdest = (string)routes[route_key];
-                    Match m1 = Regex.Match(rdest, "^(?:(GET|POST|PUT|DELETE) )?(.+)");
+                    Match m1 = Regex.Match(rdest, "^(?:(GET|POST|PUT|PATCH|DELETE) )?(.+)");
                     if (m1.Success)
                     {
                         // override method
@@ -417,8 +437,10 @@ public class FW : IDisposable
             // GET   /controller/{id}[.format]   Show     (show in format - not for editing)
             // GET   /controller/{id}/edit       ShowForm (show edit form - ShowEdit)
             // GET   /controller/{id}/delete     ShowDelete
-            // POST/PUT  /controller/{id}        Save     (save changes to exisitng record - Update    Note:Request.Form should contain data
-            // POST/DELETE  /controller/{id}            Delete    Note:Request.Form should NOT contain any data
+            // POST/PUT  /controller/{id}        Save     (save changes to exisitng record - Update    Note:Request.Form should contain data. Assumes whole form submit. I.e. unchecked checkboxe treated as empty value)
+            // PATCH /controller                 SaveMulti (partial update multiple records)
+            // PATCH /controller/{id}            Save     (save partial changes to exisitng record - Update. Can be used to update single/specific fields without affecting any other fields.)
+            // POST/DELETE  /controller/{id}     Delete    Note:Request.Form should NOT contain any data
             //
             // /controller/(Action)              Action    call for arbitrary action from the controller
             Match m = Regex.Match(url, @"^/([^/]+)(?:/(new|\.\w+)|/([\d\w_-]+)(?:\.(\w+))?(?:/(edit|delete))?)?/?$");
@@ -459,7 +481,7 @@ public class FW : IDisposable
                 {
                     if (!string.IsNullOrEmpty(route.id))
                     {
-                        if (request.Form.Count > 0 || request.ContentLength > 0)
+                        if (request.HasFormContentType && request.Form.Count > 0 || request.ContentLength > 0)
                             route.action_raw = ACTION_SAVE;
                         else
                             route.action_raw = ACTION_DELETE;
@@ -468,6 +490,13 @@ public class FW : IDisposable
                         route.action_raw = ACTION_SAVE;
                 }
                 else if (route.method == "PUT")
+                {
+                    if (!string.IsNullOrEmpty(route.id))
+                        route.action_raw = ACTION_SAVE;
+                    else
+                        route.action_raw = ACTION_SAVE_MULTI;
+                }
+                else if (route.method == "PATCH")
                 {
                     if (!string.IsNullOrEmpty(route.id))
                         route.action_raw = ACTION_SAVE;
@@ -508,6 +537,8 @@ public class FW : IDisposable
         route.action = Utils.routeFixChars(route.action_raw);
         if (string.IsNullOrEmpty(route.action))
             route.action = ACTION_INDEX;
+
+        return route;
     }
 
     public void dispatch()
@@ -516,10 +547,10 @@ public class FW : IDisposable
 
         try
         {
-            this.getRoute();
+            route = getRoute();
             logger(LogLevel.INFO, "REQUEST START [", route.method, " ", request_url, "] => ", route.controller, ".", route.action);
 
-            this.callRoute();
+            callRoute();
         }
         catch (RedirectException)
         {
@@ -530,7 +561,7 @@ public class FW : IDisposable
         {
             logger(LogLevel.DEBUG, Ex.Message);
             // if not logged - just redirect to login
-            if (!this.isLogged)
+            if (!isLogged)
                 redirect((string)config("UNLOGGED_DEFAULT_URL"), false);
             else
                 errMsg(Ex.Message);
@@ -606,16 +637,18 @@ public class FW : IDisposable
     {
         int result = 0;
 
-        // integrated XSS check - only for POST/PUT/DELETE requests
+        // integrated XSS check - only for POST/PUT/PATCH/DELETE requests
         // OR for standard actions: Save, Delete, SaveMulti
         // OR if it contains XSS param
         if ((FORM.ContainsKey("XSS")
             || route.method == "POST"
             || route.method == "PUT"
+            || route.method == "PATCH"
             || route.method == "DELETE"
             || action == ACTION_SAVE
+            || action == ACTION_SAVE_MULTI
             || action == ACTION_DELETE
-            || action == ACTION_SAVE_MULTI)
+            || action == ACTION_DELETE_RESTORE)
             && !string.IsNullOrEmpty(Session("XSS")) && Session("XSS") != (string)FORM["XSS"])
         {
             // XSS validation failed - check if we are under xss-excluded controller
@@ -701,20 +734,25 @@ public class FW : IDisposable
             f[s] = SQ[s];
 
         // also parse json in request body if any
-        if (request.ContentType != null && request.ContentType.Substring(0, "application/json".Length) == "application/json")
+        if (request.ContentType?[.."application/json".Length] == "application/json")
         {
             try
             {
-                // also could try this with Utils.json_decode
-                request.Body.Position = 0;
-                var json = new System.IO.StreamReader(request.Body).ReadToEnd();
-                Hashtable h = JsonSerializer.Deserialize<Hashtable>(json);
-                logger(LogLevel.TRACE, "REQUESTED JSON:", h);
-                Utils.mergeHash(f, h);
+                //read json from request body
+                using (StreamReader reader = new(request.Body, Encoding.UTF8))
+                {
+                    string json = reader.ReadToEndAsync().Result; // TODO await
+                    Hashtable requestJson = (Hashtable)Utils.jsonDecode(json);
+                    logger(LogLevel.TRACE, "REQUESTED JSON:", requestJson);
+
+                    if (requestJson != null)
+                        // merge json into FORM, but all values should be stingified in FORM
+                        Utils.mergeHash(f, (Hashtable)Utils.jsonStringifyValues(requestJson));
+                }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                logger(LogLevel.WARN, "Request JSON parse error");
+                logger(LogLevel.WARN, "Request JSON parse error", ex.ToString());
             }
         }
 
@@ -1296,7 +1334,7 @@ public class FW : IDisposable
                 if (test_email.Length == 0)
                     test_email = (string)this.config("test_email"); //try test_email from config
 
-                mail_body = "TEST SEND. PASSED MAIL_TO=[" + mail_to + "]" + System.Environment.NewLine + mail_body;
+                mail_body = mail_body + System.Environment.NewLine + "TEST SEND. PASSED MAIL_TO=[" + mail_to + "]"; //add to the end of the body to preserve html
                 mail_to = test_email;
                 logger(LogLevel.INFO, "EMAIL SENT TO TEST EMAIL [", mail_to, "] - TEST ENABLED IN web.config");
             }

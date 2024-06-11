@@ -70,7 +70,7 @@ public class AdminSendEmailController : FwAdminController
         // Dim item_old As Hashtable = model.one(id)
 
         Hashtable itemdb = FormUtils.filter(item, this.save_fields);
-        FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes);
+        FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
 
         var options = new Hashtable
         {
@@ -89,7 +89,7 @@ public class AdminSendEmailController : FwAdminController
 
     public override void Validate(int id, Hashtable item)
     {
-        bool result = this.validateRequired(item, this.required_fields);
+        bool result = this.validateRequired(id, item, this.required_fields);
 
         //if (result && !SomeOtherValidation())
         //{

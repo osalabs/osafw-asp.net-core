@@ -1,0 +1,66 @@
+<script type="text/x-template" id="list-pagination-template">
+ <div>
+  <ul class="pagination mb-0">
+    <template v-if="isShowCount">
+      <li class="p-1 pe-3"><span class="badge badge-outline-secondary rounded-pill">{{count}}</span></li>
+    </template>
+    <template v-for="page in pager" :key="page.pagenum">
+      <li class="page-item" v-if="page.is_show_first">
+        <a class="page-link" href="#" @click.prevent="page_click(0)">`First`</a>
+      </li>
+      <li class="page-item" title="`Previous Page`" v-if="page.is_show_prev">
+        <a class="page-link text-center" href="#" @click.prevent="page_click(page.pagenum_prev)" style="width:80px;">&laquo;</a>
+      </li>
+      <li :class="'page-item'+(page.is_cur_page?' active':'')">
+        <a class="page-link" href="#" @click.prevent="page_click(page.pagenum)">{{page.pagenum_show}}</a>
+      </li>
+      <li class="page-item" title="`Next Page`" v-if="page.is_show_next">
+        <a class="page-link text-center" href="#" @click.prevent="page_click(page.pagenum_next)" style="width:80px;">&raquo;</a>
+      </li>
+    </template>
+    <li class="page-item" title="`Page Size`"><select class="d-inline-block w-auto align-top form-select" v-model="pagesize_selected" @change="$emit('on-pagesize', pagesize_selected)">
+        <option v-for="psize in pagesize_options" :key="psize" :value="psize" :selectedX="pagesize_selected==psize">{{psize}}</option>
+      </select>
+    </li>
+  </ul>
+ </div>
+</script>
+
+<script type="module">
+fwApp.component('list-pagination', {
+  template: '#list-pagination-template',
+  props: {
+    pager: {
+      type: [Array,null],
+      required: true
+    },
+    pagesize: {
+      type: Number,
+      default: 25
+    },
+    count: {
+      type: Number
+    },
+    isShowCount: {
+      type: Boolean,
+      default: false
+    }
+  },
+  emits: ['on-page', 'on-pagesize'],
+  data: () => ({
+    pagesize_options: [10,20,25,30,40,50,100,150,200],
+    pagesize_selected: null,
+  }),
+  mounted(){
+    this.pagesize_selected = this.pagesize ? this.pagesize : 25;
+  },
+  updated(){
+    this.pagesize_selected = this.pagesize ? this.pagesize : 25;
+  },
+  methods: {
+    page_click(pagenum) {
+      this.$emit('on-page', pagenum);
+    }
+  }
+});
+</script>

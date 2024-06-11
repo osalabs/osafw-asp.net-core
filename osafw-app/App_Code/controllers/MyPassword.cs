@@ -87,7 +87,7 @@ public class MyPasswordController : FwController
     public void Validate(int id, Hashtable item)
     {
         bool result = true;
-        result &= validateRequired(item, Utils.qw("email old_pwd pwd pwd2"));
+        result &= validateRequired(id, item, Utils.qw("email old_pwd pwd pwd2"));
         if (!result)
             fw.FormErrors["REQ"] = 1;
 
@@ -99,7 +99,7 @@ public class MyPasswordController : FwController
         if (result && !FormUtils.isEmail((string)item["email"]))
         {
             result = false;
-            fw.FormErrors["email"] = "WRONG";
+            fw.FormErrors["email"] = "EMAIL";
         }
 
         if (result && model.cleanPwd((string)item["pwd"]) != model.cleanPwd((string)item["pwd2"]))

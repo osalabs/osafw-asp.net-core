@@ -2,17 +2,17 @@
     <tr data-sortby="<~f[sortby]>" data-sortdir="<~f[sortdir]>">
         <~/common/list/th_chkall>
         <~/common/list/th_filter_customize if="GLOBAL[is_list_btn_left]">
-        <~headers repeat inline>
+        <~list_headers repeat inline>
             <th class="rotate" <~dsort if="is_sortable" inline>data-sort="<~field_name>"</~dsort>><div><span><~field_name_visible></span></div></th>
-        </~headers>
+        </~list_headers>
         <~/common/list/th_filter_customize unless="GLOBAL[is_list_btn_left]">
     </tr>
     <tr class="search">
         <th></th>
         <~/common/list/th_empty if="GLOBAL[is_list_btn_left]">
-        <~headers_search repeat inline>
+        <~list_headers repeat inline forsearch>
             <th><input type="text" name="search[<~field_name>]" value="<~search_value>" class="form-control form-control-sm"></th>
-        </~headers_search>
+        </~list_headers>
         <~/common/list/th_empty unless="GLOBAL[is_list_btn_left]">
     </tr>
 </thead>

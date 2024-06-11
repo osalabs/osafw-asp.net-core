@@ -443,7 +443,7 @@ public class AdminLookupManagerController : FwController
 
     public void Validate(int id, Hashtable item)
     {
-        validateRequired(item, Utils.qw(required_fields));
+        validateRequired(id, item, Utils.qw(required_fields));
 
         this.validateCheckResult();
     }

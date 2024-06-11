@@ -1,0 +1,147 @@
+<script type="text/x-template" id="att-select-template">
+  <Teleport to="body">
+    <div id="modal-att" class="modal fade text-start" tabindex="-1" role="dialog" ref="modal_att">
+      <div class="modal-dialog modal-lg" role="document">
+
+        <div class="modal-content">
+          <div class="modal-header">
+              <h5 class="modal-title">Select Image or File</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body modal-overflowed">
+              <div class="row row-cols-auto g-3 mb-3">
+                  <div class="col">
+                    <span role="button" class="btn btn-success btn-fileinput me-3">
+                      <span class="msg-button"><~/common/icons/cloud-upload-fill><span> Upload new file...</span></span>
+                      <span class="msg-uploading d-none"><span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> uploading...</span>
+                      <input ref="file1" type="file" @change.stop="onSave">
+                    </span>
+                  </div>
+                  <label class="col col-form-label me-3">`or choose from existing uploads, category`:</label>
+                  <div class="col">
+                      <select v-model="att_categories_id" class="form-select" @change.stop="onChangeCategory">
+                          <option value="0">- `show all` -</option>
+                          <option v-for="row in att_categories" :value="row.id">{{row.iname}}</option>
+                      </select>
+                  </div>
+              </div>
+
+              <div class="thumbs clearfix">
+                  <a v-for="att in att_rows"
+                    class="float-start thumbnail text-truncate"
+                    href="#"
+                    :title="att.iname"
+                    @click.prevent="onSelect(att)">
+                      <img :src="att.url_preview" :alt="att.iname">
+                      <span class="title">{{att.iname}}</span>
+                  </a>
+              </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </Teleport>
+</script>
+
+<script type="module">
+import { mande } from 'mande';
+
+fwApp.component('att-select', {
+  template: '#att-select-template',
+  props: {
+    category: {
+      type: String,
+      required: false,
+      default: 'general'
+    }
+  },
+  emits: ['selected','hidden'],
+   data: () => ({
+    XSS: '',
+    att_upload_url: '/Admin/Att',
+    att_select_url: '/Admin/Att/(Select)',
+    att_category: '',
+    att_categories_id: 0,
+    att_categories: [],
+    att_rows: [],
+    modal: null
+  }),
+  computed: {
+  },
+  mounted(){
+    //console.log('att select mounted');
+    this.att_category = this.category;
+    this.showModal();
+  },
+  unmounted(){
+    //console.log('att select unmounted');
+  },
+  methods: {
+    showModal(e){
+      if (!this.modal){
+        this.modal = new bootstrap.Modal(this.$refs.modal_att);
+      }
+      this.modal.show();
+      this.$refs.modal_att.addEventListener('hidden.bs.modal', e => {
+        this.$emit('hidden', e);
+      }, { once: true });
+
+      this.loadData();
+    },
+
+    async loadData(){
+      //load att_categories and att_rows
+      const apiBase = mande(this.att_select_url);
+      let q = {};
+      if (this.att_category>''){
+        q = { category: this.att_category };
+      }else{
+        q = { att_categories_id: this.att_categories_id };
+      }
+
+      const data = await apiBase.get({ query: q });
+
+      this.XSS = data.XSS;
+      this.att_categories = data.select_att_categories_id;
+      this.att_categories_id = data.att_categories_id;
+      this.att_rows = data.att_dr;
+    },
+
+    async onChangeCategory(){
+      this.att_category = '';
+      await this.loadData();
+    },
+
+    async onSave(e){
+      try {
+        const apiBase = mande(this.att_upload_url);
+        //upload file
+        const formData = new FormData();
+        formData.append('XSS', this.XSS);
+        formData.append('file1', this.$refs.file1.files[0]);
+        formData.append('item[att_categories_id]', this.att_categories_id);
+
+        const data = await apiBase.post(formData);
+        //console.log("uploaded:", data);
+
+        if (!data.success)
+           throw data.err_msg;
+
+        this.onSelect(data);
+
+      } catch (error) {
+          console.error(error);
+          let err_msg = typeof error === "string" ? error : (error.body?.err_msg ?? 'server error');
+          Toast(err_msg, { theme: 'text-bg-danger' });
+      }
+    },
+
+    onSelect(att){
+      this.$emit('selected', att);
+      this.modal.hide();
+    }
+
+  }
+});
+</script>

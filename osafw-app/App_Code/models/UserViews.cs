@@ -3,13 +3,17 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
-using System;
 using System.Collections;
 
 namespace osafw;
 
 public class UserViews : FwModel
 {
+    public static string icodeByUrl(string url, bool is_list_edit = false)
+    {
+        return url + (is_list_edit ? "/edit" : "");
+    }
+
     public UserViews() : base()
     {
         table_name = "user_views";

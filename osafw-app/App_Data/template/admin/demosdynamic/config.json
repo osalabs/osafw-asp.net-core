@@ -140,13 +140,6 @@
                     "type": "row_end"
                 },
                 {
-                    "field": "dict_link_auto_id",
-                    "label": "DemoDicts Autocomplete",
-                    "type": "plaintext",
-                    "lookup_model": "DemoDicts",
-                    "lookup_field": "iname"
-                },
-                {
                     "field": "fcombo",
                     "label": "Combo",
                     "type": "plaintext",
@@ -204,6 +197,13 @@
                     "type": "plaintext"
                 },
                 {
+                    "field": "dict_link_auto_id",
+                    "label": "DemoDicts Autocomplete",
+                    "type": "plaintext_autocomplete",
+                    "lookup_model": "DemoDicts",
+                    "lookup_field": "iname"
+                },
+                {
                     "field": "dict_link_multi",
                     "label": "DemoDicts Multi",
                     "type": "multi",
@@ -217,7 +217,7 @@
                     "model": "DemosDemoDicts"
                 },
                 {
-                    "field": "demos_items_subtable",
+                    "field": "demos_items",
                     "label": "Subtable",
                     "class_label": "col-12 text-start",
                     "type": "subtable",
@@ -455,7 +455,7 @@
                     "model": "DemosDemoDicts"
                 },
                 {
-                    "field": "demos_items_subtable",
+                    "field": "demos_items",
                     "label": "Subtable",
                     "class_label": "col-12 text-start",
                     "type": "subtable_edit",

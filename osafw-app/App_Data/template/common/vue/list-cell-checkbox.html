@@ -1,0 +1,72 @@
+<script type="text/x-template" id="list-cell-checkbox-template">
+  <div :class="$slots.prepend || $slots.append || col.append || col.prepend ? 'input-group' : ''">
+      <template v-if="col.prepend" v-for="(el,index) in col.prepend" :key="index">
+        <button type="button"
+          :class="el.class ? el.class : 'btn btn-default btn-sm'"
+          :title="el.hint"
+          @click.stop="onBtnClick(el.event)"
+        >
+          <i v-if="el.icon" :class="el.icon"></i> {{el.label}}
+        </button>
+      </template>
+      <slot name="prepend"></slot>
+      <input type="checkbox"
+        class="form-check-input"
+        :id="'cell-'+row.id+'-'+col.field_name"
+        v-model="row[col.field_name]"
+        true-value="1"
+        false-value="0"
+        :disabled="col.disabled"
+        @focus="onFocus"
+        @blur="$emit('blur', $event)"
+        @change="$emit('change', $event)"
+        @keydown.up.prevent="onNavigate('up')"
+        @keydown.down.prevent="onNavigate('down')"
+        >
+      <slot name="append"></slot>
+      <template v-if="col.append"
+        v-for="(el,index) in col.append"
+        :key="index"
+      >
+        <button type="button"
+          :class="el.class ? el.class : 'btn btn-default btn-sm'"
+          :title="el.hint"
+          @click.stop="onBtnClick(el.event)"
+        >
+          <i v-if="el.icon" :class="el.icon"></i> {{el.label}}
+        </button>
+      </template>
+  </div>
+</script>
+
+<script type="module">
+fwApp.component('list-cell-checkbox', {
+  template: '#list-cell-checkbox-template',
+  props: {
+    row: {
+      type: Object,
+      required: true
+    },
+    col: {
+      type: Object,
+      required: true
+    }
+  },
+  emits: ['focus', 'blur', 'change', 'navigate', 'btnClick'],
+  data: () => ({
+    initial_value: '', //value before change
+  }),
+  methods: {
+    onFocus(e){
+      this.initial_value = this.row[this.col.field_name];
+      this.$emit('focus', e);
+    },
+    onNavigate(dir) {
+      this.$emit('navigate', { dir, row: this.row, col: this.col });
+    },
+    onBtnClick(icode){
+      this.$emit('btnClick', { event: icode, row: this.row, col: this.col});
+    }
+  }
+});
+</script>

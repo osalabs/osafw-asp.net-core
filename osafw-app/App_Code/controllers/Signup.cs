@@ -78,7 +78,7 @@ public class SignupController : FwController
     {
         string msg = "";
         bool result = true;
-        result &= validateRequired(item, Utils.qw(required_fields));
+        result &= validateRequired(0, item, Utils.qw(required_fields));
         if (!result)
             msg = "Please fill in all required fields";
 
@@ -90,7 +90,7 @@ public class SignupController : FwController
         if (result && !FormUtils.isEmail((string)item["email"]))
         {
             result = false;
-            fw.FormErrors["email"] = "WRONG";
+            fw.FormErrors["email"] = "EMAIL";
         }
 
         if (result && (string)item["pwd"] != (string)item["pwd2"])

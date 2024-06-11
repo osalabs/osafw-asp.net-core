@@ -33,6 +33,7 @@ public abstract class FwController
     protected Hashtable access_actions_to_permissions; // optional, controller-level custom actions to permissions mapping for role-based access checks, e.g. "UIMain" => Permissions.PERMISSION_VIEW . Can also be used to override default actions to permissions
 
     protected string list_view;                  // table/view to use in list sql, if empty model0.table_name used
+    protected string list_fields = "*";          // comma-separated and quoted list of fields to select in list sql
     protected string list_orderby;               // orderby for the list screen
     protected Hashtable list_filter;             // filter values for the list screen
     protected Hashtable list_filter_search;      // filter for the search columns from reqh("search")
@@ -40,11 +41,17 @@ public abstract class FwController
     protected string list_where = " 1=1 ";       // where to use in list sql, default is non-deleted records (see setListSearch() )
     protected long list_count;                    // count of list rows returned from db
     protected ArrayList list_rows;               // list rows returned from db (array of hashes)
+    protected ArrayList list_headers;            // list headers with misc meta info per column
     protected ArrayList list_pager;              // pager for the list from FormUtils.getPager
     protected string list_sortdef;               // required for Index, default list sorting: name asc|desc
     protected Hashtable list_sortmap;            // required for Index, sortmap fields
+    protected Hashtable list_user_view;          // optional, user view settings for the list screen from UserViews model
     protected string search_fields;              // optional, search fields, space-separated
                                                  // fields to search via $s=list_filter["s"), ] - means exact match, not "like"
+
+    // editable list support
+    protected bool is_dynamic_index_edit = false;
+    protected bool is_list_edit = false;         // true if requested list edit mode and it's allowed by is_dynamic_index_edit
 
     public string export_format = "";            // empty or "csv" or "xls" (set from query string "export") - export format for IndexAction
     protected string export_filename = "export"; // default filename for export, without extension
@@ -69,6 +76,8 @@ public abstract class FwController
     protected string related_id;                 // related id, passed via request. Controller should limit view to items related to this id
     protected string related_field_name;         // if set (in Controller) and $related_id passed - list will be filtered on this field
 
+    protected Hashtable rbac = [];               // RBAC for the current user, read in init()
+
 
     protected FwController(FW fw = null)
     {
@@ -89,6 +98,8 @@ public abstract class FwController
         return_url = reqs("return_url");
         related_id = reqs("related_id");
         export_format = reqs("export");
+
+        rbac = fw.model<Users>().getRBAC();
     }
 
     // load controller config from json in template dir (based on base_url)
@@ -163,7 +174,44 @@ public abstract class FwController
                 view_list_map = Utils.qh((string)raw_view_list_map);
 
             view_list_custom = Utils.f2str(this.config["view_list_custom"]);
+        }
 
+        is_dynamic_index_edit = Utils.f2bool(this.config["is_dynamic_index_edit"]);
+        if (is_dynamic_index_edit)
+        {
+            //combine with request param
+            if (Utils.isEmpty(req("is_list_edit")))
+                is_list_edit = is_dynamic_index_edit;
+            else
+                is_list_edit = reqb("is_list_edit") && is_dynamic_index_edit;
+
+            if (is_list_edit)
+            {
+                //list edit is on - override view used for list
+                var list_edit = Utils.f2str(config["list_edit"]);
+                if (!Utils.isEmpty(list_edit))
+                    list_view = list_edit;
+
+                //override list defaults if set
+                if (!Utils.isEmpty(config["edit_list_defaults"]))
+                    view_list_defaults = Utils.f2str(config["edit_list_defaults"]);
+
+                //override list map if set
+                // since edit_list_map could be defined as qw string or as hashtable - check and convert
+                if (!Utils.isEmpty(config["edit_list_map"]))
+                {
+                    var raw_edit_list_map = config["edit_list_map"];
+                    if (raw_edit_list_map is IDictionary)
+                        view_list_map = (Hashtable)raw_edit_list_map;
+                    else
+                        view_list_map = Utils.qh((string)raw_edit_list_map);
+                }
+            }
+        }
+
+        //common for both dynamic index and index_edit
+        if (is_dynamic_index || is_dynamic_index_edit && is_list_edit)
+        {
             if (list_sortmap.Count == 0)
                 list_sortmap = getViewListSortmap(); // just add all fields from view_list_map if no list_sortmap in config
             if (search_fields == "")
@@ -183,6 +231,15 @@ public abstract class FwController
     public bool isGet()
     {
         return (fw.route.method == "GET");
+    }
+
+    /// <summary>
+    /// return true if current request is PATCH request
+    /// </summary>
+    /// <returns></returns>
+    public bool isPatch()
+    {
+        return (fw.route.method == "PATCH");
     }
 
     // set of helper functions to return string, integer, date values from request (fw.FORM)
@@ -210,6 +267,10 @@ public abstract class FwController
     public object reqd(string iname)
     {
         return Utils.f2date(fw.FORM[iname]);
+    }
+    public bool reqb(string iname)
+    {
+        return Utils.f2bool(fw.FORM[iname]);
     }
 
     public void rw(string str)
@@ -331,28 +392,35 @@ public abstract class FwController
     /// <summary>
     /// Validate required fields are non-empty and set global fw.ERR[field] values in case of errors
     /// </summary>
+    /// <param name="id">id of the record, 0 if new record to add (for existing records - do not require fields not present in item)</param>
     /// <param name="item">fields/values to validate</param>
     /// <param name="fields">field names required to be non-empty (trim used)</param>
     /// <param name="form_errors">optional - form errors to fill</param>
     /// <returns>true if all required field names non-empty</returns>
     /// <remarks>also set global fw.FormErrors[REQUIRED]=true in case of validation error if no form_errors defined</remarks>
-    public virtual bool validateRequired(Hashtable item, Array fields, Hashtable form_errors = null)
+    public virtual bool validateRequired(int id, Hashtable item, Array fields, Hashtable form_errors = null)
     {
         bool result = true;
 
-        var is_gloabl_errors = false;
+        var is_global_errors = false;
         if (form_errors == null)
         {
             //if no form_errors passed - use global fw.FormErrors
             form_errors = fw.FormErrors;
-            is_gloabl_errors = true;
+            is_global_errors = true;
         }
 
-        if (item != null && fields.Length > 0)
+        if (fields.Length > 0)
         {
+            item ??= []; // if item is null - make it empty hash
+            var is_new = (id == 0);
             foreach (string fld in fields)
             {
-                if (!string.IsNullOrEmpty(fld) && (!item.ContainsKey(fld) || ((string)item[fld]).Trim() == ""))
+                var is_fld_exists = item.ContainsKey(fld);
+                if (!is_new && !is_fld_exists)
+                    continue; // for existing records - do not require fields not present in item (so we can update only some fields)
+
+                if (!string.IsNullOrEmpty(fld) && (!is_fld_exists || ((string)item[fld]).Trim() == ""))
                 {
                     result = false;
                     form_errors[fld] = true;
@@ -360,17 +428,17 @@ public abstract class FwController
             }
         }
         else
-            result = false;
+            result = false; //TODO check
 
-        if (!result && is_gloabl_errors)
+        if (!result && is_global_errors)
             form_errors["REQUIRED"] = true; // set global error
 
         return result;
     }
     // same as above but fields param passed as a qw string
-    public virtual bool validateRequired(Hashtable item, string fields)
+    public virtual bool validateRequired(int id, Hashtable item, string fields)
     {
-        return validateRequired(item, Utils.qw(fields));
+        return validateRequired(id, item, Utils.qw(fields));
     }
 
     /// <summary>
@@ -392,7 +460,11 @@ public abstract class FwController
         }
 
         if (!result)
+        {
+            logger(LogLevel.DEBUG, "Validation failed:", fw.FormErrors);
             throw new ValidationException();
+        }
+
     }
 
     /// <summary>
@@ -636,6 +708,15 @@ public abstract class FwController
     }
 
     /// <summary>
+    /// set list fields for db select, based on user-selected headers from config
+    /// so we fetch from db only fields that are visible in the list + id field
+    /// </summary>
+    protected virtual void setListFields()
+    {
+        // default is "*", override in controller
+    }
+
+    /// <summary>
     /// Perform 2 queries to get list of rows.
     /// Set variables:
     /// Me.list_count - count of rows obtained from db
@@ -666,7 +747,7 @@ public abstract class FwController
             int offset = pagenum * pagesize;
             int limit = pagesize;
 
-            this.list_rows = db.selectRaw("*", list_view_name, list_where, list_where_params, list_orderby, offset, limit);
+            this.list_rows = db.selectRaw(list_fields, list_view_name, list_where, list_where_params, list_orderby, offset, limit);
 
             model0.normalizeNames(this.list_rows);
 
@@ -863,9 +944,16 @@ public abstract class FwController
         // if user is logged and not SiteAdmin(can access everything)
         // and user's access level is enough for the controller - check access by roles (if enabled)
         int current_user_level = fw.userAccessLevel;
-        if (current_user_level > Users.ACL_VISITOR && current_user_level < Users.ACL_SITEADMIN)
+        if (current_user_level >= Users.ACL_VISITOR && current_user_level < Users.ACL_SITEADMIN)
         {
-            if (!fw.model<Users>().isAccessByRolesResourceAction(fw.userId, fw.route.controller, fw.route.action, fw.route.action_more, access_actions_to_permissions))
+            var action_more = fw.route.action_more;
+            if ((fw.route.action == FW.ACTION_SAVE || fw.route.action == FW.ACTION_SHOW_FORM) && Utils.isEmpty(fw.route.id))
+            {
+                //if save/showform and no id - it's add new - check for Add permission
+                action_more = FW.ACTION_MORE_NEW;
+            }
+
+            if (!fw.model<Users>().isAccessByRolesResourceAction(fw.userId, fw.route.controller, fw.route.action, action_more, access_actions_to_permissions))
                 throw new AuthException("Bad access - Not authorized (3)");
         }
     }
@@ -897,6 +985,8 @@ public abstract class FwController
         if (ps == null)
             ps = new Hashtable();
 
+        ps["list_user_view"] = this.list_user_view;
+        ps["list_headers"] = this.list_headers;
         ps["list_rows"] = this.list_rows;
         ps["count"] = this.list_count;
         ps["pager"] = this.list_pager;
@@ -905,9 +995,13 @@ public abstract class FwController
         ps["base_url"] = this.base_url;
         ps["is_userlists"] = this.is_userlists;
         ps["is_readonly"] = is_readonly;
+        ps["is_list_edit"] = is_list_edit;
+
+        //for RBAC
+        ps["rbac"] = rbac;
 
         //implement "Showing FROM to TO of TOTAL records"
-        if (this.list_rows.Count > 0)
+        if (this.list_rows != null && this.list_rows.Count > 0)
         {
             int pagenum = Utils.f2int(list_filter["pagenum"]);
             int pagesize = Utils.f2int(list_filter["pagesize"]);
@@ -1021,8 +1115,9 @@ public abstract class FwController
 
     public virtual string getViewListUserFields()
     {
-        var item = fw.model<UserViews>().oneByIcode(base_url); // base_url is screen identifier
-        var fields = (string)item["fields"] ?? "";
+        if (list_user_view == null)
+            list_user_view = fw.model<UserViews>().oneByIcode(UserViews.icodeByUrl(base_url, is_list_edit)); // base_url is screen identifier
+        var fields = (string)list_user_view["fields"] ?? "";
         return (fields.Length > 0 ? fields : view_list_defaults);
     }
 
@@ -1071,47 +1166,41 @@ public abstract class FwController
     public virtual string applyViewListConversions(string fieldname, Hashtable row, Hashtable hconversions)
     {
         var data = (string)row[fieldname];
-        if (hconversions.ContainsKey(fieldname))
+        if ((string)(hconversions[fieldname] ?? "") == "date")
         {
             data = DateUtils.Str2DateOnly(data);
         }
         return data;
     }
 
-    // add to ps:
-    // headers
-    // headers_search
-    // depends on ps("list_rows")
-    // use is_cols=false when return ps as json
-    // usage:
-    // model.setViewList(ps, list_filter_search)
-    public virtual void setViewList(Hashtable ps, Hashtable hsearch, bool is_cols = true)
+    /// <summary>
+    /// set list_headers (and add search_value from list_filter_search) 
+    /// and 
+    /// </summary>
+    /// <param name="is_cols">if true - update list_rows with cols, use false for json responses</param>
+    public virtual void setViewList(bool is_cols = true)
     {
-        var user_view = fw.model<UserViews>().oneByIcode(base_url);
-        ps["user_view"] = user_view;
+        list_user_view = fw.model<UserViews>().oneByIcode(UserViews.icodeByUrl(base_url, is_list_edit));
 
         var fields = getViewListUserFields();
 
-        var headers = getViewListArr(fields);
+        list_headers = getViewListArr(fields);
         // add search from user's submit
-        foreach (Hashtable header in headers)
-            header["search_value"] = hsearch[header["field_name"]];
-
-        ps["headers"] = headers;
-        ps["headers_search"] = headers;
-
-        var hcustom = Utils.qh(view_list_custom);
+        foreach (Hashtable header in list_headers)
+            header["search_value"] = list_filter_search[header["field_name"]];
 
         if (is_cols)
         {
+            var hcustom = Utils.qh(view_list_custom);
+
             // dynamic cols
             var afields = Utils.qw(fields);
 
             var hconversions = getViewListConversions(afields);
 
-            foreach (Hashtable row in (ArrayList)ps["list_rows"])
+            foreach (Hashtable row in list_rows)
             {
-                ArrayList cols = new();
+                ArrayList cols = [];
                 foreach (var fieldname in afields)
                 {
                     var data = applyViewListConversions(fieldname, row, hconversions);

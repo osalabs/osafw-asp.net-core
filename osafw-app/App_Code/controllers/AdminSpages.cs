@@ -150,7 +150,7 @@ public class AdminSpagesController : FwAdminController
         // load old record if necessary
 
         Hashtable itemdb = FormUtils.filter(item, save_fields2);
-        FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes);
+        FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
         itemdb["prio"] = Utils.f2int(itemdb["prio"]);
 
         // if no publish time defined - publish it now
@@ -167,7 +167,7 @@ public class AdminSpagesController : FwAdminController
 
     public override void Validate(int id, Hashtable item)
     {
-        bool result = this.validateRequired(item, this.required_fields);
+        bool result = this.validateRequired(id, item, this.required_fields);
 
         if (result && model.isExistsByUrl((string)item["url"], Utils.f2int(item["parent_id"]), id))
             fw.FormErrors["url"] = "EXISTS";
