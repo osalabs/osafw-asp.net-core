@@ -14,15 +14,13 @@ window.fw={
   MODAL_CONFIRM: '<div class="modal fade" tabindex="-1" role="dialog" id="fw-modal-confirm"><div class="modal-dialog modal-sm" role="document"><div class="modal-content"><div class="modal-header"><h5 class="modal-title"></h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><p></p></div><div class="modal-footer"><button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button><button type="button" class="btn btn-default" data-bs-dismiss="modal">Cancel</button></div></div></div></div>',
 
   ok: function (str, options){
-    options = $.extend({}, {theme: 'hint_green'}, options);
-    // if (typeof(options)=='undefined') options={theme: 'hint_green'};
-    $.jGrowl(str, options);
+    options = $.extend({}, options);
+    ToastSuccess(str, options);
   },
 
   error: function (str, options){
-    options = $.extend({}, {theme: 'hint_error'}, options);
-    // if (typeof(options)=='undefined') options={theme: 'hint_error'};
-    $.jGrowl(str, options);
+    options = $.extend({}, options);
+    ToastDanger(str, options);
   },
 
   // usage: fw.alert('Process completed','Worker');
@@ -121,12 +119,12 @@ window.fw={
           $el.show();
           $fis.val('1');
           //show search tooltip
-          $.jGrowl("WORD to search for contains word<br>"+
+          ToastInfo("WORD to search for contains word<br>"+
             "!WORD to search for NOT contains word<br>"+
             "=WORD to search for equals word<br>"+
             "!=WORD to search for NOT equals word<br>"+
             "&lt;=N, &lt;N, &gt;=N, &gt;N - compare numbers",
-            {header: 'Search hints', theme: 'hint_info', sticky: true});
+            {header: 'Search hints', autohide: false});
       }
     };
     $(document).on('click', '.on-toggle-search', on_toggle_search);

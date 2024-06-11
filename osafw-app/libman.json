@@ -42,15 +42,6 @@
       ]
     },
     {
-      "library": "jgrowl@1.4.9",
-      "destination": "wwwroot/assets/lib/jgrowl",
-      "files": [
-        "jquery.jgrowl.min.js",
-        "jquery.jgrowl.map",
-        "jquery.jgrowl.min.css"
-      ]
-    },
-    {
       "library": "jquery-form@4.3.0",
       "destination": "wwwroot/assets/lib/jquery-form",
       "files": [

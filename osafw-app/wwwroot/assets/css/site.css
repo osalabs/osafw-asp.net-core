@@ -564,31 +564,6 @@ a.thumbnail:hover {
   }
 }
 
-
-/****** jGrowl customizations */
-div.jGrowl div.hint_green{
- background-color:var(--bs-success);
- color:var(--bs-white);
-}
-
-div.jGrowl div.hint_error{
- background-color:var(--bs-danger);
- color:var(--bs-white);
-}
-
-div.jGrowl div.hint_info{
- background-color:var(--bs-info);
- color:var(--bs-white);
-}
-
-div.jGrowl div.jGrowl-notification
-, div.jGrowl div.jGrowl-closer {
-  border-radius: var(--bs-border-radius);
-}
-  div.jGrowl div.jGrowl-notification div.jGrowl-close {
-    font-size: 1.2em;
-  }
-
 /* print helpers */
 @media print {
   .page-break-after {
