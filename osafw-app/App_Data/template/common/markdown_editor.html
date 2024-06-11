@@ -119,8 +119,8 @@
               var chunk, cursor, selected = e.getSelection(), content = e.getContent();
 
               var att_category = e.$textarea.data('att-category') ?? 'general';
-              modal_att_open(att_category, function (e2, id, iname, url) {
-                chunk="![]("+url+")";
+              modal_att_open(att_category, function (e2, id, iname, url, is_image) {
+                chunk=(is_image?"!":"")+"["+iname+"]("+url+")";
 
                 // transform selection and set the cursor into chunked text
                 e.replaceSelection(chunk);

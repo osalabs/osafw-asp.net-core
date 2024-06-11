@@ -307,13 +307,29 @@ public class FormUtils
     /// </summary>
     /// <param name="itemdb"></param>
     /// <param name="item"></param>
-    /// <param name="fields">qw string with default values: "field|def_value field2|def_value2"</param>
+    /// <param name="fields">qh string with default values: "field|def_value field2|def_value2"</param>
     /// <param name="is_existing_fields_only">if true, then only process fields existing in the item. Usually used with PATCH requests</param>
     /// <param name="default_value">default value for non-exsiting fields in item, if default not defined in fields qw string</param>
     /// <returns>by ref itemdb - add fields with default_value or form value</returns>
     public static bool filterCheckboxes(Hashtable itemdb, Hashtable item, string fields, bool is_existing_fields_only = false, string default_value = "0")
     {
-        return filterCheckboxes(itemdb, item, Utils.qw(fields), is_existing_fields_only, default_value);
+        if (string.IsNullOrEmpty(fields)) return false;
+
+        if (item != null)
+        {
+            Hashtable hfields = Utils.qh(fields, default_value);
+            foreach (string fld in hfields.Keys)
+            {
+                if (item.ContainsKey(fld))
+                    itemdb[fld] = item[fld];
+                else
+                {
+                    if (!is_existing_fields_only)
+                        itemdb[fld] = hfields[fld];// default value
+                }
+            }
+        }
+        return true;
     }
 
     // fore each name in $name - check if value is empty '' and make it null

@@ -1,45 +1,43 @@
-﻿using System;
+﻿using Microsoft.Extensions.Caching.Memory;
+using System;
 using System.Collections;
 
 namespace osafw;
 
 public class FwCache
 {
-    public static Hashtable cache = new();  // app level cache
-    private static readonly Object locker = new();
+    public static IMemoryCache MemoryCache { get; set; }
 
-    public Hashtable request_cache = new(); // request level cache
+    public Hashtable request_cache = []; // request level cache
+
+    // ******** application-level cache with IMemoryCache ***********
 
     public static object getValue(string key)
     {
-        var result = cache[key];
-        return deserialize(result);
+        return MemoryCache.Get(key);
     }
 
-    public static void setValue(string key, object value)
+    /// <summary>
+    /// set value to cache with default expire time 3600 seconds
+    /// </summary>
+    /// <param name="key"></param>
+    /// <param name="value"></param>
+    /// <param name="expire_seconds"></param>
+    public static void setValue(string key, object value, int expire_seconds = 3600)
     {
-        lock (locker)
-        {
-            cache[key] = serialize(value);
-        }
+        MemoryCache.Set(key, value, TimeSpan.FromSeconds(expire_seconds));
     }
 
     // remove one key from cache
     public static void remove(string key)
     {
-        lock (locker)
-        {
-            cache.Remove(key);
-        }
+        MemoryCache.Remove(key);
     }
 
     // clear whole cache
     public static void clear()
     {
-        lock (locker)
-        {
-            cache.Clear();
-        }
+        MemoryCache.Dispose();
     }
 
     protected static object serialize(object data)

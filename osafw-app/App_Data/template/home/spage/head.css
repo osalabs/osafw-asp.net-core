@@ -1,1 +1,6 @@
+body.spage main img {
+  max-width: 100%;
+  height: auto;
+}
+
 <~page[custom_css] noescape>

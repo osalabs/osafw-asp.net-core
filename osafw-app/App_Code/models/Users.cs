@@ -436,8 +436,27 @@ public class Users : FwModel
 #if isRoles
         var result = new Hashtable();
 
+        int user_access_level;
+
         if (users_id == null)
+        {
             users_id = fw.userId;
+            user_access_level = fw.userAccessLevel;
+        }
+        else
+        {
+            var user = one(users_id);
+            user_access_level = Utils.f2int(user["access_level"]);
+        }
+
+        if (user_access_level == ACL_SITEADMIN)
+        {
+            //siteadmin doesn't have roles - has access to everything - just set all permissions to true
+            //logger(LogLevel.TRACE, "RBAC info (SITEADMIN):");
+            return allPermissions();
+        }
+
+
         if (string.IsNullOrEmpty(resource_icode))
             resource_icode = fw.route.controller;
 
@@ -450,20 +469,10 @@ public class Users : FwModel
         //list all permissions for the resource and all user roles
         List<string> roles_ids;
         if (users_id == 0)
-        {
             //visitor
             roles_ids = [fw.model<Roles>().idVisitor().ToString()]; // visitor role for non-logged
-        }
         else
-        {
-            var user = one(users_id);
-            if (Utils.f2int(user["access_level"]) == ACL_SITEADMIN)
-                //siteadmin doesn't have roles - has access to everything - just set all permissions to true
-                //logger("RBAC info (SITEADMIN):", result);
-                return allPermissions();
-            else
                 roles_ids = fw.model<UsersRoles>().colLinkedIdsByMainId((int)users_id);
-        }
 
         // read all permissions for the resource and user's roles
         var rows = fw.model<RolesResourcesPermissions>().listByRolesResources(roles_ids, new int[] { resources_id });
@@ -483,7 +492,7 @@ public class Users : FwModel
         var result = allPermissions(); //if no Roles support - always allow
 #endif
 
-        //logger("RBAC info:", result);
+        logger(LogLevel.TRACE, "RBAC info:", result);
         return result;
     }
 
@@ -581,13 +590,24 @@ public class Users : FwModel
             return false; //if no permission defined - access denied
         var permissions_id = Utils.f2int(permission["id"]);
 
-        List<string> roles_ids;
         // read all roles for user
-        var user = one(users_id);
-        if (Utils.f2int(user["access_level"]) == ACL_SITEADMIN)
-            return true; //siteadmin doesn't have roles - has access to everything
+        List<string> roles_ids;
+        if (users_id == 0)
+            roles_ids = [fw.model<Roles>().idVisitor().ToString()]; // visitor role for non-logged
         else
-            roles_ids = fw.model<UsersRoles>().colLinkedIdsByMainId(users_id);
+        {
+            var user = one(users_id);
+            if (Utils.f2int(user["access_level"]) == ACL_SITEADMIN)
+            {
+                //siteadmin doesn't have roles - has access to everything
+                return true;
+            }
+            else
+            {
+                roles_ids = fw.model<UsersRoles>().colLinkedIdsByMainId(users_id); // logged user roles
+            }
+        }
+
 
         // check if any of user's roles has access to resource/permission
         var result = fw.model<RolesResourcesPermissions>().isExistsByResourcePermissionRoles(resources_id, permissions_id, roles_ids);

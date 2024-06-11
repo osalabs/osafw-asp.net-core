@@ -127,6 +127,7 @@ GO
 
 -- default Resources
 INSERT INTO resources (icode,iname) VALUES ('Main', 'Main Dashboard');
+INSERT INTO resources (icode,iname) VALUES ('Att', 'Uploads');
 INSERT INTO resources (icode,iname) VALUES ('AdminReports', 'Reports');
 --- optional demo
 INSERT INTO resources (icode,iname) VALUES ('AdminDemos', 'Demo');

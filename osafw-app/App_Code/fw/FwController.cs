@@ -6,6 +6,7 @@
 using System;
 using System.Collections;
 using System.Linq;
+using System.Runtime.ExceptionServices;
 using System.Text.RegularExpressions;
 
 namespace osafw;
@@ -961,11 +962,12 @@ public abstract class FwController
     //called when unhandled error happens in action
     public virtual Hashtable actionError(Exception ex, object[] args)
     {
+        var edi = ExceptionDispatchInfo.Capture(ex);
 
         Hashtable ps = null;
         if (fw.isJsonExpected())
         {
-            throw ex; //exception will be handled in fw.dispatch() and fw.errMsg() called
+            edi.Throw(); //exception will be handled in fw.dispatch() and fw.errMsg() called
         }
         else
         {
@@ -973,7 +975,7 @@ public abstract class FwController
             setFormError(ex);
 
             if (string.IsNullOrEmpty(route_onerror))
-                throw ex; //re-throw exception
+                edi.Throw(); //re-throw exception
             else
                 fw.routeRedirect(route_onerror, args);
         }

@@ -1,4 +1,11 @@
-<~parent_link if="parent[id]" inline><a href="<~../url>/<~parent[id]>/edit"><~parent[iname] default="noname"></a></~parent_link>
+<nav class="d-print-none">
+  <a href="<~../url>"><~../index/title></a> <span class="text-muted">/</span>
+  <~parents repeat inline>
+    <a href="<~../url>/<~id>/edit"><~iname default="noname"></a> <span class="text-muted">/</span>
+  </~parents>
+  <span class="text-muted"><~i[iname]></span>
+</nav>
+
 <h1><~title></h1>
 
 <~form>

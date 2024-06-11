@@ -331,7 +331,28 @@ window.fw={
         });
     });
 
+    fw.textarea_autoresize('textarea.autoresize');
+  },
 
+  //automatically resize textarea element to it's content (but no downsize smaller than initial)
+  textarea_autoresize: function(selector){
+    const textareas = document.querySelectorAll(selector);
+
+    textareas.forEach(textarea => {
+        const initialHeight = textarea.scrollHeight;
+
+        function resizeTextarea() {
+            // Reset textarea height to initial height to recalculate scroll height correctly
+            textarea.style.height = `${initialHeight}px`;
+
+            // Set the height to the scroll height, ensuring it doesn't go below initial height
+            const newHeight = Math.max(initialHeight, textarea.scrollHeight);
+            textarea.style.height = `${newHeight}px`;
+        }
+
+        textarea.addEventListener('input', resizeTextarea);
+        resizeTextarea(); // Initialize the correct height
+    });
   },
 
   //for all forms with data-check-changes on a page - setup changes tracker, call in $(document).ready()

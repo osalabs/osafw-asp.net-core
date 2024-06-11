@@ -55,6 +55,10 @@ public class Spages : FwModel
     {
         string[] url_parts = full_url.Split("/");
         int parent_id = 0;
+        var breadcrumbs = new ArrayList();
+        var item_full_url = "";
+
+
         Hashtable item = new();
         for (int i = 1; i <= url_parts.GetUpperBound(0); i++)
         {
@@ -62,6 +66,12 @@ public class Spages : FwModel
             if (item.Count == 0)
                 return item;// empty hashtable
             parent_id = Utils.f2int(item["id"]);
+
+            item_full_url += "/" + item["url"];
+            breadcrumbs.Add(new Hashtable {
+                { "iname", item["iname"] },
+                { "url", item_full_url }
+            });
         }
         // item now contains page data for the url
         if (item.Count > 0)
@@ -73,6 +83,9 @@ public class Spages : FwModel
         // page[top_url] used in templates navigation
         if (url_parts.GetUpperBound(0) >= 1)
             item["top_url"] = url_parts[1].ToLower();
+
+        item["full_url"] = item_full_url;
+        item["breadcrumbs"] = breadcrumbs;
 
         // columns
         if (!Utils.isEmpty(item["idesc_left"]))
@@ -208,6 +221,26 @@ public class Spages : FwModel
         return getFullUrl(Utils.f2int(item["parent_id"])) + "/" + item["url"];
     }
 
+    /// <summary>
+    /// return list of parent pages for the page (from topmost to immediate parent)
+    /// </summary>
+    /// <param name="id"></param>
+    /// <returns></returns>
+    public ArrayList listParents(int id)
+    {
+        ArrayList result = new();
+        Hashtable item = one(id);
+        while (item.Count > 0)
+        {
+            var item_id = Utils.f2int(item["id"]);
+            if (item_id != id)
+                result.Insert(0, item);
+
+            item = one(Utils.f2int(item["parent_id"]));
+        }
+        return result;
+    }
+
 
     // render page by full url
     public void showPageByFullUrl(string full_url)
@@ -229,12 +262,34 @@ public class Spages : FwModel
         if (!Utils.isEmpty(item["redirect_url"]))
             fw.redirect((string)item["redirect_url"]);
 
+        var item_id = Utils.f2int(item["id"]);
+
+        // subpages navigation
+        ArrayList subpages = listChildrenPublished(item_id);
+        ps["subpages"] = subpages;
+        foreach (Hashtable subpage in subpages)
+        {
+            subpage["full_url"] = item["full_url"] + "/" + subpage["url"];
+        }
+
         ps["page"] = item;
         ps["meta_keywords"] = item["meta_keywords"];
         ps["meta_description"] = item["meta_description"];
+        ps["is_can_edit"] = fw.model<Users>().isAccessLevel(Users.ACL_MANAGER);
         ps["hide_std_sidebar"] = true; // TODO - control via item[template]
         fw.parser("/home/spage", ps);
     }
+
+    public DBList listChildrenPublished(int parent_id)
+    {
+        return db.arrayp(@$"select * 
+              from {db.qid(table_name)}
+             where status=0 
+               and (pub_time IS NULL OR pub_time<=GETDATE()) 
+               and parent_id=@parent_id
+          order by prio desc, iname", DB.h("parent_id", parent_id));
+    }
+
 
     // check if item exists for a given email
     // Public Overrides Function isExists(uniq_key As Object, not_id As Integer) As Boolean

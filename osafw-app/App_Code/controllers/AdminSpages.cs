@@ -31,19 +31,15 @@ public class AdminSpagesController : FwAdminController
         list_sortmap = Utils.qh("id|id iname|iname pub_time|pub_time upd_time|upd_time status|status url|url");
     }
 
-    public override Hashtable IndexAction()
+    public override void getListRows()
     {
-        // get filters from the search form
-        Hashtable f = this.initFilter();
-
-        this.setListSorting();
-        this.setListSearch();
-        this.setListSearchStatus();
-
-        if ((string)list_filter["sortby"] == "iname" && (string)list_filter["s"] == "" & ((string)this.list_filter["status"] == "" || (string)this.list_filter["status"] == "0"))
+        if ((string)list_filter["sortby"] == "iname"
+            && (string)list_filter["s"] == ""
+            && ((string)this.list_filter["status"] == "" || (string)this.list_filter["status"] == "0"))
         {
             // show tree only if sort by title and no search and status by all or active
-            this.list_count = Utils.f2long(db.valuep("select count(*) from " + db.qid(model.table_name) + " where " + this.list_where, this.list_where_params));
+            this.list_count = Utils.f2long(db.valuep("select count(*) from " + db.qid(model.table_name) +
+                " where " + this.list_where, this.list_where_params));
             if (this.list_count > 0)
             {
                 // build pages tree
@@ -73,24 +69,28 @@ public class AdminSpagesController : FwAdminController
         }
         else
             // if order not by iname or search performed - display plain page list using  Me.get_list_rows()
-            this.getListRows();
+            base.getListRows();
 
         // add/modify rows from db if necessary
         foreach (Hashtable row in this.list_rows)
+        {
             row["full_url"] = model.getFullUrl(Utils.f2int(row["id"]));
+        }
 
-        var ps = this.setPS();
-
-        return ps;
     }
 
     public override Hashtable ShowFormAction(int id = 0)
     {
+        var parent_id = reqi("parent_id");
+
         // set new form defaults here if any
-        if (!string.IsNullOrEmpty(reqs("parent_id")))
+        if (parent_id > 0)
         {
-            this.form_new_defaults = new Hashtable();
-            this.form_new_defaults["parent_id"] = reqi("parent_id");
+            var parent = model.one(parent_id);
+            this.form_new_defaults = new Hashtable
+            {
+                ["parent_id"] = parent_id
+            };
         }
         Hashtable ps = base.ShowFormAction(id);
 
@@ -100,7 +100,9 @@ public class AdminSpagesController : FwAdminController
         ps["select_options_parent_id"] = model.getPagesTreeSelectHtml(Utils.f2str(item["parent_id"]), pages_tree);
 
         ps["parent_url"] = model.getFullUrl(Utils.f2int(item["parent_id"]));
-        ps["full_url"] = model.getFullUrl(Utils.f2int(item["id"]));
+        ps["full_url"] = model.getFullUrl(id);
+
+        ps["parents"] = model.listParents(id);
 
         ps["parent"] = model.one(Utils.f2int(item["parent_id"]));
 
@@ -157,6 +159,7 @@ public class AdminSpagesController : FwAdminController
         if ((string)itemdb["pub_time"] == "")
             itemdb["pub_time"] = DB.NOW;
 
+        logger("itemdb: ", itemdb);
         id = this.modelAddOrUpdate(id, itemdb);
 
         if ((string)item_old["is_home"] == "1")

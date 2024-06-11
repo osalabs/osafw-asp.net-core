@@ -1,10 +1,31 @@
+<nav aria-label="breadcrumb">
+  <~admin_edit>
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="<~ROOT_URL>/">Home</a></li>
+    <~page[breadcrumbs] repeat inline>
+        <~link unless="repeat.last" inline><li class="breadcrumb-item"><a href="<~url>"><~iname></a></li></~link>
+        <~nolink if="repeat.last" inline><li class="breadcrumb-item active" aria-current="page"><~iname></li></~nolink>
+    </~page[breadcrumbs]>
+  </ol>
+</nav>
+
 <h1><~title></h1>
 
 <~head_image if="page[head_att_id_url]" inline>
- <img src="<~page[head_att_id_url]>" class="img-fluid">
+ <img src="<~page[head_att_id_url]>" class="img-fluid mb-2">
 </~head_image>
 
 <~one_col if="page[is_col1]">
 <~two_left_col if="page[is_col2_left]">
 <~two_right_col if="page[is_col2_right]">
 <~three_col if="page[is_col3]">
+
+<~subpages_block if="subpages" inline>
+<hr>
+<h4 class="pt-4">See Also:</h4>
+<ul>
+<~subpages repeat inline>
+    <li><a href="<~full_url>"><~iname></a></li>
+</~subpages>
+</ul>
+</~subpages_block>

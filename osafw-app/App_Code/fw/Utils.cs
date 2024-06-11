@@ -35,6 +35,8 @@ public class Utils
     // WARN! replaces all "&nbsp;" to spaces (after convert)
     public static string[] qw(string str)
     {
+        if (String.IsNullOrEmpty(str)) return [];
+
         string[] arr = str.Trim().Split(" ");
 
         for (int i = 0; i < arr.Length; i++)

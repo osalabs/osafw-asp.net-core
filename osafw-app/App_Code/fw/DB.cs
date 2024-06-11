@@ -1197,7 +1197,8 @@ public class DB : IDisposable
         Hashtable schema_table = (Hashtable)schema[table];
         if (!schema_table.ContainsKey(field_name))
         {
-            throw new ApplicationException("field " + table + "." + field_name + " does not defined in FW.config(\"schema\") ");
+            //logger(LogLevel.DEBUG, "schema_table:", schema_table);
+            throw new ApplicationException("field " + db_name + "." + table + "." + field_name + " does not defined in FW.config(\"schema\") ");
         }
 
         string field_type = (string)schema_table[field_name];
