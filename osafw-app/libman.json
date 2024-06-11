@@ -138,8 +138,7 @@
       "library": "pinia@2.1.7",
       "destination": "wwwroot/assets/lib/pinia",
       "files": [
-        "dist/pinia.esm-browser.js",
-        "dist/pinia.mjs"
+        "dist/pinia.esm-browser.js"
       ]
     },
     {
