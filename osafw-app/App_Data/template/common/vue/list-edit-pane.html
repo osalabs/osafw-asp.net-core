@@ -46,13 +46,13 @@ fwApp.component('list-edit-pane', {
     document.removeEventListener('click', this.handleClickOutside);
   },
   methods: {
-    //click outside pane closes pane
-    // except when clicked on something with on-quickedit class (button that opens pane)
+    //click outside pane closes pane    
     handleClickOutside(e) {
       if (this.fwStore.is_list_edit_pane
         && this.$refs.pane
         && !this.$refs.pane.contains(e.target)
-        && !e.target.classList.contains('on-quickedit')
+        && !e.target.classList.contains('on-quickedit') // except when clicked on something with on-quickedit class (button that opens pane)
+        && !e.target.closest('.modal') //and except clicked on something within a modal
         ) {
         this.closePane();
       }

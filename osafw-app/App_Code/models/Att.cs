@@ -618,5 +618,11 @@ public class Att : FwModel
             if (!keys.ContainsKey(key))
                 item.Remove(key);
         }
+
+        //also add url and url_preview if not exists
+        if (!item.ContainsKey("url"))
+            item["url"] = getUrl(item);
+        if (!item.ContainsKey("url_preview"))
+            item["url_preview"] = getUrlPreview(item);
     }
 }

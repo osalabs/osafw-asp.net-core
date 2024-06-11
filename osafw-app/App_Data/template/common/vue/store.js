@@ -530,6 +530,14 @@ let actions = {
                 });
             });
 
+            //also submit attachments (att_links) as att[ID]=1
+            if (this.edit_data.att_links?.length) {
+              req.att = {};
+              this.edit_data.att_links.forEach(att_id => {
+                  req.att[att_id] = 1;
+              });
+            }
+
             //console.log('saveEditData req', req);
             const response = await apiBase.post(this.edit_data.id, req);
             //console.log('saveEditData response', response);
