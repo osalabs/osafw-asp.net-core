@@ -51,6 +51,12 @@ public class FwVueController : FwDynamicController
         foreach (Hashtable row in list_rows)
         {
             model0.filterForJson(row);
+
+            //added/updated username - it's readonly so we can replace _id fields with names
+            if (!string.IsNullOrEmpty(model0.field_add_users_id) && row.ContainsKey(model0.field_add_users_id))
+                row["add_users_id"] = fw.model<Users>().iname(row[model0.field_add_users_id]);
+            if (!string.IsNullOrEmpty(model0.field_upd_users_id) && row.ContainsKey(model0.field_upd_users_id))
+                row["upd_users_id"] = fw.model<Users>().iname(row[model0.field_upd_users_id]);
         }
     }
 

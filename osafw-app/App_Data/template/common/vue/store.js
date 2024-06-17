@@ -248,7 +248,11 @@ let actions = {
         this.list_headers = this.list_headers.map(header => {
             let field_name = header.field_name;
             let def = hfields[field_name] ?? null;
-            if (!def) return header;
+            if (!def) {
+              //if no editable field definition found - make as read-only
+              header.is_ro = true;
+              return header;
+            }
 
             let def_type = def.type;
             header.input_type = def_type;
