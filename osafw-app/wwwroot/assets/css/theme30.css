@@ -156,10 +156,16 @@ label {
   padding-bottom: calc(0.1875rem + var(--bs-border-width));
 }
 
-.form-control:not(.form-control-lg):not(.form-control-sm):not(.form-control-md),
-.form-select:not(.form-select-lg):not(.form-select-sm):not(.form-select-md)
+.form-control:not(.form-control-lg):not(.form-control-sm):not(.form-control-md)
 {
   padding: .1875rem .75rem;
+  font-size: 0.875rem;
+  border-radius: .2rem;
+}
+
+.form-select:not(.form-select-lg):not(.form-select-sm):not(.form-select-md)
+{
+  padding: .1875rem 1.75rem .1875rem .75rem;
   font-size: 0.875rem;
   border-radius: .2rem;
 }
