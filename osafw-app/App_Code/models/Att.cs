@@ -25,6 +25,8 @@ public class Att : FwModel
     const int MAX_THUMB_W_L = 1200;
     const int MAX_THUMB_H_L = 1200;
 
+    const int CACHE_DAYS = 30; // cache requests for 30 days
+
     public string MIME_MAP = "doc|application/msword docx|application/msword xls|application/vnd.ms-excel xlsx|application/vnd.ms-excel ppt|application/vnd.ms-powerpoint pptx|application/vnd.ms-powerpoint csv|text/csv pdf|application/pdf html|text/html zip|application/x-zip-compressed jpg|image/jpeg jpeg|image/jpeg gif|image/gif png|image/png wmv|video/x-ms-wmv avi|video/x-msvideo mp4|video/mp4";
 
     public Att() : base()
@@ -274,50 +276,44 @@ public class Att : FwModel
     public void transmitFile(int id, string size = "", string disposition = "attachment")
     {
         var item = one(id);
+        if (item.Count == 0)
+            throw new UserException("No file specified");
+
+        checkAccess(Utils.f2int(item["id"]));
+
         if (size != "s" && size != "m")
             size = "";
 
-        if (Utils.f2int(item["id"]) > 0)
+        var max_age = new TimeSpan(CACHE_DAYS, 0, 0, 0);
+        fw.response.Headers.Append("Cache-Control", $"private, max-age={max_age}"); // use public only if all uploads are public
+        fw.response.Headers.Append("Pragma", "cache");
+        fw.response.Headers.Append("Expires", DateTime.Now.AddDays(CACHE_DAYS).ToString("R")); // cache for several days, this allows browser not to send any requests to server during this period (unless F5)
+
+        string filepath = getUploadImgPath(id, size, (string)item["ext"]);
+        if (!File.Exists(filepath))
         {
-            checkAccess(Utils.f2int(item["id"]));
-
-            //TODO MIGRATE
-            //fw.resp.Cache.SetCacheability(HttpCacheability.Private); // use public only if all uploads are public
-            //fw.resp.Cache.SetExpires(DateTime.Now.AddDays(30)); // cache for 30 days, this allows browser not to send any requests to server during this period (unless F5)
-            //fw.resp.Cache.SetMaxAge(new TimeSpan(30, 0, 0, 0));
-
-            string filepath = getUploadImgPath(id, size, (string)item["ext"]);
-            if (!File.Exists(filepath))
-            {
-                fw.response.StatusCode = 404;
-                return;
-            }
-
-            DateTime filetime = System.IO.File.GetLastWriteTime(filepath);
-            filetime = new DateTime(filetime.Year, filetime.Month, filetime.Day, filetime.Hour, filetime.Minute, filetime.Second); // remove any milliseconds
-
-            //TODO MIGRATE
-            //fw.resp.Cache.SetLastModified(filetime); // this allows browser to send If-Modified-Since request headers (unless Ctrl+F5)
-
-            string ifmodhead = fw.request.Headers["If-Modified-Since"];
-            if (ifmodhead != null && DateTime.TryParse(ifmodhead, out DateTime ifmod) && ifmod.ToLocalTime() >= filetime)
-            {
-                fw.response.StatusCode = 304; // not modified
-                //TODO MIGRATE fw.resp.SuppressContent = true;
-            }
-            else
-            {
-                fw.logger(LogLevel.INFO, "Transmit(", disposition, ") filepath [", filepath, "]");
-                string filename = ((string)item["fname"]).Replace("\"", "'");
-                string ext = UploadUtils.getUploadFileExt(filename);
-
-                fw.response.Headers.Append("Content-type", getMimeForExt(ext));
-                fw.response.Headers.Append("Content-Disposition", disposition + "; filename=\"" + filename + "\"");
-                fw.response.SendFileAsync(filepath).Wait();
-            }
+            fw.response.StatusCode = 404;
+            return;
         }
-        else
-            throw new UserException("No file specified");
+
+        DateTime filetime = File.GetLastWriteTime(filepath).ToUniversalTime();
+
+        fw.response.Headers.Append("Last-Modified", filetime.ToString("R")); // this allows browser to send If-Modified-Since request headers (unless Ctrl+F5)
+
+        string ifmodhead = fw.request.Headers.IfModifiedSince;
+        if (ifmodhead != null && DateTime.TryParse(ifmodhead, out DateTime ifmod) && ifmod >= filetime)
+        {
+            fw.response.StatusCode = 304; // not modified
+            return;
+        }
+
+        fw.logger(LogLevel.INFO, "Transmit(", disposition, ") filepath [", filepath, "]");
+        string filename = item["fname"].Replace('"', '\'');
+        string ext = UploadUtils.getUploadFileExt(filename);
+
+        fw.response.Headers.Append("Content-type", getMimeForExt(ext));
+        fw.response.Headers.Append("Content-Disposition", disposition + "; filename=\"" + filename + "\"");
+        fw.response.SendFileAsync(filepath).Wait();
     }
 
     /// <summary>
