@@ -223,6 +223,12 @@ public class ParsePage
 
     private string _parse_page(string tpl_name, Hashtable hf, string page, ref Hashtable parent_hf)
     {
+        if (tpl_name == null)
+        {
+            fw.logger(LogLevel.DEBUG, "ParsePage - layout template (tpl_name) is null");
+            return "";
+        }
+
         if (tpl_name.Length > 0 && tpl_name.Substring(0, 1) != "/")
             tpl_name = basedir + "/" + tpl_name;
 
