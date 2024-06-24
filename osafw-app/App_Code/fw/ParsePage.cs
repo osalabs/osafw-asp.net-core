@@ -116,7 +116,7 @@
   default
   urlencode
   json (was var2js) - produces json-compatible string, example: {success:true, msg:""}
-  markdown      - convert markdown text to html using CommonMark.NET (optional). Note: may wrap tag with <p>
+  markdown      - convert markdown text to html using Markdig (optional). Note: may wrap tag with <p>
   noparse       - doesn't parse file and just include file by tag path as is, ignores all other attrs except if
 */
 
@@ -154,9 +154,9 @@ public class ParsePage
     private const string DATE_FORMAT_SQL = "yyyy-MM-dd HH:mm:ss";
     // "d M yyyy HH:mm"
 
-    // for dynamic load of CommonMark markdown converter
-    private static object CommonMarkSettings;
-    private static System.Reflection.MethodInfo mConvert;
+    // for dynamic load of Markdig markdown converter
+    private static System.Reflection.MethodInfo mMarkdownToHtml;
+    private static object MarkdownPipeline;
 
     private readonly FW fw;
     // checks if template files modifies and reload them, depends on config's "log_level"
@@ -992,28 +992,38 @@ public class ParsePage
 
                 if (attr_count > 0 && hattrs.ContainsKey("markdown"))
                 {
+                    // try to dynamically load Markdig, equivalent to:
+                    // var pipeline = new MarkdownPipelineBuilder().UseAdvancedExtensions().Build();
+                    // or var pipeline = new MarkdownPipelineBuilder().Configure("common+gfm-pipetables+emphasisextras+listextras+footers+citations+attributes+abbreviations+figures+bootstrap+medialinks+autoidentifiers+tasklists+autolinks").Build();
+                    // var result = Markdown.ToHtml(value, pipeline);
                     try
                     {
-                        if (mConvert == null)
+                        if (mMarkdownToHtml == null)
                         {
-                            // try to dynamic load CommonMark
-                            System.Reflection.Assembly aCommonMark = System.Reflection.Assembly.Load("CommonMark");
-                            Type tCommonMarkConverter = aCommonMark.GetType("CommonMark.CommonMarkConverter");
-                            Type tCommonMarkSettings = aCommonMark.GetType("CommonMark.CommonMarkSettings");
-                            CommonMarkSettings = tCommonMarkSettings.GetProperty("Default", tCommonMarkSettings).GetValue(null, null); //TODO MIGRATE .Clone()
-                            //TODO MIGRATE CommonMarkSettings.RenderSoftLineBreaksAsLineBreaks = true;
-                            // more default settings can be overriden here
+                            System.Reflection.Assembly aMarkdig = System.Reflection.Assembly.Load("Markdig");
+                            Type tMarkdown = aMarkdig.GetType("Markdig.Markdown");
+                            Type tMarkdownPipeline = aMarkdig.GetType("Markdig.MarkdownPipeline");
+                            Type tMarkdownPipelineBuilder = aMarkdig.GetType("Markdig.MarkdownPipelineBuilder");
+                            Type tMarkdownExtensions = aMarkdig.GetType("Markdig.MarkdownExtensions");
+                            Type tMarkdownParserContext = aMarkdig.GetType("Markdig.MarkdownParserContext");
 
-                            mConvert = tCommonMarkConverter.GetMethod("Convert", new Type[] { typeof(string), aCommonMark.GetType("CommonMark.CommonMarkSettings") });
+                            mMarkdownToHtml = tMarkdown.GetMethod("ToHtml", [typeof(string), tMarkdownPipeline, tMarkdownParserContext]);
+
+                            var configureMethod = tMarkdownExtensions.GetMethod("Configure");
+
+                            var pipelineBuilder = Activator.CreateInstance(tMarkdownPipelineBuilder);
+                            configureMethod.Invoke(null, [pipelineBuilder, "common+hardlinebreak+gfm-pipetables+emphasisextras+listextras+footers+citations+abbreviations+figures+bootstrap+medialinks+autoidentifiers+tasklists+autolinks+customcontainers+attributes"]);
+
+                            MarkdownPipeline = tMarkdownPipelineBuilder.GetMethod("Build").Invoke(pipelineBuilder, null);
                         }
 
-                        // equivalent of: value = CommonMarkConverter.Convert(value)
-                        value = (string)mConvert.Invoke(null, new object[] { value, CommonMarkSettings });
+                        if (mMarkdownToHtml != null)
+                            value = (string)mMarkdownToHtml.Invoke(null, [value, MarkdownPipeline, null]);
                     }
                     catch (Exception ex)
                     {
-                        fw.logger("WARN", @"error parsing markdown, check bin\CommonMark.dll exists");
-                        fw.logger("DEBUG", ex.Message);
+                        fw.logger(LogLevel.WARN, @"error parsing markdown, install Markdig package");
+                        fw.logger(LogLevel.DEBUG, ex.Message);
                     }
 
                     attr_count -= 1;

@@ -96,10 +96,59 @@
       ]
     },
     {
-      "library": "markdown-it@14.0.0",
+      "library": "markdown-it@14.1.0",
       "destination": "wwwroot/assets/lib/markdown-it",
       "files": [
         "dist/markdown-it.min.js"
+      ]
+    },
+    {
+      "library": "markdown-it-sub@2.0.0",
+      "destination": "wwwroot/assets/lib/markdown-it-sub",
+      "files": [
+        "dist/markdown-it-sub.min.js"
+      ]
+    },
+    {
+      "library": "markdown-it-sup@2.0.0",
+      "destination": "wwwroot/assets/lib/markdown-it-sup",
+      "files": [
+        "dist/markdown-it-sup.min.js"
+      ]
+    },
+    {
+      "library": "markdown-it-abbr@2.0.0",
+      "destination": "wwwroot/assets/lib/markdown-it-abbr",
+      "files": [
+        "dist/markdown-it-abbr.min.js"
+      ]
+    },
+    {
+      "library": "markdown-it-ins@4.0.0",
+      "destination": "wwwroot/assets/lib/markdown-it-ins",
+      "files": [
+        "dist/markdown-it-ins.min.js"
+      ]
+    },
+    {
+      "library": "markdown-it-mark@4.0.0",
+      "destination": "wwwroot/assets/lib/markdown-it-mark",
+      "files": [
+        "dist/markdown-it-mark.min.js"
+      ]
+    },
+    {
+      "library": "markdown-it-container@4.0.0",
+      "destination": "wwwroot/assets/lib/markdown-it-container",
+      "files": [
+        "dist/markdown-it-container.min.js"
+      ]
+    },
+    {
+      "library": "markdown-it-attrs@4.1.6",
+      "destination": "wwwroot/assets/lib/markdown-it-attrs",
+      "files": [
+        "markdown-it-attrs.browser.js"
       ]
     },
 
