@@ -67,8 +67,8 @@
                   @edit="onRowEdit(row)"
                   @quickedit="onRowQuickEdit(row)"
                   @delete="onRowDelete(row)">
-                  <template #btn-prepend><slot name="list-row-btn-prepend"></slot></template>
-                  <template #btn-append><slot name="list-row-btn-append"></slot></template>
+                  <template #btn-prepend><slot name="list-row-btn-prepend" :row="row"></slot></template>
+                  <template #btn-append><slot name="list-row-btn-append" :row="row"></slot></template>
                 </list-row-btn>
 
                 <template v-for="header in fwStore.list_headers" :key="header.field_name">
@@ -110,8 +110,8 @@
                   @edit="onRowEdit(row)"
                   @quickedit="onRowQuickEdit(row)"
                   @delete="onRowDelete(row)">
-                  <template #btn-prepend><slot name="list-row-btn-prepend"></slot></template>
-                  <template #btn-append><slot name="list-row-btn-append"></slot></template>
+                  <template #btn-prepend><slot name="list-row-btn-prepend" :row="row"></slot></template>
+                  <template #btn-append><slot name="list-row-btn-append" :row="row"></slot></template>
                 </list-row-btn>
             </tr>
           </template>
