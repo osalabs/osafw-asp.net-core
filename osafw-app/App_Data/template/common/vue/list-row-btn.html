@@ -1,7 +1,7 @@
 <script type="text/x-template" id="list-row-btn-template">
   <td class="list-row-controls text-nowrap d-print-none"
     :class="(isLeft?'':'text-end')">
-    <slot name="btn-prepend"></slot>
+    <slot name="btn-prepend" :row="row"></slot>
 
     <a v-if="co_buttons.view" href="#" @click.prevent="$emit('view', $event)">`View`</a>
     <template v-if="co_buttons.edit">
@@ -17,7 +17,7 @@
       <a href="#" class="text-danger" @click.prevent="$emit('delete', $event)" :disabled="isReadonly"><i class="bi bi-x"></i></a>
     </template>
 
-    <slot name="btn-append"></slot>
+    <slot name="btn-append" :row="row"></slot>
   </td>
 </script>
 
