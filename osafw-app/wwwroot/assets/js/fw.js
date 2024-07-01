@@ -264,7 +264,8 @@ window.fw={
     $(document).on('click', 'table.list > tbody > tr', function (e) {
       var $this = $(this);
       var tag_name = e.target.tagName.toLowerCase();
-      if (tag_name === 'a'||tag_name === 'button'){
+      var tag_name_parent = e.target.parentElement.tagName.toLowerCase();
+      if (tag_name === 'a'||tag_name === 'button'||tag_name_parent === 'a'||tag_name_parent === 'button'){
         return; // do not process if link/button clicked
       }
       $this.find('.multicb:first').click();
