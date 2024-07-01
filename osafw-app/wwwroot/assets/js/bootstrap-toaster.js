@@ -1,11 +1,15 @@
 /**
- * Toaster - Bootstrap 5 Toast Manager Library v0.23.0312
+ * Toaster - Bootstrap 5 Toast Manager Library
+ * https://github.com/osalabs/bootstrap-toaster
+ * Copyright 2024 Oleg Savchuk
+ * Licensed under MIT (https://github.com/osalabs/bootstrap-toaster/blob/main/LICENSE)
+ *
  *
  * A lightweight and customizable toast notification library built on top of Bootstrap 5.
  *
  * Features:
  * - Supports HTML content.
- * - Customizable themes and positions.
+ * - Customizable themes.
  * - Provides helper methods for common toast types (success, danger, info, primary).
  * - Includes a "Close All" feature with debounced update for performance.
  * - Emits custom events for toast actions.
@@ -19,7 +23,7 @@
  * ToastSuccess('Operation completed successfully', { autohide: false });
  *
  * // Custom toast with options
- * Toast('Custom Message', { theme: 'text-bg-info', position: 'bottom-left', html: true, delay: 7000 });
+ * Toast('Custom Message', { theme: 'text-bg-info', html: true, delay: 7000 });
  *
  * Custom Events:
  * Toast events can be listened to on the document body for actions like 'toast.shown', 'toast.hidden', and 'toast.hidden.all'.
@@ -147,6 +151,7 @@
     // Helper functions for common use cases
     window.Toast = createToast;
     window.ToastSuccess = function(message, options) { createToast(message, { ...options, theme: 'text-bg-success' }); };
+    window.ToastWarning = function(message, options) { createToast(message, { ...options, theme: 'text-bg-warning' }); };
     window.ToastDanger = function(message, options) { createToast(message, { ...options, theme: 'text-bg-danger' }); };
     window.ToastInfo = function(message, options) { createToast(message, { ...options, theme: 'text-bg-info' }); };
     window.ToastPrimary = function(message, options) { createToast(message, { ...options, theme: 'text-bg-primary' }); };
