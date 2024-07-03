@@ -1,6 +1,22 @@
-body.spage main img {
+body.spage .main img {
   max-width: 100%;
   height: auto;
+}
+
+body.spage .main h1 {
+ margin-bottom: 3rem;
+ font-weight: 700;
+}
+
+body.spage .main .blockquote {
+ border-left: 10px solid var(--bs-tertiary-bg);
+ padding-left: 2rem;
+}
+
+.spage-content {
+ /*font-family: Georgia, Cambria, "Times New Roman", Times, serif;*/
+ font-size: 1.1rem;
+ line-height: 2rem;
 }
 
 <~page[custom_css] noescape>

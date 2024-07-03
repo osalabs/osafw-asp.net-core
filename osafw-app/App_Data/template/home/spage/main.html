@@ -15,10 +15,12 @@
  <img src="<~page[head_att_id_url]>" class="img-fluid mb-2">
 </~head_image>
 
+<div class="spage-content">
 <~one_col if="page[is_col1]">
 <~two_left_col if="page[is_col2_left]">
 <~two_right_col if="page[is_col2_right]">
 <~three_col if="page[is_col3]">
+</div>
 
 <~subpages_block if="subpages" inline>
 <hr>

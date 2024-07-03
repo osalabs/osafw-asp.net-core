@@ -3,6 +3,7 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
+using System;
 using System.Collections;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -80,9 +81,9 @@ public class Spages : FwModel
                 item["head_att_id_url"] = fw.model<Att>().getUrl(Utils.f2int(item["head_att_id"]));
         }
 
-        // page[top_url] used in templates navigation
-        if (url_parts.GetUpperBound(0) >= 1)
-            item["top_url"] = url_parts[1].ToLower();
+        // page[top_page] can be used in templates navigation
+        if (breadcrumbs.Count >= 1)
+            item["top_page"] = breadcrumbs[0];
 
         item["full_url"] = item_full_url;
         item["breadcrumbs"] = breadcrumbs;
@@ -241,6 +242,10 @@ public class Spages : FwModel
         return result;
     }
 
+    public bool isPublished(Hashtable item)
+    {
+        return Utils.f2int(item["status"]) == FwModel.STATUS_ACTIVE && (item["pub_time"] == null || Utils.f2date(item["pub_time"]) <= DateTime.Now);
+    }
 
     // render page by full url
     public void showPageByFullUrl(string full_url)
@@ -251,8 +256,10 @@ public class Spages : FwModel
         var pages_tree = tree("status=0", new Hashtable(), "parent_id, prio, iname"); // published only
         ps["pages"] = getPagesTreeList(pages_tree, 0);
 
+        var is_pub = false;
+
         Hashtable item = oneByFullUrl(full_url);
-        if (item.Count == 0 || Utils.f2int(item["status"]) == FwModel.STATUS_DELETED && !fw.model<Users>().isAccessLevel(Users.ACL_ADMIN))
+        if (item.Count == 0 || !(is_pub = isPublished(item)) && !fw.model<Users>().isAccessLevel(Users.ACL_ADMIN))
         {
             ps["hide_std_sidebar"] = true;
             fw.parser("/error/404", ps);
@@ -275,6 +282,7 @@ public class Spages : FwModel
         ps["page"] = item;
         ps["meta_keywords"] = item["meta_keywords"];
         ps["meta_description"] = item["meta_description"];
+        ps["is_page_published"] = is_pub;
         ps["is_can_edit"] = fw.model<Users>().isAccessLevel(Users.ACL_MANAGER);
         ps["hide_std_sidebar"] = true; // TODO - control via item[template]
         fw.parser("/home/spage", ps);
