@@ -261,10 +261,9 @@ window.fw={
     });
 
     //click on row - select/unselect row
-    $(document).on('click mousedown', 'table.list:not([data-row-selectable="false"]) > tbody > tr', function (e) {
+    $(document).on('click', 'table.list:not([data-row-selectable="false"]) > tbody > tr', function (e) {
       // Do not process on text selection
-      if (e.type === 'mousedown') return;
-      else if (window.getSelection().toString() !== '') return;
+      if (window.getSelection().toString() !== '') return;
 
       const $this = $(this);
       const $target = $(e.target);
@@ -735,6 +734,9 @@ window.fw={
     var $f = $tbl.data('filter') ? $($tbl.data('filter')) : $('form[data-list-filter]:first');
 
     $tbl.on('dblclick', 'tbody tr', function(e){
+      // Do not process on text selection
+      if (window.getSelection().toString() !== '') return;
+      
       if ($(e.target).is('input.multicb')) return;
       var url=$(this).data('url');
       if (url) window.location=url;
