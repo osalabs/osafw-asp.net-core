@@ -114,7 +114,7 @@ public class LookupManager : FwModel
         //set nullable fields to NULL value if empty
         Hashtable table_schema = db.tableSchemaFull(tname);
         foreach (string fld_name in item.Keys.Cast<string>().ToArray())
-            if (Utils.isEmpty(item[fld_name]) && (string)((Hashtable)(table_schema[fld_name]))["is_nullable"] == "1")
+            if (Utils.isEmpty(item[fld_name]) && Utils.f2int(((Hashtable)(table_schema[fld_name]))["is_nullable"]) == 1)
                 item[fld_name] = null;
 
         // also we need include old fields into where just because id by sort is not robust enough
