@@ -261,13 +261,19 @@ window.fw={
     });
 
     //click on row - select/unselect row
-    $(document).on('click', 'table.list > tbody > tr', function (e) {
-      var $this = $(this);
-      var tag_name = e.target.tagName.toLowerCase();
-      var tag_name_parent = e.target.parentElement.tagName.toLowerCase();
-      if (tag_name === 'a'||tag_name === 'button'||tag_name_parent === 'a'||tag_name_parent === 'button'){
-        return; // do not process if link/button clicked
+    $(document).on('click mousedown', 'table.list:not([data-row-selectable="false"]) > tbody > tr', function (e) {
+      // Do not process on text selection
+      if (e.type === 'mousedown') return;
+      else if (window.getSelection().toString() !== '') return;
+
+      const $this = $(this);
+      const $target = $(e.target);
+
+      // Check if the clicked element or any of its parents is an interactive element
+      if ($target.closest('a, button, input, select, textarea').length) {
+        return; // Do not process if an interactive element was clicked
       }
+
       $this.find('.multicb:first').click();
     });
 
@@ -717,7 +723,7 @@ window.fw={
   },
 
   // if no data-filter defined, tries to find first form with data-list-filter
-  // <table class="list" data-rowtitle="Double click to Edit" [data-rowtitle-type="explicit"] [data-filter="#FFilter"]>
+  // <table class="list" data-rowtitle="Double click to Edit" [data-rowtitle-type="explicit"] [data-filter="#FFilter"] [data-row-selectable="false"]>
   //  <thead>
   //    <tr data-sortby="" data-sortdir="asc|desc"
   //  ... <tr data-url="url to go on double click">
