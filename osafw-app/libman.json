@@ -71,14 +71,6 @@
         "dist/chart.min.js"
       ]
     },
-    {
-      "provider": "cdnjs",
-      "library": "typeahead.js@0.9.3",
-      "destination": "wwwroot/assets/lib/typeahead",
-      "files": [
-        "typeahead.min.js"
-      ]
-    },
 
     {
       "library": "bootstrap-markdown@2.10.0",
