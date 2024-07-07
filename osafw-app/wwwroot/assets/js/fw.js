@@ -732,7 +732,8 @@ window.fw={
     if (!$tbl.length) return; //skip if no list tables found
 
     var $f = $tbl.data('filter') ? $($tbl.data('filter')) : $('form[data-list-filter]:first');
-
+    var is_selectable = !$tbl.is('[data-row-selectable="false"]');
+    
     $tbl.on('dblclick', 'tbody tr', function(e){
       // Do not process on text selection
       if (window.getSelection().toString() !== '') return;
@@ -743,7 +744,7 @@ window.fw={
     });
 
     var rowtitle=$tbl.data('rowtitle');
-    if (typeof(rowtitle)=='undefined') rowtitle='Double click to Edit';
+    if (typeof(rowtitle)=='undefined') rowtitle=(is_selectable ? 'Click to select, ' : '') + 'Double click to Edit';
     var title_selector = "tbody tr";
     if ($tbl.data('rowtitle-type')=='explicit') title_selector="tbody tr td.rowtitle";
     $tbl.find(title_selector).attr('title', rowtitle);
