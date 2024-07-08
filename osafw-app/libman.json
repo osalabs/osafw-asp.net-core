@@ -195,6 +195,13 @@
       "files": [
         "dist/vue-draggable-next.esm-browser.js"
       ]
+    },
+    {
+      "library": "bootstrap-simple-autocomplete@1.0.0",
+      "destination": "wwwroot/assets/lib/bootstrap-simple-autocomplete",
+      "files": [
+        "bootstrap-simple-autocomplete.js"
+      ]
     }
   ]
 }
