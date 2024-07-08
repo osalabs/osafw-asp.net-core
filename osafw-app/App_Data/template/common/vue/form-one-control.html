@@ -197,7 +197,12 @@
   </template>
 
   <template v-else-if="def.type=='autocomplete'">
-    <Multiselect
+    <autocomplete
+      v-model="value_autocomplete"
+      :placeholder="def.placeholder"
+      :url="def.autocomplete_url"
+    />
+    <!--Multiselect
       v-model="value_autocomplete"
       :placeholder="def.placeholder"
       :filter-results="false"
@@ -207,7 +212,7 @@
       :searchable="true"
       :create-option="true"
       :options="autocompleteOptions"
-    />
+    /-->
     <form-control-help-block :text="def.help_text" />
   </template>
 

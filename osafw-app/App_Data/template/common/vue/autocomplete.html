@@ -1,0 +1,41 @@
+<script type="text/x-template" id="autocomplete-template">
+  <input ref="input" type="text" value="" :data-autocomplete="url" :placeholder="placeholder" class="form-control">
+</script>
+
+<script type="module">
+  import * as BootstrapSimpleAutocomplete from 'bootstrap-simple-autocomplete';
+  console.log(BootstrapSimpleAutocomplete);
+
+fwApp.component('autocomplete', {
+  template: '#autocomplete-template',
+  props: {
+    url: {
+      type: String,
+      required: true
+    },
+    placeholder: {
+      type: String,
+      required: false,
+      default: 'start typing to select...'
+    }
+  },
+  data: () => ({
+  }),
+  computed: {
+  },
+  mounted(){
+    new BootstrapSimpleAutocomplete(this.$refs.input);
+  },
+  unmounted(){
+    console.log('autocomplete unmounted');
+  },
+  updated(){
+    console.log('autocomplete updated');
+  },
+  methods: {
+    sampleMethod(e) {
+      this.$emit('on-sample-event', e);
+    }
+  }
+});
+</script>
