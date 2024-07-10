@@ -559,6 +559,10 @@ a.thumbnail:hover {
 
 /* print helpers */
 @media print {
+  .sidebar {
+    display: none !important;
+  }
+
   .page-break-after {
     page-break-after: always;
   }

@@ -428,8 +428,7 @@ public abstract class FwController
                 }
             }
         }
-        else
-            result = false; //TODO check
+        //else - no required fields defined - valid
 
         if (!result && is_global_errors)
             form_errors["REQUIRED"] = true; // set global error
