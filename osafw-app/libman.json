@@ -197,10 +197,11 @@
       ]
     },
     {
-      "library": "bootstrap-simple-autocomplete@1.0.0",
+      "library": "bootstrap-simple-autocomplete@1.0.1",
       "destination": "wwwroot/assets/lib/bootstrap-simple-autocomplete",
       "files": [
-        "bootstrap-simple-autocomplete.js"
+        "bootstrap-simple-autocomplete.js",
+        "bootstrap-simple-autocomplete.mjs"
       ]
     }
   ]
