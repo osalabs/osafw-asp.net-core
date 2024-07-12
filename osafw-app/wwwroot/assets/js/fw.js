@@ -735,10 +735,11 @@ window.fw={
     var is_selectable = !$tbl.is('[data-row-selectable="false"]');
     
     $tbl.on('dblclick', 'tbody tr', function(e){
-      // Do not process on text selection
-      if (window.getSelection().toString() !== '') return;
-      
-      if ($(e.target).is('input.multicb')) return;
+      var $target = $(e.target);
+      // Do not process on text selection, but only if clicked on the element with a selected text (double click on th/td padding selects all text inside the cell)
+      if (window.getSelection().toString() !== '' && !$target.is('th, td')) return;
+
+      if ($target.is('input.multicb')) return;
       var url=$(this).data('url');
       if (url) window.location=url;
     });
