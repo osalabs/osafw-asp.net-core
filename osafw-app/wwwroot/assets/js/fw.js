@@ -178,7 +178,7 @@ window.fw={
 
     //autosubmit filter on change filter fields
     $(document).on('change', 'form[data-list-filter][data-autosubmit] [name^="f["]:input:visible:not([data-nosubmit])', function(){
-        this.form.submit();
+        $(this.form).trigger('submit');
     });
 
     //pager click via form filter submit so all filters applied
