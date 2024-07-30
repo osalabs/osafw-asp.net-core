@@ -239,12 +239,18 @@ window.fw={
     });
 
     //click on row - select/unselect row
-    $(document).on('click', 'table.list > tbody > tr', function (e) {
-      var $this = $(this);
-      var tag_name = e.target.tagName.toLowerCase();
-      if (tag_name === 'a'||tag_name === 'button'){
-        return; // do not process if link/button clicked
+    $(document).on('click', 'table.list:not([data-row-selectable="false"]) > tbody > tr', function (e) {
+      // Do not process on text selection
+      if (window.getSelection().toString() !== '') return;
+
+      const $this = $(this);
+      const $target = $(e.target);
+
+      // Check if the clicked element or any of its parents is an interactive element
+      if ($target.closest('a, button, input, select, textarea').length) {
+        return; // Do not process if an interactive element was clicked
       }
+
       $this.find('.multicb:first').click();
     });
 
@@ -694,7 +700,7 @@ window.fw={
   },
 
   // if no data-filter defined, tries to find first form with data-list-filter
-  // <table class="list" data-rowtitle="Double click to Edit" [data-rowtitle-type="explicit"] [data-filter="#FFilter"]>
+  // <table class="list" data-rowtitle="Double click to Edit" [data-rowtitle-type="explicit"] [data-filter="#FFilter"] [data-row-selectable="false"]>
   //  <thead>
   //    <tr data-sortby="" data-sortdir="asc|desc"
   //  ... <tr data-url="url to go on double click">
@@ -704,15 +710,20 @@ window.fw={
     if (!$tbl.length) return; //skip if no list tables found
 
     var $f = $tbl.data('filter') ? $($tbl.data('filter')) : $('form[data-list-filter]:first');
-
+    var is_selectable = !$tbl.is('[data-row-selectable="false"]');
+    
     $tbl.on('dblclick', 'tbody tr', function(e){
-      if ($(e.target).is('input.multicb')) return;
+      var $target = $(e.target);
+      // Do not process on text selection, but only if clicked on the element with a selected text (double click on th/td padding selects all text inside the cell)
+      if (window.getSelection().toString() !== '' && !$target.is('th, td')) return;
+
+      if ($target.is('input.multicb')) return;
       var url=$(this).data('url');
       if (url) window.location=url;
     });
 
     var rowtitle=$tbl.data('rowtitle');
-    if (typeof(rowtitle)=='undefined') rowtitle='Double click to Edit';
+    if (typeof(rowtitle)=='undefined') rowtitle=(is_selectable ? 'Click to select, ' : '') + 'Double click to Edit';
     var title_selector = "tbody tr";
     if ($tbl.data('rowtitle-type')=='explicit') title_selector="tbody tr td.rowtitle";
     $tbl.find(title_selector).attr('title', rowtitle);
