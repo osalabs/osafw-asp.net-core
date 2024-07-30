@@ -113,20 +113,39 @@ public class FormUtils
 
     /// <summary>
     /// get name for the value fromt the select template
+    /// file format: each line - value|description
     /// ex: selectTplName('/common/sel/status.sel', 127) => 'Deleted'
+    /// ex: selectTplName('../status.sel', 127, '/admin/users/index') => 'Deleted'
     /// TODO: refactor to make common code with ParsePage?
     /// </summary>
-    /// <param name="tpl_path"></param>
+    /// <param name="tpl_path">path </param>
     /// <param name="sel_id"></param>
+    /// <param name="base_path">required if tpl_path is relative (not start with "/"), then base_path used. base_path itself is relative to template root</param>
     /// <returns></returns>
-    public static string selectTplName(string tpl_path, string sel_id)
+    public static string selectTplName(string tpl_path, string sel_id, string base_path = "")
     {
         string result = "";
-        if (sel_id == null)
-            sel_id = "";
+        sel_id ??= "";
 
-        string[] lines = FW.getFileLines((string)FwConfig.settings["template"] + tpl_path);
+        if (!tpl_path.StartsWith('/'))
+        {
+            if (string.IsNullOrEmpty(base_path))
+                return ""; // base_path required for relative tpl_path
 
+            tpl_path = base_path + "/" + tpl_path;
+        }
+
+        var template = (string)FwConfig.settings["template"];
+
+        // translate to absolute path, without any ../
+        var path = System.IO.Path.GetFullPath(template + tpl_path);
+
+        // path traversal validation - check if path is a subpath of FwConfig.settings["template"]
+        if (!path.StartsWith(template))
+            return "";
+
+
+        string[] lines = FW.getFileLines(path);
         foreach (string line in lines)
         {
             if (line.Length < 2)
@@ -147,12 +166,37 @@ public class FormUtils
         return result;
     }
 
-    public static ArrayList selectTplOptions(string tpl_path)
+    /// <summary>
+    /// return options for select tag from the template file
+    /// file format: each line - value|description
+    /// </summary>
+    /// <param name="tpl_path"></param>
+    /// <param name="base_path">required if tpl_path is relative (not start with "/"), then base_path used. base_path itself is relative to template root</param>
+    /// <returns></returns>
+
+    public static ArrayList selectTplOptions(string tpl_path, string base_path = "")
     {
-        ArrayList result = new();
+        ArrayList result = [];
 
-        string[] lines = FW.getFileLines((string)FwConfig.settings["template"] + tpl_path);
+        if (!tpl_path.StartsWith('/'))
+        {
+            if (string.IsNullOrEmpty(base_path))
+                return result; // base_path required for relative tpl_path
 
+            tpl_path = base_path + "/" + tpl_path;
+        }
+
+        var template = (string)FwConfig.settings["template"];
+
+        // translate to absolute path, without any ../
+        var path = System.IO.Path.GetFullPath(template + tpl_path);
+
+        // path traversal validation - check if path is a subpath of FwConfig.settings["template"]
+        if (!path.StartsWith(template))
+            return result;
+
+
+        string[] lines = FW.getFileLines(path);
         foreach (var line in lines)
         {
             if (line.Length < 2)

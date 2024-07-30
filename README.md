@@ -217,6 +217,7 @@ Renders:
 |field|Field name from database.table or arbitrary name for non-db block|demo_dicts_id - in case of select id value won't be displayed, but used to select active list element|
 |label|Label text|Demo Dictionary|
 |lookup_model|Model name where to read lookup values|DemoDicts|
+|lookup_tpl|template path to read lookup values, can be absolute (to templates root) or relative to current controller's template folder|/common/sel/status.sel|
 |is_option0|only for "select" type, if true - includes `<option value="0">option0_title</option>`|false(default),true|
 |is_option_empty|only for "select" type, if true - includes `<option value="">option0_title</option>`|false(default),true|
 |option0_title|only for "select" type for is_option0 or is_option_empty option title|"- select -"(default)|

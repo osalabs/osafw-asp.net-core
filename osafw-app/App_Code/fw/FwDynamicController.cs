@@ -772,7 +772,7 @@ public class FwDynamicController : FwController
                         def["admin_url"] = "/Admin/" + def["lookup_model"]; // default admin url from model name
                 }
                 else if (def.ContainsKey("lookup_tpl"))
-                    def["value"] = FormUtils.selectTplName((string)def["lookup_tpl"], (string)item[field]);
+                    def["value"] = FormUtils.selectTplName((string)def["lookup_tpl"], (string)item[field], fw.route.controller_path.ToLower());
                 else
                     def["value"] = item[field];
 
@@ -961,7 +961,7 @@ public class FwDynamicController : FwController
                 }
                 else if (def.ContainsKey("lookup_tpl"))
                 {
-                    def["select_options"] = FormUtils.selectTplOptions((string)def["lookup_tpl"]);
+                    def["select_options"] = FormUtils.selectTplOptions((string)def["lookup_tpl"], fw.route.controller_path.ToLower());
                     def["value"] = item[field];
                     foreach (Hashtable row in (ArrayList)def["select_options"]) // contains id, iname
                     {
