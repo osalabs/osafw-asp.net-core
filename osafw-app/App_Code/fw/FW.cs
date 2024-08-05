@@ -53,6 +53,7 @@ public enum LogLevel : int
     ERROR,           // error happened, but current request might still continue (notify admin)
     WARN,            // potentially harmful situations for further investigation, request processing continues
     INFO,            // default for production (easier maintenance/support), progress of the application at coarse-grained level (fw request processing: request start/end, sql, route/external redirects, sql, fileaccess, third-party API)
+    NOTICE,          // normal, but noticeable condition (for Sentry logged as bradcrumbs)
     DEBUG,           // default for development (default for logger("msg") call), fine-grained level
     TRACE,           // very detailed dumps (in-module details like fw core, despatcher, parse page, ...)
     ALL              // just log everything
@@ -184,11 +185,10 @@ public class FW : IDisposable
 
         FwConfig.init(context, configuration);
 
-        //TODO MIGRATE
 #if isSentry
-        //Sentry Raven processing
-        sentryClient = Sentry.SentrySdk.Init(config("log_sentry"))
-        Sentry.SentrySdk.ConfigureScope(Sub(scope) scope.User = New Sentry.Protocol.User With {.Email = SESSION("login")})
+        //configure Sentry logging
+        sentryClient = Sentry.SentrySdk.Init(Utils.f2str(config("log_sentry")));
+        Sentry.SentrySdk.ConfigureScope(scope => scope.User = new Sentry.SentryUser { Email = Session("login") });
 #endif
 
         db = new DB(this);
@@ -809,8 +809,10 @@ public class FW : IDisposable
         foreach (object dmp_obj in args)
             str.Append(dumper(dmp_obj));
 
+        var strlog = str.ToString();
+
         // write to debug console first
-        System.Diagnostics.Debug.WriteLine(str);
+        System.Diagnostics.Debug.WriteLine(strlog);
 
         // write to log file
         string log_file = (string)config("log");
@@ -821,7 +823,7 @@ public class FW : IDisposable
                 // force seek to end just in case other process added to file
                 using (StreamWriter floggerSW = File.AppendText(log_file))
                 {
-                    floggerSW.WriteLine(str.ToString());
+                    floggerSW.WriteLine(strlog);
                 }
             }
             catch (Exception ex)
@@ -829,6 +831,45 @@ public class FW : IDisposable
                 System.Diagnostics.Debug.WriteLine("WARN logger can't write to log file. Reason:" + ex.Message);
             }
         }
+#if isSentry
+        // send to Sentry
+        try
+        {
+            //do not log to Sentry too detailed TRACEs
+            if (level <= LogLevel.DEBUG)
+            {
+                //convert LogLevel to Sentry.SentryLevel
+                Sentry.SentryLevel sentryLevel = level switch
+                {
+                    LogLevel.FATAL => Sentry.SentryLevel.Fatal,
+                    LogLevel.ERROR => Sentry.SentryLevel.Error,
+                    LogLevel.WARN => Sentry.SentryLevel.Warning,
+                    LogLevel.INFO => Sentry.SentryLevel.Info,
+                    LogLevel.DEBUG => Sentry.SentryLevel.Debug,
+                    _ => Sentry.SentryLevel.Error
+                };
+
+                if (args.Length > 0 && args[0] is Exception ex)
+                {
+                    //if first argument is an exception - send it as exception with strlog as an additional info
+                    Sentry.SentrySdk.CaptureException(ex, scope =>
+                        {
+                            scope.Level = sentryLevel;
+                            scope.SetExtra("message", strlog);
+                        });
+                }
+                else
+                    Sentry.SentrySdk.CaptureMessage(strlog, sentryLevel);
+
+                //also add as a breadcrumb for the future events
+                Sentry.SentrySdk.AddBreadcrumb(strlog);
+            }
+        }
+        catch (Exception)
+        {
+            // make sure we don't break the app if Sentry fails
+        }
+#endif
     }
 
     public static string dumper(object dmp_obj, int level = 0) // TODO better type detection(suitable for all collection types)

@@ -89,4 +89,9 @@ public class TestController : FwController
         return new Hashtable { { "_json", ps } };
     }
 
+    public Hashtable ExceptionAction()
+    {
+        throw new Exception("Test exception");
+    }
+
 }
