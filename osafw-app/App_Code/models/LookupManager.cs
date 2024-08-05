@@ -111,6 +111,12 @@ public class LookupManager : FwModel
             throw new ApplicationException("Wrong lookup table name");
         string id_fname = fw.model<LookupManagerTables>().getColumnId(defs);
 
+        //set nullable fields to NULL value if empty
+        Hashtable table_schema = db.tableSchemaFull(tname);
+        foreach (string fld_name in item.Keys.Cast<string>().ToArray())
+            if (Utils.isEmpty(item[fld_name]) && Utils.f2int(((Hashtable)(table_schema[fld_name]))["is_nullable"]) == 1)
+                item[fld_name] = null;
+
         // also we need include old fields into where just because id by sort is not robust enough
         var itemold = oneByTname(tname, id);
         // If Not defs["list_columns"] > "" Then
@@ -141,7 +147,9 @@ public class LookupManager : FwModel
         Hashtable item_save = new();
         foreach (string key in item.Keys)
         {
-            if (itemold[key].ToString() != item[key].ToString())
+            // additional null and old value empty string check to avoid SET to NULL constantly as we get empty string from DB for DBNull values
+            if ((item[key] == null && itemold[key].ToString() != "")
+                || (item[key] != null && itemold[key].ToString() != item[key].ToString()))
                 item_save[key] = item[key];
         }
         // logger("NEW SAVE")
