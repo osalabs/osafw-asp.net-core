@@ -298,22 +298,69 @@ window.fw={
       }
     });
 
-    //on click - confirm, then submit via POST
-    //ex: <button type="button" class="btn btn-default on-fw-submit" data-url="SUBMIT_URL?XSS=<~SESSION[XSS]>" data-title="CONFIRMATION TITLE"></button>
-    $(document).on('click', '.on-fw-submit', function (e) {
-        e.preventDefault();
-        var $this=$(this);
-        var url = $this.data('url');
-        var title = $this.data('title');
-        if (!title) title='Are you sure?';
-        fw.confirm(title, function (e) {
-            $('#FTmpSubmit').remove();
-            $(document.body).append('<form id="FTmpSubmit" method="POST" action="'+url+'"></form>');
-            $('#FTmpSubmit').submit();
+    //on click - submit via POST with a spinner on clicked element
+    //  with optional confirmation (if title set)
+    //  optionally via ajax
+    //  optionally replace target content (otherwise fw.ok(json.message) displayed)
+    //  optionally show spinner
+    //ex: <button type="button" class="btn btn-default on-fw-submit" data-url="SUBMIT_URL?XSS=<~SESSION[XSS]>" data-title="CONFIRMATION TITLE" data-ajax data-target="#optional" data-spinner>Button</button>
+    $(document).on('click', '.on-fw-submit', function (e){
+      e.preventDefault();
+      var $this = $(this);
+      var url = $this.data('url');
+      var title = $this.data('title');
+      var ajax = $this.is('[data-ajax]');
+      var target = $this.data('target');
+      var spinner = $this.is('[data-spinner]');
+
+      if (title) {
+        fw.confirm(title, function() {
+          fw.submit($this, url, ajax, target, spinner);
         });
+      } else {
+        fw.submit($this, url, ajax, target, spinner);
+      }
     });
 
     fw.textarea_autoresize('textarea.autoresize');
+  },
+
+  //submit url via POST form
+  submit: function ($el, url, is_ajax, target, is_spinner) {
+    var $form = $('<form action="' + url + '" method="post"></form>');
+
+    if (is_spinner){
+      var spinner = $('<span class="fw-spinner-container"> <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span></span');
+      $el.prop('disabled', true).append(spinner); // Add spinner and disable button
+    }
+
+    var complete = function() {
+      if (is_spinner){
+        $el.prop('disabled', false).find('.fw-spinner-container').remove(); // Remove spinner and enable button
+      }
+    };
+
+    if (is_ajax) {
+      var options = {
+        complete: complete // Ensure spinner is removed after the request completes
+      };
+
+      if (target) {
+        options.target = target;
+      } else {
+        options.dataType = 'json';
+        options.success = function(response) {
+          fw.ok(response.message ?? 'Success'); // Display message using fw.ok
+        };
+        options.error = function(xhr, status, error) {
+          fw.error("An error occurred: " + error); // Error handling
+        };
+      }
+
+      $form.ajaxSubmit(options);
+    } else {
+      $form.appendTo('body').submit();//non-ajax submit
+    }
   },
 
   //automatically resize textarea element to it's content (but no downsize smaller than initial)
