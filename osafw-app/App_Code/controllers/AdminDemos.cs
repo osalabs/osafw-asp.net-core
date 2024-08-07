@@ -86,7 +86,7 @@ public class AdminDemosController : FwAdminController
         ps["select_options_parent_id"] = model.listSelectOptionsParent();
         ps["select_options_demo_dicts_id"] = model_related.listSelectOptions();
         ps["dict_link_auto_id_iname"] = model_related.iname(item["dict_link_auto_id"]);
-        ps["multi_datarow"] = model_related.listWithChecked((string)item["dict_link_multi"]);
+        ps["multi_datarow"] = model_related.listWithChecked(Utils.f2str(item["dict_link_multi"]));
         ps["multi_datarow_link"] = fw.model<DemosDemoDicts>().listLinkedByMainId(id);
         FormUtils.comboForDate((string)item["fdate_combo"], ps, "fdate_combo");
 

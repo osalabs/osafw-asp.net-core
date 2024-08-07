@@ -191,6 +191,16 @@ public class FwAdminController : FwController
         return this.afterSave(true);
     }
 
+    public virtual Hashtable RestoreDeletedAction(int id)
+    {
+        fw.model<Users>().checkReadOnly();
+
+        model0.update(id, new Hashtable() { { model0.field_status, Utils.f2str(FwModel.STATUS_ACTIVE) } });
+
+        fw.flash("record_updated", 1);
+        return this.afterSave(true, id);
+    }
+
     public virtual Hashtable SaveMultiAction()
     {
         route_onerror = FW.ACTION_INDEX;

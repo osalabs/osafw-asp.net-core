@@ -62,7 +62,7 @@
       e.preventDefault();
       var id = $(this).data('id');
       fw.confirm('`Are you sure to delete current filter?`', function (e) {
-        var $f = $('<form action="<~/my/filters/url>/'+id+'?XSS=<~session[XSS]>&return_url=<~../url>" method="post"></form>')
+        var $f = $('<form action="<~/my/filters/url>/'+id+'?_method=DELETE&XSS=<~session[XSS]>&return_url=<~../url>" method="post"></form>')
           .appendTo(document.body)
           .submit();
       });

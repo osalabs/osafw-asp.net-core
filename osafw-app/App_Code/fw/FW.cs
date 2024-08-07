@@ -440,7 +440,7 @@ public class FW : IDisposable
             // POST/PUT  /controller/{id}        Save     (save changes to exisitng record - Update    Note:Request.Form should contain data. Assumes whole form submit. I.e. unchecked checkboxe treated as empty value)
             // PATCH /controller                 SaveMulti (partial update multiple records)
             // PATCH /controller/{id}            Save     (save partial changes to exisitng record - Update. Can be used to update single/specific fields without affecting any other fields.)
-            // POST/DELETE  /controller/{id}     Delete    Note:Request.Form should NOT contain any data
+            // DELETE /controller/{id}           Delete
             //
             // /controller/(Action)              Action    call for arbitrary action from the controller
             Match m = Regex.Match(url, @"^/([^/]+)(?:/(new|\.\w+)|/([\d\w_-]+)(?:\.(\w+))?(?:/(edit|delete))?)?/?$");
@@ -479,15 +479,7 @@ public class FW : IDisposable
                 }
                 else if (route.method == "POST")
                 {
-                    if (!string.IsNullOrEmpty(route.id))
-                    {
-                        if (request.HasFormContentType && request.Form.Count > 0 || request.ContentLength > 0)
-                            route.action_raw = ACTION_SAVE;
-                        else
-                            route.action_raw = ACTION_DELETE;
-                    }
-                    else
-                        route.action_raw = ACTION_SAVE;
+                    route.action_raw = ACTION_SAVE;
                 }
                 else if (route.method == "PUT")
                 {

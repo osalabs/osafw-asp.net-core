@@ -456,6 +456,9 @@ public class AdminLookupManagerController : FwController
 
         Hashtable hf = new();
         Hashtable item = model.oneByTname(dict, id);
+        if (item.Count == 0)
+            throw new ApplicationException("Not found");
+
         hf["i"] = item;
         hf["iname"] = item[new ArrayList(item.Keys)[0]];
         hf["id"] = id;

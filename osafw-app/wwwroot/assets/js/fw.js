@@ -692,9 +692,7 @@ window.fw={
 
   delete_btn: function (ael){
     fw.confirm('<strong>ARE YOU SURE</strong> to delete this item?', function(){
-      var XSS=$(ael).parents('form:first').find("input[name=XSS]").val();
-      var action = ael.href+ ( ( ael.href.match(/\?/) ) ? '&':'?' ) +'XSS='+XSS;
-      $('#FOneDelete').attr('action', action).submit();
+      $('#FOneDelete').attr('action', ael.href).submit();
     });
     return false;
   },

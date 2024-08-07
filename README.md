@@ -76,7 +76,7 @@ Controllers automatically directly mapped to URLs, so developer doesn't need to 
   - `POST /Controller` - insert new record `SaveAction()`
   - `PUT /Controller` - update multiple records `SaveMultiAction()`
   - `POST/PUT /Controller/ID` - update record `SaveAction()`
-  - `POST/DELETE /Controller/ID` - delete record (POST body should be empty) `DeleteAction()`
+  - `DELETE /Controller/ID` - delete record `DeleteAction()`
   - `GET/POST /Controller/(Something)[/ID]` - call for arbitrary action from the controller `SomethingAction()`
 
 For example `GET /Products` will call `ProductsController.IndexAction()`
