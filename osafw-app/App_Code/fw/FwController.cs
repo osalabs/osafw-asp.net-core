@@ -244,10 +244,23 @@ public abstract class FwController
     }
 
     // set of helper functions to return string, integer, date values from request (fw.FORM)
-    public object req(string iname)
+
+    /// <summary>
+    /// return value from request (fw.FORM) by name
+    /// </summary>
+    /// <param name="iname"></param>
+    /// <param name="def">optional default value to return if request value is not set</param>
+    /// <returns></returns>
+    public object req(string iname, object def = null)
     {
-        return fw.FORM[iname];
+        return fw.FORM[iname] ?? def;
     }
+
+    /// <summary>
+    /// return Hashtable value from request (fw.FORM)
+    /// </summary>
+    /// <param name="iname"></param>
+    /// <returns></returns>
     public Hashtable reqh(string iname)
     {
         if (fw.FORM[iname] != null && fw.FORM[iname].GetType() == typeof(Hashtable))
@@ -256,22 +269,49 @@ public abstract class FwController
             return new Hashtable();
     }
 
-    public string reqs(string iname)
+    /// <summary>
+    /// return string value from request (fw.FORM)
+    /// </summary>
+    /// <param name="iname"></param>
+    /// <param name="def">optional default value</param>
+    /// <returns></returns>
+    public string reqs(string iname, string def = "")
     {
-        string value = (string)fw.FORM[iname] ?? "";
+        string value = (string)(fw.FORM[iname] ?? def);
         return value;
     }
-    public int reqi(string iname)
+
+    /// <summary>
+    /// return int value from request (fw.FORM)
+    /// </summary>
+    /// <param name="iname"></param>
+    /// <param name="def">optional default value</param>
+    /// <returns></returns>
+    public int reqi(string iname, int def = 0)
     {
-        return Utils.f2int(fw.FORM[iname]);
+        return Utils.f2int(fw.FORM[iname] ?? def);
     }
-    public object reqd(string iname)
+
+    /// <summary>
+    /// return date value from request (fw.FORM)
+    /// </summary>
+    /// <param name="iname"></param>
+    /// <param name="def">optional default value</param>
+    /// <returns></returns>
+    public object reqd(string iname, object def = null)
     {
-        return Utils.f2date(fw.FORM[iname]);
+        return Utils.f2date(fw.FORM[iname] ?? def);
     }
-    public bool reqb(string iname)
+
+    /// <summary>
+    /// return bool value from request (fw.FORM)
+    /// </summary>
+    /// <param name="iname"></param>
+    /// <param name="def"></param>
+    /// <returns></returns>
+    public bool reqb(string iname, bool def = false)
     {
-        return Utils.f2bool(fw.FORM[iname]);
+        return Utils.f2bool(fw.FORM[iname] ?? def);
     }
 
     public void rw(string str)
