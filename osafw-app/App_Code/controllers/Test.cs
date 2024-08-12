@@ -86,6 +86,7 @@ public class TestController : FwController
     {
         var ps = new Hashtable();
         ps["success"] = true;
+        ps["message"] = "This is Json!";
         return new Hashtable { { "_json", ps } };
     }
 
