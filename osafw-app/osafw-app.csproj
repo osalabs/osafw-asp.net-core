@@ -23,6 +23,8 @@
 
   <ItemGroup>
     <Folder Include="App_Data\" />
+    <Content Remove="App_Data\**" />
+    <None Remove="App_Data\**" />
   </ItemGroup>
 
   <ItemGroup>
