@@ -963,23 +963,23 @@ public class DevManageController : FwController
 
                     if (hparts.Contains("multiple"))
                     {
-                        //this is many to many link table
+                        //this is many to many junction table
                         var linked_tblname = Utils.name2fw(field_name);
-                        var link_tblname = table_entity["table"] + "_" + linked_tblname;
-                        var link_entity = new Hashtable
+                        var junction_tblname = table_entity["table"] + "_" + linked_tblname;
+                        var junction_entity = new Hashtable
                         {
                             ["db_config"] = table_entity["db_config"],
-                            ["table"] = link_tblname,
-                            ["fw_name"] = Utils.name2fw(link_tblname), // new table name using fw standards
-                            ["iname"] = Utils.name2human(link_tblname), // human table name
+                            ["table"] = junction_tblname,
+                            ["fw_name"] = Utils.name2fw(junction_tblname), // new table name using fw standards
+                            ["iname"] = Utils.name2human(junction_tblname), // human table name
                             ["is_fw"] = true
                         };
 
                         //2 link fields - one to main table, another - to lookup table
-                        var link_fields = new ArrayList();
+                        var junction_fields = new ArrayList();
                         var field_name1 = table_entity["table"] + "_id";
                         var field_name2 = linked_tblname + "_id";
-                        link_fields.Add(new Hashtable()
+                        junction_fields.Add(new Hashtable()
                                     {
                                         {"name",field_name1},
                                         {"fw_name",field_name1},
@@ -992,7 +992,7 @@ public class DevManageController : FwController
                                         {"fw_type","int"},
                                         {"fw_subtype","int"}
                                     });
-                        link_fields.Add(new Hashtable()
+                        junction_fields.Add(new Hashtable()
                                     {
                                         {"name",field_name2},
                                         {"fw_name",field_name2},
@@ -1005,12 +1005,12 @@ public class DevManageController : FwController
                                         {"fw_type","int"},
                                         {"fw_subtype","int"}
                                     });
-                        link_fields.Add(defaultFieldStatus());
-                        link_fields.AddRange(defaultFieldsAdded());
-                        link_entity["fields"] = link_fields;
+                        junction_fields.Add(defaultFieldStatus());
+                        junction_fields.AddRange(defaultFieldsAdded());
+                        junction_entity["fields"] = junction_fields;
 
                         //2 foreign keys - to main table and lookup table
-                        var link_fk = new ArrayList
+                        var junction_fk = new ArrayList
                         {
                             new Hashtable()
                                 {
@@ -1025,20 +1025,20 @@ public class DevManageController : FwController
                                     {"column", field_name2}
                                 }
                         };
-                        link_entity["foreign_keys"] = link_fk;
+                        junction_entity["foreign_keys"] = junction_fk;
                         //automatic PK on both link fields
-                        link_entity["indexes"] = new Hashtable()
+                        junction_entity["indexes"] = new Hashtable()
                         {
                             {"PK", field_name1+", "+field_name2},
                             {"UX", field_name2+", "+field_name1}, //have an index with reversed fields order
                         };
 
-                        link_entity["model_name"] = _tablename2model((string)link_entity["fw_name"]); // potential Model Name
-                        link_entity["controller_url"] = ""; // no ui for link tables
-                        link_entity["controller_title"] = ""; // no ui for link tables
-                        if (comments.Length > 0) link_entity["comments"] = comments;
+                        junction_entity["model_name"] = _tablename2model((string)junction_entity["fw_name"]); // potential Model Name
+                        junction_entity["controller_url"] = ""; // no ui for link tables
+                        junction_entity["controller_title"] = ""; // no ui for link tables
+                        if (comments.Length > 0) junction_entity["comments"] = comments;
 
-                        entities.Add(link_entity);
+                        entities.Add(junction_entity);
                         continue; //do not add a field as we made a link table
                     }
                 }
