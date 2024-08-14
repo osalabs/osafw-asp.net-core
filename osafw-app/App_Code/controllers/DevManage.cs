@@ -972,7 +972,8 @@ public class DevManageController : FwController
                             ["table"] = junction_tblname,
                             ["fw_name"] = Utils.name2fw(junction_tblname), // new table name using fw standards
                             ["iname"] = Utils.name2human(junction_tblname), // human table name
-                            ["is_fw"] = true
+                            ["is_fw"] = true,
+                            ["is_junction"] = true,
                         };
 
                         //2 link fields - one to main table, another - to lookup table
@@ -1256,6 +1257,7 @@ public class DevManageController : FwController
     {
         string table_name = (string)entity["table"];
         string model_name = (string)entity["model_name"];
+        bool is_junction = Utils.f2bool(entity["is_junction"]);
 
         if (model_name == "")
             model_name = Utils.nameCamelCase(table_name);
@@ -1263,83 +1265,127 @@ public class DevManageController : FwController
             throw new UserException("No table name or no model name");
         // If _models().Contains(model_name) Then Throw New ApplicationException("Such model already exists")
 
-        // copy DemoDicts.cs to model_name.cs
         var path = fw.config("site_root") + @"\App_Code\models";
-        var mdemo = FW.getFileContent(path + @"\DemoDicts.cs");
-        if (mdemo == "")
-            throw new ApplicationException("Can't open DemoDicts.cs");
-
-        // replace: DemoDicts => ModelName, demo_dicts => table_name
-        mdemo = mdemo.Replace("DemoDicts", (string)model_name);
-        mdemo = mdemo.Replace("demo_dicts", table_name);
-        mdemo = mdemo.Replace("db_config = \"\"", "db_config = \"" + entity["db_config"] + "\"");
-
-        // generate code for the model's constructor:
-        // set field_*
-        var codegen = "";
-        if (entity.ContainsKey("fields"))
+        string mdemo;
+        if (is_junction)
         {
-            var fields = array2hashtable((ArrayList)entity["fields"], "name");
+            //for junction tables - use DemosDemoDicts.cs as a template
+            mdemo = FW.getFileContent(path + @"\DemosDemoDicts.cs");
+            if (mdemo == "")
+                throw new ApplicationException("Can't open DemosDemoDicts.cs");
 
-            // detect id and iname fields
-            var i = 1;
-            Hashtable fld_int = null;
-            Hashtable fld_identity = null;
-            Hashtable fld_iname = null;
-            var is_normalize_names = false;
-            foreach (Hashtable fld in (ArrayList)entity["fields"])
+            // replace: DemosDemoDicts => ModelName, demos_demo_dicts => table_name
+            mdemo = mdemo.Replace("DemosDemoDicts", model_name);
+            mdemo = mdemo.Replace("demos_demo_dicts", table_name);
+            mdemo = mdemo.Replace("db_config = \"\"", "db_config = \"" + entity["db_config"] + "\"");
+
+            // setup junction_* fields from foreign_keys (first is main, second is linked)
+            var model_main = "";
+            var field_main_id = "";
+            var model_linked = "";
+            var field_linked_id = "";
+            foreach (Hashtable fk in (ArrayList)entity["foreign_keys"])
             {
-                // find identity
-                if (fld_identity == null && Utils.f2str(fld["is_identity"]) == "1")
-                    fld_identity = fld;
+                if (field_main_id == "")
+                {
+                    model_main = _tablename2model(Utils.name2fw((string)fk["pk_table"]));
+                    field_main_id = (string)fk["column"];
+                }
+                else
+                {
+                    model_linked = _tablename2model(Utils.name2fw((string)fk["pk_table"]));
+                    field_linked_id = (string)fk["column"];
+                }
 
-                // first int field
-                if (fld_int == null && Utils.f2str(fld["fw_type"]) == "int")
-                    fld_int = fld;
-
-                // for iname - just use 2nd to 4th field which not end with ID, varchar type and has some maxlen
-                if (fld_iname == null && i >= 2 && i <= 4 && Utils.f2str(fld["fw_type"]) == "varchar" && Utils.f2int(fld["maxlen"]) > 0 && Utils.Right(Utils.f2str(fld["name"]), 2).ToLower() != "id")
-                    fld_iname = fld;
-
-                if (Regex.IsMatch((string)fld["name"], @"[^\w_]", RegexOptions.IgnoreCase))
-                    // normalize names only if at least one field contains non-alphanumeric chars
-                    is_normalize_names = true;
-
-                i += 1;
             }
 
-            if (fld_identity == null && fld_int != null && fields.Count == 2)
-                // this is looks like lookup table (id/name fields only) without identity - just set id field as first int field
-                fld_identity = fld_int;
+            mdemo = mdemo.Replace("<Demos>", $"<{model_main}>");
+            mdemo = mdemo.Replace("\"demos_id\"", $"\"{field_main_id}\"");
 
-            if (fld_iname == null && fld_identity != null)
-                // if no iname field found - just use ID field
-                fld_iname = fld_identity;
+            mdemo = mdemo.Replace("<DemoDicts>", $"<{model_linked}>");
+            mdemo = mdemo.Replace("\"demo_dicts_id\"", $"\"{field_linked_id}\"");
+        }
+        else
+        {
+            //for regular tables - use DemoDicts.cs as a template
 
-            if (fld_identity != null && (string)fld_identity["name"] != "id")
-                codegen += "        field_id = \"" + fld_identity["name"] + "\";" + Environment.NewLine;
-            if (fld_iname != null && (string)fld_iname["name"] != "iname")
-                codegen += "        field_iname = \"" + fld_iname["name"] + "\";" + Environment.NewLine;
+            // copy DemoDicts.cs to model_name.cs
+            mdemo = FW.getFileContent(path + @"\DemoDicts.cs");
+            if (mdemo == "")
+                throw new ApplicationException("Can't open DemoDicts.cs");
 
-            // also reset fw fields if such not exists
-            if (!fields.ContainsKey("status"))
-                codegen += "        field_status = \"\";" + Environment.NewLine;
-            if (!fields.ContainsKey("add_users_id"))
-                codegen += "        field_add_users_id = \"\";" + Environment.NewLine;
-            if (!fields.ContainsKey("upd_users_id"))
-                codegen += "        field_upd_users_id = \"\";" + Environment.NewLine;
-            if (!fields.ContainsKey("upd_time"))
-                codegen += "        field_upd_time = \"\";" + Environment.NewLine;
-            if (fields.ContainsKey("prio"))
-                codegen += "        field_prio = \"prio\";" + Environment.NewLine;
+            // replace: DemoDicts => ModelName, demo_dicts => table_name
+            mdemo = mdemo.Replace("DemoDicts", model_name);
+            mdemo = mdemo.Replace("demo_dicts", table_name);
+            mdemo = mdemo.Replace("db_config = \"\"", "db_config = \"" + entity["db_config"] + "\"");
 
-            if (is_normalize_names || !Utils.f2bool(entity["is_fw"]))
-                codegen += "        is_normalize_names = true;" + Environment.NewLine;
+            // generate code for the model's constructor:
+            // set field_*
+            var codegen = "";
+            if (entity.ContainsKey("fields"))
+            {
+                var fields = array2hashtable((ArrayList)entity["fields"], "name");
+
+                // detect id and iname fields
+                var i = 1;
+                Hashtable fld_int = null;
+                Hashtable fld_identity = null;
+                Hashtable fld_iname = null;
+                var is_normalize_names = false;
+                foreach (Hashtable fld in (ArrayList)entity["fields"])
+                {
+                    // find identity
+                    if (fld_identity == null && Utils.f2str(fld["is_identity"]) == "1")
+                        fld_identity = fld;
+
+                    // first int field
+                    if (fld_int == null && Utils.f2str(fld["fw_type"]) == "int")
+                        fld_int = fld;
+
+                    // for iname - just use 2nd to 4th field which not end with ID, varchar type and has some maxlen
+                    if (fld_iname == null && i >= 2 && i <= 4 && Utils.f2str(fld["fw_type"]) == "varchar" && Utils.f2int(fld["maxlen"]) > 0 && Utils.Right(Utils.f2str(fld["name"]), 2).ToLower() != "id")
+                        fld_iname = fld;
+
+                    if (Regex.IsMatch((string)fld["name"], @"[^\w_]", RegexOptions.IgnoreCase))
+                        // normalize names only if at least one field contains non-alphanumeric chars
+                        is_normalize_names = true;
+
+                    i += 1;
+                }
+
+                if (fld_identity == null && fld_int != null && fields.Count == 2)
+                    // this is looks like lookup table (id/name fields only) without identity - just set id field as first int field
+                    fld_identity = fld_int;
+
+                if (fld_iname == null && fld_identity != null)
+                    // if no iname field found - just use ID field
+                    fld_iname = fld_identity;
+
+                if (fld_identity != null && (string)fld_identity["name"] != "id")
+                    codegen += "        field_id = \"" + fld_identity["name"] + "\";" + Environment.NewLine;
+                if (fld_iname != null && (string)fld_iname["name"] != "iname")
+                    codegen += "        field_iname = \"" + fld_iname["name"] + "\";" + Environment.NewLine;
+
+                // also reset fw fields if such not exists
+                if (!fields.ContainsKey("status"))
+                    codegen += "        field_status = \"\";" + Environment.NewLine;
+                if (!fields.ContainsKey("add_users_id"))
+                    codegen += "        field_add_users_id = \"\";" + Environment.NewLine;
+                if (!fields.ContainsKey("upd_users_id"))
+                    codegen += "        field_upd_users_id = \"\";" + Environment.NewLine;
+                if (!fields.ContainsKey("upd_time"))
+                    codegen += "        field_upd_time = \"\";" + Environment.NewLine;
+                if (fields.ContainsKey("prio"))
+                    codegen += "        field_prio = \"prio\";" + Environment.NewLine;
+
+                if (is_normalize_names || !Utils.f2bool(entity["is_fw"]))
+                    codegen += "        is_normalize_names = true;" + Environment.NewLine;
+            }
+
+            mdemo = mdemo.Replace("//###CODEGEN", codegen);
         }
 
-
-        mdemo = mdemo.Replace("//###CODEGEN", codegen);
-
+        // copy demo model to model_name.cs
         FW.setFileContent(path + @"\" + model_name + ".cs", ref mdemo);
     }
 
@@ -1886,6 +1932,10 @@ public class DevManageController : FwController
             var m = Regex.Match(table, rx_table_link);
             if (m.Success)
             {
+                //table could be a junction table name then
+                var tentity = (Hashtable)tables[table];
+                var is_junction = Utils.f2bool(tentity["is_junction"]);
+                string junction_model = (string)tentity["model_name"];
                 string table_name_linked = m.Groups[1].Value;
                 string table_name_link = table;
 
@@ -1897,21 +1947,30 @@ public class DevManageController : FwController
                         { "field", table_name_linked + "_link" },
                         { "label", Utils.name2human(table_name_linked) },
                         { "type", "multi" },
-                        { "lookup_model", _tablename2model(table_name_linked) },
+                        //{ "lookup_model", _tablename2model(table_name_linked) },
                         //{ "table_link", table_name_link },
                         //{ "table_link_id_name", table_name + "_id" },
                         //{ "table_link_linked_id_name", table_name_linked + "_id" }
                     };
+                    if (is_junction)
+                        sflink["model"] = junction_model;
+                    else
+                        sflink["lookup_model"] = _tablename2model(table_name_linked);
+
                     Hashtable sfflink = new()
                     {
                         { "field", table_name_linked + "_link" },
                         { "label", Utils.name2human(table_name_linked) },
                         { "type", "multicb" },
-                        { "lookup_model", _tablename2model(table_name_linked) },
+                        //{ "lookup_model", _tablename2model(table_name_linked) },
                         //{ "table_link", table_name_link },
                         //{ "table_link_id_name", table_name + "_id" },
                         //{ "table_link_linked_id_name", table_name_linked + "_id" }
                     };
+                    if (is_junction)
+                        sfflink["model"] = junction_model;
+                    else
+                        sfflink["lookup_model"] = _tablename2model(table_name_linked);
 
                     showFieldsLeft.Add(sflink);
                     showFormFieldsLeft.Add(sfflink);
