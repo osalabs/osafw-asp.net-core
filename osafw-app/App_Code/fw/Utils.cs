@@ -488,7 +488,7 @@ public class Utils
             if (!is_first) result.Append(',');
 
             string str = Regex.Replace(row[fld] + "", @"[\n\r]+", " ");
-            str = str.Replace("\"", "\\\"");
+            str = str.Replace("\"", "\"\"");
             // check if string need to be quoted (if it contains " or ,)
             if (str.IndexOf("\"") > 0 || str.IndexOf(",") > 0)
             {
