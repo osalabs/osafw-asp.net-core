@@ -31,12 +31,18 @@ public class AdminReportsController : FwController
         ps["return_url"] = return_url;
 
         var repcode = FwReports.cleanupRepcode(id);
+        var filter_session_key = "_filter_" + fw.G["controller.action"] + "." + repcode;
+
+        if (reqs("doreset").Length > 0) {
+            fw.Session(filter_session_key, "");
+            fw.redirect(base_url + "/" + repcode);
+        }
 
         var is_run = reqs("dofilter").Length > 0 || reqs("is_run").Length > 0;
         ps["is_run"] = is_run;
 
         // report filters (options)
-        initFilter("AdminReports." + repcode);
+        initFilter(filter_session_key);
 
         // get format directly form request as we don't need to remember format
         list_filter["format"] = reqh("f")["format"];
