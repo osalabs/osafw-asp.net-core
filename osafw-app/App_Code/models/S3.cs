@@ -21,6 +21,7 @@
 //                "s3:*"
 //            ],
 //            "Resource": [
+//                "arn:aws:s3:::YOURBUCKETNAME",   <-- bucket name only to allow Bucket List queries
 //                "arn:aws:s3:::YOURBUCKETNAME/*"  <-- note /* here
 //            ]
 //        }
@@ -303,35 +304,40 @@ public class S3 : FwModel
     /// <summary>
     /// delete one object or whole folder
     /// </summary>
-    /// <param name="key">relative to the S3Root</param>
+    /// <param name="key">object key, relative to the S3Root by default</param>
+    /// <param name="is_add_root">if set to False, the S3Root prefix is not added. Used in recursive folder delete where object key name is obtained as a full path from the S3 API</param>
+    /// <param name="is_folder_check">if set to False, do not check for the folder "/" ending. Used to delete a folder where the folder itself is an actual object with a zero size</param>
     /// <returns>response of one object deletion or response of top folder delete</returns>
     /// <remarks>RECURSIVE! for folders</remarks>
-    public DeleteObjectResponse deleteObject(string key)
+    public DeleteObjectResponse deleteObject(string key, bool is_add_root = true, bool is_folder_check = true)
     {
-        logger("S3 deleteObject: [" + key + "]");
-        if (key.EndsWith("/"))
+        logger("S3 deleteObject: [" + key + "]" + " (" + is_add_root.ToString()[0] + "," + is_folder_check.ToString()[0] + ")");
+        if (is_folder_check && key.EndsWith("/"))
         {
             // it's subfolder - delete all content first
-            ListObjectsRequest listrequest = new()
+            ListObjectsV2Request listrequest = new()
             {
                 BucketName = this.bucket,
-                Prefix = this.root + key,
+                Prefix = (is_add_root ? this.root : "") + key,
                 Delimiter = "/"
             };
-            var task = client.ListObjectsAsync(listrequest);
+            var task = client.ListObjectsV2Async(listrequest);
             task.Wait();
-            ListObjectsResponse list = task.Result;
-            foreach (S3Object entry in list.S3Objects)
-                deleteObject(entry.Key);
+            ListObjectsV2Response list = task.Result;
 
-            //remove last /
-            key = key.TrimEnd('/');
+            //delete objects in folder first. Note: object can be a folder itself with a zero size if it was created separately with no body and key name ending with "/", so set "is_folder_check" to False here to delete an object and avoid an infinite loop
+            foreach (S3Object entry in list.S3Objects)
+                deleteObject(entry.Key, false, false);
+
+            //delete subfolders if any
+            foreach (string subfolder in list.CommonPrefixes)
+                deleteObject(subfolder, false);
         }
 
         DeleteObjectRequest request = new()
         {
             BucketName = this.bucket,
-            Key = this.root + key
+            Key = (is_add_root ? this.root : "") + key
         };
 
         var task2 = client.DeleteObjectAsync(request);
