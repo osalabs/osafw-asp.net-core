@@ -54,6 +54,7 @@ public class Att : FwModel
             fields["fname"] = file.FileName;
             fields["fsize"] = Utils.fileSize(filepath);
             fields["ext"] = ext;
+            fields["is_s3"] = 0; //reset S3 flag to overwrite the existing S3 file
             fields["status"] = STATUS_ACTIVE; // finished upload - change status to active
                                               // turn on image flag if it's an image
             if (UploadUtils.isUploadImgExtAllowed(ext))
