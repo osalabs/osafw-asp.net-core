@@ -121,7 +121,7 @@ public class Utils
         }
     }
 
-    // leave just allowed chars in string - for routers: controller, action or for route ID
+    // leave just allowed chars in string - for routers: prefix part, controller, action or for route ID
     public static string routeFixChars(string str)
     {
         return Regex.Replace(str, "[^A-Za-z0-9_-]+", "");
@@ -204,14 +204,17 @@ public class Utils
         // Convert.ToBase64CharArray();
     }
 
+    #region toBool, toInt, toStr... isDate, isEmpty functions
     /// <summary>
-    /// convert object of any type to bool, in case of error return false
+    /// convert anything to bool, in case of error return false:
+    ///   null - false
+    ///   collections - true if not empty
+    ///   non-zero number - true
     /// </summary>
     /// <param name="o"></param>
     /// <returns></returns>
-    public static bool f2bool(object o)
+    public static bool toBool(object o)
     {
-        // convert object of any type to bool, in case of error return false
         if (o == null) return false;
         if (o is bool b) return b;
         if (o is ICollection ic) return ic.Count > 0; //for collections return true if not empty
@@ -220,8 +223,30 @@ public class Utils
             return result;
 
         return false;
+
     }
 
+    [Obsolete("This method is deprecated, use toBool instead.")]
+    public static bool f2bool(object o)
+    {
+        return toBool(o);
+    }
+
+    /// <summary>
+    /// convert anything to DateTime, in case of error return DateTime.MinValue:
+    /// </summary>
+    /// <param name="o"></param>
+    /// <returns></returns>
+    public static DateTime toDate(object o)
+    {
+        if (o is DateTime dt) return dt;
+        if (DateTime.TryParse(o.ToString(), out DateTime result))
+            return result;
+
+        return DateTime.MinValue;
+    }
+
+    [Obsolete("This method is deprecated, use toDate instead.")]
     public static DateTime? f2date(object field)
     {
         if (field is DateTime dateTimeValue)
@@ -240,55 +265,122 @@ public class Utils
     /// <returns></returns>
     public static bool isDate(object o)
     {
-        return f2date(o) != null;
+        return toDate(o) != DateTime.MinValue;
     }
 
-    // guarantee to return string (if cannot convert to string - just return empty string)
+    /// <summary>
+    /// convert anything to string (if cannot convert to string - just return empty string)
+    /// </summary>
+    /// <param name="o"></param>
+    /// <returns></returns>
+    public static string toStr(object o)
+    {
+        if (o == null) return "";
+        return o.ToString();
+    }
+
+    [Obsolete("This method is deprecated, use toStr instead.")]
     public static string f2str(object field)
     {
-        if (field == null) return "";
-        return field.ToString();
+        return toStr(field);
     }
 
+    /// <summary>
+    /// convert anything to int, in case of error return 0:
+    /// </summary>
+    /// <param name="o"></param>
+    /// <returns></returns>
+    public static int toInt(object o)
+    {
+        if (o == null) return 0;
+        if (o is int i) return i;
+        if (int.TryParse(o.ToString(), out int result))
+            return result;
+
+        return 0;
+    }
+
+    [Obsolete("This method is deprecated, use toInt instead.")]
     public static int f2int(object AField)
     {
-        if (AField == null) return 0;
-        if (AField is int i) return i;
-        if (int.TryParse(AField.ToString(), out int result))
+        return toInt(AField);
+    }
+
+    public static long toLong(object o)
+    {
+        if (o == null) return 0;
+        if (o is long l) return l;
+        if (long.TryParse(o.ToString(), out long result))
             return result;
 
         return 0;
     }
 
+    [Obsolete("This method is deprecated, use toLong instead.")]
     public static long f2long(object AField)
     {
-        if (AField == null) return 0;
-        if (AField is long l) return l;
-        if (long.TryParse(AField.ToString(), out long result))
-            return result;
-
-        return 0;
+        return toLong(AField);
     }
 
-    public static decimal f2decimal(object AField)
+    /// <summary>
+    /// convert anything to decimal, in case of error return 0:
+    /// </summary>
+    /// <param name="o"></param>
+    /// <returns></returns>
+    public static decimal toDecimal(object o)
     {
-        if (AField == null) return decimal.Zero;
-        if (decimal.TryParse(AField.ToString(), out decimal result))
+        if (o == null) return decimal.Zero;
+        if (o is decimal d) return d;
+        if (decimal.TryParse(o.ToString(), out decimal result))
             return result;
 
         return decimal.Zero;
     }
 
-    public static Single f2single(object AField)
+    [Obsolete("This method is deprecated, use toDecimal instead.")]
+    public static decimal f2decimal(object AField)
     {
-        if (AField == null) return 0f;
-        if (Single.TryParse(AField.ToString(), out Single result))
+        return toDecimal(AField);
+    }
+
+    /// <summary>
+    /// convert anything to single, in case of error return 0:
+    /// </summary>
+    /// <param name="o"></param>
+    /// <returns></returns>
+    public static Single toSingle(object o)
+    {
+        if (o == null) return 0f;
+        if (o is Single s) return s;
+        if (Single.TryParse(o.ToString(), out Single result))
             return result;
 
         return 0f;
     }
 
+    [Obsolete("This method is deprecated, use toSingle instead.")]
+    public static Single f2single(object AField)
+    {
+        return toSingle(AField);
+    }
+
+    /// <summary>
+    /// convert anything to double, in case of error return 0:
+    /// </summary>
+    /// <param name="o"></param>
+    /// <returns></returns>
+    public static double toFloat(object o)
+    {
+        if (o == null) return 0.0;
+        if (o is double d) return d;
+        if (double.TryParse(o.ToString(), out double result))
+            return result;
+
+        return 0.0;
+    }
+
     // convert to double, optionally throw error
+    [Obsolete("This method is deprecated, use toFloat instead.")]
     public static double f2float(object AField, bool is_error = false)
     {
         if (AField == null && !is_error) return 0.0;
@@ -353,6 +445,8 @@ public class Utils
         if (o is ICollection col) return col.Count == 0;
         return false;
     }
+
+    #endregion
 
     public static string sTrim(string str, int size)
     {
@@ -436,13 +530,13 @@ public class Utils
     *    End void
     * </summary>
     * <param name="fw">fw instance</param>
-    * <param name="callback">callback to custom code, accept worksheet name and all rows(as ArrayList of Hashtables)</param>
+    * <param name="callback">callback to custom code, accept worksheet name and all rows(as ArrayList of Hashtables). Returns bool - to continue after first page or break.</param>
     * <param name="filepath">.xlsx file name to import</param>
     * <param name="is_header"></param>
     * <returns></returns>
     */
     [SupportedOSPlatform("windows")]
-    public static Hashtable importExcel(FW fw, Action<string, ArrayList> callback, string filepath, bool is_header = true)
+    public static Hashtable importExcel(FW fw, Func<string, ArrayList, bool> callback, string filepath, bool is_header = true)
     {
         Hashtable result = new();
         Hashtable conf = new();
@@ -467,7 +561,11 @@ public class Utils
             try
             {
                 ArrayList rows = accdb.array(sheet_name_full, where);
-                callback(sheet_name, rows);
+                if (!callback(sheet_name, rows))
+                {
+                    break;
+                }
+
             }
             catch (Exception ex)
             {

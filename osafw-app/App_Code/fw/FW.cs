@@ -61,7 +61,7 @@ public enum LogLevel : int
 
 public class FwRoute
 {
-    public string controller_path; // store /Prefix/Controller - to use in parser a default path for templates
+    public string controller_path; // store /Prefix/Prefix2/Controller - to use in parser a default path for templates
     public string method;
     public string controller;
     public string action;
@@ -376,7 +376,7 @@ public class FW : IDisposable
             if (route.method == "HEAD") route.method = "GET"; // for website processing HEAD is same as GET, IIS will send just headers
         }
 
-        string controller_prefix = "";
+        string controller_prefix = ""; // prefix without "/", i.e. /Admin/Reports -> AdminReports
 
         // process config special routes (redirects, rewrites)
         Hashtable routes = (Hashtable)this.config("routes");
@@ -423,9 +423,14 @@ public class FW : IDisposable
             Match m_prefix = Regex.Match(url, prefix_rx);
             if (m_prefix.Success)
             {
-                // convert from /Some/Prefix to SomePrefix
-                controller_prefix = Utils.routeFixChars(m_prefix.Groups[1].Value);
-                route.controller_path = "/" + controller_prefix;
+                // prefix detected - fix all prefix parts
+                var prefix_parts = m_prefix.Groups[1].Value.Split('/');
+                foreach (string prefix_part in prefix_parts)
+                {
+                    var part_fixed = Utils.routeFixChars(prefix_part);
+                    controller_prefix += part_fixed;
+                    route.controller_path += "/" + part_fixed;
+                }
                 url = m_prefix.Groups[2].Value;
             }
 
