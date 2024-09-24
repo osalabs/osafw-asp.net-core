@@ -95,4 +95,20 @@ public class TestController : FwController
         throw new Exception("Test exception");
     }
 
+    public void ReportAction()
+    {
+        var repcode = "sample";
+        var filters = new Hashtable();
+        filters["format"] = "html";
+
+        //var report = FwReports.createInstance(fw, repcode, filters);
+        //report.setFilters(); // set filters data like select/lookups
+        //report.getData();
+        //// show or output report according format
+        ////var ps = new Hashtable();
+        //report.render();
+
+        var html = FwReports.createHtml(fw, repcode);
+        rw(html);
+    }
 }

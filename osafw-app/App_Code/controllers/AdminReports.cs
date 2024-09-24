@@ -27,19 +27,16 @@ public class AdminReportsController : FwController
 
     public void ShowAction(string id)
     {
-        Hashtable ps = [];
-        ps["return_url"] = return_url;
-
         var repcode = FwReports.cleanupRepcode(id);
-        var filter_session_key = "_filter_" + fw.G["controller.action"] + "." + repcode;
+        var filter_session_key = FwReports.filterSessionKey(fw, repcode);
 
-        if (reqs("doreset").Length > 0) {
+        if (reqs("doreset").Length > 0)
+        {
             fw.Session(filter_session_key, "");
             fw.redirect(base_url + "/" + repcode);
         }
 
         var is_run = reqs("dofilter").Length > 0 || reqs("is_run").Length > 0;
-        ps["is_run"] = is_run;
 
         // report filters (options)
         initFilter(filter_session_key);
@@ -50,13 +47,15 @@ public class AdminReportsController : FwController
             list_filter["format"] = "html";
 
         var report = FwReports.createInstance(fw, repcode, list_filter);
-
         report.setFilters(); // set filters data like select/lookups
 
         if (is_run)
             report.getData();
 
         // show or output report according format
+        Hashtable ps = [];
+        ps["return_url"] = return_url;
+
         report.render(ps);
     }
 
@@ -74,7 +73,7 @@ public class AdminReportsController : FwController
         else
         {
             fw.FORM["is_run"] = 1;
-            fw.routeRedirect(FW.ACTION_SHOW, new string[] { repcode });
+            fw.routeRedirect(FW.ACTION_SHOW, [repcode]);
         }
     }
 }

@@ -25,6 +25,8 @@ public class SampleReport : FwReports
     // filter defaults can be Set here
     public override void setFilters()
     {
+        base.setFilters();
+
         Hashtable result = [];
         if (!f.ContainsKey("from_date") && !f.ContainsKey("to_date"))
             // set default filters
@@ -39,6 +41,8 @@ public class SampleReport : FwReports
 
     public override void getData()
     {
+        base.getData();
+
         setListSorting();
 
         // apply filters from Me.f

@@ -2,6 +2,20 @@
 //
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
+// Example usage from code:
+//
+// var repcode = "sample";
+// var filters = new Hashtable();
+//
+// // get report data only, without rendering
+// var report = FwReports.createInstance(fw, repcode, filters);
+// report.setFilters(); // set filters data like select/lookups
+// report.getData(); // report.list_rows now contains data
+//
+// // get html string of the report (based on report_html template only)
+// var html = FwReports.createHtml(fw, repcode);
+
+
 using System;
 using System.Collections;
 
@@ -14,8 +28,12 @@ public class FwReports
     public const string TPL_EXPORT_PDF = "/admin/reports/common/pdf.html";
     public const string TPL_EXPORT_XLS = "/admin/reports/common/xls.html";
 
+    public const string TO_BROWSER = "";
+    public const string TO_STRING = "string";
+
     public string report_code;
     public string format; // report format, if empty - html, other options: html, csv, pdf, xls
+    public string render_to = ""; // output to: empty(browser), "string"(render returns string, for html only), "/file/path"(render saves to file)
     public Hashtable f; // report filters/options
                         // render options for html to pdf/xls/etc... convertor
     public Hashtable f_data = new(); //filters data, like dropdown options
@@ -29,9 +47,9 @@ public class FwReports
 
     protected FW fw;
     protected DB db;
-    protected Hashtable ps = new(); // final data for template rendering
-    protected long list_count;      // count of list rows returned from db
-    protected ArrayList list_rows;  // list rows returned from db (array of hashes)
+    public Hashtable ps = new(); // final data for template rendering
+    public long list_count;      // count of list rows returned from db
+    public ArrayList list_rows;  // list rows returned from db (array of hashes)
 
     // access level for the report, default - Manager level.
     // Note, if you lower it for the specific report - you may want to update AdminReports access level as well
@@ -45,6 +63,11 @@ public class FwReports
     public static string cleanupRepcode(string repcode)
     {
         return Utils.routeFixChars(repcode);
+    }
+
+    public static string filterSessionKey(FW fw, string repcode)
+    {
+        return "_filter_" + fw.G["controller.action"] + "." + repcode;
     }
 
     /// <summary>
@@ -88,6 +111,35 @@ public class FwReports
         report.init(fw, repcode, f);
         report.checkAccess();
         return report;
+    }
+
+    // TBD
+    public static FwReports createAndRun(FW fw, string repcode, Hashtable f)
+    {
+        var report = createInstance(fw, repcode, f);
+        report.setFilters(); // set filters data like select/lookups
+        report.getData();
+        report.render();
+        return report;
+    }
+
+    //
+    /// <summary>
+    /// return html string of the report (based on report_html template only)
+    /// </summary>
+    /// <param name="fw"></param>
+    /// <param name="repcode"></param>
+    /// <param name="f"></param>
+    /// <returns></returns>
+    public static string createHtml(FW fw, string repcode, Hashtable f = null)
+    {
+        f ??= [];
+
+        var report = createInstance(fw, repcode, f);
+        report.setFilters(); // set filters data like select/lookups
+        report.getData();
+        report.render_to = TO_STRING;
+        return report.render();
     }
 
     public FwReports()
@@ -165,6 +217,8 @@ public class FwReports
         // list_rows =db.array("select * from something where 1=1 " & where & " order by {list_sortby}")
         // list_count = list_rows.Count();
         // ps["totals"] = 123;
+
+        ps["is_run"] = true; //show data in render
     }
 
     //override if report has inputs that needs to be saved to db
@@ -177,15 +231,18 @@ public class FwReports
     /// render report according to format
     /// </summary>
     /// <param name="ps_more">additional data for the template</param>
-    public virtual void render(Hashtable ps_more)
+    public virtual string render(Hashtable ps_more = null)
     {
+        var result = "";
+
         ps["f"] = f; // filter values
         ps["filter"] = f_data; // filter data
         ps["count"] = list_count;
         ps["list_rows"] = list_rows;
 
-        // merge ps_more into ps
-        Utils.mergeHash(ps, ps_more);
+        if (ps_more != null)
+            // merge ps_more into ps
+            Utils.mergeHash(ps, ps_more);
 
         ps["IS_EXPORT_PDF"] = false;
         ps["IS_EXPORT_XLS"] = false;
@@ -218,11 +275,23 @@ public class FwReports
             default:
                 {
                     // html
-                    // show report using templates from related report dir
-                    fw.parser(base_dir, ps);
+                    if (render_to == TO_STRING)
+                    {
+                        ps["IS_PRINT_MODE"] = true;
+                        var layout = (string)fw.G["PAGE_LAYOUT"];
+                        ParsePage parser_obj = new(fw);
+                        result = parser_obj.parse_page(base_dir, layout, ps);
+                    }
+                    else
+                    {
+                        // show report using templates from related report dir
+                        fw.parser(base_dir, ps);
+                    }
                     break;
                 }
         }
+
+        return result;
     }
 
     // REPORT HELPERS
