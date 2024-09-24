@@ -487,13 +487,19 @@ public class Utils
         {
             if (!is_first) result.Append(',');
 
-            string str = Regex.Replace(row[fld] + "", @"[\n\r]+", " ");
-            str = str.Replace("\"", "\\\"");
-            // check if string need to be quoted (if it contains " or ,)
-            if (str.IndexOf("\"") > 0 || str.IndexOf(",") > 0)
+            string str = (string)row[fld] ?? ""; // non-null guard
+
+            // escape double quotes + quote if value has line breaks, double quotes, commas
+            // https://www.ietf.org/rfc/rfc4180.txt
+            if (str.IndexOf('"') != -1)
+            {
+                str = "\"" + str.Replace("\"", "\"\"") + "\"";
+            }
+            else if (str.IndexOfAny(new char[] { ',', '\r', '\n' }) != -1)
             {
                 str = "\"" + str + "\"";
             }
+
             result.Append(str);
             is_first = false;
         }
@@ -527,10 +533,10 @@ public class Utils
             fields = Utils.qw(csv_export_fields);
         }
 
-        csv.Append(headers_str + "\n");
+        csv.Append(headers_str + "\r\n");
         foreach (Hashtable row in rows)
         {
-            csv.Append(Utils.toCSVRow(row, fields) + "\n");
+            csv.Append(Utils.toCSVRow(row, fields) + "\r\n");
         }
         return csv;
     }
