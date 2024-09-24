@@ -232,11 +232,11 @@ public class FwReports
     {
         int total_ctr = 0;
         foreach (Hashtable row in rows)
-            total_ctr += Utils.f2int(row["ctr"]);
+            total_ctr += Utils.toInt(row["ctr"]);
         if (total_ctr > 0)
         {
             foreach (Hashtable row in rows)
-                row["perc"] = Utils.f2int(row["ctr"]) / (double)total_ctr * 100;
+                row["perc"] = Utils.toInt(row["ctr"]) / (double)total_ctr * 100;
         }
         return total_ctr;
     }

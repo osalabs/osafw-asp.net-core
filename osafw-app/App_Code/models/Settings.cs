@@ -35,7 +35,7 @@ public class Settings : FwModel
     /// <remarks></remarks>
     public int readi(string icode)
     {
-        return Utils.f2int(read(icode));
+        return Utils.toInt(read(icode));
     }
 
     /// <summary>
@@ -46,7 +46,7 @@ public class Settings : FwModel
     /// <remarks></remarks>
     public object readd(string icode)
     {
-        return Utils.f2date(read(icode));
+        return Utils.toDate(read(icode));
     }
 
     /// <summary>
@@ -80,7 +80,7 @@ public class Settings : FwModel
         {
             // exists - update
             fields["ivalue"] = ivalue;
-            update(Utils.f2int(item["id"]), fields);
+            update(Utils.toInt(item["id"]), fields);
         }
         else
         {

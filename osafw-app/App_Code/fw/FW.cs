@@ -133,12 +133,12 @@ public class FW : IDisposable
     // usage: fw.userId
     public int userId
     {
-        get { return Utils.f2int(Session("user_id")); }
+        get { return Utils.toInt(Session("user_id")); }
     }
 
     public int userAccessLevel
     {
-        get { return Utils.f2int(Session("access_level")); }
+        get { return Utils.toInt(Session("access_level")); }
     }
 
     // shortcut to obtain if we working under logged in user
@@ -308,7 +308,7 @@ public class FW : IDisposable
     public string getResponseExpectedFormat()
     {
         string result = "";
-        if (this.route.format == "json" || Utils.f2str(this.request.Headers["Accept"]).Contains("application/json"))
+        if (this.route.format == "json" || Utils.toStr(this.request.Headers["Accept"]).Contains("application/json"))
             result = "json";
         else if (this.route.format == "pjax" || !string.IsNullOrEmpty(this.request.Headers["X-Requested-With"]))
             result = "pjax";
@@ -614,7 +614,7 @@ public class FW : IDisposable
             //    + "Form: " + dumper(FORM) + System.Environment.NewLine + System.Environment.NewLine
             //    + "Session:" + dumper(context.Session));
 
-            if (Utils.f2int(this.config("log_level")) >= (int)LogLevel.DEBUG)
+            if (Utils.toInt(this.config("log_level")) >= (int)LogLevel.DEBUG)
                 throw;
             else
                 errMsg("Server Error. Please, contact site administrator!", Ex);
@@ -667,12 +667,12 @@ public class FW : IDisposable
         Hashtable rules = (Hashtable)config("access_levels");
         if (rules != null && rules.ContainsKey(path))
         {
-            if (current_level >= Utils.f2int(rules[path]))
+            if (current_level >= Utils.toInt(rules[path]))
                 result = 2;
         }
         else if (rules != null && rules.ContainsKey(path2))
         {
-            if (current_level >= Utils.f2int(rules[path2]))
+            if (current_level >= Utils.toInt(rules[path2]))
                 result = 2;
         }
         else
@@ -1197,7 +1197,7 @@ public class FW : IDisposable
                 var field = controllerClass.GetField("access_level", BindingFlags.Public | BindingFlags.Static);
                 if (field != null)
                 {
-                    if (userAccessLevel < Utils.f2int(field.GetValue(null)))
+                    if (userAccessLevel < Utils.toInt(field.GetValue(null)))
                         throw new AuthException("Bad access - Not authorized (2)");
                 }
 
@@ -1365,7 +1365,7 @@ public class FW : IDisposable
                 mail_from = (string)this.config("mail_from"); // default mail from
             mail_subject = Regex.Replace(mail_subject, @"[\r\n]+", " ");
 
-            bool is_test = Utils.f2bool(this.config("is_test"));
+            bool is_test = Utils.toBool(this.config("is_test"));
             if (is_test)
             {
                 string test_email = this.Session("login") ?? ""; //in test mode - try logged user email (if logged)
@@ -1464,10 +1464,10 @@ public class FW : IDisposable
                     }
                     if (mailSettings.Count > 0)
                     {
-                        client.Host = Utils.f2str(mailSettings["host"]);
-                        client.Port = Utils.f2int(mailSettings["port"]);
-                        client.EnableSsl = Utils.f2bool(mailSettings["is_ssl"]);
-                        client.Credentials = new System.Net.NetworkCredential(Utils.f2str(mailSettings["username"]), Utils.f2str(mailSettings["password"]));
+                        client.Host = Utils.toStr(mailSettings["host"]);
+                        client.Port = Utils.toInt(mailSettings["port"]);
+                        client.EnableSsl = Utils.toBool(mailSettings["is_ssl"]);
+                        client.Credentials = new System.Net.NetworkCredential(Utils.toStr(mailSettings["username"]), Utils.toStr(mailSettings["password"]));
                         client.Send(message);
                     }
                 }
@@ -1514,7 +1514,7 @@ public class FW : IDisposable
 
         ps["err_time"] = DateTime.Now;
         ps["err_msg"] = msg;
-        if (Utils.f2bool(this.config("IS_DEV")))
+        if (Utils.toBool(this.config("IS_DEV")))
         {
             ps["is_dump"] = true;
             if (Ex != null)
@@ -1637,7 +1637,7 @@ public class FW : IDisposable
                 string log_file = (string)config("log");
                 if (!string.IsNullOrEmpty(log_file))
                 {
-                    long max_log_size = Utils.f2long(config("log_max_size"));
+                    long max_log_size = Utils.toLong(config("log_max_size"));
                     using (FileStream floggerFS = new(log_file, FileMode.Open, FileAccess.Read, FileShare.Read))
                     {
                         if (max_log_size > 0 && floggerFS.Length > max_log_size)

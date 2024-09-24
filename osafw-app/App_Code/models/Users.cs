@@ -55,7 +55,7 @@ public class Users : FwModel
     {
         string result = "";
 
-        int iid = Utils.f2int(id);
+        int iid = Utils.toInt(id);
         if (iid > 0)
         {
             var item = one(iid);
@@ -82,9 +82,9 @@ public class Users : FwModel
 
         // set ui_theme/ui_mode form the config if not set
         if (!item.ContainsKey("ui_theme"))
-            item["ui_theme"] = Utils.f2int(fw.config("ui_theme"));
+            item["ui_theme"] = Utils.toInt(fw.config("ui_theme"));
         if (!item.ContainsKey("ui_mode"))
-            item["ui_mode"] = Utils.f2int(fw.config("ui_mode"));
+            item["ui_mode"] = Utils.toInt(fw.config("ui_mode"));
 
         return base.add(item);
     }
@@ -201,7 +201,7 @@ public class Users : FwModel
         Hashtable chars = new();
         for (var i = 0; i <= pwd.Length - 1; i++)
         {
-            chars[pwd[i]] = Utils.f2int(chars[pwd[i]]) + 1;
+            chars[pwd[i]] = Utils.toInt(chars[pwd[i]]) + 1;
             result += (int)(5.0 / (double)chars[pwd[i]]);
         }
 
@@ -281,7 +281,7 @@ public class Users : FwModel
     {
         var result = false;
         var user = this.one(id);
-        var recovery_codes = Utils.f2str(user["mfa_recovery"]).Split(' '); // space-separated hashed codes
+        var recovery_codes = Utils.toStr(user["mfa_recovery"]).Split(' '); // space-separated hashed codes
         var new_recovery_codes = "";
         //split by space and check each code
         foreach (var recovery_code in recovery_codes)
@@ -326,7 +326,7 @@ public class Users : FwModel
             id = fw.userId;
         var user = one(id);
 
-        fw.Session("user_id", Utils.f2str(id));
+        fw.Session("user_id", Utils.toStr(id));
         fw.Session("login", user["email"]);
         fw.Session("access_level", user["access_level"]); //note, set as string
         fw.Session("lang", user["lang"]);
@@ -342,8 +342,8 @@ public class Users : FwModel
             fw.Session("user_name", user["email"]);
 
         var avatar_link = "";
-        if (Utils.f2int(user["att_id"]) > 0)
-            avatar_link = fw.model<Att>().getUrl(Utils.f2int(user["att_id"]), "s");
+        if (Utils.toInt(user["att_id"]) > 0)
+            avatar_link = fw.model<Att>().getUrl(Utils.toInt(user["att_id"]), "s");
         fw.Session("user_avatar_link", avatar_link);
 
         return true;
@@ -388,7 +388,7 @@ public class Users : FwModel
             return true; //if no user logged - readonly
 
         var user = one(id);
-        if (Utils.f2bool(user["is_readonly"]))
+        if (Utils.toBool(user["is_readonly"]))
             result = true;
 
         return result;
@@ -662,7 +662,7 @@ public class Users : FwModel
             DBRow row = db.row(table_users_cookies, DB.h("cookie_id", cookieId));
             if (row.Count > 0)
             {
-                doLogin(Utils.f2int(row["users_id"]));
+                doLogin(Utils.toInt(row["users_id"]));
                 return true;
             }
             else
@@ -697,7 +697,7 @@ public class Users : FwModel
         ArrayList result = new();
         foreach (Hashtable item in menu_items)
         {
-            if (Utils.f2int(item["access_level"]) <= users_acl)
+            if (Utils.toInt(item["access_level"]) <= users_acl)
                 result.Add(item);
         }
 

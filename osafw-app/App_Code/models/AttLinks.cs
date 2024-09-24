@@ -81,7 +81,7 @@ public class AttLinks : FwModel
 
         foreach (string key in att_keys.Keys)
         {
-            var att_id = Utils.f2int(key);
+            var att_id = Utils.toInt(key);
             if (att_id == 0)
                 continue; // skip non-id, ex prio_ID
 

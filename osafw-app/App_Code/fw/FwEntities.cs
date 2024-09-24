@@ -22,7 +22,7 @@ public class FwEntities : FwModel
     public virtual int idByIcodeOrAdd(string icode)
     {
         var row = oneByIcode(icode);
-        var id = Utils.f2int(row[field_id]);
+        var id = Utils.toInt(row[field_id]);
         if (id == 0)
             id = add(DB.h(field_icode, icode, field_iname, Utils.name2human(icode)));
         return id;

@@ -220,8 +220,8 @@ public class DevManageController : FwController
     public void CreateModelAction()
     {
         var item = reqh("item");
-        var table_name = Utils.f2str(item["table_name"]).Trim();
-        var model_name = Utils.f2str(item["model_name"]).Trim();
+        var table_name = Utils.toStr(item["table_name"]).Trim();
+        var model_name = Utils.toStr(item["model_name"]).Trim();
 
         Hashtable entity = new()
         {
@@ -238,10 +238,10 @@ public class DevManageController : FwController
     public void CreateControllerAction()
     {
         var item = reqh("item");
-        var model_name = Utils.f2str(item["model_name"]).Trim();
-        var controller_url = Utils.f2str(item["controller_url"]).Trim();
-        var controller_title = Utils.f2str(item["controller_title"]).Trim();
-        var controller_type = Utils.f2str(item["controller_type"]).Trim(); // empty("dynamic") or "vue"
+        var model_name = Utils.toStr(item["model_name"]).Trim();
+        var controller_url = Utils.toStr(item["controller_url"]).Trim();
+        var controller_title = Utils.toStr(item["controller_title"]).Trim();
+        var controller_type = Utils.toStr(item["controller_type"]).Trim(); // empty("dynamic") or "vue"
 
         var config_file = fw.config("template") + DB_JSON_PATH;
         var entities = loadJson<ArrayList>(config_file);
@@ -258,7 +258,7 @@ public class DevManageController : FwController
         // table = Utils.name2fw(model_name) - this is not always ok
 
         createController(entity, entities);
-        var controller_name = Utils.f2str(entity["controller_url"]).Replace("/", "");
+        var controller_name = Utils.toStr(entity["controller_url"]).Replace("/", "");
 
         fw.flash("controller_created", controller_name);
         fw.flash("controller_url", entity["controller_url"]);
@@ -268,7 +268,7 @@ public class DevManageController : FwController
     public void ExtractControllerAction()
     {
         var item = reqh("item");
-        var controller_name = Utils.f2str(item["controller_name"]).Trim();
+        var controller_name = Utils.toStr(item["controller_name"]).Trim();
 
         if (!_controllers().Contains(controller_name))
             throw new NotFoundException("No controller found");
@@ -487,9 +487,9 @@ public class DevManageController : FwController
 
         foreach (Hashtable entity in entities)
         {
-            var controller_url = Utils.f2str(entity["controller_url"]);
+            var controller_url = Utils.toStr(entity["controller_url"]);
             entity["is_model_exists"] = models.Contains(entity["model_name"]);
-            entity["controller_name"] = Utils.f2str(controller_url).Replace("/", "");
+            entity["controller_name"] = Utils.toStr(controller_url).Replace("/", "");
             //create controller only if not exists already and url not empty
             entity["is_controller_create"] = !controllers.Contains(entity["controller_name"] + "Controller") && !string.IsNullOrEmpty(controller_url);
         }
@@ -514,7 +514,7 @@ public class DevManageController : FwController
             if (item.ContainsKey(key + "is_model"))
             {
                 // create model
-                if (Utils.f2str(item[key + "model_name"]).Length > 0 && entity["model_name"] != item[key + "model_name"])
+                if (Utils.toStr(item[key + "model_name"]).Length > 0 && entity["model_name"] != item[key + "model_name"])
                 {
                     is_updated = true;
                     entity["model_name"] = item[key + "model_name"];
@@ -525,30 +525,30 @@ public class DevManageController : FwController
             if (item.ContainsKey(key + "is_controller"))
             {
                 // create controller (model must exists)
-                if (Utils.f2str(item[key + "controller_name"]).Length > 0 && entity["controller_name"] != item[key + "controller_name"])
+                if (Utils.toStr(item[key + "controller_name"]).Length > 0 && entity["controller_name"] != item[key + "controller_name"])
                 {
                     is_updated = true;
                     entity["controller_name"] = item[key + "controller_name"];
                 }
-                if (Utils.f2str(item[key + "controller_title"]).Length > 0 && entity["controller_title"] != item[key + "controller_title"])
+                if (Utils.toStr(item[key + "controller_title"]).Length > 0 && entity["controller_title"] != item[key + "controller_title"])
                 {
                     is_updated = true;
                     entity["controller_title"] = item[key + "controller_title"];
                 }
-                if (!entity.ContainsKey("controller_is_dynamic_show") || Utils.f2bool(entity["controller_is_dynamic_show"]) != (Utils.f2str(item[key + "coview"]).Length > 0))
+                if (!entity.ContainsKey("controller_is_dynamic_show") || Utils.toBool(entity["controller_is_dynamic_show"]) != (Utils.toStr(item[key + "coview"]).Length > 0))
                 {
                     is_updated = true;
-                    entity["controller_is_dynamic_show"] = Utils.f2str(item[key + "coview"]).Length > 0;
+                    entity["controller_is_dynamic_show"] = Utils.toStr(item[key + "coview"]).Length > 0;
                 }
-                if (!entity.ContainsKey("controller_is_dynamic_showform") || Utils.f2bool(entity["controller_is_dynamic_showform"]) != (Utils.f2str(item[key + "coedit"]).Length > 0))
+                if (!entity.ContainsKey("controller_is_dynamic_showform") || Utils.toBool(entity["controller_is_dynamic_showform"]) != (Utils.toStr(item[key + "coedit"]).Length > 0))
                 {
                     is_updated = true;
-                    entity["controller_is_dynamic_showform"] = Utils.f2str(item[key + "coedit"]).Length > 0;
+                    entity["controller_is_dynamic_showform"] = Utils.toStr(item[key + "coedit"]).Length > 0;
                 }
-                if (!entity.ContainsKey("controller_is_lookup") || Utils.f2bool(entity["controller_is_lookup"]) != (Utils.f2str(item[key + "colookup"]).Length > 0))
+                if (!entity.ContainsKey("controller_is_lookup") || Utils.toBool(entity["controller_is_lookup"]) != (Utils.toStr(item[key + "colookup"]).Length > 0))
                 {
                     is_updated = true;
-                    entity["controller_is_lookup"] = Utils.f2str(item[key + "colookup"]).Length > 0;
+                    entity["controller_is_lookup"] = Utils.toStr(item[key + "colookup"]).Length > 0;
                 }
                 this.createController(entity, entities);
             }
@@ -1055,17 +1055,17 @@ public class DevManageController : FwController
                 field["numeric_precision"] = null;
                 field["maxlen"] = null;
                 // detect type if not yet set by foreigh key
-                if (Utils.f2str(field["fw_type"]) == "")
+                if (Utils.toStr(field["fw_type"]) == "")
                 {
                     field["fw_type"] = "varchar";
                     field["fw_subtype"] = "nvarchar";
                     var m = Regex.Match(line, @"varchar\((.+?)\)"); // detect varchar(LEN|MAX)
                     if (m.Success)
                     {
-                        if (m.Groups[1].Value == "MAX" || Utils.f2int(m.Groups[1].Value) > 255)
+                        if (m.Groups[1].Value == "MAX" || Utils.toInt(m.Groups[1].Value) > 255)
                             field["maxlen"] = -1;
                         else
-                            field["maxlen"] = Utils.f2int(m.Groups[1].Value);
+                            field["maxlen"] = Utils.toInt(m.Groups[1].Value);
                     }
                     else if (Regex.IsMatch(line, @"\bint\b", RegexOptions.IgnoreCase))
                     {
@@ -1112,15 +1112,15 @@ public class DevManageController : FwController
                         m = Regex.Match(line, @"\bdecimal\((\d+),(\d+)\)"); // decimal(PRECISION,SCALE)
                         if (m.Success)
                         {
-                            field["numeric_precision"] = Utils.f2int(m.Groups[1].Value);
-                            field["numeric_scale"] = Utils.f2int(m.Groups[2].Value);
+                            field["numeric_precision"] = Utils.toInt(m.Groups[1].Value);
+                            field["numeric_scale"] = Utils.toInt(m.Groups[2].Value);
                         }
                         else
                         {
                             m = Regex.Match(line, @"\bdecimal\((\d+)\)"); // decimal(PRECISION)
                             if (m.Success)
                             {
-                                field["numeric_precision"] = Utils.f2int(m.Groups[1].Value);
+                                field["numeric_precision"] = Utils.toInt(m.Groups[1].Value);
                                 field["numeric_scale"] = 0;
                             }
                         }
@@ -1165,7 +1165,7 @@ public class DevManageController : FwController
                     {
                         field["default"] = null;
                         // no default set and field is NOT NULLable - then for nvarchar set empty string default
-                        if (Utils.f2int(field["is_nullable"]) == 0 && Utils.f2str(field["fw_type"]) == "varchar")
+                        if (Utils.toInt(field["is_nullable"]) == 0 && Utils.toStr(field["fw_type"]) == "varchar")
                             field["default"] = "";
                     }
                 }
@@ -1257,7 +1257,7 @@ public class DevManageController : FwController
     {
         string table_name = (string)entity["table"];
         string model_name = (string)entity["model_name"];
-        bool is_junction = Utils.f2bool(entity["is_junction"]);
+        bool is_junction = Utils.toBool(entity["is_junction"]);
 
         if (model_name == "")
             model_name = Utils.nameCamelCase(table_name);
@@ -1335,15 +1335,15 @@ public class DevManageController : FwController
                 foreach (Hashtable fld in (ArrayList)entity["fields"])
                 {
                     // find identity
-                    if (fld_identity == null && Utils.f2str(fld["is_identity"]) == "1")
+                    if (fld_identity == null && Utils.toStr(fld["is_identity"]) == "1")
                         fld_identity = fld;
 
                     // first int field
-                    if (fld_int == null && Utils.f2str(fld["fw_type"]) == "int")
+                    if (fld_int == null && Utils.toStr(fld["fw_type"]) == "int")
                         fld_int = fld;
 
                     // for iname - just use 2nd to 4th field which not end with ID, varchar type and has some maxlen
-                    if (fld_iname == null && i >= 2 && i <= 4 && Utils.f2str(fld["fw_type"]) == "varchar" && Utils.f2int(fld["maxlen"]) > 0 && Utils.Right(Utils.f2str(fld["name"]), 2).ToLower() != "id")
+                    if (fld_iname == null && i >= 2 && i <= 4 && Utils.toStr(fld["fw_type"]) == "varchar" && Utils.toInt(fld["maxlen"]) > 0 && Utils.Right(Utils.toStr(fld["name"]), 2).ToLower() != "id")
                         fld_iname = fld;
 
                     if (Regex.IsMatch((string)fld["name"], @"[^\w_]", RegexOptions.IgnoreCase))
@@ -1378,7 +1378,7 @@ public class DevManageController : FwController
                 if (fields.ContainsKey("prio"))
                     codegen += "        field_prio = \"prio\";" + Environment.NewLine;
 
-                if (is_normalize_names || !Utils.f2bool(entity["is_fw"]))
+                if (is_normalize_names || !Utils.toBool(entity["is_fw"]))
                     codegen += "        is_normalize_names = true;" + Environment.NewLine;
             }
 
@@ -1454,7 +1454,7 @@ public class DevManageController : FwController
             { "column_types", column_types }
         };
         if (ltable.Count > 0)// replace
-            fw.model<LookupManagerTables>().update(Utils.f2int(ltable["id"]), item);
+            fw.model<LookupManagerTables>().update(Utils.toInt(ltable["id"]), item);
         else
             fw.model<LookupManagerTables>().add(item);
     }
@@ -1489,7 +1489,7 @@ public class DevManageController : FwController
         entity["controller_url"] = controller_url;
         entity["controller_title"] = controller_title;
 
-        if (Utils.f2bool(entity["controller_is_lookup"]))
+        if (Utils.toBool(entity["controller_is_lookup"]))
         {
             // if requested controller as a lookup table - just add/update lookup tables, no actual controller creation
             this.createLookup(entity);
@@ -1581,7 +1581,7 @@ public class DevManageController : FwController
         {
             // TODO deprecate reading from db, always use entity info
             DB db;
-            if (Utils.f2str(entity["db_config"]).Length > 0)
+            if (Utils.toStr(entity["db_config"]).Length > 0)
                 db = new DB(fw, (Hashtable)((Hashtable)fw.config("db"))[entity["db_config"]], (string)entity["db_config"]);
             else
                 db = new DB(fw);
@@ -1596,12 +1596,12 @@ public class DevManageController : FwController
             foreach (Hashtable tentity in entities)
                 tables[tentity["table"]] = tentity;
 
-        var is_fw = Utils.f2bool(entity["is_fw"]);
+        var is_fw = Utils.toBool(entity["is_fw"]);
 
         //build index by field name
         Hashtable hfields = []; // name => fld index
         foreach (Hashtable fld in fields)
-            hfields[Utils.f2str(fld["name"])] = fld;
+            hfields[Utils.toStr(fld["name"])] = fld;
 
         var foreign_keys = (ArrayList)entity["foreign_keys"] ?? [];
         //add system user fields to fake foreign keys, so it can generate list query with user names
@@ -1640,12 +1640,12 @@ public class DevManageController : FwController
 
         foreach (Hashtable fld in fields)
         {
-            string fld_name = Utils.f2str(fld["name"]);
+            string fld_name = Utils.toStr(fld["name"]);
             logger("field name=", fld_name, fld);
 
-            if (Utils.f2str(fld["fw_name"]) == "")
+            if (Utils.toStr(fld["fw_name"]) == "")
                 fld["fw_name"] = Utils.name2fw(fld_name); // system name using fw standards
-            if (Utils.f2str(fld["iname"]) == "")
+            if (Utils.toStr(fld["iname"]) == "")
                 fld["iname"] = Utils.name2human(fld_name); // human name using fw standards
 
             var is_field_fk = hforeign_keys.ContainsKey(fld_name);
@@ -1676,16 +1676,16 @@ public class DevManageController : FwController
             sff["field"] = fld_name;
             sff["label"] = fld["iname"];
 
-            if (Utils.f2str(fld["is_nullable"]) == "0" && fld["default"] == null)
+            if (Utils.toStr(fld["is_nullable"]) == "0" && fld["default"] == null)
                 sff["required"] = true;// if not nullable and no default - required
 
-            if (Utils.f2str(fld["is_nullable"]) == "1")
+            if (Utils.toStr(fld["is_nullable"]) == "1")
                 saveFieldsNullable.Add(fld_name);
 
-            var maxlen = Utils.f2int(fld["maxlen"]);
+            var maxlen = Utils.toInt(fld["maxlen"]);
             if (maxlen > 0)
                 sff["maxlength"] = maxlen;
-            if (Utils.f2str(fld["fw_type"]) == "varchar")
+            if (Utils.toStr(fld["fw_type"]) == "varchar")
             {
                 if (maxlen <= 0 || fld_name == "idesc")
                 {
@@ -1711,7 +1711,7 @@ public class DevManageController : FwController
                     }
                 }
             }
-            else if (Utils.f2str(fld["fw_type"]) == "int")
+            else if (Utils.toStr(fld["fw_type"]) == "int")
             {
                 // int fields could be: foreign keys, yes/no, just a number input
 
@@ -1758,7 +1758,7 @@ public class DevManageController : FwController
                         sff["is_option0"] = true;
                         //sff["class_contents"] = "col-md-4";
                     }
-                    else if (Utils.f2str(fld["fw_subtype"]) == "boolean" || Utils.f2str(fld["fw_subtype"]) == "bit" || fld_name.StartsWith("is_") || Regex.IsMatch(fld_name, @"^Is[A-Z]"))
+                    else if (Utils.toStr(fld["fw_subtype"]) == "boolean" || Utils.toStr(fld["fw_subtype"]) == "bit" || fld_name.StartsWith("is_") || Regex.IsMatch(fld_name, @"^Is[A-Z]"))
                     {
                         // make it as yes/no radio
                         sff["type"] = "yesno";
@@ -1778,13 +1778,13 @@ public class DevManageController : FwController
                     }
                 }
             }
-            else if (Utils.f2str(fld["fw_type"]) == "float")
+            else if (Utils.toStr(fld["fw_type"]) == "float")
             {
                 sff["type"] = "number";
                 sff["step"] = 0.1;
                 sff["class_contents"] = "col-md-4";
             }
-            else if (Utils.f2str(fld["fw_type"]) == "datetime")
+            else if (Utils.toStr(fld["fw_type"]) == "datetime")
             {
                 sf["type"] = "date";
                 sff["type"] = "date_popup";
@@ -1794,7 +1794,7 @@ public class DevManageController : FwController
                 // everything else - just input
                 sff["type"] = "input";
 
-            if (Utils.f2str(fld["is_identity"]) == "1")
+            if (Utils.toStr(fld["is_identity"]) == "1")
             {
                 sff["type"] = "id";
                 sff.Remove("class_contents");
@@ -1895,7 +1895,7 @@ public class DevManageController : FwController
                 continue;
 
             var is_sys = false;
-            if (Utils.f2str(fld["is_identity"]) == "1" || sys_fields.Contains(fld_name))
+            if (Utils.toStr(fld["is_identity"]) == "1" || sys_fields.Contains(fld_name))
             {
                 // add to system fields
                 showFieldsRight.Add(sf);
@@ -1905,9 +1905,9 @@ public class DevManageController : FwController
             else
             {
                 //non-system fields
-                if (Utils.f2str(sf["type"]) == "att"
-                    || Utils.f2str(sf["type"]) == "att_links"
-                    || Utils.f2str(sff["type"]) == "textarea" && fields.Count >= 10)
+                if (Utils.toStr(sf["type"]) == "att"
+                    || Utils.toStr(sf["type"]) == "att_links"
+                    || Utils.toStr(sff["type"]) == "textarea" && fields.Count >= 10)
                 {
                     //add to the right: attachments, textareas (only if many fields)
                     showFieldsRight.Add(sf);
@@ -1934,7 +1934,7 @@ public class DevManageController : FwController
             {
                 //table could be a junction table name then
                 var tentity = (Hashtable)tables[table];
-                var is_junction = Utils.f2bool(tentity["is_junction"]);
+                var is_junction = Utils.toBool(tentity["is_junction"]);
                 string junction_model = (string)tentity["model_name"];
                 string table_name_linked = m.Groups[1].Value;
                 string table_name_link = table;
@@ -2016,7 +2016,7 @@ public class DevManageController : FwController
 
                 var field = (Hashtable)hfields[tcolumn];
                 var sql_join = "";
-                if (Utils.f2int(field["is_nullable"]) == 1)
+                if (Utils.toInt(field["is_nullable"]) == 1)
                 {
                     //if FK field can be NULL - use LEFT OUTER JOIN
                     sql_join = $"LEFT OUTER JOIN {db.qid(pk_table)} {alias} ON ({alias}.{pk_column}=t.{tcolumn})";
@@ -2046,10 +2046,10 @@ public class DevManageController : FwController
         var edit_list_defaults = "";
         int defaults_ctr = 0;
         var rfields = (from Hashtable fld in fields
-                       where Utils.f2str(fld["is_identity"]) != "1"
-                         && !(Utils.f2str(fld["fw_type"]) == "varchar" && Utils.f2int(fld["maxlen"]) <= 0)
-                         && !(sys_fields.Contains(fld["name"]) && Utils.f2str(fld["name"]) != "status")
-                       orderby (Utils.f2str(fld["is_nullable"]) == "0" && fld["default"] == null) descending
+                       where Utils.toStr(fld["is_identity"]) != "1"
+                         && !(Utils.toStr(fld["fw_type"]) == "varchar" && Utils.toInt(fld["maxlen"]) <= 0)
+                         && !(sys_fields.Contains(fld["name"]) && Utils.toStr(fld["name"]) != "status")
+                       orderby (Utils.toStr(fld["is_nullable"]) == "0" && fld["default"] == null) descending
                        select fld);
         foreach (Hashtable field in rfields)
         {
@@ -2181,14 +2181,14 @@ public class DevManageController : FwController
         foreach (Hashtable field in fields)
         {
             var fsql = "";
-            var field_name = Utils.f2str(field["name"]);
+            var field_name = Utils.toStr(field["name"]);
             if (field_name == "status")
                 fsql += Environment.NewLine; // add empty line before system fields starting with "status"
 
             fsql += "  " + q_ident(field_name).PadRight(21, ' ') + " " + entityfield2dbtype(field);
-            if (Utils.f2int(field["is_identity"]) == 1)
+            if (Utils.toInt(field["is_identity"]) == 1)
                 fsql += " IDENTITY(1, 1) PRIMARY KEY CLUSTERED";
-            fsql += Utils.f2int(field["is_nullable"]) == 0 ? " NOT NULL" : "";
+            fsql += Utils.toInt(field["is_nullable"]) == 0 ? " NOT NULL" : "";
             fsql += entityfield2dbdefault(field);
             fsql += entityfield2dbfk(field, entity);
             fsql += (i < fields.Count ? "," : "");
@@ -2236,11 +2236,11 @@ public class DevManageController : FwController
         {
             case "int":
                 {
-                    if (Utils.f2str(entity["fw_subtype"]) == "boolean" || Utils.f2str(entity["fw_subtype"]) == "bit")
+                    if (Utils.toStr(entity["fw_subtype"]) == "boolean" || Utils.toStr(entity["fw_subtype"]) == "bit")
                         result = "BIT";
-                    else if (Utils.f2int(entity["numeric_precision"]) == 3)
+                    else if (Utils.toInt(entity["numeric_precision"]) == 3)
                         result = "TINYINT";
-                    else if (Utils.f2int(entity["numeric_precision"]) == 5)
+                    else if (Utils.toInt(entity["numeric_precision"]) == 5)
                         result = "SMALLINT";
                     else
                         result = "INT";
@@ -2249,10 +2249,10 @@ public class DevManageController : FwController
 
             case "float":
                 {
-                    if (Utils.f2str(entity["fw_subtype"]) == "currency")
+                    if (Utils.toStr(entity["fw_subtype"]) == "currency")
                         result = "DECIMAL(18,2)";
-                    else if (Utils.f2str(entity["fw_subtype"]) == "decimal")
-                        result = "DECIMAL(" + Utils.f2int(entity["numeric_precision"]) + "," + Utils.f2int(entity["numeric_scale"]) + ")";
+                    else if (Utils.toStr(entity["fw_subtype"]) == "decimal")
+                        result = "DECIMAL(" + Utils.toInt(entity["numeric_precision"]) + "," + Utils.toInt(entity["numeric_scale"]) + ")";
                     else
                         result = "FLOAT";
                     break;
@@ -2260,7 +2260,7 @@ public class DevManageController : FwController
 
             case "datetime":
                 {
-                    if (Utils.f2str(entity["fw_subtype"]) == "date")
+                    if (Utils.toStr(entity["fw_subtype"]) == "date")
                         result = "DATE";
                     else
                         result = "DATETIME2";
@@ -2270,7 +2270,7 @@ public class DevManageController : FwController
             default:
                 {
                     result = "NVARCHAR";
-                    var maxlen = Utils.f2int(entity["maxlen"]);
+                    var maxlen = Utils.toInt(entity["maxlen"]);
                     if (maxlen > 0 & maxlen < 256)
                         result += "(" + entity["maxlen"] + ")";
                     else
@@ -2287,7 +2287,7 @@ public class DevManageController : FwController
         var result = "";
         if (entity["default"] != null)
         {
-            string def = Utils.f2str(entity["default"]);
+            string def = Utils.toStr(entity["default"]);
             result += " DEFAULT ";
             // remove outer parentheses if any
             def = Regex.Replace(def, @"^\((.+)\)$", "$1");
@@ -2304,7 +2304,7 @@ public class DevManageController : FwController
                 // any other text - quote
                 def = Regex.Replace(def, "^'(.*)'$", "$1"); // remove outer quotes if any
 
-                if (Utils.f2str(entity["fw_type"]) == "int")
+                if (Utils.toStr(entity["fw_type"]) == "int")
                     // if field type int - convert to int
                     result += "(" + db.qi(def) + ")";
                 else

@@ -40,8 +40,8 @@ public class ContactController : FwController
 
         // validation
         var is_spam = false;
-        var view_time = Utils.f2date(fw.Session("contact_view_time"));
-        if (view_time == null || (DateTime.Now - (DateTime)view_time).TotalSeconds < 5)
+        var view_time = Utils.toDate(fw.Session("contact_view_time"));
+        if (!Utils.isDate(view_time) || (DateTime.Now - view_time).TotalSeconds < 5)
             is_spam = true;
         if (reqs("real_email").Length > 0)
             // honeypot

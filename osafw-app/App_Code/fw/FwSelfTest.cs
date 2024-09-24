@@ -84,8 +84,8 @@ public class FwSelfTest
             echo("log_level", "OK");
         }
 
-        is_false("is_test", Utils.f2bool(fw.config("is_test")), "Turned ON");
-        is_false("IS_DEV", Utils.f2bool(fw.config("IS_DEV")), "Turned ON");
+        is_false("is_test", Utils.toBool(fw.config("is_test")), "Turned ON");
+        is_false("IS_DEV", Utils.toBool(fw.config("IS_DEV")), "Turned ON");
 
         // template directory should exists - TODO test parser to actually see templates work?
         is_true("template", Directory.Exists((string)fw.config("template")), (string)fw.config("template"));

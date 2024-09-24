@@ -38,7 +38,7 @@ public class AdminSpagesController : FwAdminController
             && ((string)this.list_filter["status"] == "" || (string)this.list_filter["status"] == "0"))
         {
             // show tree only if sort by title and no search and status by all or active
-            this.list_count = Utils.f2long(db.valuep("select count(*) from " + db.qid(model.table_name) +
+            this.list_count = Utils.toLong(db.valuep("select count(*) from " + db.qid(model.table_name) +
                 " where " + this.list_where, this.list_where_params));
             if (this.list_count > 0)
             {
@@ -47,8 +47,8 @@ public class AdminSpagesController : FwAdminController
                 this.list_rows = model.getPagesTreeList(pages_tree, 0);
 
                 // apply LIMIT
-                var pagesize = Utils.f2int(this.list_filter["pagesize"]);
-                var pagenum = Utils.f2int(this.list_filter["pagenum"]);
+                var pagesize = Utils.toInt(this.list_filter["pagesize"]);
+                var pagenum = Utils.toInt(this.list_filter["pagenum"]);
                 if (this.list_count > pagesize)
                 {
                     ArrayList subset = new();
@@ -74,7 +74,7 @@ public class AdminSpagesController : FwAdminController
         // add/modify rows from db if necessary
         foreach (Hashtable row in this.list_rows)
         {
-            row["full_url"] = model.getFullUrl(Utils.f2int(row["id"]));
+            row["full_url"] = model.getFullUrl(Utils.toInt(row["id"]));
         }
 
     }
@@ -97,17 +97,17 @@ public class AdminSpagesController : FwAdminController
         var item = (Hashtable)ps["i"];
         string where = " status<>@status ";
         ArrayList pages_tree = model.tree(where, DB.h("status", FwModel.STATUS_DELETED), "parent_id, prio desc, iname");
-        ps["select_options_parent_id"] = model.getPagesTreeSelectHtml(Utils.f2str(item["parent_id"]), pages_tree);
+        ps["select_options_parent_id"] = model.getPagesTreeSelectHtml(Utils.toStr(item["parent_id"]), pages_tree);
 
-        ps["parent_url"] = model.getFullUrl(Utils.f2int(item["parent_id"]));
+        ps["parent_url"] = model.getFullUrl(Utils.toInt(item["parent_id"]));
         ps["full_url"] = model.getFullUrl(id);
 
         ps["parents"] = model.listParents(id);
 
-        ps["parent"] = model.one(Utils.f2int(item["parent_id"]));
+        ps["parent"] = model.one(Utils.toInt(item["parent_id"]));
 
         if (!Utils.isEmpty(item["head_att_id"]))
-            ps["att"] = fw.model<Att>().one(Utils.f2int(item["head_att_id"]));
+            ps["att"] = fw.model<Att>().one(Utils.toInt(item["head_att_id"]));
 
         if (id > 0)
             ps["subpages"] = model.listChildren(id);
@@ -153,7 +153,7 @@ public class AdminSpagesController : FwAdminController
 
         Hashtable itemdb = FormUtils.filter(item, save_fields2);
         FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
-        itemdb["prio"] = Utils.f2int(itemdb["prio"]);
+        itemdb["prio"] = Utils.toInt(itemdb["prio"]);
 
         // if no publish time defined - publish it now
         if ((string)itemdb["pub_time"] == "")
@@ -172,7 +172,7 @@ public class AdminSpagesController : FwAdminController
     {
         bool result = this.validateRequired(id, item, this.required_fields);
 
-        if (result && model.isExistsByUrl((string)item["url"], Utils.f2int(item["parent_id"]), id))
+        if (result && model.isExistsByUrl((string)item["url"], Utils.toInt(item["parent_id"]), id))
             fw.FormErrors["url"] = "EXISTS";
 
         //if (result && model0.isExists(item["iname"], id)){

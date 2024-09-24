@@ -50,10 +50,10 @@ public class PasswordController : FwController
             throw new UserException("Please enter your Email");
 
         Hashtable user = model.oneByEmail(login);
-        if (user.Count == 0 || Utils.f2int(user["status"]) != 0)
+        if (user.Count == 0 || Utils.toInt(user["status"]) != 0)
             throw new UserException("Not a valid Email");
 
-        model.sendPwdReset(Utils.f2int(user["id"]));
+        model.sendPwdReset(Utils.toInt(user["id"]));
 
         fw.redirect(base_url + "/(Sent)");
     }
@@ -64,7 +64,7 @@ public class PasswordController : FwController
         var login = reqs("login");
         var token = reqs("token");
         var user = model.oneByEmail(login);
-        if (user.Count == 0 || Utils.f2int(user["status"]) != 0)
+        if (user.Count == 0 || Utils.toInt(user["status"]) != 0)
             throw new UserException("Not a valid Email");
 
         if ((string)user["pwd_reset"] == "" || !model.checkPwd(token, (string)user["pwd_reset"])
@@ -99,7 +99,7 @@ public class PasswordController : FwController
         var login = reqs("login");
         var token = reqs("token");
         var user = model.oneByEmail(login);
-        if (user.Count == 0 || Utils.f2int(user["status"]) != 0)
+        if (user.Count == 0 || Utils.toInt(user["status"]) != 0)
             throw new UserException("Not a valid Email");
 
         if ((string)user["pwd_reset"] == "" || !model.checkPwd(token, (string)user["pwd_reset"])
@@ -109,7 +109,7 @@ public class PasswordController : FwController
             fw.redirect("/Login");
         }
 
-        int id = Utils.f2int(user["id"]);
+        int id = Utils.toInt(user["id"]);
 
         ValidateReset(id, item);
         // load old record if necessary

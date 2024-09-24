@@ -66,7 +66,7 @@ public class MySettingsController : FwController
 
         Hashtable itemdb = FormUtils.filter(item, save_fields);
 
-        if (Utils.f2str(itemdb["ui_theme"]) == "30")
+        if (Utils.toStr(itemdb["ui_theme"]) == "30")
         {
             itemdb["ui_mode"] = "10"; //for blue theme - enforce light color mode
         }

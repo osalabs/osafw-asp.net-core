@@ -1,9 +1,7 @@
-﻿using Amazon.Runtime.Internal.Util;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -164,79 +162,71 @@ namespace osafw.Tests
         public void f2boolTest()
         {
             // tests for Utils.f2bool() - convert object of any type to bool, in case of error return false
-            Assert.IsFalse(Utils.f2bool(null));
-            Assert.IsFalse(Utils.f2bool(""));
-            Assert.IsFalse(Utils.f2bool(0));
-            Assert.IsFalse(Utils.f2bool(0.0));
-            Assert.IsFalse(Utils.f2bool(0.0f));
-            Assert.IsFalse(Utils.f2bool(0.0m));
-            Assert.IsFalse(Utils.f2bool(false));
-            Assert.IsFalse(Utils.f2bool("0"));
-            Assert.IsFalse(Utils.f2bool("false"));
-            Assert.IsFalse(Utils.f2bool("no"));
-            Assert.IsFalse(Utils.f2bool("off"));
-            Assert.IsFalse(Utils.f2bool("n"));
-            Assert.IsFalse(Utils.f2bool("N"));
-            Assert.IsFalse(Utils.f2bool("f"));
-            Assert.IsFalse(Utils.f2bool("F"));
-            Assert.IsFalse(Utils.f2bool("ABC"));
-            Assert.IsFalse(Utils.f2bool("yes"));
-            Assert.IsFalse(Utils.f2bool("on"));
-            Assert.IsFalse(Utils.f2bool(new ArrayList())); //empty arraylist false
+            Assert.IsFalse(Utils.toBool(null));
+            Assert.IsFalse(Utils.toBool(""));
+            Assert.IsFalse(Utils.toBool(0));
+            Assert.IsFalse(Utils.toBool(0.0));
+            Assert.IsFalse(Utils.toBool(0.0f));
+            Assert.IsFalse(Utils.toBool(0.0m));
+            Assert.IsFalse(Utils.toBool(false));
+            Assert.IsFalse(Utils.toBool("0"));
+            Assert.IsFalse(Utils.toBool("false"));
+            Assert.IsFalse(Utils.toBool("no"));
+            Assert.IsFalse(Utils.toBool("off"));
+            Assert.IsFalse(Utils.toBool("n"));
+            Assert.IsFalse(Utils.toBool("N"));
+            Assert.IsFalse(Utils.toBool("f"));
+            Assert.IsFalse(Utils.toBool("F"));
+            Assert.IsFalse(Utils.toBool("ABC"));
+            Assert.IsFalse(Utils.toBool("yes"));
+            Assert.IsFalse(Utils.toBool("on"));
+            Assert.IsFalse(Utils.toBool(new ArrayList())); //empty arraylist false
 
-            Assert.IsTrue(Utils.f2bool("true"));
-            Assert.IsTrue(Utils.f2bool("True"));
-            Assert.IsTrue(Utils.f2bool("TRUE"));
-            Assert.IsTrue(Utils.f2bool("1")); //non-zero number            
-            Assert.IsTrue(Utils.f2bool(new ArrayList() { 1 })); //non-empty arraylist true
+            Assert.IsTrue(Utils.toBool("true"));
+            Assert.IsTrue(Utils.toBool("True"));
+            Assert.IsTrue(Utils.toBool("TRUE"));
+            Assert.IsTrue(Utils.toBool("1")); //non-zero number            
+            Assert.IsTrue(Utils.toBool(new ArrayList() { 1 })); //non-empty arraylist true
         }
 
 
         [TestMethod()]
-        public void f2dateTest()
+        public void toDateTest()
         {
-            object r = (DateTime)Utils.f2date(DateTime.Now);
+            var r = Utils.toDate(DateTime.Now);
             Assert.IsNotNull(r);
+            Assert.IsTrue(r != DateTime.MinValue);
             Assert.IsInstanceOfType(r, typeof(DateTime));
 
-            r = (DateTime)Utils.f2date("2021-10-9");
+            r = Utils.toDate("2021-10-9");
+            Assert.AreEqual(r.Day, 9);
+            Assert.AreEqual(r.Month, 10);
+            Assert.AreEqual(r.Year, 2021);
 
-            Assert.IsInstanceOfType(r, typeof(DateTime));
-            DateTime d = (DateTime)r;
-            Assert.AreEqual(d.Day, 9);
-            Assert.AreEqual(d.Month, 10);
-            Assert.AreEqual(d.Year, 2021);
+            r = Utils.toDate("10/9/2021");
+            Assert.AreEqual(r.Day, 9);
+            Assert.AreEqual(r.Month, 10);
+            Assert.AreEqual(r.Year, 2021);
 
-            r = (DateTime)Utils.f2date("10/9/2021");
+            r = Utils.toDate("11/10/2020 01:02:03");
+            Assert.AreEqual(r.Day, 10);
+            Assert.AreEqual(r.Month, 11);
+            Assert.AreEqual(r.Year, 2020);
+            Assert.AreEqual(r.Hour, 1);
+            Assert.AreEqual(r.Minute, 2);
+            Assert.AreEqual(r.Second, 3);
 
-            Assert.IsInstanceOfType(r, typeof(DateTime));
-            d = (DateTime)r;
-            Assert.AreEqual(d.Day, 9);
-            Assert.AreEqual(d.Month, 10);
-            Assert.AreEqual(d.Year, 2021);
+            r = Utils.toDate("ABC");
+            Assert.IsTrue(r == DateTime.MinValue);
 
-            r = (DateTime)Utils.f2date("11/10/2020 01:02:03");
+            r = Utils.toDate("");
+            Assert.IsTrue(r == DateTime.MinValue);
 
-            Assert.IsInstanceOfType(r, typeof(DateTime));
-            d = (DateTime)r;
-            Assert.AreEqual(d.Day, 10);
-            Assert.AreEqual(d.Month, 11);
-            Assert.AreEqual(d.Year, 2020);
-            Assert.AreEqual(d.Hour, 1);
-            Assert.AreEqual(d.Minute, 2);
-            Assert.AreEqual(d.Second, 3);
+            r = Utils.toDate(null);
+            Assert.IsTrue(r == DateTime.MinValue);
 
-            r = Utils.f2date("ABC");
-            Assert.IsNull(r);
-
-            r = Utils.f2date("");
-            Assert.IsNull(r);
-
-            r = Utils.f2date(null);
-            Assert.IsNull(r);
-
-            r = Utils.f2date(DBNull.Value);
-            Assert.IsNull(r);
+            r = Utils.toDate(DBNull.Value);
+            Assert.IsTrue(r == DateTime.MinValue);
         }
 
         [TestMethod()]
@@ -249,33 +239,33 @@ namespace osafw.Tests
         [TestMethod()]
         public void f2strTest()
         {
-            Assert.AreEqual(Utils.f2str(null), "");
-            Assert.AreEqual(Utils.f2str(123), "123");
+            Assert.AreEqual(Utils.toStr(null), "");
+            Assert.AreEqual(Utils.toStr(123), "123");
         }
 
         [TestMethod()]
         public void f2intTest()
         {
-            Assert.IsInstanceOfType(Utils.f2int("123"), typeof(int));
-            Assert.AreEqual(Utils.f2int("123"), 123);
-            Assert.AreEqual(Utils.f2int("123.123"), 0);
-            Assert.AreEqual(Utils.f2int("123b"), 0);
-            Assert.AreEqual(Utils.f2int("b123"), 0);
-            Assert.AreEqual(Utils.f2int("ABC"), 0);
-            Assert.AreEqual(Utils.f2int(null), 0);
+            Assert.IsInstanceOfType(Utils.toInt("123"), typeof(int));
+            Assert.AreEqual(Utils.toInt("123"), 123);
+            Assert.AreEqual(Utils.toInt("123.123"), 0);
+            Assert.AreEqual(Utils.toInt("123b"), 0);
+            Assert.AreEqual(Utils.toInt("b123"), 0);
+            Assert.AreEqual(Utils.toInt("ABC"), 0);
+            Assert.AreEqual(Utils.toInt(null), 0);
         }
 
         [TestMethod()]
         public void f2floatTest()
         {
-            Assert.IsInstanceOfType(Utils.f2float("123.123"), typeof(double));
-            Assert.AreEqual(Utils.f2float("123.123"), 123.123);
-            Assert.AreEqual(Utils.f2float(123.123), 123.123);
-            Assert.AreEqual(Utils.f2float("123"), 123.0);
-            Assert.AreEqual(Utils.f2float("123.123b"), 0);
-            Assert.AreEqual(Utils.f2float("b123.123"), 0);
-            Assert.AreEqual(Utils.f2float("ABC"), 0);
-            Assert.AreEqual(Utils.f2float(""), 0);
+            Assert.IsInstanceOfType(Utils.toFloat("123.123"), typeof(double));
+            Assert.AreEqual(Utils.toFloat("123.123"), 123.123);
+            Assert.AreEqual(Utils.toFloat(123.123), 123.123);
+            Assert.AreEqual(Utils.toFloat("123"), 123.0);
+            Assert.AreEqual(Utils.toFloat("123.123b"), 0);
+            Assert.AreEqual(Utils.toFloat("b123.123"), 0);
+            Assert.AreEqual(Utils.toFloat("ABC"), 0);
+            Assert.AreEqual(Utils.toFloat(""), 0);
         }
 
         [TestMethod()]
@@ -309,61 +299,61 @@ namespace osafw.Tests
         public void f2longTest()
         {
             long? n = 42;
-            Assert.IsInstanceOfType(Utils.f2long(n), typeof(long));
-            Assert.IsInstanceOfType(Utils.f2long("123"), typeof(long));
-            Assert.AreEqual(Utils.f2long("100M"), 0);
-            Assert.AreEqual(Utils.f2long(100M), 100M);
-            Assert.AreEqual(Utils.f2long("123"), 123);
-            Assert.AreEqual(Utils.f2long(123), 123);
-            Assert.AreEqual(Utils.f2long("123"), 123.0);
-            Assert.AreEqual(Utils.f2long("123.123b"), 0);
-            Assert.AreEqual(Utils.f2long("b123.123"), 0);
-            Assert.AreEqual(Utils.f2long("ABC"), 0);
-            Assert.AreEqual(Utils.f2long(""), 0);
-            Assert.AreEqual(Utils.f2long(null), 0);
+            Assert.IsInstanceOfType(Utils.toLong(n), typeof(long));
+            Assert.IsInstanceOfType(Utils.toLong("123"), typeof(long));
+            Assert.AreEqual(Utils.toLong("100M"), 0);
+            Assert.AreEqual(Utils.toLong(100M), 100M);
+            Assert.AreEqual(Utils.toLong("123"), 123);
+            Assert.AreEqual(Utils.toLong(123), 123);
+            Assert.AreEqual(Utils.toLong("123"), 123.0);
+            Assert.AreEqual(Utils.toLong("123.123b"), 0);
+            Assert.AreEqual(Utils.toLong("b123.123"), 0);
+            Assert.AreEqual(Utils.toLong("ABC"), 0);
+            Assert.AreEqual(Utils.toLong(""), 0);
+            Assert.AreEqual(Utils.toLong(null), 0);
         }
 
         [TestMethod]
         public void f2decimalTest()
         {
             // Test cases for different representations of decimals
-            Assert.AreEqual(decimal.Zero, Utils.f2decimal("100M"));
-            Assert.AreEqual(100m, Utils.f2decimal(100m));
-            Assert.AreEqual(123m, Utils.f2decimal("123"));
-            Assert.AreEqual(123m, Utils.f2decimal(123));
-            Assert.AreEqual(123m, Utils.f2decimal("123.0"));
-            Assert.AreEqual(decimal.Zero, Utils.f2decimal("123.123b"));
-            Assert.AreEqual(decimal.Zero, Utils.f2decimal("b123.123"));
-            Assert.AreEqual(decimal.Zero, Utils.f2decimal("ABC"));
-            Assert.AreEqual(decimal.Zero, Utils.f2decimal(""));
+            Assert.AreEqual(decimal.Zero, Utils.toDecimal("100M"));
+            Assert.AreEqual(100m, Utils.toDecimal(100m));
+            Assert.AreEqual(123m, Utils.toDecimal("123"));
+            Assert.AreEqual(123m, Utils.toDecimal(123));
+            Assert.AreEqual(123m, Utils.toDecimal("123.0"));
+            Assert.AreEqual(decimal.Zero, Utils.toDecimal("123.123b"));
+            Assert.AreEqual(decimal.Zero, Utils.toDecimal("b123.123"));
+            Assert.AreEqual(decimal.Zero, Utils.toDecimal("ABC"));
+            Assert.AreEqual(decimal.Zero, Utils.toDecimal(""));
 
             // Test case: Input is null
             object inputNull = null;
-            Assert.AreEqual(decimal.Zero, Utils.f2decimal(inputNull));
+            Assert.AreEqual(decimal.Zero, Utils.toDecimal(inputNull));
 
             // Test case: Input is a valid decimal string
             object inputValidDecimal = "123.45";
-            Assert.AreEqual(123.45m, Utils.f2decimal(inputValidDecimal));
+            Assert.AreEqual(123.45m, Utils.toDecimal(inputValidDecimal));
 
             // Test case: Input is not a valid decimal string
             object inputInvalidDecimal = "not a decimal";
-            Assert.AreEqual(decimal.Zero, Utils.f2decimal(inputInvalidDecimal));
+            Assert.AreEqual(decimal.Zero, Utils.toDecimal(inputInvalidDecimal));
 
             // Test case: Input is decimal overflow (max value)
             object inputDecimalOverflowMax = "79228162514264337593543950336"; // Max value of decimal + 1
-            Assert.AreEqual(decimal.Zero, Utils.f2decimal(inputDecimalOverflowMax));
+            Assert.AreEqual(decimal.Zero, Utils.toDecimal(inputDecimalOverflowMax));
 
             // Test case: Input is negative decimal overflow (min value)
             object inputDecimalOverflowMin = "-79228162514264337593543950336"; // Min value of decimal - 1
-            Assert.AreEqual(decimal.Zero, Utils.f2decimal(inputDecimalOverflowMin));
+            Assert.AreEqual(decimal.Zero, Utils.toDecimal(inputDecimalOverflowMin));
 
             // Test case: Input is decimal max value
             object inputDecimalMaxValue = decimal.MaxValue.ToString();
-            Assert.AreEqual(decimal.MaxValue, Utils.f2decimal(inputDecimalMaxValue));
+            Assert.AreEqual(decimal.MaxValue, Utils.toDecimal(inputDecimalMaxValue));
 
             // Test case: Input is decimal min value
             object inputDecimalMinValue = decimal.MinValue.ToString();
-            Assert.AreEqual(decimal.MinValue, Utils.f2decimal(inputDecimalMinValue));
+            Assert.AreEqual(decimal.MinValue, Utils.toDecimal(inputDecimalMinValue));
         }
 
         [TestMethod()]
@@ -371,47 +361,47 @@ namespace osafw.Tests
         {
             // Case 1: Convert valid float string to Single
             object field1 = "123.45";
-            Single result1 = Utils.f2single(field1);
+            Single result1 = Utils.toSingle(field1);
             Assert.AreEqual(123.45f, result1, "Result should be converted Single from valid float string");
 
             // Case 2: Convert valid integer string to Single
             object field2 = "123";
-            Single result2 = Utils.f2single(field2);
+            Single result2 = Utils.toSingle(field2);
             Assert.AreEqual(123f, result2, "Result should be converted Single from valid integer string");
 
             // Case 3: Convert null to Single
             object field3 = null;
-            Single result3 = Utils.f2single(field3);
+            Single result3 = Utils.toSingle(field3);
             Assert.AreEqual(0f, result3, "Result should be 0 for null input");
 
             // Case 4: Convert empty string to Single
             object field4 = "";
-            Single result4 = Utils.f2single(field4);
+            Single result4 = Utils.toSingle(field4);
             Assert.AreEqual(0f, result4, "Result should be 0 for empty string input");
 
             // Case 5: Convert invalid string to Single
             object field5 = "abc";
-            Single result5 = Utils.f2single(field5);
+            Single result5 = Utils.toSingle(field5);
             Assert.AreEqual(0f, result5, "Result should be 0 for invalid string input");
 
             // Case 6: Convert Single to Single
             object field6 = 123.45f;
-            Single result6 = Utils.f2single(field6);
+            Single result6 = Utils.toSingle(field6);
             Assert.AreEqual(123.45f, result6, "Result should be same Single for Single input");
 
             // Case 7: Convert integer to Single
             object field7 = 123;
-            Single result7 = Utils.f2single(field7);
+            Single result7 = Utils.toSingle(field7);
             Assert.AreEqual(123f, result7, "Result should be converted Single from integer");
 
             // Case 8: Convert negative float string to Single
             object field8 = "-123.45";
-            Single result8 = Utils.f2single(field8);
+            Single result8 = Utils.toSingle(field8);
             Assert.AreEqual(-123.45f, result8, "Result should be converted Single from negative float string");
 
             // Case 9: Convert negative integer string to Single
             object field9 = "-123";
-            Single result9 = Utils.f2single(field9);
+            Single result9 = Utils.toSingle(field9);
             Assert.AreEqual(-123f, result9, "Result should be converted Single from negative integer string");
         }
 
@@ -854,7 +844,7 @@ namespace osafw.Tests
             hattrs["trword"] = "0";
             hattrs["trchar"] = "";
             string r = Utils.str2truncate(s, hattrs);
-            Assert.AreEqual("12345",r);
+            Assert.AreEqual("12345", r);
 
             // test for trchar
             hattrs.Clear();
@@ -862,7 +852,7 @@ namespace osafw.Tests
             hattrs["trword"] = "0";
             hattrs["trchar"] = "...";
             r = Utils.str2truncate(s, hattrs);
-            Assert.AreEqual("12345...",r);
+            Assert.AreEqual("12345...", r);
 
             // test for trword
             hattrs.Clear();

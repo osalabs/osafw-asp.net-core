@@ -73,7 +73,7 @@ public class TestController : FwController
         {
             bool flag;
             //if (Boolean.TryParse(value, out flag
-            flag = Utils.f2bool(value);
+            flag = Utils.toBool(value);
             rw(value + " --> " + flag);
             //if (flag)
             //    rw(value + " --> "+ flag);

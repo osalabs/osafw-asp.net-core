@@ -156,15 +156,15 @@ public class FwVueController : FwDynamicController
             if (def == null)
                 continue;
 
-            var dtype = Utils.f2str(def["type"]);
-            var lookup_model = Utils.f2str(def["lookup_model"]);
+            var dtype = Utils.toStr(def["type"]);
+            var lookup_model = Utils.toStr(def["lookup_model"]);
             if (lookup_model.Length > 0 && dtype != "autocomplete")
             {
                 //all lookup_models, except autocomplete (for those it could be too large)
                 lookups[lookup_model] = fw.model(lookup_model).listSelectOptions(def);
             }
 
-            var lookup_tpl = Utils.f2str(def["lookup_tpl"]);
+            var lookup_tpl = Utils.toStr(def["lookup_tpl"]);
             if (lookup_tpl.Length > 0)
             {
                 lookups[lookup_tpl] = FormUtils.selectTplOptions(lookup_tpl);
@@ -269,9 +269,9 @@ public class FwVueController : FwDynamicController
         var fields = (ArrayList)this.config[mode == "edit" ? "showform_fields" : "show_fields"];
         foreach (Hashtable def in fields)
         {
-            var field_name = Utils.f2str(def["field"] ?? "");
-            var model_name = Utils.f2str(def["lookup_model"] ?? "");
-            var dtype = Utils.f2str(def["type"]);
+            var field_name = Utils.toStr(def["field"] ?? "");
+            var model_name = Utils.toStr(def["lookup_model"] ?? "");
+            var dtype = Utils.toStr(def["type"]);
             if (dtype == "autocomplete")
             {
                 var ac_model = fw.model(model_name);
@@ -290,13 +290,13 @@ public class FwVueController : FwDynamicController
                 {
                     //use comma-separated values in field from lookup_model
                     multi_model = fw.model(model_name);
-                    rows = multi_model.listWithChecked(Utils.f2str(item[field_name]), def);
+                    rows = multi_model.listWithChecked(Utils.toStr(item[field_name]), def);
                 }
                 else
                 {
                     //use junction model
-                    multi_model = fw.model(Utils.f2str(def["model"]));
-                    if (Utils.f2bool(def["is_by_linked"]))
+                    multi_model = fw.model(Utils.toStr(def["model"]));
+                    if (Utils.toBool(def["is_by_linked"]))
                         // list main items by linked id from junction model (i.e. list of Users(with checked) for Company from UsersCompanies model)
                         rows = multi_model.listMainByLinkedId(id, def); //junction model
                     else
@@ -307,7 +307,7 @@ public class FwVueController : FwDynamicController
             }
             else if (dtype == "subtable" || dtype == "subtable_edit")
             {
-                var sub_model = fw.model(Utils.f2str(def["model"]));
+                var sub_model = fw.model(Utils.toStr(def["model"]));
                 var list_rows = sub_model.listByMainId(id, def); //list related rows from db
                 sub_model.prepareSubtable(list_rows, id, def);
 
@@ -315,7 +315,7 @@ public class FwVueController : FwDynamicController
             }
             else if (dtype == "att" || dtype == "att_edit")
             {
-                var att_id = Utils.f2int(item[field_name]);
+                var att_id = Utils.toInt(item[field_name]);
                 if (att_id > 0)
                 {
                     Hashtable att_item = fw.model<Att>().one(att_id);
