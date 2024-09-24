@@ -54,6 +54,7 @@ public class Att : FwModel
             fields["fname"] = file.FileName;
             fields["fsize"] = Utils.fileSize(filepath);
             fields["ext"] = ext;
+            fields["is_s3"] = 0; //reset S3 flag to overwrite the existing S3 file
             fields["status"] = STATUS_ACTIVE; // finished upload - change status to active
                                               // turn on image flag if it's an image
             if (UploadUtils.isUploadImgExtAllowed(ext))
@@ -131,7 +132,7 @@ public class Att : FwModel
     public int cleanupTmpUploads()
     {
         var rows = db.arrayp("select * from " + db.qid(table_name) +
-            @$" where add_time<DATEADD(hour, -48, getdate()) 
+            @$" where add_time<DATEADD(hour, -48, getdate())
                  and (status={db.qi(STATUS_UNDER_UPDATE)} or status={db.qi(STATUS_DELETED)} and iname like 'TMP#%')", DB.h());
         foreach (var row in rows)
             this.delete(Utils.f2int(row["id"]), true);
@@ -219,7 +220,8 @@ public class Att : FwModel
             var item = one(id);
             if (Utils.f2int(item["is_s3"]) == 1)
             {
-                fw.model<S3>().deleteObject(table_name + "/" + item["id"]);
+                //delete the whole folder for att, it will delete all files recursively
+                fw.model<S3>().deleteObject(table_name + "/" + item["id"] + "/");
             }
             else
             {
@@ -382,7 +384,7 @@ public class Att : FwModel
         return db.rowp(db.limit("SELECT a.* from " + db.qid(fw.model<AttLinks>().table_name) + " al, " + db.qid(table_name) + " a" +
             @$" WHERE al.fwentities_id=@fwentities_id
                   and al.item_id=@item_id
-                  and a.id=al.att_id 
+                  and a.id=al.att_id
                   {where}
                 order by a.id", 1), @params);
     }
