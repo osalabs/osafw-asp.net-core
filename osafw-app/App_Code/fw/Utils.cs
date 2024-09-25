@@ -153,12 +153,12 @@ public class Utils
         }
     }
 
-    // IN: email addresses delimited with ; space or newline
+    // IN: email addresses delimited with ,; space or newline
     // OUT: arraylist of email addresses
     public static ArrayList splitEmails(string emails)
     {
         ArrayList result = new();
-        string[] arr = Regex.Split(emails, @"[; \n\r]+");
+        string[] arr = Regex.Split(emails, @"[,; \n\r]+");
         foreach (string email in arr)
         {
             string _email = email.Trim();

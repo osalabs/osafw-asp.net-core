@@ -258,6 +258,7 @@ public class FwReports
     {
         var result = "";
 
+        ps["report_code"] = report_code;
         ps["f"] = f; // filter values
         ps["filter"] = f_data; // filter data
         ps["count"] = list_count;

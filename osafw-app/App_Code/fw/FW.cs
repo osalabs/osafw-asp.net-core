@@ -1353,18 +1353,22 @@ public class FW : IDisposable
         response.SendFileAsync(filepath).Wait();
     }
 
-    // SEND EMAIL
-    // mail_to may contain several emails delimited by ;
-    // filenames (optional) - human filename => hash filepath
-    // aCC - arraylist of CC addresses (strings)
-    // reply_to - optional reply to email
-    // options - hashtable with options:
-    //   "read-receipt"
-    //   "smtp" - hashtable with smtp settings (host, port, is_ssl, username, password)
-    // RETURN:
-    // true if sent successfully
-    // false if some problem occured (see log)
-    public bool sendEmail(string mail_from, string mail_to, string mail_subject, string mail_body, Hashtable filenames = null, ArrayList aCC = null, string reply_to = "", Hashtable options = null)
+    /// <summary>
+    /// Send Email
+    /// </summary>
+    /// <param name="mail_from">if empty - config mail_from used</param>
+    /// <param name="mail_to">may contain several emails delimited by ,; or space</param>
+    /// <param name="mail_subject">subject</param>
+    /// <param name="mail_body">body, if starts with !DOCTYPE or html tag - html email will be sent</param>
+    /// <param name="filenames">optional hashtable human filename => filepath</param>
+    /// <param name="aCC">optional arraylist of CC addresses (strings)</param>
+    /// <param name="reply_to">optional reply to email</param>
+    /// <param name="options">hashtable with options:
+    ///   "read-receipt"
+    ///   "smtp" - hashtable with smtp settings (host, port, is_ssl, username, password)
+    /// </param>
+    /// <returns>true if sent successfully, false if problem - see fw.last_error_send_email</returns>
+    public bool sendEmail(string mail_from, string mail_to, string mail_subject, string mail_body, IDictionary filenames = null, IList aCC = null, string reply_to = "", Hashtable options = null)
     {
         bool result = true;
         MailMessage message = null;
@@ -1454,7 +1458,7 @@ public class FW : IDisposable
                     foreach (string human_filename in fkeys)
                     {
                         string filename = (string)filenames[human_filename];
-                        System.Net.Mail.Attachment att = new(filename, System.Net.Mime.MediaTypeNames.Application.Octet)
+                        System.Net.Mail.Attachment att = new(filename, Utils.ext2mime(Path.GetExtension(filename)))
                         {
                             Name = human_filename,
                             NameEncoding = System.Text.Encoding.UTF8
