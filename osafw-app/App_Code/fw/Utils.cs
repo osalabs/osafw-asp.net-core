@@ -31,6 +31,8 @@ public class Utils
 
     public const string TMP_PREFIX = "osafw"; // prefix for temp directory where framework stores temporary files
 
+    public const string MIME_MAP = "doc|application/msword docx|application/msword xls|application/vnd.ms-excel xlsx|application/vnd.ms-excel ppt|application/vnd.ms-powerpoint pptx|application/vnd.ms-powerpoint csv|text/csv pdf|application/pdf html|text/html zip|application/x-zip-compressed jpg|image/jpeg jpeg|image/jpeg gif|image/gif png|image/png wmv|video/x-ms-wmv avi|video/x-msvideo mp4|video/mp4";
+
     // convert "space" delimited string to an array
     // WARN! replaces all "&nbsp;" to spaces (after convert)
     public static string[] qw(string str)
@@ -469,6 +471,22 @@ public class Utils
         }
 
         return result.ToString();
+    }
+
+    /// <summary>
+    /// return content-type mime string by file extension, default is "application/octet-stream"
+    /// </summary>
+    /// <param name="ext">extension - doc, .jpg, ... (dot is optional)</param>
+    /// <returns></returns>
+    public static string ext2mime(string ext)
+    {
+        Hashtable mime_map = qh(MIME_MAP);
+        ext = ext.ToLower(); //to lower
+        //remove first dot if any
+        if (ext.StartsWith('.'))
+            ext = ext[1..];
+
+        return (string)mime_map[ext] ?? "application/octet-stream";
     }
 
     /* <summary>

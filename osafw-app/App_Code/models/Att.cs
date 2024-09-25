@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections;
 using System.IO;
-using System.Text.RegularExpressions;
 
 namespace osafw;
 
@@ -26,8 +25,6 @@ public class Att : FwModel
     const int MAX_THUMB_H_L = 1200;
 
     const int CACHE_DAYS = 30; // cache requests for 30 days
-
-    public string MIME_MAP = "doc|application/msword docx|application/msword xls|application/vnd.ms-excel xlsx|application/vnd.ms-excel ppt|application/vnd.ms-powerpoint pptx|application/vnd.ms-powerpoint csv|text/csv pdf|application/pdf html|text/html zip|application/x-zip-compressed jpg|image/jpeg jpeg|image/jpeg gif|image/gif png|image/png wmv|video/x-ms-wmv avi|video/x-msvideo mp4|video/mp4";
 
     public Att() : base()
     {
@@ -189,22 +186,6 @@ public class Att : FwModel
         return getUrl(item, size) + "&preview=1";
     }
 
-    // IN: extension - doc, jpg, ... (dot is optional)
-    // OUT: mime type or application/octetstream if not found
-    public string getMimeForExt(string ext)
-    {
-        Hashtable map = Utils.qh(MIME_MAP);
-        ext = Regex.Replace(ext, @"^\.", ""); // remove dot if any
-
-        string result;
-        if (map.ContainsKey(ext))
-            result = (string)map[ext];
-        else
-            result = "application/octetstream";
-
-        return result;
-    }
-
     // mark record as deleted (status=127) OR actually delete from db (if is_perm)
     public override void delete(int id, bool is_perm = false)
     {
@@ -313,7 +294,7 @@ public class Att : FwModel
         string filename = item["fname"].Replace('"', '\'');
         string ext = UploadUtils.getUploadFileExt(filename);
 
-        fw.response.Headers.Append("Content-type", getMimeForExt(ext));
+        fw.response.Headers.Append("Content-type", Utils.ext2mime(ext));
         fw.response.Headers.Append("Content-Disposition", disposition + "; filename=\"" + filename + "\"");
         fw.response.SendFileAsync(filepath).Wait();
     }

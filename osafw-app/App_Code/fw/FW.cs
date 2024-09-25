@@ -1331,14 +1331,25 @@ public class FW : IDisposable
             parser(ps);
     }
 
-
-    public void fileResponse(string filepath, string attname, string ContentType = "application/octet-stream", string ContentDisposition = "attachment")
+    // 
+    /// <summary>
+    /// output file to response with given content type and disposition
+    /// </summary>
+    /// <param name="filepath"></param>
+    /// <param name="attname">attachment name, all speсial chars replaced with underscore</param>
+    /// <param name="ContentType">detected based on file extension or application/octet-stream</param>
+    /// <param name="ContentDisposition"></param>
+    public void fileResponse(string filepath, string attname, string ContentType = "", string ContentDisposition = "attachment")
     {
-        logger(LogLevel.DEBUG, "sending file response  = ", filepath, " as ", attname);
+        if (string.IsNullOrEmpty(ContentType))
+            ContentType = Utils.ext2mime(Path.GetExtension(filepath));
+
+        logger(LogLevel.DEBUG, "sending file response  = ", filepath, " as ", attname, " content-type:", ContentType);
         attname = Regex.Replace(attname, @"[^\w. \-]+", "_");
+
         response.Headers.Append("Content-type", ContentType);
         response.Headers.Append("Content-Length", Utils.fileSize(filepath).ToString());
-        response.Headers.Append("Content-Disposition", ContentDisposition + "; filename=\"" + attname + "\"");
+        response.Headers.Append("Content-Disposition", $"{ContentDisposition}; filename=\"{attname}\"");
         response.SendFileAsync(filepath).Wait();
     }
 

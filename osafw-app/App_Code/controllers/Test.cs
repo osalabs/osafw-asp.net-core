@@ -108,7 +108,11 @@ public class TestController : FwController
         ////var ps = new Hashtable();
         //report.render();
 
-        var html = FwReports.createHtml(fw, repcode);
-        rw(html);
+        //var html = FwReports.createHtml(fw, repcode);
+        //rw(html);
+
+        var filepath = FwReports.createFile(fw, repcode, "pdf");
+        fw.fileResponse(filepath, "report.pdf");
+        Utils.cleanupTmpFiles();
     }
 }

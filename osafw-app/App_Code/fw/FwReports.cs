@@ -1,6 +1,6 @@
 ﻿// Reports Base class
 //
-// (c) 2009-2021 Oleg Savchuk www.osalabs.com
+// (c) 2009-2024 Oleg Savchuk www.osalabs.com
 
 // Example usage from code:
 //
@@ -14,6 +14,12 @@
 //
 // // get html string of the report (based on report_html template only)
 // var html = FwReports.createHtml(fw, repcode);
+
+// // supported formats: html(default), csv, pdf, xls
+// // get report data, render to pdf file (temporary file created), output to browser, cleanup
+// var filepath = FwReports.createFile(fw, repcode, "pdf");
+// fw.fileResponse(filepath, "report.pdf");
+// Utils.cleanupTmpFiles();
 
 
 using System;
@@ -113,17 +119,6 @@ public class FwReports
         return report;
     }
 
-    // TBD
-    public static FwReports createAndRun(FW fw, string repcode, Hashtable f)
-    {
-        var report = createInstance(fw, repcode, f);
-        report.setFilters(); // set filters data like select/lookups
-        report.getData();
-        report.render();
-        return report;
-    }
-
-    //
     /// <summary>
     /// return html string of the report (based on report_html template only)
     /// </summary>
@@ -141,6 +136,33 @@ public class FwReports
         report.getData();
         report.render_to = TO_STRING;
         return report.render(ps);
+    }
+
+    public static string createFile(FW fw, string repcode, string format = "", Hashtable f = null, Hashtable ps = null)
+    {
+        f ??= [];
+        f["format"] = format;
+
+        var report = createInstance(fw, repcode, f);
+        report.setFilters(); // set filters data like select/lookups
+        report.getData();
+
+        report.render_to = Utils.getTmpFilename() + format2ext(format);
+        report.render(ps);
+
+        return report.render_to;
+    }
+
+    public static string format2ext(string format)
+    {
+        string ext = format switch
+        {
+            "pdf" => ".pdf",
+            "xls" => ".xls",
+            "csv" => ".csv",
+            _ => ".html",
+        };
+        return ext;
     }
 
     public FwReports()
@@ -255,28 +277,42 @@ public class FwReports
                 {
                     ((Hashtable)ps["f"])["edit"] = false; // force any edit modes off
                     ps["IS_EXPORT_PDF"] = true; //use as <~PARSEPAGE.TOP[IS_EXPORT_PDF]> in templates
-                    string file_name = Utils.isEmpty(render_options["pdf_filename"]) ? report_code : (string)render_options["pdf_filename"];
-                    ConvUtils.parsePagePdf(fw, base_dir, TPL_EXPORT_PDF, ps, file_name, render_options);
+                    string out_filename = Utils.isEmpty(render_options["pdf_filename"]) ? report_code : (string)render_options["pdf_filename"];
+                    if (isFileRender())
+                        out_filename = render_to;
+
+                    ConvUtils.parsePagePdf(fw, base_dir, TPL_EXPORT_PDF, ps, out_filename, render_options);
                     break;
                 }
 
             case "xls":
                 {
                     ps["IS_EXPORT_XLS"] = true; //use as <~PARSEPAGE.TOP[IS_EXPORT_XLS]> in templates
-                    ConvUtils.parsePageExcelSimple(fw, base_dir, TPL_EXPORT_XLS, ps, report_code);
+                    var out_filename = Utils.isEmpty(render_options["xls_filename"]) ? report_code : (string)render_options["xls_filename"];
+                    if (isFileRender())
+                        out_filename = render_to;
+
+                    ConvUtils.parsePageExcelSimple(fw, base_dir, TPL_EXPORT_XLS, ps, out_filename);
                     break;
                 }
 
             case "csv":
                 {
-                    Utils.writeCSVExport(fw.response, report_code + ".csv", "", "", list_rows);
+                    if (isFileRender())
+                    {
+                        //make csv and save to file
+                        var content = Utils.getCSVExport("", "", list_rows).ToString();
+                        FW.setFileContent(render_to, ref content);
+                    }
+                    else
+                        Utils.writeCSVExport(fw.response, report_code + ".csv", "", "", list_rows);
                     break;
                 }
 
             default:
                 {
                     // html
-                    if (render_to == TO_STRING)
+                    if (render_to != TO_BROWSER)
                     {
                         ps["IS_PRINT_MODE"] = true;
 
@@ -286,6 +322,10 @@ public class FwReports
 
                         ParsePage parser_obj = new(fw);
                         result = parser_obj.parse_page(base_dir, layout, ps);
+
+                        if (render_to != TO_STRING)
+                            //this is render to file
+                            FW.setFileContent(render_to, ref result);
                     }
                     else
                     {
@@ -297,6 +337,11 @@ public class FwReports
         }
 
         return result;
+    }
+
+    protected bool isFileRender()
+    {
+        return render_to != TO_BROWSER && render_to != TO_STRING;
     }
 
     // REPORT HELPERS
