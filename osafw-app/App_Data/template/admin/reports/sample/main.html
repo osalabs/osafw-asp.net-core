@@ -1,8 +1,8 @@
-<~/common/form/nav_title unless="IS_PRINT_MODE">
+<~report_ui unless="IS_PRINT_MODE" inline>
+  <~/common/form/nav_title>
+  <~/common/form/msg>
+  <~list_filter>
+</~report_ui>
 <~/admin/reports/common/title if="IS_PRINT_MODE">
-
-<~/common/form/msg unless="IS_PRINT_MODE">
-
-<~list_filter unless="IS_PRINT_MODE">
 
 <~report_html if="is_run">

@@ -620,18 +620,23 @@ public class ParsePage
 
     private string _attr_sub(string tag, string tpl_name, Hashtable hf, Hashtable attrs, string inline_tpl, Hashtable parent_hf, object tag_value)
     {
+        Hashtable sub_hf = [];
         string sub = (string)attrs["sub"];
         if (!string.IsNullOrEmpty(sub))
             // if sub attr contains name - use it to get value from hf (instead using tag_value)
             tag_value = hfvalue(sub, hf, parent_hf);
-        if (tag_value is DBRow)
-            tag_value = ((DBRow)tag_value).toHashtable();
-        if (!(tag_value is Hashtable))
+
+        if (tag_value is DBRow row)
+            sub_hf = row.toHashtable();
+
+        if (tag_value is Hashtable ht)
         {
-            fw.logger(LogLevel.DEBUG, "ParsePage - not a Hash passed for a SUB tag=", tag, ", sub=" + sub);
-            tag_value = new();
+            sub_hf = ht;
         }
-        return _parse_page(tag_tplpath(tag, tpl_name), (Hashtable)tag_value, inline_tpl, ref parent_hf);
+        else
+            fw.logger(LogLevel.DEBUG, "ParsePage - not a Hash passed for a SUB tag=", tag, ", sub=" + sub);
+
+        return _parse_page(tag_tplpath(tag, tpl_name), sub_hf, inline_tpl, ref parent_hf);
     }
 
     // Check for misc if attrs

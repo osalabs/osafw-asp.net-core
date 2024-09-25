@@ -130,8 +130,9 @@ public class FwReports
     /// <param name="fw"></param>
     /// <param name="repcode"></param>
     /// <param name="f"></param>
+    /// <param name="ps"></param>
     /// <returns></returns>
-    public static string createHtml(FW fw, string repcode, Hashtable f = null)
+    public static string createHtml(FW fw, string repcode, Hashtable f = null, Hashtable ps = null)
     {
         f ??= [];
 
@@ -139,7 +140,7 @@ public class FwReports
         report.setFilters(); // set filters data like select/lookups
         report.getData();
         report.render_to = TO_STRING;
-        return report.render();
+        return report.render(ps);
     }
 
     public FwReports()
@@ -278,7 +279,11 @@ public class FwReports
                     if (render_to == TO_STRING)
                     {
                         ps["IS_PRINT_MODE"] = true;
-                        var layout = (string)fw.G["PAGE_LAYOUT"];
+
+                        var layout = (string)fw.G["PAGE_LAYOUT_PRINT"];
+                        if (ps.ContainsKey("_layout"))
+                            layout = (string)ps["_layout"];
+
                         ParsePage parser_obj = new(fw);
                         result = parser_obj.parse_page(base_dir, layout, ps);
                     }

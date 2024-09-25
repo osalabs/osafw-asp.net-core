@@ -30,17 +30,17 @@ public class MainController : FwController
     public Hashtable IndexAction()
     {
 
-        Hashtable ps = new();
+        Hashtable ps = [];
 
         Hashtable one;
-        Hashtable panes = new();
+        Hashtable panes = [];
         ps["panes"] = panes;
 
         const int DIFF_DAYS = -7;
         // init const int[] STATUSES with single value FwModel.STATUS_ACTIVE
         var STATUSES = new int[] { FwModel.STATUS_ACTIVE };
 
-        one = new Hashtable();
+        one = [];
         one["type"] = "bignum";
         one["title"] = "Pages";
         one["url"] = "/Admin/Spages";
@@ -51,7 +51,7 @@ public class MainController : FwController
         one["icon"] = "pages";
         panes["plate1"] = one;
 
-        one = new Hashtable();
+        one = [];
         one["type"] = "bignum";
         one["title"] = "Uploads";
         one["url"] = "/Admin/Att";
@@ -62,7 +62,7 @@ public class MainController : FwController
         one["icon"] = "uploads";
         panes["plate2"] = one;
 
-        one = new Hashtable();
+        one = [];
         one["type"] = "bignum";
         one["title"] = "Users";
         one["url"] = "/Admin/Users";
@@ -73,7 +73,7 @@ public class MainController : FwController
         one["icon"] = "users";
         panes["plate3"] = one;
 
-        one = new Hashtable();
+        one = [];
         one["type"] = "bignum";
         one["title"] = "Events";
         one["url"] = "/Admin/Reports/sample";
@@ -84,7 +84,7 @@ public class MainController : FwController
         one["icon"] = "events";
         panes["plate4"] = one;
 
-        one = new Hashtable();
+        one = [];
         one["type"] = "barchart";
         one["title"] = "Logins per day";
         one["id"] = "logins_per_day";
@@ -98,7 +98,7 @@ public class MainController : FwController
             + " select CONCAT(MONTH(idate),'/',DAY(idate)) as ilabel, ivalue from zzz order by idate", DB.h());
         panes["barchart"] = one;
 
-        one = new Hashtable();
+        one = [];
         one["type"] = "piechart";
         one["title"] = "Users by Type";
         one["id"] = "user_types";
@@ -109,7 +109,7 @@ public class MainController : FwController
             row["ilabel"] = FormUtils.selectTplName("/common/sel/access_level.sel", (string)row["access_level"]);
         panes["piechart"] = one;
 
-        one = new Hashtable();
+        one = [];
         one["type"] = "table";
         one["title"] = "Last Events";
         // one["url") ] "/Admin/Reports/sample"
@@ -130,7 +130,7 @@ public class MainController : FwController
                 headers.Add(new Hashtable() { { "field_name", key } });
             foreach (Hashtable row in rows)
             {
-                ArrayList cols = new();
+                ArrayList cols = [];
                 foreach (var fieldname in fields)
                 {
                     cols.Add(new Hashtable()
@@ -145,8 +145,23 @@ public class MainController : FwController
         }
         panes["tabledata"] = one;
 
+        // Example of using Report class to generate html block
+        //one = [];
+        //one["type"] = "html";
+        //one["title"] = "Last Events Report";
+        ////from yesterday
+        //var f = new Hashtable
+        //{
+        //    { "from_date", DateUtils.Date2Str(DateTime.Now) }
+        //};
+        //var ps_rep = new Hashtable
+        //{
+        //    { "IS_SUPPRESS_TITLE", true }
+        //};
+        //one["html"] = FwReports.createHtml(fw, "sample", f, ps_rep);
+        //panes["htmldata"] = one;
 
-        one = new Hashtable();
+        one = [];
         one["type"] = "linechart";
         one["title"] = "Events per day";
         one["id"] = "eventsctr";
