@@ -87,14 +87,16 @@
        <~./fradio.sel radio="fradio" name="item[fradio]" delim="inline">
   selvalue="var" - display value (fetched from the .sel file) for the var (example: to display 'select' and 'radio' values in List view)
        ex: <~../fcombo.sel selvalue="fcombo">
-  TODO nolang - for subtemplates - use default language instead of current (usually english)
+  nolang - do not parse lang strings in ``, files only, not "inline" templates (this automatically applied for .js files)
   htmlescape - replace special symbols by their html equivalents (such as <>,",')
 
-    'multi-language support `text` => replaced by language string from $site_templ/lang/$lang.txt according to fw.config('lang ') (english by default)
-   example: <b>`Hello`</b>  -> become -> <b>Hola</b>
-   lang.txt line format:
+ multi-language support `text` => replaced by language string from $site_templ/lang/$lang.txt according to fw.config('lang') (english by default)
+  example: <b>`Hello`</b>  -> become -> <b>Hola</b>
+  lang.txt line format:
             english string === lang string
             Hello === Hola
+  note: .js files are not parsed for `lang` strings as `` is used for ES6 template strings
+
  support modifiers:
   htmlescape
   date          - format as datetime, sample "d M yyyy HH:mm", see https://docs.microsoft.com/en-us/dotnet/standard/base-types/custom-date-and-time-format-strings
@@ -144,8 +146,8 @@ public class ParsePage
     private static readonly Regex RX_LAST_SLASH = new(@"[^\/]+$", RegexOptions.Compiled);
     private static readonly Regex RX_EXT = new(@"\.[^\/]+$", RegexOptions.Compiled);
 
-    private static readonly Hashtable FILE_CACHE = new();
-    private static readonly Hashtable LANG_CACHE = new();
+    private static readonly Hashtable FILE_CACHE = [];
+    private static readonly Hashtable LANG_CACHE = [];
     private static readonly string[] IFOPERS = new[] { "if", "unless", "ifne", "ifeq", "ifgt", "iflt", "ifge", "ifle" };
 
     private const string DATE_FORMAT_DEF = "M/d/yyyy"; // for US, TODO make based on user settigns (with fallback to server's settings)
@@ -204,11 +206,11 @@ public class ParsePage
     {
         this.basedir = bdir;
         this.data_top = hf;
-        Hashtable parent_hf = new();
+        Hashtable parent_hf = [];
         // Return _parse_page(tpl_name, hf, "", "", parent_hf)
 
         // Dim start_time = DateTime.Now
-        var result = _parse_page(tpl_name, hf, "", ref parent_hf);
+        var result = _parse_page(tpl_name, hf, "", parent_hf);
         // Dim end_timespan As TimeSpan = DateTime.Now - start_time
         // fw.logger("ParsePage speed: " & String.Format("{0:0.000}", 1 / end_timespan.TotalSeconds) & "/s")
         return result;
@@ -217,11 +219,11 @@ public class ParsePage
     public string parse_string(string tpl, Hashtable hf)
     {
         basedir = "/";
-        Hashtable parent_hf = new();
-        return _parse_page("", hf, tpl, ref parent_hf);
+        Hashtable parent_hf = [];
+        return _parse_page("", hf, tpl, parent_hf);
     }
 
-    private string _parse_page(string tpl_name, Hashtable hf, string page, ref Hashtable parent_hf)
+    private string _parse_page(string tpl_name, Hashtable hf, string page, Hashtable parent_hf, Hashtable parent_attrs = null)
     {
         if (tpl_name == null)
         {
@@ -232,154 +234,155 @@ public class ParsePage
         if (tpl_name.Length > 0 && tpl_name.Substring(0, 1) != "/")
             tpl_name = basedir + "/" + tpl_name;
 
-        //fw.logger("DEBUG", $"ParsePage - Parsing template = {tpl_name}, pagelen={page.Length}");
+        fw.logger("DEBUG", $"ParsePage - Parsing template = {tpl_name}, pagelen={page.Length}");
         if (page.Length < 1)
             page = precache_file(TMPL_PATH + tpl_name);
+        if (page.Length == 0)
+            return "";
 
-        if (page.Length > 0)
-        {
+        parent_attrs ??= [];
+        //parse lang if caller attrs doesn't have "nolang" key and tpl_name is not .js file
+        if (!parent_attrs.ContainsKey("nolang") && !tpl_name.EndsWith(".js"))
             parse_lang(ref page);
-            string page_orig = page;
-            MatchCollection tags_full = get_full_tags(ref page);
 
-            if (tags_full.Count > 0)
+        string page_orig = page;
+        MatchCollection tags_full = get_full_tags(ref page);
+        if (tags_full.Count == 0)
+            return page; // no tags - return early without parsing
+
+        // parse tags on page
+
+        sort_tags(tags_full);
+        Hashtable TAGSEEN = [];
+        string tag_full;
+        string tag;
+        Hashtable attrs;
+        object tag_value;
+        string v;
+
+        foreach (Match tag_match in tags_full)
+        {
+            tag_full = tag_match.Groups[1].Value;
+            if (TAGSEEN.ContainsKey(tag_full))
+                continue; // each tag (tag_full) parsed just once and replaces all occurencies of the tag in the page
+            TAGSEEN.Add(tag_full, 1);
+
+            tag = tag_full;
+            attrs = [];
+            get_tag_attrs(ref tag, attrs);
+
+            // skip # commented tags and tags that not pass if
+            if (tag[0] != '#' && _attr_if(attrs, hf))
             {
-                sort_tags(tags_full);
-                Hashtable TAGSEEN = new();
-                string tag_full;
-                string tag;
-                Hashtable attrs;
-                object tag_value;
-                string v;
+                string inline_tpl = "";
 
-                foreach (Match tag_match in tags_full)
+                if (attrs.Count > 0)
                 {
-                    tag_full = tag_match.Groups[1].Value;
-                    if (TAGSEEN.ContainsKey(tag_full))
-                        continue; // each tag (tag_full) parsed just once and replaces all occurencies of the tag in the page
-                    TAGSEEN.Add(tag_full, 1);
+                    if (attrs.ContainsKey("inline"))
+                        inline_tpl = get_inline_tpl(ref page_orig, ref tag, ref tag_full);
 
-                    tag = tag_full;
-                    attrs = new();
-                    get_tag_attrs(ref tag, ref attrs);
+                    if (attrs.ContainsKey("session"))
+                        tag_value = hfvalue(tag, fw.context.Session);
+                    else if (attrs.ContainsKey("global"))
+                        tag_value = hfvalue(tag, fw.G);
+                    else
+                        tag_value = hfvalue(tag, hf, parent_hf);
+                }
+                else
+                    tag_value = hfvalue(tag, hf, parent_hf);
 
-                    // skip # commented tags and tags that not pass if
-                    if (tag[0] != '#' && _attr_if(attrs, hf))
+                // fw.logger("ParsePage - tag: " & tag_full & ", found=" & is_found_last_hfvalue)
+                if (tag_value.ToString().Length > 0)
+                {
+                    string value;
+                    if (attrs.ContainsKey("repeat"))
+                        value = _attr_repeat(ref tag, ref tag_value, ref tpl_name, ref inline_tpl, hf);
+                    else if (attrs.ContainsKey("select"))
                     {
-                        string inline_tpl = "";
-
-                        if (attrs.Count > 0)
-                        {
-                            if (attrs.ContainsKey("inline"))
-                                inline_tpl = get_inline_tpl(ref page_orig, ref tag, ref tag_full);
-
-                            if (attrs.ContainsKey("session"))
-                                tag_value = hfvalue(tag, fw.context.Session);
-                            else if (attrs.ContainsKey("global"))
-                                tag_value = hfvalue(tag, fw.G);
-                            else
-                                tag_value = hfvalue(tag, hf, parent_hf);
-                        }
-                        else
-                            tag_value = hfvalue(tag, hf, parent_hf);
-
-                        // fw.logger("ParsePage - tag: " & tag_full & ", found=" & is_found_last_hfvalue)
-                        if (tag_value.ToString().Length > 0)
-                        {
-                            string value;
-                            if (attrs.ContainsKey("repeat"))
-                                value = _attr_repeat(ref tag, ref tag_value, ref tpl_name, ref inline_tpl, hf);
-                            else if (attrs.ContainsKey("select"))
-                            {
-                                // this is special case for '<select>' HTML tag when options passed as ArrayList
-                                value = _attr_select(tag, tpl_name, ref hf, attrs);
-                            }
-                            else if (attrs.ContainsKey("selvalue"))
-                            {
-                                // # this is special case for '<select>' HTML tag
-                                value = _attr_select_name(tag, tpl_name, ref hf, attrs);
-                                if (!attrs.ContainsKey("noescape"))
-                                    value = Utils.htmlescape(value);
-                            }
-                            else if (attrs.ContainsKey("sub"))
-                                value = _attr_sub(tag, tpl_name, hf, attrs, inline_tpl, parent_hf, tag_value);
-                            else
-                            {
-                                if (attrs.ContainsKey("json"))
-                                    value = Utils.jsonEncode(tag_value);
-                                else
-                                    value = tag_value.ToString();
-                                if (!string.IsNullOrEmpty(value) && !attrs.ContainsKey("noescape"))
-                                    value = Utils.htmlescape(value);
-                            }
-                            tag_replace(ref page, ref tag_full, ref value, attrs);
-                        }
-                        else if (attrs.ContainsKey("repeat"))
-                        {
-                            v = _attr_repeat(ref tag, ref tag_value, ref tpl_name, ref inline_tpl, hf);
-                            tag_replace(ref page, ref tag_full, ref v, attrs);
-                        }
-                        else if (attrs.ContainsKey("var"))
-                        {
-                            string tmp_value = "";
-                            tag_replace(ref page, ref tag_full, ref tmp_value, attrs);
-                        }
-                        else if (attrs.ContainsKey("select"))
-                        {
-                            // # this is special case for '<select>' HTML tag
-                            v = _attr_select(tag, tpl_name, ref hf, attrs);
-                            tag_replace(ref page, ref tag_full, ref v, attrs);
-                        }
-                        else if (attrs.ContainsKey("selvalue"))
-                        {
-                            // # this is special case for '<select>' HTML tag
-                            v = _attr_select_name(tag, tpl_name, ref hf, attrs);
-                            if (!attrs.ContainsKey("noescape"))
-                                v = Utils.htmlescape(v);
-                            tag_replace(ref page, ref tag_full, ref v, attrs);
-                        }
-                        else if (attrs.ContainsKey("radio"))
-                        {
-                            // # this is special case for '<index type=radio>' HTML tag
-                            v = _attr_radio(tag_tplpath(tag, tpl_name), ref hf, attrs);
-                            tag_replace(ref page, ref tag_full, ref v, attrs);
-                        }
-                        else if (attrs.ContainsKey("noparse"))
-                        {
-                            // # no need to parse file - just include as is
-                            var path = tag_tplpath(tag, tpl_name);
-                            if (path.Substring(0, 1) != "/")
-                                path = basedir + "/" + path;
-                            path = TMPL_PATH + path;
-                            var file_content = precache_file(path);
-                            tag_replace(ref page, ref tag_full, ref file_content, new Hashtable());
-                        }
-                        else
-                        {
-
-                            // #also checking for sub
-                            if (attrs.ContainsKey("sub"))
-                                v = _attr_sub(tag, tpl_name, hf, attrs, inline_tpl, parent_hf, tag_value);
-                            else if (is_found_last_hfvalue)
-                                // value found but empty
-                                v = "";
-                            else
-                                // value not found - looks like subtemplate in file
-                                v = _parse_page(tag_tplpath(tag, tpl_name), hf, inline_tpl, ref parent_hf);
-                            tag_replace(ref page, ref tag_full, ref v, attrs);
-                        }
+                        // this is special case for '<select>' HTML tag when options passed as ArrayList
+                        value = _attr_select(tag, tpl_name, hf, attrs);
                     }
+                    else if (attrs.ContainsKey("selvalue"))
+                    {
+                        // # this is special case for '<select>' HTML tag
+                        value = _attr_select_name(tag, tpl_name, hf, attrs);
+                        if (!attrs.ContainsKey("noescape"))
+                            value = Utils.htmlescape(value);
+                    }
+                    else if (attrs.ContainsKey("sub"))
+                        value = _attr_sub(tag, tpl_name, hf, attrs, inline_tpl, parent_hf, tag_value);
                     else
                     {
-                        string tmp_value = "";
-                        tag_replace(ref page, ref tag_full, ref tmp_value, attrs);
+                        if (attrs.ContainsKey("json"))
+                            value = Utils.jsonEncode(tag_value);
+                        else
+                            value = tag_value.ToString();
+                        if (!string.IsNullOrEmpty(value) && !attrs.ContainsKey("noescape"))
+                            value = Utils.htmlescape(value);
                     }
+                    tag_replace(ref page, ref tag_full, ref value, attrs);
+                }
+                else if (attrs.ContainsKey("repeat"))
+                {
+                    v = _attr_repeat(ref tag, ref tag_value, ref tpl_name, ref inline_tpl, hf);
+                    tag_replace(ref page, ref tag_full, ref v, attrs);
+                }
+                else if (attrs.ContainsKey("var"))
+                {
+                    string tmp_value = "";
+                    tag_replace(ref page, ref tag_full, ref tmp_value, attrs);
+                }
+                else if (attrs.ContainsKey("select"))
+                {
+                    // # this is special case for '<select>' HTML tag
+                    v = _attr_select(tag, tpl_name, hf, attrs);
+                    tag_replace(ref page, ref tag_full, ref v, attrs);
+                }
+                else if (attrs.ContainsKey("selvalue"))
+                {
+                    // # this is special case for '<select>' HTML tag
+                    v = _attr_select_name(tag, tpl_name, hf, attrs);
+                    if (!attrs.ContainsKey("noescape"))
+                        v = Utils.htmlescape(v);
+                    tag_replace(ref page, ref tag_full, ref v, attrs);
+                }
+                else if (attrs.ContainsKey("radio"))
+                {
+                    // # this is special case for '<index type=radio>' HTML tag
+                    v = _attr_radio(tag_tplpath(tag, tpl_name), hf, attrs);
+                    tag_replace(ref page, ref tag_full, ref v, attrs);
+                }
+                else if (attrs.ContainsKey("noparse"))
+                {
+                    // # no need to parse file - just include as is
+                    var path = tag_tplpath(tag, tpl_name);
+                    if (path.Substring(0, 1) != "/")
+                        path = basedir + "/" + path;
+                    path = TMPL_PATH + path;
+                    var file_content = precache_file(path);
+                    tag_replace(ref page, ref tag_full, ref file_content, []);
+                }
+                else
+                {
 
+                    // #also checking for sub
+                    if (attrs.ContainsKey("sub"))
+                        v = _attr_sub(tag, tpl_name, hf, attrs, inline_tpl, parent_hf, tag_value);
+                    else if (is_found_last_hfvalue)
+                        // value found but empty
+                        v = "";
+                    else
+                        // value not found - looks like subtemplate in file
+                        v = _parse_page(tag_tplpath(tag, tpl_name), hf, inline_tpl, parent_hf, attrs);
+                    tag_replace(ref page, ref tag_full, ref v, attrs);
                 }
             }
             else
             {
+                string tmp_value = "";
+                tag_replace(ref page, ref tag_full, ref tmp_value, attrs);
             }
+
         }
 
         // FW.logger("DEBUG", "ParsePage - Parsing template = " & tpl_name & " END")
@@ -436,7 +439,7 @@ public class ParsePage
         }
 
         // get from fs(if not in cache)
-        Hashtable cache = new();
+        Hashtable cache = [];
         cache["data"] = file_data;
         cache["modtime"] = modtime;
 
@@ -456,7 +459,7 @@ public class ParsePage
     }
 
     // Note: also strip tag to short tag
-    private static void get_tag_attrs(ref string tag, ref Hashtable attrs)
+    private static void get_tag_attrs(ref string tag, Hashtable attrs)
     {
         // If Regex.IsMatch(tag, "\s") Then
         if (tag.Contains(" "))
@@ -636,7 +639,7 @@ public class ParsePage
         else
             fw.logger(LogLevel.DEBUG, "ParsePage - not a Hash passed for a SUB tag=", tag, ", sub=" + sub);
 
-        return _parse_page(tag_tplpath(tag, tpl_name), sub_hf, inline_tpl, ref parent_hf);
+        return _parse_page(tag_tplpath(tag, tpl_name), sub_hf, inline_tpl, parent_hf, attrs);
     }
 
     // Check for misc if attrs
@@ -783,7 +786,7 @@ public class ParsePage
 
         StringBuilder value = new();
         if (parent_hf == null)
-            parent_hf = new();
+            parent_hf = [];
 
         string ttpath = tag_tplpath(tag, tpl_name);
 
@@ -791,7 +794,7 @@ public class ParsePage
         for (int i = 0; i <= list.Count - 1; i++)
         {
             var row = proc_repeat_modifiers(list, i);
-            value.Append(_parse_page(ttpath, row, inline_tpl, ref parent_hf));
+            value.Append(_parse_page(ttpath, row, inline_tpl, parent_hf));
         }
         return value.ToString();
     }
@@ -1057,7 +1060,7 @@ public class ParsePage
     }
 
     // if attrs["multi") ]efined - attrs["select") ]an contain strings with separator in attrs["multi") ]default ",") for multiple select
-    private string _attr_select(string tag, string tpl_name, ref Hashtable hf, Hashtable attrs)
+    private string _attr_select(string tag, string tpl_name, Hashtable hf, Hashtable attrs)
     {
         StringBuilder result = new();
 
@@ -1174,7 +1177,7 @@ public class ParsePage
         return result.ToString();
     }
 
-    private string _attr_radio(string tpl_path, ref Hashtable hf, Hashtable attrs)
+    private string _attr_radio(string tpl_path, Hashtable hf, Hashtable attrs)
     {
         StringBuilder result = new();
         string sel_value = (string)hfvalue((string)attrs["radio"], hf);
@@ -1205,8 +1208,8 @@ public class ParsePage
             if (desc.Length < 1)
                 continue;
 
-            Hashtable parent_hf = new();
-            desc = _parse_page("", hf, desc, ref parent_hf);
+            Hashtable parent_hf = [];
+            desc = _parse_page("", hf, desc, parent_hf, attrs);
 
             if (!attrs.ContainsKey("noescape"))
             {
@@ -1239,7 +1242,7 @@ public class ParsePage
         }
         return result.ToString();
     }
-    private string _attr_select_name(string tag, string tpl_name, ref Hashtable hf, Hashtable attrs)
+    private string _attr_select_name(string tag, string tpl_name, Hashtable hf, Hashtable attrs)
     {
         string result = "";
         string sel_value = (string)hfvalue((string)attrs["selvalue"], hf);
