@@ -23,25 +23,26 @@
   </div>
 
   <div class="btn-std d-print-none">
-   <div class="btn-group" v-if="!disableAddNew || $slots.group || fwStore.return_url">
       <a v-if="fwStore.return_url"
-        class="btn btn-default"
-        :href="fwStore.return_url"
-      ><i class="bi bi-arrow-left-circle"></i> `Return Back`</a>
-      <a v-if="!disableAddNew"
-        class="btn btn-default"
-        href="#"
-        @click.prevent="onAddNew"
-        :disabled="fwStore.is_readonly"
-      ><~/common/icons/plusb> `Add New`</a>
-      <a v-if="current_id"
-        class="btn btn-default"
-        href="#"
-        @click.prevent="onView"
-      ><i class="bi bi-eye"></i> `View`</a>
-      <slot name="group"></slot>
-   </div>
-   <slot></slot>
+         class="btn btn-default me-1"
+         :href="fwStore.return_url"><i class="bi bi-arrow-left-circle"></i> `Return Back`</a>
+      <a v-else
+         class="btn btn-default me-1"
+         href="#"
+         @click.prevent="onCancelForm"><i class="bi bi-arrow-left-circle"></i> `Back to List`</a>
+      <div class="btn-group" v-if="!disableAddNew || $slots.group || fwStore.return_url">
+          <a v-if="!disableAddNew"
+             class="btn btn-default"
+             href="#"
+             @click.prevent="onAddNew"
+             :disabled="fwStore.is_readonly"><i class="bi bi-plus-lg"></i> `Add New`</a>
+          <a v-if="current_id"
+             class="btn btn-default"
+             href="#"
+             @click.prevent="onView"><i class="bi bi-eye"></i> `View`</a>
+          <slot name="group"></slot>
+      </div>
+      <slot></slot>
   </div>
 </script>
 

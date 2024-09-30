@@ -10,17 +10,22 @@
   <h1>{{fwStore.view_title}}</h1>
 
   <div class="btn-std d-print-none">
+    <a v-if="fwStore.return_url"
+      class="btn btn-default me-1"
+      :href="fwStore.return_url"
+    ><i class="bi bi-arrow-left-circle"></i> `Return Back`</a>
+    <a v-else
+      class="btn btn-default me-1"
+      href="#"
+      @click.prevent="onBack"
+    ><i class="bi bi-arrow-left-circle"></i> `Back to List`</a>
     <div class="btn-group" v-if="!disableAddNew || $slots.group || fwStore.return_url">
-      <a v-if="fwStore.return_url"
-        class="btn btn-default"
-        :href="fwStore.return_url"
-      ><i class="bi bi-arrow-left-circle"></i> `Return Back`</a>
       <a v-if="!disableAddNew"
         class="btn btn-default"
         href="#"
         @click.prevent="onAddNew"
         :disabled="fwStore.is_readonly"
-      ><~/common/icons/plusb> `Add New`</a>
+      ><i class="bi bi-plus-lg"></i> `Add New`</a>
       <a v-if="current_id"
         class="btn btn-default"
         href="#"
@@ -81,6 +86,9 @@ fwApp.component('view-header', {
     },
     onEdit(e){
       this.fwStore.openEditScreen(this.current_id);
+    },
+    onBack() {
+      this.fwStore.openListScreen();
     },
     async onDelete(e){
       await this.fwStore.deleteRow(this.current_id);
