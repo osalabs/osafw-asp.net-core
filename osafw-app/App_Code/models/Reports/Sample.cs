@@ -25,6 +25,8 @@ public class SampleReport : FwReports
     // filter defaults can be Set here
     public override void setFilters()
     {
+        base.setFilters();
+
         Hashtable result = [];
         if (!f.ContainsKey("from_date") && !f.ContainsKey("to_date"))
             // set default filters
@@ -39,6 +41,8 @@ public class SampleReport : FwReports
 
     public override void getData()
     {
+        base.getData();
+
         setListSorting();
 
         // apply filters from Me.f
@@ -77,7 +81,7 @@ public class SampleReport : FwReports
         {
             //search in item_id, idesc, payload
             where += " and (al.item_id=@item_id OR al.idesc like @slike OR al.payload like @slike)";
-            where_params["@item_id"] = Utils.f2int(f["s"]);
+            where_params["@item_id"] = Utils.toInt(f["s"]);
             where_params["@slike"] = "%" + f["s"] + "%";
         }
 
@@ -106,7 +110,7 @@ public class SampleReport : FwReports
             //row["entity"] = fw.model<FwEntities>().one(Utils.f2int(row["fwentities_id"]));
             //ps["total_ctr"] = _calcPerc(list_rows); //if you need calculate "perc" for each row based on row["ctr"]
             // if row["payload"] contains password/pass/pwd - hide it
-            var payload = Utils.f2str(row["payload"]);
+            var payload = Utils.toStr(row["payload"]);
             if (payload.Contains("pass") || payload.Contains("pwd"))
                 row["payload"] = "********";
         }

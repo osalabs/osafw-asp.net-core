@@ -53,6 +53,7 @@ public enum LogLevel : int
     ERROR,           // error happened, but current request might still continue (notify admin)
     WARN,            // potentially harmful situations for further investigation, request processing continues
     INFO,            // default for production (easier maintenance/support), progress of the application at coarse-grained level (fw request processing: request start/end, sql, route/external redirects, sql, fileaccess, third-party API)
+    NOTICE,          // normal, but noticeable condition (for Sentry logged as bradcrumbs)
     DEBUG,           // default for development (default for logger("msg") call), fine-grained level
     TRACE,           // very detailed dumps (in-module details like fw core, despatcher, parse page, ...)
     ALL              // just log everything
@@ -60,7 +61,7 @@ public enum LogLevel : int
 
 public class FwRoute
 {
-    public string controller_path; // store /Prefix/Controller - to use in parser a default path for templates
+    public string controller_path; // store /Prefix/Prefix2/Controller - to use in parser a default path for templates
     public string method;
     public string controller;
     public string action;
@@ -132,12 +133,12 @@ public class FW : IDisposable
     // usage: fw.userId
     public int userId
     {
-        get { return Utils.f2int(Session("user_id")); }
+        get { return Utils.toInt(Session("user_id")); }
     }
 
     public int userAccessLevel
     {
-        get { return Utils.f2int(Session("access_level")); }
+        get { return Utils.toInt(Session("access_level")); }
     }
 
     // shortcut to obtain if we working under logged in user
@@ -184,11 +185,10 @@ public class FW : IDisposable
 
         FwConfig.init(context, configuration);
 
-        //TODO MIGRATE
 #if isSentry
-        //Sentry Raven processing
-        sentryClient = Sentry.SentrySdk.Init(config("log_sentry"))
-        Sentry.SentrySdk.ConfigureScope(Sub(scope) scope.User = New Sentry.Protocol.User With {.Email = SESSION("login")})
+        //configure Sentry logging
+        sentryClient = Sentry.SentrySdk.Init(Utils.f2str(config("log_sentry")));
+        Sentry.SentrySdk.ConfigureScope(scope => scope.User = new Sentry.SentryUser { Email = Session("login") });
 #endif
 
         db = new DB(this);
@@ -308,7 +308,7 @@ public class FW : IDisposable
     public string getResponseExpectedFormat()
     {
         string result = "";
-        if (this.route.format == "json" || Utils.f2str(this.request.Headers["Accept"]).Contains("application/json"))
+        if (this.route.format == "json" || Utils.toStr(this.request.Headers["Accept"]).Contains("application/json"))
             result = "json";
         else if (this.route.format == "pjax" || !string.IsNullOrEmpty(this.request.Headers["X-Requested-With"]))
             result = "pjax";
@@ -376,7 +376,7 @@ public class FW : IDisposable
             if (route.method == "HEAD") route.method = "GET"; // for website processing HEAD is same as GET, IIS will send just headers
         }
 
-        string controller_prefix = "";
+        string controller_prefix = ""; // prefix without "/", i.e. /Admin/Reports -> AdminReports
 
         // process config special routes (redirects, rewrites)
         Hashtable routes = (Hashtable)this.config("routes");
@@ -423,9 +423,14 @@ public class FW : IDisposable
             Match m_prefix = Regex.Match(url, prefix_rx);
             if (m_prefix.Success)
             {
-                // convert from /Some/Prefix to SomePrefix
-                controller_prefix = Utils.routeFixChars(m_prefix.Groups[1].Value);
-                route.controller_path = "/" + controller_prefix;
+                // prefix detected - fix all prefix parts
+                var prefix_parts = m_prefix.Groups[1].Value.Split('/');
+                foreach (string prefix_part in prefix_parts)
+                {
+                    var part_fixed = Utils.routeFixChars(prefix_part);
+                    controller_prefix += part_fixed;
+                    route.controller_path += "/" + part_fixed;
+                }
                 url = m_prefix.Groups[2].Value;
             }
 
@@ -440,7 +445,7 @@ public class FW : IDisposable
             // POST/PUT  /controller/{id}        Save     (save changes to exisitng record - Update    Note:Request.Form should contain data. Assumes whole form submit. I.e. unchecked checkboxe treated as empty value)
             // PATCH /controller                 SaveMulti (partial update multiple records)
             // PATCH /controller/{id}            Save     (save partial changes to exisitng record - Update. Can be used to update single/specific fields without affecting any other fields.)
-            // POST/DELETE  /controller/{id}     Delete    Note:Request.Form should NOT contain any data
+            // DELETE /controller/{id}           Delete
             //
             // /controller/(Action)              Action    call for arbitrary action from the controller
             Match m = Regex.Match(url, @"^/([^/]+)(?:/(new|\.\w+)|/([\d\w_-]+)(?:\.(\w+))?(?:/(edit|delete))?)?/?$");
@@ -479,15 +484,7 @@ public class FW : IDisposable
                 }
                 else if (route.method == "POST")
                 {
-                    if (!string.IsNullOrEmpty(route.id))
-                    {
-                        if (request.HasFormContentType && request.Form.Count > 0 || request.ContentLength > 0)
-                            route.action_raw = ACTION_SAVE;
-                        else
-                            route.action_raw = ACTION_DELETE;
-                    }
-                    else
-                        route.action_raw = ACTION_SAVE;
+                    route.action_raw = ACTION_SAVE;
                 }
                 else if (route.method == "PUT")
                 {
@@ -617,7 +614,7 @@ public class FW : IDisposable
             //    + "Form: " + dumper(FORM) + System.Environment.NewLine + System.Environment.NewLine
             //    + "Session:" + dumper(context.Session));
 
-            if (Utils.f2int(this.config("log_level")) >= (int)LogLevel.DEBUG)
+            if (Utils.toInt(this.config("log_level")) >= (int)LogLevel.DEBUG)
                 throw;
             else
                 errMsg("Server Error. Please, contact site administrator!", Ex);
@@ -670,12 +667,12 @@ public class FW : IDisposable
         Hashtable rules = (Hashtable)config("access_levels");
         if (rules != null && rules.ContainsKey(path))
         {
-            if (current_level >= Utils.f2int(rules[path]))
+            if (current_level >= Utils.toInt(rules[path]))
                 result = 2;
         }
         else if (rules != null && rules.ContainsKey(path2))
         {
-            if (current_level >= Utils.f2int(rules[path2]))
+            if (current_level >= Utils.toInt(rules[path2]))
                 result = 2;
         }
         else
@@ -809,8 +806,10 @@ public class FW : IDisposable
         foreach (object dmp_obj in args)
             str.Append(dumper(dmp_obj));
 
+        var strlog = str.ToString();
+
         // write to debug console first
-        System.Diagnostics.Debug.WriteLine(str);
+        System.Diagnostics.Debug.WriteLine(strlog);
 
         // write to log file
         string log_file = (string)config("log");
@@ -821,7 +820,7 @@ public class FW : IDisposable
                 // force seek to end just in case other process added to file
                 using (StreamWriter floggerSW = File.AppendText(log_file))
                 {
-                    floggerSW.WriteLine(str.ToString());
+                    floggerSW.WriteLine(strlog);
                 }
             }
             catch (Exception ex)
@@ -829,6 +828,45 @@ public class FW : IDisposable
                 System.Diagnostics.Debug.WriteLine("WARN logger can't write to log file. Reason:" + ex.Message);
             }
         }
+#if isSentry
+        // send to Sentry
+        try
+        {
+            //do not log to Sentry too detailed TRACEs
+            if (level <= LogLevel.DEBUG)
+            {
+                //convert LogLevel to Sentry.SentryLevel
+                Sentry.SentryLevel sentryLevel = level switch
+                {
+                    LogLevel.FATAL => Sentry.SentryLevel.Fatal,
+                    LogLevel.ERROR => Sentry.SentryLevel.Error,
+                    LogLevel.WARN => Sentry.SentryLevel.Warning,
+                    LogLevel.INFO => Sentry.SentryLevel.Info,
+                    LogLevel.DEBUG => Sentry.SentryLevel.Debug,
+                    _ => Sentry.SentryLevel.Error
+                };
+
+                if (args.Length > 0 && args[0] is Exception ex)
+                {
+                    //if first argument is an exception - send it as exception with strlog as an additional info
+                    Sentry.SentrySdk.CaptureException(ex, scope =>
+                        {
+                            scope.Level = sentryLevel;
+                            scope.SetExtra("message", strlog);
+                        });
+                }
+                else
+                    Sentry.SentrySdk.CaptureMessage(strlog, sentryLevel);
+
+                //also add as a breadcrumb for the future events
+                Sentry.SentrySdk.AddBreadcrumb(strlog);
+            }
+        }
+        catch (Exception)
+        {
+            // make sure we don't break the app if Sentry fails
+        }
+#endif
     }
 
     public static string dumper(object dmp_obj, int level = 0) // TODO better type detection(suitable for all collection types)
@@ -1159,7 +1197,7 @@ public class FW : IDisposable
                 var field = controllerClass.GetField("access_level", BindingFlags.Public | BindingFlags.Static);
                 if (field != null)
                 {
-                    if (userAccessLevel < Utils.f2int(field.GetValue(null)))
+                    if (userAccessLevel < Utils.toInt(field.GetValue(null)))
                         throw new AuthException("Bad access - Not authorized (2)");
                 }
 
@@ -1293,29 +1331,44 @@ public class FW : IDisposable
             parser(ps);
     }
 
-
-    public void fileResponse(string filepath, string attname, string ContentType = "application/octet-stream", string ContentDisposition = "attachment")
+    // 
+    /// <summary>
+    /// output file to response with given content type and disposition
+    /// </summary>
+    /// <param name="filepath"></param>
+    /// <param name="attname">attachment name, all speсial chars replaced with underscore</param>
+    /// <param name="ContentType">detected based on file extension or application/octet-stream</param>
+    /// <param name="ContentDisposition"></param>
+    public void fileResponse(string filepath, string attname, string ContentType = "", string ContentDisposition = "attachment")
     {
-        logger(LogLevel.DEBUG, "sending file response  = ", filepath, " as ", attname);
+        if (string.IsNullOrEmpty(ContentType))
+            ContentType = Utils.ext2mime(Path.GetExtension(filepath));
+
+        logger(LogLevel.DEBUG, "sending file response  = ", filepath, " as ", attname, " content-type:", ContentType);
         attname = Regex.Replace(attname, @"[^\w. \-]+", "_");
+
         response.Headers.Append("Content-type", ContentType);
         response.Headers.Append("Content-Length", Utils.fileSize(filepath).ToString());
-        response.Headers.Append("Content-Disposition", ContentDisposition + "; filename=\"" + attname + "\"");
+        response.Headers.Append("Content-Disposition", $"{ContentDisposition}; filename=\"{attname}\"");
         response.SendFileAsync(filepath).Wait();
     }
 
-    // SEND EMAIL
-    // mail_to may contain several emails delimited by ;
-    // filenames (optional) - human filename => hash filepath
-    // aCC - arraylist of CC addresses (strings)
-    // reply_to - optional reply to email
-    // options - hashtable with options:
-    //   "read-receipt"
-    //   "smtp" - hashtable with smtp settings (host, port, is_ssl, username, password)
-    // RETURN:
-    // true if sent successfully
-    // false if some problem occured (see log)
-    public bool sendEmail(string mail_from, string mail_to, string mail_subject, string mail_body, Hashtable filenames = null, ArrayList aCC = null, string reply_to = "", Hashtable options = null)
+    /// <summary>
+    /// Send Email
+    /// </summary>
+    /// <param name="mail_from">if empty - config mail_from used</param>
+    /// <param name="mail_to">may contain several emails delimited by ,; or space</param>
+    /// <param name="mail_subject">subject</param>
+    /// <param name="mail_body">body, if starts with !DOCTYPE or html tag - html email will be sent</param>
+    /// <param name="filenames">optional hashtable human filename => filepath</param>
+    /// <param name="aCC">optional arraylist of CC addresses (strings)</param>
+    /// <param name="reply_to">optional reply to email</param>
+    /// <param name="options">hashtable with options:
+    ///   "read-receipt"
+    ///   "smtp" - hashtable with smtp settings (host, port, is_ssl, username, password)
+    /// </param>
+    /// <returns>true if sent successfully, false if problem - see fw.last_error_send_email</returns>
+    public bool sendEmail(string mail_from, string mail_to, string mail_subject, string mail_body, IDictionary filenames = null, IList aCC = null, string reply_to = "", Hashtable options = null)
     {
         bool result = true;
         MailMessage message = null;
@@ -1327,7 +1380,7 @@ public class FW : IDisposable
                 mail_from = (string)this.config("mail_from"); // default mail from
             mail_subject = Regex.Replace(mail_subject, @"[\r\n]+", " ");
 
-            bool is_test = Utils.f2bool(this.config("is_test"));
+            bool is_test = Utils.toBool(this.config("is_test"));
             if (is_test)
             {
                 string test_email = this.Session("login") ?? ""; //in test mode - try logged user email (if logged)
@@ -1405,7 +1458,7 @@ public class FW : IDisposable
                     foreach (string human_filename in fkeys)
                     {
                         string filename = (string)filenames[human_filename];
-                        System.Net.Mail.Attachment att = new(filename, System.Net.Mime.MediaTypeNames.Application.Octet)
+                        System.Net.Mail.Attachment att = new(filename, Utils.ext2mime(Path.GetExtension(filename)))
                         {
                             Name = human_filename,
                             NameEncoding = System.Text.Encoding.UTF8
@@ -1426,10 +1479,10 @@ public class FW : IDisposable
                     }
                     if (mailSettings.Count > 0)
                     {
-                        client.Host = Utils.f2str(mailSettings["host"]);
-                        client.Port = Utils.f2int(mailSettings["port"]);
-                        client.EnableSsl = Utils.f2bool(mailSettings["is_ssl"]);
-                        client.Credentials = new System.Net.NetworkCredential(Utils.f2str(mailSettings["username"]), Utils.f2str(mailSettings["password"]));
+                        client.Host = Utils.toStr(mailSettings["host"]);
+                        client.Port = Utils.toInt(mailSettings["port"]);
+                        client.EnableSsl = Utils.toBool(mailSettings["is_ssl"]);
+                        client.Credentials = new System.Net.NetworkCredential(Utils.toStr(mailSettings["username"]), Utils.toStr(mailSettings["password"]));
                         client.Send(message);
                     }
                 }
@@ -1476,7 +1529,7 @@ public class FW : IDisposable
 
         ps["err_time"] = DateTime.Now;
         ps["err_msg"] = msg;
-        if (Utils.f2bool(this.config("IS_DEV")))
+        if (Utils.toBool(this.config("IS_DEV")))
         {
             ps["is_dump"] = true;
             if (Ex != null)
@@ -1599,7 +1652,7 @@ public class FW : IDisposable
                 string log_file = (string)config("log");
                 if (!string.IsNullOrEmpty(log_file))
                 {
-                    long max_log_size = Utils.f2long(config("log_max_size"));
+                    long max_log_size = Utils.toLong(config("log_max_size"));
                     using (FileStream floggerFS = new(log_file, FileMode.Open, FileAccess.Read, FileShare.Read))
                     {
                         if (max_log_size > 0 && floggerFS.Length > max_log_size)

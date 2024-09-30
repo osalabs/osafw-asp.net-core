@@ -1,10 +1,7 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace osafw.Tests
 {
@@ -122,14 +119,14 @@ namespace osafw.Tests
             // Case 4: Populate itemdb with custom default value for non-existing fields when item is not null
             Hashtable itemdb4 = new Hashtable();
             Hashtable item4 = new Hashtable { { "field1", "value1" } };
-            FormUtils.filterCheckboxes(itemdb4, item4, new string[] { "field1", "field2" }, "custom_default");
+            FormUtils.filterCheckboxes(itemdb4, item4, new string[] { "field1", "field2" }, false, "custom_default");
             Assert.AreEqual("value1", itemdb4["field1"], "Itemdb should contain value from item for existing field");
             Assert.AreEqual("custom_default", itemdb4["field2"], "Itemdb should contain custom default value for non-existing field");
 
             // Case 5: Populate itemdb with default values when fields array is null
             Hashtable itemdb5 = new Hashtable();
             Hashtable item5 = new Hashtable { { "field1", "value1" } };
-            FormUtils.filterCheckboxes(itemdb5, item5, null);
+            FormUtils.filterCheckboxes(itemdb5, item5, (IList)null);
             Assert.AreEqual(0, itemdb5.Count, "Itemdb should be empty when fields array is null");
 
             // Case 6: Populate itemdb with default values when fields array is empty
@@ -140,7 +137,7 @@ namespace osafw.Tests
 
             // Case 7: Populate itemdb with default values when item is null and fields array is null
             Hashtable itemdb7 = new Hashtable();
-            FormUtils.filterCheckboxes(itemdb7, null, null);
+            FormUtils.filterCheckboxes(itemdb7, null, (IList)null);
             Assert.AreEqual(0, itemdb7.Count, "Itemdb should be empty when item is null and fields array is null");
         }
 
@@ -170,14 +167,14 @@ namespace osafw.Tests
             // Case 4: Populate itemdb with custom default value for non-existing fields when item is not null
             Hashtable itemdb4 = new Hashtable();
             Hashtable item4 = new Hashtable { { "field1", "value1" } };
-            FormUtils.filterCheckboxes(itemdb4, item4, new string[] { "field1", "field2" }, "custom_default");
+            FormUtils.filterCheckboxes(itemdb4, item4, new string[] { "field1", "field2" }, false, "custom_default");
             Assert.AreEqual("value1", itemdb4["field1"], "Itemdb should contain value from item for existing field");
             Assert.AreEqual("custom_default", itemdb4["field2"], "Itemdb should contain custom default value for non-existing field");
 
             // Case 5: Populate itemdb with default values when fields array is null
             Hashtable itemdb5 = new Hashtable();
             Hashtable item5 = new Hashtable { { "field1", "value1" } };
-            FormUtils.filterCheckboxes(itemdb5, item5, null);
+            FormUtils.filterCheckboxes(itemdb5, item5, (IList)null);
             Assert.AreEqual(0, itemdb5.Count, "Itemdb should be empty when fields array is null");
 
             // Case 6: Populate itemdb with default values when fields array is empty
@@ -188,7 +185,7 @@ namespace osafw.Tests
 
             // Case 7: Populate itemdb with default values when item is null and fields array is null
             Hashtable itemdb7 = new Hashtable();
-            FormUtils.filterCheckboxes(itemdb7, null, null);
+            FormUtils.filterCheckboxes(itemdb7, null, (IList)null);
             Assert.AreEqual(0, itemdb7.Count, "Itemdb should be empty when item is null and fields array is null");
         }
 

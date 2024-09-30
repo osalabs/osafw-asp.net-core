@@ -1,8 +1,8 @@
-<div class="modal fade" tabindex="-1" role="dialog" id="modal-custom-cols" data-load-url="<~../url>/(UserViews)<~/common/list/relid>">
+<div class="modal fade" tabindex="-1" role="dialog" id="modal-custom-cols" data-load-url="<~../url>/(UserViews)<~/common/list/relidq>">
   <div class="modal-dialog modal-lg" role="document">
   <form method="post" action="<~../url>/(SaveUserViews)">
     <input type="hidden" name="XSS" value="<~session[XSS]>">
-    <input type="hidden" name="return_url" value="<~../url>/<~/common/list/relid>">
+    <input type="hidden" name="return_url" value="<~../url>/<~/common/list/relidq>">
     <input type="hidden" name="load_id" value="">
     <input type="hidden" name="item[iname]" value="">
     <~/common/form/relid>
@@ -77,7 +77,7 @@
       e.preventDefault();
       var id = $(this).data('id');
       fw.confirm('Are you sure to delete current view?', function (e) {
-        var $f = $('<form action="<~/my/views/url>/'+id+'?XSS=<~session[XSS]>&return_url=<~../url>" method="post"></form>')
+        var $f = $('<form action="<~/my/views/url>/'+id+'?_method=DELETE&XSS=<~session[XSS]>&return_url=<~../url>" method="post"></form>')
           .appendTo(document.body)
           .submit();
       });

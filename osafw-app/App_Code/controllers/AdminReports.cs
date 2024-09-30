@@ -27,16 +27,20 @@ public class AdminReportsController : FwController
 
     public void ShowAction(string id)
     {
-        Hashtable ps = [];
-        ps["return_url"] = return_url;
-
         var repcode = FwReports.cleanupRepcode(id);
+        var filter_session_key = FwReports.filterSessionKey(fw, repcode);
 
-        var is_run = reqs("dofilter").Length > 0 || reqs("is_run").Length > 0;
-        ps["is_run"] = is_run;
+        if (reqb("doreset"))
+        {
+            fw.Session(filter_session_key, "");
+            fw.redirect(base_url + "/" + repcode);
+        }
+
+        var is_send_email = reqb("send_email");
+        var is_run = (reqb("dofilter") || reqb("is_run")) && !is_send_email;
 
         // report filters (options)
-        initFilter("AdminReports." + repcode);
+        initFilter(filter_session_key);
 
         // get format directly form request as we don't need to remember format
         list_filter["format"] = reqh("f")["format"];
@@ -44,13 +48,15 @@ public class AdminReportsController : FwController
             list_filter["format"] = "html";
 
         var report = FwReports.createInstance(fw, repcode, list_filter);
-
         report.setFilters(); // set filters data like select/lookups
 
         if (is_run)
             report.getData();
 
         // show or output report according format
+        Hashtable ps = [];
+        ps["return_url"] = return_url;
+
         report.render(ps);
     }
 
@@ -68,7 +74,47 @@ public class AdminReportsController : FwController
         else
         {
             fw.FORM["is_run"] = 1;
-            fw.routeRedirect(FW.ACTION_SHOW, new string[] { repcode });
+            fw.routeRedirect(FW.ACTION_SHOW, [repcode]);
         }
+    }
+
+    public void SendEmailAction(string id)
+    {
+        route_onerror = FW.ACTION_SHOW;
+
+        var repcode = FwReports.cleanupRepcode(id);
+
+        var f = reqh("f");
+        var to_emails = Utils.toStr(f["to_emails"] ?? "");
+
+        string mail_subject = "Report " + repcode;
+        string mail_body = "";
+        Hashtable filenames = [];
+
+        var email_as = Utils.toStr(f["email_as"] ?? "");
+        if (email_as == "pdf")
+        {
+            var filepath = FwReports.createFile(fw, repcode, "pdf", f);
+            filenames[repcode + ".pdf"] = filepath;
+            mail_body = "Report pdf attached";
+        }
+        else
+        {
+            var ps = new Hashtable {
+                { "_layout", fw.config("PAGE_LAYOUT_EMAIL") }
+            };
+            var html = FwReports.createHtml(fw, repcode, f, ps);
+            mail_body = html;
+        }
+
+        //sending from logged user
+        var user = fw.model<Users>().one(fw.userId);
+        var res = fw.sendEmail(user["email"], to_emails, mail_subject, mail_body, filenames);
+        if (res)
+            fw.flash("success", "Report sent");
+        else
+            fw.flash("error", "Error sending email:" + fw.last_error_send_email);
+
+        fw.redirect(base_url + "/" + repcode);
     }
 }

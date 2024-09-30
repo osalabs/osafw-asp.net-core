@@ -1,11 +1,9 @@
-﻿using Amazon.Runtime;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
-using System.Threading;
 
 namespace osafw.Tests
 {
@@ -61,7 +59,8 @@ namespace osafw.Tests
                 db.logger(LogLevel.INFO, "test db.logger(LogLevel.INFO)");
                 db.logger(LogLevel.TRACE, "test db.logger(LogLevel.TRACE)");
                 db.logger(LogLevel.WARN, "test db.logger(LogLevel.WARN)");
-            } catch (Exception e)
+            }
+            catch (Exception)
             {
                 Assert.Fail();
             }
@@ -498,10 +497,11 @@ namespace osafw.Tests
         }
 
         [TestMethod()]
-        public void tablesTest() {
+        public void tablesTest()
+        {
             string[] tablesToCheck = Utils.qw("users att settings lookup_manager_tables menu_items att_categories fwsessions");
             ArrayList tables = db.tables();
-            foreach( var tableName in tablesToCheck)
+            foreach (var tableName in tablesToCheck)
             {
                 Assert.IsTrue(tables.IndexOf(tableName) >= 0);
             }

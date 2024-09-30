@@ -31,6 +31,8 @@ public class Utils
 
     public const string TMP_PREFIX = "osafw"; // prefix for temp directory where framework stores temporary files
 
+    public const string MIME_MAP = "doc|application/msword docx|application/msword xls|application/vnd.ms-excel xlsx|application/vnd.ms-excel ppt|application/vnd.ms-powerpoint pptx|application/vnd.ms-powerpoint csv|text/csv pdf|application/pdf html|text/html zip|application/x-zip-compressed jpg|image/jpeg jpeg|image/jpeg gif|image/gif png|image/png wmv|video/x-ms-wmv avi|video/x-msvideo mp4|video/mp4";
+
     // convert "space" delimited string to an array
     // WARN! replaces all "&nbsp;" to spaces (after convert)
     public static string[] qw(string str)
@@ -121,7 +123,7 @@ public class Utils
         }
     }
 
-    // leave just allowed chars in string - for routers: controller, action or for route ID
+    // leave just allowed chars in string - for routers: prefix part, controller, action or for route ID
     public static string routeFixChars(string str)
     {
         return Regex.Replace(str, "[^A-Za-z0-9_-]+", "");
@@ -151,12 +153,12 @@ public class Utils
         }
     }
 
-    // IN: email addresses delimited with ; space or newline
+    // IN: email addresses delimited with ,; space or newline
     // OUT: arraylist of email addresses
     public static ArrayList splitEmails(string emails)
     {
         ArrayList result = new();
-        string[] arr = Regex.Split(emails, @"[; \n\r]+");
+        string[] arr = Regex.Split(emails, @"[,; \n\r]+");
         foreach (string email in arr)
         {
             string _email = email.Trim();
@@ -204,24 +206,50 @@ public class Utils
         // Convert.ToBase64CharArray();
     }
 
+    #region toBool, toInt, toStr... isDate, isEmpty functions
     /// <summary>
-    /// convert object of any type to bool, in case of error return false
+    /// convert anything to bool, in case of error return false:
+    ///   null - false
+    ///   collections - true if not empty
+    ///   non-zero number - true
     /// </summary>
     /// <param name="o"></param>
     /// <returns></returns>
-    public static bool f2bool(object o)
+    public static bool toBool(object o)
     {
-        // convert object of any type to bool, in case of error return false
         if (o == null) return false;
         if (o is bool b) return b;
         if (o is ICollection ic) return ic.Count > 0; //for collections return true if not empty
-        if (f2float(o) != 0) return true; //non-zero number is true
+        if (toFloat(o) != 0) return true; //non-zero number is true
         if (bool.TryParse(o.ToString(), out bool result))
             return result;
 
         return false;
+
     }
 
+    [Obsolete("This method is deprecated, use toBool instead.")]
+    public static bool f2bool(object o)
+    {
+        return toBool(o);
+    }
+
+    /// <summary>
+    /// convert anything to DateTime, in case of error return DateTime.MinValue:
+    /// </summary>
+    /// <param name="o"></param>
+    /// <returns></returns>
+    public static DateTime toDate(object o)
+    {
+        if (o == null) return DateTime.MinValue;
+        if (o is DateTime dt) return dt;
+        if (DateTime.TryParse(o.ToString(), out DateTime result))
+            return result;
+
+        return DateTime.MinValue;
+    }
+
+    [Obsolete("This method is deprecated, use toDate instead.")]
     public static DateTime? f2date(object field)
     {
         if (field is DateTime dateTimeValue)
@@ -240,55 +268,122 @@ public class Utils
     /// <returns></returns>
     public static bool isDate(object o)
     {
-        return f2date(o) != null;
+        return toDate(o) != DateTime.MinValue;
     }
 
-    // guarantee to return string (if cannot convert to string - just return empty string)
+    /// <summary>
+    /// convert anything to string (if cannot convert to string - just return empty string)
+    /// </summary>
+    /// <param name="o"></param>
+    /// <returns></returns>
+    public static string toStr(object o)
+    {
+        if (o == null) return "";
+        return o.ToString();
+    }
+
+    [Obsolete("This method is deprecated, use toStr instead.")]
     public static string f2str(object field)
     {
-        if (field == null) return "";
-        return field.ToString();
+        return toStr(field);
     }
 
+    /// <summary>
+    /// convert anything to int, in case of error return 0:
+    /// </summary>
+    /// <param name="o"></param>
+    /// <returns></returns>
+    public static int toInt(object o)
+    {
+        if (o == null) return 0;
+        if (o is int i) return i;
+        if (int.TryParse(o.ToString(), out int result))
+            return result;
+
+        return 0;
+    }
+
+    [Obsolete("This method is deprecated, use toInt instead.")]
     public static int f2int(object AField)
     {
-        if (AField == null) return 0;
-        if (AField is int i) return i;
-        if (int.TryParse(AField.ToString(), out int result))
+        return toInt(AField);
+    }
+
+    public static long toLong(object o)
+    {
+        if (o == null) return 0;
+        if (o is long l) return l;
+        if (long.TryParse(o.ToString(), out long result))
             return result;
 
         return 0;
     }
 
+    [Obsolete("This method is deprecated, use toLong instead.")]
     public static long f2long(object AField)
     {
-        if (AField == null) return 0;
-        if (AField is long l) return l;
-        if (long.TryParse(AField.ToString(), out long result))
-            return result;
-
-        return 0;
+        return toLong(AField);
     }
 
-    public static decimal f2decimal(object AField)
+    /// <summary>
+    /// convert anything to decimal, in case of error return 0:
+    /// </summary>
+    /// <param name="o"></param>
+    /// <returns></returns>
+    public static decimal toDecimal(object o)
     {
-        if (AField == null) return decimal.Zero;
-        if (decimal.TryParse(AField.ToString(), out decimal result))
+        if (o == null) return decimal.Zero;
+        if (o is decimal d) return d;
+        if (decimal.TryParse(o.ToString(), out decimal result))
             return result;
 
         return decimal.Zero;
     }
 
-    public static Single f2single(object AField)
+    [Obsolete("This method is deprecated, use toDecimal instead.")]
+    public static decimal f2decimal(object AField)
     {
-        if (AField == null) return 0f;
-        if (Single.TryParse(AField.ToString(), out Single result))
+        return toDecimal(AField);
+    }
+
+    /// <summary>
+    /// convert anything to single, in case of error return 0:
+    /// </summary>
+    /// <param name="o"></param>
+    /// <returns></returns>
+    public static Single toSingle(object o)
+    {
+        if (o == null) return 0f;
+        if (o is Single s) return s;
+        if (Single.TryParse(o.ToString(), out Single result))
             return result;
 
         return 0f;
     }
 
+    [Obsolete("This method is deprecated, use toSingle instead.")]
+    public static Single f2single(object AField)
+    {
+        return toSingle(AField);
+    }
+
+    /// <summary>
+    /// convert anything to double, in case of error return 0:
+    /// </summary>
+    /// <param name="o"></param>
+    /// <returns></returns>
+    public static double toFloat(object o)
+    {
+        if (o == null) return 0.0;
+        if (o is double d) return d;
+        if (double.TryParse(o.ToString(), out double result))
+            return result;
+
+        return 0.0;
+    }
+
     // convert to double, optionally throw error
+    [Obsolete("This method is deprecated, use toFloat instead.")]
     public static double f2float(object AField, bool is_error = false)
     {
         if (AField == null && !is_error) return 0.0;
@@ -354,6 +449,8 @@ public class Utils
         return false;
     }
 
+    #endregion
+
     public static string sTrim(string str, int size)
     {
         if (str.Length > size) str = str.Substring(0, size) + "...";
@@ -374,6 +471,22 @@ public class Utils
         }
 
         return result.ToString();
+    }
+
+    /// <summary>
+    /// return content-type mime string by file extension, default is "application/octet-stream"
+    /// </summary>
+    /// <param name="ext">extension - doc, .jpg, ... (dot is optional)</param>
+    /// <returns></returns>
+    public static string ext2mime(string ext)
+    {
+        Hashtable mime_map = qh(MIME_MAP);
+        ext = ext.ToLower(); //to lower
+        //remove first dot if any
+        if (ext.StartsWith('.'))
+            ext = ext[1..];
+
+        return (string)mime_map[ext] ?? "application/octet-stream";
     }
 
     /* <summary>
@@ -436,13 +549,13 @@ public class Utils
     *    End void
     * </summary>
     * <param name="fw">fw instance</param>
-    * <param name="callback">callback to custom code, accept worksheet name and all rows(as ArrayList of Hashtables)</param>
+    * <param name="callback">callback to custom code, accept worksheet name and all rows(as ArrayList of Hashtables). Returns bool - to continue after first page or break.</param>
     * <param name="filepath">.xlsx file name to import</param>
     * <param name="is_header"></param>
     * <returns></returns>
     */
     [SupportedOSPlatform("windows")]
-    public static Hashtable importExcel(FW fw, Action<string, ArrayList> callback, string filepath, bool is_header = true)
+    public static Hashtable importExcel(FW fw, Func<string, ArrayList, bool> callback, string filepath, bool is_header = true)
     {
         Hashtable result = new();
         Hashtable conf = new();
@@ -467,7 +580,11 @@ public class Utils
             try
             {
                 ArrayList rows = accdb.array(sheet_name_full, where);
-                callback(sheet_name, rows);
+                if (!callback(sheet_name, rows))
+                {
+                    break;
+                }
+
             }
             catch (Exception ex)
             {
@@ -487,13 +604,19 @@ public class Utils
         {
             if (!is_first) result.Append(',');
 
-            string str = Regex.Replace(row[fld] + "", @"[\n\r]+", " ");
-            str = str.Replace("\"", "\\\"");
-            // check if string need to be quoted (if it contains " or ,)
-            if (str.IndexOf("\"") > 0 || str.IndexOf(",") > 0)
+            string str = (string)row[fld] ?? ""; // non-null guard
+
+            // escape double quotes + quote if value has line breaks, double quotes, commas
+            // https://www.ietf.org/rfc/rfc4180.txt
+            if (str.IndexOf('"') != -1)
+            {
+                str = "\"" + str.Replace("\"", "\"\"") + "\"";
+            }
+            else if (str.IndexOfAny(new char[] { ',', '\r', '\n' }) != -1)
             {
                 str = "\"" + str + "\"";
             }
+
             result.Append(str);
             is_first = false;
         }
@@ -527,10 +650,10 @@ public class Utils
             fields = Utils.qw(csv_export_fields);
         }
 
-        csv.Append(headers_str + "\n");
+        csv.Append(headers_str + "\r\n");
         foreach (Hashtable row in rows)
         {
-            csv.Append(Utils.toCSVRow(row, fields) + "\n");
+            csv.Append(Utils.toCSVRow(row, fields) + "\r\n");
         }
         return csv;
     }
@@ -847,7 +970,7 @@ public class Utils
             // make static copy of hash2.keys, so even if hash2.keys changing (ex: hash1 is same as hash2) it will not affect the loop
             foreach (string key in hash2.Keys)
             {
-                hash1[key] = Utils.f2str(hash2[key]);
+                hash1[key] = Utils.toStr(hash2[key]);
             }
         }
     }
@@ -858,7 +981,7 @@ public class Utils
             // make static copy of hash2.keys, so even if hash2.keys changing (ex: hash1 is same as hash2) it will not affect the loop
             foreach (string key in hash2.Keys)
             {
-                hash1[key] = Utils.f2str(hash2[key]);
+                hash1[key] = Utils.toStr(hash2[key]);
             }
         }
     }
@@ -1262,12 +1385,12 @@ public class Utils
 
         if (hattrs["truncate"].ToString().Length > 0)
         {
-            int trlen1 = f2int(hattrs["truncate"]);
+            int trlen1 = toInt(hattrs["truncate"]);
             if (trlen1 > 0) trlen = trlen1;
         }
         if (hattrs.ContainsKey("trchar")) trchar = (string)hattrs["trchar"];
-        if (hattrs.ContainsKey("trend")) trend = f2int(hattrs["trend"]);
-        if (hattrs.ContainsKey("trword")) trword = f2int(hattrs["trword"]);
+        if (hattrs.ContainsKey("trend")) trend = toInt(hattrs["trend"]);
+        if (hattrs.ContainsKey("trword")) trword = toInt(hattrs["trword"]);
 
         int orig_len = str.Length;
         if (orig_len < trlen) return str; // no need truncate

@@ -72,7 +72,7 @@ public class UserViews : FwModel
         var item = oneByUK(icode, iname);
         if (item.Count > 0)
         {
-            id = Utils.f2int(item["id"]);
+            id = Utils.toInt(item["id"]);
             update(id, DB.h("fields", fields));
         }
         else
@@ -96,7 +96,7 @@ public class UserViews : FwModel
         if (item.Count > 0)
         {
             // exists
-            result = Utils.f2int(item[field_id]);
+            result = Utils.toInt(item[field_id]);
             update(result, itemdb);
         }
         else

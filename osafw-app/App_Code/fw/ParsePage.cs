@@ -189,7 +189,7 @@ public class ParsePage
             if (LANG_CACHE[lang] == null)
                 load_lang();
 
-            lang_update = Utils.f2bool(fw.config("is_lang_update"));
+            lang_update = Utils.toBool(fw.config("is_lang_update"));
         }
         lang_evaluator = new MatchEvaluator(this.lang_replacer);
     }
@@ -559,7 +559,7 @@ public class ParsePage
                     }
                     else if (ptr is IList list)
                     {
-                        ptr = list[Utils.f2int(k)];
+                        ptr = list[Utils.toInt(k)];
                     }
                     else if (ptr is ISession session)
                     {
@@ -620,18 +620,23 @@ public class ParsePage
 
     private string _attr_sub(string tag, string tpl_name, Hashtable hf, Hashtable attrs, string inline_tpl, Hashtable parent_hf, object tag_value)
     {
+        Hashtable sub_hf = [];
         string sub = (string)attrs["sub"];
         if (!string.IsNullOrEmpty(sub))
             // if sub attr contains name - use it to get value from hf (instead using tag_value)
             tag_value = hfvalue(sub, hf, parent_hf);
-        if (tag_value is DBRow)
-            tag_value = ((DBRow)tag_value).toHashtable();
-        if (!(tag_value is Hashtable))
+
+        if (tag_value is DBRow row)
+            sub_hf = row.toHashtable();
+
+        if (tag_value is Hashtable ht)
         {
-            fw.logger(LogLevel.DEBUG, "ParsePage - not a Hash passed for a SUB tag=", tag, ", sub=" + sub);
-            tag_value = new();
+            sub_hf = ht;
         }
-        return _parse_page(tag_tplpath(tag, tpl_name), (Hashtable)tag_value, inline_tpl, ref parent_hf);
+        else
+            fw.logger(LogLevel.DEBUG, "ParsePage - not a Hash passed for a SUB tag=", tag, ", sub=" + sub);
+
+        return _parse_page(tag_tplpath(tag, tpl_name), sub_hf, inline_tpl, ref parent_hf);
     }
 
     // Check for misc if attrs
@@ -737,17 +742,17 @@ public class ParsePage
             result = true;
         else if (oper == "unless" && (bool)eqvalue == false)
             result = true;
-        else if (oper == "ifeq" && (is_numeric_comparison && Utils.f2int(eqvalue) == Utils.f2int(ravalue) || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) == 0))
+        else if (oper == "ifeq" && (is_numeric_comparison && Utils.toInt(eqvalue) == Utils.toInt(ravalue) || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) == 0))
             result = true;
-        else if (oper == "ifne" && (is_numeric_comparison && Utils.f2int(eqvalue) != Utils.f2int(ravalue) || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) != 0))
+        else if (oper == "ifne" && (is_numeric_comparison && Utils.toInt(eqvalue) != Utils.toInt(ravalue) || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) != 0))
             result = true;
-        else if (oper == "iflt" && (is_numeric_comparison && Utils.f2int(eqvalue) < Utils.f2int(ravalue) || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) < 0))
+        else if (oper == "iflt" && (is_numeric_comparison && Utils.toInt(eqvalue) < Utils.toInt(ravalue) || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) < 0))
             result = true;
-        else if (oper == "ifgt" && (is_numeric_comparison && Utils.f2int(eqvalue) > Utils.f2int(ravalue) || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) > 0))
+        else if (oper == "ifgt" && (is_numeric_comparison && Utils.toInt(eqvalue) > Utils.toInt(ravalue) || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) > 0))
             result = true;
-        else if (oper == "ifge" && (is_numeric_comparison && Utils.f2int(eqvalue) >= Utils.f2int(ravalue) || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) >= 0))
+        else if (oper == "ifge" && (is_numeric_comparison && Utils.toInt(eqvalue) >= Utils.toInt(ravalue) || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) >= 0))
             result = true;
-        else if (oper == "ifle" && (is_numeric_comparison && Utils.f2int(eqvalue) <= Utils.f2int(ravalue) || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) <= 0))
+        else if (oper == "ifle" && (is_numeric_comparison && Utils.toInt(eqvalue) <= Utils.toInt(ravalue) || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) <= 0))
             result = true;
 
         return result;
@@ -889,10 +894,10 @@ public class ParsePage
                 }
                 if (attr_count > 0 && hattrs.ContainsKey("number_format"))
                 {
-                    var precision = (!string.IsNullOrEmpty((string)hattrs["number_format"]) ? Utils.f2int(hattrs["number_format"]) : 2);
+                    var precision = (!string.IsNullOrEmpty((string)hattrs["number_format"]) ? Utils.toInt(hattrs["number_format"]) : 2);
                     bool groupdigits = !hattrs.ContainsKey("nfthousands") || !string.IsNullOrEmpty((string)hattrs["nfthousands"]); // default - group digits, but if nfthousands empty - don't
 
-                    value = Utils.f2float(value).ToString("N" + precision, CultureInfo.InvariantCulture);
+                    value = Utils.toFloat(value).ToString("N" + precision, CultureInfo.InvariantCulture);
                     if (!groupdigits)
                     {
                         value = value.Replace(NumberFormatInfo.InvariantInfo.NumberGroupSeparator, "");
@@ -902,7 +907,7 @@ public class ParsePage
                 }
                 if (attr_count > 0 && hattrs.ContainsKey("currency"))
                 {
-                    value = Utils.f2float(value).ToString("C2");
+                    value = Utils.toFloat(value).ToString("C2");
                     attr_count -= 1;
                 }
                 if (attr_count > 0 && hattrs.ContainsKey("date"))
@@ -1056,7 +1061,7 @@ public class ParsePage
     {
         StringBuilder result = new();
 
-        string sel_value = Utils.f2str(hfvalue((string)attrs["select"] ?? "", hf));
+        string sel_value = Utils.toStr(hfvalue((string)attrs["select"] ?? "", hf));
         //fw.logger($"_attr_select: tag={tag}, tpl_name={tpl_name}", attrs, hf[tag]);
 
         var multi_delim = ""; // by default no multiple select

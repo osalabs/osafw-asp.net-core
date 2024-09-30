@@ -113,20 +113,39 @@ public class FormUtils
 
     /// <summary>
     /// get name for the value fromt the select template
+    /// file format: each line - value|description
     /// ex: selectTplName('/common/sel/status.sel', 127) => 'Deleted'
+    /// ex: selectTplName('../status.sel', 127, '/admin/users/index') => 'Deleted'
     /// TODO: refactor to make common code with ParsePage?
     /// </summary>
-    /// <param name="tpl_path"></param>
+    /// <param name="tpl_path">path </param>
     /// <param name="sel_id"></param>
+    /// <param name="base_path">required if tpl_path is relative (not start with "/"), then base_path used. base_path itself is relative to template root</param>
     /// <returns></returns>
-    public static string selectTplName(string tpl_path, string sel_id)
+    public static string selectTplName(string tpl_path, string sel_id, string base_path = "")
     {
         string result = "";
-        if (sel_id == null)
-            sel_id = "";
+        sel_id ??= "";
 
-        string[] lines = FW.getFileLines((string)FwConfig.settings["template"] + tpl_path);
+        if (!tpl_path.StartsWith('/'))
+        {
+            if (string.IsNullOrEmpty(base_path))
+                return ""; // base_path required for relative tpl_path
 
+            tpl_path = base_path + "/" + tpl_path;
+        }
+
+        var template = (string)FwConfig.settings["template"];
+
+        // translate to absolute path, without any ../
+        var path = System.IO.Path.GetFullPath(template + tpl_path);
+
+        // path traversal validation - check if path is a subpath of FwConfig.settings["template"]
+        if (!path.StartsWith(template))
+            return "";
+
+
+        string[] lines = FW.getFileLines(path);
         foreach (string line in lines)
         {
             if (line.Length < 2)
@@ -147,12 +166,37 @@ public class FormUtils
         return result;
     }
 
-    public static ArrayList selectTplOptions(string tpl_path)
+    /// <summary>
+    /// return options for select tag from the template file
+    /// file format: each line - value|description
+    /// </summary>
+    /// <param name="tpl_path"></param>
+    /// <param name="base_path">required if tpl_path is relative (not start with "/"), then base_path used. base_path itself is relative to template root</param>
+    /// <returns></returns>
+
+    public static ArrayList selectTplOptions(string tpl_path, string base_path = "")
     {
-        ArrayList result = new();
+        ArrayList result = [];
 
-        string[] lines = FW.getFileLines((string)FwConfig.settings["template"] + tpl_path);
+        if (!tpl_path.StartsWith('/'))
+        {
+            if (string.IsNullOrEmpty(base_path))
+                return result; // base_path required for relative tpl_path
 
+            tpl_path = base_path + "/" + tpl_path;
+        }
+
+        var template = (string)FwConfig.settings["template"];
+
+        // translate to absolute path, without any ../
+        var path = System.IO.Path.GetFullPath(template + tpl_path);
+
+        // path traversal validation - check if path is a subpath of FwConfig.settings["template"]
+        if (!path.StartsWith(template))
+            return result;
+
+
+        string[] lines = FW.getFileLines(path);
         foreach (var line in lines)
         {
             if (line.Length < 2)
@@ -394,9 +438,9 @@ public class FormUtils
     public static object dateForCombo(Hashtable item, string field_prefix)
     {
         object result = null;
-        int day = f2int(item[field_prefix + "_day"]);
-        int mon = f2int(item[field_prefix + "_mon"]);
-        int year = f2int(item[field_prefix + "_year"]);
+        int day = toInt(item[field_prefix + "_day"]);
+        int mon = toInt(item[field_prefix + "_mon"]);
+        int year = toInt(item[field_prefix + "_year"]);
 
         if (day > 0 && mon > 0 && year > 0)
         {
@@ -443,7 +487,7 @@ public class FormUtils
         int result = 0;
         try
         {
-            result = f2int(a[0]) * 3600 + f2int(a[1]) * 60;
+            result = toInt(a[0]) * 3600 + toInt(a[1]) * 60;
         }
         catch (Exception)
         {
@@ -482,9 +526,9 @@ public class FormUtils
     public static bool formToTime(Hashtable item, string field_name)
     {
         bool result = true;
-        int hh = f2int(item[field_name + "_hh"]);
-        int mm = f2int(item[field_name + "_mm"]);
-        int ss = f2int(item[field_name + "_ss"]);
+        int hh = toInt(item[field_name + "_hh"]);
+        int mm = toInt(item[field_name + "_mm"]);
+        int ss = toInt(item[field_name + "_ss"]);
         try
         {
             //TODO MIGRATE item[field_name] = DateTime.TimeSerial(hh, mm, ss);
@@ -503,9 +547,9 @@ public class FormUtils
         string result = "";
         if (!string.IsNullOrEmpty(datestr))
         {
-            var dt = Utils.f2date(datestr);
-            if (dt != null)
-                result = ((DateTime)dt).ToString("HH:mm", System.Globalization.DateTimeFormatInfo.InvariantInfo);
+            var dt = Utils.toDate(datestr);
+            if (Utils.isDate(dt))
+                result = dt.ToString("HH:mm", System.Globalization.DateTimeFormatInfo.InvariantInfo);
         }
         return result;
     }
@@ -516,10 +560,10 @@ public class FormUtils
     {
         var result = datestr;
         var timeint = FormUtils.timeStrToInt(timestr);
-        var dt = Utils.f2date(datestr);
-        if (dt != null)
+        var dt = Utils.toDate(datestr);
+        if (Utils.isDate(dt))
             // if date set - add time
-            result = ((DateTime)dt).AddSeconds(timeint);
+            result = dt.AddSeconds(timeint);
         return result;
     }
 
@@ -558,13 +602,15 @@ public class FormUtils
             object vold = itemold[key];
 
             // If both are dates, compare only the date part.
-            if (Utils.f2date(vnew) is DateTime dtNew && Utils.f2date(vold) is DateTime dtOld)
+            var dtNew = Utils.toDate(vnew);
+            var dtOld = Utils.toDate(vold);
+            if (Utils.isDate(dtNew) && Utils.isDate(dtOld))
             {
                 if (dtNew.Date != dtOld.Date)
                     result[key] = vnew;
             }
             // Handle non-date values and the case where one value is a date and the other is not.
-            else if (!itemold.ContainsKey(key) || Utils.f2str(vnew) != Utils.f2str(vold))
+            else if (!itemold.ContainsKey(key) || Utils.toStr(vnew) != Utils.toStr(vold))
             {
                 result[key] = vnew;
             }
@@ -586,7 +632,7 @@ public class FormUtils
         var afields = Utils.qw(fields);
         foreach (var fld in afields)
         {
-            if (item1.ContainsKey(fld) && item2.ContainsKey(fld) && Utils.f2str(item1[fld]) != Utils.f2str(item2[fld]))
+            if (item1.ContainsKey(fld) && item2.ContainsKey(fld) && Utils.toStr(item1[fld]) != Utils.toStr(item2[fld]))
             {
                 result = true;
                 break;
@@ -599,15 +645,15 @@ public class FormUtils
     // check if 2 dates (without time) chagned
     public static bool isChangedDate(object date1, object date2)
     {
-        var dt1 = Utils.f2date(date1);
-        var dt2 = Utils.f2date(date2);
+        var dt1 = Utils.toDate(date1);
+        var dt2 = Utils.toDate(date2);
 
-        if (dt1 != null || dt2 != null)
+        if (Utils.isDate(dt1) || Utils.isDate(dt2))
         {
-            if (dt1 != null && dt2 != null)
+            if (Utils.isDate(dt1) && Utils.isDate(dt2))
             {
                 // both set - compare dates
-                if (DateUtils.Date2SQL((DateTime)dt1) != DateUtils.Date2SQL((DateTime)dt2))
+                if (DateUtils.Date2SQL(dt1) != DateUtils.Date2SQL(dt2))
                     return true;
             }
             else

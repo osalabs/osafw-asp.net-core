@@ -73,7 +73,7 @@ public class TestController : FwController
         {
             bool flag;
             //if (Boolean.TryParse(value, out flag
-            flag = Utils.f2bool(value);
+            flag = Utils.toBool(value);
             rw(value + " --> " + flag);
             //if (flag)
             //    rw(value + " --> "+ flag);
@@ -86,7 +86,13 @@ public class TestController : FwController
     {
         var ps = new Hashtable();
         ps["success"] = true;
+        ps["message"] = "This is Json!";
         return new Hashtable { { "_json", ps } };
+    }
+
+    public Hashtable ExceptionAction()
+    {
+        throw new Exception("Test exception");
     }
 
 }

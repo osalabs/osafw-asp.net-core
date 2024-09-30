@@ -191,6 +191,16 @@ public class FwAdminController : FwController
         return this.afterSave(true);
     }
 
+    public virtual Hashtable RestoreDeletedAction(int id)
+    {
+        fw.model<Users>().checkReadOnly();
+
+        model0.update(id, new Hashtable() { { model0.field_status, Utils.toStr(FwModel.STATUS_ACTIVE) } });
+
+        fw.flash("record_updated", 1);
+        return this.afterSave(true, id);
+    }
+
     public virtual Hashtable SaveMultiAction()
     {
         route_onerror = FW.ACTION_INDEX;
@@ -207,13 +217,13 @@ public class FwAdminController : FwController
         if (user_lists_id > 0)
         {
             var user_lists = fw.model<UserLists>().one(user_lists_id);
-            if (user_lists.Count == 0 || Utils.f2int(user_lists["add_users_id"]) != fw.userId)
+            if (user_lists.Count == 0 || Utils.toInt(user_lists["add_users_id"]) != fw.userId)
                 throw new UserException("Wrong Request");
         }
 
         foreach (string id1 in cbses.Keys)
         {
-            var id = Utils.f2int(id1);
+            var id = Utils.toInt(id1);
             if (is_delete)
             {
                 model0.deleteWithPermanentCheck(id);

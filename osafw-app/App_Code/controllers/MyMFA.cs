@@ -28,7 +28,7 @@ public class MyMFAController : FwController
         if (user_id == 0)
         {
             //if user not logged in - we are in setup mode after login
-            user_id = Utils.f2int(fw.Session("mfa_login_users_id"));
+            user_id = Utils.toInt(fw.Session("mfa_login_users_id"));
             if (user_id == 0)
                 fw.redirect("/"); // no user - go to home
         }

@@ -47,7 +47,7 @@ public class LookupManager : FwModel
 
         var id_field = fw.model<LookupManagerTables>().getColumnId(defs);
         var value = db.valuep("SELECT MAX(" + db.qid(id_field) + ") from " + db.qid(tname));
-        return Utils.f2int(value);
+        return Utils.toInt(value);
     }
 
     public virtual Hashtable oneByTname(string tname, int id)
@@ -78,7 +78,7 @@ public class LookupManager : FwModel
         {
             // if no list cols - it's std table - add std fields
             if (!item.ContainsKey("add_users_id") && fw.isLogged)
-                item["add_users_id"] = Utils.f2str(fw.userId);
+                item["add_users_id"] = Utils.toStr(fw.userId);
         }
 
         var field_prio = fw.model<LookupManagerTables>().getColumnPrio(defs);
@@ -111,6 +111,12 @@ public class LookupManager : FwModel
             throw new ApplicationException("Wrong lookup table name");
         string id_fname = fw.model<LookupManagerTables>().getColumnId(defs);
 
+        //set nullable fields to NULL value if empty
+        Hashtable table_schema = db.tableSchemaFull(tname);
+        foreach (string fld_name in item.Keys.Cast<string>().ToArray())
+            if (Utils.isEmpty(item[fld_name]) && Utils.toInt(((Hashtable)(table_schema[fld_name]))["is_nullable"]) == 1)
+                item[fld_name] = null;
+
         // also we need include old fields into where just because id by sort is not robust enough
         var itemold = oneByTname(tname, id);
         // If Not defs["list_columns"] > "" Then
@@ -141,7 +147,9 @@ public class LookupManager : FwModel
         Hashtable item_save = new();
         foreach (string key in item.Keys)
         {
-            if (itemold[key].ToString() != item[key].ToString())
+            // additional null and old value empty string check to avoid SET to NULL constantly as we get empty string from DB for DBNull values
+            if ((item[key] == null && itemold[key].ToString() != "")
+                || (item[key] != null && itemold[key].ToString() != item[key].ToString()))
                 item_save[key] = item[key];
         }
         // logger("NEW SAVE")
@@ -263,13 +271,13 @@ public class LookupManager : FwModel
         var field_prioq = db.qid(field_prio);
 
         var tname = (string)defs["tname"];
-        int id_prio = Utils.f2int(oneByTname(tname, id)[field_prio]);
+        int id_prio = Utils.toInt(oneByTname(tname, id)[field_prio]);
 
         // detect reorder
         if (under_id > 0)
         {
             // under id present
-            int under_prio = Utils.f2int(oneByTname(tname, under_id)[field_prio]);
+            int under_prio = Utils.toInt(oneByTname(tname, under_id)[field_prio]);
             if (sortdir == "asc")
             {
                 if (id_prio < under_prio)
@@ -307,7 +315,7 @@ public class LookupManager : FwModel
         else if (above_id > 0)
         {
             // above id present
-            int above_prio = Utils.f2int(oneByTname(tname, above_id)[field_prio]);
+            int above_prio = Utils.toInt(oneByTname(tname, above_id)[field_prio]);
             if (sortdir == "asc")
             {
                 if (id_prio < above_prio)

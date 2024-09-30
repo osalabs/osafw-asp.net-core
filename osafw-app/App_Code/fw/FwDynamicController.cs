@@ -71,7 +71,7 @@ public class FwDynamicController : FwController
     //Prev/Next navigation
     public virtual Hashtable NextAction(string form_id)
     {
-        var id = Utils.f2int(form_id);
+        var id = Utils.toInt(form_id);
         if (id == 0)
             return new Hashtable { { "_redirect", base_url } };
 
@@ -88,7 +88,7 @@ public class FwDynamicController : FwController
         this.setListSearchStatus();
 
         // get all ids
-        var sql = "SELECT id FROM " + list_view + " WHERE " + this.list_where + " ORDER BY " + this.list_orderby;
+        var sql = $"SELECT {model0.field_id} FROM " + list_view + " WHERE " + this.list_where + " ORDER BY " + this.list_orderby;
         var ids = db.colp(sql, list_where_params);
         if (ids.Count == 0)
             return new Hashtable { { "_redirect", base_url } };
@@ -106,9 +106,9 @@ public class FwDynamicController : FwController
                 }
             }
             if (index_prev > -1 && index_prev <= ids.Count - 1)
-                go_id = Utils.f2int(ids[index_prev]);
+                go_id = Utils.toInt(ids[index_prev]);
             else if (ids.Count > 0)
-                go_id = Utils.f2int(ids[ids.Count - 1]);
+                go_id = Utils.toInt(ids[ids.Count - 1]);
             else
                 return new Hashtable { { "_redirect", base_url } };
         }
@@ -124,9 +124,9 @@ public class FwDynamicController : FwController
                 }
             }
             if (index_next > -1 && index_next <= ids.Count - 1)
-                go_id = Utils.f2int(ids[index_next]);
+                go_id = Utils.toInt(ids[index_next]);
             else if (ids.Count > 0)
-                go_id = Utils.f2int(ids[0]);
+                go_id = Utils.toInt(ids[0]);
             else
                 return new Hashtable { { "_redirect", base_url } };
         }
@@ -166,7 +166,7 @@ public class FwDynamicController : FwController
         {
             initFilter();
 
-            list_filter["tab_activity"] = Utils.f2str(list_filter["tab_activity"] ?? FwActivityLogs.TAB_COMMENTS);
+            list_filter["tab_activity"] = Utils.toStr(list_filter["tab_activity"] ?? FwActivityLogs.TAB_COMMENTS);
             ps["list_filter"] = list_filter;
             ps["activity_entity"] = model0.table_name;
             ps["activity_rows"] = fw.model<FwActivityLogs>().listByEntityForUI(model0.table_name, id, (string)list_filter["tab_activity"]);
@@ -318,7 +318,7 @@ public class FwDynamicController : FwController
             ArrayList req = [];
             foreach (Hashtable def in fields)
             {
-                if (Utils.f2bool(def["required"]))
+                if (Utils.toBool(def["required"]))
                     req.Add(def["field"]);
             }
 
@@ -438,7 +438,7 @@ public class FwDynamicController : FwController
             return result; //nothing to validate
 
         var row_errors = new Hashtable();
-        var id = Utils.f2int(row_id.StartsWith("new-") ? 0 : row_id);
+        var id = Utils.toInt(row_id.StartsWith("new-") ? 0 : row_id);
         result = this.validateRequired(id, item, required_fields, row_errors);
         if (!result)
         {
@@ -504,7 +504,7 @@ public class FwDynamicController : FwController
     {
         fw.model<Users>().checkReadOnly();
 
-        model0.update(id, new Hashtable() { { model0.field_status, Utils.f2str(FwModel.STATUS_ACTIVE) } });
+        model0.update(id, new Hashtable() { { model0.field_status, Utils.toStr(FwModel.STATUS_ACTIVE) } });
 
         fw.flash("record_updated", 1);
         return this.afterSave(true, id);
@@ -525,13 +525,13 @@ public class FwDynamicController : FwController
         if (user_lists_id > 0)
         {
             var user_lists = fw.model<UserLists>().one(user_lists_id);
-            if (user_lists.Count == 0 || Utils.f2int(user_lists["add_users_id"]) != fw.userId)
+            if (user_lists.Count == 0 || Utils.toInt(user_lists["add_users_id"]) != fw.userId)
                 throw new UserException("Wrong Request");
         }
 
         foreach (string id1 in cbses.Keys)
         {
-            int id = Utils.f2int(id1);
+            int id = Utils.toInt(id1);
             if (is_delete)
             {
                 model0.deleteWithPermanentCheck(id);
@@ -578,7 +578,7 @@ public class FwDynamicController : FwController
             var fields = (ArrayList)this.config["showform_fields"];
             foreach (Hashtable def in fields)
             {
-                if (Utils.f2str(def["type"]) == "autocomplete" && Utils.f2str(def["lookup_model"]) == model_name)
+                if (Utils.toStr(def["type"]) == "autocomplete" && Utils.toStr(def["lookup_model"]) == model_name)
                 {
                     ac_model = fw.model(model_name);
                     break;
@@ -644,11 +644,11 @@ public class FwDynamicController : FwController
         else
         {
             var item = reqh("item");
-            var iname = Utils.f2str(item["iname"]);
+            var iname = Utils.toStr(item["iname"]);
 
             // save fields
             // order by value
-            var ordered = fld.Cast<DictionaryEntry>().OrderBy(entry => Utils.f2int(entry.Value)).ToList();
+            var ordered = fld.Cast<DictionaryEntry>().OrderBy(entry => Utils.toInt(entry.Value)).ToList();
             // and then get ordered keys
             List<string> anames = new();
             foreach (var el in ordered)
@@ -692,14 +692,14 @@ public class FwDynamicController : FwController
     /// <returns></returns>
     public virtual ArrayList prepareShowFields(Hashtable item, Hashtable ps)
     {
-        var id = Utils.f2int(item["id"]);
+        var id = Utils.toInt(item["id"]);
 
         ArrayList fields = (ArrayList)this.config["show_fields"];
         foreach (Hashtable def in fields)
         {
             def["i"] = item; // ref to item
             string dtype = (string)def["type"];
-            string field = Utils.f2str(def["field"]);
+            string field = Utils.toStr(def["field"]);
 
             if (dtype is "row" or "row_end" or "col" or "col_end")
                 // structural tags
@@ -710,7 +710,7 @@ public class FwDynamicController : FwController
                     def["multi_datarow"] = fw.model((string)def["lookup_model"]).listWithChecked((string)item[field], def);
                 else
                 {
-                    if (Utils.f2bool(def["is_by_linked"]))
+                    if (Utils.toBool(def["is_by_linked"]))
                         // list main items by linked id from junction model (i.e. list of Users(with checked) for Company from UsersCompanies model)
                         def["multi_datarow"] = fw.model((string)def["model"]).listMainByLinkedId(id, def); //junction model
                     else
@@ -723,11 +723,11 @@ public class FwDynamicController : FwController
                 // complex field with prio
                 def["multi_datarow"] = fw.model((string)def["model"]).listLinkedByMainId(id, def); //junction model
             else if (dtype == "att")
-                def["att"] = fw.model<Att>().one(Utils.f2int((string)item[field]));
+                def["att"] = fw.model<Att>().one(Utils.toInt((string)item[field]));
             else if (dtype == "att_links")
-                def["att_links"] = fw.model<Att>().listLinked(model0.table_name, Utils.f2int(id));
+                def["att_links"] = fw.model<Att>().listLinked(model0.table_name, Utils.toInt(id));
             else if (dtype == "att_files")
-                def["att_files"] = fw.model<Att>().listByEntity(model0.table_name, Utils.f2int(id));
+                def["att_files"] = fw.model<Att>().listByEntity(model0.table_name, Utils.toInt(id));
 
             else if (dtype == "subtable")
             {
@@ -744,11 +744,11 @@ public class FwDynamicController : FwController
                 // lookups
                 if (def.ContainsKey("lookup_table"))
                 {
-                    string lookup_key = Utils.f2str(def["lookup_key"]);
+                    string lookup_key = Utils.toStr(def["lookup_key"]);
                     if (lookup_key == "")
                         lookup_key = "id";
 
-                    string lookup_field = Utils.f2str(def["lookup_field"]);
+                    string lookup_field = Utils.toStr(def["lookup_field"]);
                     if (lookup_field == "")
                         lookup_field = "iname";
 
@@ -759,11 +759,11 @@ public class FwDynamicController : FwController
                 else if (def.ContainsKey("lookup_model"))
                 {
                     var lookup_model = fw.model((string)def["lookup_model"]);
-                    def["lookup_id"] = Utils.f2int(item[field]);
-                    var lookup_row = lookup_model.one(Utils.f2int(def["lookup_id"]));
+                    def["lookup_id"] = Utils.toInt(item[field]);
+                    var lookup_row = lookup_model.one(Utils.toInt(def["lookup_id"]));
                     def["lookup_row"] = lookup_row;
 
-                    string lookup_field = Utils.f2str(def["lookup_field"]);
+                    string lookup_field = Utils.toStr(def["lookup_field"]);
                     if (lookup_field == "")
                         lookup_field = lookup_model.field_iname;
 
@@ -772,7 +772,7 @@ public class FwDynamicController : FwController
                         def["admin_url"] = "/Admin/" + def["lookup_model"]; // default admin url from model name
                 }
                 else if (def.ContainsKey("lookup_tpl"))
-                    def["value"] = FormUtils.selectTplName((string)def["lookup_tpl"], (string)item[field]);
+                    def["value"] = FormUtils.selectTplName((string)def["lookup_tpl"], (string)item[field], fw.route.controller_path.ToLower());
                 else
                     def["value"] = item[field];
 
@@ -780,7 +780,7 @@ public class FwDynamicController : FwController
                 if (def.ContainsKey("conv"))
                 {
                     if ((string)def["conv"] == "time_from_seconds")
-                        def["value"] = FormUtils.intToTimeStr(Utils.f2int(def["value"]));
+                        def["value"] = FormUtils.intToTimeStr(Utils.toInt(def["value"]));
                 }
             }
         }
@@ -789,7 +789,7 @@ public class FwDynamicController : FwController
 
     public virtual ArrayList prepareShowFormFields(Hashtable item, Hashtable ps)
     {
-        var id = Utils.f2int(item["id"]);
+        var id = Utils.toInt(item["id"]);
 
         var subtable_add = reqh("subtable_add");
         var subtable_del = reqh("subtable_del");
@@ -804,7 +804,7 @@ public class FwDynamicController : FwController
             def["i"] = item; // ref to item
             def["ps"] = ps; // ref to whole ps
             string dtype = (string)def["type"]; // type is required
-            string field = Utils.f2str(def["field"]);
+            string field = Utils.toStr(def["field"]);
 
             if (id == 0 && (dtype == "added" || dtype == "updated"))
                 // special case - hide if new item screen
@@ -816,10 +816,10 @@ public class FwDynamicController : FwController
             else if (dtype == "multicb")
             {
                 if (def.ContainsKey("lookup_model"))
-                    def["multi_datarow"] = fw.model((string)def["lookup_model"]).listWithChecked(Utils.f2str(item[field]), def);
+                    def["multi_datarow"] = fw.model((string)def["lookup_model"]).listWithChecked(Utils.toStr(item[field]), def);
                 else
                 {
-                    if (Utils.f2bool(def["is_by_linked"]))
+                    if (Utils.toBool(def["is_by_linked"]))
                         // list main items by linked id from junction model (i.e. list of Users(with checked) for Company from UsersCompanies model)
                         def["multi_datarow"] = fw.model((string)def["model"]).listMainByLinkedId(id, def); //junction model
                     else
@@ -839,13 +839,13 @@ public class FwDynamicController : FwController
             }
             else if (dtype == "att_edit")
             {
-                def["att"] = fw.model<Att>().one(Utils.f2int(item[field]));
+                def["att"] = fw.model<Att>().one(Utils.toInt(item[field]));
                 def["value"] = item[field];
             }
             else if (dtype == "att_links_edit")
-                def["att_links"] = fw.model<Att>().listLinked(model0.table_name, Utils.f2int(id));
+                def["att_links"] = fw.model<Att>().listLinked(model0.table_name, Utils.toInt(id));
             else if (dtype == "att_files_edit")
-                def["att_files"] = fw.model<Att>().listByEntity(model0.table_name, Utils.f2int(id));
+                def["att_files"] = fw.model<Att>().listByEntity(model0.table_name, Utils.toInt(id));
 
             else if (dtype == "subtable_edit")
             {
@@ -909,11 +909,11 @@ public class FwDynamicController : FwController
                 // lookups
                 if (def.ContainsKey("lookup_table"))
                 {
-                    string lookup_key = Utils.f2str(def["lookup_key"]);
+                    string lookup_key = Utils.toStr(def["lookup_key"]);
                     if (lookup_key == "")
                         lookup_key = "id";
 
-                    string lookup_field = Utils.f2str(def["lookup_field"]);
+                    string lookup_field = Utils.toStr(def["lookup_field"]);
                     if (lookup_field == "")
                         lookup_field = "iname";
 
@@ -936,11 +936,11 @@ public class FwDynamicController : FwController
                         // single value from lookup
                         if (isGet())
                         {
-                            def["lookup_id"] = Utils.f2int(item[field]);
-                            var lookup_row = lookup_model.one(Utils.f2int(def["lookup_id"]));
+                            def["lookup_id"] = Utils.toInt(item[field]);
+                            var lookup_row = lookup_model.one(Utils.toInt(def["lookup_id"]));
                             def["lookup_row"] = lookup_row;
 
-                            string lookup_field = Utils.f2str(def["lookup_field"]);
+                            string lookup_field = Utils.toStr(def["lookup_field"]);
                             if (lookup_field == "")
                                 lookup_field = lookup_model.field_iname;
 
@@ -961,7 +961,7 @@ public class FwDynamicController : FwController
                 }
                 else if (def.ContainsKey("lookup_tpl"))
                 {
-                    def["select_options"] = FormUtils.selectTplOptions((string)def["lookup_tpl"]);
+                    def["select_options"] = FormUtils.selectTplOptions((string)def["lookup_tpl"], fw.route.controller_path.ToLower());
                     def["value"] = item[field];
                     foreach (Hashtable row in (ArrayList)def["select_options"]) // contains id, iname
                     {
@@ -977,7 +977,7 @@ public class FwDynamicController : FwController
                 if (def.ContainsKey("conv"))
                 {
                     if ((string)def["conv"] == "time_from_seconds")
-                        def["value"] = FormUtils.intToTimeStr(Utils.f2int(def["value"]));
+                        def["value"] = FormUtils.intToTimeStr(Utils.toInt(def["value"]));
                 }
             }
         }
@@ -1004,20 +1004,20 @@ public class FwDynamicController : FwController
             if (type == "autocomplete")
             {
                 var lookup_model = fw.model((string)def["lookup_model"]);
-                var field_value = Utils.f2str(item[field + "_iname"]); // autocomplete value is in "${field}_iname"
-                fields[field] = Utils.f2str(lookup_model.findOrAddByIname(field_value, out _));
+                var field_value = Utils.toStr(item[field + "_iname"]); // autocomplete value is in "${field}_iname"
+                fields[field] = Utils.toStr(lookup_model.findOrAddByIname(field_value, out _));
             }
             else if (type == "date_combo")
                 fields[field] = FormUtils.dateForCombo(item, field).ToString();
             else if (type == "time")
-                fields[field] = Utils.f2str(FormUtils.timeStrToInt((string)fields[field])); // ftime - convert from HH:MM to int (0-24h in seconds)
+                fields[field] = Utils.toStr(FormUtils.timeStrToInt((string)fields[field])); // ftime - convert from HH:MM to int (0-24h in seconds)
             else if (type == "number")
             {
                 if (fnullable.ContainsKey(field) && string.IsNullOrEmpty((string)fields[field]))
                     // if field nullable and empty - pass NULL
                     fields[field] = null;
                 else
-                    fields[field] = Utils.f2str(Utils.f2float(fields[field]));// number - convert to number (if field empty or non-number - it will become 0)
+                    fields[field] = Utils.toStr(Utils.toFloat(fields[field]));// number - convert to number (if field empty or non-number - it will become 0)
             }
         }
     }
@@ -1061,7 +1061,7 @@ public class FwDynamicController : FwController
                 else
                 {
                     //junction model based
-                    if (Utils.f2bool(def["is_by_linked"]))
+                    if (Utils.toBool(def["is_by_linked"]))
                         //by linked id
                         fw.model((string)def["model"]).updateJunctionByLinkedId(id, reqh(field + "_multi")); // junction model
                     else
@@ -1145,7 +1145,7 @@ public class FwDynamicController : FwController
         }
         else
         {
-            id = Utils.f2int(row_id);
+            id = Utils.toInt(row_id);
             sub_model.update(id, fields);
         }
 
@@ -1163,7 +1163,7 @@ public class FwDynamicController : FwController
     {
         foreach (Hashtable def in fields)
         {
-            if (Utils.f2str(def["field"]) == field_name)
+            if (Utils.toStr(def["field"]) == field_name)
                 return def;
         }
         return null;

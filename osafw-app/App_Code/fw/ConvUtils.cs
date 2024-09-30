@@ -77,7 +77,7 @@ public class ConvUtils
         string cmdline = (string)FwConfig.settings["pdf_converter_args"];
         cmdline = cmdline.Replace("%IN", "\"" + htmlfile + "\"");
         cmdline = cmdline.Replace("%OUT", "\"" + filename + "\"");
-        if (options != null && Utils.f2bool(options["landscape"]) == true)
+        if (options != null && Utils.toBool(options["landscape"]) == true)
         {
             cmdline = " -O Landscape " + cmdline;
         }

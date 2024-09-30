@@ -1,6 +1,26 @@
 ﻿// Reports Base class
 //
-// (c) 2009-2021 Oleg Savchuk www.osalabs.com
+// (c) 2009-2024 Oleg Savchuk www.osalabs.com
+
+// Example usage from code:
+//
+// var repcode = "sample";
+// var filters = new Hashtable();
+//
+// // get report data only, without rendering
+// var report = FwReports.createInstance(fw, repcode, filters);
+// report.setFilters(); // set filters data like select/lookups
+// report.getData(); // report.list_rows now contains data
+//
+// // get html string of the report (based on report_html template only)
+// var html = FwReports.createHtml(fw, repcode);
+
+// // supported formats: html(default), csv, pdf, xls
+// // get report data, render to pdf file (temporary file created), output to browser, cleanup
+// var filepath = FwReports.createFile(fw, repcode, "pdf");
+// fw.fileResponse(filepath, "report.pdf");
+// Utils.cleanupTmpFiles();
+
 
 using System;
 using System.Collections;
@@ -14,8 +34,12 @@ public class FwReports
     public const string TPL_EXPORT_PDF = "/admin/reports/common/pdf.html";
     public const string TPL_EXPORT_XLS = "/admin/reports/common/xls.html";
 
+    public const string TO_BROWSER = "";
+    public const string TO_STRING = "string";
+
     public string report_code;
     public string format; // report format, if empty - html, other options: html, csv, pdf, xls
+    public string render_to = ""; // output to: empty(browser), "string"(render returns string, for html only), "/file/path"(render saves to file)
     public Hashtable f; // report filters/options
                         // render options for html to pdf/xls/etc... convertor
     public Hashtable f_data = new(); //filters data, like dropdown options
@@ -29,9 +53,9 @@ public class FwReports
 
     protected FW fw;
     protected DB db;
-    protected Hashtable ps = new(); // final data for template rendering
-    protected long list_count;      // count of list rows returned from db
-    protected ArrayList list_rows;  // list rows returned from db (array of hashes)
+    public Hashtable ps = new(); // final data for template rendering
+    public long list_count;      // count of list rows returned from db
+    public ArrayList list_rows;  // list rows returned from db (array of hashes)
 
     // access level for the report, default - Manager level.
     // Note, if you lower it for the specific report - you may want to update AdminReports access level as well
@@ -45,6 +69,11 @@ public class FwReports
     public static string cleanupRepcode(string repcode)
     {
         return Utils.routeFixChars(repcode);
+    }
+
+    public static string filterSessionKey(FW fw, string repcode)
+    {
+        return "_filter_" + fw.G["controller.action"] + "." + repcode;
     }
 
     /// <summary>
@@ -88,6 +117,52 @@ public class FwReports
         report.init(fw, repcode, f);
         report.checkAccess();
         return report;
+    }
+
+    /// <summary>
+    /// return html string of the report (based on report_html template only)
+    /// </summary>
+    /// <param name="fw"></param>
+    /// <param name="repcode"></param>
+    /// <param name="f"></param>
+    /// <param name="ps"></param>
+    /// <returns></returns>
+    public static string createHtml(FW fw, string repcode, Hashtable f = null, Hashtable ps = null)
+    {
+        f ??= [];
+
+        var report = createInstance(fw, repcode, f);
+        report.setFilters(); // set filters data like select/lookups
+        report.getData();
+        report.render_to = TO_STRING;
+        return report.render(ps);
+    }
+
+    public static string createFile(FW fw, string repcode, string format = "", Hashtable f = null, Hashtable ps = null)
+    {
+        f ??= [];
+        f["format"] = format;
+
+        var report = createInstance(fw, repcode, f);
+        report.setFilters(); // set filters data like select/lookups
+        report.getData();
+
+        report.render_to = Utils.getTmpFilename() + format2ext(format);
+        report.render(ps);
+
+        return report.render_to;
+    }
+
+    public static string format2ext(string format)
+    {
+        string ext = format switch
+        {
+            "pdf" => ".pdf",
+            "xls" => ".xls",
+            "csv" => ".csv",
+            _ => ".html",
+        };
+        return ext;
     }
 
     public FwReports()
@@ -165,6 +240,8 @@ public class FwReports
         // list_rows =db.array("select * from something where 1=1 " & where & " order by {list_sortby}")
         // list_count = list_rows.Count();
         // ps["totals"] = 123;
+
+        ps["is_run"] = true; //show data in render
     }
 
     //override if report has inputs that needs to be saved to db
@@ -177,15 +254,19 @@ public class FwReports
     /// render report according to format
     /// </summary>
     /// <param name="ps_more">additional data for the template</param>
-    public virtual void render(Hashtable ps_more)
+    public virtual string render(Hashtable ps_more = null)
     {
+        var result = "";
+
+        ps["report_code"] = report_code;
         ps["f"] = f; // filter values
         ps["filter"] = f_data; // filter data
         ps["count"] = list_count;
         ps["list_rows"] = list_rows;
 
-        // merge ps_more into ps
-        Utils.mergeHash(ps, ps_more);
+        if (ps_more != null)
+            // merge ps_more into ps
+            Utils.mergeHash(ps, ps_more);
 
         ps["IS_EXPORT_PDF"] = false;
         ps["IS_EXPORT_XLS"] = false;
@@ -197,32 +278,71 @@ public class FwReports
                 {
                     ((Hashtable)ps["f"])["edit"] = false; // force any edit modes off
                     ps["IS_EXPORT_PDF"] = true; //use as <~PARSEPAGE.TOP[IS_EXPORT_PDF]> in templates
-                    string file_name = Utils.isEmpty(render_options["pdf_filename"]) ? report_code : (string)render_options["pdf_filename"];
-                    ConvUtils.parsePagePdf(fw, base_dir, TPL_EXPORT_PDF, ps, file_name, render_options);
+                    string out_filename = Utils.isEmpty(render_options["pdf_filename"]) ? report_code : (string)render_options["pdf_filename"];
+                    if (isFileRender())
+                        out_filename = render_to;
+
+                    ConvUtils.parsePagePdf(fw, base_dir, TPL_EXPORT_PDF, ps, out_filename, render_options);
                     break;
                 }
 
             case "xls":
                 {
                     ps["IS_EXPORT_XLS"] = true; //use as <~PARSEPAGE.TOP[IS_EXPORT_XLS]> in templates
-                    ConvUtils.parsePageExcelSimple(fw, base_dir, TPL_EXPORT_XLS, ps, report_code);
+                    var out_filename = Utils.isEmpty(render_options["xls_filename"]) ? report_code : (string)render_options["xls_filename"];
+                    if (isFileRender())
+                        out_filename = render_to;
+
+                    ConvUtils.parsePageExcelSimple(fw, base_dir, TPL_EXPORT_XLS, ps, out_filename);
                     break;
                 }
 
             case "csv":
                 {
-                    Utils.writeCSVExport(fw.response, report_code + ".csv", "", "", list_rows);
+                    if (isFileRender())
+                    {
+                        //make csv and save to file
+                        var content = Utils.getCSVExport("", "", list_rows).ToString();
+                        FW.setFileContent(render_to, ref content);
+                    }
+                    else
+                        Utils.writeCSVExport(fw.response, report_code + ".csv", "", "", list_rows);
                     break;
                 }
 
             default:
                 {
                     // html
-                    // show report using templates from related report dir
-                    fw.parser(base_dir, ps);
+                    if (render_to != TO_BROWSER)
+                    {
+                        ps["IS_PRINT_MODE"] = true;
+
+                        var layout = (string)fw.G["PAGE_LAYOUT_PRINT"];
+                        if (ps.ContainsKey("_layout"))
+                            layout = (string)ps["_layout"];
+
+                        ParsePage parser_obj = new(fw);
+                        result = parser_obj.parse_page(base_dir, layout, ps);
+
+                        if (render_to != TO_STRING)
+                            //this is render to file
+                            FW.setFileContent(render_to, ref result);
+                    }
+                    else
+                    {
+                        // show report using templates from related report dir
+                        fw.parser(base_dir, ps);
+                    }
                     break;
                 }
         }
+
+        return result;
+    }
+
+    protected bool isFileRender()
+    {
+        return render_to != TO_BROWSER && render_to != TO_STRING;
     }
 
     // REPORT HELPERS
@@ -232,11 +352,11 @@ public class FwReports
     {
         int total_ctr = 0;
         foreach (Hashtable row in rows)
-            total_ctr += Utils.f2int(row["ctr"]);
+            total_ctr += Utils.toInt(row["ctr"]);
         if (total_ctr > 0)
         {
             foreach (Hashtable row in rows)
-                row["perc"] = Utils.f2int(row["ctr"]) / (double)total_ctr * 100;
+                row["perc"] = Utils.toInt(row["ctr"]) / (double)total_ctr * 100;
         }
         return total_ctr;
     }

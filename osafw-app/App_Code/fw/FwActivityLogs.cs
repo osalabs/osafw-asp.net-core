@@ -122,14 +122,14 @@ public class FwActivityLogs : FwModel
         var rows = listByEntity(entity_icode, id, log_types_icodes);
         foreach (DBRow row in rows)
         {
-            var add_time = (DateTime)Utils.f2date(row["add_time"]);
-            var users_id = Utils.f2int(row["users_id"]);
-            var log_types_id = Utils.f2int(row["log_types_id"]);
+            var add_time = Utils.toDate(row["add_time"]);
+            var users_id = Utils.toInt(row["users_id"]);
+            var log_types_id = Utils.toInt(row["log_types_id"]);
             var log_type = fw.model<FwLogTypes>().one(log_types_id);
 
             //for system types - fill fields from payload
             var is_merged = false;
-            if (Utils.f2int(log_type["itype"]) == FwLogTypes.ITYPE_SYSTEM)
+            if (Utils.toInt(log_type["itype"]) == FwLogTypes.ITYPE_SYSTEM)
             {
                 if (last_fields != null
                     && last_log_types_id == log_types_id
@@ -184,8 +184,8 @@ public class FwActivityLogs : FwModel
             new_row["log_type"] = log_type;
             var user = fw.model<Users>().one(users_id);
             new_row["user"] = user;
-            if (Utils.f2int(user["att_id"]) > 0)
-                new_row["avatar_link"] = fw.model<Att>().getUrl(Utils.f2int(user["att_id"]), "s");
+            if (Utils.toInt(user["att_id"]) > 0)
+                new_row["avatar_link"] = fw.model<Att>().getUrl(Utils.toInt(user["att_id"]), "s");
             if (!Utils.isEmpty(row["upd_users_id"]))
                 new_row["upd_user"] = fw.model<Users>().one(row["upd_users_id"]);
             if (last_fields != null)
@@ -235,7 +235,7 @@ public class FwActivityLogs : FwModel
             p["since_days"] = since_days;
         }
 
-        return Utils.f2long(db.valuep(sql, p));
+        return Utils.toLong(db.valuep(sql, p));
     }
 
 }

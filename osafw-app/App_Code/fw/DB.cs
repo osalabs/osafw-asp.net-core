@@ -46,7 +46,7 @@ public class DBRow : Dictionary<string, string>
         {
             foreach (string k in h.Keys)
             {
-                this[k] = Utils.f2str(h[k]);
+                this[k] = Utils.toStr(h[k]);
             }
         }
     }
@@ -509,7 +509,7 @@ public class DB : IDisposable
                     dbcomm.Parameters.AddWithValue(p, @params[p]);
 
             if (is_get_identity)
-                result = Utils.f2int(dbcomm.ExecuteScalar());
+                result = Utils.toInt(dbcomm.ExecuteScalar());
             else
                 result = dbcomm.ExecuteNonQuery();
         }
@@ -980,19 +980,19 @@ public class DB : IDisposable
     // simple quote as Integer Value
     public int qi(object str)
     {
-        return Utils.f2int(str);
+        return Utils.toInt(str);
     }
 
     // simple quote as Float Value
     public double qf(object str)
     {
-        return Utils.f2float(str);
+        return Utils.toFloat(str);
     }
 
     // simple quote as Decimal Value
     public decimal qdec(object str)
     {
-        return Utils.f2decimal(str);
+        return Utils.toDecimal(str);
     }
 
     // value to Date (or null if value is not a date)
@@ -1265,10 +1265,10 @@ public class DB : IDisposable
                         // if empty string for numerical field - assume NULL
                         result = DBNull.Value;
                     else
-                        result = Utils.f2long(field_value);
+                        result = Utils.toLong(field_value);
                 }
                 else
-                    result = Utils.f2long(field_value);
+                    result = Utils.toLong(field_value);
             }
             else if (field_type == "datetime")
             {
@@ -1276,9 +1276,9 @@ public class DB : IDisposable
                 result ??= DBNull.Value;
             }
             else if (field_type == "float")
-                result = Utils.f2float(field_value);
+                result = Utils.toFloat(field_value);
             else if (field_type == "decimal")
-                result = Utils.f2decimal(field_value);
+                result = Utils.toDecimal(field_value);
             else
                 // string or other unknown value
                 result = field_value;

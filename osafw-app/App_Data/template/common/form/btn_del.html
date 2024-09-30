@@ -5,5 +5,5 @@
  <~perm_delete ifge="SESSION[access_level]" value="100" inline>
    <a class="btn btn-danger float-end ms-1" href="<~../url>/<~id>/delete?return_url=<~GLOBAL[request_url] urlencode><~/common/list/relid>"><i class="bi bi-x-square-fill"></i> `Permanent Delete`</a>
  </~perm_delete>
- <a class="btn btn-default float-end ms-1" href="<~../url>/(RestoreDeleted)/<~id><~/common/list/relid>"><span class="text-success"><i class="bi bi-check-circle-fill"></i></span> `Restore Deleted`</a>
+ <a class="btn btn-default float-end ms-1" href="<~../url>/(RestoreDeleted)/<~id>?XSS=<~SESSION[XSS]><~/common/list/relid>"><span class="text-success"><i class="bi bi-check-circle-fill"></i></span> `Restore Deleted`</a>
 </~status_deleted>

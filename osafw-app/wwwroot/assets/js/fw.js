@@ -178,7 +178,7 @@ window.fw={
 
     //autosubmit filter on change filter fields
     $(document).on('change', 'form[data-list-filter][data-autosubmit] [name^="f["]:input:visible:not([data-nosubmit])', function(){
-        this.form.submit();
+        $(this.form).trigger('submit');
     });
 
     //pager click via form filter submit so all filters applied
@@ -239,12 +239,18 @@ window.fw={
     });
 
     //click on row - select/unselect row
-    $(document).on('click', 'table.list > tbody > tr', function (e) {
-      var $this = $(this);
-      var tag_name = e.target.tagName.toLowerCase();
-      if (tag_name === 'a'||tag_name === 'button'){
-        return; // do not process if link/button clicked
+    $(document).on('click', 'table.list:not([data-row-selectable="false"]) > tbody > tr', function (e) {
+      // Do not process on text selection
+      if (window.getSelection().toString() !== '') return;
+
+      const $this = $(this);
+      const $target = $(e.target);
+
+      // Check if the clicked element or any of its parents is an interactive element
+      if ($target.closest('a, button, input, select, textarea').length) {
+        return; // Do not process if an interactive element was clicked
       }
+
       $this.find('.multicb:first').click();
     });
 
@@ -292,22 +298,69 @@ window.fw={
       }
     });
 
-    //on click - confirm, then submit via POST
-    //ex: <button type="button" class="btn btn-default on-fw-submit" data-url="SUBMIT_URL?XSS=<~SESSION[XSS]>" data-title="CONFIRMATION TITLE"></button>
-    $(document).on('click', '.on-fw-submit', function (e) {
-        e.preventDefault();
-        var $this=$(this);
-        var url = $this.data('url');
-        var title = $this.data('title');
-        if (!title) title='Are you sure?';
-        fw.confirm(title, function (e) {
-            $('#FTmpSubmit').remove();
-            $(document.body).append('<form id="FTmpSubmit" method="POST" action="'+url+'"></form>');
-            $('#FTmpSubmit').submit();
+    //on click - submit via POST with a spinner on clicked element
+    //  with optional confirmation (if title set)
+    //  optionally via ajax
+    //  optionally replace target content (otherwise fw.ok(json.message) displayed)
+    //  optionally show spinner
+    //ex: <button type="button" class="btn btn-default on-fw-submit" data-url="SUBMIT_URL?XSS=<~SESSION[XSS]>" data-title="CONFIRMATION TITLE" data-ajax data-target="#optional" data-spinner>Button</button>
+    $(document).on('click', '.on-fw-submit', function (e){
+      e.preventDefault();
+      var $this = $(this);
+      var url = $this.data('url');
+      var title = $this.data('title');
+      var ajax = $this.is('[data-ajax]');
+      var target = $this.data('target');
+      var spinner = $this.is('[data-spinner]');
+
+      if (title) {
+        fw.confirm(title, function() {
+          fw.submit($this, url, ajax, target, spinner);
         });
+      } else {
+        fw.submit($this, url, ajax, target, spinner);
+      }
     });
 
     fw.textarea_autoresize('textarea.autoresize');
+  },
+
+  //submit url via POST form
+  submit: function ($el, url, is_ajax, target, is_spinner) {
+    var $form = $('<form action="' + url + '" method="post"></form>');
+
+    if (is_spinner){
+      var spinner = $('<span class="fw-spinner-container"> <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span></span');
+      $el.prop('disabled', true).append(spinner); // Add spinner and disable button
+    }
+
+    var complete = function() {
+      if (is_spinner){
+        $el.prop('disabled', false).find('.fw-spinner-container').remove(); // Remove spinner and enable button
+      }
+    };
+
+    if (is_ajax) {
+      var options = {
+        complete: complete // Ensure spinner is removed after the request completes
+      };
+
+      if (target) {
+        options.target = target;
+      } else {
+        options.dataType = 'json';
+        options.success = function(response) {
+          fw.ok(response.message ?? 'Success'); // Display message using fw.ok
+        };
+        options.error = function(xhr, status, error) {
+          fw.error("An error occurred: " + error); // Error handling
+        };
+      }
+
+      $form.ajaxSubmit(options);
+    } else {
+      $form.appendTo('body').submit();//non-ajax submit
+    }
   },
 
   //automatically resize textarea element to it's content (but no downsize smaller than initial)
@@ -686,15 +739,13 @@ window.fw={
 
   delete_btn: function (ael){
     fw.confirm('<strong>ARE YOU SURE</strong> to delete this item?', function(){
-      var XSS=$(ael).parents('form:first').find("input[name=XSS]").val();
-      var action = ael.href+ ( ( ael.href.match(/\?/) ) ? '&':'?' ) +'XSS='+XSS;
-      $('#FOneDelete').attr('action', action).submit();
+      $('#FOneDelete').attr('action', ael.href).submit();
     });
     return false;
   },
 
   // if no data-filter defined, tries to find first form with data-list-filter
-  // <table class="list" data-rowtitle="Double click to Edit" [data-rowtitle-type="explicit"] [data-filter="#FFilter"]>
+  // <table class="list" data-rowtitle="Double click to Edit" [data-rowtitle-type="explicit"] [data-filter="#FFilter"] [data-row-selectable="false"]>
   //  <thead>
   //    <tr data-sortby="" data-sortdir="asc|desc"
   //  ... <tr data-url="url to go on double click">
@@ -704,15 +755,20 @@ window.fw={
     if (!$tbl.length) return; //skip if no list tables found
 
     var $f = $tbl.data('filter') ? $($tbl.data('filter')) : $('form[data-list-filter]:first');
-
+    var is_selectable = !$tbl.is('[data-row-selectable="false"]');
+    
     $tbl.on('dblclick', 'tbody tr', function(e){
-      if ($(e.target).is('input.multicb')) return;
+      var $target = $(e.target);
+      // Do not process on text selection, but only if clicked on the element with a selected text (double click on th/td padding selects all text inside the cell)
+      if (window.getSelection().toString() !== '' && !$target.is('th, td')) return;
+
+      if ($target.is('input.multicb')) return;
       var url=$(this).data('url');
       if (url) window.location=url;
     });
 
     var rowtitle=$tbl.data('rowtitle');
-    if (typeof(rowtitle)=='undefined') rowtitle='Double click to Edit';
+    if (typeof(rowtitle)=='undefined') rowtitle=(is_selectable ? 'Click to select, ' : '') + 'Double click to Edit';
     var title_selector = "tbody tr";
     if ($tbl.data('rowtitle-type')=='explicit') title_selector="tbody tr td.rowtitle";
     $tbl.find(title_selector).attr('title', rowtitle);

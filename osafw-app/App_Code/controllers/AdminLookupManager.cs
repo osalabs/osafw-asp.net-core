@@ -35,7 +35,7 @@ public class AdminLookupManagerController : FwController
         else
         {
             //don't allow access to tables with access_level higher than current user
-            var acl = Utils.f2int(defs["access_level"]);
+            var acl = Utils.toInt(defs["access_level"]);
             if (!fw.model<Users>().isAccessLevel(acl))
                 dict = "";
         }
@@ -65,7 +65,7 @@ public class AdminLookupManagerController : FwController
         foreach (var table in tables)
         {
             //do not show tables with access_level higher than current user
-            var acl = Utils.f2int(table["access_level"]);
+            var acl = Utils.toInt(table["access_level"]);
             if (!fw.model<Users>().isAccessLevel(acl))
                 continue;
 
@@ -92,7 +92,7 @@ public class AdminLookupManagerController : FwController
         check_dict();
 
         // if this is one-form dictionary - show edit form with first record
-        if (Utils.f2int(defs["is_one_form"]) == 1)
+        if (Utils.toInt(defs["is_one_form"]) == 1)
         {
             string id_fname = fw.model<LookupManagerTables>().getColumnId(defs);
             var row = model.topByTname((string)defs["tname"]);
@@ -118,7 +118,7 @@ public class AdminLookupManagerController : FwController
             var is_prio_exists = false;
             foreach (Hashtable col in cols)
             {
-                if (Utils.f2str(col["name"]) == "prio")
+                if (Utils.toStr(col["name"]) == "prio")
                 {
                     is_prio_exists = true;
                     break;
@@ -214,12 +214,12 @@ public class AdminLookupManagerController : FwController
                 list_where += " and (0=1 " + swhere + ")";
         }
 
-        ps["count"] = Utils.f2long(db.valuep("select count(*) from " + db.qid(list_table_name) + " where " + list_where, list_where_params));
+        ps["count"] = Utils.toLong(db.valuep("select count(*) from " + db.qid(list_table_name) + " where " + list_where, list_where_params));
 
         if ((long)ps["count"] > 0)
         {
-            int pagenum = Utils.f2int(list_filter["pagenum"]);
-            int pagesize = Utils.f2int(list_filter["pagesize"]);
+            int pagenum = Utils.toInt(list_filter["pagenum"]);
+            int pagesize = Utils.toInt(list_filter["pagesize"]);
             int offset = pagenum * pagesize;
             int limit = pagesize;
             string orderby = (string)SORTSQL[(string)f["sortby"]];
@@ -366,7 +366,7 @@ public class AdminLookupManagerController : FwController
                     fh["maxlen"] = col["maxlen"];
             }
             else
-                fh["maxlen"] = Utils.f2str(Utils.f2int(col["numeric_precision"]) + (Utils.f2int(col["numeric_scale"]) > 0 ? 1 : 0));
+                fh["maxlen"] = Utils.toStr(Utils.toInt(col["numeric_precision"]) + (Utils.toInt(col["numeric_scale"]) > 0 ? 1 : 0));
 
             if (col["itype"].ToString().Contains("."))
             {
@@ -456,6 +456,9 @@ public class AdminLookupManagerController : FwController
 
         Hashtable hf = new();
         Hashtable item = model.oneByTname(dict, id);
+        if (item.Count == 0)
+            throw new ApplicationException("Not found");
+
         hf["i"] = item;
         hf["iname"] = item[new ArrayList(item.Keys)[0]];
         hf["id"] = id;
@@ -495,7 +498,7 @@ public class AdminLookupManagerController : FwController
             {
                 if (fw.FORM.ContainsKey("delete"))
                 {
-                    model.deleteByTname(dict, Utils.f2int(id));
+                    model.deleteByTname(dict, Utils.toInt(id));
                     del_ctr += 1;
                 }
             }
@@ -517,7 +520,7 @@ public class AdminLookupManagerController : FwController
             foreach (string key in rows.Keys)
             {
                 string form_id = key;
-                int id = Utils.f2int(form_id);
+                int id = Utils.toInt(form_id);
                 if (id == 0)
                     continue; // skip wrong rows
 
@@ -550,7 +553,7 @@ public class AdminLookupManagerController : FwController
             foreach (string key in rows.Keys)
             {
                 string form_id = key;
-                int id = Utils.f2int(form_id);
+                int id = Utils.toInt(form_id);
                 if (id == 0)
                     continue; // skip wrong rows
                               // logger("new formid=" & form_id)

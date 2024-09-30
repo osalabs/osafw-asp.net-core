@@ -117,20 +117,20 @@ public abstract class FwController
         // logger("loaded config:")
         // logger(Me.config)
 
-        var model_name = Utils.f2str(this.config["model"]);
+        var model_name = Utils.toStr(this.config["model"]);
         if (!string.IsNullOrEmpty(model_name))
             model0 = fw.model(model_name);
 
         // check/conv to str
-        required_fields = Utils.f2str(this.config["required_fields"]);
-        is_userlists = Utils.f2bool(this.config["is_userlists"]);
+        required_fields = Utils.toStr(this.config["required_fields"]);
+        is_userlists = Utils.toBool(this.config["is_userlists"]);
 
         // save_fields could be defined as qw string - check and convert
         var save_fields_raw = this.config["save_fields"];
         if (save_fields_raw is IList list)
             save_fields = Utils.qwRevert(list); // not optimal, but simplest for now
         else
-            save_fields = Utils.f2str(save_fields_raw);
+            save_fields = Utils.toStr(save_fields_raw);
 
         form_new_defaults = (Hashtable)this.config["form_new_defaults"];
 
@@ -139,33 +139,33 @@ public abstract class FwController
         if (save_fields_checkboxes_raw is IDictionary dictionary)
             save_fields_checkboxes = Utils.qhRevert(dictionary); // not optimal, but simplest for now
         else
-            save_fields_checkboxes = Utils.f2str(save_fields_checkboxes_raw);
+            save_fields_checkboxes = Utils.toStr(save_fields_checkboxes_raw);
 
         // save_fields_nullable could be defined as qw string - check and convert
         var save_fields_nullable_raw = this.config["save_fields_nullable"];
         if (save_fields_nullable_raw is IList list1)
             save_fields_nullable = Utils.qwRevert(list1); // not optimal, but simplest for now
         else
-            save_fields_nullable = Utils.f2str(save_fields_nullable_raw);
+            save_fields_nullable = Utils.toStr(save_fields_nullable_raw);
 
-        search_fields = Utils.f2str(this.config["search_fields"]);
-        list_sortdef = Utils.f2str(this.config["list_sortdef"]);
+        search_fields = Utils.toStr(this.config["search_fields"]);
+        list_sortdef = Utils.toStr(this.config["list_sortdef"]);
 
         var list_sortmap_raw = this.config["list_sortmap"];
         if (list_sortmap_raw is IDictionary)
             list_sortmap = (Hashtable)list_sortmap_raw;
         else
-            list_sortmap = Utils.qh(Utils.f2str(this.config["list_sortmap"]));
+            list_sortmap = Utils.qh(Utils.toStr(this.config["list_sortmap"]));
 
-        related_field_name = Utils.f2str(this.config["related_field_name"]);
+        related_field_name = Utils.toStr(this.config["related_field_name"]);
 
-        list_view = Utils.f2str(this.config["list_view"]);
+        list_view = Utils.toStr(this.config["list_view"]);
 
-        is_dynamic_index = Utils.f2bool(this.config["is_dynamic_index"]);
+        is_dynamic_index = Utils.toBool(this.config["is_dynamic_index"]);
         if (is_dynamic_index)
         {
             // Whoah! list view is dynamic
-            view_list_defaults = Utils.f2str(this.config["view_list_defaults"]);
+            view_list_defaults = Utils.toStr(this.config["view_list_defaults"]);
 
             // since view_list_map could be defined as qw string or as hashtable - check and convert
             var raw_view_list_map = this.config["view_list_map"];
@@ -174,10 +174,10 @@ public abstract class FwController
             else
                 view_list_map = Utils.qh((string)raw_view_list_map);
 
-            view_list_custom = Utils.f2str(this.config["view_list_custom"]);
+            view_list_custom = Utils.toStr(this.config["view_list_custom"]);
         }
 
-        is_dynamic_index_edit = Utils.f2bool(this.config["is_dynamic_index_edit"]);
+        is_dynamic_index_edit = Utils.toBool(this.config["is_dynamic_index_edit"]);
         if (is_dynamic_index_edit)
         {
             //combine with request param
@@ -189,13 +189,13 @@ public abstract class FwController
             if (is_list_edit)
             {
                 //list edit is on - override view used for list
-                var list_edit = Utils.f2str(config["list_edit"]);
+                var list_edit = Utils.toStr(config["list_edit"]);
                 if (!Utils.isEmpty(list_edit))
                     list_view = list_edit;
 
                 //override list defaults if set
                 if (!Utils.isEmpty(config["edit_list_defaults"]))
-                    view_list_defaults = Utils.f2str(config["edit_list_defaults"]);
+                    view_list_defaults = Utils.toStr(config["edit_list_defaults"]);
 
                 //override list map if set
                 // since edit_list_map could be defined as qw string or as hashtable - check and convert
@@ -219,10 +219,10 @@ public abstract class FwController
                 search_fields = getViewListUserFields(); // just search in all visible fields if no specific fields defined
         }
 
-        is_dynamic_show = Utils.f2bool(this.config["is_dynamic_show"]);
-        is_dynamic_showform = Utils.f2bool(this.config["is_dynamic_showform"]);
+        is_dynamic_show = Utils.toBool(this.config["is_dynamic_show"]);
+        is_dynamic_showform = Utils.toBool(this.config["is_dynamic_showform"]);
 
-        route_return = Utils.f2str(this.config["route_return"]);
+        route_return = Utils.toStr(this.config["route_return"]);
     }
 
     /// <summary>
@@ -244,10 +244,23 @@ public abstract class FwController
     }
 
     // set of helper functions to return string, integer, date values from request (fw.FORM)
-    public object req(string iname)
+
+    /// <summary>
+    /// return value from request (fw.FORM) by name
+    /// </summary>
+    /// <param name="iname"></param>
+    /// <param name="def">optional default value to return if request value is not set</param>
+    /// <returns></returns>
+    public object req(string iname, object def = null)
     {
-        return fw.FORM[iname];
+        return fw.FORM[iname] ?? def;
     }
+
+    /// <summary>
+    /// return Hashtable value from request (fw.FORM)
+    /// </summary>
+    /// <param name="iname"></param>
+    /// <returns></returns>
     public Hashtable reqh(string iname)
     {
         if (fw.FORM[iname] != null && fw.FORM[iname].GetType() == typeof(Hashtable))
@@ -256,22 +269,49 @@ public abstract class FwController
             return new Hashtable();
     }
 
-    public string reqs(string iname)
+    /// <summary>
+    /// return string value from request (fw.FORM)
+    /// </summary>
+    /// <param name="iname"></param>
+    /// <param name="def">optional default value</param>
+    /// <returns></returns>
+    public string reqs(string iname, string def = "")
     {
-        string value = (string)fw.FORM[iname] ?? "";
+        string value = (string)(fw.FORM[iname] ?? def);
         return value;
     }
-    public int reqi(string iname)
+
+    /// <summary>
+    /// return int value from request (fw.FORM)
+    /// </summary>
+    /// <param name="iname"></param>
+    /// <param name="def">optional default value</param>
+    /// <returns></returns>
+    public int reqi(string iname, int def = 0)
     {
-        return Utils.f2int(fw.FORM[iname]);
+        return Utils.toInt(fw.FORM[iname] ?? def);
     }
-    public object reqd(string iname)
+
+    /// <summary>
+    /// return date value from request (fw.FORM)
+    /// </summary>
+    /// <param name="iname"></param>
+    /// <param name="def">optional default value</param>
+    /// <returns></returns>
+    public DateTime reqd(string iname, DateTime? def = null)
     {
-        return Utils.f2date(fw.FORM[iname]);
+        return Utils.toDate(fw.FORM[iname] ?? def);
     }
-    public bool reqb(string iname)
+
+    /// <summary>
+    /// return bool value from request (fw.FORM)
+    /// </summary>
+    /// <param name="iname"></param>
+    /// <param name="def"></param>
+    /// <returns></returns>
+    public bool reqb(string iname, bool def = false)
     {
-        return Utils.f2bool(fw.FORM[iname]);
+        return Utils.toBool(fw.FORM[iname] ?? def);
     }
 
     public void rw(string str)
@@ -331,7 +371,7 @@ public abstract class FwController
                 Hashtable f1 = (Hashtable)Utils.jsonDecode(uf["idesc"]);
                 if (f1 != null)
                     f = f1;
-                if (Utils.f2int(uf["is_system"]) == 0)
+                if (Utils.toInt(uf["is_system"]) == 0)
                 {
                     f["userfilters_id"] = userfilters_id; // set filter id (for edit/delete) only if not system
                     f["userfilter"] = uf;
@@ -340,7 +380,7 @@ public abstract class FwController
             else
             {
                 // check if we have some filter loaded
-                userfilters_id = Utils.f2int(f["userfilters_id"]);
+                userfilters_id = Utils.toInt(f["userfilters_id"]);
                 if (userfilters_id > 0)
                 {
                     // just ned info on this filter
@@ -351,8 +391,8 @@ public abstract class FwController
         }
 
         // paging
-        f["pagenum"] = Utils.f2int(f["pagenum"]); //sets default to 0 if no value or non-numeric
-        f["pagesize"] = Utils.f2int(f["pagesize"] ?? FormUtils.MAX_PAGE_ITEMS);
+        f["pagenum"] = Utils.toInt(f["pagenum"]); //sets default to 0 if no value or non-numeric
+        f["pagesize"] = Utils.toInt(f["pagesize"] ?? FormUtils.MAX_PAGE_ITEMS);
 
         // save in session for later use
         fw.SessionHashtable(session_key, f);
@@ -428,8 +468,7 @@ public abstract class FwController
                 }
             }
         }
-        else
-            result = false; //TODO check
+        //else - no required fields defined - valid
 
         if (!result && is_global_errors)
             form_errors["REQUIRED"] = true; // set global error
@@ -537,17 +576,17 @@ public abstract class FwController
                         if (is_subquery)
                         {
                             // for subqueries - just use string quoting, but convert to number (so only numeric search supported in this case)
-                            list_where_params[param_name] = Utils.f2long(s);
+                            list_where_params[param_name] = Utils.toLong(s);
                         }
                         else
                         {
                             var ft = db.schemaFieldType(list_table_name, fand);
                             if (ft == "int")
-                                list_where_params[param_name] = Utils.f2long(s);
+                                list_where_params[param_name] = Utils.toLong(s);
                             else if (ft == "float")
-                                list_where_params[param_name] = Utils.f2float(s);
+                                list_where_params[param_name] = Utils.toFloat(s);
                             else if (ft == "decimal")
-                                list_where_params[param_name] = Utils.f2decimal(s);
+                                list_where_params[param_name] = Utils.toDecimal(s);
                             else
                                 list_where_params[param_name] = s;
                         }
@@ -631,7 +670,7 @@ public abstract class FwController
                 {
                     //numerical comparison
                     fieldname_sql = fieldname_sql_num;
-                    qv = Utils.f2str(db.qdec(v));
+                    qv = Utils.toStr(db.qdec(v));
                 }
             }
 
@@ -687,7 +726,7 @@ public abstract class FwController
         {
             if (!Utils.isEmpty(this.list_filter["status"]))
             {
-                var status = Utils.f2int(this.list_filter["status"]);
+                var status = Utils.toInt(this.list_filter["status"]);
                 // if want to see trashed and not admin - just show active
                 if (status == FwModel.STATUS_DELETED & !fw.model<Users>().isAccessLevel(Users.ACL_SITEADMIN))
                     status = 0;
@@ -705,7 +744,7 @@ public abstract class FwController
     public virtual void getListCount(string list_view = "")
     {
         string list_view_name = (!string.IsNullOrEmpty(list_view) ? list_view : this.list_view);
-        this.list_count = Utils.f2long(db.valuep("select count(*) from " + list_view_name + " where " + this.list_where, this.list_where_params));
+        this.list_count = Utils.toLong(db.valuep("select count(*) from " + list_view_name + " where " + this.list_where, this.list_where_params));
     }
 
     /// <summary>
@@ -728,8 +767,8 @@ public abstract class FwController
     public virtual void getListRows()
     {
         var is_export = false;
-        int pagenum = Utils.f2int(list_filter["pagenum"]);
-        int pagesize = Utils.f2int(list_filter["pagesize"]);
+        int pagenum = Utils.toInt(list_filter["pagenum"]);
+        int pagesize = Utils.toInt(list_filter["pagesize"]);
         // if export requested - start with first page and have a high limit (still better to have a limit just for the case)
         if (export_format.Length > 0)
         {
@@ -896,7 +935,7 @@ public abstract class FwController
     public virtual Hashtable afterSave(bool success, object id = null, bool is_new = false, string action = "ShowForm", string location = "", Hashtable more_json = null)
     {
         if (string.IsNullOrEmpty(location))
-            location = this.afterSaveLocation(Utils.f2str(id));
+            location = this.afterSaveLocation(Utils.toStr(id));
 
         if (fw.isJsonExpected())
         {
@@ -1005,8 +1044,8 @@ public abstract class FwController
         //implement "Showing FROM to TO of TOTAL records"
         if (this.list_rows != null && this.list_rows.Count > 0)
         {
-            int pagenum = Utils.f2int(list_filter["pagenum"]);
-            int pagesize = Utils.f2int(list_filter["pagesize"]);
+            int pagenum = Utils.toInt(list_filter["pagenum"]);
+            int pagesize = Utils.toInt(list_filter["pagesize"]);
             ps["count_from"] = pagenum * pagesize + 1;
             ps["count_to"] = pagenum * pagesize + this.list_rows.Count;
         }

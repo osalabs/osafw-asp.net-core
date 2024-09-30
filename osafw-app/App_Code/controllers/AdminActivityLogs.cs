@@ -74,11 +74,11 @@ public class AdminActivityLogsController : FwController
         //for new items - convert log_type and entity to ids
         if (is_new)
         {
-            var log_type = fw.model<FwLogTypes>().oneByIcode(Utils.f2str(item["log_type"]));
-            if (log_type.Count == 0 || Utils.f2int(log_type["itype"]) != FwLogTypes.ITYPE_USER)
+            var log_type = fw.model<FwLogTypes>().oneByIcode(Utils.toStr(item["log_type"]));
+            if (log_type.Count == 0 || Utils.toInt(log_type["itype"]) != FwLogTypes.ITYPE_USER)
                 throw new UserException("Invalid log_type");
 
-            var fwentity = fw.model<FwEntities>().oneByIcode(Utils.f2str(item["entity"]));
+            var fwentity = fw.model<FwEntities>().oneByIcode(Utils.toStr(item["entity"]));
             if (fwentity.Count == 0)
                 throw new UserException("Invalid entity");
             // TODO Customize - check if entity is allowed for this log_type
@@ -88,9 +88,9 @@ public class AdminActivityLogsController : FwController
             itemdb["fwentities_id"] = fwentity["id"];
         }
 
-        if (Utils.f2date(itemdb["idate"]) == null)
+        if (!Utils.isDate(itemdb["idate"]))
             itemdb["idate"] = DB.NOW; //if no date specified - use current date
-        if (Utils.f2int(itemdb["users_id"]) == 0)
+        if (Utils.toInt(itemdb["users_id"]) == 0)
             itemdb["users_id"] = fw.userId; //if no user specified - use current user
 
         id = this.modelAddOrUpdate(id, itemdb);
@@ -103,7 +103,7 @@ public class AdminActivityLogsController : FwController
         bool result = this.validateRequired(id, item, this.required_fields);
 
         // comment or user event should be related to some item
-        if (result && Utils.f2int(item["item_id"]) == 0)
+        if (result && Utils.toInt(item["item_id"]) == 0)
             fw.FormErrors["REQUIRED"] = true;
 
         // If result AndAlso Not SomeOtherValidation() Then

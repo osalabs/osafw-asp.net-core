@@ -1,13 +1,13 @@
 <~date1 if="f[is_dates]" inline>
-<div class="d-none d-print-block">
-Dates: <strong><~f[from_date]>-<~f[to_date]></strong>
-</div>
+  <div class="d-none d-print-block">
+    Dates: <strong><~f[from_date]>-<~f[to_date]></strong>
+  </div>
 </~date1>
 
 <div class="fw-card">
 <table class="table table-sm table-bordered table-hover list">
     <thead>
-        <tr data-sortby="<~f[sortby]>" data-sortdir="<~f[sortdir]>">
+        <tr <~/admin/reports/common/tr_sort unless="IS_PRINT_MODE">>
             <th data-sort="idate">Date/Time</th>
             <th data-sort="event_name">Event</th>
             <th data-sort="entity_name">Entity</th>

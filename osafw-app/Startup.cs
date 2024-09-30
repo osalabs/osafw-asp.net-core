@@ -60,10 +60,10 @@ public class Startup
         });
 #endif
 #if !isMySQL
-        services.AddDistributedSqlServerCache(options =>
+        services.AddDistributedSqlServerCache((Action<Microsoft.Extensions.Caching.SqlServer.SqlServerCacheOptions>)(options =>
         {
             // override settings based on env variable ASPNETCORE_ENVIRONMENT
-            var enviroment = Utils.f2str(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"));
+            var enviroment = Utils.toStr((object)Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"));
 
             var appSessings = new Hashtable();
             FwConfig.readSettingsSection(Startup.Configuration.GetSection("appSettings"), ref appSessings);
@@ -83,7 +83,7 @@ public class Startup
             options.ConnectionString = conn_str;
             options.SchemaName = "dbo";
             options.TableName = "fwsessions";
-        });
+        }));
 #endif
         // Set form limits
         services.Configure<FormOptions>(options =>

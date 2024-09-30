@@ -1,2 +1,4 @@
-<form id="FOneDelete" action="<~../url>/%id%?XSS=<~SESSION[XSS]>" method="post" class="d-none">
+<form id="FOneDelete" action="<~../url>/%id%" method="post" class="d-none">
+  <input type="hidden" name="_method" value="DELETE">
+  <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
 </form>

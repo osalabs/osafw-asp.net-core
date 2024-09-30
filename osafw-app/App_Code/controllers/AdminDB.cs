@@ -20,9 +20,7 @@ public class AdminDBController : FwController
     public Hashtable IndexAction()
     {
         Hashtable ps = new();
-        var selected_db = reqs("db");
-        if (selected_db == "")
-            selected_db = "main";
+        var selected_db = reqs("db", "main");
 
         string sql = reqs("sql");
         ArrayList tablehead = null;
