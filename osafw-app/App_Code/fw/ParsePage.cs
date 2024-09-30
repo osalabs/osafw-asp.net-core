@@ -1,18 +1,20 @@
 ﻿// ParsePage for ASP.NET - framework template engine
 //
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
-// (c) 2009-2019 Oleg Savchuk www.osalabs.com
+// (c) 2009-2024 Oleg Savchuk www.osalabs.com
 /*
- supports:
+Parses file templates and replaces <~tags> with values from hashtable
+
+ Supports features:
  - SESSION, GLOBAL (from fw.G), SUBHASHES, SUBARRAYS, PARSEPAGE.TOP, PARSEPAGE.PARENT
  - <~tag if="var"> - var tested for true value (1, true, >"", but not "0")
  - CSRF shield - all vars escaped, if var shouldn't be escaped use "noescape" attr: < ~raw_variable noescape >
   - attrs["select") ]an contain strings with separator ","(or custom defined) for multiple select
   - <~#commented_tag> - comment tags that doesn't need to be parsed(quickly replaced by empty string)
-
+- <~subfolder/*.html> - will include all html files in folder (basically read all files per mask and parse them as a single template)
+  - <~subfolder/*.*> - will include all files in folder
 
  # Supported attributes:
-
 
  var - tag is variable, no fileseek necessary
  ifXX - if confitions
@@ -25,17 +27,8 @@
    var can be ICollection (Hashtable/ArrayList/...)
    <~tag if="ArrayList"> will fail if ArrayList.Count=0 or success if ArrayList.Count>0
 
-    ## old mapping
-    neq => ne
-    ge => gt
-    le => lt
-    gee => ge
-    lee => le
-
-
   vvalue - value as hf variable:
     <~tag ifeq="var" vvalue="YYY"> - actual value got via hfvalue('YYY', $hf);
-
 
   #shortcuts
   <~tag if="var"> - tag will be shown if var is evaluated as TRUE, not using eval(), equivalent to "if ($var)"
@@ -56,7 +49,6 @@
     unset variable
   -------------------------
 
-
   repeat - this tag is repeat content ($hf hash should contain reference to array of hashes),
     supported repeat vars:
     repeat.first (0-not first, 1-first)
@@ -64,7 +56,6 @@
     repeat.total (total number of items)
     repeat.index  (0-based)
     repeat.iteration (1-based)
-
 
   sub - this tag tell parser to use subhash for parse subtemplate ($hf hash should contain reference to hash), examples:
      <~tag sub inline>...</~tag>- use $hf[tag] as hashtable for inline template
@@ -364,7 +355,6 @@ public class ParsePage
                 }
                 else
                 {
-
                     // #also checking for sub
                     if (attrs.ContainsKey("sub"))
                         v = _attr_sub(tag, tpl_name, hf, attrs, inline_tpl, parent_hf, tag_value);
@@ -382,7 +372,6 @@ public class ParsePage
                 string tmp_value = "";
                 tag_replace(ref page, ref tag_full, ref tmp_value, attrs);
             }
-
         }
 
         // FW.logger("DEBUG", "ParsePage - Parsing template = " & tpl_name & " END")
@@ -395,15 +384,33 @@ public class ParsePage
         LANG_CACHE.Clear();
     }
 
-    //read precached file and split it into lines (ignores empty lines)
+    /// <summary>
+    /// read precached file and split it into lines (ignores empty lines)
+    /// </summary>
+    /// <param name="filename"></param>
+    /// <returns>empty array if no content</returns>
     private string[] precache_file_lines(string filename)
     {
         var content = precache_file(filename);
+        if (string.IsNullOrEmpty(content))
+            return [];
         return Regex.Split(content, "[\r\n]+");
     }
 
     private string precache_file(string filename)
     {
+        // if filename contains a mask - load all files via recursive calls and return as a single template
+        if (filename.Contains('*'))
+        {
+            string folder = Path.GetDirectoryName(filename);
+            string mask = Path.GetFileName(filename);
+            string[] files = Directory.GetFiles(folder, mask);
+            StringBuilder sb = new();
+            foreach (var file in files)
+                sb.Append(precache_file(file));
+            return sb.ToString();
+        }
+
         string modtime = "";
         string file_data = "";
         //For Windows - replace Unix-style separators / to \
@@ -462,7 +469,7 @@ public class ParsePage
     private static void get_tag_attrs(ref string tag, Hashtable attrs)
     {
         // If Regex.IsMatch(tag, "\s") Then
-        if (tag.Contains(" "))
+        if (tag.Contains(' '))
         {
             MatchCollection attrs_raw = RX_ATTRS1.Matches(tag);
 
@@ -1133,17 +1140,15 @@ public class ParsePage
             // just read from the plain text file
             var tpl_path = tag_tplpath(tag, tpl_name);
             if (tpl_path.Substring(0, 1) != "/")
-            {
                 tpl_path = basedir + "/" + tpl_path;
-            }
 
-            if (!File.Exists(TMPL_PATH + "/" + tpl_path))
+            string[] lines = precache_file_lines(TMPL_PATH + "/" + tpl_path);
+            if (lines.Length == 0)
             {
                 fw.logger(LogLevel.TRACE, $"ParsePage - NOR an ArrayList of Hashtables NEITHER .sel template file passed for a select tag={tag}");
                 return "";
             }
 
-            string[] lines = precache_file_lines(TMPL_PATH + "/" + tpl_path);
             foreach (string line in lines)
             {
                 if (line.Length < 2)
@@ -1180,19 +1185,19 @@ public class ParsePage
     private string _attr_radio(string tpl_path, Hashtable hf, Hashtable attrs)
     {
         StringBuilder result = new();
-        string sel_value = (string)hfvalue((string)attrs["radio"], hf);
-        if (sel_value == null)
-            sel_value = "";
-
+        string sel_value = (string)hfvalue((string)attrs["radio"], hf) ?? "";
         string name = (string)attrs["name"];
         string delim = (string)attrs["delim"]; // delimiter class
 
         if (tpl_path.Substring(0, 1) != "/")
-        {
             tpl_path = basedir + "/" + tpl_path;
-        }
 
         string[] lines = precache_file_lines(TMPL_PATH + "/" + tpl_path);
+        if (lines.Length == 0)
+        {
+            fw.logger(LogLevel.TRACE, $"ParsePage - NOR an ArrayList of Hashtables NEITHER .sel template file passed for a radio tag tpl path={tpl_path}");
+            return "";
+        }
 
         int i = 0;
         foreach (string line in lines)
@@ -1282,17 +1287,15 @@ public class ParsePage
         {
             var tpl_path = tag_tplpath(tag, tpl_name);
             if (tpl_path.Substring(0, 1) != "/")
-            {
                 tpl_path = basedir + "/" + tpl_path;
-            }
 
-            if (!File.Exists(TMPL_PATH + "/" + tpl_path))
+            string[] lines = precache_file_lines(TMPL_PATH + "/" + tpl_path);
+            if (lines.Length == 0)
             {
-                fw.logger(LogLevel.DEBUG, "ParsePage - NOR an ArrayList of Hashtables NEITHER .sel template file passed for a selvalue tag=", tag);
+                fw.logger(LogLevel.TRACE, $"ParsePage - NOR an ArrayList of Hashtables NEITHER .sel template file passed for a selvalue tag={tag}");
                 return "";
             }
 
-            string[] lines = precache_file_lines(TMPL_PATH + "/" + tpl_path);
             foreach (string line in lines)
             {
                 if (line.Length < 2)
