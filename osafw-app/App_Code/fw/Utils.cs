@@ -658,14 +658,14 @@ public class Utils
         return csv;
     }
 
-    public static async void writeCSVExport(HttpResponse response, string filename, string csv_export_headers, string csv_export_fields, ArrayList rows)
+    public static void writeCSVExport(HttpResponse response, string filename, string csv_export_headers, string csv_export_fields, ArrayList rows)
     {
         filename = filename.Replace("\"", "'"); // quote doublequotes
 
         response.Headers.Append("Content-type", "text/csv");
         response.Headers.Append("Content-Disposition", "attachment; filename=\"" + filename + "\"");
 
-        await HttpResponseWritingExtensions.WriteAsync(response, Utils.getCSVExport(csv_export_headers, csv_export_fields, rows).ToString());
+        HttpResponseWritingExtensions.WriteAsync(response, Utils.getCSVExport(csv_export_headers, csv_export_fields, rows).ToString()).Wait();
     }
 
     /// <summary>
