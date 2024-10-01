@@ -1039,6 +1039,10 @@ public class FwDynamicController : FwController
                 var att_post_param = "att";
                 if (def.ContainsKey("att_post_prefix"))
                     att_post_param = (string)def["att_post_prefix"];
+                // if PATCH - only update is post param is present (otherwise it will delete all records)
+                if (isPatch() && req(att_post_param) == null)
+                    continue;
+
                 fw.model<AttLinks>().updateJunction(model0.table_name, id, reqh(att_post_param));
             }
             else if (type == "att_files_edit")
@@ -1056,11 +1060,19 @@ public class FwDynamicController : FwController
                 if (Utils.isEmpty(def["model"]))
                 {
                     // multiple checkboxes -> non-junction model single comma-delimited field                    
+                    // if PATCH - only update is post param is present (otherwise it will delete all records)
+                    if (isPatch() && req(field + "_multi") == null)
+                        continue;
+
                     fields_update[field] = FormUtils.multi2ids(reqh(field + "_multi"));
                 }
                 else
                 {
                     //junction model based
+                    // if PATCH - only update is post param is present (otherwise it will delete all records)
+                    if (isPatch() && req(field + "_multi") == null)
+                        continue;
+
                     if (Utils.toBool(def["is_by_linked"]))
                         //by linked id
                         fw.model((string)def["model"]).updateJunctionByLinkedId(id, reqh(field + "_multi")); // junction model
@@ -1070,11 +1082,20 @@ public class FwDynamicController : FwController
                 }
             }
             else if (type == "multicb_prio")
-                fw.model((string)def["model"]).updateJunctionByMainId(id, reqh(field + "_multi")); // junction model
+            {
+                // if PATCH - only update is post param is present (otherwise it will delete all records)
+                if (isPatch() && req(field + "_multi") == null)
+                    continue;
 
+                fw.model((string)def["model"]).updateJunctionByMainId(id, reqh(field + "_multi")); // junction model
+            }
             else if (type == "subtable_edit")
             {
                 //save subtable
+                // if PATCH - only update is post param is present (otherwise it will delete all records)
+                if (isPatch() && req("item-" + field) == null)
+                    continue;
+
                 var sub_model = fw.model((string)def["model"]);
 
                 var save_fields = (string)def["save_fields"];

@@ -1,12 +1,13 @@
 <script type="text/x-template" id="autocomplete-template">
-    <div class="position-relative">
-        <input ref="input"
-               type="text"
-               :data-autocomplete="url"
-               :placeholder="placeholder"
-               class="form-control"
-               v-model="value" />
-    </div>
+    <input ref="input"
+            type="text"
+            :data-autocomplete="url"
+            :placeholder="placeholder"
+            :required="required"
+            :readonly="readonly"
+            :pattern="pattern"
+            :class="'form-control' + ($attrs.class ? ' ' + $attrs.class : '')"
+            v-model="value" />
 </script>
 
 <script type="module">
@@ -15,6 +16,10 @@
     fwApp.component('autocomplete', {
         template: '#autocomplete-template',
         props: {
+            modelValue: {
+                type: String,
+                default: '',
+            },
             url: {
                 type: String,
                 required: true,
@@ -23,7 +28,15 @@
                 type: String,
                 default: 'Start typing to select...',
             },
-            modelValue: {
+            required: {
+                type: Boolean,
+                default: false,
+            },
+            readonly: {
+                type: Boolean,
+                default: false,
+            },
+            pattern: {
                 type: String,
                 default: '',
             },

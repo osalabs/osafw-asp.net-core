@@ -397,6 +397,11 @@ let actions = {
         let value = row[field_name];
 
         let item = { [field_name]: value };
+        if (col.type == 'autocomplete') {
+          //for autocomplete submit _iname instead of id value
+          item[field_name] = null;
+          item[field_name + '_iname'] = row[field_name + '_iname'];
+        }
 
         try {
             const apiBase = mande(this.base_url);

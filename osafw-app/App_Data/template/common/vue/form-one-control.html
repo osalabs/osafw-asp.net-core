@@ -201,6 +201,10 @@
       v-model="value_autocomplete"
       :placeholder="def.placeholder"
       :url="def.autocomplete_url"
+      :required="def.required"
+      :readonly="def.readonly"
+      :pattern="def.pattern"
+      :class="class_control"
     />
     <form-control-help-block :text="def.help_text" />
   </template>
