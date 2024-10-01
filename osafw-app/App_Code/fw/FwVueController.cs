@@ -48,6 +48,20 @@ public class FwVueController : FwDynamicController
     /// </summary>
     protected virtual void filterListForJson()
     {
+        //extract autocomplete fields
+        var ac_fields = new ArrayList();
+        var fields = (ArrayList)this.config["showform_fields"];
+        foreach (Hashtable def in fields)
+        {
+            var field_name = Utils.toStr(def["field"] ?? "");
+            var model_name = Utils.toStr(def["lookup_model"] ?? "");
+            var dtype = Utils.toStr(def["type"]);
+            if (dtype == "autocomplete" || dtype == "plaintext_autocomplete")
+            {
+                ac_fields.Add(def);
+            }
+        }
+
         foreach (Hashtable row in list_rows)
         {
             model0.filterForJson(row);
@@ -57,6 +71,23 @@ public class FwVueController : FwDynamicController
                 row["add_users_id"] = fw.model<Users>().iname(row[model0.field_add_users_id]);
             if (!string.IsNullOrEmpty(model0.field_upd_users_id) && row.ContainsKey(model0.field_upd_users_id))
                 row["upd_users_id"] = fw.model<Users>().iname(row[model0.field_upd_users_id]);
+
+            //autocomplete fields - add _iname fields
+            foreach (Hashtable def in ac_fields)
+            {
+                var field_name = Utils.toStr(def["field"] ?? "");
+                var model_name = Utils.toStr(def["lookup_model"] ?? "");
+                var dtype = Utils.toStr(def["type"]);
+                if (dtype == "autocomplete" || dtype == "plaintext_autocomplete")
+                {
+                    var ac_model = fw.model(model_name);
+                    if (ac_model != null)
+                    {
+                        var ac_item = ac_model.one(row[field_name]);
+                        row[field_name + "_iname"] = ac_item["iname"];
+                    }
+                }
+            }
         }
     }
 
@@ -272,7 +303,7 @@ public class FwVueController : FwDynamicController
             var field_name = Utils.toStr(def["field"] ?? "");
             var model_name = Utils.toStr(def["lookup_model"] ?? "");
             var dtype = Utils.toStr(def["type"]);
-            if (dtype == "autocomplete")
+            if (dtype == "autocomplete" || dtype == "plaintext_autocomplete")
             {
                 var ac_model = fw.model(model_name);
                 if (ac_model != null)

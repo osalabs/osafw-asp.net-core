@@ -397,6 +397,11 @@ let actions = {
         let value = row[field_name];
 
         let item = { [field_name]: value };
+        if (col.type == 'autocomplete') {
+          //for autocomplete submit _iname instead of id value
+          item[field_name] = null;
+          item[field_name + '_iname'] = row[field_name + '_iname'];
+        }
 
         try {
             const apiBase = mande(this.base_url);
@@ -527,7 +532,7 @@ let actions = {
                 rows.forEach(row => {
                     req['item-' + field + '#' + row.id] = {};
                     Object.keys(row).forEach(col => {
-                        if (col == 'id') return; //skip id
+                        if (col == 'id' || Array.isArray(row[col])) return; //skip id and array fields
                         req['item-' + field + '#' + row.id][col] = row[col];
                     });
                     req['item-' + field][row.id] = 1;

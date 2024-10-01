@@ -197,16 +197,14 @@
   </template>
 
   <template v-else-if="def.type=='autocomplete'">
-    <Multiselect
+    <autocomplete
       v-model="value_autocomplete"
       :placeholder="def.placeholder"
-      :filter-results="false"
-      :min-chars="1"
-      :resolve-on-load="true"
-      :delay="0"
-      :searchable="true"
-      :create-option="true"
-      :options="autocompleteOptions"
+      :url="def.autocomplete_url"
+      :required="def.required"
+      :readonly="def.readonly"
+      :pattern="def.pattern"
+      :class="class_control"
     />
     <form-control-help-block :text="def.help_text" />
   </template>
@@ -214,7 +212,7 @@
   <template v-else-if="def.type=='multicb'">
     <div class="field-multi-value">
       <input v-model="multi_search"
-        type="input" class="form-control form-control-sm mb-1" placeholder="type to filter...">
+        type="text" class="form-control form-control-sm mb-1" placeholder="type to filter...">
       <div v-for="row in multi_rows" :key="row.id"
         class="form-check" data-s="<~id upper> - <~iname upper>">
         <input type="checkbox"
@@ -288,7 +286,7 @@ fwApp.component('form-one-control', {
       }
     },
     multi_rows(){
-      const rows = this.form.multi_rows[this.def.field]??[];
+      const rows = this.form.multi_rows?.[this.def.field]??[];
       if (this.multi_search > '') {
         return rows.filter(row => row.iname.toLowerCase().includes(this.multi_search.toLowerCase()));
       } else {

@@ -64,18 +64,11 @@
                                    :class="'form-control'+(error(row, 'iname')?' is-invalid':'')"-->
 
                             <!-- autocomplete -->
-                            <Multiselect
+                            <autocomplete
                               v-model="row.iname"
                               placeholder="Start typing..."
-                              :class="(error(row, 'iname')?' cell-invalid':'')"
-                              :filter-results="false"
-                              :min-chars="1"
-                              :resolve-on-load="true"
-                              :delay="0"
-                              :searchable="true"
-                              :create-option="true"
-                              :options="(query, select$) => autocompleteOptions(row, query, select$)"
-                              @change="triggerChange"
+                              :url="autocomplete_url"
+                              :class="(error(row, 'iname')?' is-invalid':'')"
                             />
                             <div v-if="error(row, 'iname')" class="invalid-tooltip">{{error_text(row, 'iname')}}</div>
                         </td>
@@ -135,6 +128,7 @@
         },
         data: () => ({
             sample_value: 0,
+            autocomplete_url: '/Admin/Demos/(Autocomplete)?q='
         }),
         computed: {
             ...mapStores(useFwStore), //accessible via this.fwStore
@@ -190,17 +184,6 @@
             },
             triggerChange(){
               this.$el.dispatchEvent(new Event('change', { bubbles: true }));
-            },
-            //autocomplete for iname field
-            async autocompleteOptions(row, query, select$){
-              let id = 0;
-              if (query === null){
-                //initial load - return preloaded name
-                return [ row.iname??'' ];
-              }
-              const autocomplete_url = "/Admin/Demos/(Autocomplete)";
-              const lookup_model = '';
-              return await this.fwStore.autocompleteOptions(query, autocomplete_url, lookup_model, id);
             },
         }
     });
