@@ -2,9 +2,10 @@
     <div class="position-relative">
         <input ref="input"
                type="text"
+               :data-autocomplete="url"
                :placeholder="placeholder"
                class="form-control"
-               v-model="inputValue" />
+               v-model="value" />
     </div>
 </script>
 
@@ -22,12 +23,26 @@
                 type: String,
                 default: 'Start typing to select...',
             },
+            modelValue: {
+                type: String,
+                default: '',
+            },
         },
+        emits: ['update:modelValue', 'select'],
         data() {
             return {
-                inputValue: '',
                 autocompleteInstance: null,
             };
+        },
+        computed: {
+            value: {
+                get() {
+                    return this.modelValue
+                },
+                set(value) {
+                    this.$emit('update:modelValue', value)
+                }
+            }
         },
         mounted() {
             // Initialize the autocomplete instance
@@ -52,9 +67,7 @@
         methods: {
             onSelect(event) {
                 const selectedValue = event.detail.value;
-                this.inputValue = selectedValue;
-                // Emit a custom event to notify parent components
-                this.$emit('update:modelValue', selectedValue);
+                this.value = selectedValue;
                 this.$emit('select', selectedValue);
             },
         // customize if needed

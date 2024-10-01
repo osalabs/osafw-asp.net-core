@@ -526,8 +526,8 @@ let actions = {
                 }
                 rows.forEach(row => {
                     req['item-' + field + '#' + row.id] = {};
-                    Object.keys(row).forEach(col => {
-                        if (col == 'id') return; //skip id
+                    Object.keys(row).forEach(col => {                        
+                        if (col == 'id' || Array.isArray(row[col])) return; //skip id and array fields
                         req['item-' + field + '#' + row.id][col] = row[col];
                     });
                     req['item-' + field][row.id] = 1;
