@@ -1325,7 +1325,25 @@ public class Utils
         StringBuilder sb = new();
         foreach (byte one_byte in bhash)
         {
-            sb.Append(one_byte.ToString("x2").ToUpper());
+            sb.Append(one_byte.ToString("x2"));
+        }
+
+        return sb.ToString().ToLower();
+    }
+
+    // return sha256 hash (hexadecimals) for a string
+    public static string sha256(string str)
+    {
+        // convert string to bytes
+        UTF8Encoding ustr = new();
+        byte[] bstr = ustr.GetBytes(str);
+        byte[] bhash = SHA256.HashData(bstr);
+
+        // convert hash value to hex string
+        StringBuilder sb = new();
+        foreach (byte one_byte in bhash)
+        {
+            sb.Append(one_byte.ToString("x2"));
         }
 
         return sb.ToString().ToLower();
