@@ -462,12 +462,14 @@ public class Utils
         StringBuilder result = new();
         string[] chars = qw("A B C D E F a b c d e f 0 1 2 3 4 5 6 7 8 9");
 
-        Random _random = new();
-        for (int i = 1; i < size + 1; i++)
+        using (var rng = RandomNumberGenerator.Create())
         {
-#pragma warning disable SCS0005 // Weak random generator
-            result.Append(chars[_random.Next(0, chars.Length - 1)]);
-#pragma warning restore SCS0005 // Weak random generator
+            byte[] data = new byte[size];
+            rng.GetBytes(data);
+            for (int i = 0; i < size; i++)
+            {
+                result.Append(chars[data[i] % chars.Length]);
+            }
         }
 
         return result.ToString();
