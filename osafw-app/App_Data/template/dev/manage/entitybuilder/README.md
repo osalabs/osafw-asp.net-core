@@ -59,6 +59,7 @@ This format allows you to define database entities and fields in a concise and i
     - Use `NULL` to allow `NULL` values.
   - **DEFAULT(Value)**: Sets a default value.
     - Fields by default are DEFAULT('') or DEFAULT(0) or other relevant
+    - use `getdate` or `now` without parentheses for current datetime
     - Specify `DEFAULT()` to disable default values
   - **UNIQUE**: Adds a unique constraint.
   - **UI Options**: Controls how the field is rendered in the UI.
@@ -120,12 +121,13 @@ is_active bit DEFAULT(1) UI:checkbox -- Makes "is_active bit DEFAULT(1) NULL"
 customers_notes nostd
 customers.id UI:required -- Foreign key to customers, NOT NULL because of required
 idesc text -- Using idesc field for the note content
-add_time datetime2 DEFAULT(getdate())
+add_time datetime2 DEFAULT(getdate)
 add_users_id int DEFAULT 0
 
 -- Vendor entity with standard fields
 vendors
-iname UI:label(Company name) -- Override label, all other params standard
+iname remove
+iname UI:label(Company name) -- Override standard iname
 contact_name
 phone varchar(20)
 email UNIQUE
@@ -145,7 +147,7 @@ UNIQUE INDEX (iname) -- 'iname' (product name) is unique
 -- Orders entity with items junction
 orders
 customers.id UI:required -- Foreign key to customers
-order_date date DEFAULT(getdate())
+order_date date DEFAULT(now)
 total_amount decimal(10,2) DEFAULT(0.0)
 
 -- Order items entity with additional fields, no controller

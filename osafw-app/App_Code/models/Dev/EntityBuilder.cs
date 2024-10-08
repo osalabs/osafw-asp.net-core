@@ -1,6 +1,13 @@
+// Entity builder for Developers
+//
+// Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
+// (c) 2009-2024  Oleg Savchuk www.osalabs.com
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Data;
+using System.Linq;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -10,80 +17,22 @@ class DevEntityBuilder
 {
     const string FW_TABLES = "fwsessions fwentities att_categories att att_links users settings spages log_types activity_logs lookup_manager_tables user_views user_lists user_lists_items menu_items";
 
-    public static void test(FW fw)
+    public static void createDBJsonFromExistingDB(string dbname, FW fw)
     {
-        string inputText = @"
--- from TimeCard
--- another entity level comment
-Timesheets
-iname remove
-users.id UI:required,data-refresh(1) --EmployeeID
-idate date ui:required,label(Work Date),data-calendar --WorkDate
-eow date UI:required,placeholder(Enter End Of Week) --end of week
-begin_time datetime NULL --idate+time start
-end_time datetime NULL --idate+time end
-break_min int default(0) --minutes 0, 15, 30, 45 60
-salary currency
-overtime currency
-rate currency UI:placeholder(Pay Rate)
-is_draft bit default(0) ui:checkbox --draft or final
-secondary_users_id FK(users.id) NULL --secondary employee (optional)
-projects junction -- junction subtable with projects
-UNIQUE INDEX (idate, users_id)
-INDEX (begin_time)
+        var db = new DB(fw, (Hashtable)((Hashtable)fw.config("db"))[dbname], dbname);
 
--- Customer entity with standard fields
-Customers
-email UNIQUE UI:required -- Email is unique and required
-phone varchar(20) -- Defining specific field length
-address text -- Makes SQL field ""address nvarchar(MAX) NOT NULL DEFAULT ''""
-is_active bit DEFAULT(1) UI:checkbox -- Makes ""is_active bit DEFAULT(1) NULL""
+        var entities = DevEntityBuilder.dbschema2entities(db);
 
--- Notes for customers, excludes standard fields
-customers_notes nostd
-customers.id UI:required -- Foreign key to customers, NOT NULL because of required
-idesc text -- Using idesc field for the note content
-add_time datetime2 DEFAULT(getdate())
-add_users_id int DEFAULT 0
+        // save db.json
+        DevEntityBuilder.saveJsonEntity(entities, fw.config("template") + DevCodeGen.DB_JSON_PATH);
 
--- Vendor entity with standard fields
-vendors
-iname UI:label(Company name) -- Override label, all other params standard
-contact_name
-phone varchar(20)
-email UNIQUE
-address text
+        db.disconnect();
+    }
 
--- Lookup table for product categories
-categories lookup
-
--- Product entity with vendor link and category junction
-products
-vendors.id UI:required -- Foreign key to vendors
-categories junction -- Creates junction table `products_categories`
-price decimal(10,2) DEFAULT(0.0) UI:number,required,step(0.1)
-stock_quantity int DEFAULT(0)
-UNIQUE INDEX (iname) -- 'iname' (product name) is unique
-
--- Orders entity with items junction
-orders
-customers.id UI:required -- Foreign key to customers
-order_date date DEFAULT(getdate())
-total_amount decimal(10,2) DEFAULT(0.0)
-
--- Order items entity with additional fields, no controller
-orders_items noui
-iname remove -- Remove some standard fields
-idesc remove
-orders.id UI:required -- Foreign key to orders
-products.id UI:required -- Foreign key to products
-quantity int DEFAULT(1)
-price decimal(10,2) DEFAULT(0.0)
-UNIQUE INDEX (orders_id, products_id)";
-
-        var entities = ParseEntities(inputText, fw);
-        //convert to ArrayList
-        saveJsonEntity(entities, fw.config("template") + "/dev/test.json");
+    public static void createDBJsonFromText(string entities_text, FW fw)
+    {
+        var entities = ParseEntities(entities_text, fw);
+        saveJsonEntity(entities, fw.config("template") + DevCodeGen.DB_JSON_PATH);
     }
 
     private static ArrayList ParseEntities(string inputText, FW fw)
@@ -198,7 +147,7 @@ UNIQUE INDEX (orders_id, products_id)";
                 {
                     string indexName = match.Groups[1].Value == "UNIQUE INDEX" ? "UX" : "IX";
                     string indexFields = match.Groups[2].Value;
-                    indexes[indexName + "_" + (indexes.Count + 1)] = indexFields;
+                    indexes[indexName + (indexes.Count + 1)] = indexFields;
                     continue;
                 }
 
@@ -222,7 +171,7 @@ UNIQUE INDEX (orders_id, products_id)";
                     if (field.TryGetValue("unique", out object uvalue))
                     {
                         if ((bool)uvalue)
-                            indexes["UX_" + (indexes.Count + 1)] = field["name"].ToString();
+                            indexes["UX" + (indexes.Count + 1)] = field["name"].ToString();
                         field.Remove("unique");
                     }
 
@@ -233,7 +182,7 @@ UNIQUE INDEX (orders_id, products_id)";
                         field.Remove("foreign_key");
                         //also for each foreign key add index (unless it's already added as unique)
                         if (!indexes.ContainsValue(field["name"].ToString()))
-                            indexes["IX_" + (indexes.Count + 1)] = field["name"].ToString();
+                            indexes["IX" + (indexes.Count + 1)] = field["name"].ToString();
                     }
 
                 }
@@ -273,7 +222,7 @@ UNIQUE INDEX (orders_id, products_id)";
     {
         fields.AddRange(
             [
-                CreateField("add_time", "Added on", "datetime", "datetime2", null, false, defaultValue: "getdate()"),
+                CreateField("add_time", "Added on", "datetime", "datetime2", null, false, defaultValue: "GETDATE()"),
                 CreateField("add_users_id", "Added by", "int", "int", null, true)
             ]);
     }
@@ -351,7 +300,7 @@ UNIQUE INDEX (orders_id, products_id)";
         junction["indexes"] = new Dictionary<string, string>
         {
             ["PK"] = $"{field_name1}, {field_name2}",
-            ["UX_1"] = $"{field_name2}, {field_name1}" //have an index with reversed fields order
+            ["UX1"] = $"{field_name2}, {field_name1}" //have an index with reversed fields order
         };
 
         return junction;
@@ -465,7 +414,11 @@ UNIQUE INDEX (orders_id, products_id)";
         var defaultMatch = Regex.Match(line, @"DEFAULT\((.*?)\)", RegexOptions.IgnoreCase);
         if (defaultMatch.Success)
         {
-            field["default"] = defaultMatch.Groups[1].Value.Length > 0 ? defaultMatch.Groups[1].Value : null;
+            //remove anything from open bracket, if any (can happen if user type "getdate()" or "now()")
+            var defaultVal = defaultMatch.Groups[1].Value;
+            defaultVal = Regex.Replace(defaultVal, @"\(.+", "");
+
+            field["default"] = defaultVal.Length > 0 ? defaultVal : null;
         }
 
         // basiscally only left to check is data type
@@ -496,7 +449,7 @@ UNIQUE INDEX (orders_id, products_id)";
         if (token.Contains('('))
             token = token[..token.IndexOf('(')];
 
-        return Utils.qh("varchar int smallint decimal datetime date bit text currency").ContainsKey(token.ToLower());
+        return Utils.qh("varchar int smallint tinyint decimal date datetime datetime2 bit text currency").ContainsKey(token.ToLower());
     }
 
     // parse data type and length:
@@ -588,6 +541,7 @@ UNIQUE INDEX (orders_id, products_id)";
                     field["is_nullable"] = 1;
                 break;
             case "datetime":
+            case "datetime2":
                 field["fw_type"] = "datetime";
                 field["fw_subtype"] = "datetime2";
                 // Dates are nullable by default if not specified
@@ -628,21 +582,16 @@ UNIQUE INDEX (orders_id, products_id)";
         return result;
     }
 
-    private static string GetDefaultValueForType(string fwType)
+    private static object GetDefaultValueForType(string fwType)
     {
-        switch (fwType)
+        return fwType switch
         {
-            case "varchar":
-                return "";
-            case "int":
-                return "0";
-            case "float":
-                return "0.0";
-            case "datetime":
-                return null;
-            default:
-                return null;
-        }
+            "varchar" => "",
+            "int" => 0,
+            "float" => 0,
+            "datetime" => null,
+            _ => null,
+        };
     }
 
     private static Dictionary<string, object> CreateField(
@@ -732,4 +681,186 @@ UNIQUE INDEX (orders_id, products_id)";
         FW.setFileContent(filename, ref json_str);
     }
 
+
+    // ****************************** PRIVATE HELPERS (move to Dev model?)
+
+    public static ArrayList dbschema2entities(DB db)
+    {
+        ArrayList result = [];
+        // Access System tables:
+        // MSysAccessStorage
+        // MSysAccessXML
+        // MSysACEs
+        // MSysComplexColumns
+        // MSysNameMap
+        // MSysNavPaneGroupCategories
+        // MSysNavPaneGroups
+        // MSysNavPaneGroupToObjects
+        // MSysNavPaneObjectIDs
+        // MSysObjects
+        // MSysQueries
+        // MSysRelationships
+        // MSysResources
+        var tables = db.tables();
+        foreach (string tblname in tables)
+        {
+            if (tblname.StartsWith("MSys", StringComparison.Ordinal))
+                continue;
+
+            // get table schema
+            var tblschema = db.loadTableSchemaFull(tblname);
+            // logger(tblschema)
+
+            Hashtable table_entity = new()
+            {
+                ["db_config"] = db.db_name,
+                ["table"] = tblname,
+                ["fw_name"] = Utils.name2fw(tblname), // new table name using fw standards
+                ["iname"] = Utils.name2human(tblname), // human table name
+                ["fields"] = tableschema2fields(tblschema),
+                ["foreign_keys"] = db.listForeignKeys(tblname)
+            };
+
+            table_entity["model_name"] = tablenameToModel((string)table_entity["fw_name"]); // potential Model Name
+            table_entity["controller_url"] = "/Admin/" + table_entity["model_name"]; // potential Controller URL/Name/Title
+            table_entity["controller_title"] = Utils.name2human((string)table_entity["model_name"]);
+
+            // set is_fw flag - if it's fw compatible (contains id,iname,status,add_time,add_users_id)
+            var fields = Utils.array2hashtable((ArrayList)table_entity["fields"], "name");
+            // AndAlso fields.Contains("iname")
+            table_entity["is_fw"] = fields.Contains("id") && fields.Contains("status") && fields.Contains("add_time") && fields.Contains("add_users_id");
+            result.Add(table_entity);
+        }
+
+        return result;
+    }
+
+    public static ArrayList tableschema2fields(ArrayList schema)
+    {
+        ArrayList result = new(schema);
+
+        foreach (Hashtable fldschema in schema)
+        {
+            fldschema["fw_name"] = Utils.name2fw((string)fldschema["name"]);
+            fldschema["iname"] = Utils.name2human((string)fldschema["name"]);
+        }
+        // result("xxxx") = "yyyy"
+        // attrs used to build UI
+        // name => iname
+        // default
+        // maxlen
+        // is_nullable
+        // type
+        // fw_type
+        // is_identity
+
+        return result;
+    }
+
+    public static List<string> listModels()
+    {
+        var baseType = typeof(FwModel);
+        var assembly = baseType.Assembly;
+        return (from t in assembly.GetTypes()
+                where t.IsSubclassOf(baseType)
+                orderby t.Name
+                select t.Name).ToList();
+    }
+
+    public static List<string> listControllers()
+    {
+        var baseType = typeof(FwController);
+        var assembly = baseType.Assembly;
+        return (from t in assembly.GetTypes()
+                where t.IsSubclassOf(baseType)
+                orderby t.Name
+                select t.Name).ToList();
+    }
+
+
+    private static ArrayList addressFields(string field_name)
+    {
+        var m = Regex.Match(field_name, "(.*?)(Address)$", RegexOptions.IgnoreCase);
+        string prefix = m.Groups[1].Value;
+        var city_name = prefix + "city";
+        var state_name = prefix + "state";
+        var zip_name = prefix + "zip";
+        //var country_name = prefix + "country";
+        if (m.Groups[2].Value == "Address")
+        {
+            city_name = prefix + "City";
+            state_name = prefix + "State";
+            zip_name = prefix + "Zip";
+            //country_name = prefix + "Country";
+        }
+
+        return
+        [
+            new Hashtable()
+            {
+                {"name",field_name},
+                {"fw_name",Utils.name2fw(field_name)},
+                {"iname",Utils.name2human(field_name)},
+                {"is_identity",0},
+                {"default",""},
+                {"maxlen",255},
+                {"numeric_precision",null},
+                {"is_nullable",0},
+                {"fw_type","varchar"},
+                {"fw_subtype","nvarchar"}
+            },
+            new Hashtable()
+            {
+                {"name",field_name + "2"},
+                {"fw_name",Utils.name2fw(field_name + "2")},
+                {"iname",Utils.name2human(field_name + "2")},
+                {"is_identity",0},
+                {"default",""},
+                {"maxlen",255},
+                {"numeric_precision",null},
+                {"is_nullable",0},
+                {"fw_type","varchar"},
+                {"fw_subtype","nvarchar"}
+            },
+            new Hashtable()
+            {
+                {"name",city_name},
+                {"fw_name",Utils.name2fw(city_name)},
+                {"iname",Utils.name2human(city_name)},
+                {"is_identity",0},
+                {"default",""},
+                {"maxlen",64},
+                {"numeric_precision",null},
+                {"is_nullable",0},
+                {"fw_type","varchar"},
+                {"fw_subtype","nvarchar"}
+            },
+            new Hashtable()
+            {
+                {"name",state_name},
+                {"fw_name",Utils.name2fw(state_name)},
+                {"iname",Utils.name2human(state_name)},
+                {"is_identity",0},
+                {"default",""},
+                {"maxlen",2},
+                {"numeric_precision",null},
+                {"is_nullable",0},
+                {"fw_type","varchar"},
+                {"fw_subtype","nvarchar"}
+            },
+            new Hashtable()
+            {
+                {"name",zip_name},
+                {"fw_name",Utils.name2fw(zip_name)},
+                {"iname",Utils.name2human(zip_name)},
+                {"is_identity",0},
+                {"default",""},
+                {"maxlen",11},
+                {"numeric_precision",null},
+                {"is_nullable",0},
+                {"fw_type","varchar"},
+                {"fw_subtype","nvarchar"}
+            }
+        ];
+    }
 }
