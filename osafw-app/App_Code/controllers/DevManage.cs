@@ -9,7 +9,6 @@ using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 
 namespace osafw;
@@ -21,7 +20,6 @@ public class DevManageController : FwController
     const string DB_SQL_PATH = "/App_Data/sql/database.sql"; // relative to site_root
     const string DB_JSON_PATH = "/dev/db.json";
     const string ENTITIES_PATH = "/dev/entities.txt";
-    const string FW_TABLES = "fwsessions fwentities att_categories att att_links users settings spages log_types activity_logs lookup_manager_tables user_views user_lists user_lists_items menu_items";
 
     public override void init(FW fw)
     {
@@ -244,7 +242,7 @@ public class DevManageController : FwController
         var controller_type = Utils.toStr(item["controller_type"]).Trim(); // empty("dynamic") or "vue"
 
         var config_file = fw.config("template") + DB_JSON_PATH;
-        var entities = loadJson<ArrayList>(config_file);
+        var entities = DevEntityBuilder.loadJson<ArrayList>(config_file);
 
         // emulate entity
         var entity = new Hashtable()
@@ -279,7 +277,7 @@ public class DevManageController : FwController
         var tpl_to = cInstance.base_url.ToLower();
         var tpl_path = fw.config("template") + tpl_to;
         var config_file = tpl_path + "/config.json";
-        var config = loadJson<Hashtable>(config_file);
+        var config = DevEntityBuilder.loadJson<Hashtable>(config_file);
 
         // extract ShowAction
         config["is_dynamic_show"] = false;
@@ -316,7 +314,7 @@ public class DevManageController : FwController
         // config.Remove("show_fields")
         // config.Remove("showform_fields")
 
-        saveJson(config, config_file);
+        DevEntityBuilder.saveJsonController(config, config_file);
 
         fw.flash("success", "Controller " + controller_name + " extracted dynamic show/showfrom to static templates");
         fw.redirect(base_url);
@@ -339,7 +337,7 @@ public class DevManageController : FwController
         var entities = dbschema2entities(db);
 
         // save db.json
-        saveJson(entities, fw.config("template") + DB_JSON_PATH);
+        DevEntityBuilder.saveJsonEntity(entities, fw.config("template") + DB_JSON_PATH);
 
         db.disconnect();
         fw.flash("success", "template" + DB_JSON_PATH + " created");
@@ -443,7 +441,7 @@ public class DevManageController : FwController
         Hashtable ps = [];
 
         var config_file = fw.config("template") + DB_JSON_PATH;
-        var entities = loadJson<ArrayList>(config_file);
+        var entities = DevEntityBuilder.loadJson<ArrayList>(config_file);
 
         ps["tables"] = entities;
 
@@ -480,7 +478,7 @@ public class DevManageController : FwController
 
         // tables
         var config_file = fw.config("template") + DB_JSON_PATH;
-        var entities = loadJson<ArrayList>(config_file);
+        var entities = DevEntityBuilder.loadJson<ArrayList>(config_file);
 
         var models = _models();
         var controllers = _controllers();
@@ -503,7 +501,7 @@ public class DevManageController : FwController
         var item = reqh("item");
 
         var config_file = fw.config("template") + DB_JSON_PATH;
-        var entities = loadJson<ArrayList>(config_file);
+        var entities = DevEntityBuilder.loadJson<ArrayList>(config_file);
 
         // go thru entities and:
         // update checked rows for any user input (like model name changed)
@@ -556,7 +554,7 @@ public class DevManageController : FwController
 
         // save db.json if there are any changes
         if (is_updated)
-            saveJson(entities, config_file);
+            DevEntityBuilder.saveJsonEntity(entities, config_file);
 
         fw.flash("success", "App build successfull");
         fw.redirect(base_url + "/(AppCreator)?reload=1");
@@ -564,28 +562,6 @@ public class DevManageController : FwController
 
 
     // ****************************** PRIVATE HELPERS (move to Dev model?)
-
-    // load json
-    private static T loadJson<T>(string filename) where T : new()
-    {
-        T result;
-        result = (T)Utils.jsonDecode(FW.getFileContent(filename));
-        if (result == null)
-            result = new T();
-        return result;
-    }
-
-    private static void saveJson(object data, string filename)
-    {
-        string json_str;
-        //use custom converter to output keys in specific order
-        JsonSerializerOptions options = new();
-        options.WriteIndented = true;
-        options.Converters.Add(new ConfigJsonConverter());
-        json_str = JsonSerializer.Serialize(data, data.GetType(), options);
-
-        FW.setFileContent(filename, ref json_str);
-    }
 
     private static ArrayList dbschema2entities(DB db)
     {
@@ -624,7 +600,7 @@ public class DevManageController : FwController
                 ["foreign_keys"] = db.listForeignKeys(tblname)
             };
 
-            table_entity["model_name"] = _tablename2model((string)table_entity["fw_name"]); // potential Model Name
+            table_entity["model_name"] = DevEntityBuilder.tablenameToModel((string)table_entity["fw_name"]); // potential Model Name
             table_entity["controller_url"] = "/Admin/" + table_entity["model_name"]; // potential Controller URL/Name/Title
             table_entity["controller_title"] = Utils.name2human((string)table_entity["model_name"]);
 
@@ -719,17 +695,6 @@ public class DevManageController : FwController
         FW.setFileContent(filepath, ref content);
     }
 
-    // demo_dicts => DemoDicts
-    // TODO actually go thru models and find model with table_name
-    private static string _tablename2model(string table_name)
-    {
-        string result = "";
-        string[] pieces = table_name.Split('_');
-        foreach (string piece in pieces)
-            result += Utils.capitalize(piece);
-        return result;
-    }
-
     private static void _makeValueTags(ArrayList fields)
     {
         foreach (Hashtable def in fields)
@@ -820,12 +785,12 @@ public class DevManageController : FwController
                 table_entity["db_config"] = ""; // main
                 table_entity["iname"] = Utils.name2human(table_name);
                 table_entity["table"] = Utils.name2fw(table_name);
-                if (isFwTableName((string)table_entity["table"]))
+                if (DevEntityBuilder.isFwTableName((string)table_entity["table"]))
                     throw new UserException("Cannot have table name " + table_entity["table"]);
 
                 table_entity["fw_name"] = Utils.name2fw(table_name); // new table name using fw standards
 
-                table_entity["model_name"] = _tablename2model((string)table_entity["fw_name"]); // potential Model Name
+                table_entity["model_name"] = DevEntityBuilder.tablenameToModel((string)table_entity["fw_name"]); // potential Model Name
 
 
                 if (Regex.IsMatch(line, @"\bnoui\b"))
@@ -1034,7 +999,7 @@ public class DevManageController : FwController
                             {"UX", field_name2+", "+field_name1}, //have an index with reversed fields order
                         };
 
-                        junction_entity["model_name"] = _tablename2model((string)junction_entity["fw_name"]); // potential Model Name
+                        junction_entity["model_name"] = DevEntityBuilder.tablenameToModel((string)junction_entity["fw_name"]); // potential Model Name
                         junction_entity["controller_url"] = ""; // no ui for link tables
                         junction_entity["controller_title"] = ""; // no ui for link tables
                         if (comments.Length > 0) junction_entity["comments"] = comments;
@@ -1176,7 +1141,7 @@ public class DevManageController : FwController
             ((ArrayList)table_entity["fields"]).AddRange(defaultFieldsAfter());
 
         // save db.json
-        saveJson(entities, fw.config("template") + DB_JSON_PATH);
+        DevEntityBuilder.saveJsonEntity(entities, fw.config("template") + DB_JSON_PATH);
     }
 
     private void createDBJsonFromExistingDB(string dbname)
@@ -1186,7 +1151,7 @@ public class DevManageController : FwController
         var entities = dbschema2entities(db);
 
         // save db.json
-        saveJson(entities, fw.config("template") + DB_JSON_PATH);
+        DevEntityBuilder.saveJsonEntity(entities, fw.config("template") + DB_JSON_PATH);
 
         db.disconnect();
     }
@@ -1194,7 +1159,7 @@ public class DevManageController : FwController
     private void createDBFromDBJson()
     {
         var config_file = fw.config("template") + DB_JSON_PATH;
-        var entities = loadJson<ArrayList>(config_file);
+        var entities = DevEntityBuilder.loadJson<ArrayList>(config_file);
 
         // drop all FKs we created before, so we'll be able to drop tables later
         DBList fks = db.arrayp("SELECT fk.name, o.name as table_name FROM sys.foreign_keys fk, sys.objects o where fk.is_system_named=0 and o.object_id=fk.parent_object_id", DB.h());
@@ -1222,7 +1187,7 @@ public class DevManageController : FwController
     private void createDBSQLFromDBJson()
     {
         var config_file = fw.config("template") + DB_JSON_PATH;
-        var entities = loadJson<ArrayList>(config_file);
+        var entities = DevEntityBuilder.loadJson<ArrayList>(config_file);
 
         var database_sql = "";
         foreach (Hashtable entity in entities)
@@ -1243,7 +1208,7 @@ public class DevManageController : FwController
     private void createModelsAndControllersFromDBJson()
     {
         var config_file = fw.config("template") + DB_JSON_PATH;
-        var entities = loadJson<ArrayList>(config_file);
+        var entities = DevEntityBuilder.loadJson<ArrayList>(config_file);
 
         foreach (Hashtable entity in entities)
         {
@@ -1288,12 +1253,12 @@ public class DevManageController : FwController
             {
                 if (field_main_id == "")
                 {
-                    model_main = _tablename2model(Utils.name2fw((string)fk["pk_table"]));
+                    model_main = DevEntityBuilder.tablenameToModel(Utils.name2fw((string)fk["pk_table"]));
                     field_main_id = (string)fk["column"];
                 }
                 else
                 {
-                    model_linked = _tablename2model(Utils.name2fw((string)fk["pk_table"]));
+                    model_linked = DevEntityBuilder.tablenameToModel(Utils.name2fw((string)fk["pk_table"]));
                     field_linked_id = (string)fk["column"];
                 }
 
@@ -1555,12 +1520,12 @@ public class DevManageController : FwController
         // field NOT NULL and no default - required
         // field has foreign key - add that table as dropdown
         var config_file = tpl_to + "/config.json";
-        var config = loadJson<Hashtable>(config_file);
+        var config = DevEntityBuilder.loadJson<Hashtable>(config_file);
 
         updateControllerConfig(entity, config, entities);
 
         // Utils.jsonEncode(config) - can't use as it produces unformatted json string
-        saveJson(config, config_file);
+        DevEntityBuilder.saveJsonController(config, config_file);
     }
 
     public void updateControllerConfig(Hashtable entity, Hashtable config, ArrayList entities)
@@ -1722,7 +1687,7 @@ public class DevManageController : FwController
                     if ((string)fkinfo["column"] == fld_name)
                     {
                         is_fk = true;
-                        var mname = _tablename2model(Utils.name2fw((string)fkinfo["pk_table"]));
+                        var mname = DevEntityBuilder.tablenameToModel(Utils.name2fw((string)fkinfo["pk_table"]));
 
                         sf["lookup_model"] = mname;
                         // sf["lookup_field"] = "iname"
@@ -1947,7 +1912,7 @@ public class DevManageController : FwController
                         { "field", table_name_linked + "_link" },
                         { "label", Utils.name2human(table_name_linked) },
                         { "type", "multi" },
-                        //{ "lookup_model", _tablename2model(table_name_linked) },
+                        //{ "lookup_model", DevEntityBuilder.tablenameToModel(table_name_linked) },
                         //{ "table_link", table_name_link },
                         //{ "table_link_id_name", table_name + "_id" },
                         //{ "table_link_linked_id_name", table_name_linked + "_id" }
@@ -1955,14 +1920,14 @@ public class DevManageController : FwController
                     if (is_junction)
                         sflink["model"] = junction_model;
                     else
-                        sflink["lookup_model"] = _tablename2model(table_name_linked);
+                        sflink["lookup_model"] = DevEntityBuilder.tablenameToModel(table_name_linked);
 
                     Hashtable sfflink = new()
                     {
                         { "field", table_name_linked + "_link" },
                         { "label", Utils.name2human(table_name_linked) },
                         { "type", "multicb" },
-                        //{ "lookup_model", _tablename2model(table_name_linked) },
+                        //{ "lookup_model", DevEntityBuilder.tablenameToModel(table_name_linked) },
                         //{ "table_link", table_name_link },
                         //{ "table_link_id_name", table_name + "_id" },
                         //{ "table_link_linked_id_name", table_name_linked + "_id" }
@@ -1970,7 +1935,7 @@ public class DevManageController : FwController
                     if (is_junction)
                         sfflink["model"] = junction_model;
                     else
-                        sfflink["lookup_model"] = _tablename2model(table_name_linked);
+                        sfflink["lookup_model"] = DevEntityBuilder.tablenameToModel(table_name_linked);
 
                     showFieldsLeft.Add(sflink);
                     showFormFieldsLeft.Add(sfflink);
@@ -2605,46 +2570,9 @@ public class DevManageController : FwController
             db.insert("menu_items", fields);
     }
 
-    private static bool isFwTableName(string table_name)
+    public void TestAction()
     {
-        var tables = Utils.qh(FW_TABLES);
-        return tables.ContainsKey(table_name.ToLower());
-    }
-}
-
-public class ConfigJsonConverter : System.Text.Json.Serialization.JsonConverter<Hashtable>
-{
-    readonly string ordered_keys = "model is_dynamic_index list_view list_sortdef search_fields related_field_name view_list_defaults view_list_map view_list_custom is_dynamic_index_edit list_edit edit_list_defaults edit_list_map is_dynamic_show show_fields is_dynamic_showform showform_fields form_new_defaults required_fields save_fields save_fields_checkboxes save_fields_nullable field type lookup_model label class class_control class_label class_contents required validate maxlength min max lookup_tpl is_option_empty option0_title table fields foreign_keys is_fw name iname fw_name fw_type fw_subtype maxlen is_nullable is_identity numeric_precision default db_config model_name controller_title controller_url controller_is_lookup";
-    public override Hashtable Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-    {
-        throw new NotImplementedException();
+        DevEntityBuilder.test(fw);
     }
 
-    public override void Write(Utf8JsonWriter writer, Hashtable value, JsonSerializerOptions options)
-    {
-        writer.WriteStartObject();
-
-        Hashtable hwritten = [];
-        //write specific keys first
-        foreach (var key in Utils.qw(ordered_keys))
-        {
-            if (value.ContainsKey(key))
-            {
-                writer.WritePropertyName(key);
-                JsonSerializer.Serialize(writer, value[key], options);
-                hwritten[key] = true;
-            }
-        }
-
-        //then write rest of keys
-        foreach (string key in value.Keys)
-        {
-            if (hwritten.ContainsKey(key))
-                continue;
-            writer.WritePropertyName(key);
-            JsonSerializer.Serialize(writer, value[key], options);
-        }
-
-        writer.WriteEndObject();
-    }
 }
