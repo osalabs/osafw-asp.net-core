@@ -499,7 +499,6 @@ UNIQUE INDEX (orders_id, products_id)";
         return Utils.qh("varchar int smallint decimal datetime date bit text currency").ContainsKey(token.ToLower());
     }
 
-
     // parse data type and length:
     // text => varchar(MAX)
     // varchar(255) => fw_type=varchar, maxlen=255
@@ -606,40 +605,27 @@ UNIQUE INDEX (orders_id, products_id)";
     // option,option(some other value),option,...
     private static Dictionary<string, object> ParseUiOptions(string uiOptions)
     {
-        var uiDict = new Dictionary<string, object>();
+        var result = new Dictionary<string, object>();
         var options = uiOptions.Split(',');
 
         foreach (var option in options)
         {
-            if (option.Equals("required", StringComparison.OrdinalIgnoreCase))
+            var parts = option.Split(['(', ')'], StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 1)
             {
-                uiDict["required"] = true;
+                result[parts[0].Trim()] = true;
             }
-            else if (option.StartsWith("label(", StringComparison.OrdinalIgnoreCase))
+            else if (parts.Length == 2)
             {
-                var label = option.Substring(6, option.Length - 7);
-                uiDict["label"] = label;
-            }
-            else if (option.StartsWith("placeholder(", StringComparison.OrdinalIgnoreCase))
-            {
-                var placeholder = option.Substring(12, option.Length - 13);
-                uiDict["placeholder"] = placeholder;
-            }
-            else if (option.StartsWith("data-", StringComparison.OrdinalIgnoreCase))
-            {
-                var dataAttr = option.Split(new[] { '(', ')' }, StringSplitOptions.RemoveEmptyEntries);
-                if (dataAttr.Length == 2)
-                {
-                    uiDict[dataAttr[0]] = dataAttr[1];
-                }
+                result[parts[0].Trim()] = parts[1].Trim();
             }
             else
             {
-                // Handle other UI options as needed
+                throw new Exception($"Invalid UI option syntax: {option} in options line \"{uiOptions}\"");
             }
         }
 
-        return uiDict;
+        return result;
     }
 
     private static string GetDefaultValueForType(string fwType)
