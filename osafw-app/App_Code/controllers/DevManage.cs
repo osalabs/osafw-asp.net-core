@@ -576,6 +576,10 @@ public class DevManageController : FwController
                     is_updated = true;
                     controller_options["type"] = Utils.toStr(item[key + "cotype"]);
                 }
+                if (!controller_options.ContainsKey("rwtpl") || Utils.toStr(controller_options["rwtpl"]) != (Utils.toStr(item[key + "corwtpl"])))
+                {
+                    controller_options["rwtpl"] = Utils.toStr(item[key + "corwtpl"]).Length > 0;
+                }
 
                 entity["controller"] = controller_options;
 

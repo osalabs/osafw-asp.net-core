@@ -580,6 +580,11 @@ class DevCodeGen
         // copy templates from /admin/demosdynamic to /controller/url
         var tpl_from = fw.config("template") + controller_from_url.ToLower();
         var tpl_to = fw.config("template") + controller_url.ToLower();
+        if (Utils.toBool(controller_options["rwtpl"]) && Directory.Exists(tpl_to))
+        {
+            //remove directory if exists
+            Directory.Delete(tpl_to, true);
+        }
         Utils.CopyDirectory(tpl_from, tpl_to, true);
 
         // replace in templates: DemoDynamic to Title
@@ -723,7 +728,7 @@ class DevCodeGen
 
             Hashtable sf = [];  // show fields
             Hashtable sff = []; // showform fields
-            var is_skip = false;
+
             sf["field"] = fld_name;
             sf["label"] = fld["iname"];
             sf["type"] = "plaintext";
@@ -856,98 +861,9 @@ class DevCodeGen
                 sff.Remove("required");
             }
 
-            // special fields
-            switch (fld_name)
-            {
-                case "iname":
-                    {
-                        sff["validate"] = "exists"; // unique field
-                        break;
-                    }
 
-                case "att_id": // Single attachment field - TODO better detect on foreign key to "att" table
-                    {
-                        sf["type"] = "att";
-                        sf["label"] = "Attachment";
-                        //sf["class_contents"] = "col-md-4";
-                        sff.Remove("lookup_model");
-
-                        sff["type"] = "att_edit";
-                        sff["label"] = "Attachment";
-                        //sff["class_contents"] = "col-md-4";
-                        sff["att_category"] = "general";
-                        sff.Remove("class_contents");
-                        sff.Remove("lookup_model");
-                        sff.Remove("is_option0");
-                        break;
-                    }
-
-                case "status":
-                    {
-                        sf["label"] = "Status";
-                        sf["lookup_tpl"] = "/common/sel/status.sel";
-
-                        sff["label"] = "Status";
-                        sff["type"] = "select";
-                        sff["lookup_tpl"] = "/common/sel/status.sel";
-                        sff["class_contents"] = "col-md-4";
-                        sff.Remove("min");//remove min/max because status detected above as numeric field
-                        sff.Remove("max");
-                        break;
-                    }
-
-                case "add_time":
-                    {
-                        sf["label"] = "Added on";
-                        sf["type"] = "added";
-
-                        sff["label"] = "Added on";
-                        sff["type"] = "added";
-                        sff.Remove("class_contents");
-                        break;
-                    }
-
-                case "upd_time":
-                    {
-                        sf["label"] = "Updated on";
-                        sf["type"] = "updated";
-
-                        sff["label"] = "Updated on";
-                        sff["type"] = "updated";
-                        sff.Remove("class_contents");
-                        break;
-                    }
-
-                case "add_users_id":
-                case "upd_users_id":
-                    {
-                        is_skip = true;
-                        break;
-                    }
-
-                default:
-                    {
-                        if (Regex.IsMatch((string)fld["iname"], @"\bState$"))
-                        {
-                            // if human name ends with State - make it State select
-                            sf["lookup_tpl"] = "/common/sel/state.sel";
-
-                            sff["type"] = "select";
-                            sff["lookup_tpl"] = "/common/sel/state.sel";
-                            sff["is_option_empty"] = true;
-                            sff["option0_title"] = "- select -";
-                            sff["class_contents"] = "col-md-4";
-                        }
-                        else
-                        {
-                        }
-
-                        break;
-                    }
-            }
-
-            if (is_skip)
-                continue;
+            if (overrideSpecialFields(fld, sf, sff))
+                continue; //skip field
 
             overrideUIOptions(fld, sf, sff); // override ui options (if any)
 
@@ -1215,6 +1131,104 @@ class DevCodeGen
         }
     }
 
+    //return true if skip this field
+    public static bool overrideSpecialFields(Hashtable fld, Hashtable sf, Hashtable sff)
+    {
+        var is_skip = false;
+        var field_name = Utils.toStr(fld["name"]);
+        // special fields
+        switch (field_name)
+        {
+            case "iname":
+                {
+                    sff["validate"] = "exists"; // unique field
+                    break;
+                }
+
+            case "att_id": // Single attachment field - TODO better detect on foreign key to "att" table
+                {
+                    sf["type"] = "att";
+                    sf["label"] = "Attachment";
+                    //sf["class_contents"] = "col-md-4";
+                    sff.Remove("lookup_model");
+
+                    sff["type"] = "att_edit";
+                    sff["label"] = "Attachment";
+                    //sff["class_contents"] = "col-md-4";
+                    sff["att_category"] = "general";
+                    sff.Remove("class_contents");
+                    sff.Remove("lookup_model");
+                    sff.Remove("is_option0");
+                    break;
+                }
+
+            case "status":
+                {
+                    sf["label"] = "Status";
+                    sf["lookup_tpl"] = "/common/sel/status.sel";
+
+                    sff["label"] = "Status";
+                    sff["type"] = "select";
+                    sff["lookup_tpl"] = "/common/sel/status.sel";
+                    sff["class_contents"] = "col-md-4";
+                    sff.Remove("min");//remove min/max because status detected above as numeric field
+                    sff.Remove("max");
+                    break;
+                }
+
+            case "add_time":
+                {
+                    sf["label"] = "Added on";
+                    sf["type"] = "added";
+
+                    sff["label"] = "Added on";
+                    sff["type"] = "added";
+                    sff.Remove("class_contents");
+                    break;
+                }
+
+            case "upd_time":
+                {
+                    sf["label"] = "Updated on";
+                    sf["type"] = "updated";
+
+                    sff["label"] = "Updated on";
+                    sff["type"] = "updated";
+                    sff.Remove("class_contents");
+                    break;
+                }
+
+            case "add_users_id":
+            case "upd_users_id":
+                {
+                    is_skip = true;
+                    break;
+                }
+
+            default:
+                {
+                    if (Regex.IsMatch((string)fld["iname"], @"\bState$"))
+                    {
+                        // if human name ends with State - make it State select
+                        sf["lookup_tpl"] = "/common/sel/state.sel";
+
+                        sff["type"] = "select";
+                        sff["lookup_tpl"] = "/common/sel/state.sel";
+                        sff["is_option_empty"] = true;
+                        sff["option0_title"] = "- select -";
+                        sff["class_contents"] = "col-md-4";
+                    }
+                    else
+                    {
+                    }
+
+                    break;
+                }
+        }
+
+        return is_skip;
+    }
+
     public static void overrideUIOptions(Hashtable fld, Hashtable sf, Hashtable sff)
     {
         var ui = (Hashtable)fld["ui"] ?? []; // ui options for the field
@@ -1225,7 +1239,7 @@ class DevCodeGen
 
         //input types
         if (ui.ContainsKey("checkbox"))
-            sff["type"] = "checkbox";
+            sff["type"] = "cb";
         if (ui.ContainsKey("number"))
             sff["type"] = "number";
         if (ui.ContainsKey("password"))

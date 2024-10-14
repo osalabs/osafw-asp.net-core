@@ -127,6 +127,7 @@ email UNIQUE UI:required -- Email is unique and required
 phone varchar(20) -- Defining specific field length
 address text -- Makes SQL field "address nvarchar(MAX) NOT NULL DEFAULT ''"
 is_active bit DEFAULT(1) UI:checkbox -- Makes "is_active bit DEFAULT(1) NULL"
+lead_users_id FK(users.id) NULL
 
 -- Notes for customers, excludes standard fields
 customers_notes nostd
