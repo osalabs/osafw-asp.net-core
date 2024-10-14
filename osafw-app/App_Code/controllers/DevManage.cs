@@ -494,12 +494,22 @@ public class DevManageController : FwController
             entity["controller"] = controller_options;
         }
 
+        var f = reqh("f");
+        var sortby = Utils.toStr(f["sort"]);
+        if (sortby == "table" || sortby == "model_name")
+        {
+            //sort entities ArrayList of Hashtables with linq
+            entities = new ArrayList(entities.Cast<Hashtable>().OrderBy(x => x[sortby]).ToList());
+        }
+
         ps["entities"] = entities;
         return ps;
     }
 
     public void AppCreatorSaveAction()
     {
+        var f = reqh("f");
+        var search = Utils.toStr(f["s"]);
         var item = reqh("item");
 
         var config_file = fw.config("template") + DevCodeGen.DB_JSON_PATH;
@@ -507,10 +517,17 @@ public class DevManageController : FwController
 
         // go thru entities and:
         // update checked rows for any user input (like model name changed)
+        var models_ctr = 0;
+        var controllers_ctr = 0;
         var is_updated = false;
         var CodeGen = DevCodeGen.init(fw);
         foreach (Hashtable entity in entities)
         {
+            if (search.Length > 0
+                && !Utils.toStr(entity["table"]).Contains(search)
+                && !Utils.toStr(entity["model_name"]).Contains(search))
+                continue; // skip not matching rows if search is set
+
             var key = entity["fw_name"] + "#";
             if (item.ContainsKey(key + "is_model"))
             {
@@ -521,6 +538,7 @@ public class DevManageController : FwController
                     entity["model_name"] = item[key + "model_name"];
                 }
                 CodeGen.createModel(entity);
+                models_ctr++;
             }
 
             if (item.ContainsKey(key + "is_controller"))
@@ -562,6 +580,7 @@ public class DevManageController : FwController
                 entity["controller"] = controller_options;
 
                 CodeGen.createController(entity, entities);
+                controllers_ctr++;
             }
         }
 
@@ -569,7 +588,7 @@ public class DevManageController : FwController
         if (is_updated)
             DevEntityBuilder.saveJsonEntity(entities, config_file);
 
-        fw.flash("success", "App build successfull");
+        fw.flash("success", $"App build successfull. Models created: {models_ctr}, Controllers created: {controllers_ctr}");
         fw.redirect(base_url + "/(AppCreator)?reload=1");
     }
 }
