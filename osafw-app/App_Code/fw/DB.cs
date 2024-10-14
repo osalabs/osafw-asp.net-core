@@ -909,18 +909,23 @@ public class DB : IDisposable
         return sb.ToString();
     }
 
-    // quote identifier (only if name contains non-alphanumeric symbols)
-    // (SQL Server)
-    //   table => [table] 
-    //   schema.table => [schema].[table]
-    // (MySQL)
-    //   table => `table` 
-    //   schema.table => `schema`.`table`
-    public string qid(string str)
+    /// <summary>
+    /// quote identifier (only if name contains non-alphanumeric symbols)
+    /// (SQL Server)
+    ///   table => [table]
+    ///   schema.table => [schema].[table]
+    /// (MySQL)
+    ///  table => `table` 
+    ///  schema.table => `schema`.`table`
+    /// </summary>
+    /// <param name="str"></param>
+    /// <param name="is_force">if false - quoting won't be applied if there are only alphanumeric chars</param>
+    /// <returns></returns>
+    public string qid(string str, bool is_force = true)
     {
         str ??= "";
-        //check if quoting required
-        if (!Regex.IsMatch(str, @"\W"))
+        //if not forced - check if quoting required
+        if (!is_force && !Regex.IsMatch(str, @"\W"))
             return str;
 
         if (dbtype == DBTYPE_MYSQL)
