@@ -166,7 +166,7 @@ class DevCodeGen
                 //build FK name as FK_TABLE_FIELDWITHOUTID
                 var fk_name = (string)fk["column"];
                 fk_name = Regex.Replace(fk_name, "_id$", "", RegexOptions.IgnoreCase);
-                result = " CONSTRAINT FK_" + entity["fw_name"] + "_" + Utils.name2fw(fk_name) + " FOREIGN KEY REFERENCES " + db.qid((string)fk["pk_table"]) + "(" + db.qid((string)fk["pk_column"]) + ")";
+                result = " CONSTRAINT FK_" + entity["fw_name"] + "_" + Utils.name2fw(fk_name) + " FOREIGN KEY REFERENCES " + db.qid((string)fk["pk_table"], false) + "(" + db.qid((string)fk["pk_column"], false) + ")";
                 break;
             }
         }
@@ -179,7 +179,7 @@ class DevCodeGen
     private string entity2SQL(Hashtable entity)
     {
         var table_name = (string)entity["table"];
-        var result = "CREATE TABLE " + db.qid(table_name) + " (" + Environment.NewLine;
+        var result = "CREATE TABLE " + db.qid(table_name, false) + " (" + Environment.NewLine;
 
         var i = 1;
         var fields = (ArrayList)entity["fields"];
@@ -190,7 +190,7 @@ class DevCodeGen
             if (field_name == "status")
                 fsql += Environment.NewLine; // add empty line before system fields starting with "status"
 
-            fsql += "  " + db.qid(field_name).PadRight(21, ' ') + " " + entityFieldToSQLType(field);
+            fsql += "  " + db.qid(field_name, false).PadRight(21, ' ') + " " + entityFieldToSQLType(field);
             if (Utils.toInt(field["is_identity"]) == 1)
                 fsql += " IDENTITY(1, 1) PRIMARY KEY CLUSTERED";
             fsql += Utils.toInt(field["is_nullable"]) == 0 ? " NOT NULL" : "";
@@ -257,7 +257,7 @@ class DevCodeGen
                         where fk.is_system_named=0 
                           and o.object_id=fk.parent_object_id", DB.h());
         foreach (var fk in fks)
-            db.exec("ALTER TABLE " + db.qid((string)fk["table_name"]) + " DROP CONSTRAINT " + db.qid((string)fk["name"]));
+            db.exec("ALTER TABLE " + db.qid(fk["table_name"], false) + " DROP CONSTRAINT " + db.qid(fk["name"], false));
 
         foreach (Hashtable entity in entities)
         {
@@ -266,7 +266,7 @@ class DevCodeGen
 
             try
             {
-                db.exec("DROP TABLE IF EXISTS " + db.qid((string)entity["table"]));
+                db.exec("DROP TABLE IF EXISTS " + db.qid((string)entity["table"], false));
             }
             catch (Exception ex)
             {
@@ -290,7 +290,7 @@ class DevCodeGen
             // add drop
             if (entity.ContainsKey("comments"))
                 database_sql += "-- " + entity["comments"] + Environment.NewLine;
-            database_sql += "DROP TABLE IF EXISTS " + db.qid((string)entity["table"]) + ";" + Environment.NewLine;
+            database_sql += "DROP TABLE IF EXISTS " + db.qid((string)entity["table"], false) + ";" + Environment.NewLine;
             database_sql += sql + ";" + Environment.NewLine + Environment.NewLine;
         }
 
@@ -1071,18 +1071,18 @@ class DevCodeGen
                 if (Utils.toInt(field["is_nullable"]) == 1)
                 {
                     //if FK field can be NULL - use LEFT OUTER JOIN
-                    sql_join = $"LEFT OUTER JOIN {db.qid(pk_table)} {alias} ON ({alias}.{pk_column}=t.{tcolumn})";
+                    sql_join = $"LEFT OUTER JOIN {db.qid(pk_table, false)} {alias} ON ({alias}.{pk_column}=t.{tcolumn})";
                 }
                 else
                 {
-                    sql_join = $"INNER JOIN {db.qid(pk_table)} {alias} ON ({alias}.{pk_column}=t.{tcolumn})";
+                    sql_join = $"INNER JOIN {db.qid(pk_table, false)} {alias} ON ({alias}.{pk_column}=t.{tcolumn})";
                 }
                 fk_joins.Add(sql_join);
-                fk_inames.Add($"{alias}.iname as " + db.qid(tcolumn + "_iname")); //TODO detect non-iname for non-fw tables?
+                fk_inames.Add($"{alias}.iname as " + db.qid(tcolumn + "_iname", false)); //TODO detect non-iname for non-fw tables?
             }
             var inames = string.Join(", ", fk_inames.Cast<string>().ToArray());
             var joins = string.Join(" ", fk_joins.Cast<string>().ToArray());
-            config["list_view"] = $"(SELECT t.*, {inames} FROM {db.qid(table_name)} t {joins}) tt";
+            config["list_view"] = $"(SELECT t.*, {inames} FROM {db.qid(table_name, false)} t {joins}) tt";
         }
         else
         {
