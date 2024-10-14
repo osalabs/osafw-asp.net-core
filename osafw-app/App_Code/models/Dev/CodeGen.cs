@@ -949,6 +949,9 @@ class DevCodeGen
             if (is_skip)
                 continue;
 
+            overrideUIOptions(fld, sf, sff); // override ui options (if any)
+
+            // layout
             var is_sys = false;
             if (Utils.toStr(fld["is_identity"]) == "1" || sys_fields.Contains(fld_name))
             {
@@ -1209,6 +1212,70 @@ class DevCodeGen
         {
             if (key.StartsWith('#'))
                 config.Remove(key);
+        }
+    }
+
+    public static void overrideUIOptions(Hashtable fld, Hashtable sf, Hashtable sff)
+    {
+        var ui = (Hashtable)fld["ui"] ?? []; // ui options for the field
+
+        // override ui options
+        if (ui.ContainsKey("required"))
+            sff["required"] = Utils.toBool(ui["required"]);
+
+        //input types
+        if (ui.ContainsKey("checkbox"))
+            sff["type"] = "checkbox";
+        if (ui.ContainsKey("number"))
+            sff["type"] = "number";
+        if (ui.ContainsKey("password"))
+            sff["type"] = "password";
+
+        //direct attributes for show form
+        foreach (string attr in "validate maxlength rows placeholder step min max".Split())
+        {
+            if (ui.ContainsKey(attr))
+                sff[attr] = ui[attr];
+        }
+
+        //control attributes
+        foreach (string attr in "pattern multiple".Split())
+        {
+            if (ui.ContainsKey(attr))
+                sff["attrs_control"] = sff["attrs_control"] ?? "" + " " + attr + "=\"" + ui[attr] + "\"";
+        }
+        //data-* attributes
+        foreach (string ui_key in ui.Keys)
+        {
+            if (ui_key.StartsWith("data-"))
+                sff["attrs_control"] = sff["attrs_control"] ?? "" + " " + ui_key + "=\"" + ui[ui_key] + "\"";
+        }
+
+        //label and class overrides for both form and show form
+        foreach (string attr in "label class class_label class_contents class_control".Split())
+        {
+            if (ui.ContainsKey(attr))
+            {
+                //if value is explicitly "false" string - set to falss (used to disable row class)
+                //otherwise - set to value
+                var v = Utils.toStr(ui[attr]) == "false" ? false : ui[attr];
+                sf[attr] = v;
+                sff[attr] = v;
+            }
+        }
+
+        // options(value1|Display1 value2|Display2)
+        // options(/common/sel/status.sel)
+        // options(status.sel) -- relative to controller template folder
+        if (ui.ContainsKey("options"))
+        {
+            var options = Utils.toStr(ui["options"]);
+            if (options.Contains('|'))
+                // if contains | - it's a list of options
+                sff["options"] = Utils.qh(options);
+            else
+                // otherwise - it's a template
+                sff["lookup_tpl"] = options;
         }
     }
 

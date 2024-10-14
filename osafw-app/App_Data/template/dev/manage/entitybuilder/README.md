@@ -31,6 +31,9 @@ This format allows you to define database entities and fields in a concise and i
   EntityName [parameters]
   [field definition]
   [field definition]
+  ...
+  [index definition]
+  ...
   ```
 
 - **Parameters**:
@@ -56,7 +59,7 @@ This format allows you to define database entities and fields in a concise and i
     - `currency` type converted to `DECIMAL(18,2)`
   - **NULL/NOT NULL**:
     - Fields are `NOT NULL` by default (except dates)
-    - Use `NULL` to allow `NULL` values.
+    - Use `NULL` to allow `NULL` values. In this case DEFAULT not applied (unless explicitly specified)
   - **DEFAULT(Value)**: Sets a default value.
     - Fields by default are DEFAULT('') or DEFAULT(0) or other relevant
     - use `getdate` or `now` without parentheses for current datetime
@@ -74,12 +77,20 @@ This format allows you to define database entities and fields in a concise and i
     - `label(text)`: Overrides the default label.
     - `placeholder(text)`: Adds placeholder text.
     - `step(value)`: Sets increment step for numeric inputs.
+    - `pattern(value)`: input pattern
+    - `multiple`: for select tag
+    - `rows(x)`: for textarea tag
+    - `step(x)`: for number inputs
+    - `min(x)`: for number inputs
+    - `max(x)`: for number inputs
+    - `validate(exists isemail)`: for backend validation
+    - `class`, `class_label`, `class_contents`, `class_control`: for different input classes
     - `data-attribute(value)`: Adds custom data attributes.
       - Example: `UI:data-category(special)`
   - **Options with Values**:
-    - Use `|` delimiters: `options(value1|Display1,value2|Display2)`
-      - Example: `UI:select,options(0|Active,1|Inactive)`
-    - Link to a template file: `options(/common/sel/status.sel)`
+    - Use `|` delimiters: `options(value1|Display1 value2|Display2)`
+      - Example: `UI:select,options(0|Active 1|Inactive)`
+    - Link to a template file: `options(/common/sel/status.sel)` or `options(status.sel)` for relative path to controller base template folder
 
 - **Foreign Keys**:
   - **Simplest Form**: `RelatedEntity.id [NULL|NOT NULL]`
