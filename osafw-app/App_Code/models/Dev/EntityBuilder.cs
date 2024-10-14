@@ -98,7 +98,7 @@ class DevEntityBuilder
                 entity["controller"] = new Dictionary<string, object>
                 {
                     ["title"] = Utils.name2human(entityName),
-                    ["url"] = $"/Admin/{entityName}",
+                    ["url"] = $"/Admin/" + entity["model_name"],
                     ["is_dynamic_show"] = true,
                     ["is_dynamic_showform"] = true
                 };
@@ -711,6 +711,7 @@ class DevEntityBuilder
             var tblschema = db.loadTableSchemaFull(tblname);
             // logger(tblschema)
 
+            Hashtable controller_options = [];
             Hashtable table_entity = new()
             {
                 ["db_config"] = db.db_name,
@@ -718,12 +719,13 @@ class DevEntityBuilder
                 ["fw_name"] = Utils.name2fw(tblname), // new table name using fw standards
                 ["iname"] = Utils.name2human(tblname), // human table name
                 ["fields"] = tableschema2fields(tblschema),
-                ["foreign_keys"] = db.listForeignKeys(tblname)
+                ["foreign_keys"] = db.listForeignKeys(tblname),
+                ["controller_options"] = controller_options,
             };
 
             table_entity["model_name"] = tablenameToModel((string)table_entity["fw_name"]); // potential Model Name
-            table_entity["controller_url"] = "/Admin/" + table_entity["model_name"]; // potential Controller URL/Name/Title
-            table_entity["controller_title"] = Utils.name2human((string)table_entity["model_name"]);
+            controller_options["url"] = "/Admin/" + table_entity["model_name"]; // potential Controller URL/Name/Title
+            controller_options["title"] = Utils.name2human((string)table_entity["model_name"]);
 
             // set is_fw flag - if it's fw compatible (contains id,iname,status,add_time,add_users_id)
             var fields = Utils.array2hashtable((ArrayList)table_entity["fields"], "name");

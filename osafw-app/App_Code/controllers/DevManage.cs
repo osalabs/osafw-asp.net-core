@@ -242,18 +242,22 @@ public class DevManageController : FwController
         var entity = new Hashtable()
         {
             {"model_name",model_name},
-            {"controller_url",controller_url},
-            {"controller_title",controller_title},
-            {"controller_type",controller_type},
+            {"controller", new Hashtable {
+                    {"url",controller_url},
+                    {"title",controller_title},
+                    {"type",controller_type},
+                }
+            },
             {"table",fw.model(model_name).table_name}
         };
         // table = Utils.name2fw(model_name) - this is not always ok
 
         DevCodeGen.init(fw).createController(entity, entities);
-        var controller_name = Utils.toStr(entity["controller_url"]).Replace("/", "");
+        controller_url = Utils.toStr(((Hashtable)entity["controller"])["url"]);
+        var controller_name = controller_url.Replace("/", "");
 
         fw.flash("controller_created", controller_name);
-        fw.flash("controller_url", entity["controller_url"]);
+        fw.flash("controller_url", controller_url);
         fw.redirect(base_url);
     }
 
@@ -480,11 +484,14 @@ public class DevManageController : FwController
 
         foreach (Hashtable entity in entities)
         {
-            var controller_url = Utils.toStr(entity["controller_url"]);
+            var controller_options = (Hashtable)entity["controller"] ?? [];
+            var controller_url = Utils.toStr(controller_options["url"]);
             entity["is_model_exists"] = models.Contains(entity["model_name"]);
-            entity["controller_name"] = Utils.toStr(controller_url).Replace("/", "");
+            controller_options["name"] = Utils.toStr(controller_url).Replace("/", "");
             //create controller only if not exists already and url not empty
-            entity["is_controller_create"] = !controllers.Contains(entity["controller_name"] + "Controller") && !string.IsNullOrEmpty(controller_url);
+            entity["is_controller_create"] = !controllers.Contains(controller_options["name"] + "Controller") && !string.IsNullOrEmpty(controller_url);
+
+            entity["controller"] = controller_options;
         }
 
         ps["entities"] = entities;
@@ -518,32 +525,42 @@ public class DevManageController : FwController
 
             if (item.ContainsKey(key + "is_controller"))
             {
+                var controller_options = (Hashtable)entity["controller"] ?? [];
+
                 // create controller (model must exists)
-                if (Utils.toStr(item[key + "controller_name"]).Length > 0 && entity["controller_name"] != item[key + "controller_name"])
+                if (Utils.toStr(item[key + "controller_name"]).Length > 0 && Utils.toStr(controller_options["name"]) != Utils.toStr(item[key + "controller_name"]))
                 {
                     is_updated = true;
-                    entity["controller_name"] = item[key + "controller_name"];
+                    controller_options["name"] = item[key + "controller_name"];
                 }
-                if (Utils.toStr(item[key + "controller_title"]).Length > 0 && entity["controller_title"] != item[key + "controller_title"])
+                if (Utils.toStr(item[key + "controller_title"]).Length > 0 && Utils.toStr(controller_options["title"]) != Utils.toStr(item[key + "controller_title"]))
                 {
                     is_updated = true;
-                    entity["controller_title"] = item[key + "controller_title"];
+                    controller_options["title"] = item[key + "controller_title"];
                 }
-                if (!entity.ContainsKey("controller_is_dynamic_show") || Utils.toBool(entity["controller_is_dynamic_show"]) != (Utils.toStr(item[key + "coview"]).Length > 0))
+                if (!controller_options.ContainsKey("is_dynamic_show") || Utils.toBool(controller_options["is_dynamic_show"]) != (Utils.toStr(item[key + "coview"]).Length > 0))
                 {
                     is_updated = true;
-                    entity["controller_is_dynamic_show"] = Utils.toStr(item[key + "coview"]).Length > 0;
+                    controller_options["is_dynamic_show"] = Utils.toStr(item[key + "coview"]).Length > 0;
                 }
-                if (!entity.ContainsKey("controller_is_dynamic_showform") || Utils.toBool(entity["controller_is_dynamic_showform"]) != (Utils.toStr(item[key + "coedit"]).Length > 0))
+                if (!controller_options.ContainsKey("is_dynamic_showform") || Utils.toBool(controller_options["is_dynamic_showform"]) != (Utils.toStr(item[key + "coedit"]).Length > 0))
                 {
                     is_updated = true;
-                    entity["controller_is_dynamic_showform"] = Utils.toStr(item[key + "coedit"]).Length > 0;
+                    controller_options["is_dynamic_showform"] = Utils.toStr(item[key + "coedit"]).Length > 0;
                 }
-                if (!entity.ContainsKey("controller_is_lookup") || Utils.toBool(entity["controller_is_lookup"]) != (Utils.toStr(item[key + "colookup"]).Length > 0))
+                if (!controller_options.ContainsKey("is_lookup") || Utils.toBool(controller_options["is_lookup"]) != (Utils.toStr(item[key + "colookup"]).Length > 0))
                 {
                     is_updated = true;
-                    entity["controller_is_lookup"] = Utils.toStr(item[key + "colookup"]).Length > 0;
+                    controller_options["is_lookup"] = Utils.toStr(item[key + "colookup"]).Length > 0;
                 }
+                if (!controller_options.ContainsKey("type") || Utils.toStr(controller_options["type"]) != (Utils.toStr(item[key + "cotype"])))
+                {
+                    is_updated = true;
+                    controller_options["type"] = Utils.toStr(item[key + "cotype"]);
+                }
+
+                entity["controller"] = controller_options;
+
                 CodeGen.createController(entity, entities);
             }
         }

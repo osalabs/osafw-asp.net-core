@@ -519,9 +519,9 @@ class DevCodeGen
     public void createController(Hashtable entity, ArrayList entities)
     {
         string model_name = (string)entity["model_name"];
-        string controller_url = (string)entity["controller_url"];
-        string controller_title = (string)entity["controller_title"];
-        string controller_type = (string)entity["controller_type"];
+        var controller_options = (Hashtable)entity["controller"] ?? [];
+        string controller_url = (string)controller_options["url"];
+        string controller_title = (string)controller_options["title"];
 
         if (controller_url == "")
         {
@@ -540,10 +540,10 @@ class DevCodeGen
         // If _controllers().Contains(controller_name & "Controller") Then Throw New ApplicationException("Such controller already exists")
 
         // save back to entity as it can be used by caller
-        entity["controller_url"] = controller_url;
-        entity["controller_title"] = controller_title;
+        controller_options["url"] = controller_url;
+        controller_options["title"] = controller_title;
 
-        if (Utils.toBool(entity["controller_is_lookup"]))
+        if (Utils.toBool(controller_options["is_lookup"]))
         {
             // if requested controller as a lookup table - just add/update lookup tables, no actual controller creation
             this.createLookup(entity);
@@ -554,12 +554,14 @@ class DevCodeGen
         var controller_from_class = "AdminDemosDynamic";
         var controller_from_url = "/Admin/DemosDynamic";
         var controller_from_title = "Demo Dynamic";
-        if (controller_type == "vue")
+        if (Utils.toStr(controller_options["type"]) == "vue")
         {
             controller_from_class = "AdminDemosVue";
             controller_from_url = "/Admin/DemosVue";
             controller_from_title = "Demo Vue";
         };
+
+        entity["controller"] = controller_options; //write back
 
         // copy DemoDicts.cs to model_name.cs
         var path = fw.config("site_root") + @"\App_Code\controllers";
@@ -621,8 +623,9 @@ class DevCodeGen
     {
         string model_name = (string)entity["model_name"];
         string table_name = (string)entity["table"];
-        string controller_type = (string)entity["controller_type"];
-        fw.logger($"updating config for controller({controller_type})=", entity["controller_url"]);
+        var controller_options = (Hashtable)entity["controller"] ?? [];
+        string controller_type = (string)controller_options["type"];
+        fw.logger($"updating config for controller({controller_type})=", controller_options["url"]);
 
         var sys_fields = Utils.qh(SYS_FIELDS);
 
@@ -1168,7 +1171,7 @@ class DevCodeGen
             config["edit_list_map"] = hFieldsMapEdit;
         }
 
-        config["is_dynamic_show"] = entity.ContainsKey("controller_is_dynamic_show") ? entity["controller_is_dynamic_show"] : true;
+        config["is_dynamic_show"] = controller_options.ContainsKey("is_dynamic_show") ? controller_options["is_dynamic_show"] : true;
         if ((bool)config["is_dynamic_show"])
         {
             var showFields = new ArrayList
@@ -1184,7 +1187,7 @@ class DevCodeGen
             showFields.Add(Utils.qh("type|row_end"));
             config["show_fields"] = showFields;
         }
-        config["is_dynamic_showform"] = entity.ContainsKey("controller_is_dynamic_showform") ? entity["controller_is_dynamic_showform"] : true;
+        config["is_dynamic_showform"] = controller_options.ContainsKey("is_dynamic_showform") ? controller_options["is_dynamic_showform"] : true;
         if ((bool)config["is_dynamic_showform"])
         {
             var showFormFields = new ArrayList

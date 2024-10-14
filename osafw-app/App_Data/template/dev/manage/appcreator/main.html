@@ -49,11 +49,11 @@
                 <label class="form-check-label" for="<~fw_name>#cbcontroller">&nbsp;</label>
               </div>
             </div>
-            <input name="item[<~fw_name>#controller_name]" maxlength="255" value="" type="text" class="form-control" placeholder="<~controller_url>">
+            <input name="item[<~fw_name>#controller_name]" maxlength="255" value="" type="text" class="form-control" placeholder="<~controller[url]>">
           </div>
         </div>
         <div class="col">
-          <input name="item[<~fw_name>#controller_title]" maxlength="255" value="" type="text" class="form-control" placeholder="<~controller_title>">
+          <input name="item[<~fw_name>#controller_title]" maxlength="255" value="" type="text" class="form-control" placeholder="<~controller[title]>">
         </div>
         <div class="col">
           <div class="form-check form-check-inline">
@@ -67,6 +67,10 @@
           <div class="form-check form-check-inline cb-lookup">
             <input type="checkbox" class="form-check-input" id="<~fw_name>#cbcolookup" name="item[<~fw_name>#colookup]" <~/common/checked if="controller_is_lookup">>
             <label class="form-check-label" for="<~fw_name>#cbcolookup">Lookup</label>
+          </div>
+          <div class="form-check form-check-inline">
+            <input type="checkbox" class="form-check-input" id="<~fw_name>#cbcotype" name="item[<~fw_name>#cotype]" value="vue" <~/common/checked ifeq="controller_type" value="vue">>
+            <label class="form-check-label" for="<~fw_name>#cbcotype">Vue</label>
           </div>
         </div>
       </div>

@@ -12,7 +12,7 @@ using System.Text.Json;
 
 namespace osafw;
 
-public class ConfigJsonConverter : System.Text.Json.Serialization.JsonConverter<object>
+public class ConfigJsonConverter : System.Text.Json.Serialization.JsonConverter<Hashtable>
 {
     public readonly List<string> ordered_keys_entity = [
         "iname",
@@ -135,28 +135,30 @@ public class ConfigJsonConverter : System.Text.Json.Serialization.JsonConverter<
         throw new NotImplementedException();
     }
 
-    public override void Write(Utf8JsonWriter writer, object value, JsonSerializerOptions options)
+    public override void Write(Utf8JsonWriter writer, Hashtable value, JsonSerializerOptions options)
     {
-        if (value is IDictionary<string, object> hashtable)
-        {
-            WriteDictionary(writer, hashtable, options);
-        }
-        else if (value is IList arrayList)
-        {
-            writer.WriteStartArray();
-            foreach (var item in arrayList)
-            {
-                JsonSerializer.Serialize(writer, item, options);
-            }
-            writer.WriteEndArray();
-        }
-        else
-        {
-            // pass-through to standard serialization of other types
-            JsonSerializer.Serialize(writer, value);
-        }
+        WriteDictionary(writer, value, options);
+
+        //if (value is IDictionary hashtable)
+        //{
+        //    WriteDictionary(writer, hashtable, options);
+        //}
+        //else if (value is IList arrayList)
+        //{
+        //    writer.WriteStartArray();
+        //    foreach (var item in arrayList)
+        //    {
+        //        JsonSerializer.Serialize(writer, item, options);
+        //    }
+        //    writer.WriteEndArray();
+        //}
+        //else
+        //{
+        //    // pass-through to standard serialization of other types
+        //    JsonSerializer.Serialize(writer, value);
+        //}
     }
-    public void WriteDictionary(Utf8JsonWriter writer, IDictionary<string, object> value, JsonSerializerOptions options)
+    public void WriteDictionary(Utf8JsonWriter writer, IDictionary value, JsonSerializerOptions options)
     {
         writer.WriteStartObject();
 
@@ -166,7 +168,7 @@ public class ConfigJsonConverter : System.Text.Json.Serialization.JsonConverter<
         //write specific keys first
         foreach (var key in ordered_keys)
         {
-            if (value.ContainsKey(key))
+            if (value.Contains(key))
             {
                 writer.WritePropertyName(key);
                 JsonSerializer.Serialize(writer, value[key], options);
