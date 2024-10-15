@@ -15,7 +15,7 @@ CREATE TABLE resources (
   upd_time              DATETIME2,
   upd_users_id          INT DEFAULT 0,
 
-  UNIQUE INDEX UX_resources_icode ON resources(icode)
+  INDEX UX_resources_icode UNIQUE (icode)
 );
 GO
 
@@ -36,7 +36,7 @@ CREATE TABLE permissions (
   upd_time              DATETIME2,
   upd_users_id          INT DEFAULT 0,
 
-  UNIQUE INDEX UX_permissions_icode ON permissions(icode),
+  INDEX UX_permissions_icode UNIQUE (icode),
   INDEX IX_permissions_resources_id (resources_id)
 );
 GO
@@ -56,7 +56,7 @@ CREATE TABLE roles (
   upd_time              DATETIME2,
   upd_users_id          INT DEFAULT 0,
   
-  UNIQUE INDEX UX_roles_iname ON roles(iname)
+  INDEX UX_roles_iname UNIQUE (iname)
 );
 GO
 
