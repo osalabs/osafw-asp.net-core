@@ -102,7 +102,7 @@ window.fw={
             "=WORD to search for equals word<br>"+
             "!=WORD to search for NOT equals word<br>"+
             "&lt;=N, &lt;N, &gt;=N, &gt;N - compare numbers",
-            {header: 'Search hints', autohide: false});
+            {header: 'Search hints', html: true, autohide: false});
       }
     };
     $(document).on('click', '.on-toggle-search', on_toggle_search);
