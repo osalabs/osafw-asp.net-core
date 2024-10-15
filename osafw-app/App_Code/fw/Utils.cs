@@ -1478,6 +1478,16 @@ public class Utils
         return str;
     }
 
+    // convert array of hashtables to hashtable of hashtables using key
+    // example for key="id": [ {id:1, name:"one"}, {id:2, name:"two"} ] => { 1: {id:1, name:"one"}, 2: {id:2, name:"two"} }
+    public static Hashtable array2hashtable(IList arr, string key)
+    {
+        Hashtable result = [];
+        foreach (Hashtable item in arr)
+            result[item[key]] = item;
+        return result;
+    }
+
     // sel_ids - comma-separated ids
     // value:
     //      nothing - use id value from input
