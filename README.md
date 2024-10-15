@@ -32,13 +32,20 @@ http://demo.engineeredit.com/ - this is how it looks in action right after insta
 All the details can be found in MS docs https://docs.microsoft.com/en-us/aspnet/core/host-and-deploy/iis/?view=aspnetcore-6.0
 Short summary how to deploy without VS publish (from clone git repo):
 1. on the server - install IIS and .NET Core Hosting Bundle
-2. install latest .NET 6 SDK to have `dotnet` CLI
+2. install latest .NET 8 SDK to have `dotnet` CLI
 4. create website directory
   - make `git clone` from repo to website directory
   - make `dotnet publish configuration Release` in the direcotry
 5. create website in IIS with root directory to `/bin/Release/net6/publish`
 6. set website's app pool to "No managed code" (so pool works like a proxy to app core)
 7. open your website address in browser
+8. create database and apply sql files in order:
+  - fwdatabase.sql - core fw tables
+  - database.sql - your app specific tables
+  - lookups.sql - fill lookup tables
+  - views.sql - (re-)create views
+  - roles.sql (optional, only if RBAC used)
+  - demo.sql (optional, demo tables)
 
 ### Directory structure
 ```
