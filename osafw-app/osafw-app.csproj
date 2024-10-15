@@ -23,13 +23,13 @@
     <PackageReference Include="System.Drawing.Common" Version="8.0.8" />
   </ItemGroup>
 
+  <!-- no need to publish App_Data -->
   <ItemGroup>
-    <Folder Include="App_Data\" />
-    <Content Remove="App_Data\**" CopyToPublishDirectory="Never"/>
+    <Content Remove="App_Data\**" />
+    <None Include="App_Data\**" />
   </ItemGroup>
-
   <ItemGroup>
-    <None Include="..\.editorconfig" Link=".editorconfig" />
+    <None Include="..\.editorconfig" Link=".editorconfig" />    
   </ItemGroup>
 
 </Project>
