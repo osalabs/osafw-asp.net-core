@@ -324,7 +324,7 @@ public class FwReports
                 var sheetsOrder = ps.ContainsKey("xls_sheets_order") ? (ArrayList)ps["xls_sheets_order"] : null;
                 var filepath = exportToExcel(xls_sheets, sheetsOrder);
 
-                fw.fileResponse(filepath, report_code + ".xls", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "attachment");
+                fw.fileResponse(filepath, report_code + ".xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "attachment");
                 break;
             case "csv":
                 {
