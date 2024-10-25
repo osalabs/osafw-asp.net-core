@@ -1,0 +1,7 @@
+<~if_auth_microsoft if="auth_microsoft_enabled" inline>
+  <a class="btn btn-lg btn-outline-primary w-100 d-flex align-items-center justify-content-center mt-2"
+     href="/mvc/extauth/login?provider=Microsoft&redirect_uri=<~auth_microsoft_redirect_uri>">
+    <~/common/icons/windows>
+    <span class="ps-2">Log in with Microsoft</span>
+  </a>
+</~if_auth_microsoft>

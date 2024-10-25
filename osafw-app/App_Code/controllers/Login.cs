@@ -29,6 +29,8 @@ public class LoginController : FwController
         if (fw.isLogged)
             fw.redirect((string)fw.config("LOGGED_DEFAULT_URL"));
 
+        LoginHelper.PrepareExtLoginParameters(fw, ps);
+
         Hashtable item = reqh("item");
         if (isGet())
             // set defaults here

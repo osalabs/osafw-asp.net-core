@@ -72,7 +72,7 @@ public class FwRoute
     public ArrayList @params;
 }
 
-public class FW : IDisposable
+public class FW : IFW, IDisposable
 {
     //controller standard actions
     public const string ACTION_SUFFIX = "Action";

@@ -35,5 +35,12 @@
       </~btn_signup>
     </p>
 
+    <~if_external_logins if="auth_external_logins" inline>
+    <p class="pt-3 border-top">
+      <~/common/login/google_login>
+      <~/common/login/microsoft_login>
+    </p>
+    </~if_external_logins>
+
   </fieldset>
 </form>

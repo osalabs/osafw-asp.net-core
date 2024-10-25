@@ -1,0 +1,7 @@
+<~if_auth_google if="auth_google_enabled" inline>
+  <a class="btn btn-lg btn-outline-danger w-100 d-flex align-items-center justify-content-center"
+     href="/mvc/extauth/login?provider=Google&redirect_uri=<~auth_google_redirect_uri>">
+    <~/common/icons/google>
+    <span class="ps-2">Log in with Google</span>
+  </a>
+</~if_auth_google>

@@ -3,10 +3,13 @@
 using Pomelo.Extensions.Caching.MySql;
 #endif
 
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,6 +17,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Net.Http.Headers;
 using System;
 using System.Collections;
+using System.Security.Claims;
+using System.Threading.Tasks;
 
 namespace osafw;
 
@@ -116,6 +121,67 @@ public class Startup
         // services.AddAuthentication(Microsoft.AspNetCore.Authentication.Negotiate.NegotiateDefaults.AuthenticationScheme).AddNegotiate();
 
         services.AddMemoryCache();
+        services.AddHttpContextAccessor();
+
+        services.AddTransient<IFW, FW>(s =>
+        {
+            var httpContextAccessor = s.GetRequiredService<IHttpContextAccessor>();
+            var configuration = s.GetRequiredService<IConfiguration>();
+
+            return new FW(httpContextAccessor.HttpContext, configuration);
+        });
+
+        var authBuilder = services.AddAuthentication(x =>
+        {
+            x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        })
+        .AddCookie();
+
+        // External auth configuration.
+
+        var enable_external_login = false;
+
+        var googleConfigSectionName = $"appSettings:{Constants.ExtLogin.GoogleSettingsKey}";
+        var google_settings = new ExtAuthSettings();
+        Configuration.GetSection(googleConfigSectionName).Bind(google_settings);
+
+        if (google_settings.Enabled)
+        {
+            enable_external_login = true;
+
+            authBuilder.AddGoogle(options =>
+            {
+                options.ClientId = google_settings.ClientId;
+                options.ClientSecret = google_settings.ClientSecret;
+                options.SignInScheme = IdentityConstants.ExternalScheme;
+                options.Events.OnTicketReceived = AuthOnTicketReceived;
+            });
+        }
+
+        var microsoftConfigSectionName = $"appSettings:{Constants.ExtLogin.MicrosoftSettingsKey}";
+        var microsoft_settings = new ExtAuthSettings();
+        Configuration.GetSection(microsoftConfigSectionName).Bind(microsoft_settings);
+
+        if (microsoft_settings.Enabled)
+        {
+            enable_external_login = true;
+
+            authBuilder.AddMicrosoftAccount(options =>
+            {
+                options.ClientId = microsoft_settings.ClientId;
+                options.ClientSecret = microsoft_settings.ClientSecret;
+                options.SignInScheme = IdentityConstants.ExternalScheme;
+                options.Events.OnTicketReceived = AuthOnTicketReceived;
+            });
+        }
+
+        if (enable_external_login)
+        {
+            authBuilder.AddCookie(IdentityConstants.ExternalScheme);
+        }
+
+        services.AddControllers();
     }
 
     // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -153,8 +219,8 @@ public class Startup
         {
             CheckConsentNeeded = _ => false,
             HttpOnly = Microsoft.AspNetCore.CookiePolicy.HttpOnlyPolicy.Always,
-            MinimumSameSitePolicy = Microsoft.AspNetCore.Http.SameSiteMode.Strict, // with Strict setting, external links to app won't keep session
-            //MinimumSameSitePolicy = Microsoft.AspNetCore.Http.SameSiteMode.Lax, // Lax - external links to app will keep session
+            // MinimumSameSitePolicy = Microsoft.AspNetCore.Http.SameSiteMode.Strict, // with Strict setting, external links to app won't keep session
+            MinimumSameSitePolicy = Microsoft.AspNetCore.Http.SameSiteMode.Lax, // Lax - external links to app will keep session
             Secure = CookieSecurePolicy.SameAsRequest,
             OnAppendCookie = (context) =>
             {
@@ -164,6 +230,18 @@ public class Startup
             {
             }
         });
+
+        app.Map("/mvc", builder =>
+        {
+            app.UseRouting();
+
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapControllers();
+            });
+        });
+
+        app.UseAuthentication();
 
         // security headers
         app.Use(async (context, next) =>
@@ -179,9 +257,32 @@ public class Startup
 
         // Create branch to the MyHandlerMiddleware.
         // All requests will follow this branch.
-        app.MapWhen(context => context.Request != null, appBranch =>
+        app.MapWhen(
+            context => context.Request != null
+                && context.Request.Path.Value?.Contains("mvc/", StringComparison.InvariantCultureIgnoreCase) != true,
+            appBranch =>
+            {
+                appBranch.UseMyHandler();
+            });
+    }
+
+    private Task AuthOnTicketReceived(TicketReceivedContext context)
+    {
+        if (context.Principal.Identity.IsAuthenticated)
         {
-            appBranch.UseMyHandler();
-        });
+            var serviceProvider = context.HttpContext.RequestServices;
+            using var fw = serviceProvider.GetService<IFW>();
+
+            var user = fw.model<Users>().oneByEmail(context.Principal.FindFirstValue(ClaimTypes.Email));
+
+            if (user.Count > 0 && Utils.f2int(user["status"]) == Users.STATUS_ACTIVE)
+            {
+                fw.model<Users>().doLogin(Utils.f2int(user["id"]));
+            }
+
+            context.Success();
+        }
+
+        return Task.CompletedTask;
     }
 }
