@@ -29,6 +29,9 @@ public class HomeController : FwController
         }
         ps["hide_sidebar"] = true;
         // ps["_layout"] = fw.config("PAGE_LAYOUT_PUBLIC") 'alternatively override layout just for this action
+
+        LoginHelper.PrepareExtLoginParameters(fw, ps);
+
         return ps;
     }
 
