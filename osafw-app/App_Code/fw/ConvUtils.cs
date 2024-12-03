@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Text.RegularExpressions;
 
 // see also http://stackoverflow.com/questions/1331926/calling-wkhtmltopdf-to-generate-pdf-from-html/1698839#1698839
@@ -236,4 +238,42 @@ public class ConvUtils
         html_data = html_data.Replace(((char)(174)).ToString(), "<sup><small>R</small></sup>");
         return html_data;
     }
+
+    /// <summary>
+    /// To make this worh generic class should gave get and set for every property that expected to be converted.
+    /// 
+    /// Example:
+    /// class MyClass
+    /// {
+    ///    public int id { get; set; }
+    ///    public string name { get; set; }
+    /// }
+    /// Hashtable ht = new Hashtable() { { "id", 1 }, { "name", "John" } };
+    /// MyClass myClass = new MyClass();
+    /// myClass = ConvUtils.HashtableToClass<MyClass>(ht);
+    /// 
+    /// </summary>
+    /// <typeparam name="T">Class that hastable be converted to </typeparam>
+    /// <param name="hashtable">One level deep hashtable where keys has the same name as class properties</param>
+    /// <returns>class of passed generic type</returns>
+    public static T DictionaryToClass<T>(Dictionary<string, string> hashtable) where T : new()
+    {
+        T obj = new T();
+        Type type = typeof(T);
+
+        foreach (var entry in hashtable)
+        {
+            string key = entry.Key.ToString();
+            PropertyInfo property = type.GetProperty(key, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
+
+            if (property != null && property.CanWrite)
+            {
+                object value = Convert.ChangeType(entry.Value, property.PropertyType);
+                property.SetValue(obj, value);
+            }
+        }
+
+        return obj;
+    }
+
 }

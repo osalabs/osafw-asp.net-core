@@ -28,6 +28,7 @@ using System.Data.OleDb;
 using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Text;
@@ -608,6 +609,40 @@ public class DB : IDisposable
         return result;
     }
 
+    //read row values as a strings to generic type
+    private T readRow<T>(DbDataReader dbread) where T : new()
+    {
+        T result = new T();
+        if (!dbread.HasRows)
+            return new T(); //if no rows - return empty row
+
+        Type type = typeof(T);
+        int fieldCount = dbread.FieldCount;
+        for (int i = 0; i <= fieldCount - 1; i++)
+        {
+            try
+            {
+                if (is_check_ole_types && UNSUPPORTED_OLE_TYPES.ContainsKey(dbread.GetDataTypeName(i))) continue;
+
+                string value = dbread[i].ToString();
+                string name = dbread.GetName(i);
+
+                PropertyInfo property = type.GetProperty(name, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
+
+                if (property != null && property.CanWrite)
+                {
+                    object resultValue = Convert.ChangeType(value, property.PropertyType);
+                    property.SetValue(result, resultValue);
+                }
+            }
+            catch (Exception)
+            {
+                break;
+            }
+        }
+        return result;
+    }
+
     /// <summary>
     /// read signle irst row using table/where/orderby
     /// </summary>
@@ -619,6 +654,19 @@ public class DB : IDisposable
     {
         var qp = buildSelect(table, where, order_by, 1);
         return rowp(qp.sql, qp.@params);
+    }
+
+    /// <summary>
+    /// read signle irst row using table/where/orderby with generic type
+    /// </summary>
+    /// <param name="table"></param>
+    /// <param name="where"></param>
+    /// <param name="order_by"></param>
+    /// <returns></returns>
+    public T row<T>(string table, Hashtable where, string order_by = "") where T : new()
+    {
+        var qp = buildSelect(table, where, order_by, 1);
+        return rowp<T>(qp.sql, qp.@params);
     }
 
     /// <summary>
@@ -636,12 +684,38 @@ public class DB : IDisposable
         return result;
     }
 
+    /// <summary>
+    /// read single first row using parametrized sql query with generic type
+    /// </summary>
+    /// <param name="sql"></param>
+    /// <param name="params"></param>
+    /// <returns></returns>
+    public T rowp<T>(string sql, Hashtable @params = null) where T : new()
+    {
+        DbDataReader dbread = query(sql, @params);
+        dbread.Read();
+        var result = readRow(dbread);
+        dbread.Close();
+        return ConvUtils.DictionaryToClass<T>(result);
+    }
+
     public DBList readArray(DbDataReader dbread)
     {
         DBList result = new(DBList.DEFAULT_CAPACITY); //pre-allocate capacity
 
         while (dbread.Read())
             result.Add(readRow(dbread));
+
+        dbread.Close();
+        return result;
+    }
+
+    public List<T> readArray<T>(DbDataReader dbread) where T : new()
+    {
+        List<T> result = new(DBList.DEFAULT_CAPACITY); //pre-allocate capacity
+
+        while (dbread.Read())
+            result.Add(readRow<T>(dbread));
 
         dbread.Close();
         return result;
@@ -657,6 +731,18 @@ public class DB : IDisposable
     {
         DbDataReader dbread = query(sql, @params);
         return readArray(dbread);
+    }
+
+    /// <summary>
+    /// read all rows using parametrized query with generic type
+    /// </summary>
+    /// <param name="sql"></param>
+    /// <param name="params"></param>
+    /// <returns></returns>
+    public List<T> arrayp<T>(string sql, Hashtable @params = null) where T : new()
+    {
+        DbDataReader dbread = query(sql, @params);
+        return readArray<T>(dbread);
     }
 
     /// <summary>
