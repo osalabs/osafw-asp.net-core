@@ -41,6 +41,15 @@ public class AdminLookupManagerController : FwController
         }
     }
 
+    public override void checkAccess()
+    {
+        // add custom actions to permissions mapping
+        access_actions_to_permissions = new() {
+            { "Dictionaries", Permissions.PERMISSION_LIST },
+        };
+        base.checkAccess();
+    }
+
     private void check_dict()
     {
         if (string.IsNullOrEmpty(dict))

@@ -7,10 +7,19 @@ namespace osafw;
 
 public class Roles : FwModel
 {
+
+    public const string INAME_VISITOR = "visitor";
+
     public Roles() : base()
     {
         db_config = "";
         table_name = "roles";
         field_prio = "prio";
     }
+
+    public int idVisitor()
+    {
+        return Utils.toInt(oneByIname(INAME_VISITOR)[field_id]);
+    }
+
 }

@@ -10,6 +10,7 @@ using OtpNet;
 using QRCoder;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using static BCrypt.Net.BCrypt;
 
@@ -448,7 +449,7 @@ public class Users : FwModel
         else
         {
             var user = one(users_id);
-            user_access_level = Utils.f2int(user["access_level"]);
+            user_access_level = Utils.toInt(user["access_level"]);
         }
 
         if (user_access_level == ACL_SITEADMIN)
@@ -466,7 +467,7 @@ public class Users : FwModel
         var resource = fw.model<Resources>().oneByIcode(resource_icode);
         if (resource.Count == 0)
             return result; //if no resource defined - return empty result - basically access denied
-        var resources_id = Utils.f2int(resource["id"]);
+        var resources_id = Utils.toInt(resource["id"]);
 
         //list all permissions for the resource and all user roles
         List<string> roles_ids;
@@ -474,7 +475,7 @@ public class Users : FwModel
             //visitor
             roles_ids = [fw.model<Roles>().idVisitor().ToString()]; // visitor role for non-logged
         else
-                roles_ids = fw.model<UsersRoles>().colLinkedIdsByMainId((int)users_id);
+            roles_ids = fw.model<UsersRoles>().colLinkedIdsByMainId((int)users_id);
 
         // read all permissions for the resource and user's roles
         var rows = fw.model<RolesResourcesPermissions>().listByRolesResources(roles_ids, new int[] { resources_id });
@@ -585,12 +586,12 @@ public class Users : FwModel
         var resource = fw.model<Resources>().oneByIcode(resource_icode);
         if (resource.Count == 0)
             return false; //if no resource defined - access denied
-        var resources_id = Utils.f2int(resource["id"]);
+        var resources_id = Utils.toInt(resource["id"]);
 
         var permission = fw.model<Permissions>().oneByIcode(permission_icode);
         if (permission.Count == 0)
             return false; //if no permission defined - access denied
-        var permissions_id = Utils.f2int(permission["id"]);
+        var permissions_id = Utils.toInt(permission["id"]);
 
         // read all roles for user
         List<string> roles_ids;
@@ -599,7 +600,7 @@ public class Users : FwModel
         else
         {
             var user = one(users_id);
-            if (Utils.f2int(user["access_level"]) == ACL_SITEADMIN)
+            if (Utils.toInt(user["access_level"]) == ACL_SITEADMIN)
             {
                 //siteadmin doesn't have roles - has access to everything
                 return true;

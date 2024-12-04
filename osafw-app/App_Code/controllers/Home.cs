@@ -12,6 +12,10 @@ public class HomeController : FwController
         // override global layout because for this controller we need public pages template, not admin pages
         fw.G["PAGE_LAYOUT"] = fw.config("PAGE_LAYOUT_PUBLIC");
     }
+    public override void checkAccess()
+    {
+        //true - allow access to all, including visitors
+    }
 
     // CACHED as home_page
     public Hashtable IndexAction()

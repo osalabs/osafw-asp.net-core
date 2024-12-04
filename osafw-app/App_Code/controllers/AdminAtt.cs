@@ -28,6 +28,15 @@ public class AdminAttController : FwAdminController
         list_sortmap = Utils.qh("id|id iname|iname add_time|add_time fsize|fsize ext|ext category|att_categories_id status|status");
     }
 
+    public override void checkAccess()
+    {
+        // add custom actions to permissions mapping
+        access_actions_to_permissions = new() {
+            { "Select", Permissions.PERMISSION_LIST },
+        };
+        base.checkAccess();
+    }
+
     public override void setListSearch()
     {
         list_where = " fwentities_id IS NULL "; //only show uploads directly from user (not linked to specific entity)

@@ -23,6 +23,11 @@ public class PasswordController : FwController
         fw.G["PAGE_LAYOUT"] = fw.G["PAGE_LAYOUT_PUBLIC"];
     }
 
+    public override void checkAccess()
+    {
+        //true - allow access to all, including visitors
+    }
+
     public Hashtable IndexAction()
     {
         Hashtable ps = new();
