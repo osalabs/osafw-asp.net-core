@@ -66,6 +66,7 @@ public abstract class FwController
 
     protected bool is_dynamic_show = false;      // true if controller has dynamic ShowAction, requires "show_fields" to be defined in config.json
     protected bool is_dynamic_showform = false;  // true if controller has dynamic ShowFormAction, requires "showform_fields" to be defined in config.json
+    protected string form_tab = "";              // current tab in the form
 
     protected bool is_userlists = false;         // true if controller should support UserLists
     protected bool is_activity_logs = false;     // true if controller should support ActivityLogs
@@ -98,6 +99,7 @@ public abstract class FwController
 
         return_url = reqs("return_url");
         related_id = reqs("related_id");
+        form_tab = reqs("tab");
         export_format = reqs("export");
 
         rbac = fw.model<Users>().getRBAC();

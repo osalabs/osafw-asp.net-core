@@ -1116,9 +1116,6 @@ public class Utils
                     throw new JsonException("PropertyName expected");
 
                 string keyName = reader.GetString();
-                if (string.IsNullOrWhiteSpace(keyName))
-                    throw new JsonException("Got Empty PropertyName");
-
                 //rw("keyName=" + keyName);
                 reader.Read();
                 ht[keyName] = jsonDecodeValue(ref reader);

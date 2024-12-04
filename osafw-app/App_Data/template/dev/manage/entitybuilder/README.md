@@ -70,7 +70,11 @@ This format allows you to define database entities and fields in a concise and i
 - **UI Options**:
   - **Syntax**: `UI:option1,option2,...`
   - **Common Options**:
+    - `skip`: do not include this field in UI
+    - `formcol(left/mid/mid/right)`: place field into specific form column
+    - `formtab(name)`: place field into specific form tab (enables tabbed form), default tab "Main"
     - `required`: Field is mandatory; implies `NOT NULL` without a default.
+    - `plaintext`: non-editable text
     - `checkbox`: Renders as a checkbox.
     - `number`: Numeric input.
     - `password`: Password input.

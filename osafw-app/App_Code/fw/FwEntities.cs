@@ -16,6 +16,7 @@ public class FwEntities : FwModel
     public FwEntities() : base()
     {
         table_name = "fwentities";
+        is_log_changes = false;
     }
 
     //find record by icode, if not exists - add, return id (existing or newly added)

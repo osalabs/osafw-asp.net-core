@@ -156,7 +156,13 @@ public class FwDynamicController : FwController
 
         // dynamic fields
         if (is_dynamic_show)
+        {
+            //add form_tabs only if we have more than one tab
+            if (config["form_tabs"] is ArrayList form_tabs && form_tabs.Count > 1)
+                ps["form_tabs"] = form_tabs;
+
             ps["fields"] = prepareShowFields(item, ps);
+        }
 
         // userlists support if necessary
         if (this.is_userlists)
@@ -219,7 +225,14 @@ public class FwDynamicController : FwController
         setAddUpdUser(ps, item);
 
         if (is_dynamic_showform)
+        {
+            //add form_tabs only if we have more than one tab
+            if (config["form_tabs"] is ArrayList form_tabs && form_tabs.Count > 1)
+                ps["form_tabs"] = form_tabs;
+
             ps["fields"] = prepareShowFormFields(item, ps);
+        }
+
         // TODO
         // ps["select_options_parent_id") ] model.listSelectOptionsParent()
         // FormUtils.comboForDate(item["fdate_combo"], ps, "fdate_combo")
@@ -234,6 +247,8 @@ public class FwDynamicController : FwController
         ps["return_url"] = return_url;
         ps["related_id"] = related_id;
         ps["is_readonly"] = is_readonly;
+        ps["tab"] = form_tab;
+        ps["is_showform"] = true; // flag for template that we are in show form
 
         //for RBAC
         ps["rbac"] = rbac;
@@ -308,13 +323,27 @@ public class FwDynamicController : FwController
         this.validateCheckResult();
     }
 
+    /// <summary>
+    /// return config for show/showform fields by tab
+    /// </summary>
+    /// <param name="prefix">show_fields or showform_fields</param>
+    /// <param name="tab">optional tab code, if ommited - form_tab used</param>
+    /// <returns></returns>
+    protected virtual ArrayList getConfigShowFormFieldsByTab(string prefix, string tab = null)
+    {
+        tab ??= form_tab;
+        var key = prefix + (tab.Length > 0 ? "_" + tab : "");
+        return (ArrayList)config[key];
+    }
+
+
     protected virtual bool validateRequiredDynamic(int id, Hashtable item)
     {
         var result = true;
         if (string.IsNullOrEmpty(this.required_fields) && is_dynamic_showform)
         {
             // if required_fields not defined - fill from showform_fields
-            ArrayList fields = (ArrayList)this.config["showform_fields"];
+            ArrayList fields = getConfigShowFormFieldsByTab("showform_fields");
             ArrayList req = [];
             foreach (Hashtable def in fields)
             {
@@ -338,7 +367,7 @@ public class FwDynamicController : FwController
         var is_new = (id == 0);
         var subtable_del = reqh("subtable_del");
 
-        ArrayList fields = (ArrayList)this.config["showform_fields"];
+        ArrayList fields = getConfigShowFormFieldsByTab("showform_fields");
         foreach (Hashtable def in fields)
         {
             string field = (string)def["field"];
@@ -575,13 +604,17 @@ public class FwDynamicController : FwController
         else
         {
             //validation - only allow models from showform_fields type=autocomplete
-            var fields = (ArrayList)this.config["showform_fields"];
-            foreach (Hashtable def in fields)
+            var form_tabs = config["form_tabs"] as ArrayList ?? [];
+            foreach (Hashtable form_tab in form_tabs)
             {
-                if (Utils.toStr(def["type"]) == "autocomplete" && Utils.toStr(def["lookup_model"]) == model_name)
+                var fields = getConfigShowFormFieldsByTab("showform_fields", Utils.toStr(form_tab["tab"]));
+                foreach (Hashtable def in fields)
                 {
-                    ac_model = fw.model(model_name);
-                    break;
+                    if (Utils.toStr(def["type"]) == "autocomplete" && Utils.toStr(def["lookup_model"]) == model_name)
+                    {
+                        ac_model = fw.model(model_name);
+                        break;
+                    }
                 }
             }
         }
@@ -694,7 +727,7 @@ public class FwDynamicController : FwController
     {
         var id = Utils.toInt(item["id"]);
 
-        ArrayList fields = (ArrayList)this.config["show_fields"];
+        ArrayList fields = getConfigShowFormFieldsByTab("show_fields");
         foreach (Hashtable def in fields)
         {
             def["i"] = item; // ref to item
@@ -773,6 +806,12 @@ public class FwDynamicController : FwController
                 }
                 else if (def.ContainsKey("lookup_tpl"))
                     def["value"] = FormUtils.selectTplName((string)def["lookup_tpl"], (string)item[field], fw.route.controller_path.ToLower());
+                else if (def.ContainsKey("options"))
+                {
+                    // select options
+                    var options = def["options"] as Hashtable;
+                    def["value"] = options[item[field]];
+                }
                 else
                     def["value"] = item[field];
 
@@ -794,7 +833,7 @@ public class FwDynamicController : FwController
         var subtable_add = reqh("subtable_add");
         var subtable_del = reqh("subtable_del");
 
-        var fields = (ArrayList)this.config["showform_fields"];
+        var fields = getConfigShowFormFieldsByTab("showform_fields");
         if (fields == null)
             throw new ApplicationException("Controller config.json doesn't contain 'showform_fields'");
 
@@ -970,6 +1009,20 @@ public class FwDynamicController : FwController
                         row["value"] = item[field];
                     }
                 }
+                else if (def.ContainsKey("options"))
+                {
+                    //select options as array - convert to arraylist of id => iname
+                    var options = def["options"] as Hashtable;
+                    var select_options = new ArrayList();
+                    foreach (DictionaryEntry entry in options)
+                        select_options.Add(new Hashtable() {
+                            { "id", entry.Key },
+                            { "iname", entry.Value },
+                            { "is_inline", def["is_inline"] },
+                            { "field", def["field"] },
+                            { "value", item[field] }
+                        });
+                }
                 else
                     def["value"] = item[field];
 
@@ -989,7 +1042,7 @@ public class FwDynamicController : FwController
     {
         Hashtable item = reqh("item");
 
-        var showform_fields = _fieldsToHash((ArrayList)this.config["showform_fields"]);
+        var showform_fields = _fieldsToHash(getConfigShowFormFieldsByTab("showform_fields"));
 
         var fnullable = Utils.qh(save_fields_nullable);
 
@@ -1030,7 +1083,7 @@ public class FwDynamicController : FwController
         var fields_update = new Hashtable();
 
         // for now we just look if we have att_links_edit field and update att links
-        foreach (Hashtable def in (ArrayList)this.config["showform_fields"])
+        foreach (Hashtable def in getConfigShowFormFieldsByTab("showform_fields"))
         {
             string field = (string)def["field"];
             string type = (string)def["type"];

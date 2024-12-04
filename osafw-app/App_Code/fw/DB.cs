@@ -18,6 +18,7 @@
 using MySqlConnector;
 #endif
 
+using Microsoft.Data.SqlClient;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -25,7 +26,6 @@ using System.Data;
 using System.Data.Common;
 using System.Data.Odbc;
 using System.Data.OleDb;
-using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -403,12 +403,16 @@ public class DB : IDisposable
     /// <param name="params">param => value, value can be IList (example: new int[] {1,2,3}) - then sql query has something like "id IN (@ids)"</param>
     /// <returns></returns>
     /// <exception cref="ApplicationException"></exception>
-    public DbDataReader query(string sql, Hashtable @params = null)
+    public DbDataReader query(string sql, Hashtable in_params = null)
     {
         connect();
 
         //in case @params contains an IList (example: new int[] {1,2,3}) - then sql query has something like "id IN (@ids)"
         //need to expand array into single params
+
+        //shallow copy to avoid modifying original
+        Hashtable @params = in_params != null ? (Hashtable)in_params.Clone() : [];
+
         if (@params != null)
         {
             foreach (string p in @params.Keys.Cast<string>().ToList())

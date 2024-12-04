@@ -181,6 +181,15 @@ h1 .badge {
   .sidebar .nav-pills .nav-link.active {
     color: var(--bs-nav-pills-link-active-color) !important; /*fix active nav text color for light mode*/
   }
+  .sidebar .nav-header {
+    margin-left: -1rem;
+    margin-right: -1rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    font-weight: bold;
+    margin-top: 0.5rem;
+    margin-bottom: 0.25rem;
+  }
 
 main {
   margin-left: var(--fw-sidebar-width);

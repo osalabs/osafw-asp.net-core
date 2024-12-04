@@ -225,7 +225,7 @@ public class ParsePage
         if (tpl_name.Length > 0 && tpl_name.Substring(0, 1) != "/")
             tpl_name = basedir + "/" + tpl_name;
 
-        fw.logger("DEBUG", $"ParsePage - Parsing template = {tpl_name}, pagelen={page.Length}");
+        fw.logger(LogLevel.TRACE, $"ParsePage - Parsing template = {tpl_name}, pagelen={page.Length}");
         if (page.Length < 1)
             page = precache_file(TMPL_PATH + tpl_name);
         if (page.Length == 0)
