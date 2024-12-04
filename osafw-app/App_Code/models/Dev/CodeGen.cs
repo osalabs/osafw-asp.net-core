@@ -289,7 +289,13 @@ class DevCodeGen
             // only create App_Data/database.sql
             // add drop
             if (entity.ContainsKey("comments"))
-                database_sql += "-- " + entity["comments"] + Environment.NewLine;
+            {
+                //comments can contain new lines - comment each line separately
+                var comments = Regex.Split((string)entity["comments"], "[\r\n]+");
+                foreach (string comment in comments)
+                    database_sql += "-- " + comment + Environment.NewLine;
+            }
+
             database_sql += "DROP TABLE IF EXISTS " + db.qid((string)entity["table"], false) + ";" + Environment.NewLine;
             database_sql += sql + ";" + Environment.NewLine + Environment.NewLine;
         }
@@ -516,7 +522,7 @@ class DevCodeGen
             fw.model<LookupManagerTables>().add(item);
     }
 
-    public void createController(Hashtable entity, ArrayList entities)
+    public bool createController(Hashtable entity, ArrayList entities)
     {
         string model_name = (string)entity["model_name"];
         var controller_options = (Hashtable)entity["controller"] ?? [];
@@ -526,7 +532,7 @@ class DevCodeGen
         if (controller_url == "")
         {
             //if controller url explicitly empty - do not create controller
-            return;
+            return false;
         }
         //if controller url is not defined - default to admin model
         controller_url ??= "/Admin/" + model_name;
@@ -547,7 +553,7 @@ class DevCodeGen
         {
             // if requested controller as a lookup table - just add/update lookup tables, no actual controller creation
             this.createLookup(entity);
-            return;
+            return false;
         }
 
         // determine controller type used as a template
@@ -562,20 +568,6 @@ class DevCodeGen
         };
 
         entity["controller"] = controller_options; //write back
-
-        // copy DemoDicts.cs to model_name.cs
-        var path = fw.config("site_root") + @"\App_Code\controllers";
-        var mdemo = FW.getFileContent(path + @$"\{controller_from_class}.cs");
-        if (mdemo == "")
-            throw new ApplicationException($"Can't open {controller_from_class}.cs");
-
-        // replace: DemoDicts => ModelName, demo_dicts => table_name
-        mdemo = mdemo.Replace(controller_from_class, controller_name);
-        mdemo = mdemo.Replace(controller_from_url, controller_url);
-        mdemo = mdemo.Replace("DemoDicts", model_name);
-        mdemo = mdemo.Replace("Demos", model_name);
-
-        FW.setFileContent(path + @"\" + controller_name + ".cs", ref mdemo);
 
         // copy templates from /admin/demosdynamic to /controller/url
         var tpl_from = fw.config("template") + controller_from_url.ToLower();
@@ -599,8 +591,25 @@ class DevCodeGen
         // update config.json:
         updateControllerConfigJson(entity, tpl_to, entities);
 
+        // this should be last as under VS auto-rebuild can lock template files
+        // copy DemosController .cs to controller .cs
+        var path = fw.config("site_root") + @"\App_Code\controllers";
+        var mdemo = FW.getFileContent(path + @$"\{controller_from_class}.cs");
+        if (mdemo == "")
+            throw new ApplicationException($"Can't open {controller_from_class}.cs");
+
+        // replace: DemoDicts => ModelName, demo_dicts => table_name
+        mdemo = mdemo.Replace(controller_from_class, controller_name);
+        mdemo = mdemo.Replace(controller_from_url, controller_url);
+        mdemo = mdemo.Replace("DemoDicts", model_name);
+        mdemo = mdemo.Replace("Demos", model_name);
+
+        FW.setFileContent(path + @"\" + controller_name + ".cs", ref mdemo);
+
         // add controller to sidebar menu
         updateMenuItem(controller_url, controller_title);
+
+        return true;
     }
 
     public void updateControllerConfigJson(Hashtable entity, string tpl_to, ArrayList entities)
@@ -693,13 +702,25 @@ class DevCodeGen
         Hashtable hFieldsMap = [];   // name => iname - map for the view_list_map
         Hashtable hFieldsMapEdit = []; // for Vue editable list
         Hashtable hFieldsMapFW = []; // fw_name => name
-        ArrayList showFieldsLeft = [];
-        ArrayList showFieldsRight = [];
-        ArrayList showFormFieldsLeft = [];
-        ArrayList showFormFieldsRight = []; // system fields - to the right
+
+        List<Hashtable> formTabs = [
+            //default
+            new Hashtable {
+                ["tab"] = "",
+                ["label"] = "Main"
+            }
+        ]; // show form tabs
+
+        // tab => fields
+        Dictionary<string, List<List<Hashtable>>> showFieldsTabs = [];  // show fields tabs/columns
+        Dictionary<string, List<List<Hashtable>>> showFormFieldsTabs = []; // show form fields tabs/columns
 
         foreach (Hashtable fld in fields)
         {
+            var ui = (Hashtable)fld["ui"] ?? []; // ui options for the field
+            if (ui.ContainsKey("skip"))
+                continue; //skip unnecessary fields
+
             string fld_name = Utils.toStr(fld["name"]);
             fw.logger("field name=", fld_name, fld);
 
@@ -865,39 +886,18 @@ class DevCodeGen
             if (overrideSpecialFields(fld, sf, sff))
                 continue; //skip field
 
-            overrideUIOptions(fld, sf, sff); // override ui options (if any)
+            overrideUIOptions(fld, sf, sff, model_name); // override ui options (if any)
 
             // layout
+            addToFormColumns(fld, sf, sff, showFieldsTabs, showFormFieldsTabs, sys_fields, fields);
+
             var is_sys = false;
             if (Utils.toStr(fld["is_identity"]) == "1" || sys_fields.Contains(fld_name))
-            {
-                // add to system fields
-                showFieldsRight.Add(sf);
-                showFormFieldsRight.Add(sff);
                 is_sys = true;
-            }
-            else
-            {
-                //non-system fields
-                if (Utils.toStr(sf["type"]) == "att"
-                    || Utils.toStr(sf["type"]) == "att_links"
-                    || Utils.toStr(sff["type"]) == "textarea" && fields.Count >= 10)
-                {
-                    //add to the right: attachments, textareas (only if many fields)
-                    showFieldsRight.Add(sf);
-                    showFormFieldsRight.Add(sff);
-                }
-                else
-                {
-                    showFieldsLeft.Add(sf);
-                    showFormFieldsLeft.Add(sff);
-                }
-            }
-
             if (!is_sys || fld_name == "status")
                 // add to save fields only if not system (except status)
                 saveFields.Add(fld_name);
-        }
+        } // end of foreach field
 
         // special case - "Lookup via Link Table" - could be multiple tables
         var rx_table_link = "^" + Regex.Escape(table_name) + "_(.+?)$";
@@ -946,8 +946,9 @@ class DevCodeGen
                     else
                         sfflink["lookup_model"] = DevEntityBuilder.tablenameToModel(table_name_linked);
 
-                    showFieldsLeft.Add(sflink);
-                    showFormFieldsLeft.Add(sfflink);
+                    //add to default tab, left column
+                    addToTabColumn(showFieldsTabs, "", 0, sflink);
+                    addToTabColumn(showFormFieldsTabs, "", 0, sfflink);
                 }
             }
         }
@@ -1012,12 +1013,161 @@ class DevCodeGen
         }
 
         // default fields for list view
-        // alternatively - just show couple fields
-        // If is_fw Then config("view_list_defaults") = "id" & If(hfields.ContainsKey("iname"), " iname", "") & If(hfields.ContainsKey("add_time"), " add_time", "") & If(hfields.ContainsKey("status"), " status", "")
+        var list_defaults = getListDefaults(fields, hforeign_keys, sys_fields, is_fw);
+        config["view_list_defaults"] = list_defaults.view;
 
-        // show first 6 fields (priority to required) +status, except identity, large text and system fields
-        config["view_list_defaults"] = "";
-        var edit_list_defaults = "";
+        if (!is_fw)
+        {
+            // for non-fw - list_sortmap separately
+            config["list_sortmap"] = hFieldsMapFW;
+        }
+        config["view_list_map"] = hFieldsMap; // fields to names
+        config["view_list_custom"] = "status";
+
+        if (controller_type == "vue")
+        {
+            config["is_dynamic_index_edit"] = false; // by default disable list editing        
+            config["list_edit"] = table_name;
+            config["edit_list_defaults"] = list_defaults.edit;
+            config["edit_list_map"] = hFieldsMapEdit;
+        }
+
+        config["form_tabs"] = formTabs;
+
+        //view form
+        config["is_dynamic_show"] = controller_options.ContainsKey("is_dynamic_show") ? controller_options["is_dynamic_show"] : true;
+        if ((bool)config["is_dynamic_show"])
+            configAddTabs(config, "show_fields", showFieldsTabs);
+
+        //edit form
+        config["is_dynamic_showform"] = controller_options.ContainsKey("is_dynamic_showform") ? controller_options["is_dynamic_showform"] : true;
+        if ((bool)config["is_dynamic_showform"])
+            configAddTabs(config, "showform_fields", showFormFieldsTabs);
+
+        // remove all commented items - name start with "#"
+        foreach (var key in config.Keys.Cast<string>().ToArray())
+        {
+            if (key.StartsWith('#'))
+                config.Remove(key);
+        }
+    }
+
+    public static void addToTabColumn(Dictionary<string, List<List<Hashtable>>> showFieldsTabs, string tab, int col, Hashtable sf)
+    {
+        if (!showFieldsTabs.ContainsKey(tab))
+            showFieldsTabs[tab] = [
+                [], //left col
+                [], //mid col
+                []  //right col
+            ];
+        var showFieldsCols = showFieldsTabs[tab];
+        showFieldsCols[col].Add(sf);
+    }
+
+    //add tabs to config[key] and config[key_tab] based on showFieldsTabs and update config["form_tabs"]
+    public static void configAddTabs(Hashtable config, string key, Dictionary<string, List<List<Hashtable>>> showFieldsTabs)
+    {
+        var formTabs = config["form_tabs"] as List<Hashtable>;
+
+        var tabs = new ArrayList();
+        foreach (var tab in showFieldsTabs.Keys)
+        {
+            var showFieldsCols = showFieldsTabs[tab];
+            if (showFieldsCols.Count == 0)
+                continue;
+
+            var tabFields = makeLayoutForFields(showFieldsCols);
+
+            var config_key = key + (tab.Length > 0 ? "_" + tab : ""); // show_fields (default) or show_fields_tab
+            config[config_key] = tabFields;
+
+            //add tab to formTabs if not exists
+            if (!formTabs.Any(x => (string)(x["tab"]) == tab))
+            {
+                formTabs.Add(new Hashtable
+                {
+                    ["tab"] = tab,
+                    ["label"] = Utils.name2human(tab)
+                });
+            }
+        }
+    }
+
+    public static ArrayList makeLayoutForFields(List<List<Hashtable>> fieldsCols)
+    {
+        //remove/filter empty columns from showFieldsCols
+        var fieldsColsFinal = fieldsCols.Where(x => x.Count > 0).ToList();
+        //here we have 2 or 3 collumns
+        var class_col = "col-lg-" + (fieldsColsFinal.Count == 2 ? 6 : 4);
+
+        var configFields = new ArrayList
+        {
+            Utils.qh("type|row"),
+        };
+        for (var i = 0; i < fieldsColsFinal.Count; i++)
+        {
+            configFields.Add(Utils.qh($"type|col class|{class_col}"));
+            configFields.AddRange(fieldsColsFinal[i]);
+            configFields.Add(Utils.qh("type|col_end"));
+        }
+        configFields.Add(Utils.qh("type|row_end"));
+        return configFields;
+    }
+
+    public static int addToFormColumns(Hashtable fld, Hashtable sf, Hashtable sff,
+        Dictionary<string, List<List<Hashtable>>> showFieldsTabs,
+        Dictionary<string, List<List<Hashtable>>> showFormFieldsTabs,
+        Hashtable sys_fields, ArrayList fields)
+    {
+        var ui = (Hashtable)fld["ui"] ?? []; // ui options for the field
+        var col = 0; //default to left
+
+        if (Utils.toStr(fld["is_identity"]) == "1" || sys_fields.Contains(fld["name"] ?? ""))
+        {
+            // add to system fields - to the right
+            col = 2;
+        }
+        else
+        {
+            //non-system fields
+            if (Utils.toStr(sf["type"]) == "att"
+                || Utils.toStr(sf["type"]) == "att_links"
+                || Utils.toStr(sff["type"]) == "textarea" && fields.Count >= 10)
+            {
+                //add to the right: attachments, textareas (only if many fields)
+                col = 2;
+            }
+        }
+
+        //check if specific column required
+        var formcol = Utils.toStr(ui["formcol"] ?? "");
+        if (formcol == "left")
+            col = 0;
+        else if (formcol == "mid")
+            col = 1;
+        else if (formcol == "right")
+            col = 2;
+
+        //select/add proper tab
+        var formtab = Utils.toStr(ui["formtab"] ?? "");
+
+        addToTabColumn(showFieldsTabs, formtab, col, sf);
+        addToTabColumn(showFormFieldsTabs, formtab, col, sff);
+
+        return col;
+    }
+
+    //return 2 separte values for view_list_defaults and edit_list_defaults
+    // show first 6 fields (priority to required) +status,
+    // except identity, large text and system fields
+    //
+    // alternatively - just show couple fields
+    // If is_fw Then config("view_list_defaults") = "id" & If(hfields.ContainsKey("iname"), " iname", "") & If(hfields.ContainsKey("add_time"), " add_time", "") & If(hfields.ContainsKey("status"), " status", "")
+    public static (string view, string edit) getListDefaults(ArrayList fields, Hashtable hforeign_keys, Hashtable sys_fields, bool is_fw)
+    {
+        string view_list_defaults = "";
+        string edit_list_defaults = "";
+
         int defaults_ctr = 0;
         var rfields = (from Hashtable fld in fields
                        where Utils.toStr(fld["is_identity"]) != "1"
@@ -1034,101 +1184,17 @@ class DevCodeGen
             edit_list_defaults += (defaults_ctr == 0 ? "" : " ") + fname; //for edit list we need real field names only
 
             if (hforeign_keys.ContainsKey(fname))
-            {
                 fname = (string)((Hashtable)hforeign_keys[fname])["column"] + "_iname";
-            }
-            if (!is_fw)
-            {
-                fname = (string)field["fw_name"];
-            }
 
-            config["view_list_defaults"] += (defaults_ctr == 0 ? "" : " ") + fname;
+            if (!is_fw)
+                fname = (string)field["fw_name"];
+
+            view_list_defaults += (defaults_ctr == 0 ? "" : " ") + fname;
             defaults_ctr++;
         }
 
-        //for (var i = 0; i <= fields.Count - 1; i++)
-        //{
-        //    Hashtable field = (Hashtable)fields[i];
-        //    if (Utils.f2str(field["is_identity"]) == "1")
-        //        continue;
-        //    if (Utils.f2str(field["fw_type"]) == "varchar" && Utils.f2int(field["maxlen"]) <= 0)
-        //        continue;
-        //    var fname = (string)field["name"];
-        //    if (sys_fields.Contains(field["name"]) && fname != "status")
-        //        continue;
-        //    if (defaults_ctr > 5 && fname != "status")
-        //        continue;
 
-        //    if (!is_fw)
-        //    {
-        //        fname = (string)field["fw_name"];
-        //    }
-
-        //    config["view_list_defaults"] += (i == 0 ? "" : " ") + fname;
-        //    defaults_ctr++;
-        //}
-
-        if (!is_fw)
-        {
-            // nor non-fw tables - just show first 3 fields
-            // config["view_list_defaults"] = ""
-            // For i = 0 To Math.Min(2, fields.Count - 1)
-            // config["view_list_defaults"] &= IIf(i = 0, "", " ") & fields(i)("fw_name")
-            // Next
-
-            // for non-fw - list_sortmap separately
-            config["list_sortmap"] = hFieldsMapFW;
-        }
-        config["view_list_map"] = hFieldsMap; // fields to names
-        config["view_list_custom"] = "status";
-
-        if (controller_type == "vue")
-        {
-            config["is_dynamic_index_edit"] = false; // by default disable list editing        
-            config["list_edit"] = table_name;
-            config["edit_list_defaults"] = edit_list_defaults;
-            config["edit_list_map"] = hFieldsMapEdit;
-        }
-
-        config["is_dynamic_show"] = controller_options.ContainsKey("is_dynamic_show") ? controller_options["is_dynamic_show"] : true;
-        if ((bool)config["is_dynamic_show"])
-        {
-            var showFields = new ArrayList
-            {
-                Utils.qh("type|row"),
-                Utils.qh("type|col class|col-lg-6")
-            };
-            showFields.AddRange(showFieldsLeft);
-            showFields.Add(Utils.qh("type|col_end"));
-            showFields.Add(Utils.qh("type|col class|col-lg-6"));
-            showFields.AddRange(showFieldsRight);
-            showFields.Add(Utils.qh("type|col_end"));
-            showFields.Add(Utils.qh("type|row_end"));
-            config["show_fields"] = showFields;
-        }
-        config["is_dynamic_showform"] = controller_options.ContainsKey("is_dynamic_showform") ? controller_options["is_dynamic_showform"] : true;
-        if ((bool)config["is_dynamic_showform"])
-        {
-            var showFormFields = new ArrayList
-            {
-                Utils.qh("type|row"),
-                Utils.qh("type|col class|col-lg-6")
-            };
-            showFormFields.AddRange(showFormFieldsLeft);
-            showFormFields.Add(Utils.qh("type|col_end"));
-            showFormFields.Add(Utils.qh("type|col class|col-lg-6"));
-            showFormFields.AddRange(showFormFieldsRight);
-            showFormFields.Add(Utils.qh("type|col_end"));
-            showFormFields.Add(Utils.qh("type|row_end"));
-            config["showform_fields"] = showFormFields;
-        }
-
-        // remove all commented items - name start with "#"
-        foreach (var key in config.Keys.Cast<string>().ToArray())
-        {
-            if (key.StartsWith('#'))
-                config.Remove(key);
-        }
+        return (view_list_defaults, edit_list_defaults);
     }
 
     //return true if skip this field
@@ -1229,7 +1295,7 @@ class DevCodeGen
         return is_skip;
     }
 
-    public static void overrideUIOptions(Hashtable fld, Hashtable sf, Hashtable sff)
+    public static void overrideUIOptions(Hashtable fld, Hashtable sf, Hashtable sff, string model_name)
     {
         var ui = (Hashtable)fld["ui"] ?? []; // ui options for the field
 
@@ -1238,12 +1304,26 @@ class DevCodeGen
             sff["required"] = Utils.toBool(ui["required"]);
 
         //input types
+        if (ui.ContainsKey("plaintext"))
+            sff["type"] = "plaintext";
         if (ui.ContainsKey("checkbox"))
             sff["type"] = "cb";
         if (ui.ContainsKey("number"))
             sff["type"] = "number";
         if (ui.ContainsKey("password"))
             sff["type"] = "password";
+        if (ui.ContainsKey("select"))
+            sff["type"] = "select";
+        if (ui.ContainsKey("time"))
+        {
+            sf["type"] = "plaintext";
+            sf["conv"] = "time_from_seconds";
+            sff["type"] = "time";
+            sff["conv"] = "time_from_seconds";
+            sff.Remove("min");
+            sff.Remove("max");
+            sff.Remove("maxlength");
+        }
 
         //direct attributes for show form
         foreach (string attr in "validate maxlength rows placeholder step min max".Split())
@@ -1270,7 +1350,7 @@ class DevCodeGen
         {
             if (ui.ContainsKey(attr))
             {
-                //if value is explicitly "false" string - set to falss (used to disable row class)
+                //if value is explicitly "false" string - set to false (used to disable row class)
                 //otherwise - set to value
                 var v = Utils.toStr(ui[attr]) == "false" ? false : ui[attr];
                 sf[attr] = v;
@@ -1290,6 +1370,21 @@ class DevCodeGen
             else
                 // otherwise - it's a template
                 sff["lookup_tpl"] = options;
+        }
+
+        // help text under control
+        if (ui.ContainsKey("help"))
+        {
+            sff["help_text"] = ui["help"];
+        }
+
+        // autocomplete
+        if (ui.ContainsKey("autocomplete"))
+        {
+            sf["type"] = "plaintext_autocomplete";
+            sff["type"] = "autocomplete";
+            // url /controller/(Autocomplete)?model=ModelName&q=
+            sff["autocomplete_url"] = $"/Admin/{model_name}/(Autocomplete)?model=" + sff["lookup_model"] + "&q=";
         }
     }
 

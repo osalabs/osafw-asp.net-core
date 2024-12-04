@@ -575,7 +575,12 @@ class DevEntityBuilder
             }
             else
             {
-                throw new Exception($"Invalid UI option syntax: {option} in options line \"{uiOptions}\"");
+                // case when option does not have value in brackets
+                var key = option.Trim();
+                if (string.IsNullOrEmpty(key))
+                    continue; //skip empty options
+
+                result[key] = true;
             }
         }
 

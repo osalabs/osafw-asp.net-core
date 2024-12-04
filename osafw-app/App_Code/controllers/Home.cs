@@ -8,7 +8,16 @@ public class HomeController : FwController
 
     public override void init(FW fw)
     {
-        base.init(fw);
+        //base.init(fw); //not using base init as it calls getRBAC which require access to db (and we may not have it yet)
+        this.fw = fw;
+        this.db = fw.db;
+
+        is_readonly = fw.model<Users>().isReadOnly();
+
+        return_url = reqs("return_url");
+        related_id = reqs("related_id");
+        export_format = reqs("export");
+
         // override global layout because for this controller we need public pages template, not admin pages
         fw.G["PAGE_LAYOUT"] = fw.config("PAGE_LAYOUT_PUBLIC");
     }

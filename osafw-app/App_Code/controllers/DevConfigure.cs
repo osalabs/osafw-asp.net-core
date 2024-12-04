@@ -19,7 +19,9 @@ public class DevConfigureController : FwController
 
     public override void init(FW fw)
     {
-        base.init(fw);
+        //base.init(fw); //not using base init as it calls getRBAC which require access to db (and we may not have it yet)
+        this.fw = fw;
+        this.db = fw.db;
 
         base_url = "/Dev/Configure"; // base url for the controller
     }

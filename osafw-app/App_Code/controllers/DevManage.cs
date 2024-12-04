@@ -583,8 +583,8 @@ public class DevManageController : FwController
 
                 entity["controller"] = controller_options;
 
-                CodeGen.createController(entity, entities);
-                controllers_ctr++;
+                if (CodeGen.createController(entity, entities))
+                    controllers_ctr++;
             }
         }
 
