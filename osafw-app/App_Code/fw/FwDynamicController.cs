@@ -186,6 +186,7 @@ public class FwDynamicController : FwController
         ps["is_userlists"] = is_userlists;
         ps["is_activity_logs"] = is_activity_logs;
         ps["is_readonly"] = is_readonly;
+        ps["tab"] = form_tab;
 
         //for RBAC
         ps["rbac"] = rbac;
