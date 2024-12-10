@@ -645,13 +645,12 @@ public class Users : FwModel
     #region Permanent Login Cookies
     public string createPermCookie(int id)
     {
-        long curTS = new DateTimeOffset(DateTime.UtcNow).ToUnixTimeSeconds();
         string cookieId = Utils.getRandStr(64);
         string hashed = Utils.sha256(cookieId);
         var fields = DB.h("cookie_id", hashed, "users_id", id);
         db.updateOrInsert(table_users_cookies, fields, DB.h("users_id", id));
 
-        Utils.createCookie(fw, PERM_COOKIE_NAME, cookieId, curTS + 60 * 60 * 24 * PERM_COOKIE_DAYS);
+        Utils.createCookie(fw, PERM_COOKIE_NAME, cookieId, 60 * 60 * 24 * PERM_COOKIE_DAYS);
 
         return cookieId;
     }
