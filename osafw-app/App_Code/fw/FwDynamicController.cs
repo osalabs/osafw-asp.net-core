@@ -88,8 +88,7 @@ public class FwDynamicController : FwController
         this.setListSearchStatus();
 
         // get all ids
-        var sql = $"SELECT {model0.field_id} FROM " + list_view + " WHERE " + this.list_where + " ORDER BY " + this.list_orderby;
-        var ids = db.colp(sql, list_where_params);
+        var ids = getListIds(list_view);
         if (ids.Count == 0)
             return new Hashtable { { "_redirect", base_url } };
 

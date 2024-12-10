@@ -322,17 +322,17 @@ table.list-edit tbody td {
     white-space: nowrap;
   }
 
-  table.list-edit tbody td > div .form-control {
+  table.list-edit tbody td > div > .form-control {
    border: 0;
    border-radius: 0;
    background: transparent;
   }
-  table.list-edit tbody td > div .form-select {
+  table.list-edit tbody td > div > .form-select {
     border: 0px;
     border-radius: 0;
     /*background: transparent;*/
   }
-  table.list-edit tbody td > div .form-check-input {
+  table.list-edit tbody td > div > .form-check-input {
    margin:0.5rem 0.4rem;
   }
 
@@ -346,12 +346,12 @@ table.list-edit tbody td {
   table.list-edit.table-sm tbody td > div.ro {
     padding: 0.25rem 0.25rem;
   }
-  table.list-edit.table-sm tbody td > div .form-control {
+  table.list-edit.table-sm tbody td > div > .form-control {
     min-height: calc(1.5em + .5rem + calc(var(--bs-border-width) * 2));
     padding: .25rem .5rem;
     font-size: .875rem;
   }
-  table.list-edit.table-sm tbody td > div .form-select {
+  table.list-edit.table-sm tbody td > div > .form-select {
     padding-top: .31rem;
     padding-bottom: .32rem;
     padding-left: .5rem;
@@ -368,18 +368,18 @@ table.list-edit tbody td {
   table.list-edit.table-dense tbody td > div.ro {
     padding: 0 0.1rem;
   }
-  table.list-edit.table-dense tbody td > div .form-control {
+  table.list-edit.table-dense tbody td > div > .form-control {
     min-height: auto;
     padding: 0 .5rem;
     font-size: .7rem;
   }
-  table.list-edit.table-dense tbody td > div .form-select {
+  table.list-edit.table-dense tbody td > div > .form-select {
     padding-top: 0;
     padding-bottom: 0;
     padding-left: .5rem;
     font-size: .7rem;
   }
-  table.list-edit.table-dense tbody td > div .form-check-input {
+  table.list-edit.table-dense tbody td > div > .form-check-input {
     margin: 0.17rem 0.4rem;
   }
 

@@ -91,7 +91,8 @@ public class AdminActivityLogsController : FwController
         if (!Utils.isDate(itemdb["idate"]))
             itemdb["idate"] = DB.NOW; //if no date specified - use current date
         if (Utils.toInt(itemdb["users_id"]) == 0)
-            itemdb["users_id"] = fw.userId; //if no user specified - use current user
+            if (fw.userId > 0)
+                itemdb["users_id"] = fw.userId; //if no user specified - use current user, unless visitor
 
         id = this.modelAddOrUpdate(id, itemdb);
 

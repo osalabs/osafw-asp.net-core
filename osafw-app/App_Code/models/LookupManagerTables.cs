@@ -4,6 +4,7 @@
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace osafw;
@@ -195,4 +196,15 @@ public class LookupManagerTables : FwModel
         Hashtable where = new() { { idfield, sel_id } };
         return (string)db.value(lutable, where, inamefield);
     }
+
+    public DBList listByGroup()
+    {
+        return db.array(table_name, [], "igroup, iname");
+    }
+
+    public virtual List<string> getAutocompleteGroupsList(string q)
+    {
+        return db.colp($"select distinct igroup from {db.qid(table_name)} where igroup>'' order by igroup");
+    }
+
 }

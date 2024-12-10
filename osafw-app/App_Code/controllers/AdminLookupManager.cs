@@ -56,6 +56,23 @@ public class AdminLookupManagerController : FwController
             fw.redirect(base_url + "/(Dictionaries)");
         if (!Utils.isEmpty(defs["url"]))
             fw.redirect((string)defs["url"]);
+
+        //now check access rights via RBAC
+        int current_user_level = fw.userAccessLevel;
+        if (current_user_level < Users.ACL_SITEADMIN)
+        {
+            var action_more = fw.route.action_more;
+            if ((fw.route.action == FW.ACTION_SAVE || fw.route.action == FW.ACTION_SHOW_FORM) && Utils.isEmpty(fw.route.id))
+            {
+                //if save/showform and no id - it's add new - check for Add permission
+                action_more = FW.ACTION_MORE_NEW;
+            }
+
+            var resource_code = LookupManager.RBAC_RESOURCE_PREFIX + dict;
+            if (!fw.model<Users>().isAccessByRolesResourceAction(fw.userId, resource_code, fw.route.action, action_more))
+                throw new AuthException("Bad access - Not authorized to perform this action with Lookup Table");
+        }
+
     }
 
     public Hashtable DictionariesAction()
@@ -65,19 +82,43 @@ public class AdminLookupManagerController : FwController
         // code below to show list of items in columns instead of plain list
 
         int columns = 4;
-        DBList tables = model_tables.list();
-        int max_rows = (int)Math.Ceiling(tables.Count / (double)columns);
-        ArrayList cols = new();
+        DBList tables1 = model_tables.listByGroup();
+        DBList tables = [];
 
-        // add rows
-        int curcol = 0;
-        foreach (var table in tables)
+        //first filter out inaccessible tables
+        foreach (var table in tables1)
         {
             //do not show tables with access_level higher than current user
             var acl = Utils.toInt(table["access_level"]);
             if (!fw.model<Users>().isAccessLevel(acl))
                 continue;
 
+            // do not show tables if RBAC denies list access
+            var resource_code = LookupManager.RBAC_RESOURCE_PREFIX + table["tname"];
+            if (!fw.model<Users>().isAccessByRolesResourceAction(fw.userId, resource_code, FW.ACTION_INDEX))
+                continue;
+
+            tables.Add(table);
+        }
+
+        int max_rows = (int)Math.Ceiling(tables.Count / (double)columns);
+        ArrayList cols = [];
+
+        // add rows
+        int curcol = 0;
+        int curcol_rows = 0;
+        string curgroup = "";
+        foreach (var table in tables)
+        {
+            var igroup = table["igroup"].Trim();
+            bool is_new_group = igroup != curgroup;
+            if ((is_new_group || igroup == "") && curcol_rows >= max_rows)
+            {
+                //if we got more rows than max - move to next column (for new group or empty group)
+                curcol += 1;
+            }
+
+            // add new column if needed
             if (cols.Count <= curcol)
                 cols.Add(new Hashtable());
             Hashtable h = (Hashtable)cols[curcol];
@@ -86,10 +127,20 @@ public class AdminLookupManagerController : FwController
                 h["col_sm"] = Math.Floor(12 / (double)columns);
                 h["list_rows"] = new ArrayList();
             }
+
             ArrayList al = (ArrayList)h["list_rows"];
+            if (is_new_group)
+            {
+                Hashtable group = new()
+                {
+                    ["is_group"] = true,
+                    ["igroup"] = igroup
+                };
+                al.Add(group);
+                curgroup = igroup;
+            }
             al.Add(table.toHashtable());
-            if (al.Count >= max_rows)
-                curcol += 1;
+            curcol_rows = al.Count;
         }
 
         ps["list_сols"] = cols;
@@ -309,6 +360,7 @@ public class AdminLookupManagerController : FwController
         ps["defs"] = defs;
         ps["d"] = dict;
         ps["is_readonly"] = is_readonly;
+        ps["return_url"] = reqs("return_url");
 
         return ps;
     }

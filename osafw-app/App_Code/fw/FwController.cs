@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Text.RegularExpressions;
@@ -743,10 +744,27 @@ public abstract class FwController
         }
     }
 
+    // get count of rows from db
     public virtual void getListCount(string list_view = "")
     {
         string list_view_name = (!string.IsNullOrEmpty(list_view) ? list_view : this.list_view);
-        this.list_count = Utils.toLong(db.valuep("select count(*) from " + list_view_name + " where " + this.list_where, this.list_where_params));
+        var qlist_view_name = list_view_name.StartsWith('(') ? list_view_name : db.qid(list_view_name); // don't quote if list_view is a subquery (starting with parentheses)
+
+        this.list_count = Utils.toLong(db.valuep($"select count(*) from {qlist_view_name} where {list_where}", list_where_params));
+    }
+
+    // get list of rows from db
+    public virtual DBList getListRowsQuery(int offset = 0, int limit = -1)
+    {
+        var qlist_view_name = list_view.StartsWith('(') ? list_view : db.qid(list_view); // don't quote if list_view is a subquery (starting with parentheses)
+
+        return db.selectRaw(list_fields, qlist_view_name, list_where, list_where_params, list_orderby, offset, limit);
+    }
+
+    public virtual List<string> getListIds(string list_view = "")
+    {
+        var sql = $"SELECT {model0.field_id} FROM {list_view} WHERE {list_where} ORDER BY {list_orderby}";
+        return db.colp(sql, list_where_params);
     }
 
     /// <summary>
@@ -781,25 +799,16 @@ public abstract class FwController
 
         if (string.IsNullOrEmpty(list_view))
             list_view = model0.table_name;
-        var list_view_name = (list_view.Substring(0, 1) == "(" ? list_view : db.qid(list_view)); // don't quote if list_view is a subquery (starting with parentheses)
 
-        this.getListCount(list_view_name);
+        this.getListCount();
         if (this.list_count > 0)
         {
             int offset = pagenum * pagesize;
             int limit = pagesize;
 
-            this.list_rows = db.selectRaw(list_fields, list_view_name, list_where, list_where_params, list_orderby, offset, limit);
+            this.list_rows = getListRowsQuery(offset, limit);
 
             model0.normalizeNames(this.list_rows);
-
-            // for 2005<= SQL Server versions <2012
-            // offset+1 because _RowNumber starts from 1
-            // Dim sql As String = "SELECT * FROM (" &
-            // "   SELECT *, ROW_NUMBER() OVER (ORDER BY " & Me.list_orderby & ") AS _RowNumber" &
-            // "   FROM " & list_view &
-            // "   WHERE " & Me.list_where &
-            // ") tmp WHERE _RowNumber BETWEEN " & (offset + 1) & " AND " & (offset + 1 + limit - 1)
 
             if (!is_export)
                 this.list_pager = FormUtils.getPager(this.list_count, pagenum, pagesize);

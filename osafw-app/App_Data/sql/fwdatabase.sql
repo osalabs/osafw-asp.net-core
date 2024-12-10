@@ -287,6 +287,7 @@ CREATE TABLE lookup_manager_tables (
   tname                 NVARCHAR(255) NOT NULL DEFAULT '', /*table name*/
   iname                 NVARCHAR(255) NOT NULL DEFAULT '', /*human table name*/
   idesc                 NVARCHAR(MAX),                     /*table internal description*/
+  igroup                NVARCHAR(64) NOT NULL DEFAULT '',  -- group name, if set - tables grouped under same group name
 
   is_one_form           TINYINT NOT NULL DEFAULT 0,        /*1 - lookup table cotains one row, use form view*/
   is_custom_form        TINYINT NOT NULL DEFAULT 0,        /*1 - use custom form template, named by lowercase(tname)*/

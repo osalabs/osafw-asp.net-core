@@ -40,6 +40,13 @@ public class AdminUsersController : FwDynamicController
         }
     }
 
+    public override Hashtable setPS(Hashtable ps = null)
+    {
+        ps = base.setPS(ps);
+        ps["is_roles"] = model.isRoles();
+        return ps;
+    }
+
     public override Hashtable ShowFormAction(int id = 0)
     {
         var ps = base.ShowFormAction(id);

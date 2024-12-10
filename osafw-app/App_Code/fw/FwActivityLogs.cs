@@ -176,6 +176,7 @@ public class FwActivityLogs : FwModel
                 continue; // skip this row as it's merged with previous
 
             var new_row = new Hashtable();
+            new_row["users_id"] = row["users_id"];
             new_row["idesc"] = row["idesc"];
             new_row["idate"] = row["idate"];
             new_row["add_time"] = row["add_time"];
