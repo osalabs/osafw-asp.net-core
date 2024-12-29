@@ -144,7 +144,6 @@
       ]
     },
 
-
     {
       "library": "vue@3.5.8",
       "destination": "wwwroot/assets/lib/vue",
@@ -158,6 +157,35 @@
     {
       "library": "@vue/devtools-api@7.4.6",
       "destination": "wwwroot/assets/lib/vue-devtools-api"
+    },
+    {
+      "library": "@vue/devtools-kit@7.4.6",
+      "destination": "wwwroot/assets/lib/vue-devtools-kit"
+    },
+    {
+      "library": "@vue/devtools-shared@7.4.6",
+      "destination": "wwwroot/assets/lib/vue-devtools-shared"
+    },
+    {
+      "library": "perfect-debounce@1.0.0",
+      "destination": "wwwroot/assets/lib/perfect-debounce",
+      "files": [
+        "dist/index.mjs"
+      ]
+    },
+    {
+      "library": "hookable@5.5.3",
+      "destination": "wwwroot/assets/lib/hookable",
+      "files": [
+        "dist/index.mjs"
+      ]
+    },
+    {
+      "library": "birpc@0.2.19",
+      "destination": "wwwroot/assets/lib/birpc",
+      "files": [
+        "dist/index.mjs"
+      ]
     },
     {
       "library": "vue-demi@0.14.10",
