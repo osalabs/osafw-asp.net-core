@@ -12,6 +12,7 @@ namespace osafw;
 
 public class LookupManager : FwModel
 {
+    public const string RBAC_RESOURCE_PREFIX = "Lookups/";
 
     // system columns that not need to be shown to user as is
     public Hashtable SYS_COLS = new()
