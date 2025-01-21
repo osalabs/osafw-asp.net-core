@@ -478,6 +478,7 @@ public abstract class FwController
 
         return result;
     }
+
     // same as above but fields param passed as a qw string
     public virtual bool validateRequired(int id, Hashtable item, string fields)
     {

@@ -1112,7 +1112,7 @@ public class FwDynamicController : FwController
             {
                 if (Utils.isEmpty(def["model"]))
                 {
-                    // multiple checkboxes -> non-junction model single comma-delimited field                    
+                    // multiple checkboxes -> non-junction model single comma-delimited field
                     // if PATCH - only update is post param is present (otherwise it will delete all records)
                     if (isPatch() && req(field + "_multi") == null)
                         continue;
