@@ -22,7 +22,7 @@ public abstract class FwController
     public string base_url; // base url for the controller
     public string base_url_suffix; // additional base url suffix
 
-    public Hashtable form_new_defaults;   // optional, defaults for the fields in new form
+    public Hashtable form_new_defaults;   // optional, defaults for the fields in new form, overridden by item passed from request
     public string required_fields;        // optional, default required fields, space-separated
     public string save_fields;            // required, fields to save from the form to db, space-separated
     public string save_fields_checkboxes; // optional, checkboxes fields to save from the form to db, qw string: "field|def_value field2|def_value2"
@@ -478,7 +478,6 @@ public abstract class FwController
 
         return result;
     }
-
     // same as above but fields param passed as a qw string
     public virtual bool validateRequired(int id, Hashtable item, string fields)
     {
@@ -1269,6 +1268,45 @@ public abstract class FwController
                 row["cols"] = cols;
             }
         }
+    }
+
+    protected virtual int saveMultiRows(ICollection keys, bool is_delete, int user_lists_id, int remove_user_lists_id)
+    {
+        int ctr = 0;
+        if (keys == null || keys.Count == 0 || !(is_delete || user_lists_id > 0 || remove_user_lists_id > 0))
+            return ctr;
+
+        foreach (string id1 in keys)
+        {
+            var id = Utils.toInt(id1);
+            if (is_delete)
+            {
+                model0.deleteWithPermanentCheck(id);
+                ctr += 1;
+            }
+            else if (user_lists_id > 0)
+            {
+                fw.model<UserLists>().addItemList(user_lists_id, id);
+                ctr += 1;
+            }
+            else if (remove_user_lists_id > 0)
+            {
+                fw.model<UserLists>().delItemList(remove_user_lists_id, id);
+                ctr += 1;
+            }
+        }
+
+        return ctr;
+    }
+
+    protected virtual void saveMultiResult(int ctr, bool is_delete, int user_lists_id, int remove_user_lists_id)
+    {
+        if (is_delete)
+            fw.flash("multidelete", ctr);
+        if (user_lists_id > 0)
+            fw.flash("success", ctr + " records added to the list");
+        if (remove_user_lists_id > 0)
+            fw.flash("success", ctr + " records removed from the list");
     }
 
     // Default Actions

@@ -198,19 +198,23 @@ public class FwDynamicController : FwController
         // define form_new_defaults via config.json
         // Me.form_new_defaults = New Hashtable From {{"field", "default value"}} 'OR set new form defaults here
 
-        Hashtable ps = new();
+        Hashtable ps = [];
         var item = reqh("item"); // set defaults from request params
 
         if (isGet())
         {
             if (id > 0)
             {
+                // edit screen
                 item = model0.one(id);
             }
             else
             {
-                // override any defaults here
-                Utils.mergeHash(item, this.form_new_defaults);
+                // add new screen
+                Hashtable item_new = [];
+                Utils.mergeHash(item_new, form_new_defaults); // use hardcoded defaults if any
+                Utils.mergeHash(item_new, item); // override with passed defaults
+                item = item_new;
             }
         }
         else
@@ -280,7 +284,7 @@ public class FwDynamicController : FwController
             throw new Exception("No fields to save defined, define in Controller.save_fields");
 
         fw.model<Users>().checkReadOnly();
-        if (reqi("refresh") == 1)
+        if (reqi("refresh") == 1 && (id == 0)) //for new record - just refresh the form, for existing - also try to save
         {
             fw.routeRedirect(FW.ACTION_SHOW_FORM, new object[] { id });
             return null;
@@ -542,6 +546,7 @@ public class FwDynamicController : FwController
     public virtual Hashtable SaveMultiAction()
     {
         route_onerror = FW.ACTION_INDEX;
+
         Hashtable cbses = reqh("cb");
         bool is_delete = fw.FORM.ContainsKey("delete");
         if (is_delete)
@@ -549,7 +554,6 @@ public class FwDynamicController : FwController
 
         int user_lists_id = reqi("addtolist");
         var remove_user_lists_id = reqi("removefromlist");
-        int ctr = 0;
 
         if (user_lists_id > 0)
         {
@@ -558,34 +562,12 @@ public class FwDynamicController : FwController
                 throw new UserException("Wrong Request");
         }
 
-        foreach (string id1 in cbses.Keys)
-        {
-            int id = Utils.toInt(id1);
-            if (is_delete)
-            {
-                model0.deleteWithPermanentCheck(id);
-                ctr += 1;
-            }
-            else if (user_lists_id > 0)
-            {
-                fw.model<UserLists>().addItemList(user_lists_id, id);
-                ctr += 1;
-            }
-            else if (remove_user_lists_id > 0)
-            {
-                fw.model<UserLists>().delItemList(remove_user_lists_id, id);
-                ctr += 1;
-            }
-        }
+        int ctr = saveMultiRows(cbses.Keys, is_delete, user_lists_id, remove_user_lists_id);
 
-        if (is_delete)
-            fw.flash("multidelete", ctr);
-        if (user_lists_id > 0)
-            fw.flash("success", ctr + " records added to the list");
+        saveMultiResult(ctr, is_delete, user_lists_id, remove_user_lists_id);
 
         return this.afterSave(true, new Hashtable() { { "ctr", ctr } });
     }
-
 
     // ********************* support for autocomlete related items
     public virtual Hashtable AutocompleteAction()
@@ -1112,7 +1094,7 @@ public class FwDynamicController : FwController
             {
                 if (Utils.isEmpty(def["model"]))
                 {
-                    // multiple checkboxes -> non-junction model single comma-delimited field
+                    // multiple checkboxes -> non-junction model single comma-delimited field                    
                     // if PATCH - only update is post param is present (otherwise it will delete all records)
                     if (isPatch() && req(field + "_multi") == null)
                         continue;

@@ -238,16 +238,42 @@ public class Utils
     /// convert anything to DateTime, in case of error return DateTime.MinValue:
     /// </summary>
     /// <param name="o"></param>
+    /// <param name="exact_format">if set - TryParseExact used, example: "yyyyMMddHHmm"</param>
     /// <returns></returns>
-    public static DateTime toDate(object o)
+    public static DateTime toDate(object o, string exact_format = "")
     {
         if (o == null) return DateTime.MinValue;
         if (o is DateTime dt) return dt;
-        if (DateTime.TryParse(o.ToString(), out DateTime result))
+
+        if (!string.IsNullOrEmpty(exact_format) && DateTime.TryParseExact(o.ToString(), exact_format, null, System.Globalization.DateTimeStyles.None, out DateTime result))
             return result;
+
+        if (DateTime.TryParse(o.ToString(), out DateTime result2))
+            return result2;
 
         return DateTime.MinValue;
     }
+
+    /// <summary>
+    /// Convert anything to DateTime, in case of error return null.
+    /// </summary>
+    /// <param name="o"></param>
+    /// <param name="exact_format">if set - TryParseExact used, example: "yyyyMMddHHmm"</param>
+    /// <returns></returns>
+    public static DateTime? toDateOrNull(object o, string exact_format = "")
+    {
+        if (o == null) return null;
+        if (o is DateTime dt) return dt;
+
+        if (!string.IsNullOrEmpty(exact_format) && DateTime.TryParseExact(o.ToString(), exact_format, null, System.Globalization.DateTimeStyles.None, out DateTime result))
+            return result;
+
+        if (DateTime.TryParse(o.ToString(), out DateTime result2))
+            return result2;
+
+        return null;
+    }
+
 
     [Obsolete("This method is deprecated, use toDate instead.")]
     public static DateTime? f2date(object field)
@@ -268,7 +294,7 @@ public class Utils
     /// <returns></returns>
     public static bool isDate(object o)
     {
-        return toDate(o) != DateTime.MinValue;
+        return toDateOrNull(o) != null;
     }
 
     /// <summary>
@@ -1498,6 +1524,9 @@ public class Utils
         for (int i = 0; i < ids.Count; i++)
         {
             string v = (string)ids[i];
+            //skip empty values
+            if (v == "") continue;
+
             if (value == null)
             {
                 result[v] = v;

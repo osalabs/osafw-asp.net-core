@@ -685,7 +685,7 @@ public abstract class FwModel : IDisposable
                 }
             }
 
-            lookup_rows = sortByCheckedPrio(lookup_rows);
+            lookup_rows = filterAndSortChecked(lookup_rows, def);
         }
         return lookup_rows;
     }
@@ -721,7 +721,7 @@ public abstract class FwModel : IDisposable
                 }
             }
 
-            lookup_rows = sortByCheckedPrio(lookup_rows);
+            lookup_rows = filterAndSortChecked(lookup_rows, def);
         }
         return lookup_rows;
     }
@@ -738,20 +738,28 @@ public abstract class FwModel : IDisposable
                 row["is_checked"] = ids.Contains(row[this.field_id]);
 
             // now sort so checked values will be at the top - using LINQ
-            result = new ArrayList();
-            if (is_checked_only)
-                result.AddRange((from Hashtable h in rows
-                                 where (bool)h["is_checked"]
-                                 select h).ToList());
-            else
-                result.AddRange((from Hashtable h in rows
-                                 orderby h["is_checked"] descending
-                                 select h).ToList());
+            result = filterAndSortChecked(rows, def);
         }
         else if (is_checked_only)
             // return no items if no checked
             result = new ArrayList();
         return result;
+    }
+
+    protected ArrayList filterAndSortChecked(ArrayList rows, Hashtable def = null)
+    {
+        var is_checked_only = (def != null && Utils.toBool(def["lookup_checked_only"]));
+        if (is_checked_only)
+        {
+            var result = new ArrayList();
+            result.AddRange((from Hashtable h in rows
+                             where (bool)h["is_checked"]
+                             select h).ToList());
+            return result;
+        }
+        else
+            return sortByCheckedPrio(rows);
+
     }
 
     /// <summary>
