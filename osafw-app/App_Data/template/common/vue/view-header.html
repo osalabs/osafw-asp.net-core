@@ -7,7 +7,14 @@
   <nav class="d-print-none">
     <a href="#" @click.prevent="fwStore.openListScreen">{{fwStore.list_title}}</a> <span class="text-muted">/</span>
   </nav>
-  <h1>{{fwStore.view_title}}</h1>
+  
+  <h1>
+      <span v-if="fwStore.is_loading_item"
+                  class="spinner-border" role="status" aria-hidden="true"></span>
+      {{fwStore.view_title}}
+  </h1>
+
+  <slot name="beforeButtons"></slot>
 
   <div class="btn-std d-print-none">
     <a v-if="fwStore.return_url"
@@ -19,8 +26,8 @@
       href="#"
       @click.prevent="onBack"
     ><i class="bi bi-arrow-left-circle"></i> `Back to List`</a>
-    <div class="btn-group" v-if="!disableAddNew || $slots.group || fwStore.return_url">
-      <a v-if="!disableAddNew"
+    <div class="btn-group" v-if="uioptions.btnAddNew || $slots.group || fwStore.return_url">
+      <a v-if="uioptions.btnAddNew"
         class="btn btn-default"
         href="#"
         @click.prevent="onAddNew"
@@ -56,6 +63,8 @@
    <slot></slot>
   </div>
 
+  <slot name="afterButtons"></slot>
+
 </script>
 
 <script type="module">
@@ -63,16 +72,13 @@ import { mapStores } from 'pinia';
 
 fwApp.component('view-header', {
   template: '#view-header-template',
-  props: {
-    disableAddNew: {
-      type: Boolean,
-      default: false
-    },
-  },
   data: () => ({
   }),
   computed: {
     ...mapStores(useFwStore), //accessible via this.fwStore
+    uioptions(){
+      return this.fwStore.uioptions.view.header??false;
+    },
     current_id() {
       return this.fwStore.current_id ?? 0;
     },

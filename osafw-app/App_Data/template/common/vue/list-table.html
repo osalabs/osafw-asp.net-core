@@ -9,8 +9,8 @@
       <table :class="'table table-stripedX table-hover list ' + (fwStore.is_list_edit?'list-edit ':'') + fwStore.list_user_view.density">
         <thead>
             <tr>
-              <th><input type="checkbox" name="all" v-model="cb_check_all" @change="onCheckAll"></th>
-              <th v-if="fwStore.global.is_list_btn_left && fwStore.list_row_buttons!==false"></th>
+              <th class="d-print-none"><input type="checkbox" name="all" v-model="cb_check_all" @change="onCheckAll"></th>
+              <th class="d-print-none" v-if="uioptions.isButtonsLeft && uioptions.rowButtons!==false"></th>
 
               <template v-for="header in fwStore.list_headers" :key="header.field_name">
                 <th :class="'rotate'+(header.is_sortable && fwStore.f.sortby==header.field_name ? ' active-sort' : '')"
@@ -33,18 +33,18 @@
                 </th>
               </template>
 
-              <th v-if="!fwStore.global.is_list_btn_left && fwStore.list_row_buttons!==false"></th>
+              <th v-if="!uioptions.isButtonsLeft && uioptions.rowButtons!==false"></th>
             </tr>
             <tr class="search" :style="fwStore.is_list_search_open ? 'display: table-row' : ''">
               <th></th>
-              <th v-if="fwStore.global.is_list_btn_left && fwStore.list_row_buttons!==false"></th>
+              <th v-if="uioptions.isButtonsLeft && uioptions.rowButtons!==false"></th>
               <th v-for="header in fwStore.list_headers" :key="header.field_name">
                 <input type="text" class="form-control form-control-sm"
                   v-model="header.search_value"
                   @change="fwStore.loadIndexDebounced"
                   @keyup.enter.stop="fwStore.loadIndexDebounced">
               </th>
-              <th v-if="!fwStore.global.is_list_btn_left && fwStore.list_row_buttons!==false"></th>
+              <th v-if="!uioptions.isButtonsLeft && uioptions.rowButtons!==false"></th>
             </tr>
         </thead>
 
@@ -57,12 +57,12 @@
                 @dblclick="(event) => onDblClickRow(event,row)"
             >
 
-                <td class="list-row-cb"><input class="multicb" type="checkbox" v-model="fwStore.hchecked_rows[row[fwStore.field_id]]"></td>
-                <list-row-btn v-if="fwStore.global.is_list_btn_left && fwStore.list_row_buttons!==false"
+                <td class="list-row-cb d-print-none"><input class="multicb" type="checkbox" v-model="fwStore.hchecked_rows[row[fwStore.field_id]]"></td>
+                <list-row-btn v-if="uioptions.isButtonsLeft && uioptions.rowButtons!==false"
                   :row="row"
-                  :is_left="fwStore.global.is_list_btn_left"
+                  :is_left="uioptions.isButtonsLeft"
                   :is_readonly="fwStore.is_readonly"
-                  :buttons="fwStore.list_row_buttons"
+                  :buttons="uioptions.rowButtons"
                   @view="onRowView(row)"
                   @edit="onRowEdit(row)"
                   @quickedit="onRowQuickEdit(row)"
@@ -74,24 +74,26 @@
                 <template v-for="header in fwStore.list_headers" :key="header.field_name">
                   <td v-if="!fwStore.is_list_edit">{{fieldValueByName(row, header.field_name)}}</td>
                   <td v-else
-                      :class="(fwStore.cells_saving[row.id+'-'+header.field_name]?'cell-success-fade':'')+(fwStore.cells_errors[row.id+'-'+header.field_name]?' cell-invalid':'')">
+                      :class="(fwStore.cells_saving[row[fwStore.field_id]+'-'+header.field_name]?'cell-success-fade':'')+(fwStore.cells_errors[row[fwStore.field_id]+'-'+header.field_name]?' cell-invalid':'')">
                       <list-cell-ro v-if="header.is_ro || row._meta?.is_ro || row._meta?.ro_fields?.includes(header.field_name)" :row="row" :col="header"></list-cell-ro>
 
                       <list-cell-input v-else-if="['input','email','number','date_popup','textarea','autocomplete'].includes(header.input_type)"
-                        :row="row" :col="header"
-                        :error="fwStore.cells_errors[row.id+'-'+header.field_name]"
+                        :rowId="row[fwStore.field_id]" :row="row" :col="header"
+                        :error="fwStore.cells_errors[row[fwStore.field_id]+'-'+header.field_name]"
                         @change="onCellChange($event, row, header)"
+                        @keyup="fwStore.onCellKeyup($event, row, header)"
                         @navigate="onCellNavigate($event)"
                         @btnClick="fwStore.onCellBtnClick($event)"
                         ></list-cell-input>
                       <list-cell-select v-else-if="header.input_type=='select' || header.input_type=='radio'"
-                        :row="row" :col="header" :error="fwStore.cells_errors[row.id+'-'+header.field_name]"
+                        :rowId="row[fwStore.field_id]" :row="row" :col="header"
+                        :error="fwStore.cells_errors[row[fwStore.field_id]+'-'+header.field_name]"
                         :options="fwStore.lookupByDef(header)"
                         @change="onCellChange($event, row, header)"
                         @btnClick="fwStore.onCellBtnClick($event)"
                         ></list-cell-select>
                       <list-cell-checkbox v-else-if="header.input_type=='cb' || header.input_type=='yesno'"
-                        :row="row" :col="header"
+                        :rowId="row[fwStore.field_id]" :row="row" :col="header"
                         @change="onCellChange($event, row, header)"
                         @navigate="onCellNavigate($event)"
                         @btnClick="fwStore.onCellBtnClick($event)"
@@ -101,11 +103,11 @@
                   </td>
                 </template>
 
-                <list-row-btn v-if="!fwStore.global.is_list_btn_left && fwStore.list_row_buttons!==false"
+                <list-row-btn v-if="!uioptions.isButtonsLeft && uioptions.rowButtons!==false"
                   :row="row"
-                  :is_left="fwStore.global.is_list_btn_left"
+                  :is_left="uioptions.isButtonsLeft"
                   :is_readonly="fwStore.is_readonly"
-                  :buttons="fwStore.list_row_buttons"
+                  :buttons="uioptions.rowButtons"
                   @view="onRowView(row)"
                   @edit="onRowEdit(row)"
                   @quickedit="onRowQuickEdit(row)"
@@ -121,26 +123,32 @@
     </div>
 
     <div class="text-center py-4" v-if="!fwStore.list_rows.length">
-      <h3><i class="bi bi-0-square"></i> `No results`</h3>
-      Try to <a :href="'?dofilter=1'+(fwStore.related_id ? '&related_id='+fwStore.related_id : '')">reset</a> all filters.
+      <template v-if="fwStore.is_loading_index">
+        <span class="spinner-border" role="status" aria-hidden="true"></span>
+      </template>
+      <template v-else>
+        <h3><i class="bi bi-0-square"></i> `No results`</h3>
+        Try to <a :href="'?dofilter=1'+(fwStore.related_id ? '&related_id='+fwStore.related_id : '')">reset</a> all filters.
+      </template>
     </div>
 
     <template v-if="fwStore.list_rows.length">
-      <div class="float-md-end pt-2 mb-3 d-print-none">
+      <div v-if="uioptions.pagination"
+        class="float-md-end pt-2 mb-3 d-print-none">
         <span class="badge"></span><br>
         <div class="d-flex justify-content-md-end">
           <list-pagination
             :pager="fwStore.pager"
             :pagesize="fwStore.f.pagesize"
             :count="fwStore.count"
-            :isShowCount="paginationIsShowCount"
+            :isShowCount="uioptions.pagination.count"
             @on-page="onClickPage"
             @on-pagesize="onChangePagesize"
           ></list-pagination>
         </div>
       </div>
 
-      <list-btn-multi><slot name="list-btn-multi"></slot></list-btn-multi>
+      <list-btn-multi v-if="this.fwStore.uioptions.list.btnMulti"><slot name="list-btn-multi"></slot></list-btn-multi>
     </template>
 
   </form>
@@ -162,9 +170,6 @@ fwApp.component('list-table', {
       validator: value => {
         return ['','view','edit','quickedit'].includes(value)
       }
-    },
-    paginationIsShowCount: {
-      type: Boolean
     }
   },
   emit: [],
@@ -175,6 +180,9 @@ fwApp.component('list-table', {
     ...mapStores(useFwStore), //accessible via this.fwStore
     row_title(){
       return this.fwStore.is_list_edit ? '' : 'Double click to Edit';
+    },
+    uioptions(){
+      return this.fwStore.uioptions.list.table??{};
     }
   },
   mounted() {
@@ -217,7 +225,7 @@ fwApp.component('list-table', {
     //check all/none rows
     onCheckAll(e){
         if (e.target.checked){
-            // for each row.id in fwStore.list_rows - add to hchecked_rows
+            // for each row[id] in fwStore.list_rows - add to hchecked_rows
             this.fwStore.hchecked_rows = this.fwStore.list_rows.reduce((acc, row) => {
                 acc[row[this.fwStore.field_id]] = true;
                 return acc;
@@ -250,17 +258,17 @@ fwApp.component('list-table', {
       }
     },
     async onRowView(row){
-      this.fwStore.openViewScreen(row.id);
+      this.fwStore.openViewScreen(row[this.fwStore.field_id]);
     },
     async onRowEdit(row){
-      this.fwStore.openEditScreen(row.id);
+      this.fwStore.openEditScreen(row[this.fwStore.field_id]);
     },
     async onRowQuickEdit(row){
-      await this.fwStore.openEditPane(row.id);
+      await this.fwStore.openEditPane(row[this.fwStore.field_id]);
     },
     async onRowDelete(row){
-      console.log("TODO confirm modal list-table onRowDelete", row.id);
-      await this.fwStore.deleteRow(row.id);
+      console.log("TODO confirm modal list-table onRowDelete", row[this.fwStore.field_id]);
+      await this.fwStore.deleteRow(row[this.fwStore.field_id]);
       await this.fwStore.loadIndexDebounced(); //reload list to show changes
     },
 
@@ -273,7 +281,7 @@ fwApp.component('list-table', {
         }
     },
     onCellNavigate({ dir, row, col }) {
-        const cur_row_index = this.fwStore.list_rows.findIndex(r => r.id === row.id);
+        const cur_row_index = this.fwStore.list_rows.findIndex(r => r[this.fwStore.field_id] === row[this.fwStore.field_id]);
         const next_row_index = (dir === 'up' ? cur_row_index - 1 : cur_row_index + 1);
         if (next_row_index < 0 || next_row_index >= this.fwStore.list_rows.length) {
           return; //no row to go
@@ -286,7 +294,7 @@ fwApp.component('list-table', {
         });
     },
     findCell(row, col) {
-        const cell_id = 'cell-'+row.id+'-'+col.field_name;
+        const cell_id = 'cell-'+row[this.fwStore.field_id]+'-'+col.field_name;
         return document.getElementById(cell_id);
     }
   }

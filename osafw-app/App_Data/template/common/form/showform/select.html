@@ -5,4 +5,5 @@
     <~select_options select="value" unless="multiple">
 </select>
 <span class="err-EXISTS"><~err_exists_msg default="`This name already exists in our database`"></span>
+<~./validation_errors if="errors">
 <~./help_block if="help_text">

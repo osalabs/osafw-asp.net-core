@@ -1,4 +1,5 @@
 <script type="text/x-template" id="edit-form-template">
+  <div v-if="save_result && !save_result.success && save_result.err_msg>''" class="alert alert-danger">{{save_result.err_msg}}</div>
   <form v-if="fwStore.edit_data !== null"
     id="FEdit"
     class="fw-card"
@@ -31,6 +32,9 @@
       </div>
     </div>
   </form>
+  <template v-else>
+    <div v-if="fwStore.is_loading_item" class="text-center"><span class="spinner-border" role="status" aria-hidden="true"></span></div>
+  </template>
 </script>
 
 <script type="module">

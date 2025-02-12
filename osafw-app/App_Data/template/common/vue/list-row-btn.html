@@ -16,6 +16,10 @@
       <template v-if="co_buttons.view || co_buttons.edit || co_buttons.quickedit">&nbsp;&#183;&nbsp;</template>
       <a href="#" class="text-danger" @click.prevent="$emit('delete', $event)" :disabled="isReadonly"><i class="bi bi-x"></i></a>
     </template>
+    <template v-if="co_buttons.custom">
+      <template v-if="co_buttons.view || co_buttons.edit || co_buttons.quickedit || co_buttons.delete">&nbsp;&#183;&nbsp;</template>
+      <a href="#" @click.prevent="$emit('custom', $event)" :disabled="isReadonly">{{co_buttons.custom}}</a>
+    </template>
 
     <slot name="btn-append" :row="row"></slot>
   </td>
@@ -41,7 +45,7 @@ fwApp.component('list-row-btn', {
       default: false
     },
   },
-  emits: ['view', 'edit', 'quickedit', 'delete'],
+  emits: ['view', 'edit', 'quickedit', 'delete', 'custom'],
   computed: {
         co_buttons(){
           return this.buttons === undefined ? false : this.buttons;

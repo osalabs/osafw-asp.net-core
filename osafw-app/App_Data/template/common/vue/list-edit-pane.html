@@ -6,6 +6,7 @@
       <span v-if="!save_result.success" class="badge bg-danger">not saved</span>
     </span>
     <h2>Edit Record</h2>
+    <div v-if="save_result && !save_result.success && save_result.err_msg>''" class="alert alert-danger">{{save_result.err_msg}}</div>
     <form v-if="fwStore.edit_data !== null"
       class="fw-card"
       @submit.prevent="saveChanges"
@@ -22,6 +23,9 @@
         />
       </fieldset>
     </form>
+    <template v-else>
+      <div v-if="fwStore.is_loading_item" class="text-center"><span class="spinner-border" role="status" aria-hidden="true"></span></div>
+    </template>
   </div>
 </script>
 

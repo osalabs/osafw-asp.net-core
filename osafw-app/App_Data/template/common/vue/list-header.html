@@ -1,17 +1,17 @@
 <script type="text/x-template" id="list-header-template">
  <div>
   <h1>{{fwStore.list_title}}
-    <span v-if="!disableCount" class="badge badge-outline-secondary rounded-pill">{{fwStore.count}}</span>
+    <span v-if="uioptions.count" class="badge badge-outline-secondary rounded-pill">{{fwStore.count}}</span>
   </h1>
-
+  <slot name="beforeButtons"></slot>
   <div class="btn-std d-print-none">
-   <div class="btn-group" v-if="!disableAddNew || $slots.group || $slots.groupPrepend || fwStore.return_url">
+   <div class="btn-group" v-if="uioptions.btnAddNew || $slots.group || $slots.groupPrepend || fwStore.return_url">
       <a v-if="fwStore.return_url"
         class="btn btn-default"
         :href="fwStore.return_url"
       ><i class="bi bi-arrow-left-circle"></i> `Return Back`</a>
       <slot name="group-prepend"></slot>
-      <a v-if="!disableAddNew"
+      <a v-if="uioptions.btnAddNew"
         class="btn btn-default"
         href="#"
         @click.prevent="onAddNew"
@@ -21,6 +21,7 @@
    </div>
    <slot></slot>
   </div>
+  <slot name="afterButtons"></slot>
 
  </div>
 </script>
@@ -30,20 +31,13 @@ import { mapStores } from 'pinia';
 
 fwApp.component('list-header', {
   template: '#list-header-template',
-  props: {
-    disableAddNew: {
-      type: Boolean,
-      default: false
-    },
-    disableCount: {
-      type: Boolean,
-      default: false
-    },
-  },
   data: () => ({
   }),
   computed: {
-    ...mapStores(useFwStore) //accessible via this.fwStore
+    ...mapStores(useFwStore), //accessible via this.fwStore
+    uioptions(){
+      return this.fwStore.uioptions.list.header??false;
+    }
   },
   methods: {
     onAddNew(e){

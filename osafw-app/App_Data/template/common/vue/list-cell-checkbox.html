@@ -12,7 +12,7 @@
       <slot name="prepend"></slot>
       <input type="checkbox"
         class="form-check-input"
-        :id="'cell-'+row.id+'-'+col.field_name"
+        :id="'cell-'+rowId+'-'+col.field_name"
         v-model="row[col.field_name]"
         true-value="1"
         false-value="0"
@@ -43,6 +43,10 @@
 fwApp.component('list-cell-checkbox', {
   template: '#list-cell-checkbox-template',
   props: {
+    rowId: {
+      type: String,
+      required: true
+    },
     row: {
       type: Object,
       required: true
