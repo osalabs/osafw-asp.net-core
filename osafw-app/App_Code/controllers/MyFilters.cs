@@ -58,8 +58,7 @@ public class MyFiltersController : FwAdminController
 
     public override Hashtable ShowFormAction(int id = 0)
     {
-        this.form_new_defaults = new();
-        this.form_new_defaults["icode"] = related_id;
+        form_new_defaults = new() { ["icode"] = related_id };
         var ps = base.ShowFormAction(id);
         ps["is_admin"] = fw.userAccessLevel == Users.ACL_ADMIN;
         return ps;

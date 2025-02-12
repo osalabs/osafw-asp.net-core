@@ -76,9 +76,7 @@ public class AdminDemosController : FwAdminController
 
     public override Hashtable ShowFormAction(int id = 0)
     {
-        // Me.form_new_defaults = New Hashtable 'set new form defaults here if any
-        // Me.form_new_defaults = reqh("item") 'OR optionally set defaults from request params
-        // item["field"]="default value"
+        // form_new_defaults = new() { { "iname", "New Item" } }; //set new form defaults if any
         Hashtable ps = base.ShowFormAction(id);
 
         // read dropdowns lists from db

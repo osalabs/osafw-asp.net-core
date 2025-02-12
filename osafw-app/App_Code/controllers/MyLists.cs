@@ -88,8 +88,7 @@ public class MyListsController : FwAdminController
 
     public override Hashtable ShowFormAction(int id = 0)
     {
-        this.form_new_defaults = new();
-        this.form_new_defaults["entity"] = related_id;
+        form_new_defaults = new() { ["entity"] = related_id };
         return base.ShowFormAction(id);
     }
 
