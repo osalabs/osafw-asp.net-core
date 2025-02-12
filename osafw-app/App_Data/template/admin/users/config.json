@@ -25,10 +25,11 @@
     "is_readonly": "Read Only?",
     "is_mfa": "MFA?",
     "add_time": "Added On",
-    "upd_time": "Updated On"
+    "upd_time": "Updated On",
+    "login": "Active Directory Login"
   },
   "model": "Users",
-  "save_fields_nullable": "att_id",
+  "save_fields_nullable": "att_id login",
   "show_fields": [
     {
       "type": "plaintext",
@@ -39,6 +40,11 @@
       "type": "plaintext",
       "field": "email",
       "label": "Email"
+    },
+    {
+      "type": "plaintext",
+      "field": "login",
+      "label": "Active Directory Login"
     },
     {
       "type": "plaintext",
@@ -139,6 +145,7 @@
     "idesc",
     "status",
     "title",
-    "att_id"
+    "att_id",
+    "login"
   ]
 }

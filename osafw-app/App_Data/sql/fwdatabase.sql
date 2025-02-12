@@ -142,6 +142,7 @@ CREATE TABLE users (
   mfa_secret            NVARCHAR(64), -- mfa secret code, if empty - no mfa for the user configured
   mfa_recovery          NVARCHAR(1024), -- mfa recovery hashed codes, space-separated
   mfa_added             DATETIME2,    -- last datetime when mfa setup or resynced
+  login                 NVARCHAR(128) NULL, -- windows authentication login
 
   status                TINYINT NOT NULL DEFAULT 0,        /*0-ok, 127-deleted*/
   add_time              DATETIME2 NOT NULL DEFAULT getdate(),
@@ -151,13 +152,16 @@ CREATE TABLE users (
 
   INDEX UX_users_email UNIQUE (email)
 );
+-- special index that allows NULLs
+CREATE UNIQUE NONCLUSTERED INDEX UX_users_login ON users(login) WHERE login IS NOT NULL;
+
 INSERT INTO users (fname, lname, email, pwd, access_level)
 VALUES ('Website','Admin','admin@admin.com','CHANGE_ME',100);
 
 /*user cookies (for permanent sessions)*/
 DROP TABLE IF EXISTS users_cookies;
 CREATE TABLE users_cookies (
-    cookie_id           NVARCHAR(255) PRIMARY KEY CLUSTERED NOT NULL,      /*hashed cookie id*/
+    cookie_id           NVARCHAR(255) PRIMARY KEY CLUSTERED NOT NULL,      /*cookie id: sha256(rand(64))*/
     users_id            INT NOT NULL CONSTRAINT FK_users_cookies_users FOREIGN KEY REFERENCES users(id),
 
     add_time            DATETIME2 NOT NULL DEFAULT getdate()

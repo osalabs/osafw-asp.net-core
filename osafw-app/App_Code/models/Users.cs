@@ -29,6 +29,8 @@ public class Users : FwModel
     public const string PERM_COOKIE_NAME = "osafw_perm";
     public const int PERM_COOKIE_DAYS = 356;
 
+    public const int PWD_RESET_TOKEN_LEN = 50;
+
     private readonly string table_menu_items = "menu_items";
     private readonly string table_users_cookies = "users_cookies";
 
@@ -45,6 +47,11 @@ public class Users : FwModel
         Hashtable where = new();
         where["email"] = email;
         return db.row(table_name, where);
+    }
+
+    public Hashtable oneByLogin(string login)
+    {
+        return db.row(table_name, DB.h("login", login));
     }
 
     /// <summary>
@@ -174,11 +181,11 @@ public class Users : FwModel
     /// <returns></returns>
     public bool sendPwdReset(int id)
     {
-        var pwd_reset_token = Utils.getRandStr(50);
+        var pwd_reset_token = Utils.getRandStr(PWD_RESET_TOKEN_LEN);
 
         Hashtable item = new()
         {
-            {"pwd_reset", this.hashPwd(pwd_reset_token, 50)},
+            {"pwd_reset", this.hashPwd(pwd_reset_token, PWD_RESET_TOKEN_LEN)},
             {"pwd_reset_time", DB.NOW}
         };
         this.update(id, item);
@@ -544,10 +551,11 @@ public class Users : FwModel
     /// <returns></returns>
     public bool isAccessByRolesResourceAction(int users_id, string resource_icode, string resource_action, string resource_action_more = "", Hashtable access_actions_to_permissions = null)
     {
-
+        logger("isAccessByRolesResourceAction", DB.h("users_id", users_id, "resource_icode", resource_icode, "resource_action", resource_action, "resource_action_more", resource_action_more));
 #if isRoles
         // determine permission by resource action
         var permission_icode = fw.model<Permissions>().mapActionToPermission(resource_action, resource_action_more);
+        logger("permission_icode:", permission_icode);
 
         if (access_actions_to_permissions != null)
         {
@@ -640,6 +648,59 @@ public class Users : FwModel
 #endif
     }
 
+    // return list of icodes for resources user has access to with a "list" permission
+    // i.e. if user has list permission to a resource - it should be accessible via menu
+    public List<string> icodesAccessibleResources(int users_id)
+    {
+        var result = new List<string>();
+
+#if isRoles
+        var p = new Hashtable
+        {
+            { "icode", Permissions.PERMISSION_LIST },
+            { "users_id", users_id }
+        };
+        var roles_sql = "";
+
+        if (users_id == 0)
+        {
+            //this is visitor - use just one specific role
+            var role_visitor_id = fw.model<Roles>().idVisitor();
+            p["visitor_role_id"] = role_visitor_id;
+            roles_sql = $"@visitor_role_id";
+        }
+        else
+        {
+            //if Site Admin - has access to all resources
+            if (Utils.toInt(one(users_id)["access_level"]) == ACL_SITEADMIN)
+                return db.colp($"select icode from {fw.model<Resources>().table_name}");
+
+            //get all roles for the known user
+            roles_sql = $"select roles_id from {fw.model<UsersRoles>().table_name} where users_id=@users_id";
+        }
+
+        result = db.colp($@"with rids as (
+                        select resources_id 
+                        from {fw.model<RolesResourcesPermissions>().table_name}
+                        where permissions_id in (select id from {fw.model<Permissions>().table_name} where icode=@icode)
+                          and roles_id in ({roles_sql})
+                        )
+
+                        select icode from {fw.model<Resources>().table_name} r, rids 
+                         where r.id=rids.resources_id", p);
+#endif
+
+        return result;
+    }
+
+    /// <summary>
+    /// shortcut to check if currently logged user is a Site Admin
+    /// </summary>
+    /// <returns></returns>
+    public bool isSiteAdmin()
+    {
+        return isAccessLevel(ACL_SITEADMIN);
+    }
     #endregion
 
     #region Permanent Login Cookies

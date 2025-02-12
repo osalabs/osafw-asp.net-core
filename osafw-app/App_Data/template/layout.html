@@ -6,19 +6,19 @@
   <body class="<~body_class>">
     <~/layout/header>
 
-    <div class="sidebar bg-body-tertiary" id="sidebar">
-      <div class="d-flex flex-column flex-shrink-0 p-3 w-100 d-print-none">
-        <~/layout/sidebar unless="hide_std_sidebar">
-        <~sidebar>
-        <~/layout/sidebar_my>
-        <~#/layout/footer>
+    <div class="container-fluid">
+      <div class="sidebar bg-body-tertiary" id="sidebar">
+        <div class="d-flex flex-column flex-shrink-0 p-3 w-100 d-print-none">
+          <~/layout/sidebar unless="hide_std_sidebar">
+          <~sidebar>
+          <~/layout/sidebar_my>
+          <~#/layout/footer>
+        </div>
       </div>
-    </div>
-    <main>
-      <div class="container-fluid">
+      <main>
         <~main>
-      </div>
-    </main>
+      </main>
+    </div>
 
     <~/layout/sys_footer>
   </body>

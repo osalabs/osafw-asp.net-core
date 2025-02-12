@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Builder;
+﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using System.Linq;
 using System.Threading.Tasks;
@@ -52,6 +53,15 @@ public class MyHandlerMiddleware
             // end request
             //context.RequestServices.CompleteRequest()
         }
+
+        // Windows Authentication support
+        if (!context.User.Identity.IsAuthenticated && context.Request.Path.ToString().ToLower().StartsWith("/winlogin"))
+        {
+            //if not authenticated and win login requested - send challenge to the browser
+            await context.ChallengeAsync(Microsoft.AspNetCore.Server.IISIntegration.IISDefaults.AuthenticationScheme);
+            return;
+        }
+
         await Task.Run(() =>
         {
             FW.run(context, Startup.Configuration);
