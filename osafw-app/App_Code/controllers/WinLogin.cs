@@ -4,6 +4,7 @@
 // (c) 2009-2025 Oleg Savchuk www.osalabs.com
 
 // To enable Windows Authenticaiton support:
+// install Microsoft.AspNetCore.Authentication.Negotiate (uncomment in csproj)
 // uncomment in Startup.cs
 // check HttpMiddleware.cs
 // uncomment windows login button in template/index/form.html

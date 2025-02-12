@@ -1,4 +1,14 @@
-﻿//if you use Sentry set to True here, install SentrySDK, in web.config fill endpoint URL to "log_sentry"
+﻿// FW Core
+//
+// Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
+// (c) 2009-2024 Oleg Savchuk www.osalabs.com
+
+
+//if you use Sentry https://docs.sentry.io/platforms/dotnet/guides/aspnetcore/
+//  install Sentry.AspNetCore (uncomment in csproj)
+//  in appsettings.json set your Sentry.Dsn
+//  in Program - uncomment webBuilder.UseSentry();
+//  uncomment define below
 //#define isSentry
 
 using Microsoft.AspNetCore.Http;
@@ -125,10 +135,6 @@ public class FW : IDisposable
     public string last_error_send_email = "";
     private static readonly char path_separator = Path.DirectorySeparatorChar;
 
-#if isSentry
-    private readonly IDisposable sentryClient;
-#endif
-
     // shortcut for currently logged users.id
     // usage: fw.userId
     public int userId
@@ -187,8 +193,14 @@ public class FW : IDisposable
 
 #if isSentry
         //configure Sentry logging
-        sentryClient = Sentry.SentrySdk.Init(Utils.f2str(config("log_sentry")));
-        Sentry.SentrySdk.ConfigureScope(scope => scope.User = new Sentry.SentryUser { Email = Session("login") });
+        var env = Utils.toStr(config("config_override"));
+        env = env == "" ? "live" : env;
+        Sentry.SentrySdk.ConfigureScope(scope =>
+        {
+            scope.User = new Sentry.SentryUser { Email = Session("login") };
+            scope.Environment = env;
+            scope.SetTag("ProcessId", Environment.ProcessId.ToString());
+        });
 #endif
 
         db = new DB(this);
@@ -586,11 +598,9 @@ public class FW : IDisposable
             else
             {
                 // it's ApplicationException, so just warning
-                logger(LogLevel.WARN, "===== ERROR DUMP APP =====");
-                logger(LogLevel.WARN, Ex.Message);
-                logger(LogLevel.WARN, Ex.ToString());
-                logger(LogLevel.WARN, "REQUEST FORM:", FORM);
-                logger(LogLevel.WARN, "SESSION:", context.Session);
+                logger(LogLevel.NOTICE, "REQUEST FORM:", FORM);
+                logger(LogLevel.NOTICE, "SESSION:", context.Session);
+                logger(LogLevel.WARN, Ex.Message, Ex.ToString());
 
                 // send_email_admin("App Exception: " & Ex.ToString() & vbCrLf & vbCrLf & _
                 // "Request: " & req.Path & vbCrLf & vbCrLf & _
@@ -603,11 +613,9 @@ public class FW : IDisposable
         catch (Exception Ex)
         {
             // it's general Exception, so something more severe occur, log as error and notify admin
-            logger(LogLevel.ERROR, "===== ERROR DUMP =====");
-            logger(LogLevel.ERROR, Ex.Message);
-            logger(LogLevel.ERROR, Ex.ToString());
-            logger(LogLevel.ERROR, "REQUEST FORM:", FORM);
-            logger(LogLevel.ERROR, "SESSION:", context.Session);
+            logger(LogLevel.NOTICE, "REQUEST FORM:", FORM);
+            logger(LogLevel.NOTICE, "SESSION:", context.Session);
+            logger(LogLevel.ERROR, Ex.Message, Ex.ToString());
 
             //send_email_admin("Exception: " + Ex.ToString() + System.Environment.NewLine + System.Environment.NewLine
             //    + "Request: " + req.Path + System.Environment.NewLine + System.Environment.NewLine
@@ -777,9 +785,11 @@ public class FW : IDisposable
         if (level > (LogLevel)this.config("log_level"))
             return;
 
-        StringBuilder str = new(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"));
-        str.Append(' ').Append(level.ToString()).Append(' ');
-        str.Append(Environment.ProcessId).Append(' ');
+        StringBuilder str_prefix = new(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+        str_prefix.Append(' ').Append(level.ToString()).Append(' ');
+        str_prefix.Append(Environment.ProcessId).Append(' ');
+
+        StringBuilder str_stack = new();
         System.Diagnostics.StackTrace st = new(true);
 
         try
@@ -795,18 +805,19 @@ public class FW : IDisposable
             }
             fname = sf.GetFileName();
             if (fname != null)
-                str.Append(fname.Replace((string)this.config("site_root"), "").Replace($@"{path_separator}App_Code", ""));
-            str.Append(':').Append(sf.GetMethod().Name).Append(' ').Append(sf.GetFileLineNumber()).Append(" # ");
+                str_stack.Append(fname.Replace((string)this.config("site_root"), "").Replace($@"{path_separator}App_Code", ""));
+            str_stack.Append(':').Append(sf.GetMethod().Name).Append(' ').Append(sf.GetFileLineNumber()).Append(" # ");
         }
         catch (Exception ex)
         {
-            str.Append(" ... #" + ex.Message);
+            str_stack.Append(" ... #" + ex.Message);
         }
 
+        StringBuilder str = new();
         foreach (object dmp_obj in args)
             str.Append(dumper(dmp_obj));
 
-        var strlog = str.ToString();
+        var strlog = str_prefix + str_stack.ToString() + str.ToString();
 
         // write to debug console first
         System.Diagnostics.Debug.WriteLine(strlog);
@@ -832,19 +843,36 @@ public class FW : IDisposable
         // send to Sentry
         try
         {
-            //do not log to Sentry too detailed TRACEs
-            if (level <= LogLevel.DEBUG)
+            var sentry_str = str.ToString();
+
+            //convert LogLevel to Sentry.SentryLevel and Sentry.BreadcrumbLevel
+            Sentry.SentryLevel sentryLevel = Sentry.SentryLevel.Error;
+            Sentry.BreadcrumbLevel breadcrumbLevel = Sentry.BreadcrumbLevel.Error;
+
+            if (level == LogLevel.FATAL)
             {
-                //convert LogLevel to Sentry.SentryLevel
-                Sentry.SentryLevel sentryLevel = level switch
-                {
-                    LogLevel.FATAL => Sentry.SentryLevel.Fatal,
-                    LogLevel.ERROR => Sentry.SentryLevel.Error,
-                    LogLevel.WARN => Sentry.SentryLevel.Warning,
-                    LogLevel.INFO => Sentry.SentryLevel.Info,
-                    LogLevel.DEBUG => Sentry.SentryLevel.Debug,
-                    _ => Sentry.SentryLevel.Error
-                };
+                sentryLevel = Sentry.SentryLevel.Fatal;
+                breadcrumbLevel = Sentry.BreadcrumbLevel.Critical;
+            }
+            else if (level == LogLevel.ERROR)
+            {
+                sentryLevel = Sentry.SentryLevel.Error;
+                breadcrumbLevel = Sentry.BreadcrumbLevel.Error;
+            }
+            else if (level == LogLevel.WARN)
+            {
+                sentryLevel = Sentry.SentryLevel.Warning;
+                breadcrumbLevel = Sentry.BreadcrumbLevel.Warning;
+            }
+            else
+            {
+                sentryLevel = Sentry.SentryLevel.Info;
+                breadcrumbLevel = Sentry.BreadcrumbLevel.Info;
+            }
+
+            //log to Sentry as separate events only WARN, ERROR, FATAL
+            if (level <= LogLevel.WARN)
+            {
 
                 if (args.Length > 0 && args[0] is Exception ex)
                 {
@@ -852,14 +880,19 @@ public class FW : IDisposable
                     Sentry.SentrySdk.CaptureException(ex, scope =>
                         {
                             scope.Level = sentryLevel;
-                            scope.SetExtra("message", strlog);
+                            scope.SetExtra("message", sentry_str);
                         });
                 }
                 else
-                    Sentry.SentrySdk.CaptureMessage(strlog, sentryLevel);
+                    Sentry.SentrySdk.CaptureMessage(sentry_str, sentryLevel);
 
                 //also add as a breadcrumb for the future events
-                Sentry.SentrySdk.AddBreadcrumb(strlog);
+                Sentry.SentrySdk.AddBreadcrumb(str_stack.ToString() + sentry_str, null, null, null, breadcrumbLevel);
+            }
+            else
+            {
+                //log to Sentry as breadcrumbs only
+                Sentry.SentrySdk.AddBreadcrumb(str_stack.ToString() + sentry_str, null, null, null, breadcrumbLevel);
             }
         }
         catch (Exception)
@@ -1638,10 +1671,6 @@ public class FW : IDisposable
             if (disposing)
             {
                 // dispose managed state (managed objects).
-#if isSentry
-                if (sentryClient != null)
-                    sentryClient.Dispose();
-#endif
                 db.Dispose(); // this will return db connections to pool
             }
 
