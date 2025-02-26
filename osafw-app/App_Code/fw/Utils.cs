@@ -240,13 +240,14 @@ public class Utils
     public static DateTime? f2date(object field) => field.toDateOrNull();
 
     /// <summary>
-    /// return true if field is date
+    /// return true if field is date (DateTime.MinValue is not considered as date)
     /// </summary>
     /// <param name="o"></param>
     /// <returns></returns>
     public static bool isDate(object o)
     {
-        return o.toDateOrNull() != null;
+        var dt = o.toDateOrNull();
+        return dt != null && ((DateTime)dt) != DateTime.MinValue;
     }
 
     /// <summary>
