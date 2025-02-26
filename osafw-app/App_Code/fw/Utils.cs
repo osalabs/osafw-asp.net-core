@@ -207,85 +207,37 @@ public class Utils
     }
 
     #region toBool, toInt, toStr... isDate, isEmpty functions
-    /// <summary>
-    /// convert anything to bool, in case of error return false:
-    ///   null - false
-    ///   collections - true if not empty
-    ///   non-zero number - true
-    /// </summary>
-    /// <param name="o"></param>
-    /// <returns></returns>
-    public static bool toBool(object o)
-    {
-        if (o == null) return false;
-        if (o is bool b) return b;
-        if (o is ICollection ic) return ic.Count > 0; //for collections return true if not empty
-        if (toFloat(o) != 0) return true; //non-zero number is true
-        if (bool.TryParse(o.ToString(), out bool result))
-            return result;
-
-        return false;
-
-    }
-
-    [Obsolete("This method is deprecated, use toBool instead.")]
-    public static bool f2bool(object o)
-    {
-        return toBool(o);
-    }
 
     /// <summary>
-    /// convert anything to DateTime, in case of error return DateTime.MinValue:
+    /// This method is obsolete. Use <see cref="FwExtensions.toBool(object)"/> instead.
     /// </summary>
-    /// <param name="o"></param>
-    /// <param name="exact_format">if set - TryParseExact used, example: "yyyyMMddHHmm"</param>
-    /// <returns></returns>
-    public static DateTime toDate(object o, string exact_format = "")
-    {
-        if (o == null) return DateTime.MinValue;
-        if (o is DateTime dt) return dt;
-
-        if (!string.IsNullOrEmpty(exact_format) && DateTime.TryParseExact(o.ToString(), exact_format, null, System.Globalization.DateTimeStyles.None, out DateTime result))
-            return result;
-
-        if (DateTime.TryParse(o.ToString(), out DateTime result2))
-            return result2;
-
-        return DateTime.MinValue;
-    }
+    [Obsolete("This method is obsolete. Please use the 'toBool' extension method instead.")]
+    public static bool toBool(object o) => o.toBool();
 
     /// <summary>
-    /// Convert anything to DateTime, in case of error return null.
+    /// This method is obsolete. Use <see cref="FwExtensions.toBool(object)"/> instead.
     /// </summary>
-    /// <param name="o"></param>
-    /// <param name="exact_format">if set - TryParseExact used, example: "yyyyMMddHHmm"</param>
+    [Obsolete("This method is obsolete. Please use the 'toBool' extension method instead.")]
+    public static bool f2bool(object o) => o.toBool();
+
+    /// <summary>
+    /// This method is obsolete. Use <see cref="FwExtensions.toDate(object, string)"/> instead.
+    /// </summary>
+    [Obsolete("This method is obsolete. Please use the 'toDate' extension method instead.")]
+    public static DateTime toDate(object o, string exact_format = "") => o.toDate(exact_format);
+
+    /// <summary>
+    /// This method is obsolete. Use <see cref="FwExtensions.toDateOrNull(object, string)"/> instead.
+    /// </summary>
+    [Obsolete("This method is obsolete. Please use the 'toDateOrNull' extension method instead.")]
     /// <returns></returns>
-    public static DateTime? toDateOrNull(object o, string exact_format = "")
-    {
-        if (o == null) return null;
-        if (o is DateTime dt) return dt;
+    public static DateTime? toDateOrNull(object o, string exact_format = "") => o.toDateOrNull(exact_format);
 
-        if (!string.IsNullOrEmpty(exact_format) && DateTime.TryParseExact(o.ToString(), exact_format, null, System.Globalization.DateTimeStyles.None, out DateTime result))
-            return result;
-
-        if (DateTime.TryParse(o.ToString(), out DateTime result2))
-            return result2;
-
-        return null;
-    }
-
-
-    [Obsolete("This method is deprecated, use toDate instead.")]
-    public static DateTime? f2date(object field)
-    {
-        if (field is DateTime dateTimeValue)
-            return dateTimeValue;
-
-        if (DateTime.TryParse(field?.ToString().Trim(), out DateTime parsedDate))
-            return parsedDate;
-
-        return null;
-    }
+    /// <summary>
+    /// This method is obsolete. Use <see cref="FwExtensions.toDateOrNull(object, string)"/> instead.
+    /// </summary>
+    [Obsolete("This method is obsolete. Please use the 'toDateOrNull' extension method instead.")]
+    public static DateTime? f2date(object field) => field.toDateOrNull();
 
     /// <summary>
     /// return true if field is date
@@ -294,122 +246,79 @@ public class Utils
     /// <returns></returns>
     public static bool isDate(object o)
     {
-        return toDateOrNull(o) != null;
+        return o.toDateOrNull() != null;
     }
 
     /// <summary>
-    /// convert anything to string (if cannot convert to string - just return empty string)
+    /// This method is obsolete. Use <see cref="FwExtensions.toStr(object)"/> instead.
     /// </summary>
-    /// <param name="o"></param>
-    /// <returns></returns>
-    public static string toStr(object o)
-    {
-        if (o == null) return "";
-        return o.ToString();
-    }
-
-    [Obsolete("This method is deprecated, use toStr instead.")]
-    public static string f2str(object field)
-    {
-        return toStr(field);
-    }
+    [Obsolete("This method is obsolete. Please use the 'toStr' extension method instead.")]
+    public static string toStr(object o) => o.toStr();
 
     /// <summary>
-    /// convert anything to int, in case of error return 0:
+    /// This method is obsolete. Use <see cref="FwExtensions.toStr(object)"/> instead.
     /// </summary>
-    /// <param name="o"></param>
-    /// <returns></returns>
-    public static int toInt(object o)
-    {
-        if (o == null) return 0;
-        if (o is int i) return i;
-        if (int.TryParse(o.ToString(), out int result))
-            return result;
-
-        return 0;
-    }
-
-    [Obsolete("This method is deprecated, use toInt instead.")]
-    public static int f2int(object AField)
-    {
-        return toInt(AField);
-    }
-
-    public static long toLong(object o)
-    {
-        if (o == null) return 0;
-        if (o is long l) return l;
-        if (long.TryParse(o.ToString(), out long result))
-            return result;
-
-        return 0;
-    }
-
-    [Obsolete("This method is deprecated, use toLong instead.")]
-    public static long f2long(object AField)
-    {
-        return toLong(AField);
-    }
+    [Obsolete("This method is obsolete. Please use the 'toStr' extension method instead.")]
+    public static string f2str(object field) => field.toStr();
 
     /// <summary>
-    /// convert anything to decimal, in case of error return 0:
+    /// This method is obsolete. Use <see cref="FwExtensions.toInt(object, int)"/> instead.
     /// </summary>
-    /// <param name="o"></param>
-    /// <returns></returns>
-    public static decimal toDecimal(object o)
-    {
-        if (o == null) return decimal.Zero;
-        if (o is decimal d) return d;
-        if (decimal.TryParse(o.ToString(), out decimal result))
-            return result;
-
-        return decimal.Zero;
-    }
-
-    [Obsolete("This method is deprecated, use toDecimal instead.")]
-    public static decimal f2decimal(object AField)
-    {
-        return toDecimal(AField);
-    }
+    [Obsolete("This method is obsolete. Please use the 'toInt' extension method instead.")]
+    public static int toInt(object o) => o.toInt();
 
     /// <summary>
-    /// convert anything to single, in case of error return 0:
+    /// This method is obsolete. Use <see cref="FwExtensions.toInt(object, int)"/> instead.
     /// </summary>
-    /// <param name="o"></param>
-    /// <returns></returns>
-    public static Single toSingle(object o)
-    {
-        if (o == null) return 0f;
-        if (o is Single s) return s;
-        if (Single.TryParse(o.ToString(), out Single result))
-            return result;
-
-        return 0f;
-    }
-
-    [Obsolete("This method is deprecated, use toSingle instead.")]
-    public static Single f2single(object AField)
-    {
-        return toSingle(AField);
-    }
+    [Obsolete("This method is obsolete. Please use the 'toInt' extension method instead.")]
+    public static int f2int(object AField) => AField.toInt();
 
     /// <summary>
-    /// convert anything to double, in case of error return 0:
+    /// This method is obsolete. Use <see cref="FwExtensions.toLong(object, long)"/> instead.
     /// </summary>
-    /// <param name="o"></param>
-    /// <returns></returns>
-    public static double toFloat(object o)
-    {
-        if (o == null) return 0.0;
-        if (o is double d) return d;
-        if (double.TryParse(o.ToString(), out double result))
-            return result;
+    [Obsolete("This method is obsolete. Please use the 'toLong' extension method instead.")]
+    public static long toLong(object o) => o.toLong();
 
-        return 0.0;
-    }
+    /// <summary>
+    /// This method is obsolete. Use <see cref="FwExtensions.toLong(object, long)"/> instead.
+    /// </summary>
+    [Obsolete("This method is obsolete. Please use the 'toLong' extension method instead.")]
+    public static long f2long(object AField) => AField.toLong();
 
-    // convert to double, optionally throw error
-    [Obsolete("This method is deprecated, use toFloat instead.")]
+    /// <summary>
+    /// This method is obsolete. Use <see cref="FwExtensions.toDecimal(object, decimal)"/> instead.
+    /// </summary>
+    [Obsolete("This method is obsolete. Please use the 'toDecimal' extension method instead.")]
+    public static decimal toDecimal(object o) => o.toDecimal();
+
+    /// <summary>
+    /// This method is obsolete. Use <see cref="FwExtensions.toDecimal(object, decimal)"/> instead.
+    /// </summary>
+    [Obsolete("This method is obsolete. Please use the 'toDecimal' extension method instead.")]
+    public static decimal f2decimal(object AField) => AField.toDecimal();
+
+    /// <summary>
+    /// This method is obsolete. Use <see cref="FwExtensions.toFloat(object, float)"/> instead.
+    /// </summary>
+    [Obsolete("This method is obsolete. Please use the 'toFloat' extension method instead.")]
+    public static Single toSingle(object o) => o.toFloat();
+
+    /// <summary>
+    /// This method is obsolete. Use <see cref="FwExtensions.toFloat(object, float)"/> instead.
+    /// </summary>
+    [Obsolete("This method is obsolete. Please use the 'toFloat' extension method instead.")]
+    public static Single f2single(object AField) => AField.toFloat();
+
+    /// <summary>
+    /// This method is obsolete. Use <see cref="FwExtensions.toDouble(object, double)"/> instead.
+    /// </summary>
+    [Obsolete("This method is obsolete. Please use the 'toDouble' extension method instead.")]
+    public static double toFloat(object o) => o.toDouble();
+
+    /// <summary>
+    /// This method is obsolete. Use <see cref="FwExtensions.toDouble(object, double)"/> instead.
+    /// </summary>
+    [Obsolete("This method is obsolete. Please use the 'toDouble' extension method instead.")]
     public static double f2float(object AField, bool is_error = false)
     {
         if (AField == null && !is_error) return 0.0;
@@ -510,7 +419,7 @@ public class Utils
     {
         Hashtable mime_map = qh(MIME_MAP);
         ext = ext.ToLower(); //to lower
-        //remove first dot if any
+                             //remove first dot if any
         if (ext.StartsWith('.'))
             ext = ext[1..];
 
