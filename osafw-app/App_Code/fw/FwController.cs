@@ -900,6 +900,10 @@ public abstract class FwController
         if (!string.IsNullOrEmpty(base_url_suffix))
             url_q += "&" + base_url_suffix;
 
+        //add tab if any, so after save we can return to the same tab
+        if (!string.IsNullOrEmpty(form_tab))
+            url_q += "&tab=" + form_tab;
+
         //add query
         var is_url_q = false;
         if (!string.IsNullOrEmpty(url_q))
