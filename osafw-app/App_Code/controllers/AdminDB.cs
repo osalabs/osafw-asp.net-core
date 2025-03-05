@@ -155,7 +155,7 @@ public class AdminDBController : FwController
         foreach (DataRow row in dataTable.Rows)
         {
             string tblname = row["TABLE_NAME"].ToString();
-            if (tblname.Contains("MSys"))
+            if (tblname.StartsWith("MSys"))
                 continue;
 
             Hashtable tblrow = [];

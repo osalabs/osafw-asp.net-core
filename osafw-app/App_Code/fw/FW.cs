@@ -1599,7 +1599,7 @@ public class FW : IDisposable
             code = 500;
 
         ps["code"] = code;
-        if (code > 0)
+        if (code > 0 && !this.response.HasStarted)
             this.response.StatusCode = code;
 
         parser(tpl_dir, ps);

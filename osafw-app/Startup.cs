@@ -4,6 +4,7 @@ using Pomelo.Extensions.Caching.MySql;
 #endif
 
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
@@ -14,6 +15,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Net.Http.Headers;
 using System;
 using System.Collections;
+using System.IO;
 
 namespace osafw;
 
@@ -30,6 +32,11 @@ public class Startup
     // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
     public void ConfigureServices(IServiceCollection services)
     {
+        // this will save key to file system, so it's shared between multiple instances and not reset on app restart
+        services.AddDataProtection()
+        .SetApplicationName("osafw")
+        .PersistKeysToFileSystem(new DirectoryInfo(Utils.getTmpDir()));
+
 #if isMySQL
         services.AddDistributedMySqlCache(options =>
         {
