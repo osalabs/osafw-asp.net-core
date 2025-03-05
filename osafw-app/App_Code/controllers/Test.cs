@@ -66,9 +66,9 @@ public class TestController : FwController
 
     public void BooleanAction()
     {
-        string[] values = { null, String.Empty, "True", "False",
+        string[] values = [ null, String.Empty, "True", "False",
                       "true", "false", "    true    ", "0",
-                      "1", "-1", "string" };
+                      "1", "-1", "string" ];
         foreach (var value in values)
         {
             bool flag;

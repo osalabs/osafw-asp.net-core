@@ -502,7 +502,7 @@ public class FormUtils
         if (string.IsNullOrEmpty(s))
             return 0;
 
-        var idPart = s.Split(new[] { " - " }, StringSplitOptions.None).FirstOrDefault();
+        var idPart = s.Split([" - "], StringSplitOptions.None).FirstOrDefault();
 
         return int.TryParse(idPart, out int result) ? result : 0;
     }

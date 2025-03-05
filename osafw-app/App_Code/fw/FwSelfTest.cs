@@ -251,7 +251,7 @@ public class FwSelfTest
 
                     FwController new_controller = (FwController)Activator.CreateInstance(calledType);
                     new_controller.init(fw);
-                    Result res = (Result)mInfo.Invoke(new_controller, new object[] { this });
+                    Result res = (Result)mInfo.Invoke(new_controller, [this]);
                     if (res == Result.OK)
                     {
                         plus_ok();

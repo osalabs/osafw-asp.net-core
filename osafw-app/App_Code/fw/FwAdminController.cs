@@ -135,7 +135,7 @@ public class FwAdminController : FwController
         fw.model<Users>().checkReadOnly();
         if (reqi("refresh") == 1 && (id == 0)) //for new record - just refresh the form, for existing - also try to save
         {
-            fw.routeRedirect(FW.ACTION_SHOW_FORM, new object[] { id });
+            fw.routeRedirect(FW.ACTION_SHOW_FORM, [id]);
             return null;
         }
 

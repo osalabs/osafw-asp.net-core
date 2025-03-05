@@ -550,7 +550,7 @@ public class Utils
             {
                 str = "\"" + str.Replace("\"", "\"\"") + "\"";
             }
-            else if (str.IndexOfAny(new char[] { ',', '\r', '\n' }) != -1)
+            else if (str.IndexOfAny([',', '\r', '\n']) != -1)
             {
                 str = "\"" + str + "\"";
             }

@@ -59,7 +59,7 @@ public class AdminSendEmailController : FwAdminController
 
         if (reqi("refresh") == 1)
         {
-            fw.routeRedirect(FW.ACTION_SHOW_FORM, new object[] { id });
+            fw.routeRedirect(FW.ACTION_SHOW_FORM, [id]);
             return null;
         }
 

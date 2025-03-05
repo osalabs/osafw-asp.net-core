@@ -139,7 +139,7 @@ public class ParsePage
 
     private static readonly Hashtable FILE_CACHE = [];
     private static readonly Hashtable LANG_CACHE = [];
-    private static readonly string[] IFOPERS = new[] { "if", "unless", "ifne", "ifeq", "ifgt", "iflt", "ifge", "ifle" };
+    private static readonly string[] IFOPERS = ["if", "unless", "ifne", "ifeq", "ifgt", "iflt", "ifge", "ifle"];
 
     private const string DATE_FORMAT_DEF = "M/d/yyyy"; // for US, TODO make based on user settigns (with fallback to server's settings)
     private const string DATE_FORMAT_SHORT = "M/d/yyyy HH:mm";

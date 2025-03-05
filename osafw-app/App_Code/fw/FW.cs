@@ -1205,7 +1205,7 @@ public class FW : IDisposable
 
     public void callRoute()
     {
-        string[] args = new[] { route.id }; // TODO - add rest of possible params from parts
+        string[] args = [route.id]; // TODO - add rest of possible params from parts
 
         var auth_check_controller = _auth(route.controller, route.action);
 
@@ -1616,7 +1616,7 @@ public class FW : IDisposable
             T m = new();
 
             // initialize
-            typeof(T).GetMethod("init").Invoke(m, new object[] { this });
+            typeof(T).GetMethod("init").Invoke(m, [this]);
 
             models[tt.Name] = m;
         }

@@ -119,7 +119,7 @@ public class DevConfigureController : FwController
 
         Hashtable ps = [];
         int sql_ctr = 0;
-        string[] files = { "fwdatabase.sql", "database.sql", "lookups.sql", "views.sql" };
+        string[] files = ["fwdatabase.sql", "database.sql", "lookups.sql", "views.sql"];
         foreach (string file in files)
         {
             var sql_file = fw.config("site_root") + @"\App_Data\sql\" + file;

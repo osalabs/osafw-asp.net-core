@@ -157,7 +157,7 @@ public class AdminLookupManagerController : FwController
             string id_fname = fw.model<LookupManagerTables>().getColumnId(defs);
             var row = model.topByTname((string)defs["tname"]);
             // fw.redirect(base_url & "/" & row(id_fname) & "/edit/?d=" & dict)
-            String[] args = (new[] { (string)row[id_fname] });
+            String[] args = ([(string)row[id_fname]]);
             fw.routeRedirect(FW.ACTION_SHOW_FORM, args);
             return null;
         }
