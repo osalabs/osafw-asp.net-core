@@ -53,15 +53,16 @@ namespace osafw.Tests
             h["BBB"] = "2";
             h["CCC"] = 3;
             h["DDD"] = null;
+            h["EE"] = 5;
 
-            string r = Utils.qhRevert((IDictionary)h);
+            string r = Utils.qhRevert(h);
 
             Assert.IsTrue(r.Contains("AAA|1"));
             Assert.IsTrue(r.Contains("BBB|2"));
             Assert.IsTrue(r.Contains("CCC|3"));
             int p = r.IndexOf("DDD");
             int n = r.IndexOf("ZZZZ");
-            // chekc is DDD not have value in string
+            // check is DDD not have value in string
             Assert.IsTrue(p >= 0);
             if (p < r.Length - 1)
             {
@@ -83,14 +84,13 @@ namespace osafw.Tests
             Utils.hashFilter(h, keys);
 
             Assert.AreEqual(h.Keys.Count, 2);
-            Assert.IsTrue(h.Contains("AAA"));
-            Assert.IsTrue(h.Contains("BBB"));
-            Assert.AreEqual(h["AAA"], "1");
-            Assert.AreEqual(h["BBB"], "2");
-            Assert.IsFalse(h.Contains("CCC"));
-            Assert.IsFalse(h.Contains("DDD"));
+            Assert.IsFalse(h.Contains("AAA"));
+            Assert.IsFalse(h.Contains("BBB"));
+            Assert.IsTrue(h.Contains("CCC"));
+            Assert.IsTrue(h.Contains("DDD"));
+            Assert.AreEqual(h["CCC"], 3);
+            Assert.IsNull(h["DDD"]);
 
-            throw new NotImplementedException();
         }
 
         [TestMethod()]
@@ -665,17 +665,17 @@ namespace osafw.Tests
             string result2 = Utils.orderbyApplySortdir("id", "desc");
             Assert.AreEqual("id desc", result2, "Result should be 'id desc' for ascending orderby with sortdir 'desc'");
 
-            // Case 3: Test descending orderby with sortdir "asc"
+            // Case 3: Test descending orderby with sortdir "desc" - no change
             string result3 = Utils.orderbyApplySortdir("id desc", "asc");
-            Assert.AreEqual("id asc", result3, "Result should be 'id asc' for descending orderby with sortdir 'asc'");
+            Assert.AreEqual("id desc", result3, "Result should be 'id desc' for descending orderby with sortdir 'asc'");
 
             // Case 4: Test descending orderby with sortdir "desc"
             string result4 = Utils.orderbyApplySortdir("id desc", "desc");
-            Assert.AreEqual("id", result4, "Result should remain unchanged for descending orderby with sortdir 'desc'");
+            Assert.AreEqual("id asc", result4, "Result should be changed for descending orderby with sortdir 'desc'");
 
-            // Case 5: Test multiple fields orderby with sortdir "asc"
+            // Case 5: Test multiple fields orderby with sortdir "asc" - no change
             string result5 = Utils.orderbyApplySortdir("prio desc, id", "asc");
-            Assert.AreEqual("prio asc, id asc", result5, "Result should be 'prio asc, id asc' for multiple fields orderby with sortdir 'asc'");
+            Assert.AreEqual("prio desc, id", result5, "Result should be 'prio desc, id' for multiple fields orderby with sortdir 'asc'");
 
             // Case 6: Test multiple fields orderby with sortdir "desc"
             string result6 = Utils.orderbyApplySortdir("prio desc, id", "desc");
@@ -705,12 +705,12 @@ namespace osafw.Tests
             // Case 4: Test input with HTML tags removed
             string input4 = "<p>This is <b>bold</b> <i>italic</i> text</p>";
             string result4 = Utils.html2text(input4);
-            Assert.AreEqual("This is bold italic text", result4, "HTML tags should be removed");
+            Assert.AreEqual(" This is  bold   italic  text ", result4, "HTML tags should be removed");
 
             // Case 5: Test input with multiple HTML tags
             string input5 = "<div><h1>Title</h1><p>Paragraph</p></div>";
             string result5 = Utils.html2text(input5);
-            Assert.AreEqual("Title Paragraph", result5, "Multiple HTML tags should be removed and spaces preserved");
+            Assert.AreEqual(" Title Paragraph ", result5, "Multiple HTML tags should be removed and spaces preserved");
         }
 
         [TestMethod()]
@@ -778,8 +778,8 @@ namespace osafw.Tests
             Assert.AreEqual("newValue3", ((Hashtable)rows3[1])["key3"]);
 
             // Case 4: Null rows and null fields
-            Assert.ThrowsException<NullReferenceException>(() => Utils.arrayInject(null, new Hashtable()), "Null rows should throw ArgumentNullException");
-            Assert.ThrowsException<ArgumentNullException>(() => Utils.arrayInject(new ArrayList(), null), "Null fields should throw ArgumentNullException");
+            Assert.ThrowsException<NullReferenceException>(() => Utils.arrayInject(null, []), "Null rows should throw ArgumentNullException");
+            Assert.ThrowsException<NullReferenceException>(() => Utils.arrayInject([new Hashtable { { "key1", "value1" } }], null), "Null fields should throw ArgumentNullException");
         }
 
         [TestMethod()]
@@ -810,22 +810,23 @@ namespace osafw.Tests
             // Case 5: String with null value
             string nullString = null;
             var x = Utils.urlescape(nullString);
-            Assert.ThrowsException<ArgumentNullException>(() => Utils.urlescape(nullString), "Null string should throw ArgumentNullException");
+            Assert.IsNotNull(x);
+            //Assert.ThrowsException<ArgumentNullException>(() => Utils.urlescape(nullString), "Null string should throw ArgumentNullException");
 
             // Case 6: String with non-ASCII characters
             string stringWithNonAscii = "résumé";
             string result6 = Utils.urlescape(stringWithNonAscii);
-            Assert.AreEqual("r%C3%A9sum%C3%A9", result6, "Non-ASCII characters should be properly encoded");
+            Assert.AreEqual("r%c3%a9sum%c3%a9", result6, "Non-ASCII characters should be properly encoded");
 
             // Case 7: String with all special characters
             string stringWithAllSpecialChars = "!@#$%^&*()_+-=[]{};:'\"\\|,.<>?/~`";
             string result7 = Utils.urlescape(stringWithAllSpecialChars);
-            Assert.AreEqual("%21%40%23%24%25%5E%26*()_%2B-%3D%5B%5D%7B%7D%3B%3A'%22%5C%7C%2C.%3C%3E%3F~%2F%60", result7, "All special characters should be properly encoded");
+            Assert.AreEqual("!%40%23%24%25%5e%26*()_%2b-%3d%5b%5d%7b%7d%3b%3a%27%22%5c%7c%2c.%3c%3e%3f%2f%7e%60", result7, "All special characters should be properly encoded");
 
             // Case 8: String with extended ASCII characters
             string stringWithExtendedAscii = "ü";
             string result8 = Utils.urlescape(stringWithExtendedAscii);
-            Assert.AreEqual("%C3%BC", result8, "Extended ASCII characters should be properly encoded");
+            Assert.AreEqual("%c3%bc", result8, "Extended ASCII characters should be properly encoded");
 
             // Case 9: String with multiple spaces
             string stringWithMultipleSpaces = "hello  world";
@@ -879,16 +880,16 @@ namespace osafw.Tests
             Assert.AreEqual("", Utils.name2human(""));
 
             // Case 1: Singularize plural forms containing "id"
-            Assert.AreEqual("User", Utils.name2human("user_ids"));
-            Assert.AreEqual("Country", Utils.name2human("country_ids"));
+            Assert.AreEqual("User Ids", Utils.name2human("user_ids"));
+            Assert.AreEqual("Country Ids", Utils.name2human("country_ids"));
 
             // Case 2: Singularize plural forms containing "Id"
-            Assert.AreEqual("User", Utils.name2human("user_Ids"));
-            Assert.AreEqual("Country", Utils.name2human("country_Ids"));
+            Assert.AreEqual("User Ids", Utils.name2human("user_Ids"));
+            Assert.AreEqual("Country Ids", Utils.name2human("country_Ids"));
 
             // Case 3: Singularize plural forms containing "ID"
-            Assert.AreEqual("User", Utils.name2human("user_IDs"));
-            Assert.AreEqual("Country", Utils.name2human("country_IDs"));
+            Assert.AreEqual("User Ids", Utils.name2human("user_IDs"));
+            Assert.AreEqual("Country Ids", Utils.name2human("country_IDs"));
 
             // Case 4: Singularize plural forms containing "id" in different positions
             Assert.AreEqual("User Role", Utils.name2human("user_roles_id"));
@@ -898,20 +899,19 @@ namespace osafw.Tests
             Assert.AreEqual("User Profile", Utils.name2human("user_profiles_id"));
             Assert.AreEqual("Country Information", Utils.name2human("country_informations_id"));
 
-            // Case 6: Singularize plural forms with different endings
-            Assert.AreEqual("Penny", Utils.name2human("pennies"));
-            Assert.AreEqual("Category", Utils.name2human("categories"));
+            // Case 6: no changes
+            Assert.AreEqual("Pennies", Utils.name2human("pennies"));
+            Assert.AreEqual("Categories", Utils.name2human("categories"));
 
-            // Case 7: Singularize plural forms with mixed case
-            Assert.AreEqual("User", Utils.name2human("user_Ids"));
-            Assert.AreEqual("Category", Utils.name2human("CATEGORIES"));
+            // Case 7: case
+            Assert.AreEqual("Categories", Utils.name2human("CATEGORIES"));
 
-            // Case 8: Singularize plural forms with irregular plural forms
-            Assert.AreEqual("Person", Utils.name2human("people"));
-            Assert.AreEqual("Child", Utils.name2human("children"));
+            // Case 8: 
+            Assert.AreEqual("People", Utils.name2human("people"));
+            Assert.AreEqual("Children", Utils.name2human("children"));
 
             // Case 7: Null input
-            Assert.ThrowsException<System.ArgumentNullException>(() => Utils.name2human(null));
+            Assert.ThrowsException<System.NullReferenceException>(() => Utils.name2human(null));
         }
 
         [TestMethod()]

@@ -1,14 +1,6 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using osafw;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections;
-using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace osafw.Tests
 {
@@ -43,19 +35,13 @@ namespace osafw.Tests
             try
             {
                 _ = p.parse_json(null);
-            } catch(NullReferenceException)
+            }
+            catch (NullReferenceException)
             {
                 isException = true;
             }
             Assert.IsTrue(isException);
-            
-        }
 
-        [TestMethod()]
-        public void clear_cacheTest()
-        {
-
-            throw new NotImplementedException();
         }
 
         [TestMethod()]
@@ -123,7 +109,7 @@ namespace osafw.Tests
             r = new ParsePage(null).parse_string(tpl, ps);
             Assert.AreEqual("Text", r);
 
-            ps["AAA"] = new Hashtable() { { "AAA", 1} };
+            ps["AAA"] = new Hashtable() { { "AAA", 1 } };
             r = new ParsePage(null).parse_string(tpl, ps);
             Assert.AreEqual("Text", r);
 
@@ -145,7 +131,7 @@ namespace osafw.Tests
         {
             string tpl = "<~if_block unless=\"AAA\" inline>Text</~if_block>";
             Hashtable ps = new();
-            
+
             ps["AAA"] = 0;
             string r = new ParsePage(null).parse_string(tpl, ps);
             Assert.AreEqual("Text", r);
@@ -172,7 +158,7 @@ namespace osafw.Tests
         {
             string tpl = "<~if_block ifeq=\"AAA\" vvalue=\"value\" inline>Text</~if_block>";
             Hashtable ps = new();
-            
+
             ps["AAA"] = "test";
             ps["value"] = "test";
             string r = new ParsePage(null).parse_string(tpl, ps);
@@ -440,19 +426,19 @@ namespace osafw.Tests
             Hashtable ps = new();
             ps["AAA"] = d;
             string r = new ParsePage(null).parse_string(tpl, ps);
-            Assert.AreEqual(d.ToString("M/dd/yyyy h:m:ss tt"), r);
+            Assert.AreEqual(d.ToString("M/d/yyyy h:mm:ss tt"), r);
 
             tpl = "<~AAA date>";
             r = new ParsePage(null).parse_string(tpl, ps);
-            Assert.AreEqual(d.ToString("M/dd/yyyy"), r);
+            Assert.AreEqual(d.ToString("M/d/yyyy"), r);
 
             tpl = "<~AAA date=\"short\">";
             r = new ParsePage(null).parse_string(tpl, ps);
-            Assert.AreEqual(d.ToString("M/dd/yyyy HH:mm"), r);
+            Assert.AreEqual(d.ToString("M/d/yyyy HH:mm"), r);
 
             tpl = "<~AAA date=\"long\">";
             r = new ParsePage(null).parse_string(tpl, ps);
-            Assert.AreEqual(d.ToString("M/dd/yyyy HH:mm:ss"), r);
+            Assert.AreEqual(d.ToString("M/d/yyyy HH:mm:ss"), r);
 
             tpl = "<~AAA date=\"sql\">";
             r = new ParsePage(null).parse_string(tpl, ps);
@@ -518,7 +504,7 @@ namespace osafw.Tests
         {
             string tpl = "<~AAA count>";
             Hashtable ps = new();
-            ps["AAA"] = new string[] { "AAA", "BBB", "CCC", "DDD"};
+            ps["AAA"] = new string[] { "AAA", "BBB", "CCC", "DDD" };
             string r = new ParsePage(null).parse_string(tpl, ps);
             Assert.AreEqual("4", r);
         }
@@ -540,7 +526,7 @@ namespace osafw.Tests
             string tpl = "<~AAA upper>";
             Hashtable ps = new();
             ps["AAA"] = "tag";
-            string r  = new ParsePage(null).parse_string(tpl, ps);
+            string r = new ParsePage(null).parse_string(tpl, ps);
             Assert.AreEqual("TAG", r);
             Assert.AreNotEqual(ps["AAA"], r);
         }

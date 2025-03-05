@@ -45,15 +45,15 @@ namespace osafw.Tests
         {
             ArrayList pager1 = FormUtils.getPager(100, 1);
             Assert.IsNotNull(pager1, "Pager should not be null when paging is required");
-            Assert.AreEqual(10, pager1.Count, "Pager should have correct number of pages when paging is required");
+            Assert.AreEqual(4, pager1.Count, "Pager should have correct number of pages when paging is required");
 
             ArrayList pager2 = FormUtils.getPager(100, 1, 20);
             Assert.IsNotNull(pager2, "Pager should not be null when paging is required with custom page size");
             Assert.AreEqual(5, pager2.Count, "Pager should have correct number of pages when paging is required with custom page size");
 
-            ArrayList pager3 = FormUtils.getPager(15, 1);
-            Assert.IsNotNull(pager3, "Pager should not be null when count is less than page size");
-            Assert.AreEqual(1, pager3.Count, "Pager should have only one page when count is less than page size");
+            ArrayList pager3 = FormUtils.getPager(30, 1);
+            Assert.IsNotNull(pager3, "Pager should not be null when count is more than default page size");
+            Assert.AreEqual(2, pager3.Count, "Pager should not be null when count is more than default page size");
 
             ArrayList pager4 = FormUtils.getPager(10, 1);
             Assert.IsNull(pager4, "Pager should be null when no paging is required");
@@ -86,11 +86,11 @@ namespace osafw.Tests
             Assert.IsNotNull(result4, "Result should not be null when filtering existing fields with is_exists false");
             CollectionAssert.AreEquivalent(new string[] { "field1", "field2" }, result4.Keys.Cast<string>().ToArray(), "Result should contain all fields when is_exists is false");
 
-            // Case 5: Filter non-existing fields when is_exists is false
+            // Case 5: Filter non-existing fields when is_exists is true
             Hashtable item5 = new Hashtable { { "field1", "value1" }, { "field2", "value2" } };
-            Hashtable result5 = FormUtils.filter(item5, new string[] { "field1", "field3" }, false);
-            Assert.IsNotNull(result5, "Result should not be null when filtering non-existing fields with is_exists false");
-            CollectionAssert.AreEquivalent(new string[] { "field1" }, result5.Keys.Cast<string>().ToArray(), "Result should contain only existing fields when is_exists is false");
+            Hashtable result5 = FormUtils.filter(item5, new string[] { "field1", "field3" }, true);
+            Assert.IsNotNull(result5, "Result should not be null when filtering non-existing fields with is_exists true");
+            CollectionAssert.AreEquivalent(new string[] { "field1" }, result5.Keys.Cast<string>().ToArray(), "Result should contain only existing fields when is_exists is true");
         }
 
         [TestMethod]

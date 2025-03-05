@@ -1157,6 +1157,9 @@ public class Utils
     // mode="all" : sample STRING => Sample String
     public static string capitalize(string str, string mode = "")
     {
+        if (string.IsNullOrEmpty(str))
+            return str;
+
         if (mode == "all")
         {
             str = str.ToLower();
@@ -1375,7 +1378,6 @@ public class Utils
 
         if (sortdir == "desc")
         {
-            // TODO - move this to fw utils
             ArrayList order_fields = new();
             foreach (string fld in orderby.Split(","))
             {
@@ -1394,7 +1396,7 @@ public class Utils
                     // if no asc/desc - just add desc at the end
                     _fld += " desc";
                 }
-                order_fields.Add(_fld);
+                order_fields.Add(_fld.Trim());
             }
             // result = String.Join(", ", order_fields.ToArray(GetType(String))) // net 2
             result = string.Join(", ", order_fields.ToArray());  // net 4
@@ -1491,7 +1493,7 @@ public class Utils
     */
     public static string urlescape(string str)
     {
-        return HttpUtility.UrlEncode(str);
+        return HttpUtility.UrlEncode(str) ?? "";
     }
 
     /* <summary>
@@ -1672,13 +1674,10 @@ public class Utils
 
     // convert c/snake style name to CamelCase
     // system_name => SystemName
+    // system_name_123 => SystemName123
     public static string nameCamelCase(string str)
     {
-        string result = str;
-        result = Regex.Replace(result, @"\W+", " "); // non-alphanum chars to spaces
-        result = Utils.capitalize(result);
-        result = Regex.Replace(result, " +", ""); // remove spaces
-        return result;
+        return Regex.Replace(str, @"(?:^|_)([a-z0-9])", m => m.Groups[1].Value.ToUpper());
     }
 
     public static string Right(string str, int len)

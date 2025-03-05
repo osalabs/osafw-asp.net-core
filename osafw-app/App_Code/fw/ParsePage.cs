@@ -203,7 +203,7 @@ public class ParsePage
         // Dim start_time = DateTime.Now
         var result = _parse_page(tpl_name, hf, "", parent_hf);
         // Dim end_timespan As TimeSpan = DateTime.Now - start_time
-        // fw.logger("ParsePage speed: " & String.Format("{0:0.000}", 1 / end_timespan.TotalSeconds) & "/s")
+        // logger("ParsePage speed: " & String.Format("{0:0.000}", 1 / end_timespan.TotalSeconds) & "/s")
         return result;
     }
 
@@ -218,14 +218,14 @@ public class ParsePage
     {
         if (tpl_name == null)
         {
-            fw.logger(LogLevel.DEBUG, "ParsePage - layout template (tpl_name) is null");
+            logger(LogLevel.DEBUG, "ParsePage - layout template (tpl_name) is null");
             return "";
         }
 
         if (tpl_name.Length > 0 && tpl_name.Substring(0, 1) != "/")
             tpl_name = basedir + "/" + tpl_name;
 
-        fw.logger(LogLevel.TRACE, $"ParsePage - Parsing template = {tpl_name}, pagelen={page.Length}");
+        logger(LogLevel.TRACE, $"ParsePage - Parsing template = {tpl_name}, pagelen={page.Length}");
         if (page.Length < 1)
             page = precache_file(TMPL_PATH + tpl_name);
         if (page.Length == 0)
@@ -282,7 +282,7 @@ public class ParsePage
                 else
                     tag_value = hfvalue(tag, hf, parent_hf);
 
-                // fw.logger("ParsePage - tag: " & tag_full & ", found=" & is_found_last_hfvalue)
+                // logger("ParsePage - tag: " & tag_full & ", found=" & is_found_last_hfvalue)
                 if (tag_value.ToString().Length > 0)
                 {
                     string value;
@@ -416,7 +416,7 @@ public class ParsePage
         //For Windows - replace Unix-style separators / to \
         if (path_separator == '\\')
             filename = filename.Replace('/', path_separator);
-        // fw.logger("preacaching [" & filename & "]")
+        // logger("preacaching [" & filename & "]")
 
         // check and get from cache
         if (FILE_CACHE.ContainsKey(filename))
@@ -436,7 +436,7 @@ public class ParsePage
         else if (is_check_file_modifications)
             modtime = File.GetLastWriteTime(filename).ToString();
 
-        // fw.logger("ParsePage - try load file " & filename)
+        // logger("ParsePage - try load file " & filename)
         // get from fs(if not in cache)
         if (File.Exists(filename))
         {
@@ -451,7 +451,7 @@ public class ParsePage
         cache["modtime"] = modtime;
 
         FILE_CACHE[filename] = cache;
-        // fw.logger("END preacaching [" & filename & "]")
+        // logger("END preacaching [" & filename & "]")
         return file_data;
     }
 
@@ -619,7 +619,7 @@ public class ParsePage
         }
         catch (Exception ex)
         {
-            fw.logger(LogLevel.DEBUG, "ParsePage - error in hvalue for tag [", tag, "]:", ex.Message);
+            logger(LogLevel.DEBUG, "ParsePage - error in hvalue for tag [", tag, "]:", ex.Message);
         }
 
         if (tag_value == null)
@@ -644,7 +644,7 @@ public class ParsePage
             sub_hf = ht;
         }
         else
-            fw.logger(LogLevel.DEBUG, "ParsePage - not a Hash passed for a SUB tag=", tag, ", sub=" + sub);
+            logger(LogLevel.DEBUG, "ParsePage - not a Hash passed for a SUB tag=", tag, ", sub=" + sub);
 
         return _parse_page(tag_tplpath(tag, tpl_name), sub_hf, inline_tpl, parent_hf, attrs);
     }
@@ -770,7 +770,7 @@ public class ParsePage
 
     private static string get_inline_tpl(ref string hpage, ref string tag, ref string tag_full)
     {
-        // fw.logger("ParsePage - get_inline_tpl: ", tag, " | ", tag_full)
+        // logger("ParsePage - get_inline_tpl: ", tag, " | ", tag_full)
         string re = Regex.Escape("<~" + tag_full + ">") + "(.*?)" + Regex.Escape("</~" + tag + ">");
 
         Match inline_match = Regex.Match(hpage, re, RegexOptions.Singleline | RegexOptions.IgnoreCase);
@@ -787,7 +787,7 @@ public class ParsePage
         if (!(tag_val_array is IList))
         {
             if (tag_val_array != null && tag_val_array.ToString() != "")
-                fw.logger(LogLevel.DEBUG, "ParsePage - Not an ArrayList passed to repeat tag=", tag);
+                logger(LogLevel.DEBUG, "ParsePage - Not an ArrayList passed to repeat tag=", tag);
             return "";
         }
 
@@ -988,7 +988,7 @@ public class ParsePage
                 // If TypeOf (value) Is ICollection Then
                 // value = CType(value, ICollection).Count
                 // Else
-                // fw.logger("WARN", "ParsePage - 'count' attribute used on non-array value")
+                // logger("WARN", "ParsePage - 'count' attribute used on non-array value")
                 // End If
                 // attr_count -= 1
                 // End If
@@ -1037,8 +1037,8 @@ public class ParsePage
                     }
                     catch (Exception ex)
                     {
-                        fw.logger(LogLevel.WARN, @"error parsing markdown, install Markdig package");
-                        fw.logger(LogLevel.DEBUG, ex.Message);
+                        logger(LogLevel.WARN, @"error parsing markdown, install Markdig package");
+                        logger(LogLevel.DEBUG, ex.Message);
                     }
 
                     attr_count -= 1;
@@ -1053,9 +1053,9 @@ public class ParsePage
                 // replace tag+inline tpl+close tag
                 string restr = Regex.Escape("<~" + tag_full + ">") + ".*?" + Regex.Escape("</~" + tag + ">");
 
-                // fw.logger(restr)
-                // fw.logger(hpage_ref)
-                // fw.logger(value)
+                // logger(restr)
+                // logger(hpage_ref)
+                // logger(value)
                 // escape $0-$9 and ${...}, i.e. all $ chars replaced with $$
                 value = Regex.Replace(value, @"\$", "$$$$");
                 hpage_ref = Regex.Replace(hpage_ref, restr, value, RegexOptions.IgnoreCase | RegexOptions.Singleline);
@@ -1145,7 +1145,7 @@ public class ParsePage
             string[] lines = precache_file_lines(TMPL_PATH + "/" + tpl_path);
             if (lines.Length == 0)
             {
-                fw.logger(LogLevel.TRACE, $"ParsePage - NOR an ArrayList of Hashtables NEITHER .sel template file passed for a select tag={tag}");
+                logger(LogLevel.TRACE, $"ParsePage - NOR an ArrayList of Hashtables NEITHER .sel template file passed for a select tag={tag}");
                 return "";
             }
 
@@ -1195,7 +1195,7 @@ public class ParsePage
         string[] lines = precache_file_lines(TMPL_PATH + "/" + tpl_path);
         if (lines.Length == 0)
         {
-            fw.logger(LogLevel.TRACE, $"ParsePage - NOR an ArrayList of Hashtables NEITHER .sel template file passed for a radio tag tpl path={tpl_path}");
+            logger(LogLevel.TRACE, $"ParsePage - NOR an ArrayList of Hashtables NEITHER .sel template file passed for a radio tag tpl path={tpl_path}");
             return "";
         }
 
@@ -1292,7 +1292,7 @@ public class ParsePage
             string[] lines = precache_file_lines(TMPL_PATH + "/" + tpl_path);
             if (lines.Length == 0)
             {
-                fw.logger(LogLevel.TRACE, $"ParsePage - NOR an ArrayList of Hashtables NEITHER .sel template file passed for a selvalue tag={tag}");
+                logger(LogLevel.TRACE, $"ParsePage - NOR an ArrayList of Hashtables NEITHER .sel template file passed for a selvalue tag={tag}");
                 return "";
             }
 
@@ -1334,7 +1334,7 @@ public class ParsePage
     private string lang_replacer(Match m)
     {
         var value = m.Groups[1].Value.Trim();
-        // fw.logger("checking:", lang, value)
+        // logger("checking:", lang, value)
         return langMap(value);
     }
 
@@ -1372,13 +1372,13 @@ public class ParsePage
                 // if no translation - return original string
                 result = str;
         }
-        // fw.logger("in=[" & str & "], out=[" & result & "]")
+        // logger("in=[" & str & "], out=[" & result & "]")
         return result;
     }
 
     private void load_lang()
     {
-        // fw.logger("load lang: " & TMPL_PATH & "\" & lang & ".txt")
+        // logger("load lang: " & TMPL_PATH & "\" & lang & ".txt")
         var lines = FW.getFileLines(TMPL_PATH + @"\lang\" + lang + ".txt");
 
         if (LANG_CACHE[lang] == null)
@@ -1392,7 +1392,7 @@ public class ParsePage
                 continue;
             }
             string[] pair = line.Split("===", 2);
-            // fw.logger("added to cache:", Trim(pair(0)))
+            // logger("added to cache:", Trim(pair(0)))
             ((Hashtable)LANG_CACHE[lang])[pair[0].Trim()] = pair[1].TrimStart();
         }
     }
@@ -1400,11 +1400,17 @@ public class ParsePage
     // add new language string to the lang file (for futher translation)
     private void add_lang(string str)
     {
-        fw.logger(LogLevel.DEBUG, "ParsePage notice - updating lang [" + lang + "] with: " + str);
+        logger(LogLevel.DEBUG, "ParsePage notice - updating lang [" + lang + "] with: " + str);
         string filedata = str + " === " + System.Environment.NewLine;
         FW.setFileContent(TMPL_PATH + @"\lang\" + lang + ".txt", ref filedata, true);
 
         // also add to lang cache
         ((Hashtable)LANG_CACHE[lang])[str.Trim()] = "";
+    }
+
+    private void logger(LogLevel level, params string[] args)
+    {
+        if (fw != null)
+            fw.logger(level, args);
     }
 }

@@ -241,11 +241,7 @@ public class FormUtils
     // return pager or Nothing if no paging required
     public static ArrayList getPager(long count, int pagenum, object pagesize1 = null)
     {
-        int pagesize = MAX_PAGE_ITEMS;
-        if (pagesize1 != null)
-        {
-            pagesize = (int)pagesize1;
-        }
+        int pagesize = pagesize1.toInt(MAX_PAGE_ITEMS);
 
         ArrayList pager = null;
         const int PAD_PAGES = 5;
@@ -327,7 +323,7 @@ public class FormUtils
     /// <returns>by ref itemdb - add fields with default_value or form value</returns>
     public static bool filterCheckboxes(Hashtable itemdb, Hashtable item, IList fields, bool is_existing_fields_only = false, string default_value = "0")
     {
-        if (fields.Count.Equals(0))
+        if (fields == null || fields.Count.Equals(0))
             return false;
 
         if (item != null)
@@ -441,6 +437,9 @@ public class FormUtils
     public static object dateForCombo(Hashtable item, string field_prefix)
     {
         object result = null;
+        if (item == null)
+            return result;
+
         int day = item[field_prefix + "_day"].toInt();
         int mon = item[field_prefix + "_mon"].toInt();
         int year = item[field_prefix + "_year"].toInt();

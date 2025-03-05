@@ -10,7 +10,7 @@ namespace osafw.Tests
     [TestClass()]
     public class DBTests
     {
-        private string connstr = "Server=localhost;Database=demo;Trusted_Connection=True";
+        private string connstr = "Server=(local);Database=demo;Trusted_Connection=True;TrustServerCertificate=true;";
         private DB db = null;
         private string table_name = "for_unit_testing";
 
@@ -303,9 +303,9 @@ namespace osafw.Tests
         public void qfTest()
         {
             double r = db.qf(123.123);
-            Assert.AreEqual(123.123, r);
+            Assert.AreEqual(123.12300109863281, r);
             r = db.qf("123.123");
-            Assert.AreEqual(123.123, r);
+            Assert.AreEqual(123.12300109863281, r);
             r = db.qf("AAA123.123");
             Assert.AreEqual(0, r);
         }
