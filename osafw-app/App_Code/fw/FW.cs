@@ -32,10 +32,8 @@ public class AuthException : ApplicationException
     public AuthException(string message) : base(message) { }
 }
 [Serializable]
-public class UserException : ApplicationException
+public class UserException(string message) : ApplicationException(message)
 {
-    //thrown when input parameters from the request (browser/user) are not valid
-    public UserException(string message) : base(message) { }
 }
 [Serializable]
 public class ValidationException : UserException
@@ -139,12 +137,12 @@ public class FW : IDisposable
     // usage: fw.userId
     public int userId
     {
-        get { return Utils.toInt(Session("user_id")); }
+        get { return Session("user_id").toInt(); }
     }
 
     public int userAccessLevel
     {
-        get { return Utils.toInt(Session("access_level")); }
+        get { return Session("access_level").toInt(); }
     }
 
     // shortcut to obtain if we working under logged in user
@@ -320,9 +318,9 @@ public class FW : IDisposable
     public string getResponseExpectedFormat()
     {
         string result = "";
-        if (this.route.format == "json" || Utils.toStr(this.request.Headers["Accept"]).Contains("application/json"))
+        if (this.route.format == "json" || this.request.Headers.Accept.toStr().Contains("application/json"))
             result = "json";
-        else if (this.route.format == "pjax" || !string.IsNullOrEmpty(this.request.Headers["X-Requested-With"]))
+        else if (this.route.format == "pjax" || !string.IsNullOrEmpty(this.request.Headers.XRequestedWith))
             result = "pjax";
         return result;
     }
@@ -622,7 +620,7 @@ public class FW : IDisposable
             //    + "Form: " + dumper(FORM) + System.Environment.NewLine + System.Environment.NewLine
             //    + "Session:" + dumper(context.Session));
 
-            if (Utils.toInt(this.config("log_level")) >= (int)LogLevel.DEBUG)
+            if (this.config("log_level").toInt() >= (int)LogLevel.DEBUG)
                 throw;
             else
                 errMsg("Server Error. Please, contact site administrator!", Ex);
@@ -675,12 +673,12 @@ public class FW : IDisposable
         Hashtable rules = (Hashtable)config("access_levels");
         if (rules != null && rules.ContainsKey(path))
         {
-            if (current_level >= Utils.toInt(rules[path]))
+            if (current_level >= rules[path].toInt())
                 result = 2;
         }
         else if (rules != null && rules.ContainsKey(path2))
         {
-            if (current_level >= Utils.toInt(rules[path2]))
+            if (current_level >= rules[path2].toInt())
                 result = 2;
         }
         else
@@ -1230,7 +1228,7 @@ public class FW : IDisposable
                 var field = controllerClass.GetField("access_level", BindingFlags.Public | BindingFlags.Static);
                 if (field != null)
                 {
-                    if (userAccessLevel < Utils.toInt(field.GetValue(null)))
+                    if (userAccessLevel < field.GetValue(null).toInt())
                         throw new AuthException("Bad access - Not authorized (2)");
                 }
 
@@ -1413,7 +1411,7 @@ public class FW : IDisposable
                 mail_from = (string)this.config("mail_from"); // default mail from
             mail_subject = Regex.Replace(mail_subject, @"[\r\n]+", " ");
 
-            bool is_test = Utils.toBool(this.config("is_test"));
+            bool is_test = this.config("is_test").toBool();
             if (is_test)
             {
                 string test_email = this.Session("login") ?? ""; //in test mode - try logged user email (if logged)
@@ -1512,10 +1510,10 @@ public class FW : IDisposable
                     }
                     if (mailSettings.Count > 0)
                     {
-                        client.Host = Utils.toStr(mailSettings["host"]);
-                        client.Port = Utils.toInt(mailSettings["port"]);
-                        client.EnableSsl = Utils.toBool(mailSettings["is_ssl"]);
-                        client.Credentials = new System.Net.NetworkCredential(Utils.toStr(mailSettings["username"]), Utils.toStr(mailSettings["password"]));
+                        client.Host = mailSettings["host"].toStr();
+                        client.Port = mailSettings["port"].toInt();
+                        client.EnableSsl = mailSettings["is_ssl"].toBool();
+                        client.Credentials = new System.Net.NetworkCredential(mailSettings["username"].toStr(), mailSettings["password"].toStr());
                         client.Send(message);
                     }
                 }
@@ -1562,7 +1560,7 @@ public class FW : IDisposable
 
         ps["err_time"] = DateTime.Now;
         ps["err_msg"] = msg;
-        if (Utils.toBool(this.config("IS_DEV")))
+        if (this.config("IS_DEV").toBool())
         {
             ps["is_dump"] = true;
             if (Ex != null)
@@ -1681,7 +1679,7 @@ public class FW : IDisposable
                 string log_file = (string)config("log");
                 if (!string.IsNullOrEmpty(log_file))
                 {
-                    long max_log_size = Utils.toLong(config("log_max_size"));
+                    long max_log_size = config("log_max_size").toLong();
                     using (FileStream floggerFS = new(log_file, FileMode.Open, FileAccess.Read, FileShare.Read))
                     {
                         if (max_log_size > 0 && floggerFS.Length > max_log_size)

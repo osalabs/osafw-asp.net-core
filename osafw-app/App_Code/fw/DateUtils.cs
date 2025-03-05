@@ -12,7 +12,7 @@ public class DateUtils
 {
     public static string toFormat(object d, string format)
     {
-        var dt = Utils.toDateOrNull(d);
+        var dt = d.toDateOrNull();
         if (dt == null)
             return "";
         return ((DateTime)dt).ToString(format);
@@ -81,7 +81,7 @@ public class DateUtils
     public static string Str2DateOnly(string str)
     {
         string result = str;
-        var dt = Utils.toDate(str);
+        var dt = str.toDate();
         if (Utils.isDate(dt))
         {
             result = dt.ToShortDateString();

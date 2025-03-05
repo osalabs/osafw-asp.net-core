@@ -51,7 +51,7 @@ public class FwAdminController : FwController
     public virtual Hashtable ShowAction(int id)
     {
         Hashtable ps = new();
-        Hashtable item = model0.one(id);
+        var item = model0.one(id);
         if (item.Count == 0)
             throw new NotFoundException();
 
@@ -199,7 +199,7 @@ public class FwAdminController : FwController
     {
         fw.model<Users>().checkReadOnly();
 
-        model0.update(id, new Hashtable() { { model0.field_status, Utils.toStr(FwModel.STATUS_ACTIVE) } });
+        model0.update(id, new Hashtable() { { model0.field_status, FwModel.STATUS_ACTIVE } });
 
         fw.flash("record_updated", 1);
         return this.afterSave(true, id);
@@ -220,7 +220,7 @@ public class FwAdminController : FwController
         if (user_lists_id > 0)
         {
             var user_lists = fw.model<UserLists>().one(user_lists_id);
-            if (user_lists.Count == 0 || Utils.toInt(user_lists["add_users_id"]) != fw.userId)
+            if (user_lists.Count == 0 || user_lists["add_users_id"].toInt() != fw.userId)
                 throw new UserException("Wrong Request");
         }
 

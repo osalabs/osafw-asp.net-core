@@ -33,7 +33,7 @@ public class Spages : FwModel
         where["url"] = url;
         where["id"] = db.opNOT(not_id);
 
-        int val = Utils.toInt(db.value(table_name, where, "id"));
+        int val = db.value(table_name, where, "id").toInt();
         if (val > 0)
             return true;
         else
@@ -66,7 +66,7 @@ public class Spages : FwModel
             item = oneByUrl(url_parts[i], parent_id);
             if (item.Count == 0)
                 return item;// empty hashtable
-            parent_id = Utils.toInt(item["id"]);
+            parent_id = item["id"].toInt();
 
             item_full_url += "/" + item["url"];
             breadcrumbs.Add(new Hashtable {
@@ -78,7 +78,7 @@ public class Spages : FwModel
         if (item.Count > 0)
         {
             if (!Utils.isEmpty(item["head_att_id"]))
-                item["head_att_id_url"] = fw.model<Att>().getUrl(Utils.toInt(item["head_att_id"]));
+                item["head_att_id_url"] = fw.model<Att>().getUrl(item["head_att_id"].toInt());
         }
 
         // page[top_page] can be used in templates navigation
@@ -137,13 +137,13 @@ public class Spages : FwModel
 
         foreach (Hashtable row in rows)
         {
-            if (parent_id == Utils.toInt(row["parent_id"]))
+            if (parent_id == row["parent_id"].toInt())
             {
                 Hashtable row2 = (Hashtable)row.Clone();
                 row2["_level"] = level;
                 // row2["_level1"] level + 1 'to easier use in templates
                 row2["full_url"] = parent_url + "/" + row["url"];
-                row2["children"] = getPagesTree(rows, Utils.toInt(row["id"]), level + 1, (string)row["url"]);
+                row2["children"] = getPagesTree(rows, row["id"].toInt(), level + 1, (string)row["url"]);
                 result.Add(row2);
             }
         }
@@ -219,7 +219,7 @@ public class Spages : FwModel
             return "";
 
         var item = one(id);
-        return getFullUrl(Utils.toInt(item["parent_id"])) + "/" + item["url"];
+        return getFullUrl(item["parent_id"].toInt()) + "/" + item["url"];
     }
 
     /// <summary>
@@ -227,24 +227,24 @@ public class Spages : FwModel
     /// </summary>
     /// <param name="id"></param>
     /// <returns></returns>
-    public ArrayList listParents(int id)
+    public DBList listParents(int id)
     {
-        ArrayList result = new();
-        Hashtable item = one(id);
+        DBList result = new();
+        var item = one(id);
         while (item.Count > 0)
         {
-            var item_id = Utils.toInt(item["id"]);
+            var item_id = item["id"].toInt();
             if (item_id != id)
                 result.Insert(0, item);
 
-            item = one(Utils.toInt(item["parent_id"]));
+            item = one(item["parent_id"]);
         }
         return result;
     }
 
     public bool isPublished(Hashtable item)
     {
-        return Utils.toInt(item["status"]) == FwModel.STATUS_ACTIVE && (item["pub_time"] == null || Utils.toDate(item["pub_time"]) <= DateTime.Now);
+        return item["status"].toInt() == FwModel.STATUS_ACTIVE && (item["pub_time"] == null || item["pub_time"].toDate() <= DateTime.Now);
     }
 
     // render page by full url
@@ -269,7 +269,7 @@ public class Spages : FwModel
         if (!Utils.isEmpty(item["redirect_url"]))
             fw.redirect((string)item["redirect_url"]);
 
-        var item_id = Utils.toInt(item["id"]);
+        var item_id = item["id"].toInt();
 
         // subpages navigation
         ArrayList subpages = listChildrenPublished(item_id);

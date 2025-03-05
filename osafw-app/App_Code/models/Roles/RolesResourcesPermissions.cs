@@ -45,8 +45,8 @@ public class RolesResourcesPermissions : FwModel
         string str_permissions_id = "";
         Utils.split2(KEY_DELIM, key, ref str_resources_id, ref str_permissions_id);
 
-        resources_id = Utils.toInt(str_resources_id);
-        permissions_id = Utils.toInt(str_permissions_id);
+        resources_id = str_resources_id.toInt();
+        permissions_id = str_permissions_id.toInt();
     }
 
     /// <summary>
@@ -66,7 +66,7 @@ public class RolesResourcesPermissions : FwModel
         };
         var value = db.value(table_name, where, "1");
 
-        return 1 == Utils.toInt(value);
+        return value.toBool();
     }
 
     /// <summary>
@@ -120,7 +120,7 @@ public class RolesResourcesPermissions : FwModel
             resource["permissions_cols"] = permissions_cols;
 
             // load permissions for this resource
-            var hpermissions = fw.model<RolesResourcesPermissions>().matrixRowByRoleResource(roles_id, Utils.toInt(resource["id"]));
+            var hpermissions = fw.model<RolesResourcesPermissions>().matrixRowByRoleResource(roles_id, resource["id"].toInt());
 
             foreach (Hashtable permission in permissions)
             {

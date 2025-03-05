@@ -66,15 +66,16 @@ class DevCodeGen
     {
         string result;
 
+        var fw_subtype = entity["fw_subtype"].toStr();
         switch (entity["fw_type"])
         {
             case "int":
                 {
-                    if (Utils.toStr(entity["fw_subtype"]) == "boolean" || Utils.toStr(entity["fw_subtype"]) == "bit")
+                    if (fw_subtype == "boolean" || fw_subtype == "bit")
                         result = "BIT";
-                    else if (Utils.toInt(entity["numeric_precision"]) == 3 || Utils.toStr(entity["fw_subtype"]) == "tinyint")
+                    else if (entity["numeric_precision"].toInt() == 3 || fw_subtype == "tinyint")
                         result = "TINYINT";
-                    else if (Utils.toInt(entity["numeric_precision"]) == 5 || Utils.toStr(entity["fw_subtype"]) == "smallint")
+                    else if (entity["numeric_precision"].toInt() == 5 || fw_subtype == "smallint")
                         result = "SMALLINT";
                     else
                         result = "INT";
@@ -83,10 +84,10 @@ class DevCodeGen
 
             case "float":
                 {
-                    if (Utils.toStr(entity["fw_subtype"]) == "currency")
+                    if (fw_subtype == "currency")
                         result = "DECIMAL(18,2)";
-                    else if (Utils.toStr(entity["fw_subtype"]) == "decimal")
-                        result = "DECIMAL(" + Utils.toInt(entity["numeric_precision"]) + "," + Utils.toInt(entity["numeric_scale"]) + ")";
+                    else if (fw_subtype == "decimal")
+                        result = "DECIMAL(" + entity["numeric_precision"].toInt() + "," + entity["numeric_scale"].toInt() + ")";
                     else
                         result = "FLOAT";
                     break;
@@ -94,7 +95,7 @@ class DevCodeGen
 
             case "datetime":
                 {
-                    if (Utils.toStr(entity["fw_subtype"]) == "date")
+                    if (fw_subtype == "date")
                         result = "DATE";
                     else
                         result = "DATETIME2";
@@ -104,7 +105,7 @@ class DevCodeGen
             default:
                 {
                     result = "NVARCHAR";
-                    var maxlen = Utils.toInt(entity["maxlen"]);
+                    var maxlen = entity["maxlen"].toInt();
                     if (maxlen > 0 & maxlen < 256)
                         result += "(" + entity["maxlen"] + ")";
                     else
@@ -122,7 +123,7 @@ class DevCodeGen
         if (entity["default"] == null)
             return result;
 
-        string def = Utils.toStr(entity["default"]);
+        string def = entity["default"].toStr();
         result += " DEFAULT ";
         // remove outer parentheses if any
         def = Regex.Replace(def, @"^\((.+)\)$", "$1");
@@ -139,7 +140,7 @@ class DevCodeGen
             // any other text - quote
             def = Regex.Replace(def, "^'(.*)'$", "$1"); // remove outer quotes if any
 
-            if (Utils.toStr(entity["fw_type"]) == "int")
+            if (entity["fw_type"].toStr() == "int")
                 // if field type int - convert to int
                 result += "(" + db.qi(def) + ")";
             else
@@ -186,14 +187,14 @@ class DevCodeGen
         foreach (Hashtable field in fields)
         {
             var fsql = "";
-            var field_name = Utils.toStr(field["name"]);
+            var field_name = field["name"].toStr();
             if (field_name == "status")
                 fsql += Environment.NewLine; // add empty line before system fields starting with "status"
 
             fsql += "  " + db.qid(field_name, false).PadRight(21, ' ') + " " + entityFieldToSQLType(field);
-            if (Utils.toInt(field["is_identity"]) == 1)
+            if (field["is_identity"].toBool())
                 fsql += " IDENTITY(1, 1) PRIMARY KEY CLUSTERED";
-            fsql += Utils.toInt(field["is_nullable"]) == 0 ? " NOT NULL" : "";
+            fsql += field["is_nullable"].toBool() ? "" : " NOT NULL";
             fsql += entityFieldToSQLDefault(field);
             fsql += entityFieldToSQLForeignKey(field, entity);
             fsql += (i < fields.Count ? "," : "");
@@ -320,7 +321,7 @@ class DevCodeGen
     {
         string table_name = (string)entity["table"];
         string model_name = (string)entity["model_name"];
-        bool is_junction = Utils.toBool(entity["is_junction"]);
+        bool is_junction = entity["is_junction"].toBool();
 
         if (model_name == "")
             model_name = Utils.nameCamelCase(table_name);
@@ -398,15 +399,15 @@ class DevCodeGen
                 foreach (Hashtable fld in (ArrayList)entity["fields"])
                 {
                     // find identity
-                    if (fld_identity == null && Utils.toStr(fld["is_identity"]) == "1")
+                    if (fld_identity == null && fld["is_identity"].toBool())
                         fld_identity = fld;
 
                     // first int field
-                    if (fld_int == null && Utils.toStr(fld["fw_type"]) == "int")
+                    if (fld_int == null && fld["fw_type"].toStr() == "int")
                         fld_int = fld;
 
                     // for iname - just use 2nd to 4th field which not end with ID, varchar type and has some maxlen
-                    if (fld_iname == null && i >= 2 && i <= 4 && Utils.toStr(fld["fw_type"]) == "varchar" && Utils.toInt(fld["maxlen"]) > 0 && Utils.Right(Utils.toStr(fld["name"]), 2).ToLower() != "id")
+                    if (fld_iname == null && i >= 2 && i <= 4 && fld["fw_type"].toStr() == "varchar" && fld["maxlen"].toInt() > 0 && Utils.Right(fld["name"].toStr(), 2).ToLower() != "id")
                         fld_iname = fld;
 
                     if (Regex.IsMatch((string)fld["name"], @"[^\w_]", RegexOptions.IgnoreCase))
@@ -441,7 +442,7 @@ class DevCodeGen
                 if (fields.ContainsKey("prio"))
                     codegen += "        field_prio = \"prio\";" + Environment.NewLine;
 
-                if (is_normalize_names || !Utils.toBool(entity["is_fw"]))
+                if (is_normalize_names || !entity["is_fw"].toBool())
                     codegen += "        is_normalize_names = true;" + Environment.NewLine;
             }
 
@@ -517,7 +518,7 @@ class DevCodeGen
             { "column_types", column_types }
         };
         if (ltable.Count > 0)// replace
-            fw.model<LookupManagerTables>().update(Utils.toInt(ltable["id"]), item);
+            fw.model<LookupManagerTables>().update(ltable["id"].toInt(), item);
         else
             fw.model<LookupManagerTables>().add(item);
     }
@@ -549,7 +550,7 @@ class DevCodeGen
         controller_options["url"] = controller_url;
         controller_options["title"] = controller_title;
 
-        if (Utils.toBool(controller_options["is_lookup"]))
+        if (controller_options["is_lookup"].toBool())
         {
             // if requested controller as a lookup table - just add/update lookup tables, no actual controller creation
             this.createLookup(entity);
@@ -560,7 +561,7 @@ class DevCodeGen
         var controller_from_class = "AdminDemosDynamic";
         var controller_from_url = "/Admin/DemosDynamic";
         var controller_from_title = "Demo Dynamic";
-        if (Utils.toStr(controller_options["type"]) == "vue")
+        if (controller_options["type"].toStr() == "vue")
         {
             controller_from_class = "AdminDemosVue";
             controller_from_url = "/Admin/DemosVue";
@@ -572,7 +573,7 @@ class DevCodeGen
         // copy templates from /admin/demosdynamic to /controller/url
         var tpl_from = fw.config("template") + controller_from_url.ToLower();
         var tpl_to = fw.config("template") + controller_url.ToLower();
-        if (Utils.toBool(controller_options["rwtpl"]) && Directory.Exists(tpl_to))
+        if (controller_options["rwtpl"].toBool() && Directory.Exists(tpl_to))
         {
             //remove directory if exists
             Directory.Delete(tpl_to, true);
@@ -649,7 +650,7 @@ class DevCodeGen
         {
             // TODO deprecate reading from db, always use entity info
             DB db;
-            if (Utils.toStr(entity["db_config"]).Length > 0)
+            if (entity["db_config"].toStr().Length > 0)
                 db = new DB(fw, (Hashtable)((Hashtable)fw.config("db"))[entity["db_config"]], (string)entity["db_config"]);
             else
                 db = new DB(fw);
@@ -666,12 +667,12 @@ class DevCodeGen
             foreach (Hashtable tentity in entities)
                 tables[tentity["table"]] = tentity;
 
-        var is_fw = Utils.toBool(entity["is_fw"]);
+        var is_fw = entity["is_fw"].toBool();
 
         //build index by field name
         Hashtable hfields = []; // name => fld index
         foreach (Hashtable fld in fields)
-            hfields[Utils.toStr(fld["name"])] = fld;
+            hfields[fld["name"].toStr()] = fld;
 
         var foreign_keys = (ArrayList)entity["foreign_keys"] ?? [];
         //add system user fields to fake foreign keys, so it can generate list query with user names
@@ -722,12 +723,12 @@ class DevCodeGen
             if (ui.ContainsKey("skip"))
                 continue; //skip unnecessary fields
 
-            string fld_name = Utils.toStr(fld["name"]);
+            string fld_name = fld["name"].toStr();
             fw.logger("field name=", fld_name, fld);
 
-            if (Utils.toStr(fld["fw_name"]) == "")
+            if (fld["fw_name"].toStr() == "")
                 fld["fw_name"] = Utils.name2fw(fld_name); // system name using fw standards
-            if (Utils.toStr(fld["iname"]) == "")
+            if (fld["iname"].toStr() == "")
                 fld["iname"] = Utils.name2human(fld_name); // human name using fw standards
 
             var is_field_fk = hforeign_keys.ContainsKey(fld_name);
@@ -758,16 +759,16 @@ class DevCodeGen
             sff["field"] = fld_name;
             sff["label"] = fld["iname"];
 
-            if (Utils.toStr(fld["is_nullable"]) == "0" && fld["default"] == null)
+            if (!fld["is_nullable"].toBool() && fld["default"] == null)
                 sff["required"] = true;// if not nullable and no default - required
 
-            if (Utils.toStr(fld["is_nullable"]) == "1")
+            if (fld["is_nullable"].toBool())
                 saveFieldsNullable.Add(fld_name);
 
-            var maxlen = Utils.toInt(fld["maxlen"]);
+            var maxlen = fld["maxlen"].toInt();
             if (maxlen > 0)
                 sff["maxlength"] = maxlen;
-            if (Utils.toStr(fld["fw_type"]) == "varchar")
+            if (fld["fw_type"].toStr() == "varchar")
             {
                 if (maxlen <= 0 || fld_name == "idesc")
                 {
@@ -793,7 +794,7 @@ class DevCodeGen
                     }
                 }
             }
-            else if (Utils.toStr(fld["fw_type"]) == "int")
+            else if (fld["fw_type"].toStr() == "int")
             {
                 // int fields could be: foreign keys, yes/no, just a number input
 
@@ -840,7 +841,7 @@ class DevCodeGen
                         sff["is_option0"] = true;
                         //sff["class_contents"] = "col-md-4";
                     }
-                    else if (Utils.toStr(fld["fw_subtype"]) == "boolean" || Utils.toStr(fld["fw_subtype"]) == "bit" || fld_name.StartsWith("is_") || Regex.IsMatch(fld_name, @"^Is[A-Z]"))
+                    else if (fld["fw_subtype"].toStr() == "boolean" || fld["fw_subtype"].toStr() == "bit" || fld_name.StartsWith("is_") || Regex.IsMatch(fld_name, @"^Is[A-Z]"))
                     {
                         // make it as yes/no radio
                         sff["type"] = "yesno";
@@ -860,13 +861,13 @@ class DevCodeGen
                     }
                 }
             }
-            else if (Utils.toStr(fld["fw_type"]) == "float")
+            else if (fld["fw_type"].toStr() == "float")
             {
                 sff["type"] = "number";
                 sff["step"] = 0.1;
                 sff["class_contents"] = "col-md-4";
             }
-            else if (Utils.toStr(fld["fw_type"]) == "datetime")
+            else if (fld["fw_type"].toStr() == "datetime")
             {
                 sf["type"] = "date";
                 sff["type"] = "date_popup";
@@ -876,7 +877,7 @@ class DevCodeGen
                 // everything else - just input
                 sff["type"] = "input";
 
-            if (Utils.toStr(fld["is_identity"]) == "1")
+            if (fld["is_identity"].toBool())
             {
                 sff["type"] = "id";
                 sff.Remove("class_contents");
@@ -893,7 +894,7 @@ class DevCodeGen
             addToFormColumns(fld, sf, sff, showFieldsTabs, showFormFieldsTabs, sys_fields, fields);
 
             var is_sys = false;
-            if (Utils.toStr(fld["is_identity"]) == "1" || sys_fields.Contains(fld_name))
+            if (fld["is_identity"].toBool() || sys_fields.Contains(fld_name))
                 is_sys = true;
             if (!is_sys || fld_name == "status")
                 // add to save fields only if not system (except status)
@@ -909,7 +910,7 @@ class DevCodeGen
             {
                 //table could be a junction table name then
                 var tentity = (Hashtable)tables[table];
-                var is_junction = Utils.toBool(tentity["is_junction"]);
+                var is_junction = tentity["is_junction"].toBool();
                 string junction_model = (string)tentity["model_name"];
                 string table_name_linked = m.Groups[1].Value;
                 string table_name_link = table;
@@ -992,7 +993,7 @@ class DevCodeGen
 
                 var field = (Hashtable)hfields[tcolumn];
                 var sql_join = "";
-                if (Utils.toInt(field["is_nullable"]) == 1)
+                if (field["is_nullable"].toBool())
                 {
                     //if FK field can be NULL - use LEFT OUTER JOIN
                     sql_join = $"LEFT OUTER JOIN {db.qid(pk_table, false)} {alias} ON ({alias}.{pk_column}=t.{tcolumn})";
@@ -1123,7 +1124,7 @@ class DevCodeGen
         var ui = (Hashtable)fld["ui"] ?? []; // ui options for the field
         var col = 0; //default to left
 
-        if (Utils.toStr(fld["is_identity"]) == "1" || sys_fields.Contains(fld["name"] ?? ""))
+        if (fld["is_identity"].toBool() || sys_fields.Contains(fld["name"] ?? ""))
         {
             // add to system fields - to the right
             col = 2;
@@ -1131,9 +1132,9 @@ class DevCodeGen
         else
         {
             //non-system fields
-            if (Utils.toStr(sf["type"]) == "att"
-                || Utils.toStr(sf["type"]) == "att_links"
-                || Utils.toStr(sff["type"]) == "textarea" && fields.Count >= 10)
+            if (sf["type"].toStr() == "att"
+                || sf["type"].toStr() == "att_links"
+                || sff["type"].toStr() == "textarea" && fields.Count >= 10)
             {
                 //add to the right: attachments, textareas (only if many fields)
                 col = 2;
@@ -1141,7 +1142,7 @@ class DevCodeGen
         }
 
         //check if specific column required
-        var formcol = Utils.toStr(ui["formcol"] ?? "");
+        var formcol = ui["formcol"].toStr();
         if (formcol == "left")
             col = 0;
         else if (formcol == "mid")
@@ -1150,7 +1151,7 @@ class DevCodeGen
             col = 2;
 
         //select/add proper tab
-        var formtab = Utils.toStr(ui["formtab"] ?? "");
+        var formtab = ui["formtab"].toStr();
 
         addToTabColumn(showFieldsTabs, formtab, col, sf);
         addToTabColumn(showFormFieldsTabs, formtab, col, sff);
@@ -1171,10 +1172,10 @@ class DevCodeGen
 
         int defaults_ctr = 0;
         var rfields = (from Hashtable fld in fields
-                       where Utils.toStr(fld["is_identity"]) != "1"
-                         && !(Utils.toStr(fld["fw_type"]) == "varchar" && Utils.toInt(fld["maxlen"]) <= 0)
-                         && !(sys_fields.Contains(fld["name"]) && Utils.toStr(fld["name"]) != "status")
-                       orderby (Utils.toStr(fld["is_nullable"]) == "0" && fld["default"] == null) descending
+                       where !fld["is_identity"].toBool()
+                         && !(fld["fw_type"].toStr() == "varchar" && fld["maxlen"].toInt() <= 0)
+                         && !(sys_fields.Contains(fld["name"]) && fld["name"].toStr() != "status")
+                       orderby (!fld["is_nullable"].toBool() && fld["default"] == null) descending
                        select fld);
         foreach (Hashtable field in rfields)
         {
@@ -1202,7 +1203,7 @@ class DevCodeGen
     public static bool overrideSpecialFields(Hashtable fld, Hashtable sf, Hashtable sff)
     {
         var is_skip = false;
-        var field_name = Utils.toStr(fld["name"]);
+        var field_name = fld["name"].toStr();
         // special fields
         switch (field_name)
         {
@@ -1302,7 +1303,7 @@ class DevCodeGen
 
         // override ui options
         if (ui.ContainsKey("required"))
-            sff["required"] = Utils.toBool(ui["required"]);
+            sff["required"] = ui["required"].toBool();
 
         //input types
         if (ui.ContainsKey("plaintext"))
@@ -1353,7 +1354,7 @@ class DevCodeGen
             {
                 //if value is explicitly "false" string - set to false (used to disable row class)
                 //otherwise - set to value
-                var v = Utils.toStr(ui[attr]) == "false" ? false : ui[attr];
+                var v = ui[attr].toStr() == "false" ? false : ui[attr];
                 sf[attr] = v;
                 sff[attr] = v;
             }
@@ -1364,7 +1365,7 @@ class DevCodeGen
         // options(status.sel) -- relative to controller template folder
         if (ui.ContainsKey("options"))
         {
-            var options = Utils.toStr(ui["options"]);
+            var options = ui["options"].toStr();
             if (options.Contains('|'))
                 // if contains | - it's a list of options
                 sff["options"] = Utils.qh(options);

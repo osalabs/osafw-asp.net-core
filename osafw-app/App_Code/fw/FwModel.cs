@@ -131,11 +131,11 @@ public abstract class FwModel : IDisposable
     //overload of one() to accept id of any type, so no need to explicitly convert by caller
     public virtual DBRow one(object id)
     {
-        var iid = Utils.toInt(id);
+        var iid = id.toInt();
         if (iid > 0)
             return one(iid);
         else
-            return new DBRow();
+            return [];
     }
 
     public virtual DBList multi(ICollection ids)
@@ -187,7 +187,7 @@ public abstract class FwModel : IDisposable
         if (!is_normalize_names)
             return;
 
-        foreach (DBRow row in rows)
+        foreach (var row in rows)
             normalizeNames(row);
     }
 
@@ -196,13 +196,13 @@ public abstract class FwModel : IDisposable
         if (field_iname == "")
             return "";
 
-        DBRow row = one(id);
+        var row = one(id);
         return row[field_iname];
     }
     public virtual string iname(object id)
     {
         var result = "";
-        var iid = Utils.toInt(id);
+        var iid = id.toInt();
         if (iid > 0)
             result = iname(iid);
         return result;
@@ -212,7 +212,7 @@ public abstract class FwModel : IDisposable
     public virtual int idByInameOrAdd(string iname)
     {
         var row = oneByIname(iname);
-        var id = Utils.toInt(row[field_id]);
+        var id = row[field_id].toInt();
         if (id == 0)
             id = add(DB.h(field_iname, iname));
         return id;
@@ -228,7 +228,7 @@ public abstract class FwModel : IDisposable
         Hashtable item = this.oneByIname(iname);
         if (item.ContainsKey(this.field_id))
             // exists
-            result = Utils.toInt(item[this.field_id]);
+            result = item[this.field_id].toInt();
         else
         {
             // not exists - add new
@@ -279,7 +279,7 @@ public abstract class FwModel : IDisposable
         {
             where[field_add_time] = db.opGT(DateTime.Now.AddDays((int)since_days));
         }
-        return Utils.toLong(db.value(table_name, where, "count(*)"));
+        return db.value(table_name, where, "count(*)").toLong();
     }
 
     // just return first row by iname field (you may want to make it unique)
@@ -324,11 +324,7 @@ public abstract class FwModel : IDisposable
         where[field] = uniq_key;
         if (!string.IsNullOrEmpty(field_id))
             where[field_id] = db.opNOT(not_id);
-        string val = Utils.toStr(db.value(table_name, where, "1"));
-        if (val == "1")
-            return true;
-        else
-            return false;
+        return db.value(table_name, where, "1").toBool();
     }
 
     // check if item exists for a given fields and their values, commonly used in junction tables
@@ -340,11 +336,7 @@ public abstract class FwModel : IDisposable
 
         if (!string.IsNullOrEmpty(field_id))
             where[field_id] = db.opNOT(not_id);
-        string val = Utils.toStr(db.value(table_name, where, "1"));
-        if (val == "1")
-            return true;
-        else
-            return false;
+        return db.value(table_name, where, "1").toBool();
     }
 
     // check if item exists for a given iname
@@ -386,7 +378,7 @@ public abstract class FwModel : IDisposable
         Hashtable item_changes = [];
         if (is_log_changes)
         {
-            Hashtable item_old = this.one(id);
+            var item_old = this.one(id);
             Hashtable item_compare = item;
             if (is_under_bulk_update)
             {
@@ -452,7 +444,7 @@ public abstract class FwModel : IDisposable
         // if record already deleted and we are admin - perform permanent delete
         if (fw.model<Users>().isAccessLevel(Users.ACL_ADMIN)
             && !string.IsNullOrEmpty(field_status)
-            && Utils.toInt(one(id)[field_status]) == FwModel.STATUS_DELETED)
+            && one(id)[field_status].toInt() == FwModel.STATUS_DELETED)
             delete(id, true);
         else
             delete(id);
@@ -620,7 +612,7 @@ public abstract class FwModel : IDisposable
     /// <param name="def"></param>
     /// <returns></returns>
     /// <exception cref="NotImplementedException"></exception>
-    public virtual ArrayList listByMainId(int main_id, Hashtable def = null)
+    public virtual DBList listByMainId(int main_id, Hashtable def = null)
     {
         if (string.IsNullOrEmpty(junction_field_main_id))
             throw new NotImplementedException();
@@ -628,7 +620,7 @@ public abstract class FwModel : IDisposable
     }
 
     //similar to listByMainId but by linked_id
-    public virtual ArrayList listByLinkedId(int linked_id, Hashtable def = null)
+    public virtual DBList listByLinkedId(int linked_id, Hashtable def = null)
     {
         if (string.IsNullOrEmpty(junction_field_linked_id))
             throw new NotImplementedException();
@@ -663,7 +655,7 @@ public abstract class FwModel : IDisposable
     /// <returns></returns>
     public virtual ArrayList listLinkedByMainId(int main_id, Hashtable def = null)
     {
-        ArrayList linked_rows = listByMainId(main_id, def);
+        var linked_rows = listByMainId(main_id, def);
 
         ArrayList lookup_rows = junction_model_linked.list();
         if (linked_rows != null && linked_rows.Count > 0)
@@ -673,10 +665,10 @@ public abstract class FwModel : IDisposable
                 // check if linked_rows contain main id
                 row["is_checked"] = false;
                 row["_link"] = new Hashtable();
-                foreach (Hashtable lrow in linked_rows)
+                foreach (var lrow in linked_rows)
                 {
                     // compare LINKED ids
-                    if (Utils.toStr(row[junction_model_linked.field_id]) == Utils.toStr(lrow[junction_field_linked_id]))
+                    if (row[junction_model_linked.field_id].toStr() == lrow[junction_field_linked_id])
                     {
                         row["is_checked"] = true;
                         row["_link"] = lrow;
@@ -699,7 +691,7 @@ public abstract class FwModel : IDisposable
     /// <returns></returns>
     public virtual ArrayList listMainByLinkedId(int linked_id, Hashtable def = null)
     {
-        ArrayList linked_rows = listByLinkedId(linked_id, def);
+        var linked_rows = listByLinkedId(linked_id, def);
 
         ArrayList lookup_rows = junction_model_main.list();
         if (linked_rows != null && linked_rows.Count > 0)
@@ -709,10 +701,10 @@ public abstract class FwModel : IDisposable
                 // check if linked_rows contain main id
                 row["is_checked"] = false;
                 row["_link"] = new Hashtable();
-                foreach (Hashtable lrow in linked_rows)
+                foreach (var lrow in linked_rows)
                 {
                     // compare MAIN ids
-                    if (Utils.toStr(row[junction_model_main.field_id]) == Utils.toStr(lrow[junction_field_main_id]))
+                    if (row[junction_model_main.field_id].toStr() == lrow[junction_field_main_id])
                     {
                         row["is_checked"] = true;
                         row["_link"] = lrow;
@@ -730,7 +722,7 @@ public abstract class FwModel : IDisposable
     {
         var result = rows;
 
-        var is_checked_only = (def != null && Utils.toBool(def["lookup_checked_only"]));
+        var is_checked_only = def?["lookup_checked_only"].toBool() ?? false;
 
         if (ids != null && ids.Count > 0)
         {
@@ -742,13 +734,13 @@ public abstract class FwModel : IDisposable
         }
         else if (is_checked_only)
             // return no items if no checked
-            result = new ArrayList();
+            result = [];
         return result;
     }
 
     protected ArrayList filterAndSortChecked(ArrayList rows, Hashtable def = null)
     {
-        var is_checked_only = (def != null && Utils.toBool(def["lookup_checked_only"]));
+        var is_checked_only = def?["lookup_checked_only"].toBool() ?? false;
         if (is_checked_only)
         {
             var result = new ArrayList();
@@ -892,7 +884,7 @@ public abstract class FwModel : IDisposable
     public virtual void updateJunctionByMainIdAdditional(Hashtable linked_keys, string link_id, Hashtable fields)
     {
         if (!string.IsNullOrEmpty(field_prio) && linked_keys.Contains(field_prio + "_" + link_id))
-            fields[field_prio] = Utils.toInt(linked_keys[field_prio + "_" + link_id]);// get value from prio_ID
+            fields[field_prio] = linked_keys[field_prio + "_" + link_id].toInt();// get value from prio_ID
     }
 
     /// <summary>
@@ -916,7 +908,7 @@ public abstract class FwModel : IDisposable
         {
             foreach (string link_id in linked_keys.Keys)
             {
-                if (Utils.toInt(link_id) == 0)
+                if (link_id.toInt() == 0)
                     continue; // skip non-id, ex prio_ID
 
                 fields = new Hashtable();
@@ -942,7 +934,7 @@ public abstract class FwModel : IDisposable
     public virtual void updateJunctionByLinkedIdAdditional(Hashtable linked_keys, string main_id, Hashtable fields)
     {
         if (string.IsNullOrEmpty(field_prio) && linked_keys.ContainsKey(field_prio + "_" + main_id))
-            fields[field_prio] = Utils.toInt(linked_keys[field_prio + "_" + main_id]);// get value from prio_ID
+            fields[field_prio] = linked_keys[field_prio + "_" + main_id].toInt();// get value from prio_ID
     }
 
     /// <summary>
@@ -968,11 +960,11 @@ public abstract class FwModel : IDisposable
         {
             foreach (string main_id in main_keys.Keys)
             {
-                if (Utils.toInt(main_id) == 0)
+                if (main_id.toInt() == 0)
                     continue; // skip non-id, ex prio_ID
 
                 fields = new Hashtable();
-                fields[junction_field_linked_id] = Utils.toStr(linked_id);
+                fields[junction_field_linked_id] = linked_id;
                 fields[junction_field_main_id] = main_id;
                 fields[link_table_field_status] = STATUS_ACTIVE;
 
@@ -1048,13 +1040,13 @@ public abstract class FwModel : IDisposable
         if (string.IsNullOrEmpty(field_prio))
             return false;
 
-        int id_prio = Utils.toInt(one(id)[field_prio]);
+        int id_prio = one(id)[field_prio].toInt();
 
         // detect reorder
         if (under_id > 0)
         {
             // under id present
-            int under_prio = Utils.toInt(one(under_id)[field_prio]);
+            int under_prio = one(under_id)[field_prio].toInt();
             if (sortdir == "asc")
             {
                 if (id_prio < under_prio)
@@ -1092,7 +1084,7 @@ public abstract class FwModel : IDisposable
         else if (above_id > 0)
         {
             // above id present
-            int above_prio = Utils.toInt(one(above_id)[field_prio]);
+            int above_prio = one(above_id)[field_prio].toInt();
             if (sortdir == "asc")
             {
                 if (id_prio < above_prio)
@@ -1174,7 +1166,7 @@ public abstract class FwModel : IDisposable
             else if (fw_subtype == "bit")
             {
                 //if field is exactly BIT - convert from True/False to 1/0
-                item[fieldname] = Utils.toBool(item[fieldname]) ? 1 : 0;
+                item[fieldname] = item[fieldname].toBool() ? 1 : 0;
             }
             // ADD OTHER CONVERSIONS HERE if necessary
         }

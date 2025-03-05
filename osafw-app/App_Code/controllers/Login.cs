@@ -46,7 +46,7 @@ public class LoginController : FwController
         ps["hide_sidebar"] = true;
 
         ps["i"] = item;
-        ps["err_ctr"] = Utils.toInt(fw.G["err_ctr"]) + 1;
+        ps["err_ctr"] = fw.G["err_ctr"].toInt() + 1;
         ps["ERR"] = fw.FormErrors;
         return ps;
     }
@@ -57,7 +57,7 @@ public class LoginController : FwController
         {
             var item = reqh("item");
             var gourl = reqs("gourl");
-            string login = Utils.toStr(item["login"]).Trim();
+            string login = item["login"].toStr().Trim();
             string pwd = (string)item["pwdh"];
             // if use field with masked chars - read masked field
             if ((string)item["chpwd"] == "1")
@@ -66,7 +66,7 @@ public class LoginController : FwController
 
             // for dev config only - login as first admin
             var is_dev_login = false;
-            if (Utils.toBool(fw.config("IS_DEV")) && string.IsNullOrEmpty(login) && pwd == "~")
+            if (fw.config("IS_DEV").toBool() && string.IsNullOrEmpty(login) && pwd == "~")
             {
                 var dev = db.row(model.table_name, DB.h("status", Users.STATUS_ACTIVE, "access_level", Users.ACL_SITEADMIN), "id");
                 login = (string)dev["email"];
@@ -91,7 +91,7 @@ public class LoginController : FwController
             var user = model.oneByEmail(login);
             if (!is_dev_login)
             {
-                if (user.Count == 0 || (string)user["status"] != "0" || !model.checkPwd(pwd, (string)user["pwd"]))
+                if (user.Count == 0 || user["status"].toInt() != Users.STATUS_ACTIVE || !model.checkPwd(pwd, user["pwd"]))
                 {
                     fw.logActivity(FwLogTypes.ICODE_USERS_LOGIN_FAIL, FwEntities.ICODE_USERS, 0, login);
                     throw new AuthException("User Authentication Error");
@@ -100,23 +100,23 @@ public class LoginController : FwController
                 // check if MFA enabled and redirect to MFA login
                 if (!Utils.isEmpty(user["mfa_secret"]))
                 {
-                    fw.Session("mfa_login_users_id", (string)user["id"]);
+                    fw.Session("mfa_login_users_id", user["id"]);
                     fw.Session("mfa_login_attempts", "0");
                     fw.Session("mfa_login_time", DateUtils.UnixTimestamp().ToString());
-                    fw.Session("mfa_login_remember", Utils.toStr(item["remember"]));
+                    fw.Session("mfa_login_remember", item["remember"].toStr());
                     fw.Session("mfa_login_gourl", gourl);
                     fw.redirect(base_url + "/(MFA)");
                 }
 
                 // no MFA secret for the user here - check if MFA enforced and redirect to setup MFA
-                if (Utils.toBool(fw.config("is_mfa_enforced")))
+                if (fw.config("is_mfa_enforced").toBool())
                 {
-                    fw.Session("mfa_login_users_id", (string)user["id"]);
+                    fw.Session("mfa_login_users_id", user["id"]);
                     fw.redirect("/My/MFA");
                 }
             }
 
-            performLogin(Utils.toInt(user["id"]), Utils.toStr(item["remember"]), gourl);
+            performLogin(user["id"].toInt(), item["remember"].toStr(), gourl);
         }
         catch (ApplicationException ex)
         {
@@ -137,7 +137,7 @@ public class LoginController : FwController
 
     public Hashtable MFAAction()
     {
-        var users_id = Utils.toInt(fw.Session("mfa_login_users_id"));
+        var users_id = fw.Session("mfa_login_users_id").toInt();
         if (users_id == 0)
             fw.redirect(base_url);
 
@@ -152,19 +152,19 @@ public class LoginController : FwController
     {
         route_onerror = FW.ACTION_INDEX;
         checkXSS();
-        var users_id = Utils.toInt(fw.Session("mfa_login_users_id"));
+        var users_id = fw.Session("mfa_login_users_id").toInt();
         if (users_id == 0)
             fw.redirect(base_url);
 
         // check if MFA login expired (more than 5 min after login)
-        if (DateUtils.UnixTimestamp() - Utils.toLong(fw.Session("mfa_login_time")) > 60 * 5)
+        if (DateUtils.UnixTimestamp() - fw.Session("mfa_login_time").toLong() > 60 * 5)
         {
             fw.Session("mfa_login_users_id", "0");
             fw.redirect(base_url);
         }
 
         // check no more than 10 attempts
-        var mfa_login_attempts = Utils.toInt(fw.Session("mfa_login_attempts"));
+        var mfa_login_attempts = fw.Session("mfa_login_attempts").toInt();
         if (mfa_login_attempts >= 10)
         {
             fw.Session("mfa_login_users_id", "0");

@@ -19,7 +19,7 @@ public class Roles : FwModel
 
     public int idVisitor()
     {
-        return Utils.toInt(oneByIname(INAME_VISITOR)[field_id]);
+        return oneByIname(INAME_VISITOR)[field_id].toInt();
     }
 
 }

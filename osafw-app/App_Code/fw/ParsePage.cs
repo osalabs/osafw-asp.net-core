@@ -182,7 +182,7 @@ public class ParsePage
             if (LANG_CACHE[lang] == null)
                 load_lang();
 
-            lang_update = Utils.toBool(fw.config("is_lang_update"));
+            lang_update = fw.config("is_lang_update").toBool();
         }
         lang_evaluator = new MatchEvaluator(this.lang_replacer);
     }
@@ -569,7 +569,7 @@ public class ParsePage
                     }
                     else if (ptr is IList list)
                     {
-                        ptr = list[Utils.toInt(k)];
+                        ptr = list[k.toInt()];
                     }
                     else if (ptr is ISession session)
                     {
@@ -752,17 +752,17 @@ public class ParsePage
             result = true;
         else if (oper == "unless" && (bool)eqvalue == false)
             result = true;
-        else if (oper == "ifeq" && (is_numeric_comparison && Utils.toInt(eqvalue) == Utils.toInt(ravalue) || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) == 0))
+        else if (oper == "ifeq" && (is_numeric_comparison && eqvalue.toInt() == ravalue.toInt() || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) == 0))
             result = true;
-        else if (oper == "ifne" && (is_numeric_comparison && Utils.toInt(eqvalue) != Utils.toInt(ravalue) || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) != 0))
+        else if (oper == "ifne" && (is_numeric_comparison && eqvalue.toInt() != ravalue.toInt() || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) != 0))
             result = true;
-        else if (oper == "iflt" && (is_numeric_comparison && Utils.toInt(eqvalue) < Utils.toInt(ravalue) || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) < 0))
+        else if (oper == "iflt" && (is_numeric_comparison && eqvalue.toInt() < ravalue.toInt() || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) < 0))
             result = true;
-        else if (oper == "ifgt" && (is_numeric_comparison && Utils.toInt(eqvalue) > Utils.toInt(ravalue) || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) > 0))
+        else if (oper == "ifgt" && (is_numeric_comparison && eqvalue.toInt() > ravalue.toInt() || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) > 0))
             result = true;
-        else if (oper == "ifge" && (is_numeric_comparison && Utils.toInt(eqvalue) >= Utils.toInt(ravalue) || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) >= 0))
+        else if (oper == "ifge" && (is_numeric_comparison && eqvalue.toInt() >= ravalue.toInt() || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) >= 0))
             result = true;
-        else if (oper == "ifle" && (is_numeric_comparison && Utils.toInt(eqvalue) <= Utils.toInt(ravalue) || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) <= 0))
+        else if (oper == "ifle" && (is_numeric_comparison && eqvalue.toInt() <= ravalue.toInt() || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) <= 0))
             result = true;
 
         return result;
@@ -904,10 +904,10 @@ public class ParsePage
                 }
                 if (attr_count > 0 && hattrs.ContainsKey("number_format"))
                 {
-                    var precision = (!string.IsNullOrEmpty((string)hattrs["number_format"]) ? Utils.toInt(hattrs["number_format"]) : 2);
+                    var precision = (!string.IsNullOrEmpty((string)hattrs["number_format"]) ? hattrs["number_format"].toInt() : 2);
                     bool groupdigits = !hattrs.ContainsKey("nfthousands") || !string.IsNullOrEmpty((string)hattrs["nfthousands"]); // default - group digits, but if nfthousands empty - don't
 
-                    value = Utils.toFloat(value).ToString("N" + precision, CultureInfo.InvariantCulture);
+                    value = value.toFloat().ToString("N" + precision, CultureInfo.InvariantCulture);
                     if (!groupdigits)
                     {
                         value = value.Replace(NumberFormatInfo.InvariantInfo.NumberGroupSeparator, "");
@@ -917,7 +917,7 @@ public class ParsePage
                 }
                 if (attr_count > 0 && hattrs.ContainsKey("currency"))
                 {
-                    value = Utils.toFloat(value).ToString("C2");
+                    value = value.toFloat().ToString("C2");
                     attr_count -= 1;
                 }
                 if (attr_count > 0 && hattrs.ContainsKey("date"))
@@ -1071,7 +1071,7 @@ public class ParsePage
     {
         StringBuilder result = new();
 
-        string sel_value = Utils.toStr(hfvalue((string)attrs["select"] ?? "", hf));
+        string sel_value = hfvalue((string)attrs["select"] ?? "", hf).toStr();
         //fw.logger($"_attr_select: tag={tag}, tpl_name={tpl_name}", attrs, hf[tag]);
 
         var multi_delim = ""; // by default no multiple select

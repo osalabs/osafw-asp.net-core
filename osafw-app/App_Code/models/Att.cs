@@ -117,7 +117,7 @@ public class Att : FwModel
         where["item_id"] = db.opISNULL();
         db.update(table_name, new Hashtable() {
             { "status", STATUS_ACTIVE },
-            { "item_id", Utils.toStr(item_id) }
+            { "item_id", item_id }
         }, where);
         return true;
     }
@@ -132,7 +132,7 @@ public class Att : FwModel
             @$" where add_time<DATEADD(hour, -48, getdate())
                  and (status={db.qi(STATUS_UNDER_UPDATE)} or status={db.qi(STATUS_DELETED)} and iname like 'TMP#%')", DB.h());
         foreach (var row in rows)
-            this.delete(Utils.toInt(row["id"]), true);
+            this.delete(row["id"].toInt(), true);
         return rows.Count;
     }
 
@@ -199,7 +199,7 @@ public class Att : FwModel
 
             // remove files first
             var item = one(id);
-            if (Utils.toInt(item["is_s3"]) == 1)
+            if (item["is_s3"].toInt() == 1)
             {
                 //delete the whole folder for att, it will delete all files recursively
                 fw.model<S3>().deleteObject(table_name + "/" + item["id"] + "/");
@@ -222,7 +222,7 @@ public class Att : FwModel
         if (!string.IsNullOrEmpty(filepath))
             File.Delete(filepath);
         // for images - also delete s/m thumbnails
-        if (Utils.toInt(item["is_image"]) == 1)
+        if (item["is_image"].toInt() == 1)
         {
             foreach (string size in Utils.qw("s m l"))
             {
@@ -246,7 +246,7 @@ public class Att : FwModel
         // End If
 
         // file must have Active status
-        if (Utils.toInt(item["status"]) != 0)
+        if (item["status"].toInt() != STATUS_ACTIVE)
             result = false;
 
         if (!result)
@@ -262,7 +262,7 @@ public class Att : FwModel
         if (item.Count == 0)
             throw new UserException("No file specified");
 
-        checkAccess(Utils.toInt(item["id"]));
+        checkAccess(item["id"].toInt());
 
         if (size != "s" && size != "m")
             size = "";
@@ -327,7 +327,7 @@ public class Att : FwModel
             if (att_category.Count > 0)
             {
                 where += " and a.att_categories_id=@att_categories_id";
-                @params["@att_categories_id"] = Utils.toInt(att_category["id"]);
+                @params["@att_categories_id"] = att_category["id"];
             }
         }
 
@@ -397,7 +397,7 @@ public class Att : FwModel
         var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
 
         var row = one(id).toHashtable();
-        if (Utils.toInt(row["fwentities_id"]) != fwentities_id)
+        if (row["fwentities_id"].toInt() != fwentities_id)
             row.Clear();
         return row;
     }
@@ -449,7 +449,7 @@ public class Att : FwModel
         var result = true;
 #pragma warning restore CS0162 // Unreachable code detected
         var item = one(id);
-        if (Utils.toInt(item["is_s3"]) == 1)
+        if (item["is_s3"].toInt() == 1)
             return true; // already in S3
 
         var model_s3 = fw.model<S3>();
@@ -557,11 +557,11 @@ public class Att : FwModel
             Hashtable attitem = new();
             attitem["att_categories_id"] = att_categories_id;
             attitem["fwentities_id"] = fwentities_id;
-            attitem["item_id"] = Utils.toStr(item_id);
+            attitem["item_id"] = item_id;
             attitem["is_s3"] = "1";
             attitem["status"] = "1";
             attitem["fname"] = file.FileName;
-            attitem["fsize"] = Utils.toStr(file.Length);
+            attitem["fsize"] = file.Length;
             attitem["ext"] = UploadUtils.getUploadFileExt(file.FileName);
             var att_id = fw.model<Att>().add(attitem);
 

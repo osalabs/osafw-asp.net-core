@@ -80,10 +80,10 @@ public class MyFiltersController : FwAdminController
             required_fields += " icode";
         Validate(id, item);
         // load old record if necessary
-        Hashtable item_old = model0.one(id);
+        var item_old = model0.one(id);
 
         // also check that this filter is user's filter (cannot override system filter)
-        if (item_old.Count > 0 && Utils.toInt(item_old["is_system"]) == 1)
+        if (item_old.Count > 0 && item_old["is_system"].toInt() == 1)
             throw new UserException("Cannot overwrite system filter");
 
         Hashtable itemdb = FormUtils.filter(item, this.save_fields);

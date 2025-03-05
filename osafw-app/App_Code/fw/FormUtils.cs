@@ -418,15 +418,18 @@ public class FormUtils
     {
         return string.Join(",", col.ToArray());
     }
+
+    /**
+     * convert comma-separated string to arraylist, trimming each element
+     * if str is empty - return empty arraylist
+     * @param string str
+     * @return ArrayList
+     */
     public static ArrayList comma_str2col(string str)
     {
-        ArrayList result;
-        str = str.Trim();
-        if (!string.IsNullOrEmpty(str))
-            result = new ArrayList(str.Split(","));
-        else
-            result = new ArrayList();
-        return result;
+        if (string.IsNullOrWhiteSpace(str))
+            return [];
+        return new ArrayList(str.Split(",").Select(s => s.Trim()).ToList());
     }
 
     // return date for combo date selection or Nothing if wrong date
@@ -438,9 +441,9 @@ public class FormUtils
     public static object dateForCombo(Hashtable item, string field_prefix)
     {
         object result = null;
-        int day = toInt(item[field_prefix + "_day"]);
-        int mon = toInt(item[field_prefix + "_mon"]);
-        int year = toInt(item[field_prefix + "_year"]);
+        int day = item[field_prefix + "_day"].toInt();
+        int mon = item[field_prefix + "_mon"].toInt();
+        int year = item[field_prefix + "_year"].toInt();
 
         if (day > 0 && mon > 0 && year > 0)
         {
@@ -487,7 +490,7 @@ public class FormUtils
         int result = 0;
         try
         {
-            result = toInt(a[0]) * 3600 + toInt(a[1]) * 60;
+            result = a[0].toInt() * 3600 + a[1].toInt() * 60;
         }
         catch (Exception)
         {
@@ -526,9 +529,9 @@ public class FormUtils
     public static bool formToTime(Hashtable item, string field_name)
     {
         bool result = true;
-        int hh = toInt(item[field_name + "_hh"]);
-        int mm = toInt(item[field_name + "_mm"]);
-        int ss = toInt(item[field_name + "_ss"]);
+        int hh = item[field_name + "_hh"].toInt();
+        int mm = item[field_name + "_mm"].toInt();
+        int ss = item[field_name + "_ss"].toInt();
         try
         {
             //TODO MIGRATE item[field_name] = DateTime.TimeSerial(hh, mm, ss);
@@ -547,7 +550,7 @@ public class FormUtils
         string result = "";
         if (!string.IsNullOrEmpty(datestr))
         {
-            var dt = Utils.toDate(datestr);
+            var dt = datestr.toDate();
             if (Utils.isDate(dt))
                 result = dt.ToString("HH:mm", System.Globalization.DateTimeFormatInfo.InvariantInfo);
         }
@@ -560,7 +563,7 @@ public class FormUtils
     {
         var result = datestr;
         var timeint = FormUtils.timeStrToInt(timestr);
-        var dt = Utils.toDate(datestr);
+        var dt = datestr.toDate();
         if (Utils.isDate(dt))
             // if date set - add time
             result = dt.AddSeconds(timeint);
@@ -602,15 +605,15 @@ public class FormUtils
             object vold = itemold[key];
 
             // If both are dates, compare only the date part.
-            var dtNew = Utils.toDate(vnew);
-            var dtOld = Utils.toDate(vold);
+            var dtNew = vnew.toDate();
+            var dtOld = vold.toDate();
             if (Utils.isDate(dtNew) && Utils.isDate(dtOld))
             {
                 if (dtNew.Date != dtOld.Date)
                     result[key] = vnew;
             }
             // Handle non-date values and the case where one value is a date and the other is not.
-            else if (!itemold.ContainsKey(key) || Utils.toStr(vnew) != Utils.toStr(vold))
+            else if (!itemold.ContainsKey(key) || vnew.toStr() != vold.toStr())
             {
                 result[key] = vnew;
             }
@@ -632,7 +635,7 @@ public class FormUtils
         var afields = Utils.qw(fields);
         foreach (var fld in afields)
         {
-            if (item1.ContainsKey(fld) && item2.ContainsKey(fld) && Utils.toStr(item1[fld]) != Utils.toStr(item2[fld]))
+            if (item1.ContainsKey(fld) && item2.ContainsKey(fld) && item1[fld].toStr() != item2[fld].toStr())
             {
                 result = true;
                 break;
@@ -645,8 +648,8 @@ public class FormUtils
     // check if 2 dates (without time) chagned
     public static bool isChangedDate(object date1, object date2)
     {
-        var dt1 = Utils.toDate(date1);
-        var dt2 = Utils.toDate(date2);
+        var dt1 = date1.toDate();
+        var dt2 = date2.toDate();
 
         if (Utils.isDate(dt1) || Utils.isDate(dt2))
         {

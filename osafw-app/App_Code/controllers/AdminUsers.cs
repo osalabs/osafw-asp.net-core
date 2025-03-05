@@ -51,7 +51,7 @@ public class AdminUsersController : FwDynamicController
     {
         var ps = base.ShowFormAction(id);
         Hashtable item = (Hashtable)ps["i"];
-        ps["att"] = fw.model<Att>().one(Utils.toInt(item["att_id"]));
+        ps["att"] = fw.model<Att>().one(item["att_id"]);
 
         ps["is_roles"] = model.isRoles();
         ps["roles_link"] = model.listLinkedRoles(id);
@@ -136,10 +136,10 @@ public class AdminUsersController : FwDynamicController
     // check access - only users with higher level may login as lower leve
     public void SimulateAction(int id)
     {
-        Hashtable user = model.one(id);
+        var user = model.one(id);
         if (user.Count == 0)
             throw new NotFoundException("Wrong User ID");
-        if (Utils.toInt(user["access_level"]) >= fw.userAccessLevel)
+        if (user["access_level"].toInt() >= fw.userAccessLevel)
             throw new AuthException("Access Denied. Cannot simulate user with higher access level");
 
         fw.logActivity(FwLogTypes.ICODE_USERS_SIMULATE, FwEntities.ICODE_USERS, id);

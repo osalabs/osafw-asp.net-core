@@ -111,7 +111,7 @@ public class UserLists : FwModel
         Hashtable litem = oneItemsByUK(user_lists_id, item_id);
         if (litem.Count > 0)
             // remove
-            deleteItems(Utils.toInt(litem["id"]));
+            deleteItems(litem["id"].toInt());
         else
         {
             // add new
@@ -147,7 +147,7 @@ public class UserLists : FwModel
         Hashtable litem = oneItemsByUK(user_lists_id, item_id);
         if (litem.Count > 0)
         {
-            deleteItems(Utils.toInt(litem["id"]));
+            deleteItems(litem["id"].toInt());
             result = true;
         }
 

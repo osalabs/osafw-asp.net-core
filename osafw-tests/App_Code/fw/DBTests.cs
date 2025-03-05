@@ -311,19 +311,6 @@ namespace osafw.Tests
         }
 
         [TestMethod()]
-        public void qdTest()
-        {
-            string s = "2021-08-08 01:02:03";
-            string r = db.qdstr(s);
-            Assert.AreEqual("convert(DATETIME2, '" + s + "', 120)", r);
-
-            r = db.qdstr("");
-            Assert.AreEqual("NULL", r);
-
-            // TODO test with non SQL connnection
-        }
-
-        [TestMethod()]
         public void opNOTTest()
         {
             DBOperation r = db.opNOT("test_value");

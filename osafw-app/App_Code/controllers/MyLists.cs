@@ -83,7 +83,7 @@ public class MyListsController : FwAdminController
         base.getListRows();
 
         foreach (Hashtable row in this.list_rows)
-            row["ctr"] = model.countItems(Utils.toInt(row["id"]));
+            row["ctr"] = model.countItems(row["id"].toInt());
     }
 
     public override Hashtable ShowFormAction(int id = 0)
@@ -121,7 +121,7 @@ public class MyListsController : FwAdminController
                 // if item id passed - link item with the created list
                 foreach (string sitem_id in hids.Keys)
                 {
-                    var item_id = Utils.toInt(sitem_id);
+                    var item_id = sitem_id.toInt();
                     if (item_id > 0)
                         model.addItems(id, item_id);
                 }
@@ -137,7 +137,7 @@ public class MyListsController : FwAdminController
         var ps = new Hashtable();
 
         var user_lists = fw.model<UserLists>().one(id);
-        if (item_id == 0 || user_lists.Count == 0 || Utils.toInt(user_lists["add_users_id"]) != fw.userId)
+        if (item_id == 0 || user_lists.Count == 0 || user_lists["add_users_id"].toInt() != fw.userId)
             throw new UserException("Wrong Request");
 
         var res = fw.model<UserLists>().toggleItemList(id, item_id);
@@ -153,12 +153,12 @@ public class MyListsController : FwAdminController
         Hashtable items = Utils.commastr2hash(reqs("item_id"));
 
         var user_lists = fw.model<UserLists>().one(id);
-        if (user_lists.Count == 0 || Utils.toInt(user_lists["add_users_id"]) != fw.userId)
+        if (user_lists.Count == 0 || user_lists["add_users_id"].toInt() != fw.userId)
             throw new UserException("Wrong Request");
 
         foreach (string key in items.Keys)
         {
-            var item_id = Utils.toInt(key);
+            var item_id = key.toInt();
             if (item_id > 0)
                 fw.model<UserLists>().addItemList(id, item_id);
         }
@@ -172,12 +172,12 @@ public class MyListsController : FwAdminController
         Hashtable items = Utils.commastr2hash(reqs("item_id"));
 
         var user_lists = fw.model<UserLists>().one(id);
-        if (user_lists.Count == 0 || Utils.toInt(user_lists["add_users_id"]) != fw.userId)
+        if (user_lists.Count == 0 || user_lists["add_users_id"].toInt() != fw.userId)
             throw new UserException("Wrong Request");
 
         foreach (string key in items.Keys)
         {
-            var item_id = Utils.toInt(key);
+            var item_id = key.toInt();
             if (item_id > 0)
                 fw.model<UserLists>().delItemList(id, item_id);
         }

@@ -40,7 +40,7 @@ public class ContactController : FwController
 
         // validation
         var is_spam = false;
-        var view_time = Utils.toDate(fw.Session("contact_view_time"));
+        var view_time = fw.Session("contact_view_time").toDate();
         if (!Utils.isDate(view_time) || (DateTime.Now - view_time).TotalSeconds < 5)
             is_spam = true;
         if (reqs("real_email").Length > 0)

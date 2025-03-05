@@ -28,12 +28,12 @@ public class AdminSendEmailController : FwAdminController
         Hashtable mailSettings = (Hashtable)fw.config("mail");
         form_new_defaults = new Hashtable
         {
-            ["from"] = Utils.toStr(fw.config("mail_from")),
-            ["host"] = Utils.toStr(mailSettings["host"]),
-            ["port"] = Utils.toInt(mailSettings["port"]),
-            ["username"] = Utils.toStr(mailSettings["username"]),
-            ["password"] = Utils.toStr(mailSettings["password"]),
-            ["is_ssl"] = Utils.toInt(mailSettings["is_ssl"]),
+            ["from"] = fw.config("mail_from").toStr(),
+            ["host"] = mailSettings["host"].toStr(),
+            ["port"] = mailSettings["port"].toInt(),
+            ["username"] = mailSettings["username"].toStr(),
+            ["password"] = mailSettings["password"].toStr(),
+            ["is_ssl"] = mailSettings["is_ssl"].toInt(),
         };
     }
 

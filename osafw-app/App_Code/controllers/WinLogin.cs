@@ -64,12 +64,12 @@ public class WinLoginController : FwController
             int usersId = 0;
             if (user.Count > 0)
             {
-                if (Utils.toInt(user["status"]) != 0)
+                if (user["status"].toInt() != Users.STATUS_ACTIVE)
                 {
                     fw.flash("error", "Login disabled, please contact Site Administrator");
                     fw.redirect("/Login");
                 }
-                usersId = Utils.toInt(user["id"]);
+                usersId = user["id"].toInt();
             }
             else
             {

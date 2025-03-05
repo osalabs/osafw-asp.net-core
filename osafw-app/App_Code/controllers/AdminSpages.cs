@@ -38,8 +38,8 @@ public class AdminSpagesController : FwAdminController
             && ((string)this.list_filter["status"] == "" || (string)this.list_filter["status"] == "0"))
         {
             // show tree only if sort by title and no search and status by all or active
-            this.list_count = Utils.toLong(db.valuep("select count(*) from " + db.qid(model.table_name) +
-                " where " + this.list_where, this.list_where_params));
+            this.list_count = db.valuep("select count(*) from " + db.qid(model.table_name) +
+                " where " + this.list_where, this.list_where_params).toLong();
             if (this.list_count > 0)
             {
                 // build pages tree
@@ -47,8 +47,8 @@ public class AdminSpagesController : FwAdminController
                 this.list_rows = model.getPagesTreeList(pages_tree, 0);
 
                 // apply LIMIT
-                var pagesize = Utils.toInt(this.list_filter["pagesize"]);
-                var pagenum = Utils.toInt(this.list_filter["pagenum"]);
+                var pagesize = this.list_filter["pagesize"].toInt();
+                var pagenum = this.list_filter["pagenum"].toInt();
                 if (this.list_count > pagesize)
                 {
                     ArrayList subset = new();
@@ -74,7 +74,7 @@ public class AdminSpagesController : FwAdminController
         // add/modify rows from db if necessary
         foreach (Hashtable row in this.list_rows)
         {
-            row["full_url"] = model.getFullUrl(Utils.toInt(row["id"]));
+            row["full_url"] = model.getFullUrl(row["id"].toInt());
         }
 
     }
@@ -97,17 +97,17 @@ public class AdminSpagesController : FwAdminController
         var item = (Hashtable)ps["i"];
         string where = " status<>@status ";
         ArrayList pages_tree = model.tree(where, DB.h("status", FwModel.STATUS_DELETED), "parent_id, prio desc, iname");
-        ps["select_options_parent_id"] = model.getPagesTreeSelectHtml(Utils.toStr(item["parent_id"]), pages_tree);
+        ps["select_options_parent_id"] = model.getPagesTreeSelectHtml(item["parent_id"].toStr(), pages_tree);
 
-        ps["parent_url"] = model.getFullUrl(Utils.toInt(item["parent_id"]));
+        ps["parent_url"] = model.getFullUrl(item["parent_id"].toInt());
         ps["full_url"] = model.getFullUrl(id);
 
         ps["parents"] = model.listParents(id);
 
-        ps["parent"] = model.one(Utils.toInt(item["parent_id"]));
+        ps["parent"] = model.one(item["parent_id"].toInt());
 
         if (!Utils.isEmpty(item["head_att_id"]))
-            ps["att"] = fw.model<Att>().one(Utils.toInt(item["head_att_id"]));
+            ps["att"] = fw.model<Att>().one(item["head_att_id"]);
 
         if (id > 0)
             ps["subpages"] = model.listChildren(id);
@@ -126,10 +126,10 @@ public class AdminSpagesController : FwAdminController
         var success = true;
         var is_new = (id == 0);
 
-        Hashtable item_old = model.one(id);
+        var item_old = model.one(id);
         // for non-home page enable some fields
         string save_fields2 = this.save_fields;
-        if ((string)item_old["is_home"] != "1")
+        if (item_old["is_home"] != "1")
             save_fields2 += " parent_id url status pub_time";
 
         // auto-generate url if it's empty
@@ -153,7 +153,7 @@ public class AdminSpagesController : FwAdminController
 
         Hashtable itemdb = FormUtils.filter(item, save_fields2);
         FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
-        itemdb["prio"] = Utils.toInt(itemdb["prio"]);
+        itemdb["prio"] = itemdb["prio"].toInt();
 
         // if no publish time defined - publish it now
         if ((string)itemdb["pub_time"] == "")
@@ -162,7 +162,7 @@ public class AdminSpagesController : FwAdminController
         logger("itemdb: ", itemdb);
         id = this.modelAddOrUpdate(id, itemdb);
 
-        if ((string)item_old["is_home"] == "1")
+        if (item_old["is_home"] == "1")
             FwCache.remove("home_page"); // reset home page cache if Home page changed
 
         return this.afterSave(success, id, is_new);
@@ -172,7 +172,7 @@ public class AdminSpagesController : FwAdminController
     {
         bool result = this.validateRequired(id, item, this.required_fields);
 
-        if (result && model.isExistsByUrl((string)item["url"], Utils.toInt(item["parent_id"]), id))
+        if (result && model.isExistsByUrl((string)item["url"], item["parent_id"].toInt(), id))
             fw.FormErrors["url"] = "EXISTS";
 
         //if (result && model0.isExists(item["iname"], id)){

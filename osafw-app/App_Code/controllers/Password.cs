@@ -54,11 +54,11 @@ public class PasswordController : FwController
         if (login.Length == 0)
             throw new UserException("Please enter your Email");
 
-        Hashtable user = model.oneByEmail(login);
-        if (user.Count == 0 || Utils.toInt(user["status"]) != 0)
+        var user = model.oneByEmail(login);
+        if (user.Count == 0 || user["status"].toInt() != Users.STATUS_ACTIVE)
             throw new UserException("Not a valid Email");
 
-        model.sendPwdReset(Utils.toInt(user["id"]));
+        model.sendPwdReset(user["id"].toInt());
 
         fw.redirect(base_url + "/(Sent)");
     }
@@ -69,11 +69,11 @@ public class PasswordController : FwController
         var login = reqs("login");
         var token = reqs("token");
         var user = model.oneByEmail(login);
-        if (user.Count == 0 || Utils.toInt(user["status"]) != 0)
+        if (user.Count == 0 || user["status"].toInt() != Users.STATUS_ACTIVE)
             throw new UserException("Not a valid Email");
 
-        if ((string)user["pwd_reset"] == "" || !model.checkPwd(token, (string)user["pwd_reset"], Users.PWD_RESET_TOKEN_LEN)
-            || (db.Now() - DateTime.Parse((string)user["pwd_reset_time"])).TotalMinutes > PWD_RESET_EXPIRATION)
+        if (user["pwd_reset"] == "" || !model.checkPwd(token, user["pwd_reset"], Users.PWD_RESET_TOKEN_LEN)
+            || (db.Now() - DateTime.Parse(user["pwd_reset_time"])).TotalMinutes > PWD_RESET_EXPIRATION)
         {
             fw.flash("error", "Password reset token expired. Use Forgotten password link again.");
             fw.redirect("/Login");
@@ -104,17 +104,17 @@ public class PasswordController : FwController
         var login = reqs("login");
         var token = reqs("token");
         var user = model.oneByEmail(login);
-        if (user.Count == 0 || Utils.toInt(user["status"]) != 0)
+        if (user.Count == 0 || user["status"].toInt() != Users.STATUS_ACTIVE)
             throw new UserException("Not a valid Email");
 
-        if ((string)user["pwd_reset"] == "" || !model.checkPwd(token, (string)user["pwd_reset"], Users.PWD_RESET_TOKEN_LEN)
-            || (db.Now() - DateTime.Parse((string)user["pwd_reset_time"])).TotalMinutes > PWD_RESET_EXPIRATION)
+        if (user["pwd_reset"] == "" || !model.checkPwd(token, user["pwd_reset"], Users.PWD_RESET_TOKEN_LEN)
+            || (db.Now() - DateTime.Parse(user["pwd_reset_time"])).TotalMinutes > PWD_RESET_EXPIRATION)
         {
             fw.flash("error", "Password reset token expired. Use Forgotten password link again.");
             fw.redirect("/Login");
         }
 
-        int id = Utils.toInt(user["id"]);
+        int id = user["id"].toInt();
 
         ValidateReset(id, item);
         // load old record if necessary

@@ -352,8 +352,8 @@ public static class FwExtensions
     /// </summary>
     /// <param name="o">The object to convert.</param>
     /// <returns>The string representation of the object, or an empty string if null.</returns>
-    public static string toStr(this object o)
+    public static string toStr(this object o, string defaultValule = "")
     {
-        return o?.ToString() ?? string.Empty;
+        return o?.ToString() ?? defaultValule;
     }
 }

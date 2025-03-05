@@ -46,7 +46,7 @@ public class DBRow : Dictionary<string, string>
         {
             foreach (string k in h.Keys)
             {
-                this[k] = Utils.toStr(h[k]);
+                this[k] = h[k].toStr();
             }
         }
     }
@@ -592,7 +592,7 @@ public class DB : IDisposable
                 dbcomm.Parameters.AddWithValue(p, @params[p]);
 
             if (is_get_identity)
-                result = Utils.toInt(dbcomm.ExecuteScalar());
+                result = dbcomm.ExecuteScalar().toInt();
             else
                 result = dbcomm.ExecuteNonQuery();
         }
@@ -1090,19 +1090,19 @@ public class DB : IDisposable
     // simple quote as Integer Value
     public int qi(object str)
     {
-        return Utils.toInt(str);
+        return str.toInt();
     }
 
     // simple quote as Float Value
     public double qf(object str)
     {
-        return Utils.toFloat(str);
+        return str.toFloat();
     }
 
     // simple quote as Decimal Value
     public decimal qdec(object str)
     {
-        return Utils.toDecimal(str);
+        return str.toDecimal();
     }
 
     // value to Date (or null if value is not a date)
@@ -1116,29 +1116,6 @@ public class DB : IDisposable
                 if (DateTime.TryParse(value.ToString(), out DateTime tmpdate))
                 result = tmpdate;
 
-        return result;
-    }
-
-    // simple quote as Date Value (string
-    [Obsolete("This method is deprecated, use qd instead.")]
-    public string qdstr(object str)
-    {
-        string result;
-        if (dbtype == DBTYPE_SQLSRV)
-        {
-            if (DateTime.TryParse(str.ToString(), out DateTime tmpdate))
-                result = "convert(DATETIME2, '" + tmpdate.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.DateTimeFormatInfo.InvariantInfo) + "', 120)";
-            else
-                result = "NULL";
-        }
-        else
-        {
-            result = Regex.Replace(str.ToString(), @"['""\]\[]", "");
-            if (Regex.IsMatch(result, @"\D"))
-                result = "'" + str + "'";
-            else
-                result = "NULL";
-        }
         return result;
     }
 
@@ -1376,10 +1353,10 @@ public class DB : IDisposable
                         // if empty string for numerical field - assume NULL
                         result = DBNull.Value;
                     else
-                        result = Utils.toLong(field_value);
+                        result = field_value.toLong();
                 }
                 else
-                    result = Utils.toLong(field_value);
+                    result = field_value.toLong();
             }
             else if (field_type == "datetime")
             {
@@ -1387,9 +1364,9 @@ public class DB : IDisposable
                 result ??= DBNull.Value;
             }
             else if (field_type == "float")
-                result = Utils.toFloat(field_value);
+                result = field_value.toFloat();
             else if (field_type == "decimal")
-                result = Utils.toDecimal(field_value);
+                result = field_value.toDecimal();
             else
                 // string or other unknown value
                 result = field_value;

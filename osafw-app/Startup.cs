@@ -34,7 +34,7 @@ public class Startup
         services.AddDistributedMySqlCache(options =>
         {
             // override settings based on env variable ASPNETCORE_ENVIRONMENT
-            var enviroment = Utils.f2str(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"));
+            var enviroment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT").toStr();
 
             var appSessings = new Hashtable();
             FwConfig.readSettingsSection(Startup.Configuration.GetSection("appSettings"), ref appSessings);
@@ -63,7 +63,7 @@ public class Startup
         services.AddDistributedSqlServerCache((Action<Microsoft.Extensions.Caching.SqlServer.SqlServerCacheOptions>)(options =>
         {
             // override settings based on env variable ASPNETCORE_ENVIRONMENT
-            var enviroment = Utils.toStr((object)Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"));
+            var enviroment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT").toStr();
 
             var appSessings = new Hashtable();
             FwConfig.readSettingsSection(Startup.Configuration.GetSection("appSettings"), ref appSessings);

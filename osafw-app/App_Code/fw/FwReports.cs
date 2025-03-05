@@ -352,11 +352,11 @@ public class FwReports
     {
         int total_ctr = 0;
         foreach (Hashtable row in rows)
-            total_ctr += Utils.toInt(row["ctr"]);
+            total_ctr += row["ctr"].toInt();
         if (total_ctr > 0)
         {
             foreach (Hashtable row in rows)
-                row["perc"] = Utils.toInt(row["ctr"]) / (double)total_ctr * 100;
+                row["perc"] = row["ctr"].toInt() / (double)total_ctr * 100;
         }
         return total_ctr;
     }

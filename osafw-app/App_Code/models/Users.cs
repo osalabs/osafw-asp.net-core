@@ -42,14 +42,14 @@ public class Users : FwModel
     }
 
     #region standard one/add/update overrides
-    public Hashtable oneByEmail(string email)
+    public DBRow oneByEmail(string email)
     {
         Hashtable where = new();
         where["email"] = email;
         return db.row(table_name, where);
     }
 
-    public Hashtable oneByLogin(string login)
+    public DBRow oneByLogin(string login)
     {
         return db.row(table_name, DB.h("login", login));
     }
@@ -59,11 +59,11 @@ public class Users : FwModel
     /// </summary>
     /// <param name="id">Object type because if upd_users_id could be null</param>
     /// <returns></returns>
-    public new string iname(object id)
+    public override string iname(object id)
     {
         string result = "";
 
-        int iid = Utils.toInt(id);
+        int iid = id.toInt();
         if (iid > 0)
         {
             var item = one(iid);
@@ -90,9 +90,9 @@ public class Users : FwModel
 
         // set ui_theme/ui_mode form the config if not set
         if (!item.ContainsKey("ui_theme"))
-            item["ui_theme"] = Utils.toInt(fw.config("ui_theme"));
+            item["ui_theme"] = fw.config("ui_theme").toInt();
         if (!item.ContainsKey("ui_mode"))
-            item["ui_mode"] = Utils.toInt(fw.config("ui_mode"));
+            item["ui_mode"] = fw.config("ui_mode").toInt();
 
         return base.add(item);
     }
@@ -211,7 +211,7 @@ public class Users : FwModel
         Hashtable chars = new();
         for (var i = 0; i <= pwd.Length - 1; i++)
         {
-            chars[pwd[i]] = Utils.toInt(chars[pwd[i]]) + 1;
+            chars[pwd[i]] = chars[pwd[i]].toInt() + 1;
             result += (int)(5.0 / (double)chars[pwd[i]]);
         }
 
@@ -291,7 +291,7 @@ public class Users : FwModel
     {
         var result = false;
         var user = this.one(id);
-        var recovery_codes = Utils.toStr(user["mfa_recovery"]).Split(' '); // space-separated hashed codes
+        var recovery_codes = user["mfa_recovery"].toStr().Split(' '); // space-separated hashed codes
         var new_recovery_codes = "";
         //split by space and check each code
         foreach (var recovery_code in recovery_codes)
@@ -336,7 +336,7 @@ public class Users : FwModel
             id = fw.userId;
         var user = one(id);
 
-        fw.Session("user_id", Utils.toStr(id));
+        fw.Session("user_id", id.toStr());
         fw.Session("login", user["email"]);
         fw.Session("access_level", user["access_level"]); //note, set as string
         fw.Session("lang", user["lang"]);
@@ -352,8 +352,8 @@ public class Users : FwModel
             fw.Session("user_name", user["email"]);
 
         var avatar_link = "";
-        if (Utils.toInt(user["att_id"]) > 0)
-            avatar_link = fw.model<Att>().getUrl(Utils.toInt(user["att_id"]), "s");
+        if (user["att_id"].toInt() > 0)
+            avatar_link = fw.model<Att>().getUrl(user["att_id"].toInt(), "s");
         fw.Session("user_avatar_link", avatar_link);
 
         return true;
@@ -390,7 +390,6 @@ public class Users : FwModel
     /// <returns></returns>
     public bool isReadOnly(int id = -1)
     {
-        var result = false;
         if (id == -1)
             id = fw.userId;
 
@@ -398,10 +397,7 @@ public class Users : FwModel
             return true; //if no user logged - readonly
 
         var user = one(id);
-        if (Utils.toBool(user["is_readonly"]))
-            result = true;
-
-        return result;
+        return user["is_readonly"].toBool();
     }
 
     /// <summary>
@@ -725,7 +721,7 @@ public class Users : FwModel
             DBRow row = db.row(table_users_cookies, DB.h("cookie_id", hashed));
             if (row.Count > 0)
             {
-                doLogin(Utils.toInt(row["users_id"]));
+                doLogin(row["users_id"].toInt());
                 return true;
             }
             else
@@ -760,7 +756,7 @@ public class Users : FwModel
         ArrayList result = new();
         foreach (Hashtable item in menu_items)
         {
-            if (Utils.toInt(item["access_level"]) <= users_acl)
+            if (item["access_level"].toInt() <= users_acl)
                 result.Add(item);
         }
 

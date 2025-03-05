@@ -39,7 +39,7 @@ public class DevConfigureController : FwController
         var aspnet_env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
         ps["ASPNETCORE_ENVIRONMENT"] = aspnet_env;
         ps["config_file_name"] = fw.config("config_override");
-        ps["is_config_env"] = String.IsNullOrEmpty(aspnet_env) || aspnet_env == Utils.toStr(ps["config_file_name"]);
+        ps["is_config_env"] = String.IsNullOrEmpty(aspnet_env) || aspnet_env == ps["config_file_name"].toStr();
 
         ps["is_db_config"] = false;
         var configdb = (Hashtable)fw.config("db");
@@ -79,7 +79,7 @@ public class DevConfigureController : FwController
         ps["is_write_dirs"] = isWritable(upload_dir, true);
 
         ps["is_write_langok"] = true;
-        if (isWritable(fw.config("template") + "/lang", true) && !Utils.toBool(fw.config("IS_DEV")))
+        if (isWritable(fw.config("template") + "/lang", true) && !fw.config("IS_DEV").toBool())
             ps["is_write_langok"] = false;
 
         // obsolete in .net 4
@@ -114,7 +114,7 @@ public class DevConfigureController : FwController
 
     public Hashtable InitDBAction()
     {
-        if (!Utils.toBool(fw.config("IS_DEV")))
+        if (!fw.config("IS_DEV").toBool())
             throw new AuthException("Not in a DEV mode");
 
         Hashtable ps = new();

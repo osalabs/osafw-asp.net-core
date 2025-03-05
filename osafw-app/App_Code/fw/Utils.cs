@@ -908,7 +908,7 @@ public class Utils
             // make static copy of hash2.keys, so even if hash2.keys changing (ex: hash1 is same as hash2) it will not affect the loop
             foreach (string key in hash2.Keys)
             {
-                hash1[key] = Utils.toStr(hash2[key]);
+                hash1[key] = hash2[key].toStr();
             }
         }
     }
@@ -919,7 +919,7 @@ public class Utils
             // make static copy of hash2.keys, so even if hash2.keys changing (ex: hash1 is same as hash2) it will not affect the loop
             foreach (string key in hash2.Keys)
             {
-                hash1[key] = Utils.toStr(hash2[key]);
+                hash1[key] = hash2[key].toStr();
             }
         }
     }
@@ -1338,12 +1338,12 @@ public class Utils
 
         if (hattrs["truncate"].ToString().Length > 0)
         {
-            int trlen1 = toInt(hattrs["truncate"]);
+            int trlen1 = hattrs["truncate"].toInt();
             if (trlen1 > 0) trlen = trlen1;
         }
         if (hattrs.ContainsKey("trchar")) trchar = (string)hattrs["trchar"];
-        if (hattrs.ContainsKey("trend")) trend = toInt(hattrs["trend"]);
-        if (hattrs.ContainsKey("trword")) trword = toInt(hattrs["trword"]);
+        if (hattrs.ContainsKey("trend")) trend = hattrs["trend"].toInt();
+        if (hattrs.ContainsKey("trword")) trword = hattrs["trword"].toInt();
 
         int orig_len = str.Length;
         if (orig_len < trlen) return str; // no need truncate
