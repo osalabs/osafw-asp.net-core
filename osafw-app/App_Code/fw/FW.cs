@@ -354,7 +354,7 @@ public class FW : IDisposable
         //TODO MIGRATE test
         // cut the App path from the begin
         if (request.PathBase.Value.Length > 1) url = url.Replace(request.PathBase, "");
-        url = Regex.Replace(url, @"\/$", ""); // cut last / if any
+        url = url.TrimEnd('/'); // cut last / if any
 
         if (!is_url_param)
         {
@@ -1549,7 +1549,7 @@ public class FW : IDisposable
     // send email message to site admin (usually used in case of errors)
     public void sendEmailAdmin(string msg)
     {
-        this.sendEmail("", (string)this.config("admin_email"), msg.Substring(0, 512), msg);
+        this.sendEmail("", (string)this.config("admin_email"), msg[..512], msg);
     }
 
     public void errMsg(string msg, Exception Ex = null)

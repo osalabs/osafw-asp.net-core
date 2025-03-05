@@ -119,7 +119,6 @@ public class MyPasswordController : FwController
             var itemdb = model.one(id);
             if (!fw.model<Users>().checkPwd((string)item["old_pwd"], itemdb["pwd"]))
             {
-                result = false;
                 fw.FormErrors["old_pwd"] = "WRONG";
             }
         }

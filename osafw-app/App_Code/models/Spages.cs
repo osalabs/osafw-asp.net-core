@@ -255,10 +255,9 @@ public class Spages : FwModel
         // for navigation
         var pages_tree = tree("status=0", [], "parent_id, prio, iname"); // published only
         ps["pages"] = getPagesTreeList(pages_tree, 0);
-
-        var is_pub = false;
-
         Hashtable item = oneByFullUrl(full_url);
+
+        bool is_pub;
         if (item.Count == 0 || !(is_pub = isPublished(item)) && !fw.model<Users>().isAccessLevel(Users.ACL_ADMIN))
         {
             ps["hide_std_sidebar"] = true;

@@ -88,10 +88,10 @@ public class AdminReportsController : FwController
         var to_emails = f["to_emails"].toStr();
 
         string mail_subject = "Report " + repcode;
-        string mail_body = "";
         Hashtable filenames = [];
 
         var email_as = f["email_as"].toStr();
+        string mail_body;
         if (email_as == "pdf")
         {
             var filepath = FwReports.createFile(fw, repcode, "pdf", f);

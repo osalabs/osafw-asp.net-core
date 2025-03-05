@@ -732,13 +732,11 @@ class DevCodeGen
                 fld["iname"] = Utils.name2human(fld_name); // human name using fw standards
 
             var is_field_fk = hforeign_keys.ContainsKey(fld_name);
-            var fk_field_name = "";
-
             hFieldsMapEdit[fld_name] = fld["iname"]; //use regular field for Vue editable list
             if (is_field_fk)
             {
-                fk_field_name = (string)((Hashtable)hforeign_keys[fld_name])["column"] + "_iname";
-                hFieldsMap[fk_field_name] = fld["iname"]; //if FK field - add as column_id_iname                
+                string fk_field_name = (string)((Hashtable)hforeign_keys[fld_name])["column"] + "_iname";
+                hFieldsMap[fk_field_name] = fld["iname"]; //if FK field - add as column_id_iname
             }
             else
                 hFieldsMap[fld_name] = fld["iname"]; //regular field
@@ -913,8 +911,6 @@ class DevCodeGen
                 var is_junction = tentity["is_junction"].toBool();
                 string junction_model = (string)tentity["model_name"];
                 string table_name_linked = m.Groups[1].Value;
-                string table_name_link = table;
-
                 if (!string.IsNullOrEmpty(table_name_linked) && tables.ContainsKey(table_name_linked))
                 {
                     // if tables "TBL2" and "MODELTBL_TBL2" exists - add control for linked table
@@ -992,7 +988,7 @@ class DevCodeGen
                 var pk_column = (string)fk["pk_column"];
 
                 var field = (Hashtable)hfields[tcolumn];
-                var sql_join = "";
+                string sql_join;
                 if (field["is_nullable"].toBool())
                 {
                     //if FK field can be NULL - use LEFT OUTER JOIN

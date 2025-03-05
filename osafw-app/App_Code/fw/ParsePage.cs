@@ -222,7 +222,7 @@ public class ParsePage
             return "";
         }
 
-        if (tpl_name.Length > 0 && tpl_name.Substring(0, 1) != "/")
+        if (!string.IsNullOrEmpty(tpl_name) && !tpl_name.StartsWith('/'))
             tpl_name = basedir + "/" + tpl_name;
 
         logger(LogLevel.TRACE, $"ParsePage - Parsing template = {tpl_name}, pagelen={page.Length}");
@@ -844,7 +844,7 @@ public class ParsePage
         string add_path = "";
         string result;
 
-        if (tag.Substring(0, 2) == "./")
+        if (tag.StartsWith("./"))
         {
             add_path = tpl_name;
             add_path = RX_LAST_SLASH.Replace(add_path, "");
@@ -1135,7 +1135,7 @@ public class ParsePage
         {
             // just read from the plain text file
             var tpl_path = tag_tplpath(tag, tpl_name);
-            if (tpl_path.Substring(0, 1) != "/")
+            if (!tpl_path.StartsWith('/'))
                 tpl_path = basedir + "/" + tpl_path;
 
             string[] lines = precache_file_lines(TMPL_PATH + "/" + tpl_path);
@@ -1185,7 +1185,7 @@ public class ParsePage
         string name = (string)attrs["name"];
         string delim = (string)attrs["delim"]; // delimiter class
 
-        if (tpl_path.Substring(0, 1) != "/")
+        if (!tpl_path.StartsWith('/'))
             tpl_path = basedir + "/" + tpl_path;
 
         string[] lines = precache_file_lines(TMPL_PATH + "/" + tpl_path);
@@ -1279,7 +1279,7 @@ public class ParsePage
         else
         {
             var tpl_path = tag_tplpath(tag, tpl_name);
-            if (tpl_path.Substring(0, 1) != "/")
+            if (!tpl_path.StartsWith('/'))
                 tpl_path = basedir + "/" + tpl_path;
 
             string[] lines = precache_file_lines(TMPL_PATH + "/" + tpl_path);
@@ -1403,7 +1403,6 @@ public class ParsePage
 
     private void logger(LogLevel level, params string[] args)
     {
-        if (fw != null)
-            fw.logger(level, args);
+        fw?.logger(level, args);
     }
 }

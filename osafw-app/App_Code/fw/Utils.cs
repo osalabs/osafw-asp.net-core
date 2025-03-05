@@ -1,7 +1,4 @@
-﻿//disable warning that some imaging functions are only available on Windows
-#pragma warning disable CA1416
-
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections;
 using System.Collections.Generic;

@@ -140,7 +140,6 @@ public class PasswordController : FwController
 
         if (result && (string)item["pwd"] != (string)item["pwd2"])
         {
-            result = false;
             fw.FormErrors["pwd2"] = "NOTEQUAL";
         }
 

@@ -92,7 +92,7 @@ public class FwDynamicController : FwController
         if (ids.Count == 0)
             return new Hashtable { { "_redirect", base_url } };
 
-        var go_id = 0;
+        int go_id;
         if (is_prev)
         {
             var index_prev = -1;
