@@ -133,7 +133,7 @@ public class FwAdminController : FwController
             throw new Exception("No fields to save defined, define in Controller.save_fields");
 
         fw.model<Users>().checkReadOnly();
-        if (reqi("refresh") == 1 && (id == 0)) //for new record - just refresh the form, for existing - also try to save
+        if (reqb("refresh"))
         {
             fw.routeRedirect(FW.ACTION_SHOW_FORM, [id]);
             return null;

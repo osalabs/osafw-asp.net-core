@@ -53,7 +53,7 @@ public class AdminActivityLogsController : FwController
         route_onerror = FW.ACTION_INDEX;
 
         fw.model<Users>().checkReadOnly();
-        if (reqi("refresh") == 1)
+        if (reqb("refresh"))
         {
             fw.routeRedirect(FW.ACTION_SHOW_FORM, [id]);
             return null;

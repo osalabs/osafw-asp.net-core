@@ -393,7 +393,7 @@ public class FwVueController : FwDynamicController
     {
         if (this.save_fields == null)
             throw new Exception("No fields to save defined, define in Controller.save_fields");
-        if (reqi("refresh") == 1)
+        if (reqb("refresh"))
             throw new Exception("Wrong use refresh=1 on Vue Controller");
 
         fw.model<Users>().checkReadOnly();
