@@ -51,7 +51,7 @@ public class AdminSpagesController : FwAdminController
                 var pagenum = this.list_filter["pagenum"].toInt();
                 if (this.list_count > pagesize)
                 {
-                    ArrayList subset = new();
+                    ArrayList subset = [];
                     int start_offset = pagenum * pagesize;
 
                     for (int i = start_offset; i <= Math.Min(start_offset + pagesize, this.list_rows.Count) - 1; i++)
@@ -63,8 +63,8 @@ public class AdminSpagesController : FwAdminController
             }
             else
             {
-                this.list_rows = new ArrayList();
-                this.list_pager = new ArrayList();
+                this.list_rows = [];
+                this.list_pager = [];
             }
         }
         else

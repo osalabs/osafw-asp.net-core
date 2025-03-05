@@ -44,7 +44,7 @@ public class Users : FwModel
     #region standard one/add/update overrides
     public DBRow oneByEmail(string email)
     {
-        Hashtable where = new();
+        Hashtable where = [];
         where["email"] = email;
         return db.row(table_name, where);
     }
@@ -208,7 +208,7 @@ public class Users : FwModel
             return result;
 
         // award every unique letter until 5 repetitions
-        Hashtable chars = new();
+        Hashtable chars = [];
         for (var i = 0; i <= pwd.Length - 1; i++)
         {
             chars[pwd[i]] = chars[pwd[i]].toInt() + 1;
@@ -325,7 +325,7 @@ public class Users : FwModel
 
         fw.logActivity(FwLogTypes.ICODE_USERS_LOGIN, FwEntities.ICODE_USERS, id);
         // update login info
-        Hashtable fields = new();
+        Hashtable fields = [];
         fields["login_time"] = DB.NOW;
         this.update(id, fields);
     }
@@ -632,7 +632,7 @@ public class Users : FwModel
 #if isRoles
         return fw.model<UsersRoles>().listLinkedByMainId(users_id);
 #else
-        return new ArrayList();
+        return [];
 #endif
     }
 
@@ -753,7 +753,7 @@ public class Users : FwModel
 
         // only Menu items user can see per ACL
         var users_acl = fw.userAccessLevel;
-        ArrayList result = new();
+        ArrayList result = [];
         foreach (Hashtable item in menu_items)
         {
             if (item["access_level"].toInt() <= users_acl)

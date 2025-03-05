@@ -60,7 +60,7 @@ public class LookupManager : FwModel
         if (defs.Count == 0)
             throw new ApplicationException("Wrong lookup table name");
 
-        Hashtable where = new();
+        Hashtable where = [];
         where[fw.model<LookupManagerTables>().getColumnId(defs)] = id;
         return db.row(tname, where);
     }
@@ -145,7 +145,7 @@ public class LookupManager : FwModel
         // logger(itemold)
         // logger("NEW")
         // logger(item)
-        Hashtable item_save = new();
+        Hashtable item_save = [];
         foreach (string key in item.Keys)
         {
             // additional null and old value empty string check to avoid SET to NULL constantly as we get empty string from DB for DBNull values
@@ -158,7 +158,7 @@ public class LookupManager : FwModel
 
         if (item_save.Count > 0)
         {
-            Hashtable where = new();
+            Hashtable where = [];
             where[id_fname] = id;
 
             if (Utils.isEmpty(defs["list_columns"]))
@@ -198,7 +198,7 @@ public class LookupManager : FwModel
                 throw new ApplicationException("Cannot delete from database. Wrong checksum. Probably someone else already updated data you are trying to edit.");
         }
 
-        Hashtable where = new();
+        Hashtable where = [];
         where[id_fname] = id;
         db.del(tname, where);
 
@@ -232,7 +232,7 @@ public class LookupManager : FwModel
 
     public ArrayList filterOutSysCols(ArrayList cols)
     {
-        ArrayList result = new();
+        ArrayList result = [];
 
         foreach (Hashtable col in cols)
         {

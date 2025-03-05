@@ -52,7 +52,7 @@ public class FwConfig
     // init default settings
     private static void initDefaults(HttpContext context, string hostname = "")
     {
-        settings = new Hashtable();
+        settings = [];
         HttpRequest req = context.Request;
 
         if (string.IsNullOrEmpty(hostname))
@@ -166,7 +166,7 @@ public class FwConfig
         if (string.IsNullOrEmpty(route_prefixes_rx))
         {
             // prepare regexp - escape all prefixes
-            ArrayList r = new();
+            ArrayList r = [];
             var route_prefixes = (Hashtable)settings["route_prefixes"];
             if (route_prefixes != null)
             {

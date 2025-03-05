@@ -151,7 +151,7 @@ public class AdminUsersController : FwDynamicController
 
     public Hashtable SendPwdAction(int id)
     {
-        Hashtable ps = new();
+        Hashtable ps = [];
 
         ps["success"] = model.sendPwdReset(id);
         ps["err_msg"] = fw.last_error_send_email;
@@ -163,7 +163,7 @@ public class AdminUsersController : FwDynamicController
     public void HashPasswordsAction()
     {
         rw("hashing passwords");
-        var rows = db.array(model.table_name, new Hashtable(), "id");
+        var rows = db.array(model.table_name, [], "id");
         foreach (var row in rows)
         {
             if (row["pwd"].ToString().Substring(0, 2) == "$2")

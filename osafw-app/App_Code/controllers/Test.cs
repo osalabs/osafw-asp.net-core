@@ -30,7 +30,7 @@ public class TestController : FwController
         //is_uploaded = UploadUtils.uploadSimple(up);
 
         rw("!@!@!!@!@!@");
-        return new Hashtable();
+        return [];
     }
 
     public void BenchmarkAction()

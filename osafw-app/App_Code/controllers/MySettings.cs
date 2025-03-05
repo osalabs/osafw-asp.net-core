@@ -32,7 +32,7 @@ public class MySettingsController : FwController
 
     public Hashtable ShowFormAction()
     {
-        Hashtable ps = new();
+        Hashtable ps = [];
         Hashtable item = reqh("item");
         var id = fw.userId;
 

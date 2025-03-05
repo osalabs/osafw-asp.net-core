@@ -30,14 +30,14 @@ public class LoginController : FwController
 
     public Hashtable IndexAction()
     {
-        Hashtable ps = new();
+        Hashtable ps = [];
         if (fw.isLogged)
             fw.redirect((string)fw.config("LOGGED_DEFAULT_URL"));
 
         Hashtable item = reqh("item");
         if (isGet())
             // set defaults here
-            item = new Hashtable();
+            item = [];
         else
         {
         }

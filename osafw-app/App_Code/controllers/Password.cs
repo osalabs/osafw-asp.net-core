@@ -30,12 +30,12 @@ public class PasswordController : FwController
 
     public Hashtable IndexAction()
     {
-        Hashtable ps = new();
+        Hashtable ps = [];
 
         Hashtable item = reqh("item");
         if (isGet())
             // set defaults here
-            item = new Hashtable();
+            item = [];
         else
         {
         }
@@ -65,7 +65,7 @@ public class PasswordController : FwController
 
     public Hashtable ResetAction()
     {
-        Hashtable ps = new();
+        Hashtable ps = [];
         var login = reqs("login");
         var token = reqs("token");
         var user = model.oneByEmail(login);
@@ -82,7 +82,7 @@ public class PasswordController : FwController
         var item = reqh("item");
         if (isGet())
             // set defaults here
-            item = new Hashtable();
+            item = [];
         else
         {
         }
@@ -149,7 +149,7 @@ public class PasswordController : FwController
 
     public Hashtable SentAction()
     {
-        Hashtable ps = new();
+        Hashtable ps = [];
         ps["hide_sidebar"] = true;
         return ps;
     }

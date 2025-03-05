@@ -50,7 +50,7 @@ public class FwAdminController : FwController
 
     public virtual Hashtable ShowAction(int id)
     {
-        Hashtable ps = new();
+        Hashtable ps = [];
         var item = model0.one(id);
         if (item.Count == 0)
             throw new NotFoundException();

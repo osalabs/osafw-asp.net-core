@@ -248,7 +248,7 @@ public class FormUtils
 
         if (count > pagesize)
         {
-            pager = new ArrayList();
+            pager = [];
             int page_count = (int)Math.Ceiling(count / (double)pagesize);
 
             var from_page = pagenum - PAD_PAGES;
@@ -261,7 +261,7 @@ public class FormUtils
 
             for (int i = from_page; i <= to_page; i++)
             {
-                Hashtable pager_item = new();
+                Hashtable pager_item = [];
                 if (pagenum == i)
                     pager_item["is_cur_page"] = 1;
                 pager_item["pagenum"] = i;
@@ -295,7 +295,7 @@ public class FormUtils
     // if is_exists (default true) - only values actually exists in input hash returned
     public static Hashtable filter(Hashtable item, Array fields, bool is_exists = true)
     {
-        Hashtable result = new();
+        Hashtable result = [];
         if (item != null)
         {
             foreach (string fld in fields)
@@ -404,7 +404,7 @@ public class FormUtils
     public static Hashtable ids2multi(string str)
     {
         ArrayList col = comma_str2col(str);
-        Hashtable result = new();
+        Hashtable result = [];
         foreach (string id in col)
             result[id] = 1;
         return result;

@@ -145,7 +145,7 @@ public class FwDynamicController : FwController
 
     public virtual Hashtable ShowAction(int id = 0)
     {
-        Hashtable ps = new();
+        Hashtable ps = [];
         var item = model0.one(id);
         if (item.Count == 0)
             throw new NotFoundException();
@@ -624,7 +624,7 @@ public class FwDynamicController : FwController
     // ********************* support for customizable list screen
     public virtual void UserViewsAction(int id = 0)
     {
-        Hashtable ps = new();
+        Hashtable ps = [];
 
         var rows = getViewListArr(getViewListUserFields(), true); // list all fields
         ps["rows"] = rows;
@@ -665,7 +665,7 @@ public class FwDynamicController : FwController
             // order by value
             var ordered = fld.Cast<DictionaryEntry>().OrderBy(entry => entry.Value.toInt()).ToList();
             // and then get ordered keys
-            List<string> anames = new();
+            List<string> anames = [];
             foreach (var el in ordered)
                 anames.Add((string)el.Key);
             var fields = string.Join(" ", anames);
@@ -1229,7 +1229,7 @@ public class FwDynamicController : FwController
     // if there are more than one field - just first field added to the hash
     protected Hashtable _fieldsToHash(ArrayList fields)
     {
-        Hashtable result = new();
+        Hashtable result = [];
         foreach (Hashtable fldinfo in fields)
         {
             if (fldinfo.ContainsKey("field") && !result.ContainsKey((string)fldinfo["field"]))

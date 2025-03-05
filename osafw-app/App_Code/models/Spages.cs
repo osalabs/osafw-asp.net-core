@@ -28,7 +28,7 @@ public class Spages : FwModel
 
     public bool isExistsByUrl(string url, int parent_id, int not_id)
     {
-        Hashtable where = new();
+        Hashtable where = [];
         where["parent_id"] = parent_id;
         where["url"] = url;
         where["id"] = db.opNOT(not_id);
@@ -60,7 +60,7 @@ public class Spages : FwModel
         var item_full_url = "";
 
 
-        Hashtable item = new();
+        Hashtable item = [];
         for (int i = 1; i <= url_parts.GetUpperBound(0); i++)
         {
             item = oneByUrl(url_parts[i], parent_id);
@@ -133,7 +133,7 @@ public class Spages : FwModel
     // RECURSIVE!
     public ArrayList getPagesTree(ArrayList rows, int parent_id, int level = 0, string parent_url = "")
     {
-        ArrayList result = new();
+        ArrayList result = [];
 
         foreach (Hashtable row in rows)
         {
@@ -160,7 +160,7 @@ public class Spages : FwModel
     /// <remarks>RECURSIVE</remarks>
     public ArrayList getPagesTreeList(ArrayList pages_tree, int level = 0)
     {
-        ArrayList result = new();
+        ArrayList result = [];
 
         if (pages_tree != null)
         {
@@ -170,7 +170,7 @@ public class Spages : FwModel
                 // add leveler
                 if (level > 0)
                 {
-                    ArrayList leveler = new();
+                    ArrayList leveler = [];
                     for (int i = 1; i <= level; i++)
                         leveler.Add(new Hashtable());
                     row["leveler"] = leveler;
@@ -229,7 +229,7 @@ public class Spages : FwModel
     /// <returns></returns>
     public DBList listParents(int id)
     {
-        DBList result = new();
+        DBList result = [];
         var item = one(id);
         while (item.Count > 0)
         {
@@ -250,10 +250,10 @@ public class Spages : FwModel
     // render page by full url
     public void showPageByFullUrl(string full_url)
     {
-        Hashtable ps = new();
+        Hashtable ps = [];
 
         // for navigation
-        var pages_tree = tree("status=0", new Hashtable(), "parent_id, prio, iname"); // published only
+        var pages_tree = tree("status=0", [], "parent_id, prio, iname"); // published only
         ps["pages"] = getPagesTreeList(pages_tree, 0);
 
         var is_pub = false;

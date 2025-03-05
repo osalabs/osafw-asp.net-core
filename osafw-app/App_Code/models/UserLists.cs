@@ -35,7 +35,7 @@ public class UserLists : FwModel
     // list for select by entity and for only logged user
     public ArrayList listSelectByEntity(string entity)
     {
-        Hashtable where = new();
+        Hashtable where = [];
         where["status"] = STATUS_ACTIVE;
         where["entity"] = entity;
         where["add_users_id"] = fw.userId;
@@ -44,7 +44,7 @@ public class UserLists : FwModel
 
     public ArrayList listItemsById(int id)
     {
-        Hashtable where = new();
+        Hashtable where = [];
         where["status"] = STATUS_ACTIVE;
         where["user_lists_id"] = id;
         return db.array(table_items, where, "id desc", Utils.qw("id item_id"));
@@ -65,7 +65,7 @@ public class UserLists : FwModel
         if (is_perm)
         {
             // delete list items first
-            Hashtable where = new();
+            Hashtable where = [];
             where["user_lists_id"] = id;
             db.del(table_items, where);
         }
@@ -80,7 +80,7 @@ public class UserLists : FwModel
 
     public virtual void deleteItems(int id)
     {
-        Hashtable where = new();
+        Hashtable where = [];
         where["id"] = id;
         db.del(table_items, where);
 
@@ -91,7 +91,7 @@ public class UserLists : FwModel
     // add new record and return new record id
     public virtual int addItems(int user_lists_id, int item_id)
     {
-        Hashtable item = new();
+        Hashtable item = [];
         item["user_lists_id"] = user_lists_id;
         item["item_id"] = item_id;
         item["add_users_id"] = fw.userId;

@@ -47,7 +47,7 @@ public class MyMFAController : FwController
         var secret = model.generateMFASecret();
         fw.Session("mfa_secret", secret);
 
-        Hashtable ps = new();
+        Hashtable ps = [];
         ps["qr_code"] = model.generateMFAQRCode(secret, user["email"], (string)fw.config("SITE_NAME"));
         return ps;
     }
@@ -68,7 +68,7 @@ public class MyMFAController : FwController
         // code is valid, generate recovery codes and save
         // generate 5 recovery codes as random 8-digit numbers using Utils.getRandStr(8) and concatenate into comma-separated string
         var hashed_codes = new List<string>(5);
-        ArrayList recovery_codes = new();
+        ArrayList recovery_codes = [];
         for (int i = 0; i < 5; i++)
         {
             var code = Utils.getRandStr(8);

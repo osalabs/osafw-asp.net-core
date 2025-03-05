@@ -108,7 +108,7 @@ public class FW : IDisposable
     public const string FW_NAMESPACE_PREFIX = "osafw.";
     public static Hashtable METHOD_ALLOWED = Utils.qh("GET POST PUT PATCH DELETE");
 
-    private readonly Hashtable models = new();
+    private readonly Hashtable models = [];
     public FwCache cache = new(); // request level cache
 
     public Hashtable FORM;
@@ -216,13 +216,13 @@ public class FW : IDisposable
         if (!string.IsNullOrEmpty(Session("ui_theme"))) G["ui_theme"] = Session("ui_theme");
         if (!string.IsNullOrEmpty(Session("ui_mode"))) G["ui_mode"] = Session("ui_mode");
 
-        FormErrors = new Hashtable(); // reset errors
+        FormErrors = []; // reset errors
         parseForm();
 
         // save flash to current var and update session as flash is used only for nearest request
         Hashtable _flash = SessionHashtable("_flash");
         if (_flash != null) G["_flash"] = _flash;
-        SessionHashtable("_flash", new Hashtable());
+        SessionHashtable("_flash", []);
     }
 
     // ***************** work with SESSION
@@ -286,7 +286,7 @@ public class FW : IDisposable
             if (!isJsonExpected())
             {
                 // write for the next request
-                Hashtable _flash = SessionHashtable("_flash") ?? new();
+                Hashtable _flash = SessionHashtable("_flash") ?? [];
                 _flash[name] = value;
                 SessionHashtable("_flash", _flash);
             }
@@ -372,7 +372,7 @@ public class FW : IDisposable
             action_more = "",
             format = "html",
             method = request.Method,
-            @params = new ArrayList()
+            @params = []
         };
 
         if (!is_url_param)
@@ -694,7 +694,7 @@ public class FW : IDisposable
     // parse query string, form and json in request body into fw.FORM
     private void parseForm()
     {
-        Hashtable input = new();
+        Hashtable input = [];
 
         foreach (string s in request.Query.Keys)
         {
@@ -712,11 +712,11 @@ public class FW : IDisposable
         }
 
         // after perpare_FORM - grouping for names like XXX[YYYY] -> FORM{XXX}=@{YYYY1, YYYY2, ...}
-        Hashtable SQ = new();
+        Hashtable SQ = [];
         string k;
         string sk;
 
-        Hashtable f = new();
+        Hashtable f = [];
         foreach (string s in input.Keys)
         {
             Match m = Regex.Match(s, @"^([^\]]+)\[([^\]]+)\]$");
@@ -1287,7 +1287,7 @@ public class FW : IDisposable
         {
             logger(LogLevel.INFO, "No method found for controller.action=[", route.controller, ".", route.action, "], displaying static page from related templates");
             // if no method - just call FW.parser(hf) - show template from /route.controller/route.action dir
-            parser(new Hashtable());
+            parser([]);
         }
         else
             callController(controllerClass, actionMethod, args);
@@ -1403,7 +1403,7 @@ public class FW : IDisposable
     {
         bool result = true;
         MailMessage message = null;
-        options ??= new Hashtable();
+        options ??= [];
 
         try
         {
@@ -1555,7 +1555,7 @@ public class FW : IDisposable
 
     public void errMsg(string msg, Exception Ex = null)
     {
-        Hashtable ps = new();
+        Hashtable ps = [];
         var tpl_dir = "/error";
 
         ps["err_time"] = DateTime.Now;

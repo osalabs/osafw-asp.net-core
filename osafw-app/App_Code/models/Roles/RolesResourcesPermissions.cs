@@ -141,8 +141,8 @@ public class RolesResourcesPermissions : FwModel
     {
         var permissions = fw.model<Permissions>().list();
 
-        Hashtable fields = new();
-        Hashtable where = new();
+        Hashtable fields = [];
+        Hashtable where = [];
 
         // set all fields as under update
         fields[field_status] = STATUS_UNDER_UPDATE;
@@ -153,7 +153,7 @@ public class RolesResourcesPermissions : FwModel
         {
             extractKey(key, out int resources_id, out int permissions_id);
 
-            fields = new Hashtable();
+            fields = [];
             fields[junction_field_main_id] = roles_id;
             fields[junction_field_linked_id] = resources_id;
             fields[junction_field_permissions_id] = permissions_id;
@@ -161,7 +161,7 @@ public class RolesResourcesPermissions : FwModel
             fields[field_upd_users_id] = fw.userId;
             fields[field_upd_time] = DB.NOW;
 
-            where = new Hashtable();
+            where = [];
             where[junction_field_main_id] = roles_id;
             where[junction_field_linked_id] = resources_id;
             where[junction_field_permissions_id] = permissions_id;
@@ -169,7 +169,7 @@ public class RolesResourcesPermissions : FwModel
         }
 
         // remove those who still not updated (so removed)
-        where = new Hashtable();
+        where = [];
         where[junction_field_main_id] = roles_id;
         where[field_status] = STATUS_UNDER_UPDATE;
         db.del(table_name, where);

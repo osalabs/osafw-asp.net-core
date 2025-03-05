@@ -33,7 +33,7 @@ public class DevConfigureController : FwController
 
     public Hashtable IndexAction()
     {
-        Hashtable ps = new();
+        Hashtable ps = [];
 
         ps["hide_sidebar"] = true;
         var aspnet_env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
@@ -59,7 +59,7 @@ public class DevConfigureController : FwController
 
                 try
                 {
-                    var value = db.value("menu_items", new Hashtable(), "count(*)"); // just a last table in database.sql script
+                    var value = db.value("menu_items", [], "count(*)"); // just a last table in database.sql script
                     ps["is_db_tables"] = true;
                 }
                 catch (Exception ex)
@@ -117,7 +117,7 @@ public class DevConfigureController : FwController
         if (!fw.config("IS_DEV").toBool())
             throw new AuthException("Not in a DEV mode");
 
-        Hashtable ps = new();
+        Hashtable ps = [];
         int sql_ctr = 0;
         string[] files = { "fwdatabase.sql", "database.sql", "lookups.sql", "views.sql" };
         foreach (string file in files)

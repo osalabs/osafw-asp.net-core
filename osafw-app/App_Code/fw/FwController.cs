@@ -39,7 +39,7 @@ public abstract class FwController
     protected string list_orderby;               // orderby for the list screen
     protected Hashtable list_filter;             // filter values for the list screen
     protected Hashtable list_filter_search;      // filter for the search columns from reqh("search")
-    protected Hashtable list_where_params = new();       // any sql params for the list_where
+    protected Hashtable list_where_params = [];       // any sql params for the list_where
     protected string list_where = " 1=1 ";       // where to use in list sql, default is non-deleted records (see setListSearch() )
     protected long list_count;                    // count of list rows returned from db
     protected ArrayList list_rows;               // list rows returned from db (array of hashes)
@@ -354,7 +354,7 @@ public abstract class FwController
 
         Hashtable sfilter = fw.SessionHashtable(session_key);
         if (sfilter == null || !(sfilter is Hashtable))
-            sfilter = new Hashtable();
+            sfilter = [];
 
         // if not forced filter - merge form filters to session filters
         bool is_dofilter = fw.FORM.ContainsKey("dofilter");
@@ -408,7 +408,7 @@ public abstract class FwController
         {
             //read from session
             list_filter_search = fw.SessionHashtable(session_key_search);
-            if (list_filter_search == null) list_filter_search = new Hashtable();
+            if (list_filter_search == null) list_filter_search = [];
         }
         else
         {
@@ -425,7 +425,7 @@ public abstract class FwController
     /// <param name="session_key"></param>
     public virtual void clearFilter(string session_key = null)
     {
-        Hashtable f = new();
+        Hashtable f = [];
         if (session_key == null)
             session_key = "_filter_" + fw.G["controller.action"];
         fw.SessionHashtable(session_key, f);
@@ -814,8 +814,8 @@ public abstract class FwController
         }
         else
         {
-            this.list_rows = new ArrayList();
-            this.list_pager = new ArrayList();
+            this.list_rows = [];
+            this.list_pager = [];
         }
 
         if (related_id.Length > 0)
@@ -1034,7 +1034,7 @@ public abstract class FwController
     public virtual Hashtable setPS(Hashtable ps = null)
     {
         if (ps == null)
-            ps = new Hashtable();
+            ps = [];
 
         ps["list_user_view"] = this.list_user_view;
         ps["list_headers"] = this.list_headers;
@@ -1080,11 +1080,11 @@ public abstract class FwController
     public virtual void exportList()
     {
         if (list_rows == null)
-            list_rows = new ArrayList();
+            list_rows = [];
 
         var fields = getViewListUserFields();
         // header names
-        ArrayList headers = new();
+        ArrayList headers = [];
         foreach (var fld in Utils.qw(fields))
             headers.Add(view_list_map[fld]);
 
@@ -1110,10 +1110,10 @@ public abstract class FwController
     // if is_all true - then show all fields (not only from fields param)
     public virtual ArrayList getViewListArr(string fields = "", bool is_all = false)
     {
-        ArrayList result = new();
+        ArrayList result = [];
 
         // if fields defined - first show these fields, then the rest
-        Hashtable fields_added = new();
+        Hashtable fields_added = [];
         if (!string.IsNullOrEmpty(fields))
         {
             foreach (var fieldname in Utils.qw(fields))
@@ -1158,7 +1158,7 @@ public abstract class FwController
 
     public virtual Hashtable getViewListSortmap()
     {
-        Hashtable result = new();
+        Hashtable result = [];
         foreach (var fieldname in view_list_map.Keys)
             result[fieldname] = fieldname;
         return result;

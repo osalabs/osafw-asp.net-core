@@ -20,7 +20,7 @@ public class ConvUtils
     {
         if (options == null)
         {
-            options = new Hashtable();
+            options = [];
         }
         if (!options.ContainsKey("disposition"))
         {

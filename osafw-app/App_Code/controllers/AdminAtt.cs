@@ -95,7 +95,7 @@ public class AdminAttController : FwAdminController
     {
         route_onerror = FW.ACTION_SHOW_FORM; //set route to go if error happens
 
-        Hashtable ps = new();
+        Hashtable ps = [];
         Hashtable item = reqh("item");
         var is_new = (id == 0);
 
@@ -156,7 +156,7 @@ public class AdminAttController : FwAdminController
         }
         else
         {
-            itemdb = new();
+            itemdb = [];
             itemdb["fsize"] = "0";
         }
 
@@ -173,11 +173,11 @@ public class AdminAttController : FwAdminController
 
     public Hashtable SelectAction()
     {
-        Hashtable ps = new();
+        Hashtable ps = [];
         string category_icode = reqs("category");
         int att_categories_id = reqi("att_categories_id");
 
-        Hashtable where = new();
+        Hashtable where = [];
         where["status"] = 0;
         if (category_icode.Length > 0)
         {

@@ -34,7 +34,7 @@ public class HomeController : FwController
         if (ps == null || ps.Count == 0)
         {
             // CACHE MISS
-            ps = new Hashtable();
+            ps = [];
 
             // create home page with heavy queries
 
@@ -54,7 +54,7 @@ public class HomeController : FwController
         //if (page_name == "about")
         //    tpl_name = (string)fw.config("PAGE_LAYOUT_PUBLIC");
 
-        Hashtable ps = new();
+        Hashtable ps = [];
         ps["hide_sidebar"] = true; // TODO control via Spages
         ps["page_name"] = page_name;
 
@@ -69,7 +69,7 @@ public class HomeController : FwController
 
     public void TestAction(string id = "")
     {
-        Hashtable hf = new();
+        Hashtable hf = [];
         logger("in the TestAction");
         rw("here it is Test");
         rw("id=" + id);

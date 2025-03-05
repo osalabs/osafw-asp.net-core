@@ -119,7 +119,7 @@ public abstract class FwModel : IDisposable
         var item = (DBRow)(Hashtable)fw.cache.getRequestValue(cache_key);
         if (item == null)
         {
-            Hashtable where = new();
+            Hashtable where = [];
             where[this.field_id] = id;
             item = db.row(table_name, where);
             normalizeNames(item);
@@ -232,7 +232,7 @@ public abstract class FwModel : IDisposable
         else
         {
             // not exists - add new
-            item = new();
+            item = [];
             item[field_iname] = iname;
             result = this.add(item);
             is_added = true;
@@ -253,7 +253,7 @@ public abstract class FwModel : IDisposable
     // return standard list of id,iname for all non-deleted OR wtih specified statuses order by by getOrderBy
     public virtual DBList list(IList statuses = null)
     {
-        Hashtable where = new();
+        Hashtable where = [];
         if (!string.IsNullOrEmpty(field_status))
         {
             if (statuses != null && statuses.Count > 0)
@@ -267,7 +267,7 @@ public abstract class FwModel : IDisposable
     // return count of all non-deleted or with specified statuses
     public virtual long getCount(IList statuses = null, int? since_days = null)
     {
-        Hashtable where = new();
+        Hashtable where = [];
         if (!string.IsNullOrEmpty(field_status))
         {
             if (statuses != null && statuses.Count > 0)
@@ -286,9 +286,9 @@ public abstract class FwModel : IDisposable
     public virtual DBRow oneByIname(string iname)
     {
         if (field_iname == "")
-            return new DBRow();
+            return [];
 
-        Hashtable where = new();
+        Hashtable where = [];
         where[field_iname] = iname;
         var item = db.row(table_name, where);
         normalizeNames(item);
@@ -304,7 +304,7 @@ public abstract class FwModel : IDisposable
         var item = (DBRow)(Hashtable)fw.cache.getRequestValue(cache_key);
         if (item == null)
         {
-            Hashtable where = new();
+            Hashtable where = [];
             where[field_icode] = icode;
             item = db.row(table_name, where);
             normalizeNames(item);
@@ -320,7 +320,7 @@ public abstract class FwModel : IDisposable
     // check if item exists for a given field
     public virtual bool isExistsByField(object uniq_key, int not_id, string field)
     {
-        Hashtable where = new();
+        Hashtable where = [];
         where[field] = uniq_key;
         if (!string.IsNullOrEmpty(field_id))
             where[field_id] = db.opNOT(not_id);
@@ -330,7 +330,7 @@ public abstract class FwModel : IDisposable
     // check if item exists for a given fields and their values, commonly used in junction tables
     public bool isExistsByFields(Hashtable fields, int not_id)
     {
-        Hashtable where = new();
+        Hashtable where = [];
         foreach (DictionaryEntry de in fields)
             where[de.Key] = de.Value;
 
@@ -415,7 +415,7 @@ public abstract class FwModel : IDisposable
     // mark record as deleted (status=127) OR actually delete from db (if is_perm or status field not defined for this model table)
     public virtual void delete(int id, bool is_perm = false)
     {
-        Hashtable where = new();
+        Hashtable where = [];
         where[this.field_id] = id;
 
         if (is_perm || string.IsNullOrEmpty(field_status))
@@ -426,7 +426,7 @@ public abstract class FwModel : IDisposable
         }
         else
         {
-            Hashtable vars = new();
+            Hashtable vars = [];
             vars[field_status] = STATUS_DELETED;
             if (!string.IsNullOrEmpty(field_upd_time))
                 vars[field_upd_time] = DB.NOW;
@@ -541,30 +541,30 @@ public abstract class FwModel : IDisposable
     // def - in dynamic controller - field definition (also contains "i" and "ps", "lookup_params", ...) or you could use it to pass additional params
     public virtual ArrayList listSelectOptions(Hashtable def = null)
     {
-        Hashtable where = new();
+        Hashtable where = [];
         if (!string.IsNullOrEmpty(field_status))
             where[field_status] = db.opNOT(STATUS_DELETED);
 
-        ArrayList select_fields = new()
-        {
+        ArrayList select_fields =
+        [
             new Hashtable() { { "field", field_id }, { "alias", "id" } },
             new Hashtable() { { "field", field_iname }, { "alias", "iname" } }
-        };
+        ];
         return db.array(table_name, where, getOrderBy(), select_fields);
     }
 
     // similar to listSelectOptions but returns iname/iname
     public virtual ArrayList listSelectOptionsName(Hashtable def = null)
     {
-        Hashtable where = new();
+        Hashtable where = [];
         if (!string.IsNullOrEmpty(field_status))
             where[field_status] = db.opNOT(STATUS_DELETED);
 
-        ArrayList select_fields = new()
-        {
+        ArrayList select_fields =
+        [
             new Hashtable() { { "field", field_iname }, { "alias", "id" } },
             new Hashtable() { { "field", field_iname }, { "alias", "iname" } }
-        };
+        ];
         return db.array(table_name, where, getOrderBy(), select_fields);
     }
 
@@ -577,11 +577,11 @@ public abstract class FwModel : IDisposable
         if (!string.IsNullOrEmpty(field_status))
             where[field_status] = db.opNOT(STATUS_DELETED);
 
-        ArrayList select_fields = new()
-        {
+        ArrayList select_fields =
+        [
             new Hashtable() { { "field", field_id }, { "alias", "id" } },
             new Hashtable() { { "field", field_iname }, { "alias", "iname" } }
-        };
+        ];
         return db.array(table_name, where, getOrderBy(), select_fields);
     }
 
@@ -594,7 +594,7 @@ public abstract class FwModel : IDisposable
 
     public virtual List<string> getAutocompleteList(string q)
     {
-        Hashtable where = new();
+        Hashtable where = [];
         where[field_iname] = db.opLIKE("%" + q + "%");
         if (!string.IsNullOrEmpty(field_status))
             where[field_status] = db.opNOT(STATUS_DELETED);
@@ -634,7 +634,7 @@ public abstract class FwModel : IDisposable
     /// <returns></returns>
     public virtual ArrayList sortByCheckedPrio(ArrayList lookup_rows)
     {
-        ArrayList result = new();
+        ArrayList result = [];
         if (!string.IsNullOrEmpty(field_prio))
             result.AddRange((from Hashtable h in lookup_rows
                              orderby ((Hashtable)h["_link"])[field_prio], h["is_checked"] descending
@@ -848,8 +848,8 @@ public abstract class FwModel : IDisposable
     /// <param name="linked_keys">hashtable with keys as link id (as passed from web)</param>
     public virtual void updateJunction(string junction_table_name, int main_id, string main_id_name, string linked_id_name, Hashtable linked_keys)
     {
-        Hashtable fields = new();
-        Hashtable where = new();
+        Hashtable fields = [];
+        Hashtable where = [];
         var link_table_field_status = getJunctionFieldStatus();
 
         // set all fields as under update
@@ -861,12 +861,12 @@ public abstract class FwModel : IDisposable
         {
             foreach (string linked_id in linked_keys.Keys)
             {
-                fields = new Hashtable();
+                fields = [];
                 fields[main_id_name] = main_id;
                 fields[linked_id_name] = linked_id;
                 fields[link_table_field_status] = STATUS_ACTIVE;
 
-                where = new Hashtable();
+                where = [];
                 where[main_id_name] = main_id;
                 where[linked_id_name] = linked_id;
                 db.updateOrInsert(junction_table_name, fields, where);
@@ -874,7 +874,7 @@ public abstract class FwModel : IDisposable
         }
 
         // remove those who still not updated (so removed)
-        where = new Hashtable();
+        where = [];
         where[main_id_name] = main_id;
         where[link_table_field_status] = STATUS_UNDER_UPDATE;
         db.del(junction_table_name, where);
@@ -897,8 +897,8 @@ public abstract class FwModel : IDisposable
     /// <param name="linked_keys">hashtable with keys as linked_id (as passed from web)</param>
     public virtual void updateJunctionByMainId(int main_id, Hashtable linked_keys)
     {
-        Hashtable fields = new();
-        Hashtable where = new();
+        Hashtable fields = [];
+        Hashtable where = [];
         var link_table_field_status = getJunctionFieldStatus();
 
         // set all rows as under update
@@ -911,7 +911,7 @@ public abstract class FwModel : IDisposable
                 if (link_id.toInt() == 0)
                     continue; // skip non-id, ex prio_ID
 
-                fields = new Hashtable();
+                fields = [];
                 fields[junction_field_main_id] = main_id;
                 fields[junction_field_linked_id] = link_id;
                 fields[link_table_field_status] = STATUS_ACTIVE;
@@ -919,7 +919,7 @@ public abstract class FwModel : IDisposable
                 // additional fields here
                 updateJunctionByMainIdAdditional(linked_keys, link_id, fields);
 
-                where = new Hashtable();
+                where = [];
                 where[junction_field_main_id] = main_id;
                 where[junction_field_linked_id] = link_id;
                 db.updateOrInsert(table_name, fields, where);
@@ -947,8 +947,8 @@ public abstract class FwModel : IDisposable
     /// <param name="main_keys">hashtable with keys as main_id (as passed from web)</param>
     public virtual void updateJunctionByLinkedId(int linked_id, Hashtable main_keys)
     {
-        Hashtable fields = new();
-        Hashtable where = new();
+        Hashtable fields = [];
+        Hashtable where = [];
         var link_table_field_status = getJunctionFieldStatus();
 
         // set all fields as under update
@@ -963,7 +963,7 @@ public abstract class FwModel : IDisposable
                 if (main_id.toInt() == 0)
                     continue; // skip non-id, ex prio_ID
 
-                fields = new Hashtable();
+                fields = [];
                 fields[junction_field_linked_id] = linked_id;
                 fields[junction_field_main_id] = main_id;
                 fields[link_table_field_status] = STATUS_ACTIVE;
@@ -971,7 +971,7 @@ public abstract class FwModel : IDisposable
                 // additional fields here
                 updateJunctionByLinkedIdAdditional(main_keys, main_id, fields);
 
-                where = new Hashtable();
+                where = [];
                 where[junction_field_linked_id] = linked_id;
                 where[junction_field_main_id] = main_id;
                 //logger(fields);
@@ -980,7 +980,7 @@ public abstract class FwModel : IDisposable
         }
 
         // remove those who still not updated (so removed)
-        where = new Hashtable();
+        where = [];
         where[junction_field_linked_id] = linked_id;
         where[link_table_field_status] = STATUS_UNDER_UPDATE;
         db.del(table_name, where);
@@ -1197,7 +1197,7 @@ public abstract class FwModel : IDisposable
 
     public virtual StringBuilder getCSVExport()
     {
-        Hashtable where = new();
+        Hashtable where = [];
         if (!string.IsNullOrEmpty(field_status))
             where[field_status] = STATUS_ACTIVE;
 

@@ -74,7 +74,7 @@ public class Utils
     */
     public static Hashtable qh(string str, object default_value = null)
     {
-        Hashtable result = new();
+        Hashtable result = [];
         if (str != null && str != "")
         {
             string[] arr = Regex.Split(str, @"\s+");
@@ -95,7 +95,7 @@ public class Utils
 
     public static string qhRevert(IDictionary sh)
     {
-        ArrayList result = new();
+        ArrayList result = [];
         foreach (string key in sh.Keys)
         {
             result.Add(key.Replace(" ", "&nbsp;") + "|" + sh[key]);
@@ -108,7 +108,7 @@ public class Utils
     public static void hashFilter(Hashtable hash, string[] keys)
     {
         ArrayList all_keys = new(keys);
-        ArrayList to_remove = new();
+        ArrayList to_remove = [];
         foreach (string key in hash.Keys)
         {
             if (all_keys.IndexOf(key) < 0)
@@ -157,7 +157,7 @@ public class Utils
     // OUT: arraylist of email addresses
     public static ArrayList splitEmails(string emails)
     {
-        ArrayList result = new();
+        ArrayList result = [];
         string[] arr = Regex.Split(emails, @"[,; \n\r]+");
         foreach (string email in arr)
         {
@@ -463,7 +463,7 @@ public class Utils
 
             while (dbread.Read())
             {
-                Hashtable row = new();
+                Hashtable row = [];
                 for (int i = 0; i < dbread.FieldCount; i++)
                 {
                     string value = dbread[i].ToString();
@@ -495,8 +495,8 @@ public class Utils
     [SupportedOSPlatform("windows")]
     public static Hashtable importExcel(FW fw, Func<string, ArrayList, bool> callback, string filepath, bool is_header = true)
     {
-        Hashtable result = new();
-        Hashtable conf = new();
+        Hashtable result = [];
+        Hashtable conf = [];
         conf["type"] = "OLE";
         conf["connection_string"] = "Provider=" + OLEDB_PROVIDER + ";Data Source=" + filepath + ";Extended Properties=\"Excel 12.0 Xml;HDR=" + (is_header ? "Yes" : "No") + ";ReadOnly=True;IMEX=1\"";
         DB accdb = new(fw, conf);
@@ -508,7 +508,7 @@ public class Utils
             throw new ApplicationException("No worksheets found in the Excel file");
         }
 
-        Hashtable where = new();
+        Hashtable where = [];
         for (int i = 0; i < schema.Rows.Count; i++)
         {
             string sheet_name_full = schema.Rows[i]["TABLE_NAME"].ToString();
@@ -617,12 +617,12 @@ public class Utils
     /// <param name="tpl_dir">template directory</param>
     public static void writeXLSExport(FW fw, string filename, string csv_export_headers, string csv_export_fields, ArrayList rows, string tpl_dir = "/common/list/export")
     {
-        Hashtable ps = new();
+        Hashtable ps = [];
 
-        ArrayList headers = new();
+        ArrayList headers = [];
         foreach (string str in csv_export_headers.Split(","))
         {
-            Hashtable h = new();
+            Hashtable h = [];
             h["iname"] = str;
             headers.Add(h);
         }
@@ -648,10 +648,10 @@ public class Utils
             var rowcopy = new Hashtable();
             Utils.mergeHash(rowcopy, row);
 
-            ArrayList cell = new();
+            ArrayList cell = [];
             foreach (string f in fields)
             {
-                Hashtable h = new();
+                Hashtable h = [];
                 h["value"] = rowcopy[f];
                 cell.Add(h);
             }
@@ -1378,7 +1378,7 @@ public class Utils
 
         if (sortdir == "desc")
         {
-            ArrayList order_fields = new();
+            ArrayList order_fields = [];
             foreach (string fld in orderby.Split(","))
             {
                 string _fld = fld;
@@ -1431,7 +1431,7 @@ public class Utils
     // return hash: id => id
     public static Hashtable commastr2hash(string sel_ids, string value = null)
     {
-        Hashtable result = new();
+        Hashtable result = [];
         ArrayList ids = new(sel_ids.Split(","));
         for (int i = 0; i < ids.Count; i++)
         {

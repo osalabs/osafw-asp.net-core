@@ -43,7 +43,7 @@ public class Att : FwModel
             IFormFile file = fw.request.Form.Files[file_index];
 
             // update db with file information
-            Hashtable fields = new();
+            Hashtable fields = [];
             if (is_new)
                 fields["iname"] = file.FileName;
 
@@ -81,7 +81,7 @@ public class Att : FwModel
     /// <returns>db array list of added files information id, fname, fsize, ext, filepath</returns>
     public ArrayList uploadMulti(Hashtable item)
     {
-        ArrayList result = new();
+        ArrayList result = [];
 
         for (var i = 0; i <= fw.request.Form.Files.Count - 1; i++)
         {
@@ -110,7 +110,7 @@ public class Att : FwModel
     {
         var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
 
-        Hashtable where = new();
+        Hashtable where = [];
         where["fwentities_id"] = fwentities_id;
         where["iname"] = db.opLIKE("TMP#%");
         where["status"] = STATUS_DELETED;
@@ -312,7 +312,7 @@ public class Att : FwModel
         var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
 
         string where = "";
-        Hashtable @params = new();
+        Hashtable @params = [];
         @params["@fwentities_id"] = fwentities_id;
         @params["@item_id"] = item_id;
 
@@ -382,7 +382,7 @@ public class Att : FwModel
     {
         var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
 
-        Hashtable where = new();
+        Hashtable where = [];
         where["status"] = STATUS_ACTIVE;
         where["fwentities_id"] = fwentities_id;
         where["item_id"] = item_id;
@@ -520,7 +520,7 @@ public class Att : FwModel
         var honlynames = Utils.qh(fieldnames);
 
         // create list of eligible file uploads, check for the ContentLength as any 'input type = "file"' creates a System.Web.HttpPostedFile object even if the file was not attached to the input
-        ArrayList afiles = new();
+        ArrayList afiles = [];
         if (honlynames.Count > 0)
         {
             // if we only need some fields - skip if not requested field
@@ -554,7 +554,7 @@ public class Att : FwModel
         foreach (IFormFile file in afiles)
         {
             // first - save to db so we can get att_id
-            Hashtable attitem = new();
+            Hashtable attitem = [];
             attitem["att_categories_id"] = att_categories_id;
             attitem["fwentities_id"] = fwentities_id;
             attitem["item_id"] = item_id;

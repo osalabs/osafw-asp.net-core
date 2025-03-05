@@ -35,8 +35,8 @@ public class SignupController : FwController
 
     public Hashtable ShowFormAction()
     {
-        Hashtable ps = new();
-        Hashtable item = new();
+        Hashtable ps = [];
+        Hashtable item = [];
 
         if (isGet())
         {

@@ -33,7 +33,7 @@ public class MyPasswordController : FwController
         if (reqs("result") == "record_updated")
             fw.G["green_msg"] = "Login/Password has been changed";
 
-        Hashtable ps = new();
+        Hashtable ps = [];
         Hashtable item = reqh("item");
         int id = fw.userId;
 
@@ -43,7 +43,7 @@ public class MyPasswordController : FwController
                 item = model.one(id);
             else
                 // set defaults here
-                item = new Hashtable();
+                item = [];
         }
         else
         {

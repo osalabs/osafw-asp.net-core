@@ -19,7 +19,7 @@ public class AdminDBController : FwController
 
     public Hashtable IndexAction()
     {
-        Hashtable ps = new();
+        Hashtable ps = [];
         var selected_db = reqs("db", "main");
 
         string sql = reqs("sql");
@@ -70,7 +70,7 @@ public class AdminDBController : FwController
             fw.setGlobalError("Error occured: " + ex.Message);
         }
 
-        ArrayList dbsources = new();
+        ArrayList dbsources = [];
         foreach (string dbname in ((Hashtable)fw.config("db")).Keys)
             dbsources.Add(new Hashtable()
             {
@@ -100,17 +100,17 @@ public class AdminDBController : FwController
     {
         if (sth == null || !sth.HasRows)
             return null;
-        ArrayList result = new();
+        ArrayList result = [];
 
         while (sth.Read())
         {
-            Hashtable tblrow = new();
+            Hashtable tblrow = [];
             var fields = new ArrayList();
             tblrow["fields"] = fields;
 
             for (int i = 0; i <= sth.FieldCount - 1; i++)
             {
-                Hashtable tblfld = new();
+                Hashtable tblfld = [];
                 tblfld["value"] = sth[i].ToString();
 
                 fields.Add(tblfld);
@@ -125,11 +125,11 @@ public class AdminDBController : FwController
     {
         if (sth == null)
             return null;
-        ArrayList result = new();
+        ArrayList result = [];
 
         for (int i = 0; i <= sth.FieldCount - 1; i++)
         {
-            Hashtable tblfld = new();
+            Hashtable tblfld = [];
             tblfld["field_name"] = sth.GetName(i);
 
             result.Add(tblfld);
@@ -140,15 +140,15 @@ public class AdminDBController : FwController
 
     private void show_tables(ref ArrayList tablehead, ref ArrayList tablerows)
     {
-        tablehead = new ArrayList();
-        Hashtable h = new();
+        tablehead = [];
+        Hashtable h = [];
         h["field_name"] = "Table";
         tablehead.Add(h);
-        h = new();
+        h = [];
         h["field_name"] = "Row Count";
         tablehead.Add(h);
 
-        tablerows = new ArrayList();
+        tablerows = [];
 
         DbConnection conn = db.connect();
         DataTable dataTable = conn.GetSchema("Tables");
@@ -157,17 +157,17 @@ public class AdminDBController : FwController
             string tblname = row["TABLE_NAME"].ToString();
             if (tblname.IndexOf("MSys", StringComparison.Ordinal) == -1)
             {
-                Hashtable tblrow = new();
+                Hashtable tblrow = [];
                 var fields = new ArrayList();
                 tblrow["fields"] = fields;
 
-                Hashtable tblfld = new();
+                Hashtable tblfld = [];
                 tblfld["db"] = db.db_name;
                 tblfld["value"] = tblname;
                 tblfld["is_select_link"] = true;
                 fields.Add(tblfld);
 
-                tblfld = new();
+                tblfld = [];
                 tblfld["value"] = get_tbl_count(tblname);
                 fields.Add(tblfld);
 
@@ -182,7 +182,7 @@ public class AdminDBController : FwController
         int result = -1;
         try
         {
-            result = (int)db.value(tblname, new Hashtable(), "count(*)");
+            result = (int)db.value(tblname, [], "count(*)");
         }
         catch (Exception)
         {

@@ -20,7 +20,7 @@ public class AdminReportsController : FwController
 
     public Hashtable IndexAction()
     {
-        Hashtable ps = new();
+        Hashtable ps = [];
 
         return ps;
     }

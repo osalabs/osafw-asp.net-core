@@ -32,7 +32,7 @@ public class AdminLookupManagerTablesController : FwAdminController
 
     public override Hashtable ShowFormAction(int id = 0)
     {
-        Hashtable ps = new();
+        Hashtable ps = [];
         Hashtable item;
 
         if (isGet())
@@ -50,7 +50,7 @@ public class AdminLookupManagerTablesController : FwAdminController
             else
             {
                 // set defaults here
-                item = new Hashtable();
+                item = [];
                 Utils.mergeHash(item, this.form_new_defaults);
             }
         }
