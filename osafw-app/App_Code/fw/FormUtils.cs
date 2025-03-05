@@ -72,8 +72,7 @@ public class FormUtils
     // isel may contain multiple comma-separated values
     public static string selectOptions(ArrayList arr, string isel, bool is_multi = false)
     {
-        if (isel == null)
-            isel = "";
+        isel ??= "";
 
         string[] asel;
         if (is_multi)

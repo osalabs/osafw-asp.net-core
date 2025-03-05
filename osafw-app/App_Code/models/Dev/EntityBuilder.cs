@@ -646,8 +646,7 @@ class DevEntityBuilder
     {
         T result;
         result = (T)Utils.jsonDecode(FW.getFileContent(filename));
-        if (result == null)
-            result = new T();
+        result ??= new T();
         return result;
     }
 

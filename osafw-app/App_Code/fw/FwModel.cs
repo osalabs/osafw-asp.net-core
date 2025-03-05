@@ -468,8 +468,7 @@ public abstract class FwModel : IDisposable
 
     public Hashtable getTableSchema()
     {
-        if (table_schema == null)
-            table_schema = db.tableSchemaFull(table_name);
+        table_schema ??= db.tableSchemaFull(table_name);
         return table_schema;
     }
     #endregion

@@ -114,8 +114,7 @@ public class Users : FwModel
     // return standard list of id,iname where status=0 order by iname
     public override DBList list(IList statuses = null)
     {
-        if (statuses == null)
-            statuses = new ArrayList() { STATUS_ACTIVE };
+        statuses ??= new ArrayList() { STATUS_ACTIVE };
         return base.list(statuses);
     }
 

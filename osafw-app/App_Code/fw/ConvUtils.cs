@@ -18,10 +18,7 @@ public class ConvUtils
     // landscape = True - will produce landscape output
     public static string parsePagePdf(FW fw, string bdir, string tpl_name, Hashtable ps, string out_filename = "", Hashtable options = null)
     {
-        if (options == null)
-        {
-            options = [];
-        }
+        options ??= [];
         if (!options.ContainsKey("disposition"))
         {
             options["disposition"] = "attachment";

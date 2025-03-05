@@ -550,8 +550,6 @@ public class AdminLookupManagerController : FwController
 
         int del_ctr = 0;
         Hashtable cbses = reqh("cb");
-        if (cbses == null)
-            cbses = [];
         if (cbses.Count > 0)
         {
             // multirecord delete
@@ -572,11 +570,7 @@ public class AdminLookupManagerController : FwController
 
             // go thru all existing rows
             Hashtable rows = reqh("row");
-            if (rows == null)
-                rows = [];
             Hashtable rowsdel = reqh("del");
-            if (rowsdel == null)
-                rowsdel = [];
             Hashtable ids_md5 = [];
             foreach (string key in rows.Keys)
             {

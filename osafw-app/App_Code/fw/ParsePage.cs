@@ -622,8 +622,7 @@ public class ParsePage
             logger(LogLevel.DEBUG, "ParsePage - error in hvalue for tag [", tag, "]:", ex.Message);
         }
 
-        if (tag_value == null)
-            tag_value = "";
+        tag_value ??= "";
 
         return tag_value;
     }
@@ -673,8 +672,7 @@ public class ParsePage
             return false; // return false if var need to be compared is empty
 
         object eqvalue = hfvalue(eqvar, hf);
-        if (eqvalue == null)
-            eqvalue = "";
+        eqvalue ??= "";
 
         // detect if eqvalue is integer
         if (Int32.TryParse(eqvalue.ToString(), out int zzz))
@@ -687,8 +685,7 @@ public class ParsePage
             if (attrs.ContainsKey("vvalue"))
             {
                 ravalue = hfvalue((string)attrs["vvalue"], hf);
-                if (ravalue == null)
-                    ravalue = "";
+                ravalue ??= "";
             }
             else
                 ravalue = attrs["value"];
@@ -792,8 +789,7 @@ public class ParsePage
         }
 
         StringBuilder value = new();
-        if (parent_hf == null)
-            parent_hf = [];
+        parent_hf ??= [];
 
         string ttpath = tag_tplpath(tag, tpl_name);
 
@@ -1251,10 +1247,7 @@ public class ParsePage
     {
         string result = "";
         string sel_value = (string)hfvalue((string)attrs["selvalue"], hf);
-        if (sel_value == null)
-        {
-            sel_value = "";
-        }
+        sel_value ??= "";
 
         if (hfvalue(tag, hf) is ICollection seloptions)
         {

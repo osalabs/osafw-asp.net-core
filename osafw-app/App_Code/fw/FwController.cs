@@ -349,8 +349,7 @@ public abstract class FwController
     {
         Hashtable f = reqh("f");
 
-        if (session_key == null)
-            session_key = "_filter_" + fw.G["controller.action"];
+        session_key ??= "_filter_" + fw.G["controller.action"];
 
         Hashtable sfilter = fw.SessionHashtable(session_key);
         if (sfilter == null || !(sfilter is Hashtable))
@@ -408,7 +407,7 @@ public abstract class FwController
         {
             //read from session
             list_filter_search = fw.SessionHashtable(session_key_search);
-            if (list_filter_search == null) list_filter_search = [];
+            list_filter_search ??= [];
         }
         else
         {
@@ -426,8 +425,7 @@ public abstract class FwController
     public virtual void clearFilter(string session_key = null)
     {
         Hashtable f = [];
-        if (session_key == null)
-            session_key = "_filter_" + fw.G["controller.action"];
+        session_key ??= "_filter_" + fw.G["controller.action"];
         fw.SessionHashtable(session_key, f);
         this.list_filter = f;
     }
@@ -1033,8 +1031,7 @@ public abstract class FwController
 
     public virtual Hashtable setPS(Hashtable ps = null)
     {
-        if (ps == null)
-            ps = [];
+        ps ??= [];
 
         ps["list_user_view"] = this.list_user_view;
         ps["list_headers"] = this.list_headers;
@@ -1079,8 +1076,7 @@ public abstract class FwController
     // export to csv or html/xls
     public virtual void exportList()
     {
-        if (list_rows == null)
-            list_rows = [];
+        list_rows ??= [];
 
         var fields = getViewListUserFields();
         // header names
@@ -1166,8 +1162,7 @@ public abstract class FwController
 
     public virtual string getViewListUserFields()
     {
-        if (list_user_view == null)
-            list_user_view = fw.model<UserViews>().oneByIcode(UserViews.icodeByUrl(base_url, is_list_edit)); // base_url is screen identifier
+        list_user_view ??= fw.model<UserViews>().oneByIcode(UserViews.icodeByUrl(base_url, is_list_edit)); // base_url is screen identifier
         var fields = (string)list_user_view["fields"] ?? "";
         return (fields.Length > 0 ? fields : view_list_defaults);
     }
