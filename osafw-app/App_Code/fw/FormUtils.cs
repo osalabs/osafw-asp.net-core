@@ -522,7 +522,7 @@ public class FormUtils
             return false;
     }
 
-    // opposite to time2from
+    // opposite to timeToForm
     // OUT: false if can't create time from input item
     public static bool formToTime(Hashtable item, string field_name)
     {
@@ -532,7 +532,7 @@ public class FormUtils
         int ss = item[field_name + "_ss"].toInt();
         try
         {
-            //TODO MIGRATE item[field_name] = DateTime.TimeSerial(hh, mm, ss);
+            item[field_name] = new DateTime(1, 1, 1, hh, mm, ss);
         }
         catch (Exception)
         {

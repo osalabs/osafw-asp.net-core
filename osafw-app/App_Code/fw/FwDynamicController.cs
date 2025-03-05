@@ -815,10 +815,7 @@ public class FwDynamicController : FwController
         var subtable_add = reqh("subtable_add");
         var subtable_del = reqh("subtable_del");
 
-        var fields = getConfigShowFormFieldsByTab("showform_fields");
-        if (fields == null)
-            throw new ApplicationException("Controller config.json doesn't contain 'showform_fields'");
-
+        var fields = getConfigShowFormFieldsByTab("showform_fields") ?? throw new ApplicationException("Controller config.json doesn't contain 'showform_fields'");
         foreach (Hashtable def in fields)
         {
             //logger(def);

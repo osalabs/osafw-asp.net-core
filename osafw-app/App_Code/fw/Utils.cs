@@ -935,7 +935,7 @@ public class Utils
             {
                 if (hash2[key] is Hashtable ht)
                 {
-                    if (!(hash1[key] is Hashtable))
+                    if (hash1[key] is not Hashtable)
                         hash1[key] = new Hashtable();
                     Hashtable _hash1 = (Hashtable)hash1[key];
                     Hashtable _hash2 = ht;

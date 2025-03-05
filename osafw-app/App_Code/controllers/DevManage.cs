@@ -373,10 +373,7 @@ public class DevManageController : FwController
     {
         var item = reqh("item");
         string dbname = item["db"] + "";
-        var dbconfig = ((Hashtable)fw.config("db"))[dbname];
-        if (dbconfig == null)
-            throw new UserException("Wrong DB selection");
-
+        var dbconfig = ((Hashtable)fw.config("db"))[dbname] ?? throw new UserException("Wrong DB selection");
         DevEntityBuilder.createDBJsonFromExistingDB(dbname, fw);
         fw.flash("success", "template" + DevCodeGen.DB_JSON_PATH + " created");
 

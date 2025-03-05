@@ -43,7 +43,7 @@ public class MyListsController : FwAdminController
 
     public override Hashtable initFilter(string session_key = null)
     {
-        var result = base.initFilter(session_key);
+        base.initFilter(session_key);
         if (!this.list_filter.ContainsKey("entity"))
             this.list_filter["entity"] = related_id;
         return this.list_filter;

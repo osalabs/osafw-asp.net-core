@@ -21,7 +21,7 @@ public class FwAdminController : FwController
     public virtual Hashtable IndexAction()
     {
         // get filters from the search form
-        Hashtable f = this.initFilter();
+        this.initFilter();
 
         this.setListSorting();
 

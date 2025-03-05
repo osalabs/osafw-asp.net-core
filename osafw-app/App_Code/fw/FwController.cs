@@ -352,7 +352,7 @@ public abstract class FwController
         session_key ??= "_filter_" + fw.G["controller.action"];
 
         Hashtable sfilter = fw.SessionHashtable(session_key);
-        if (sfilter == null || !(sfilter is Hashtable))
+        if (sfilter == null || sfilter is not Hashtable)
             sfilter = [];
 
         // if not forced filter - merge form filters to session filters
@@ -823,7 +823,7 @@ public abstract class FwController
     public virtual void setFormError(Exception ex)
     {
         //if Validation exception - don't set general error message - specific validation message set in templates
-        if (!(ex is ValidationException))
+        if (ex is not ValidationException)
             fw.setGlobalError(ex.Message);
     }
 

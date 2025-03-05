@@ -735,7 +735,7 @@ public class ParsePage
                 eqvalue = b;
             else if (eqvalue is ICollection collection)
                 eqvalue = collection.Count > 0;
-            else if (!(eqvalue is bool))
+            else if (eqvalue is not bool)
             {
                 string eqstr = eqvalue.ToString();
                 eqvalue = !string.IsNullOrEmpty(eqstr) && eqstr != "0" && eqstr.ToLower() != "false";
@@ -781,7 +781,7 @@ public class ParsePage
     private string _attr_repeat(ref string tag, ref object tag_val_array, ref string tpl_name, ref string inline_tpl, Hashtable parent_hf)
     {
         // Validate: if input doesn't contain array - return "" - nothing to repeat
-        if (!(tag_val_array is IList))
+        if (tag_val_array is not IList)
         {
             if (tag_val_array != null && tag_val_array.ToString() != "")
                 logger(LogLevel.DEBUG, "ParsePage - Not an ArrayList passed to repeat tag=", tag);

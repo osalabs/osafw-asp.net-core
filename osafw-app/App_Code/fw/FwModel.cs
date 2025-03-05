@@ -1200,7 +1200,7 @@ public abstract class FwModel : IDisposable
         if (!string.IsNullOrEmpty(field_status))
             where[field_status] = STATUS_ACTIVE;
 
-        string[] aselect_fields = Array.Empty<string>();
+        string[] aselect_fields = [];
         if (!string.IsNullOrEmpty(csv_export_fields))
             aselect_fields = Utils.qw(csv_export_fields);
 

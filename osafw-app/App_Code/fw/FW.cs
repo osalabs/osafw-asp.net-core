@@ -403,7 +403,7 @@ public class FW : IDisposable
                     {
                         // override method
                         if (!string.IsNullOrEmpty(m1.Groups[1].Value)) route.method = m1.Groups[1].Value;
-                        if (m1.Groups[2].Value.Substring(0, 1) == "/")
+                        if (m1.Groups[2].Value.StartsWith('/'))
                         {
                             // if started from / - this is redirect url
                             url = m1.Groups[2].Value;
@@ -466,7 +466,7 @@ public class FW : IDisposable
                     throw new Exception("Wrong request");
 
                 // capitalize first letter - TODO - URL-case-insensitivity should be an option!
-                route.controller = route.controller.Substring(0, 1).ToUpper() + route.controller.Substring(1);
+                route.controller = string.Concat(route.controller[..1].ToUpper(), route.controller.AsSpan(1));
                 route.id = m.Groups[3].Value;
                 route.format = m.Groups[4].Value;
                 route.action_more = m.Groups[5].Value;
@@ -475,7 +475,7 @@ public class FW : IDisposable
                     if (m.Groups[2].Value == ACTION_MORE_NEW)
                         route.action_more = ACTION_MORE_NEW;
                     else
-                        route.format = m.Groups[2].Value.Substring(1);
+                        route.format = m.Groups[2].Value[1..];
                 }
 
                 // match to method (GET/POST)
@@ -796,7 +796,7 @@ public class FW : IDisposable
             System.Diagnostics.StackFrame sf = st.GetFrame(i);
             string fname = sf.GetFileName() ?? "";
             // skip logger methods and DB internals as we want to know line where logged thing actually called from
-            while (sf.GetMethod().Name == "logger" || fname.Length >= 6 && fname.Substring(fname.Length - 6) == $@"{path_separator}DB.vb")
+            while (sf.GetMethod().Name == "logger" || fname.Length >= 6 && fname[^6..] == $@"{path_separator}DB.vb")
             {
                 i += 1;
                 sf = st.GetFrame(i);
@@ -1014,7 +1014,7 @@ public class FW : IDisposable
     public static string[] getFileLines(string filename, out Exception error)
     {
         error = null;
-        string[] result = Array.Empty<string>();
+        string[] result = [];
         try
         {
             result = File.ReadAllLines(filename);
@@ -1067,7 +1067,7 @@ public class FW : IDisposable
     // TODO - create another func and call it from call_controller for processing _redirect, ... (non-parsepage) instead of calling parser?
     public void parser(string bdir, Hashtable ps)
     {
-        if (!this.response.HasStarted) this.response.Headers["Cache-Control"] = cache_control;
+        if (!this.response.HasStarted) this.response.Headers.CacheControl = cache_control;
 
         if (this.FormErrors.Count > 0 && !ps.ContainsKey("ERR"))
             ps["ERR"] = this.FormErrors; // add errors if any
@@ -1346,13 +1346,13 @@ public class FW : IDisposable
                     iex = iex.InnerException;
             }
 
-            if (iex != null && !(iex is ApplicationException))
+            if (iex != null && iex is not ApplicationException)
             {
                 throw; //throw if not an ApplicationException happened - this keeps stack, also see http://weblogs.asp.net/fmarguerie/rethrowing-exceptions-and-preserving-the-full-call-stack-trace
             }
 
             // ignore redirect exception
-            if (iex == null || !(iex is RedirectException))
+            if (iex == null || iex is not RedirectException)
             {
                 //if got ApplicationException - call error action handler
                 ps = controller.actionError(iex, args);
@@ -1529,8 +1529,7 @@ public class FW : IDisposable
         }
         finally
         {
-            if (message != null)
-                message.Dispose();
+            message?.Dispose();
         }// important, as this will close any opened attachment files
         return result;
     }
@@ -1628,8 +1627,7 @@ public class FW : IDisposable
     {
         if (!models.ContainsKey(model_name))
         {
-            Type mt = Type.GetType(FW_NAMESPACE_PREFIX + model_name);
-            if (mt == null) throw new ApplicationException("Error initializing model: [" + FW_NAMESPACE_PREFIX + model_name + "] class not found");
+            Type mt = Type.GetType(FW_NAMESPACE_PREFIX + model_name) ?? throw new ApplicationException("Error initializing model: [" + FW_NAMESPACE_PREFIX + model_name + "] class not found");
             FwModel m = (FwModel)Activator.CreateInstance(mt);
             // initialize
             m.init(this);

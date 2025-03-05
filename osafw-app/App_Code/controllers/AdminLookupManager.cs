@@ -571,7 +571,6 @@ public class AdminLookupManagerController : FwController
             // go thru all existing rows
             Hashtable rows = reqh("row");
             Hashtable rowsdel = reqh("del");
-            Hashtable ids_md5 = [];
             foreach (string key in rows.Keys)
             {
                 string form_id = key;

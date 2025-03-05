@@ -1888,7 +1888,7 @@ public class DB : IDisposable
             }
 
             // order by ORDINAL_POSITION
-            fieldslist = fieldslist.OrderBy(h => (long)h["pos"]).ToList();
+            fieldslist = [.. fieldslist.OrderBy(h => (long)h["pos"])];
             result.AddRange(fieldslist);
 
             // now detect identity (because order is important)
