@@ -954,15 +954,23 @@ public class FwDynamicController : FwController
                         // single value from lookup
                         if (isGet())
                         {
-                            def["lookup_id"] = item[field].toInt();
-                            var lookup_row = lookup_model.one(def["lookup_id"]);
-                            def["lookup_row"] = lookup_row;
+                            if (def["lookup_by_value"].toBool())
+                            {
+                                //if lookup by value - use value itself, not as id
+                                def["value"] = item[field];
+                            }
+                            else
+                            {
+                                def["lookup_id"] = item[field].toInt();
+                                var lookup_row = lookup_model.one(def["lookup_id"]);
+                                def["lookup_row"] = lookup_row;
 
-                            string lookup_field = def["lookup_field"].toStr();
-                            if (lookup_field == "")
-                                lookup_field = lookup_model.field_iname;
+                                string lookup_field = def["lookup_field"].toStr();
+                                if (lookup_field == "")
+                                    lookup_field = lookup_model.field_iname;
 
-                            def["value"] = lookup_row[lookup_field];
+                                def["value"] = lookup_row[lookup_field];
+                            }
                         }
                         else
                         {
@@ -1037,7 +1045,10 @@ public class FwDynamicController : FwController
             {
                 var lookup_model = fw.model((string)def["lookup_model"]);
                 var field_value = item[field + "_iname"].toStr(); // autocomplete value is in "${field}_iname"
-                fields[field] = lookup_model.findOrAddByIname(field_value, out _);
+                if (def["lookup_by_value"].toBool())
+                    fields[field] = field_value; // just by value, not by id
+                else
+                    fields[field] = lookup_model.findOrAddByIname(field_value, out _);
             }
             else if (type == "date_combo")
                 fields[field] = FormUtils.dateForCombo(item, field).ToString();
