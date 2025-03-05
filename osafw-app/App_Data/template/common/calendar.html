@@ -2,7 +2,8 @@
 <script src="<~GLOBAL[ASSETS_URL]>/js/bootstrap-datepicker.js"></script>
 <script>
     $(document).ready(function() {
-        $('.date').datepicker({format: 'mm/dd/yyyy'})
+        var autoClose = true;
+        $('.date').datepicker({format: 'mm/dd/yyyy', autoclose: autoClose})
             .on('changeDate', function (e) {
                 if (e.viewMode=='years' || e.viewMode=='months' ) return; //do not trigger change yet, while user selecting year/month
                 $(this).find('input').trigger('change');
