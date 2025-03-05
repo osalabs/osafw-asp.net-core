@@ -504,7 +504,7 @@ public class ParsePage
 
         try
         {
-            if (tag.Contains("["))
+            if (tag.Contains('['))
             {
                 string[] parts = tag.Split("[");
                 int start_pos = 0;

@@ -111,22 +111,22 @@ namespace osafw.Tests
             Assert.AreEqual(DateTime.Today.AddDays((int)(DayOfWeek.Monday - DateTime.Today.DayOfWeek + 7) % 7), result1, "Result should be next Monday from today's date");
 
             // Case 2: Test with specific date provided
-            DateTime specificDate = new DateTime(2023, 2, 10); // February 10, 2023 (Friday)
+            DateTime specificDate = new(2023, 2, 10); // February 10, 2023 (Friday)
             DateTime result2 = DateUtils.nextDOW(DayOfWeek.Monday, specificDate);
             Assert.AreEqual(new DateTime(2023, 2, 13), result2, "Result should be next Monday after the specific date");
 
             // Case 3: Test with specific date provided which is the same day as the requested day
-            DateTime specificDate2 = new DateTime(2023, 2, 13); // February 13, 2023 (Monday)
+            DateTime specificDate2 = new(2023, 2, 13); // February 13, 2023 (Monday)
             DateTime result3 = DateUtils.nextDOW(DayOfWeek.Monday, specificDate2);
             Assert.AreEqual(new DateTime(2023, 2, 20), result3, "Result should be next Monday after the specific date, considering it's the same day");
 
             // Case 4: Test with specific date provided which is after the requested day
-            DateTime specificDate3 = new DateTime(2023, 2, 15); // February 15, 2023 (Wednesday)
+            DateTime specificDate3 = new(2023, 2, 15); // February 15, 2023 (Wednesday)
             DateTime result4 = DateUtils.nextDOW(DayOfWeek.Monday, specificDate3);
             Assert.AreEqual(new DateTime(2023, 2, 20), result4, "Result should be next Monday after the specific date, even if it's after the requested day");
 
             // Case 5: Test with specific date provided which is before the requested day
-            DateTime specificDate4 = new DateTime(2023, 2, 6); // February 6, 2023 (Monday)
+            DateTime specificDate4 = new(2023, 2, 6); // February 6, 2023 (Monday)
             DateTime result5 = DateUtils.nextDOW(DayOfWeek.Monday, specificDate4);
             Assert.AreEqual(new DateTime(2023, 2, 13), result5, "Result should be next Monday after the specific date, even if it's before the requested day");
         }

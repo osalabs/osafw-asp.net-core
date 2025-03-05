@@ -218,17 +218,17 @@ namespace osafw.Tests
             Assert.AreEqual(" IN ('')", result2);
 
             // Test with string array
-            string[] strArray = new string[] { "a", "b", "c" };
+            string[] strArray = ["a", "b", "c"];
             string result3 = db.insql(strArray);
             Assert.AreEqual(" IN ('a', 'b', 'c')", result3);
 
             // Test with ArrayList
-            ArrayList list = new ArrayList() { "a", "b", "c" };
+            ArrayList list = ["a", "b", "c"];
             string result4 = db.insql(list);
             Assert.AreEqual(" IN ('a', 'b', 'c')", result4);
 
             // Test with empty ArrayList
-            ArrayList emptyList = new ArrayList();
+            ArrayList emptyList = [];
             string result5 = db.insql(emptyList);
             Assert.AreEqual(" IN (NULL)", result5);
         }
@@ -248,17 +248,17 @@ namespace osafw.Tests
             Assert.AreEqual(" IN (0)", result3);
 
             // Test with string array
-            string[] strArray = new string[] { "1", "2", "3" };
+            string[] strArray = ["1", "2", "3"];
             string result4 = db.insqli(strArray);
             Assert.AreEqual(" IN (1, 2, 3)", result4);
 
             // Test with ArrayList
-            ArrayList list = new ArrayList() { "1", "2", "3" };
+            ArrayList list = ["1", "2", "3"];
             string result5 = db.insqli(list);
             Assert.AreEqual(" IN (1, 2, 3)", result5);
 
             // Test with empty ArrayList
-            ArrayList emptyList = new ArrayList();
+            ArrayList emptyList = [];
             string result6 = db.insqli(emptyList);
             Assert.AreEqual(" IN (NULL)", result6);
         }

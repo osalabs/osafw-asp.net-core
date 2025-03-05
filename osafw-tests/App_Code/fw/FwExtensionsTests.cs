@@ -34,14 +34,14 @@ namespace osafw.Tests
         public void toBool_ICollection_Empty_ReturnsFalse()
         {
             // List implementing ICollection with count=0
-            ICollection<int> input = new List<int>();
+            ICollection<int> input = [];
             Assert.IsFalse(input.toBool());
         }
 
         [TestMethod]
         public void toBool_ICollection_NonEmpty_ReturnsTrue()
         {
-            ICollection<int> input = new List<int> { 1, 2 };
+            ICollection<int> input = [1, 2];
             Assert.IsTrue(input.toBool());
         }
 

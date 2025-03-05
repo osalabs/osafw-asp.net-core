@@ -230,7 +230,7 @@ public class AdminLookupManagerController : FwController
             if ((string)fh["type"] == "textarea")
                 fh["type"] = ""; // show textarea as inputtext in table edit mode
 
-            if (col["itype"].ToString().Contains("."))
+            if (col["itype"].ToString().Contains('.'))
             {
                 // lookup type
                 fh["type"] = "lookup";
@@ -287,7 +287,7 @@ public class AdminLookupManagerController : FwController
                 orderby = "1";
             if ((string)f["sortdir"] == "desc")
             {
-                if (orderby.Contains(","))
+                if (orderby.Contains(','))
                     orderby = orderby.Replace(",", " desc,");
                 orderby += " desc";
             }
@@ -339,7 +339,7 @@ public class AdminLookupManagerController : FwController
                     if ((string)fh["type"] == "textarea")
                         fh["type"] = ""; // show textarea as inputtext in table edit mode
 
-                    if (colitype.Contains("."))
+                    if (colitype.Contains('.'))
                     {
                         // lookup type
                         fh["type"] = "lookup";
@@ -429,7 +429,7 @@ public class AdminLookupManagerController : FwController
             else
                 fh["maxlen"] = col["numeric_precision"].toInt() + (col["numeric_scale"].toInt() > 0 ? 1 : 0);
 
-            if (col["itype"].toStr().Contains("."))
+            if (col["itype"].toStr().Contains('.'))
             {
                 // lookup type
                 fh["type"] = "lookup";

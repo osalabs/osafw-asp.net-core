@@ -24,10 +24,7 @@ namespace osafw.Tests
         [TestMethod()]
         public void qwRevertTest()
         {
-            IList<string> list = new List<string>() { };
-            list.Add("test1");
-            list.Add("test2");
-            list.Add("test3");
+            IList<string> list = ["test1", "test2", "test3"];
             string r = Utils.qwRevert(list.ToList());
 
             Assert.AreEqual(r, "test1 test2 test3 ");
@@ -48,7 +45,7 @@ namespace osafw.Tests
         [TestMethod()]
         public void qhRevertTest()
         {
-            Hashtable h = new();
+            Hashtable h = [];
             h["AAA"] = "1";
             h["BBB"] = "2";
             h["CCC"] = 3;
@@ -74,13 +71,13 @@ namespace osafw.Tests
         [TestMethod()]
         public void hashFilterTest()
         {
-            Hashtable h = new();
+            Hashtable h = [];
             h["AAA"] = "1";
             h["BBB"] = "2";
             h["CCC"] = 3;
             h["DDD"] = null;
 
-            string[] keys = { "DDD", "CCC" };
+            string[] keys = ["DDD", "CCC"];
             Utils.hashFilter(h, keys);
 
             Assert.AreEqual(h.Keys.Count, 2);
@@ -384,10 +381,10 @@ namespace osafw.Tests
         [TestMethod()]
         public void mergeHashTest()
         {
-            Hashtable h1 = new();
+            Hashtable h1 = [];
             h1["AAA"] = 1;
             h1["BBB"] = 2;
-            Hashtable h2 = new();
+            Hashtable h2 = [];
             h2["CCC"] = 3;
             h2["DDD"] = 4;
 
@@ -407,10 +404,10 @@ namespace osafw.Tests
         [TestMethod()]
         public void mergeHashDeepTest()
         {
-            Hashtable h1 = new();
+            Hashtable h1 = [];
             h1["AAA"] = 1;
             h1["BBB"] = 2;
-            Hashtable h2 = new();
+            Hashtable h2 = [];
             h2["CCC"] = 3;
             h2["DDD"] = new Hashtable() { { "EEE", 5 } };
 
@@ -453,7 +450,7 @@ namespace osafw.Tests
         [TestMethod()]
         public void jsonEncodeTest()
         {
-            Hashtable h1 = new();
+            Hashtable h1 = [];
             h1["AAA"] = 1;
             h1["BBB"] = 2;
             h1["CCC"] = 3;
@@ -490,7 +487,7 @@ namespace osafw.Tests
         [TestMethod()]
         public void hashKeysTest()
         {
-            Hashtable h1 = new();
+            Hashtable h1 = [];
             h1["AAA"] = 1;
             h1["BBB"] = 2;
             h1["CCC"] = 3;
@@ -546,7 +543,7 @@ namespace osafw.Tests
             Assert.AreEqual(100, result3.Length, "Result should have custom length of 100 characters");
 
             // Case 4: Test uniqueness of generated IDs
-            HashSet<string> idSet = new HashSet<string>();
+            HashSet<string> idSet = [];
             for (int i = 0; i < 100000; i++)
             {
                 string id = Utils.nanoid();
@@ -562,7 +559,7 @@ namespace osafw.Tests
             string tmp_path = Utils.getTmpDir(prefix);
             string r = Utils.getTmpFilename(prefix);
 
-            Assert.IsTrue(r.IndexOf(tmp_path) == 0);
+            Assert.IsTrue(r.StartsWith(tmp_path));
             Assert.IsTrue(r.Contains(prefix));
             Assert.AreEqual(r.Length, tmp_path.Length + prefix.Length + 1 + 31);
         }
@@ -627,7 +624,7 @@ namespace osafw.Tests
             string s = "1234567890";
 
             //test for truncate
-            Hashtable hattrs = new();
+            Hashtable hattrs = [];
             hattrs["truncate"] = "5";
             hattrs["trword"] = "0";
             hattrs["trchar"] = "";
@@ -750,26 +747,22 @@ namespace osafw.Tests
         public void arrayInjectTest()
         {
             // Case 1: Empty rows and empty fields
-            ArrayList rows1 = new ArrayList();
-            Hashtable fields1 = new Hashtable();
+            ArrayList rows1 = [];
+            Hashtable fields1 = [];
             Utils.arrayInject(rows1, fields1);
             Assert.AreEqual(0, rows1.Count, "Empty rows and fields should result in no changes");
 
             // Case 2: Rows with values and empty fields
-            ArrayList rows2 = new ArrayList();
-            rows2.Add(new Hashtable { { "key1", "value1" } });
-            rows2.Add(new Hashtable { { "key2", "value2" } });
-            Hashtable fields2 = new Hashtable();
+            ArrayList rows2 = [new Hashtable { { "key1", "value1" } }, new Hashtable { { "key2", "value2" } }];
+            Hashtable fields2 = [];
             Utils.arrayInject(rows2, fields2);
             Assert.AreEqual(2, rows2.Count, "Rows with values and empty fields should result in no changes");
             Assert.AreEqual("value1", ((Hashtable)rows2[0])["key1"]);
             Assert.AreEqual("value2", ((Hashtable)rows2[1])["key2"]);
 
             // Case 3: Rows with values and fields with some new and some existing keys
-            ArrayList rows3 = new ArrayList();
-            rows3.Add(new Hashtable { { "key1", "value1" } });
-            rows3.Add(new Hashtable { { "key2", "value2" } });
-            Hashtable fields3 = new Hashtable { { "key1", "newValue1" }, { "key3", "newValue3" } };
+            ArrayList rows3 = [new Hashtable { { "key1", "value1" } }, new Hashtable { { "key2", "value2" } }];
+            Hashtable fields3 = new() { { "key1", "newValue1" }, { "key3", "newValue3" } };
             Utils.arrayInject(rows3, fields3);
             Assert.AreEqual(2, rows3.Count, "Rows with values and fields with some new and some existing keys should merge properly");
             Assert.AreEqual("newValue1", ((Hashtable)rows3[0])["key1"]);
