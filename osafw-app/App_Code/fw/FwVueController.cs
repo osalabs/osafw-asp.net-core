@@ -175,7 +175,7 @@ public class FwVueController : FwDynamicController
             setViewList(false); // initialize list_headers and related (can already be initialized in setScopeInitial)
 
         ArrayList showform_fields = (ArrayList)this.config["showform_fields"];
-        Hashtable hfields = _fieldsToHash(showform_fields);
+        //Hashtable hfields = _fieldsToHash(showform_fields);
 
         // extract lookups from config and add to ps
         var lookups = new Hashtable();

@@ -155,25 +155,26 @@ public class AdminDBController : FwController
         foreach (DataRow row in dataTable.Rows)
         {
             string tblname = row["TABLE_NAME"].ToString();
-            if (tblname.IndexOf("MSys", StringComparison.Ordinal) == -1)
-            {
-                Hashtable tblrow = [];
-                var fields = new ArrayList();
-                tblrow["fields"] = fields;
+            if (tblname.Contains("MSys"))
+                continue;
 
-                Hashtable tblfld = [];
-                tblfld["db"] = db.db_name;
-                tblfld["value"] = tblname;
-                tblfld["is_select_link"] = true;
-                fields.Add(tblfld);
+            Hashtable tblrow = [];
+            var fields = new ArrayList();
+            tblrow["fields"] = fields;
 
-                tblfld = [];
-                tblfld["value"] = get_tbl_count(tblname);
-                fields.Add(tblfld);
+            Hashtable tblfld = [];
+            tblfld["db"] = db.db_name;
+            tblfld["value"] = tblname;
+            tblfld["is_select_link"] = true;
+            fields.Add(tblfld);
 
-                tblrow["db"] = db.db_name;
-                tablerows.Add(tblrow);
-            }
+            tblfld = [];
+            tblfld["value"] = get_tbl_count(tblname);
+            fields.Add(tblfld);
+
+            tblrow["db"] = db.db_name;
+            tablerows.Add(tblrow);
+
         }
     }
 

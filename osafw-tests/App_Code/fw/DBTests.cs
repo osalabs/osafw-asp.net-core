@@ -10,7 +10,7 @@ namespace osafw.Tests
     [TestClass()]
     public class DBTests
     {
-        private string connstr = "Server=(local);Database=demo;Trusted_Connection=True;TrustServerCertificate=true;";
+        private readonly string connstr = "Server=(local);Database=demo;Trusted_Connection=True;TrustServerCertificate=true;";
         private DB db = null;
         private string table_name = "for_unit_testing";
 

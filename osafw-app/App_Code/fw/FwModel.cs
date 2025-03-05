@@ -896,8 +896,6 @@ public abstract class FwModel : IDisposable
     /// <param name="linked_keys">hashtable with keys as linked_id (as passed from web)</param>
     public virtual void updateJunctionByMainId(int main_id, Hashtable linked_keys)
     {
-        Hashtable fields = [];
-        Hashtable where = [];
         var link_table_field_status = getJunctionFieldStatus();
 
         // set all rows as under update
@@ -910,7 +908,7 @@ public abstract class FwModel : IDisposable
                 if (link_id.toInt() == 0)
                     continue; // skip non-id, ex prio_ID
 
-                fields = [];
+                Hashtable fields = [];
                 fields[junction_field_main_id] = main_id;
                 fields[junction_field_linked_id] = link_id;
                 fields[link_table_field_status] = STATUS_ACTIVE;
@@ -918,7 +916,7 @@ public abstract class FwModel : IDisposable
                 // additional fields here
                 updateJunctionByMainIdAdditional(linked_keys, link_id, fields);
 
-                where = [];
+                Hashtable where = [];
                 where[junction_field_main_id] = main_id;
                 where[junction_field_linked_id] = link_id;
                 db.updateOrInsert(table_name, fields, where);

@@ -1,8 +1,9 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿#pragma warning disable CA1416 // some methods are Windows only
+
+using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Data.Common;
 using System.Data.OleDb;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -29,6 +30,10 @@ public class Utils
     public const string TMP_PREFIX = "osafw"; // prefix for temp directory where framework stores temporary files
 
     public const string MIME_MAP = "doc|application/msword docx|application/msword xls|application/vnd.ms-excel xlsx|application/vnd.ms-excel ppt|application/vnd.ms-powerpoint pptx|application/vnd.ms-powerpoint csv|text/csv pdf|application/pdf html|text/html zip|application/x-zip-compressed jpg|image/jpeg jpeg|image/jpeg gif|image/gif png|image/png wmv|video/x-ms-wmv avi|video/x-msvideo mp4|video/mp4";
+
+    // pre-initialize for performance
+    private static readonly JsonSerializerOptions jsonSerializerOptions = new() { WriteIndented = false };
+    private static readonly JsonSerializerOptions jsonSerializerOptionsPretty = new() { WriteIndented = true };
 
     // convert "space" delimited string to an array
     // WARN! replaces all "&nbsp;" to spaces (after convert)
@@ -386,7 +391,7 @@ public class Utils
 
     public static string sTrim(string str, int size)
     {
-        if (str.Length > size) str = str.Substring(0, size) + "...";
+        if (str.Length > size) str = string.Concat(str.AsSpan(0, size), "...");
         return str;
     }
 
@@ -456,7 +461,7 @@ public class Utils
 
             string sql = "select * from [" + WorkSheetName + "]";
             OleDbCommand dbcomm = new(sql, cn);
-            DbDataReader dbread = dbcomm.ExecuteReader();
+            OleDbDataReader dbread = dbcomm.ExecuteReader();
 
             while (dbread.Read())
             {
@@ -511,7 +516,7 @@ public class Utils
             string sheet_name_full = schema.Rows[i]["TABLE_NAME"].ToString();
             string sheet_name = sheet_name_full.Replace("\"", "");
             sheet_name = sheet_name.Replace("'", "");
-            sheet_name = sheet_name.Substring(0, sheet_name.Length - 1);
+            sheet_name = sheet_name[..^1]; // remove trailing $
             try
             {
                 ArrayList rows = accdb.array(sheet_name_full, where);
@@ -543,7 +548,7 @@ public class Utils
 
             // escape double quotes + quote if value has line breaks, double quotes, commas
             // https://www.ietf.org/rfc/rfc4180.txt
-            if (str.IndexOf('"') != -1)
+            if (str.Contains('"'))
             {
                 str = "\"" + str.Replace("\"", "\"\"") + "\"";
             }
@@ -687,6 +692,7 @@ public class Utils
     {
         bool result = false;
         var rot = RotateFlipType.RotateNoneFlipNone;
+
         PropertyItem[] props = image.PropertyItems;
 
         foreach (PropertyItem p in props)
@@ -975,9 +981,7 @@ public class Utils
     */
     public static string jsonEncode(object data, bool is_pretty = false)
     {
-        JsonSerializerOptions options = new();
-        if (is_pretty) options.WriteIndented = true;
-        return JsonSerializer.Serialize(data, data.GetType(), options);
+        return JsonSerializer.Serialize(data, data.GetType(), is_pretty ? jsonSerializerOptionsPretty : jsonSerializerOptions);
     }
 
     //overload alias for jsonDecode(string)
@@ -1164,7 +1168,7 @@ public class Utils
         }
         else
         {
-            str = str.Substring(0, 1).ToUpper() + str.Substring(1);
+            str = string.Concat(str[..1].ToUpper(), str.AsSpan(1));
         }
 
         return str;
@@ -1248,11 +1252,7 @@ public class Utils
         // convert string to bytes
         UTF8Encoding ustr = new();
         byte[] bstr = ustr.GetBytes(str);
-
-#pragma warning disable SCS0006 // Weak hashing function
-        MD5 md5hasher = MD5.Create();
-#pragma warning restore SCS0006 // Weak hashing function
-        byte[] bhash = md5hasher.ComputeHash(bstr);
+        byte[] bhash = MD5.HashData(bstr);
 
         // convert hash value to hex string
         StringBuilder sb = new();
@@ -1357,12 +1357,12 @@ public class Utils
             }
             else
             {
-                str = str.Substring(0, trlen) + trchar;
+                str = string.Concat(str.AsSpan(0, trlen), trchar);
             }
         }
         else
         {
-            str = str.Substring(0, trlen / 2) + trchar + str.Substring(trlen / 2 + 1);
+            str = string.Concat(str.AsSpan(0, trlen / 2), trchar, str.AsSpan(trlen / 2 + 1));
         }
         return str;
     }
@@ -1683,7 +1683,7 @@ public class Utils
         if (str.Length <= len)
             return str;
         else
-            return str.Substring(str.Length - len);
+            return str[^len..];
     }
 
     //from https://docs.microsoft.com/en-us/dotnet/standard/io/how-to-copy-directories

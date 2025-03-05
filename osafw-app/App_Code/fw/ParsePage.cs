@@ -133,7 +133,6 @@ public class ParsePage
     private static readonly Regex RX_ATTRS1 = new(@"((?:\S+\=" + (char)34 + "[^" + (char)34 + "]*" + (char)34 + @")|(?:\S+\='[^']*')|(?:[^'" + (char)34 + @"\s]+)|(?:\S+\=\S*))", RegexOptions.Compiled);
     private static readonly Regex RX_ATTRS2 = new(@"^([^\s\=]+)=(['" + (char)34 + @"]?)(.*?)\2$", RegexOptions.Compiled);
 
-    private static readonly Regex RX_ALL_DIGITS = new(@"^\d+$", RegexOptions.Compiled);
     private static readonly Regex RX_LAST_SLASH = new(@"[^\/]+$", RegexOptions.Compiled);
     private static readonly Regex RX_EXT = new(@"\.[^\/]+$", RegexOptions.Compiled);
 
@@ -347,7 +346,7 @@ public class ParsePage
                 {
                     // # no need to parse file - just include as is
                     var path = tag_tplpath(tag, tpl_name);
-                    if (path.Substring(0, 1) != "/")
+                    if (!path.StartsWith('/'))
                         path = basedir + "/" + path;
                     path = TMPL_PATH + path;
                     var file_content = precache_file(path);
