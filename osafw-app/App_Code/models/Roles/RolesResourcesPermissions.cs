@@ -151,6 +151,9 @@ public class RolesResourcesPermissions : FwModel
 
         foreach (string key in hresources_permissions.Keys)
         {
+            if (!hresources_permissions[key].toBool())
+                continue; // skip unchecked
+
             extractKey(key, out int resources_id, out int permissions_id);
 
             fields = [];

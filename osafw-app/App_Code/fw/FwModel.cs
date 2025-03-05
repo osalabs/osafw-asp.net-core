@@ -860,6 +860,9 @@ public abstract class FwModel : IDisposable
         {
             foreach (string linked_id in linked_keys.Keys)
             {
+                if (!linked_keys[linked_id].toBool())
+                    continue;
+
                 fields = [];
                 fields[main_id_name] = main_id;
                 fields[linked_id_name] = linked_id;
@@ -905,7 +908,7 @@ public abstract class FwModel : IDisposable
         {
             foreach (string link_id in linked_keys.Keys)
             {
-                if (link_id.toInt() == 0)
+                if (link_id.toInt() == 0 || !linked_keys[link_id].toBool())
                     continue; // skip non-id, ex prio_ID
 
                 Hashtable fields = [];
@@ -957,7 +960,7 @@ public abstract class FwModel : IDisposable
         {
             foreach (string main_id in main_keys.Keys)
             {
-                if (main_id.toInt() == 0)
+                if (main_id.toInt() == 0 || !main_keys[main_id].toBool())
                     continue; // skip non-id, ex prio_ID
 
                 fields = [];
