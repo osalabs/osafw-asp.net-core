@@ -268,9 +268,9 @@ public class Att : FwModel
             size = "";
 
         var max_age = new TimeSpan(CACHE_DAYS, 0, 0, 0);
-        fw.response.Headers.Append("Cache-Control", $"private, max-age={max_age}"); // use public only if all uploads are public
-        fw.response.Headers.Append("Pragma", "cache");
-        fw.response.Headers.Append("Expires", DateTime.Now.AddDays(CACHE_DAYS).ToString("R")); // cache for several days, this allows browser not to send any requests to server during this period (unless F5)
+        fw.response.Headers.CacheControl = $"private, max-age={max_age}"; // use public only if all uploads are public
+        fw.response.Headers.Pragma = "cache";
+        fw.response.Headers.Expires = DateTime.Now.AddDays(CACHE_DAYS).ToString("R"); // cache for several days, this allows browser not to send any requests to server during this period (unless F5)
 
         string filepath = getUploadImgPath(id, size, (string)item["ext"]);
         if (!File.Exists(filepath))
@@ -281,7 +281,7 @@ public class Att : FwModel
 
         DateTime filetime = File.GetLastWriteTime(filepath).ToUniversalTime();
 
-        fw.response.Headers.Append("Last-Modified", filetime.ToString("R")); // this allows browser to send If-Modified-Since request headers (unless Ctrl+F5)
+        fw.response.Headers.LastModified = filetime.ToString("R");// this allows browser to send If-Modified-Since request headers (unless Ctrl+F5)
 
         string ifmodhead = fw.request.Headers.IfModifiedSince;
         if (ifmodhead != null && DateTime.TryParse(ifmodhead, out DateTime ifmod) && ifmod >= filetime)
@@ -294,8 +294,9 @@ public class Att : FwModel
         string filename = item["fname"].Replace('"', '\'');
         string ext = UploadUtils.getUploadFileExt(filename);
 
-        fw.response.Headers.Append("Content-type", Utils.ext2mime(ext));
-        fw.response.Headers.Append("Content-Disposition", disposition + "; filename=\"" + filename + "\"");
+        fw.response.Headers.ContentType = Utils.ext2mime(ext);
+        fw.response.Headers.ContentDisposition = disposition + $"; filename=\"{filename}\"";
+
         fw.response.SendFileAsync(filepath).Wait();
     }
 

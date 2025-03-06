@@ -37,6 +37,12 @@ public class Startup
         .SetApplicationName("osafw")
         .PersistKeysToFileSystem(new DirectoryInfo(Utils.getTmpDir()));
 
+        services.AddResponseCompression(options =>
+        {
+            options.EnableForHttps = true;
+            options.MimeTypes = ["text/plain", "text/html", "text/css", "application/javascript", "text/javascript", "text/xml", "text/csv", "application/json", "image/svg+xml"];
+        });
+
 #if isMySQL
         services.AddDistributedMySqlCache(options =>
         {
@@ -140,6 +146,8 @@ public class Startup
             //app.UseHsts(); //enable if need Strict-Transport-Security header
         }
 
+        app.UseResponseCompression();
+
         //enable aggressive caching of static files
         app.UseStaticFiles(new StaticFileOptions
         {
@@ -175,12 +183,11 @@ public class Startup
         // security headers
         app.Use(async (context, next) =>
         {
-            //TODO FIX if set ContentType here, then responseWrite fails with "cannot write to the response body, response has completed"
-            //context.Response.ContentType = "text/html; charset=utf-8"; //default content type
-            //context.Response.Headers.Add("X-Content-Type-Options", "NOSNIFF"); //TODO FIX cannot set this header till fix issue with ContentType
-            context.Response.Headers.Append("X-Frame-Options", "DENY"); // SAMEORIGIN allows site iframes
+            context.Response.ContentType = "text/html; charset=utf-8"; //default content type
+            context.Response.Headers.XContentTypeOptions = "NOSNIFF";
+            context.Response.Headers.XFrameOptions = "DENY"; // SAMEORIGIN allows site iframes
             context.Response.Headers.Append("X-Permitted-Cross-Domain-Policies", "master-only");
-            context.Response.Headers.Append("X-XSS-Protection", "1; mode=block");
+            context.Response.Headers.XXSSProtection = "1; mode=block";
             await next();
         });
 

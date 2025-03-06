@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace osafw;
@@ -25,7 +24,7 @@ public class MyHandlerMiddleware
             response.Clear();
 
             // Set allowed method And headers
-            response.Headers.Append("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+            response.Headers.AccessControlAllowMethods = "GET, POST, PUT, PATCH, DELETE, OPTIONS";
 
             // allow any custom headers
             Microsoft.Extensions.Primitives.StringValues access_control_request_headers = new("");
@@ -33,21 +32,20 @@ public class MyHandlerMiddleware
                 request.Headers.TryGetValue("Access-Control-Request-Headers", out access_control_request_headers);
 
             if (is_access_control_request_headers)
-            {
-                response.Headers.Append("Access-Control-Allow-Headers", access_control_request_headers.ToString());
-            }
-            // response.AppendHeader("Access-Control-Allow-Headers", "*")
-            // response.AppendHeader("Access-Control-Expose-Headers", "*")
+                response.Headers.AccessControlAllowHeaders = access_control_request_headers;
+
+            // response.Headers.AccessControlAllowHeaders = "*";
+            // response.Headers.AccessControlExposeHeaders = "*";
 
             // allow credentials
-            response.Headers.Append("Access-Control-Allow-Credentials", "true");
+            response.Headers.AccessControlAllowCredentials = "true";
 
             // Set allowed origin
             /*Dim origin = context.Request.Headers("Origin")
             If Not IsNothing(origin) Then
-                response.AppendHeader("Access-Control-Allow-Origin", origin)
+                response.Headers.AccessControlAllowOrigin = origin;
             Else
-                response.AppendHeader("Access-Control-Allow-Origin", "*")
+                response.Headers.AccessControlAllowOrigin = "*";
             End If*/
 
             // end request

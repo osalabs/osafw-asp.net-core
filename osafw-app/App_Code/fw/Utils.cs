@@ -602,8 +602,8 @@ public class Utils
     {
         filename = filename.Replace("\"", "'"); // quote doublequotes
 
-        response.Headers.Append("Content-type", "text/csv");
-        response.Headers.Append("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+        response.Headers.ContentType = "text/csv";
+        response.Headers.ContentDisposition = $"attachment; filename=\"{filename}\"";
 
         HttpResponseWritingExtensions.WriteAsync(response, Utils.getCSVExport(csv_export_headers, csv_export_fields, rows).ToString()).Wait();
     }
@@ -632,8 +632,8 @@ public class Utils
 
         filename = filename.Replace("\"", "_");
 
-        fw.response.Headers.Append("Content-type", "application/vnd.ms-excel");
-        fw.response.Headers.Append("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+        fw.response.Headers.ContentType = "application/vnd.ms-excel";
+        fw.response.Headers.ContentDisposition = $"attachment; filename=\"{filename}\"";
 
         //output headers
         ParsePage parser = new(fw);

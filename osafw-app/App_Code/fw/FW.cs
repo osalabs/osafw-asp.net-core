@@ -1134,9 +1134,8 @@ public class FW : IDisposable
         logger(LogLevel.DEBUG, "parsing page bdir=", bdir, ", tpl=", tpl_name);
         ParsePage parser_obj = new(this);
         string page = parser_obj.parse_page(bdir, tpl_name, hf);
-        //TODO FIX if set ContentType here, then responseWrite fails with "cannot write to the response body, response has completed"
-        //if (!this.response.HasStarted) response.Headers.Add("Content-type", "text/html; charset=utf-8");
-        //response.ContentType= "text/html; charset=utf-8";
+        // no need to set content type here, as it's set in Startup.cs
+        //if (!this.response.HasStarted) response.ContentType = "text/html; charset=utf-8";
         responseWrite(page);
     }
 
@@ -1378,9 +1377,9 @@ public class FW : IDisposable
         logger(LogLevel.DEBUG, "sending file response  = ", filepath, " as ", attname, " content-type:", ContentType);
         attname = Regex.Replace(attname, @"[^\w. \-]+", "_");
 
-        response.Headers.Append("Content-type", ContentType);
-        response.Headers.Append("Content-Length", Utils.fileSize(filepath).ToString());
-        response.Headers.Append("Content-Disposition", $"{ContentDisposition}; filename=\"{attname}\"");
+        response.Headers.ContentType = ContentType;
+        response.Headers.ContentLength = Utils.fileSize(filepath);
+        response.Headers.ContentDisposition = $"{ContentDisposition}; filename=\"{attname}\"";
         response.SendFileAsync(filepath).Wait();
     }
 

@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
-using System;
+﻿using System;
 using System.Collections;
 using System.IO;
 using System.Text.RegularExpressions;
@@ -214,8 +213,8 @@ public class ConvUtils
                 out_filename = "output";
             }
             // out to browser
-            fw.response.Headers.Append("Content-type", "application/vnd.ms-excel");
-            fw.response.Headers.Append("Content-Disposition", "attachment; filename=\"" + out_filename + ".xls\"");
+            fw.response.Headers.ContentType = "application/vnd.ms-excel";
+            fw.response.Headers.ContentDisposition = $"attachment; filename=\"{out_filename}.xls\"";
             fw.responseWrite(html_data);
         }
         else
