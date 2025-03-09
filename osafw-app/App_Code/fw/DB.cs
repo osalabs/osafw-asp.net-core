@@ -37,6 +37,16 @@ using System.Text.RegularExpressions;
 
 namespace osafw;
 
+public class DBNameAttribute : Attribute
+{
+    public string Description { get; set; }
+
+    public DBNameAttribute(string description)
+    {
+        Description = description;
+    }
+}
+
 public class DBRow : Dictionary<string, string>
 {
 
@@ -635,11 +645,12 @@ public class DB : IDisposable
 
         Type type = typeof(T);
         int fieldCount = dbread.FieldCount;
+        var _map = GetClassMapByName<T>(type.Name);
         for (int i = 0; i <= fieldCount - 1; i++)
         {
             if (is_check_ole_types && UNSUPPORTED_OLE_TYPES.ContainsKey(dbread.GetDataTypeName(i))) continue;
 
-            PropertyInfo property = type.GetProperty(dbread.GetName(i), BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
+            PropertyInfo property = _map[dbread.GetName(i)];
 
             if (property != null && property.CanWrite)
             {
@@ -2290,7 +2301,7 @@ public class DB : IDisposable
             class_mapping_cache[name] = type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static)
                                                  .ToDictionary(prop =>
                                                  {
-                                                     var attr = prop.GetCustomAttribute<DescriptionAttribute>(inherit: false);
+                                                     var attr = prop.GetCustomAttribute<DBNameAttribute>(inherit: false);
                                                      return attr?.Description ?? prop.Name;
                                                  });
         }
@@ -2300,6 +2311,7 @@ public class DB : IDisposable
 
     /// <summary>
     /// To make this work generic class should gave get and set for every property that expected to be converted.
+    /// Use DBName attribute if field name in DB is defferent the in object class
     /// 
     /// Example:
     /// class MyClass
@@ -2319,20 +2331,11 @@ public class DB : IDisposable
     {
         T obj = new T();
         Type type = typeof(T);
-        //if ( !class_mapping_cache.ContainsKey(type.Name))
-        //{
-        //    class_mapping_cache[type.Name] = type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static)
-        //                                         .ToDictionary(prop =>
-        //                                         {
-        //                                             var attr = prop.GetCustomAttribute<DescriptionAttribute>(inherit: false);
-        //                                             return attr?.Description ?? prop.Name;
-        //                                         });
-        //}
 
         var _map = GetClassMapByName<T>(type.Name);
         foreach (var entry in hashtable)
         {
-            PropertyInfo property = _map[entry.Key];//type.GetProperty(d.Key, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
+            PropertyInfo property = _map[entry.Key];
 
             if (property != null && property.CanWrite)
             {
