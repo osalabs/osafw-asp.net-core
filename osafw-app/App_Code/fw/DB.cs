@@ -21,6 +21,7 @@ using MySqlConnector;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Data;
 using System.Data.Common;
 using System.Data.Odbc;
@@ -208,6 +209,7 @@ public class DB : IDisposable
 
     private static Hashtable schemafull_cache; // cache for the full schema, lifetime = app lifetime
     private static Hashtable schema_cache; // cache for the schema, lifetime = app lifetime
+    private static Dictionary<string, Dictionary<string, PropertyInfo?>> class_mapping_cache = null; // cache for converting DB object to class
 
     public static string last_sql = ""; // last executed sql
     public static int SQL_QUERY_CTR = 0; // counter for SQL queries during request
@@ -609,6 +611,21 @@ public class DB : IDisposable
         return result;
     }
 
+    private Dictionary<string, object> readRowRaw(DbDataReader dbread)
+    {
+        if (!dbread.HasRows)
+            return []; //if no rows - return empty row
+
+        int fieldCount = dbread.FieldCount;
+        Dictionary<string, object> result = new(fieldCount); //pre-allocate capacity
+        for (int i = 0; i <= fieldCount - 1; i++)
+        {
+            if (is_check_ole_types && UNSUPPORTED_OLE_TYPES.ContainsKey(dbread.GetDataTypeName(i))) continue;
+            result.Add(dbread.GetName(i), dbread[i]);
+        }
+        return result;
+    }
+
     //read row values as a strings to generic type
     private T readRow<T>(DbDataReader dbread) where T : new()
     {
@@ -620,24 +637,13 @@ public class DB : IDisposable
         int fieldCount = dbread.FieldCount;
         for (int i = 0; i <= fieldCount - 1; i++)
         {
-            try
+            if (is_check_ole_types && UNSUPPORTED_OLE_TYPES.ContainsKey(dbread.GetDataTypeName(i))) continue;
+
+            PropertyInfo property = type.GetProperty(dbread.GetName(i), BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
+
+            if (property != null && property.CanWrite)
             {
-                if (is_check_ole_types && UNSUPPORTED_OLE_TYPES.ContainsKey(dbread.GetDataTypeName(i))) continue;
-
-                string value = dbread[i].ToString();
-                string name = dbread.GetName(i);
-
-                PropertyInfo property = type.GetProperty(name, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
-
-                if (property != null && property.CanWrite)
-                {
-                    object resultValue = Convert.ChangeType(value, property.PropertyType);
-                    property.SetValue(result, resultValue);
-                }
-            }
-            catch (Exception)
-            {
-                break;
+                property.SetValue(result, (dbread[i] == null ) ? null : Convert.ChangeType(dbread[i], property.PropertyType));
             }
         }
         return result;
@@ -694,9 +700,9 @@ public class DB : IDisposable
     {
         DbDataReader dbread = query(sql, @params);
         dbread.Read();
-        var result = readRow(dbread);
+        var result = readRow<T>(dbread);
         dbread.Close();
-        return ConvUtils.DictionaryToClass<T>(result);
+        return result;
     }
 
     public DBList readArray(DbDataReader dbread)
@@ -1264,6 +1270,102 @@ public class DB : IDisposable
         };
     }
 
+    public DBQueryAndParams prepareParams<T>(string table, T data, string join_type = "where", string suffix = "")
+    {
+        connect();
+        loadTableSchema(table);
+        if (!schema.ContainsKey(table))
+            throw new ApplicationException("table [" + table + "] does not defined in FW.config(\"schema\")");
+
+        Type type = typeof(T);
+        PropertyInfo[] fields = type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+
+        if (fields.Length == 0)
+            return new DBQueryAndParams()
+            {
+                sql = "",
+                @params = []
+            };
+
+        var is_for_insert = (join_type == "insert");
+        var is_for_where = (join_type == "where"); // if for where "IS NULL" will be used instead "=NULL"
+
+        var join_delimiter = is_for_where ? " AND " : ",";
+
+        ArrayList fields_list = new(fields.Length);
+        List<string> params_sqls = [];
+
+        Hashtable @params = new(fields.Length);
+        var reW = new Regex(@"\W"); //pre-compile regex
+
+        foreach (var field in fields)
+        {
+            var fname = field.Name;
+            var dbop = field2Op(table, fname, field.GetValue(data), is_for_where);
+
+            var delim = $" {dbop.opstr} ";
+            var param_name = reW.Replace(fname, "_") + suffix; // replace any non-alphanum in param names and add suffix
+
+            // for insert VALUES it will be form @p1,@p2,... i.e. without field names
+            // for update/where we need it in form like "field="
+            string sql = is_for_insert ? "" : fname + delim;
+
+            if (dbop.is_value)
+            {
+                // if we have value - add it to params
+                if (dbop.op == DBOps.BETWEEN)
+                {
+                    // special case for between
+                    @params[param_name + "_1"] = ((IList)dbop.value)[0];
+                    @params[param_name + "_2"] = ((IList)dbop.value)[1];
+                    // BETWEEN @p1 AND @p2
+                    sql += $"@{param_name}_1 AND @{param_name}_2";
+                }
+                else if (dbop.op == DBOps.IN || dbop.op == DBOps.NOTIN)
+                {
+                    List<string> sql_params = new(((IList)dbop.value).Count);
+                    var i = 1;
+                    foreach (var pvalue in (IList)dbop.value)
+                    {
+                        @params[param_name + "_" + i] = pvalue;
+                        sql_params.Add("@" + param_name + "_" + i);
+                        i += 1;
+                    }
+                    // [NOT] IN (@p1,@p2,@p3...)
+                    sql += "(" + (sql_params.Count > 0 ? string.Join(",", sql_params) : "NULL") + ")";
+                }
+                else
+                {
+                    if (dbop.value == DB.NOW)
+                    {
+                        // if value is NOW object - don't add it to params, just use NOW()/GETDATE() in sql
+                        sql += sqlNOW();
+                    }
+                    else
+                    {
+                        @params[param_name] = dbop.value;
+                        sql += "@" + param_name;
+                    }
+                }
+                fields_list.Add(fname); // only if field has a parameter - include in the list
+            }
+            else
+            {
+                sql += dbop.sql; //if no value - add operation's raw sql if any
+            }
+            params_sqls.Add(sql);
+        }
+        //logger(LogLevel.DEBUG, "fields:", fields);
+        //logger(LogLevel.DEBUG, "params:", params_sqls);
+
+        return new DBQueryAndParams()
+        {
+            fields = fields_list,
+            sql = string.Join(join_delimiter, params_sqls),
+            @params = @params
+        };
+    }
+
     public DBOperation field2Op(string table, string field_name, object field_value_or_op, bool is_for_where = false)
     {
         DBOperation dbop;
@@ -1589,6 +1691,34 @@ public class DB : IDisposable
         return (int)insert_id;
     }
 
+    public int insert<T>(string table, T data)
+    {
+        var qp = buildInsert(table, data);
+
+        object insert_id;
+
+        if (dbtype == DBTYPE_SQLSRV)
+            // SELECT SCOPE_IDENTITY() not always return what we need
+            insert_id = exec(qp.sql, qp.@params, true);
+        else if (dbtype == DBTYPE_OLE)
+        {
+            exec(qp.sql, qp.@params);
+            insert_id = valuep("SELECT @@identity");
+        }
+        else if (dbtype == DBTYPE_MYSQL)
+        {
+            insert_id = exec(qp.sql, qp.@params, true);
+        }
+        else
+            throw new ApplicationException("Get last insert ID for DB type [" + dbtype + "] not implemented");
+
+        // if table doesn't have identity insert_id would be DBNull
+        if (insert_id == DBNull.Value || insert_id == null)
+            insert_id = 0;
+
+        return (int)insert_id;
+    }
+
     public int updatep(string sql, Hashtable @params = null)
     {
         return exec(sql, @params);
@@ -1597,6 +1727,12 @@ public class DB : IDisposable
     public int update(string table, Hashtable fields, Hashtable where)
     {
         var qp = buildUpdate(table, fields, where);
+        return exec(qp.sql, qp.@params);
+    }
+
+    public int update<T>(string table, T data, Hashtable where)
+    {
+        var qp = buildUpdate<T>(table, data, where);
         return exec(qp.sql, qp.@params);
     }
 
@@ -1687,11 +1823,47 @@ public class DB : IDisposable
         return result;
     }
 
+    private DBQueryAndParams buildUpdate<T>(string table, T data, Hashtable where)
+    {
+        DBQueryAndParams result = new()
+        {
+            sql = "UPDATE " + qid(table) + " " + " SET "
+        };
+
+        //logger(LogLevel.DEBUG, "buildUpdate:", table, fields);
+
+        var set_params = prepareParams<T>(table, data, "update", "_SET");
+        result.sql += set_params.sql;
+        result.@params = set_params.@params;
+
+        if (where.Count > 0)
+        {
+            var where_params = prepareParams(table, where);
+            result.sql += " WHERE " + where_params.sql;
+            Utils.mergeHash(result.@params, where_params.@params);
+        }
+
+        return result;
+    }
+
     private DBQueryAndParams buildInsert(string table, Hashtable fields)
     {
         DBQueryAndParams result = new();
 
         var insert_params = prepareParams(table, fields, "insert");
+        var sql_fields = string.Join(",", insert_params.fields.ToArray());
+
+        result.sql = "INSERT INTO " + qid(table) + " (" + sql_fields + ") VALUES (" + insert_params.sql + ")";
+        result.@params = insert_params.@params;
+
+        return result;
+    }
+
+    private DBQueryAndParams buildInsert<T>(string table, T data)
+    {
+        DBQueryAndParams result = new();
+
+        var insert_params = prepareParams<T>(table, data, "insert");
         var sql_fields = string.Join(",", insert_params.fields.ToArray());
 
         result.sql = "INSERT INTO " + qid(table) + " (" + sql_fields + ") VALUES (" + insert_params.sql + ")";
@@ -2047,6 +2219,7 @@ public class DB : IDisposable
         schemafull_cache?.Clear();
         schema_cache?.Clear();
         schema?.Clear();
+        class_mapping_cache?.Clear();
     }
 
     // This method for unit tests
@@ -2104,6 +2277,70 @@ public class DB : IDisposable
         }
 
         return result;
+    }
+
+    private static Dictionary<string, PropertyInfo?> GetClassMapByName<T>(string name) 
+    {
+        Type type = typeof(T);
+        if (class_mapping_cache == null)
+            class_mapping_cache = new Dictionary<string, Dictionary<string, PropertyInfo?>>();
+        
+        if (!class_mapping_cache.ContainsKey(name))
+        {
+            class_mapping_cache[name] = type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static)
+                                                 .ToDictionary(prop =>
+                                                 {
+                                                     var attr = prop.GetCustomAttribute<DescriptionAttribute>(inherit: false);
+                                                     return attr?.Description ?? prop.Name;
+                                                 });
+        }
+
+        return class_mapping_cache[name];
+    }
+
+    /// <summary>
+    /// To make this work generic class should gave get and set for every property that expected to be converted.
+    /// 
+    /// Example:
+    /// class MyClass
+    /// {
+    ///    public int id { get; set; }
+    ///    public string name { get; set; }
+    /// }
+    /// Hashtable ht = new Hashtable() { { "id", 1 }, { "name", "John" } };
+    /// MyClass myClass = new MyClass();
+    /// myClass = ConvUtils.HashtableToClass<MyClass>(ht);
+    /// 
+    /// </summary>
+    /// <typeparam name="T">Class that hastable be converted to </typeparam>
+    /// <param name="hashtable">One level deep hashtable where keys has the same name as class properties</param>
+    /// <returns>class of passed generic type</returns>
+    public static T DictionaryToClass<T>(Dictionary<string, object> hashtable) where T : new()
+    {
+        T obj = new T();
+        Type type = typeof(T);
+        //if ( !class_mapping_cache.ContainsKey(type.Name))
+        //{
+        //    class_mapping_cache[type.Name] = type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static)
+        //                                         .ToDictionary(prop =>
+        //                                         {
+        //                                             var attr = prop.GetCustomAttribute<DescriptionAttribute>(inherit: false);
+        //                                             return attr?.Description ?? prop.Name;
+        //                                         });
+        //}
+
+        var _map = GetClassMapByName<T>(type.Name);
+        foreach (var entry in hashtable)
+        {
+            PropertyInfo property = _map[entry.Key];//type.GetProperty(d.Key, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
+
+            if (property != null && property.CanWrite)
+            {
+                property.SetValue(obj, (entry.Value == null) ? null : Convert.ChangeType(entry.Value, property.PropertyType));
+            }
+        }
+
+        return obj;
     }
 
     [SupportedOSPlatform("windows")]
