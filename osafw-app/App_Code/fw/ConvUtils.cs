@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Text.RegularExpressions;
 
 // see also http://stackoverflow.com/questions/1331926/calling-wkhtmltopdf-to-generate-pdf-from-html/1698839#1698839
@@ -232,4 +234,5 @@ public class ConvUtils
         html_data = html_data.Replace(((char)(174)).ToString(), "<sup><small>R</small></sup>");
         return html_data;
     }
+
 }
