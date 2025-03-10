@@ -97,22 +97,23 @@ public class TestController : FwController
     }
 
 
-    class MyTestGenericsClass
+    class UsersRow
     {
         public int id { get; set; }
+
         [DBName("email")]
         public string email2 { get; set; }
     }
-   
+
     public void GenericsAction()
     {
         var ht = new Dictionary<string, object>() { { "id", 1 }, { "email", "test@test.com" } };
-        var myClass = DB.DictionaryToClass<MyTestGenericsClass>(ht);
+        var myClass = DB.DictionaryToClass<UsersRow>(ht);
 
         var non_generic_test = db.rowp("SELECT TOP 1 id, email from users");
-        var generic_test = db.rowp<MyTestGenericsClass>("SELECT TOP 1 id, email from users");
+        var generic_test = db.rowp<UsersRow>("SELECT TOP 1 id, email from users");
 
-        var generic_test_array = db.arrayp<MyTestGenericsClass>("SELECT id, email from users");
+        var generic_test_array = db.arrayp<UsersRow>("SELECT id, email from users");
 
     }
 }
