@@ -192,7 +192,7 @@ public class FW : IDisposable
 #if isSentry
         //configure Sentry logging
         var env = Utils.toStr(config("config_override"));
-        env = env == "" ? "live" : env;
+        env = env == "" ? "production" : env;
         Sentry.SentrySdk.ConfigureScope(scope =>
         {
             scope.User = new Sentry.SentryUser { Email = Session("login") };
