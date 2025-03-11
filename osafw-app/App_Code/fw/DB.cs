@@ -2309,13 +2309,13 @@ public class DB : IDisposable
     /// <typeparam name="T">Class that hastable be converted to</typeparam>
     /// <param name="kv">key-value pairs where keys has the same name as class properties</param>
     /// <returns>class of passed generic type</returns>
-    public static T toClass<T>(IDictionary kv) where T : new()
+    public static T toClass<T>(IDictionary kv, Dictionary<string, PropertyInfo> props = null) where T : new()
     {
         ArgumentNullException.ThrowIfNull(kv);
 
         T obj = new();
 
-        var props = getWritableProperties<T>();
+        props ??= getWritableProperties<T>();
         foreach (DictionaryEntry entry in kv)
         {
             string key = entry.Key?.ToString();
@@ -2326,6 +2326,19 @@ public class DB : IDisposable
         }
 
         return obj;
+    }
+
+    // convert list of IDictionaries to list of specific clas sobjects
+    public static List<T> toClass<T>(IList<IDictionary> list) where T : new()
+    {
+        ArgumentNullException.ThrowIfNull(list);
+        var result = new List<T>(list.Count);
+        var props = getWritableProperties<T>();
+        foreach (IDictionary kv in list)
+        {
+            result.Add(toClass<T>(kv, props));
+        }
+        return result;
     }
 
     /// <summary>
