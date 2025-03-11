@@ -108,12 +108,17 @@ public class TestController : FwController
     public void GenericsAction()
     {
         var ht = new Dictionary<string, object>() { { "id", 1 }, { "email", "test@test.com" } };
-        var myClass = DB.toClass<UsersRow>(ht);
+        var user = DB.toClass<UsersRow>(ht);
+        logger("user:", user);
 
         var non_generic_test = db.rowp("SELECT TOP 1 id, email from users");
+        logger("non_generic_test:", non_generic_test);
         var generic_test = db.rowp<UsersRow>("SELECT TOP 1 id, email from users");
+        logger("generic_test:", generic_test);
 
         var generic_test_array = db.arrayp<UsersRow>("SELECT id, email from users");
+        logger("generic_test_array:", generic_test_array);
 
+        rw("done");
     }
 }

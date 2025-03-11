@@ -620,7 +620,7 @@ public class DB : IDisposable
         return result;
     }
 
-    //read row values as a strings into generic type
+    //read database row values into generic type
     private T readRow<T>(DbDataReader dbread) where T : new()
     {
         T result = new();
@@ -632,8 +632,8 @@ public class DB : IDisposable
         {
             if (is_check_ole_types && UNSUPPORTED_OLE_TYPES.ContainsKey(dbread.GetDataTypeName(i))) continue;
 
-            if (props.TryGetValue(dbread.GetName(i), out PropertyInfo property))
-                property.SetValue(result, dbread.IsDBNull(i) ? null : dbread.GetValue(i));
+            object value = dbread.IsDBNull(i) ? null : dbread.GetValue(i);
+            setPropertyValue(result, props, dbread.GetName(i), value);
         }
         return result;
     }
@@ -2299,28 +2299,65 @@ public class DB : IDisposable
     /// class UsersRow
     /// {
     ///    public int id { get; set; }
+    ///    [DBName("iname")]
     ///    public string name { get; set; }
     /// }
-    /// var ht = new Hashtable() { { "id", 1 }, { "name", "John" } };
+    /// var ht = new Hashtable() { { "id", 1 }, { "iname", "John" } };
     /// var myClass = DB.toClass<UsersRow>(ht);
     /// 
     /// </summary>
-    /// <typeparam name="T">Class that hastable be converted to </typeparam>
-    /// <param name="hashtable">One level deep hashtable where keys has the same name as class properties</param>
+    /// <typeparam name="T">Class that hastable be converted to</typeparam>
+    /// <param name="kv">key-value pairs where keys has the same name as class properties</param>
     /// <returns>class of passed generic type</returns>
-    public static T toClass<T>(Dictionary<string, object> hashtable) where T : new()
+    public static T toClass<T>(IDictionary kv) where T : new()
     {
+        ArgumentNullException.ThrowIfNull(kv);
+
         T obj = new();
 
         var props = getWritableProperties<T>();
-        foreach (var entry in hashtable)
+        foreach (DictionaryEntry entry in kv)
         {
-            if (props.TryGetValue(entry.Key, out PropertyInfo property))
-                property.SetValue(obj, entry.Value == null ? null : Convert.ChangeType(entry.Value, property.PropertyType));
+            string key = entry.Key?.ToString();
+            if (key == null)
+                continue;
+
+            setPropertyValue(obj, props, key, entry.Value);
         }
 
         return obj;
     }
+
+    /// <summary>
+    /// set property value of object according to field/value pair
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="obj"></param>
+    /// <param name="props"></param>
+    /// <param name="field"></param>
+    /// <param name="value"></param>
+    private static void setPropertyValue<T>(T obj, Dictionary<string, PropertyInfo> props, string field, object value) where T : new()
+    {
+        if (props.TryGetValue(field, out PropertyInfo property))
+        {
+            if (value == null)
+                property.SetValue(obj, null);
+            else
+            {
+                // Handle nullable types by extracting the underlying type if necessary
+                Type targetType = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
+
+                // Special handling for enums
+                object convertedValue;
+                if (targetType.IsEnum)
+                    convertedValue = Enum.Parse(targetType, value.ToString());
+                else
+                    convertedValue = Convert.ChangeType(value, targetType);
+                property.SetValue(obj, convertedValue);
+            }
+        }
+    }
+
 
     [SupportedOSPlatform("windows")]
     // map OLE type to FW's
