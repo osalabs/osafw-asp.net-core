@@ -21,7 +21,6 @@ using MySqlConnector;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Data;
 using System.Data.Common;
 using System.Data.Odbc;
@@ -219,7 +218,7 @@ public class DB : IDisposable
 
     private static Hashtable schemafull_cache; // cache for the full schema, lifetime = app lifetime
     private static Hashtable schema_cache; // cache for the schema, lifetime = app lifetime
-    private static Dictionary<string, Dictionary<string, PropertyInfo?>> class_mapping_cache = null; // cache for converting DB object to class
+    private static Dictionary<string, Dictionary<string, PropertyInfo>> class_mapping_cache = []; // cache for converting DB object to class
 
     public static string last_sql = ""; // last executed sql
     public static int SQL_QUERY_CTR = 0; // counter for SQL queries during request
@@ -621,41 +620,20 @@ public class DB : IDisposable
         return result;
     }
 
-    private Dictionary<string, object> readRowRaw(DbDataReader dbread)
-    {
-        if (!dbread.HasRows)
-            return []; //if no rows - return empty row
-
-        int fieldCount = dbread.FieldCount;
-        Dictionary<string, object> result = new(fieldCount); //pre-allocate capacity
-        for (int i = 0; i <= fieldCount - 1; i++)
-        {
-            if (is_check_ole_types && UNSUPPORTED_OLE_TYPES.ContainsKey(dbread.GetDataTypeName(i))) continue;
-            result.Add(dbread.GetName(i), dbread[i]);
-        }
-        return result;
-    }
-
-    //read row values as a strings to generic type
+    //read row values as a strings into generic type
     private T readRow<T>(DbDataReader dbread) where T : new()
     {
-        T result = new T();
+        T result = new();
         if (!dbread.HasRows)
-            return new T(); //if no rows - return empty row
+            return result; //if no rows - return empty row
 
-        Type type = typeof(T);
-        int fieldCount = dbread.FieldCount;
-        var _map = GetClassMapByName<T>(type.Name);
-        for (int i = 0; i <= fieldCount - 1; i++)
+        var props = getWritableProperties<T>();
+        for (int i = 0; i < dbread.FieldCount; i++)
         {
             if (is_check_ole_types && UNSUPPORTED_OLE_TYPES.ContainsKey(dbread.GetDataTypeName(i))) continue;
 
-            PropertyInfo property = _map[dbread.GetName(i)];
-
-            if (property != null && property.CanWrite)
-            {
-                property.SetValue(result, (dbread[i] == null ) ? null : Convert.ChangeType(dbread[i], property.PropertyType));
-            }
+            if (props.TryGetValue(dbread.GetName(i), out PropertyInfo property))
+                property.SetValue(result, dbread.IsDBNull(i) ? null : dbread.GetValue(i));
         }
         return result;
     }
@@ -2230,7 +2208,7 @@ public class DB : IDisposable
         schemafull_cache?.Clear();
         schema_cache?.Clear();
         schema?.Clear();
-        class_mapping_cache?.Clear();
+        class_mapping_cache.Clear();
     }
 
     // This method for unit tests
@@ -2290,23 +2268,27 @@ public class DB : IDisposable
         return result;
     }
 
-    private static Dictionary<string, PropertyInfo?> GetClassMapByName<T>(string name) 
+    /// <summary>
+    /// Get writable properties of class T
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <returns></returns>
+    private static Dictionary<string, PropertyInfo> getWritableProperties<T>()
     {
         Type type = typeof(T);
-        if (class_mapping_cache == null)
-            class_mapping_cache = new Dictionary<string, Dictionary<string, PropertyInfo?>>();
-        
-        if (!class_mapping_cache.ContainsKey(name))
+        if (!class_mapping_cache.TryGetValue(type.FullName, out var value))
         {
-            class_mapping_cache[name] = type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static)
-                                                 .ToDictionary(prop =>
-                                                 {
-                                                     var attr = prop.GetCustomAttribute<DBNameAttribute>(inherit: false);
-                                                     return attr?.Description ?? prop.Name;
-                                                 });
+            value = type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                        .Where(prop => prop.CanWrite)
+                        .ToDictionary(prop =>
+                        {
+                            var attr = prop.GetCustomAttribute<DBNameAttribute>(false);
+                            return attr?.Description ?? prop.Name;
+                        });
+            class_mapping_cache[type.FullName] = value;
         }
 
-        return class_mapping_cache[name];
+        return value;
     }
 
     /// <summary>
@@ -2314,33 +2296,27 @@ public class DB : IDisposable
     /// Use DBName attribute if field name in DB is defferent the in object class
     /// 
     /// Example:
-    /// class MyClass
+    /// class UsersRow
     /// {
     ///    public int id { get; set; }
     ///    public string name { get; set; }
     /// }
-    /// Hashtable ht = new Hashtable() { { "id", 1 }, { "name", "John" } };
-    /// MyClass myClass = new MyClass();
-    /// myClass = ConvUtils.HashtableToClass<MyClass>(ht);
+    /// var ht = new Hashtable() { { "id", 1 }, { "name", "John" } };
+    /// var myClass = DB.toClass<UsersRow>(ht);
     /// 
     /// </summary>
     /// <typeparam name="T">Class that hastable be converted to </typeparam>
     /// <param name="hashtable">One level deep hashtable where keys has the same name as class properties</param>
     /// <returns>class of passed generic type</returns>
-    public static T DictionaryToClass<T>(Dictionary<string, object> hashtable) where T : new()
+    public static T toClass<T>(Dictionary<string, object> hashtable) where T : new()
     {
-        T obj = new T();
-        Type type = typeof(T);
+        T obj = new();
 
-        var _map = GetClassMapByName<T>(type.Name);
+        var props = getWritableProperties<T>();
         foreach (var entry in hashtable)
         {
-            PropertyInfo property = _map[entry.Key];
-
-            if (property != null && property.CanWrite)
-            {
-                property.SetValue(obj, (entry.Value == null) ? null : Convert.ChangeType(entry.Value, property.PropertyType));
-            }
+            if (props.TryGetValue(entry.Key, out PropertyInfo property))
+                property.SetValue(obj, entry.Value == null ? null : Convert.ChangeType(entry.Value, property.PropertyType));
         }
 
         return obj;

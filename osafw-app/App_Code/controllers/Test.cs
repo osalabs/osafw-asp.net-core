@@ -108,7 +108,7 @@ public class TestController : FwController
     public void GenericsAction()
     {
         var ht = new Dictionary<string, object>() { { "id", 1 }, { "email", "test@test.com" } };
-        var myClass = DB.DictionaryToClass<UsersRow>(ht);
+        var myClass = DB.toClass<UsersRow>(ht);
 
         var non_generic_test = db.rowp("SELECT TOP 1 id, email from users");
         var generic_test = db.rowp<UsersRow>("SELECT TOP 1 id, email from users");
