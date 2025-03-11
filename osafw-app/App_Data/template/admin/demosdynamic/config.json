@@ -105,39 +105,24 @@
                     "type": "plaintext"
                 },
                 {
-                    "type": "row",
-                    "class": ""
+                  "type": "row",
+                  "class": "form-row"
                 },
                     {
-                        "type": "col",
-                        "class": "col-lg-6"
-                    },
-                        {
-                            "field": "fint",
-                            "label": "Integer number",
-                            "type": "plaintext",
-                            "class_label": "col-md-3 col-lg-6",
-                            "class_contents": "col-3"
-                        },
-                    {
-                        "type": "col_end"
+                        "field": "fint",
+                        "label": "Integer number",
+                        "type": "plaintext",
+                        "class": false
                     },
                     {
-                        "type": "col",
-                        "class": "col-lg-6"
-                    },
-                        {
-                            "field": "ffloat",
-                            "label": "Float number",
-                            "type": "float",
-                            "class_label": "col-md-3 col-lg-6",
-                            "class_contents": "col-3"
-                        },
-                    {
-                        "type": "col_end"
+                        "field": "ffloat",
+                        "label": "Float number",
+                        "type": "float",
+                        "class_label": "col-md-3",
+                        "class": false
                     },
                 {
-                    "type": "row_end"
+                  "type": "row_end"
                 },
                 {
                     "field": "fcombo",
@@ -330,42 +315,26 @@
                     "maxlength": 128
                 },
                 {
-                    "type": "row",
-                    "class": "row form-row"
+                  "type": "row",
+                  "class": "form-row"
                 },
                     {
-                        "type": "col",
-                        "class": "col-md-6"
-                    },
-                        {
-                            "field": "fint",
-                            "label": "Integer number",
-                            "type": "number",
-                            "min": 0,
-                            "max": 999999,
-                            "class_label": "col-6",
-                            "class_contents": "col-md-4"
-                        },
-                    {
-                        "type": "col_end"
+                        "field": "fint",
+                        "label": "Integer number",
+                        "type": "number",
+                        "min": 0,
+                        "max": 999999,
+                        "class": false
                     },
                     {
-                        "type": "col",
-                        "class": "col-md-6"
-                    },
-                        {
-                            "field": "ffloat",
-                            "label": "Float number",
-                            "type": "number",
-                            "step": 0.1,
-                            "class_label": "col-6",
-                            "class_contents": "col"
-                        },
-                    {
-                        "type": "col_end"
+                        "field": "ffloat",
+                        "label": "Float number",
+                        "type": "number",
+                        "step": 0.1,
+                        "class": false
                     },
                 {
-                    "type": "row_end"
+                  "type": "row_end"
                 },
 
                 {

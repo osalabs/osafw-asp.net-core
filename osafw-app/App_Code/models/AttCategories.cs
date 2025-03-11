@@ -17,7 +17,7 @@ public class AttCategories : FwModel
     // just return first row by iname field (you may want to make it unique)
     public override DBRow oneByIcode(string icode)
     {
-        Hashtable where = new();
+        Hashtable where = [];
         where["icode"] = icode;
         return db.row(table_name, where);
     }

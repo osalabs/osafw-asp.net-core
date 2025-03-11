@@ -37,7 +37,7 @@ public class AdminSettingsController : FwAdminController
         if (!Utils.isEmpty(list_filter["icat"]))
         {
             list_where += " and icat=@icat";
-            list_where_params["icat"] = Utils.toStr(list_filter["icat"]);
+            list_where_params["icat"] = list_filter["icat"].toStr();
         }
     }
 

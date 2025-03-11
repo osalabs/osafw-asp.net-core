@@ -22,13 +22,18 @@ public class SitemapController : FwController
         fw.G["PAGE_LAYOUT"] = fw.G["PAGE_LAYOUT_PUBLIC"];
     }
 
+    public override void checkAccess()
+    {
+        //true - allow access to all, including visitors
+    }
+
     public Hashtable IndexAction()
     {
-        Hashtable ps = new();
+        Hashtable ps = [];
 
         Hashtable item = model.oneByFullUrl(base_url);
 
-        ArrayList pages_tree = model.tree(" status=0 ", new Hashtable(), "parent_id, prio desc, iname");
+        ArrayList pages_tree = model.tree(" status=0 ", [], "parent_id, prio desc, iname");
         _add_full_url(pages_tree);
 
         ps["page"] = item;

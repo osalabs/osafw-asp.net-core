@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
-using System;
+﻿using System;
 using System.Collections;
 using System.IO;
 using System.Text.RegularExpressions;
@@ -18,10 +17,7 @@ public class ConvUtils
     // landscape = True - will produce landscape output
     public static string parsePagePdf(FW fw, string bdir, string tpl_name, Hashtable ps, string out_filename = "", Hashtable options = null)
     {
-        if (options == null)
-        {
-            options = new Hashtable();
-        }
+        options ??= [];
         if (!options.ContainsKey("disposition"))
         {
             options["disposition"] = "attachment";
@@ -77,7 +73,7 @@ public class ConvUtils
         string cmdline = (string)FwConfig.settings["pdf_converter_args"];
         cmdline = cmdline.Replace("%IN", "\"" + htmlfile + "\"");
         cmdline = cmdline.Replace("%OUT", "\"" + filename + "\"");
-        if (options != null && Utils.toBool(options["landscape"]) == true)
+        if (options != null && options["landscape"].toBool())
         {
             cmdline = " -O Landscape " + cmdline;
         }
@@ -217,8 +213,8 @@ public class ConvUtils
                 out_filename = "output";
             }
             // out to browser
-            fw.response.Headers.Append("Content-type", "application/vnd.ms-excel");
-            fw.response.Headers.Append("Content-Disposition", "attachment; filename=\"" + out_filename + ".xls\"");
+            fw.response.Headers.ContentType = "application/vnd.ms-excel";
+            fw.response.Headers.ContentDisposition = $"attachment; filename=\"{out_filename}.xls\"";
             fw.responseWrite(html_data);
         }
         else

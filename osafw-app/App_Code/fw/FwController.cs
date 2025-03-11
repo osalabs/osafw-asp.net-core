@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Text.RegularExpressions;
@@ -21,7 +22,7 @@ public abstract class FwController
     public string base_url; // base url for the controller
     public string base_url_suffix; // additional base url suffix
 
-    public Hashtable form_new_defaults;   // optional, defaults for the fields in new form
+    public Hashtable form_new_defaults;   // optional, defaults for the fields in new form, overridden by item passed from request
     public string required_fields;        // optional, default required fields, space-separated
     public string save_fields;            // required, fields to save from the form to db, space-separated
     public string save_fields_checkboxes; // optional, checkboxes fields to save from the form to db, qw string: "field|def_value field2|def_value2"
@@ -38,7 +39,7 @@ public abstract class FwController
     protected string list_orderby;               // orderby for the list screen
     protected Hashtable list_filter;             // filter values for the list screen
     protected Hashtable list_filter_search;      // filter for the search columns from reqh("search")
-    protected Hashtable list_where_params = new();       // any sql params for the list_where
+    protected Hashtable list_where_params = [];       // any sql params for the list_where
     protected string list_where = " 1=1 ";       // where to use in list sql, default is non-deleted records (see setListSearch() )
     protected long list_count;                    // count of list rows returned from db
     protected ArrayList list_rows;               // list rows returned from db (array of hashes)
@@ -66,6 +67,7 @@ public abstract class FwController
 
     protected bool is_dynamic_show = false;      // true if controller has dynamic ShowAction, requires "show_fields" to be defined in config.json
     protected bool is_dynamic_showform = false;  // true if controller has dynamic ShowFormAction, requires "showform_fields" to be defined in config.json
+    protected string form_tab = "";              // current tab in the form
 
     protected bool is_userlists = false;         // true if controller should support UserLists
     protected bool is_activity_logs = false;     // true if controller should support ActivityLogs
@@ -98,6 +100,7 @@ public abstract class FwController
 
         return_url = reqs("return_url");
         related_id = reqs("related_id");
+        form_tab = reqs("tab");
         export_format = reqs("export");
 
         rbac = fw.model<Users>().getRBAC();
@@ -117,20 +120,20 @@ public abstract class FwController
         // logger("loaded config:")
         // logger(Me.config)
 
-        var model_name = Utils.toStr(this.config["model"]);
+        var model_name = this.config["model"].toStr();
         if (!string.IsNullOrEmpty(model_name))
             model0 = fw.model(model_name);
 
         // check/conv to str
-        required_fields = Utils.toStr(this.config["required_fields"]);
-        is_userlists = Utils.toBool(this.config["is_userlists"]);
+        required_fields = this.config["required_fields"].toStr();
+        is_userlists = this.config["is_userlists"].toBool();
 
         // save_fields could be defined as qw string - check and convert
         var save_fields_raw = this.config["save_fields"];
         if (save_fields_raw is IList list)
             save_fields = Utils.qwRevert(list); // not optimal, but simplest for now
         else
-            save_fields = Utils.toStr(save_fields_raw);
+            save_fields = save_fields_raw.toStr();
 
         form_new_defaults = (Hashtable)this.config["form_new_defaults"];
 
@@ -139,33 +142,33 @@ public abstract class FwController
         if (save_fields_checkboxes_raw is IDictionary dictionary)
             save_fields_checkboxes = Utils.qhRevert(dictionary); // not optimal, but simplest for now
         else
-            save_fields_checkboxes = Utils.toStr(save_fields_checkboxes_raw);
+            save_fields_checkboxes = save_fields_checkboxes_raw.toStr();
 
         // save_fields_nullable could be defined as qw string - check and convert
         var save_fields_nullable_raw = this.config["save_fields_nullable"];
         if (save_fields_nullable_raw is IList list1)
             save_fields_nullable = Utils.qwRevert(list1); // not optimal, but simplest for now
         else
-            save_fields_nullable = Utils.toStr(save_fields_nullable_raw);
+            save_fields_nullable = save_fields_nullable_raw.toStr();
 
-        search_fields = Utils.toStr(this.config["search_fields"]);
-        list_sortdef = Utils.toStr(this.config["list_sortdef"]);
+        search_fields = this.config["search_fields"].toStr();
+        list_sortdef = this.config["list_sortdef"].toStr();
 
         var list_sortmap_raw = this.config["list_sortmap"];
         if (list_sortmap_raw is IDictionary)
             list_sortmap = (Hashtable)list_sortmap_raw;
         else
-            list_sortmap = Utils.qh(Utils.toStr(this.config["list_sortmap"]));
+            list_sortmap = Utils.qh(this.config["list_sortmap"].toStr());
 
-        related_field_name = Utils.toStr(this.config["related_field_name"]);
+        related_field_name = this.config["related_field_name"].toStr();
 
-        list_view = Utils.toStr(this.config["list_view"]);
+        list_view = this.config["list_view"].toStr();
 
-        is_dynamic_index = Utils.toBool(this.config["is_dynamic_index"]);
+        is_dynamic_index = this.config["is_dynamic_index"].toBool();
         if (is_dynamic_index)
         {
             // Whoah! list view is dynamic
-            view_list_defaults = Utils.toStr(this.config["view_list_defaults"]);
+            view_list_defaults = this.config["view_list_defaults"].toStr();
 
             // since view_list_map could be defined as qw string or as hashtable - check and convert
             var raw_view_list_map = this.config["view_list_map"];
@@ -174,10 +177,10 @@ public abstract class FwController
             else
                 view_list_map = Utils.qh((string)raw_view_list_map);
 
-            view_list_custom = Utils.toStr(this.config["view_list_custom"]);
+            view_list_custom = this.config["view_list_custom"].toStr();
         }
 
-        is_dynamic_index_edit = Utils.toBool(this.config["is_dynamic_index_edit"]);
+        is_dynamic_index_edit = this.config["is_dynamic_index_edit"].toBool();
         if (is_dynamic_index_edit)
         {
             //combine with request param
@@ -189,13 +192,13 @@ public abstract class FwController
             if (is_list_edit)
             {
                 //list edit is on - override view used for list
-                var list_edit = Utils.toStr(config["list_edit"]);
+                var list_edit = config["list_edit"].toStr();
                 if (!Utils.isEmpty(list_edit))
                     list_view = list_edit;
 
                 //override list defaults if set
                 if (!Utils.isEmpty(config["edit_list_defaults"]))
-                    view_list_defaults = Utils.toStr(config["edit_list_defaults"]);
+                    view_list_defaults = config["edit_list_defaults"].toStr();
 
                 //override list map if set
                 // since edit_list_map could be defined as qw string or as hashtable - check and convert
@@ -219,10 +222,10 @@ public abstract class FwController
                 search_fields = getViewListUserFields(); // just search in all visible fields if no specific fields defined
         }
 
-        is_dynamic_show = Utils.toBool(this.config["is_dynamic_show"]);
-        is_dynamic_showform = Utils.toBool(this.config["is_dynamic_showform"]);
+        is_dynamic_show = this.config["is_dynamic_show"].toBool();
+        is_dynamic_showform = this.config["is_dynamic_showform"].toBool();
 
-        route_return = Utils.toStr(this.config["route_return"]);
+        route_return = this.config["route_return"].toStr();
     }
 
     /// <summary>
@@ -266,7 +269,7 @@ public abstract class FwController
         if (fw.FORM[iname] != null && fw.FORM[iname].GetType() == typeof(Hashtable))
             return (Hashtable)fw.FORM[iname];
         else
-            return new Hashtable();
+            return [];
     }
 
     /// <summary>
@@ -277,8 +280,7 @@ public abstract class FwController
     /// <returns></returns>
     public string reqs(string iname, string def = "")
     {
-        string value = (string)(fw.FORM[iname] ?? def);
-        return value;
+        return fw.FORM[iname].toStr(def);
     }
 
     /// <summary>
@@ -289,7 +291,7 @@ public abstract class FwController
     /// <returns></returns>
     public int reqi(string iname, int def = 0)
     {
-        return Utils.toInt(fw.FORM[iname] ?? def);
+        return fw.FORM[iname].toInt(def);
     }
 
     /// <summary>
@@ -298,9 +300,9 @@ public abstract class FwController
     /// <param name="iname"></param>
     /// <param name="def">optional default value</param>
     /// <returns></returns>
-    public DateTime reqd(string iname, DateTime? def = null)
+    public DateTime? reqd(string iname, DateTime? def = null)
     {
-        return Utils.toDate(fw.FORM[iname] ?? def);
+        return fw.FORM[iname].toDateOrNull() ?? def;
     }
 
     /// <summary>
@@ -311,7 +313,7 @@ public abstract class FwController
     /// <returns></returns>
     public bool reqb(string iname, bool def = false)
     {
-        return Utils.toBool(fw.FORM[iname] ?? def);
+        return fw.FORM.ContainsKey(iname) ? fw.FORM[iname].toBool() : def;
     }
 
     public void rw(string str)
@@ -347,12 +349,11 @@ public abstract class FwController
     {
         Hashtable f = reqh("f");
 
-        if (session_key == null)
-            session_key = "_filter_" + fw.G["controller.action"];
+        session_key ??= "_filter_" + fw.G["controller.action"];
 
         Hashtable sfilter = fw.SessionHashtable(session_key);
-        if (sfilter == null || !(sfilter is Hashtable))
-            sfilter = new Hashtable();
+        if (sfilter == null || sfilter is not Hashtable)
+            sfilter = [];
 
         // if not forced filter - merge form filters to session filters
         bool is_dofilter = fw.FORM.ContainsKey("dofilter");
@@ -367,11 +368,11 @@ public abstract class FwController
             var userfilters_id = reqi("userfilters_id");
             if (userfilters_id > 0)
             {
-                Hashtable uf = fw.model<UserFilters>().one(userfilters_id);
+                var uf = fw.model<UserFilters>().one(userfilters_id);
                 Hashtable f1 = (Hashtable)Utils.jsonDecode(uf["idesc"]);
                 if (f1 != null)
                     f = f1;
-                if (Utils.toInt(uf["is_system"]) == 0)
+                if (!uf["is_system"].toBool())
                 {
                     f["userfilters_id"] = userfilters_id; // set filter id (for edit/delete) only if not system
                     f["userfilter"] = uf;
@@ -380,7 +381,7 @@ public abstract class FwController
             else
             {
                 // check if we have some filter loaded
-                userfilters_id = Utils.toInt(f["userfilters_id"]);
+                userfilters_id = f["userfilters_id"].toInt();
                 if (userfilters_id > 0)
                 {
                     // just ned info on this filter
@@ -391,8 +392,8 @@ public abstract class FwController
         }
 
         // paging
-        f["pagenum"] = Utils.toInt(f["pagenum"]); //sets default to 0 if no value or non-numeric
-        f["pagesize"] = Utils.toInt(f["pagesize"] ?? FormUtils.MAX_PAGE_ITEMS);
+        f["pagenum"] = f["pagenum"].toInt(); //sets default to 0 if no value or non-numeric
+        f["pagesize"] = f["pagesize"].toInt(FormUtils.MAX_PAGE_ITEMS);
 
         // save in session for later use
         fw.SessionHashtable(session_key, f);
@@ -406,7 +407,7 @@ public abstract class FwController
         {
             //read from session
             list_filter_search = fw.SessionHashtable(session_key_search);
-            if (list_filter_search == null) list_filter_search = new Hashtable();
+            list_filter_search ??= [];
         }
         else
         {
@@ -423,9 +424,8 @@ public abstract class FwController
     /// <param name="session_key"></param>
     public virtual void clearFilter(string session_key = null)
     {
-        Hashtable f = new();
-        if (session_key == null)
-            session_key = "_filter_" + fw.G["controller.action"];
+        Hashtable f = [];
+        session_key ??= "_filter_" + fw.G["controller.action"];
         fw.SessionHashtable(session_key, f);
         this.list_filter = f;
     }
@@ -576,17 +576,17 @@ public abstract class FwController
                         if (is_subquery)
                         {
                             // for subqueries - just use string quoting, but convert to number (so only numeric search supported in this case)
-                            list_where_params[param_name] = Utils.toLong(s);
+                            list_where_params[param_name] = s.toLong();
                         }
                         else
                         {
                             var ft = db.schemaFieldType(list_table_name, fand);
                             if (ft == "int")
-                                list_where_params[param_name] = Utils.toLong(s);
+                                list_where_params[param_name] = s.toLong();
                             else if (ft == "float")
-                                list_where_params[param_name] = Utils.toFloat(s);
+                                list_where_params[param_name] = s.toFloat();
                             else if (ft == "decimal")
-                                list_where_params[param_name] = Utils.toDecimal(s);
+                                list_where_params[param_name] = s.toDecimal();
                             else
                                 list_where_params[param_name] = s;
                         }
@@ -670,7 +670,7 @@ public abstract class FwController
                 {
                     //numerical comparison
                     fieldname_sql = fieldname_sql_num;
-                    qv = Utils.toStr(db.qdec(v));
+                    qv = db.qdec(v).toStr();
                 }
             }
 
@@ -726,7 +726,7 @@ public abstract class FwController
         {
             if (!Utils.isEmpty(this.list_filter["status"]))
             {
-                var status = Utils.toInt(this.list_filter["status"]);
+                var status = this.list_filter["status"].toInt();
                 // if want to see trashed and not admin - just show active
                 if (status == FwModel.STATUS_DELETED & !fw.model<Users>().isAccessLevel(Users.ACL_SITEADMIN))
                     status = 0;
@@ -741,10 +741,27 @@ public abstract class FwController
         }
     }
 
+    // get count of rows from db
     public virtual void getListCount(string list_view = "")
     {
         string list_view_name = (!string.IsNullOrEmpty(list_view) ? list_view : this.list_view);
-        this.list_count = Utils.toLong(db.valuep("select count(*) from " + list_view_name + " where " + this.list_where, this.list_where_params));
+        var qlist_view_name = list_view_name.StartsWith('(') ? list_view_name : db.qid(list_view_name); // don't quote if list_view is a subquery (starting with parentheses)
+
+        this.list_count = db.valuep($"select count(*) from {qlist_view_name} where {list_where}", list_where_params).toLong();
+    }
+
+    // get list of rows from db
+    public virtual DBList getListRowsQuery(int offset = 0, int limit = -1)
+    {
+        var qlist_view_name = list_view.StartsWith('(') ? list_view : db.qid(list_view); // don't quote if list_view is a subquery (starting with parentheses)
+
+        return db.selectRaw(list_fields, qlist_view_name, list_where, list_where_params, list_orderby, offset, limit);
+    }
+
+    public virtual List<string> getListIds(string list_view = "")
+    {
+        var sql = $"SELECT {model0.field_id} FROM {list_view} WHERE {list_where} ORDER BY {list_orderby}";
+        return db.colp(sql, list_where_params);
     }
 
     /// <summary>
@@ -767,8 +784,8 @@ public abstract class FwController
     public virtual void getListRows()
     {
         var is_export = false;
-        int pagenum = Utils.toInt(list_filter["pagenum"]);
-        int pagesize = Utils.toInt(list_filter["pagesize"]);
+        int pagenum = list_filter["pagenum"].toInt();
+        int pagesize = list_filter["pagesize"].toInt();
         // if export requested - start with first page and have a high limit (still better to have a limit just for the case)
         if (export_format.Length > 0)
         {
@@ -779,33 +796,24 @@ public abstract class FwController
 
         if (string.IsNullOrEmpty(list_view))
             list_view = model0.table_name;
-        var list_view_name = (list_view.Substring(0, 1) == "(" ? list_view : db.qid(list_view)); // don't quote if list_view is a subquery (starting with parentheses)
 
-        this.getListCount(list_view_name);
+        this.getListCount();
         if (this.list_count > 0)
         {
             int offset = pagenum * pagesize;
             int limit = pagesize;
 
-            this.list_rows = db.selectRaw(list_fields, list_view_name, list_where, list_where_params, list_orderby, offset, limit);
+            this.list_rows = getListRowsQuery(offset, limit);
 
             model0.normalizeNames(this.list_rows);
-
-            // for 2005<= SQL Server versions <2012
-            // offset+1 because _RowNumber starts from 1
-            // Dim sql As String = "SELECT * FROM (" &
-            // "   SELECT *, ROW_NUMBER() OVER (ORDER BY " & Me.list_orderby & ") AS _RowNumber" &
-            // "   FROM " & list_view &
-            // "   WHERE " & Me.list_where &
-            // ") tmp WHERE _RowNumber BETWEEN " & (offset + 1) & " AND " & (offset + 1 + limit - 1)
 
             if (!is_export)
                 this.list_pager = FormUtils.getPager(this.list_count, pagenum, pagesize);
         }
         else
         {
-            this.list_rows = new ArrayList();
-            this.list_pager = new ArrayList();
+            this.list_rows = [];
+            this.list_pager = [];
         }
 
         if (related_id.Length > 0)
@@ -815,7 +823,7 @@ public abstract class FwController
     public virtual void setFormError(Exception ex)
     {
         //if Validation exception - don't set general error message - specific validation message set in templates
-        if (!(ex is ValidationException))
+        if (ex is not ValidationException)
             fw.setGlobalError(ex.Message);
     }
 
@@ -892,6 +900,10 @@ public abstract class FwController
         if (!string.IsNullOrEmpty(base_url_suffix))
             url_q += "&" + base_url_suffix;
 
+        //add tab if any, so after save we can return to the same tab
+        if (!string.IsNullOrEmpty(form_tab))
+            url_q += "&tab=" + form_tab;
+
         //add query
         var is_url_q = false;
         if (!string.IsNullOrEmpty(url_q))
@@ -935,7 +947,7 @@ public abstract class FwController
     public virtual Hashtable afterSave(bool success, object id = null, bool is_new = false, string action = "ShowForm", string location = "", Hashtable more_json = null)
     {
         if (string.IsNullOrEmpty(location))
-            location = this.afterSaveLocation(Utils.toStr(id));
+            location = this.afterSaveLocation(id.toStr());
 
         if (fw.isJsonExpected())
         {
@@ -1023,8 +1035,7 @@ public abstract class FwController
 
     public virtual Hashtable setPS(Hashtable ps = null)
     {
-        if (ps == null)
-            ps = new Hashtable();
+        ps ??= [];
 
         ps["list_user_view"] = this.list_user_view;
         ps["list_headers"] = this.list_headers;
@@ -1044,8 +1055,8 @@ public abstract class FwController
         //implement "Showing FROM to TO of TOTAL records"
         if (this.list_rows != null && this.list_rows.Count > 0)
         {
-            int pagenum = Utils.toInt(list_filter["pagenum"]);
-            int pagesize = Utils.toInt(list_filter["pagesize"]);
+            int pagenum = list_filter["pagenum"].toInt();
+            int pagesize = list_filter["pagesize"].toInt();
             ps["count_from"] = pagenum * pagesize + 1;
             ps["count_to"] = pagenum * pagesize + this.list_rows.Count;
         }
@@ -1069,12 +1080,11 @@ public abstract class FwController
     // export to csv or html/xls
     public virtual void exportList()
     {
-        if (list_rows == null)
-            list_rows = new ArrayList();
+        list_rows ??= [];
 
         var fields = getViewListUserFields();
         // header names
-        ArrayList headers = new();
+        ArrayList headers = [];
         foreach (var fld in Utils.qw(fields))
             headers.Add(view_list_map[fld]);
 
@@ -1100,10 +1110,10 @@ public abstract class FwController
     // if is_all true - then show all fields (not only from fields param)
     public virtual ArrayList getViewListArr(string fields = "", bool is_all = false)
     {
-        ArrayList result = new();
+        ArrayList result = [];
 
         // if fields defined - first show these fields, then the rest
-        Hashtable fields_added = new();
+        Hashtable fields_added = [];
         if (!string.IsNullOrEmpty(fields))
         {
             foreach (var fieldname in Utils.qw(fields))
@@ -1148,7 +1158,7 @@ public abstract class FwController
 
     public virtual Hashtable getViewListSortmap()
     {
-        Hashtable result = new();
+        Hashtable result = [];
         foreach (var fieldname in view_list_map.Keys)
             result[fieldname] = fieldname;
         return result;
@@ -1156,8 +1166,7 @@ public abstract class FwController
 
     public virtual string getViewListUserFields()
     {
-        if (list_user_view == null)
-            list_user_view = fw.model<UserViews>().oneByIcode(UserViews.icodeByUrl(base_url, is_list_edit)); // base_url is screen identifier
+        list_user_view ??= fw.model<UserViews>().oneByIcode(UserViews.icodeByUrl(base_url, is_list_edit)); // base_url is screen identifier
         var fields = (string)list_user_view["fields"] ?? "";
         return (fields.Length > 0 ? fields : view_list_defaults);
     }
@@ -1257,6 +1266,45 @@ public abstract class FwController
                 row["cols"] = cols;
             }
         }
+    }
+
+    protected virtual int saveMultiRows(ICollection keys, bool is_delete, int user_lists_id, int remove_user_lists_id)
+    {
+        int ctr = 0;
+        if (keys == null || keys.Count == 0 || !(is_delete || user_lists_id > 0 || remove_user_lists_id > 0))
+            return ctr;
+
+        foreach (string id1 in keys)
+        {
+            var id = id1.toInt();
+            if (is_delete)
+            {
+                model0.deleteWithPermanentCheck(id);
+                ctr += 1;
+            }
+            else if (user_lists_id > 0)
+            {
+                fw.model<UserLists>().addItemList(user_lists_id, id);
+                ctr += 1;
+            }
+            else if (remove_user_lists_id > 0)
+            {
+                fw.model<UserLists>().delItemList(remove_user_lists_id, id);
+                ctr += 1;
+            }
+        }
+
+        return ctr;
+    }
+
+    protected virtual void saveMultiResult(int ctr, bool is_delete, int user_lists_id, int remove_user_lists_id)
+    {
+        if (is_delete)
+            fw.flash("multidelete", ctr);
+        if (user_lists_id > 0)
+            fw.flash("success", ctr + " records added to the list");
+        if (remove_user_lists_id > 0)
+            fw.flash("success", ctr + " records removed from the list");
     }
 
     // Default Actions

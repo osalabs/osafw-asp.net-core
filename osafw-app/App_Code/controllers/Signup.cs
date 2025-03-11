@@ -24,7 +24,7 @@ public class SignupController : FwController
         // override layout
         fw.G["PAGE_LAYOUT"] = fw.G["PAGE_LAYOUT_PUBLIC"];
 
-        if (!Utils.toBool(fw.config("IS_SIGNUP")))
+        if (!fw.config("IS_SIGNUP").toBool())
             fw.redirect((string)fw.config("UNLOGGED_DEFAULT_URL"));
     }
 
@@ -35,8 +35,8 @@ public class SignupController : FwController
 
     public Hashtable ShowFormAction()
     {
-        Hashtable ps = new();
-        Hashtable item = new();
+        Hashtable ps = [];
+        Hashtable item = [];
 
         if (isGet())
         {

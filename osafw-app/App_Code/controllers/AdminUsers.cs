@@ -40,11 +40,18 @@ public class AdminUsersController : FwDynamicController
         }
     }
 
+    public override Hashtable setPS(Hashtable ps = null)
+    {
+        ps = base.setPS(ps);
+        ps["is_roles"] = model.isRoles();
+        return ps;
+    }
+
     public override Hashtable ShowFormAction(int id = 0)
     {
         var ps = base.ShowFormAction(id);
         Hashtable item = (Hashtable)ps["i"];
-        ps["att"] = fw.model<Att>().one(Utils.toInt(item["att_id"]));
+        ps["att"] = fw.model<Att>().one(item["att_id"]);
 
         ps["is_roles"] = model.isRoles();
         ps["roles_link"] = model.listLinkedRoles(id);
@@ -59,9 +66,9 @@ public class AdminUsersController : FwDynamicController
         if (this.save_fields == null)
             throw new Exception("No fields to save defined, define in Controller.save_fields");
 
-        if (reqi("refresh") == 1)
+        if (reqb("refresh"))
         {
-            fw.routeRedirect(FW.ACTION_SHOW_FORM, new object[] { id });
+            fw.routeRedirect(FW.ACTION_SHOW_FORM, [id]);
             return null;
         }
 
@@ -129,10 +136,10 @@ public class AdminUsersController : FwDynamicController
     // check access - only users with higher level may login as lower leve
     public void SimulateAction(int id)
     {
-        Hashtable user = model.one(id);
+        var user = model.one(id);
         if (user.Count == 0)
             throw new NotFoundException("Wrong User ID");
-        if (Utils.toInt(user["access_level"]) >= fw.userAccessLevel)
+        if (user["access_level"].toInt() >= fw.userAccessLevel)
             throw new AuthException("Access Denied. Cannot simulate user with higher access level");
 
         fw.logActivity(FwLogTypes.ICODE_USERS_SIMULATE, FwEntities.ICODE_USERS, id);
@@ -144,7 +151,7 @@ public class AdminUsersController : FwDynamicController
 
     public Hashtable SendPwdAction(int id)
     {
-        Hashtable ps = new();
+        Hashtable ps = [];
 
         ps["success"] = model.sendPwdReset(id);
         ps["err_msg"] = fw.last_error_send_email;
@@ -156,7 +163,7 @@ public class AdminUsersController : FwDynamicController
     public void HashPasswordsAction()
     {
         rw("hashing passwords");
-        var rows = db.array(model.table_name, new Hashtable(), "id");
+        var rows = db.array(model.table_name, [], "id");
         foreach (var row in rows)
         {
             if (row["pwd"].ToString().Substring(0, 2) == "$2")

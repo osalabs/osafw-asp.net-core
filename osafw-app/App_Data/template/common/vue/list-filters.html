@@ -1,12 +1,13 @@
 <script type="text/x-template" id="list-filters-template">
  <div>
-  <form class="fw-card" data-list-filter @submit.prevent @change="fwStore.setFilters({})">
-    <div class="row form-row">
+  <form class="fw-card d-print-none" data-list-filter @submit.prevent @change="fwStore.setFilters({})">
+    <div v-if="uioptions.s"
+      class="row form-row">
       <label class="col-form-label col-md-2 col-xl-1" for="list-filters-s">`Search`</label>
       <div class="col">
         <div class="input-group">
           <input id="list-filters-s" type="text" maxlength="255" class="form-control"
-            :placeholder="sPlaceholder"
+            :placeholder="uioptions.s.placeholder"
             v-model="fwStore.f.s">
           <button class="btn btn-outline-secondary w100"
             @click="fwStore.loadIndexDebounced">
@@ -23,6 +24,7 @@
     <slot></slot>
 
     <div class="row form-row">
+      <template v-if="fwStore.is_list_filter_status">
       <label class="col-form-label col-md-2 col-xl-1" for="list-filters-status">`Status`</label>
       <div class="col-md-3 col-lg-2">
           <Multiselect
@@ -34,6 +36,7 @@
             @change="fwStore.setFilters({})"
           />
       </div>
+      </template>
 
       <template v-if="fwStore.is_userlists">
         <label class="col-form-label col-md-2 col-xl-1">`My List`</label>
@@ -49,6 +52,8 @@
         </div>
       </template>
 
+      <slot name="status"></slot>
+
       <div class="col text-end d-print-none">
         <div class="btn-group me-2">
           <a class="btn btn-outline-secondary" :href="urlExport('csv')"><i class="bi bi-cloud-download"></i> `Export`</a>
@@ -61,12 +66,14 @@
             </a>
           </div>
         </div>
-        <list-filters-table-btn></list-filters-table-btn>
+        <button type="button" class="btn btn-outline-secondary me-2" @click="print"><i class="bi bi-printer"></i> `Print`</button>
+        <list-filters-table-btn @on-show-customize-columns="is_show_customize_columns=true"></list-filters-table-btn>
       </div>
 
     </div>
   </form>
 
+  <list-customize-columns v-if="is_show_customize_columns" @hidden="is_show_customize_columns=false"></list-customize-columns>
  </div>
 </script>
 
@@ -76,18 +83,17 @@ import Multiselect from 'Multiselect';
 
 fwApp.component('list-filters', {
   template: '#list-filters-template',
-  props: {
-    sPlaceholder: {
-      type: String
-    }
-  },
   components: {
     Multiselect
   },
   data: () => ({
+    is_show_customize_columns: false
   }),
   computed: {
         ...mapStores(useFwStore), //accessible via this.fwStore
+        uioptions(){
+          return this.fwStore.uioptions.list.filters??false;
+        },
         lookup_statusf() {
           return this.fwStore.access_level<100 ? this.fwStore.lookups_std.statusf : this.fwStore.lookups_std.statusf_admin;
         },
@@ -102,6 +108,9 @@ fwApp.component('list-filters', {
           //convert req object to query string - TODO move to utils
           let query = Object.keys(req).map(key => encodeURIComponent(key) + '=' + encodeURIComponent(req[key])).join('&');
           return this.fwStore.base_url + '?' + query;
+      },
+      print() {
+          window.print();
       }
   }
 });

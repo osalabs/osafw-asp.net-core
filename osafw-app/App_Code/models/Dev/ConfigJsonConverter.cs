@@ -176,11 +176,16 @@ public class ConfigJsonConverter : System.Text.Json.Serialization.JsonConverter<
             }
         }
 
-        //then write rest of keys
+        //then write rest of keys in alphabetical order
+        var remainingKeys = new List<string>();
         foreach (string key in value.Keys)
         {
-            if (hwritten.ContainsKey(key))
-                continue;
+            if (!hwritten.ContainsKey(key))
+                remainingKeys.Add(key);
+        }
+        remainingKeys.Sort();
+        foreach (string key in remainingKeys)
+        {
             writer.WritePropertyName(key);
             JsonSerializer.Serialize(writer, value[key], options);
         }

@@ -53,9 +53,9 @@ public class AdminActivityLogsController : FwController
         route_onerror = FW.ACTION_INDEX;
 
         fw.model<Users>().checkReadOnly();
-        if (reqi("refresh") == 1)
+        if (reqb("refresh"))
         {
-            fw.routeRedirect(FW.ACTION_SHOW_FORM, new object[] { id });
+            fw.routeRedirect(FW.ACTION_SHOW_FORM, [id]);
             return null;
         }
 
@@ -74,11 +74,11 @@ public class AdminActivityLogsController : FwController
         //for new items - convert log_type and entity to ids
         if (is_new)
         {
-            var log_type = fw.model<FwLogTypes>().oneByIcode(Utils.toStr(item["log_type"]));
-            if (log_type.Count == 0 || Utils.toInt(log_type["itype"]) != FwLogTypes.ITYPE_USER)
+            var log_type = fw.model<FwLogTypes>().oneByIcode(item["log_type"].toStr());
+            if (log_type.Count == 0 || log_type["itype"].toInt() != FwLogTypes.ITYPE_USER)
                 throw new UserException("Invalid log_type");
 
-            var fwentity = fw.model<FwEntities>().oneByIcode(Utils.toStr(item["entity"]));
+            var fwentity = fw.model<FwEntities>().oneByIcode(item["entity"].toStr());
             if (fwentity.Count == 0)
                 throw new UserException("Invalid entity");
             // TODO Customize - check if entity is allowed for this log_type
@@ -90,8 +90,9 @@ public class AdminActivityLogsController : FwController
 
         if (!Utils.isDate(itemdb["idate"]))
             itemdb["idate"] = DB.NOW; //if no date specified - use current date
-        if (Utils.toInt(itemdb["users_id"]) == 0)
-            itemdb["users_id"] = fw.userId; //if no user specified - use current user
+        if (itemdb["users_id"].toInt() == 0)
+            if (fw.userId > 0)
+                itemdb["users_id"] = fw.userId; //if no user specified - use current user, unless visitor
 
         id = this.modelAddOrUpdate(id, itemdb);
 
@@ -103,7 +104,7 @@ public class AdminActivityLogsController : FwController
         bool result = this.validateRequired(id, item, this.required_fields);
 
         // comment or user event should be related to some item
-        if (result && Utils.toInt(item["item_id"]) == 0)
+        if (result && item["item_id"].toInt() == 0)
             fw.FormErrors["REQUIRED"] = true;
 
         // If result AndAlso Not SomeOtherValidation() Then

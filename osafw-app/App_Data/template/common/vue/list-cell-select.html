@@ -15,7 +15,7 @@
       <slot name="prepend"></slot>
       <select
         :class="'form-select'+(error?' is-invalid':'')"
-        :id="'cell-'+row.id+'-'+col.field_name"
+        :id="'cell-'+rowId+'-'+col.field_name"
         v-model="row[col.field_name]"
         :required="col.required"
         :readonly="col.readonly"
@@ -51,6 +51,10 @@
 fwApp.component('list-cell-select', {
   template: '#list-cell-select-template',
   props: {
+    rowId: {
+      type: String,
+      required: true
+    },
     row: {
       type: Object,
       required: true

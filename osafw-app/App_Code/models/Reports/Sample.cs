@@ -81,7 +81,7 @@ public class SampleReport : FwReports
         {
             //search in item_id, idesc, payload
             where += " and (al.item_id=@item_id OR al.idesc like @slike OR al.payload like @slike)";
-            where_params["@item_id"] = Utils.toInt(f["s"]);
+            where_params["@item_id"] = f["s"].toInt();
             where_params["@slike"] = "%" + f["s"] + "%";
         }
 
@@ -107,10 +107,10 @@ public class SampleReport : FwReports
         // perform calculations and add additional info for each result row
         foreach (Hashtable row in list_rows)
         {
-            //row["entity"] = fw.model<FwEntities>().one(Utils.f2int(row["fwentities_id"]));
+            //row["entity"] = fw.model<FwEntities>().one(row["fwentities_id"]);
             //ps["total_ctr"] = _calcPerc(list_rows); //if you need calculate "perc" for each row based on row["ctr"]
             // if row["payload"] contains password/pass/pwd - hide it
-            var payload = Utils.toStr(row["payload"]);
+            var payload = row["payload"].toStr();
             if (payload.Contains("pass") || payload.Contains("pwd"))
                 row["payload"] = "********";
         }

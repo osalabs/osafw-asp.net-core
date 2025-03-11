@@ -266,7 +266,7 @@ fwApp.component('form-one-control', {
   computed:{
     ...mapStores(useFwStore), //accessible via this.fwStore
     item: function(){
-      return this.form.i;
+      return this.form.i; //this comes from fwStore.edit_data, so has .id
     },
 
     value: {
@@ -286,7 +286,7 @@ fwApp.component('form-one-control', {
       }
     },
     multi_rows(){
-      const rows = this.form.multi_rows?.[this.def.field]??[];
+      const rows = this.form.multi_rows[this.def.field]??[];
       if (this.multi_search > '') {
         return rows.filter(row => row.iname.toLowerCase().includes(this.multi_search.toLowerCase()));
       } else {

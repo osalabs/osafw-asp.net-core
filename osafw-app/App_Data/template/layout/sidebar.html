@@ -25,7 +25,7 @@
     </~GLOBAL[menu_items]>
 
     <~admin80_menu ifge="SESSION[access_level]" value="80" inline>
-      <li class="nav-item"><a href="#" class="nav-link disabled">`Manager Menu`</a></li>
+      <li class="nav-item nav-header bg-secondary-subtle"><a href="#" class="nav-link disabled">`Manager Menu`</a></li>
       <li class="nav-item">
         <a href="<~/admin/reports/url>" class="nav-link link-body-emphasis <~/common/active ifeq="GLOBAL[controller]" value="AdminReports">">
           <i class="bi bi-file-ruled"></i> `Reports`
@@ -69,7 +69,7 @@
     </~admin80_menu>
 
     <~admin90_menu ifge="SESSION[access_level]" value="90" inline>
-      <li class="nav-item"><a href="#" class="nav-link disabled">`Admin Menu`</a></li>
+      <li class="nav-item nav-header bg-secondary-subtle"><a href="#" class="nav-link disabled">`Admin Menu`</a></li>
       <li class="nav-item">
         <a href="<~/admin/users/url>" class="nav-link link-body-emphasis <~/common/active ifeq="GLOBAL[controller]" value="AdminUsers">">
           <i class="bi bi-person-lines-fill"></i> `Manage Members`

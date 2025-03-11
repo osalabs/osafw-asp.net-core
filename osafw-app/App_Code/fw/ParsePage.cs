@@ -133,13 +133,12 @@ public class ParsePage
     private static readonly Regex RX_ATTRS1 = new(@"((?:\S+\=" + (char)34 + "[^" + (char)34 + "]*" + (char)34 + @")|(?:\S+\='[^']*')|(?:[^'" + (char)34 + @"\s]+)|(?:\S+\=\S*))", RegexOptions.Compiled);
     private static readonly Regex RX_ATTRS2 = new(@"^([^\s\=]+)=(['" + (char)34 + @"]?)(.*?)\2$", RegexOptions.Compiled);
 
-    private static readonly Regex RX_ALL_DIGITS = new(@"^\d+$", RegexOptions.Compiled);
     private static readonly Regex RX_LAST_SLASH = new(@"[^\/]+$", RegexOptions.Compiled);
     private static readonly Regex RX_EXT = new(@"\.[^\/]+$", RegexOptions.Compiled);
 
     private static readonly Hashtable FILE_CACHE = [];
     private static readonly Hashtable LANG_CACHE = [];
-    private static readonly string[] IFOPERS = new[] { "if", "unless", "ifne", "ifeq", "ifgt", "iflt", "ifge", "ifle" };
+    private static readonly string[] IFOPERS = ["if", "unless", "ifne", "ifeq", "ifgt", "iflt", "ifge", "ifle"];
 
     private const string DATE_FORMAT_DEF = "M/d/yyyy"; // for US, TODO make based on user settigns (with fallback to server's settings)
     private const string DATE_FORMAT_SHORT = "M/d/yyyy HH:mm";
@@ -182,7 +181,7 @@ public class ParsePage
             if (LANG_CACHE[lang] == null)
                 load_lang();
 
-            lang_update = Utils.toBool(fw.config("is_lang_update"));
+            lang_update = fw.config("is_lang_update").toBool();
         }
         lang_evaluator = new MatchEvaluator(this.lang_replacer);
     }
@@ -203,7 +202,7 @@ public class ParsePage
         // Dim start_time = DateTime.Now
         var result = _parse_page(tpl_name, hf, "", parent_hf);
         // Dim end_timespan As TimeSpan = DateTime.Now - start_time
-        // fw.logger("ParsePage speed: " & String.Format("{0:0.000}", 1 / end_timespan.TotalSeconds) & "/s")
+        // logger("ParsePage speed: " & String.Format("{0:0.000}", 1 / end_timespan.TotalSeconds) & "/s")
         return result;
     }
 
@@ -218,14 +217,14 @@ public class ParsePage
     {
         if (tpl_name == null)
         {
-            fw.logger(LogLevel.DEBUG, "ParsePage - layout template (tpl_name) is null");
+            logger(LogLevel.DEBUG, "ParsePage - layout template (tpl_name) is null");
             return "";
         }
 
-        if (tpl_name.Length > 0 && tpl_name.Substring(0, 1) != "/")
+        if (!string.IsNullOrEmpty(tpl_name) && !tpl_name.StartsWith('/'))
             tpl_name = basedir + "/" + tpl_name;
 
-        fw.logger("DEBUG", $"ParsePage - Parsing template = {tpl_name}, pagelen={page.Length}");
+        logger(LogLevel.TRACE, $"ParsePage - Parsing template = {tpl_name}, pagelen={page.Length}");
         if (page.Length < 1)
             page = precache_file(TMPL_PATH + tpl_name);
         if (page.Length == 0)
@@ -282,7 +281,7 @@ public class ParsePage
                 else
                     tag_value = hfvalue(tag, hf, parent_hf);
 
-                // fw.logger("ParsePage - tag: " & tag_full & ", found=" & is_found_last_hfvalue)
+                // logger("ParsePage - tag: " & tag_full & ", found=" & is_found_last_hfvalue)
                 if (tag_value.ToString().Length > 0)
                 {
                     string value;
@@ -347,7 +346,7 @@ public class ParsePage
                 {
                     // # no need to parse file - just include as is
                     var path = tag_tplpath(tag, tpl_name);
-                    if (path.Substring(0, 1) != "/")
+                    if (!path.StartsWith('/'))
                         path = basedir + "/" + path;
                     path = TMPL_PATH + path;
                     var file_content = precache_file(path);
@@ -416,7 +415,7 @@ public class ParsePage
         //For Windows - replace Unix-style separators / to \
         if (path_separator == '\\')
             filename = filename.Replace('/', path_separator);
-        // fw.logger("preacaching [" & filename & "]")
+        // logger("preacaching [" & filename & "]")
 
         // check and get from cache
         if (FILE_CACHE.ContainsKey(filename))
@@ -436,7 +435,7 @@ public class ParsePage
         else if (is_check_file_modifications)
             modtime = File.GetLastWriteTime(filename).ToString();
 
-        // fw.logger("ParsePage - try load file " & filename)
+        // logger("ParsePage - try load file " & filename)
         // get from fs(if not in cache)
         if (File.Exists(filename))
         {
@@ -451,7 +450,7 @@ public class ParsePage
         cache["modtime"] = modtime;
 
         FILE_CACHE[filename] = cache;
-        // fw.logger("END preacaching [" & filename & "]")
+        // logger("END preacaching [" & filename & "]")
         return file_data;
     }
 
@@ -504,7 +503,7 @@ public class ParsePage
 
         try
         {
-            if (tag.Contains("["))
+            if (tag.Contains('['))
             {
                 string[] parts = tag.Split("[");
                 int start_pos = 0;
@@ -569,7 +568,7 @@ public class ParsePage
                     }
                     else if (ptr is IList list)
                     {
-                        ptr = list[Utils.toInt(k)];
+                        ptr = list[k.toInt()];
                     }
                     else if (ptr is ISession session)
                     {
@@ -619,11 +618,10 @@ public class ParsePage
         }
         catch (Exception ex)
         {
-            fw.logger(LogLevel.DEBUG, "ParsePage - error in hvalue for tag [", tag, "]:", ex.Message);
+            logger(LogLevel.DEBUG, "ParsePage - error in hvalue for tag [", tag, "]:", ex.Message);
         }
 
-        if (tag_value == null)
-            tag_value = "";
+        tag_value ??= "";
 
         return tag_value;
     }
@@ -644,7 +642,7 @@ public class ParsePage
             sub_hf = ht;
         }
         else
-            fw.logger(LogLevel.DEBUG, "ParsePage - not a Hash passed for a SUB tag=", tag, ", sub=" + sub);
+            logger(LogLevel.DEBUG, "ParsePage - not a Hash passed for a SUB tag=", tag, ", sub=" + sub);
 
         return _parse_page(tag_tplpath(tag, tpl_name), sub_hf, inline_tpl, parent_hf, attrs);
     }
@@ -673,8 +671,7 @@ public class ParsePage
             return false; // return false if var need to be compared is empty
 
         object eqvalue = hfvalue(eqvar, hf);
-        if (eqvalue == null)
-            eqvalue = "";
+        eqvalue ??= "";
 
         // detect if eqvalue is integer
         if (Int32.TryParse(eqvalue.ToString(), out int zzz))
@@ -687,8 +684,7 @@ public class ParsePage
             if (attrs.ContainsKey("vvalue"))
             {
                 ravalue = hfvalue((string)attrs["vvalue"], hf);
-                if (ravalue == null)
-                    ravalue = "";
+                ravalue ??= "";
             }
             else
                 ravalue = attrs["value"];
@@ -738,7 +734,7 @@ public class ParsePage
                 eqvalue = b;
             else if (eqvalue is ICollection collection)
                 eqvalue = collection.Count > 0;
-            else if (!(eqvalue is bool))
+            else if (eqvalue is not bool)
             {
                 string eqstr = eqvalue.ToString();
                 eqvalue = !string.IsNullOrEmpty(eqstr) && eqstr != "0" && eqstr.ToLower() != "false";
@@ -752,17 +748,17 @@ public class ParsePage
             result = true;
         else if (oper == "unless" && (bool)eqvalue == false)
             result = true;
-        else if (oper == "ifeq" && (is_numeric_comparison && Utils.toInt(eqvalue) == Utils.toInt(ravalue) || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) == 0))
+        else if (oper == "ifeq" && (is_numeric_comparison && eqvalue.toInt() == ravalue.toInt() || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) == 0))
             result = true;
-        else if (oper == "ifne" && (is_numeric_comparison && Utils.toInt(eqvalue) != Utils.toInt(ravalue) || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) != 0))
+        else if (oper == "ifne" && (is_numeric_comparison && eqvalue.toInt() != ravalue.toInt() || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) != 0))
             result = true;
-        else if (oper == "iflt" && (is_numeric_comparison && Utils.toInt(eqvalue) < Utils.toInt(ravalue) || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) < 0))
+        else if (oper == "iflt" && (is_numeric_comparison && eqvalue.toInt() < ravalue.toInt() || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) < 0))
             result = true;
-        else if (oper == "ifgt" && (is_numeric_comparison && Utils.toInt(eqvalue) > Utils.toInt(ravalue) || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) > 0))
+        else if (oper == "ifgt" && (is_numeric_comparison && eqvalue.toInt() > ravalue.toInt() || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) > 0))
             result = true;
-        else if (oper == "ifge" && (is_numeric_comparison && Utils.toInt(eqvalue) >= Utils.toInt(ravalue) || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) >= 0))
+        else if (oper == "ifge" && (is_numeric_comparison && eqvalue.toInt() >= ravalue.toInt() || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) >= 0))
             result = true;
-        else if (oper == "ifle" && (is_numeric_comparison && Utils.toInt(eqvalue) <= Utils.toInt(ravalue) || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) <= 0))
+        else if (oper == "ifle" && (is_numeric_comparison && eqvalue.toInt() <= ravalue.toInt() || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) <= 0))
             result = true;
 
         return result;
@@ -770,7 +766,7 @@ public class ParsePage
 
     private static string get_inline_tpl(ref string hpage, ref string tag, ref string tag_full)
     {
-        // fw.logger("ParsePage - get_inline_tpl: ", tag, " | ", tag_full)
+        // logger("ParsePage - get_inline_tpl: ", tag, " | ", tag_full)
         string re = Regex.Escape("<~" + tag_full + ">") + "(.*?)" + Regex.Escape("</~" + tag + ">");
 
         Match inline_match = Regex.Match(hpage, re, RegexOptions.Singleline | RegexOptions.IgnoreCase);
@@ -784,16 +780,15 @@ public class ParsePage
     private string _attr_repeat(ref string tag, ref object tag_val_array, ref string tpl_name, ref string inline_tpl, Hashtable parent_hf)
     {
         // Validate: if input doesn't contain array - return "" - nothing to repeat
-        if (!(tag_val_array is IList))
+        if (tag_val_array is not IList)
         {
             if (tag_val_array != null && tag_val_array.ToString() != "")
-                fw.logger(LogLevel.DEBUG, "ParsePage - Not an ArrayList passed to repeat tag=", tag);
+                logger(LogLevel.DEBUG, "ParsePage - Not an ArrayList passed to repeat tag=", tag);
             return "";
         }
 
         StringBuilder value = new();
-        if (parent_hf == null)
-            parent_hf = [];
+        parent_hf ??= [];
 
         string ttpath = tag_tplpath(tag, tpl_name);
 
@@ -848,7 +843,7 @@ public class ParsePage
         string add_path = "";
         string result;
 
-        if (tag.Substring(0, 2) == "./")
+        if (tag.StartsWith("./"))
         {
             add_path = tpl_name;
             add_path = RX_LAST_SLASH.Replace(add_path, "");
@@ -904,10 +899,10 @@ public class ParsePage
                 }
                 if (attr_count > 0 && hattrs.ContainsKey("number_format"))
                 {
-                    var precision = (!string.IsNullOrEmpty((string)hattrs["number_format"]) ? Utils.toInt(hattrs["number_format"]) : 2);
+                    var precision = (!string.IsNullOrEmpty((string)hattrs["number_format"]) ? hattrs["number_format"].toInt() : 2);
                     bool groupdigits = !hattrs.ContainsKey("nfthousands") || !string.IsNullOrEmpty((string)hattrs["nfthousands"]); // default - group digits, but if nfthousands empty - don't
 
-                    value = Utils.toFloat(value).ToString("N" + precision, CultureInfo.InvariantCulture);
+                    value = value.toFloat().ToString("N" + precision, CultureInfo.InvariantCulture);
                     if (!groupdigits)
                     {
                         value = value.Replace(NumberFormatInfo.InvariantInfo.NumberGroupSeparator, "");
@@ -917,7 +912,7 @@ public class ParsePage
                 }
                 if (attr_count > 0 && hattrs.ContainsKey("currency"))
                 {
-                    value = Utils.toFloat(value).ToString("C2");
+                    value = value.toFloat().ToString("C2");
                     attr_count -= 1;
                 }
                 if (attr_count > 0 && hattrs.ContainsKey("date"))
@@ -988,7 +983,7 @@ public class ParsePage
                 // If TypeOf (value) Is ICollection Then
                 // value = CType(value, ICollection).Count
                 // Else
-                // fw.logger("WARN", "ParsePage - 'count' attribute used on non-array value")
+                // logger("WARN", "ParsePage - 'count' attribute used on non-array value")
                 // End If
                 // attr_count -= 1
                 // End If
@@ -1037,8 +1032,8 @@ public class ParsePage
                     }
                     catch (Exception ex)
                     {
-                        fw.logger(LogLevel.WARN, @"error parsing markdown, install Markdig package");
-                        fw.logger(LogLevel.DEBUG, ex.Message);
+                        logger(LogLevel.WARN, @"error parsing markdown, install Markdig package");
+                        logger(LogLevel.DEBUG, ex.Message);
                     }
 
                     attr_count -= 1;
@@ -1053,9 +1048,9 @@ public class ParsePage
                 // replace tag+inline tpl+close tag
                 string restr = Regex.Escape("<~" + tag_full + ">") + ".*?" + Regex.Escape("</~" + tag + ">");
 
-                // fw.logger(restr)
-                // fw.logger(hpage_ref)
-                // fw.logger(value)
+                // logger(restr)
+                // logger(hpage_ref)
+                // logger(value)
                 // escape $0-$9 and ${...}, i.e. all $ chars replaced with $$
                 value = Regex.Replace(value, @"\$", "$$$$");
                 hpage_ref = Regex.Replace(hpage_ref, restr, value, RegexOptions.IgnoreCase | RegexOptions.Singleline);
@@ -1071,7 +1066,7 @@ public class ParsePage
     {
         StringBuilder result = new();
 
-        string sel_value = Utils.toStr(hfvalue((string)attrs["select"] ?? "", hf));
+        string sel_value = hfvalue((string)attrs["select"] ?? "", hf).toStr();
         //fw.logger($"_attr_select: tag={tag}, tpl_name={tpl_name}", attrs, hf[tag]);
 
         var multi_delim = ""; // by default no multiple select
@@ -1139,13 +1134,13 @@ public class ParsePage
         {
             // just read from the plain text file
             var tpl_path = tag_tplpath(tag, tpl_name);
-            if (tpl_path.Substring(0, 1) != "/")
+            if (!tpl_path.StartsWith('/'))
                 tpl_path = basedir + "/" + tpl_path;
 
             string[] lines = precache_file_lines(TMPL_PATH + "/" + tpl_path);
             if (lines.Length == 0)
             {
-                fw.logger(LogLevel.TRACE, $"ParsePage - NOR an ArrayList of Hashtables NEITHER .sel template file passed for a select tag={tag}");
+                logger(LogLevel.TRACE, $"ParsePage - NOR an ArrayList of Hashtables NEITHER .sel template file passed for a select tag={tag}");
                 return "";
             }
 
@@ -1189,13 +1184,13 @@ public class ParsePage
         string name = (string)attrs["name"];
         string delim = (string)attrs["delim"]; // delimiter class
 
-        if (tpl_path.Substring(0, 1) != "/")
+        if (!tpl_path.StartsWith('/'))
             tpl_path = basedir + "/" + tpl_path;
 
         string[] lines = precache_file_lines(TMPL_PATH + "/" + tpl_path);
         if (lines.Length == 0)
         {
-            fw.logger(LogLevel.TRACE, $"ParsePage - NOR an ArrayList of Hashtables NEITHER .sel template file passed for a radio tag tpl path={tpl_path}");
+            logger(LogLevel.TRACE, $"ParsePage - NOR an ArrayList of Hashtables NEITHER .sel template file passed for a radio tag tpl path={tpl_path}");
             return "";
         }
 
@@ -1251,10 +1246,7 @@ public class ParsePage
     {
         string result = "";
         string sel_value = (string)hfvalue((string)attrs["selvalue"], hf);
-        if (sel_value == null)
-        {
-            sel_value = "";
-        }
+        sel_value ??= "";
 
         if (hfvalue(tag, hf) is ICollection seloptions)
         {
@@ -1286,13 +1278,13 @@ public class ParsePage
         else
         {
             var tpl_path = tag_tplpath(tag, tpl_name);
-            if (tpl_path.Substring(0, 1) != "/")
+            if (!tpl_path.StartsWith('/'))
                 tpl_path = basedir + "/" + tpl_path;
 
             string[] lines = precache_file_lines(TMPL_PATH + "/" + tpl_path);
             if (lines.Length == 0)
             {
-                fw.logger(LogLevel.TRACE, $"ParsePage - NOR an ArrayList of Hashtables NEITHER .sel template file passed for a selvalue tag={tag}");
+                logger(LogLevel.TRACE, $"ParsePage - NOR an ArrayList of Hashtables NEITHER .sel template file passed for a selvalue tag={tag}");
                 return "";
             }
 
@@ -1334,7 +1326,7 @@ public class ParsePage
     private string lang_replacer(Match m)
     {
         var value = m.Groups[1].Value.Trim();
-        // fw.logger("checking:", lang, value)
+        // logger("checking:", lang, value)
         return langMap(value);
     }
 
@@ -1372,13 +1364,13 @@ public class ParsePage
                 // if no translation - return original string
                 result = str;
         }
-        // fw.logger("in=[" & str & "], out=[" & result & "]")
+        // logger("in=[" & str & "], out=[" & result & "]")
         return result;
     }
 
     private void load_lang()
     {
-        // fw.logger("load lang: " & TMPL_PATH & "\" & lang & ".txt")
+        // logger("load lang: " & TMPL_PATH & "\" & lang & ".txt")
         var lines = FW.getFileLines(TMPL_PATH + @"\lang\" + lang + ".txt");
 
         if (LANG_CACHE[lang] == null)
@@ -1392,7 +1384,7 @@ public class ParsePage
                 continue;
             }
             string[] pair = line.Split("===", 2);
-            // fw.logger("added to cache:", Trim(pair(0)))
+            // logger("added to cache:", Trim(pair(0)))
             ((Hashtable)LANG_CACHE[lang])[pair[0].Trim()] = pair[1].TrimStart();
         }
     }
@@ -1400,11 +1392,16 @@ public class ParsePage
     // add new language string to the lang file (for futher translation)
     private void add_lang(string str)
     {
-        fw.logger(LogLevel.DEBUG, "ParsePage notice - updating lang [" + lang + "] with: " + str);
+        logger(LogLevel.DEBUG, "ParsePage notice - updating lang [" + lang + "] with: " + str);
         string filedata = str + " === " + System.Environment.NewLine;
         FW.setFileContent(TMPL_PATH + @"\lang\" + lang + ".txt", ref filedata, true);
 
         // also add to lang cache
         ((Hashtable)LANG_CACHE[lang])[str.Trim()] = "";
+    }
+
+    private void logger(LogLevel level, params string[] args)
+    {
+        fw?.logger(level, args);
     }
 }

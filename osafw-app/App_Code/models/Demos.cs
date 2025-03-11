@@ -32,7 +32,7 @@ public class Demos : FwModel
 
     public virtual ArrayList listSelectOptionsParent()
     {
-        Hashtable where = new();
+        Hashtable where = [];
         where["parent_id"] = 0;
         where["status"] = db.opNOT(STATUS_DELETED);
         return db.array(table_name, where, "iname", Utils.qw("id iname"));

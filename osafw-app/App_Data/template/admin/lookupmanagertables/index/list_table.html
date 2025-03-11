@@ -6,6 +6,7 @@
     <thead>
         <tr data-sortby="<~f[sortby]>" data-sortdir="<~f[sortdir]>">
             <th><input type="checkbox" name="all" value="1" class="on-list-chkall"></th>
+            <th data-sort="gname">`Group`</th>
             <th data-sort="tname">`Table Name`</th>
             <th data-sort="iname">`Title`</th>
             <th>`Description`</th>
@@ -17,6 +18,7 @@
 <~list_rows repeat inline>
         <tr data-url="<~row_click_url>">
             <td><input class="multicb" type="checkbox" name="cb[<~id>]" value="1"></td>
+            <td><~igroup></td>
             <td><~tname></td>
             <td><~iname></td>
             <td><~idesc truncate></td>

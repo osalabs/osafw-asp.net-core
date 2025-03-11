@@ -21,7 +21,7 @@ public class FwAdminController : FwController
     public virtual Hashtable IndexAction()
     {
         // get filters from the search form
-        Hashtable f = this.initFilter();
+        this.initFilter();
 
         this.setListSorting();
 
@@ -50,8 +50,8 @@ public class FwAdminController : FwController
 
     public virtual Hashtable ShowAction(int id)
     {
-        Hashtable ps = new();
-        Hashtable item = model0.one(id);
+        Hashtable ps = [];
+        var item = model0.one(id);
         if (item.Count == 0)
             throw new NotFoundException();
 
@@ -84,19 +84,23 @@ public class FwAdminController : FwController
     /// <remarks></remarks>
     public virtual Hashtable ShowFormAction(int id = 0)
     {
-        Hashtable ps = new();
+        Hashtable ps = [];
         var item = reqh("item"); // set defaults from request params
 
         if (isGet())
         {
             if (id > 0)
             {
+                // edit screen
                 item = model0.one(id);
             }
             else
             {
-                // override any defaults here
-                Utils.mergeHash(item, this.form_new_defaults);
+                // add new screen
+                Hashtable item_new = [];
+                Utils.mergeHash(item_new, form_new_defaults); // use hardcoded defaults if any
+                Utils.mergeHash(item_new, item); // override with passed defaults
+                item = item_new;
             }
         }
         else
@@ -129,9 +133,9 @@ public class FwAdminController : FwController
             throw new Exception("No fields to save defined, define in Controller.save_fields");
 
         fw.model<Users>().checkReadOnly();
-        if (reqi("refresh") == 1)
+        if (reqb("refresh"))
         {
-            fw.routeRedirect(FW.ACTION_SHOW_FORM, new object[] { id });
+            fw.routeRedirect(FW.ACTION_SHOW_FORM, [id]);
             return null;
         }
 
@@ -195,7 +199,7 @@ public class FwAdminController : FwController
     {
         fw.model<Users>().checkReadOnly();
 
-        model0.update(id, new Hashtable() { { model0.field_status, Utils.toStr(FwModel.STATUS_ACTIVE) } });
+        model0.update(id, new Hashtable() { { model0.field_status, FwModel.STATUS_ACTIVE } });
 
         fw.flash("record_updated", 1);
         return this.afterSave(true, id);
@@ -212,40 +216,19 @@ public class FwAdminController : FwController
 
         int user_lists_id = reqi("addtolist");
         var remove_user_lists_id = reqi("removefromlist");
-        int ctr = 0;
 
         if (user_lists_id > 0)
         {
             var user_lists = fw.model<UserLists>().one(user_lists_id);
-            if (user_lists.Count == 0 || Utils.toInt(user_lists["add_users_id"]) != fw.userId)
+            if (user_lists.Count == 0 || user_lists["add_users_id"].toInt() != fw.userId)
                 throw new UserException("Wrong Request");
         }
 
-        foreach (string id1 in cbses.Keys)
-        {
-            var id = Utils.toInt(id1);
-            if (is_delete)
-            {
-                model0.deleteWithPermanentCheck(id);
-                ctr += 1;
-            }
-            else if (user_lists_id > 0)
-            {
-                fw.model<UserLists>().addItemList(user_lists_id, id);
-                ctr += 1;
-            }
-            else if (remove_user_lists_id > 0)
-            {
-                fw.model<UserLists>().delItemList(remove_user_lists_id, id);
-                ctr += 1;
-            }
-        }
+        int ctr = saveMultiRows(cbses.Keys, is_delete, user_lists_id, remove_user_lists_id);
 
-        if (is_delete)
-            fw.flash("multidelete", ctr);
-        if (user_lists_id > 0)
-            fw.flash("success", ctr + " records added to the list");
+        saveMultiResult(ctr, is_delete, user_lists_id, remove_user_lists_id);
 
         return this.afterSave(true, new Hashtable() { { "ctr", ctr } });
     }
+
 }

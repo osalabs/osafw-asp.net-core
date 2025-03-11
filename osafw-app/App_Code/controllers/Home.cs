@@ -8,9 +8,22 @@ public class HomeController : FwController
 
     public override void init(FW fw)
     {
-        base.init(fw);
+        //base.init(fw); //not using base init as it calls getRBAC which require access to db (and we may not have it yet)
+        this.fw = fw;
+        this.db = fw.db;
+
+        is_readonly = fw.model<Users>().isReadOnly();
+
+        return_url = reqs("return_url");
+        related_id = reqs("related_id");
+        export_format = reqs("export");
+
         // override global layout because for this controller we need public pages template, not admin pages
         fw.G["PAGE_LAYOUT"] = fw.config("PAGE_LAYOUT_PUBLIC");
+    }
+    public override void checkAccess()
+    {
+        //true - allow access to all, including visitors
     }
 
     // CACHED as home_page
@@ -21,7 +34,7 @@ public class HomeController : FwController
         if (ps == null || ps.Count == 0)
         {
             // CACHE MISS
-            ps = new Hashtable();
+            ps = [];
 
             // create home page with heavy queries
 
@@ -41,7 +54,7 @@ public class HomeController : FwController
         //if (page_name == "about")
         //    tpl_name = (string)fw.config("PAGE_LAYOUT_PUBLIC");
 
-        Hashtable ps = new();
+        Hashtable ps = [];
         ps["hide_sidebar"] = true; // TODO control via Spages
         ps["page_name"] = page_name;
 
@@ -56,7 +69,7 @@ public class HomeController : FwController
 
     public void TestAction(string id = "")
     {
-        Hashtable hf = new();
+        Hashtable hf = [];
         logger("in the TestAction");
         rw("here it is Test");
         rw("id=" + id);

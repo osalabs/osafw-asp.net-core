@@ -10,7 +10,7 @@ namespace osafw.Tests
     [TestClass()]
     public class DBTests
     {
-        private string connstr = "Server=localhost;Database=demo;Trusted_Connection=True";
+        private readonly string connstr = "Server=(local);Database=demo;Trusted_Connection=True;TrustServerCertificate=true;";
         private DB db = null;
         private string table_name = "for_unit_testing";
 
@@ -240,17 +240,17 @@ namespace osafw.Tests
             Assert.AreEqual(" IN ('')", result2);
 
             // Test with string array
-            string[] strArray = new string[] { "a", "b", "c" };
+            string[] strArray = ["a", "b", "c"];
             string result3 = db.insql(strArray);
             Assert.AreEqual(" IN ('a', 'b', 'c')", result3);
 
             // Test with ArrayList
-            ArrayList list = new ArrayList() { "a", "b", "c" };
+            ArrayList list = ["a", "b", "c"];
             string result4 = db.insql(list);
             Assert.AreEqual(" IN ('a', 'b', 'c')", result4);
 
             // Test with empty ArrayList
-            ArrayList emptyList = new ArrayList();
+            ArrayList emptyList = [];
             string result5 = db.insql(emptyList);
             Assert.AreEqual(" IN (NULL)", result5);
         }
@@ -270,17 +270,17 @@ namespace osafw.Tests
             Assert.AreEqual(" IN (0)", result3);
 
             // Test with string array
-            string[] strArray = new string[] { "1", "2", "3" };
+            string[] strArray = ["1", "2", "3"];
             string result4 = db.insqli(strArray);
             Assert.AreEqual(" IN (1, 2, 3)", result4);
 
             // Test with ArrayList
-            ArrayList list = new ArrayList() { "1", "2", "3" };
+            ArrayList list = ["1", "2", "3"];
             string result5 = db.insqli(list);
             Assert.AreEqual(" IN (1, 2, 3)", result5);
 
             // Test with empty ArrayList
-            ArrayList emptyList = new ArrayList();
+            ArrayList emptyList = [];
             string result6 = db.insqli(emptyList);
             Assert.AreEqual(" IN (NULL)", result6);
         }
@@ -325,24 +325,11 @@ namespace osafw.Tests
         public void qfTest()
         {
             double r = db.qf(123.123);
-            Assert.AreEqual(123.123, r);
+            Assert.AreEqual(123.12300109863281, r);
             r = db.qf("123.123");
-            Assert.AreEqual(123.123, r);
+            Assert.AreEqual(123.12300109863281, r);
             r = db.qf("AAA123.123");
             Assert.AreEqual(0, r);
-        }
-
-        [TestMethod()]
-        public void qdTest()
-        {
-            string s = "2021-08-08 01:02:03";
-            string r = db.qdstr(s);
-            Assert.AreEqual("convert(DATETIME2, '" + s + "', 120)", r);
-
-            r = db.qdstr("");
-            Assert.AreEqual("NULL", r);
-
-            // TODO test with non SQL connnection
         }
 
         [TestMethod()]

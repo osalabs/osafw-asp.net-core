@@ -35,7 +35,7 @@ public class Settings : FwModel
     /// <remarks></remarks>
     public int readi(string icode)
     {
-        return Utils.toInt(read(icode));
+        return read(icode).toInt();
     }
 
     /// <summary>
@@ -46,7 +46,7 @@ public class Settings : FwModel
     /// <remarks></remarks>
     public object readd(string icode)
     {
-        return Utils.toDate(read(icode));
+        return read(icode).toDateOrNull();
     }
 
     /// <summary>
@@ -63,7 +63,7 @@ public class Settings : FwModel
     // just return first row by icode field
     public override DBRow oneByIcode(string icode)
     {
-        Hashtable where = new();
+        Hashtable where = [];
         where["icode"] = icode;
         return db.row(table_name, where);
     }
@@ -75,12 +75,12 @@ public class Settings : FwModel
     public void setValue(string icode, string ivalue)
     {
         var item = this.oneByIcode(icode);
-        Hashtable fields = new();
+        Hashtable fields = [];
         if (item.ContainsKey("id"))
         {
             // exists - update
             fields["ivalue"] = ivalue;
-            update(Utils.toInt(item["id"]), fields);
+            update(item["id"].toInt(), fields);
         }
         else
         {

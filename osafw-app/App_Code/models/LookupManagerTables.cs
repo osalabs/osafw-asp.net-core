@@ -4,6 +4,7 @@
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace osafw;
@@ -22,7 +23,7 @@ public class LookupManagerTables : FwModel
         Hashtable item = (Hashtable)fw.cache.getRequestValue("LookupManagerTables_one_by_tname_" + table_name + "#" + tname);
         if (item == null)
         {
-            Hashtable where = new();
+            Hashtable where = [];
             where["tname"] = tname;
             item = db.row(table_name, where);
             fw.cache.setRequestValue("LookupManagerTables_one_by_tname_" + table_name + "#" + tname, item);
@@ -37,16 +38,16 @@ public class LookupManagerTables : FwModel
     // added custom names, types and grouping info - if defined
     public ArrayList getColumns(Hashtable defs)
     {
-        ArrayList result = new();
+        ArrayList result = [];
 
-        Hashtable custom_columns = new();
-        Hashtable ix_custom_columns = new();
+        Hashtable custom_columns = [];
+        Hashtable ix_custom_columns = [];
         if (!Utils.isEmpty(defs["columns"]))
         {
             var custom_cols = Utils.commastr2hash((string)defs["columns"], "123...");
             foreach (string key in custom_cols.Keys)
             {
-                Hashtable h = new();
+                Hashtable h = [];
                 h["index"] = custom_cols[key];
                 h["iname"] = key; // default display name is column name
                 h["itype"] = ""; // no default input type
@@ -128,9 +129,7 @@ public class LookupManagerTables : FwModel
                         orderby col["index"]
                         select col;
 
-            ArrayList sorted_result = new();
-            foreach (Hashtable h in query)
-                sorted_result.Add(h);
+            ArrayList sorted_result = [.. query];
             return sorted_result;
         }
         else
@@ -175,10 +174,12 @@ public class LookupManagerTables : FwModel
         var inamefield = "";
         Utils.split2(":", lufields, ref idfield, ref inamefield);
 
-        ArrayList fields = new();
-        fields.Add(new Hashtable { { "field", idfield }, { "alias", "id" } });
-        fields.Add(new Hashtable { { "field", inamefield }, { "alias", "iname" } });
-        var rows = db.array(lutable, new Hashtable(), "1", fields);
+        ArrayList fields =
+        [
+            new Hashtable { { "field", idfield }, { "alias", "id" } },
+            new Hashtable { { "field", inamefield }, { "alias", "iname" } },
+        ];
+        var rows = db.array(lutable, [], "1", fields);
 
         return FormUtils.selectOptions(rows, (string)sel_id);
     }
@@ -195,4 +196,15 @@ public class LookupManagerTables : FwModel
         Hashtable where = new() { { idfield, sel_id } };
         return (string)db.value(lutable, where, inamefield);
     }
+
+    public DBList listByGroup()
+    {
+        return db.array(table_name, [], "igroup, iname");
+    }
+
+    public virtual List<string> getAutocompleteGroupsList(string q)
+    {
+        return db.colp($"select distinct igroup from {db.qid(table_name)} where igroup>'' order by igroup");
+    }
+
 }

@@ -4,11 +4,13 @@
     :class="(fwStore.countCheckedRows ? 'position-sticky' : '')"
   >
     with <span class="badge bg-secondary rows-num" v-if="fwStore.countCheckedRows">{{fwStore.countCheckedRows}}</span> checked rows:<br>
-    <button type="button"
+    <button v-if="uioptions.isDelete"
+      type="button"
       class="btn btn-danger me-2"
       @click="onDelete"
-      :disabled="fwStore.is_readonly || !fwStore.countCheckedRows">`Delete`</button>
-    <list-btn-userlists v-if="fwStore.is_userlists" />
+      :disabled="fwStore.is_readonly || !fwStore.countCheckedRows"
+      >`Delete`</button>
+    <list-btn-userlists v-if="fwStore.is_userlists && uioptions.isUserlists" />
     <slot></slot>
   </div>
 </script>
@@ -23,7 +25,10 @@ fwApp.component('list-btn-multi', {
   data: () => ({
   }),
   computed: {
-    ...mapStores(useFwStore) //accessible via this.fwStore
+    ...mapStores(useFwStore), //accessible via this.fwStore
+    uioptions(){
+      return this.fwStore.uioptions.list.btnMulti??{};
+    }
   },
   mounted(){
   },

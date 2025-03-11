@@ -17,6 +17,9 @@
       />
     </fieldset>
   </form>
+  <template v-else>
+    <div v-if="fwStore.is_loading_item" class="text-center"><span class="spinner-border" role="status" aria-hidden="true"></span></div>
+  </template>
 </script>
 
 <script type="module">

@@ -2,4 +2,5 @@
   <input id="<~field>" name="item[<~field>]" maxlength="10" value="<~value date>" type="text" class="form-control <~class_control>" <~/common/required if="required"> <~attrs_control noescape>>
   <button class="btn btn-outline-secondary" type="button"><i class="bi bi-calendar3"></i></button>
 </div>
+<~./validation_errors if="errors">
 <~./help_block if="help_text">

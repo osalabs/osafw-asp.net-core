@@ -10,6 +10,14 @@ namespace osafw;
 
 public class DateUtils
 {
+    public static string toFormat(object d, string format)
+    {
+        var dt = d.toDateOrNull();
+        if (dt == null)
+            return "";
+        return ((DateTime)dt).ToString(format);
+    }
+
     public static string Date2SQL(DateTime d)
     {
         return d.Year + "-" + d.Month + "-" + d.Day;
@@ -73,7 +81,7 @@ public class DateUtils
     public static string Str2DateOnly(string str)
     {
         string result = str;
-        var dt = Utils.toDate(str);
+        var dt = str.toDate();
         if (Utils.isDate(dt))
         {
             result = dt.ToShortDateString();

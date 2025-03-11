@@ -5,7 +5,6 @@
     <a href="#" class="btn btn-outline-secondary" title="`Density`" @click.prevent="onToggleDensity"><i class="bi bi-grid-3x2-gap"></i></a>
     <a href="#" :class="'btn '+(fwStore.is_list_edit ? 'btn-info' : 'btn-outline-secondary')" title="`Toggle Edit`" @click.prevent="onToggleEdit"><i class="bi bi-pencil-square"></i></a>
   </div>
-  <list-customize-columns v-if="is_show_customize_columns" @hidden="is_show_customize_columns=false"></list-customize-columns>
 </script>
 
 <script type="module">
@@ -14,8 +13,8 @@ import { mapStores } from 'pinia';
 fwApp.component('list-filters-table-btn', {
   template: '#list-filters-table-btn-template',
   props: [],
+  emits: ['on-show-customize-columns'],
   data: () => ({
-    is_show_customize_columns: false
   }),
   computed: {
     ...mapStores(useFwStore) //accessible via this.fwStore
@@ -34,7 +33,7 @@ fwApp.component('list-filters-table-btn', {
           }
       },
       onCustomCols(e){
-        this.is_show_customize_columns=true;
+        this.$emit('on-show-customize-columns', e);
       },
       onToggleDensity(e){
           const classes = ['table-sm', 'table-dense', 'table-normal'];

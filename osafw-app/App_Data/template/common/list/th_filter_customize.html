@@ -1,5 +1,5 @@
 <th class="fw-normal text-nowrap d-print-none <~/common/text_end unless="GLOBAL[is_list_btn_left]">">
   <a href="#" class="px-1 me-1 on-toggle-search" title="`Filter Columns`"><i class="bi bi-funnel"></i></a>
-  <a href="#" class="px-1 me-1 on-custom-cols" title="`Customize Columns`"><i class="bi bi-table"></i></a>
+  <~ccols if="SESSION[user_id]" inline><a href="#" class="px-1 me-1 on-custom-cols" title="`Customize Columns`"><i class="bi bi-table"></i></a></~ccols>
   <a href="#" class="px-1 on-toggle-density" title="`Density`"><i class="bi bi-grid-3x2-gap"></i></a>
 </th>

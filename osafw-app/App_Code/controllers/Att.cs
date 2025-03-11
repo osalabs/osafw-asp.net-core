@@ -3,8 +3,6 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
-using System.Collections;
-
 namespace osafw;
 
 public class AttController : FwController
@@ -28,11 +26,11 @@ public class AttController : FwController
             throw new NotFoundException();
         string size = reqs("size");
 
-        Hashtable item = model.one(id);
+        var item = model.one(id);
         if (item.Count == 0)
             throw new NotFoundException();
 
-        if ((string)item["is_s3"] == "1")
+        if (item["is_s3"] == "1")
             model.redirectS3(item, size);
 
         model.transmitFile(id, size);
@@ -45,11 +43,11 @@ public class AttController : FwController
         string size = reqs("size");
         bool is_preview = reqs("preview") == "1";
 
-        Hashtable item = model.one(id);
+        var item = model.one(id);
         if (item.Count == 0)
             throw new NotFoundException();
 
-        if ((string)item["is_s3"] == "1")
+        if (item["is_s3"] == "1")
         {
             model.redirectS3(item, size);
             return;
@@ -57,7 +55,7 @@ public class AttController : FwController
 
         if (is_preview)
         {
-            if ((string)item["is_image"] == "1")
+            if (item["is_image"] == "1")
             {
                 model.transmitFile(id, size, "inline");
             }

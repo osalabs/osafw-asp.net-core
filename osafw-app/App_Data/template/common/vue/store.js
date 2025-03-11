@@ -22,6 +22,48 @@ let state = {
     is_readonly: false,
     is_activity_logs: false, //true if activity logs enabled
 
+    // default UI options, override in specific controller via store.js
+    uioptions: {
+      //top keys - screens
+      list: {
+        header: { // list-header, can be false
+          btnAddNew: true,
+          count: false, //FRY SPECIFIC
+        },
+        filters: { // list-filters, can be false
+          s: { // search input, can be false
+            placeholder: ""
+          }
+        },
+        table: { //list-table
+          isButtonsLeft: null, //null - use global.is_list_btn_left
+          rowButtons: { // list-row-btn, can be false as whole
+            view: true,
+            edit: true,
+            quickedit: true,
+            delete: true
+          },
+          pagination: { // list-pagination, can be false
+            count: true, //FRY SPECIFIC
+          }
+        },
+        btnMulti: { //list-btn-multi, can be false
+          isDelete: true,
+          isUserlists: true
+        }
+      },
+      view: {
+        header: { // view-header, can be false
+          btnAddNew: true,
+        },
+      },
+      edit: {
+        header: { // edit-header, can be false
+          btnAddNew: true,
+        },
+      }
+    },
+
     // user views
     all_list_columns: [], // list of all available columns
     list_user_view: {}, // UserViews record for current controller
@@ -48,6 +90,8 @@ let state = {
         status: '',
         userlist: '',
     },
+    is_list_filter_status: true, //default - show status filter
+
     related_id: 0, // related model id
     return_url: '', // return url if controller called from other place expecting user's return
     field_id: 'id', // model's id field name
@@ -56,12 +100,6 @@ let state = {
     count: 0, // total list rows count
     list_rows: [], // array of row objects to display, row can contain _meta object {is_ro:bool, ro_fields:[read only field names]}
     pager: [], // array of { pagenum:N, pagenum_show:N, is_cur_page:0|1, is_show_first:0|1, is_show_prev:0|1, is_show_next:0|1, pagenum_next:N}
-    list_row_buttons: { // list row buttons configuration, can be set to false to hide all buttons
-        view: true,
-        edit: true,
-        quickedit: true,
-        delete: true
-    },
 
     // edit form fields configuration
     list_editable_def_types: ['input', 'email', 'number', 'textarea', 'date_popup', 'datetime_popup', 'autocomplete', 'select', 'cb', 'radio', 'yesno'],
@@ -89,18 +127,19 @@ let state = {
     current_screen: '', // current screen name - list/view/edit
     current_id: 0, // current item id for view/edit screens
 
-    hchecked_rows: {}, // array of checked rows {row.id => 1}
+    hchecked_rows: {}, // array of checked rows {row[id_field] => 1}
     loadIndexDebouncedTimeout: null,
     saveEditDataDebouncedTimeout: null,
     is_initial_load: true, //reset after initial load
     is_loading_index: false, //true while loading index data
-    cells_saving: {}, // cells saving status {row.id_field => true}
-    cells_errors: {}, // cells saving status {row.id_field => true}
+    is_loading_item: false, //true while loading item data
+    cells_saving: {}, // cells saving status {row[id_field] => true}
+    cells_errors: {}, // cells saving status {row[id_field] => true}
   };
 
 // merge in fwStoreState if defined
 if (typeof fwStoreState !== 'undefined') {
-    state = { ...state, ...fwStoreState };
+    state = AppUtils.deepMerge(state, fwStoreState);
 }
 
 let getters = {
@@ -194,7 +233,7 @@ let getters = {
 
 //merge in fwStoreGetters if defined
 if (typeof fwStoreGetters !== 'undefined') {
-    getters = { ...getters, ...fwStoreGetters };
+   getters = AppUtils.deepMerge(getters, fwStoreGetters);
 }
 
 let actions = {
@@ -213,10 +252,12 @@ let actions = {
         this.current_id = id;
         let suffix = '';
         if (screen == 'view') {
-            suffix = '/' + id;
+          suffix = '/' + id;
+          this.edit_data = null;
         } else if (screen == 'edit') {
-            suffix = '/' + (id ? id + '/edit' : 'new');
-            if (!id) this.edit_data = { i: {} };
+          suffix = '/' + (id ? id + '/edit' : 'new');
+          this.edit_data = null;
+          if (!id) this.edit_data = { i: {} };
         }
         window.history.pushState({ screen: screen, id: id }, '', this.base_url + suffix);
         this.is_list_edit_pane = false;
@@ -274,6 +315,16 @@ let actions = {
         });
     },
 
+    // set defaults
+    applyDefaultsAfterLoad(data) {
+        this.uioptions.list.table.isButtonsLeft = this.uioptions.list.table.isButtonsLeft ?? this.global.is_list_btn_left;
+        this.list_user_view.density = this.list_user_view.density ?? 'table-sm';
+        this.is_initial_load = false; // reset initial load flag
+        if (data.showform_fields) {
+          this.enrichEditableListHeaders();
+        }
+    },
+
     // load init and lookup scopes only
     async loadInitial() {
         try {
@@ -283,13 +334,7 @@ let actions = {
             //console.log('loadInitial data', data);
 
             this.saveToStore(data);
-
-            // set defaults
-            this.list_user_view.density = this.list_user_view.density ?? 'table-sm';
-            this.is_initial_load = false; // reset initial load flag
-            if (data.showform_fields) {
-                this.enrichEditableListHeaders();
-            }
+            this.applyDefaultsAfterLoad(data);
 
         } catch (error) {
             this.handleError(error, 'loadInitial');
@@ -337,13 +382,7 @@ let actions = {
             this.is_loading_index = false;
 
             this.saveToStore(data);
-
-            // set defaults
-            this.list_user_view.density = this.list_user_view.density ?? 'table-sm';
-            this.is_initial_load = false; // reset initial load flag
-            if (data.showform_fields) {
-                this.enrichEditableListHeaders();
-            }
+            this.applyDefaultsAfterLoad(data);
 
         } catch (error) {
             this.is_loading_index = false;
@@ -354,6 +393,7 @@ let actions = {
     //load single item for view/edit
     async loadItem(id, mode) {
         try {
+            this.is_loading_item = true;
             const apiBase = mande(this.base_url);
             let q = {};
             if (mode == 'edit') {
@@ -362,6 +402,7 @@ let actions = {
 
             const data = await apiBase.get(id, q);
             //console.log('loadItem data', data);
+            this.is_loading_item = false;
 
             this.edit_data = data;
 
@@ -386,13 +427,18 @@ let actions = {
     },
     //when custom cell button clicked
     async onCellBtnClick({ event, row, col }) {
-        console.log('onCellBtnClick:', event, row.id, col.field);
+        console.log('onCellBtnClick:', event, row[this.field_id], col.field);
+    },
+    async onCellKeyup(event, row, col) {
+        //console.log('onCellKeyup:', event, row, col);
     },
     async saveCell(row, col) {
-        this.cells_saving[row.id + '-' + col.field_name] = true; //set saving flag
-        delete this.cells_errors[row.id + '-' + col.field_name]; //clear errors if any
+        let id = row[this.field_id];
+        let id_name = id + '-' + col.field_name;
 
-        let id = row.id;
+        this.cells_saving[id_name] = true; //set saving flag
+        delete this.cells_errors[id_name]; //clear errors if any
+        
         let field_name = col.field_name;
         let value = row[field_name];
 
@@ -413,11 +459,11 @@ let actions = {
 
             //remove saving flag after 5sec
             setTimeout(() => {
-                delete this.cells_saving[row.id + '-' + col.field_name];
+                delete this.cells_saving[id_name];
             }, 5000);
 
         } catch (error) {
-            delete this.cells_saving[row.id + '-' + col.field_name];
+            delete this.cells_saving[id_name];
 
             let err_msg = error.body?.err_msg ?? 'Server Error';
 
@@ -433,7 +479,7 @@ let actions = {
                 err_msg = window.fwConst.ERR_CODES_MAP[field_err_code] ?? 'Invalid';
             }
 
-            this.cells_errors[row.id + '-' + col.field_name] = err_msg;
+            this.cells_errors[id_name] = err_msg;
             this.handleError(error, 'saveCell', true);
             return error;
         }
@@ -701,7 +747,7 @@ let actions = {
 
 //merge in fwStoreActions if defined
 if (typeof fwStoreActions !== 'undefined') {
-    actions = { ...actions, ...fwStoreActions };
+   actions = AppUtils.deepMerge(actions, fwStoreActions);
 }
 
 const useFwStore = defineStore('fw', {

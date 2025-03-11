@@ -50,7 +50,7 @@
       ]
     },
     {
-      "library": "jquery-ui@1.14.0",
+      "library": "jquery-ui@1.14.1",
       "destination": "wwwroot/assets/lib/jquery-ui",
       "files": [
         "dist/jquery-ui.min.js"
@@ -144,9 +144,8 @@
       ]
     },
 
-
     {
-      "library": "vue@3.5.8",
+      "library": "vue@3.5.13",
       "destination": "wwwroot/assets/lib/vue",
       "files": [
         "dist/vue.global.js",
@@ -156,8 +155,37 @@
       ]
     },
     {
-      "library": "@vue/devtools-api@7.4.6",
+      "library": "@vue/devtools-api@7.6.8",
       "destination": "wwwroot/assets/lib/vue-devtools-api"
+    },
+    {
+      "library": "@vue/devtools-kit@7.6.8",
+      "destination": "wwwroot/assets/lib/vue-devtools-kit"
+    },
+    {
+      "library": "@vue/devtools-shared@7.6.8",
+      "destination": "wwwroot/assets/lib/vue-devtools-shared"
+    },
+    {
+      "library": "perfect-debounce@1.0.0",
+      "destination": "wwwroot/assets/lib/perfect-debounce",
+      "files": [
+        "dist/index.mjs"
+      ]
+    },
+    {
+      "library": "hookable@5.5.3",
+      "destination": "wwwroot/assets/lib/hookable",
+      "files": [
+        "dist/index.mjs"
+      ]
+    },
+    {
+      "library": "birpc@0.2.19",
+      "destination": "wwwroot/assets/lib/birpc",
+      "files": [
+        "dist/index.mjs"
+      ]
     },
     {
       "library": "vue-demi@0.14.10",
@@ -167,7 +195,7 @@
       ]
     },
     {
-      "library": "pinia@2.2.2",
+      "library": "pinia@2.3.0",
       "destination": "wwwroot/assets/lib/pinia",
       "files": [
         "dist/pinia.esm-browser.js"
@@ -182,7 +210,7 @@
       ]
     },
     {
-      "library": "@vueform/multiselect@2.6.10",
+      "library": "@vueform/multiselect@2.6.11",
       "destination": "wwwroot/assets/lib/vueform-multiselect",
       "files": [
         "dist/multiselect.js",
