@@ -216,26 +216,26 @@ public class DB : IDisposable
     // db.array("demos", DB.h("upd_time", db.opGT(DB.NOW))); - get all rows with upd_time > current datetime
     public static readonly object NOW = new();
 
-    private static Hashtable schemafull_cache; // cache for the full schema, lifetime = app lifetime
-    private static Hashtable schema_cache; // cache for the schema, lifetime = app lifetime
-    private static Dictionary<string, Dictionary<string, PropertyInfo>> class_mapping_cache = []; // cache for converting DB object to class
+    protected static Dictionary<string, Dictionary<string, ArrayList>> schemafull_cache = []; // cache for the full schema, lifetime = app lifetime
+    protected static Dictionary<string, Dictionary<string, Hashtable>> schema_cache = []; // cache for the schema, lifetime = app lifetime
+    protected static Dictionary<string, Dictionary<string, PropertyInfo>> class_mapping_cache = []; // cache for converting DB object to class
 
     public static string last_sql = ""; // last executed sql
     public static int SQL_QUERY_CTR = 0; // counter for SQL queries during request
 
-    private readonly FW fw; // for now only used for: fw.logger and fw.context (for request-level cacheing of multi-db connections)
+    protected readonly FW fw; // for now only used for: fw.logger and fw.context (for request-level cacheing of multi-db connections)
 
     public string db_name = "";
     public string dbtype = DBTYPE_SQLSRV; // SQL=SQL Server, OLE=OleDB, MySQL=MySQL
     public int sql_command_timeout = 30; // default command timeout, override in model for long queries (in reports or export, for example)
-    private readonly Hashtable conf = [];  // config contains: connection_string, type
-    private readonly string connstr = "";
+    protected readonly Hashtable conf = [];  // config contains: connection_string, type
+    protected readonly string connstr = "";
 
-    private Hashtable schema = []; // schema for currently connected db
-    private DbConnection conn; // actual db connection - SqlConnection or OleDbConnection
+    protected Dictionary<string, Hashtable> schema = []; // schema for currently connected db
+    protected DbConnection conn; // actual db connection - SqlConnection or OleDbConnection
 
-    private bool is_check_ole_types = false; // if true - checks for unsupported OLE types during readRow
-    private readonly Hashtable UNSUPPORTED_OLE_TYPES = Utils.qh("DBTYPE_IDISPATCH DBTYPE_IUNKNOWN"); // also? DBTYPE_ARRAY DBTYPE_VECTOR DBTYPE_BYTES
+    protected bool is_check_ole_types = false; // if true - checks for unsupported OLE types during readRow
+    protected readonly Hashtable UNSUPPORTED_OLE_TYPES = Utils.qh("DBTYPE_IDISPATCH DBTYPE_IUNKNOWN"); // also? DBTYPE_ARRAY DBTYPE_VECTOR DBTYPE_BYTES
 
     /// <summary>
     ///  "synax sugar" helper to build Hashtable from list of arguments instead more complex New Hashtable from {...}
@@ -595,7 +595,7 @@ public class DB : IDisposable
     }
 
     //read row values as a strings
-    private DBRow readRow(DbDataReader dbread)
+    protected DBRow readRow(DbDataReader dbread)
     {
         if (!dbread.HasRows)
             return []; //if no rows - return empty row
@@ -621,7 +621,7 @@ public class DB : IDisposable
     }
 
     //read database row values into generic type
-    private T readRow<T>(DbDataReader dbread) where T : new()
+    protected T readRow<T>(DbDataReader dbread) where T : new()
     {
         T result = new();
         if (!dbread.HasRows)
@@ -740,18 +740,9 @@ public class DB : IDisposable
         return readArray<T>(dbread);
     }
 
-    /// <summary>
-    /// return all rows with all fields from the table based on coditions/order
-    /// array("table", where, "id asc", Utils.qh("field1|id field2|iname"))
-    /// </summary>
-    /// <param name="table">table name</param>
-    /// <param name="where">where conditions</param>
-    /// <param name="order_by">optional order by, MUST BE QUOTED</param>
-    /// <param name="aselect_fields">optional select fields array or hashtable("field"=>"alias") or arraylist of hashtable("field"=>1,"alias"=>1) for cases if there could be several same fields with diff aliases), if not set * returned</param>
-    /// <returns></returns>
-    public DBList array(string table, Hashtable where, string order_by = "", ICollection aselect_fields = null)
+    protected string buildSelectFields(ICollection aselect_fields = null)
     {
-        string select_fields = "*";
+        string result = "*";
         if (aselect_fields != null)
         {
             ArrayList quoted = new(aselect_fields.Count);
@@ -777,11 +768,30 @@ public class DB : IDisposable
                     quoted.Add(this.qid(field));
                 }
             }
-            select_fields = quoted.Count > 0 ? string.Join(", ", quoted.ToArray()) : "*";
+            result = quoted.Count > 0 ? string.Join(", ", quoted.ToArray()) : "*";
         }
+        return result;
+    }
 
-        var qp = buildSelect(table, where, order_by, select_fields: select_fields);
+    /// <summary>
+    /// return all rows with all fields from the table based on coditions/order
+    /// array("table", where, "id asc", Utils.qh("field1|id field2|iname"))
+    /// </summary>
+    /// <param name="table">table name</param>
+    /// <param name="where">where conditions</param>
+    /// <param name="order_by">optional order by, MUST BE QUOTED</param>
+    /// <param name="aselect_fields">optional select fields array or hashtable("field"=>"alias") or arraylist of hashtable("field"=>1,"alias"=>1) for cases if there could be several same fields with diff aliases), if not set * returned</param>
+    /// <returns></returns>
+    public DBList array(string table, Hashtable where, string order_by = "", ICollection aselect_fields = null)
+    {
+        var qp = buildSelect(table, where, order_by, select_fields: buildSelectFields(aselect_fields));
         return arrayp(qp.sql, qp.@params);
+    }
+
+    public List<T> array<T>(string table, Hashtable where, string order_by = "", ICollection aselect_fields = null) where T : new()
+    {
+        var qp = buildSelect(table, where, order_by, select_fields: buildSelectFields(aselect_fields));
+        return arrayp<T>(qp.sql, qp.@params);
     }
 
     /// <summary>
@@ -1167,7 +1177,7 @@ public class DB : IDisposable
     /// <param name="join_type">"where"(default), "update"(for SET), "insert"(for VALUES)</param>
     /// <param name="suffix">optional suffix to append to each param name</param>
     /// <returns></returns>
-    public DBQueryAndParams prepareParams(string table, Hashtable fields, string join_type = "where", string suffix = "")
+    public DBQueryAndParams prepareParams(string table, IDictionary fields, string join_type = "where", string suffix = "")
     {
         connect();
         loadTableSchema(table);
@@ -1259,100 +1269,9 @@ public class DB : IDisposable
         };
     }
 
-    public DBQueryAndParams prepareParams<T>(string table, T data, string join_type = "where", string suffix = "")
+    public DBQueryAndParams prepareParams(string table, Hashtable fields, string join_type = "where", string suffix = "")
     {
-        connect();
-        loadTableSchema(table);
-        if (!schema.ContainsKey(table))
-            throw new ApplicationException("table [" + table + "] does not defined in FW.config(\"schema\")");
-
-        Type type = typeof(T);
-        PropertyInfo[] fields = type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
-
-        if (fields.Length == 0)
-            return new DBQueryAndParams()
-            {
-                sql = "",
-                @params = []
-            };
-
-        var is_for_insert = (join_type == "insert");
-        var is_for_where = (join_type == "where"); // if for where "IS NULL" will be used instead "=NULL"
-
-        var join_delimiter = is_for_where ? " AND " : ",";
-
-        ArrayList fields_list = new(fields.Length);
-        List<string> params_sqls = [];
-
-        Hashtable @params = new(fields.Length);
-        var reW = new Regex(@"\W"); //pre-compile regex
-
-        foreach (var field in fields)
-        {
-            var fname = field.Name;
-            var dbop = field2Op(table, fname, field.GetValue(data), is_for_where);
-
-            var delim = $" {dbop.opstr} ";
-            var param_name = reW.Replace(fname, "_") + suffix; // replace any non-alphanum in param names and add suffix
-
-            // for insert VALUES it will be form @p1,@p2,... i.e. without field names
-            // for update/where we need it in form like "field="
-            string sql = is_for_insert ? "" : fname + delim;
-
-            if (dbop.is_value)
-            {
-                // if we have value - add it to params
-                if (dbop.op == DBOps.BETWEEN)
-                {
-                    // special case for between
-                    @params[param_name + "_1"] = ((IList)dbop.value)[0];
-                    @params[param_name + "_2"] = ((IList)dbop.value)[1];
-                    // BETWEEN @p1 AND @p2
-                    sql += $"@{param_name}_1 AND @{param_name}_2";
-                }
-                else if (dbop.op == DBOps.IN || dbop.op == DBOps.NOTIN)
-                {
-                    List<string> sql_params = new(((IList)dbop.value).Count);
-                    var i = 1;
-                    foreach (var pvalue in (IList)dbop.value)
-                    {
-                        @params[param_name + "_" + i] = pvalue;
-                        sql_params.Add("@" + param_name + "_" + i);
-                        i += 1;
-                    }
-                    // [NOT] IN (@p1,@p2,@p3...)
-                    sql += "(" + (sql_params.Count > 0 ? string.Join(",", sql_params) : "NULL") + ")";
-                }
-                else
-                {
-                    if (dbop.value == DB.NOW)
-                    {
-                        // if value is NOW object - don't add it to params, just use NOW()/GETDATE() in sql
-                        sql += sqlNOW();
-                    }
-                    else
-                    {
-                        @params[param_name] = dbop.value;
-                        sql += "@" + param_name;
-                    }
-                }
-                fields_list.Add(fname); // only if field has a parameter - include in the list
-            }
-            else
-            {
-                sql += dbop.sql; //if no value - add operation's raw sql if any
-            }
-            params_sqls.Add(sql);
-        }
-        //logger(LogLevel.DEBUG, "fields:", fields);
-        //logger(LogLevel.DEBUG, "params:", params_sqls);
-
-        return new DBQueryAndParams()
-        {
-            fields = fields_list,
-            sql = string.Join(join_delimiter, params_sqls),
-            @params = @params
-        };
+        return prepareParams(table, (IDictionary)fields, join_type, suffix);
     }
 
     public DBOperation field2Op(string table, string field_name, object field_value_or_op, bool is_for_where = false)
@@ -1380,7 +1299,7 @@ public class DB : IDisposable
         connect();
         loadTableSchema(table);
         field_name = field_name.ToLower();
-        Hashtable schema_table = (Hashtable)schema[table];
+        Hashtable schema_table = schema[table];
         if (!schema_table.ContainsKey(field_name))
         {
             //logger(LogLevel.DEBUG, "schema_table:", schema_table);
@@ -1649,84 +1568,112 @@ public class DB : IDisposable
         return new DBOperation(DBOps.BETWEEN, new object[] { from_value, to_value });
     }
 
-    // return last inserted id
-    public int insert(string table, Hashtable fields)
+    protected int insertQueryAndParams(DBQueryAndParams qp)
+    {
+        object insert_id;
+
+        if (dbtype == DBTYPE_SQLSRV)
+            // SELECT SCOPE_IDENTITY() not always return what we need
+            insert_id = exec(qp.sql, qp.@params, true);
+        else if (dbtype == DBTYPE_OLE)
+        {
+            exec(qp.sql, qp.@params);
+            insert_id = valuep("SELECT @@identity");
+        }
+        else if (dbtype == DBTYPE_MYSQL)
+        {
+            insert_id = exec(qp.sql, qp.@params, true);
+        }
+        else
+            throw new ApplicationException("Get last insert ID for DB type [" + dbtype + "] not implemented");
+
+        // if table doesn't have identity insert_id would be DBNull
+        if (insert_id == DBNull.Value || insert_id == null)
+            insert_id = 0;
+
+        return (int)insert_id;
+    }
+
+    /// <summary>
+    /// insert record into table
+    /// </summary>
+    /// <param name="table"></param>
+    /// <param name="fields">last inserted id</param>
+    /// <returns></returns>
+    public int insert(string table, IDictionary fields)
     {
         if (fields.Count < 1)
             return 0;
         var qp = buildInsert(table, fields);
 
-        object insert_id;
-
-        if (dbtype == DBTYPE_SQLSRV)
-            // SELECT SCOPE_IDENTITY() not always return what we need
-            insert_id = exec(qp.sql, qp.@params, true);
-        else if (dbtype == DBTYPE_OLE)
-        {
-            exec(qp.sql, qp.@params);
-            insert_id = valuep("SELECT @@identity");
-        }
-        else if (dbtype == DBTYPE_MYSQL)
-        {
-            insert_id = exec(qp.sql, qp.@params, true);
-        }
-        else
-            throw new ApplicationException("Get last insert ID for DB type [" + dbtype + "] not implemented");
-
-        // if table doesn't have identity insert_id would be DBNull
-        if (insert_id == DBNull.Value || insert_id == null)
-            insert_id = 0;
-
-        return (int)insert_id;
+        return insertQueryAndParams(qp);
+    }
+    public int insert(string table, Hashtable fields)
+    {
+        return insert(table, (IDictionary)fields);
     }
 
+    /// <summary>
+    /// insert typed record into table
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="table"></param>
+    /// <param name="data">last inserted id</param>
+    /// <returns></returns>
     public int insert<T>(string table, T data)
     {
-        var qp = buildInsert(table, data);
+        if (data == null)
+            return 0;
 
-        object insert_id;
+        var qp = buildInsert(table, toKeyValue(data));
 
-        if (dbtype == DBTYPE_SQLSRV)
-            // SELECT SCOPE_IDENTITY() not always return what we need
-            insert_id = exec(qp.sql, qp.@params, true);
-        else if (dbtype == DBTYPE_OLE)
-        {
-            exec(qp.sql, qp.@params);
-            insert_id = valuep("SELECT @@identity");
-        }
-        else if (dbtype == DBTYPE_MYSQL)
-        {
-            insert_id = exec(qp.sql, qp.@params, true);
-        }
-        else
-            throw new ApplicationException("Get last insert ID for DB type [" + dbtype + "] not implemented");
-
-        // if table doesn't have identity insert_id would be DBNull
-        if (insert_id == DBNull.Value || insert_id == null)
-            insert_id = 0;
-
-        return (int)insert_id;
+        return insertQueryAndParams(qp);
     }
 
-    public int updatep(string sql, Hashtable @params = null)
+    /// <summary>
+    /// update records in table
+    /// </summary>
+    /// <param name="table"></param>
+    /// <param name="fields">key => value</param>
+    /// <param name="where">key => value/opXX</param>
+    /// <returns></returns>
+    public int update(string table, IDictionary fields, IDictionary where)
     {
-        return exec(sql, @params);
+        var qp = buildUpdate(table, fields, where);
+        return exec(qp.sql, qp.@params);
     }
-
     public int update(string table, Hashtable fields, Hashtable where)
     {
         var qp = buildUpdate(table, fields, where);
         return exec(qp.sql, qp.@params);
     }
 
-    public int update<T>(string table, T data, Hashtable where)
+    /// <summary>
+    /// update records in table
+    /// </summary>
+    /// <param name="table"></param>
+    /// <param name="data">typed object</param>
+    /// <param name="where">key => value/opXX</param>
+    /// <returns></returns>
+    public int update<T>(string table, T data, IDictionary where)
     {
-        var qp = buildUpdate<T>(table, data, where);
+        var qp = buildUpdate(table, toKeyValue(data), where);
         return exec(qp.sql, qp.@params);
     }
 
+    /// <summary>
+    /// update records in table - alias for exec()
+    /// </summary>
+    /// <param name="sql"></param>
+    /// <param name="params"></param>
+    /// <returns></returns>
+    public int updatep(string sql, Hashtable @params = null)
+    {
+        return exec(sql, @params);
+    }
+
     // retrun number of affected rows
-    public int updateOrInsert(string table, Hashtable fields, Hashtable where)
+    public int updateOrInsert(string table, IDictionary fields, IDictionary where)
     {
         //try to update first
         var result = update(table, fields, where);
@@ -1759,7 +1706,7 @@ public class DB : IDisposable
     /// <param name="limit">optional limit number of results</param>
     /// <param name="select_fields">optional (default "*") fields to select, MUST already be quoted!</param>
     /// <returns></returns>
-    private DBQueryAndParams buildSelect(string table, Hashtable where, string order_by = "", int limit = -1, string select_fields = "*")
+    protected DBQueryAndParams buildSelect(string table, IDictionary where, string order_by = "", int limit = -1, string select_fields = "*")
     {
         DBQueryAndParams result = new()
         {
@@ -1789,7 +1736,7 @@ public class DB : IDisposable
         return result;
     }
 
-    private DBQueryAndParams buildUpdate(string table, Hashtable fields, Hashtable where)
+    protected DBQueryAndParams buildUpdate(string table, IDictionary fields, IDictionary where)
     {
         DBQueryAndParams result = new()
         {
@@ -1812,30 +1759,7 @@ public class DB : IDisposable
         return result;
     }
 
-    private DBQueryAndParams buildUpdate<T>(string table, T data, Hashtable where)
-    {
-        DBQueryAndParams result = new()
-        {
-            sql = "UPDATE " + qid(table) + " " + " SET "
-        };
-
-        //logger(LogLevel.DEBUG, "buildUpdate:", table, fields);
-
-        var set_params = prepareParams<T>(table, data, "update", "_SET");
-        result.sql += set_params.sql;
-        result.@params = set_params.@params;
-
-        if (where.Count > 0)
-        {
-            var where_params = prepareParams(table, where);
-            result.sql += " WHERE " + where_params.sql;
-            Utils.mergeHash(result.@params, where_params.@params);
-        }
-
-        return result;
-    }
-
-    private DBQueryAndParams buildInsert(string table, Hashtable fields)
+    protected DBQueryAndParams buildInsert(string table, IDictionary fields)
     {
         DBQueryAndParams result = new();
 
@@ -1848,20 +1772,7 @@ public class DB : IDisposable
         return result;
     }
 
-    private DBQueryAndParams buildInsert<T>(string table, T data)
-    {
-        DBQueryAndParams result = new();
-
-        var insert_params = prepareParams<T>(table, data, "insert");
-        var sql_fields = string.Join(",", insert_params.fields.ToArray());
-
-        result.sql = "INSERT INTO " + qid(table) + " (" + sql_fields + ") VALUES (" + insert_params.sql + ")";
-        result.@params = insert_params.@params;
-
-        return result;
-    }
-
-    private DBQueryAndParams buildDelete(string table, Hashtable where)
+    protected DBQueryAndParams buildDelete(string table, IDictionary where)
     {
         DBQueryAndParams result = new()
         {
@@ -1924,9 +1835,9 @@ public class DB : IDisposable
         connect();
         loadTableSchema(table);
         field_name = field_name.ToLower();
-        if (!((Hashtable)schema[table]).ContainsKey(field_name))
+        if (!(schema[table]).ContainsKey(field_name))
             return "";
-        string field_type = (string)((Hashtable)schema[table])[field_name];
+        string field_type = (string)schema[table][field_name];
 
         string result;
         if (Regex.IsMatch(field_type, "int"))
@@ -1957,13 +1868,14 @@ public class DB : IDisposable
     public ArrayList loadTableSchemaFull(string table)
     {
         // check if full schema already there
-        schemafull_cache ??= [];
-        if (!schemafull_cache.ContainsKey(connstr))
-            schemafull_cache[connstr] = new Hashtable();
+        if (!schemafull_cache.TryGetValue(connstr, out var cache))
+        {
+            cache = [];
+            schemafull_cache[connstr] = cache;
+        }
 
-        var cache = (Hashtable)schemafull_cache[connstr];
-        if (cache.ContainsKey(table))
-            return (ArrayList)cache[table];
+        if (cache.TryGetValue(table, out ArrayList value))
+            return value;
 
         // cache miss
         ArrayList result = [];
@@ -2173,18 +2085,20 @@ public class DB : IDisposable
         if (dbtype != DBTYPE_SQLSRV && dbtype != DBTYPE_OLE && dbtype != DBTYPE_MYSQL)
         {
             if (schema.Count == 0)
-                schema = (Hashtable)conf["schema"];
+                schema = (Dictionary<string, Hashtable>)conf["schema"];
         }
 
         // check if schema already there
-        if (schema.ContainsKey(table))
-            return (Hashtable)schema[table];
+        if (schema.TryGetValue(table, out var cachedSchema))
+            return cachedSchema;
 
-        schema_cache ??= [];
-        if (!schema_cache.ContainsKey(connstr))
-            schema_cache[connstr] = new Hashtable();
+        if (!schema_cache.TryGetValue(connstr, out var connSchemaCache))
+        {
+            connSchemaCache = [];
+            schema_cache[connstr] = connSchemaCache;
+        }
 
-        if (!((Hashtable)schema_cache[connstr]).ContainsKey(table))
+        if (!connSchemaCache.ContainsKey(table))
         {
             ArrayList fields = loadTableSchemaFull(table);
             Hashtable h = new(fields.Count);
@@ -2192,12 +2106,12 @@ public class DB : IDisposable
                 h[row["name"].ToString().ToLower()] = row["fw_type"];
 
             schema[table] = h;
-            ((Hashtable)schema_cache[connstr])[table] = h;
+            connSchemaCache[table] = h;
         }
         else
         {
             // fw.logger("schema_cache HIT " & current_db & "." & table)
-            schema[table] = ((Hashtable)schema_cache[connstr])[table];
+            schema[table] = connSchemaCache[table];
         }
 
         return (Hashtable)schema[table];
@@ -2205,9 +2119,9 @@ public class DB : IDisposable
 
     public void clearSchemaCache()
     {
-        schemafull_cache?.Clear();
-        schema_cache?.Clear();
-        schema?.Clear();
+        schemafull_cache.Clear();
+        schema_cache.Clear();
+        schema.Clear();
         class_mapping_cache.Clear();
     }
 
@@ -2218,7 +2132,7 @@ public class DB : IDisposable
     }
 
     // map SQL Server type to FW's
-    private static string mapTypeSQL2Fw(string mstype)
+    protected static string mapTypeSQL2Fw(string mstype)
     {
         string result;
         switch (mstype.ToLower())
@@ -2273,7 +2187,7 @@ public class DB : IDisposable
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <returns></returns>
-    private static Dictionary<string, PropertyInfo> getWritableProperties<T>()
+    protected static Dictionary<string, PropertyInfo> getWritableProperties<T>()
     {
         Type type = typeof(T);
         if (!class_mapping_cache.TryGetValue(type.FullName, out var value))
@@ -2341,6 +2255,18 @@ public class DB : IDisposable
         return result;
     }
 
+    public static Dictionary<string, object> toKeyValue<T>(T o)
+    {
+        Dictionary<string, object> result = [];
+
+        var props = getWritableProperties<T>();
+        foreach (var prop in props)
+        {
+            result[prop.Key] = prop.Value.GetValue(o);
+        }
+        return result;
+    }
+
     /// <summary>
     /// set property value of object according to field/value pair
     /// </summary>
@@ -2349,7 +2275,7 @@ public class DB : IDisposable
     /// <param name="props"></param>
     /// <param name="field"></param>
     /// <param name="value"></param>
-    private static void setPropertyValue<T>(T obj, Dictionary<string, PropertyInfo> props, string field, object value) where T : new()
+    protected static void setPropertyValue<T>(T obj, Dictionary<string, PropertyInfo> props, string field, object value) where T : new()
     {
         if (props.TryGetValue(field, out PropertyInfo property))
         {
@@ -2374,7 +2300,7 @@ public class DB : IDisposable
 
     [SupportedOSPlatform("windows")]
     // map OLE type to FW's
-    private static string mapTypeOLE2Fw(int mstype)
+    protected static string mapTypeOLE2Fw(int mstype)
     {
         string result = mstype switch
         {
@@ -2408,7 +2334,7 @@ public class DB : IDisposable
         return result;
     }
 
-    private bool disposedValue; // To detect redundant calls
+    protected bool disposedValue; // To detect redundant calls
 
     protected virtual void Dispose(bool disposing)
     {

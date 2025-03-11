@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Generic;
 
 namespace osafw;
 
@@ -97,28 +96,12 @@ public class TestController : FwController
     }
 
 
-    class UsersRow
+    public void DBGenericsAction()
     {
-        public int id { get; set; }
-
-        [DBName("email")]
-        public string email2 { get; set; }
-    }
-
-    public void GenericsAction()
-    {
-        var ht = new Dictionary<string, object>() { { "id", 1 }, { "email", "test@test.com" } };
-        var user = DB.toClass<UsersRow>(ht);
-        logger("user:", user);
-
-        var non_generic_test = db.rowp("SELECT TOP 1 id, email from users");
-        logger("non_generic_test:", non_generic_test);
-        var generic_test = db.rowp<UsersRow>("SELECT TOP 1 id, email from users");
-        logger("generic_test:", generic_test);
-
-        var generic_test_array = db.arrayp<UsersRow>("SELECT id, email from users");
-        logger("generic_test_array:", generic_test_array);
-
+        //var item = fw.model<Demos>().one(1);
+        //logger(item);
+        var result = fw.model<Demos>().calcTotal(1);
+        rw("result:" + result);
         rw("done");
     }
 }
