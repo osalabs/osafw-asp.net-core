@@ -95,4 +95,13 @@ public class TestController : FwController
         throw new Exception("Test exception");
     }
 
+
+    public void DBGenericsAction()
+    {
+        //var item = fw.model<Demos>().one(1);
+        //logger(item);
+        var result = fw.model<Demos>().calcTotal(1);
+        rw("result:" + result);
+        rw("done");
+    }
 }
