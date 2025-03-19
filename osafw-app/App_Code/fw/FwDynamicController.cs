@@ -17,6 +17,8 @@ public class FwDynamicController : FwController
 
     protected FwModel model_related;
 
+    protected static readonly string[] DEF_TYPES_STRUCTURE = ["row", "row_end", "col", "col_end", "header"];
+
     public override void init(FW fw)
     {
         base.init(fw);
@@ -716,7 +718,7 @@ public class FwDynamicController : FwController
             string dtype = (string)def["type"];
             string field = def["field"].toStr();
 
-            if (dtype is "row" or "row_end" or "col" or "col_end")
+            if (DEF_TYPES_STRUCTURE.Contains(dtype))
                 // structural tags
                 def["is_structure"] = true;
             else if (dtype == "multi")
@@ -828,7 +830,7 @@ public class FwDynamicController : FwController
                 // special case - hide if new item screen
                 def["class"] = "d-none";
 
-            if (dtype == "row" || dtype == "row_end" || dtype == "col" || dtype == "col_end")
+            if (DEF_TYPES_STRUCTURE.Contains(dtype))
                 // structural tags
                 def["is_structure"] = true;
             else if (dtype == "multicb")

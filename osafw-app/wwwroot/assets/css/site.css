@@ -460,6 +460,18 @@ table.list-edit tbody td {
   padding-bottom: var(--fw-spacer);
 }
 
+.hr-header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 1rem;
+}
+  .hr-header::before,
+  .hr-header::after {
+    content: "";
+    border-top: 0.1rem double var(--bs-border-color);
+    align-self: center;
+  }
+
 form .required:before {
   content: "*";
   color: var(--bs-danger);

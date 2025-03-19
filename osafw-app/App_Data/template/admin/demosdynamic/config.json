@@ -148,6 +148,10 @@
                     "type": "checkbox"
                 },
                 {
+                    "type": "header",
+                    "label": "Dates"
+                },
+                {
                     "field": "fdate_combo",
                     "label": "Date combo",
                     "type": "date"
@@ -204,7 +208,7 @@
                 {
                     "field": "demos_items",
                     "label": "Subtable",
-                    "class_label": "col-12 text-start",
+                    "class_label": "col-12 hr-header fs-5",
                     "type": "subtable",
                     "model": "DemosItems"
                 },
@@ -366,6 +370,10 @@
                     "class_contents": "col d-flex align-items-center"
                 },
                 {
+                    "type": "header",
+                    "label": "Dates"
+                },
+                {
                     "field": "fdate_combo",
                     "label": "Date combo (TODO)",
                     "type": "date"
@@ -426,7 +434,7 @@
                 {
                     "field": "demos_items",
                     "label": "Subtable",
-                    "class_label": "col-12 text-start",
+                    "class_label": "col-12 text-center hr-header fs-5",
                     "type": "subtable_edit",
                     "model": "DemosItems",
                     "related_field_name": "demos_id",
