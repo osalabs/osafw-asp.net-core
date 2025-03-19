@@ -451,7 +451,7 @@ public class Users : FwModel
         else
         {
             var user = one(users_id);
-            user_access_level = Utils.toInt(user["access_level"]);
+            user_access_level = user["access_level"].toInt();
         }
 
         if (user_access_level == ACL_SITEADMIN)
@@ -469,7 +469,7 @@ public class Users : FwModel
         var resource = fw.model<Resources>().oneByIcode(resource_icode);
         if (resource.Count == 0)
             return result; //if no resource defined - return empty result - basically access denied
-        var resources_id = Utils.toInt(resource["id"]);
+        var resources_id = resource["id"].toInt();
 
         //list all permissions for the resource and all user roles
         List<string> roles_ids;
@@ -589,12 +589,12 @@ public class Users : FwModel
         var resource = fw.model<Resources>().oneByIcode(resource_icode);
         if (resource.Count == 0)
             return false; //if no resource defined - access denied
-        var resources_id = Utils.toInt(resource["id"]);
+        var resources_id = resource["id"].toInt();
 
         var permission = fw.model<Permissions>().oneByIcode(permission_icode);
         if (permission.Count == 0)
             return false; //if no permission defined - access denied
-        var permissions_id = Utils.toInt(permission["id"]);
+        var permissions_id = permission["id"].toInt();
 
         // read all roles for user
         List<string> roles_ids;
@@ -603,7 +603,7 @@ public class Users : FwModel
         else
         {
             var user = one(users_id);
-            if (Utils.toInt(user["access_level"]) == ACL_SITEADMIN)
+            if (user["access_level"].toInt() == ACL_SITEADMIN)
             {
                 //siteadmin doesn't have roles - has access to everything
                 return true;
@@ -623,6 +623,63 @@ public class Users : FwModel
         var result = true; //if no Roles support - always allow
 #endif
         return result;
+    }
+
+    // load list of resources user can see (have list permission) per RBAC and save into fw.G[rbac_menu]
+    // use in sidebar menu as <~imenu if="GLOBAL[rbac_menu][AdminUsers]" inline>...</~imenu>
+    public void loadRBACMenu()
+    {
+#if isRoles
+        //check cache
+        var cache_key = "rbac_menu#" + fw.userId;
+        var cache_key_time = "rbac_menu_time#" + fw.userId;
+        var rbac_menu = (DBRow)FwCache.getValue(cache_key);
+        if (rbac_menu != null)
+        {
+            //check if time is earlier than roles_resources_permissions_updated
+            var cache_time = (DateTime?)FwCache.getValue(cache_key_time);
+            var roles_resources_permissions_updated = (DateTime?)FwCache.getValue(RolesResourcesPermissions.CACHE_KEY_UPDATED); // if null - then roles not changed recently
+            if (roles_resources_permissions_updated == null || cache_time != null && cache_time >= roles_resources_permissions_updated)
+            {
+                fw.G["rbac_menu"] = rbac_menu; // CACHE HIT
+                return;
+            }
+        }
+
+        //not in cache - read from db
+        List<string> res_icodes;
+        if (isSiteAdmin())
+        {
+            //siteadmin doesn't have roles - has access to everything
+            res_icodes = fw.model<Resources>().colIcodes();
+        }
+        else
+        {
+            // read all roles for user
+            List<string> roles_ids = fw.model<UsersRoles>().colLinkedIdsByMainId(fw.userId);
+            // read all resources user has list permission
+            var list_permission = fw.model<Permissions>().oneByIcode(Permissions.PERMISSION_LIST);
+            var rrps = fw.model<RolesResourcesPermissions>().listByRolesPermissions(roles_ids, new int[] { list_permission["id"].toInt() });
+
+            // read all resources user has list permission
+            var resources_ids = new List<int>();
+            foreach (Hashtable rrp in rrps)
+            {
+                resources_ids.Add(rrp["resources_id"].toInt());
+            }
+            res_icodes = fw.model<Resources>().colIcodes(resources_ids);
+        }
+
+        //convert res_icodes into key => 1
+        rbac_menu = [];
+        foreach (var icode in res_icodes)
+            rbac_menu[icode] = "1";
+
+        FwCache.setValue(cache_key, rbac_menu, 1800); // cache for 30 minutes
+        FwCache.setValue(cache_key_time, DateTime.Now);
+
+        fw.G["rbac_menu"] = rbac_menu;
+#endif
     }
 
     //shortcut to avoid calling UsersRoles directly
@@ -667,7 +724,7 @@ public class Users : FwModel
         else
         {
             //if Site Admin - has access to all resources
-            if (Utils.toInt(one(users_id)["access_level"]) == ACL_SITEADMIN)
+            if (one(users_id)["access_level"].toInt() == ACL_SITEADMIN)
                 return db.colp($"select icode from {fw.model<Resources>().table_name}");
 
             //get all roles for the known user

@@ -1,1 +1,11 @@
 <a href="<~/admin/sendemail/url>/new?item[to]=<~i[email]>" class="btn btn-default"><i class="bi bi-envelope"></i> `Send Email`</a>
+
+<~btn_roles ifeq="SESSION[access_level]" value="100" inline>
+<~btn_roles2 if="is_roles" inline>
+<div class="btn-group">
+  <a href="<~/admin/lookupmanager/url>?d=roles" class="btn btn-default"><i class="bi bi-people"></i> `Roles`</a>
+  <a href="<~/admin/lookupmanager/url>?d=permissions" class="btn btn-default"><i class="bi bi-key"></i> `Permissions`</a>
+  <a href="<~/admin/lookupmanager/url>?d=resources" class="btn btn-default"><i class="bi bi-gear"></i> `Resources`</a>
+</div>
+</~btn_roles2>
+</~btn_roles>

@@ -195,7 +195,7 @@ public class FwReports
         int current_user_level = fw.userAccessLevel;
         if (current_user_level > Users.ACL_VISITOR && current_user_level < Users.ACL_SITEADMIN)
         {
-            if (!fw.model<Users>().isAccessByRolesResourceAction(fw.userId, report_code, fw.route.action, fw.route.action_more))
+            if (!fw.model<Users>().isAccessByRolesResourceAction(fw.userId, report_code + "Report", fw.route.action, fw.route.action_more))
                 throw new AuthException("Bad access - Not authorized to view the Report (2)");
         }
     }

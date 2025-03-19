@@ -3,12 +3,15 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2023 Oleg Savchuk www.osalabs.com
 
+using System;
 using System.Collections;
 
 namespace osafw;
 
 public class RolesResourcesPermissions : FwModel
 {
+    public const string CACHE_KEY_UPDATED = "roles_resources_permissions_updated";
+
     const string KEY_DELIM = "#";
 
     public FwModel junction_model_permissions;
@@ -89,6 +92,17 @@ public class RolesResourcesPermissions : FwModel
     public DBList listByRolesResources(IList roles_ids, IList resources_ids)
     {
         return db.array(table_name, DB.h("roles_id", db.opIN(roles_ids), "resources_id", db.opIN(resources_ids)));
+    }
+
+    /// <summary>
+    /// list of records for given MULTIPLE roles and permissions
+    /// </summary>
+    /// <param name="roles_ids"></param>
+    /// <param name="permissions_ids"></param>
+    /// <returns></returns>
+    public DBList listByRolesPermissions(IList roles_ids, IList permissions_ids)
+    {
+        return db.array(table_name, DB.h("roles_id", db.opIN(roles_ids), "permissions_id", db.opIN(permissions_ids)));
     }
 
     /// <summary>
@@ -176,5 +190,8 @@ public class RolesResourcesPermissions : FwModel
         where[junction_field_main_id] = roles_id;
         where[field_status] = STATUS_UNDER_UPDATE;
         db.del(table_name, where);
+
+        // set in cache time when roles updated
+        FwCache.setValue(CACHE_KEY_UPDATED, DateTime.Now);
     }
 }
