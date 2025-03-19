@@ -141,6 +141,8 @@ public class LoginController : FwController
         if (users_id == 0)
             fw.redirect(base_url);
 
+        fw.logActivity(FwLogTypes.ICODE_USERS_LOGIN, FwEntities.ICODE_USERS, users_id, "MFA check, IP:" + fw.context.Connection.RemoteIpAddress.ToString());
+
         var ps = new Hashtable() {
             { "hide_sidebar" , true},
             { "users_id", users_id }
@@ -160,6 +162,7 @@ public class LoginController : FwController
         if (DateUtils.UnixTimestamp() - fw.Session("mfa_login_time").toLong() > 60 * 5)
         {
             fw.Session("mfa_login_users_id", "0");
+            fw.logActivity(FwLogTypes.ICODE_USERS_LOGIN_FAIL, FwEntities.ICODE_USERS, users_id, "mfa fail - expired");
             fw.redirect(base_url);
         }
 
@@ -168,6 +171,7 @@ public class LoginController : FwController
         if (mfa_login_attempts >= 10)
         {
             fw.Session("mfa_login_users_id", "0");
+            fw.logActivity(FwLogTypes.ICODE_USERS_LOGIN_FAIL, FwEntities.ICODE_USERS, users_id, "mfa fail - more than 10 attempts");
             fw.redirect(base_url);
         }
         // increase attempts
@@ -182,7 +186,7 @@ public class LoginController : FwController
             if (!model.checkMFARecovery(users_id, mfs_code))
             {
                 fw.flash("error", "Invalid MFA code, try again");
-                fw.logActivity(FwLogTypes.ICODE_USERS_LOGIN_FAIL, FwEntities.ICODE_USERS, users_id, "mfa fail");
+                fw.logActivity(FwLogTypes.ICODE_USERS_LOGIN_FAIL, FwEntities.ICODE_USERS, users_id, "mfa fail - invalid code");
                 fw.redirect(base_url + "/(MFA)");
             }
         }

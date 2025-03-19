@@ -208,6 +208,7 @@ public class FW : IDisposable
 
         // per request settings
         G["request_url"] = UriHelper.GetDisplayUrl(request);
+        G["current_time"] = DateTime.Now;
 
         // override default lang with user's lang
         if (!string.IsNullOrEmpty(Session("lang"))) G["lang"] = Session("lang");

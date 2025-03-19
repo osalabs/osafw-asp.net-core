@@ -322,7 +322,7 @@ public class Users : FwModel
 
         reloadSession(id);
 
-        fw.logActivity(FwLogTypes.ICODE_USERS_LOGIN, FwEntities.ICODE_USERS, id);
+        fw.logActivity(FwLogTypes.ICODE_USERS_LOGIN, FwEntities.ICODE_USERS, id, "IP:" + fw.context.Connection.RemoteIpAddress.ToString());
         // update login info
         Hashtable fields = [];
         fields["login_time"] = DB.NOW;
