@@ -71,6 +71,7 @@ public class FwRoute
 {
     public string controller_path; // store /Prefix/Prefix2/Controller - to use in parser a default path for templates
     public string method;
+    public string prefix;
     public string controller;
     public string action;
     public string action_raw;
@@ -114,7 +115,7 @@ public class FW : IDisposable
     public Hashtable FORM;
     public Hashtable postedJson; // parsed JSON from request body
     public Hashtable G; // for storing global vars - used in template engine, also stores "_flash"
-    public Hashtable FormErrors; // for storing form id's with error messages, put to hf("ERR") for parser
+    public Hashtable FormErrors; // for storing form id's with error messages, put to ps['error']['details'] for parser
     public Exception last_file_exception; // set by getFileContent, getFileLines in case of exception
 
     public DB db;
@@ -336,7 +337,7 @@ public class FW : IDisposable
     }
 
     /// <summary>
-    /// parse request URL and return controller, action, id, format, method
+    /// parse request URL and return prefix, controller, action, id, format, method
     /// if url is empty - use current request url and also set request_url property
     /// 
     /// </summary>
@@ -366,6 +367,7 @@ public class FW : IDisposable
         // init defaults
         var route = new FwRoute()
         {
+            prefix = "",
             controller = "Home",
             action = ACTION_INDEX,
             action_raw = "",
@@ -541,6 +543,7 @@ public class FW : IDisposable
 
         route.controller_path = route.controller_path + "/" + route.controller;
         // add controller prefix if any
+        route.prefix = controller_prefix;
         route.controller = controller_prefix + route.controller;
         route.action = Utils.routeFixChars(route.action_raw);
         if (string.IsNullOrEmpty(route.action))
@@ -637,7 +640,7 @@ public class FW : IDisposable
     // return 2 - if user allowed to see page - explicitly based on fw.config
     // return 1 - if no fw.config rule, so need to further check Controller.access_level (not checking here for performance reasons)
     // return 0 - if not allowed
-    public int _auth(string controller, string action, bool is_die = true)
+    public int _auth(FwRoute route, bool is_die = true)
     {
         int result = 0;
 
@@ -649,24 +652,30 @@ public class FW : IDisposable
             || route.method == "PUT"
             || route.method == "PATCH"
             || route.method == "DELETE"
-            || action == ACTION_SAVE
-            || action == ACTION_SAVE_MULTI
-            || action == ACTION_DELETE
-            || action == ACTION_DELETE_RESTORE)
+            || route.action == ACTION_SAVE
+            || route.action == ACTION_SAVE_MULTI
+            || route.action == ACTION_DELETE
+            || route.action == ACTION_DELETE_RESTORE)
             && !string.IsNullOrEmpty(Session("XSS")) && Session("XSS") != (string)FORM["XSS"])
         {
-            // XSS validation failed - check if we are under xss-excluded controller
-            Hashtable no_xss = (Hashtable)this.config("no_xss");
-            if (no_xss == null || !no_xss.ContainsKey(controller))
+            // XSS validation failed
+            // first, check if we are under xss-excluded prefix            
+            Hashtable no_xss_prefixes = (Hashtable)this.config("no_xss_prefixes_prefixes");
+            if (no_xss_prefixes == null || !no_xss_prefixes.ContainsKey(route.prefix))
             {
-                if (is_die)
-                    throw new AuthException("XSS Error. Reload the page or try to re-login");
-                return result;
+                // second, check if we are under xss-excluded controller
+                Hashtable no_xss = (Hashtable)this.config("no_xss");
+                if (no_xss == null || !no_xss.ContainsKey(route.controller))
+                {
+                    if (is_die)
+                        throw new AuthException("XSS Error. Reload the page or try to re-login");
+                    return result;
+                }
             }
         }
 
-        string path = "/" + controller + "/" + action;
-        string path2 = "/" + controller;
+        string path = "/" + route.controller + "/" + route.action;
+        string path2 = "/" + route.controller;
 
         // pre-check controller's access level by url
         int current_level = userAccessLevel;
@@ -1054,24 +1063,33 @@ public class FW : IDisposable
     }
 
     // show page from template  /route.controller/route.action = parser('/route.controller/route.action/', $ps)
-    public void parser(Hashtable hf)
+    public void parser(Hashtable ps)
     {
-        this.parser((route.controller_path + "/" + route.action).ToLower(), hf);
+        this.parser((route.controller_path + "/" + route.action).ToLower(), ps);
     }
 
-    // same as parsert(hf), but with base dir param
+    // same as parser(ps), but with base dir param
     // output format based on requested format: json, pjax or (default) full page html
     // for automatic json response support - set hf("_json") = True OR set hf("_json")=ArrayList/Hashtable - if json requested, only _json content will be returned
-    // to override page template - set hf("_layout")="another_page_layout.html" (relative to SITE_TEMPLATES dir)
-    // (not for json) to perform route_redirect - set hf("_route_redirect")("method"), hf("_route_redirect")("controller"), hf("_route_redirect")("args")
-    // (not for json) to perform redirect - set hf("_redirect")="url"
-    // TODO - create another func and call it from call_controller for processing _redirect, ... (non-parsepage) instead of calling parser?
-    public void parser(string bdir, Hashtable ps)
+    // to override:
+    //   - base directory - set ps("_basedir")="/another_controller/another_action" (relative to SITE_TEMPLATES dir)
+    //   - only controller base directory - set ps("_basedir_controller")="/another_controller" (relative to SITE_TEMPLATES dir)
+    //   - layout template - set ps("_layout")="/another_page_layout.html" (relative to SITE_TEMPLATES dir)
+    //   - (not for json) to perform route_redirect - set hf("_route_redirect")("method"), hf("_route_redirect")("controller"), hf("_route_redirect")("args")
+    //   - (not for json) to perform redirect - set hf("_redirect")="url"
+    public void parser(string basedir, Hashtable ps)
     {
         if (!this.response.HasStarted) this.response.Headers.CacheControl = cache_control;
 
-        if (this.FormErrors.Count > 0 && !ps.ContainsKey("ERR"))
-            ps["ERR"] = this.FormErrors; // add errors if any
+        if (this.FormErrors.Count > 0)
+        {
+            if (!ps.ContainsKey("error"))
+                ps["error"] = new Hashtable();
+
+            if (!((Hashtable)ps["error"]).ContainsKey("details"))
+                ((Hashtable)ps["error"])["details"] = this.FormErrors; // add form errors if any
+            logger(LogLevel.DEBUG, "Form errors:", this.FormErrors);
+        }
 
         string format = this.getResponseExpectedFormat();
         if (format == "json")
@@ -1088,10 +1106,13 @@ public class FW : IDisposable
             }
             else
             {
+                var msg = @"JSON response is not enabled for this Controller.Action (set ps[""_json""])=True or ps[""_json""])=data... to enable).";
+                logger(LogLevel.DEBUG, msg);
+
                 ps = new Hashtable()
                 {
                     {"success", false},
-                    {"message", @"JSON response is not enabled for this Controller.Action (set ps[""_json""])=True or ps[""_json""])=data... to enable)."}
+                    {"message", msg}
                 };
                 this.parserJson(ps);
             }
@@ -1117,9 +1138,35 @@ public class FW : IDisposable
         else
             layout = (string)G["PAGE_LAYOUT"];
 
+        //override layout from parse strings
         if (ps.ContainsKey("_layout"))
             layout = (string)ps["_layout"];
-        _parser(bdir, layout, ps);
+
+        //override full basedir
+        if (ps.ContainsKey("_basedir"))
+            basedir = (string)ps["_basedir"];
+
+        if (basedir == "")
+        {
+            // if basedir not passed - use current controller/action as default then check overrides
+            var controller = this.route.controller;
+            if (!string.IsNullOrEmpty(this.route.prefix))
+            {
+                basedir += "/" + this.route.prefix;
+                //remove prefix from controller name (only from the start)
+                controller = Regex.Replace(controller, "^" + this.route.prefix, "", RegexOptions.IgnoreCase);
+            }
+            basedir += "/" + controller;
+
+            // override controller basedir only
+            if (ps.ContainsKey("_basedir_controller"))
+                basedir = (string)ps["_basedir_controller"];
+
+            basedir += "/" + this.route.action; // add action dir to controller's directory
+        }
+        basedir = basedir.ToLower(); // make sure it's lower case
+
+        _parser(basedir, layout, ps);
     }
 
     // - show page from template  /controller/action = parser('/controller/action/', $layout, $ps)
@@ -1130,11 +1177,11 @@ public class FW : IDisposable
     }
 
     // actually uses ParsePage
-    public void _parser(string bdir, string tpl_name, Hashtable hf)
+    public void _parser(string bdir, string tpl_name, Hashtable ps)
     {
         logger(LogLevel.DEBUG, "parsing page bdir=", bdir, ", tpl=", tpl_name);
         ParsePage parser_obj = new(this);
-        string page = parser_obj.parse_page(bdir, tpl_name, hf);
+        string page = parser_obj.parse_page(bdir, tpl_name, ps);
         // no need to set content type here, as it's set in Startup.cs
         //if (!this.response.HasStarted) response.ContentType = "text/html; charset=utf-8";
         responseWrite(page);
@@ -1207,7 +1254,7 @@ public class FW : IDisposable
     {
         string[] args = [route.id]; // TODO - add rest of possible params from parts
 
-        var auth_check_controller = _auth(route.controller, route.action);
+        var auth_check_controller = _auth(route);
 
         Type controllerClass = Type.GetType(FW_NAMESPACE_PREFIX + route.controller + "Controller", false, true); // case ignored
         if (controllerClass == null)
@@ -1557,24 +1604,6 @@ public class FW : IDisposable
         Hashtable ps = [];
         var tpl_dir = "/error";
 
-        ps["err_time"] = DateTime.Now;
-        ps["err_msg"] = msg;
-        if (this.config("IS_DEV").toBool())
-        {
-            ps["is_dump"] = true;
-            if (Ex != null)
-                ps["DUMP_STACK"] = Ex.ToString();
-
-            ps["DUMP_SQL"] = DB.last_sql;
-            ps["DUMP_FORM"] = dumper(FORM);
-            ps["DUMP_SESSION"] = dumper(context.Session);
-        }
-
-        ps["success"] = false;
-        ps["message"] = msg;
-        ps["title"] = msg;
-        ps["_json"] = true;
-
         var code = 0;
         if (Ex is NotFoundException)
         {
@@ -1598,9 +1627,38 @@ public class FW : IDisposable
             //Server Error
             code = 500;
 
-        ps["code"] = code;
         if (code > 0 && !this.response.HasStarted)
             this.response.StatusCode = code;
+
+        ps["_json"] = true;
+        ps["title"] = msg;
+        ps["error"] = new Hashtable
+        {
+            ["code"] = code,
+            ["message"] = msg,
+            ["time"] = DateTime.Now,
+            //optional:
+            //["category"] = Ex?.GetType().Name,
+            //["details"] = new ArrayList()
+        };
+
+        //legacy response:
+        ps["code"] = code;
+        ps["err_msg"] = msg;
+        ps["success"] = false;
+        ps["message"] = msg;
+        ps["err_time"] = DateTime.Now;
+
+        if (this.config("IS_DEV").toBool())
+        {
+            ps["is_dump"] = true;
+            if (Ex != null)
+                ps["DUMP_STACK"] = Ex.ToString();
+
+            ps["DUMP_SQL"] = DB.last_sql;
+            ps["DUMP_FORM"] = dumper(FORM);
+            ps["DUMP_SESSION"] = dumper(context.Session);
+        }
 
         parser(tpl_dir, ps);
     }

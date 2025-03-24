@@ -1,10 +1,10 @@
 <div align="center">
 
-<img src="<~GLOBAL[ASSETS_URL]>/img/error.png">
+<img src="<~GLOBAL[ASSETS_URL]>/img/<~error[code] default="500">.png" style="max-width:128px">
 <h2>`Server Error Occured`</h2>
-As of <~err_time date="sql"> we know the following:
+As of <~error[time] date="sql"> we know the following:
 <div class="alert alert-danger">
-    <~err_msg nl2br>
+    <~error[message] nl2br>
 </div>
 
 <~dump if="is_dump" inline>
