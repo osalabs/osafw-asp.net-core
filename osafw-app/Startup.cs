@@ -37,9 +37,12 @@ public class Startup
         .SetApplicationName("osafw")
         .PersistKeysToFileSystem(new DirectoryInfo(Utils.getTmpDir()));
 
+        var enviroment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT").toStr();
+        var is_development = !(string.IsNullOrEmpty(enviroment) || enviroment.Equals("Production", StringComparison.OrdinalIgnoreCase) || enviroment.Equals("Beta", StringComparison.OrdinalIgnoreCase));
+
         services.AddResponseCompression(options =>
         {
-            options.EnableForHttps = true;
+            options.EnableForHttps = !is_development; // disable https compression for dev env due to intermittent issues
             options.MimeTypes = ["text/plain", "text/html", "text/css", "application/javascript", "text/javascript", "text/xml", "text/csv", "application/json", "image/svg+xml"];
         });
 
@@ -143,7 +146,7 @@ public class Startup
         else
         {
             app.UseHttpsRedirection();
-            //app.UseHsts(); //enable if need Strict-Transport-Security header
+            //app.UseHsts(); //enable if need Strict-Transport-Security header            
         }
 
         app.UseResponseCompression();
