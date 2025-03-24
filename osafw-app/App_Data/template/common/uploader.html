@@ -44,7 +44,7 @@
                     return xhr;
                 }
             }).done(function (data) {
-                if (data.success){
+                if (!data.error){
                     fw.ok('File(s) added successfully');
 
                     //render added files from data.files
@@ -60,7 +60,7 @@
                     }
 
                 }else{
-                    fw.error(data.err_msg ? data.err_msg : 'Server error');
+                    fw.error(data.error?.message || 'Server error');
                 }
             }).fail(function(jqXHR, textStatus, errorThrown){
                 fw.error('Error uploading file:+'+ textStatus);
@@ -89,10 +89,10 @@
                     contentType: false,
                     type: 'POST',
                 }).done(function (data) {
-                    if (data.success){
+                    if (!data.error){
                         $this.closest('.row form-row').remove();
                     }else{
-                        fw.error(data.err_msg ? data.err_msg : 'Server error');
+                        fw.error(data.error?.message || 'Server error');
                     }
                 }).fail(function(jqXHR, textStatus, errorThrown){
                     fw.error('Error deleting file:+'+ textStatus);

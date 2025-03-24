@@ -1,19 +1,19 @@
 <script type="text/x-template" id="list-cell-ro-template">
- <div class="ro">{{row[col.field_name]}}</div>
+    <div class="ro">{{row[col.field_name]}}</div>
 </script>
 
 <script type="module">
-fwApp.component('list-cell-ro', {
-  template: '#list-cell-ro-template',
-  props: {
-    row: {
-      type: Object,
-      required: true
-    },
-    col: {
-      type: Object,
-      required: true
-    }
-  },
-});
+    fwApp.component('list-cell-ro', {
+        template: '#list-cell-ro-template',
+        props: {
+            row: {
+                type: Object,
+                required: true
+            },
+            col: {
+                type: Object,
+                required: true
+            }
+        },
+    });
 </script>

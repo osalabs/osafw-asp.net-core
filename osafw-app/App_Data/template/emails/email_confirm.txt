@@ -1,0 +1,7 @@
+Member Confirmation
+Hello <~fname> <~lname>,
+
+Use the following link to confirm your email:
+<~GLOBAL[ROOT_DOMAIN]><~ROOT_URL>/v1/users/(Confirm)/<~icode>?token=<~confirm_token urlencode>
+
+<~/emails/sign_en.txt>

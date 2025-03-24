@@ -54,7 +54,7 @@
       var $this = $(this);
       $.getJSON($this.prop('href'))
       .done(function (data, textStatus, jqXHR) {
-        if (data.success){
+        if (!data.error){
           if (data.action=='added'){
             $this.find('.flag-yes').removeClass('d-none');
             $this.find('.flag-no').addClass('d-none');
@@ -65,7 +65,7 @@
             fw.ok('Record removed from list "'+data.iname+'"');
           }
         }else{
-          fw.error(data.err_msg);
+          fw.error(data.error?.message || 'Server error');
         }
       })
       .fail(function(jqXHR, textStatus, errorThrown) {
