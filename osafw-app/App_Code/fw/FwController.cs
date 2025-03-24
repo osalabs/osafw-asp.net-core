@@ -26,7 +26,6 @@ public abstract class FwController
     public string required_fields;        // optional, default required fields, space-separated
     public string save_fields;            // required, fields to save from the form to db, space-separated
     public string save_fields_checkboxes; // optional, checkboxes fields to save from the form to db, qw string: "field|def_value field2|def_value2"
-    public string save_fields_nullable;   // optional, nullable fields that should be set to null in db if form submit as ''
 
     protected FW fw;
     protected DB db;
@@ -143,13 +142,6 @@ public abstract class FwController
             save_fields_checkboxes = Utils.qhRevert(dictionary); // not optimal, but simplest for now
         else
             save_fields_checkboxes = save_fields_checkboxes_raw.toStr();
-
-        // save_fields_nullable could be defined as qw string - check and convert
-        var save_fields_nullable_raw = this.config["save_fields_nullable"];
-        if (save_fields_nullable_raw is IList list1)
-            save_fields_nullable = Utils.qwRevert(list1); // not optimal, but simplest for now
-        else
-            save_fields_nullable = save_fields_nullable_raw.toStr();
 
         search_fields = this.config["search_fields"].toStr();
         list_sortdef = this.config["list_sortdef"].toStr();

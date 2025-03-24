@@ -27,7 +27,6 @@ public class AdminActivityLogsController : FwController
 
         required_fields = "log_type entity item_id";
         save_fields = "reply_id item_id idate users_id idesc";
-        save_fields_nullable = "reply_id item_id idate users_id idesc";
 
         //set default return url just for the case
         if (Utils.isEmpty(return_url))
@@ -69,7 +68,6 @@ public class AdminActivityLogsController : FwController
 
         Hashtable itemdb = FormUtils.filter(item, this.save_fields);
         FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
-        FormUtils.filterNullable(itemdb, save_fields_nullable);
 
         //for new items - convert log_type and entity to ids
         if (is_new)

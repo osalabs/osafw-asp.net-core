@@ -29,7 +29,6 @@
     "login": "Active Directory Login"
   },
   "model": "Users",
-  "save_fields_nullable": "att_id login",
   "show_fields": [
     {
       "type": "plaintext",

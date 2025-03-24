@@ -149,7 +149,6 @@ public class FwAdminController : FwController
 
         Hashtable itemdb = FormUtils.filter(item, this.save_fields);
         FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
-        FormUtils.filterNullable(itemdb, save_fields_nullable);
 
         id = this.modelAddOrUpdate(id, itemdb);
 

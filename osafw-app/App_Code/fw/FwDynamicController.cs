@@ -302,7 +302,6 @@ public class FwDynamicController : FwController
 
         Hashtable itemdb = FormUtils.filter(item, this.save_fields);
         FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
-        FormUtils.filterNullable(itemdb, save_fields_nullable);
 
         id = this.modelAddOrUpdate(id, itemdb);
 
@@ -1033,8 +1032,6 @@ public class FwDynamicController : FwController
 
         var showform_fields = _fieldsToHash(getConfigShowFormFieldsByTab("showform_fields"));
 
-        var fnullable = Utils.qh(save_fields_nullable);
-
         // special auto-processing for fields of particular types - use .Cast<string>().ToArray() to make a copy of keys as we modify fields
         foreach (string field in fields.Keys.Cast<string>().ToArray())
         {
@@ -1058,11 +1055,12 @@ public class FwDynamicController : FwController
                 fields[field] = FormUtils.timeStrToInt((string)fields[field]); // ftime - convert from HH:MM to int (0-24h in seconds)
             else if (type == "number")
             {
-                if (fnullable.ContainsKey(field) && string.IsNullOrEmpty((string)fields[field]))
-                    // if field nullable and empty - pass NULL
-                    fields[field] = null;
-                else
-                    fields[field] = fields[field].toFloat();// number - convert to number (if field empty or non-number - it will become 0)
+                // no need to do this as DB knows if field nullable and convert empty string to NULL
+                //if (Utils.qh(save_fields_nullable).ContainsKey(field) && string.IsNullOrEmpty((string)fields[field]))
+                //    // if field nullable and empty - pass NULL
+                //    fields[field] = null;
+                //else
+                //    fields[field] = fields[field].toFloat();// number - convert to number (if field empty or non-number - it will become 0)
             }
         }
     }

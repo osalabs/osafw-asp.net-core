@@ -84,7 +84,6 @@ public class AdminUsersController : FwDynamicController
 
         Hashtable itemdb = FormUtils.filter(item, this.save_fields);
         FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
-        FormUtils.filterNullable(itemdb, save_fields_nullable);
 
         itemdb["pwd"] = itemdb["pwd"].ToString().Trim();
         if (Utils.isEmpty(itemdb["pwd"]))

@@ -371,16 +371,31 @@ public class FormUtils
         return true;
     }
 
-    // fore each name in $name - check if value is empty '' and make it null
-    // not necessary in this framework As DB knows field types, it's here just for compatibility with php framework
+    /// <summary>
+    /// overload for filterNullable - for qw string
+    /// </summary>
+    /// <param name="itemdb"></param>
+    /// <param name="names"></param>
     public static void filterNullable(Hashtable itemdb, string names)
     {
         if (string.IsNullOrEmpty(names)) return;
-
         var anames = Utils.qw(names);
-        foreach (string fld in anames)
+
+        filterNullable(itemdb, anames);
+    }
+
+    /// <summary>
+    /// for each name in $names - check if value is empty '' and make it null
+    /// not necessary in this framework As DB knows field types, it's here just for compatibility with php framework
+    /// </summary>
+    /// <param name="itemdb"></param>
+    /// <param name="names"></param>
+    public static void filterNullable(Hashtable itemdb, IList names)
+    {
+        if (names == null || names.Count == 0) return;
+        foreach (string fld in names)
         {
-            if (itemdb.ContainsKey(fld) && (string)itemdb[fld] == "")
+            if (itemdb.ContainsKey(fld) && itemdb[fld].toStr() == "")
                 itemdb[fld] = null;
         }
     }

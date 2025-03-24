@@ -176,11 +176,5 @@
     "status"
   ],
   "save_fields_checkboxes": "",
-  "save_fields_nullable": [
-    "idesc",
-    "add_users_id",
-    "upd_time",
-    "upd_users_id"
-  ],
   "1": "1"
 }

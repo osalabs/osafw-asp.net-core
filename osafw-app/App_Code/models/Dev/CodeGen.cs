@@ -760,9 +760,6 @@ class DevCodeGen
             if (!fld["is_nullable"].toBool() && fld["default"] == null)
                 sff["required"] = true;// if not nullable and no default - required
 
-            if (fld["is_nullable"].toBool())
-                saveFieldsNullable.Add(fld_name);
-
             var maxlen = fld["maxlen"].toInt();
             if (maxlen > 0)
                 sff["maxlength"] = maxlen;
@@ -954,7 +951,6 @@ class DevCodeGen
 
         config["model"] = model_name;
         config["is_dynamic_index"] = true;
-        config["save_fields_nullable"] = saveFieldsNullable;
         config["save_fields"] = saveFields; // save all non-system
         config["save_fields_checkboxes"] = "";
         config["search_fields"] = "id" + (hfields.ContainsKey("iname") ? " iname" : ""); // id iname
