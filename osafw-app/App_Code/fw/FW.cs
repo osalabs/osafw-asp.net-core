@@ -1642,7 +1642,7 @@ public class FW : IDisposable
             //["details"] = new ArrayList()
         };
 
-        //legacy response:
+        //legacy response: TODO DEPRECATE
         ps["code"] = code;
         ps["err_msg"] = msg;
         ps["success"] = false;

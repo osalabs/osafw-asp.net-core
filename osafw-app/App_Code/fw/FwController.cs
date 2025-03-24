@@ -423,7 +423,7 @@ public abstract class FwController
     }
 
     /// <summary>
-    /// Validate required fields are non-empty and set global fw.ERR[field] values in case of errors
+    /// Validate required fields are non-empty and set global fw.FormErrors[field] values in case of errors
     /// </summary>
     /// <param name="id">id of the record, 0 if new record to add (for existing records - do not require fields not present in item)</param>
     /// <param name="item">fields/values to validate</param>
@@ -477,8 +477,8 @@ public abstract class FwController
     /// Check validation result (validate_required)
     /// </summary>
     /// <param name="result">to use from external validation check</param>
-    /// <remarks>throw ValidationException exception if global ERR non-empty.
-    /// Also set global ERR[INVALID] if ERR non-empty, but ERR[REQUIRED] not true
+    /// <remarks>throw ValidationException exception if global FormErrors non-empty.
+    /// Also set global FormErrors[INVALID] if FormErrors non-empty, but FormErrors[REQUIRED] not true
     /// </remarks>
     public virtual void validateCheckResult(bool result = true)
     {
@@ -946,15 +946,25 @@ public abstract class FwController
             var ps = new Hashtable();
             var _json = new Hashtable()
             {
-                {"success",success},
                 {"id",id},
                 {"is_new",is_new},
                 {"location",location},
-                {"err_msg",fw.G["err_msg"]}
+                {"success",success}, //legacy TODO DEPRECATE
             };
-            // add ERR field errors to response if any
+            if (!success)
+            {
+                // set error message if any
+                _json["err_msg"] = fw.G["err_msg"]; // legacy TODO DEPRECATE
+                _json["error"] = new Hashtable() { { "message", fw.G["err_msg"] } };
+            }
+
+            // add FormErrors field errors to response if any
             if (fw.FormErrors.Count > 0)
-                _json["ERR"] = fw.FormErrors;
+            {
+                if (_json["error"] is not Hashtable)
+                    _json["error"] = new Hashtable();
+                ((Hashtable)_json["error"])["details"] = fw.FormErrors;
+            }
 
             if (more_json != null)
                 Utils.mergeHash(_json, more_json);
@@ -969,7 +979,7 @@ public abstract class FwController
             if (success)
                 fw.redirect(location);
             else
-                fw.routeRedirect(action, new[] { id.ToString() });
+                fw.routeRedirect(action, [id.ToString()]);
         }
         return null;
     }

@@ -56,7 +56,6 @@ public class MyPasswordController : FwController
 
         ps["id"] = id;
         ps["i"] = item;
-        ps["ERR"] = fw.FormErrors;
         return ps;
     }
 
