@@ -134,15 +134,6 @@ h1 .badge {
  vertical-align: middle;
 }
 
-/*fixes for twitter-typeahead*/
-.twitter-typeahead {
-  width:100%
-}
-  .twitter-typeahead .tt-hint {
-    top: -1px !important;
-    left: -1px !important;
-  }
-
 .fw-card {
 /*  background-color: #fff;
   border-radius: 0.25rem;
