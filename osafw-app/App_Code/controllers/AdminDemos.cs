@@ -50,7 +50,7 @@ public class AdminDemosController : FwAdminController
     public override Hashtable ShowAction(int id)
     {
         Hashtable ps = base.ShowAction(id);
-        var item = (Hashtable)ps["i"];
+        Hashtable item = (DBRow)ps["i"];
         //var id = Utils.f2int(item["id"]);
 
         ps["parent"] = model.one(item["parent_id"].toInt());

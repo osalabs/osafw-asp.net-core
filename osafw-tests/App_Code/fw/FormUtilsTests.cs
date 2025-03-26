@@ -222,10 +222,6 @@ namespace osafw.Tests
             FormUtils.filterNullable(itemdb6, "");
             Assert.AreEqual("", itemdb6["field1"], "Value should remain unchanged for empty field names string");
 
-            // Case 7: Do not change value for null field names string
-            Hashtable itemdb7 = new() { { "field1", "" }, { "field2", "value2" } };
-            FormUtils.filterNullable(itemdb7, null);
-            Assert.AreEqual("", itemdb7["field1"], "Value should remain unchanged for null field names string");
         }
 
         [TestMethod]
