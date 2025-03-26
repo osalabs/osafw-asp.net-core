@@ -112,7 +112,7 @@ DROP TABLE IF EXISTS users;
 CREATE TABLE users (
   id int IDENTITY(1,1) PRIMARY KEY CLUSTERED,
 
-  email                 NVARCHAR(128) NOT NULL DEFAULT '',
+  email                 NVARCHAR(255) NOT NULL DEFAULT '',
   pwd                   NVARCHAR(255) NOT NULL DEFAULT '', -- hashed password
   access_level          TINYINT NOT NULL,  /*0 - visitor, 1 - usual user, 80 - moderator, 100 - admin*/
   is_readonly           TINYINT NOT NULL DEFAULT 0,        -- 1 if user is readonly
@@ -215,6 +215,7 @@ CREATE TABLE spages (
   is_home               INT DEFAULT 0,                          /* 1 is for home page (non-deletable page*/
   redirect_url          NVARCHAR(255) NOT NULL DEFAULT '',      /*if set - redirect to this url instead displaying page*/
 
+  custom_head           NVARCHAR(MAX),                          /*custom page head*/
   custom_css            NVARCHAR(MAX),                          /*custom page css*/
   custom_js             NVARCHAR(MAX),                          /*custom page js*/
 

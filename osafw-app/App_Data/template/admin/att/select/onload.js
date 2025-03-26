@@ -39,11 +39,11 @@ $modal.find('form').ajaxForm({
     // return false to cancel submit
     },
     success  : function (data) {
-        if (data.success){
+        if (!data.error){
             $modal.trigger('select.modal-att', [data.id, data.iname, data.url, data.is_image ] );
             $modal.modal('hide');
         }else{
-            fw.error(data.err_msg);
+            fw.error(data.error?.message??'Server error');
         }
     }
 });

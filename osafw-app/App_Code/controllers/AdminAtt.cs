@@ -58,7 +58,6 @@ public class AdminAttController : FwAdminController
             row["fsize_human"] = Utils.bytes2str(row["fsize"].toLong());
             if (row["is_image"].toInt() == 1)
             {
-                row["url"] = model.getUrl(row["id"].toInt());
                 row["url_s"] = model.getUrl(row["id"].toInt(), "s");
             }
 
@@ -196,7 +195,6 @@ public class AdminAttController : FwAdminController
         foreach (Hashtable row in rows)
         {
             row["url"] = model.getUrl(row);
-            row["url_preview"] = model.getUrlPreview(row);
             if (is_json)
                 model.filterForJson(row);
         }

@@ -24,7 +24,7 @@ public class AdminSpagesController : FwAdminController
         // initialization
         base_url = "/Admin/Spages";
         required_fields = "iname";
-        save_fields = "iname idesc idesc_left idesc_right head_att_id template prio meta_keywords meta_description custom_css custom_js redirect_url";
+        save_fields = "iname idesc idesc_left idesc_right head_att_id template prio meta_keywords meta_description custom_head custom_css custom_js redirect_url";
 
         search_fields = "url iname idesc";
         list_sortdef = "iname asc";   // default sorting: name, asc|desc direction

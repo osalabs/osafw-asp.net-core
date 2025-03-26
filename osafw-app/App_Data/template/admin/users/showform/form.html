@@ -15,7 +15,10 @@
       </div>
       <div class="col-lg-6">
         <~/common/form/id>
-        <~/common/form/group_status>
+        <~form_status if="id">
+        <~/common/form/added if="id">
+        <~/common/form/updated if="i[upd_users_id]">
+
         <div class="row form-row">
           <label class="col-form-label col-md-3" for="status">`Last Login Time`</label>
           <div class="col-md-3">
