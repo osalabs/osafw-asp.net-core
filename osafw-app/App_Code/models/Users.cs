@@ -327,6 +327,15 @@ public class Users : FwModel
         Hashtable fields = [];
         fields["login_time"] = DB.NOW;
         this.update(id, fields);
+
+        //if Site Admin - check for pending db updates
+        if (isAccessLevel(ACL_SITEADMIN))
+        {
+            fw.model<FwUpdates>().loadUpdates();
+
+            fw.Session("FW_UPDATES_CTR", fw.model<FwUpdates>().getCountPending().toStr());
+        }
+
     }
 
     public bool reloadSession(int id = 0)

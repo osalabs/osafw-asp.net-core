@@ -1,10 +1,13 @@
 -- fill initial data for lookups here
 
--- lookup manager table definitions
-insert into lookup_manager_tables (tname, iname, access_level) VALUES
-('log_types','Log Types', 100)
-, ('att_categories','Upload Categories', NULL)
+-- lookups in virtual controllers
+INSERT INTO fwcontrollers (igroup, icode, url, iname, model, access_level)
+VALUES ('System', 'AdminLogTypes', '/Admin/LogTypes', 'Log Types', 'FwLogTypes', 100),
+       ('System', 'AdminAttCategories', '/Admin/AttCategories', 'Upload Categories', 'AttCategories', 50),
+       ('System', 'AdminFwUpdates', '/Admin/FwUpdates', 'FW Updates', 'FwUpdates', 100)
 ;
+UPDATE fwcontrollers
+SET is_lookup=1;
 
 -- att_categories
 INSERT INTO att_categories (icode, iname) VALUES

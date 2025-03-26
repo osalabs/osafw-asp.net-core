@@ -143,4 +143,29 @@ public class DevConfigureController : FwController
         return ps;
     }
 
+    public Hashtable ApplyUpdatesAction()
+    {
+        if (!fw.config("IS_DEV").toBool())
+            throw new AuthException("Not in a DEV mode");
+
+        fw.model<FwUpdates>().loadUpdates();
+
+        // apply updates - if any and echo results. If error happens we stay on this page
+        try
+        {
+            fw.model<FwUpdates>().applyPending(true);
+        }
+        catch (Exception ex)
+        {
+            fw.rw("Error: " + ex.Message);
+            fw.rw("");
+            fw.rw("<b>Press F5 to continue applying updates</b>");
+            fw.rw("or go to <a href='/Admin/FwUpdates'>Admin FwUpdates</a>");
+            return null;
+        }
+
+        // all success - show link back to home
+        fw.rw("All updates applied successfully. <a href='/'>Back to Home</a>");
+        return null;
+    }
 }
