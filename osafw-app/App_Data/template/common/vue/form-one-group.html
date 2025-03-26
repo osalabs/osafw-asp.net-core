@@ -1,43 +1,42 @@
 <script type="text/x-template" id="form-one-group-template">
-  <label class="col-form-label" :class="def.class_label ? def.class_label : 'col-md-3'" :required="def.required">{{def.label}}
-    <small v-if="def.help_label" class="d-block form-text fw-normal" :class="def.help_label_class">{{def.help_label}}</small>
-    <small v-if="def.help_label_html" class="d-block form-text fw-normal" :class="def.help_label_class" v-html="def.help_label_html"></small>
-  </label>
-  <div :class="def.class_contents ? def.class_contents : 'col'">
-    <form-one-control
-      :form="form"
-      @update-form-field="$emit('update-form-field', $event)"
-      @cancel-form="$emit('cancel-form', $event)"
-      :def="def"
-      :lookups="lookups"
-    />
-  </div>
+    <label class="col-form-label" :class="def.class_label ? def.class_label : 'col-md-3'" :required="def.required">{{def.label}}
+        <small v-if="def.help_label" class="d-block form-text fw-normal" :class="def.help_label_class">{{def.help_label}}</small>
+        <small v-if="def.help_label_html" class="d-block form-text fw-normal" :class="def.help_label_class"
+               v-html="def.help_label_html"></small>
+    </label>
+    <div :class="def.class_contents ? def.class_contents : 'col'">
+        <form-one-control
+                :form="form"
+                @update-form-field="$emit('update-form-field', $event)"
+                @cancel-form="$emit('cancel-form', $event)"
+                :def="def"
+                :lookups="lookups"
+        />
+    </div>
 </script>
 
 <script type="module">
-fwApp.component('form-one-group', {
-  template: '#form-one-group-template',
-  props: {
-    def: {
-      type: Object,
-      required: true
-    },
-    lookups: {
-      type: Object,
-      required: true
-    },
-    form: {
-      type: Object,
-      required: true
-    }
-  },
-  emits: ['update-form-field', 'cancel-form'],
-  data: () => ({
-  }),
-  mounted(){
-    //console.log("form-one-group mounted", this.def);
-  },
-  methods: {
-  }
-});
+    fwApp.component('form-one-group', {
+        template: '#form-one-group-template',
+        props: {
+            def: {
+                type: Object,
+                required: true
+            },
+            lookups: {
+                type: Object,
+                required: true
+            },
+            form: {
+                type: Object,
+                required: true
+            }
+        },
+        emits: ['update-form-field', 'cancel-form'],
+        data: () => ({}),
+        mounted() {
+            //console.log("form-one-group mounted", this.def);
+        },
+        methods: {}
+    });
 </script>
