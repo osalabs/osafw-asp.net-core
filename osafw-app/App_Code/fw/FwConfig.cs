@@ -207,4 +207,22 @@ public class FwConfig
         if (!settings.ContainsKey("ASSETS_URL"))
             settings["ASSETS_URL"] = settings["ROOT_URL"] + "/assets";
     }
+
+    /// <summary>
+    /// Get settings for the current environment with proper overrides
+    /// </summary>
+    /// <returns></returns>
+    public static Hashtable settingsForEnvironment(IConfiguration configuration)
+    {
+        var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "";
+        var appSettings = new Hashtable();
+        readSettingsSection(configuration.GetSection("appSettings"), ref appSettings);
+
+        // The “appSettings” itself might be nested inside the hash
+        var settings = (Hashtable)appSettings["appSettings"];
+        // Override by name if environment-based overrides are used
+        overrideSettingsByName(environment, ref settings);
+
+        return settings;
+    }
 }
