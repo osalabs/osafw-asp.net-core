@@ -600,8 +600,8 @@ public class DB : IDisposable
             {
                 CommandTimeout = sql_command_timeout
             };
-                foreach (string p in @params.Keys)
-                    dbcomm.Parameters.AddWithValue(p, @params[p]);
+            foreach (string p in @params.Keys)
+                dbcomm.Parameters.AddWithValue(p, @params[p]);
 
             if (is_get_identity)
                 result = dbcomm.ExecuteScalar().toInt();
@@ -1031,11 +1031,12 @@ public class DB : IDisposable
     }
 
     // string will be Left(RTrim(str),length)
-    // TODO move to Utils since its not belong DB
     public string left(string str, int length)
     {
         if (string.IsNullOrEmpty(str)) return "";
-        return str.TrimStart()[..length];
+        str = str.TrimStart();
+        str = str.Length > length ? str[..length] : str;
+        return str;
     }
 
     // create "IN (1,2,3)" sql or IN (NULL) if empty params passed
@@ -1117,11 +1118,11 @@ public class DB : IDisposable
 
         // Determine start and end quote characters
         if (this.quotes.Length == 2)
-            {
+        {
             startQuote = this.quotes[0].ToString();
             endQuote = this.quotes[1].ToString();
-            }
-            else
+        }
+        else
         {
             startQuote = endQuote = this.quotes;
         }
@@ -1138,11 +1139,11 @@ public class DB : IDisposable
 
             // Wrap the part with quote characters
             parts[i] = $"{startQuote}{part}{endQuote}";
-            }
+        }
 
         // Join the parts back together with '.'
         return string.Join(".", parts);
-        }
+    }
 
 
     [Obsolete("use qid() instead")]

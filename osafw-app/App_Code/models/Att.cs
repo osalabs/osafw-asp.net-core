@@ -31,16 +31,33 @@ public class Att : FwModel
         table_name = "att";
     }
 
+    // overload by file index
     public Hashtable uploadOne(int id, int file_index, bool is_new = false)
     {
+        return uploadOne(id, fw.request.Form.Files[file_index], is_new);
+    }
+
+    // overload by file name
+    public Hashtable uploadOne(int id, string input_name, bool is_new = false)
+    {
+        return uploadOne(id, fw.request.Form.Files[input_name], is_new);
+    }
+
+    /// <summary>
+    /// upload file to the server and update att table with file information
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="file"></param>
+    /// <param name="is_new"></param>
+    /// <returns> return hashtable with added files information id, fname, fsize, ext and filepath</returns>
+    /// </returns>
+    public Hashtable uploadOne(int id, IFormFile file, bool is_new = false)
+    {
         Hashtable result = null;
-        if (uploadFile(id, out string filepath, file_index, true))
+        if (uploadFile(id, out string filepath, file.Name, true))
         {
             logger("uploaded to [" + filepath + "]");
             string ext = UploadUtils.getUploadFileExt(filepath);
-
-            // TODO refactor in better way
-            IFormFile file = fw.request.Form.Files[file_index];
 
             // update db with file information
             Hashtable fields = [];
@@ -175,6 +192,22 @@ public class Att : FwModel
             return "";
 
         return getUrl(item, size);
+    }
+
+    /// <summary>
+    /// return absolute url (with https://domain) of the uploaded file (by id)
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="size"></param>
+    /// <returns></returns>
+    public string getUrlAbsolute(int id, string size = "")
+    {
+        var url = getUrl(id, size);
+        //if start with "/" - this is relative, add domain
+        if (url.StartsWith("/"))
+            url = fw.config("ROOT_DOMAIN").toStr() + url;
+
+        return url;
     }
 
     public string getUrlPreview(int id, string size = "s")

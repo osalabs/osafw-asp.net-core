@@ -1285,7 +1285,17 @@ public class FW : IDisposable
 
         logger(LogLevel.TRACE, "TRY controller.action=", route.controller, ".", route.action);
 
-        MethodInfo actionMethod = controllerClass.GetMethod(route.action + ACTION_SUFFIX);
+        MethodInfo actionMethod = null;
+        if (!int.TryParse(route.id, out _))
+        {
+            //id is not numeric - try to find action with string param
+            actionMethod = controllerClass.GetMethod(route.action + ACTION_SUFFIX, [typeof(string)]);
+        }
+
+        //if still no method - try to find generic method
+        if (actionMethod == null)
+            actionMethod = controllerClass.GetMethod(route.action + ACTION_SUFFIX);
+
         if (actionMethod == null)
         {
             logger(LogLevel.DEBUG, "No method found for controller.action=[", route.controller, ".", route.action, "], checking route_default_action");
@@ -1444,6 +1454,7 @@ public class FW : IDisposable
     /// <param name="options">hashtable with options:
     ///   "read-receipt"
     ///   "smtp" - hashtable with smtp settings (host, port, is_ssl, username, password)
+    ///   "bcc" - bcc email addresses - ArrayList
     /// </param>
     /// <returns>true if sent successfully, false if problem - see fw.last_error_send_email</returns>
     public bool sendEmail(string mail_from, string mail_to, string mail_subject, string mail_body, IDictionary filenames = null, IList aCC = null, string reply_to = "", Hashtable options = null)
@@ -1526,6 +1537,17 @@ public class FW : IDisposable
                             message.CC.Add(new MailAddress(cc));
                         }
                 }
+                // add BCC if any
+                if (options.ContainsKey("bcc") && !is_test)
+                {
+                    foreach (string bcc1 in (ArrayList)options["bcc"])
+                    {
+                        string bcc = bcc1.Trim();
+                        if (string.IsNullOrEmpty(bcc))
+                            continue;
+                        message.Bcc.Add(new MailAddress(bcc));
+                    }
+                }
 
                 // attach attachments if any
                 if (filenames != null)
@@ -1582,7 +1604,7 @@ public class FW : IDisposable
     }
 
     // shortcut for send_email from template from the /emails template dir
-    public bool sendEmailTpl(string mail_to, string tpl, Hashtable hf, Hashtable filenames = null, ArrayList aCC = null, string reply_to = "")
+    public bool sendEmailTpl(string mail_to, string tpl, Hashtable hf, Hashtable filenames = null, ArrayList aCC = null, string reply_to = "", Hashtable options = null)
     {
         ParsePage parser_obj = new(this);
         Regex r = new(@"[\n\r]+");
@@ -1590,7 +1612,7 @@ public class FW : IDisposable
         if (subj_body.Length == 0)
             throw new ApplicationException("No email template defined [" + tpl + "]");
         string[] arr = r.Split(subj_body, 2);
-        return sendEmail("", mail_to, arr[0], arr[1], filenames, aCC, reply_to);
+        return sendEmail("", mail_to, arr[0], arr[1], filenames, aCC, reply_to, options);
     }
 
     // send email message to site admin (usually used in case of errors)

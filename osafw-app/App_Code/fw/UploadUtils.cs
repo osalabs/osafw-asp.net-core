@@ -121,14 +121,14 @@ public class UploadUtils
 
         filepath = uploadFileSave(fw, module_name, id, file, is_skip_check);
 
-        return result;
+        return !string.IsNullOrEmpty(filepath);
     }
 
     // this one based on file index, not input name
     public static bool uploadFile(FW fw, string module_name, int id, out string filepath, int file_index = 0, bool is_skip_check = false)
     {
         filepath = "";
-        if (file_index > fw.request.Form.Files.Count-1)
+        if (file_index > fw.request.Form.Files.Count - 1)
             return false;
         IFormFile file = fw.request.Form.Files[file_index];
 
