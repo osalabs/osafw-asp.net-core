@@ -30,7 +30,7 @@ public class TestController : FwController
         //is_uploaded = UploadUtils.uploadSimple(up);
 
         rw("!@!@!!@!@!@");
-        return new Hashtable();
+        return [];
     }
 
     public void BenchmarkAction()
@@ -66,14 +66,14 @@ public class TestController : FwController
 
     public void BooleanAction()
     {
-        string[] values = { null, String.Empty, "True", "False",
+        string[] values = [ null, String.Empty, "True", "False",
                       "true", "false", "    true    ", "0",
-                      "1", "-1", "string" };
+                      "1", "-1", "string" ];
         foreach (var value in values)
         {
             bool flag;
             //if (Boolean.TryParse(value, out flag
-            flag = Utils.toBool(value);
+            flag = value.toBool();
             rw(value + " --> " + flag);
             //if (flag)
             //    rw(value + " --> "+ flag);
@@ -95,4 +95,13 @@ public class TestController : FwController
         throw new Exception("Test exception");
     }
 
+
+    public void DBGenericsAction()
+    {
+        //var item = fw.model<Demos>().one(1);
+        //logger(item);
+        var result = fw.model<Demos>().calcTotal(1);
+        rw("result:" + result);
+        rw("done");
+    }
 }

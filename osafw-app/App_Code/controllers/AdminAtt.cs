@@ -28,6 +28,15 @@ public class AdminAttController : FwAdminController
         list_sortmap = Utils.qh("id|id iname|iname add_time|add_time fsize|fsize ext|ext category|att_categories_id status|status");
     }
 
+    public override void checkAccess()
+    {
+        // add custom actions to permissions mapping
+        access_actions_to_permissions = new() {
+            { "Select", Permissions.PERMISSION_LIST },
+        };
+        base.checkAccess();
+    }
+
     public override void setListSearch()
     {
         list_where = " fwentities_id IS NULL "; //only show uploads directly from user (not linked to specific entity)
@@ -37,7 +46,7 @@ public class AdminAttController : FwAdminController
         if (!Utils.isEmpty(list_filter["att_categories_id"]))
         {
             list_where += " and att_categories_id=@att_categories_id";
-            list_where_params["@att_categories_id"] = Utils.toInt(list_filter["att_categories_id"]);
+            list_where_params["@att_categories_id"] = list_filter["att_categories_id"].toInt();
         }
     }
 
@@ -46,14 +55,13 @@ public class AdminAttController : FwAdminController
         base.getListRows();
         foreach (Hashtable row in this.list_rows)
         {
-            row["fsize_human"] = Utils.bytes2str(Utils.toLong(row["fsize"]));
-            if (Utils.toInt(row["is_image"]) == 1)
+            row["fsize_human"] = Utils.bytes2str(row["fsize"].toLong());
+            if (row["is_image"].toInt() == 1)
             {
-                row["url"] = model.getUrl(Utils.toInt(row["id"]));
-                row["url_s"] = model.getUrl(Utils.toInt(row["id"]), "s");
+                row["url_s"] = model.getUrl(row["id"].toInt(), "s");
             }
 
-            var att_categories_id = Utils.toInt(row["att_categories_id"]);
+            var att_categories_id = row["att_categories_id"].toInt();
             if (att_categories_id > 0)
                 row["cat"] = fw.model<AttCategories>().one(att_categories_id);
         }
@@ -72,9 +80,9 @@ public class AdminAttController : FwAdminController
         var ps = base.ShowFormAction(id);
         var item = (Hashtable)ps["i"];
 
-        ps["fsize_human"] = Utils.bytes2str(Utils.toLong(item["fsize"]));
+        ps["fsize_human"] = Utils.bytes2str(item["fsize"].toLong());
         ps["url"] = model.getUrl(id);
-        if (Utils.toInt(item["is_image"]) == 1)
+        if (item["is_image"].toInt() == 1)
             ps["url_m"] = model.getUrl(id, "m");
 
         ps["select_options_att_categories_id"] = fw.model<AttCategories>().listSelectOptions();
@@ -86,7 +94,7 @@ public class AdminAttController : FwAdminController
     {
         route_onerror = FW.ACTION_SHOW_FORM; //set route to go if error happens
 
-        Hashtable ps = new();
+        Hashtable ps = [];
         Hashtable item = reqh("item");
         var is_new = (id == 0);
 
@@ -147,11 +155,11 @@ public class AdminAttController : FwAdminController
         }
         else
         {
-            itemdb = new();
+            itemdb = [];
             itemdb["fsize"] = "0";
         }
 
-        if (Utils.toInt(itemdb["fsize"]) == 0)
+        if (itemdb["fsize"].toInt() == 0)
         {
             if (fw.request.Form.Files.Count == 0 || fw.request.Form.Files[0] == null || fw.request.Form.Files[0].Length == 0)
             {
@@ -164,18 +172,18 @@ public class AdminAttController : FwAdminController
 
     public Hashtable SelectAction()
     {
-        Hashtable ps = new();
+        Hashtable ps = [];
         string category_icode = reqs("category");
         int att_categories_id = reqi("att_categories_id");
 
-        Hashtable where = new();
+        Hashtable where = [];
         where["status"] = 0;
         if (category_icode.Length > 0)
         {
             var att_cat = fw.model<AttCategories>().oneByIcode(category_icode);
             if (att_cat.Count > 0)
             {
-                att_categories_id = Utils.toInt(att_cat["id"]);
+                att_categories_id = att_cat["id"].toInt();
                 where["att_categories_id"] = att_categories_id;
             }
         }
@@ -187,7 +195,6 @@ public class AdminAttController : FwAdminController
         foreach (Hashtable row in rows)
         {
             row["url"] = model.getUrl(row);
-            row["url_preview"] = model.getUrlPreview(row);
             if (is_json)
                 model.filterForJson(row);
         }

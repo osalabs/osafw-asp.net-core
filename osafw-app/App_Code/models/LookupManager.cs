@@ -12,6 +12,7 @@ namespace osafw;
 
 public class LookupManager : FwModel
 {
+    public const string RBAC_RESOURCE_PREFIX = "Lookups/";
 
     // system columns that not need to be shown to user as is
     public Hashtable SYS_COLS = new()
@@ -47,7 +48,7 @@ public class LookupManager : FwModel
 
         var id_field = fw.model<LookupManagerTables>().getColumnId(defs);
         var value = db.valuep("SELECT MAX(" + db.qid(id_field) + ") from " + db.qid(tname));
-        return Utils.toInt(value);
+        return value.toInt();
     }
 
     public virtual Hashtable oneByTname(string tname, int id)
@@ -59,7 +60,7 @@ public class LookupManager : FwModel
         if (defs.Count == 0)
             throw new ApplicationException("Wrong lookup table name");
 
-        Hashtable where = new();
+        Hashtable where = [];
         where[fw.model<LookupManagerTables>().getColumnId(defs)] = id;
         return db.row(tname, where);
     }
@@ -78,7 +79,7 @@ public class LookupManager : FwModel
         {
             // if no list cols - it's std table - add std fields
             if (!item.ContainsKey("add_users_id") && fw.isLogged)
-                item["add_users_id"] = Utils.toStr(fw.userId);
+                item["add_users_id"] = fw.userId.toStr();
         }
 
         var field_prio = fw.model<LookupManagerTables>().getColumnPrio(defs);
@@ -114,7 +115,7 @@ public class LookupManager : FwModel
         //set nullable fields to NULL value if empty
         Hashtable table_schema = db.tableSchemaFull(tname);
         foreach (string fld_name in item.Keys.Cast<string>().ToArray())
-            if (Utils.isEmpty(item[fld_name]) && Utils.toInt(((Hashtable)(table_schema[fld_name]))["is_nullable"]) == 1)
+            if (Utils.isEmpty(item[fld_name]) && ((Hashtable)(table_schema[fld_name]))["is_nullable"].toBool())
                 item[fld_name] = null;
 
         // also we need include old fields into where just because id by sort is not robust enough
@@ -144,7 +145,7 @@ public class LookupManager : FwModel
         // logger(itemold)
         // logger("NEW")
         // logger(item)
-        Hashtable item_save = new();
+        Hashtable item_save = [];
         foreach (string key in item.Keys)
         {
             // additional null and old value empty string check to avoid SET to NULL constantly as we get empty string from DB for DBNull values
@@ -157,7 +158,7 @@ public class LookupManager : FwModel
 
         if (item_save.Count > 0)
         {
-            Hashtable where = new();
+            Hashtable where = [];
             where[id_fname] = id;
 
             if (Utils.isEmpty(defs["list_columns"]))
@@ -197,7 +198,7 @@ public class LookupManager : FwModel
                 throw new ApplicationException("Cannot delete from database. Wrong checksum. Probably someone else already updated data you are trying to edit.");
         }
 
-        Hashtable where = new();
+        Hashtable where = [];
         where[id_fname] = id;
         db.del(tname, where);
 
@@ -231,7 +232,7 @@ public class LookupManager : FwModel
 
     public ArrayList filterOutSysCols(ArrayList cols)
     {
-        ArrayList result = new();
+        ArrayList result = [];
 
         foreach (Hashtable col in cols)
         {
@@ -271,13 +272,13 @@ public class LookupManager : FwModel
         var field_prioq = db.qid(field_prio);
 
         var tname = (string)defs["tname"];
-        int id_prio = Utils.toInt(oneByTname(tname, id)[field_prio]);
+        int id_prio = oneByTname(tname, id)[field_prio].toInt();
 
         // detect reorder
         if (under_id > 0)
         {
             // under id present
-            int under_prio = Utils.toInt(oneByTname(tname, under_id)[field_prio]);
+            int under_prio = oneByTname(tname, under_id)[field_prio].toInt();
             if (sortdir == "asc")
             {
                 if (id_prio < under_prio)
@@ -315,7 +316,7 @@ public class LookupManager : FwModel
         else if (above_id > 0)
         {
             // above id present
-            int above_prio = Utils.toInt(oneByTname(tname, above_id)[field_prio]);
+            int above_prio = oneByTname(tname, above_id)[field_prio].toInt();
             if (sortdir == "asc")
             {
                 if (id_prio < above_prio)

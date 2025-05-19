@@ -72,8 +72,7 @@ public class FormUtils
     // isel may contain multiple comma-separated values
     public static string selectOptions(ArrayList arr, string isel, bool is_multi = false)
     {
-        if (isel == null)
-            isel = "";
+        isel ??= "";
 
         string[] asel;
         if (is_multi)
@@ -241,18 +240,14 @@ public class FormUtils
     // return pager or Nothing if no paging required
     public static ArrayList getPager(long count, int pagenum, object pagesize1 = null)
     {
-        int pagesize = MAX_PAGE_ITEMS;
-        if (pagesize1 != null)
-        {
-            pagesize = (int)pagesize1;
-        }
+        int pagesize = pagesize1.toInt(MAX_PAGE_ITEMS);
 
         ArrayList pager = null;
         const int PAD_PAGES = 5;
 
         if (count > pagesize)
         {
-            pager = new ArrayList();
+            pager = [];
             int page_count = (int)Math.Ceiling(count / (double)pagesize);
 
             var from_page = pagenum - PAD_PAGES;
@@ -265,7 +260,7 @@ public class FormUtils
 
             for (int i = from_page; i <= to_page; i++)
             {
-                Hashtable pager_item = new();
+                Hashtable pager_item = [];
                 if (pagenum == i)
                     pager_item["is_cur_page"] = 1;
                 pager_item["pagenum"] = i;
@@ -299,7 +294,7 @@ public class FormUtils
     // if is_exists (default true) - only values actually exists in input hash returned
     public static Hashtable filter(Hashtable item, Array fields, bool is_exists = true)
     {
-        Hashtable result = new();
+        Hashtable result = [];
         if (item != null)
         {
             foreach (string fld in fields)
@@ -327,7 +322,7 @@ public class FormUtils
     /// <returns>by ref itemdb - add fields with default_value or form value</returns>
     public static bool filterCheckboxes(Hashtable itemdb, Hashtable item, IList fields, bool is_existing_fields_only = false, string default_value = "0")
     {
-        if (fields.Count.Equals(0))
+        if (fields == null || fields.Count.Equals(0))
             return false;
 
         if (item != null)
@@ -376,16 +371,31 @@ public class FormUtils
         return true;
     }
 
-    // fore each name in $name - check if value is empty '' and make it null
-    // not necessary in this framework As DB knows field types, it's here just for compatibility with php framework
+    /// <summary>
+    /// overload for filterNullable - for qw string
+    /// </summary>
+    /// <param name="itemdb"></param>
+    /// <param name="names"></param>
     public static void filterNullable(Hashtable itemdb, string names)
     {
         if (string.IsNullOrEmpty(names)) return;
-
         var anames = Utils.qw(names);
-        foreach (string fld in anames)
+
+        filterNullable(itemdb, anames);
+    }
+
+    /// <summary>
+    /// for each name in $names - check if value is empty '' and make it null
+    /// not necessary in this framework As DB knows field types, it's here just for compatibility with php framework
+    /// </summary>
+    /// <param name="itemdb"></param>
+    /// <param name="names"></param>
+    public static void filterNullable(Hashtable itemdb, IList names)
+    {
+        if (names == null || names.Count == 0) return;
+        foreach (string fld in names)
         {
-            if (itemdb.ContainsKey(fld) && (string)itemdb[fld] == "")
+            if (itemdb.ContainsKey(fld) && itemdb[fld].toStr() == "")
                 itemdb[fld] = null;
         }
     }
@@ -408,7 +418,7 @@ public class FormUtils
     public static Hashtable ids2multi(string str)
     {
         ArrayList col = comma_str2col(str);
-        Hashtable result = new();
+        Hashtable result = [];
         foreach (string id in col)
             result[id] = 1;
         return result;
@@ -418,15 +428,18 @@ public class FormUtils
     {
         return string.Join(",", col.ToArray());
     }
+
+    /**
+     * convert comma-separated string to arraylist, trimming each element
+     * if str is empty - return empty arraylist
+     * @param string str
+     * @return ArrayList
+     */
     public static ArrayList comma_str2col(string str)
     {
-        ArrayList result;
-        str = str.Trim();
-        if (!string.IsNullOrEmpty(str))
-            result = new ArrayList(str.Split(","));
-        else
-            result = new ArrayList();
-        return result;
+        if (string.IsNullOrWhiteSpace(str))
+            return [];
+        return new ArrayList(str.Split(",").Select(s => s.Trim()).ToList());
     }
 
     // return date for combo date selection or Nothing if wrong date
@@ -438,9 +451,12 @@ public class FormUtils
     public static object dateForCombo(Hashtable item, string field_prefix)
     {
         object result = null;
-        int day = toInt(item[field_prefix + "_day"]);
-        int mon = toInt(item[field_prefix + "_mon"]);
-        int year = toInt(item[field_prefix + "_year"]);
+        if (item == null)
+            return result;
+
+        int day = item[field_prefix + "_day"].toInt();
+        int mon = item[field_prefix + "_mon"].toInt();
+        int year = item[field_prefix + "_year"].toInt();
 
         if (day > 0 && mon > 0 && year > 0)
         {
@@ -487,7 +503,7 @@ public class FormUtils
         int result = 0;
         try
         {
-            result = toInt(a[0]) * 3600 + toInt(a[1]) * 60;
+            result = a[0].toInt() * 3600 + a[1].toInt() * 60;
         }
         catch (Exception)
         {
@@ -500,7 +516,7 @@ public class FormUtils
         if (string.IsNullOrEmpty(s))
             return 0;
 
-        var idPart = s.Split(new[] { " - " }, StringSplitOptions.None).FirstOrDefault();
+        var idPart = s.Split([" - "], StringSplitOptions.None).FirstOrDefault();
 
         return int.TryParse(idPart, out int result) ? result : 0;
     }
@@ -521,17 +537,17 @@ public class FormUtils
             return false;
     }
 
-    // opposite to time2from
+    // opposite to timeToForm
     // OUT: false if can't create time from input item
     public static bool formToTime(Hashtable item, string field_name)
     {
         bool result = true;
-        int hh = toInt(item[field_name + "_hh"]);
-        int mm = toInt(item[field_name + "_mm"]);
-        int ss = toInt(item[field_name + "_ss"]);
+        int hh = item[field_name + "_hh"].toInt();
+        int mm = item[field_name + "_mm"].toInt();
+        int ss = item[field_name + "_ss"].toInt();
         try
         {
-            //TODO MIGRATE item[field_name] = DateTime.TimeSerial(hh, mm, ss);
+            item[field_name] = new DateTime(1, 1, 1, hh, mm, ss);
         }
         catch (Exception)
         {
@@ -547,7 +563,7 @@ public class FormUtils
         string result = "";
         if (!string.IsNullOrEmpty(datestr))
         {
-            var dt = Utils.toDate(datestr);
+            var dt = datestr.toDate();
             if (Utils.isDate(dt))
                 result = dt.ToString("HH:mm", System.Globalization.DateTimeFormatInfo.InvariantInfo);
         }
@@ -560,7 +576,7 @@ public class FormUtils
     {
         var result = datestr;
         var timeint = FormUtils.timeStrToInt(timestr);
-        var dt = Utils.toDate(datestr);
+        var dt = datestr.toDate();
         if (Utils.isDate(dt))
             // if date set - add time
             result = dt.AddSeconds(timeint);
@@ -602,15 +618,15 @@ public class FormUtils
             object vold = itemold[key];
 
             // If both are dates, compare only the date part.
-            var dtNew = Utils.toDate(vnew);
-            var dtOld = Utils.toDate(vold);
+            var dtNew = vnew.toDate();
+            var dtOld = vold.toDate();
             if (Utils.isDate(dtNew) && Utils.isDate(dtOld))
             {
                 if (dtNew.Date != dtOld.Date)
                     result[key] = vnew;
             }
             // Handle non-date values and the case where one value is a date and the other is not.
-            else if (!itemold.ContainsKey(key) || Utils.toStr(vnew) != Utils.toStr(vold))
+            else if (!itemold.ContainsKey(key) || vnew.toStr() != vold.toStr())
             {
                 result[key] = vnew;
             }
@@ -632,7 +648,7 @@ public class FormUtils
         var afields = Utils.qw(fields);
         foreach (var fld in afields)
         {
-            if (item1.ContainsKey(fld) && item2.ContainsKey(fld) && Utils.toStr(item1[fld]) != Utils.toStr(item2[fld]))
+            if (item1.ContainsKey(fld) && item2.ContainsKey(fld) && item1[fld].toStr() != item2[fld].toStr())
             {
                 result = true;
                 break;
@@ -645,8 +661,8 @@ public class FormUtils
     // check if 2 dates (without time) chagned
     public static bool isChangedDate(object date1, object date2)
     {
-        var dt1 = Utils.toDate(date1);
-        var dt2 = Utils.toDate(date2);
+        var dt1 = date1.toDate();
+        var dt2 = date2.toDate();
 
         if (Utils.isDate(dt1) || Utils.isDate(dt2))
         {

@@ -84,8 +84,8 @@ public class FwSelfTest
             echo("log_level", "OK");
         }
 
-        is_false("is_test", Utils.toBool(fw.config("is_test")), "Turned ON");
-        is_false("IS_DEV", Utils.toBool(fw.config("IS_DEV")), "Turned ON");
+        is_false("is_test", fw.config("is_test").toBool(), "Turned ON");
+        is_false("IS_DEV", fw.config("IS_DEV").toBool(), "Turned ON");
 
         // template directory should exists - TODO test parser to actually see templates work?
         is_true("template", Directory.Exists((string)fw.config("template")), (string)fw.config("template"));
@@ -223,7 +223,12 @@ public class FwSelfTest
                     //var bufferingFeature2 = fw.context.Features.Get<IHttpResponseBodyFeature>();
                     //bufferingFeature2?.DisableBuffering();
 
-                    fw._auth(controller_name, FW.ACTION_INDEX);
+                    var route = new FwRoute
+                    {
+                        controller = controller_name,
+                        action = FW.ACTION_INDEX
+                    };
+                    fw._auth(route);
                     fw.setController(controller_name, FW.ACTION_INDEX);
 
                     FwController new_controller = (FwController)Activator.CreateInstance(calledType);
@@ -247,11 +252,16 @@ public class FwSelfTest
                 else
                 {
                     // test using SelfTest
-                    fw._auth(controller_name, "SelfTest");
+                    var route = new FwRoute
+                    {
+                        controller = controller_name,
+                        action = "SelfTest"
+                    };
+                    fw._auth(route);
 
                     FwController new_controller = (FwController)Activator.CreateInstance(calledType);
                     new_controller.init(fw);
-                    Result res = (Result)mInfo.Invoke(new_controller, new object[] { this });
+                    Result res = (Result)mInfo.Invoke(new_controller, [this]);
                     if (res == Result.OK)
                     {
                         plus_ok();

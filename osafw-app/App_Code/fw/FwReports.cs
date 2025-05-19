@@ -58,7 +58,7 @@ public class FwReports
     public string render_to = ""; // output to: empty(browser), "string"(render returns string, for html only), "/file/path"(render saves to file)
     public Hashtable f; // report filters/options
                         // render options for html to pdf/xls/etc... convertor
-    public Hashtable f_data = new(); //filters data, like dropdown options
+    public Hashtable f_data = []; //filters data, like dropdown options
 
     public Hashtable render_options = new()
     {
@@ -69,7 +69,7 @@ public class FwReports
 
     protected FW fw;
     protected DB db;
-    public Hashtable ps = new(); // final data for template rendering
+    public Hashtable ps = []; // final data for template rendering
     public long list_count;      // count of list rows returned from db
     public ArrayList list_rows;  // list rows returned from db (array of hashes)
 
@@ -211,7 +211,7 @@ public class FwReports
         int current_user_level = fw.userAccessLevel;
         if (current_user_level > Users.ACL_VISITOR && current_user_level < Users.ACL_SITEADMIN)
         {
-            if (!fw.model<Users>().isAccessByRolesResourceAction(fw.userId, report_code, fw.route.action, fw.route.action_more))
+            if (!fw.model<Users>().isAccessByRolesResourceAction(fw.userId, report_code + "Report", fw.route.action, fw.route.action_more))
                 throw new AuthException("Bad access - Not authorized to view the Report (2)");
         }
     }
@@ -349,8 +349,7 @@ public class FwReports
                         if (ps.ContainsKey("_layout"))
                             layout = (string)ps["_layout"];
 
-                        ParsePage parser_obj = new(fw);
-                        result = parser_obj.parse_page(base_dir, layout, ps);
+                        result = fw.parsePage(base_dir, layout, ps);
 
                         if (render_to != TO_STRING)
                             //this is render to file
@@ -380,11 +379,11 @@ public class FwReports
     {
         int total_ctr = 0;
         foreach (Hashtable row in rows)
-            total_ctr += Utils.toInt(row["ctr"]);
+            total_ctr += row["ctr"].toInt();
         if (total_ctr > 0)
         {
             foreach (Hashtable row in rows)
-                row["perc"] = Utils.toInt(row["ctr"]) / (double)total_ctr * 100;
+                row["perc"] = row["ctr"].toInt() / (double)total_ctr * 100;
         }
         return total_ctr;
     }

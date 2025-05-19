@@ -7,6 +7,16 @@ using System.Collections;
 
 namespace osafw;
 
+public class TDemos
+{
+    public int id { get; set; }
+
+    [DBName("iname")]
+    public string title { get; set; }
+    public int fint { get; set; }
+    public float ffloat { get; set; }
+}
+
 public class Demos : FwModel
 {
     public Demos() : base()
@@ -22,9 +32,16 @@ public class Demos : FwModel
 
     public virtual ArrayList listSelectOptionsParent()
     {
-        Hashtable where = new();
+        Hashtable where = [];
         where["parent_id"] = 0;
         where["status"] = db.opNOT(STATUS_DELETED);
         return db.array(table_name, where, "iname", Utils.qw("id iname"));
+    }
+
+    // demo for DB generics
+    public decimal calcTotal(int id)
+    {
+        var item = db.row<TDemos>(table_name, DB.h("id", id));
+        return (decimal)item.ffloat * item.fint;
     }
 }

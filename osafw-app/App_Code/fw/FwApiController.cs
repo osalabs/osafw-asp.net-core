@@ -3,7 +3,6 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
-using Microsoft.AspNetCore.Http;
 using System;
 
 namespace osafw;
@@ -62,14 +61,9 @@ public class FwApiController : FwController
             throw new AuthException("Invalid origin " + origin);
 
         // create headers
-        fw.response.Headers.Remove("Access-Control-Allow-Origin");
-        fw.response.Headers.Append("Access-Control-Allow-Origin", origin);
-
-        fw.response.Headers.Remove("Access-Control-Allow-Credentials");
-        fw.response.Headers.Append("Access-Control-Allow-Credentials", "true");
-
-        fw.response.Headers.Remove("Access-Control-Allow-Methods");
-        fw.response.Headers.Append("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+        fw.response.Headers.AccessControlAllowOrigin = origin;
+        fw.response.Headers.AccessControlAllowCredentials = "true";
+        fw.response.Headers.AccessControlAllowMethods = "GET, POST, PUT, DELETE, OPTIONS";
 
         // check auth
         if (isAuth)

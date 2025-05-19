@@ -1,0 +1,1 @@
+<~/common/vue/app.js>

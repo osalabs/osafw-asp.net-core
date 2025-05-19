@@ -10,6 +10,7 @@ using OtpNet;
 using QRCoder;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using static BCrypt.Net.BCrypt;
 
@@ -28,6 +29,8 @@ public class Users : FwModel
     public const string PERM_COOKIE_NAME = "osafw_perm";
     public const int PERM_COOKIE_DAYS = 356;
 
+    public const int PWD_RESET_TOKEN_LEN = 50;
+
     private readonly string table_menu_items = "menu_items";
     private readonly string table_users_cookies = "users_cookies";
 
@@ -39,11 +42,16 @@ public class Users : FwModel
     }
 
     #region standard one/add/update overrides
-    public Hashtable oneByEmail(string email)
+    public DBRow oneByEmail(string email)
     {
-        Hashtable where = new();
+        Hashtable where = [];
         where["email"] = email;
         return db.row(table_name, where);
+    }
+
+    public DBRow oneByLogin(string login)
+    {
+        return db.row(table_name, DB.h("login", login));
     }
 
     /// <summary>
@@ -51,11 +59,11 @@ public class Users : FwModel
     /// </summary>
     /// <param name="id">Object type because if upd_users_id could be null</param>
     /// <returns></returns>
-    public new string iname(object id)
+    public override string iname(object id)
     {
         string result = "";
 
-        int iid = Utils.toInt(id);
+        int iid = id.toInt();
         if (iid > 0)
         {
             var item = one(iid);
@@ -82,9 +90,9 @@ public class Users : FwModel
 
         // set ui_theme/ui_mode form the config if not set
         if (!item.ContainsKey("ui_theme"))
-            item["ui_theme"] = Utils.toInt(fw.config("ui_theme"));
+            item["ui_theme"] = fw.config("ui_theme").toInt();
         if (!item.ContainsKey("ui_mode"))
-            item["ui_mode"] = Utils.toInt(fw.config("ui_mode"));
+            item["ui_mode"] = fw.config("ui_mode").toInt();
 
         return base.add(item);
     }
@@ -106,8 +114,7 @@ public class Users : FwModel
     // return standard list of id,iname where status=0 order by iname
     public override DBList list(IList statuses = null)
     {
-        if (statuses == null)
-            statuses = new ArrayList() { STATUS_ACTIVE };
+        statuses ??= new ArrayList() { STATUS_ACTIVE };
         return base.list(statuses);
     }
 
@@ -173,11 +180,11 @@ public class Users : FwModel
     /// <returns></returns>
     public bool sendPwdReset(int id)
     {
-        var pwd_reset_token = Utils.getRandStr(50);
+        var pwd_reset_token = Utils.getRandStr(PWD_RESET_TOKEN_LEN);
 
         Hashtable item = new()
         {
-            {"pwd_reset", this.hashPwd(pwd_reset_token, 50)},
+            {"pwd_reset", this.hashPwd(pwd_reset_token, PWD_RESET_TOKEN_LEN)},
             {"pwd_reset_time", DB.NOW}
         };
         this.update(id, item);
@@ -200,10 +207,10 @@ public class Users : FwModel
             return result;
 
         // award every unique letter until 5 repetitions
-        Hashtable chars = new();
+        Hashtable chars = [];
         for (var i = 0; i <= pwd.Length - 1; i++)
         {
-            chars[pwd[i]] = Utils.toInt(chars[pwd[i]]) + 1;
+            chars[pwd[i]] = chars[pwd[i]].toInt() + 1;
             result += (int)(5.0 / (double)chars[pwd[i]]);
         }
 
@@ -283,7 +290,7 @@ public class Users : FwModel
     {
         var result = false;
         var user = this.one(id);
-        var recovery_codes = Utils.toStr(user["mfa_recovery"]).Split(' '); // space-separated hashed codes
+        var recovery_codes = user["mfa_recovery"].toStr().Split(' '); // space-separated hashed codes
         var new_recovery_codes = "";
         //split by space and check each code
         foreach (var recovery_code in recovery_codes)
@@ -315,11 +322,20 @@ public class Users : FwModel
 
         reloadSession(id);
 
-        fw.logActivity(FwLogTypes.ICODE_USERS_LOGIN, FwEntities.ICODE_USERS, id);
+        fw.logActivity(FwLogTypes.ICODE_USERS_LOGIN, FwEntities.ICODE_USERS, id, "IP:" + fw.context.Connection.RemoteIpAddress.ToString());
         // update login info
-        Hashtable fields = new();
+        Hashtable fields = [];
         fields["login_time"] = DB.NOW;
         this.update(id, fields);
+
+        //if Site Admin - check for pending db updates
+        if (isAccessLevel(ACL_SITEADMIN))
+        {
+            fw.model<FwUpdates>().loadUpdates();
+
+            fw.Session("FW_UPDATES_CTR", fw.model<FwUpdates>().getCountPending().toStr());
+        }
+
     }
 
     public bool reloadSession(int id = 0)
@@ -328,7 +344,7 @@ public class Users : FwModel
             id = fw.userId;
         var user = one(id);
 
-        fw.Session("user_id", Utils.toStr(id));
+        fw.Session("user_id", id.toStr());
         fw.Session("login", user["email"]);
         fw.Session("access_level", user["access_level"]); //note, set as string
         fw.Session("lang", user["lang"]);
@@ -344,8 +360,8 @@ public class Users : FwModel
             fw.Session("user_name", user["email"]);
 
         var avatar_link = "";
-        if (Utils.toInt(user["att_id"]) > 0)
-            avatar_link = fw.model<Att>().getUrl(Utils.toInt(user["att_id"]), "s");
+        if (user["att_id"].toInt() > 0)
+            avatar_link = fw.model<Att>().getUrl(user["att_id"].toInt(), "s");
         fw.Session("user_avatar_link", avatar_link);
 
         return true;
@@ -382,7 +398,6 @@ public class Users : FwModel
     /// <returns></returns>
     public bool isReadOnly(int id = -1)
     {
-        var result = false;
         if (id == -1)
             id = fw.userId;
 
@@ -390,10 +405,7 @@ public class Users : FwModel
             return true; //if no user logged - readonly
 
         var user = one(id);
-        if (Utils.toBool(user["is_readonly"]))
-            result = true;
-
-        return result;
+        return user["is_readonly"].toBool();
     }
 
     /// <summary>
@@ -448,7 +460,7 @@ public class Users : FwModel
         else
         {
             var user = one(users_id);
-            user_access_level = Utils.f2int(user["access_level"]);
+            user_access_level = user["access_level"].toInt();
         }
 
         if (user_access_level == ACL_SITEADMIN)
@@ -466,7 +478,7 @@ public class Users : FwModel
         var resource = fw.model<Resources>().oneByIcode(resource_icode);
         if (resource.Count == 0)
             return result; //if no resource defined - return empty result - basically access denied
-        var resources_id = Utils.f2int(resource["id"]);
+        var resources_id = resource["id"].toInt();
 
         //list all permissions for the resource and all user roles
         List<string> roles_ids;
@@ -474,7 +486,7 @@ public class Users : FwModel
             //visitor
             roles_ids = [fw.model<Roles>().idVisitor().ToString()]; // visitor role for non-logged
         else
-                roles_ids = fw.model<UsersRoles>().colLinkedIdsByMainId((int)users_id);
+            roles_ids = fw.model<UsersRoles>().colLinkedIdsByMainId((int)users_id);
 
         // read all permissions for the resource and user's roles
         var rows = fw.model<RolesResourcesPermissions>().listByRolesResources(roles_ids, new int[] { resources_id });
@@ -543,10 +555,11 @@ public class Users : FwModel
     /// <returns></returns>
     public bool isAccessByRolesResourceAction(int users_id, string resource_icode, string resource_action, string resource_action_more = "", Hashtable access_actions_to_permissions = null)
     {
-
+        logger("isAccessByRolesResourceAction", DB.h("users_id", users_id, "resource_icode", resource_icode, "resource_action", resource_action, "resource_action_more", resource_action_more));
 #if isRoles
         // determine permission by resource action
         var permission_icode = fw.model<Permissions>().mapActionToPermission(resource_action, resource_action_more);
+        logger("permission_icode:", permission_icode);
 
         if (access_actions_to_permissions != null)
         {
@@ -585,12 +598,12 @@ public class Users : FwModel
         var resource = fw.model<Resources>().oneByIcode(resource_icode);
         if (resource.Count == 0)
             return false; //if no resource defined - access denied
-        var resources_id = Utils.f2int(resource["id"]);
+        var resources_id = resource["id"].toInt();
 
         var permission = fw.model<Permissions>().oneByIcode(permission_icode);
         if (permission.Count == 0)
             return false; //if no permission defined - access denied
-        var permissions_id = Utils.f2int(permission["id"]);
+        var permissions_id = permission["id"].toInt();
 
         // read all roles for user
         List<string> roles_ids;
@@ -599,7 +612,7 @@ public class Users : FwModel
         else
         {
             var user = one(users_id);
-            if (Utils.f2int(user["access_level"]) == ACL_SITEADMIN)
+            if (user["access_level"].toInt() == ACL_SITEADMIN)
             {
                 //siteadmin doesn't have roles - has access to everything
                 return true;
@@ -621,13 +634,70 @@ public class Users : FwModel
         return result;
     }
 
+    // load list of resources user can see (have list permission) per RBAC and save into fw.G[rbac_menu]
+    // use in sidebar menu as <~imenu if="GLOBAL[rbac_menu][AdminUsers]" inline>...</~imenu>
+    public void loadRBACMenu()
+    {
+#if isRoles
+        //check cache
+        var cache_key = "rbac_menu#" + fw.userId;
+        var cache_key_time = "rbac_menu_time#" + fw.userId;
+        var rbac_menu = (DBRow)FwCache.getValue(cache_key);
+        if (rbac_menu != null)
+        {
+            //check if time is earlier than roles_resources_permissions_updated
+            var cache_time = (DateTime?)FwCache.getValue(cache_key_time);
+            var roles_resources_permissions_updated = (DateTime?)FwCache.getValue(RolesResourcesPermissions.CACHE_KEY_UPDATED); // if null - then roles not changed recently
+            if (roles_resources_permissions_updated == null || cache_time != null && cache_time >= roles_resources_permissions_updated)
+            {
+                fw.G["rbac_menu"] = rbac_menu; // CACHE HIT
+                return;
+            }
+        }
+
+        //not in cache - read from db
+        List<string> res_icodes;
+        if (isSiteAdmin())
+        {
+            //siteadmin doesn't have roles - has access to everything
+            res_icodes = fw.model<Resources>().colIcodes();
+        }
+        else
+        {
+            // read all roles for user
+            List<string> roles_ids = fw.model<UsersRoles>().colLinkedIdsByMainId(fw.userId);
+            // read all resources user has list permission
+            var list_permission = fw.model<Permissions>().oneByIcode(Permissions.PERMISSION_LIST);
+            var rrps = fw.model<RolesResourcesPermissions>().listByRolesPermissions(roles_ids, new int[] { list_permission["id"].toInt() });
+
+            // read all resources user has list permission
+            var resources_ids = new List<int>();
+            foreach (Hashtable rrp in rrps)
+            {
+                resources_ids.Add(rrp["resources_id"].toInt());
+            }
+            res_icodes = fw.model<Resources>().colIcodes(resources_ids);
+        }
+
+        //convert res_icodes into key => 1
+        rbac_menu = [];
+        foreach (var icode in res_icodes)
+            rbac_menu[icode] = "1";
+
+        FwCache.setValue(cache_key, rbac_menu, 1800); // cache for 30 minutes
+        FwCache.setValue(cache_key_time, DateTime.Now);
+
+        fw.G["rbac_menu"] = rbac_menu;
+#endif
+    }
+
     //shortcut to avoid calling UsersRoles directly
     public ArrayList listLinkedRoles(int users_id)
     {
 #if isRoles
         return fw.model<UsersRoles>().listLinkedByMainId(users_id);
 #else
-        return new ArrayList();
+        return [];
 #endif
     }
 
@@ -639,18 +709,70 @@ public class Users : FwModel
 #endif
     }
 
+    // return list of icodes for resources user has access to with a "list" permission
+    // i.e. if user has list permission to a resource - it should be accessible via menu
+    public List<string> icodesAccessibleResources(int users_id)
+    {
+        var result = new List<string>();
+
+#if isRoles
+        var p = new Hashtable
+        {
+            { "icode", Permissions.PERMISSION_LIST },
+            { "users_id", users_id }
+        };
+        var roles_sql = "";
+
+        if (users_id == 0)
+        {
+            //this is visitor - use just one specific role
+            var role_visitor_id = fw.model<Roles>().idVisitor();
+            p["visitor_role_id"] = role_visitor_id;
+            roles_sql = $"@visitor_role_id";
+        }
+        else
+        {
+            //if Site Admin - has access to all resources
+            if (one(users_id)["access_level"].toInt() == ACL_SITEADMIN)
+                return db.colp($"select icode from {fw.model<Resources>().table_name}");
+
+            //get all roles for the known user
+            roles_sql = $"select roles_id from {fw.model<UsersRoles>().table_name} where users_id=@users_id";
+        }
+
+        result = db.colp($@"with rids as (
+                        select resources_id 
+                        from {fw.model<RolesResourcesPermissions>().table_name}
+                        where permissions_id in (select id from {fw.model<Permissions>().table_name} where icode=@icode)
+                          and roles_id in ({roles_sql})
+                        )
+
+                        select icode from {fw.model<Resources>().table_name} r, rids 
+                         where r.id=rids.resources_id", p);
+#endif
+
+        return result;
+    }
+
+    /// <summary>
+    /// shortcut to check if currently logged user is a Site Admin
+    /// </summary>
+    /// <returns></returns>
+    public bool isSiteAdmin()
+    {
+        return isAccessLevel(ACL_SITEADMIN);
+    }
     #endregion
 
     #region Permanent Login Cookies
     public string createPermCookie(int id)
     {
-        long curTS = new DateTimeOffset(DateTime.UtcNow).ToUnixTimeSeconds();
         string cookieId = Utils.getRandStr(64);
         string hashed = Utils.sha256(cookieId);
         var fields = DB.h("cookie_id", hashed, "users_id", id);
         db.updateOrInsert(table_users_cookies, fields, DB.h("users_id", id));
 
-        Utils.createCookie(fw, PERM_COOKIE_NAME, cookieId, curTS + 60 * 60 * 24 * PERM_COOKIE_DAYS);
+        Utils.createCookie(fw, PERM_COOKIE_NAME, cookieId, 60 * 60 * 24 * PERM_COOKIE_DAYS);
 
         return cookieId;
     }
@@ -664,7 +786,7 @@ public class Users : FwModel
             DBRow row = db.row(table_users_cookies, DB.h("cookie_id", hashed));
             if (row.Count > 0)
             {
-                doLogin(Utils.toInt(row["users_id"]));
+                doLogin(row["users_id"].toInt());
                 return true;
             }
             else
@@ -696,10 +818,10 @@ public class Users : FwModel
 
         // only Menu items user can see per ACL
         var users_acl = fw.userAccessLevel;
-        ArrayList result = new();
+        ArrayList result = [];
         foreach (Hashtable item in menu_items)
         {
-            if (Utils.toInt(item["access_level"]) <= users_acl)
+            if (item["access_level"].toInt() <= users_acl)
                 result.Add(item);
         }
 

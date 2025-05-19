@@ -19,7 +19,9 @@ public class DevConfigureController : FwController
 
     public override void init(FW fw)
     {
-        base.init(fw);
+        //base.init(fw); //not using base init as it calls getRBAC which require access to db (and we may not have it yet)
+        this.fw = fw;
+        this.db = fw.db;
 
         base_url = "/Dev/Configure"; // base url for the controller
     }
@@ -31,13 +33,13 @@ public class DevConfigureController : FwController
 
     public Hashtable IndexAction()
     {
-        Hashtable ps = new();
+        Hashtable ps = [];
 
         ps["hide_sidebar"] = true;
         var aspnet_env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
         ps["ASPNETCORE_ENVIRONMENT"] = aspnet_env;
         ps["config_file_name"] = fw.config("config_override");
-        ps["is_config_env"] = String.IsNullOrEmpty(aspnet_env) || aspnet_env == Utils.toStr(ps["config_file_name"]);
+        ps["is_config_env"] = String.IsNullOrEmpty(aspnet_env) || aspnet_env == ps["config_file_name"].toStr();
 
         ps["is_db_config"] = false;
         var configdb = (Hashtable)fw.config("db");
@@ -57,7 +59,7 @@ public class DevConfigureController : FwController
 
                 try
                 {
-                    var value = db.value("menu_items", new Hashtable(), "count(*)"); // just a last table in database.sql script
+                    var value = db.value("menu_items", [], "count(*)"); // just a last table in database.sql script
                     ps["is_db_tables"] = true;
                 }
                 catch (Exception ex)
@@ -77,7 +79,7 @@ public class DevConfigureController : FwController
         ps["is_write_dirs"] = isWritable(upload_dir, true);
 
         ps["is_write_langok"] = true;
-        if (isWritable(fw.config("template") + "/lang", true) && !Utils.toBool(fw.config("IS_DEV")))
+        if (isWritable(fw.config("template") + "/lang", true) && !fw.config("IS_DEV").toBool())
             ps["is_write_langok"] = false;
 
         // obsolete in .net 4
@@ -112,12 +114,12 @@ public class DevConfigureController : FwController
 
     public Hashtable InitDBAction()
     {
-        if (!Utils.toBool(fw.config("IS_DEV")))
+        if (!fw.config("IS_DEV").toBool())
             throw new AuthException("Not in a DEV mode");
 
-        Hashtable ps = new();
+        Hashtable ps = [];
         int sql_ctr = 0;
-        string[] files = { "fwdatabase.sql", "database.sql", "lookups.sql", "views.sql" };
+        string[] files = ["fwdatabase.sql", "database.sql", "lookups.sql", "views.sql"];
         foreach (string file in files)
         {
             var sql_file = fw.config("site_root") + @"\App_Data\sql\" + file;
@@ -141,4 +143,29 @@ public class DevConfigureController : FwController
         return ps;
     }
 
+    public Hashtable ApplyUpdatesAction()
+    {
+        if (!fw.config("IS_DEV").toBool())
+            throw new AuthException("Not in a DEV mode");
+
+        fw.model<FwUpdates>().loadUpdates();
+
+        // apply updates - if any and echo results. If error happens we stay on this page
+        try
+        {
+            fw.model<FwUpdates>().applyPending(true);
+        }
+        catch (Exception ex)
+        {
+            fw.rw("Error: " + ex.Message);
+            fw.rw("");
+            fw.rw("<b>Press F5 to continue applying updates</b>");
+            fw.rw("or go to <a href='/Admin/FwUpdates'>Admin FwUpdates</a>");
+            return null;
+        }
+
+        // all success - show link back to home
+        fw.rw("All updates applied successfully. <a href='/'>Back to Home</a>");
+        return null;
+    }
 }

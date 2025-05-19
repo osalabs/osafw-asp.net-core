@@ -3,11 +3,14 @@
 <~/common/form/btn_top_save_addnew>
 <~/common/form/btn_std>
 
-<form class="fw-card" id="FEdit" method="post" data-check-changes <~/common/form/data_autosave if="id"> action="<~../url><~uu1 if="id" inline>/<~id></~uu1>" data-errors="<~ERR json>">
+<form class="fw-card" id="FEdit" method="post" data-check-changes <~/common/form/data_autosave if="id"> action="<~../url><~uu1 if="id" inline>/<~id></~uu1>" data-errors="<~error[details] json>">
  <input type="hidden" name="XSS" value="<~session[XSS]>">
  <input type="hidden" name="return_url" value="<~return_url>">
  <input type="hidden" name="refresh" value="">
+ <input type="hidden" name="tab" value="<~tab>">
  <~/common/form/relid>
+
+ <~/common/form/tabs if="form_tabs">
 
   <fieldset <~/common/disabled if="is_readonly">>
     <~/common/form/msg>

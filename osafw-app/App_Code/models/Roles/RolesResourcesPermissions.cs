@@ -3,12 +3,15 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2023 Oleg Savchuk www.osalabs.com
 
+using System;
 using System.Collections;
 
 namespace osafw;
 
 public class RolesResourcesPermissions : FwModel
 {
+    public const string CACHE_KEY_UPDATED = "roles_resources_permissions_updated";
+
     const string KEY_DELIM = "#";
 
     public FwModel junction_model_permissions;
@@ -45,8 +48,8 @@ public class RolesResourcesPermissions : FwModel
         string str_permissions_id = "";
         Utils.split2(KEY_DELIM, key, ref str_resources_id, ref str_permissions_id);
 
-        resources_id = Utils.toInt(str_resources_id);
-        permissions_id = Utils.toInt(str_permissions_id);
+        resources_id = str_resources_id.toInt();
+        permissions_id = str_permissions_id.toInt();
     }
 
     /// <summary>
@@ -66,7 +69,7 @@ public class RolesResourcesPermissions : FwModel
         };
         var value = db.value(table_name, where, "1");
 
-        return 1 == Utils.toInt(value);
+        return value.toBool();
     }
 
     /// <summary>
@@ -89,6 +92,17 @@ public class RolesResourcesPermissions : FwModel
     public DBList listByRolesResources(IList roles_ids, IList resources_ids)
     {
         return db.array(table_name, DB.h("roles_id", db.opIN(roles_ids), "resources_id", db.opIN(resources_ids)));
+    }
+
+    /// <summary>
+    /// list of records for given MULTIPLE roles and permissions
+    /// </summary>
+    /// <param name="roles_ids"></param>
+    /// <param name="permissions_ids"></param>
+    /// <returns></returns>
+    public DBList listByRolesPermissions(IList roles_ids, IList permissions_ids)
+    {
+        return db.array(table_name, DB.h("roles_id", db.opIN(roles_ids), "permissions_id", db.opIN(permissions_ids)));
     }
 
     /// <summary>
@@ -120,7 +134,7 @@ public class RolesResourcesPermissions : FwModel
             resource["permissions_cols"] = permissions_cols;
 
             // load permissions for this resource
-            var hpermissions = fw.model<RolesResourcesPermissions>().matrixRowByRoleResource(roles_id, Utils.toInt(resource["id"]));
+            var hpermissions = fw.model<RolesResourcesPermissions>().matrixRowByRoleResource(roles_id, resource["id"].toInt());
 
             foreach (Hashtable permission in permissions)
             {
@@ -141,8 +155,8 @@ public class RolesResourcesPermissions : FwModel
     {
         var permissions = fw.model<Permissions>().list();
 
-        Hashtable fields = new();
-        Hashtable where = new();
+        Hashtable fields = [];
+        Hashtable where = [];
 
         // set all fields as under update
         fields[field_status] = STATUS_UNDER_UPDATE;
@@ -151,9 +165,12 @@ public class RolesResourcesPermissions : FwModel
 
         foreach (string key in hresources_permissions.Keys)
         {
+            if (!hresources_permissions[key].toBool())
+                continue; // skip unchecked
+
             extractKey(key, out int resources_id, out int permissions_id);
 
-            fields = new Hashtable();
+            fields = [];
             fields[junction_field_main_id] = roles_id;
             fields[junction_field_linked_id] = resources_id;
             fields[junction_field_permissions_id] = permissions_id;
@@ -161,7 +178,7 @@ public class RolesResourcesPermissions : FwModel
             fields[field_upd_users_id] = fw.userId;
             fields[field_upd_time] = DB.NOW;
 
-            where = new Hashtable();
+            where = [];
             where[junction_field_main_id] = roles_id;
             where[junction_field_linked_id] = resources_id;
             where[junction_field_permissions_id] = permissions_id;
@@ -169,9 +186,12 @@ public class RolesResourcesPermissions : FwModel
         }
 
         // remove those who still not updated (so removed)
-        where = new Hashtable();
+        where = [];
         where[junction_field_main_id] = roles_id;
         where[field_status] = STATUS_UNDER_UPDATE;
         db.del(table_name, where);
+
+        // set in cache time when roles updated
+        FwCache.setValue(CACHE_KEY_UPDATED, DateTime.Now);
     }
 }

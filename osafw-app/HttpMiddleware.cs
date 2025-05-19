@@ -1,64 +1,73 @@
-﻿using Microsoft.AspNetCore.Builder;
+﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using System.Linq;
+using Microsoft.Extensions.Configuration;
+using System;
 using System.Threading.Tasks;
 
 namespace osafw;
 
-public class MyHandlerMiddleware
+/// <summary>
+/// Custom HTTP middleware
+/// Must have a constructor taking RequestDelegate next.
+/// </summary>
+public class MyHandlerMiddleware(RequestDelegate next, IConfiguration config)
 {
+    private readonly RequestDelegate _next = next;
+    private readonly IConfiguration _config = config;
 
-    // Must have constructor with this signature, otherwise exception at run time
-    public MyHandlerMiddleware(RequestDelegate next)
+    public async Task InvokeAsync(HttpContext context)
     {
-        // This is an HTTP Handler, so no need to store next
-    }
+        var request = context.Request;
+        var response = context.Response;
 
-    public async Task Invoke(HttpContext context)
-    {
-        HttpRequest request = context.Request;
-        HttpResponse response = context.Response;
         // preflight request
-        if (request.Method.ToUpper() == "OPTIONS")
+        if (request.Method.Equals("OPTIONS", StringComparison.OrdinalIgnoreCase))
         {
+            // Clear the response
             response.Clear();
 
-            // Set allowed method And headers
-            response.Headers.Append("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+            // set allowed methods and headers
+            response.Headers.AccessControlAllowMethods = "GET, POST, PUT, PATCH, DELETE, OPTIONS";
 
             // allow any custom headers
-            Microsoft.Extensions.Primitives.StringValues access_control_request_headers = new("");
-            bool is_access_control_request_headers =
-                request.Headers.TryGetValue("Access-Control-Request-Headers", out access_control_request_headers);
-
-            if (is_access_control_request_headers)
-            {
-                response.Headers.Append("Access-Control-Allow-Headers", access_control_request_headers.ToString());
-            }
-            // response.AppendHeader("Access-Control-Allow-Headers", "*")
-            // response.AppendHeader("Access-Control-Expose-Headers", "*")
+            if (request.Headers.TryGetValue("Access-Control-Request-Headers", out var acrh))
+                response.Headers.AccessControlAllowHeaders = acrh;
 
             // allow credentials
-            response.Headers.Append("Access-Control-Allow-Credentials", "true");
+            response.Headers.AccessControlAllowCredentials = "true";
 
-            // Set allowed origin
-            /*Dim origin = context.Request.Headers("Origin")
-            If Not IsNothing(origin) Then
-                response.AppendHeader("Access-Control-Allow-Origin", origin)
-            Else
-                response.AppendHeader("Access-Control-Allow-Origin", "*")
-            End If*/
+            // (optional) set allowed origin dynamically
+            // e.g. 
+            // var origin = request.Headers["Origin"];
+            // response.Headers.AccessControlAllowOrigin = string.IsNullOrEmpty(origin) ? "*" : origin;
 
-            // end request
-            //context.RequestServices.CompleteRequest()
+            // No need to do anything else. We'll just let the request end
         }
+
+        // Windows Authentication Support
+        // If not authenticated and path is /winlogin => challenge
+        if (!context.User.Identity.IsAuthenticated
+            && request.Path.ToString().StartsWith("/winlogin", StringComparison.CurrentCultureIgnoreCase))
+        {
+            await context.ChallengeAsync(Microsoft.AspNetCore.Server.IISIntegration.IISDefaults.AuthenticationScheme);
+            return;
+        }
+
+        // Call the FW "core" pipeline
         await Task.Run(() =>
         {
-            FW.run(context, Startup.Configuration);
+            FW.run(context, _config);
         });
+
+        // If needed any post-processing, can be added here, after FW.run.
     }
 }
 
+/// <summary>
+/// Extension method to add MyHandlerMiddleware in the pipeline
+/// usage: app.UseMyHandler()
+/// </summary>
 public static class MyHandlerExtensions
 {
     public static IApplicationBuilder UseMyHandler(this IApplicationBuilder builder)

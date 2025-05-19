@@ -35,10 +35,19 @@ public class AdminLookupManagerController : FwController
         else
         {
             //don't allow access to tables with access_level higher than current user
-            var acl = Utils.toInt(defs["access_level"]);
+            var acl = defs["access_level"].toInt();
             if (!fw.model<Users>().isAccessLevel(acl))
                 dict = "";
         }
+    }
+
+    public override void checkAccess()
+    {
+        // add custom actions to permissions mapping
+        access_actions_to_permissions = new() {
+            { "Dictionaries", Permissions.PERMISSION_LIST },
+        };
+        base.checkAccess();
     }
 
     private void check_dict()
@@ -47,28 +56,69 @@ public class AdminLookupManagerController : FwController
             fw.redirect(base_url + "/(Dictionaries)");
         if (!Utils.isEmpty(defs["url"]))
             fw.redirect((string)defs["url"]);
+
+        //now check access rights via RBAC
+        int current_user_level = fw.userAccessLevel;
+        if (current_user_level < Users.ACL_SITEADMIN)
+        {
+            var action_more = fw.route.action_more;
+            if ((fw.route.action == FW.ACTION_SAVE || fw.route.action == FW.ACTION_SHOW_FORM) && Utils.isEmpty(fw.route.id))
+            {
+                //if save/showform and no id - it's add new - check for Add permission
+                action_more = FW.ACTION_MORE_NEW;
+            }
+
+            var resource_code = LookupManager.RBAC_RESOURCE_PREFIX + dict;
+            if (!fw.model<Users>().isAccessByRolesResourceAction(fw.userId, resource_code, fw.route.action, action_more))
+                throw new AuthException("Bad access - Not authorized to perform this action with Lookup Table");
+        }
+
     }
 
     public Hashtable DictionariesAction()
     {
-        Hashtable ps = new();
+        Hashtable ps = [];
 
         // code below to show list of items in columns instead of plain list
 
         int columns = 4;
-        DBList tables = model_tables.list();
-        int max_rows = (int)Math.Ceiling(tables.Count / (double)columns);
-        ArrayList cols = new();
+        DBList tables1 = model_tables.listByGroup();
+        DBList tables = [];
 
-        // add rows
-        int curcol = 0;
-        foreach (var table in tables)
+        //first filter out inaccessible tables
+        foreach (var table in tables1)
         {
             //do not show tables with access_level higher than current user
-            var acl = Utils.toInt(table["access_level"]);
+            var acl = table["access_level"].toInt();
             if (!fw.model<Users>().isAccessLevel(acl))
                 continue;
 
+            // do not show tables if RBAC denies list access
+            var resource_code = LookupManager.RBAC_RESOURCE_PREFIX + table["tname"];
+            if (!fw.model<Users>().isAccessByRolesResourceAction(fw.userId, resource_code, FW.ACTION_INDEX))
+                continue;
+
+            tables.Add(table);
+        }
+
+        int max_rows = (int)Math.Ceiling(tables.Count / (double)columns);
+        ArrayList cols = [];
+
+        // add rows
+        int curcol = 0;
+        int curcol_rows = 0;
+        string curgroup = "";
+        foreach (var table in tables)
+        {
+            var igroup = table["igroup"].Trim();
+            bool is_new_group = igroup != curgroup;
+            if ((is_new_group || igroup == "") && curcol_rows >= max_rows)
+            {
+                //if we got more rows than max - move to next column (for new group or empty group)
+                curcol += 1;
+            }
+
+            // add new column if needed
             if (cols.Count <= curcol)
                 cols.Add(new Hashtable());
             Hashtable h = (Hashtable)cols[curcol];
@@ -77,10 +127,20 @@ public class AdminLookupManagerController : FwController
                 h["col_sm"] = Math.Floor(12 / (double)columns);
                 h["list_rows"] = new ArrayList();
             }
+
             ArrayList al = (ArrayList)h["list_rows"];
+            if (is_new_group)
+            {
+                Hashtable group = new()
+                {
+                    ["is_group"] = true,
+                    ["igroup"] = igroup
+                };
+                al.Add(group);
+                curgroup = igroup;
+            }
             al.Add(table.toHashtable());
-            if (al.Count >= max_rows)
-                curcol += 1;
+            curcol_rows = al.Count;
         }
 
         ps["list_сols"] = cols;
@@ -92,12 +152,12 @@ public class AdminLookupManagerController : FwController
         check_dict();
 
         // if this is one-form dictionary - show edit form with first record
-        if (Utils.toInt(defs["is_one_form"]) == 1)
+        if (defs["is_one_form"].toBool())
         {
             string id_fname = fw.model<LookupManagerTables>().getColumnId(defs);
             var row = model.topByTname((string)defs["tname"]);
             // fw.redirect(base_url & "/" & row(id_fname) & "/edit/?d=" & dict)
-            String[] args = (new[] { (string)row[id_fname] });
+            String[] args = ([(string)row[id_fname]]);
             fw.routeRedirect(FW.ACTION_SHOW_FORM, args);
             return null;
         }
@@ -108,7 +168,7 @@ public class AdminLookupManagerController : FwController
         // logger(defs)
         // logger(cols)
 
-        Hashtable ps = new();
+        Hashtable ps = [];
         ps["is_two_modes"] = true;
         Hashtable f = initFilter("_filter_lookupmanager_" + list_table_name);
 
@@ -118,7 +178,7 @@ public class AdminLookupManagerController : FwController
             var is_prio_exists = false;
             foreach (Hashtable col in cols)
             {
-                if (Utils.toStr(col["name"]) == "prio")
+                if (col["name"].toStr() == "prio")
                 {
                     is_prio_exists = true;
                     break;
@@ -140,12 +200,12 @@ public class AdminLookupManagerController : FwController
         }
         if ((string)f["sortdir"] != "desc")
             f["sortdir"] = "asc";
-        Hashtable SORTSQL = new();
-        ArrayList fields_headers = new();
-        ArrayList group_headers = new();
+        Hashtable SORTSQL = [];
+        ArrayList fields_headers = [];
+        ArrayList group_headers = [];
         bool is_group_headers = false;
 
-        Hashtable list_cols = new();
+        Hashtable list_cols = [];
         if (!Utils.isEmpty(defs["list_columns"]))
         {
             list_cols = Utils.commastr2hash((string)defs["list_columns"]);
@@ -162,7 +222,7 @@ public class AdminLookupManagerController : FwController
             if (list_cols.Count > 0 && !list_cols.ContainsKey(col["name"]))
                 continue;
 
-            Hashtable fh = new();
+            Hashtable fh = [];
             fh["iname"] = col["iname"];
             fh["colname"] = col["name"];
             fh["maxlen"] = col["maxlen"];
@@ -170,7 +230,7 @@ public class AdminLookupManagerController : FwController
             if ((string)fh["type"] == "textarea")
                 fh["type"] = ""; // show textarea as inputtext in table edit mode
 
-            if (col["itype"].ToString().Contains("."))
+            if (col["itype"].ToString().Contains('.'))
             {
                 // lookup type
                 fh["type"] = "lookup";
@@ -183,7 +243,7 @@ public class AdminLookupManagerController : FwController
             string igroup = col["igroup"].ToString().Trim();
             if (group_headers.Count == 0)
             {
-                Hashtable h = new();
+                Hashtable h = [];
                 h["iname"] = igroup;
                 h["colspan"] = 0;
                 group_headers.Add(h);
@@ -192,7 +252,7 @@ public class AdminLookupManagerController : FwController
                 ((Hashtable)group_headers[group_headers.Count - 1])["colspan"] = (int)((Hashtable)group_headers[group_headers.Count - 1])["colspan"] + 1;
             else
             {
-                Hashtable h = new();
+                Hashtable h = [];
                 h["iname"] = igroup;
                 h["colspan"] = 1;
                 group_headers.Add(h);
@@ -214,12 +274,12 @@ public class AdminLookupManagerController : FwController
                 list_where += " and (0=1 " + swhere + ")";
         }
 
-        ps["count"] = Utils.toLong(db.valuep("select count(*) from " + db.qid(list_table_name) + " where " + list_where, list_where_params));
+        ps["count"] = db.valuep("select count(*) from " + db.qid(list_table_name) + " where " + list_where, list_where_params).toLong();
 
         if ((long)ps["count"] > 0)
         {
-            int pagenum = Utils.toInt(list_filter["pagenum"]);
-            int pagesize = Utils.toInt(list_filter["pagesize"]);
+            int pagenum = list_filter["pagenum"].toInt();
+            int pagesize = list_filter["pagesize"].toInt();
             int offset = pagenum * pagesize;
             int limit = pagesize;
             string orderby = (string)SORTSQL[(string)f["sortby"]];
@@ -227,7 +287,7 @@ public class AdminLookupManagerController : FwController
                 orderby = "1";
             if ((string)f["sortdir"] == "desc")
             {
-                if (orderby.Contains(","))
+                if (orderby.Contains(','))
                     orderby = orderby.Replace(",", " desc,");
                 orderby += " desc";
             }
@@ -258,7 +318,7 @@ public class AdminLookupManagerController : FwController
                 row["d"] = dict;
                 row["f"] = f;
 
-                ArrayList fv = new();
+                ArrayList fv = [];
                 foreach (Hashtable col in cols)
                 {
                     var colname = (string)col["name"];
@@ -266,7 +326,7 @@ public class AdminLookupManagerController : FwController
                     if (list_cols.Count > 0 && !list_cols.ContainsKey(colname))
                         continue;
 
-                    Hashtable fh = new();
+                    Hashtable fh = [];
                     fh["colname"] = colname;
                     fh["iname"] = col["iname"];
                     fh["value"] = row[colname];
@@ -279,7 +339,7 @@ public class AdminLookupManagerController : FwController
                     if ((string)fh["type"] == "textarea")
                         fh["type"] = ""; // show textarea as inputtext in table edit mode
 
-                    if (colitype.Contains("."))
+                    if (colitype.Contains('.'))
                     {
                         // lookup type
                         fh["type"] = "lookup";
@@ -300,6 +360,7 @@ public class AdminLookupManagerController : FwController
         ps["defs"] = defs;
         ps["d"] = dict;
         ps["is_readonly"] = is_readonly;
+        ps["return_url"] = reqs("return_url");
 
         return ps;
     }
@@ -310,7 +371,7 @@ public class AdminLookupManagerController : FwController
 
         check_dict();
 
-        Hashtable hf = new();
+        Hashtable hf = [];
         Hashtable item;
         ArrayList cols = model_tables.getColumns(defs);
         bool is_fwtable = false;
@@ -330,7 +391,7 @@ public class AdminLookupManagerController : FwController
             else
             {
                 // set defaults here
-                item = new();
+                item = [];
                 // item["field"]="default value";
                 item["prio"] = model.maxIdByTname(dict) + 1; // default prio (if exists) = max(id)+1
             }
@@ -343,14 +404,14 @@ public class AdminLookupManagerController : FwController
             Utils.mergeHash(item, reqh("item"));
         }
 
-        ArrayList fv = new();
+        ArrayList fv = [];
         string last_igroup = "";
         foreach (Hashtable col in cols)
         {
             if (is_fwtable && (string)col["name"] == "status")
                 continue; // for fw tables - status displayed in standard way
 
-            Hashtable fh = new();
+            Hashtable fh = [];
             fh["colname"] = col["name"];
             fh["iname"] = col["iname"];
             fh["value"] = item[col["name"]];
@@ -366,16 +427,16 @@ public class AdminLookupManagerController : FwController
                     fh["maxlen"] = col["maxlen"];
             }
             else
-                fh["maxlen"] = Utils.toStr(Utils.toInt(col["numeric_precision"]) + (Utils.toInt(col["numeric_scale"]) > 0 ? 1 : 0));
+                fh["maxlen"] = col["numeric_precision"].toInt() + (col["numeric_scale"].toInt() > 0 ? 1 : 0);
 
-            if (col["itype"].ToString().Contains("."))
+            if (col["itype"].toStr().Contains('.'))
             {
                 // lookup type
                 fh["type"] = "lookup";
                 fh["select_options"] = model_tables.getLookupSelectOptions((string)col["itype"], fh["value"]);
             }
 
-            string igroup = col["igroup"].ToString().Trim();
+            string igroup = col["igroup"].toStr().Trim();
             if (igroup != last_igroup)
             {
                 fh["is_group"] = true;
@@ -415,7 +476,7 @@ public class AdminLookupManagerController : FwController
 
         Validate(id, item);
 
-        Hashtable itemdb = new();
+        Hashtable itemdb = [];
         foreach (Hashtable col in cols)
         {
             if (item.ContainsKey(col["name"]))
@@ -454,7 +515,7 @@ public class AdminLookupManagerController : FwController
 
         check_dict();
 
-        Hashtable hf = new();
+        Hashtable hf = [];
         Hashtable item = model.oneByTname(dict, id);
         if (item.Count == 0)
             throw new ApplicationException("Not found");
@@ -489,8 +550,6 @@ public class AdminLookupManagerController : FwController
 
         int del_ctr = 0;
         Hashtable cbses = reqh("cb");
-        if (cbses == null)
-            cbses = new Hashtable();
         if (cbses.Count > 0)
         {
             // multirecord delete
@@ -498,7 +557,7 @@ public class AdminLookupManagerController : FwController
             {
                 if (fw.FORM.ContainsKey("delete"))
                 {
-                    model.deleteByTname(dict, Utils.toInt(id));
+                    model.deleteByTname(dict, id.toInt());
                     del_ctr += 1;
                 }
             }
@@ -511,23 +570,18 @@ public class AdminLookupManagerController : FwController
 
             // go thru all existing rows
             Hashtable rows = reqh("row");
-            if (rows == null)
-                rows = new Hashtable();
             Hashtable rowsdel = reqh("del");
-            if (rowsdel == null)
-                rowsdel = new Hashtable();
-            Hashtable ids_md5 = new();
             foreach (string key in rows.Keys)
             {
                 string form_id = key;
-                int id = Utils.toInt(form_id);
+                int id = form_id.toInt();
                 if (id == 0)
                     continue; // skip wrong rows
 
                 string md5 = (string)rows[key];
                 // logger(form_id)
                 Hashtable item = reqh("f" + form_id);
-                Hashtable itemdb = new();
+                Hashtable itemdb = [];
                 // copy from form item to db item - only defined columns
                 foreach (Hashtable col in cols)
                 {
@@ -553,13 +607,13 @@ public class AdminLookupManagerController : FwController
             foreach (string key in rows.Keys)
             {
                 string form_id = key;
-                int id = Utils.toInt(form_id);
+                int id = form_id.toInt();
                 if (id == 0)
                     continue; // skip wrong rows
                               // logger("new formid=" & form_id)
 
                 Hashtable item = reqh("fnew" + form_id);
-                Hashtable itemdb = new();
+                Hashtable itemdb = [];
                 bool is_row_empty = true;
                 // copy from form item to db item - only defined columns
                 foreach (Hashtable col in cols)

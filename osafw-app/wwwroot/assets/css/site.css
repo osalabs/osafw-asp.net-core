@@ -134,15 +134,6 @@ h1 .badge {
  vertical-align: middle;
 }
 
-/*fixes for twitter-typeahead*/
-.twitter-typeahead {
-  width:100%
-}
-  .twitter-typeahead .tt-hint {
-    top: -1px !important;
-    left: -1px !important;
-  }
-
 .fw-card {
 /*  background-color: #fff;
   border-radius: 0.25rem;
@@ -180,6 +171,15 @@ h1 .badge {
 
   .sidebar .nav-pills .nav-link.active {
     color: var(--bs-nav-pills-link-active-color) !important; /*fix active nav text color for light mode*/
+  }
+  .sidebar .nav-header {
+    margin-left: -1rem;
+    margin-right: -1rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    font-weight: bold;
+    margin-top: 0.5rem;
+    margin-bottom: 0.25rem;
   }
 
 main {
@@ -313,17 +313,17 @@ table.list-edit tbody td {
     white-space: nowrap;
   }
 
-  table.list-edit tbody td > div .form-control {
+  table.list-edit tbody td > div > .form-control {
    border: 0;
    border-radius: 0;
    background: transparent;
   }
-  table.list-edit tbody td > div .form-select {
+  table.list-edit tbody td > div > .form-select {
     border: 0px;
     border-radius: 0;
     /*background: transparent;*/
   }
-  table.list-edit tbody td > div .form-check-input {
+  table.list-edit tbody td > div > .form-check-input {
    margin:0.5rem 0.4rem;
   }
 
@@ -337,12 +337,12 @@ table.list-edit tbody td {
   table.list-edit.table-sm tbody td > div.ro {
     padding: 0.25rem 0.25rem;
   }
-  table.list-edit.table-sm tbody td > div .form-control {
+  table.list-edit.table-sm tbody td > div > .form-control {
     min-height: calc(1.5em + .5rem + calc(var(--bs-border-width) * 2));
     padding: .25rem .5rem;
     font-size: .875rem;
   }
-  table.list-edit.table-sm tbody td > div .form-select {
+  table.list-edit.table-sm tbody td > div > .form-select {
     padding-top: .31rem;
     padding-bottom: .32rem;
     padding-left: .5rem;
@@ -359,18 +359,18 @@ table.list-edit tbody td {
   table.list-edit.table-dense tbody td > div.ro {
     padding: 0 0.1rem;
   }
-  table.list-edit.table-dense tbody td > div .form-control {
+  table.list-edit.table-dense tbody td > div > .form-control {
     min-height: auto;
     padding: 0 .5rem;
     font-size: .7rem;
   }
-  table.list-edit.table-dense tbody td > div .form-select {
+  table.list-edit.table-dense tbody td > div > .form-select {
     padding-top: 0;
     padding-bottom: 0;
     padding-left: .5rem;
     font-size: .7rem;
   }
-  table.list-edit.table-dense tbody td > div .form-check-input {
+  table.list-edit.table-dense tbody td > div > .form-check-input {
     margin: 0.17rem 0.4rem;
   }
 
@@ -450,6 +450,18 @@ table.list-edit tbody td {
 .form-row {
   padding-bottom: var(--fw-spacer);
 }
+
+.hr-header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 1rem;
+}
+  .hr-header::before,
+  .hr-header::after {
+    content: "";
+    border-top: 0.1rem double var(--bs-border-color);
+    align-self: center;
+  }
 
 form .required:before {
   content: "*";

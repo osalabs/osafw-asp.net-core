@@ -1,4 +1,14 @@
-﻿//if you use Sentry set to True here, install SentrySDK, in web.config fill endpoint URL to "log_sentry"
+﻿// FW Core
+//
+// Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
+// (c) 2009-2024 Oleg Savchuk www.osalabs.com
+
+
+//if you use Sentry https://docs.sentry.io/platforms/dotnet/guides/aspnetcore/
+//  install Sentry.AspNetCore (uncomment in csproj)
+//  in appsettings.json set your Sentry.Dsn
+//  in Program - uncomment webBuilder.UseSentry();
+//  uncomment define below
 //#define isSentry
 
 using Microsoft.AspNetCore.Http;
@@ -22,10 +32,8 @@ public class AuthException : ApplicationException
     public AuthException(string message) : base(message) { }
 }
 [Serializable]
-public class UserException : ApplicationException
+public class UserException(string message) : ApplicationException(message)
 {
-    //thrown when input parameters from the request (browser/user) are not valid
-    public UserException(string message) : base(message) { }
 }
 [Serializable]
 public class ValidationException : UserException
@@ -63,6 +71,7 @@ public class FwRoute
 {
     public string controller_path; // store /Prefix/Prefix2/Controller - to use in parser a default path for templates
     public string method;
+    public string prefix;
     public string controller;
     public string action;
     public string action_raw;
@@ -100,13 +109,14 @@ public class FW : IDisposable
     public const string FW_NAMESPACE_PREFIX = "osafw.";
     public static Hashtable METHOD_ALLOWED = Utils.qh("GET POST PUT PATCH DELETE");
 
-    private readonly Hashtable models = new();
+    private readonly Hashtable models = [];
     public FwCache cache = new(); // request level cache
+    private ParsePage pp_instance; // for parsePage()
 
     public Hashtable FORM;
-    public Hashtable requestJson; // parsed JSON from request body
+    public Hashtable postedJson; // parsed JSON from request body
     public Hashtable G; // for storing global vars - used in template engine, also stores "_flash"
-    public Hashtable FormErrors; // for storing form id's with error messages, put to hf("ERR") for parser
+    public Hashtable FormErrors; // for storing form id's with error messages, put to ps['error']['details'] for parser
     public Exception last_file_exception; // set by getFileContent, getFileLines in case of exception
 
     public DB db;
@@ -125,20 +135,16 @@ public class FW : IDisposable
     public string last_error_send_email = "";
     private static readonly char path_separator = Path.DirectorySeparatorChar;
 
-#if isSentry
-    private readonly IDisposable sentryClient;
-#endif
-
     // shortcut for currently logged users.id
     // usage: fw.userId
     public int userId
     {
-        get { return Utils.toInt(Session("user_id")); }
+        get { return Session("user_id").toInt(); }
     }
 
     public int userAccessLevel
     {
-        get { return Utils.toInt(Session("access_level")); }
+        get { return Session("access_level").toInt(); }
     }
 
     // shortcut to obtain if we working under logged in user
@@ -187,8 +193,14 @@ public class FW : IDisposable
 
 #if isSentry
         //configure Sentry logging
-        sentryClient = Sentry.SentrySdk.Init(Utils.f2str(config("log_sentry")));
-        Sentry.SentrySdk.ConfigureScope(scope => scope.User = new Sentry.SentryUser { Email = Session("login") });
+        var env = Utils.toStr(config("config_override"));
+        env = env == "" ? "production" : env;
+        Sentry.SentrySdk.ConfigureScope(scope =>
+        {
+            scope.User = new Sentry.SentryUser { Email = Session("login") };
+            scope.Environment = env;
+            scope.SetTag("ProcessId", Environment.ProcessId.ToString());
+        });
 #endif
 
         db = new DB(this);
@@ -198,6 +210,7 @@ public class FW : IDisposable
 
         // per request settings
         G["request_url"] = UriHelper.GetDisplayUrl(request);
+        G["current_time"] = DateTime.Now;
 
         // override default lang with user's lang
         if (!string.IsNullOrEmpty(Session("lang"))) G["lang"] = Session("lang");
@@ -206,13 +219,13 @@ public class FW : IDisposable
         if (!string.IsNullOrEmpty(Session("ui_theme"))) G["ui_theme"] = Session("ui_theme");
         if (!string.IsNullOrEmpty(Session("ui_mode"))) G["ui_mode"] = Session("ui_mode");
 
-        FormErrors = new Hashtable(); // reset errors
+        FormErrors = []; // reset errors
         parseForm();
 
         // save flash to current var and update session as flash is used only for nearest request
         Hashtable _flash = SessionHashtable("_flash");
         if (_flash != null) G["_flash"] = _flash;
-        SessionHashtable("_flash", new Hashtable());
+        SessionHashtable("_flash", []);
     }
 
     // ***************** work with SESSION
@@ -276,7 +289,7 @@ public class FW : IDisposable
             if (!isJsonExpected())
             {
                 // write for the next request
-                Hashtable _flash = SessionHashtable("_flash") ?? new();
+                Hashtable _flash = SessionHashtable("_flash") ?? [];
                 _flash[name] = value;
                 SessionHashtable("_flash", _flash);
             }
@@ -308,9 +321,9 @@ public class FW : IDisposable
     public string getResponseExpectedFormat()
     {
         string result = "";
-        if (this.route.format == "json" || Utils.toStr(this.request.Headers["Accept"]).Contains("application/json"))
+        if (this.route.format == "json" || this.request.Headers.Accept.toStr().Contains("application/json"))
             result = "json";
-        else if (this.route.format == "pjax" || !string.IsNullOrEmpty(this.request.Headers["X-Requested-With"]))
+        else if (this.route.format == "pjax" || !string.IsNullOrEmpty(this.request.Headers.XRequestedWith))
             result = "pjax";
         return result;
     }
@@ -325,7 +338,7 @@ public class FW : IDisposable
     }
 
     /// <summary>
-    /// parse request URL and return controller, action, id, format, method
+    /// parse request URL and return prefix, controller, action, id, format, method
     /// if url is empty - use current request url and also set request_url property
     /// 
     /// </summary>
@@ -344,7 +357,7 @@ public class FW : IDisposable
         //TODO MIGRATE test
         // cut the App path from the begin
         if (request.PathBase.Value.Length > 1) url = url.Replace(request.PathBase, "");
-        url = Regex.Replace(url, @"\/$", ""); // cut last / if any
+        url = url.TrimEnd('/'); // cut last / if any
 
         if (!is_url_param)
         {
@@ -355,6 +368,7 @@ public class FW : IDisposable
         // init defaults
         var route = new FwRoute()
         {
+            prefix = "",
             controller = "Home",
             action = ACTION_INDEX,
             action_raw = "",
@@ -362,7 +376,7 @@ public class FW : IDisposable
             action_more = "",
             format = "html",
             method = request.Method,
-            @params = new ArrayList()
+            @params = []
         };
 
         if (!is_url_param)
@@ -393,7 +407,7 @@ public class FW : IDisposable
                     {
                         // override method
                         if (!string.IsNullOrEmpty(m1.Groups[1].Value)) route.method = m1.Groups[1].Value;
-                        if (m1.Groups[2].Value.Substring(0, 1) == "/")
+                        if (m1.Groups[2].Value.StartsWith('/'))
                         {
                             // if started from / - this is redirect url
                             url = m1.Groups[2].Value;
@@ -456,7 +470,7 @@ public class FW : IDisposable
                     throw new Exception("Wrong request");
 
                 // capitalize first letter - TODO - URL-case-insensitivity should be an option!
-                route.controller = route.controller.Substring(0, 1).ToUpper() + route.controller.Substring(1);
+                route.controller = string.Concat(route.controller[..1].ToUpper(), route.controller.AsSpan(1));
                 route.id = m.Groups[3].Value;
                 route.format = m.Groups[4].Value;
                 route.action_more = m.Groups[5].Value;
@@ -465,7 +479,7 @@ public class FW : IDisposable
                     if (m.Groups[2].Value == ACTION_MORE_NEW)
                         route.action_more = ACTION_MORE_NEW;
                     else
-                        route.format = m.Groups[2].Value.Substring(1);
+                        route.format = m.Groups[2].Value[1..];
                 }
 
                 // match to method (GET/POST)
@@ -530,6 +544,7 @@ public class FW : IDisposable
 
         route.controller_path = route.controller_path + "/" + route.controller;
         // add controller prefix if any
+        route.prefix = controller_prefix;
         route.controller = controller_prefix + route.controller;
         route.action = Utils.routeFixChars(route.action_raw);
         if (string.IsNullOrEmpty(route.action))
@@ -586,11 +601,9 @@ public class FW : IDisposable
             else
             {
                 // it's ApplicationException, so just warning
-                logger(LogLevel.WARN, "===== ERROR DUMP APP =====");
-                logger(LogLevel.WARN, Ex.Message);
-                logger(LogLevel.WARN, Ex.ToString());
-                logger(LogLevel.WARN, "REQUEST FORM:", FORM);
-                logger(LogLevel.WARN, "SESSION:", context.Session);
+                logger(LogLevel.NOTICE, "REQUEST FORM:", FORM);
+                logger(LogLevel.NOTICE, "SESSION:", context.Session);
+                logger(LogLevel.WARN, Ex.Message, Ex.ToString());
 
                 // send_email_admin("App Exception: " & Ex.ToString() & vbCrLf & vbCrLf & _
                 // "Request: " & req.Path & vbCrLf & vbCrLf & _
@@ -603,18 +616,16 @@ public class FW : IDisposable
         catch (Exception Ex)
         {
             // it's general Exception, so something more severe occur, log as error and notify admin
-            logger(LogLevel.ERROR, "===== ERROR DUMP =====");
-            logger(LogLevel.ERROR, Ex.Message);
-            logger(LogLevel.ERROR, Ex.ToString());
-            logger(LogLevel.ERROR, "REQUEST FORM:", FORM);
-            logger(LogLevel.ERROR, "SESSION:", context.Session);
+            logger(LogLevel.NOTICE, "REQUEST FORM:", FORM);
+            logger(LogLevel.NOTICE, "SESSION:", context.Session);
+            logger(LogLevel.ERROR, Ex.Message, Ex.ToString());
 
             //send_email_admin("Exception: " + Ex.ToString() + System.Environment.NewLine + System.Environment.NewLine
             //    + "Request: " + req.Path + System.Environment.NewLine + System.Environment.NewLine
             //    + "Form: " + dumper(FORM) + System.Environment.NewLine + System.Environment.NewLine
             //    + "Session:" + dumper(context.Session));
 
-            if (Utils.toInt(this.config("log_level")) >= (int)LogLevel.DEBUG)
+            if (this.config("log_level").toInt() >= (int)LogLevel.DEBUG)
                 throw;
             else
                 errMsg("Server Error. Please, contact site administrator!", Ex);
@@ -630,7 +641,7 @@ public class FW : IDisposable
     // return 2 - if user allowed to see page - explicitly based on fw.config
     // return 1 - if no fw.config rule, so need to further check Controller.access_level (not checking here for performance reasons)
     // return 0 - if not allowed
-    public int _auth(string controller, string action, bool is_die = true)
+    public int _auth(FwRoute route, bool is_die = true)
     {
         int result = 0;
 
@@ -642,24 +653,30 @@ public class FW : IDisposable
             || route.method == "PUT"
             || route.method == "PATCH"
             || route.method == "DELETE"
-            || action == ACTION_SAVE
-            || action == ACTION_SAVE_MULTI
-            || action == ACTION_DELETE
-            || action == ACTION_DELETE_RESTORE)
+            || route.action == ACTION_SAVE
+            || route.action == ACTION_SAVE_MULTI
+            || route.action == ACTION_DELETE
+            || route.action == ACTION_DELETE_RESTORE)
             && !string.IsNullOrEmpty(Session("XSS")) && Session("XSS") != (string)FORM["XSS"])
         {
-            // XSS validation failed - check if we are under xss-excluded controller
-            Hashtable no_xss = (Hashtable)this.config("no_xss");
-            if (no_xss == null || !no_xss.ContainsKey(controller))
+            // XSS validation failed
+            // first, check if we are under xss-excluded prefix            
+            Hashtable no_xss_prefixes = (Hashtable)this.config("no_xss_prefixes_prefixes");
+            if (no_xss_prefixes == null || !no_xss_prefixes.ContainsKey(route.prefix))
             {
-                if (is_die)
-                    throw new AuthException("XSS Error. Reload the page or try to re-login");
-                return result;
+                // second, check if we are under xss-excluded controller
+                Hashtable no_xss = (Hashtable)this.config("no_xss");
+                if (no_xss == null || !no_xss.ContainsKey(route.controller))
+                {
+                    if (is_die)
+                        throw new AuthException("XSS Error. Reload the page or try to re-login");
+                    return result;
+                }
             }
         }
 
-        string path = "/" + controller + "/" + action;
-        string path2 = "/" + controller;
+        string path = "/" + route.controller + "/" + route.action;
+        string path2 = "/" + route.controller;
 
         // pre-check controller's access level by url
         int current_level = userAccessLevel;
@@ -667,12 +684,12 @@ public class FW : IDisposable
         Hashtable rules = (Hashtable)config("access_levels");
         if (rules != null && rules.ContainsKey(path))
         {
-            if (current_level >= Utils.toInt(rules[path]))
+            if (current_level >= rules[path].toInt())
                 result = 2;
         }
         else if (rules != null && rules.ContainsKey(path2))
         {
-            if (current_level >= Utils.toInt(rules[path2]))
+            if (current_level >= rules[path2].toInt())
                 result = 2;
         }
         else
@@ -688,7 +705,7 @@ public class FW : IDisposable
     // parse query string, form and json in request body into fw.FORM
     private void parseForm()
     {
-        Hashtable input = new();
+        Hashtable input = [];
 
         foreach (string s in request.Query.Keys)
         {
@@ -706,11 +723,11 @@ public class FW : IDisposable
         }
 
         // after perpare_FORM - grouping for names like XXX[YYYY] -> FORM{XXX}=@{YYYY1, YYYY2, ...}
-        Hashtable SQ = new();
+        Hashtable SQ = [];
         string k;
         string sk;
 
-        Hashtable f = new();
+        Hashtable f = [];
         foreach (string s in input.Keys)
         {
             Match m = Regex.Match(s, @"^([^\]]+)\[([^\]]+)\]$");
@@ -739,12 +756,12 @@ public class FW : IDisposable
                 using (StreamReader reader = new(request.Body, Encoding.UTF8))
                 {
                     string json = reader.ReadToEndAsync().Result; // TODO await
-                    Hashtable requestJson = (Hashtable)Utils.jsonDecode(json);
-                    logger(LogLevel.TRACE, "REQUESTED JSON:", requestJson);
+                    postedJson = (Hashtable)Utils.jsonDecode(json);
+                    logger(LogLevel.TRACE, "REQUESTED JSON:", postedJson);
 
-                    if (requestJson != null)
+                    if (postedJson != null)
                         // merge json into FORM, but all values should be stingified in FORM
-                        Utils.mergeHash(f, (Hashtable)Utils.jsonStringifyValues(requestJson));
+                        Utils.mergeHash(f, (Hashtable)Utils.jsonStringifyValues(postedJson));
                 }
             }
             catch (Exception ex)
@@ -777,9 +794,11 @@ public class FW : IDisposable
         if (level > (LogLevel)this.config("log_level"))
             return;
 
-        StringBuilder str = new(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"));
-        str.Append(' ').Append(level.ToString()).Append(' ');
-        str.Append(Environment.ProcessId).Append(' ');
+        StringBuilder str_prefix = new(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+        str_prefix.Append(' ').Append(level.ToString()).Append(' ');
+        str_prefix.Append(Environment.ProcessId).Append(' ');
+
+        StringBuilder str_stack = new();
         System.Diagnostics.StackTrace st = new(true);
 
         try
@@ -788,25 +807,26 @@ public class FW : IDisposable
             System.Diagnostics.StackFrame sf = st.GetFrame(i);
             string fname = sf.GetFileName() ?? "";
             // skip logger methods and DB internals as we want to know line where logged thing actually called from
-            while (sf.GetMethod().Name == "logger" || fname.Length >= 6 && fname.Substring(fname.Length - 6) == $@"{path_separator}DB.vb")
+            while (sf.GetMethod().Name == "logger" || fname.Length >= 6 && fname[^6..] == $@"{path_separator}DB.vb")
             {
                 i += 1;
                 sf = st.GetFrame(i);
             }
             fname = sf.GetFileName();
             if (fname != null)
-                str.Append(fname.Replace((string)this.config("site_root"), "").Replace($@"{path_separator}App_Code", ""));
-            str.Append(':').Append(sf.GetMethod().Name).Append(' ').Append(sf.GetFileLineNumber()).Append(" # ");
+                str_stack.Append(fname.Replace((string)this.config("site_root"), "").Replace($@"{path_separator}App_Code", ""));
+            str_stack.Append(':').Append(sf.GetMethod().Name).Append(' ').Append(sf.GetFileLineNumber()).Append(" # ");
         }
         catch (Exception ex)
         {
-            str.Append(" ... #" + ex.Message);
+            str_stack.Append(" ... #" + ex.Message);
         }
 
+        StringBuilder str = new();
         foreach (object dmp_obj in args)
             str.Append(dumper(dmp_obj));
 
-        var strlog = str.ToString();
+        var strlog = str_prefix + str_stack.ToString() + str.ToString();
 
         // write to debug console first
         System.Diagnostics.Debug.WriteLine(strlog);
@@ -832,19 +852,36 @@ public class FW : IDisposable
         // send to Sentry
         try
         {
-            //do not log to Sentry too detailed TRACEs
-            if (level <= LogLevel.DEBUG)
+            var sentry_str = str.ToString();
+
+            //convert LogLevel to Sentry.SentryLevel and Sentry.BreadcrumbLevel
+            Sentry.SentryLevel sentryLevel = Sentry.SentryLevel.Error;
+            Sentry.BreadcrumbLevel breadcrumbLevel = Sentry.BreadcrumbLevel.Error;
+
+            if (level == LogLevel.FATAL)
             {
-                //convert LogLevel to Sentry.SentryLevel
-                Sentry.SentryLevel sentryLevel = level switch
-                {
-                    LogLevel.FATAL => Sentry.SentryLevel.Fatal,
-                    LogLevel.ERROR => Sentry.SentryLevel.Error,
-                    LogLevel.WARN => Sentry.SentryLevel.Warning,
-                    LogLevel.INFO => Sentry.SentryLevel.Info,
-                    LogLevel.DEBUG => Sentry.SentryLevel.Debug,
-                    _ => Sentry.SentryLevel.Error
-                };
+                sentryLevel = Sentry.SentryLevel.Fatal;
+                breadcrumbLevel = Sentry.BreadcrumbLevel.Critical;
+            }
+            else if (level == LogLevel.ERROR)
+            {
+                sentryLevel = Sentry.SentryLevel.Error;
+                breadcrumbLevel = Sentry.BreadcrumbLevel.Error;
+            }
+            else if (level == LogLevel.WARN)
+            {
+                sentryLevel = Sentry.SentryLevel.Warning;
+                breadcrumbLevel = Sentry.BreadcrumbLevel.Warning;
+            }
+            else
+            {
+                sentryLevel = Sentry.SentryLevel.Info;
+                breadcrumbLevel = Sentry.BreadcrumbLevel.Info;
+            }
+
+            //log to Sentry as separate events only WARN, ERROR, FATAL
+            if (level <= LogLevel.WARN)
+            {
 
                 if (args.Length > 0 && args[0] is Exception ex)
                 {
@@ -852,14 +889,19 @@ public class FW : IDisposable
                     Sentry.SentrySdk.CaptureException(ex, scope =>
                         {
                             scope.Level = sentryLevel;
-                            scope.SetExtra("message", strlog);
+                            scope.SetExtra("message", sentry_str);
                         });
                 }
                 else
-                    Sentry.SentrySdk.CaptureMessage(strlog, sentryLevel);
+                    Sentry.SentrySdk.CaptureMessage(sentry_str, sentryLevel);
 
                 //also add as a breadcrumb for the future events
-                Sentry.SentrySdk.AddBreadcrumb(strlog);
+                Sentry.SentrySdk.AddBreadcrumb(str_stack.ToString() + sentry_str, null, null, null, breadcrumbLevel);
+            }
+            else
+            {
+                //log to Sentry as breadcrumbs only
+                Sentry.SentrySdk.AddBreadcrumb(str_stack.ToString() + sentry_str, null, null, null, breadcrumbLevel);
             }
         }
         catch (Exception)
@@ -983,7 +1025,7 @@ public class FW : IDisposable
     public static string[] getFileLines(string filename, out Exception error)
     {
         error = null;
-        string[] result = Array.Empty<string>();
+        string[] result = [];
         try
         {
             result = File.ReadAllLines(filename);
@@ -1022,24 +1064,33 @@ public class FW : IDisposable
     }
 
     // show page from template  /route.controller/route.action = parser('/route.controller/route.action/', $ps)
-    public void parser(Hashtable hf)
+    public void parser(Hashtable ps)
     {
-        this.parser((route.controller_path + "/" + route.action).ToLower(), hf);
+        this.parser((route.controller_path + "/" + route.action).ToLower(), ps);
     }
 
-    // same as parsert(hf), but with base dir param
+    // same as parser(ps), but with base dir param
     // output format based on requested format: json, pjax or (default) full page html
     // for automatic json response support - set hf("_json") = True OR set hf("_json")=ArrayList/Hashtable - if json requested, only _json content will be returned
-    // to override page template - set hf("_layout")="another_page_layout.html" (relative to SITE_TEMPLATES dir)
-    // (not for json) to perform route_redirect - set hf("_route_redirect")("method"), hf("_route_redirect")("controller"), hf("_route_redirect")("args")
-    // (not for json) to perform redirect - set hf("_redirect")="url"
-    // TODO - create another func and call it from call_controller for processing _redirect, ... (non-parsepage) instead of calling parser?
-    public void parser(string bdir, Hashtable ps)
+    // to override:
+    //   - base directory - set ps("_basedir")="/another_controller/another_action" (relative to SITE_TEMPLATES dir)
+    //   - only controller base directory - set ps("_basedir_controller")="/another_controller" (relative to SITE_TEMPLATES dir)
+    //   - layout template - set ps("_layout")="/another_page_layout.html" (relative to SITE_TEMPLATES dir)
+    //   - (not for json) to perform route_redirect - set hf("_route_redirect")("method"), hf("_route_redirect")("controller"), hf("_route_redirect")("args")
+    //   - (not for json) to perform redirect - set hf("_redirect")="url"
+    public void parser(string basedir, Hashtable ps)
     {
-        if (!this.response.HasStarted) this.response.Headers["Cache-Control"] = cache_control;
+        if (!this.response.HasStarted) this.response.Headers.CacheControl = cache_control;
 
-        if (this.FormErrors.Count > 0 && !ps.ContainsKey("ERR"))
-            ps["ERR"] = this.FormErrors; // add errors if any
+        if (this.FormErrors.Count > 0)
+        {
+            if (!ps.ContainsKey("error"))
+                ps["error"] = new Hashtable();
+
+            if (!((Hashtable)ps["error"]).ContainsKey("details"))
+                ((Hashtable)ps["error"])["details"] = this.FormErrors; // add form errors if any
+            logger(LogLevel.DEBUG, "Form errors:", this.FormErrors);
+        }
 
         string format = this.getResponseExpectedFormat();
         if (format == "json")
@@ -1056,10 +1107,13 @@ public class FW : IDisposable
             }
             else
             {
+                var msg = @"JSON response is not enabled for this Controller.Action (set ps[""_json""])=True or ps[""_json""])=data... to enable).";
+                logger(LogLevel.DEBUG, msg);
+
                 ps = new Hashtable()
                 {
                     {"success", false},
-                    {"message", @"JSON response is not enabled for this Controller.Action (set ps[""_json""])=True or ps[""_json""])=data... to enable)."}
+                    {"message", msg}
                 };
                 this.parserJson(ps);
             }
@@ -1085,37 +1139,76 @@ public class FW : IDisposable
         else
             layout = (string)G["PAGE_LAYOUT"];
 
+        //override layout from parse strings
         if (ps.ContainsKey("_layout"))
             layout = (string)ps["_layout"];
-        _parser(bdir, layout, ps);
+
+        //override full basedir
+        if (ps.ContainsKey("_basedir"))
+            basedir = (string)ps["_basedir"];
+
+        if (basedir == "")
+        {
+            // if basedir not passed - use current controller/action as default then check overrides
+            var controller = this.route.controller;
+            if (!string.IsNullOrEmpty(this.route.prefix))
+            {
+                basedir += "/" + this.route.prefix;
+                //remove prefix from controller name (only from the start)
+                controller = Regex.Replace(controller, "^" + this.route.prefix, "", RegexOptions.IgnoreCase);
+            }
+            basedir += "/" + controller;
+
+            // override controller basedir only
+            if (ps.ContainsKey("_basedir_controller"))
+                basedir = (string)ps["_basedir_controller"];
+
+            basedir += "/" + this.route.action; // add action dir to controller's directory
+        }
+        basedir = basedir.ToLower(); // make sure it's lower case
+
+        string page = parsePage(basedir, layout, ps);
+        // no need to set content type here, as it's set in Startup.cs
+        //if (!this.response.HasStarted) response.ContentType = "text/html; charset=utf-8";
+        responseWrite(page);
     }
 
     // - show page from template  /controller/action = parser('/controller/action/', $layout, $ps)
-    public void parser(string bdir, string tpl_name, Hashtable ps)
+    public void parser(string basedir, string layout, Hashtable ps)
     {
-        ps["_layout"] = tpl_name;
-        parser(bdir, ps);
-    }
-
-    // actually uses ParsePage
-    public void _parser(string bdir, string tpl_name, Hashtable hf)
-    {
-        logger(LogLevel.DEBUG, "parsing page bdir=", bdir, ", tpl=", tpl_name);
-        ParsePage parser_obj = new(this);
-        string page = parser_obj.parse_page(bdir, tpl_name, hf);
-        //TODO FIX if set ContentType here, then responseWrite fails with "cannot write to the response body, response has completed"
-        //if (!this.response.HasStarted) response.Headers.Add("Content-type", "text/html; charset=utf-8");
-        //response.ContentType= "text/html; charset=utf-8";
-        responseWrite(page);
+        ps["_layout"] = layout;
+        parser(basedir, ps);
     }
 
     public void parserJson(object ps)
     {
-        ParsePage parser_obj = new(this);
-        string page = parser_obj.parse_json(ps);
+        string page = parsePageInstance().parse_json(ps);
         //if (!this.response.HasStarted) response.Headers.Add("Content-type", "application/json; charset=utf-8");
         response.ContentType = "application/json; charset=utf-8";
         responseWrite(page);
+    }
+
+    public ParsePage parsePageInstance()
+    {
+        // if pp_instance not yet set - instantiate
+        pp_instance ??= new ParsePage(new ParsePageOptions
+        {
+            TemplatesRoot = config("template").toStr(),
+            IsCheckFileModifications = (LogLevel)config("log_level") >= LogLevel.DEBUG,
+            Lang = G["lang"].toStr(),
+            IsLangUpdate = config("is_lang_update").toBool(),
+            GlobalsGetter = () => G,
+            Session = context.Session,
+            Logger = (level, args) => logger(level, args)
+        });
+        return pp_instance;
+    }
+
+    public string parsePage(string basedir, string layout, Hashtable ps)
+    {
+        logger(LogLevel.DEBUG, "parsing page bdir=", basedir, ", tpl=", layout);
+        ParsePage parser_obj = parsePageInstance();
+        return parser_obj.parse_page(basedir, layout, ps);
     }
 
     // perform redirect
@@ -1174,9 +1267,9 @@ public class FW : IDisposable
 
     public void callRoute()
     {
-        string[] args = new[] { route.id }; // TODO - add rest of possible params from parts
+        string[] args = [route.id]; // TODO - add rest of possible params from parts
 
-        var auth_check_controller = _auth(route.controller, route.action);
+        var auth_check_controller = _auth(route);
 
         Type controllerClass = Type.GetType(FW_NAMESPACE_PREFIX + route.controller + "Controller", false, true); // case ignored
         if (controllerClass == null)
@@ -1197,7 +1290,7 @@ public class FW : IDisposable
                 var field = controllerClass.GetField("access_level", BindingFlags.Public | BindingFlags.Static);
                 if (field != null)
                 {
-                    if (userAccessLevel < Utils.toInt(field.GetValue(null)))
+                    if (userAccessLevel < field.GetValue(null).toInt())
                         throw new AuthException("Bad access - Not authorized (2)");
                 }
 
@@ -1207,7 +1300,17 @@ public class FW : IDisposable
 
         logger(LogLevel.TRACE, "TRY controller.action=", route.controller, ".", route.action);
 
-        MethodInfo actionMethod = controllerClass.GetMethod(route.action + ACTION_SUFFIX);
+        MethodInfo actionMethod = null;
+        if (!int.TryParse(route.id, out _))
+        {
+            //id is not numeric - try to find action with string param
+            actionMethod = controllerClass.GetMethod(route.action + ACTION_SUFFIX, [typeof(string)]);
+        }
+
+        //if still no method - try to find generic method
+        if (actionMethod == null)
+            actionMethod = controllerClass.GetMethod(route.action + ACTION_SUFFIX);
+
         if (actionMethod == null)
         {
             logger(LogLevel.DEBUG, "No method found for controller.action=[", route.controller, ".", route.action, "], checking route_default_action");
@@ -1256,7 +1359,7 @@ public class FW : IDisposable
         {
             logger(LogLevel.INFO, "No method found for controller.action=[", route.controller, ".", route.action, "], displaying static page from related templates");
             // if no method - just call FW.parser(hf) - show template from /route.controller/route.action dir
-            parser(new Hashtable());
+            parser([]);
         }
         else
             callController(controllerClass, actionMethod, args);
@@ -1315,13 +1418,13 @@ public class FW : IDisposable
                     iex = iex.InnerException;
             }
 
-            if (iex != null && !(iex is ApplicationException))
+            if (iex != null && iex is not ApplicationException)
             {
                 throw; //throw if not an ApplicationException happened - this keeps stack, also see http://weblogs.asp.net/fmarguerie/rethrowing-exceptions-and-preserving-the-full-call-stack-trace
             }
 
             // ignore redirect exception
-            if (iex == null || !(iex is RedirectException))
+            if (iex == null || iex is not RedirectException)
             {
                 //if got ApplicationException - call error action handler
                 ps = controller.actionError(iex, args);
@@ -1347,9 +1450,9 @@ public class FW : IDisposable
         logger(LogLevel.DEBUG, "sending file response  = ", filepath, " as ", attname, " content-type:", ContentType);
         attname = Regex.Replace(attname, @"[^\w. \-]+", "_");
 
-        response.Headers.Append("Content-type", ContentType);
-        response.Headers.Append("Content-Length", Utils.fileSize(filepath).ToString());
-        response.Headers.Append("Content-Disposition", $"{ContentDisposition}; filename=\"{attname}\"");
+        response.Headers.ContentType = ContentType;
+        response.Headers.ContentLength = Utils.fileSize(filepath);
+        response.Headers.ContentDisposition = $"{ContentDisposition}; filename=\"{attname}\"";
         response.SendFileAsync(filepath).Wait();
     }
 
@@ -1366,13 +1469,14 @@ public class FW : IDisposable
     /// <param name="options">hashtable with options:
     ///   "read-receipt"
     ///   "smtp" - hashtable with smtp settings (host, port, is_ssl, username, password)
+    ///   "bcc" - bcc email addresses - ArrayList
     /// </param>
     /// <returns>true if sent successfully, false if problem - see fw.last_error_send_email</returns>
     public bool sendEmail(string mail_from, string mail_to, string mail_subject, string mail_body, IDictionary filenames = null, IList aCC = null, string reply_to = "", Hashtable options = null)
     {
         bool result = true;
         MailMessage message = null;
-        options ??= new Hashtable();
+        options ??= [];
 
         try
         {
@@ -1380,7 +1484,7 @@ public class FW : IDisposable
                 mail_from = (string)this.config("mail_from"); // default mail from
             mail_subject = Regex.Replace(mail_subject, @"[\r\n]+", " ");
 
-            bool is_test = Utils.toBool(this.config("is_test"));
+            bool is_test = this.config("is_test").toBool();
             if (is_test)
             {
                 string test_email = this.Session("login") ?? ""; //in test mode - try logged user email (if logged)
@@ -1448,6 +1552,17 @@ public class FW : IDisposable
                             message.CC.Add(new MailAddress(cc));
                         }
                 }
+                // add BCC if any
+                if (options.ContainsKey("bcc") && !is_test)
+                {
+                    foreach (string bcc1 in (ArrayList)options["bcc"])
+                    {
+                        string bcc = bcc1.Trim();
+                        if (string.IsNullOrEmpty(bcc))
+                            continue;
+                        message.Bcc.Add(new MailAddress(bcc));
+                    }
+                }
 
                 // attach attachments if any
                 if (filenames != null)
@@ -1479,10 +1594,10 @@ public class FW : IDisposable
                     }
                     if (mailSettings.Count > 0)
                     {
-                        client.Host = Utils.toStr(mailSettings["host"]);
-                        client.Port = Utils.toInt(mailSettings["port"]);
-                        client.EnableSsl = Utils.toBool(mailSettings["is_ssl"]);
-                        client.Credentials = new System.Net.NetworkCredential(Utils.toStr(mailSettings["username"]), Utils.toStr(mailSettings["password"]));
+                        client.Host = mailSettings["host"].toStr();
+                        client.Port = mailSettings["port"].toInt();
+                        client.EnableSsl = mailSettings["is_ssl"].toBool();
+                        client.Credentials = new System.Net.NetworkCredential(mailSettings["username"].toStr(), mailSettings["password"].toStr());
                         client.Send(message);
                     }
                 }
@@ -1498,52 +1613,32 @@ public class FW : IDisposable
         }
         finally
         {
-            if (message != null)
-                message.Dispose();
+            message?.Dispose();
         }// important, as this will close any opened attachment files
         return result;
     }
 
     // shortcut for send_email from template from the /emails template dir
-    public bool sendEmailTpl(string mail_to, string tpl, Hashtable hf, Hashtable filenames = null, ArrayList aCC = null, string reply_to = "")
+    public bool sendEmailTpl(string mail_to, string tpl, Hashtable hf, Hashtable filenames = null, ArrayList aCC = null, string reply_to = "", Hashtable options = null)
     {
-        ParsePage parser_obj = new(this);
         Regex r = new(@"[\n\r]+");
-        string subj_body = parser_obj.parse_page("/emails", tpl, hf);
+        string subj_body = parsePage("/emails", tpl, hf);
         if (subj_body.Length == 0)
             throw new ApplicationException("No email template defined [" + tpl + "]");
         string[] arr = r.Split(subj_body, 2);
-        return sendEmail("", mail_to, arr[0], arr[1], filenames, aCC, reply_to);
+        return sendEmail("", mail_to, arr[0], arr[1], filenames, aCC, reply_to, options);
     }
 
     // send email message to site admin (usually used in case of errors)
     public void sendEmailAdmin(string msg)
     {
-        this.sendEmail("", (string)this.config("admin_email"), msg.Substring(0, 512), msg);
+        this.sendEmail("", (string)this.config("admin_email"), msg[..512], msg);
     }
 
     public void errMsg(string msg, Exception Ex = null)
     {
-        Hashtable ps = new();
+        Hashtable ps = [];
         var tpl_dir = "/error";
-
-        ps["err_time"] = DateTime.Now;
-        ps["err_msg"] = msg;
-        if (Utils.toBool(this.config("IS_DEV")))
-        {
-            ps["is_dump"] = true;
-            if (Ex != null)
-                ps["DUMP_STACK"] = Ex.ToString();
-
-            ps["DUMP_SQL"] = DB.last_sql;
-            ps["DUMP_FORM"] = dumper(FORM);
-            ps["DUMP_SESSION"] = dumper(context.Session);
-        }
-
-        ps["success"] = false;
-        ps["message"] = msg;
-        ps["title"] = msg;
-        ps["_json"] = true;
 
         var code = 0;
         if (Ex is NotFoundException)
@@ -1568,9 +1663,38 @@ public class FW : IDisposable
             //Server Error
             code = 500;
 
-        ps["code"] = code;
-        if (code > 0)
+        if (code > 0 && !this.response.HasStarted)
             this.response.StatusCode = code;
+
+        ps["_json"] = true;
+        ps["title"] = msg;
+        ps["error"] = new Hashtable
+        {
+            ["code"] = code,
+            ["message"] = msg,
+            ["time"] = DateTime.Now,
+            //optional:
+            //["category"] = Ex?.GetType().Name,
+            //["details"] = new ArrayList()
+        };
+
+        //legacy response: TODO DEPRECATE
+        ps["code"] = code;
+        ps["err_msg"] = msg;
+        ps["success"] = false;
+        ps["message"] = msg;
+        ps["err_time"] = DateTime.Now;
+
+        if (this.config("IS_DEV").toBool())
+        {
+            ps["is_dump"] = true;
+            if (Ex != null)
+                ps["DUMP_STACK"] = Ex.ToString();
+
+            ps["DUMP_SQL"] = DB.last_sql;
+            ps["DUMP_FORM"] = dumper(FORM);
+            ps["DUMP_SESSION"] = dumper(context.Session);
+        }
 
         parser(tpl_dir, ps);
     }
@@ -1585,7 +1709,7 @@ public class FW : IDisposable
             T m = new();
 
             // initialize
-            typeof(T).GetMethod("init").Invoke(m, new object[] { this });
+            typeof(T).GetMethod("init").Invoke(m, [this]);
 
             models[tt.Name] = m;
         }
@@ -1597,8 +1721,7 @@ public class FW : IDisposable
     {
         if (!models.ContainsKey(model_name))
         {
-            Type mt = Type.GetType(FW_NAMESPACE_PREFIX + model_name);
-            if (mt == null) throw new ApplicationException("Error initializing model: [" + FW_NAMESPACE_PREFIX + model_name + "] class not found");
+            Type mt = Type.GetType(FW_NAMESPACE_PREFIX + model_name) ?? throw new ApplicationException("Error initializing model: [" + FW_NAMESPACE_PREFIX + model_name + "] class not found");
             FwModel m = (FwModel)Activator.CreateInstance(mt);
             // initialize
             m.init(this);
@@ -1638,10 +1761,6 @@ public class FW : IDisposable
             if (disposing)
             {
                 // dispose managed state (managed objects).
-#if isSentry
-                if (sentryClient != null)
-                    sentryClient.Dispose();
-#endif
                 db.Dispose(); // this will return db connections to pool
             }
 
@@ -1652,7 +1771,7 @@ public class FW : IDisposable
                 string log_file = (string)config("log");
                 if (!string.IsNullOrEmpty(log_file))
                 {
-                    long max_log_size = Utils.toLong(config("log_max_size"));
+                    long max_log_size = config("log_max_size").toLong();
                     using (FileStream floggerFS = new(log_file, FileMode.Open, FileAccess.Read, FileShare.Read))
                     {
                         if (max_log_size > 0 && floggerFS.Length > max_log_size)

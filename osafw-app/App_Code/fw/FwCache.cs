@@ -37,7 +37,10 @@ public class FwCache
     // clear whole cache
     public static void clear()
     {
-        MemoryCache.Dispose();
+        if (MemoryCache is MemoryCache memoryCache)
+        {
+            memoryCache.Compact(1.0); //remove all entries
+        }
     }
 
     protected static object serialize(object data)
@@ -112,7 +115,7 @@ public class FwCache
         var plen = prefix.Length;
         foreach (string key in new ArrayList(request_cache.Keys))
         {
-            if (key.Length > plen && key.Substring(0, plen) == prefix)
+            if (key.Length > plen && key[..plen] == prefix)
             {
                 request_cache.Remove(key);
             }

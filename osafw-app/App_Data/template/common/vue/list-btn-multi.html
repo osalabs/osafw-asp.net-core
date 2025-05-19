@@ -1,38 +1,44 @@
 <script type="text/x-template" id="list-btn-multi-template">
-  <div id="list-btn-multi"
-    class="mb-3 d-print-none"
-    :class="(fwStore.countCheckedRows ? 'position-sticky' : '')"
-  >
-    with <span class="badge bg-secondary rows-num" v-if="fwStore.countCheckedRows">{{fwStore.countCheckedRows}}</span> checked rows:<br>
-    <button type="button"
-      class="btn btn-danger me-2"
-      @click="onDelete"
-      :disabled="fwStore.is_readonly || !fwStore.countCheckedRows">`Delete`</button>
-    <list-btn-userlists v-if="fwStore.is_userlists" />
-    <slot></slot>
-  </div>
+    <div id="list-btn-multi"
+         class="mb-3 d-print-none"
+         :class="(fwStore.countCheckedRows ? 'position-sticky' : '')"
+    >
+        with <span class="badge bg-secondary rows-num"
+                   v-if="fwStore.countCheckedRows">{{fwStore.countCheckedRows}}</span> checked rows:<br>
+        <button v-if="uioptions.isDelete"
+                type="button"
+                class="btn btn-danger me-2"
+                @click="onDelete"
+                :disabled="fwStore.is_readonly || !fwStore.countCheckedRows"
+        >`Delete`
+        </button>
+        <list-btn-userlists v-if="fwStore.is_userlists && uioptions.isUserlists"/>
+        <slot></slot>
+    </div>
 </script>
 
 <script type="module">
-import { mapStores } from 'pinia';
+    import {mapStores} from 'pinia';
 
-fwApp.component('list-btn-multi', {
-  template: '#list-btn-multi-template',
-  props: [],
-  emits: [],
-  data: () => ({
-  }),
-  computed: {
-    ...mapStores(useFwStore) //accessible via this.fwStore
-  },
-  mounted(){
-  },
-  updated(){
-  },
-  methods: {
-    onDelete(e){
-      this.fwStore.deleteCheckedRows();
-    },
-  }
-});
+    fwApp.component('list-btn-multi', {
+        template: '#list-btn-multi-template',
+        props: [],
+        emits: [],
+        data: () => ({}),
+        computed: {
+            ...mapStores(useFwStore), //accessible via this.fwStore
+            uioptions() {
+                return this.fwStore.uioptions.list.btnMulti ?? {};
+            }
+        },
+        mounted() {
+        },
+        updated() {
+        },
+        methods: {
+            onDelete(e) {
+                this.fwStore.deleteCheckedRows();
+            },
+        }
+    });
 </script>

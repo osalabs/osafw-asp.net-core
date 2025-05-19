@@ -4,6 +4,7 @@
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
 using System.Collections;
+using System.Collections.Generic;
 
 namespace osafw;
 
@@ -21,17 +22,17 @@ public class AdminLookupManagerTablesController : FwAdminController
 
         base_url = "/Admin/LookupManagerTables";
         required_fields = "tname iname";
-        save_fields = "tname iname idesc header_text footer_text column_id columns column_names column_types column_groups groups url access_level status";
+        save_fields = "tname iname idesc igroup header_text footer_text column_id columns column_names column_types column_groups groups url access_level status";
         save_fields_checkboxes = "is_one_form is_custom_form";
 
         search_fields = "tname iname";
         list_sortdef = "iname asc";
-        list_sortmap = Utils.qh("id|id iname|iname tname|tname acl|access_level");
+        list_sortmap = Utils.qh("id|id iname|iname tname|tname gname|igroup,tname acl|access_level");
     }
 
     public override Hashtable ShowFormAction(int id = 0)
     {
-        Hashtable ps = new();
+        Hashtable ps = [];
         Hashtable item;
 
         if (isGet())
@@ -49,7 +50,7 @@ public class AdminLookupManagerTablesController : FwAdminController
             else
             {
                 // set defaults here
-                item = new Hashtable();
+                item = [];
                 Utils.mergeHash(item, this.form_new_defaults);
             }
         }
@@ -90,4 +91,12 @@ public class AdminLookupManagerTablesController : FwAdminController
 
         return base.modelAddOrUpdate(id, fields);
     }
+
+    public Hashtable ACGroupsAction()
+    {
+        List<string> items = model.getAutocompleteGroupsList(reqs("q"));
+
+        return new Hashtable() { { "_json", items } };
+    }
+
 }

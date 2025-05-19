@@ -1,4 +1,4 @@
-﻿using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
 using DocumentFormat.OpenXml;
 using Microsoft.AspNetCore.Http;
@@ -23,18 +23,14 @@ public class ConvUtils
     // landscape = True - will produce landscape output
     public static string parsePagePdf(FW fw, string bdir, string tpl_name, Hashtable ps, string out_filename = "", Hashtable options = null)
     {
-        if (options == null)
-        {
-            options = new Hashtable();
-        }
+        options ??= [];
         if (!options.ContainsKey("disposition"))
         {
             options["disposition"] = "attachment";
         }
 
-        ParsePage parser = new(fw);
         ps["IS_PRINT_MODE"] = true;
-        string html_data = parser.parse_page(bdir, tpl_name, ps);
+        string html_data = fw.parsePage(bdir, tpl_name, ps);
 
         html_data = _replace_specials(html_data);
 
@@ -82,7 +78,7 @@ public class ConvUtils
         string cmdline = (string)FwConfig.settings["pdf_converter_args"];
         cmdline = cmdline.Replace("%IN", "\"" + htmlfile + "\"");
         cmdline = cmdline.Replace("%OUT", "\"" + filename + "\"");
-        if (options != null && Utils.toBool(options["landscape"]) == true)
+        if (options != null && options["landscape"].toBool())
         {
             cmdline = " -O Landscape " + cmdline;
         }
@@ -110,8 +106,7 @@ public class ConvUtils
     // if out_filename cotains "\" or "/" - save pdf file to this path
     public static string parsePageDoc(FW fw, ref string bdir, ref string tpl_name, ref Hashtable ps, string out_filename = "")
     {
-        ParsePage parser = new(fw);
-        string html_data = parser.parse_page(bdir, tpl_name, ps);
+        string html_data = fw.parsePage(bdir, tpl_name, ps);
 
         html_data = _replace_specials(html_data);
 
@@ -171,9 +166,8 @@ public class ConvUtils
     // if out_filename cotains "\" or "/" - save pdf file to this path
     public static string parsePageExcel(FW fw, ref string bdir, ref string tpl_name, ref Hashtable ps, string out_filename = "")
     {
-        ParsePage parser = new(fw);
         ps["IS_PRINT_MODE"] = true;
-        string html_data = parser.parse_page(bdir, tpl_name, ps);
+        string html_data = fw.parsePage(bdir, tpl_name, ps);
 
         html_data = _replace_specials(html_data);
 
@@ -209,9 +203,8 @@ public class ConvUtils
     // simple version of parse_page_xls - i.e. it's usual html file, just output as xls (Excel opens it successfully, however displays a warning)
     public static string parsePageExcelSimple(FW fw, string bdir, string tpl_name, Hashtable ps, string out_filename = "")
     {
-        ParsePage parser = new(fw);
         ps["IS_PRINT_MODE"] = true;
-        string html_data = parser.parse_page(bdir, tpl_name, ps);
+        string html_data = fw.parsePage(bdir, tpl_name, ps);
 
         html_data = _replace_specials(html_data);
 
@@ -222,8 +215,8 @@ public class ConvUtils
                 out_filename = "output";
             }
             // out to browser
-            fw.response.Headers.Append("Content-type", "application/vnd.ms-excel");
-            fw.response.Headers.Append("Content-Disposition", "attachment; filename=\"" + out_filename + ".xls\"");
+            fw.response.Headers.ContentType = "application/vnd.ms-excel";
+            fw.response.Headers.ContentDisposition = $"attachment; filename=\"{out_filename}.xls\"";
             fw.responseWrite(html_data);
         }
         else

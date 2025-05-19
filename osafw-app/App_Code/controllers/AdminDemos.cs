@@ -44,28 +44,28 @@ public class AdminDemosController : FwAdminController
 
         // add/modify rows from db if necessary
         foreach (Hashtable row in this.list_rows)
-            row["demo_dicts"] = model_related.one(Utils.toInt(row["demo_dicts_id"])).toHashtable();
+            row["demo_dicts"] = model_related.one(row["demo_dicts_id"].toInt()).toHashtable();
     }
 
     public override Hashtable ShowAction(int id)
     {
         Hashtable ps = base.ShowAction(id);
-        var item = (Hashtable)ps["i"];
+        Hashtable item = (DBRow)ps["i"];
         //var id = Utils.f2int(item["id"]);
 
-        ps["parent"] = model.one(Utils.toInt(item["parent_id"]));
-        ps["demo_dicts"] = model_related.one(Utils.toInt(item["demo_dicts_id"]));
-        ps["dict_link_auto"] = model_related.one(Utils.toInt(item["dict_link_auto_id"]));
+        ps["parent"] = model.one(item["parent_id"].toInt());
+        ps["demo_dicts"] = model_related.one(item["demo_dicts_id"].toInt());
+        ps["dict_link_auto"] = model_related.one(item["dict_link_auto_id"].toInt());
         ps["multi_datarow"] = model_related.listWithChecked((string)item["dict_link_multi"]);
         ps["multi_datarow_link"] = fw.model<DemosDemoDicts>().listLinkedByMainId(id);
-        ps["att"] = fw.model<Att>().one(Utils.toInt(item["att_id"]));
+        ps["att"] = fw.model<Att>().one(item["att_id"].toInt());
         ps["att_links"] = fw.model<Att>().listLinked(model.table_name, id);
 
         if (is_activity_logs)
         {
             initFilter();
 
-            list_filter["tab_activity"] = Utils.toStr(list_filter["tab_activity"] ?? FwActivityLogs.TAB_COMMENTS);
+            list_filter["tab_activity"] = list_filter["tab_activity"].toStr(FwActivityLogs.TAB_COMMENTS);
             ps["list_filter"] = list_filter;
             ps["activity_entity"] = model0.table_name;
             ps["activity_rows"] = fw.model<FwActivityLogs>().listByEntityForUI(model.table_name, id, (string)list_filter["tab_activity"]);
@@ -76,9 +76,7 @@ public class AdminDemosController : FwAdminController
 
     public override Hashtable ShowFormAction(int id = 0)
     {
-        // Me.form_new_defaults = New Hashtable 'set new form defaults here if any
-        // Me.form_new_defaults = reqh("item") 'OR optionally set defaults from request params
-        // item["field"]="default value"
+        // form_new_defaults = new() { { "iname", "New Item" } }; //set new form defaults if any
         Hashtable ps = base.ShowFormAction(id);
 
         // read dropdowns lists from db
@@ -86,11 +84,11 @@ public class AdminDemosController : FwAdminController
         ps["select_options_parent_id"] = model.listSelectOptionsParent();
         ps["select_options_demo_dicts_id"] = model_related.listSelectOptions();
         ps["dict_link_auto_id_iname"] = model_related.iname(item["dict_link_auto_id"]);
-        ps["multi_datarow"] = model_related.listWithChecked(Utils.toStr(item["dict_link_multi"]));
+        ps["multi_datarow"] = model_related.listWithChecked(item["dict_link_multi"].toStr());
         ps["multi_datarow_link"] = fw.model<DemosDemoDicts>().listLinkedByMainId(id);
         FormUtils.comboForDate((string)item["fdate_combo"], ps, "fdate_combo");
 
-        ps["att"] = fw.model<Att>().one(Utils.toInt(item["att_id"])).toHashtable();
+        ps["att"] = fw.model<Att>().one(item["att_id"]).toHashtable();
         ps["att_links"] = fw.model<Att>().listLinked(model.table_name, id);
 
         return ps;
@@ -103,9 +101,9 @@ public class AdminDemosController : FwAdminController
         if (this.save_fields == null)
             throw new Exception("No fields to save defined, define in save_fields");
 
-        if (reqi("refresh") == 1)
+        if (reqb("refresh"))
         {
-            fw.routeRedirect(FW.ACTION_SHOW_FORM, new object[] { id });
+            fw.routeRedirect(FW.ACTION_SHOW_FORM, [id]);
             return null;
         }
 
@@ -123,7 +121,7 @@ public class AdminDemosController : FwAdminController
         itemdb["dict_link_multi"] = FormUtils.multi2ids(reqh("dict_link_multi"));
         itemdb["fdate_combo"] = FormUtils.dateForCombo(item, "fdate_combo");
         itemdb["ftime"] = FormUtils.timeStrToInt((string)item["ftime_str"]); // ftime - convert from HH:MM to int (0-24h in seconds)
-        itemdb["fint"] = Utils.toInt(itemdb["fint"]); // field accepts only int
+        itemdb["fint"] = itemdb["fint"].toInt(); // field accepts only int
 
         id = this.modelAddOrUpdate(id, itemdb);
 

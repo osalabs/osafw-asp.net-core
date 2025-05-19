@@ -1,51 +1,56 @@
 <script type="text/x-template" id="list-row-btn-template">
-  <td class="list-row-controls text-nowrap d-print-none"
-    :class="(isLeft?'':'text-end')">
-    <slot name="btn-prepend" :row="row"></slot>
+    <td class="list-row-controls text-nowrap d-print-none"
+        :class="(isLeft?'':'text-end')">
+        <slot name="btn-prepend" :row="row"></slot>
 
-    <a v-if="co_buttons.view" href="#" @click.prevent="$emit('view', $event)">`View`</a>
-    <template v-if="co_buttons.edit">
-      <template v-if="co_buttons.view">&nbsp;&#183;&nbsp;</template>
-      <a href="#" @click.prevent="$emit('edit', $event)">`Edit`</a>
-    </template>
-    <template v-if="co_buttons.quickedit">
-      <template v-if="co_buttons.view || co_buttons.edit">&nbsp;&#183;&nbsp;</template>
-      <a href="#" @click.prevent="$emit('quickedit', $event)" class="on-quickedit">`Quick Edit`</a>
-    </template>
-    <template v-if="co_buttons.delete">
-      <template v-if="co_buttons.view || co_buttons.edit || co_buttons.quickedit">&nbsp;&#183;&nbsp;</template>
-      <a href="#" class="text-danger" @click.prevent="$emit('delete', $event)" :disabled="isReadonly"><i class="bi bi-x"></i></a>
-    </template>
+        <a v-if="co_buttons.view" href="#" @click.prevent="$emit('view', $event)">`View`</a>
+        <template v-if="co_buttons.edit">
+            <template v-if="co_buttons.view">&nbsp;&#183;&nbsp;</template>
+            <a href="#" @click.prevent="$emit('edit', $event)">`Edit`</a>
+        </template>
+        <template v-if="co_buttons.quickedit">
+            <template v-if="co_buttons.view || co_buttons.edit">&nbsp;&#183;&nbsp;</template>
+            <a href="#" @click.prevent="$emit('quickedit', $event)" class="on-quickedit">`Quick Edit`</a>
+        </template>
+        <template v-if="co_buttons.delete">
+            <template v-if="co_buttons.view || co_buttons.edit || co_buttons.quickedit">&nbsp;&#183;&nbsp;</template>
+            <a href="#" class="text-danger" @click.prevent="$emit('delete', $event)" :disabled="isReadonly"><i
+                    class="bi bi-x"></i></a>
+        </template>
+        <template v-if="co_buttons.custom">
+            <template v-if="co_buttons.view || co_buttons.edit || co_buttons.quickedit || co_buttons.delete">&nbsp;&#183;&nbsp;</template>
+            <a href="#" @click.prevent="$emit('custom', $event)" :disabled="isReadonly">{{co_buttons.custom}}</a>
+        </template>
 
-    <slot name="btn-append" :row="row"></slot>
-  </td>
+        <slot name="btn-append" :row="row"></slot>
+    </td>
 </script>
 
 <script type="module">
-fwApp.component('list-row-btn', {
-  template: '#list-row-btn-template',
-  props: {
-    row: {
-      type: Object
-    },
-    buttons: {
-      type: [Object, Boolean],
-      default: false
-    },
-    isLeft: {
-      type: Boolean,
-      default: false
-    },
-    isReadonly: {
-      type: Boolean,
-      default: false
-    },
-  },
-  emits: ['view', 'edit', 'quickedit', 'delete'],
-  computed: {
-        co_buttons(){
-          return this.buttons === undefined ? false : this.buttons;
-        }
-  },
-});
+    fwApp.component('list-row-btn', {
+        template: '#list-row-btn-template',
+        props: {
+            row: {
+                type: Object
+            },
+            buttons: {
+                type: [Object, Boolean],
+                default: false
+            },
+            isLeft: {
+                type: Boolean,
+                default: false
+            },
+            isReadonly: {
+                type: Boolean,
+                default: false
+            },
+        },
+        emits: ['view', 'edit', 'quickedit', 'delete', 'custom'],
+        computed: {
+            co_buttons() {
+                return this.buttons === undefined ? false : this.buttons;
+            }
+        },
+    });
 </script>

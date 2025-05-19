@@ -1,4 +1,3 @@
-
 // define some global constants
 window.fwConst = {
     ERR_CODES_MAP: {
@@ -22,6 +21,53 @@ let state = {
     is_readonly: false,
     is_activity_logs: false, //true if activity logs enabled
 
+    // default UI options, override in specific controller via store.js
+    uioptions: {
+        //top keys - screens
+        list: {
+            header: { // list-header, can be false
+                btnAddNew: true,
+                count: true,
+            },
+            filters: { // list-filters, can be false
+                s: { // search input, can be false
+                    placeholder: ""
+                },
+                status: true, // status dropdown
+                userlists: true, // userlists dropdown
+                export: true, // export btn
+                print: true, // print btn
+                tableButtons: true, // table buttons
+            },
+            table: { //list-table
+                isButtonsLeft: null, //null - use global.is_list_btn_left
+                rowButtons: { // list-row-btn, can be false as whole
+                    view: true,
+                    edit: true,
+                    quickedit: true,
+                    delete: true
+                },
+                pagination: { // list-pagination, can be false
+                    count: false,
+                }
+            },
+            btnMulti: { //list-btn-multi, can be false
+                isDelete: true,
+                isUserlists: true
+            }
+        },
+        view: {
+            header: { // view-header, can be false
+                btnAddNew: true,
+            },
+        },
+        edit: {
+            header: { // edit-header, can be false
+                btnAddNew: true,
+            },
+        }
+    },
+
     // user views
     all_list_columns: [], // list of all available columns
     list_user_view: {}, // UserViews record for current controller
@@ -32,7 +78,7 @@ let state = {
     is_userlists: false,
     select_userlists: [],
     my_userlists: [],
-    userlists_url : '/My/Lists',
+    userlists_url: '/My/Lists',
     userlists_new_name: '', // v-model name for creating new list
 
     // list edit support
@@ -48,6 +94,7 @@ let state = {
         status: '',
         userlist: '',
     },
+
     related_id: 0, // related model id
     return_url: '', // return url if controller called from other place expecting user's return
     field_id: 'id', // model's id field name
@@ -56,12 +103,6 @@ let state = {
     count: 0, // total list rows count
     list_rows: [], // array of row objects to display, row can contain _meta object {is_ro:bool, ro_fields:[read only field names]}
     pager: [], // array of { pagenum:N, pagenum_show:N, is_cur_page:0|1, is_show_first:0|1, is_show_prev:0|1, is_show_next:0|1, pagenum_next:N}
-    list_row_buttons: { // list row buttons configuration, can be set to false to hide all buttons
-        view: true,
-        edit: true,
-        quickedit: true,
-        delete: true
-    },
 
     // edit form fields configuration
     list_editable_def_types: ['input', 'email', 'number', 'textarea', 'date_popup', 'datetime_popup', 'autocomplete', 'select', 'cb', 'radio', 'yesno'],
@@ -73,15 +114,15 @@ let state = {
     //standard lookups
     lookups_std: {
         statusf: [
-            { id: 0, iname: 'Active' },
-            { id: 10, iname: 'Inactive' }
+            {id: 0, iname: 'Active'},
+            {id: 10, iname: 'Inactive'}
         ],
         statusf_admin: [
-            { id: 0, iname: 'Active' },
-            { id: 10, iname: 'Inactive' },
-            { id: 127, iname: '[Deleted]' }
+            {id: 0, iname: 'Active'},
+            {id: 10, iname: 'Inactive'},
+            {id: 127, iname: '[Deleted]'}
         ]
-        },
+    },
     //entity-related lookups
     lookups: {},
 
@@ -89,18 +130,19 @@ let state = {
     current_screen: '', // current screen name - list/view/edit
     current_id: 0, // current item id for view/edit screens
 
-    hchecked_rows: {}, // array of checked rows {row.id => 1}
+    hchecked_rows: {}, // array of checked rows {row[id_field] => 1}
     loadIndexDebouncedTimeout: null,
     saveEditDataDebouncedTimeout: null,
     is_initial_load: true, //reset after initial load
     is_loading_index: false, //true while loading index data
-    cells_saving: {}, // cells saving status {row.id_field => true}
-    cells_errors: {}, // cells saving status {row.id_field => true}
-  };
+    is_loading_item: false, //true while loading item data
+    cells_saving: {}, // cells saving status {row[id_field] => true}
+    cells_errors: {}, // cells saving status {row[id_field] => true}
+};
 
 // merge in fwStoreState if defined
 if (typeof fwStoreState !== 'undefined') {
-    state = { ...state, ...fwStoreState };
+    state = AppUtils.deepMerge(state, fwStoreState);
 }
 
 let getters = {
@@ -123,7 +165,7 @@ let getters = {
     },
     listRequestQuery: (state) => {
         // build request query from state.f, each parameter name should be int form "f[name]"
-        let req = { is_list_edit: state.is_list_edit };
+        let req = {is_list_edit: state.is_list_edit};
         if (state.is_initial_load) {
             // initial load - don't set filters, we'll get them from backend
         } else {
@@ -189,21 +231,29 @@ let getters = {
     },
     treeShowFormFields: (state) => {
         return state.fieldsToTree(state.showform_fields);
+    },
+    savedStatus: (state) => {
+        let sr = state.edit_data?.save_result ?? null;
+        if (!sr) return null; // no save initiated yet
+        return !(!sr.id || sr.error); //saved when we have id and no error
+    },
+    savedErrorMessage: (state) => {
+        return state.edit_data?.save_result?.error?.message ?? '';
     }
 };
 
 //merge in fwStoreGetters if defined
 if (typeof fwStoreGetters !== 'undefined') {
-    getters = { ...getters, ...fwStoreGetters };
+    getters = AppUtils.deepMerge(getters, fwStoreGetters);
 }
 
 let actions = {
     handleError(error, caller, is_silent) {
-        let err_msg = error.body?.err_msg ?? 'server error';
+        let err_msg = error.body?.error?.message ?? 'server error';
         console.error('handleError for', caller, ":", err_msg);
         if (!is_silent) {
             //console.error(error);
-            Toast(err_msg, { theme: 'text-bg-danger' });
+            Toast(err_msg, {theme: 'text-bg-danger'});
         }
     },
     // screen navigation
@@ -214,11 +264,13 @@ let actions = {
         let suffix = '';
         if (screen == 'view') {
             suffix = '/' + id;
+            this.edit_data = null;
         } else if (screen == 'edit') {
             suffix = '/' + (id ? id + '/edit' : 'new');
-            if (!id) this.edit_data = { i: {} };
+            this.edit_data = null;
+            if (!id) this.edit_data = {i: {}};
         }
-        window.history.pushState({ screen: screen, id: id }, '', this.base_url + suffix);
+        window.history.pushState({screen: screen, id: id}, '', this.base_url + suffix);
         this.is_list_edit_pane = false;
         if (id && (screen == 'view' || screen == 'edit')) {
             await this.loadItem(id, screen);
@@ -249,9 +301,9 @@ let actions = {
             let field_name = header.field_name;
             let def = hfields[field_name] ?? null;
             if (!def) {
-              //if no editable field definition found - make as read-only
-              header.is_ro = true;
-              return header;
+                //if no editable field definition found - make as read-only
+                header.is_ro = true;
+                return header;
             }
 
             let def_type = def.type;
@@ -274,22 +326,26 @@ let actions = {
         });
     },
 
+    // set defaults
+    applyDefaultsAfterLoad(data) {
+        this.uioptions.list.table.isButtonsLeft = this.uioptions.list.table.isButtonsLeft ?? this.global.is_list_btn_left;
+        this.list_user_view.density = this.list_user_view.density ?? 'table-sm';
+        this.is_initial_load = false; // reset initial load flag
+        if (data.showform_fields) {
+            this.enrichEditableListHeaders();
+        }
+    },
+
     // load init and lookup scopes only
     async loadInitial() {
         try {
             const apiBase = mande(this.base_url);
 
-            const data = await apiBase.get('', { query: { scope: 'init,lookups' } });
+            const data = await apiBase.get('', {query: {scope: 'init,lookups'}});
             //console.log('loadInitial data', data);
 
             this.saveToStore(data);
-
-            // set defaults
-            this.list_user_view.density = this.list_user_view.density ?? 'table-sm';
-            this.is_initial_load = false; // reset initial load flag
-            if (data.showform_fields) {
-                this.enrichEditableListHeaders();
-            }
+            this.applyDefaultsAfterLoad(data);
 
         } catch (error) {
             this.handleError(error, 'loadInitial');
@@ -299,17 +355,17 @@ let actions = {
 
     // set one or multiple filter values and reload list
     setFilters(filters) {
-        //console.log('setFilters', filters);       
+        //console.log('setFilters', filters);
         //whenever filters changed - reset page to first (if no specific page set)
         if (filters.pagenum === undefined) filters.pagenum = 0;
         //merge filters into state.f
-        this.$state.f = { ...this.$state.f, ...filters };
+        this.$state.f = {...this.$state.f, ...filters};
         this.loadIndexDebounced();
     },
     //save user view settings (density)
     async setListDensity(density) {
         this.list_user_view.density = density;
-        return this.saveUserViews({ density: density });
+        return this.saveUserViews({density: density});
     },
     async reloadIndex() {
         if (this.loadIndexDebouncedTimeout) clearTimeout(this.loadIndexDebouncedTimeout);
@@ -332,18 +388,12 @@ let actions = {
 
             const req = this.listRequestQuery;
             //console.log('loadIndex req', req);
-            const data = await apiBase.get('', { query: req });
+            const data = await apiBase.get('', {query: req});
             //console.log('loadIndex data', data);
             this.is_loading_index = false;
 
             this.saveToStore(data);
-
-            // set defaults
-            this.list_user_view.density = this.list_user_view.density ?? 'table-sm';
-            this.is_initial_load = false; // reset initial load flag
-            if (data.showform_fields) {
-                this.enrichEditableListHeaders();
-            }
+            this.applyDefaultsAfterLoad(data);
 
         } catch (error) {
             this.is_loading_index = false;
@@ -354,14 +404,16 @@ let actions = {
     //load single item for view/edit
     async loadItem(id, mode) {
         try {
+            this.is_loading_item = true;
             const apiBase = mande(this.base_url);
             let q = {};
             if (mode == 'edit') {
-                q = { query: {mode: mode} };
+                q = {query: {mode: mode}};
             }
 
             const data = await apiBase.get(id, q);
             //console.log('loadItem data', data);
+            this.is_loading_item = false;
 
             this.edit_data = data;
 
@@ -375,7 +427,7 @@ let actions = {
         try {
             const apiBase = mande(this.base_url);
 
-            const data = await apiBase.get('/(Next)/' + id, { query: { prev: is_prev?1:0 } });
+            const data = await apiBase.get('/(Next)/' + id, {query: {prev: is_prev ? 1 : 0}});
 
             return data.id;
 
@@ -385,55 +437,60 @@ let actions = {
         }
     },
     //when custom cell button clicked
-    async onCellBtnClick({ event, row, col }) {
-        console.log('onCellBtnClick:', event, row.id, col.field);
+    async onCellBtnClick({event, row, col}) {
+        console.log('onCellBtnClick:', event, row[this.field_id], col.field);
+    },
+    async onCellKeyup(event, row, col) {
+        //console.log('onCellKeyup:', event, row, col);
     },
     async saveCell(row, col) {
-        this.cells_saving[row.id + '-' + col.field_name] = true; //set saving flag
-        delete this.cells_errors[row.id + '-' + col.field_name]; //clear errors if any
+        let id = row[this.field_id];
+        let id_name = id + '-' + col.field_name;
 
-        let id = row.id;
+        this.cells_saving[id_name] = true; //set saving flag
+        delete this.cells_errors[id_name]; //clear errors if any
+
         let field_name = col.field_name;
         let value = row[field_name];
 
-        let item = { [field_name]: value };
+        let item = {[field_name]: value};
         if (col.type == 'autocomplete') {
-          //for autocomplete submit _iname instead of id value
-          item[field_name] = null;
-          item[field_name + '_iname'] = row[field_name + '_iname'];
+            //for autocomplete submit _iname instead of id value
+            item[field_name] = null;
+            item[field_name + '_iname'] = row[field_name + '_iname'];
         }
 
         try {
             const apiBase = mande(this.base_url);
 
-            const req = { item: item, XSS: this.XSS };
+            const req = {item: item, XSS: this.XSS};
             //console.log('saveCell req', id, req);
             const response = await apiBase.patch(id, req);
             //console.log('saveCell response', response);
 
             //remove saving flag after 5sec
             setTimeout(() => {
-                delete this.cells_saving[row.id + '-' + col.field_name];
+                delete this.cells_saving[id_name];
             }, 5000);
 
         } catch (error) {
-            delete this.cells_saving[row.id + '-' + col.field_name];
+            delete this.cells_saving[id_name];
 
-            let err_msg = error.body?.err_msg ?? 'Server Error';
+            let err_msg = error.body?.error?.message ?? 'Server Error';
 
             //check if we got required field error
-            let is_required = error.body?.ERR?.REQUIRED ?? false;
+            let is_required = error.body?.error?.details?.REQUIRED ?? false;
             if (is_required) {
                 err_msg = 'Required field';
             }
 
             //check if we got specific field error code
-            let field_err_code = error.body?.ERR?.[col.field_name] ?? '';
+            let field_err_code = error.body?.error?.details?.[col.field_name] ?? '';
             if (field_err_code && field_err_code !== true) {
                 err_msg = window.fwConst.ERR_CODES_MAP[field_err_code] ?? 'Invalid';
             }
 
-            this.cells_errors[row.id + '-' + col.field_name] = err_msg;
+            this.cells_errors[id_name] = err_msg;
             this.handleError(error, 'saveCell', true);
             return error;
         }
@@ -441,9 +498,9 @@ let actions = {
     async deleteRow(id) {
         try {
             const apiBase = mande(this.base_url);
-            const req = { XSS: this.XSS };
+            const req = {XSS: this.XSS};
             //console.log('deleteRow req', req);
-            const response = await apiBase.delete(id, { query: req });
+            const response = await apiBase.delete(id, {query: req});
             //console.log('deleteRow response', response);
 
         } catch (error) {
@@ -454,7 +511,7 @@ let actions = {
     async deleteCheckedRows() {
         try {
             const apiBase = mande(this.base_url);
-            const req = { XSS: this.XSS, delete: true };
+            const req = {XSS: this.XSS, delete: true};
             req.cb = this.checkedRows;
             if (!Object.keys(req.cb).length) return; //no checked rows
 
@@ -476,7 +533,7 @@ let actions = {
     async restoreRow(id) {
         try {
             const apiBase = mande(this.base_url);
-            const req = { XSS: this.XSS };
+            const req = {XSS: this.XSS};
             const response = await apiBase.post('/(RestoreDeleted)/' + id, req);
         } catch (error) {
             this.handleError(error, 'restoreRow');
@@ -497,7 +554,7 @@ let actions = {
     async saveEditDataDebounced(delay) {
         if (!delay) delay = 500;
         // debounce saveEditData
-        this.edit_data.save_result = { success: false };
+        if (this.edit_data) this.edit_data.save_result = {};
         if (this.saveEditDataDebouncedTimeout) clearTimeout(this.saveEditDataDebouncedTimeout);
         this.saveEditDataDebouncedTimeout = setTimeout(() => {
             this.saveEditData();
@@ -508,7 +565,7 @@ let actions = {
         try {
             const apiBase = mande(this.base_url);
 
-            const req = { item: this.edit_data.i, XSS: this.XSS };
+            const req = {item: this.edit_data.i, XSS: this.XSS};
             // also submit checked multi_rows, if form has any
             Object.keys(this.edit_data.multi_rows ?? {}).forEach(field => {
                 let rows = this.edit_data.multi_rows[field] ?? [];
@@ -518,7 +575,8 @@ let actions = {
                     checked_rows.forEach(row => {
                         req[field + '_multi'][row.id] = 1;
                     });
-                };
+                }
+                ;
             });
 
             //also submit subtables
@@ -541,10 +599,10 @@ let actions = {
 
             //also submit attachments (att_links) as att[ID]=1
             if (this.edit_data.att_links?.length) {
-              req.att = {};
-              this.edit_data.att_links.forEach(att_id => {
-                  req.att[att_id] = 1;
-              });
+                req.att = {};
+                this.edit_data.att_links.forEach(att_id => {
+                    req.att[att_id] = 1;
+                });
             }
 
             //console.log('saveEditData req', req);
@@ -555,18 +613,18 @@ let actions = {
             if (this.current_screen == 'list') {
                 //reload list to show changes
                 await this.loadIndex();
-            } else {                
+            } else {
                 //after edit form saved - process route_return
                 const rr = this.edit_data.route_return ?? '';
                 if (rr == 'New') {
-                    Toast("Saved", { theme: 'text-bg-success' });
+                    Toast("Saved", {theme: 'text-bg-success'});
                     this.openEditScreen(0);
                 } else if (rr == 'Show') {
                     this.openViewScreen(response.id);
                 } else if (rr == 'Index') {
                     this.openListScreen();
                 } else {
-                    if (response.success && response.id && !this.edit_data.id) {
+                    if (!response.error && response.id && !this.edit_data.id) {
                         //just reload edit after add new
                         await this.openEditScreen(response.id);
                     }
@@ -574,9 +632,12 @@ let actions = {
             }
 
         } catch (error) {
-            this.edit_data.save_result = error.body ?? { success: false, err_msg: 'server error' };
-            this.handleError(error, 'saveEditData');
-            return error;
+            this.edit_data.save_result = error.body ?? {error: 'server error'};
+            if (error.response >= 500) {
+                this.handleError(error, 'saveEditData');
+                return error;
+            }
+            //400 errors are user validation
         }
     },
 
@@ -584,12 +645,15 @@ let actions = {
     async saveCreateUserList() {
         try {
             const apiBase = mande(this.userlists_url);
-            const req = { XSS: this.XSS, item: { entity: this.base_url, iname: this.userlists_new_name, item_id: this.checkedRowsCommas } };
+            const req = {
+                XSS: this.XSS,
+                item: {entity: this.base_url, iname: this.userlists_new_name, item_id: this.checkedRowsCommas}
+            };
             //console.log('saveCreateUserList req', req);
             const response = await apiBase.post('', req);
             //console.log('saveCreateUserList response', response);
 
-            Toast("List created", { theme: 'text-bg-success' });
+            Toast("List created", {theme: 'text-bg-success'});
 
             //reload userslists via simply whole index reload
             this.reloadIndex();
@@ -602,12 +666,12 @@ let actions = {
     async saveAddToUserList(userlists_id) {
         try {
             const apiBase = mande(this.userlists_url);
-            const req = { XSS: this.XSS, item_id: this.checkedRowsCommas };
+            const req = {XSS: this.XSS, item_id: this.checkedRowsCommas};
             //console.log('saveAddToUserList req', req);
             const response = await apiBase.post('/(AddToList)/' + userlists_id, req);
             //console.log('saveAddToUserList response', response);
 
-            Toast("Added to List", { theme: 'text-bg-success' });
+            Toast("Added to List", {theme: 'text-bg-success'});
 
             //clear checked rows
             this.hchecked_rows = {};
@@ -622,12 +686,12 @@ let actions = {
     async saveRemoveFromUserList() {
         try {
             const apiBase = mande(this.userlists_url);
-            const req = { XSS: this.XSS, item_id: this.checkedRowsCommas };
+            const req = {XSS: this.XSS, item_id: this.checkedRowsCommas};
             //console.log('saveRemoveFromUserList req', req);
             const response = await apiBase.post('/(RemoveFromList)/' + this.f.userlist, req);
             //console.log('saveRemoveFromUserList response', response);
 
-            Toast("Removed from List", { theme: 'text-bg-success' });
+            Toast("Removed from List", {theme: 'text-bg-success'});
 
             //clear checked rows
             this.hchecked_rows = {};
@@ -643,14 +707,14 @@ let actions = {
     async saveUserViews(params) {
         try {
             const apiBase = mande(this.base_url);
-            const req = { XSS: this.XSS, is_list_edit: this.is_list_edit, ...params };
+            const req = {XSS: this.XSS, is_list_edit: this.is_list_edit, ...params};
 
             //console.log('saveUserViews req', req);
             const response = await apiBase.post('/(SaveUserViews)', req);
             //console.log('saveUserViews response', response);
 
             if (!params.is_reset && !params.density && !params.load_id) {
-                Toast("View saved", { theme: 'text-bg-success' });
+                Toast("View saved", {theme: 'text-bg-success'});
             }
             //reload as whole as columns can be changed
             this.reloadIndex();
@@ -663,13 +727,13 @@ let actions = {
     async deleteUserViews(id) {
         try {
             const apiBase = mande(this.userlists_url);
-            const req = { XSS: this.XSS };
+            const req = {XSS: this.XSS};
 
             //console.log('deleteUserViews req', req);
-            const response = await apiBase.delete(id, { query: req });
+            const response = await apiBase.delete(id, {query: req});
             //console.log('deleteUserViews response', response);
 
-            Toast("View deleted", { theme: 'text-bg-success' });
+            Toast("View deleted", {theme: 'text-bg-success'});
             //reload as whole as columns can be changed
             this.reloadIndex();
 
@@ -684,11 +748,11 @@ let actions = {
             if (!url) url = this.base_url + '/(Autocomplete)';
 
             const apiBase = mande(url);
-            const req = { q: q };
+            const req = {q: q};
             if (model_name) req.model = model_name;
             if (id) req.id = id;
 
-            const response = await apiBase.get('', { query: req });
+            const response = await apiBase.get('', {query: req});
 
             return response;
 
@@ -701,12 +765,12 @@ let actions = {
 
 //merge in fwStoreActions if defined
 if (typeof fwStoreActions !== 'undefined') {
-    actions = { ...actions, ...fwStoreActions };
+    actions = AppUtils.deepMerge(actions, fwStoreActions);
 }
 
 const useFwStore = defineStore('fw', {
-  state: () => (state),
-  getters: getters,
-  actions: actions,
+    state: () => (state),
+    getters: getters,
+    actions: actions,
 });
-window.useFwStore=useFwStore; //make store available for components in html below
+window.useFwStore = useFwStore; //make store available for components in html below

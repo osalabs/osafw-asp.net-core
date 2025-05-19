@@ -28,7 +28,7 @@ public class MyMFAController : FwController
         if (user_id == 0)
         {
             //if user not logged in - we are in setup mode after login
-            user_id = Utils.toInt(fw.Session("mfa_login_users_id"));
+            user_id = fw.Session("mfa_login_users_id").toInt();
             if (user_id == 0)
                 fw.redirect("/"); // no user - go to home
         }
@@ -43,11 +43,13 @@ public class MyMFAController : FwController
     {
         var user = model.one(user_id);
 
+        fw.logActivity(FwLogTypes.ICODE_USERS_LOGIN, FwEntities.ICODE_USERS, user_id, "MFA setup, IP:" + fw.context.Connection.RemoteIpAddress.ToString());
+
         //generate secret and save to session only (will be saved to db after validation)
         var secret = model.generateMFASecret();
         fw.Session("mfa_secret", secret);
 
-        Hashtable ps = new();
+        Hashtable ps = [];
         ps["qr_code"] = model.generateMFAQRCode(secret, user["email"], (string)fw.config("SITE_NAME"));
         return ps;
     }
@@ -68,7 +70,7 @@ public class MyMFAController : FwController
         // code is valid, generate recovery codes and save
         // generate 5 recovery codes as random 8-digit numbers using Utils.getRandStr(8) and concatenate into comma-separated string
         var hashed_codes = new List<string>(5);
-        ArrayList recovery_codes = new();
+        ArrayList recovery_codes = [];
         for (int i = 0; i < 5; i++)
         {
             var code = Utils.getRandStr(8);

@@ -31,19 +31,36 @@ public class Att : FwModel
         table_name = "att";
     }
 
+    // overload by file index
     public Hashtable uploadOne(int id, int file_index, bool is_new = false)
     {
+        return uploadOne(id, fw.request.Form.Files[file_index], is_new);
+    }
+
+    // overload by file name
+    public Hashtable uploadOne(int id, string input_name, bool is_new = false)
+    {
+        return uploadOne(id, fw.request.Form.Files[input_name], is_new);
+    }
+
+    /// <summary>
+    /// upload file to the server and update att table with file information
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="file"></param>
+    /// <param name="is_new"></param>
+    /// <returns> return hashtable with added files information id, fname, fsize, ext and filepath</returns>
+    /// </returns>
+    public Hashtable uploadOne(int id, IFormFile file, bool is_new = false)
+    {
         Hashtable result = null;
-        if (uploadFile(id, out string filepath, file_index, true))
+        if (uploadFile(id, out string filepath, file.Name, true))
         {
             logger("uploaded to [" + filepath + "]");
             string ext = UploadUtils.getUploadFileExt(filepath);
 
-            // TODO refactor in better way
-            IFormFile file = fw.request.Form.Files[file_index];
-
             // update db with file information
-            Hashtable fields = new();
+            Hashtable fields = [];
             if (is_new)
                 fields["iname"] = file.FileName;
 
@@ -81,7 +98,7 @@ public class Att : FwModel
     /// <returns>db array list of added files information id, fname, fsize, ext, filepath</returns>
     public ArrayList uploadMulti(Hashtable item)
     {
-        ArrayList result = new();
+        ArrayList result = [];
 
         for (var i = 0; i <= fw.request.Form.Files.Count - 1; i++)
         {
@@ -110,14 +127,14 @@ public class Att : FwModel
     {
         var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
 
-        Hashtable where = new();
+        Hashtable where = [];
         where["fwentities_id"] = fwentities_id;
         where["iname"] = db.opLIKE("TMP#%");
         where["status"] = STATUS_DELETED;
         where["item_id"] = db.opISNULL();
         db.update(table_name, new Hashtable() {
             { "status", STATUS_ACTIVE },
-            { "item_id", Utils.toStr(item_id) }
+            { "item_id", item_id }
         }, where);
         return true;
     }
@@ -132,7 +149,7 @@ public class Att : FwModel
             @$" where add_time<DATEADD(hour, -48, getdate())
                  and (status={db.qi(STATUS_UNDER_UPDATE)} or status={db.qi(STATUS_DELETED)} and iname like 'TMP#%')", DB.h());
         foreach (var row in rows)
-            this.delete(Utils.toInt(row["id"]), true);
+            this.delete(row["id"].toInt(), true);
         return rows.Count;
     }
 
@@ -177,6 +194,22 @@ public class Att : FwModel
         return getUrl(item, size);
     }
 
+    /// <summary>
+    /// return absolute url (with https://domain) of the uploaded file (by id)
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="size"></param>
+    /// <returns></returns>
+    public string getUrlAbsolute(int id, string size = "")
+    {
+        var url = getUrl(id, size);
+        //if start with "/" - this is relative, add domain
+        if (url.StartsWith("/"))
+            url = fw.config("ROOT_DOMAIN").toStr() + url;
+
+        return url;
+    }
+
     public string getUrlPreview(int id, string size = "s")
     {
         return getUrl(id, size) + "&preview=1";
@@ -199,7 +232,7 @@ public class Att : FwModel
 
             // remove files first
             var item = one(id);
-            if (Utils.toInt(item["is_s3"]) == 1)
+            if (item["is_s3"].toInt() == 1)
             {
                 //delete the whole folder for att, it will delete all files recursively
                 fw.model<S3>().deleteObject(table_name + "/" + item["id"] + "/");
@@ -222,7 +255,7 @@ public class Att : FwModel
         if (!string.IsNullOrEmpty(filepath))
             File.Delete(filepath);
         // for images - also delete s/m thumbnails
-        if (Utils.toInt(item["is_image"]) == 1)
+        if (item["is_image"].toInt() == 1)
         {
             foreach (string size in Utils.qw("s m l"))
             {
@@ -246,7 +279,7 @@ public class Att : FwModel
         // End If
 
         // file must have Active status
-        if (Utils.toInt(item["status"]) != 0)
+        if (item["status"].toInt() != STATUS_ACTIVE)
             result = false;
 
         if (!result)
@@ -262,15 +295,15 @@ public class Att : FwModel
         if (item.Count == 0)
             throw new UserException("No file specified");
 
-        checkAccess(Utils.toInt(item["id"]));
+        checkAccess(item["id"].toInt());
 
         if (size != "s" && size != "m")
             size = "";
 
         var max_age = new TimeSpan(CACHE_DAYS, 0, 0, 0);
-        fw.response.Headers.Append("Cache-Control", $"private, max-age={max_age}"); // use public only if all uploads are public
-        fw.response.Headers.Append("Pragma", "cache");
-        fw.response.Headers.Append("Expires", DateTime.Now.AddDays(CACHE_DAYS).ToString("R")); // cache for several days, this allows browser not to send any requests to server during this period (unless F5)
+        fw.response.Headers.CacheControl = $"private, max-age={max_age}"; // use public only if all uploads are public
+        fw.response.Headers.Pragma = "cache";
+        fw.response.Headers.Expires = DateTime.Now.AddDays(CACHE_DAYS).ToString("R"); // cache for several days, this allows browser not to send any requests to server during this period (unless F5)
 
         string filepath = getUploadImgPath(id, size, (string)item["ext"]);
         if (!File.Exists(filepath))
@@ -281,7 +314,7 @@ public class Att : FwModel
 
         DateTime filetime = File.GetLastWriteTime(filepath).ToUniversalTime();
 
-        fw.response.Headers.Append("Last-Modified", filetime.ToString("R")); // this allows browser to send If-Modified-Since request headers (unless Ctrl+F5)
+        fw.response.Headers.LastModified = filetime.ToString("R");// this allows browser to send If-Modified-Since request headers (unless Ctrl+F5)
 
         string ifmodhead = fw.request.Headers.IfModifiedSince;
         if (ifmodhead != null && DateTime.TryParse(ifmodhead, out DateTime ifmod) && ifmod >= filetime)
@@ -294,8 +327,9 @@ public class Att : FwModel
         string filename = item["fname"].Replace('"', '\'');
         string ext = UploadUtils.getUploadFileExt(filename);
 
-        fw.response.Headers.Append("Content-type", Utils.ext2mime(ext));
-        fw.response.Headers.Append("Content-Disposition", disposition + "; filename=\"" + filename + "\"");
+        fw.response.Headers.ContentType = Utils.ext2mime(ext);
+        fw.response.Headers.ContentDisposition = disposition + $"; filename=\"{filename}\"";
+
         fw.response.SendFileAsync(filepath).Wait();
     }
 
@@ -312,7 +346,7 @@ public class Att : FwModel
         var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
 
         string where = "";
-        Hashtable @params = new();
+        Hashtable @params = [];
         @params["@fwentities_id"] = fwentities_id;
         @params["@item_id"] = item_id;
 
@@ -327,7 +361,7 @@ public class Att : FwModel
             if (att_category.Count > 0)
             {
                 where += " and a.att_categories_id=@att_categories_id";
-                @params["@att_categories_id"] = Utils.toInt(att_category["id"]);
+                @params["@att_categories_id"] = att_category["id"];
             }
         }
 
@@ -382,7 +416,7 @@ public class Att : FwModel
     {
         var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
 
-        Hashtable where = new();
+        Hashtable where = [];
         where["status"] = STATUS_ACTIVE;
         where["fwentities_id"] = fwentities_id;
         where["item_id"] = item_id;
@@ -397,7 +431,7 @@ public class Att : FwModel
         var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
 
         var row = one(id).toHashtable();
-        if (Utils.toInt(row["fwentities_id"]) != fwentities_id)
+        if (row["fwentities_id"].toInt() != fwentities_id)
             row.Clear();
         return row;
     }
@@ -449,7 +483,7 @@ public class Att : FwModel
         var result = true;
 #pragma warning restore CS0162 // Unreachable code detected
         var item = one(id);
-        if (Utils.toInt(item["is_s3"]) == 1)
+        if (item["is_s3"].toInt() == 1)
             return true; // already in S3
 
         var model_s3 = fw.model<S3>();
@@ -520,7 +554,7 @@ public class Att : FwModel
         var honlynames = Utils.qh(fieldnames);
 
         // create list of eligible file uploads, check for the ContentLength as any 'input type = "file"' creates a System.Web.HttpPostedFile object even if the file was not attached to the input
-        ArrayList afiles = new();
+        ArrayList afiles = [];
         if (honlynames.Count > 0)
         {
             // if we only need some fields - skip if not requested field
@@ -554,14 +588,14 @@ public class Att : FwModel
         foreach (IFormFile file in afiles)
         {
             // first - save to db so we can get att_id
-            Hashtable attitem = new();
+            Hashtable attitem = [];
             attitem["att_categories_id"] = att_categories_id;
             attitem["fwentities_id"] = fwentities_id;
-            attitem["item_id"] = Utils.toStr(item_id);
+            attitem["item_id"] = item_id;
             attitem["is_s3"] = "1";
             attitem["status"] = "1";
             attitem["fname"] = file.FileName;
-            attitem["fsize"] = Utils.toStr(file.Length);
+            attitem["fsize"] = file.Length;
             attitem["ext"] = UploadUtils.getUploadFileExt(file.FileName);
             var att_id = fw.model<Att>().add(attitem);
 

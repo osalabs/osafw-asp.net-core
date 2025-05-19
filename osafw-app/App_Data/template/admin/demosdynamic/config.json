@@ -27,7 +27,6 @@
     "save_fields_checkboxes": {
         "is_checkbox":"0"
     },
-    "save_fields_nullable": "demo_dicts_id att_id fdate_pop",
 
     "form_new_defaults": {
         "iname": ""
@@ -105,39 +104,24 @@
                     "type": "plaintext"
                 },
                 {
-                    "type": "row",
-                    "class": ""
+                  "type": "row",
+                  "class": "form-row"
                 },
                     {
-                        "type": "col",
-                        "class": "col-lg-6"
-                    },
-                        {
-                            "field": "fint",
-                            "label": "Integer number",
-                            "type": "plaintext",
-                            "class_label": "col-md-3 col-lg-6",
-                            "class_contents": "col-3"
-                        },
-                    {
-                        "type": "col_end"
+                        "field": "fint",
+                        "label": "Integer number",
+                        "type": "plaintext",
+                        "class": false
                     },
                     {
-                        "type": "col",
-                        "class": "col-lg-6"
-                    },
-                        {
-                            "field": "ffloat",
-                            "label": "Float number",
-                            "type": "float",
-                            "class_label": "col-md-3 col-lg-6",
-                            "class_contents": "col-3"
-                        },
-                    {
-                        "type": "col_end"
+                        "field": "ffloat",
+                        "label": "Float number",
+                        "type": "float",
+                        "class_label": "col-md-3",
+                        "class": false
                     },
                 {
-                    "type": "row_end"
+                  "type": "row_end"
                 },
                 {
                     "field": "fcombo",
@@ -161,6 +145,10 @@
                     "field": "is_checkbox",
                     "label": "Checkbox",
                     "type": "checkbox"
+                },
+                {
+                    "type": "header",
+                    "label": "Dates"
                 },
                 {
                     "field": "fdate_combo",
@@ -219,7 +207,7 @@
                 {
                     "field": "demos_items",
                     "label": "Subtable",
-                    "class_label": "col-12 text-start",
+                    "class_label": "col-12 hr-header fs-5",
                     "type": "subtable",
                     "model": "DemosItems"
                 },
@@ -330,42 +318,26 @@
                     "maxlength": 128
                 },
                 {
-                    "type": "row",
-                    "class": "row form-row"
+                  "type": "row",
+                  "class": "form-row"
                 },
                     {
-                        "type": "col",
-                        "class": "col-md-6"
-                    },
-                        {
-                            "field": "fint",
-                            "label": "Integer number",
-                            "type": "number",
-                            "min": 0,
-                            "max": 999999,
-                            "class_label": "col-6",
-                            "class_contents": "col-md-4"
-                        },
-                    {
-                        "type": "col_end"
+                        "field": "fint",
+                        "label": "Integer number",
+                        "type": "number",
+                        "min": 0,
+                        "max": 999999,
+                        "class": false
                     },
                     {
-                        "type": "col",
-                        "class": "col-md-6"
-                    },
-                        {
-                            "field": "ffloat",
-                            "label": "Float number",
-                            "type": "number",
-                            "step": 0.1,
-                            "class_label": "col-6",
-                            "class_contents": "col"
-                        },
-                    {
-                        "type": "col_end"
+                        "field": "ffloat",
+                        "label": "Float number",
+                        "type": "number",
+                        "step": 0.1,
+                        "class": false
                     },
                 {
-                    "type": "row_end"
+                  "type": "row_end"
                 },
 
                 {
@@ -395,6 +367,10 @@
                     "label": "Checkbox",
                     "type": "cb",
                     "class_contents": "col d-flex align-items-center"
+                },
+                {
+                    "type": "header",
+                    "label": "Dates"
                 },
                 {
                     "field": "fdate_combo",
@@ -457,7 +433,7 @@
                 {
                     "field": "demos_items",
                     "label": "Subtable",
-                    "class_label": "col-12 text-start",
+                    "class_label": "col-12 text-center hr-header fs-5",
                     "type": "subtable_edit",
                     "model": "DemosItems",
                     "related_field_name": "demos_id",

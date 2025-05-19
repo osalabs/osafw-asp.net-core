@@ -29,6 +29,7 @@ public sealed class FwHooks
         // also force set XSS
         if (string.IsNullOrEmpty(fw.Session("XSS"))) fw.Session("XSS", Utils.getRandStr(16));
         if (fw.userId > 0) fw.model<Users>().loadMenuItems();
+        //fw.model<Users>().loadRBACMenu(); // uncomment if RBAC
     }
 
     // called from FW.run before fw.Finalize()

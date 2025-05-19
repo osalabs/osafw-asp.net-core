@@ -13,7 +13,7 @@ namespace osafw.Tests
             Assert.AreEqual(FwCache.getValue("testCacheKey").ToString(), "testing");
 
             // test serialization
-            Hashtable h = new();
+            Hashtable h = [];
             h["AAA"] = "1";
             h["BBB"] = "2";
             FwCache.setValue("testCacheKey2", h);
@@ -29,7 +29,7 @@ namespace osafw.Tests
             Assert.AreEqual(FwCache.getValue("testCacheKey").ToString(), "testing set");
 
             // test serialization
-            Hashtable h = new();
+            Hashtable h = [];
             h["CCC"] = "3";
             h["DDD"] = "4";
             FwCache.setValue("testCacheKey2", h);
@@ -82,7 +82,7 @@ namespace osafw.Tests
             Assert.AreEqual(cache.getRequestValue("testCacheKey4"), true);
 
             // test serialization of Hashtable
-            Hashtable h = new();
+            Hashtable h = [];
             h["AAA"] = "1";
             h["BBB"] = "2";
             cache.setRequestValue("testCacheKey2", h);
@@ -91,7 +91,7 @@ namespace osafw.Tests
             Assert.AreEqual(r["BBB"], "2");
 
             // test serialization of DBRow
-            DBRow row = new();
+            DBRow row = [];
             row["AAA"] = "1";
             row["BBB"] = "2";
             cache.setRequestValue("testCacheKey3", row);
@@ -100,9 +100,7 @@ namespace osafw.Tests
             Assert.AreEqual(r2["BBB"], "2");
 
             // test serialization of IList (arrays)
-            ArrayList a = new();
-            a.Add("1");
-            a.Add("2");
+            ArrayList a = ["1", "2"];
             cache.setRequestValue("testCacheKey4", a);
             ArrayList r3 = (ArrayList)cache.getRequestValue("testCacheKey4");
             Assert.AreEqual(r3[0], "1");
@@ -122,7 +120,7 @@ namespace osafw.Tests
             Assert.AreEqual(cache.getRequestValue("testCacheKey").ToString(), "testing set");
 
             // test serialization
-            Hashtable h = new();
+            Hashtable h = [];
             h["CCC"] = "3";
             h["DDD"] = "4";
             cache.setRequestValue("testCacheKey2", h);

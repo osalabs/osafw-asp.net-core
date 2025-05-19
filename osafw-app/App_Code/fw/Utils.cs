@@ -1,11 +1,9 @@
-﻿//disable warning that some imaging functions are only available on Windows
-#pragma warning disable CA1416
+﻿#pragma warning disable CA1416 // some methods are Windows only
 
 using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Data.Common;
 using System.Data.OleDb;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -32,6 +30,10 @@ public class Utils
     public const string TMP_PREFIX = "osafw"; // prefix for temp directory where framework stores temporary files
 
     public const string MIME_MAP = "doc|application/msword docx|application/msword xls|application/vnd.ms-excel xlsx|application/vnd.ms-excel ppt|application/vnd.ms-powerpoint pptx|application/vnd.ms-powerpoint csv|text/csv pdf|application/pdf html|text/html zip|application/x-zip-compressed jpg|image/jpeg jpeg|image/jpeg gif|image/gif png|image/png wmv|video/x-ms-wmv avi|video/x-msvideo mp4|video/mp4";
+
+    // pre-initialize for performance
+    private static readonly JsonSerializerOptions jsonSerializerOptions = new() { WriteIndented = false };
+    private static readonly JsonSerializerOptions jsonSerializerOptionsPretty = new() { WriteIndented = true };
 
     // convert "space" delimited string to an array
     // WARN! replaces all "&nbsp;" to spaces (after convert)
@@ -74,7 +76,7 @@ public class Utils
     */
     public static Hashtable qh(string str, object default_value = null)
     {
-        Hashtable result = new();
+        Hashtable result = [];
         if (str != null && str != "")
         {
             string[] arr = Regex.Split(str, @"\s+");
@@ -95,7 +97,7 @@ public class Utils
 
     public static string qhRevert(IDictionary sh)
     {
-        ArrayList result = new();
+        ArrayList result = [];
         foreach (string key in sh.Keys)
         {
             result.Add(key.Replace(" ", "&nbsp;") + "|" + sh[key]);
@@ -108,7 +110,7 @@ public class Utils
     public static void hashFilter(Hashtable hash, string[] keys)
     {
         ArrayList all_keys = new(keys);
-        ArrayList to_remove = new();
+        ArrayList to_remove = [];
         foreach (string key in hash.Keys)
         {
             if (all_keys.IndexOf(key) < 0)
@@ -157,7 +159,7 @@ public class Utils
     // OUT: arraylist of email addresses
     public static ArrayList splitEmails(string emails)
     {
-        ArrayList result = new();
+        ArrayList result = [];
         string[] arr = Regex.Split(emails, @"[,; \n\r]+");
         foreach (string email in arr)
         {
@@ -207,183 +209,119 @@ public class Utils
     }
 
     #region toBool, toInt, toStr... isDate, isEmpty functions
+
     /// <summary>
-    /// convert anything to bool, in case of error return false:
-    ///   null - false
-    ///   collections - true if not empty
-    ///   non-zero number - true
+    /// This method is obsolete. Use <see cref="FwExtensions.toBool(object)"/> instead.
     /// </summary>
-    /// <param name="o"></param>
-    /// <returns></returns>
-    public static bool toBool(object o)
-    {
-        if (o == null) return false;
-        if (o is bool b) return b;
-        if (o is ICollection ic) return ic.Count > 0; //for collections return true if not empty
-        if (toFloat(o) != 0) return true; //non-zero number is true
-        if (bool.TryParse(o.ToString(), out bool result))
-            return result;
-
-        return false;
-
-    }
-
-    [Obsolete("This method is deprecated, use toBool instead.")]
-    public static bool f2bool(object o)
-    {
-        return toBool(o);
-    }
+    [Obsolete("This method is obsolete. Please use the 'toBool' extension method instead.")]
+    public static bool toBool(object o) => o.toBool();
 
     /// <summary>
-    /// convert anything to DateTime, in case of error return DateTime.MinValue:
+    /// This method is obsolete. Use <see cref="FwExtensions.toBool(object)"/> instead.
     /// </summary>
-    /// <param name="o"></param>
-    /// <returns></returns>
-    public static DateTime toDate(object o)
-    {
-        if (o == null) return DateTime.MinValue;
-        if (o is DateTime dt) return dt;
-        if (DateTime.TryParse(o.ToString(), out DateTime result))
-            return result;
-
-        return DateTime.MinValue;
-    }
-
-    [Obsolete("This method is deprecated, use toDate instead.")]
-    public static DateTime? f2date(object field)
-    {
-        if (field is DateTime dateTimeValue)
-            return dateTimeValue;
-
-        if (DateTime.TryParse(field?.ToString().Trim(), out DateTime parsedDate))
-            return parsedDate;
-
-        return null;
-    }
+    [Obsolete("This method is obsolete. Please use the 'toBool' extension method instead.")]
+    public static bool f2bool(object o) => o.toBool();
 
     /// <summary>
-    /// return true if field is date
+    /// This method is obsolete. Use <see cref="FwExtensions.toDate(object, string)"/> instead.
+    /// </summary>
+    [Obsolete("This method is obsolete. Please use the 'toDate' extension method instead.")]
+    public static DateTime toDate(object o, string exact_format = "") => o.toDate(exact_format);
+
+    /// <summary>
+    /// This method is obsolete. Use <see cref="FwExtensions.toDateOrNull(object, string)"/> instead.
+    /// </summary>
+    [Obsolete("This method is obsolete. Please use the 'toDateOrNull' extension method instead.")]
+    /// <returns></returns>
+    public static DateTime? toDateOrNull(object o, string exact_format = "") => o.toDateOrNull(exact_format);
+
+    /// <summary>
+    /// This method is obsolete. Use <see cref="FwExtensions.toDateOrNull(object, string)"/> instead.
+    /// </summary>
+    [Obsolete("This method is obsolete. Please use the 'toDateOrNull' extension method instead.")]
+    public static DateTime? f2date(object field) => field.toDateOrNull();
+
+    /// <summary>
+    /// return true if field is date (DateTime.MinValue is not considered as date)
     /// </summary>
     /// <param name="o"></param>
     /// <returns></returns>
     public static bool isDate(object o)
     {
-        return toDate(o) != DateTime.MinValue;
+        var dt = o.toDateOrNull();
+        return dt != null && ((DateTime)dt) != DateTime.MinValue;
     }
 
     /// <summary>
-    /// convert anything to string (if cannot convert to string - just return empty string)
+    /// This method is obsolete. Use <see cref="FwExtensions.toStr(object)"/> instead.
     /// </summary>
-    /// <param name="o"></param>
-    /// <returns></returns>
-    public static string toStr(object o)
-    {
-        if (o == null) return "";
-        return o.ToString();
-    }
-
-    [Obsolete("This method is deprecated, use toStr instead.")]
-    public static string f2str(object field)
-    {
-        return toStr(field);
-    }
+    [Obsolete("This method is obsolete. Please use the 'toStr' extension method instead.")]
+    public static string toStr(object o) => o.toStr();
 
     /// <summary>
-    /// convert anything to int, in case of error return 0:
+    /// This method is obsolete. Use <see cref="FwExtensions.toStr(object)"/> instead.
     /// </summary>
-    /// <param name="o"></param>
-    /// <returns></returns>
-    public static int toInt(object o)
-    {
-        if (o == null) return 0;
-        if (o is int i) return i;
-        if (int.TryParse(o.ToString(), out int result))
-            return result;
-
-        return 0;
-    }
-
-    [Obsolete("This method is deprecated, use toInt instead.")]
-    public static int f2int(object AField)
-    {
-        return toInt(AField);
-    }
-
-    public static long toLong(object o)
-    {
-        if (o == null) return 0;
-        if (o is long l) return l;
-        if (long.TryParse(o.ToString(), out long result))
-            return result;
-
-        return 0;
-    }
-
-    [Obsolete("This method is deprecated, use toLong instead.")]
-    public static long f2long(object AField)
-    {
-        return toLong(AField);
-    }
+    [Obsolete("This method is obsolete. Please use the 'toStr' extension method instead.")]
+    public static string f2str(object field) => field.toStr();
 
     /// <summary>
-    /// convert anything to decimal, in case of error return 0:
+    /// This method is obsolete. Use <see cref="FwExtensions.toInt(object, int)"/> instead.
     /// </summary>
-    /// <param name="o"></param>
-    /// <returns></returns>
-    public static decimal toDecimal(object o)
-    {
-        if (o == null) return decimal.Zero;
-        if (o is decimal d) return d;
-        if (decimal.TryParse(o.ToString(), out decimal result))
-            return result;
-
-        return decimal.Zero;
-    }
-
-    [Obsolete("This method is deprecated, use toDecimal instead.")]
-    public static decimal f2decimal(object AField)
-    {
-        return toDecimal(AField);
-    }
+    [Obsolete("This method is obsolete. Please use the 'toInt' extension method instead.")]
+    public static int toInt(object o) => o.toInt();
 
     /// <summary>
-    /// convert anything to single, in case of error return 0:
+    /// This method is obsolete. Use <see cref="FwExtensions.toInt(object, int)"/> instead.
     /// </summary>
-    /// <param name="o"></param>
-    /// <returns></returns>
-    public static Single toSingle(object o)
-    {
-        if (o == null) return 0f;
-        if (o is Single s) return s;
-        if (Single.TryParse(o.ToString(), out Single result))
-            return result;
-
-        return 0f;
-    }
-
-    [Obsolete("This method is deprecated, use toSingle instead.")]
-    public static Single f2single(object AField)
-    {
-        return toSingle(AField);
-    }
+    [Obsolete("This method is obsolete. Please use the 'toInt' extension method instead.")]
+    public static int f2int(object AField) => AField.toInt();
 
     /// <summary>
-    /// convert anything to double, in case of error return 0:
+    /// This method is obsolete. Use <see cref="FwExtensions.toLong(object, long)"/> instead.
     /// </summary>
-    /// <param name="o"></param>
-    /// <returns></returns>
-    public static double toFloat(object o)
-    {
-        if (o == null) return 0.0;
-        if (o is double d) return d;
-        if (double.TryParse(o.ToString(), out double result))
-            return result;
+    [Obsolete("This method is obsolete. Please use the 'toLong' extension method instead.")]
+    public static long toLong(object o) => o.toLong();
 
-        return 0.0;
-    }
+    /// <summary>
+    /// This method is obsolete. Use <see cref="FwExtensions.toLong(object, long)"/> instead.
+    /// </summary>
+    [Obsolete("This method is obsolete. Please use the 'toLong' extension method instead.")]
+    public static long f2long(object AField) => AField.toLong();
 
-    // convert to double, optionally throw error
-    [Obsolete("This method is deprecated, use toFloat instead.")]
+    /// <summary>
+    /// This method is obsolete. Use <see cref="FwExtensions.toDecimal(object, decimal)"/> instead.
+    /// </summary>
+    [Obsolete("This method is obsolete. Please use the 'toDecimal' extension method instead.")]
+    public static decimal toDecimal(object o) => o.toDecimal();
+
+    /// <summary>
+    /// This method is obsolete. Use <see cref="FwExtensions.toDecimal(object, decimal)"/> instead.
+    /// </summary>
+    [Obsolete("This method is obsolete. Please use the 'toDecimal' extension method instead.")]
+    public static decimal f2decimal(object AField) => AField.toDecimal();
+
+    /// <summary>
+    /// This method is obsolete. Use <see cref="FwExtensions.toFloat(object, float)"/> instead.
+    /// </summary>
+    [Obsolete("This method is obsolete. Please use the 'toFloat' extension method instead.")]
+    public static Single toSingle(object o) => o.toFloat();
+
+    /// <summary>
+    /// This method is obsolete. Use <see cref="FwExtensions.toFloat(object, float)"/> instead.
+    /// </summary>
+    [Obsolete("This method is obsolete. Please use the 'toFloat' extension method instead.")]
+    public static Single f2single(object AField) => AField.toFloat();
+
+    /// <summary>
+    /// This method is obsolete. Use <see cref="FwExtensions.toDouble(object, double)"/> instead.
+    /// </summary>
+    [Obsolete("This method is obsolete. Please use the 'toDouble' extension method instead.")]
+    public static double toFloat(object o) => o.toDouble();
+
+    /// <summary>
+    /// This method is obsolete. Use <see cref="FwExtensions.toDouble(object, double)"/> instead.
+    /// </summary>
+    [Obsolete("This method is obsolete. Please use the 'toDouble' extension method instead.")]
     public static double f2float(object AField, bool is_error = false)
     {
         if (AField == null && !is_error) return 0.0;
@@ -453,7 +391,7 @@ public class Utils
 
     public static string sTrim(string str, int size)
     {
-        if (str.Length > size) str = str.Substring(0, size) + "...";
+        if (str.Length > size) str = string.Concat(str.AsSpan(0, size), "...");
         return str;
     }
 
@@ -484,7 +422,7 @@ public class Utils
     {
         Hashtable mime_map = qh(MIME_MAP);
         ext = ext.ToLower(); //to lower
-        //remove first dot if any
+                             //remove first dot if any
         if (ext.StartsWith('.'))
             ext = ext[1..];
 
@@ -523,11 +461,11 @@ public class Utils
 
             string sql = "select * from [" + WorkSheetName + "]";
             OleDbCommand dbcomm = new(sql, cn);
-            DbDataReader dbread = dbcomm.ExecuteReader();
+            OleDbDataReader dbread = dbcomm.ExecuteReader();
 
             while (dbread.Read())
             {
-                Hashtable row = new();
+                Hashtable row = [];
                 for (int i = 0; i < dbread.FieldCount; i++)
                 {
                     string value = dbread[i].ToString();
@@ -559,8 +497,8 @@ public class Utils
     [SupportedOSPlatform("windows")]
     public static Hashtable importExcel(FW fw, Func<string, ArrayList, bool> callback, string filepath, bool is_header = true)
     {
-        Hashtable result = new();
-        Hashtable conf = new();
+        Hashtable result = [];
+        Hashtable conf = [];
         conf["type"] = "OLE";
         conf["connection_string"] = "Provider=" + OLEDB_PROVIDER + ";Data Source=" + filepath + ";Extended Properties=\"Excel 12.0 Xml;HDR=" + (is_header ? "Yes" : "No") + ";ReadOnly=True;IMEX=1\"";
         DB accdb = new(fw, conf);
@@ -572,13 +510,13 @@ public class Utils
             throw new ApplicationException("No worksheets found in the Excel file");
         }
 
-        Hashtable where = new();
+        Hashtable where = [];
         for (int i = 0; i < schema.Rows.Count; i++)
         {
             string sheet_name_full = schema.Rows[i]["TABLE_NAME"].ToString();
             string sheet_name = sheet_name_full.Replace("\"", "");
             sheet_name = sheet_name.Replace("'", "");
-            sheet_name = sheet_name.Substring(0, sheet_name.Length - 1);
+            sheet_name = sheet_name[..^1]; // remove trailing $
             try
             {
                 ArrayList rows = accdb.array(sheet_name_full, where);
@@ -610,11 +548,11 @@ public class Utils
 
             // escape double quotes + quote if value has line breaks, double quotes, commas
             // https://www.ietf.org/rfc/rfc4180.txt
-            if (str.IndexOf('"') != -1)
+            if (str.Contains('"'))
             {
                 str = "\"" + str.Replace("\"", "\"\"") + "\"";
             }
-            else if (str.IndexOfAny(new char[] { ',', '\r', '\n' }) != -1)
+            else if (str.IndexOfAny([',', '\r', '\n']) != -1)
             {
                 str = "\"" + str + "\"";
             }
@@ -664,8 +602,8 @@ public class Utils
     {
         filename = filename.Replace("\"", "'"); // quote doublequotes
 
-        response.Headers.Append("Content-type", "text/csv");
-        response.Headers.Append("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+        response.Headers.ContentType = "text/csv";
+        response.Headers.ContentDisposition = $"attachment; filename=\"{filename}\"";
 
         HttpResponseWritingExtensions.WriteAsync(response, Utils.getCSVExport(csv_export_headers, csv_export_fields, rows).ToString()).Wait();
     }
@@ -681,12 +619,12 @@ public class Utils
     /// <param name="tpl_dir">template directory</param>
     public static void writeXLSExport(FW fw, string filename, string csv_export_headers, string csv_export_fields, ArrayList rows, string tpl_dir = "/common/list/export")
     {
-        Hashtable ps = new();
+        Hashtable ps = [];
 
-        ArrayList headers = new();
+        ArrayList headers = [];
         foreach (string str in csv_export_headers.Split(","))
         {
-            Hashtable h = new();
+            Hashtable h = [];
             h["iname"] = str;
             headers.Add(h);
         }
@@ -694,12 +632,11 @@ public class Utils
 
         filename = filename.Replace("\"", "_");
 
-        fw.response.Headers.Append("Content-type", "application/vnd.ms-excel");
-        fw.response.Headers.Append("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+        fw.response.Headers.ContentType = "application/vnd.ms-excel";
+        fw.response.Headers.ContentDisposition = $"attachment; filename=\"{filename}\"";
 
         //output headers
-        ParsePage parser = new(fw);
-        var filedata = parser.parse_page(tpl_dir, "xls_head.html", ps);
+        var filedata = fw.parsePage(tpl_dir, "xls_head.html", ps);
         fw.responseWrite(filedata);
 
         //output rows in chunks to save memory and keep connection alive
@@ -712,10 +649,10 @@ public class Utils
             var rowcopy = new Hashtable();
             Utils.mergeHash(rowcopy, row);
 
-            ArrayList cell = new();
+            ArrayList cell = [];
             foreach (string f in fields)
             {
-                Hashtable h = new();
+                Hashtable h = [];
                 h["value"] = rowcopy[f];
                 cell.Add(h);
             }
@@ -725,7 +662,7 @@ public class Utils
             //write to output every 10000 rows
             if (buffer.Count >= 10000)
             {
-                filedata = parser.parse_page(tpl_dir, "xls_rows.html", psbuffer);
+                filedata = fw.parsePage(tpl_dir, "xls_rows.html", psbuffer);
                 fw.responseWrite(filedata);
                 buffer.Clear();
             }
@@ -734,18 +671,18 @@ public class Utils
         //output if something left
         if (buffer.Count > 0)
         {
-            filedata = parser.parse_page(tpl_dir, "xls_rows.html", psbuffer);
+            filedata = fw.parsePage(tpl_dir, "xls_rows.html", psbuffer);
             fw.responseWrite(filedata);
         }
 
         //output footer
-        filedata = parser.parse_page(tpl_dir, "xls_foot.html", ps);
+        filedata = fw.parsePage(tpl_dir, "xls_foot.html", ps);
         fw.responseWrite(filedata);
 
         //simpler but uses more memory and for large results browser might give up waiting results from connection
         //ParsePage parser = new(fw);
         //string tpl_dir = "/common/list/export";
-        //string page = parser.parse_page(tpl_dir, "xls.html", ps);
+        //string page = fw.parsePage(tpl_dir, "xls.html", ps);
         //await HttpResponseWritingExtensions.WriteAsync(fw.response, page);
     }
 
@@ -754,6 +691,7 @@ public class Utils
     {
         bool result = false;
         var rot = RotateFlipType.RotateNoneFlipNone;
+
         PropertyItem[] props = image.PropertyItems;
 
         foreach (PropertyItem p in props)
@@ -972,7 +910,7 @@ public class Utils
             // make static copy of hash2.keys, so even if hash2.keys changing (ex: hash1 is same as hash2) it will not affect the loop
             foreach (string key in hash2.Keys)
             {
-                hash1[key] = Utils.toStr(hash2[key]);
+                hash1[key] = hash2[key].toStr();
             }
         }
     }
@@ -983,7 +921,7 @@ public class Utils
             // make static copy of hash2.keys, so even if hash2.keys changing (ex: hash1 is same as hash2) it will not affect the loop
             foreach (string key in hash2.Keys)
             {
-                hash1[key] = Utils.toStr(hash2[key]);
+                hash1[key] = hash2[key].toStr();
             }
         }
     }
@@ -999,7 +937,7 @@ public class Utils
             {
                 if (hash2[key] is Hashtable ht)
                 {
-                    if (!(hash1[key] is Hashtable))
+                    if (hash1[key] is not Hashtable)
                         hash1[key] = new Hashtable();
                     Hashtable _hash1 = (Hashtable)hash1[key];
                     Hashtable _hash2 = ht;
@@ -1042,9 +980,7 @@ public class Utils
     */
     public static string jsonEncode(object data, bool is_pretty = false)
     {
-        JsonSerializerOptions options = new();
-        if (is_pretty) options.WriteIndented = true;
-        return JsonSerializer.Serialize(data, data.GetType(), options);
+        return JsonSerializer.Serialize(data, data.GetType(), is_pretty ? jsonSerializerOptionsPretty : jsonSerializerOptions);
     }
 
     //overload alias for jsonDecode(string)
@@ -1116,9 +1052,6 @@ public class Utils
                     throw new JsonException("PropertyName expected");
 
                 string keyName = reader.GetString();
-                if (string.IsNullOrWhiteSpace(keyName))
-                    throw new JsonException("Got Empty PropertyName");
-
                 //rw("keyName=" + keyName);
                 reader.Read();
                 ht[keyName] = jsonDecodeValue(ref reader);
@@ -1224,6 +1157,9 @@ public class Utils
     // mode="all" : sample STRING => Sample String
     public static string capitalize(string str, string mode = "")
     {
+        if (string.IsNullOrEmpty(str))
+            return str;
+
         if (mode == "all")
         {
             str = str.ToLower();
@@ -1231,7 +1167,7 @@ public class Utils
         }
         else
         {
-            str = str.Substring(0, 1).ToUpper() + str.Substring(1);
+            str = string.Concat(str[..1].ToUpper(), str.AsSpan(1));
         }
 
         return str;
@@ -1315,11 +1251,7 @@ public class Utils
         // convert string to bytes
         UTF8Encoding ustr = new();
         byte[] bstr = ustr.GetBytes(str);
-
-#pragma warning disable SCS0006 // Weak hashing function
-        MD5 md5hasher = MD5.Create();
-#pragma warning restore SCS0006 // Weak hashing function
-        byte[] bhash = md5hasher.ComputeHash(bstr);
+        byte[] bhash = MD5.HashData(bstr);
 
         // convert hash value to hex string
         StringBuilder sb = new();
@@ -1405,12 +1337,12 @@ public class Utils
 
         if (hattrs["truncate"].ToString().Length > 0)
         {
-            int trlen1 = toInt(hattrs["truncate"]);
+            int trlen1 = hattrs["truncate"].toInt();
             if (trlen1 > 0) trlen = trlen1;
         }
         if (hattrs.ContainsKey("trchar")) trchar = (string)hattrs["trchar"];
-        if (hattrs.ContainsKey("trend")) trend = toInt(hattrs["trend"]);
-        if (hattrs.ContainsKey("trword")) trword = toInt(hattrs["trword"]);
+        if (hattrs.ContainsKey("trend")) trend = hattrs["trend"].toInt();
+        if (hattrs.ContainsKey("trword")) trword = hattrs["trword"].toInt();
 
         int orig_len = str.Length;
         if (orig_len < trlen) return str; // no need truncate
@@ -1424,12 +1356,12 @@ public class Utils
             }
             else
             {
-                str = str.Substring(0, trlen) + trchar;
+                str = string.Concat(str.AsSpan(0, trlen), trchar);
             }
         }
         else
         {
-            str = str.Substring(0, trlen / 2) + trchar + str.Substring(trlen / 2 + 1);
+            str = string.Concat(str.AsSpan(0, trlen / 2), trchar, str.AsSpan(trlen / 2 + 1));
         }
         return str;
     }
@@ -1442,8 +1374,7 @@ public class Utils
 
         if (sortdir == "desc")
         {
-            // TODO - move this to fw utils
-            ArrayList order_fields = new();
+            ArrayList order_fields = [];
             foreach (string fld in orderby.Split(","))
             {
                 string _fld = fld;
@@ -1461,7 +1392,7 @@ public class Utils
                     // if no asc/desc - just add desc at the end
                     _fld += " desc";
                 }
-                order_fields.Add(_fld);
+                order_fields.Add(_fld.Trim());
             }
             // result = String.Join(", ", order_fields.ToArray(GetType(String))) // net 2
             result = string.Join(", ", order_fields.ToArray());  // net 4
@@ -1496,11 +1427,14 @@ public class Utils
     // return hash: id => id
     public static Hashtable commastr2hash(string sel_ids, string value = null)
     {
-        Hashtable result = new();
+        Hashtable result = [];
         ArrayList ids = new(sel_ids.Split(","));
         for (int i = 0; i < ids.Count; i++)
         {
             string v = (string)ids[i];
+            //skip empty values
+            if (v == "") continue;
+
             if (value == null)
             {
                 result[v] = v;
@@ -1555,7 +1489,7 @@ public class Utils
     */
     public static string urlescape(string str)
     {
-        return HttpUtility.UrlEncode(str);
+        return HttpUtility.UrlEncode(str) ?? "";
     }
 
     /* <summary>
@@ -1736,13 +1670,10 @@ public class Utils
 
     // convert c/snake style name to CamelCase
     // system_name => SystemName
+    // system_name_123 => SystemName123
     public static string nameCamelCase(string str)
     {
-        string result = str;
-        result = Regex.Replace(result, @"\W+", " "); // non-alphanum chars to spaces
-        result = Utils.capitalize(result);
-        result = Regex.Replace(result, " +", ""); // remove spaces
-        return result;
+        return Regex.Replace(str, @"(?:^|_)([a-z0-9])", m => m.Groups[1].Value.ToUpper());
     }
 
     public static string Right(string str, int len)
@@ -1751,7 +1682,7 @@ public class Utils
         if (str.Length <= len)
             return str;
         else
-            return str.Substring(str.Length - len);
+            return str[^len..];
     }
 
     //from https://docs.microsoft.com/en-us/dotnet/standard/io/how-to-copy-directories

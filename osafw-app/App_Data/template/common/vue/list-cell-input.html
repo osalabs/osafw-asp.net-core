@@ -4,7 +4,8 @@
             <button type="button"
                     :class="el.class ? el.class : 'btn btn-default btn-sm'"
                     :title="el.hint"
-                    @click.stop="onBtnClick(el.event)">
+                    @click.stop="onBtnClick(el.event)"
+            >
                 <i v-if="el.icon" :class="el.icon"></i> {{el.label}}
             </button>
         </template>
@@ -21,12 +22,12 @@
                       @focus="onFocus"
                       @blur="$emit('blur', $event)"
                       @change="$emit('change', $event)"
-                      />
+        />
 
         <input v-else
                :type="inputType"
                :class="'form-control'+(error?' is-invalid':'')"
-               :id="'cell-'+row.id+'-'+col.field_name"
+               :id="'cell-'+rowId+'-'+col.field_name"
                v-model="row[col.field_name]"
                :maxlength="col.maxlength"
                :min="col.min"
@@ -43,14 +44,16 @@
                @keydown.esc.prevent="onCancel"
                @keydown.enter.prevent="$emit('change', $event)"
                @keydown.up.prevent="onNavigate('up')"
-               @keydown.down.prevent="onNavigate('down')">
-
+               @keydown.down.prevent="onNavigate('down')"
+               @keyup="$emit('keyup', $event)"
+        >
         <slot name="append"></slot>
         <template v-if="col.append" v-for="(el,index) in col.append" :key="index">
             <button type="button"
                     :class="el.class ? el.class : 'btn btn-default btn-sm'"
                     :title="el.hint"
-                    @click.stop="onBtnClick(el.event)">
+                    @click.stop="onBtnClick(el.event)"
+            >
                 <i v-if="el.icon" :class="el.icon"></i> {{el.label}}
             </button>
         </template>
@@ -65,6 +68,10 @@
             type: {
                 type: [String, null]
             },
+            rowId: {
+                type: String,
+                required: true
+            },
             row: {
                 type: Object,
                 required: true
@@ -77,7 +84,7 @@
                 type: String
             }
         },
-        emits: ['focus', 'blur', 'change', 'navigate', 'btnClick'],
+        emits: ['focus', 'blur', 'change', 'navigate', 'btnClick', 'keyup'],
         data: () => ({
             initial_value: '', //value before change
         }),
@@ -109,10 +116,10 @@
                 if (this.inputType == 'date') {
                     this.onCancel();
                 }
-                this.$emit('navigate', { dir, row: this.row, col: this.col });
+                this.$emit('navigate', {dir, row: this.row, col: this.col});
             },
             onBtnClick(icode) {
-                this.$emit('btnClick', { event: icode, row: this.row, col: this.col });
+                this.$emit('btnClick', {event: icode, row: this.row, col: this.col});
             }
         }
     });

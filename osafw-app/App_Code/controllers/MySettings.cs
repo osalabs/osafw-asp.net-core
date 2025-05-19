@@ -32,7 +32,7 @@ public class MySettingsController : FwController
 
     public Hashtable ShowFormAction()
     {
-        Hashtable ps = new();
+        Hashtable ps = [];
         Hashtable item = reqh("item");
         var id = fw.userId;
 
@@ -66,10 +66,8 @@ public class MySettingsController : FwController
 
         Hashtable itemdb = FormUtils.filter(item, save_fields);
 
-        if (Utils.toStr(itemdb["ui_theme"]) == "30")
-        {
+        if (itemdb["ui_theme"].toStr() == "30")
             itemdb["ui_mode"] = "10"; //for blue theme - enforce light color mode
-        }
 
         model.update(id, itemdb);
         fw.flash("record_updated", 1);

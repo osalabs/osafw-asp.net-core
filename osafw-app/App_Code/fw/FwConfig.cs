@@ -52,7 +52,7 @@ public class FwConfig
     // init default settings
     private static void initDefaults(HttpContext context, string hostname = "")
     {
-        settings = new Hashtable();
+        settings = [];
         HttpRequest req = context.Request;
 
         if (string.IsNullOrEmpty(hostname))
@@ -83,6 +83,9 @@ public class FwConfig
         settings["log"] = settings["site_root"] + $@"{path_separator}App_Data{path_separator}logs{path_separator}main.log";
         settings["log_max_size"] = 100 * 1024 * 1024; // 100 MB is max log size
         settings["tmp"] = Utils.getTmpDir(); // TODO not used? remove?
+
+        settings["lang"] ??= "en"; // default language
+        settings["is_lang_update"] ??= false; // default language update flag
 
         string http = "http://";
         if (context.GetServerVariable("HTTPS") == "on")
@@ -166,7 +169,7 @@ public class FwConfig
         if (string.IsNullOrEmpty(route_prefixes_rx))
         {
             // prepare regexp - escape all prefixes
-            ArrayList r = new();
+            ArrayList r = [];
             var route_prefixes = (Hashtable)settings["route_prefixes"];
             if (route_prefixes != null)
             {
@@ -206,5 +209,23 @@ public class FwConfig
         // default settings that depend on other settings
         if (!settings.ContainsKey("ASSETS_URL"))
             settings["ASSETS_URL"] = settings["ROOT_URL"] + "/assets";
+    }
+
+    /// <summary>
+    /// Get settings for the current environment with proper overrides
+    /// </summary>
+    /// <returns></returns>
+    public static Hashtable settingsForEnvironment(IConfiguration configuration)
+    {
+        var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "";
+        var appSettings = new Hashtable();
+        readSettingsSection(configuration.GetSection("appSettings"), ref appSettings);
+
+        // The “appSettings” itself might be nested inside the hash
+        var settings = (Hashtable)appSettings["appSettings"];
+        // Override by name if environment-based overrides are used
+        overrideSettingsByName(environment, ref settings);
+
+        return settings;
     }
 }

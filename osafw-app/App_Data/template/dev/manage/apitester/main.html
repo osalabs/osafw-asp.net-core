@@ -1,0 +1,81 @@
+<h1><~title></h1>
+<form id="apiForm">
+    <div class="mb-3 row">
+        <label class="col-form-label col-2" for="authKey">Auth Key (Bearer)</label>
+        <div class="col">
+            <input type="text" class="form-control" id="authKey" placeholder="Enter Auth Key">
+        </div>
+    </div>
+    <div class="mb-3 row">
+        <label class="col-form-label col-2" for="host">Host</label>
+        <div class="col">
+            <input type="text" class="form-control" id="host" value="<~GLOBAL[ROOT_DOMAIN]>" placeholder="Enter Host (e.g., https://api.example.com)">
+        </div>
+        <label class="col-form-label col-1" for="url">URL</label>
+        <div class="col">
+            <input type="text" class="form-control" id="url" value="/v1/users" placeholder="Enter URL (e.g., /v1/users)">
+        </div>
+    </div>
+    <div class="mb-3 row">
+        <label class="col-form-label col-2" for="method">Request Method</label>
+        <div class="col">
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" name="method" value="GET" id="methodGET" checked>
+              <label class="form-check-label" for="methodGET">GET</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" name="method" value="POST" id="methodPOST">
+              <label class="form-check-label" for="methodPOST">POST</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" name="method" value="PUT" id="methodPUT">
+              <label class="form-check-label" for="methodPUT">PUT</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" name="method" value="PATCH" id="methodPATCH">
+              <label class="form-check-label" for="methodPATCH">PATCH</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" name="method" value="DELETE" id="methodDELETE">
+              <label class="form-check-label" for="methodDELETE">DELETE</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" name="method" value="OPTIONS" id="methodOPTIONS">
+              <label class="form-check-label" for="methodOPTIONS">OPTIONS</label>
+            </div>
+        </div>
+    </div>
+
+    <div class="mb-3 row">
+        <label class="col-form-label col-2" for="query">Query Params</label>
+        <div class="col">
+            <input type="text" class="form-control" id="query" placeholder="Enter query parameters (e.g., aaa=bbb&ccc=ddd)">
+        </div>
+    </div>
+
+    <div class="mb-3" id="uploadSection" style="display: none;">
+        <div class="mb-3 row">
+            <label class="col-form-label col-2" for="contentType">Content Type</label>
+            <div class="col-4">
+                <select class="form-select" id="contentType">
+                    <option value="application/json">application/json</option>
+                    <option value="multipart/form-data">multipart/form-data</option>
+                </select>
+            </div>
+        </div>
+        <div class="mb-3 row">
+            <label class="col-form-label col-2" for="fileUpload">File Upload</label>
+            <div class="col">
+                <input type="file" class="form-control" id="fileUpload">
+            </div>
+        </div>
+
+        <label for="jsonBody" class="form-label mt-2">JSON Body</label>
+        <textarea class="form-control" id="jsonBody" rows="3" placeholder="Enter JSON body"></textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">Submit</button>
+</form>
+<div id="responseSection" class="mt-5" style="display: none;">
+    <h4>Response - <span id="responseStatus"></span></h4>    
+    <pre id="responseBody" class="p-2 bg-body" style="white-space: pre-wrap; word-wrap: break-word; "></pre>
+</div>
