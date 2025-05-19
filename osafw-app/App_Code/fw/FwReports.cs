@@ -22,23 +22,9 @@
 // Utils.cleanupTmpFiles();
 
 
-using Microsoft.Extensions.Options;
 using System;
 using System.Collections;
-using System.Collections.Generic;
-using static System.Net.Mime.MediaTypeNames;
-using System.IO;
-using System.Reflection.PortableExecutable;
-using DocumentFormat.OpenXml;
-using DocumentFormat.OpenXml.Packaging;
-using DocumentFormat.OpenXml.Spreadsheet;
-using DocumentFormat.OpenXml.Wordprocessing;
-using static System.Runtime.InteropServices.JavaScript.JSType;
-using DocumentFormat.OpenXml.Drawing;
-using DocumentFormat.OpenXml.VariantTypes;
 using System.Linq;
-using DocumentFormat.OpenXml.Drawing.Charts;
-using Microsoft.AspNetCore.Http;
 
 
 namespace osafw;
@@ -317,12 +303,10 @@ public class FwReports
                 {
                     var out_filename = Utils.isEmpty(render_options["xls_filename"]) ? report_code : (string)render_options["xls_filename"];
                     // TODO make headers as array of readable values, not the same as fields names
-                    var headers = ((Hashtable)list_rows[0]).Keys.OfType<string>().ToList();
-                    var fields = ((Hashtable)list_rows[0]).Keys.OfType<string>().ToList();
+                    var headers = (list_rows[0] as Hashtable).Keys.Cast<string>().ToArray();
+                    var fields = headers;
 
-                    var filepath = ConvUtils.parsePageNativeExcel(fw, string.Join(",", headers), string.Join(" ", fields), list_rows, out_filename);
-
-                    fw.fileResponse(filepath, report_code + ".xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "attachment");
+                    ConvUtils.exportNativeExcel(fw, headers, fields, list_rows, out_filename);
                     break;
                 }
             case "csv":
