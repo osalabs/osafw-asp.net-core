@@ -1,9 +1,5 @@
 # ParsePage
-ParsePage is a template parser engine, good for web development
-
-## Languages supported
-- [PHP](php)
-- [.NET](dot.net)
+ParsePage is a template parser engine, good for web development.
 
 ## Overview
 
