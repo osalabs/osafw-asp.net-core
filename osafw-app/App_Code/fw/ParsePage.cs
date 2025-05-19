@@ -127,11 +127,10 @@ namespace osafw;
 public class ParsePageOptions
 {
     public string TemplatesRoot { get; set; } = "";
-    public bool CheckFileModifications { get; set; } = false;
+    public bool IsCheckFileModifications { get; set; } = false;
     public string Lang { get; set; } = "en";
-    public bool LangUpdate { get; set; } = true;
-    public Func<Hashtable> GlobalsGetter { get; set; }
-    public Func<string, object> ConfigGetter { get; set; }
+    public bool IsLangUpdate { get; set; } = true;
+    public Func<Hashtable> GlobalsGetter { get; set; } = () => []; // by default - return empty hashtable
     public ISession Session { get; set; }
     public Action<LogLevel, string[]> Logger { get; set; }
 }
@@ -163,7 +162,6 @@ public class ParsePage
     private static object MarkdownPipeline;
 
     private readonly Func<Hashtable> globalsGetter;
-    private readonly Func<string, object> configGetter;
     private readonly ISession session;
     private readonly Action<LogLevel, string[]> loggerAction;
     // checks if template files modifies and reload them, depends on config's "log_level"
@@ -179,16 +177,15 @@ public class ParsePage
     private readonly MatchEvaluator lang_evaluator;
     private static readonly char path_separator = Path.DirectorySeparatorChar;
 
-    public ParsePage(ParsePageOptions? options = null)
+    public ParsePage(ParsePageOptions options = null)
     {
         if (options != null)
         {
             TMPL_PATH = options.TemplatesRoot;
-            is_check_file_modifications = options.CheckFileModifications;
+            is_check_file_modifications = options.IsCheckFileModifications;
             lang = options.Lang ?? "en";
-            lang_update = options.LangUpdate;
+            lang_update = options.IsLangUpdate;
             globalsGetter = options.GlobalsGetter;
-            configGetter = options.ConfigGetter;
             session = options.Session;
             loggerAction = options.Logger;
             if (LANG_CACHE[lang] == null && !string.IsNullOrEmpty(TMPL_PATH))
@@ -283,9 +280,9 @@ public class ParsePage
                         inline_tpl = get_inline_tpl(ref page_orig, ref tag, ref tag_full);
 
                     if (attrs.ContainsKey("session"))
-                        tag_value = hfvalue(tag, session ?? []);
+                        tag_value = hfvalue(tag, session != null ? session : new Hashtable());
                     else if (attrs.ContainsKey("global"))
-                        tag_value = hfvalue(tag, globalsGetter != null ? globalsGetter() : []);
+                        tag_value = hfvalue(tag, globalsGetter());
                     else
                         tag_value = hfvalue(tag, hf, parent_hf);
                 }
@@ -522,12 +519,12 @@ public class ParsePage
 
                 if (parts0 == "GLOBAL")
                 {
-                    ptr = globalsGetter != null ? globalsGetter() : [];
+                    ptr = globalsGetter();
                     start_pos = 1;
                 }
                 else if (parts0 == "SESSION")
                 {
-                    ptr = session ?? [];
+                    ptr = session != null ? session : new Hashtable();
                     start_pos = 1;
                 }
                 else if (parts0 == "PARSEPAGE.TOP")
@@ -606,7 +603,7 @@ public class ParsePage
             {
                 // special name tags - ROOT_URL and ROOT_DOMAIN - hardcoded here because of too frequent usage in the site
                 if (tag == "ROOT_URL" || tag == "ROOT_DOMAIN")
-                    tag_value = configGetter != null ? configGetter(tag) : "";
+                    tag_value = globalsGetter()[tag];
                 else if (hashtable.ContainsKey(tag))
                     tag_value = hashtable[tag];
                 else
@@ -620,10 +617,8 @@ public class ParsePage
                 if (!string.IsNullOrEmpty(value))
                     tag_value = value;
             }
-            else if (tag == "ROOT_URL")
-                tag_value = configGetter != null ? configGetter("ROOT_URL") : "";
-            else if (tag == "ROOT_DOMAIN")
-                tag_value = configGetter != null ? configGetter("ROOT_DOMAIN") : "";
+            else if (tag == "ROOT_URL" || tag == "ROOT_DOMAIN")
+                tag_value = globalsGetter()[tag];
             else
                 is_found_last_hfvalue = false;
         }

@@ -58,7 +58,7 @@ public class FwKeysXmlRepository : IXmlRepository
 
             // Try to see if a row with the same key id already exists:
             var where = new Hashtable { { "itype", ITYPE_DATA_PROTECTION_KEY }, { "iname", keyId } };
-            var is_exists = Utils.toBool(db.value(table_name, where, "1"));
+            var is_exists = db.value(table_name, where, "1").toBool();
             if (is_exists)
             {
                 // Update existing row

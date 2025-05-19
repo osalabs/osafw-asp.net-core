@@ -636,8 +636,7 @@ public class Utils
         fw.response.Headers.ContentDisposition = $"attachment; filename=\"{filename}\"";
 
         //output headers
-        ParsePage parser = new(fw);
-        var filedata = parser.parse_page(tpl_dir, "xls_head.html", ps);
+        var filedata = fw.parsePage(tpl_dir, "xls_head.html", ps);
         fw.responseWrite(filedata);
 
         //output rows in chunks to save memory and keep connection alive
@@ -663,7 +662,7 @@ public class Utils
             //write to output every 10000 rows
             if (buffer.Count >= 10000)
             {
-                filedata = parser.parse_page(tpl_dir, "xls_rows.html", psbuffer);
+                filedata = fw.parsePage(tpl_dir, "xls_rows.html", psbuffer);
                 fw.responseWrite(filedata);
                 buffer.Clear();
             }
@@ -672,18 +671,18 @@ public class Utils
         //output if something left
         if (buffer.Count > 0)
         {
-            filedata = parser.parse_page(tpl_dir, "xls_rows.html", psbuffer);
+            filedata = fw.parsePage(tpl_dir, "xls_rows.html", psbuffer);
             fw.responseWrite(filedata);
         }
 
         //output footer
-        filedata = parser.parse_page(tpl_dir, "xls_foot.html", ps);
+        filedata = fw.parsePage(tpl_dir, "xls_foot.html", ps);
         fw.responseWrite(filedata);
 
         //simpler but uses more memory and for large results browser might give up waiting results from connection
         //ParsePage parser = new(fw);
         //string tpl_dir = "/common/list/export";
-        //string page = parser.parse_page(tpl_dir, "xls.html", ps);
+        //string page = fw.parsePage(tpl_dir, "xls.html", ps);
         //await HttpResponseWritingExtensions.WriteAsync(fw.response, page);
     }
 

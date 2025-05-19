@@ -84,6 +84,9 @@ public class FwConfig
         settings["log_max_size"] = 100 * 1024 * 1024; // 100 MB is max log size
         settings["tmp"] = Utils.getTmpDir(); // TODO not used? remove?
 
+        settings["lang"] ??= "en"; // default language
+        settings["is_lang_update"] ??= false; // default language update flag
+
         string http = "http://";
         if (context.GetServerVariable("HTTPS") == "on")
             http = "https://";
