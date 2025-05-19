@@ -95,6 +95,8 @@ Generally ParsePage called as following (depending on language syntax will diffe
 
 `parse_page(BASE_DIR, PAGE_TPL_FILE, PS, [OUTPUT_FILENAME])`
 
+There is also a helper `parse_json(PS)` which returns a JSON string representation of the passed hashtable.
+
 where:
 - `BASE_DIR` - directory (relative to /template) with sub-templates for current page
 - `PAGE_TPL_FILE` - path (relative to /template) to main page template/layout used for current page
@@ -117,6 +119,8 @@ Tags in templates should be in `<~tag_name [optional attributes]>` format.
     - `tag_name.ext` - will look for `tag_name.ext` in `BASE_DIR`
     - `./tag_name` - (relative path) will look for `tag_name.html` in directory relative to currently parsed template file (see samples)
     - `/subdir/tag_name` - (absolute path) will look for `/subdir/tag_name.html` relative to `/template` directory
+    - `subfolder/*.html` - include all html files from a folder and parse them as a single template
+    - `subfolder/*.*` - include all files from a folder
 
 Note, CSRF shield integrated - all vars escaped, if var shouldn't be escaped use `noescape` attr: `<~raw_variable noescape>`
 
@@ -288,31 +292,45 @@ rows.html template file:
 ```
   
 
-- `parent` - this tag need to be read from paren't PS var, not in current PS hashtable (usually used inside `repeat` sub-templates), example:
+- `parent` - this tag needs to be read from parent's PS var, not from current PS hashtable (usually used inside `repeat` sub-templates), example:
 ```
      <~rows repeat inline>
-       <~var_in_rows> <~var_in_parent_ps parent>      
+       <~var_in_rows> <~var_in_parent_ps parent>
      </~rows>
 ```
 
-- `select="var"` - this tag tells parser to load file with tag name and use it as "value|display" for `<select>` html tag, example:
+`PARSEPAGE.TOP` and `PARSEPAGE.PARENT` can be used in tag expressions to access values from the top-most or parent hashtables directly:
+```
+  <~PARSEPAGE.TOP[user][id]>
+  <~some_subtag sub="child" inline>
+    Parent name: <~PARSEPAGE.PARENT[name]>
+  </~some_subtag>
+```
+
+`select="var"` - load a file and use it as `value|display` list for `<select>` options. If `multi` attribute is used parser splits selected values by delimiter (comma by default) so several options can be pre-selected.
 ```
      <select name="item[fruit]">
        <option value=""> - select a fruit -</option>
        <~./fruits.sel select="fruit">
      </select>
-     
+
+     <!-- multi-select example -->
+     <select name="item[cities]" multiple>
+       <~./cities.sel select="cities" multi=",">
+     </select>
+
      and file fruits.sel contains:
      10|Apple
      20|Cherry
      30|Grape
-     
-     if, for example, PS contains 'fruit'=>10, then Apple will be selected by default.
+
+     if PS contains 'fruit'=>10 then Apple will be selected by default.
 ```
 
 - `radio="var" name="YYY" [delim="ZZZ"]` - this tag tell parser to load file and use it as value|display for <input type=radio> html tags, example: `<~fradio.sel radio="fradio" name="item[fradio]" delim="&nbsp;">`
 - `selvalue="var"` - display value (fetched from the tag name file) for the var (example: to display 'select' and 'radio' values in List view), example: `<~fcombo.sel selvalue="fcombo">`
   - **Note**, it doesn't work for direct values, you can't write `<~fcombo.sel selvalue="10">`. Instead put 10 into PS var and use var name.
+- `nolang` - do not parse `\`language strings\`` inside the included file or inline template (useful for `.js` files)
 
 <table>
   <thead>
@@ -348,6 +366,7 @@ Cherry
 - `number_format` - formats number, examples:
   - `<~tag number_format>` - for 123456.789 outputs 123,456.79
   - `<~tag number_format="1" nfthousands="">` - for 123456.789 outputs 123456.8 (no comma)
+- `currency` - formats number as currency string
 - `date` - will format tag value as date, format depends on language: [PHP](http://php.net/manual/en/function.date.php), [ASP.NET](https://docs.microsoft.com/en-us/dotnet/standard/base-types/custom-date-and-time-format-strings)
   - `<~tag date>` or `<~tag date="d M Y H:i">`
   - however support several cross-language values:
@@ -368,12 +387,12 @@ Cherry
   - `<~tag default="none">`
 - `urlencode` - encode value for URLs
 - `json` (was `var2js`) - ouput variable as JSON string
-- `markdown` - convert markdown text to html using appropriate library for the language (ASP.NET - CommonMark.NET). Note: may wrap tag with <p>
+- `markdown` - convert markdown text to html using the [Markdig](https://github.com/lunet-io/markdig) library on ASP.NET. Note: may wrap tag with `<p>`
 - `noparse` - doesn't parse file and just include file by tag path as is, ignores all other attrs except `if`
 
 
 - `<~session[var]>` - this tag is a SESSION variable, not in PS hashtable (for PHP it's $_SESSION, for ASP.NET it's current context's HttpSessionState object)
-- `<~global[var]>` - this tag is a global var, not in PS hashtable (for PHP it's $_GLOBALS, for ASP.NET it depends on framework global storage implementation)
+- `<~global[var]>` - this tag is a global var, not in PS hashtable (for PHP it's $_GLOBALS, for ASP.NET it depends on framework global storage implementation). Special globals `ROOT_URL` and `ROOT_DOMAIN` are always available.
 
 ### Commenting tags
 
@@ -395,6 +414,8 @@ You need to create these files and fill with replacements in this format:
   english string === string in another language
 ```
 Default lanugage is English, so en.txt doesn't need be created.
+
+Note that `.js` template files are not parsed for backtick language strings automatically.
 
 For example, you have a template:
 ```
