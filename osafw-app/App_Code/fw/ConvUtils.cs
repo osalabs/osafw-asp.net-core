@@ -1,7 +1,13 @@
-﻿using System;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Spreadsheet;
+using DocumentFormat.OpenXml;
+using Microsoft.AspNetCore.Http;
+using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
+using System.Linq;
 
 // see also http://stackoverflow.com/questions/1331926/calling-wkhtmltopdf-to-generate-pdf-from-html/1698839#1698839
 
@@ -227,5 +233,200 @@ public class ConvUtils
         html_data = html_data.Replace(((char)(153)).ToString(), "<sup><small>TM</small></sup>");
         html_data = html_data.Replace(((char)(174)).ToString(), "<sup><small>R</small></sup>");
         return html_data;
+    }
+
+    public static Dictionary<string, int> GetMaxCharacterWidth(ArrayList rows, List<string> headers)
+    {
+        var maxColWidth = new Dictionary<string, int>();
+
+        foreach (string header in headers)
+        {
+            var cell = header;
+            var cellValue = header;
+
+            maxColWidth.Add(cell, cell.Length < 10 ? 10 : cell.Length);
+        }
+
+        foreach (Hashtable cells in rows)
+        {
+            foreach (string cell in cells.Keys)
+            {
+                var cellValue = Utils.toStr(cells[cell]);
+                var cellTextLength = cellValue.Length;
+
+                if (!maxColWidth.ContainsKey(cell))
+                {
+                    maxColWidth.Add(cell, cell.Length == 0 ? 50 : cell.Length);
+                }
+
+                if (cellTextLength > maxColWidth[cell])
+                {
+                    maxColWidth[cell] = cellTextLength;
+                }
+            }
+        }
+
+        return maxColWidth;
+    }
+
+    public static DocumentFormat.OpenXml.Spreadsheet.Columns AutoSizeCells(ArrayList rows, List<string> headers)
+    {
+        var maxColWidth = GetMaxCharacterWidth(rows, headers);
+        var columns = new DocumentFormat.OpenXml.Spreadsheet.Columns();
+        double maxWidth = 10;
+
+        UInt32Value iter = 1;
+        foreach (string item in headers)
+        {
+            var val = maxColWidth[item];
+            var width = ((val * maxWidth + 5) / maxWidth * 256) / 256;
+            DocumentFormat.OpenXml.Spreadsheet.Column col = new DocumentFormat.OpenXml.Spreadsheet.Column();
+            col.BestFit = true;
+            col.Min = iter;
+            col.Max = iter;
+            col.CustomWidth = true;
+            col.Width = (double)width;
+            columns.Append(col);
+            iter += 1;
+        }
+        return columns;
+    }
+
+    public static Stylesheet GetStylesheet()
+    {
+        var _Fonts = new DocumentFormat.OpenXml.Spreadsheet.Fonts();
+        _Fonts.Append(new DocumentFormat.OpenXml.Spreadsheet.Font());
+        _Fonts.Append(new DocumentFormat.OpenXml.Spreadsheet.Font(new DocumentFormat.OpenXml.Spreadsheet.Bold()));
+        _Fonts.Append(new DocumentFormat.OpenXml.Spreadsheet.Font(new DocumentFormat.OpenXml.Spreadsheet.Bold()));
+
+        var _Fills = new DocumentFormat.OpenXml.Spreadsheet.Fills(new DocumentFormat.OpenXml.Spreadsheet.Fill());
+        var _Borders = new DocumentFormat.OpenXml.Spreadsheet.Borders(new DocumentFormat.OpenXml.Spreadsheet.Border());
+        _Borders.Append(new DocumentFormat.OpenXml.Spreadsheet.Border());
+
+        var border = new DocumentFormat.OpenXml.Spreadsheet.Border();
+        var topBorder = new DocumentFormat.OpenXml.Spreadsheet.TopBorder();
+        topBorder.Style = BorderStyleValues.Medium;
+        border.TopBorder = topBorder;
+        _Borders.Append(border);
+
+        var _CellFormats = new DocumentFormat.OpenXml.Spreadsheet.CellFormats();
+        _CellFormats.Append(new DocumentFormat.OpenXml.Spreadsheet.CellFormat());
+
+        var cellFormat = new DocumentFormat.OpenXml.Spreadsheet.CellFormat();
+        cellFormat.FontId = 1;
+        cellFormat.FillId = 0;
+        cellFormat.BorderId = 1;
+        _CellFormats.Append(cellFormat); // header
+
+        cellFormat = new DocumentFormat.OpenXml.Spreadsheet.CellFormat();
+        cellFormat.FontId = 1;
+        cellFormat.FillId = 0;
+        cellFormat.BorderId = 2;
+        _CellFormats.Append(cellFormat); // footer
+
+        return new Stylesheet(_Fonts, _Fills, _Borders, _CellFormats);
+    }
+
+
+    /// <summary>
+    /// Create xls file form hashtable where key is sheet name and value is rows array of hashtables with table data
+    /// * <param name="xls_export_headers">XLS headers row, comma-separated format</param>
+    /// * <param name = "xls_export_fields" > empty, * or Utils.qw format</param>
+    /// * <param name = "rows" > DB array</param>
+    /// </summary>
+    /// <param name="sheetsData"></param>
+    public static string parsePageNativeExcel(FW fw, string xls_export_headers, string xls_export_fields, ArrayList rows, string out_filename = "")
+    {
+        SpreadsheetDocument spreadSheet = null;
+        var columns = new List<string>();
+
+        var fileName = System.IO.Path.GetTempPath() + Utils.uuid() + ".xlsx";
+
+        try
+        {
+            // create the workbook
+            spreadSheet = SpreadsheetDocument.Create(fileName, SpreadsheetDocumentType.Workbook);
+            spreadSheet.AddWorkbookPart();
+            spreadSheet.WorkbookPart.Workbook = new Workbook();
+            // create the worksheet to workbook relation
+            Sheets sheets = spreadSheet.WorkbookPart.Workbook.AppendChild<Sheets>(new Sheets());
+
+            var sheetsOrder = new ArrayList();
+            sheetsOrder.Add("sheet1");
+
+            UInt32Value sheetNumber = 0;
+            foreach (string sheetName in sheetsOrder)
+            {
+                List<String> headers = xls_export_headers.Split(',').ToList<string>();
+                List<string> fields = xls_export_fields.Split(' ').ToList<string>();
+                sheetNumber += 1;
+
+                var _SheetData = new SheetData();
+                var _WorksheetPart = spreadSheet.WorkbookPart.AddNewPart<WorksheetPart>();
+
+                Sheet s = new Sheet();
+                s.Id = spreadSheet.WorkbookPart.GetIdOfPart(_WorksheetPart);
+                s.SheetId = sheetNumber;
+                s.Name = sheetName;
+                sheets.AppendChild(s);
+
+                var headerRow = new Row();
+                var i = 0;
+                // create header row
+                foreach (string ColumnName in fields)
+                {
+                    columns.Add(ColumnName);
+                    var cell = new Cell();
+                    cell.StyleIndex = 1;
+                    cell.DataType = CellValues.String;
+                    cell.CellValue = new CellValue(headers[i]);
+                    headerRow.AppendChild(cell);
+                    i++;
+                }
+                _SheetData.AppendChild(headerRow);
+
+                // create data rows
+                foreach (Hashtable row in rows)
+                {
+                    var newRow = new Row();
+                    foreach (string col in fields)
+                    {
+                        var cell = new Cell();
+                        cell.StyleIndex = 0;
+                        // Set style index 2 for bold text, can be using to highlight totals, etc
+                        //    cell.StyleIndex = 2;
+                        cell.DataType = CellValues.String;
+                        if (row.ContainsKey(col))
+                        {
+                            cell.CellValue = new CellValue(Utils.toStr(row[col]));
+                        }
+
+                        newRow.AppendChild(cell);
+                    }
+                    _SheetData.AppendChild(newRow);
+                }
+
+                _WorksheetPart.Worksheet = new Worksheet();
+                _WorksheetPart.Worksheet.Append(AutoSizeCells(rows, fields));
+                _WorksheetPart.Worksheet.Append(_SheetData);
+            }
+
+            var _StylePart = spreadSheet.WorkbookPart.AddNewPart<WorkbookStylesPart>();
+            _StylePart.Stylesheet = GetStylesheet();
+            _StylePart.Stylesheet.Save();
+
+            // save workbook
+            spreadSheet.WorkbookPart.Workbook.Save();
+        }
+        catch (Exception ex)
+        {
+            throw new UserException(ex.Message);
+        }
+        finally
+        {
+            spreadSheet.Dispose();
+        }
+
+        return fileName;
     }
 }
