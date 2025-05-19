@@ -116,7 +116,6 @@ public class UploadUtils
     // perform file upload for module_name/id and set filepath where it's stored, return true - if upload successful
     public static bool uploadFile(FW fw, string module_name, int id, out string filepath, string input_name = "file1", bool is_skip_check = false)
     {
-        bool result = false;
         IFormFile file = fw.request.Form.Files[input_name];
 
         filepath = uploadFileSave(fw, module_name, id, file, is_skip_check);

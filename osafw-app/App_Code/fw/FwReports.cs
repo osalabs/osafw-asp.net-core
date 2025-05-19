@@ -321,8 +321,7 @@ public class FwReports
                         if (ps.ContainsKey("_layout"))
                             layout = (string)ps["_layout"];
 
-                        ParsePage parser_obj = new(fw);
-                        result = parser_obj.parse_page(base_dir, layout, ps);
+                        result = fw.parsePage(base_dir, layout, ps);
 
                         if (render_to != TO_STRING)
                             //this is render to file

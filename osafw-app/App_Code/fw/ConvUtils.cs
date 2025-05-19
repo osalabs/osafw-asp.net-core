@@ -23,9 +23,8 @@ public class ConvUtils
             options["disposition"] = "attachment";
         }
 
-        ParsePage parser = new(fw);
         ps["IS_PRINT_MODE"] = true;
-        string html_data = parser.parse_page(bdir, tpl_name, ps);
+        string html_data = fw.parsePage(bdir, tpl_name, ps);
 
         html_data = _replace_specials(html_data);
 
@@ -101,8 +100,7 @@ public class ConvUtils
     // if out_filename cotains "\" or "/" - save pdf file to this path
     public static string parsePageDoc(FW fw, ref string bdir, ref string tpl_name, ref Hashtable ps, string out_filename = "")
     {
-        ParsePage parser = new(fw);
-        string html_data = parser.parse_page(bdir, tpl_name, ps);
+        string html_data = fw.parsePage(bdir, tpl_name, ps);
 
         html_data = _replace_specials(html_data);
 
@@ -162,9 +160,8 @@ public class ConvUtils
     // if out_filename cotains "\" or "/" - save pdf file to this path
     public static string parsePageExcel(FW fw, ref string bdir, ref string tpl_name, ref Hashtable ps, string out_filename = "")
     {
-        ParsePage parser = new(fw);
         ps["IS_PRINT_MODE"] = true;
-        string html_data = parser.parse_page(bdir, tpl_name, ps);
+        string html_data = fw.parsePage(bdir, tpl_name, ps);
 
         html_data = _replace_specials(html_data);
 
@@ -200,9 +197,8 @@ public class ConvUtils
     // simple version of parse_page_xls - i.e. it's usual html file, just output as xls (Excel opens it successfully, however displays a warning)
     public static string parsePageExcelSimple(FW fw, string bdir, string tpl_name, Hashtable ps, string out_filename = "")
     {
-        ParsePage parser = new(fw);
         ps["IS_PRINT_MODE"] = true;
-        string html_data = parser.parse_page(bdir, tpl_name, ps);
+        string html_data = fw.parsePage(bdir, tpl_name, ps);
 
         html_data = _replace_specials(html_data);
 

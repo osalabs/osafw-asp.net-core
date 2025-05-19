@@ -111,6 +111,7 @@ public class FW : IDisposable
 
     private readonly Hashtable models = [];
     public FwCache cache = new(); // request level cache
+    private ParsePage pp_instance; // for parsePage()
 
     public Hashtable FORM;
     public Hashtable postedJson; // parsed JSON from request body
@@ -1166,34 +1167,48 @@ public class FW : IDisposable
         }
         basedir = basedir.ToLower(); // make sure it's lower case
 
-        _parser(basedir, layout, ps);
-    }
-
-    // - show page from template  /controller/action = parser('/controller/action/', $layout, $ps)
-    public void parser(string bdir, string tpl_name, Hashtable ps)
-    {
-        ps["_layout"] = tpl_name;
-        parser(bdir, ps);
-    }
-
-    // actually uses ParsePage
-    public void _parser(string bdir, string tpl_name, Hashtable ps)
-    {
-        logger(LogLevel.DEBUG, "parsing page bdir=", bdir, ", tpl=", tpl_name);
-        ParsePage parser_obj = new(this);
-        string page = parser_obj.parse_page(bdir, tpl_name, ps);
+        string page = parsePage(basedir, layout, ps);
         // no need to set content type here, as it's set in Startup.cs
         //if (!this.response.HasStarted) response.ContentType = "text/html; charset=utf-8";
         responseWrite(page);
     }
 
+    // - show page from template  /controller/action = parser('/controller/action/', $layout, $ps)
+    public void parser(string basedir, string layout, Hashtable ps)
+    {
+        ps["_layout"] = layout;
+        parser(basedir, ps);
+    }
+
     public void parserJson(object ps)
     {
-        ParsePage parser_obj = new(this);
-        string page = parser_obj.parse_json(ps);
+        string page = parsePageInstance().parse_json(ps);
         //if (!this.response.HasStarted) response.Headers.Add("Content-type", "application/json; charset=utf-8");
         response.ContentType = "application/json; charset=utf-8";
         responseWrite(page);
+    }
+
+    public ParsePage parsePageInstance()
+    {
+        // if pp_instance not yet set - instantiate
+        pp_instance ??= new ParsePage(new ParsePageOptions
+        {
+            TemplatesRoot = config("template").toStr(),
+            IsCheckFileModifications = (LogLevel)config("log_level") >= LogLevel.DEBUG,
+            Lang = G["lang"].toStr(),
+            IsLangUpdate = config("is_lang_update").toBool(),
+            GlobalsGetter = () => G,
+            Session = context.Session,
+            Logger = (level, args) => logger(level, args)
+        });
+        return pp_instance;
+    }
+
+    public string parsePage(string basedir, string layout, Hashtable ps)
+    {
+        logger(LogLevel.DEBUG, "parsing page bdir=", basedir, ", tpl=", layout);
+        ParsePage parser_obj = parsePageInstance();
+        return parser_obj.parse_page(basedir, layout, ps);
     }
 
     // perform redirect
@@ -1606,9 +1621,8 @@ public class FW : IDisposable
     // shortcut for send_email from template from the /emails template dir
     public bool sendEmailTpl(string mail_to, string tpl, Hashtable hf, Hashtable filenames = null, ArrayList aCC = null, string reply_to = "", Hashtable options = null)
     {
-        ParsePage parser_obj = new(this);
         Regex r = new(@"[\n\r]+");
-        string subj_body = parser_obj.parse_page("/emails", tpl, hf);
+        string subj_body = parsePage("/emails", tpl, hf);
         if (subj_body.Length == 0)
             throw new ApplicationException("No email template defined [" + tpl + "]");
         string[] arr = r.Split(subj_body, 2);
