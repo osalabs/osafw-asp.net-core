@@ -150,7 +150,10 @@ public class ParsePage
     private static System.Reflection.MethodInfo mMarkdownToHtml;
     private static object MarkdownPipeline;
 
-    private readonly FW fw;
+    private readonly Func<Hashtable>? globalsGetter;
+    private readonly Func<string, object>? configGetter;
+    private readonly ISession? session;
+    private readonly Action<LogLevel, string[]>? loggerAction;
     // checks if template files modifies and reload them, depends on config's "log_level"
     // true if level at least DEBUG, false for production as on production there are no tempalte file changes (unless during update, which leads to restart App anyway)
     private readonly bool is_check_file_modifications = false;
@@ -164,24 +167,20 @@ public class ParsePage
     private readonly MatchEvaluator lang_evaluator;
     private static readonly char path_separator = Path.DirectorySeparatorChar;
 
-    public ParsePage(FW fw)
+    public ParsePage(ParsePageOptions? options = null)
     {
-        this.fw = fw;
-        if (fw != null)
+        if (options != null)
         {
-            TMPL_PATH = (string)fw.config("template");
-            is_check_file_modifications = (LogLevel)fw.config("log_level") >= LogLevel.DEBUG;
-            lang = (string)fw.G["lang"];
-            if (string.IsNullOrEmpty(lang))
-                lang = (string)fw.config("lang");
-            if (string.IsNullOrEmpty(lang))
-                lang = "en";
-
-            // load cache for all current lang matches
-            if (LANG_CACHE[lang] == null)
+            TMPL_PATH = options.TemplatesRoot;
+            is_check_file_modifications = options.CheckFileModifications;
+            lang = options.Lang ?? "en";
+            lang_update = options.LangUpdate;
+            globalsGetter = options.GlobalsGetter;
+            configGetter = options.ConfigGetter;
+            session = options.Session;
+            loggerAction = options.Logger;
+            if (LANG_CACHE[lang] == null && !string.IsNullOrEmpty(TMPL_PATH))
                 load_lang();
-
-            lang_update = fw.config("is_lang_update").toBool();
         }
         lang_evaluator = new MatchEvaluator(this.lang_replacer);
     }
@@ -272,9 +271,9 @@ public class ParsePage
                         inline_tpl = get_inline_tpl(ref page_orig, ref tag, ref tag_full);
 
                     if (attrs.ContainsKey("session"))
-                        tag_value = hfvalue(tag, fw.context.Session);
+                        tag_value = hfvalue(tag, session ?? []);
                     else if (attrs.ContainsKey("global"))
-                        tag_value = hfvalue(tag, fw.G);
+                        tag_value = hfvalue(tag, globalsGetter != null ? globalsGetter() : []);
                     else
                         tag_value = hfvalue(tag, hf, parent_hf);
                 }
@@ -511,12 +510,12 @@ public class ParsePage
 
                 if (parts0 == "GLOBAL")
                 {
-                    ptr = fw.G;
+                    ptr = globalsGetter != null ? globalsGetter() : [];
                     start_pos = 1;
                 }
                 else if (parts0 == "SESSION")
                 {
-                    ptr = fw.context.Session;
+                    ptr = session ?? [];
                     start_pos = 1;
                 }
                 else if (parts0 == "PARSEPAGE.TOP")
@@ -595,7 +594,7 @@ public class ParsePage
             {
                 // special name tags - ROOT_URL and ROOT_DOMAIN - hardcoded here because of too frequent usage in the site
                 if (tag == "ROOT_URL" || tag == "ROOT_DOMAIN")
-                    tag_value = fw.config(tag);
+                    tag_value = configGetter != null ? configGetter(tag) : "";
                 else if (hashtable.ContainsKey(tag))
                     tag_value = hashtable[tag];
                 else
@@ -610,9 +609,9 @@ public class ParsePage
                     tag_value = value;
             }
             else if (tag == "ROOT_URL")
-                tag_value = fw.config("ROOT_URL");
+                tag_value = configGetter != null ? configGetter("ROOT_URL") : "";
             else if (tag == "ROOT_DOMAIN")
-                tag_value = fw.config("ROOT_DOMAIN");
+                tag_value = configGetter != null ? configGetter("ROOT_DOMAIN") : "";
             else
                 is_found_last_hfvalue = false;
         }
@@ -1402,6 +1401,6 @@ public class ParsePage
 
     private void logger(LogLevel level, params string[] args)
     {
-        fw?.logger(level, args);
+        loggerAction?.Invoke(level, args);
     }
 }

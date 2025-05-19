@@ -73,7 +73,16 @@ public class DevManageController : FwController
 
         FwCache.clear();
         db.clearSchemaCache();
-        var pp = new ParsePage(fw);
+        var pp = new ParsePage(new ParsePageOptions {
+            TemplatesRoot = (string)fw.config("template"),
+            CheckFileModifications = (LogLevel)fw.config("log_level") >= LogLevel.DEBUG,
+            Lang = ((string?)fw.G["lang"]) ?? (string)fw.config("lang") ?? "en",
+            LangUpdate = fw.config("is_lang_update").toBool(),
+            GlobalsGetter = () => fw.G,
+            ConfigGetter = fw.config,
+            Session = fw.context.Session,
+            Logger = (level, args) => fw.logger(level, args)
+        });
         pp.clear_cache();
 
         fw.redirect(base_url);
@@ -300,7 +309,16 @@ public class DevManageController : FwController
         {
             ["fields"] = fields
         };
-        parser = new ParsePage(fw);
+        parser = new ParsePage(new ParsePageOptions {
+            TemplatesRoot = (string)fw.config("template"),
+            CheckFileModifications = (LogLevel)fw.config("log_level") >= LogLevel.DEBUG,
+            Lang = ((string?)fw.G["lang"]) ?? (string)fw.config("lang") ?? "en",
+            LangUpdate = fw.config("is_lang_update").toBool(),
+            GlobalsGetter = () => fw.G,
+            ConfigGetter = fw.config,
+            Session = fw.context.Session,
+            Logger = (level, args) => fw.logger(level, args)
+        });
         content = parser.parse_page(tpl_to + "/show", "/common/form/showform/extract/form.html", ps);
         content = Regex.Replace(content, @"^(?:[\t ]*(?:\r?\n|\r))+", "", RegexOptions.Multiline); // remove empty lines
         content = Regex.Replace(content, "&lt;~(.+?)&gt;", "<~$1>"); // unescape tags

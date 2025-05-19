@@ -1180,7 +1180,16 @@ public class FW : IDisposable
     public void _parser(string bdir, string tpl_name, Hashtable ps)
     {
         logger(LogLevel.DEBUG, "parsing page bdir=", bdir, ", tpl=", tpl_name);
-        ParsePage parser_obj = new(this);
+        ParsePage parser_obj = new(new ParsePageOptions {
+            TemplatesRoot = (string)config("template"),
+            CheckFileModifications = (LogLevel)config("log_level") >= LogLevel.DEBUG,
+            Lang = ((string?)G["lang"]) ?? (string)config("lang") ?? "en",
+            LangUpdate = config("is_lang_update").toBool(),
+            GlobalsGetter = () => G,
+            ConfigGetter = config,
+            Session = context.Session,
+            Logger = (level, args) => logger(level, args)
+        });
         string page = parser_obj.parse_page(bdir, tpl_name, ps);
         // no need to set content type here, as it's set in Startup.cs
         //if (!this.response.HasStarted) response.ContentType = "text/html; charset=utf-8";
@@ -1189,7 +1198,16 @@ public class FW : IDisposable
 
     public void parserJson(object ps)
     {
-        ParsePage parser_obj = new(this);
+        ParsePage parser_obj = new(new ParsePageOptions {
+            TemplatesRoot = (string)config("template"),
+            CheckFileModifications = (LogLevel)config("log_level") >= LogLevel.DEBUG,
+            Lang = ((string?)G["lang"]) ?? (string)config("lang") ?? "en",
+            LangUpdate = config("is_lang_update").toBool(),
+            GlobalsGetter = () => G,
+            ConfigGetter = config,
+            Session = context.Session,
+            Logger = (level, args) => logger(level, args)
+        });
         string page = parser_obj.parse_json(ps);
         //if (!this.response.HasStarted) response.Headers.Add("Content-type", "application/json; charset=utf-8");
         response.ContentType = "application/json; charset=utf-8";
@@ -1606,7 +1624,16 @@ public class FW : IDisposable
     // shortcut for send_email from template from the /emails template dir
     public bool sendEmailTpl(string mail_to, string tpl, Hashtable hf, Hashtable filenames = null, ArrayList aCC = null, string reply_to = "", Hashtable options = null)
     {
-        ParsePage parser_obj = new(this);
+        ParsePage parser_obj = new(new ParsePageOptions {
+            TemplatesRoot = (string)config("template"),
+            CheckFileModifications = (LogLevel)config("log_level") >= LogLevel.DEBUG,
+            Lang = ((string?)G["lang"]) ?? (string)config("lang") ?? "en",
+            LangUpdate = config("is_lang_update").toBool(),
+            GlobalsGetter = () => G,
+            ConfigGetter = config,
+            Session = context.Session,
+            Logger = (level, args) => logger(level, args)
+        });
         Regex r = new(@"[\n\r]+");
         string subj_body = parser_obj.parse_page("/emails", tpl, hf);
         if (subj_body.Length == 0)
