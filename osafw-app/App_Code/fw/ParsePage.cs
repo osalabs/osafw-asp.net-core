@@ -124,6 +124,18 @@ using System.Web;
 
 namespace osafw;
 
+public class ParsePageOptions
+{
+    public string TemplatesRoot { get; set; } = "";
+    public bool CheckFileModifications { get; set; } = false;
+    public string Lang { get; set; } = "en";
+    public bool LangUpdate { get; set; } = true;
+    public Func<Hashtable> GlobalsGetter { get; set; }
+    public Func<string, object> ConfigGetter { get; set; }
+    public ISession Session { get; set; }
+    public Action<LogLevel, string[]> Logger { get; set; }
+}
+
 public class ParsePage
 {
     private static readonly Regex RX_NOTS = new(@"^(\S+)", RegexOptions.Compiled);
@@ -150,10 +162,10 @@ public class ParsePage
     private static System.Reflection.MethodInfo mMarkdownToHtml;
     private static object MarkdownPipeline;
 
-    private readonly Func<Hashtable>? globalsGetter;
-    private readonly Func<string, object>? configGetter;
-    private readonly ISession? session;
-    private readonly Action<LogLevel, string[]>? loggerAction;
+    private readonly Func<Hashtable> globalsGetter;
+    private readonly Func<string, object> configGetter;
+    private readonly ISession session;
+    private readonly Action<LogLevel, string[]> loggerAction;
     // checks if template files modifies and reload them, depends on config's "log_level"
     // true if level at least DEBUG, false for production as on production there are no tempalte file changes (unless during update, which leads to restart App anyway)
     private readonly bool is_check_file_modifications = false;
