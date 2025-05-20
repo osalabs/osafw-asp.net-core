@@ -1743,4 +1743,35 @@ public class Utils
         fw.response.Cookies.Delete(name);
     }
 
+    public static void prepareRowsHeaders(ArrayList rows, ArrayList headers)
+    {
+        if (rows.Count > 0)
+        {
+            if (headers.Count == 0)
+            {
+                var keys = ((Hashtable)rows[0]).Keys;
+                var fields = new string[keys.Count];
+                keys.CopyTo(fields, 0);
+                foreach (var key in fields)
+                    headers.Add(new Hashtable() { { "field_name", key } });
+            }
+
+            foreach (Hashtable row in rows)
+            {
+                ArrayList cols = [];
+                foreach (Hashtable hf in headers)
+                {
+                    var fieldname = hf["field_name"].ToString();
+                    cols.Add(new Hashtable()
+                    {
+                        {"row",row},
+                        {"field_name",fieldname},
+                        {"data",row[fieldname]}
+                    });
+                }
+                row["cols"] = cols;
+            }
+        }
+    }
+
 }
