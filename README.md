@@ -9,12 +9,18 @@ Created as simplified and lightweight alternative to other ASP.NET frameworks li
 - MVC-like
   - code, data, templates are split
   - code consists of: controllers, models, framework core and optional 3rd party libs
-  - uses [ParsePage template engine](https://github.com/osalabs/parsepage)
+- uses [ParsePage template engine](https://github.com/osalabs/parsepage) ([detailed docs](osafw-app/App_Data/template/README_ParsePage.md))
   - data stored by default in SQL Server database [using db.net](https://github.com/osalabs/db.net)
 - RESTful with some practical enhancements
 - integrated auth - simple flat access levels auth
-- UI based on [Bootstrap 5](http://getbootstrap.com) with minimal custom CSS and themes support - it's easy to customzie or apply your own theme
+ - UI based on [Bootstrap 5](http://getbootstrap.com) with minimal custom CSS and themes support - it's easy to customize or apply your own theme (see [README_THEMES](osafw-app/App_Data/README_THEMES))
 - use of well-known 3rd party libraries: [jQuery](http://jquery.com), [jQuery Form](https://github.com/malsup/form), jGrowl, markdown libs, etc...
+- dynamic controllers with JSON configuration (`FwDynamicController`) and Vue.js powered UI (`FwVueController`)
+- base API controller (`FwApiController`) for building REST APIs
+- attachments handling with optional Amazon S3 storage
+- auto database updates and environment self-tests (`FwUpdates`, `FwSelfTest`)
+- in-memory caching via `FwCache`
+- optional Entity Builder for quick scaffolding
 
 ## Demo
 http://demo.engineeredit.com/ - this is how it looks in action right after installation before customizations
@@ -29,14 +35,14 @@ http://demo.engineeredit.com/ - this is how it looks in action right after insta
 5. modify templates in `/osafw-app/App_Data/template`
 
 ### Deployment
-All the details can be found in MS docs https://docs.microsoft.com/en-us/aspnet/core/host-and-deploy/iis/?view=aspnetcore-6.0
+All the details can be found in the [Microsoft docs](https://learn.microsoft.com/aspnet/core/host-and-deploy/iis/?view=aspnetcore-8.0)
 Short summary how to deploy without VS publish (from clone git repo):
 1. on the server - install IIS and .NET Core Hosting Bundle
 2. install latest .NET 8 SDK to have `dotnet` CLI
 4. create website directory
   - make `git clone` from repo to website directory
-  - make `dotnet publish configuration Release` in the direcotry
-5. create website in IIS with root directory to `/bin/Release/net6/publish`
+  - make `dotnet publish --configuration Release` in the directory
+5. create website in IIS with root directory to `/bin/Release/net8.0/publish`
 6. set website's app pool to "No managed code" (so pool works like a proxy to app core)
 7. open your website address in browser
 8. create database and apply sql files in order:
@@ -66,6 +72,7 @@ Short summary how to deploy without VS publish (from clone git repo):
       /fonts
       /img
       /js
+      /lib           - assets built from libman.json
     /upload          - upload dir for public files
     /favicon.ico     - change to your favicon!
     /robots.txt      - default robots.txt (empty)
@@ -154,10 +161,19 @@ The following controller fields used above can be defined in controller's `init(
 - `Me.search_fields` - search fields, space-separated
 - `Me.list_view` - table/view to use in `getListRows()`, if empty model's `table_name` used
 
-### fw.config()
+### Additional Framework Components
+
+- **FwCache** – simple wrapper around `IMemoryCache` for application and request caching. Accessible in controllers and models via `fw.cache`
+- **FwUpdates** – applies SQL scripts from `/App_Data/sql/updates` automatically in development
+- **FwSelfTest** – runs configuration and controller tests to verify environment
+- **FwActivityLogs** – unified activity and change logging model. Can be used directly or via `fw.logActivity` helper
+- **FwApiController** – base class for building authenticated REST APIs
+- **Entity Builder** – text based definition to generate SQL and CRUD scaffolding
+
+### `FwConfig`
 
 Application configuration available via `fw.config([SettingName])`.
-Most of the global settings defined in `appsettings.json` `appSettings` section. But there are several caclulated settings:
+Most of the global settings are defined in `appsettings.json` `appSettings` section. But there are several calculated settings:
 
 |SettingName|Description|Example|
 |-------|-----------|-------|
@@ -169,10 +185,28 @@ Most of the global settings defined in `appsettings.json` `appSettings` section.
 |log|physical path to application log file|C:\inetpub\somesite\www\App_Data\logs\main.log|
 |tmp|physical path to the system tmp directory|C:\Windows\Temp|
 
-### config.json
+### config.json for Dynamic/Vue controllers
 
 In `FwDynamicController` controller behaviour defined by `/template/CONTROLLER/config.json`. Sample file can be fount at `/template/admin/demosdynamic/config.json`
 This config file allows to define/override several properties of the `FwController` (for example: as `model`, `save_fields`, `search_fields`, `list_view`,...) as well as define configuration of Show (`show_fields`) and ShowForm (`showform_fields`)  screens. Note `is_dynamic_show` and `is_dynamic_showform` should be set to true accordingly.
+
+Common config keys include:
+- `model` – main model name
+- `required_fields` – space separated required fields
+- `save_fields` and `save_fields_checkboxes` – fields saved from ShowForm
+- `form_new_defaults` – defaults for new item
+- `search_fields` – fields used for searching
+- `list_sortdef` and `list_sortmap` – default sorting
+- `related_field_name` – related id field
+- `list_view` – table or SQL used for listing
+- `is_dynamic_index` – enable dynamic list with `view_list_defaults` and `view_list_map`
+- `is_dynamic_index_edit` – allow inline editing (`list_edit`, `edit_list_defaults`)
+- `view_list_custom` – fields visible by default
+- `is_dynamic_show` and `is_dynamic_showform` – enable dynamic screens
+- `form_tabs` – optional tab definitions
+- `route_return` – action to redirect after save
+- `is_userlists` – enable UserLists support
+
 There are samples for the one `show_fields` or `showform_fields` element:
 
 ```json
@@ -234,7 +268,7 @@ Renders:
 |min|set input type="number" min attribute, for `showform_fields` only|0|
 |step|set input type="number" step attribute, for `showform_fields` only|0.1|
 |placeholder|set input's maxlength attribute, for `showform_fields` only|"Enter value here"|
-|autocomplete_url|type="autocomplete". Input will get data from `autocomplete_url?q=%QUERY` where %QUERY will be replaced with input value, for `showform_fields` only|/Admin/SomeLookup/(Autocompete)|
+|autocomplete_url|type="autocomplete". Input will get data from `autocomplete_url?q=%QUERY` where %QUERY will be replaced with input value, for `showform_fields` only|/Admin/SomeLookup/(Autocomplete)|
 |is_inline|type `radio` or `yesno`. If true - place all options in one line, for `showform_fields` only|true(default),false|
 |rows|set textarea rows attribute, for `showform_fields` only|5|
 |class|Class(es) added to the wrapping `div.form-row` |mb-2 - add bottom margin under the control block|
@@ -246,17 +280,27 @@ Renders:
 |help_text|Help text displayed as muted text under control block|"Minimum 8 letters and digits required"|
 |admin_url|For type="plaintext_link", controller url, final URL will be: "<~admin_url>/<~lookup_id>"|/Admin/SomeController|
 |lookup_id|to use with admin_url, if link to specific ID required|123|
+|lookup_table|name of DB table for lookup one value|demo_dicts|
+|lookup_field|field name from lookup table/model to display|iname|
+|lookup_key|key column for lookup_table|code|
+|lookup_params|additional params passed to lookup model methods|status=1|
+|validate|Simple validation codes: exists, isemail, isphone, isdate, isfloat|"exists isemail" - input value validated if such value already exists, validate if value is an email|
 |att_category|For type="att_edit", att category new upload will be related to|"general"(default)|
 |att_post_prefix|For type="att_edit", name prefix for the inputs with ids `att[<~id>]`|"att"(default)|
-|validate|Simple validation codes: exists, isemail, isphone, isdate, isfloat|"exists isemail" - input value validated if such value already exists, validate if value is an email|
-|append|to use with `FwVueController`, array of buttons to append to the cell in list edit mode|[{
-                        "event": "add",
-                        "class": "",
-                        "icon": "bi bi-plus",
-                        "label": "",
-                        "hint": "Add New"
-                      }]|
+|conv|value converter for display/save (e.g. time_from_seconds)|time_from_seconds|
+|default_time|default time for datetime_popup fields|now|
+|is_custom|placeholder processed manually in code|true|
 |prepend|to use with `FwVueController`, array of buttons to prepend to the cell in list edit mode|same as for `append`|
+|append|to use with `FwVueController`, array of buttons to append to the cell in list edit mode|
+```
+        [{
+          "event": "add",
+          "class": "",
+          "icon": "bi bi-plus",
+          "label": "",
+          "hint": "Add New"
+        }]
+```
 
 ##### type values
 
@@ -276,7 +320,7 @@ Renders:
 |float|Value formatted with 2 decimal digits|
 |checkbox|Read-only checkbox (checked if value equal to true value)|
 |date|Date in default format - M/d/yyyy|
-|date_long|Date in logn forma - M/d/yyyy hh:mm:ss|
+|date_long|Date in long format - M/d/yyyy hh:mm:ss|
 |multi|Multi-selection list with checkboxes (read-only)|
 |att|Block for displaying one attachment/file|
 |att_links|Block for displaying multiple attachments/files|
@@ -289,7 +333,7 @@ Renders:
 |group_id_addnew|ID with Submit/Submit and Add New/Cancel buttons block|
 |select|select with options html block|
 |input|input type="text" html block|
-|textarea|textaread html block|
+|textarea|textarea html block|
 |email|input type="email" html block|
 |number|input type="number" html block|
 |autocomplete|input type="text" with autocomplete using "autocomplete_url"|
@@ -309,7 +353,7 @@ Renders:
 Main and recommended approach - use `fw.logger()` function, which is available in controllers and models (so no prefix required).
 Examples: `logger("some string to log", var_to_dump)`, `logger(LogLevel.WARN, "warning message")`
 All logged messages and var content (complex objects will be dumped wit structure when possible) written on debug console as well as to log file (default `/App_Data/logs/main.log`)
-You could configure log level in `web.config` - search "log_level" in `appSettings`
+You can configure log level in `appsettings.json` - search for `log_level` in `appSettings`
 
 Another debug function that might be helpful is `fw.rw()` - but it output it's parameter directly into response output (i.e. you will see output right in the browser)
 
@@ -326,12 +370,12 @@ Another debug function that might be helpful is `fw.rw()` - but it output it's p
 - use `fw.route_redirect()` if you got request to one Controller.Action, but need to continue processing in another Controller.Action
   - for example, if for a logged user you need to show detailed data and always skip list view - in the `IndexAction()` just use `fw.routeRedirect("ShowForm")`
 - uploads
-  - save all public-readable uploads under `/wwwroot/upload` (default, see "UPLOAD_DIR" in `web.config`)
+  - save all public-readable uploads under `/wwwroot/upload` (default, see `UPLOAD_DIR` in `appsettings.json`)
   - for non-public uploads use `/upload`
   - or `S3` model and upload to the cloud
 - put all validation code into controller's `Validate()`. See usage example in `AdminDemosController`
 - use `logger()` and review `/App_Data/logs/main.log` if you stuck
-  - make sure you have "log_level" set to "DEBUG" in `web.config`
+  - make sure you have `log_level` set to `DEBUG` in `appsettings.json`
 
 ### How to quickly create a Report
 - all reports accessed via `AdminReportsController`

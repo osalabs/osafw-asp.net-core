@@ -1,5 +1,9 @@
-﻿using System;
+using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Spreadsheet;
+using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
 
@@ -227,5 +231,216 @@ public class ConvUtils
         html_data = html_data.Replace(((char)(153)).ToString(), "<sup><small>TM</small></sup>");
         html_data = html_data.Replace(((char)(174)).ToString(), "<sup><small>R</small></sup>");
         return html_data;
+    }
+
+    private static Dictionary<string, int> xlsxGetMaxCharacterWidth(ArrayList rows, IList<string> headers)
+    {
+        var maxColWidth = new Dictionary<string, int>();
+
+        foreach (string header in headers)
+        {
+            maxColWidth.Add(header, header.Length < 10 ? 10 : header.Length);
+        }
+
+        foreach (Hashtable cells in rows)
+        {
+            foreach (string cell in cells.Keys)
+            {
+                var cellValue = cells[cell].toStr();
+                var cellTextLength = cellValue.Length;
+
+                if (!maxColWidth.ContainsKey(cell))
+                    maxColWidth.Add(cell, cell.Length == 0 ? 50 : cell.Length);
+
+                if (cellTextLength > maxColWidth[cell])
+                    maxColWidth[cell] = cellTextLength;
+            }
+        }
+
+        return maxColWidth;
+    }
+
+    private static Columns xlxsAutoSizeCells(ArrayList rows, IList<string> headers)
+    {
+        var maxColWidth = xlsxGetMaxCharacterWidth(rows, headers);
+        var columns = new Columns();
+        double maxWidth = 10;
+
+        UInt32Value iter = 1;
+        foreach (string item in headers)
+        {
+            var val = maxColWidth[item];
+            var width = ((val * maxWidth + 5) / maxWidth * 256) / 256;
+            Column col = new Column
+            {
+                BestFit = true,
+                Min = iter,
+                Max = iter,
+                CustomWidth = true,
+                Width = (double)width
+            };
+            columns.Append(col);
+            iter += 1;
+        }
+        return columns;
+    }
+
+    private static Stylesheet xlsxStylesheet()
+    {
+        var _Fonts = new Fonts();
+        _Fonts.Append(new Font());
+        _Fonts.Append(new Font(new Bold()));
+        _Fonts.Append(new Font(new Bold()));
+
+        var _Fills = new Fills(new Fill());
+        var _Borders = new Borders(new Border());
+        _Borders.Append(new Border());
+
+        var border = new Border();
+        var topBorder = new TopBorder
+        {
+            Style = BorderStyleValues.Medium
+        };
+        border.TopBorder = topBorder;
+        _Borders.Append(border);
+
+        var _CellFormats = new CellFormats();
+        _CellFormats.Append(new CellFormat());
+
+        var cellFormat = new CellFormat
+        {
+            FontId = 1,
+            FillId = 0,
+            BorderId = 1
+        };
+        _CellFormats.Append(cellFormat); // header
+
+        cellFormat = new CellFormat
+        {
+            FontId = 1,
+            FillId = 0,
+            BorderId = 2
+        };
+        _CellFormats.Append(cellFormat); // footer
+
+        return new Stylesheet(_Fonts, _Fills, _Borders, _CellFormats);
+    }
+
+    /// <summary>
+    /// Create xls file form hashtable where key is sheet name and value is rows array of hashtables with table data
+    /// * <param name = "headers">XLS headers row, comma-separated format</param>
+    /// * <param name = "xls_export_fields" > empty, * or Utils.qw format</param>
+    /// * <param name = "rows" > DB array</param>
+    /// </summary>
+    /// <param name="sheetsData"></param>
+
+
+    /// <summary>
+    /// Create native xlsx file 
+    /// </summary>
+    /// <param name="fw"></param>
+    /// <param name="headers"></param>
+    /// <param name="fields"></param>
+    /// <param name="rows"></param>
+    /// <param name="out_filename">if empty or set to just filename (no path) - write to browser, if path - write to file</param>
+    /// <returns></returns>
+    /// <exception cref="UserException"></exception>
+    public static void exportNativeExcel(FW fw, IList<string> headers, IList<string> fields, ArrayList rows, string out_filename = "")
+    {
+        var is_browser = false;
+        if (string.IsNullOrEmpty(out_filename) || !Regex.IsMatch(out_filename, @"[\/\\]"))
+        {
+            is_browser = true;
+            if (string.IsNullOrEmpty(out_filename))
+                out_filename = "output";
+        }
+
+        var fileName = is_browser ? Path.GetTempPath() + Utils.uuid() + ".xlsx" : out_filename;
+
+        // create the workbook
+        using (var doc = SpreadsheetDocument.Create(fileName, SpreadsheetDocumentType.Workbook))
+        {
+            doc.AddWorkbookPart();
+            doc.WorkbookPart.Workbook = new Workbook();
+            // create the worksheet to workbook relation
+            Sheets sheets = doc.WorkbookPart.Workbook.AppendChild(new Sheets());
+
+            var sheetsOrder = new ArrayList();
+            sheetsOrder.Add("Sheet1");
+
+            UInt32Value sheetNumber = 0;
+            foreach (string sheetName in sheetsOrder)
+            {
+                sheetNumber += 1;
+
+                var _SheetData = new SheetData();
+                var _WorksheetPart = doc.WorkbookPart.AddNewPart<WorksheetPart>();
+
+                var s = new Sheet
+                {
+                    Id = doc.WorkbookPart.GetIdOfPart(_WorksheetPart),
+                    SheetId = sheetNumber,
+                    Name = sheetName
+                };
+                sheets.AppendChild(s);
+
+                var headerRow = new Row();
+                var i = 0;
+                // create header row
+                foreach (string ColumnName in fields)
+                {
+                    var cell = new Cell
+                    {
+                        StyleIndex = 1,
+                        DataType = CellValues.String,
+                        CellValue = new CellValue(headers[i])
+                    };
+                    headerRow.AppendChild(cell);
+                    i++;
+                }
+                _SheetData.AppendChild(headerRow);
+
+                // create data rows
+                foreach (Hashtable row in rows)
+                {
+                    var newRow = new Row();
+                    foreach (string col in fields)
+                    {
+                        var cell = new Cell
+                        {
+                            StyleIndex = 0,
+                            // Set style index 2 for bold text, can be using to highlight totals, etc
+                            //    .StyleIndex = 2;
+                            DataType = CellValues.String
+                        };
+                        if (row.ContainsKey(col))
+                        {
+                            cell.CellValue = new CellValue(row[col].toStr());
+                        }
+
+                        newRow.AppendChild(cell);
+                    }
+                    _SheetData.AppendChild(newRow);
+                }
+
+                _WorksheetPart.Worksheet = new Worksheet();
+                _WorksheetPart.Worksheet.Append(xlxsAutoSizeCells(rows, fields));
+                _WorksheetPart.Worksheet.Append(_SheetData);
+            }
+
+            var _StylePart = doc.WorkbookPart.AddNewPart<WorkbookStylesPart>();
+            _StylePart.Stylesheet = xlsxStylesheet();
+            _StylePart.Stylesheet.Save();
+
+            // save workbook
+            doc.WorkbookPart.Workbook.Save();
+        }
+
+        if (is_browser)
+        {
+            fw.fileResponse(fileName, out_filename + ".xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "attachment");
+            Utils.cleanupTmpFiles();
+        }
+
     }
 }

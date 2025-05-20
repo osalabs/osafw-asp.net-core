@@ -6,10 +6,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AWSSDK.S3" Version="3.7.406.3" />
+    <PackageReference Include="AWSSDK.S3" Version="4.0.0.5" />
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
-    <PackageReference Include="Markdig" Version="0.38.0" />
-    <PackageReference Include="Microsoft.Extensions.Caching.SqlServer" Version="9.0.0" />
+    <PackageReference Include="DocumentFormat.OpenXml" Version="3.3.0" />
+    <PackageReference Include="Markdig" Version="0.41.1" />
+    <PackageReference Include="Microsoft.Extensions.Caching.SqlServer" Version="9.0.5" />
     <PackageReference Include="Microsoft.Web.LibraryManager.Build" Version="3.0.71" />
     <!--PackageReference Include="Microsoft.AspNetCore.Authentication.Negotiate" Version="7.0.10" /-->
     <!-- uncomment if use MySQL -->
@@ -17,9 +18,9 @@
     <PackageReference Include="Pomelo.Extensions.Caching.MySql" Version="2.2.0" /-->
     <PackageReference Include="Otp.NET" Version="1.4.0" />
     <PackageReference Include="QRCoder" Version="1.6.0" />
-    <PackageReference Include="System.Data.Odbc" Version="9.0.0" />
-    <PackageReference Include="System.Data.OleDb" Version="9.0.0" />
-    <PackageReference Include="System.Drawing.Common" Version="9.0.0" />
+    <PackageReference Include="System.Data.Odbc" Version="9.0.5" />
+    <PackageReference Include="System.Data.OleDb" Version="9.0.5" />
+    <PackageReference Include="System.Drawing.Common" Version="9.0.5" />
     <!--PackageReference Include="Sentry.AspNetCore" Version="5.0.1" /-->
   </ItemGroup>
 
