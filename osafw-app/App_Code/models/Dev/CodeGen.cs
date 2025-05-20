@@ -651,9 +651,9 @@ class DevCodeGen
             // TODO deprecate reading from db, always use entity info
             DB db;
             if (entity["db_config"].toStr().Length > 0)
-                db = new DB(fw, (Hashtable)((Hashtable)fw.config("db"))[entity["db_config"]], (string)entity["db_config"]);
+                db = fw.getDB((string)entity["db_config"]);
             else
-                db = new DB(fw);
+                db = fw.db;
             fields = db.loadTableSchemaFull(table_name);
             entity["foreign_keys"] = db.listForeignKeys(table_name);
 

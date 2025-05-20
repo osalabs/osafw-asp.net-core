@@ -327,7 +327,9 @@ public class DevManageController : FwController
             dbtype = "OLE";
 
         // Try
-        var db = new DB(fw, new Hashtable() { { "connection_string", connstr }, { "type", dbtype } });
+        var db = new DB(connstr, dbtype, "main");
+        db.setLogger(fw.logger);
+        db.setCache(fw.context.Items);
 
         var entities = DevEntityBuilder.dbschema2entities(db);
 
