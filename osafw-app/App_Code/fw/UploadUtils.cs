@@ -104,7 +104,7 @@ public class UploadUtils
             }
 
             if (up.is_resize && isUploadImgExtAllowed(up.ext))
-                Utils.resizeImage(up.full_path, up.full_path, up.max_w, up.max_h);
+                ImageUtils.resize(up.full_path, up.full_path, up.max_w, up.max_h);
             result = true;
         }
         else if (up.is_required)
