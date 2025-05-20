@@ -129,6 +129,7 @@ public class AdminAttController : FwAdminController
         {
             item = model.one(id);
             ps["success"] = true;
+            ps["icode"] = item["icode"];
             ps["url"] = model.getUrl(id);
             ps["url_preview"] = model.getUrlPreview(id);
             ps["iname"] = item["iname"];

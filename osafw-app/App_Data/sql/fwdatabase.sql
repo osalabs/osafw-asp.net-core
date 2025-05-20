@@ -143,6 +143,8 @@ CREATE TABLE att_categories (
 DROP TABLE IF EXISTS att;
 CREATE TABLE att (
   id int IDENTITY(1,1) PRIMARY KEY CLUSTERED, /* files stored on disk under 0/0/0/id.dat */
+  icode                 NVARCHAR(36) NOT NULL DEFAULT NEWID(), -- public code - basically UUID
+
   att_categories_id     INT NULL FOREIGN KEY REFERENCES att_categories(id),
 
   fwentities_id         INT NULL CONSTRAINT FK_att_fwentities FOREIGN KEY REFERENCES fwentities(id), -- related to entity (optional)
@@ -163,6 +165,7 @@ CREATE TABLE att (
   upd_time              DATETIME2,
   upd_users_id          INT DEFAULT 0,
 
+  INDEX UX_att_icode UNIQUE (icode),
   INDEX IX_att_categories (att_categories_id),
   INDEX IX_att_fwentities (fwentities_id, item_id)
 );

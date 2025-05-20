@@ -166,14 +166,15 @@ public class Att : FwModel
         string result;
         if ((string)item["is_s3"] == "1")
         {
-            result = fw.model<S3>().getSignedUrl(getS3KeyByID((string)item["id"], size));
+            result = fw.model<S3>().getSignedUrl(getS3KeyByID((string)item["icode"], size));
         }
         else
         {
-            result = fw.config("ROOT_URL") + URL_PREFIX + "/" + item["id"];
+            result = fw.config("ROOT_URL") + URL_PREFIX + "/" + item["icode"];
             if (!string.IsNullOrEmpty(size))
                 result += "?size=" + size;
         }
+        logger("att geturl", item, ", result:", result);
         return result;
     }
 
@@ -235,7 +236,7 @@ public class Att : FwModel
             if (item["is_s3"].toInt() == 1)
             {
                 //delete the whole folder for att, it will delete all files recursively
-                fw.model<S3>().deleteObject(table_name + "/" + item["id"] + "/");
+                fw.model<S3>().deleteObject(table_name + "/" + item["icode"] + "/");
             }
             else
             {
@@ -465,7 +466,7 @@ public class Att : FwModel
         if (fw.userId == 0)
             throw new AuthException(); // denied for non-logged
 
-        var url = fw.model<S3>().getSignedUrl(getS3KeyByID((string)item["id"], size));
+        var url = fw.model<S3>().getSignedUrl(getS3KeyByID((string)item["icode"], size));
         fw.redirect(url);
     }
 
@@ -497,7 +498,7 @@ public class Att : FwModel
             if (!System.IO.File.Exists(filepath))
                 continue;
 
-            result = model_s3.uploadLocalFile(getS3KeyByID(id.ToString(), size), filepath, "inline");
+            result = model_s3.uploadLocalFile(getS3KeyByID(item["icode"], size), filepath, "inline");
             if (!result)
                 break;
         }
@@ -625,7 +626,7 @@ public class Att : FwModel
     public override void filterForJson(Hashtable item)
     {
         //leave only specific keys
-        var keys = Utils.qh("id att_categories_id iname is_image ext url url_preview");
+        var keys = Utils.qh("id icode att_categories_id iname is_image ext url url_preview");
         foreach (var key in new ArrayList(item.Keys))
         {
             if (!keys.ContainsKey(key))

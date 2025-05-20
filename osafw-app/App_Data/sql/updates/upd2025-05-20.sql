@@ -26,3 +26,8 @@ CREATE UNIQUE INDEX UX_fwcron_icode ON fwcron (icode);
 CREATE INDEX IX_fwcron_next_run ON fwcron (next_run);
 
 INSERT INTO log_types (itype, icode, iname) VALUES (0, 'executed', 'Record Executed');
+
+
+--- att.icode
+ALTER TABLE att ADD icode                 NVARCHAR(36) NOT NULL DEFAULT NEWID();
+CREATE UNIQUE INDEX UX_att_icode ON att (icode);
