@@ -72,6 +72,7 @@ Short summary how to deploy without VS publish (from clone git repo):
       /fonts
       /img
       /js
+      /lib           - assets built from libman.json
     /upload          - upload dir for public files
     /favicon.ico     - change to your favicon!
     /robots.txt      - default robots.txt (empty)
@@ -162,14 +163,14 @@ The following controller fields used above can be defined in controller's `init(
 
 ### Additional Framework Components
 
-- **FwCache** – simple wrapper around `IMemoryCache` for application and request caching
+- **FwCache** – simple wrapper around `IMemoryCache` for application and request caching. Accessible in controllers and models via `fw.cache`
 - **FwUpdates** – applies SQL scripts from `/App_Data/sql/updates` automatically in development
 - **FwSelfTest** – runs configuration and controller tests to verify environment
-- **FwActivityLogs** – unified activity and change logging model
+- **FwActivityLogs** – unified activity and change logging model. Can be used directly or via `fw.logActivity` helper
 - **FwApiController** – base class for building authenticated REST APIs
 - **Entity Builder** – text based definition to generate SQL and CRUD scaffolding
 
-### fw.config()
+### `FwConfig`
 
 Application configuration available via `fw.config([SettingName])`.
 Most of the global settings are defined in `appsettings.json` `appSettings` section. But there are several calculated settings:
@@ -184,7 +185,7 @@ Most of the global settings are defined in `appsettings.json` `appSettings` sect
 |log|physical path to application log file|C:\inetpub\somesite\www\App_Data\logs\main.log|
 |tmp|physical path to the system tmp directory|C:\Windows\Temp|
 
-### config.json
+### config.json for Dynamic/Vue controllers
 
 In `FwDynamicController` controller behaviour defined by `/template/CONTROLLER/config.json`. Sample file can be fount at `/template/admin/demosdynamic/config.json`
 This config file allows to define/override several properties of the `FwController` (for example: as `model`, `save_fields`, `search_fields`, `list_view`,...) as well as define configuration of Show (`show_fields`) and ShowForm (`showform_fields`)  screens. Note `is_dynamic_show` and `is_dynamic_showform` should be set to true accordingly.
@@ -205,6 +206,7 @@ Common config keys include:
 - `form_tabs` – optional tab definitions
 - `route_return` – action to redirect after save
 - `is_userlists` – enable UserLists support
+
 There are samples for the one `show_fields` or `showform_fields` element:
 
 ```json
@@ -281,13 +283,14 @@ Renders:
 |att_category|For type="att_edit", att category new upload will be related to|"general"(default)|
 |att_post_prefix|For type="att_edit", name prefix for the inputs with ids `att[<~id>]`|"att"(default)|
 |validate|Simple validation codes: exists, isemail, isphone, isdate, isfloat|"exists isemail" - input value validated if such value already exists, validate if value is an email|
-|append|to use with `FwVueController`, array of buttons to append to the cell in list edit mode|[{
-                        "event": "add",
-                        "class": "",
-                        "icon": "bi bi-plus",
-                        "label": "",
-                        "hint": "Add New"
-                      }]|
+|append|to use with `FwVueController`, array of buttons to append to the cell in list edit mode|
+        [{
+          "event": "add",
+          "class": "",
+          "icon": "bi bi-plus",
+          "label": "",
+          "hint": "Add New"
+        }]|
 |prepend|to use with `FwVueController`, array of buttons to prepend to the cell in list edit mode|same as for `append`|
 |lookup_table|name of DB table for lookup one value|demo_dicts|
 |lookup_field|field name from lookup table/model to display|iname|
