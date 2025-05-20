@@ -501,7 +501,8 @@ public class Utils
         Hashtable conf = [];
         conf["type"] = "OLE";
         conf["connection_string"] = "Provider=" + OLEDB_PROVIDER + ";Data Source=" + filepath + ";Extended Properties=\"Excel 12.0 Xml;HDR=" + (is_header ? "Yes" : "No") + ";ReadOnly=True;IMEX=1\"";
-        DB accdb = new(fw, conf);
+
+        DB accdb = new(conf);
         OleDbConnection conn = (OleDbConnection)accdb.connect();
         var schema = conn.GetOleDbSchemaTable(OleDbSchemaGuid.Tables, null);
 

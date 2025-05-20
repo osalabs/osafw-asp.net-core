@@ -18,6 +18,7 @@
 using MySqlConnector;
 #endif
 
+using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
 using System;
 using System.Collections;
@@ -227,8 +228,8 @@ public class DB : IDisposable
     public delegate void LoggerDelegate(LogLevel level, params object[] args);
     protected LoggerDelegate ext_logger;
 
-    // request level cache for multi-db connections
-    protected IDictionary cache_items;
+    // context for request level cache for multi-db connections
+    protected HttpContext context;
 
     public string db_name = "";
     public string dbtype = DBTYPE_SQLSRV; // SQL=SQL Server, OLE=OleDB, MySQL=MySQL
@@ -293,7 +294,13 @@ public class DB : IDisposable
         init();
     }
 
-    public DB(string connstr, string type, string db_name)
+    /// <summary>
+    /// construct new DB object with connection string and type
+    /// </summary>
+    /// <param name="connstr">connection string</param>
+    /// <param name="type">type of db: SQL, OLE, MySQL</param>
+    /// <param name="db_name"> human name of database, only used for logger</param>
+    public DB(string connstr, string type, string db_name = "main")
     {
         this.conf["type"] = type;
         this.conf["connection_string"] = connstr;
@@ -346,11 +353,11 @@ public class DB : IDisposable
     }
 
     /// <summary>
-    /// set optional request level cache storage (ex: HttpContext.Items)
+    /// set optional context for request level cache storage (ex: HttpContext.Items)
     /// </summary>
-    public void setCache(IDictionary cache)
+    public void setContext(HttpContext context)
     {
-        this.cache_items = cache;
+        this.context = context;
     }
 
     /// <summary>
@@ -362,9 +369,9 @@ public class DB : IDisposable
         var cache_key = "DB#" + connstr;
 
         // first, try to get connection from request cache (so we will use only one connection per db server - TBD make configurable?)
-        if (conn == null && cache_items != null)
+        if (conn == null && context != null)
         {
-            var db_cache = (Hashtable)cache_items["DB"] ?? [];
+            var db_cache = (Hashtable)context.Items["DB"] ?? [];
             conn = (DbConnection)db_cache[cache_key];
         }
 
@@ -374,11 +381,11 @@ public class DB : IDisposable
             schema = []; // reset schema cache
             conn = createConnection(connstr, (string)conf["type"]);
             //if cache defined - store connection in request cache
-            if (cache_items != null)
+            if (context != null)
             {
-                var db_cache = (Hashtable)cache_items["DB"] ?? [];
+                var db_cache = (Hashtable)context.Items["DB"] ?? [];
                 db_cache[cache_key] = conn;
-                cache_items["DB"] = db_cache;
+                context.Items["DB"] = db_cache;
             }
         }
 

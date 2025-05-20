@@ -159,10 +159,12 @@ public class FW : IDisposable
     {
         Hashtable dbconfig = (Hashtable)config("db");
         Hashtable conf = (Hashtable)dbconfig[config_name];
+
         var db = new DB(conf, config_name);
         db.setLogger(this.logger);
         if (context != null)
-            db.setCache(context.Items);
+            db.setContext(context);
+
         return db;
     }
 
