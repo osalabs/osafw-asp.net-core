@@ -74,5 +74,4 @@
     - Configure the connection string for your database and SMTP settings.
 
 ### Optional Components
-- **Install wkhtmltopdf** for PDF report generation from [this link](https://wkhtmltopdf.org/downloads.html).
 

@@ -23,6 +23,21 @@ public static class Program
 {
     public static void Main(string[] args)
     {
+        // Install Playwright full headless Chromium build on first run.
+        // The installer will detect existing binaries and skip re-downloading,
+        // making this safe to run every time the application starts.
+        // Additionally, if you update or downgrade the Microsoft.Playwright package,
+        // the installer will remove any out-of-sync Chromium versions and
+        // install the browser binary matching the library version,
+        // ensuring compatibility between Playwright and the browser.
+        Microsoft.Playwright.Program.Main(
+        [
+            "install",          // invoke Playwright installer
+            "chromium",         // install the full Chromium build
+            "--with-deps",      // include OS-level dependencies
+            "--no-shell"        // skip the legacy headless shell
+        ]);
+
         // In .NET 6+ the recommended pattern is the "WebApplication.CreateBuilder" approach
         var builder = WebApplication.CreateBuilder(args);
 
