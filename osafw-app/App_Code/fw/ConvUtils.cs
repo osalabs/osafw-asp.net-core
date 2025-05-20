@@ -80,7 +80,7 @@ public class ConvUtils
             var pdfOptions = new PagePdfOptions
             {
                 Path = filename,
-                Format = "A4",
+                Format = "Letter",
                 PrintBackground = true,
                 Margin = new Margin
                 {
