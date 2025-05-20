@@ -154,6 +154,20 @@ public class FW : IDisposable
         get { return userId > 0; }
     }
 
+    // helper to initialize DB instance based on configuration name
+    public DB getDB(string config_name = "main")
+    {
+        Hashtable dbconfig = (Hashtable)config("db");
+        Hashtable conf = (Hashtable)dbconfig[config_name];
+
+        var db = new DB(conf, config_name);
+        db.setLogger(this.logger);
+        if (context != null)
+            db.setContext(context);
+
+        return db;
+    }
+
     // begin processing one request
     public static void run(HttpContext context, IConfiguration configuration)
     {
@@ -203,7 +217,7 @@ public class FW : IDisposable
         });
 #endif
 
-        db = new DB(this);
+        db = getDB();
         DB.SQL_QUERY_CTR = 0; // reset query counter
 
         G = (Hashtable)config().Clone(); // by default G contains conf

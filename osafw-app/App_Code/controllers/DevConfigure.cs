@@ -53,7 +53,7 @@ public class DevConfigureController : FwController
         {
             try
             {
-                db = new DB(fw);
+                db = fw.getDB();
                 db.connect();
                 ps["is_db_conn"] = true;
 

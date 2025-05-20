@@ -19,7 +19,7 @@ class DevEntityBuilder
 
     public static void createDBJsonFromExistingDB(string dbname, FW fw)
     {
-        var db = new DB(fw, (Hashtable)((Hashtable)fw.config("db"))[dbname], dbname);
+        var db = fw.getDB(dbname);
 
         var entities = DevEntityBuilder.dbschema2entities(db);
 
