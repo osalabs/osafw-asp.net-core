@@ -280,25 +280,27 @@ Renders:
 |help_text|Help text displayed as muted text under control block|"Minimum 8 letters and digits required"|
 |admin_url|For type="plaintext_link", controller url, final URL will be: "<~admin_url>/<~lookup_id>"|/Admin/SomeController|
 |lookup_id|to use with admin_url, if link to specific ID required|123|
+|lookup_table|name of DB table for lookup one value|demo_dicts|
+|lookup_field|field name from lookup table/model to display|iname|
+|lookup_key|key column for lookup_table|code|
+|lookup_params|additional params passed to lookup model methods|status=1|
+|validate|Simple validation codes: exists, isemail, isphone, isdate, isfloat|"exists isemail" - input value validated if such value already exists, validate if value is an email|
 |att_category|For type="att_edit", att category new upload will be related to|"general"(default)|
 |att_post_prefix|For type="att_edit", name prefix for the inputs with ids `att[<~id>]`|"att"(default)|
-|validate|Simple validation codes: exists, isemail, isphone, isdate, isfloat|"exists isemail" - input value validated if such value already exists, validate if value is an email|
+|conv|value converter for display/save (e.g. time_from_seconds)|time_from_seconds|
+|default_time|default time for datetime_popup fields|now|
+|is_custom|placeholder processed manually in code|true|
+|prepend|to use with `FwVueController`, array of buttons to prepend to the cell in list edit mode|same as for `append`|
 |append|to use with `FwVueController`, array of buttons to append to the cell in list edit mode|
+```
         [{
           "event": "add",
           "class": "",
           "icon": "bi bi-plus",
           "label": "",
           "hint": "Add New"
-        }]|
-|prepend|to use with `FwVueController`, array of buttons to prepend to the cell in list edit mode|same as for `append`|
-|lookup_table|name of DB table for lookup one value|demo_dicts|
-|lookup_field|field name from lookup table/model to display|iname|
-|lookup_key|key column for lookup_table|code|
-|lookup_params|additional params passed to lookup model methods|status=1|
-|conv|value converter for display/save (e.g. time_from_seconds)|time_from_seconds|
-|default_time|default time for datetime_popup fields|now|
-|is_custom|placeholder processed manually in code|true|
+        }]
+```
 
 ##### type values
 
