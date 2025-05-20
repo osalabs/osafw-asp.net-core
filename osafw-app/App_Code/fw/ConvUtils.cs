@@ -1,13 +1,13 @@
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
+using Microsoft.Playwright;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
-
-// see also http://stackoverflow.com/questions/1331926/calling-wkhtmltopdf-to-generate-pdf-from-html/1698839#1698839
+using System.Threading.Tasks;
 
 namespace osafw;
 
@@ -32,17 +32,12 @@ public class ConvUtils
 
         html_data = _replace_specials(html_data);
 
-        string html_file = Utils.getTmpFilename() + ".html";
         string pdf_file = Utils.getTmpFilename() + ".pdf";
-        // fw.logger("INFO", "html file = " & html_file)
         // fw.logger("INFO", "pdf file = " & pdf_file)
-
-        // remove_old_files()
-        FW.setFileContent(html_file, ref html_data);
 
         if (string.IsNullOrEmpty(out_filename) || !Regex.IsMatch(out_filename, @"[\/\\]"))
         {
-            html2pdf(fw, html_file, pdf_file, options);
+            html2pdf(fw, html_data, pdf_file, options).GetAwaiter().GetResult();
 
             if (string.IsNullOrEmpty(out_filename))
             {
@@ -52,50 +47,69 @@ public class ConvUtils
             Utils.cleanupTmpFiles(); // this will cleanup temporary .pdf, can't delete immediately as file_response may not yet finish transferring file
         }
         else
-            html2pdf(fw, html_file, out_filename, options);
-        // remove tmp html file
-        File.Delete(html_file);
+        {
+            html2pdf(fw, html_data, out_filename, options).GetAwaiter().GetResult();
+        }
 
         return html_data;
     }
 
-    // !uses CONF var FW.config("pdf_converter") for converted command line
-    // !and FW.config("pdf_converter_args") - MUST include %IN %OUT which will be replaced by input and output file paths accordingly
-    // TODO: example: FW.config("html_converter_args")=" -po Landscape" - for landscape mode
-    // all params for TotalHTMLConverter: http://www.coolutils.com/help/TotalHTMLConverter/Commandlineparameters.php
-    // all params for WkHTMLtoPDF: http://wkhtmltopdf.org/usage/wkhtmltopdf.txt
     // options:
     // landscape = True - will produce landscape output
-    public static void html2pdf(FW fw, string htmlfile, string filename, Hashtable options = null)
+    public static async Task html2pdf(FW fw, string html_data, string filename, Hashtable options = null)
     {
-        if (htmlfile.Length < 1 | filename.Length < 1)
+        if (filename.Length < 1)
+        {
             throw new ApplicationException("Wrong filename");
-        System.Diagnostics.ProcessStartInfo info = new();
-        System.Diagnostics.Process process = new();
+        }
 
-        string cmdline = (string)FwConfig.settings["pdf_converter_args"];
-        cmdline = cmdline.Replace("%IN", "\"" + htmlfile + "\"");
-        cmdline = cmdline.Replace("%OUT", "\"" + filename + "\"");
-        if (options != null && options["landscape"].toBool())
+        try
         {
-            cmdline = " -O Landscape " + cmdline;
-        }
-        if (options != null && options.ContainsKey("cmd"))
-        {
-            cmdline = options["cmd"] + " " + cmdline;
-        }
-        info.FileName = (string)FwConfig.settings["pdf_converter"];
-        info.Arguments = cmdline;
+            using var playwright = await Playwright.CreateAsync();
+            await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
+            {
+                Headless = true,
+                Channel = "chromium"
+            });
 
-        fw.logger(LogLevel.DEBUG, "exec: ", info.FileName, " ", info.Arguments);
-        process.StartInfo = info;
-        process.Start();
-        process.WaitForExit();
-        if (process.ExitCode != 0)
-        {
-            fw.logger(LogLevel.ERROR, "Exit code:", process.ExitCode);
+            var context = await browser.NewContextAsync();
+            var page = await context.NewPageAsync();
+
+            await page.SetContentAsync(html_data);
+
+            var pdfOptions = new PagePdfOptions
+            {
+                Path = filename,
+                Format = "Letter",
+                PrintBackground = true,
+                Margin = new Margin
+                {
+                    Top = "5mm",
+                    Right = "10mm",
+                    Bottom = "5mm",
+                    Left = "10mm"
+                },
+                Landscape = false,
+                Scale = 0.8f,
+                DisplayHeaderFooter = false,
+                HeaderTemplate = string.Empty,
+                FooterTemplate = string.Empty,
+                PreferCSSPageSize = false,
+                Tagged = true
+            };
+
+            if (options is not null && options["landscape"].toBool())
+            {
+                pdfOptions.Landscape = true;
+            }
+
+            await page.PdfAsync(pdfOptions);
         }
-        process.Close();
+        catch (Exception ex)
+        {
+            fw.logger(LogLevel.ERROR, "PDF generation failed: ", ex.Message);
+            throw;
+        }
     }
 
     // TODO - currently it just parse html and save it under .doc extension (Word capable opening it), but need redo with real converter
