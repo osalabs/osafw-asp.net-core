@@ -135,6 +135,8 @@ public class FW : IDisposable
     public string last_error_send_email = "";
     private static readonly char path_separator = Path.DirectorySeparatorChar;
 
+    private DateTime start_time = DateTime.Now; //to track request time
+
     // shortcut for currently logged users.id
     // usage: fw.userId
     public int userId
@@ -172,36 +174,26 @@ public class FW : IDisposable
     public static void run(HttpContext context, IConfiguration configuration)
     {
         using FW fw = new(context, configuration);
-
-        try
-        {
-            FwHooks.initRequest(fw);
-        }
-        catch (Exception ex)
-        {
-            fw.logger(LogLevel.ERROR, "FwHooks.initRequest Exception: ", ex.Message);
-            fw.errMsg("FwHooks.initRequest Exception", ex);
-            throw;
-        }
-
+        fw.initRequest();
         fw.dispatch();
+        fw.endRequest();
+    }
 
-        try
-        {
-            FwHooks.finalizeRequest(fw);
-        }
-        catch (Exception ex)
-        {
-            //for finalize - just log error, no need to show to user
-            fw.logger(LogLevel.ERROR, "FwHooks.finalizeRequest Exception: ", ex.ToString());
-        }
+    public static FW initOffline(IConfiguration configuration)
+    {
+        FW fw = new(null, configuration);
+        fw.logger(LogLevel.INFO, "OFFLINE START");
+        return fw;
     }
 
     public FW(HttpContext context, IConfiguration configuration)
     {
-        this.context = context;
-        this.request = context.Request;
-        this.response = context.Response;
+        if (context != null)
+        {
+            this.context = context;
+            this.request = context.Request;
+            this.response = context.Response;
+        }
 
         FwConfig.init(context, configuration);
 
@@ -223,7 +215,7 @@ public class FW : IDisposable
         G = (Hashtable)config().Clone(); // by default G contains conf
 
         // per request settings
-        G["request_url"] = UriHelper.GetDisplayUrl(request);
+        G["request_url"] = request?.GetDisplayUrl() ?? "";
         G["current_time"] = DateTime.Now;
 
         // override default lang with user's lang
@@ -242,30 +234,64 @@ public class FW : IDisposable
         SessionHashtable("_flash", []);
     }
 
+    public void initRequest()
+    {
+        try
+        {
+            FwHooks.initRequest(this);
+        }
+        catch (Exception ex)
+        {
+            logger(LogLevel.ERROR, "FwHooks.initRequest Exception: ", ex.Message);
+            errMsg("FwHooks.initRequest Exception", ex);
+            throw;
+        }
+    }
+
+    public void endRequest()
+    {
+        try
+        {
+            FwHooks.finalizeRequest(this);
+        }
+        catch (Exception ex)
+        {
+            //for finalize - just log error, no need to show to user
+            logger(LogLevel.ERROR, "FwHooks.finalizeRequest Exception: ", ex.ToString());
+        }
+
+        TimeSpan end_timespan = DateTime.Now - start_time;
+        string msg;
+        if (this.context != null)
+            msg = "REQUEST END   [" + route.method + " " + request_url + "] in "; // web context
+        else
+            msg = "OFFLINE END   in "; // offline context
+        logger(LogLevel.INFO, msg, end_timespan.TotalSeconds, "s, ", string.Format("{0:0.000}", 1 / end_timespan.TotalSeconds), "/s, ", DB.SQL_QUERY_CTR, " SQL");
+    }
+
     // ***************** work with SESSION
     //by default Session is for strings
     public string Session(string name)
     {
-        return context.Session.GetString(name);
+        return context?.Session.GetString(name) ?? "";
     }
     public void Session(string name, string value)
     {
-        context.Session.SetString(name, value);
+        context?.Session.SetString(name, value);
     }
 
     public int? SessionInt(string name)
     {
-        return context.Session.GetInt32(name);
+        return context?.Session.GetInt32(name);
     }
     public void SessionInt(string name, int value)
     {
-        context.Session.SetInt32(name, value);
+        context?.Session.SetInt32(name, value);
     }
-
 
     public bool SessionBool(string name)
     {
-        var data = context.Session.Get(name);
+        var data = context?.Session.Get(name);
         if (data == null)
         {
             return false;
@@ -274,17 +300,17 @@ public class FW : IDisposable
     }
     public void SessionBool(string name, bool value)
     {
-        context.Session.Set(name, BitConverter.GetBytes(value));
+        context?.Session.Set(name, BitConverter.GetBytes(value));
     }
 
     public Hashtable SessionHashtable(string name)
     {
-        string data = context.Session.GetString(name);
+        string data = context?.Session.GetString(name);
         return data == null ? null : (Hashtable)Utils.deserialize(data);
     }
     public void SessionHashtable(string name, Hashtable value)
     {
-        context.Session.SetString(name, Utils.serialize(value));
+        context?.Session.SetString(name, Utils.serialize(value));
     }
 
 
@@ -368,7 +394,6 @@ public class FW : IDisposable
             url = request.Path;
         }
 
-        //TODO MIGRATE test
         // cut the App path from the begin
         if (request.PathBase.Value.Length > 1) url = url.Replace(request.PathBase, "");
         url = url.TrimEnd('/'); // cut last / if any
@@ -569,8 +594,6 @@ public class FW : IDisposable
 
     public void dispatch()
     {
-        DateTime start_time = DateTime.Now;
-
         try
         {
             route = getRoute();
@@ -644,9 +667,6 @@ public class FW : IDisposable
             else
                 errMsg("Server Error. Please, contact site administrator!", Ex);
         }
-
-        TimeSpan end_timespan = DateTime.Now - start_time;
-        logger(LogLevel.INFO, "REQUEST END   [", route.method, " ", request_url, "] in ", end_timespan.TotalSeconds, "s, ", string.Format("{0:0.000}", 1 / end_timespan.TotalSeconds), "/s, ", DB.SQL_QUERY_CTR, " SQL");
     }
 
     // simple auth check based on /controller/action - and rules filled in in Config class
@@ -674,7 +694,7 @@ public class FW : IDisposable
             && !string.IsNullOrEmpty(Session("XSS")) && Session("XSS") != (string)FORM["XSS"])
         {
             // XSS validation failed
-            // first, check if we are under xss-excluded prefix            
+            // first, check if we are under xss-excluded prefix
             Hashtable no_xss_prefixes = (Hashtable)this.config("no_xss_prefixes_prefixes");
             if (no_xss_prefixes == null || !no_xss_prefixes.ContainsKey(route.prefix))
             {
@@ -719,6 +739,13 @@ public class FW : IDisposable
     // parse query string, form and json in request body into fw.FORM
     private void parseForm()
     {
+        if (request == null)
+        {
+            // offline mode
+            FORM = [];
+            return;
+        }
+
         Hashtable input = [];
 
         foreach (string s in request.Query.Keys)
@@ -1212,7 +1239,7 @@ public class FW : IDisposable
             Lang = G["lang"].toStr(),
             IsLangUpdate = config("is_lang_update").toBool(),
             GlobalsGetter = () => G,
-            Session = context.Session,
+            Session = context?.Session,
             Logger = (level, args) => logger(level, args)
         });
         return pp_instance;
@@ -1314,16 +1341,48 @@ public class FW : IDisposable
 
         logger(LogLevel.TRACE, "TRY controller.action=", route.controller, ".", route.action);
 
+        // ---------------------------------
+        // choose proper overload for Action
         MethodInfo actionMethod = null;
-        if (!int.TryParse(route.id, out _))
+        // collect all instance public methods called Action
+        var candidates = controllerClass.GetMethods(BindingFlags.Public | BindingFlags.Instance);
+
+        bool isIdNumeric = int.TryParse(route.id, out _);
+        MethodInfo declaredFallback = null;   // declared in the controller itself
+        MethodInfo anyFallback = null;  // declared anywhere – ultimate fallback
+
+        foreach (var m in candidates)
         {
-            //id is not numeric - try to find action with string param
-            actionMethod = controllerClass.GetMethod(route.action + ACTION_SUFFIX, [typeof(string)]);
+            if (m.Name != route.action + ACTION_SUFFIX)
+                continue;
+
+            // remember the very first match in case we need it later
+            anyFallback ??= m;
+            if (m.DeclaringType == controllerClass && declaredFallback == null)
+                declaredFallback = m;
+
+            var p = m.GetParameters();
+            if (p.Length != 1)               // framework only supports one-arg actions
+                continue;
+
+            Type paramT = p[0].ParameterType;
+
+            // top priority
+            if (!isIdNumeric && paramT == typeof(string))
+            {
+                actionMethod = m;            // best possible match – use it
+                break;
+            }
+            if (isIdNumeric && (paramT == typeof(int) || paramT == typeof(long)))
+            {
+                actionMethod = m;            // best possible match – use it
+                break;
+            }
         }
 
-        //if still no method - try to find generic method
-        if (actionMethod == null)
-            actionMethod = controllerClass.GetMethod(route.action + ACTION_SUFFIX);
+        // fallbacks
+        actionMethod ??= declaredFallback;
+        actionMethod ??= anyFallback;
 
         if (actionMethod == null)
         {
@@ -1566,6 +1625,7 @@ public class FW : IDisposable
                             message.CC.Add(new MailAddress(cc));
                         }
                 }
+
                 // add BCC if any
                 if (options.ContainsKey("bcc") && !is_test)
                 {
@@ -1707,7 +1767,7 @@ public class FW : IDisposable
 
             ps["DUMP_SQL"] = DB.last_sql;
             ps["DUMP_FORM"] = dumper(FORM);
-            ps["DUMP_SESSION"] = dumper(context.Session);
+            ps["DUMP_SESSION"] = dumper(context?.Session);
         }
 
         parser(tpl_dir, ps);

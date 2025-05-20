@@ -35,7 +35,15 @@ public class FwConfig
             FwConfig.hostname = hostname;
             initDefaults(context, hostname);
             readSettings();
-            specialSettings();
+
+            if (string.IsNullOrEmpty(hostname))
+            {
+                //if no hostname - use environment
+                var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "";
+                overrideSettingsByName(environment, settings);
+            }
+            else
+                overrideSettingsByName(hostname, settings, true);
 
             settings["_SETTINGS_OK"] = true; // just a marker to ensure we have all settings set
         }
@@ -46,22 +54,44 @@ public class FwConfig
     {
         initDefaults(fw.context, FwConfig.hostname);
         readSettings();
-        specialSettings();
+        overrideSettingsByName(hostname, settings, true);
     }
 
-    // init default settings
+    // 
+    /// <summary>
+    /// init default settings
+    /// </summary>
+    /// <param name="context">can be null for offline execution</param>
+    /// <param name="hostname"></param>
     private static void initDefaults(HttpContext context, string hostname = "")
     {
-        settings = [];
-        HttpRequest req = context.Request;
+        settings = new Hashtable
+        {
+            ["hostname"] = "",
+            ["ROOT_URL"] = "",
+            ["ROOT_DOMAIN"] = "",
+        };
 
-        if (string.IsNullOrEmpty(hostname))
-            hostname = context.Request.Host.ToString();
-        //hostname = context.GetServerVariable("HTTP_HOST") ?? "";
-        settings["hostname"] = hostname;
+        if (context != null)
+        {
+            HttpRequest req = context.Request;
 
-        string ApplicationPath = req.PathBase;
-        settings["ROOT_URL"] = Regex.Replace(ApplicationPath, @"/$", ""); // removed last / if any
+            if (string.IsNullOrEmpty(hostname))
+                hostname = context.Request.Host.ToString();
+            //hostname = context.GetServerVariable("HTTP_HOST") ?? "";
+            settings["hostname"] = hostname;
+
+            string ApplicationPath = req.PathBase;
+            settings["ROOT_URL"] = Regex.Replace(ApplicationPath, @"/$", ""); // removed last / if any
+
+            string http = "http://";
+            if (context.GetServerVariable("HTTPS") == "on")
+                http = "https://";
+            string port = ":" + context.GetServerVariable("SERVER_PORT");
+            if (port == ":80" || port == ":443")
+                port = "";
+            settings["ROOT_DOMAIN"] = http + context.GetServerVariable("SERVER_NAME") + port;
+        }
 
         string PhysicalApplicationPath;
         string basedir = AppDomain.CurrentDomain.BaseDirectory; //application root directory
@@ -86,14 +116,6 @@ public class FwConfig
 
         settings["lang"] ??= "en"; // default language
         settings["is_lang_update"] ??= false; // default language update flag
-
-        string http = "http://";
-        if (context.GetServerVariable("HTTPS") == "on")
-            http = "https://";
-        string port = ":" + context.GetServerVariable("SERVER_PORT");
-        if (port == ":80" || port == ":443")
-            port = "";
-        settings["ROOT_DOMAIN"] = http + context.GetServerVariable("SERVER_NAME") + port;
     }
 
     public static void readSettingsSection(IConfigurationSection section, ref Hashtable settings)
@@ -123,18 +145,37 @@ public class FwConfig
         }
     }
 
-    // set special settings after we read config
-    private static void specialSettings()
+    // prefixes used so Dispatcher will know that url starts not with a full controller name, but with a prefix, need to be added to controller name
+    // return regexp str that cut the prefix from the url, second capturing group captures rest of url after the prefix
+    public static string getRoutePrefixesRX()
     {
-        string hostname = (string)settings["hostname"];
+        if (string.IsNullOrEmpty(route_prefixes_rx))
+        {
+            // prepare regexp - escape all prefixes
+            ArrayList r = [];
+            var route_prefixes = (Hashtable)settings["route_prefixes"];
+            if (route_prefixes != null)
+            {
+                //sort prefixes, so longer prefixes mathced first, also escape to use in regex
+                var prefixes = from string prefix in route_prefixes.Keys orderby prefix.Length descending, prefix select Regex.Escape(prefix);
+                route_prefixes_rx = @"^(" + string.Join("|", prefixes) + @")(/.*)?$";
+            }
+        }
 
+        return route_prefixes_rx;
+    }
+
+    public static void overrideSettingsByName(string override_name, Hashtable settings, bool is_regex_match = false)
+    {
         Hashtable overs = (Hashtable)settings["override"];
         if (overs != null)
         {
             foreach (string over_name in overs.Keys)
             {
                 Hashtable over = (Hashtable)overs[over_name];
-                if (Regex.IsMatch(hostname, (string)over["hostname_match"]))
+                if (!is_regex_match && over_name == override_name
+                    || is_regex_match && Regex.IsMatch(override_name, (string)over["hostname_match"])
+                    )
                 {
                     settings["config_override"] = over_name;
                     Utils.mergeHashDeep(ref settings, ref over);
@@ -161,56 +202,6 @@ public class FwConfig
         settings["template"] = (string)settings["site_root"] + settings["template"];
     }
 
-
-    // prefixes used so Dispatcher will know that url starts not with a full controller name, but with a prefix, need to be added to controller name
-    // return regexp str that cut the prefix from the url, second capturing group captures rest of url after the prefix
-    public static string getRoutePrefixesRX()
-    {
-        if (string.IsNullOrEmpty(route_prefixes_rx))
-        {
-            // prepare regexp - escape all prefixes
-            ArrayList r = [];
-            var route_prefixes = (Hashtable)settings["route_prefixes"];
-            if (route_prefixes != null)
-            {
-                //sort prefixes, so longer prefixes mathced first, also escape to use in regex
-                var prefixes = from string prefix in route_prefixes.Keys orderby prefix.Length descending, prefix select Regex.Escape(prefix);
-                route_prefixes_rx = @"^(" + string.Join("|", prefixes) + @")(/.*)?$";
-            }
-        }
-
-        return route_prefixes_rx;
-    }
-
-    public static void overrideSettingsByName(string override_name, ref Hashtable settings)
-    {
-        Hashtable overs = (Hashtable)settings["override"];
-        if (overs != null)
-        {
-            foreach (string over_name in overs.Keys)
-            {
-                if (over_name == override_name)
-                {
-                    settings["config_override"] = over_name;
-                    Hashtable over = (Hashtable)overs[over_name];
-                    Utils.mergeHashDeep(ref settings, ref over);
-                    break;
-                }
-            }
-        }
-
-        // convert strings to specific types
-        LogLevel log_level = LogLevel.INFO; // default log level if No or Wrong level in config
-        if (settings.ContainsKey("log_level") && settings["log_level"] != null)
-            Enum.TryParse<LogLevel>((string)settings["log_level"], true, out log_level);
-
-        settings["log_level"] = log_level;
-
-        // default settings that depend on other settings
-        if (!settings.ContainsKey("ASSETS_URL"))
-            settings["ASSETS_URL"] = settings["ROOT_URL"] + "/assets";
-    }
-
     /// <summary>
     /// Get settings for the current environment with proper overrides
     /// </summary>
@@ -224,7 +215,7 @@ public class FwConfig
         // The “appSettings” itself might be nested inside the hash
         var settings = (Hashtable)appSettings["appSettings"];
         // Override by name if environment-based overrides are used
-        overrideSettingsByName(environment, ref settings);
+        overrideSettingsByName(environment, settings);
 
         return settings;
     }

@@ -22,6 +22,7 @@ INSERT INTO att_categories (icode, iname) VALUES
 INSERT INTO log_types (itype, icode, iname) VALUES (0, 'added', 'Record Added');
 INSERT INTO log_types (itype, icode, iname) VALUES (0, 'updated', 'Record Updated');
 INSERT INTO log_types (itype, icode, iname) VALUES (0, 'deleted', 'Record Deleted');
+INSERT INTO log_types (itype, icode, iname) VALUES (0, 'executed', 'Code Executed');
 -- for user login audit
 INSERT INTO log_types (itype, icode, iname) VALUES (0, 'login', 'User Login');
 INSERT INTO log_types (itype, icode, iname) VALUES (0, 'logoff', 'User Logoff');
@@ -31,3 +32,6 @@ INSERT INTO log_types (itype, icode, iname) VALUES (0, 'chpwd', 'User changed lo
 INSERT INTO log_types (itype, icode, iname) VALUES (10, 'comment', 'Comment');
 
 update log_types set prio=id; -- set default priority
+
+-- fwcron tasks
+-- insert into fwcron(icode, cron) values ('example_sleep', '* * * * *') - example task to run every minute

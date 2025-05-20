@@ -396,3 +396,11 @@ Another debug function that might be helpful is `fw.rw()` - but it output it's p
     - `list_filter.html` - for filters
     - `report_html.html` - for report table/layout/appearance
   - add link to a new report to `\App_Data\template\reports\index\main.html`
+
+### Background Service for Scheduled Tasks
+
+Framework includes a background service for scheduled tasks (like send emails, run reports, etc...). Uses **Cronos** nuget package.
+To enable:
+- in Program.cs uncomment `builder.Services.AddHostedService<FwCronService>();`
+- add tasks like `insert into fwcron(icode, cron) values ('example_sleep', '* * * * *')` - example task to run every minute
+- update `FwCron.runJobAction` to call acutal code for tasks
