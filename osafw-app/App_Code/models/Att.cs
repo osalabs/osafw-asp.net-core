@@ -174,7 +174,6 @@ public class Att : FwModel
             if (!string.IsNullOrEmpty(size))
                 result += "?size=" + size;
         }
-        logger("att geturl", item, ", result:", result);
         return result;
     }
 
