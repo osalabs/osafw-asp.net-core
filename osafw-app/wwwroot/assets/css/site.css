@@ -605,10 +605,4 @@ a.thumbnail:hover {
     background-color: #f9f9f9 !important;
     -webkit-print-color-adjust: exact !important;
   }
-
-  /* https://github.com/wkhtmltopdf/wkhtmltopdf/issues/2135 */
-  .wk-img-transparency-fix {
-    z-index: 100;
-    position: relative;
-  }
 }
