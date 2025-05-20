@@ -1,213 +1,201 @@
-# db.net
-Simplified work with SQL Server, MySQL or MS Access (OLE, ODBC) databases for your website, convenient wrapper
+# DB.cs
 
-Contains `DB` class. Pure C# .NET Core.
+Simplified database helper for SQL Server, MySQL or MS Access. Part of the [OSA Framework](https://github.com/osalabs/osafw-asp.net-core).
 
-### Why I created this library?
-Because of much easier and simplier work with queries and results. Compare:
+`DB` wraps ADO.NET and hides repetitive plumbing. It automatically opens connections, builds parametrised queries and converts results to handy collections or custom types.
 
-**DB.vb usage:**
-```vb.net
+## Why DB.cs?
+Working with raw `SqlConnection` is verbose. With `DB` the same query looks like:
 
-Dim db = New DB()
-Dim sql = "SELECT * FROM table ORDER by id"
-Dim rows = db.array(sql); 'db opened automatically based on web.config, errors handled automatically
-For Each row As Hashtable In rows
-    'work with row("Field1"), row("Field2")
-Next
-db.disconnect() 'not necessary as disconnect happens on db object disposal
+```csharp
+var db = fw.getDB();
+var rows = db.array("users", DB.h("status", 0));
+foreach (DBRow row in rows)
+    Console.WriteLine(row["iname"]);
 ```
 
-compare to **"native" SqlConnection/SqlCommand/SqlDataReader usage:**
-```vb.net
-Dim connectionString as String = "Data Source=(local)\SQLEXPRESS;Initial Catalog=demo;Integrated Security=True" //sample
-Dim sql As String = "SELECT * FROM table ORDER by id"
-Using connection As New SqlConnection(connectionString)
-    Dim command As New SqlCommand(sql, connection)
-    connection.Open()
-    Dim reader As SqlDataReader = command.ExecuteReader()
-    Try
-        While reader.Read()
-            'work with fields: Field1 now in reader(0), Field2 in reader(1)
-        End While
-    Finally
-        ' Always need to call Close when done reading.
-        reader.Close()
-    End Try
-End Using
+instead of manual connection/command/reader handling.
+
+## Getting started
+
+A `DB` instance is usually created by the framework but can be constructed directly:
+
+```csharp
+var db = new DB("Server=(local);Database=demo;Trusted_Connection=True;", DB.DBTYPE_SQLSRV);
 ```
 
-### API Summary
+You rarely call `connect()`/`disconnect()` yourself – the first query opens the connection automatically.
 
-The following methods available
+## API summary
 
-#### optional
-- `connect()` opens connection to database (optional as connection opened on first sql request to database)
-- `check_create_mdb(filepath)` create new MS Access database (TBD remove? is it necessary)
-- `disconnect()` disconnect from currently connected db (optional as disconnect happens on db object disposal)
+### Optional
+- `connect()` – open connection manually
+- `disconnect()` – close current connection
+- `check_create_mdb(path)` – create empty MS Access file
 
-#### for parametrized sql queries (best practice to prevent sql-injections)
-- `value(table_name, where[, field_name[, order_by]])` get single value from table/where conditions and optional field_name (if not passed - first field value returned)
-- `value(table_name, where, 'count(*)')` get count(\*) from table/where
-- `value(table_name, where, '1')` get "1" if row exists
-```VB.NET
-    Dim name = db.value("users", New Hashtable From {{"id", 1}}, "user_name")
-    Dim ctr = db.value("users", New Hashtable, "count(*)")
-```
+### Parameterised helpers
+- `value(table, where[, field[, order]])`
+- `row(table, where[, order])`
+- `array(table, where[, order[, fields]])`
+- `col(table, where, field[, order])`
+- `insert(table, data)`
+- `update(table, data, where)`
+- `updateOrInsert(table, data, where)`
+- `del(table, where)`
 
-- `row(table_name, where[, order_by])` get single row (first row) by table/where and optional order by
-```VB.NET
-    Dim table_name = "items"
-    Dim row = db.row(table_name, New Hashtable From {{"id", 1}})
-    'select * from items where id=1
+### Raw SQL
+- `query(sql, params)`
+- `exec(sql, params)` / `update(sql, params)`
+- `valuep(sql, params)`
+- `rowp(sql, params)`
+- `arrayp(sql, params)`
+- `colp(sql, params)`
 
-    Dim where = New Hashtable From {{"status", 0}}
-    Dim row = db.row(table_name, where, "prio desc")
-    'first row from - select * from items where status=0 order by prio desc
-```
+### Helpers
+- `qid(str)` / `q(str[, len])` / `qq(str)`
+- `qi(obj)` / `qf(obj)` / `qdec(obj)` / `qd(obj)`
+- `insql(list)` / `insqli(list)`
+- `limit(sql, n)`
+- `sqlNOW()` / `Now()` and constant `DB.NOW`
+- `left(str, len)`
 
-- `array(table_name, where[, order_by])` get all rows by table/where and optional order by
-```VB.NET
-    Dim table_name = "items"
-    Dim where = New Hashtable From {{"status", 0}}
-    Dim rows = db.array(table_name, where, "prio desc")
-    'select * from items where status=0 order by prio desc
-    For Each row As Hashtable In rows
-        'work with row("fieldname") values
-    Next
-```
+### Where helpers
+- `opEQ(value)` / `opNOT(value)`
+- `opLE(value)` / `opLT(value)` / `opGE(value)` / `opGT(value)`
+- `opIN(params)` / `opNOTIN(params)`
+- `opBETWEEN(from,to)`
+- `opLIKE(value)` / `opNOTLIKE(value)`
+- `opISNULL()` / `opISNOTNULL()`
 
-- `col(table_name, where[, field_name[, order_by]])` get all value from table/where conditions and optional field_name (if not passed - first field/column values returned)
-```VB.NET
-    Dim names = db.col("users", New Hashtable From {{"status", 0}}, "user_name", "user_name desc")
-    'select user_name from users where status=0 order by user_name desc
-    For Each name As String In names
-        'work with user name
-    Next
-```
+### DB structure information
+- `tables()`
+- `views()`
+- `tableSchemaFull(table)`
+- `listForeignKeys([table])`
 
-- `insert(table_name, data)` insert new row into db, return last inserted id
-```VB.NET
-    Dim user = New Hashtable From {
-        {"name","John"},
-        {"email","john@email.com"}
-    }
-    Dim id = db.insert("users", user)
-```
+### Typed operations
+All major methods have `T` versions returning your own classes. Map property names with `[DBName("field")]` when they differ.
 
-- `update(table_name, data, where)` update record by where conditions (AND)
-```VB.NET
-    Dim user = new Hashtable From {
-        {"name","John Smith"}
-    }
-    Dim id = db.update("users", user, New Hashtable From {{"id", 1}})
-```
+```csharp
+class User
+{
+    public int id { get; set; }
 
-- `update_or_insert(table_name, data, where)` tries to update, it no records affected - insert new record, retrun number of affected rows
-```VB.NET
-    'assuming email is unique key, so if no record with such email found - new record will be inserted
-    Dim user = new Hashtable From {
-        {"name","John Smith"},
-        {"email","john@email.com"}
-    }
-    db.update_or_insert("users", user, user)
-    Dim id = value("SELECT @@identity")
+    [DBName("iname")]
+    public string Name { get; set; }
+}
+
+User u = db.row<User>("users", DB.h("id", 1));
+List<User> list = db.array<User>("users", DB.h());
 ```
 
-- `del(table_name, where)` delete record by where conditions (AND)
-```VB.NET
-   db.del("users", New Hashtable From {{"id", 1}})
+`insert`, `update` and `updateOrInsert` also accept typed objects:
+
+```csharp
+var user = new User { Name = "John" };
+int id = db.insert<User>("users", user);
+
+user.Name = "John Smith";
+db.update<User>("users", user, DB.h("id", id));
 ```
 
-#### for raw sql queries
-- `query(sql)` run arbitrary sql query and return DbDataReader
-- `exec(sql)` run arbitrary non-select sql query (for inserts, updates...)
-- `update(sql)` alias for `exec(sql)`
-- `value(sql)` get single value via arbitrary sql
-- `row(sql)` get single row As Hashtable via arbitrary sql
-- `array(sql)` get all rows As ArrayList of Hashtables via arbitrary sql
-```VB.NET
-    Dim rows = db.array("SELECT * FROM users")
-    For Each row As Hashtable In rows
-        'work with row("fieldname") values
-    Next
-```
-- `col(sql)` get all values As ArrayList from first column
+You can convert a dictionary to a typed object using `DB.toClass<T>()`.
 
-#### helpers
-- `q(string[, length=0])` quote string - double single quotes and wrap result into single quotes, optionally trim to left `length` chars
-- `q_ident(string)` quote identifier (table or field name)
-- `qq(string)` quote string witout wrapping result into single quotes
-- `qi(string)` quote string as integer - convert string into Integer
-- `qf(string)` quote string as float - convert string into Double
-- `qd(string)` quote string as date or NULL (if string cannot be parsed as Date)
-- `quote(table_name, data)` quote all field names and values in `data` for a table according to field types
-- `qone(table_name, field_name, field_value)` quote one field value according to table/field type
-- `left(string, length)` trim string and return only left `length` chars
-
-#### where helpers for parametrized queries
-- `insql(params)` - create sql like "IN (1,2,3)" or "IN (NULL)"" if empty params passed
-```VB.NET
-    where = " field "& db.insql("1,2,3,4")
-    where = " field "& db.insql("this,that,another,value")
-    where = " field "& db.insql(string())
-    where = " field "& db.insql(ArrayList)
-```
-- `opIN(value1,value2)` or `opIN(array_of_values)` IN operator
-```VB.NET
-    Dim rows = db.array("users", New Hashtable From {{"id", db.opIN(1, 2)}})
-    'select * from users where id IN (1,2)
-```
-- `opNOTIN(value1,value2)` or `opNOTIN(array_of_values)` NOT IN operator
-```VB.NET
-    Dim rows = db.array("users", New Hashtable From {{"id", db.opNOTIN(1, 2)}})
-    'select * from users where id NOT IN (1,2)
+```csharp
+Hashtable ht = DB.h("id", 3, "iname", "Alice");
+User typed = DB.toClass<User>(ht);
 ```
 
-- `opNOT(value)` NOT EQUAL condition
-```VB.NET
-    Dim rows = db.array("users", New Hashtable From {{"status", db.opNOT(127)}})
-    'select * from users where status<>127
-```
-- `opLE(value)` LESS THAN condition
-```VB.NET
-    Dim rows = db.array("users", New Hashtable From {{"access_level", db.opLT(50)}})
-    'select * from users where access_level<50
-```
-- `opLT(value)` GREATER or EQUAL than operation
-```VB.NET
-    Dim rows = db.array("users", New Hashtable From {{"access_level", db.opGE(50)}})
-    'select * from users where access_level>=50
-```
-- `opGT(value)` GREATER THAN than operation
-```VB.NET
-    Dim rows = db.array("users", New Hashtable From {{"access_level", db.opGT(50)}})
-    'select * from users where access_level>50
-```
-- `opISNULL(value)` check if field IS NULL
-```VB.NET
-    Dim rows = db.array("users", New Hashtable From {{"field", db.opISNULL()}})
-    'select * from users where field IS NULL
-```
-- `opISNOTNULL(value)` check if field IS NOT NULL
-```VB.NET
-    Dim rows = db.array("users", New Hashtable From {{"field", db.opISNOTNULL()}})
-    'select * from users where field IS NOT NULL
-```
-- `opLIKE(value)` LIKE operator
-```VB.NET
-    Dim rows = DB.array("users", New Hashtable From {{"address1", db.opLIKE("%Orlean%")}})
-    'select * from users where address1 LIKE '%Orlean%'
-```
-- `opNOTLIKE(value)` LIKE operator
-```VB.NET
-    Dim rows = DB.array("users", New Hashtable From {{"address1", db.opNOTLIKE("%Orlean%")}})
-    'select * from users where address1 NOT LIKE '%Orlean%'
+## Usage examples
+
+### Basic CRUD
+```csharp
+// read single value
+string name = (string)db.value("users", DB.h("id", 5), "iname");
+
+// first row
+DBRow row = db.row("users", DB.h("id", 5));
+
+// list of rows
+DBList rows = db.array("users", DB.h("status", 0), "iname desc");
+
+// column values
+List<string> names = db.col("users", DB.h("status", 0), "iname");
+
+// insert new user
+int id = db.insert("users", DB.h("iname", "John"));
+
+// update record
+db.update("users", DB.h("iname", "Jane"), DB.h("id", id));
+
+// update or insert
+db.updateOrInsert("users", DB.h("id", id, "iname", "Jack"), DB.h("id", id));
+
+// delete
+db.del("users", DB.h("id", id));
 ```
 
-#### db structure
-- `tables()` return names of all database tables as ArrayList
-- `load_table_schema_full(table)` return ArrayList of Hashtables with information about table columns
-- `get_foreign_keys(table)` return ArrayList of Hashtables with information about table foreign keys
+### Using raw SQL
+```csharp
+// execute custom SQL
+DbDataReader r = db.query("SELECT * FROM users WHERE id=@id", DB.h("@id", 1));
 
+// non-select statement
+db.exec("UPDATE users SET hits=hits+1 WHERE id=@id", DB.h("@id", 1));
 
+// aliases
+db.update("UPDATE users SET hits=hits+1 WHERE id=@id", DB.h("@id", 1));
+
+// read helpers
+string title = (string)db.valuep("SELECT iname FROM users WHERE id=@id", DB.h("@id", 1));
+DBRow user = db.rowp("SELECT * FROM users WHERE id=@id", DB.h("@id", 1));
+DBList list = db.arrayp("SELECT * FROM users WHERE status=@s", DB.h("@s", 0));
+List<string> cols = db.colp("SELECT iname FROM users WHERE status=@s", DB.h("@s", 0));
+```
+
+### Helper functions
+```csharp
+// quoting
+string table = db.qid("users");          // [users]
+string safe = db.q("O'Reilly");           // 'O''Reilly'
+string noWrap = db.qq("O'Reilly");       // O''Reilly
+int intVal = db.qi("123");               // 123
+```
+
+```csharp
+// IN helpers
+string inClause = db.insql(new[] { "a", "b" });     // IN ('a', 'b')
+string inIds = db.insqli(new[] { 1, 2, 3 });        // IN (1, 2, 3)
+
+// current DB time
+DateTime now = db.Now();
+db.insert("log", DB.h("add_time", DB.NOW));         // uses NOW() or GETDATE()
+```
+
+### Where helper operations - `db.opXXX()`
+```csharp
+// id IN (1,2)
+DBList res1 = db.array("users", DB.h("id", db.opIN(1, 2)));
+
+// status <> 0
+DBList res2 = db.array("users", DB.h("status", db.opNOT(0)));
+
+// age BETWEEN 18 AND 30
+DBList adults = db.array("users", DB.h("age", db.opBETWEEN(18, 30)));
+
+// text search
+DBList like = db.array("users", DB.h("address", db.opLIKE("%Street%")));
+
+// explicit NULL check
+DBList nulls = db.array("users", DB.h("deleted", db.opISNULL()));
+```
+
+### Inspecting schema
+```csharp
+ArrayList tables = db.tables();
+ArrayList views = db.views();
+Hashtable schema = db.tableSchemaFull("users");
+ArrayList fkeys = db.listForeignKeys("orders");
+```
+
+Refer to the `DB.cs` source for detailed behaviour of each method.

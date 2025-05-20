@@ -10,7 +10,7 @@ Created as simplified and lightweight alternative to other ASP.NET frameworks li
   - code, data, templates are split
   - code consists of: controllers, models, framework core and optional 3rd party libs
 - uses [ParsePage template engine](https://github.com/osalabs/parsepage) ([detailed docs](osafw-app/App_Data/template/README_ParsePage.md))
-  - data stored by default in SQL Server database [using db.net](https://github.com/osalabs/db.net)
+  - data stored by default in SQL Server database [using db.net](https://github.com/osalabs/db.net) ([detailed docs](README_DB.md))
 - RESTful with some practical enhancements
 - integrated auth - simple flat access levels auth
  - UI based on [Bootstrap 5](http://getbootstrap.com) with minimal custom CSS and themes support - it's easy to customize or apply your own theme (see [README_THEMES](osafw-app/App_Data/README_THEMES))
