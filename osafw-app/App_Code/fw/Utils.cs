@@ -1,13 +1,17 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿//uncomment to enable ExcelDataReader - install ExcelDataReader NuGet package and ExcelDataReader.DataSet (for CSV)
+//#define ExcelDataReader
+#if ExcelDataReader
+using ExcelDataReader;
+#endif
+
+using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Data.OleDb;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Runtime.Versioning;
 using System.Security.Authentication;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -20,8 +24,6 @@ namespace osafw;
 
 public class Utils
 {
-    public const string OLEDB_PROVIDER = "Microsoft.ACE.OLEDB.12.0"; // used for import from CSV/Excel, change it to your provider if necessary
-
     public const string TMP_PREFIX = "osafw"; // prefix for temp directory where framework stores temporary files
 
     public const string MIME_MAP = "doc|application/msword docx|application/msword xls|application/vnd.ms-excel xlsx|application/vnd.ms-excel ppt|application/vnd.ms-powerpoint pptx|application/vnd.ms-powerpoint csv|text/csv pdf|application/pdf html|text/html zip|application/x-zip-compressed jpg|image/jpeg jpeg|image/jpeg gif|image/gif png|image/png wmv|video/x-ms-wmv avi|video/x-msvideo mp4|video/mp4";
@@ -424,112 +426,62 @@ public class Utils
         return (string)mime_map[ext] ?? "application/octet-stream";
     }
 
-    /* <summary>
-    * helper for importing csv files. Example:
-    *    Utils.importCSV(fw, AddressOf importer, "c:\import.csv")
-    *    void importer(row as Hashtable)
-    *       ...your custom import code
-    *    End void
-    * </summary>
-    * <param name="fw">fw instance</param>
-    * <param name="callback">callback to custom code, accept one row of fields(as Hashtable)</param>
-    * <param name="filepath">.csv file name to import</param>
-    */
-    [SupportedOSPlatform("windows")]
-    public static void importCSV(FW fw, Action<Hashtable> callback, string filepath, bool is_header = true)
+    /// <summary>
+    /// Stream rows from an Excel/CSV file and invoke a callback for each row.
+    /// </summary>
+    /// <param name="fw">FW instance (logger, etc.)</param>
+    /// <param name="rowCallback">
+    ///     Your delegate that receives <c>(sheetName, rowFields)</c>.  
+    ///     Return <c>false</c> to stop the import prematurely.
+    /// </param>
+    /// <param name="filePath">Path to .xlsx, .xls, or .csv file.</param>
+    /// <param name="isHeaderRow">
+    ///     If <c>true</c> the first row becomes the column list;
+    ///     otherwise the columns are called F0, F1, …
+    /// </param>  
+    public static void ImportSpreadsheet(string filePath, Func<string, Hashtable, bool> rowCallback, bool isHeaderRow = true)
     {
-        string dir = Path.GetDirectoryName(filepath);
-        string filename = Path.GetFileName(filepath);
+#if ExcelDataReader
+        // ExcelDataReader needs this once per process for legacy encodings
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
-        string ConnectionString = "Provider=" + OLEDB_PROVIDER + ";" +
-                                  "Data Source=" + dir + ";" +
-                                  "Extended Properties=\"Text;HDR=" + (is_header ? "Yes" : "No") + ";IMEX=1;FORMAT=Delimited\";";
+        using var stream = File.OpenRead(filePath);
+        using IExcelDataReader reader = Path.GetExtension(filePath).Equals(".csv", StringComparison.OrdinalIgnoreCase)
+            ? ExcelReaderFactory.CreateCsvReader(stream)   // low‑memory CSV reader
+            : ExcelReaderFactory.CreateReader(stream);     // .xlsx / .xls
 
-        using (OleDbConnection cn = new(ConnectionString))
+        do
         {
-            cn.Open();
+            string sheetName = reader.Name ?? "Sheet1";
+            List<string> headers = null;      // lazily initialised so no per‑row realloc
 
-            string WorkSheetName = filename;
-            // quote as table name
-            WorkSheetName = WorkSheetName.Replace("[", "");
-            WorkSheetName = WorkSheetName.Replace("]", "");
-
-            string sql = "select * from [" + WorkSheetName + "]";
-            OleDbCommand dbcomm = new(sql, cn);
-            OleDbDataReader dbread = dbcomm.ExecuteReader();
-
-            while (dbread.Read())
+            while (reader.Read())
             {
-                Hashtable row = [];
-                for (int i = 0; i < dbread.FieldCount; i++)
+                // build headers once
+                if (isHeaderRow && headers == null)
                 {
-                    string value = dbread[i].ToString();
-                    string name = dbread.GetName(i).ToString();
-                    row.Add(name, value);
+                    headers = new List<string>(reader.FieldCount);
+                    for (int i = 0; i < reader.FieldCount; i++)
+                        headers.Add(reader.GetValue(i)?.ToString() ?? $"F{i}");
+                    continue;                  // move to first data row
                 }
 
-                // logger(h)
-                callback(row);
-            }
-
-            dbread.Close();
-        }
-    }
-
-    /* <summary>
-    * helper for importing Excel files. Example:
-    *    Utils.importExcel(fw, AddressOf importer, "c:\import.xlsx")
-    *    void importer(sheet_name as String, rows as ArrayList)
-    *       ...your custom import code
-    *    End void
-    * </summary>
-    * <param name="fw">fw instance</param>
-    * <param name="callback">callback to custom code, accept worksheet name and all rows(as ArrayList of Hashtables). Returns bool - to continue after first page or break.</param>
-    * <param name="filepath">.xlsx file name to import</param>
-    * <param name="is_header"></param>
-    * <returns></returns>
-    */
-    [SupportedOSPlatform("windows")]
-    public static Hashtable importExcel(FW fw, Func<string, ArrayList, bool> callback, string filepath, bool is_header = true)
-    {
-        Hashtable result = [];
-        Hashtable conf = [];
-        conf["type"] = "OLE";
-        conf["connection_string"] = "Provider=" + OLEDB_PROVIDER + ";Data Source=" + filepath + ";Extended Properties=\"Excel 12.0 Xml;HDR=" + (is_header ? "Yes" : "No") + ";ReadOnly=True;IMEX=1\"";
-
-        DB accdb = new(conf);
-        OleDbConnection conn = (OleDbConnection)accdb.connect();
-        var schema = conn.GetOleDbSchemaTable(OleDbSchemaGuid.Tables, null);
-
-        if (schema == null || schema.Rows.Count < 1)
-        {
-            throw new ApplicationException("No worksheets found in the Excel file");
-        }
-
-        Hashtable where = [];
-        for (int i = 0; i < schema.Rows.Count; i++)
-        {
-            string sheet_name_full = schema.Rows[i]["TABLE_NAME"].ToString();
-            string sheet_name = sheet_name_full.Replace("\"", "");
-            sheet_name = sheet_name.Replace("'", "");
-            sheet_name = sheet_name[..^1]; // remove trailing $
-            try
-            {
-                ArrayList rows = accdb.array(sheet_name_full, where);
-                if (!callback(sheet_name, rows))
+                var row = new Hashtable(reader.FieldCount);
+                for (int i = 0; i < reader.FieldCount; i++)
                 {
-                    break;
+                    string colName = headers != null && i < headers.Count ? headers[i] : $"F{i}";
+                    row[colName] = reader.GetValue(i);     // keep native types where possible
                 }
 
-            }
-            catch (Exception ex)
-            {
-                throw new ApplicationException("Error while reading data from [" + sheet_name + "] sheet: " + ex.Message);
+                // let caller process the row; stop if they ask
+                if (!rowCallback(sheetName, row))
+                    return;
             }
         }
-        // close connection to release the file
-        accdb.disconnect();
-        return result;
+        while (reader.NextResult());           // advance to next worksheet
+#else
+        throw new NotSupportedException("ExcelDataReader is not available. Please install the NuGet package and enable in Utils");
+#endif
     }
 
     public static string toCSVRow(Hashtable row, Array fields)
