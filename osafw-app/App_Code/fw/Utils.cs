@@ -1191,7 +1191,7 @@ public class Utils
     public static Hashtable array2hashtable(IList arr, string key)
     {
         Hashtable result = [];
-        foreach (Hashtable item in arr)
+        foreach (IDictionary item in arr)
             result[item[key]] = item;
         return result;
     }

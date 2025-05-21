@@ -243,7 +243,9 @@ public class DB : IDisposable
     private string limit_method = "TOP"; // for SQL Server 2005+, for MySQL - LIMIT, for OLE - depends on provider
     private string offset_method = "FETCH NEXT"; // for SQL Server 2012+, for MySQL - LIMIT, for OLE - depends on provider
     protected Dictionary<string, Hashtable> schema = []; // schema for currently connected db
+
     private DbConnection conn; // actual db connection - SqlConnection or OleDbConnection
+    private DbTransaction tran; // current transaction (if any)
 
     protected bool is_check_ole_types = false; // if true - checks for unsupported OLE types during readRow
     protected readonly Hashtable UNSUPPORTED_OLE_TYPES = Utils.qh("DBTYPE_IDISPATCH DBTYPE_IUNKNOWN"); // also? DBTYPE_ARRAY DBTYPE_VECTOR DBTYPE_BYTES
@@ -448,6 +450,34 @@ public class DB : IDisposable
         return result;
     }
 
+    public DbTransaction BeginTransaction()
+    {
+        connect();
+        tran = conn.BeginTransaction();
+        return tran;
+    }
+
+    public void Commit()
+    {
+        if (tran == null)
+            return;
+
+        tran.Commit();
+        tran.Dispose();
+        tran = null;
+    }
+
+    public void Rollback()
+    {
+        if (tran == null)
+            return;
+
+        tran.Rollback();
+        tran.Dispose();
+        tran = null;
+
+    }
+
     [SupportedOSPlatform("windows")]
     public void check_create_mdb(string filepath)
     {
@@ -494,6 +524,10 @@ public class DB : IDisposable
             };
             foreach (string p in @params.Keys)
                 dbcomm.Parameters.AddWithValue(p, @params[p]);
+
+            if (tran != null)
+                dbcomm.Transaction = (SqlTransaction)tran;
+
             dbread = dbcomm.ExecuteReader();
         }
         else if (dbtype == DBTYPE_OLE && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -509,6 +543,9 @@ public class DB : IDisposable
                 dbcomm.Parameters.AddWithValue("?", pvalue);
             }
 
+            if (tran != null)
+                dbcomm.Transaction = (OleDbTransaction)tran;
+
             dbread = dbcomm.ExecuteReader();
         }
 #if isMySQL
@@ -517,6 +554,10 @@ public class DB : IDisposable
             var dbcomm = new MySqlCommand(sql, (MySqlConnection)conn);
             foreach (string p in @params.Keys)
                 dbcomm.Parameters.AddWithValue(p, @params[p]);
+
+            if (tran != null)
+                dbcomm.Transaction = (MySqlTransaction)tran;
+
             dbread = dbcomm.ExecuteReader();
         }
 #endif
@@ -623,6 +664,9 @@ public class DB : IDisposable
             foreach (string p in @params.Keys)
                 dbcomm.Parameters.AddWithValue(p, @params[p]);
 
+            if (tran != null)
+                dbcomm.Transaction = (SqlTransaction)tran;
+
             if (is_get_identity)
                 result = dbcomm.ExecuteScalar().toInt();
             else
@@ -640,6 +684,10 @@ public class DB : IDisposable
                 //logger(LogLevel.INFO, "DB:", db_name, " ", "param: ", p, " = ", pvalue);
                 dbcomm.Parameters.AddWithValue("?", pvalue);
             }
+
+            if (tran != null)
+                dbcomm.Transaction = (OleDbTransaction)tran;
+
             result = dbcomm.ExecuteNonQuery();
         }
 #if isMySQL
@@ -649,6 +697,9 @@ public class DB : IDisposable
             dbcomm.CommandTimeout = sql_command_timeout;
                 foreach (string p in @params.Keys)
                     dbcomm.Parameters.AddWithValue(p, @params[p]);
+
+            if (tran != null)
+                dbcomm.Transaction = (MySqlTransaction)tran;
 
             result = dbcomm.ExecuteNonQuery();
 
