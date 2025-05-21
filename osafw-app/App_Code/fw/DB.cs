@@ -450,14 +450,16 @@ public class DB : IDisposable
         return result;
     }
 
-    public DbTransaction BeginTransaction()
+    // transactions support
+
+    public DbTransaction begin()
     {
         connect();
         tran = conn.BeginTransaction();
         return tran;
     }
 
-    public void Commit()
+    public void commit()
     {
         if (tran == null)
             return;
@@ -467,7 +469,7 @@ public class DB : IDisposable
         tran = null;
     }
 
-    public void Rollback()
+    public void rollback()
     {
         if (tran == null)
             return;

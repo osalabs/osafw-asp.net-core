@@ -52,17 +52,21 @@ public class FwUpdates : FwModel
         Array.Sort(files, new FileNameWithoutExtComparer());
         //logger("SORTED FILES:", files);
 
+        var dbfiles = db.array(table_name, [], "", new[] { "iname" });
+        var hdbfiles = Utils.array2hashtable(dbfiles, "iname");
         foreach (string file in files)
         {
-            logger("checking " + file);
             if (file == "." || file == ".." || !file.EndsWith(".sql"))
                 continue;
-            if (isExists(file, 0))
-                continue;
+
+            var filename = System.IO.Path.GetFileName(file);
+            logger("checking " + filename);
+            if (hdbfiles.ContainsKey(filename))
+                continue; // already exists in db
 
             string content = System.IO.File.ReadAllText(file);
             add(new Hashtable() {
-                { "iname", file },
+                { "iname", filename },
                 { "idesc", content }
             });
         }
@@ -93,11 +97,13 @@ public class FwUpdates : FwModel
             { "status", STATUS_APPLIED },
             { "applied_time", DB.NOW }
         };
+
+        var conn = db.getConnection();
         try
         {
-            db.exec("BEGIN TRANSACTION");
+            db.begin();
             db.execMultipleSQL(row["idesc"]);
-            db.exec("COMMIT");
+            db.commit();
 
             update(id, uitem);
         }
@@ -105,7 +111,7 @@ public class FwUpdates : FwModel
         {
             try
             {
-                db.exec("ROLLBACK");
+                db.rollback();
             }
             catch (Exception e2)
             {
@@ -113,9 +119,9 @@ public class FwUpdates : FwModel
                 logger("ERROR", "ROLLBACK failed: " + e2.Message);
             }
 
-            uitem["status"] = STATUS_FAILED;
-            uitem["last_error"] = e.Message;
-            update(id, uitem);
+            //uitem["status"] = STATUS_FAILED;
+            //uitem["last_error"] = e.Message;
+            //update(id, uitem);
 
             if (is_echo)
                 fw.rw("<b style='color:red'>" + row["iname"] + " failed</b>");
@@ -141,6 +147,10 @@ public class FwUpdates : FwModel
         }
         catch (Exception e)
         {
+            //except RedirectException
+            if (e is RedirectException)
+                throw; // re-throw
+
             logger("ERROR", e.Message);
         }
     }

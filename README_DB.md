@@ -31,7 +31,7 @@ You rarely call `connect()`/`disconnect()` yourself – the first query opens th
 ### Optional
 - `connect()` – open connection manually
 - `disconnect()` – close current connection
-- `check_create_mdb(path)` – create empty MS Access file
+- `begin()` / `commit()` / `rollback()` – manage transactions
 
 ### Parameterised helpers
 - `value(table, where[, field[, order]])`
@@ -151,6 +151,22 @@ string title = (string)db.valuep("SELECT iname FROM users WHERE id=@id", DB.h("@
 DBRow user = db.rowp("SELECT * FROM users WHERE id=@id", DB.h("@id", 1));
 DBList list = db.arrayp("SELECT * FROM users WHERE status=@s", DB.h("@s", 0));
 List<string> cols = db.colp("SELECT iname FROM users WHERE status=@s", DB.h("@s", 0));
+```
+
+### Transactions
+```csharp
+db.begin();
+try
+{
+    db.exec("UPDATE accounts SET balance=balance-10 WHERE id=@id", DB.h("@id", 1));
+    db.exec("UPDATE accounts SET balance=balance+10 WHERE id=@id", DB.h("@id", 2));
+    db.commit();
+}
+catch
+{
+    db.rollback();
+    throw;
+}
 ```
 
 ### Helper functions
