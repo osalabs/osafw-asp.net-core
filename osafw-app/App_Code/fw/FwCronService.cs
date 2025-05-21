@@ -44,7 +44,7 @@ public class FwCronService : BackgroundService
                 catch (Exception ex)
                 {
                     // Log the error to Sentry (or other error tracking systems) if available
-                    fw.logger(LogLevel.ERROR, "Failed to execute job:", job.id, ex.Message);
+                    fw.logger(LogLevel.ERROR, "Failed to execute job:", job.id, ", error:", ex.Message);
 
                     // Uncomment to log the errors in activity log
                     // fw.logActivity(FwLogTypes.ICODE_EXECUTED, FwEntities.ICODE_CRON, job.id, ex.Message);

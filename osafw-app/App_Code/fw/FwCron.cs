@@ -141,11 +141,14 @@ public class FwCron : FwModel
             toInclusive: false);
 
         // Get the last valid occurrence (if any) within that window
-        var last = occurrences.OrderDescending().FirstOrDefault();
+        DateTime? last = null;
+        var lastOcc = occurrences.LastOrDefault();
+        if (lastOcc != default)
+            last = DateTime.SpecifyKind(lastOcc, DateTimeKind.Utc);
 
         // Get the next scheduled time after the last known run
         var next_run = cron_expression.GetNextOccurrence(
-            fromUtc: last,
+            fromUtc: last ?? from_date_utc, //fallback to job's start point
             zone: TimeZoneInfo.Utc);
 
         // Enforce the end_date constraint
@@ -170,12 +173,13 @@ public class FwCron : FwModel
                 // Simulate work
                 Thread.Sleep(2000);
 
-                // Uncomment to enable tracking of successful executions
-                //fw.logActivity(FwLogTypes.ICODE_EXECUTED, FwEntities.ICODE_CRON, job.id);
                 break;
 
             default:
                 throw new Exception($"Unknown job code: {job.icode}");
         }
+
+        // Uncomment to enable tracking of successful executions
+        // fw.logActivity(FwLogTypes.ICODE_EXECUTED, FwEntities.ICODE_CRON, job.id);
     }
 }
