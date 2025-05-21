@@ -1,0 +1,44 @@
+{
+  "model": "FwUpdates",
+  "is_dynamic_index": true,
+  "list_view": "(SELECT t.*, fk0.iname as [add_users_id_iname], fk1.iname as [upd_users_id_iname] FROM [fwupdates] t LEFT OUTER JOIN [users] fk0 ON (fk0.id=t.add_users_id) LEFT OUTER JOIN [users] fk1 ON (fk1.id=t.upd_users_id)) tt",
+  "list_sortdef": "iname asc",
+  "search_fields": "id iname",
+  "related_field_name": "",
+  "view_list_defaults": "iname status applied_time",
+  "view_list_map": {
+    "id": "ID",
+    "icode": "Code",
+    "iname": "Name",
+    "idesc": "Description",
+    "status": "Status",
+    "applied_time": "Applied Date/Time",
+    "add_users_id_iname": "Add User",
+    "upd_users_id_iname": "Upd User",
+    "add_time": "Add Time",
+    "upd_time": "Upd Time"
+  },
+  "view_list_custom": "status is_applied",
+  "is_dynamic_show": false,
+  "is_dynamic_showform": false,
+  "form_new_defaults": {
+    "iname": ""
+  },
+  "save_fields": [
+    "icode",
+    "iname",
+    "idesc",
+    "applied_time",
+    "status"
+  ],
+  "save_fields_checkboxes": "",
+  "save_fields_nullable": [
+    "idesc",
+    "applied_time",
+    "status",
+    "add_users_id",
+    "upd_time",
+    "upd_users_id"
+  ],
+  "1": "1"
+}
