@@ -108,16 +108,32 @@ public abstract class FwController
     // load controller config from json in template dir (based on base_url)
     public virtual void loadControllerConfig(string config_filename = "config.json")
     {
+        if (string.IsNullOrEmpty(base_url))
+        {
+            // silent fail as it could happen for virtual controllers
+            logger(LogLevel.TRACE, "no base_url set, cannot load config");
+            return;
+        }
+
         var conf_file0 = base_url.ToLower() + "/" + config_filename;
+        logger(LogLevel.TRACE, "loading config from:", conf_file0);
+
         var conf_file = fw.config("template") + "/" + conf_file0;
         if (!System.IO.File.Exists(conf_file))
             throw new ApplicationException("Controller Config file not found in templates: " + conf_file0);
 
-        this.config = (Hashtable)Utils.jsonDecode(FW.getFileContent(conf_file));
-        if (this.config == null)
+        var config = (Hashtable)Utils.jsonDecode(FW.getFileContent(conf_file));
+        if (config == null)
             throw new ApplicationException("Controller Config is invalid, check json in templates: " + conf_file0);
+
+        loadControllerConfig(config);
+    }
+
+    public virtual void loadControllerConfig(Hashtable config)
+    {
+        this.config = config;
         // logger("loaded config:")
-        // logger(Me.config)
+        // logger(config)
 
         var model_name = this.config["model"].toStr();
         if (!string.IsNullOrEmpty(model_name))

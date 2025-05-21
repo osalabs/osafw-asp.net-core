@@ -109,8 +109,8 @@ public class FW : IDisposable
     public const string FW_NAMESPACE_PREFIX = "osafw.";
     public static Hashtable METHOD_ALLOWED = Utils.qh("GET POST PUT PATCH DELETE");
 
-    private readonly Hashtable models = [];
-    public FwCache cache = new(); // request level cache
+    private readonly Hashtable models = []; // model's singletons cache
+    private readonly Hashtable controllers = []; // controller's singletons cache
     private ParsePage pp_instance; // for parsePage()
 
     public Hashtable FORM;
@@ -119,6 +119,7 @@ public class FW : IDisposable
     public Hashtable FormErrors; // for storing form id's with error messages, put to ps['error']['details'] for parser
     public Exception last_file_exception; // set by getFileContent, getFileLines in case of exception
 
+    public FwCache cache = new(); // cache instance
     public DB db;
 
     public HttpContext context;
@@ -1790,7 +1791,7 @@ public class FW : IDisposable
         return (T)models[tt.Name];
     }
 
-    // return model object by model name
+    // return model object by model class name
     public FwModel model(string model_name)
     {
         if (!models.ContainsKey(model_name))
@@ -1802,6 +1803,50 @@ public class FW : IDisposable
             models[model_name] = m;
         }
         return (FwModel)models[model_name];
+    }
+
+    /// <summary>
+    /// Return controller instance by controller class name
+    /// </summary>
+    /// <param name="controller_name"></param>
+    /// <returns></returns>
+    /// <exception cref="ApplicationException"></exception>
+    public FwController controller(string controller_name)
+    {
+        //validate - name should end with "Controller"
+        if (!controller_name.EndsWith("Controller", StringComparison.OrdinalIgnoreCase))
+            throw new ApplicationException($"Controller class name should end on 'Controller': {controller_name}");
+
+        if (controllers.ContainsKey(controller_name))
+            return (FwController)controllers[controller_name];
+
+        FwController c;
+        Type ct = Type.GetType(FW_NAMESPACE_PREFIX + controller_name, false, true); // case ignored
+        if (ct == null)
+        {
+            //if no such controller class - try virtual controllers
+            logger(LogLevel.TRACE, $"Controller class not found, trying Virtual Controller: {controller_name}");
+            //strip "Controller" suffix from controller_name
+            var controller_icode = controller_name[..^"Controller".Length];
+
+            var fwcon = model<FwControllers>().oneByIcode(controller_icode);
+            if (fwcon.Count == 0)
+                return null; // controller class not found even in virtual controllers TODO NoControllerException?
+
+            // check defined access level
+            if (userAccessLevel < fwcon["access_level"].toInt())
+                throw new AuthException("Bad access - Not authorized (4)");
+
+            c = new FwVirtualController(this, fwcon);
+        }
+        else
+            c = (FwController)Activator.CreateInstance(ct);
+
+        // initialize
+        c.init(this);
+        controllers[controller_name] = c;
+
+        return c;
     }
 
     public void logActivity(string log_types_icode, string entity_icode, int item_id = 0, string iname = "", Hashtable changed_fields = null)

@@ -159,8 +159,9 @@ public class DevConfigureController : FwController
         {
             fw.rw("Error: " + ex.Message);
             fw.rw("");
-            fw.rw("<b>Press F5 to continue applying updates</b>");
+            fw.rw("<b>Press F5 to continue applying updates</b><br>");
             fw.rw("or go to <a href='/Admin/FwUpdates'>Admin FwUpdates</a>");
+            fw.rw("or go to <a href='/Login'>Login</a><br>");
             return null;
         }
 

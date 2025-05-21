@@ -566,7 +566,8 @@ class DevCodeGen
             controller_from_class = "AdminDemosVue";
             controller_from_url = "/Admin/DemosVue";
             controller_from_title = "Demo Vue";
-        };
+        }
+        ;
 
         entity["controller"] = controller_options; //write back
 
@@ -634,7 +635,7 @@ class DevCodeGen
         DevEntityBuilder.saveJsonController(config, config_file);
     }
 
-    public void updateControllerConfig(Hashtable entity, Hashtable config, ArrayList entities)
+    public void updateControllerConfig(Hashtable entity, Hashtable config, ArrayList entities = null)
     {
         string model_name = (string)entity["model_name"];
         string table_name = (string)entity["table"];
@@ -664,8 +665,11 @@ class DevCodeGen
                 tables[tbl] = new Hashtable();
         }
         else
+        {
+            entities ??= [];
             foreach (Hashtable tentity in entities)
                 tables[tentity["table"]] = tentity;
+        }
 
         var is_fw = entity["is_fw"].toBool();
 

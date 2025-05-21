@@ -705,7 +705,7 @@ public class Utils
 
     // deep hash merge, i.e. if hash2 contains values that is hash value - go in it and copy such values to hash2 at same place accordingly
     // recursive
-    public static void mergeHashDeep(ref Hashtable hash1, ref Hashtable hash2)
+    public static void mergeHashDeep(Hashtable hash1, Hashtable hash2)
     {
         if (hash2 != null)
         {
@@ -718,7 +718,7 @@ public class Utils
                         hash1[key] = new Hashtable();
                     Hashtable _hash1 = (Hashtable)hash1[key];
                     Hashtable _hash2 = ht;
-                    mergeHashDeep(ref _hash1, ref _hash2);
+                    mergeHashDeep(_hash1, _hash2);
                 }
                 else
                     hash1[key] = hash2[key];

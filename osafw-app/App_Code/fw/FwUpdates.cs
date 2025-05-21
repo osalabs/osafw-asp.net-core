@@ -119,9 +119,9 @@ public class FwUpdates : FwModel
                 logger("ERROR", "ROLLBACK failed: " + e2.Message);
             }
 
-            //uitem["status"] = STATUS_FAILED;
-            //uitem["last_error"] = e.Message;
-            //update(id, uitem);
+            uitem["status"] = STATUS_FAILED;
+            uitem["last_error"] = e.Message;
+            update(id, uitem);
 
             if (is_echo)
                 fw.rw("<b style='color:red'>" + row["iname"] + " failed</b>");

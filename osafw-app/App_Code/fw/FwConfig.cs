@@ -178,7 +178,7 @@ public class FwConfig
                     )
                 {
                     settings["config_override"] = over_name;
-                    Utils.mergeHashDeep(ref settings, ref over);
+                    Utils.mergeHashDeep(settings, over);
                     break;
                 }
             }
