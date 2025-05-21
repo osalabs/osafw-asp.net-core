@@ -1,58 +1,60 @@
 <script type="text/x-template" id="form-one-def-template">
-  <form-one-row v-if="def.type=='row'"
-    :form="form"
-    @update-form-field="$emit('update-form-field', $event)"
-    @cancel-form="$emit('cancel-form', $event)"
-    :def="def"
-    :lookups="lookups"
-  />
-  <form-one-col v-else-if="def.type=='col'"
-    :form="form"
-    @update-form-field="$emit('update-form-field', $event)"
-    @cancel-form="$emit('cancel-form', $event)"
-    :def="def"
-    :lookups="lookups"
-  />
-  <form-one-form-row v-else-if="def.class!==false"
-    :form="form"
-    @update-form-field="$emit('update-form-field', $event)"
-    @cancel-form="$emit('cancel-form', $event)"
-    :def="def"
-    :lookups="lookups"
-  />
-  <form-one-group v-else
-    :form="form"
-    @update-form-field="$emit('update-form-field', $event)"
-    @cancel-form="$emit('cancel-form', $event)"
-    :def="def"
-    :lookups="lookups"
-  />
+    <form-one-row
+            v-if="def.type=='row'"
+            :form="form"
+            @update-form-field="$emit('update-form-field', $event)"
+            @cancel-form="$emit('cancel-form', $event)"
+            :def="def"
+            :lookups="lookups"
+    />
+    <form-one-col
+            v-else-if="def.type=='col'"
+            :form="form"
+            @update-form-field="$emit('update-form-field', $event)"
+            @cancel-form="$emit('cancel-form', $event)"
+            :def="def"
+            :lookups="lookups"
+    />
+    <form-one-form-row
+            v-else-if="def.class!==false"
+            :form="form"
+            @update-form-field="$emit('update-form-field', $event)"
+            @cancel-form="$emit('cancel-form', $event)"
+            :def="def"
+            :lookups="lookups"
+    />
+    <form-one-group
+            v-else
+            :form="form"
+            @update-form-field="$emit('update-form-field', $event)"
+            @cancel-form="$emit('cancel-form', $event)"
+            :def="def"
+            :lookups="lookups"
+    />
 </script>
 
 <script type="module">
-fwApp.component('form-one-def', {
-  template: '#form-one-def-template',
-  props: {
-    def: {
-      type: Object,
-      required: true
-    },
-    lookups: {
-      type: Object,
-      required: true
-    },
-    form: {
-      type: Object,
-      required: true
-    }
-  },
-  emits: ['update-form-field', 'cancel-form'],
-  data: () => ({
-  }),
-  mounted(){
-    //console.log("form-one-def mounted", this.def);
-  },
-  methods: {
-  }
-});
+    fwApp.component('form-one-def', {
+        template: '#form-one-def-template',
+        props: {
+            def: {
+                type: Object,
+                required: true
+            },
+            lookups: {
+                type: Object,
+                required: true
+            },
+            form: {
+                type: Object,
+                required: true
+            }
+        },
+        emits: ['update-form-field', 'cancel-form'],
+        data: () => ({}),
+        mounted() {
+            //console.log("form-one-def mounted", this.def);
+        },
+        methods: {}
+    });
 </script>

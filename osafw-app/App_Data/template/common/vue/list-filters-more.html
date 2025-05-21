@@ -1,43 +1,42 @@
 <script type="text/x-template" id="list-filters-more-template">
-  <div class="row form-row">
-    <label class="col-form-label col-md-2 col-xl-1" for="list-filters-more-view">`Sample View`</label>
-    <div class="col-md-3 col-lg-2">
-        <Multiselect
-          v-model="fwStore.f.view"
-          :options="lookup_view"
-          valueProp="id"
-          label="iname"
-          placeholder="`- all -`"
-          @change="fwStore.setFilters({})"
-        />
-    </div>
+    <div class="row form-row">
+        <label class="col-form-label col-md-2 col-xl-1" for="list-filters-more-view">`Sample View`</label>
+        <div class="col-md-3 col-lg-2">
+            <Multiselect
+                    v-model="fwStore.f.view"
+                    :options="lookup_view"
+                    valueProp="id"
+                    label="iname"
+                    placeholder="`- all -`"
+                    @change="fwStore.setFilters({})"
+            />
+        </div>
 
-  </div>
+    </div>
 </script>
 
 <script type="module">
-import { mapStores } from 'pinia';
-import Multiselect from 'Multiselect';
+    import {mapStores} from 'pinia';
+    import Multiselect from 'Multiselect';
 
-fwApp.component('list-filters-more', {
-  template: '#list-filters-more-template',
-  props: [],
-  components: {
-    Multiselect
-  },
-  data: () => ({
-    lookup_view: [
-      { id: 10, iname: 'Option 1' },
-      { id: 20, iname: 'Option 2' },
-    ]
-  }),
-  computed: {
-        ...mapStores(useFwStore), //accessible via this.fwStore
-  },
-  mounted() {
-        console.log('list-filters-more mounted');
-  },
-  methods: {
-  }
-});
+    fwApp.component('list-filters-more', {
+        template: '#list-filters-more-template',
+        props: [],
+        components: {
+            Multiselect
+        },
+        data: () => ({
+            lookup_view: [
+                {id: 10, iname: 'Option 1'},
+                {id: 20, iname: 'Option 2'},
+            ]
+        }),
+        computed: {
+            ...mapStores(useFwStore), //accessible via this.fwStore
+        },
+        mounted() {
+            console.log('list-filters-more mounted');
+        },
+        methods: {}
+    });
 </script>

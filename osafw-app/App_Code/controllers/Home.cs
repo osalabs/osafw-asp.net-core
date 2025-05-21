@@ -29,6 +29,10 @@ public class HomeController : FwController
     // CACHED as home_page
     public Hashtable IndexAction()
     {
+        fw.model<FwUpdates>().checkApplyIfDev();
+
+        //fw.redirect("/Login"); // uncomment to always redirect to login page instead of Home
+
         Hashtable ps = (Hashtable)FwCache.getValue("home_page");
 
         if (ps == null || ps.Count == 0)

@@ -1,53 +1,56 @@
 <script type="text/x-template" id="list-filters-table-btn-template">
-  <div class="btn-group">
-    <a href="#" class="btn btn-outline-secondary" title="`Filter Columns`" @click.prevent="onToggleSearch"><i class="bi bi-funnel"></i></a>
-    <a href="#" class="btn btn-outline-secondary" title="`Customize Columns`" @click.prevent="onCustomCols"><i class="bi bi-table"></i></a>
-    <a href="#" class="btn btn-outline-secondary" title="`Density`" @click.prevent="onToggleDensity"><i class="bi bi-grid-3x2-gap"></i></a>
-    <a href="#" :class="'btn '+(fwStore.is_list_edit ? 'btn-info' : 'btn-outline-secondary')" title="`Toggle Edit`" @click.prevent="onToggleEdit"><i class="bi bi-pencil-square"></i></a>
-  </div>
+    <div class="btn-group">
+        <a href="#" class="btn btn-outline-secondary" title="`Filter Columns`" @click.prevent="onToggleSearch"><i
+                class="bi bi-funnel"></i></a>
+        <a href="#" class="btn btn-outline-secondary" title="`Customize Columns`" @click.prevent="onCustomCols"><i
+                class="bi bi-table"></i></a>
+        <a href="#" class="btn btn-outline-secondary" title="`Density`" @click.prevent="onToggleDensity"><i
+                class="bi bi-grid-3x2-gap"></i></a>
+        <a href="#" :class="'btn '+(fwStore.is_list_edit ? 'btn-info' : 'btn-outline-secondary')" title="`Toggle Edit`"
+           @click.prevent="onToggleEdit"><i class="bi bi-pencil-square"></i></a>
+    </div>
 </script>
 
 <script type="module">
-import { mapStores } from 'pinia';
+    import {mapStores} from 'pinia';
 
-fwApp.component('list-filters-table-btn', {
-  template: '#list-filters-table-btn-template',
-  props: [],
-  emits: ['on-show-customize-columns'],
-  data: () => ({
-  }),
-  computed: {
-    ...mapStores(useFwStore) //accessible via this.fwStore
-  },
-  methods: {
-      onToggleSearch(e){
-          this.fwStore.is_list_search_open = !this.fwStore.is_list_search_open;
-          if (this.fwStore.is_list_search_open){
-              //show search hints
-              Toast("WORD to search for contains word<br>"+
-                  "!WORD to search for NOT contains word<br>"+
-                  "=WORD to search for equals word<br>"+
-                  "!=WORD to search for NOT equals word<br>"+
-                  "&lt;=N, &lt;N, &gt;=N, &gt;N - compare numbers",
-                  {header: 'Search hints', theme: 'text-bg-info', html:true, autohide: false});
-          }
-      },
-      onCustomCols(e){
-        this.$emit('on-show-customize-columns', e);
-      },
-      onToggleDensity(e){
-          const classes = ['table-sm', 'table-dense', 'table-normal'];
-          const current_density = this.fwStore.list_user_view.density;
-          //get next density class
-          const next_density = classes[(classes.indexOf(current_density) + 1) % classes.length];
+    fwApp.component('list-filters-table-btn', {
+        template: '#list-filters-table-btn-template',
+        props: [],
+        emits: ['on-show-customize-columns'],
+        data: () => ({}),
+        computed: {
+            ...mapStores(useFwStore) //accessible via this.fwStore
+        },
+        methods: {
+            onToggleSearch(e) {
+                this.fwStore.is_list_search_open = !this.fwStore.is_list_search_open;
+                if (this.fwStore.is_list_search_open) {
+                    //show search hints
+                    Toast("WORD to search for contains word<br>" +
+                        "!WORD to search for NOT contains word<br>" +
+                        "=WORD to search for equals word<br>" +
+                        "!=WORD to search for NOT equals word<br>" +
+                        "&lt;=N, &lt;N, &gt;=N, &gt;N - compare numbers",
+                        {header: 'Search hints', theme: 'text-bg-info', html: true, autohide: false});
+                }
+            },
+            onCustomCols(e) {
+                this.$emit('on-show-customize-columns', e);
+            },
+            onToggleDensity(e) {
+                const classes = ['table-sm', 'table-dense', 'table-normal'];
+                const current_density = this.fwStore.list_user_view.density;
+                //get next density class
+                const next_density = classes[(classes.indexOf(current_density) + 1) % classes.length];
 
-          this.fwStore.setListDensity(next_density);
-      },
-      onToggleEdit(e){
-        this.fwStore.is_list_edit = !this.fwStore.is_list_edit;
-        this.fwStore.is_initial_load=true;
-        this.fwStore.loadIndexDebounced();
-      },
-  }
-});
+                this.fwStore.setListDensity(next_density);
+            },
+            onToggleEdit(e) {
+                this.fwStore.is_list_edit = !this.fwStore.is_list_edit;
+                this.fwStore.is_initial_load = true;
+                this.fwStore.loadIndexDebounced();
+            },
+        }
+    });
 </script>

@@ -74,9 +74,7 @@ public abstract class FwModel : IDisposable
         this.fw = fw;
         if (!string.IsNullOrEmpty(this.db_config))
         {
-            Hashtable dbconfig = (Hashtable)fw.config("db");
-            Hashtable config_details = (Hashtable)dbconfig[this.db_config];
-            this.db = new DB(fw, config_details, this.db_config);
+            this.db = fw.getDB(this.db_config);
         }
         else
             this.db = fw.db;

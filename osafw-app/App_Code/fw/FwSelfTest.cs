@@ -223,7 +223,12 @@ public class FwSelfTest
                     //var bufferingFeature2 = fw.context.Features.Get<IHttpResponseBodyFeature>();
                     //bufferingFeature2?.DisableBuffering();
 
-                    fw._auth(controller_name, FW.ACTION_INDEX);
+                    var route = new FwRoute
+                    {
+                        controller = controller_name,
+                        action = FW.ACTION_INDEX
+                    };
+                    fw._auth(route);
                     fw.setController(controller_name, FW.ACTION_INDEX);
 
                     FwController new_controller = (FwController)Activator.CreateInstance(calledType);
@@ -247,7 +252,12 @@ public class FwSelfTest
                 else
                 {
                     // test using SelfTest
-                    fw._auth(controller_name, "SelfTest");
+                    var route = new FwRoute
+                    {
+                        controller = controller_name,
+                        action = "SelfTest"
+                    };
+                    fw._auth(route);
 
                     FwController new_controller = (FwController)Activator.CreateInstance(calledType);
                     new_controller.init(fw);

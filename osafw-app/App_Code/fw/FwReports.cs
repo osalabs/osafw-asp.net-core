@@ -24,6 +24,8 @@
 
 using System;
 using System.Collections;
+using System.Linq;
+
 
 namespace osafw;
 
@@ -297,6 +299,16 @@ public class FwReports
                     break;
                 }
 
+            case "xlsx":
+                {
+                    var out_filename = Utils.isEmpty(render_options["xls_filename"]) ? report_code : (string)render_options["xls_filename"];
+                    // TODO make headers as array of readable values, not the same as fields names
+                    var headers = (list_rows[0] as Hashtable).Keys.Cast<string>().ToArray();
+                    var fields = headers;
+
+                    ConvUtils.exportNativeExcel(fw, headers, fields, list_rows, out_filename);
+                    break;
+                }
             case "csv":
                 {
                     if (isFileRender())
@@ -321,8 +333,7 @@ public class FwReports
                         if (ps.ContainsKey("_layout"))
                             layout = (string)ps["_layout"];
 
-                        ParsePage parser_obj = new(fw);
-                        result = parser_obj.parse_page(base_dir, layout, ps);
+                        result = fw.parsePage(base_dir, layout, ps);
 
                         if (render_to != TO_STRING)
                             //this is render to file

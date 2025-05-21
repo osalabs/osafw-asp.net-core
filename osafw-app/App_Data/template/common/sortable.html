@@ -36,10 +36,10 @@
             };
             $.post(url, data, null, 'json')
                 .done(function (data) {
-                  if (data.success) {
+                  if (!data.error) {
                     //OK
                   } else {
-                    fw.error(data.err_msg || "Server error");
+                    fw.error(data.error?.message || "Server error");
                   }
                 })
                 .fail(function (jqxhr, textStatus, error) {

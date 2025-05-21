@@ -73,8 +73,7 @@ public class DevManageController : FwController
 
         FwCache.clear();
         db.clearSchemaCache();
-        var pp = new ParsePage(fw);
-        pp.clear_cache();
+        fw.parsePageInstance().clear_cache();
 
         fw.redirect(base_url);
     }
@@ -287,8 +286,7 @@ public class DevManageController : FwController
         {
             ["fields"] = fields
         };
-        ParsePage parser = new(fw);
-        string content = parser.parse_page(tpl_to + "/show", "/common/form/show/extract/form.html", ps);
+        string content = fw.parsePage(tpl_to + "/show", "/common/form/show/extract/form.html", ps);
         content = Regex.Replace(content, @"^(?:[\t ]*(?:\r?\n|\r))+", "", RegexOptions.Multiline); // remove empty lines
         FW.setFileContent(tpl_path + "/show/form.html", ref content);
 
@@ -300,8 +298,7 @@ public class DevManageController : FwController
         {
             ["fields"] = fields
         };
-        parser = new ParsePage(fw);
-        content = parser.parse_page(tpl_to + "/show", "/common/form/showform/extract/form.html", ps);
+        content = fw.parsePage(tpl_to + "/show", "/common/form/showform/extract/form.html", ps);
         content = Regex.Replace(content, @"^(?:[\t ]*(?:\r?\n|\r))+", "", RegexOptions.Multiline); // remove empty lines
         content = Regex.Replace(content, "&lt;~(.+?)&gt;", "<~$1>"); // unescape tags
         FW.setFileContent(tpl_path + "/showform/form.html", ref content);
@@ -330,7 +327,9 @@ public class DevManageController : FwController
             dbtype = "OLE";
 
         // Try
-        var db = new DB(fw, new Hashtable() { { "connection_string", connstr }, { "type", dbtype } });
+        var db = new DB(connstr, dbtype, "main");
+        db.setLogger(fw.logger);
+        db.setContext(fw.context);
 
         var entities = DevEntityBuilder.dbschema2entities(db);
 
