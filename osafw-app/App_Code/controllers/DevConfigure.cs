@@ -100,7 +100,7 @@ public class DevConfigureController : FwController
         {
             var path = dir_or_filepath + (is_dir ? "" : "osafw_writable_check.txt");
             string V = "osafw";
-            FW.setFileContent(path, ref V);
+            Utils.setFileContent(path, ref V);
             File.Delete(path);
             result = true;
         }
@@ -127,7 +127,7 @@ public class DevConfigureController : FwController
             if (File.Exists(sql_file))
             {
                 logger("Executing sql file:", sql_file);
-                sql_ctr += db.execMultipleSQL(FW.getFileContent(sql_file));
+                sql_ctr += db.execMultipleSQL(Utils.getFileContent(sql_file));
             }
         }
 

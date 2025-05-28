@@ -315,7 +315,7 @@ public class FwReports
                     {
                         //make csv and save to file
                         var content = Utils.getCSVExport("", "", list_rows).ToString();
-                        FW.setFileContent(render_to, ref content);
+                        Utils.setFileContent(render_to, ref content);
                     }
                     else
                         Utils.writeCSVExport(fw.response, report_code + ".csv", "", "", list_rows);
@@ -337,7 +337,7 @@ public class FwReports
 
                         if (render_to != TO_STRING)
                             //this is render to file
-                            FW.setFileContent(render_to, ref result);
+                            Utils.setFileContent(render_to, ref result);
                     }
                     else
                     {

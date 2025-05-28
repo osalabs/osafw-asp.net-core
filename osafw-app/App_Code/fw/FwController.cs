@@ -122,7 +122,7 @@ public abstract class FwController
         if (!System.IO.File.Exists(conf_file))
             throw new ApplicationException("Controller Config file not found in templates: " + conf_file0);
 
-        var config = (Hashtable)Utils.jsonDecode(FW.getFileContent(conf_file));
+        var config = (Hashtable)Utils.jsonDecode(Utils.getFileContent(conf_file));
         if (config == null)
             throw new ApplicationException("Controller Config is invalid, check json in templates: " + conf_file0);
 

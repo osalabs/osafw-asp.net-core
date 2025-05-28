@@ -96,7 +96,7 @@ public class FwSelfTest
         {
             string upload_filepath = UploadUtils.getUploadDir(fw, "selftest", 1) + "/txt";
             string file_data = "test";
-            FW.setFileContent(upload_filepath, ref file_data);
+            Utils.setFileContent(upload_filepath, ref file_data);
             File.Delete(upload_filepath);
             plus_ok();
             echo("upload dir", "OK");
