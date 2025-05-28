@@ -80,6 +80,7 @@ public class FW : IDisposable
 
     public FwCache cache = new(); // cache instance
     public DB db;
+    public FwLogger flogger = new();
 
     public HttpContext context;
     public HttpRequest request;
@@ -168,6 +169,8 @@ public class FW : IDisposable
             scope.SetTag("ProcessId", Environment.ProcessId.ToString());
         });
 #endif
+
+        flogger = new FwLogger((LogLevel)config("log_level"), (string)config("log"), (string)config("site_root"), config("log_max_size").toLong());
 
         db = getDB();
         DB.SQL_QUERY_CTR = 0; // reset query counter
@@ -779,137 +782,19 @@ public class FW : IDisposable
     {
         if (args.Length == 0)
             return;
-        _logger(LogLevel.DEBUG, ref args);
+        flogger.Log(ref args);
     }
     public void logger(LogLevel level, params object[] args)
     {
         if (args.Length == 0)
             return;
-        _logger(level, ref args);
+        flogger.Log(level, ref args);
     }
 
     // internal logger routine, just to avoid pass args by value 2 times
     public void _logger(LogLevel level, ref object[] args)
     {
-        // skip logging if requested level more than config's debug level
-        if (level > (LogLevel)this.config("log_level"))
-            return;
-
-        StringBuilder str_prefix = new(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"));
-        str_prefix.Append(' ').Append(level.ToString()).Append(' ');
-        str_prefix.Append(Environment.ProcessId).Append(' ');
-
-        StringBuilder str_stack = new();
-        System.Diagnostics.StackTrace st = new(true);
-
-        try
-        {
-            var i = 1;
-            System.Diagnostics.StackFrame sf = st.GetFrame(i);
-            string fname = sf.GetFileName() ?? "";
-            // skip logger methods and DB internals as we want to know line where logged thing actually called from
-            while (sf.GetMethod().Name == "logger" || fname.Length >= 6 && fname[^6..] == $@"{path_separator}DB.vb")
-            {
-                i += 1;
-                sf = st.GetFrame(i);
-            }
-            fname = sf.GetFileName();
-            if (fname != null)
-                str_stack.Append(fname.Replace((string)this.config("site_root"), "").Replace($@"{path_separator}App_Code", ""));
-            str_stack.Append(':').Append(sf.GetMethod().Name).Append(' ').Append(sf.GetFileLineNumber()).Append(" # ");
-        }
-        catch (Exception ex)
-        {
-            str_stack.Append(" ... #" + ex.Message);
-        }
-
-        StringBuilder str = new();
-        foreach (object dmp_obj in args)
-            str.Append(dumper(dmp_obj));
-
-        var strlog = str_prefix + str_stack.ToString() + str.ToString();
-
-        // write to debug console first
-        System.Diagnostics.Debug.WriteLine(strlog);
-
-        // write to log file
-        string log_file = (string)config("log");
-        if (!string.IsNullOrEmpty(log_file))
-        {
-            try
-            {
-                // force seek to end just in case other process added to file
-                using (StreamWriter floggerSW = File.AppendText(log_file))
-                {
-                    floggerSW.WriteLine(strlog);
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine("WARN logger can't write to log file. Reason:" + ex.Message);
-            }
-        }
-#if isSentry
-        // send to Sentry
-        try
-        {
-            var sentry_str = str.ToString();
-
-            //convert LogLevel to Sentry.SentryLevel and Sentry.BreadcrumbLevel
-            Sentry.SentryLevel sentryLevel = Sentry.SentryLevel.Error;
-            Sentry.BreadcrumbLevel breadcrumbLevel = Sentry.BreadcrumbLevel.Error;
-
-            if (level == LogLevel.FATAL)
-            {
-                sentryLevel = Sentry.SentryLevel.Fatal;
-                breadcrumbLevel = Sentry.BreadcrumbLevel.Critical;
-            }
-            else if (level == LogLevel.ERROR)
-            {
-                sentryLevel = Sentry.SentryLevel.Error;
-                breadcrumbLevel = Sentry.BreadcrumbLevel.Error;
-            }
-            else if (level == LogLevel.WARN)
-            {
-                sentryLevel = Sentry.SentryLevel.Warning;
-                breadcrumbLevel = Sentry.BreadcrumbLevel.Warning;
-            }
-            else
-            {
-                sentryLevel = Sentry.SentryLevel.Info;
-                breadcrumbLevel = Sentry.BreadcrumbLevel.Info;
-            }
-
-            //log to Sentry as separate events only WARN, ERROR, FATAL
-            if (level <= LogLevel.WARN)
-            {
-
-                if (args.Length > 0 && args[0] is Exception ex)
-                {
-                    //if first argument is an exception - send it as exception with strlog as an additional info
-                    Sentry.SentrySdk.CaptureException(ex, scope =>
-                        {
-                            scope.Level = sentryLevel;
-                            scope.SetExtra("message", sentry_str);
-                        });
-                }
-                else
-                    Sentry.SentrySdk.CaptureMessage(sentry_str, sentryLevel);
-
-                //also add as a breadcrumb for the future events
-                Sentry.SentrySdk.AddBreadcrumb(str_stack.ToString() + sentry_str, null, null, null, breadcrumbLevel);
-            }
-            else
-            {
-                //log to Sentry as breadcrumbs only
-                Sentry.SentrySdk.AddBreadcrumb(str_stack.ToString() + sentry_str, null, null, null, breadcrumbLevel);
-            }
-        }
-        catch (Exception)
-        {
-            // make sure we don't break the app if Sentry fails
-        }
-#endif
+        flogger.Log(level, ref args);
     }
 
     public static string dumper(object dmp_obj, int level = 0) // TODO better type detection(suitable for all collection types)
@@ -1840,33 +1725,11 @@ public class FW : IDisposable
             {
                 // dispose managed state (managed objects).
                 db.Dispose(); // this will return db connections to pool
+                flogger.Dispose();
             }
 
             // free unmanaged resources (unmanaged objects) and override Finalize() below.
-            try
-            {
-                // check if log file too large and need to be rotated
-                string log_file = (string)config("log");
-                if (!string.IsNullOrEmpty(log_file))
-                {
-                    long max_log_size = config("log_max_size").toLong();
-                    using (FileStream floggerFS = new(log_file, FileMode.Open, FileAccess.Read, FileShare.Read))
-                    {
-                        if (max_log_size > 0 && floggerFS.Length > max_log_size)
-                        {
-                            floggerFS.Close();
-                            var to_path = log_file + ".1";
-                            File.Delete(to_path);
-                            File.Move(log_file, to_path);
-                        }
-                    }
-                }
-            }
             // TODO: set large fields to null.
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine("exception in Dispose:" + ex.Message);
-            }
         }
         disposedValue = true;
     }
