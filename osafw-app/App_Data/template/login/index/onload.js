@@ -3,7 +3,9 @@ pwd_hideshow();
 if (window.PublicKeyCredential) {
   $('#passkey-login-container').show();
 }
-$(document).on('click', '#passkey-login-btn', startPasskeyLogin);
+$(document).on('click', '#passkey-login-btn', function (e) {
+  startPasskeyLogin($(this).data(url));
+});
 
 $('#login').focus();
 
@@ -22,10 +24,11 @@ function pwd_hideshow(){
   }
 }
 
-function startPasskeyLogin(){
-  $.getJSON('<~/login/url>/(PasskeyStart)', function(options){
+function startPasskeyLogin(login_url){
+  $.getJSON(login_url+'/(PasskeyStart)', function(options){
     options.publicKey.challenge = Uint8Array.from(atob(options.publicKey.challenge), c=>c.charCodeAt(0));
-    options.publicKey.allowCredentials.forEach(function(c){ c.id = Uint8Array.from(atob(c.id), ch=>ch.charCodeAt(0)); });
+    options.publicKey.allowCredentials.forEach(function (c) { c.id = Uint8Array.from(atob(c.id), ch => ch.charCodeAt(0)); });
+
     navigator.credentials.get({publicKey: options.publicKey}).then(function(cred){
       const authData={
         id: cred.id,
@@ -38,9 +41,10 @@ function startPasskeyLogin(){
           userHandle: cred.response.userHandle?btoa(String.fromCharCode.apply(null,new Uint8Array(cred.response.userHandle))):null
         }
       };
-      $.ajax({url:'<~/login/url>/(PasskeyLogin)',method:'POST',contentType:'application/json',data:JSON.stringify(authData)})
-        .done(function(){window.location='<~/login/url>';})
-        .fail(function(){alert('Passkey login failed');});
-    }).catch(function(){alert('Passkey login cancelled');});
+
+      $.ajax({ url: login_url + '/(PasskeyLogin)',method:'POST',contentType:'application/json',data:JSON.stringify(authData)})
+        .done(function () { window.location = '/';})
+        .fail(function(){fw.error('Passkey login failed');});
+    }).catch(function(){fw.error('Passkey login cancelled');});
   });
 }

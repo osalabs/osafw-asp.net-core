@@ -3,13 +3,11 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
+using Fido2NetLib;
 using System;
 using System.Collections;
-using System.Collections.Generic;
-using System.IO;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Fido2NetLib;
 
 namespace osafw;
 
@@ -198,59 +196,62 @@ public class LoginController : FwController
         performLogin(users_id, fw.Session("mfa_login_remember"), fw.Session("mfa_login_gourl"));
     }
 
-    // --- Passkey login ---
+    // Passkey login support
     public Hashtable PasskeyStartAction()
     {
+        // id, rawId, type, response {authenticatorData, clientDataJSON, signature, userHandle}
+        logger("posted json:", fw.postedJson);
+
         var fido = new Fido2NetLib.Fido2(new Fido2NetLib.Fido2Configuration
         {
             ServerDomain = fw.context.Request.Host.Host,
-            ServerName = fw.config("SITE_NAME").ToString(),
-            Origin = fw.config("ROOT_URL").ToString()
+            ServerName = fw.config("SITE_NAME").toStr(),
         });
 
-        var user = new Fido2NetLib.Objects.Fido2User
+        var user = new Fido2NetLib.Fido2User
         {
-            DisplayName = "user",
+            DisplayName = "user", //TODO
             Name = "user",
-            Id = new byte[] { 0 }
+            Id = [0]
         };
 
-        var options = fido.GetAssertionOptions(new List<Fido2NetLib.Objects.PublicKeyCredentialDescriptor>(),
-            Fido2NetLib.Objects.UserVerificationRequirement.Discouraged);
-        fw.Session("fido_challenge", options.Challenge);
-        return new Hashtable { { "publicKey", options } };
+        var options = fido.GetAssertionOptions([], Fido2NetLib.Objects.UserVerificationRequirement.Discouraged);
+        fw.Session("fido_challenge", options.ToJson());
+        var ps = new Hashtable { { "publicKey", options } };
+
+        return new Hashtable { ["_json"] = ps };
     }
 
-    public void PasskeyLoginAction()
+    public Hashtable PasskeyLoginAction()
     {
-        using var reader = new StreamReader(fw.context.Request.Body);
-        var body = reader.ReadToEndAsync().Result;
+        // id, rawId, type, response {authenticatorData, clientDataJSON, signature, userHandle}
+        logger("posted json:", fw.postedJson);
+
         var fido = new Fido2NetLib.Fido2(new Fido2NetLib.Fido2Configuration
         {
             ServerDomain = fw.context.Request.Host.Host,
             ServerName = fw.config("SITE_NAME").ToString(),
-            Origin = fw.config("ROOT_URL").ToString()
         });
 
-        var options = new Fido2NetLib.Objects.AssertionOptions
-        {
-            Challenge = (byte[])fw.Session("fido_challenge")
-        };
-        var clientResponse = Fido2NetLib.AssertionResponse.FromJson(body);
+        var options = AssertionOptions.FromJson(fw.Session("fido_challenge"));
+        var clientResponse = AuthenticatorAssertionRawResponse.FromJson(fw.postedJson);
         var res = fido.MakeAssertionAsync(clientResponse, options, (args) => Task.FromResult((Fido2NetLib.Objects.StoredPublicKeyCredential?)null)).Result;
 
-        if (res.Status == Fido2NetLib.AssertionVerificationResult.Status.Ok)
-        {
-            var user = model.oneByPasskey(clientResponse.Id);
-            if (user.Count == 0)
-                throw new UserException("Passkey not registered");
-            performLogin(user["id"].toInt(), "", "");
-        }
-        else
+        if (res.Status != Fido2NetLib.AssertionVerificationResult.Status.Ok)
             throw new UserException("Passkey login failed");
+
+        var user = model.oneByPasskey(clientResponse.Id);
+        if (user.Count == 0)
+            throw new UserException("Passkey not registered");
+
+        model.doLogin(user["id"].toInt());
+
+        // successful response
+        var ps = new Hashtable { };
+        return new Hashtable { ["_json"] = ps };
     }
 
-    private void performLogin(int users_id, string remember, string gourl)
+    private void performLogin(int users_id, string remember = "", string gourl = "")
     {
         model.doLogin(users_id);
 

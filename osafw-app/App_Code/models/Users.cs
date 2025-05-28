@@ -81,14 +81,14 @@ public class Users : FwModel
 
     public DBRow oneByPasskey(string credentialId)
     {
-        return db.row(table_name, DB.h("passkey_id", credentialId));
+        return db.row(table_name, DB.h("passkey", credentialId));
     }
 
     public void savePasskey(int id, string credentialId, string publicKey)
     {
         var item = new Hashtable
         {
-            {"passkey_id", credentialId},
+            {"passkey", credentialId},
             {"passkey_pub", publicKey}
         };
         update(id, item);

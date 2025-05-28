@@ -8,11 +8,6 @@
         or sign in with email
       </p>
   </~btn_google>
-  <div class="d-grid mb-3" id="passkey-login-container" style="display:none">
-    <button type="button" class="btn btn-lg btn-success w-100" id="passkey-login-btn">
-      <i class="bi bi-key"></i> `Sign in with Passkey`
-    </button>
-  </div>
 
     <div class="form-floating mb-3">
       <input type="email" id="login" class="form-control form-control-lg filled" name="item[login]" value="<~i[login]>" placeholder="name@example.com" autofocus>
@@ -46,6 +41,12 @@
         <a class="btn btn-link" href="<~/signup/url>">`Sign Up`</a>
       </~btn_signup>
     </p>
+
+    <div class="d-grid mb-3" id="passkey-login-container" style="display:none">
+      <button type="button" class="btn btn-lg btn-success w-100" id="passkey-login-btn" data-url="<~/login/url>">
+        <i class="bi bi-key"></i> `Sign in with Passkey`
+      </button>
+    </div>
 
     <!--div class="d-grid">
       <a class="btn btn-lg btn-success w-100" href="<~ROOT_URL>/WinLogin" role="button">`Windows Login`</a>

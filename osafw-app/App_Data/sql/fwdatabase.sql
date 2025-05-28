@@ -238,6 +238,10 @@ CREATE TABLE users (
   mfa_added             DATETIME2,    -- last datetime when mfa setup or resynced
   login                 NVARCHAR(128) NULL, -- windows authentication login
 
+  -- PassKeys support
+  passkey               NVARCHAR(255) NOT NULL DEFAULT '', -- passkey credential id
+  passkey_pub           NVARCHAR(MAX) NOT NULL DEFAULT '', -- public key
+
   status                TINYINT NOT NULL DEFAULT 0,        /*0-ok, 127-deleted*/
   add_time              DATETIME2 NOT NULL DEFAULT getdate(),
   add_users_id          INT DEFAULT 0,
