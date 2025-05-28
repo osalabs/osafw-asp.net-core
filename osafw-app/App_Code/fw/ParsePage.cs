@@ -1251,7 +1251,7 @@ public class ParsePage
     private string _attr_select_name(string tag, string tpl_name, Hashtable hf, Hashtable attrs)
     {
         string result = "";
-        string sel_value = (string)hfvalue((string)attrs["selvalue"], hf);
+        string sel_value = hfvalue((string)attrs["selvalue"], hf).toStr();
         sel_value ??= "";
 
         if (hfvalue(tag, hf) is ICollection seloptions)

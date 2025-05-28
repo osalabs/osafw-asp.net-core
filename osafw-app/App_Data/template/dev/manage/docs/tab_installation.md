@@ -75,3 +75,8 @@
 
 ### Optional Components
 
+- Configure `FwCronService` for scheduled tasks if background processing is required.
+- To store uploads in Amazon S3, set the S3 credentials in `appsettings.json`.
+- Open firewall ports only as needed for HTTP/HTTPS and database access.
+
+

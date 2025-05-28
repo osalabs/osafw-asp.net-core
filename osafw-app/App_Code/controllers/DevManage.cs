@@ -97,6 +97,30 @@ public class DevManageController : FwController
         fw.redirect(base_url);
     }
 
+    // generate documentation PDF
+    public Hashtable DocsAction()
+    {
+        var is_export = reqs("format");
+
+        var ps = new Hashtable();
+        ps["is_rbac"] = fw.model<Users>().isRoles();
+        ps["access_levels"] = FormUtils.selectTplOptions("/common/sel/access_level.sel");
+
+        ps["is_S3"] = S3.IS_ENABLED;
+
+        if (!Utils.isEmpty(is_export))
+        {
+            logger("exporting");
+            var layout = (string)fw.G["PAGE_LAYOUT_PRINT"];
+            var options = new Hashtable();
+            options["disposition"] = "inline";
+            ConvUtils.parsePagePdf(fw, "/dev/manage/docs", layout, ps, "documentation", options);
+            return null;
+        }
+        else
+            return ps;
+    }
+
     public Hashtable ShowDBUpdatesAction()
     {
         Hashtable ps = [];
