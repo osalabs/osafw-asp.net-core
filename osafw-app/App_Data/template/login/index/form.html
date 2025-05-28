@@ -2,12 +2,17 @@
   <input type="hidden" name="err_ctr" value="<~GLOBAL[err_ctr]>" >
 
   <fieldset>
-    <~btn_google if="GLOBAL[IS_SIGNUP]" inline>
+  <~btn_google if="GLOBAL[IS_SIGNUP]" inline>
       <~./google>
       <p class="text-center my-4">
         or sign in with email
       </p>
-    </~btn_google>
+  </~btn_google>
+  <div class="d-grid mb-3" id="passkey-login-container" style="display:none">
+    <button type="button" class="btn btn-lg btn-success w-100" id="passkey-login-btn">
+      <i class="bi bi-key"></i> `Sign in with Passkey`
+    </button>
+  </div>
 
     <div class="form-floating mb-3">
       <input type="email" id="login" class="form-control form-control-lg filled" name="item[login]" value="<~i[login]>" placeholder="name@example.com" autofocus>

@@ -5,7 +5,11 @@
 
 using System;
 using System.Collections;
+using System.Collections.Generic;
+using System.IO;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using Fido2NetLib;
 
 namespace osafw;
 
@@ -192,6 +196,58 @@ public class LoginController : FwController
 
         // mfa ok - login
         performLogin(users_id, fw.Session("mfa_login_remember"), fw.Session("mfa_login_gourl"));
+    }
+
+    // --- Passkey login ---
+    public Hashtable PasskeyStartAction()
+    {
+        var fido = new Fido2NetLib.Fido2(new Fido2NetLib.Fido2Configuration
+        {
+            ServerDomain = fw.context.Request.Host.Host,
+            ServerName = fw.config("SITE_NAME").ToString(),
+            Origin = fw.config("ROOT_URL").ToString()
+        });
+
+        var user = new Fido2NetLib.Objects.Fido2User
+        {
+            DisplayName = "user",
+            Name = "user",
+            Id = new byte[] { 0 }
+        };
+
+        var options = fido.GetAssertionOptions(new List<Fido2NetLib.Objects.PublicKeyCredentialDescriptor>(),
+            Fido2NetLib.Objects.UserVerificationRequirement.Discouraged);
+        fw.Session("fido_challenge", options.Challenge);
+        return new Hashtable { { "publicKey", options } };
+    }
+
+    public void PasskeyLoginAction()
+    {
+        using var reader = new StreamReader(fw.context.Request.Body);
+        var body = reader.ReadToEndAsync().Result;
+        var fido = new Fido2NetLib.Fido2(new Fido2NetLib.Fido2Configuration
+        {
+            ServerDomain = fw.context.Request.Host.Host,
+            ServerName = fw.config("SITE_NAME").ToString(),
+            Origin = fw.config("ROOT_URL").ToString()
+        });
+
+        var options = new Fido2NetLib.Objects.AssertionOptions
+        {
+            Challenge = (byte[])fw.Session("fido_challenge")
+        };
+        var clientResponse = Fido2NetLib.AssertionResponse.FromJson(body);
+        var res = fido.MakeAssertionAsync(clientResponse, options, (args) => Task.FromResult((Fido2NetLib.Objects.StoredPublicKeyCredential?)null)).Result;
+
+        if (res.Status == Fido2NetLib.AssertionVerificationResult.Status.Ok)
+        {
+            var user = model.oneByPasskey(clientResponse.Id);
+            if (user.Count == 0)
+                throw new UserException("Passkey not registered");
+            performLogin(user["id"].toInt(), "", "");
+        }
+        else
+            throw new UserException("Passkey login failed");
     }
 
     private void performLogin(int users_id, string remember, string gourl)
