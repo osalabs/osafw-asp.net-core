@@ -7,24 +7,31 @@
 This documentation describes the structure and deployment of the application built with OSAFW ASP.NET Core. It includes installation, maintenance and troubleshooting guidelines. The same content can be exported as a PDF using the button above.
 
 ### Terminology
-- **Project Name:** Project Name
-- **Project Code:** ProjectCode
+- **Project Name:** %%Project Name%%
+- **Project Code:** %%ProjectCode%%
   *This short code is reused for repository names, the application folder, the database and the IIS site name.*
 - **Short Description:**
-  Replace this paragraph with a short functional overview of the system.
+  %%Provide a brief description of where, how, and by whom the system will be used. Include a link to the client website if applicable.%%
 
 ### Technology Stack
 - **Backend:** .NET Core C#
-- **Database:** SQL Server (or MySQL)
+- **Database:** SQL Server %%(or MySQL)%%
 
 ### Security Considerations
-- **Role-Based Access Control (RBAC):** enabled if the application defines roles, resources and permissions.
-- **Access Levels:** used to restrict features for different user types.
-- **Multi-Factor Authentication (MFA):** optional.
-- **Authentication Method:** Windows authentication, Active Directory or OAuth depending on deployment.
+- **Role-Based Access Control (RBAC):** <~/common/sel/yn_bool.sel selvalue="is_rbac">
+  If yes, %%list roles, resources, and permissions%%.
+- **Access Levels:**
+  <ul>
+  <~access_levels repeat inline>
+    <li><~iname></li>
+  </~access_levels>
+  </ul>
+
+- **Multi-Factor Authentication (MFA) enforced:** <~/common/sel/yn_bool.sel selvalue="GLOBAL[is_mfa_enforced]"> 
+- **Authentication Method:** %%Windows Auth, Active Directory, OAuth%%
 
 ### Uploads
-- **Storage Location:** local file system or Amazon S3.
+- **Storage Location:** <~att_local unless="is_S3" inline>local file system</~att_local> <~att_S3 if="is_S3" inline>AWS S3</~att_S3>
 
 ### User Interface
 - **Target Screen Resolutions:** Full HD and half-screen layouts.
@@ -34,13 +41,13 @@ This documentation describes the structure and deployment of the application bui
 - **Main Dashboard Blocks/Types:** customize per project.
 - **Pages Module:** available if content pages are used.
 - **Feedback Functionality:** optional, emails sent to `<~GLOBAL[support_email]>`.
-- **Display Standards:** dates in mm/dd/yyyy, 24‑hour time and the metric system.
+- **Display Standards:** dates in mm/dd/yyyy, 24-hour time and the metric system.
 - **Branding:** colors and logos can be adjusted in the theme files.
 
 ### Hosting Options
 - **Hosting Environment:** intranet, AWS or other cloud provider.
   - **Intranet:** note if VPN access is required.
-  - **AWS:** choose between SQL Server Express (no encryption) and the Web edition (supports encryption). Set the correct server time zone.
+  - **AWS:** choose between SQL Server Express (no encryption) and the Web edition (supports encryption). Set the correct server time zone (default UTC)
   - **Other:** specify additional details.
 
 ### Email Configuration
