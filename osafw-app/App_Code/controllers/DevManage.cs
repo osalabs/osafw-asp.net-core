@@ -97,6 +97,13 @@ public class DevManageController : FwController
         fw.redirect(base_url);
     }
 
+    // generate documentation PDF
+    public void DocsPdfAction()
+    {
+        var ps = new Hashtable();
+        ConvUtils.parsePagePdf(fw, "/dev/manage/docs", "main.html", ps, "documentation");
+    }
+
     public Hashtable ShowDBUpdatesAction()
     {
         Hashtable ps = [];

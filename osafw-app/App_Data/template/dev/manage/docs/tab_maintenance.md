@@ -6,9 +6,9 @@
 
 ### Updating the Application
 1. **Pull Latest Changes:**
-   ```bash
-   git pull origin main
-   ```
+ ```bash
+  git pull origin main
+  ```
 2. Rebuild and Deploy:
 
 ```bash
@@ -16,5 +16,12 @@ dotnet build
 dotnet publish -o [Deployment Directory]
 ```
 
-3. Database Migrations:
-Run any new migration scripts if there are schema changes.
+3. **Database Migrations:**
+   Run any new migration scripts if there are schema changes.
+
+4. **Clear Cache:**
+   Use the *Clear Application Cache* link under `/Dev/Manage` after deploying.
+
+5. **Review Logs:**
+   Check `/App_Data/logs/main.log` for errors after each update.
+
