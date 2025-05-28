@@ -40,14 +40,14 @@ class DevCodeGen
 
     public static void replaceInFile(string filepath, Hashtable strings)
     {
-        var content = FW.getFileContent(filepath);
+        var content = Utils.getFileContent(filepath);
         if (content.Length == 0)
             return;
 
         foreach (string str in strings.Keys)
             content = content.Replace(str, (string)strings[str]);
 
-        FW.setFileContent(filepath, ref content);
+        Utils.setFileContent(filepath, ref content);
     }
 
     // replaces strings in all files under defined dir
@@ -302,7 +302,7 @@ class DevCodeGen
         }
 
         var sql_file = fw.config("site_root") + DevCodeGen.DB_SQL_PATH;
-        FW.setFileContent(sql_file, ref database_sql);
+        Utils.setFileContent(sql_file, ref database_sql);
     }
 
     public void createModelsAndControllersFromDBJson()
@@ -334,7 +334,7 @@ class DevCodeGen
         if (is_junction)
         {
             //for junction tables - use DemosDemoDicts.cs as a template
-            mdemo = FW.getFileContent(path + @"\DemosDemoDicts.cs");
+            mdemo = Utils.getFileContent(path + @"\DemosDemoDicts.cs");
             if (mdemo == "")
                 throw new ApplicationException("Can't open DemosDemoDicts.cs");
 
@@ -374,7 +374,7 @@ class DevCodeGen
             //for regular tables - use DemoDicts.cs as a template
 
             // copy DemoDicts.cs to model_name.cs
-            mdemo = FW.getFileContent(path + @"\DemoDicts.cs");
+            mdemo = Utils.getFileContent(path + @"\DemoDicts.cs");
             if (mdemo == "")
                 throw new ApplicationException("Can't open DemoDicts.cs");
 
@@ -450,7 +450,7 @@ class DevCodeGen
         }
 
         // copy demo model to model_name.cs
-        FW.setFileContent(path + @"\" + model_name + ".cs", ref mdemo);
+        Utils.setFileContent(path + @"\" + model_name + ".cs", ref mdemo);
     }
 
     private void createLookup(Hashtable entity)
@@ -596,7 +596,7 @@ class DevCodeGen
         // this should be last as under VS auto-rebuild can lock template files
         // copy DemosController .cs to controller .cs
         var path = fw.config("site_root") + @"\App_Code\controllers";
-        var mdemo = FW.getFileContent(path + @$"\{controller_from_class}.cs");
+        var mdemo = Utils.getFileContent(path + @$"\{controller_from_class}.cs");
         if (mdemo == "")
             throw new ApplicationException($"Can't open {controller_from_class}.cs");
 
@@ -606,7 +606,7 @@ class DevCodeGen
         mdemo = mdemo.Replace("DemoDicts", model_name);
         mdemo = mdemo.Replace("Demos", model_name);
 
-        FW.setFileContent(path + @"\" + controller_name + ".cs", ref mdemo);
+        Utils.setFileContent(path + @"\" + controller_name + ".cs", ref mdemo);
 
         // add controller to sidebar menu
         updateMenuItem(controller_url, controller_title);

@@ -1550,4 +1550,91 @@ public class Utils
         }
     }
 
+    /// <summary>
+    /// return file content OR "" if no file exists or some other error happened (ignore errors)
+    /// </summary>
+    /// <param name="filename"></param>
+    /// <returns></returns>
+    public static string getFileContent(string filename)
+    {
+        return getFileContent(filename, out _);
+    }
+
+    /// <summary>
+    /// return file content OR "" if no file exists or some other error happened (see error)
+    /// </summary>
+    /// <param name="filename"></param>
+    /// <param name="error"></param>
+    /// <returns></returns>
+    public static string getFileContent(string filename, out Exception error)
+    {
+        error = null;
+        string result = "";
+
+        //For Windows - replace Unix-style separators / to \
+        if (FwConfig.path_separator == '\\')
+            filename = filename.Replace('/', FwConfig.path_separator);
+
+        if (!File.Exists(filename))
+            return result;
+
+        try
+        {
+            result = File.ReadAllText(filename);
+        }
+        catch (Exception ex)
+        {
+            error = ex;
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// return array of file lines OR empty array if no file exists or some other error happened (ignore errors)
+    /// </summary>
+    /// <param name="filename"></param>
+    /// <returns></returns>
+    public static string[] getFileLines(string filename)
+    {
+        return getFileLines(filename, out _);
+    }
+
+    /// <summary>
+    /// return array of file lines OR empty array if no file exists or some other error happened (see error)
+    /// </summary>
+    /// <param name="filename"></param>
+    /// <returns></returns>
+    public static string[] getFileLines(string filename, out Exception error)
+    {
+        error = null;
+        string[] result = [];
+        try
+        {
+            result = File.ReadAllLines(filename);
+        }
+        catch (Exception ex)
+        {
+            error = ex;
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// replace or append file content
+    /// </summary>
+    /// <param name="filename"></param>
+    /// <param name="fileData"></param>
+    /// <param name="isAppend">False by default </param>
+    public static void setFileContent(string filename, ref string fileData, bool isAppend = false)
+    {
+        //For Windows - replace Unix-style separators / to \
+        if (FwConfig.path_separator == '\\')
+            filename = filename.Replace('/', FwConfig.path_separator);
+
+        using (StreamWriter sw = new(filename, isAppend))
+        {
+            sw.Write(fileData);
+        }
+    }
+
 }

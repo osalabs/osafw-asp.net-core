@@ -130,7 +130,7 @@ public class ConvUtils
         // remove_old_files()
         // TODO fw.set_file_content(html_file, html_data)
         // TEMPORARY - store html right to .doc file
-        FW.setFileContent(doc_file, ref html_data);
+        Utils.setFileContent(doc_file, ref html_data);
 
         if (string.IsNullOrEmpty(out_filename) || !Regex.IsMatch(out_filename, @"[\/]"))
         {
@@ -189,7 +189,7 @@ public class ConvUtils
         fw.logger(LogLevel.DEBUG, "xls file = ", xls_file);
 
         // remove_old_files()
-        FW.setFileContent(html_file, ref html_data);
+        Utils.setFileContent(html_file, ref html_data);
 
         if (string.IsNullOrEmpty(out_filename) || !Regex.IsMatch(out_filename, @"[\/\\]"))
         {
@@ -233,7 +233,7 @@ public class ConvUtils
         }
         else
         {
-            FW.setFileContent(out_filename, ref html_data);
+            Utils.setFileContent(out_filename, ref html_data);
         }
 
         return html_data;

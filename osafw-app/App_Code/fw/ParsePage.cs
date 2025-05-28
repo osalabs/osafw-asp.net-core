@@ -447,7 +447,7 @@ public class ParsePage
         // get from fs(if not in cache)
         if (File.Exists(filename))
         {
-            file_data = FW.getFileContent(filename);
+            file_data = Utils.getFileContent(filename);
             if (is_check_file_modifications && string.IsNullOrEmpty(modtime))
                 modtime = File.GetLastWriteTime(filename).ToString();
         }
@@ -1377,7 +1377,7 @@ public class ParsePage
     private void load_lang()
     {
         // logger("load lang: " & TMPL_PATH & "\" & lang & ".txt")
-        var lines = FW.getFileLines(TMPL_PATH + @"\lang\" + lang + ".txt");
+        var lines = Utils.getFileLines(TMPL_PATH + @"\lang\" + lang + ".txt");
 
         if (LANG_CACHE[lang] == null)
             LANG_CACHE[lang] = new Hashtable();
@@ -1400,7 +1400,7 @@ public class ParsePage
     {
         logger(LogLevel.DEBUG, "ParsePage notice - updating lang [" + lang + "] with: " + str);
         string filedata = str + " === " + System.Environment.NewLine;
-        FW.setFileContent(TMPL_PATH + @"\lang\" + lang + ".txt", ref filedata, true);
+        Utils.setFileContent(TMPL_PATH + @"\lang\" + lang + ".txt", ref filedata, true);
 
         // also add to lang cache
         ((Hashtable)LANG_CACHE[lang])[str.Trim()] = "";
