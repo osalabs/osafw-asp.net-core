@@ -144,7 +144,7 @@ public class FormUtils
             return "";
 
 
-        string[] lines = FW.getFileLines(path);
+        string[] lines = Utils.getFileLines(path);
         foreach (string line in lines)
         {
             if (line.Length < 2)
@@ -195,7 +195,7 @@ public class FormUtils
             return result;
 
 
-        string[] lines = FW.getFileLines(path);
+        string[] lines = Utils.getFileLines(path);
         foreach (var line in lines)
         {
             if (line.Length < 2)

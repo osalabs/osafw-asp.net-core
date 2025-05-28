@@ -12,7 +12,7 @@ public class FwEntities : FwModel
 {
     //constants for standard entities
     public const string ICODE_USERS = "users";
-
+    public const string ICODE_ASSISTANT = "assistant";
     public FwEntities() : base()
     {
         table_name = "fwentities";

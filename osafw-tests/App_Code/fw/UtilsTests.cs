@@ -411,7 +411,7 @@ namespace osafw.Tests
             h2["CCC"] = 3;
             h2["DDD"] = new Hashtable() { { "EEE", 5 } };
 
-            Utils.mergeHashDeep(ref h1, ref h2);
+            Utils.mergeHashDeep(h1, h2);
 
             Assert.IsTrue(h1.ContainsKey("AAA"));
             Assert.IsTrue(h1.ContainsKey("BBB"));

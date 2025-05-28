@@ -40,14 +40,14 @@ class DevCodeGen
 
     public static void replaceInFile(string filepath, Hashtable strings)
     {
-        var content = FW.getFileContent(filepath);
+        var content = Utils.getFileContent(filepath);
         if (content.Length == 0)
             return;
 
         foreach (string str in strings.Keys)
             content = content.Replace(str, (string)strings[str]);
 
-        FW.setFileContent(filepath, ref content);
+        Utils.setFileContent(filepath, ref content);
     }
 
     // replaces strings in all files under defined dir
@@ -302,7 +302,7 @@ class DevCodeGen
         }
 
         var sql_file = fw.config("site_root") + DevCodeGen.DB_SQL_PATH;
-        FW.setFileContent(sql_file, ref database_sql);
+        Utils.setFileContent(sql_file, ref database_sql);
     }
 
     public void createModelsAndControllersFromDBJson()
@@ -334,7 +334,7 @@ class DevCodeGen
         if (is_junction)
         {
             //for junction tables - use DemosDemoDicts.cs as a template
-            mdemo = FW.getFileContent(path + @"\DemosDemoDicts.cs");
+            mdemo = Utils.getFileContent(path + @"\DemosDemoDicts.cs");
             if (mdemo == "")
                 throw new ApplicationException("Can't open DemosDemoDicts.cs");
 
@@ -374,7 +374,7 @@ class DevCodeGen
             //for regular tables - use DemoDicts.cs as a template
 
             // copy DemoDicts.cs to model_name.cs
-            mdemo = FW.getFileContent(path + @"\DemoDicts.cs");
+            mdemo = Utils.getFileContent(path + @"\DemoDicts.cs");
             if (mdemo == "")
                 throw new ApplicationException("Can't open DemoDicts.cs");
 
@@ -450,7 +450,7 @@ class DevCodeGen
         }
 
         // copy demo model to model_name.cs
-        FW.setFileContent(path + @"\" + model_name + ".cs", ref mdemo);
+        Utils.setFileContent(path + @"\" + model_name + ".cs", ref mdemo);
     }
 
     private void createLookup(Hashtable entity)
@@ -566,7 +566,8 @@ class DevCodeGen
             controller_from_class = "AdminDemosVue";
             controller_from_url = "/Admin/DemosVue";
             controller_from_title = "Demo Vue";
-        };
+        }
+        ;
 
         entity["controller"] = controller_options; //write back
 
@@ -595,7 +596,7 @@ class DevCodeGen
         // this should be last as under VS auto-rebuild can lock template files
         // copy DemosController .cs to controller .cs
         var path = fw.config("site_root") + @"\App_Code\controllers";
-        var mdemo = FW.getFileContent(path + @$"\{controller_from_class}.cs");
+        var mdemo = Utils.getFileContent(path + @$"\{controller_from_class}.cs");
         if (mdemo == "")
             throw new ApplicationException($"Can't open {controller_from_class}.cs");
 
@@ -605,7 +606,7 @@ class DevCodeGen
         mdemo = mdemo.Replace("DemoDicts", model_name);
         mdemo = mdemo.Replace("Demos", model_name);
 
-        FW.setFileContent(path + @"\" + controller_name + ".cs", ref mdemo);
+        Utils.setFileContent(path + @"\" + controller_name + ".cs", ref mdemo);
 
         // add controller to sidebar menu
         updateMenuItem(controller_url, controller_title);
@@ -634,7 +635,7 @@ class DevCodeGen
         DevEntityBuilder.saveJsonController(config, config_file);
     }
 
-    public void updateControllerConfig(Hashtable entity, Hashtable config, ArrayList entities)
+    public void updateControllerConfig(Hashtable entity, Hashtable config, ArrayList entities = null)
     {
         string model_name = (string)entity["model_name"];
         string table_name = (string)entity["table"];
@@ -651,9 +652,9 @@ class DevCodeGen
             // TODO deprecate reading from db, always use entity info
             DB db;
             if (entity["db_config"].toStr().Length > 0)
-                db = new DB(fw, (Hashtable)((Hashtable)fw.config("db"))[entity["db_config"]], (string)entity["db_config"]);
+                db = fw.getDB((string)entity["db_config"]);
             else
-                db = new DB(fw);
+                db = fw.db;
             fields = db.loadTableSchemaFull(table_name);
             entity["foreign_keys"] = db.listForeignKeys(table_name);
 
@@ -664,8 +665,11 @@ class DevCodeGen
                 tables[tbl] = new Hashtable();
         }
         else
+        {
+            entities ??= [];
             foreach (Hashtable tentity in entities)
                 tables[tentity["table"]] = tentity;
+        }
 
         var is_fw = entity["is_fw"].toBool();
 

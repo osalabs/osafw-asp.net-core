@@ -33,7 +33,7 @@ public class AdminDBController : FwController
             if (selected_db.Length > 0)
             {
                 logger("CONNECT TO", selected_db);
-                db = new DB(fw, (Hashtable)((Hashtable)fw.config("db"))[selected_db], selected_db);
+                db = fw.getDB(selected_db);
             }
 
             if (fw.SessionBool("admindb_pwd_checked") || reqs("pwd") == dbpwd)

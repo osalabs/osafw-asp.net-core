@@ -12,6 +12,20 @@ CREATE TABLE fwsessions (
   INDEX IX_ExpiresAtTime (ExpiresAtTime)
 );
 
+/* keys storage */
+DROP TABLE IF EXISTS fwkeys;
+CREATE TABLE fwkeys (
+  iname                 NVARCHAR(255) NOT NULL PRIMARY KEY CLUSTERED,
+  itype                 TINYINT NOT NULL DEFAULT 0, -- 0-generic key, 10-data protection key
+
+  XmlValue              NVARCHAR(MAX) NOT NULL,
+
+  add_time              DATETIME2 NOT NULL DEFAULT getdate(), -- to help cleanup older than 90 days keys
+  upd_time              DATETIME2,
+
+  INDEX IX_fwkeys_itype (itype)
+);
+
 /*application entities lookup - autofilled on demand*/
 DROP TABLE IF EXISTS fwentities;
 CREATE TABLE fwentities (
@@ -30,6 +44,83 @@ CREATE TABLE fwentities (
   INDEX UX_fwentities_icode UNIQUE (icode)
 );
 
+-- for scheduled tasks
+DROP TABLE IF EXISTS fwcron;
+CREATE TABLE fwcron
+(
+  id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+
+  icode                 NVARCHAR(128) NOT NULL DEFAULT '',      -- Internal job code (used in switch/logic)
+  iname                 NVARCHAR(255) NOT NULL DEFAULT '',      -- Human-readable name/title of the job
+  idesc                 NVARCHAR(MAX),                          -- Optional full description of the job
+
+  cron                  NVARCHAR(255) NOT NULL,                 -- Cron expression string
+  next_run              DATETIME2 NULL,                         -- When the job should run next (UTC)
+
+  start_date            DATETIME2 NULL,                         -- When job becomes active (inclusive)
+  end_date              DATETIME2 NULL,                         -- Optional: when job expires (exclusive)
+
+  status                TINYINT NOT NULL DEFAULT 0,             -- Job status (0=Active, 10=Inactive, 20=Completed, 127=Deleted)
+
+  add_time              DATETIME2 NOT NULL DEFAULT GETDATE(),   -- Timestamp when job was created
+  add_users_id          INT DEFAULT 0,                          -- User ID who created the job (0 = system)
+
+  upd_time              DATETIME2,                              -- Last update timestamp
+  upd_users_id          INT DEFAULT 0                           -- User ID who last updated the job (0 = system)
+);
+CREATE UNIQUE INDEX UX_fwcron_icode ON fwcron (icode);
+CREATE INDEX IX_fwcron_next_run ON fwcron (next_run);
+
+
+-- virtual controllers
+DROP TABLE IF EXISTS fwcontrollers;
+CREATE TABLE fwcontrollers
+(
+    id                INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+    
+    icode             NVARCHAR(128) NOT NULL DEFAULT '', -- controller class without Controller suffix: AdminDemos
+    url               NVARCHAR(128) NOT NULL DEFAULT '', -- controller url: /Admin/Demos
+    iname             NVARCHAR(128) NOT NULL DEFAULT '', -- human readable name
+    idesc             NVARCHAR(MAX) NULL,
+    
+    model             NVARCHAR(255) NOT NULL DEFAULT '', -- model class name controller is based on
+    is_lookup         TINYINT NOT NULL DEFAULT 0,        -- 1 if this is lookup controller (show in Lookup Manager)
+    igroup            NVARCHAR(64) NOT NULL DEFAULT '',  -- group name, if set - tables grouped under same group name
+    access_level      TINYINT NOT NULL DEFAULT 0,        -- min view access level
+    access_level_edit TINYINT NOT NULL DEFAULT 0,        -- min edit access level
+    
+    config            NVARCHAR(MAX) NULL,                -- config.json - use/create if file not exists /template/admin/demos/config.json
+    
+    status            TINYINT NOT NULL DEFAULT 0,        -- 0-ok, 10-inactive, 127-deleted
+    add_time          DATETIME NOT NULL DEFAULT GETDATE(),
+    add_users_id      INT DEFAULT 0,
+    upd_time          DATETIME NULL,
+    upd_users_id      INT DEFAULT 0,
+    
+    INDEX UX_fwcontrollers_icode UNIQUE (icode),
+    INDEX UX_fwcontrollers_url UNIQUE (url)
+);
+
+-- track framework database updates
+DROP TABLE IF EXISTS fwupdates;
+CREATE TABLE fwupdates
+(
+    id           INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+    
+    iname        NVARCHAR(255) NOT NULL DEFAULT '', -- filename from db/updates folder
+    idesc        NVARCHAR(MAX) NULL,                -- file content
+    
+    applied_time DATETIME NULL,                     -- applied date-time
+    last_error   NVARCHAR(MAX) NULL,                -- last error message
+    
+    status       TINYINT NOT NULL DEFAULT 0,        -- 0(new), 10(inactive/skip), 20-failed, 30-applied, 127-deleted
+    add_time     DATETIME NOT NULL DEFAULT GETDATE(),
+    add_users_id INT DEFAULT 0,
+    upd_time     DATETIME NULL,
+    upd_users_id INT DEFAULT 0,
+    
+    INDEX UX_fwupdates_iname UNIQUE (iname)
+);
 
 /* upload categories */
 DROP TABLE IF EXISTS att_categories;
@@ -52,6 +143,8 @@ CREATE TABLE att_categories (
 DROP TABLE IF EXISTS att;
 CREATE TABLE att (
   id int IDENTITY(1,1) PRIMARY KEY CLUSTERED, /* files stored on disk under 0/0/0/id.dat */
+  icode                 NVARCHAR(36) NOT NULL DEFAULT NEWID(), -- public code - basically UUID
+
   att_categories_id     INT NULL FOREIGN KEY REFERENCES att_categories(id),
 
   fwentities_id         INT NULL CONSTRAINT FK_att_fwentities FOREIGN KEY REFERENCES fwentities(id), -- related to entity (optional)
@@ -72,6 +165,7 @@ CREATE TABLE att (
   upd_time              DATETIME2,
   upd_users_id          INT DEFAULT 0,
 
+  INDEX UX_att_icode UNIQUE (icode),
   INDEX IX_att_categories (att_categories_id),
   INDEX IX_att_fwentities (fwentities_id, item_id)
 );
@@ -112,7 +206,7 @@ DROP TABLE IF EXISTS users;
 CREATE TABLE users (
   id int IDENTITY(1,1) PRIMARY KEY CLUSTERED,
 
-  email                 NVARCHAR(128) NOT NULL DEFAULT '',
+  email                 NVARCHAR(255) NOT NULL DEFAULT '',
   pwd                   NVARCHAR(255) NOT NULL DEFAULT '', -- hashed password
   access_level          TINYINT NOT NULL,  /*0 - visitor, 1 - usual user, 80 - moderator, 100 - admin*/
   is_readonly           TINYINT NOT NULL DEFAULT 0,        -- 1 if user is readonly
@@ -215,6 +309,7 @@ CREATE TABLE spages (
   is_home               INT DEFAULT 0,                          /* 1 is for home page (non-deletable page*/
   redirect_url          NVARCHAR(255) NOT NULL DEFAULT '',      /*if set - redirect to this url instead displaying page*/
 
+  custom_head           NVARCHAR(MAX),                          /*custom page head*/
   custom_css            NVARCHAR(MAX),                          /*custom page css*/
   custom_js             NVARCHAR(MAX),                          /*custom page js*/
 

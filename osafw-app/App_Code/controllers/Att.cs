@@ -3,6 +3,8 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
+using System.Collections;
+
 namespace osafw;
 
 public class AttController : FwController
@@ -20,34 +22,34 @@ public class AttController : FwController
         fw.redirect(fw.config("ASSETS_URL") + Att.IMGURL_0);
     }
 
-    public void DownloadAction(int id = 0)
+    public void DownloadAction(string icode)
     {
-        if (id == 0)
-            throw new NotFoundException();
         string size = reqs("size");
 
-        var item = model.one(id);
+        Hashtable item = model.oneByIcode(icode);
         if (item.Count == 0)
             throw new NotFoundException();
 
-        if (item["is_s3"] == "1")
+        var id = item["id"].toInt();
+
+        if ((string)item["is_s3"] == "1")
             model.redirectS3(item, size);
 
         model.transmitFile(id, size);
     }
 
-    public void ShowAction(int id = 0)
+    public void ShowAction(string icode)
     {
-        if (id == 0)
-            throw new NotFoundException();
         string size = reqs("size");
         bool is_preview = reqs("preview") == "1";
 
-        var item = model.one(id);
+        Hashtable item = model.oneByIcode(icode);
         if (item.Count == 0)
             throw new NotFoundException();
 
-        if (item["is_s3"] == "1")
+        var id = item["id"].toInt();
+
+        if ((string)item["is_s3"] == "1")
         {
             model.redirectS3(item, size);
             return;
@@ -55,7 +57,7 @@ public class AttController : FwController
 
         if (is_preview)
         {
-            if (item["is_image"] == "1")
+            if ((string)item["is_image"] == "1")
             {
                 model.transmitFile(id, size, "inline");
             }

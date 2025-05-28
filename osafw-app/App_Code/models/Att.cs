@@ -31,16 +31,33 @@ public class Att : FwModel
         table_name = "att";
     }
 
+    // overload by file index
     public Hashtable uploadOne(int id, int file_index, bool is_new = false)
     {
+        return uploadOne(id, fw.request.Form.Files[file_index], is_new);
+    }
+
+    // overload by file name
+    public Hashtable uploadOne(int id, string input_name, bool is_new = false)
+    {
+        return uploadOne(id, fw.request.Form.Files[input_name], is_new);
+    }
+
+    /// <summary>
+    /// upload file to the server and update att table with file information
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="file"></param>
+    /// <param name="is_new"></param>
+    /// <returns> return hashtable with added files information id, fname, fsize, ext and filepath</returns>
+    /// </returns>
+    public Hashtable uploadOne(int id, IFormFile file, bool is_new = false)
+    {
         Hashtable result = null;
-        if (uploadFile(id, out string filepath, file_index, true))
+        if (uploadFile(id, out string filepath, file.Name, true))
         {
             logger("uploaded to [" + filepath + "]");
             string ext = UploadUtils.getUploadFileExt(filepath);
-
-            // TODO refactor in better way
-            IFormFile file = fw.request.Form.Files[file_index];
 
             // update db with file information
             Hashtable fields = [];
@@ -59,9 +76,9 @@ public class Att : FwModel
                 // if it's an image - turn on flag and resize for thumbs
                 fields["is_image"] = "1";
 
-                Utils.resizeImage(filepath, getUploadImgPath(id, "s", ext), MAX_THUMB_W_S, MAX_THUMB_H_S);
-                Utils.resizeImage(filepath, getUploadImgPath(id, "m", ext), MAX_THUMB_W_M, MAX_THUMB_H_M);
-                Utils.resizeImage(filepath, getUploadImgPath(id, "l", ext), MAX_THUMB_W_L, MAX_THUMB_H_L);
+                ImageUtils.resize(filepath, getUploadImgPath(id, "s", ext), MAX_THUMB_W_S, MAX_THUMB_H_S);
+                ImageUtils.resize(filepath, getUploadImgPath(id, "m", ext), MAX_THUMB_W_M, MAX_THUMB_H_M);
+                ImageUtils.resize(filepath, getUploadImgPath(id, "l", ext), MAX_THUMB_W_L, MAX_THUMB_H_L);
             }
 
             this.update(id, fields);
@@ -149,11 +166,11 @@ public class Att : FwModel
         string result;
         if ((string)item["is_s3"] == "1")
         {
-            result = fw.model<S3>().getSignedUrl(getS3KeyByID((string)item["id"], size));
+            result = fw.model<S3>().getSignedUrl(getS3KeyByID((string)item["icode"], size));
         }
         else
         {
-            result = fw.config("ROOT_URL") + URL_PREFIX + "/" + item["id"];
+            result = fw.config("ROOT_URL") + URL_PREFIX + "/" + item["icode"];
             if (!string.IsNullOrEmpty(size))
                 result += "?size=" + size;
         }
@@ -175,6 +192,22 @@ public class Att : FwModel
             return "";
 
         return getUrl(item, size);
+    }
+
+    /// <summary>
+    /// return absolute url (with https://domain) of the uploaded file (by id)
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="size"></param>
+    /// <returns></returns>
+    public string getUrlAbsolute(int id, string size = "")
+    {
+        var url = getUrl(id, size);
+        //if start with "/" - this is relative, add domain
+        if (url.StartsWith("/"))
+            url = fw.config("ROOT_DOMAIN").toStr() + url;
+
+        return url;
     }
 
     public string getUrlPreview(int id, string size = "s")
@@ -202,7 +235,7 @@ public class Att : FwModel
             if (item["is_s3"].toInt() == 1)
             {
                 //delete the whole folder for att, it will delete all files recursively
-                fw.model<S3>().deleteObject(table_name + "/" + item["id"] + "/");
+                fw.model<S3>().deleteObject(table_name + "/" + item["icode"] + "/");
             }
             else
             {
@@ -432,7 +465,7 @@ public class Att : FwModel
         if (fw.userId == 0)
             throw new AuthException(); // denied for non-logged
 
-        var url = fw.model<S3>().getSignedUrl(getS3KeyByID((string)item["id"], size));
+        var url = fw.model<S3>().getSignedUrl(getS3KeyByID((string)item["icode"], size));
         fw.redirect(url);
     }
 
@@ -464,7 +497,7 @@ public class Att : FwModel
             if (!System.IO.File.Exists(filepath))
                 continue;
 
-            result = model_s3.uploadLocalFile(getS3KeyByID(id.ToString(), size), filepath, "inline");
+            result = model_s3.uploadLocalFile(getS3KeyByID(item["icode"], size), filepath, "inline");
             if (!result)
                 break;
         }
@@ -592,7 +625,7 @@ public class Att : FwModel
     public override void filterForJson(Hashtable item)
     {
         //leave only specific keys
-        var keys = Utils.qh("id att_categories_id iname is_image ext url url_preview");
+        var keys = Utils.qh("id icode att_categories_id iname is_image ext url url_preview");
         foreach (var key in new ArrayList(item.Keys))
         {
             if (!keys.ContainsKey(key))

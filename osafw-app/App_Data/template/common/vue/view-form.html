@@ -1,79 +1,80 @@
 <script type="text/x-template" id="view-form-template">
-  <div v-if="save_result && !save_result.success" class="alert alert-danger">{{save_result.err_msg}}</div>
-  <form v-if="fwStore.edit_data !== null"
-    id="FView"
-    class="fw-card"
-    @submit.prevent="saveChanges"
-    @change.prevent="onChange"
-  >
-    <fieldset>
-      <form-one-def v-for="(def,index) in fwStore.treeShowFields"
-        :key="index"
-        :form="fwStore.edit_data"
-        @update-form-field="onUpdateFormField"
-        @cancel-form="onCancelForm"
-        :def="def"
-        :lookups="fwStore.lookups"
-      />
-    </fieldset>
-  </form>
-  <template v-else>
-    <div v-if="fwStore.is_loading_item" class="text-center"><span class="spinner-border" role="status" aria-hidden="true"></span></div>
-  </template>
+    <div v-if="fwStore.savedStatus===false && fwStore.savedErrorMessage>''" class="alert alert-danger">
+        {{fwStore.savedErrorMessage}}
+    </div>
+    <form v-if="fwStore.edit_data !== null"
+          id="FView"
+          class="fw-card"
+          @submit.prevent="saveChanges"
+          @change.prevent="onChange"
+    >
+        <fieldset>
+            <form-one-def v-for="(def,index) in fwStore.treeShowFields"
+                          :key="index"
+                          :form="fwStore.edit_data"
+                          @update-form-field="onUpdateFormField"
+                          @cancel-form="onCancelForm"
+                          :def="def"
+                          :lookups="fwStore.lookups"
+            />
+        </fieldset>
+    </form>
+    <template v-else>
+        <div v-if="fwStore.is_loading_item" class="text-center">
+            <span class="spinner-border" role="status" aria-hidden="true"></span>
+        </div>
+    </template>
 </script>
 
 <script type="module">
-import { mapStores } from 'pinia';
+    import {mapStores} from 'pinia';
 
-fwApp.component('view-form', {
-  template: '#view-form-template',
-  props: {
-    sampleProp: {
-      type: String,
-      required: false,
-      default: ''
-    }
-  },
-  emits: ['on-sample-event'],
-  data: () => ({
-    sample_value: 0,
-  }),
-  computed: {
-    ...mapStores(useFwStore), //accessible via this.fwStore
-    save_result() {
-      return this.fwStore.edit_data?.save_result;
-    },
-  },
-  async mounted(){
-    console.log('view-form mounted');
-  },
-  unmounted(){
-    console.log('view-form unmounted');
-  },
-  updated(){
-    //console.log('view-form updated');
-  },
-  methods: {
-    onUpdateFormField({ field, value }) {
-      //console.log('view-form updateFormField', { field, value });
-      this.fwStore.edit_data.i[field] = value;
-    },
-    onChange() {
-      //console.log('view-form onChange');
-      this.saveChanges(); //save changes whenever form changed
-    },
-    saveChanges() {
-      // Implement save logic here
-      // console.log('view-form saveChanges');
-      this.fwStore.saveEditDataDebounced();
-    },
-    onCancelForm() {
-      this.closePane();
-    },
-    closePane() {
-      this.fwStore.is_list_edit_pane=false;
-      this.fwStore.clearEditData();
-    }
-  }
-});
+    fwApp.component('view-form', {
+        template: '#view-form-template',
+        props: {
+            sampleProp: {
+                type: String,
+                required: false,
+                default: ''
+            }
+        },
+        emits: [],
+        data: () => ({
+            sample_value: 0,
+        }),
+        computed: {
+            ...mapStores(useFwStore) //accessible via this.fwStore
+        },
+        async mounted() {
+            console.log('view-form mounted');
+        },
+        unmounted() {
+            console.log('view-form unmounted');
+        },
+        updated() {
+            //console.log('view-form updated');
+        },
+        methods: {
+            onUpdateFormField({field, value}) {
+                //console.log('view-form updateFormField', { field, value });
+                this.fwStore.edit_data.i[field] = value;
+            },
+            onChange() {
+                //console.log('view-form onChange');
+                this.saveChanges(); //save changes whenever form changed
+            },
+            saveChanges() {
+                // Implement save logic here
+                // console.log('view-form saveChanges');
+                this.fwStore.saveEditDataDebounced();
+            },
+            onCancelForm() {
+                this.closePane();
+            },
+            closePane() {
+                this.fwStore.is_list_edit_pane = false;
+                this.fwStore.clearEditData();
+            }
+        }
+    });
 </script>

@@ -74,9 +74,7 @@ public abstract class FwModel : IDisposable
         this.fw = fw;
         if (!string.IsNullOrEmpty(this.db_config))
         {
-            Hashtable dbconfig = (Hashtable)fw.config("db");
-            Hashtable config_details = (Hashtable)dbconfig[this.db_config];
-            this.db = new DB(fw, config_details, this.db_config);
+            this.db = fw.getDB(this.db_config);
         }
         else
             this.db = fw.db;
@@ -523,15 +521,11 @@ public abstract class FwModel : IDisposable
     // methods from fw - just for a covenience, so no need to use "fw.", as they are used quite frequently
     public void logger(params object[] args)
     {
-        if (args.Length == 0)
-            return;
-        fw._logger(LogLevel.DEBUG, ref args);
+        fw.logger(args);
     }
     public void logger(LogLevel level, params object[] args)
     {
-        if (args.Length == 0)
-            return;
-        fw._logger(level, ref args);
+        fw.logger(level, args);
     }
     #endregion
 
