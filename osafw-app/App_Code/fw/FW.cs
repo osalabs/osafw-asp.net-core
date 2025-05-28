@@ -24,33 +24,6 @@ using System.Text.RegularExpressions;
 
 namespace osafw;
 
-// standard exceptions used by framework
-[Serializable]
-public class AuthException : ApplicationException
-{
-    public AuthException() : base("Access denied") { }
-    public AuthException(string message) : base(message) { }
-}
-[Serializable]
-public class UserException(string message) : ApplicationException(message)
-{
-}
-[Serializable]
-public class ValidationException : UserException
-{
-    //specificially for validation forms
-    public ValidationException() : base("Please review and update your input") { }
-}
-[Serializable]
-public class NotFoundException : UserException
-{
-    public NotFoundException() : base("Not Found") { }
-    public NotFoundException(string message) : base(message) { }
-}
-
-[Serializable]
-public class RedirectException : Exception { }
-
 /// <summary>
 /// Logger levels, ex: logger(LogLevel.ERROR, "Something happened")
 /// </summary>
@@ -65,20 +38,6 @@ public enum LogLevel : int
     DEBUG,           // default for development (default for logger("msg") call), fine-grained level
     TRACE,           // very detailed dumps (in-module details like fw core, despatcher, parse page, ...)
     ALL              // just log everything
-}
-
-public class FwRoute
-{
-    public string controller_path; // store /Prefix/Prefix2/Controller - to use in parser a default path for templates
-    public string method;
-    public string prefix;
-    public string controller;
-    public string action;
-    public string action_raw;
-    public string id;
-    public string action_more; // new, edit, delete, etc
-    public string format; // html, json, pjax
-    public ArrayList @params;
 }
 
 public class FW : IDisposable
