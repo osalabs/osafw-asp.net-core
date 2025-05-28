@@ -1,15 +1,7 @@
 ﻿// FW Core
 //
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
-// (c) 2009-2024 Oleg Savchuk www.osalabs.com
-
-
-//if you use Sentry https://docs.sentry.io/platforms/dotnet/guides/aspnetcore/
-//  install Sentry.AspNetCore (uncomment in csproj)
-//  in appsettings.json set your Sentry.Dsn
-//  in Program - uncomment webBuilder.UseSentry();
-//  uncomment define below
-//#define isSentry
+// (c) 2009-2025 Oleg Savchuk www.osalabs.com
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
@@ -23,22 +15,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 
 namespace osafw;
-
-/// <summary>
-/// Logger levels, ex: logger(LogLevel.ERROR, "Something happened")
-/// </summary>
-public enum LogLevel : int
-{
-    OFF,             // no logging occurs
-    FATAL,           // severe error, current request (or even whole application) aborted (notify admin)
-    ERROR,           // error happened, but current request might still continue (notify admin)
-    WARN,            // potentially harmful situations for further investigation, request processing continues
-    INFO,            // default for production (easier maintenance/support), progress of the application at coarse-grained level (fw request processing: request start/end, sql, route/external redirects, sql, fileaccess, third-party API)
-    NOTICE,          // normal, but noticeable condition (for Sentry logged as bradcrumbs)
-    DEBUG,           // default for development (default for logger("msg") call), fine-grained level
-    TRACE,           // very detailed dumps (in-module details like fw core, despatcher, parse page, ...)
-    ALL              // just log everything
-}
 
 public class FW : IDisposable
 {
@@ -158,19 +134,9 @@ public class FW : IDisposable
 
         FwConfig.init(context, configuration);
 
-#if isSentry
-        //configure Sentry logging
-        var env = Utils.toStr(config("config_override"));
-        env = env == "" ? "production" : env;
-        Sentry.SentrySdk.ConfigureScope(scope =>
-        {
-            scope.User = new Sentry.SentryUser { Email = Session("login") };
-            scope.Environment = env;
-            scope.SetTag("ProcessId", Environment.ProcessId.ToString());
-        });
-#endif
-
-        flogger = new FwLogger((LogLevel)config("log_level"), (string)config("log"), (string)config("site_root"), config("log_max_size").toLong());
+        var env = config("config_override").toStr();
+        flogger = new FwLogger((LogLevel)config("log_level"), config("log").toStr(), config("site_root").toStr(), config("log_max_size").toLong());
+        flogger.setScope(env, Session("login"));
 
         db = getDB();
         DB.SQL_QUERY_CTR = 0; // reset query counter
@@ -782,74 +748,13 @@ public class FW : IDisposable
     {
         if (args.Length == 0)
             return;
-        flogger.Log(ref args);
+        flogger.log(LogLevel.DEBUG, ref args);
     }
     public void logger(LogLevel level, params object[] args)
     {
         if (args.Length == 0)
             return;
-        flogger.Log(level, ref args);
-    }
-
-    // internal logger routine, just to avoid pass args by value 2 times
-    public void _logger(LogLevel level, ref object[] args)
-    {
-        flogger.Log(level, ref args);
-    }
-
-    public static string dumper(object dmp_obj, int level = 0) // TODO better type detection(suitable for all collection types)
-    {
-        StringBuilder str = new();
-        if (dmp_obj == null)
-            return "[Nothing]";
-        if (dmp_obj == DBNull.Value)
-            return "[DBNull]";
-        if (level > 10)
-            return "[Too Much Recursion]";
-
-        try
-        {
-            Type type = dmp_obj.GetType();
-            TypeCode typeCode = Type.GetTypeCode(type);
-            string intend = new StringBuilder().Insert(0, "    ", level).Append(' ').ToString();
-
-            level += 1;
-            if (typeCode.ToString() == "Object")
-            {
-                str.Append(System.Environment.NewLine);
-                if (dmp_obj is IList list)
-                {
-                    str.Append(intend + "[" + System.Environment.NewLine);
-                    foreach (object v in list)
-                        str.Append(intend + " " + dumper(v, level) + System.Environment.NewLine);
-                    str.Append(intend + "]" + System.Environment.NewLine);
-                }
-                else if (dmp_obj is IDictionary dictionary)
-                {
-                    str.Append(intend + "{" + System.Environment.NewLine);
-                    foreach (object k in dictionary.Keys)
-                        str.Append(intend + " " + k + " => " + dumper(dictionary[k], level) + System.Environment.NewLine);
-                    str.Append(intend + "}" + System.Environment.NewLine);
-                }
-                else if (dmp_obj is ISession session)
-                {
-                    str.Append(intend + "{" + System.Environment.NewLine);
-                    foreach (string k in session.Keys)
-                        str.Append(intend + " " + k + " => " + dumper(session.GetString(k), level) + System.Environment.NewLine);
-                    str.Append(intend + "}" + System.Environment.NewLine);
-                }
-                else
-                    str.Append(intend + Utils.jsonEncode(dmp_obj, true) + System.Environment.NewLine);
-            }
-            else
-                str.Append(dmp_obj.ToString());
-        }
-        catch (Exception ex)
-        {
-            str.Append("***cannot dump object***" + ex.Message);
-        }
-
-        return str.ToString();
+        flogger.log(level, ref args);
     }
 
     // return file content OR "" if no file exists or some other error happened (ignore errors)
@@ -1611,8 +1516,8 @@ public class FW : IDisposable
                 ps["DUMP_STACK"] = Ex.ToString();
 
             ps["DUMP_SQL"] = DB.last_sql;
-            ps["DUMP_FORM"] = dumper(FORM);
-            ps["DUMP_SESSION"] = dumper(context?.Session);
+            ps["DUMP_FORM"] = FwLogger.dumper(FORM);
+            ps["DUMP_SESSION"] = FwLogger.dumper(context?.Session);
         }
 
         parser(tpl_dir, ps);

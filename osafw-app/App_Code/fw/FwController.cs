@@ -332,15 +332,11 @@ public abstract class FwController
     // methods from fw - just for a covenience, so no need to use "fw.", as they are used quite frequently
     public void logger(params object[] args)
     {
-        if (args.Length == 0)
-            return;
-        fw._logger(LogLevel.DEBUG, ref args);
+        fw.logger(args);
     }
     public void logger(LogLevel level, params object[] args)
     {
-        if (args.Length == 0)
-            return;
-        fw._logger(level, ref args);
+        fw.logger(level, args);
     }
 
     public virtual void checkXSS()
