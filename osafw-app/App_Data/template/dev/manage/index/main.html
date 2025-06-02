@@ -125,4 +125,15 @@ existing DB &rarr; db.json &rarr; models &rarr; controllers
             </div>
         </form>
     </li>
+    <li class="mt-2">
+        <form method="post" action="<~../url>/(CreateReport)" class="row row-cols-auto g-2">
+            <input type="hidden" name="XSS" value="<~session[XSS]>">
+            <div class="col">
+                <input name="item[report_code]" maxlength="255" value="<~i[report_code]>" type="text" class="form-control ms-2" placeholder="Report code" style="width:200px">
+            </div>
+            <div class="col">
+                <button class="btn btn-default ms-2">Create Report</button>
+            </div>
+        </form>
+    </li>
 </ul>
