@@ -1452,7 +1452,7 @@ class DevCodeGen
             throw new ApplicationException("Can't open Sample.cs");
 
         content = content.Replace("SampleReport", report_class);
-        content = content.Replace("Sample report", Utils.capitalize(repcode) + " report");
+        content = content.Replace("Sample report", Utils.capitalize(repcode) + " Report");
 
         Utils.setFileContent(dest_file, ref content);
 
@@ -1460,6 +1460,29 @@ class DevCodeGen
         var tpl_from = fw.config("template") + "/admin/reports/sample";
         var tpl_to = fw.config("template") + "/admin/reports/" + repcode.ToLower();
         Utils.CopyDirectory(tpl_from, tpl_to, true);
+
+        // Add link to /Admin/Reports screen (main.html)
+        var reports_index_file = fw.config("template") + "/admin/reports/index/main.html";
+        var html = Utils.getFileContent(reports_index_file);
+        if (!string.IsNullOrEmpty(html))
+        {
+            // Find the hidden template div (use escaped quotes for normal string)
+            // <~tplcodegen if="0" inline><a href="<~../url>/<~tpl-code>" class="list-group-item"><~tpl-title></a></~tplcodegen>
+            var pattern = "(<~tplcodegen.+?>(.+?)</~tplcodegen>)";
+            var match = Regex.Match(html, pattern, RegexOptions.Singleline);
+            if (match.Success)
+            {
+                var wholeDiv = match.Groups[1].Value;
+                var hiddenDiv = match.Groups[2].Value;
+                // Replace placeholders
+                var newDiv = hiddenDiv
+                    .Replace("<~tpl-code>", repcode)
+                    .Replace("<~tpl-title>", Utils.capitalize(repcode) + " Report");
+                // Insert before the hidden div
+                html = html.Replace(wholeDiv, newDiv + "\n" + wholeDiv);
+                Utils.setFileContent(reports_index_file, ref html);
+            }
+        }
     }
     // update by url
     private void updateMenuItem(string controller_url, string controller_title)
