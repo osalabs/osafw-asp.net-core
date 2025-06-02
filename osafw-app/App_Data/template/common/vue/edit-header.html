@@ -1,7 +1,6 @@
 <script type="text/x-template" id="edit-header-template">
     <div class="float-end pt-1 d-print-none">
-        <a @click.prevent="onNext(true)" href="#" class="btn btn-link"><i class="bi bi-arrow-left-circle"></i>
-            `Prev`</a>
+        <a @click.prevent="onNext(true)" href="#" class="btn btn-link"><i class="bi bi-arrow-left-circle"></i> `Prev`</a>
         <a @click.prevent="onNext()" href="#" class="btn btn-link">`Next` <i class="bi bi-arrow-right-circle"></i></a>
     </div>
 
@@ -12,17 +11,13 @@
     <h1 v-if="current_id">{{fwStore.edit_title}}</h1>
 
     <div class="float-end">
-    <span v-if="fwStore.savedStatus!==null" class="form-saved-status-global mt-1 me-2">
-      <span v-if="fwStore.savedStatus" class="badge bg-success">saved</span>
-      <span v-if="!fwStore.savedStatus" class="badge bg-danger">not saved</span>
-    </span>
+        <span v-if="fwStore.savedStatus!==null" class="form-saved-status-global mt-1 me-2">
+            <span v-if="fwStore.savedStatus" class="badge bg-success">saved</span>
+            <span v-if="!fwStore.savedStatus" class="badge bg-danger">not saved</span>
+        </span>
         <template v-if="!current_id" inline>
-            <button type="button" class="btn btn-primary me-1" :disabled="fwStore.is_readonly" @click="saveChanges">
-                `Save`
-            </button>
-            <button type="button" class="btn btn-secondary me-1" :disabled="fwStore.is_readonly"
-                    @click="saveChanges('New')">`Save and Add New`
-            </button>
+            <button type="button" class="btn btn-primary me-1" :disabled="fwStore.is_readonly" @click="saveChanges">`Save`</button>
+            <button type="button" class="btn btn-secondary me-1" :disabled="fwStore.is_readonly" @click="saveChanges('New')">`Save and Add New`</button>
             <button type="button" class="btn btn-default" @click="onCancelForm">`Cancel`</button>
         </template>
     </div>
@@ -35,7 +30,7 @@
            class="btn btn-default me-1"
            href="#"
            @click.prevent="onCancelForm"><i class="bi bi-arrow-left-circle"></i> `Back to List`</a>
-        <div class="btn-group" v-if="uioptions.btnAddNew || $slots.group || fwStore.return_url">
+        <div class="btn-group" v-if="uioptions.btnAddNew || $slots.group">
             <a v-if="uioptions.btnAddNew"
                class="btn btn-default"
                href="#"
@@ -52,11 +47,12 @@
 </script>
 
 <script type="module">
-    import {mapStores} from 'pinia';
+    import { mapStores } from 'pinia';
 
     fwApp.component('edit-header', {
         template: '#edit-header-template',
-        data: () => ({}),
+        data: () => ({
+        }),
         computed: {
             ...mapStores(useFwStore), //accessible via this.fwStore
             uioptions() {

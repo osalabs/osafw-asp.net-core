@@ -20,10 +20,11 @@
                        style="width:80px;">&raquo;</a>
                 </li>
             </template>
-            <li class="page-item" title="`Page Size`"><select class="d-inline-block w-auto align-top form-select"
-                                                              v-model="pagesize_selected">
-                <option v-for="psize in pagesize_options" :key="psize" :value="psize">{{psize}}</option>
-            </select>
+            <li class="page-item" title="`Page Size`">
+                <select class="d-inline-block w-auto align-top form-select"
+                        v-model="pagesize_selected">
+                    <option v-for="psize in pagesize_options" :key="psize" :value="psize">{{psize}}</option>
+                </select>
             </li>
         </ul>
     </div>
@@ -66,7 +67,7 @@
         methods: {
             pageClick(pagenum) {
                 this.$emit('on-page', pagenum);
-            },
+            }
         }
     });
 </script>

@@ -1,23 +1,21 @@
 <script type="text/x-template" id="list-header-template">
     <div>
-        <h1>{{fwStore.list_title}}
+        <h1>
+            {{fwStore.list_title}}
             <span v-if="uioptions.count" class="badge badge-outline-secondary rounded-pill">{{fwStore.count}}</span>
         </h1>
         <slot name="beforeButtons"></slot>
         <div class="btn-std d-print-none">
-            <div class="btn-group"
-                 v-if="uioptions.btnAddNew || $slots.group || $slots.groupPrepend || fwStore.return_url">
+            <div class="btn-group" v-if="uioptions.btnAddNew || $slots.group || $slots.groupPrepend || fwStore.return_url">
                 <a v-if="fwStore.return_url"
                    class="btn btn-default"
-                   :href="fwStore.return_url"
-                ><i class="bi bi-arrow-left-circle"></i> `Return Back`</a>
+                   :href="fwStore.return_url"><i class="bi bi-arrow-left-circle"></i> `Return Back`</a>
                 <slot name="group-prepend"></slot>
                 <a v-if="uioptions.btnAddNew"
                    class="btn btn-default"
                    href="#"
                    @click.prevent="onAddNew"
-                   :disabled="fwStore.is_readonly"
-                ><i class="bi bi-plus-lg"></i> `Add New`</a>
+                   :disabled="fwStore.is_readonly"><i class="bi bi-plus-lg"></i> `Add New`</a>
                 <slot name="group"></slot>
             </div>
             <slot></slot>
@@ -28,11 +26,12 @@
 </script>
 
 <script type="module">
-    import {mapStores} from 'pinia';
+    import { mapStores } from 'pinia';
 
     fwApp.component('list-header', {
         template: '#list-header-template',
-        data: () => ({}),
+        data: () => ({
+        }),
         computed: {
             ...mapStores(useFwStore), //accessible via this.fwStore
             uioptions() {

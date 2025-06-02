@@ -6,8 +6,7 @@
                       @update-form-field="$emit('update-form-field', $event)"
                       @cancel-form="$emit('cancel-form', $event)"
                       :def="child_def"
-                      :lookups="lookups"
-        />
+                      :lookups="lookups" />
     </div>
 </script>
 
@@ -29,10 +28,12 @@
             }
         },
         emits: ['update-form-field', 'cancel-form'],
-        data: () => ({}),
+        data: () => ({
+        }),
         mounted() {
             //console.log("form-one-row mounted", this.def);
         },
-        methods: {}
+        methods: {
+        }
     });
 </script>

@@ -1,7 +1,8 @@
 <script type="text/x-template" id="list-filters-template">
     <div>
         <form class="fw-card d-print-none" data-list-filter @submit.prevent @change="fwStore.setFilters({})">
-            <div v-if="uioptions.s" class="row form-row">
+            <div v-if="uioptions.s"
+                 class="row form-row">
                 <label class="col-form-label col-md-2 col-xl-1" for="list-filters-s">`Search`</label>
                 <div class="col">
                     <div class="input-group">
@@ -10,9 +11,10 @@
                                v-model="fwStore.f.s">
                         <button class="btn btn-outline-secondary w100"
                                 @click="fwStore.loadIndexDebounced">
-                            <span v-if="fwStore.is_loading_index"
-                                  class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                            <template v-if="!fwStore.is_loading_index"><i class="bi bi-search"></i></template>
+                            <span v-if="fwStore.is_loading_index" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                            <template v-if="!fwStore.is_loading_index">
+                                <i class="bi bi-search"></i>
+                            </template>
                         </button>
                         <a class="btn btn-outline-secondary w100 on-filter-reset"
                            :href="'?dofilter=1'+(fwStore.related_id ? '&related_id='+fwStore.related_id : '')">`Reset`</a>
@@ -27,28 +29,24 @@
                 <template v-if="uioptions.status">
                     <label class="col-form-label col-md-2 col-xl-1">`Status`</label>
                     <div class="col-md-3 col-lg-2">
-                        <Multiselect
-                                v-model="fwStore.f.status"
-                                :options="lookup_statusf"
-                                valueProp="id"
-                                label="iname"
-                                placeholder="`- all -`"
-                                @change="fwStore.setFilters({})"
-                        />
+                        <Multiselect v-model="fwStore.f.status"
+                                     :options="lookup_statusf"
+                                     valueProp="id"
+                                     label="iname"
+                                     placeholder="`- all -`"
+                                     @change="fwStore.setFilters({})" />
                     </div>
                 </template>
 
                 <template v-if="uioptions.userlists && fwStore.is_userlists">
                     <label class="col-form-label col-md-2 col-xl-1">`My List`</label>
                     <div class="col-md-3 col-lg-2">
-                        <Multiselect
-                                v-model="fwStore.f.userlist"
-                                :options="fwStore.select_userlists"
-                                valueProp="id"
-                                label="iname"
-                                placeholder="`- all -`"
-                                @change="fwStore.setFilters({})"
-                        />
+                        <Multiselect v-model="fwStore.f.userlist"
+                                     :options="fwStore.select_userlists"
+                                     valueProp="id"
+                                     label="iname"
+                                     placeholder="`- all -`"
+                                     @change="fwStore.setFilters({})" />
                     </div>
                 </template>
 
@@ -56,10 +54,8 @@
 
                 <div class="col text-end d-print-none">
                     <div class="btn-group me-2" v-if="uioptions.export">
-                        <a class="btn btn-outline-secondary"
-                           :href="urlExport('csv')"><i class="bi bi-cloud-download"></i> `Export`</a>
-                        <button type="button" class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split"
-                                data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <a class="btn btn-outline-secondary" :href="urlExport('csv')"><i class="bi bi-cloud-download"></i> `Export`</a>
+                        <button type="button" class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                             <span class="visually-hidden">`Toggle Dropdown`</span>
                         </button>
                         <div class="dropdown-menu dropdown-menu-right">
@@ -71,7 +67,8 @@
                     <button v-if="uioptions.print"
                             type="button"
                             class="btn btn-outline-secondary me-2"
-                            @click="print"><i class="bi bi-printer"></i> `Print`
+                            @click="print">
+                        <i class="bi bi-printer"></i> `Print`
                     </button>
                     <list-filters-table-btn v-if="uioptions.tableButtons"
                                             @on-show-customize-columns="is_show_customize_columns=true"></list-filters-table-btn>
@@ -80,13 +77,12 @@
             </div>
         </form>
 
-        <list-customize-columns v-if="is_show_customize_columns"
-                                @hidden="is_show_customize_columns=false"></list-customize-columns>
+        <list-customize-columns v-if="is_show_customize_columns" @hidden="is_show_customize_columns=false"></list-customize-columns>
     </div>
 </script>
 
 <script type="module">
-    import {mapStores} from 'pinia';
+    import { mapStores } from 'pinia';
     import Multiselect from 'Multiselect';
 
     fwApp.component('list-filters', {
@@ -111,7 +107,7 @@
         },
         methods: {
             urlExport(type) {
-                let req = {...this.fwStore.listRequestQuery}; //{...} because of getters caching?
+                let req = { ...this.fwStore.listRequestQuery }; //{...} because of getters caching?
                 req.export = type;
                 //convert req object to query string - TODO move to utils
                 let query = Object.keys(req).map(key => encodeURIComponent(key) + '=' + encodeURIComponent(req[key])).join('&');

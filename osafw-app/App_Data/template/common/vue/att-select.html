@@ -11,13 +11,11 @@
                     <div class="modal-body modal-overflowed">
                         <div class="row row-cols-auto g-3 mb-3">
                             <div class="col">
-                    <span role="button" class="btn btn-success btn-fileinput me-3">
-                      <span class="msg-button"><i
-                              class="bi bi-cloud-upload-fill"></i><span> Upload new file...</span></span>
-                      <span class="msg-uploading d-none"><span class="spinner-border spinner-border-sm" role="status"
-                                                               aria-hidden="true"></span> uploading...</span>
-                      <input ref="file1" type="file" @change.stop="onSave">
-                    </span>
+                                <span role="button" class="btn btn-success btn-fileinput me-3">
+                                    <span class="msg-button"><i class="bi bi-cloud-upload-fill"></i><span> Upload new file...</span></span>
+                                    <span class="msg-uploading d-none"><span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> uploading...</span>
+                                    <input ref="file1" type="file" @change.stop="onSave">
+                                </span>
                             </div>
                             <label class="col col-form-label me-3">`or choose from existing uploads, category`:</label>
                             <div class="col">
@@ -47,7 +45,7 @@
 </script>
 
 <script type="module">
-    import {mande} from 'mande';
+    import { mande } from 'mande';
 
     fwApp.component('att-select', {
         template: '#att-select-template',
@@ -69,7 +67,8 @@
             att_rows: [],
             modal: null
         }),
-        computed: {},
+        computed: {
+        },
         mounted() {
             //console.log('att select mounted');
             this.att_category = this.category;
@@ -86,7 +85,7 @@
                 this.modal.show();
                 this.$refs.modal_att.addEventListener('hidden.bs.modal', e => {
                     this.$emit('hidden', e);
-                }, {once: true});
+                }, { once: true });
 
                 this.loadData();
             },
@@ -96,12 +95,12 @@
                 const apiBase = mande(this.att_select_url);
                 let q = {};
                 if (this.att_category > '') {
-                    q = {category: this.att_category};
+                    q = { category: this.att_category };
                 } else {
-                    q = {att_categories_id: this.att_categories_id};
+                    q = { att_categories_id: this.att_categories_id };
                 }
 
-                const data = await apiBase.get({query: q});
+                const data = await apiBase.get({ query: q });
 
                 this.XSS = data.XSS;
                 this.att_categories = data.select_att_categories_id;
@@ -134,7 +133,7 @@
                 } catch (error) {
                     console.error(error);
                     let err_msg = typeof error === "string" ? error : (error.body?.error?.message ?? 'server error');
-                    Toast(err_msg, {theme: 'text-bg-danger'});
+                    Toast(err_msg, { theme: 'text-bg-danger' });
                 }
             },
 

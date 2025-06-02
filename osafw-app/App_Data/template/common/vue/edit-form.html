@@ -6,8 +6,7 @@
           id="FEdit"
           class="fw-card"
           @submit.prevent="saveChanges"
-          @change.prevent="onChange"
-    >
+          @change.prevent="onChange">
         <fieldset>
             <form-one-def v-for="(def,index) in preparedDefs"
                           :key="index"
@@ -15,8 +14,7 @@
                           @update-form-field="onUpdateFormField"
                           @cancel-form="onCancelForm"
                           :def="def"
-                          :lookups="fwStore.lookups"
-            />
+                          :lookups="fwStore.lookups" />
         </fieldset>
 
         <div class="d-block d-lg-none">
@@ -35,13 +33,12 @@
         </div>
     </form>
     <template v-else>
-        <div v-if="fwStore.is_loading_item" class="text-center"><span class="spinner-border" role="status"
-                                                                      aria-hidden="true"></span></div>
+        <div v-if="fwStore.is_loading_item" class="text-center"><span class="spinner-border" role="status" aria-hidden="true"></span></div>
     </template>
 </script>
 
 <script type="module">
-    import {mapStores} from 'pinia';
+    import { mapStores } from 'pinia';
 
     fwApp.component('edit-form', {
         template: '#edit-form-template',
@@ -60,6 +57,9 @@
             ...mapStores(useFwStore), //accessible via this.fwStore
             current_id() {
                 return this.fwStore.current_id ?? 0;
+            },
+            save_result() {
+                return this.fwStore.edit_data?.save_result;
             },
             preparedDefs() {
                 if (this.current_id) {
@@ -83,7 +83,7 @@
             //console.log('edit-form updated');
         },
         methods: {
-            onUpdateFormField({field, value}) {
+            onUpdateFormField({ field, value }) {
                 this.fwStore.edit_data.i[field] = value;
                 this.saveChanges(3000); //if just value updated - longer debounce delay
             },

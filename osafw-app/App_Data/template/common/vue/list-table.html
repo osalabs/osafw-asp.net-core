@@ -4,141 +4,31 @@
             <input type="hidden" name="_method" value="PUT">
 
             <div :class="'table-list-wrapper ' + fwStore.list_user_view.density">
-                <div class="table-list-hscroll-hint"><i class="bi bi-info-circle-fill"></i> use <kbd>Shift+Mouse
-                    Wheel</kbd> for an easy horizontal scrolling
+                <div class="table-list-hscroll-hint">
+                    <i class="bi bi-info-circle-fill"></i> use <kbd>Shift+Mouse Wheel</kbd> for an easy horizontal scrolling
                 </div>
+
                 <table :class="'table table-stripedX table-hover list ' + (fwStore.is_list_edit?'list-edit ':'') + fwStore.list_user_view.density">
-                    <thead>
-                    <tr>
-                        <th class="d-print-none"><input type="checkbox" name="all" v-model="cb_check_all"
-                                                        @change="onCheckAll"></th>
-                        <th class="d-print-none" v-if="uioptions.isButtonsLeft && uioptions.rowButtons!==false"></th>
-
-                        <template v-for="header in fwStore.list_headers" :key="header.field_name">
-                            <th :class="'rotate'+(header.is_sortable && fwStore.f.sortby==header.field_name ? ' active-sort' : '')"
-                                :style="header.list_min_width ? 'min-width:'+header.list_min_width: null"
-                                :data-sort="header.is_sortable"
-                                @click="(event) => onSortHeader(event, header)">
-                                <div>
-                                    <span>{{header.field_name_visible}}</span>
-                                    <span class="ms-1" v-if="header.is_sortable && fwStore.f.sortby==header.field_name">
-                      <template v-if="fwStore.f.sortdir=='desc'">
-                        <!-- desc icon -->
-                        <svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-arrow-up" fill="currentColor"
-                             xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd"
-                                                                      d="M8 15a.5.5 0 0 0 .5-.5V2.707l3.146 3.147a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 1 0 .708.708L7.5 2.707V14.5a.5.5 0 0 0 .5.5z"/></svg>
-                      </template>
-                      <template v-else>
-                        <!-- asc icon -->
-                        <svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-arrow-down" fill="currentColor"
-                             xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd"
-                                                                      d="M8 1a.5.5 0 0 1 .5.5v11.793l3.146-3.147a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 .708-.708L7.5 13.293V1.5A.5.5 0 0 1 8 1z"/></svg>
-                      </template>
-                    </span>
-                                </div>
-                            </th>
-                        </template>
-
-                        <th v-if="!uioptions.isButtonsLeft && uioptions.rowButtons!==false"></th>
-                    </tr>
-                    <tr class="search" :style="fwStore.is_list_search_open ? 'display: table-row' : ''">
-                        <th></th>
-                        <th v-if="uioptions.isButtonsLeft && uioptions.rowButtons!==false"></th>
-                        <th v-for="header in fwStore.list_headers" :key="header.field_name">
-                            <input type="text" class="form-control form-control-sm"
-                                   v-model="header.search_value"
-                                   @change="fwStore.loadIndexDebounced"
-                                   @keyup.enter.stop="fwStore.loadIndexDebounced">
-                        </th>
-                        <th v-if="!uioptions.isButtonsLeft && uioptions.rowButtons!==false"></th>
-                    </tr>
-                    </thead>
+                    <list-table-header />
 
                     <tbody class="table-group-divider">
-                    <template v-for="row in fwStore.list_rows" :key="row[fwStore.field_id]">
-                        <tr :data-id="row[fwStore.field_id]"
-                            :title="row_title"
-                            :class="fwStore.hchecked_rows[row[fwStore.field_id]] ? 'selected' : ''"
-                            @click="(event) => onClickRow(event,row)"
-                            @dblclick="(event) => onDblClickRow(event,row)"
-                        >
-                            <td class="list-row-cb d-print-none"><input class="multicb" type="checkbox"
-                                                                        v-model="fwStore.hchecked_rows[row[fwStore.field_id]]">
-                            </td>
-                            <list-row-btn
-                                    v-if="uioptions.isButtonsLeft && uioptions.rowButtons!==false"
-                                    :row="row"
-                                    :is_left="uioptions.isButtonsLeft"
-                                    :is_readonly="fwStore.is_readonly"
-                                    :buttons="uioptions.rowButtons"
-                                    @view="onRowView(row)"
-                                    @edit="onRowEdit(row)"
-                                    @quickedit="onRowQuickEdit(row)"
-                                    @delete="onRowDelete(row)">
-                                <template #btn-prepend>
+                        <template v-for="row in fwStore.list_rows" :key="row[fwStore.field_id]">
+                            <list-table-row :row="row">
+                                <!-- Forward standard prepend/append row-button slots -->
+                                <template #list-row-btn-prepend>
                                     <slot name="list-row-btn-prepend" :row="row"></slot>
                                 </template>
-                                <template #btn-append>
+                                <template #list-row-btn-append>
                                     <slot name="list-row-btn-append" :row="row"></slot>
                                 </template>
-                            </list-row-btn>
-
-                            <template v-for="header in fwStore.list_headers" :key="header.field_name">
-                                <td v-if="!fwStore.is_list_edit">{{fieldValueByName(row, header.field_name)}}</td>
-                                <td v-else
-                                    :class="(fwStore.cells_saving[row[fwStore.field_id]+'-'+header.field_name]?'cell-success-fade':'')+(fwStore.cells_errors[row[fwStore.field_id]+'-'+header.field_name]?' cell-invalid':'')">
-                                    <list-cell-ro
-                                            v-if="header.is_ro || row._meta?.is_ro || row._meta?.ro_fields?.includes(header.field_name)"
-                                            :row="row" :col="header"></list-cell-ro>
-
-                                    <list-cell-input
-                                            v-else-if="['input','email','number','date_popup','textarea','autocomplete'].includes(header.input_type)"
-                                            :rowId="row[fwStore.field_id]" :row="row" :col="header"
-                                            :error="fwStore.cells_errors[row[fwStore.field_id]+'-'+header.field_name]"
-                                            @change="onCellChange($event, row, header)"
-                                            @keyup="fwStore.onCellKeyup($event, row, header)"
-                                            @navigate="onCellNavigate($event)"
-                                            @btnClick="fwStore.onCellBtnClick($event)"
-                                    ></list-cell-input>
-                                    <list-cell-select
-                                            v-else-if="header.input_type=='select' || header.input_type=='radio'"
-                                            :rowId="row[fwStore.field_id]" :row="row" :col="header"
-                                            :error="fwStore.cells_errors[row[fwStore.field_id]+'-'+header.field_name]"
-                                            :options="fwStore.lookupByDef(header)"
-                                            @change="onCellChange($event, row, header)"
-                                            @btnClick="fwStore.onCellBtnClick($event)"
-                                    ></list-cell-select>
-                                    <list-cell-checkbox
-                                            v-else-if="header.input_type=='cb' || header.input_type=='yesno'"
-                                            :rowId="row[fwStore.field_id]" :row="row" :col="header"
-                                            @change="onCellChange($event, row, header)"
-                                            @navigate="onCellNavigate($event)"
-                                            @btnClick="fwStore.onCellBtnClick($event)"
-                                    ></list-cell-checkbox>
-
-                                    <div v-else class="text-danger">{{fieldValueByName(row, header.field_name)}}</div>
-                                </td>
-                            </template>
-
-                            <list-row-btn
-                                    v-if="!uioptions.isButtonsLeft && uioptions.rowButtons!==false"
-                                    :row="row"
-                                    :is_left="uioptions.isButtonsLeft"
-                                    :is_readonly="fwStore.is_readonly"
-                                    :buttons="uioptions.rowButtons"
-                                    @view="onRowView(row)"
-                                    @edit="onRowEdit(row)"
-                                    @quickedit="onRowQuickEdit(row)"
-                                    @delete="onRowDelete(row)">
-                                <template #btn-prepend>
-                                    <slot name="list-row-btn-prepend" :row="row"></slot>
+                                <!-- Forward any cell-* slots from the parent down to the row -->
+                                <template v-for="header in fwStore.list_headers"
+                                          :key="header.field_name"
+                                          v-slot:['cell-'+header.field_name]="slotProps">
+                                    <slot :name="'cell-'+header.field_name" v-bind="slotProps"></slot>
                                 </template>
-                                <template #btn-append>
-                                    <slot name="list-row-btn-append" :row="row"></slot>
-                                </template>
-                            </list-row-btn>
-                        </tr>
-                    </template>
+                            </list-table-row>
+                        </template>
                     </tbody>
 
                 </table>
@@ -150,9 +40,8 @@
                 </template>
                 <template v-else>
                     <h3><i class="bi bi-0-square"></i> `No results`</h3>
-                    Try to <a
-                        :href="'?dofilter=1'+(fwStore.related_id ? '&related_id='+fwStore.related_id : '')">reset</a>
-                    all filters.
+                    Try to
+                    <a :href="'?dofilter=1'+(fwStore.related_id ? '&related_id='+fwStore.related_id : '')">reset</a> all filters.
                 </template>
             </div>
 
@@ -161,20 +50,16 @@
                      class="float-md-end pt-2 mb-3 d-print-none">
                     <span class="badge"></span><br>
                     <div class="d-flex justify-content-md-end">
-                        <list-pagination
-                                :pager="fwStore.pager"
-                                :pagesize="fwStore.f.pagesize"
-                                :count="fwStore.count"
-                                :isShowCount="uioptions.pagination.count"
-                                @on-page="onClickPage"
-                                @on-pagesize="onChangePagesize"
-                        ></list-pagination>
+                        <list-pagination :pager="fwStore.pager"
+                                         :pagesize="fwStore.f.pagesize"
+                                         :count="fwStore.count"
+                                         :isShowCount="uioptions.pagination.count"
+                                         @on-page="onClickPage"
+                                         @on-pagesize="onChangePagesize"></list-pagination>
                     </div>
                 </div>
 
-                <list-btn-multi v-if="this.fwStore.uioptions.list.btnMulti">
-                    <slot name="list-btn-multi"></slot>
-                </list-btn-multi>
+                <list-btn-multi v-if="this.fwStore.uioptions.list.btnMulti"><slot name="list-btn-multi"></slot></list-btn-multi>
             </template>
 
         </form>
@@ -185,28 +70,16 @@
 </script>
 
 <script type="module">
-    import {mapStores} from 'pinia';
+    import { mapStores } from 'pinia';
 
     fwApp.component('list-table', {
         template: '#list-table-template',
-        props: {
-            rowDblClick: {
-                type: String,
-                default: 'edit',
-                validator: value => {
-                    return ['', 'view', 'edit', 'quickedit'].includes(value)
-                }
-            }
-        },
+        props: {},
         emit: [],
         data: () => ({
-            cb_check_all: false
         }),
         computed: {
-            ...mapStores(useFwStore), //accessible via this.fwStore
-            row_title() {
-                return this.fwStore.is_list_edit ? '' : 'Double click to Edit';
-            },
+            ...mapStores(useFwStore),
             uioptions() {
                 return this.fwStore.uioptions.list.table ?? {};
             }
@@ -216,119 +89,17 @@
             this.fwStore.loadIndex();
         },
         methods: {
-            fieldValueByName(row, field_name) {
-                //return value by field_name in row associative array
-                //add here any additional processing if needed
-                return row[field_name];
-            },
             resetCheckedRows() {
                 this.fwStore.hchecked_rows = [];
-                this.cb_check_all = false;
-            },
-            // sorting handlers
-            onSortHeader(e, header) {
-                if (!header.is_sortable) return;
-
-                let new_sortdir = 'asc'; //default sort
-                if (this.fwStore.f.sortby == header.field_name) {
-                    //active column - change sort dir
-                    new_sortdir = this.fwStore.f.sortdir == 'asc' ? 'desc' : 'asc';
-                }
-
-                this.resetCheckedRows();
-                this.fwStore.setFilters({sortby: header.field_name, sortdir: new_sortdir});
             },
             // pagination handlers
             onClickPage(e) {
                 this.resetCheckedRows();
-                this.fwStore.setFilters({pagenum: e});
+                this.fwStore.setFilters({ pagenum: e });
             },
             onChangePagesize(e) {
                 this.resetCheckedRows();
-                this.fwStore.setFilters({pagesize: e});
-            },
-
-            //check all/none rows
-            onCheckAll(e) {
-                if (e.target.checked) {
-                    // for each row[id] in fwStore.list_rows - add to hchecked_rows
-                    this.fwStore.hchecked_rows = this.fwStore.list_rows.reduce((acc, row) => {
-                        acc[row[this.fwStore.field_id]] = true;
-                        return acc;
-                    }, {});
-                } else {
-                    this.fwStore.hchecked_rows = [];
-                }
-            },
-            //click on row - select/unselect row
-            onClickRow(e, row) {
-                //console.log('onClickRow',e);
-                var tag_name = e.target.tagName.toLowerCase();
-                if (tag_name === 'a' || tag_name === 'button' || tag_name === 'input' || tag_name === 'textarea' || tag_name === 'select' || tag_name === 'option') {
-                    return; // do not process if link/button/input clicked
-                }
-
-                const row_id = row[this.fwStore.field_id];
-                this.fwStore.hchecked_rows[row_id] = !this.fwStore.hchecked_rows[row_id];
-            },
-            async onDblClickRow(e, row) {
-                if (this.fwStore.is_list_edit) {
-                    return; //no double click if in edit mode to avoid misclicks
-                }
-                if (this.rowDblClick == 'view') {
-                    this.onRowView(row);
-                } else if (this.rowDblClick == 'edit') {
-                    this.onRowEdit(row);
-                } else if (this.rowDblClick == 'quickedit') {
-                    this.onRowQuickEdit(row);
-                }
-            },
-            async onRowView(row) {
-                const row_id = row[this.fwStore.field_id];
-                this.fwStore.openViewScreen(row_id);
-            },
-            async onRowEdit(row) {
-                const row_id = row[this.fwStore.field_id];
-                this.fwStore.openEditScreen(row_id);
-            },
-            async onRowQuickEdit(row) {
-                const row_id = row[this.fwStore.field_id];
-                await this.fwStore.openEditPane(row_id);
-            },
-            async onRowDelete(row) {
-                const row_id = row[this.fwStore.field_id];
-                console.log("TODO confirm modal list-table onRowDelete", row_id);
-                await this.fwStore.deleteRow(row_id);
-                await this.fwStore.loadIndexDebounced(); //reload list to show changes
-            },
-
-            // work with a cell
-            onCellChange(e, row, col) {
-                this.fwStore.saveCell(row, col);
-                if (e.keyCode == 13) {
-                    //if enter - move to next cell under this one
-                    this.onCellNavigate({dir: 'down', row, col});
-                }
-            },
-            onCellNavigate({dir, row, col}) {
-                const field_id = this.fwStore.field_id;
-                const row_id = row[this.fwStore.field_id];
-                const cur_row_index = this.fwStore.list_rows.findIndex(r => r[field_id] === row_id);
-                const next_row_index = (dir === 'up' ? cur_row_index - 1 : cur_row_index + 1);
-                if (next_row_index < 0 || next_row_index >= this.fwStore.list_rows.length) {
-                    return; //no row to go
-                }
-
-                const next_row = this.fwStore.list_rows[next_row_index];
-                this.$nextTick(() => {
-                    const el = this.findCell(next_row, col);
-                    el?.focus();
-                });
-            },
-            findCell(row, col) {
-                const row_id = row[this.fwStore.field_id];
-                const cell_id = 'cell-' + row_id + '-' + col.field_name;
-                return document.getElementById(cell_id);
+                this.fwStore.setFilters({ pagesize: e });
             }
         }
     });

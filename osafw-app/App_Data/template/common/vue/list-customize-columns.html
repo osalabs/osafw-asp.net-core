@@ -12,8 +12,7 @@
 
                         <p class="float-end text-muted">`drag&drop to sort`</p>
                         <div class="form-check">
-                            <input type="checkbox" class="form-check-input" id="custom-cols-checkall"
-                                   v-model="cb_check_all" @change="onCheckAll">
+                            <input type="checkbox" class="form-check-input" id="custom-cols-checkall" v-model="cb_check_all" @change="onCheckAll">
                             <label class="form-check-label" for="custom-cols-checkall">`check all/none`</label>
                         </div>
                         <p></p>
@@ -36,12 +35,10 @@
 
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-info me-auto" @click="onResetDefaults">Reset to Defaults
-                        </button>
+                        <button type="button" class="btn btn-info me-auto" @click="onResetDefaults">Reset to Defaults</button>
 
                         <div class="dropdown">
-                            <button class="btn btn-outline-secondary dropdown-toggle" type="button"
-                                    data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                 Saved Views
                             </button>
                             <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownMenuButton">
@@ -76,8 +73,7 @@
                         <div class="row">
                             <label class="control-label col-sm-2" for="userviews-iname">`Title`</label>
                             <div class="col-sm-10">
-                                <input id="userviews-iname" ref="list_iname" v-model="userviews_new_name"
-                                       maxlength="255" type="text" class="form-control" required>
+                                <input id="userviews-iname" ref="list_iname" v-model="userviews_new_name" maxlength="255" type="text" class="form-control" required>
                             </div>
                         </div>
                     </div>
@@ -94,8 +90,8 @@
 </script>
 
 <script type="module">
-    import {mapStores} from 'pinia';
-    import {VueDraggableNext} from 'vue-draggable-next';
+    import { mapStores } from 'pinia';
+    import { VueDraggableNext } from 'vue-draggable-next';
 
     fwApp.component('list-customize-columns', {
         template: '#list-customize-columns-template',
@@ -133,12 +129,12 @@
                 this.modal.show();
                 this.$refs.modal_customize.addEventListener('hidden.bs.modal', e => {
                     this.$emit('hidden', e);
-                }, {once: true});
+                }, { once: true });
             },
 
             async onResetDefaults(e) {
                 this.modal.hide();
-                await this.fwStore.saveUserViews({is_reset: true});
+                await this.fwStore.saveUserViews({ is_reset: true });
             },
             async onSave(e) {
                 // build as "fld[filed_name]"=index ,"fld[filed_name]"=index, ...
@@ -148,9 +144,9 @@
                         fld[el.field_name] = index + 1;
                     }
                 });
-                let params = {fld: fld};
+                let params = { fld: fld };
                 if (this.userviews_new_name > '') {
-                    params.item = {iname: this.userviews_new_name};
+                    params.item = { iname: this.userviews_new_name };
                     this.userviews_new_name = '';
                     this.modal_create.hide();
                 }
@@ -167,11 +163,11 @@
                 let list_iname = this.$refs.list_iname;
                 this.$refs.modal_create.addEventListener('shown.bs.modal', e => {
                     list_iname.focus();
-                }, {once: true});
+                }, { once: true });
             },
             async onLoadView(id) {
                 this.modal.hide();
-                await this.fwStore.saveUserViews({load_id: id});
+                await this.fwStore.saveUserViews({ load_id: id });
             },
         }
     });

@@ -2,45 +2,39 @@
     <div :class="$slots.prepend || $slots.append || col.append || col.prepend ? 'input-group' : ''">
         <template v-if="col.prepend"
                   v-for="(el,index) in col.prepend"
-                  :key="index"
-        >
+                  :key="index">
             <button type="button"
                     :class="el.class ? el.class : 'btn btn-default btn-sm'"
                     :title="el.hint"
-                    @click.stop="onBtnClick(el.event)"
-            >
+                    @click.stop="onBtnClick(el.event)">
                 <i v-if="el.icon" :class="el.icon"></i> {{el.label}}
             </button>
         </template>
         <slot name="prepend"></slot>
-        <select
-                :class="'form-select'+(error?' is-invalid':'')"
+        <select :class="'form-select'+(error?' is-invalid':'')"
                 :id="'cell-'+rowId+'-'+col.field_name"
                 v-model="row[col.field_name]"
                 :required="col.required"
                 :readonly="col.readonly"
                 :disabled="col.disabled"
                 @focus="onFocus"
-                @blur="$emit('blur', $event)"
-        >
+                @blur="$emit('blur', $event)">
             <option v-if="col.is_option0" value="0"></option>
             <option v-if="col.is_option_empty" value=""></option>
             <option v-for="lrow in options"
                     :key="col.field_name+'#'+lrow.id"
-                    :value="lrow.id"
-            >{{lrow.iname}}
+                    :value="lrow.id">
+                {{lrow.iname}}
             </option>
         </select>
         <slot name="append"></slot>
         <template v-if="col.append"
                   v-for="(el,index) in col.append"
-                  :key="index"
-        >
+                  :key="index">
             <button type="button"
                     :class="el.class ? el.class : 'btn btn-default btn-sm'"
                     :title="el.hint"
-                    @click.stop="onBtnClick(el.event)"
-            >
+                    @click.stop="onBtnClick(el.event)">
                 <i v-if="el.icon" :class="el.icon"></i> {{el.label}}
             </button>
         </template>
@@ -82,7 +76,7 @@
                 this.$emit('focus', e);
             },
             onBtnClick(icode) {
-                this.$emit('btnClick', {event: icode, row: this.row, col: this.col});
+                this.$emit('btnClick', { event: icode, row: this.row, col: this.col });
             }
         }
     });

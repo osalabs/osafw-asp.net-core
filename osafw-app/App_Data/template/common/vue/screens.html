@@ -5,6 +5,11 @@
         <list-table v-if="fwStore.uioptions.list.table">
             <!--template #list-row-btn-prepend="props"><button class="btn btn-sm btn-default" @click.prevent="console.log(props.row)">Custom Button</button></template>
             <template #list-row-btn-append="props"><button class="btn btn-sm btn-default" @click.prevent="console.log(props.row)">Custom Button</button></template-->
+            <!--template #cell-status="{ row, col }">
+              <span :class="['badge', row.status==='Active' ? 'bg-success':'bg-secondary']">
+                {{ row.status }}
+              </span>
+            </template-->
         </list-table>
     </template>
     <template v-else-if="fwStore.current_screen=='view'">
@@ -22,7 +27,7 @@
 </script>
 
 <script type="module">
-    import {mapStores} from 'pinia';
+    import { mapStores } from 'pinia';
 
     fwApp.component('screens', {
         template: '#screens',

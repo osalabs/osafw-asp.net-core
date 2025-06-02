@@ -12,30 +12,25 @@
         <form v-if="fwStore.edit_data !== null"
               class="fw-card"
               @submit.prevent="saveChanges"
-              @change.prevent="onChange"
-        >
+              @change.prevent="onChange">
             <fieldset>
-                <form-one-def
-                        v-for="(def,index) in fwStore.treeShowFormFields"
-                        :key="index"
-                        :form="fwStore.edit_data"
-                        @update-form-field="onUpdateFormField"
-                        @cancel-form="onCancelForm"
-                        :def="def"
-                        :lookups="fwStore.lookups"
-                />
+                <form-one-def v-for="(def,index) in fwStore.treeShowFormFields"
+                              :key="index"
+                              :form="fwStore.edit_data"
+                              @update-form-field="onUpdateFormField"
+                              @cancel-form="onCancelForm"
+                              :def="def"
+                              :lookups="fwStore.lookups" />
             </fieldset>
         </form>
         <template v-else>
-            <div v-if="fwStore.is_loading_item" class="text-center">
-                <span class="spinner-border" role="status" aria-hidden="true"></span>
-            </div>
+            <div v-if="fwStore.is_loading_item" class="text-center"><span class="spinner-border" role="status" aria-hidden="true"></span></div>
         </template>
     </div>
 </script>
 
 <script type="module">
-    import {mapStores} from 'pinia';
+    import { mapStores } from 'pinia';
 
     fwApp.component('list-edit-pane', {
         template: '#list-edit-pane-template',
@@ -63,7 +58,7 @@
                     this.closePane();
                 }
             },
-            onUpdateFormField({field, value}) {
+            onUpdateFormField({ field, value }) {
                 //console.log('list-edit-pane updateFormField', { field, value });
                 this.fwStore.edit_data.i[field] = value;
             },

@@ -7,11 +7,11 @@
            :readonly="readonly"
            :pattern="pattern"
            :class="'form-control' + ($attrs.class ? ' ' + $attrs.class : '')"
-           v-model="value"/>
+           v-model="value" />
 </script>
 
 <script type="module">
-    import {BootstrapSimpleAutocomplete} from 'bootstrap-simple-autocomplete';
+    import { BootstrapSimpleAutocomplete } from 'bootstrap-simple-autocomplete';
 
     fwApp.component('autocomplete', {
         template: '#autocomplete-template',

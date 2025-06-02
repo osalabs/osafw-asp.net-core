@@ -5,21 +5,28 @@
 
         <a v-if="co_buttons.view" href="#" @click.prevent="$emit('view', $event)">`View`</a>
         <template v-if="co_buttons.edit">
-            <template v-if="co_buttons.view">&nbsp;&#183;&nbsp;</template>
+            <template v-if="co_buttons.view">
+                &nbsp;&#183;&nbsp;
+            </template>
             <a href="#" @click.prevent="$emit('edit', $event)">`Edit`</a>
         </template>
         <template v-if="co_buttons.quickedit">
-            <template v-if="co_buttons.view || co_buttons.edit">&nbsp;&#183;&nbsp;</template>
-            <a href="#" @click.prevent="$emit('quickedit', $event)" class="on-quickedit">`Quick Edit`</a>
+            <template v-if="co_buttons.view || co_buttons.edit">
+                &nbsp;&#183;&nbsp;
+            </template>
+            <a href="#" @click.prevent="$emit('quickedit', $event)" class="on-quickedit">{{co_buttons.quickedit.title ?? 'Quick Edit'}}</a>
         </template>
         <template v-if="co_buttons.delete">
-            <template v-if="co_buttons.view || co_buttons.edit || co_buttons.quickedit">&nbsp;&#183;&nbsp;</template>
-            <a href="#" class="text-danger" @click.prevent="$emit('delete', $event)" :disabled="isReadonly"><i
-                    class="bi bi-x"></i></a>
+            <template v-if="co_buttons.view || co_buttons.edit || co_buttons.quickedit">
+                &nbsp;&#183;&nbsp;
+            </template>
+            <a href="#" class="text-danger" @click.prevent="$emit('delete', $event)" :disabled="isReadonly"><i class="bi bi-x"></i></a>
         </template>
         <template v-if="co_buttons.custom">
-            <template v-if="co_buttons.view || co_buttons.edit || co_buttons.quickedit || co_buttons.delete">&nbsp;&#183;&nbsp;</template>
-            <a href="#" @click.prevent="$emit('custom', $event)" :disabled="isReadonly">{{co_buttons.custom}}</a>
+            <template v-if="co_buttons.view || co_buttons.edit || co_buttons.quickedit || co_buttons.delete">
+                &nbsp;&#183;&nbsp;
+            </template>
+            <a href="#" @click.prevent="$emit('custom', $event)" :disabled="isReadonly" class="on-view-pane">{{co_buttons.custom}}</a>
         </template>
 
         <slot name="btn-append" :row="row"></slot>
