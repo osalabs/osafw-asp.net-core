@@ -972,32 +972,18 @@ public class FW : IDisposable
 
         var auth_check_controller = _auth(route);
 
-        Type controllerClass = Type.GetType(FW_NAMESPACE_PREFIX + route.controller + "Controller", false, true); // case ignored
-        if (controllerClass == null)
+        var co = controller(route.controller, auth_check_controller == 1);
+        if (co == null)
         {
             logger(LogLevel.DEBUG, "No controller found for controller=[", route.controller, "], using default Home");
             // no controller found - call default controller with default action
-            controllerClass = Type.GetType(FW_NAMESPACE_PREFIX + "HomeController", true);
             route.controller_path = "/Home";
             route.controller = "Home";
             route.action = "NotFound";
+            co = controller(route.controller);
+            //we should always have HomeController
         }
-        else
-        {
-            // controller found
-            if (auth_check_controller == 1)
-            {
-                // but need's check access level on controller level, logged level will be 0 for visitors
-                var field = controllerClass.GetField("access_level", BindingFlags.Public | BindingFlags.Static);
-                if (field != null)
-                {
-                    if (userAccessLevel < field.GetValue(null).toInt())
-                        throw new AuthException("Bad access - Not authorized (2)");
-                }
-
-                //note, Role-Based Access - checked in callController right before calling action
-            }
-        }
+        Type controllerClass = co.GetType();
 
         logger(LogLevel.TRACE, "TRY controller.action=", route.controller, ".", route.action);
 
@@ -1095,11 +1081,11 @@ public class FW : IDisposable
             parser([]);
         }
         else
-            callController(controllerClass, actionMethod, args);
+            callController(co, actionMethod, args);
     }
 
     // Call controller
-    public void callController(Type controllerClass, MethodInfo actionMethod, object[] args = null)
+    public void callController(FwController controller, MethodInfo actionMethod, object[] args = null)
     {
         //convert args to parameters with proper types
         System.Reflection.ParameterInfo[] @params = actionMethod.GetParameters();
@@ -1126,8 +1112,6 @@ public class FW : IDisposable
             }
         }
 
-        FwController controller = (FwController)Activator.CreateInstance(controllerClass);
-        controller.init(this);
         Hashtable ps = null;
         try
         {
@@ -1467,39 +1451,57 @@ public class FW : IDisposable
     /// <summary>
     /// Return controller instance by controller class name
     /// </summary>
-    /// <param name="controller_name"></param>
+    /// <param name="controller_name">controller </param>
     /// <returns></returns>
     /// <exception cref="ApplicationException"></exception>
-    public FwController controller(string controller_name)
+    public FwController controller(string controller_name, bool is_auth_check = true)
     {
-        //validate - name should end with "Controller"
-        if (!controller_name.EndsWith("Controller", StringComparison.OrdinalIgnoreCase))
-            throw new ApplicationException($"Controller class name should end on 'Controller': {controller_name}");
+        ////validate - name should end with "Controller"
+        //if (!controller_name.EndsWith("Controller", StringComparison.OrdinalIgnoreCase))
+        //    throw new ApplicationException($"Controller class name should end on 'Controller': {controller_name}");
 
         if (controllers.ContainsKey(controller_name))
             return (FwController)controllers[controller_name];
 
         FwController c;
-        Type ct = Type.GetType(FW_NAMESPACE_PREFIX + controller_name, false, true); // case ignored
+        Type ct = Type.GetType(FW_NAMESPACE_PREFIX + controller_name + "Controller", false, true); // case ignored
         if (ct == null)
         {
             //if no such controller class - try virtual controllers
             logger(LogLevel.TRACE, $"Controller class not found, trying Virtual Controller: {controller_name}");
-            //strip "Controller" suffix from controller_name
-            var controller_icode = controller_name[..^"Controller".Length];
+            //strip "Controller" suffix from controller_name if it present
+            //var controller_icode = controller_name[..^"Controller".Length];
+
+            var controller_icode = controller_name;
 
             var fwcon = model<FwControllers>().oneByIcode(controller_icode);
             if (fwcon.Count == 0)
                 return null; // controller class not found even in virtual controllers TODO NoControllerException?
 
             // check defined access level
-            if (userAccessLevel < fwcon["access_level"].toInt())
+            if (is_auth_check && userAccessLevel < fwcon["access_level"].toInt())
                 throw new AuthException("Bad access - Not authorized (4)");
 
             c = new FwVirtualController(this, fwcon);
         }
         else
+        {
             c = (FwController)Activator.CreateInstance(ct);
+            if (is_auth_check)
+            {
+                // controller found
+                // but need's check access level on controller level, logged level will be 0 for visitors
+                var controllerClass = c.GetType();
+                var field = controllerClass.GetField("access_level", BindingFlags.Public | BindingFlags.Static);
+                if (field != null)
+                {
+                    if (userAccessLevel < field.GetValue(null).toInt())
+                        throw new AuthException("Bad access - Not authorized (2)");
+                }
+
+                //note, Role-Based Access - checked in callController right before calling action
+            }
+        }
 
         // initialize
         c.init(this);

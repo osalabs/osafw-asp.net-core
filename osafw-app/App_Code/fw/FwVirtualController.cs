@@ -111,7 +111,7 @@ public class FwVirtualController : FwVueController
                     {
                         { "url", fwcontroller["url"] },
                         { "title", fwcontroller["iname"] },
-                        { "is_dynamic_index_edit", fw.model<Users>().isAccessLevel((int)fwcontroller["access_level_edit"]) }
+                        { "is_dynamic_index_edit", fw.model<Users>().isAccessLevel(fwcontroller["access_level_edit"].toInt()) }
                     }
                 }
             };
