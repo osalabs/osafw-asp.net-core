@@ -711,7 +711,8 @@ class DevCodeGen
 
         List<Hashtable> formTabs = [
             //default
-            new Hashtable {
+            new Hashtable
+            {
                 ["tab"] = "",
                 ["label"] = "Main"
             }
@@ -1428,6 +1429,58 @@ class DevCodeGen
                         def["value"] = tag + ">";
                         break;
                     }
+            }
+        }
+    }
+
+    public void createReport(string repcode)
+    {
+        repcode = FwReports.cleanupRepcode(repcode);
+        if (string.IsNullOrEmpty(repcode))
+            throw new UserException("No report code");
+
+        var report_class = FwReports.repcodeToClass(repcode);
+        var reports_path = fw.config("site_root") + @"\App_Code\models\Reports";
+        var src_file = reports_path + @"\Sample.cs";
+        var dest_file = reports_path + @"\" + report_class.Replace("Report", "") + ".cs";
+
+        if (File.Exists(dest_file))
+            throw new UserException("Such report already exists");
+
+        var content = Utils.getFileContent(src_file);
+        if (content == "")
+            throw new ApplicationException("Can't open Sample.cs");
+
+        content = content.Replace("SampleReport", report_class);
+        content = content.Replace("Sample report", Utils.capitalize(repcode) + " Report");
+
+        Utils.setFileContent(dest_file, ref content);
+
+        // copy templates
+        var tpl_from = fw.config("template") + "/admin/reports/sample";
+        var tpl_to = fw.config("template") + "/admin/reports/" + repcode.ToLower();
+        Utils.CopyDirectory(tpl_from, tpl_to, true);
+
+        // Add link to /Admin/Reports screen (main.html)
+        var reports_index_file = fw.config("template") + "/admin/reports/index/main.html";
+        var html = Utils.getFileContent(reports_index_file);
+        if (!string.IsNullOrEmpty(html))
+        {
+            // Find the hidden template div (use escaped quotes for normal string)
+            // <~tplcodegen if="0" inline><a href="<~../url>/<~tpl-code>" class="list-group-item"><~tpl-title></a></~tplcodegen>
+            var pattern = "(<~tplcodegen.+?>(.+?)</~tplcodegen>)";
+            var match = Regex.Match(html, pattern, RegexOptions.Singleline);
+            if (match.Success)
+            {
+                var wholeDiv = match.Groups[1].Value;
+                var hiddenDiv = match.Groups[2].Value;
+                // Replace placeholders
+                var newDiv = hiddenDiv
+                    .Replace("<~tpl-code>", repcode)
+                    .Replace("<~tpl-title>", Utils.capitalize(repcode) + " Report");
+                // Insert before the hidden div
+                html = html.Replace(wholeDiv, newDiv + "\n" + wholeDiv);
+                Utils.setFileContent(reports_index_file, ref html);
             }
         }
     }

@@ -284,6 +284,17 @@ public class DevManageController : FwController
         fw.redirect(base_url);
     }
 
+    public void CreateReportAction()
+    {
+        var item = reqh("item");
+        var repcode = item["report_code"].toStr().Trim();
+
+        DevCodeGen.init(fw).createReport(repcode);
+
+        fw.flash("success", repcode + " report created");
+        fw.redirect(base_url);
+    }
+
     public void ExtractControllerAction()
     {
         var item = reqh("item");
