@@ -98,7 +98,6 @@ let state = {
         status: '',
         userlist: '',
     },
-    is_list_filter_status: true, //default - show status filter
 
     related_id: 0, // related model id
     return_url: '', // return url if controller called from other place expecting user's return

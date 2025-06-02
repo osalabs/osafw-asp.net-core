@@ -12,14 +12,8 @@
                     <div>
                         <span>{{header.field_name_visible}}</span>
                         <span class="ms-1" v-if="header.is_sortable && fwStore.f.sortby==header.field_name">
-                            <template v-if="fwStore.f.sortdir=='desc'">
-                                <!-- desc icon -->
-                                <svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-arrow-up" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M8 15a.5.5 0 0 0 .5-.5V2.707l3.146 3.147a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 1 0 .708.708L7.5 2.707V14.5a.5.5 0 0 0 .5.5z" /></svg>
-                            </template>
-                            <template v-else>
-                                <!-- asc icon -->
-                                <svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-arrow-down" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M8 1a.5.5 0 0 1 .5.5v11.793l3.146-3.147a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 .708-.708L7.5 13.293V1.5A.5.5 0 0 1 8 1z" /></svg>
-                            </template>
+                            <i v-if="fwStore.f.sortdir=='desc'" class="bi bi-arrow-up"></i>
+                            <i v-else class="bi bi-arrow-down"></i>
                         </span>
                     </div>
                 </th>
@@ -57,12 +51,12 @@
                 return this.fwStore.uioptions.list.table ?? {};
             },
             checkedAll: {
-                get: function() {
+                get: function () {
                     return this.fwStore.list_rows.length > 0 && this.fwStore.list_rows.length === Object.keys(this.fwStore.hchecked_rows).length;
                 },
-                set: function(val) {
+                set: function (val) {
                     this.cb_check_all = val;
-                },                
+                },
             }
         },
         methods: {
@@ -87,9 +81,9 @@
                 if (e.target.checked) {
                     // check all rows
                     this.fwStore.hchecked_rows = this.fwStore.list_rows.reduce((acc, row) => {
-                            acc[row[this.fwStore.field_id]] = true;
-                            return acc;
-                        },{});
+                        acc[row[this.fwStore.field_id]] = true;
+                        return acc;
+                    }, {});
                 } else {
                     this.resetCheckedRows();
                 }
