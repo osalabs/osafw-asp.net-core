@@ -27,6 +27,7 @@
     "save_fields_checkboxes": {
         "is_checkbox":"0"
     },
+    "save_fields_nullable": "demo_dicts_id att_id fdate_pop",
 
     "form_new_defaults": {
         "iname": ""

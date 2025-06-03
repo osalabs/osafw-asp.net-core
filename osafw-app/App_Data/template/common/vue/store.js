@@ -15,6 +15,7 @@ let state = {
     me_id: 0, // current user id
     access_level: 0, // user access level
     base_url: '', // base url for the controller
+    api: null, // mande instance
     list_title: '', //list screen title
     view_title: '',
     edit_title: '',
@@ -24,44 +25,51 @@ let state = {
 
     // default UI options, override in specific controller via store.js
     uioptions: {
-      //top keys - screens
-      list: {
-        header: { // list-header, can be false
-          btnAddNew: true,
-          count: false, //FRY SPECIFIC
+        //top keys - screens
+        list: {
+            header: { // list-header, can be false
+                btnAddNew: true,
+                count: true,
+            },
+            filters: { // list-filters, can be false
+                s: { // search input, can be false
+                    placeholder: ""
+                },
+                status: true, // status dropdown
+                userlists: true, // userlists dropdown
+                export: true, // export btn
+                print: true, // print btn
+                tableButtons: true, // table buttons
+            },
+            table: { //list-table
+                isButtonsLeft: null, //null - use global.is_list_btn_left
+                rowTitle: 'Double click to Edit',
+                rowButtons: { // list-row-btn, can be false as whole
+                    view: true,
+                    edit: true,
+                    quickedit: true,
+                    delete: true
+                },
+                rowDblClick: 'view', // view|edit|quickedit or else override store onRowDblClick
+                pagination: { // list-pagination, can be false
+                    count: false,
+                }
+            },
+            btnMulti: { //list-btn-multi, can be false
+                isDelete: true,
+                isUserlists: true
+            }
         },
-        filters: { // list-filters, can be false
-          s: { // search input, can be false
-            placeholder: ""
-          }
+        view: {
+            header: { // view-header, can be false
+                btnAddNew: true,
+            },
         },
-        table: { //list-table
-          isButtonsLeft: null, //null - use global.is_list_btn_left
-          rowButtons: { // list-row-btn, can be false as whole
-            view: true,
-            edit: true,
-            quickedit: true,
-            delete: true
-          },
-          pagination: { // list-pagination, can be false
-            count: true, //FRY SPECIFIC
-          }
-        },
-        btnMulti: { //list-btn-multi, can be false
-          isDelete: true,
-          isUserlists: true
+        edit: {
+            header: { // edit-header, can be false
+                btnAddNew: true,
+            },
         }
-      },
-      view: {
-        header: { // view-header, can be false
-          btnAddNew: true,
-        },
-      },
-      edit: {
-        header: { // edit-header, can be false
-          btnAddNew: true,
-        },
-      }
     },
 
     // user views
@@ -74,7 +82,7 @@ let state = {
     is_userlists: false,
     select_userlists: [],
     my_userlists: [],
-    userlists_url : '/My/Lists',
+    userlists_url: '/My/Lists',
     userlists_new_name: '', // v-model name for creating new list
 
     // list edit support
@@ -90,7 +98,6 @@ let state = {
         status: '',
         userlist: '',
     },
-    is_list_filter_status: true, //default - show status filter
 
     related_id: 0, // related model id
     return_url: '', // return url if controller called from other place expecting user's return
@@ -119,7 +126,7 @@ let state = {
             { id: 10, iname: 'Inactive' },
             { id: 127, iname: '[Deleted]' }
         ]
-        },
+    },
     //entity-related lookups
     lookups: {},
 
@@ -135,7 +142,7 @@ let state = {
     is_loading_item: false, //true while loading item data
     cells_saving: {}, // cells saving status {row[id_field] => true}
     cells_errors: {}, // cells saving status {row[id_field] => true}
-  };
+};
 
 // merge in fwStoreState if defined
 if (typeof fwStoreState !== 'undefined') {
@@ -228,17 +235,28 @@ let getters = {
     },
     treeShowFormFields: (state) => {
         return state.fieldsToTree(state.showform_fields);
+    },
+    savedStatus: (state) => {
+        let sr = state.edit_data?.save_result ?? null;
+        if (!sr) return null; // no save initiated yet
+        return !(!sr.id || sr.error); //saved when we have id and no error
+    },
+    savedErrorMessage: (state) => {
+        return state.edit_data?.save_result?.error?.message ?? '';
     }
 };
 
 //merge in fwStoreGetters if defined
 if (typeof fwStoreGetters !== 'undefined') {
-   getters = AppUtils.deepMerge(getters, fwStoreGetters);
+    getters = AppUtils.deepMerge(getters, fwStoreGetters);
 }
 
 let actions = {
+    initApi() {
+        this.api = mande(this.base_url);
+    },
     handleError(error, caller, is_silent) {
-        let err_msg = error.body?.err_msg ?? 'server error';
+        let err_msg = error.body?.error?.message ?? 'server error';
         console.error('handleError for', caller, ":", err_msg);
         if (!is_silent) {
             //console.error(error);
@@ -252,12 +270,12 @@ let actions = {
         this.current_id = id;
         let suffix = '';
         if (screen == 'view') {
-          suffix = '/' + id;
-          this.edit_data = null;
+            suffix = '/' + id;
+            this.edit_data = null;
         } else if (screen == 'edit') {
-          suffix = '/' + (id ? id + '/edit' : 'new');
-          this.edit_data = null;
-          if (!id) this.edit_data = { i: {} };
+            suffix = '/' + (id ? id + '/edit' : 'new');
+            this.edit_data = null;
+            if (!id) this.edit_data = { i: {} };
         }
         window.history.pushState({ screen: screen, id: id }, '', this.base_url + suffix);
         this.is_list_edit_pane = false;
@@ -290,9 +308,9 @@ let actions = {
             let field_name = header.field_name;
             let def = hfields[field_name] ?? null;
             if (!def) {
-              //if no editable field definition found - make as read-only
-              header.is_ro = true;
-              return header;
+                //if no editable field definition found - make as read-only
+                header.is_ro = true;
+                return header;
             }
 
             let def_type = def.type;
@@ -321,30 +339,26 @@ let actions = {
         this.list_user_view.density = this.list_user_view.density ?? 'table-sm';
         this.is_initial_load = false; // reset initial load flag
         if (data.showform_fields) {
-          this.enrichEditableListHeaders();
+            this.enrichEditableListHeaders();
         }
     },
 
     // load init and lookup scopes only
     async loadInitial() {
         try {
-            const apiBase = mande(this.base_url);
-
-            const data = await apiBase.get('', { query: { scope: 'init,lookups' } });
+            const data = await this.api.get('', { query: { scope: 'init,lookups' } });
             //console.log('loadInitial data', data);
 
             this.saveToStore(data);
             this.applyDefaultsAfterLoad(data);
-
         } catch (error) {
             this.handleError(error, 'loadInitial');
-            return error;
         }
     },
 
     // set one or multiple filter values and reload list
     setFilters(filters) {
-        //console.log('setFilters', filters);       
+        //console.log('setFilters', filters);
         //whenever filters changed - reset page to first (if no specific page set)
         if (filters.pagenum === undefined) filters.pagenum = 0;
         //merge filters into state.f
@@ -373,61 +387,63 @@ let actions = {
     async loadIndex() {
         try {
             this.is_loading_index = true;
-            const apiBase = mande(this.base_url);
 
             const req = this.listRequestQuery;
-            //console.log('loadIndex req', req);
-            const data = await apiBase.get('', { query: req });
+            const data = await this.api.get('', { query: req });
             //console.log('loadIndex data', data);
             this.is_loading_index = false;
 
             this.saveToStore(data);
             this.applyDefaultsAfterLoad(data);
+            this.onLoadIndexSuccess();
 
         } catch (error) {
-            this.is_loading_index = false;
             this.handleError(error, 'loadIndex');
-            return error;
+        } finally {
+            this.is_loading_index = false;
         }
     },
+    onLoadIndexSuccess() { }, // hook for custom actions after loadIndex
     //load single item for view/edit
     async loadItem(id, mode) {
         try {
             this.is_loading_item = true;
-            const apiBase = mande(this.base_url);
             let q = {};
             if (mode == 'edit') {
-                q = { query: {mode: mode} };
+                q = { query: { mode: mode } };
             }
 
-            const data = await apiBase.get(id, q);
+            const data = await this.api.get(id, q);
             //console.log('loadItem data', data);
-            this.is_loading_item = false;
-
             this.edit_data = data;
 
         } catch (error) {
             this.handleError(error, 'loadItem');
-            return error;
+        } finally {
+            this.is_loading_item = false;
         }
     },
     // load next/prev id related to id from current list
     async getNextID(id, is_prev) {
         try {
-            const apiBase = mande(this.base_url);
-
-            const data = await apiBase.get('/(Next)/' + id, { query: { prev: is_prev?1:0 } });
+            const data = await this.api.get('/(Next)/' + id, { query: { prev: is_prev ? 1 : 0 } });
 
             return data.id;
 
         } catch (error) {
             this.handleError(error, 'getNext');
-            return error;
+            throw error;
         }
     },
     //when custom cell button clicked
     async onCellBtnClick({ event, row, col }) {
         console.log('onCellBtnClick:', event, row[this.field_id], col.field);
+    },
+    async onRowBtnCustomClick(row) {
+        console.log('onRowBtnCustomClick:', row);
+    },
+    async onRowDblClick(row) {
+        console.log('onRowDblClick:', row);
     },
     async onCellKeyup(event, row, col) {
         //console.log('onCellKeyup:', event, row, col);
@@ -438,23 +454,21 @@ let actions = {
 
         this.cells_saving[id_name] = true; //set saving flag
         delete this.cells_errors[id_name]; //clear errors if any
-        
+
         let field_name = col.field_name;
         let value = row[field_name];
 
         let item = { [field_name]: value };
         if (col.type == 'autocomplete') {
-          //for autocomplete submit _iname instead of id value
-          item[field_name] = null;
-          item[field_name + '_iname'] = row[field_name + '_iname'];
+            //for autocomplete submit _iname instead of id value
+            item[field_name] = null;
+            item[field_name + '_iname'] = row[field_name + '_iname'];
         }
 
         try {
-            const apiBase = mande(this.base_url);
-
             const req = { item: item, XSS: this.XSS };
             //console.log('saveCell req', id, req);
-            const response = await apiBase.patch(id, req);
+            const response = await this.api.patch(id, req);
             //console.log('saveCell response', response);
 
             //remove saving flag after 5sec
@@ -465,68 +479,61 @@ let actions = {
         } catch (error) {
             delete this.cells_saving[id_name];
 
-            let err_msg = error.body?.err_msg ?? 'Server Error';
+            let err_msg = error.body?.error?.message ?? 'Server Error';
 
             //check if we got required field error
-            let is_required = error.body?.ERR?.REQUIRED ?? false;
+            let is_required = error.body?.error?.details?.REQUIRED ?? false;
             if (is_required) {
                 err_msg = 'Required field';
             }
 
             //check if we got specific field error code
-            let field_err_code = error.body?.ERR?.[col.field_name] ?? '';
+            let field_err_code = error.body?.error?.details?.[col.field_name] ?? '';
             if (field_err_code && field_err_code !== true) {
                 err_msg = window.fwConst.ERR_CODES_MAP[field_err_code] ?? 'Invalid';
             }
 
             this.cells_errors[id_name] = err_msg;
             this.handleError(error, 'saveCell', true);
-            return error;
         }
     },
     async deleteRow(id) {
         try {
-            const apiBase = mande(this.base_url);
             const req = { XSS: this.XSS };
             //console.log('deleteRow req', req);
-            const response = await apiBase.delete(id, { query: req });
+            const response = await this.api.delete(id, { query: req });
             //console.log('deleteRow response', response);
 
         } catch (error) {
             this.handleError(error, 'deleteRow');
-            return error;
         }
     },
     async deleteCheckedRows() {
         try {
-            const apiBase = mande(this.base_url);
             const req = { XSS: this.XSS, delete: true };
             req.cb = this.checkedRows;
             if (!Object.keys(req.cb).length) return; //no checked rows
 
             //console.log('deleteCheckedRows req', req);
-            const response = await apiBase.put(req);
+            const response = await this.api.put(req);
             //console.log('deleteCheckedRows response', response);
 
             //clear checked rows
             this.hchecked_rows = {};
 
-            //reload list to show changes
-            this.loadIndex();
-
         } catch (error) {
             this.handleError(error, 'deleteCheckedRows');
-            return error;
+        } finally {
+            //reload list to show changes
+            this.loadIndex();
         }
     },
     async restoreRow(id) {
         try {
-            const apiBase = mande(this.base_url);
             const req = { XSS: this.XSS };
-            const response = await apiBase.post('/(RestoreDeleted)/' + id, req);
+            const response = await this.api.post('/(RestoreDeleted)/' + id, req);
         } catch (error) {
             this.handleError(error, 'restoreRow');
-            return error;
         }
     },
 
@@ -543,7 +550,7 @@ let actions = {
     async saveEditDataDebounced(delay) {
         if (!delay) delay = 500;
         // debounce saveEditData
-        this.edit_data.save_result = { success: false };
+        if (this.edit_data) this.edit_data.save_result = {};
         if (this.saveEditDataDebouncedTimeout) clearTimeout(this.saveEditDataDebouncedTimeout);
         this.saveEditDataDebouncedTimeout = setTimeout(() => {
             this.saveEditData();
@@ -552,8 +559,6 @@ let actions = {
     //save edit form data
     async saveEditData() {
         try {
-            const apiBase = mande(this.base_url);
-
             const req = { item: this.edit_data.i, XSS: this.XSS };
             // also submit checked multi_rows, if form has any
             Object.keys(this.edit_data.multi_rows ?? {}).forEach(field => {
@@ -578,7 +583,7 @@ let actions = {
                 rows.forEach(row => {
                     req['item-' + field + '#' + row.id] = {};
                     Object.keys(row).forEach(col => {
-                        if (col == 'id' || Array.isArray(row[col])) return; //skip id and array fields
+                        if (col == 'id') return; // skip id field, skip arrays?  || Array.isArray(row[col])
                         req['item-' + field + '#' + row.id][col] = row[col];
                     });
                     req['item-' + field][row.id] = 1;
@@ -587,21 +592,21 @@ let actions = {
 
             //also submit attachments (att_links) as att[ID]=1
             if (this.edit_data.att_links?.length) {
-              req.att = {};
-              this.edit_data.att_links.forEach(att_id => {
-                  req.att[att_id] = 1;
-              });
+                req.att = {};
+                this.edit_data.att_links.forEach(att_id => {
+                    req.att[att_id] = 1;
+                });
             }
 
             //console.log('saveEditData req', req);
-            const response = await apiBase.post(this.edit_data.id, req);
+            const response = await this.api.post(this.edit_data.id, req);
             //console.log('saveEditData response', response);
             this.edit_data.save_result = response;
 
             if (this.current_screen == 'list') {
                 //reload list to show changes
                 await this.loadIndex();
-            } else {                
+            } else {
                 //after edit form saved - process route_return
                 const rr = this.edit_data.route_return ?? '';
                 if (rr == 'New') {
@@ -612,7 +617,7 @@ let actions = {
                 } else if (rr == 'Index') {
                     this.openListScreen();
                 } else {
-                    if (response.success && response.id && !this.edit_data.id) {
+                    if (!response.error && response.id && !this.edit_data.id) {
                         //just reload edit after add new
                         await this.openEditScreen(response.id);
                     }
@@ -620,9 +625,12 @@ let actions = {
             }
 
         } catch (error) {
-            this.edit_data.save_result = error.body ?? { success: false, err_msg: 'server error' };
-            this.handleError(error, 'saveEditData');
-            return error;
+            this.edit_data.save_result = error.body ?? { error: 'server error' };
+            if (error.response >= 500) {
+                this.handleError(error, 'saveEditData');
+                return error;
+            }
+            //400 errors are user validation
         }
     },
 
@@ -688,22 +696,21 @@ let actions = {
     // *** userviews support ***
     async saveUserViews(params) {
         try {
-            const apiBase = mande(this.base_url);
             const req = { XSS: this.XSS, is_list_edit: this.is_list_edit, ...params };
 
             //console.log('saveUserViews req', req);
-            const response = await apiBase.post('/(SaveUserViews)', req);
+            const response = await this.api.post('/(SaveUserViews)', req);
             //console.log('saveUserViews response', response);
 
             if (!params.is_reset && !params.density && !params.load_id) {
                 Toast("View saved", { theme: 'text-bg-success' });
             }
-            //reload as whole as columns can be changed
-            this.reloadIndex();
 
         } catch (error) {
             this.handleError(error, 'saveUserViews');
-            return error;
+        } finally {
+            //reload as whole as columns can be changed
+            this.reloadIndex();
         }
     },
     async deleteUserViews(id) {
@@ -716,12 +723,12 @@ let actions = {
             //console.log('deleteUserViews response', response);
 
             Toast("View deleted", { theme: 'text-bg-success' });
-            //reload as whole as columns can be changed
-            this.reloadIndex();
 
         } catch (error) {
             this.handleError(error, 'deleteUserViews');
-            return error;
+        } finally {
+            //reload as whole as columns can be changed
+            this.reloadIndex();
         }
     },
 
@@ -747,12 +754,12 @@ let actions = {
 
 //merge in fwStoreActions if defined
 if (typeof fwStoreActions !== 'undefined') {
-   actions = AppUtils.deepMerge(actions, fwStoreActions);
+    actions = AppUtils.deepMerge(actions, fwStoreActions);
 }
 
 const useFwStore = defineStore('fw', {
-  state: () => (state),
-  getters: getters,
-  actions: actions,
+    state: () => (state),
+    getters: getters,
+    actions: actions,
 });
-window.useFwStore=useFwStore; //make store available for components in html below
+window.useFwStore = useFwStore; //make store available for components in html below

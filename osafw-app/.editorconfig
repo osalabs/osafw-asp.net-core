@@ -3,6 +3,10 @@
 [*]
 indent_style = space
 
+# js files
+[*.js]
+indent_size = 4
+
 # Xml files
 [*.xml]
 indent_size = 2

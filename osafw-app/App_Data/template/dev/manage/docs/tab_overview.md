@@ -1,61 +1,56 @@
 ### Introduction
-**Application Name:** [Your Application Name]
+**Application Name:** <~GLOBAL[SITE_NAME]>
 **Framework:** OSAFW ASP.NET Core
-**Version:** [Application Version]
-**Last Updated:** [Last Updated Date]
+**Version:** <~GLOBAL[SITE_VERSION]>
+**Last Updated:** <~GLOBAL[current_time] date="yyyy-MM-dd">
 
-This document provides a technical overview of the [Your Application Name], including its architecture, installation, and maintenance instructions. Additionally, it includes detailed steps for deploying the application on an AWS EC2 Windows Server instance.
+This documentation describes the structure and deployment of the application built with OSAFW ASP.NET Core. It includes installation, maintenance and troubleshooting guidelines. The same content can be exported as a PDF using the button above.
 
 ### Terminology
-- **Project Name:** [Your Project Name]
-- **Project Code:** [Your Project Code]
-  *Note: The Project Code is used across various components, including the repository name, app folder, database, and web server site name.*
+- **Project Name:** %%Project Name%%
+- **Project Code:** %%ProjectCode%%
+  *This short code is reused for repository names, the application folder, the database and the IIS site name.*
 - **Short Description:**
-  [Provide a brief description of where, how, and by whom the system will be used. Include a link to the client website if applicable.]
+  %%Provide a brief description of where, how, and by whom the system will be used. Include a link to the client website if applicable.%%
 
 ### Technology Stack
-- **Backend:** .NET Core C# (default) or PHP
-- **Database:** SQL Server (default) or MySQL
+- **Backend:** .NET Core C#
+- **Database:** SQL Server %%(or MySQL)%%
 
 ### Security Considerations
-- **Role-Based Access Control (RBAC):** [Yes/No]
-  If yes, define roles, resources, and permissions.
-- **Access Levels:** [Yes/No]
-  If yes, define what can be accessed at each level.
-- **Multi-Factor Authentication (MFA):** [Yes/No]
-- **Authentication Method:** [Windows Auth, Active Directory, OAuth]
+- **Role-Based Access Control (RBAC):** <~/common/sel/yn_bool.sel selvalue="is_rbac">
+  If yes, %%list roles, resources, and permissions%%.
+- **Access Levels:**
+  <ul>
+  <~access_levels repeat inline>
+    <li><~iname></li>
+  </~access_levels>
+  </ul>
 
-### Uploads Storage Options
-- **Storage Location:** [Local, S3]
+- **Multi-Factor Authentication (MFA) enforced:** <~/common/sel/yn_bool.sel selvalue="GLOBAL[is_mfa_enforced]"> 
+- **Authentication Method:** %%Windows Auth, Active Directory, OAuth%%
 
-### User Interface (UI)
-- **Target Screen Resolutions:** [FullHD, HD, tablet, phone]
-  *Default: FullHD and Half-screen*
-- **Table Row Button Position:** [Right (default) or Left]
-- **Entity View Screens:** [Yes (default), No, or Depends on Entity]
-- **Multi-language Support:** [Yes/No]
-- **Main Dashboard Blocks/Types:** [Describe the required dashboard blocks/types]
-- **Pages Module:** [Yes/No]
-- **Feedback Functionality:** [Yes/No]
-  *If yes, provide feedback email address.*
-- **Display Standards:**
-  - Date Format: [mm/dd or dd/mm]
-  - Time Format: [24-hour or AM/PM]
-  - Measurement Units: [miles/km]
-- **Branding:** [Specify company/brand colors]
+### Uploads
+- **Storage Location:** <~att_local unless="is_S3" inline>local file system</~att_local> <~att_S3 if="is_S3" inline>AWS S3</~att_S3>
+
+### User Interface
+- **Target Screen Resolutions:** Full HD and half-screen layouts.
+- **Table Row Button Position:** right side by default.
+- **Entity View Screens:** enabled for most entities.
+- **Multi-language Support:** optional.
+- **Main Dashboard Blocks/Types:** customize per project.
+- **Pages Module:** available if content pages are used.
+- **Feedback Functionality:** optional, emails sent to `<~GLOBAL[support_email]>`.
+- **Display Standards:** dates in mm/dd/yyyy, 24-hour time and the metric system.
+- **Branding:** colors and logos can be adjusted in the theme files.
 
 ### Hosting Options
-- **Hosting Environment:** [Intranet, AWS, Other]
-  - **Intranet:**
-    *Specify if VPN access is needed.*
-  - **AWS:**
-    *Specify if using SQL Server Express (no encryption) or Web license (encryption). Include time zone information for servers.*
-  - **Other:** [Provide details]
+- **Hosting Environment:** intranet, AWS or other cloud provider.
+  - **Intranet:** note if VPN access is required.
+  - **AWS:** choose between SQL Server Express (no encryption) and the Web edition (supports encryption). Set the correct server time zone (default UTC)
+  - **Other:** specify additional details.
 
 ### Email Configuration
-- **Support Email:** [Email address]
-- **No-reply Email:** [noreply@domain.com]
-- **SMTP Server Options:**
-  - [Their SMTP Server (host, port, SSL, username/password)]
-  - [Their Outlook]
-  - [AWS SES]
+- **Support Email:** <~GLOBAL[support_email]>
+- **No-reply Email:** <~GLOBAL[mail_from]>
+- **SMTP Server Options:** use local SMTP, Outlook or AWS SES credentials as required.

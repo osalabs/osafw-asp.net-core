@@ -80,8 +80,8 @@
                         </td>
                         <td>
                             <div class="form-check form-check-inline">
-                                <input :checked="row.is_checkbox===true || row.is_checkbox==='1'"
-                                       @change="$e => row.is_checkbox = $e.target.checked"
+                            <input :checked="row.is_checkbox===true || row.is_checkbox===1 || row.is_checkbox==='1'"
+                                       @change="$e => row.is_checkbox = $e.target.checked ? 1 : 0"
                                        class="form-check-input"
                                        type="checkbox"
                                        value="1"
@@ -148,7 +148,7 @@
         methods: {
             error(row, field_name) {
               const key = 'item-'+this.def.field+'#'+row.id+'['+field_name+']';
-              return this.form.save_result?.ERR?.[key] ?? false;
+                return this.form.save_result?.error?.details?.[key] ?? false;
             },
             error_text(row, field_name) {
               return window.fwConst.ERR_CODES_MAP[this.error(row.id, field_name)];

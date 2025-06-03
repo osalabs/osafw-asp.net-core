@@ -73,8 +73,7 @@ public class DevManageController : FwController
 
         FwCache.clear();
         db.clearSchemaCache();
-        var pp = new ParsePage(fw);
-        pp.clear_cache();
+        fw.parsePageInstance().clear_cache();
 
         fw.redirect(base_url);
     }
@@ -96,6 +95,30 @@ public class DevManageController : FwController
         fw.model<Users>().reloadSession();
 
         fw.redirect(base_url);
+    }
+
+    // generate documentation PDF
+    public Hashtable DocsAction()
+    {
+        var is_export = reqs("format");
+
+        var ps = new Hashtable();
+        ps["is_rbac"] = fw.model<Users>().isRoles();
+        ps["access_levels"] = FormUtils.selectTplOptions("/common/sel/access_level.sel");
+
+        ps["is_S3"] = S3.IS_ENABLED;
+
+        if (!Utils.isEmpty(is_export))
+        {
+            logger("exporting");
+            var layout = (string)fw.G["PAGE_LAYOUT_PRINT"];
+            var options = new Hashtable();
+            options["disposition"] = "inline";
+            ConvUtils.parsePagePdf(fw, "/dev/manage/docs", layout, ps, "documentation", options);
+            return null;
+        }
+        else
+            return ps;
     }
 
     public Hashtable ShowDBUpdatesAction()
@@ -142,7 +165,7 @@ public class DevManageController : FwController
                 {
                     var filepath = updates_root + @"\" + filename;
                     rw("applying: " + filepath);
-                    ctr += exec_multi_sql(FW.getFileContent(filepath));
+                    ctr += exec_multi_sql(Utils.getFileContent(filepath));
                 }
                 rw("Done, " + ctr + " statements executed");
             }
@@ -152,7 +175,7 @@ public class DevManageController : FwController
             var views_file = fw.config("site_root") + @"\App_Data\sql\views.sql";
             rw("Applying views file: " + views_file);
             // for views - ignore errors
-            ctr = exec_multi_sql(FW.getFileContent(views_file), true);
+            ctr = exec_multi_sql(Utils.getFileContent(views_file), true);
             rw("Done, " + ctr + " statements executed");
 
             rw("<b>All Done</b>");
@@ -261,6 +284,17 @@ public class DevManageController : FwController
         fw.redirect(base_url);
     }
 
+    public void CreateReportAction()
+    {
+        var item = reqh("item");
+        var repcode = item["report_code"].toStr().Trim();
+
+        DevCodeGen.init(fw).createReport(repcode);
+
+        fw.flash("success", repcode + " report created");
+        fw.redirect(base_url);
+    }
+
     public void ExtractControllerAction()
     {
         var item = reqh("item");
@@ -287,10 +321,9 @@ public class DevManageController : FwController
         {
             ["fields"] = fields
         };
-        ParsePage parser = new(fw);
-        string content = parser.parse_page(tpl_to + "/show", "/common/form/show/extract/form.html", ps);
+        string content = fw.parsePage(tpl_to + "/show", "/common/form/show/extract/form.html", ps);
         content = Regex.Replace(content, @"^(?:[\t ]*(?:\r?\n|\r))+", "", RegexOptions.Multiline); // remove empty lines
-        FW.setFileContent(tpl_path + "/show/form.html", ref content);
+        Utils.setFileContent(tpl_path + "/show/form.html", ref content);
 
         // extract ShowAction
         config["is_dynamic_showform"] = false;
@@ -300,11 +333,10 @@ public class DevManageController : FwController
         {
             ["fields"] = fields
         };
-        parser = new ParsePage(fw);
-        content = parser.parse_page(tpl_to + "/show", "/common/form/showform/extract/form.html", ps);
+        content = fw.parsePage(tpl_to + "/show", "/common/form/showform/extract/form.html", ps);
         content = Regex.Replace(content, @"^(?:[\t ]*(?:\r?\n|\r))+", "", RegexOptions.Multiline); // remove empty lines
         content = Regex.Replace(content, "&lt;~(.+?)&gt;", "<~$1>"); // unescape tags
-        FW.setFileContent(tpl_path + "/showform/form.html", ref content);
+        Utils.setFileContent(tpl_path + "/showform/form.html", ref content);
 
         // 'TODO here - also modify controller code ShowFormAction to include listSelectOptions, multi_datarow, comboForDate, autocomplete name, etc...
 
@@ -330,7 +362,9 @@ public class DevManageController : FwController
             dbtype = "OLE";
 
         // Try
-        var db = new DB(fw, new Hashtable() { { "connection_string", connstr }, { "type", dbtype } });
+        var db = new DB(connstr, dbtype, "main");
+        db.setLogger(fw.logger);
+        db.setContext(fw.context);
 
         var entities = DevEntityBuilder.dbschema2entities(db);
 
@@ -387,7 +421,7 @@ public class DevManageController : FwController
         var entities_file = fw.config("template") + DevCodeGen.ENTITIES_PATH;
         Hashtable item = new()
         {
-            ["entities"] = FW.getFileContent(entities_file)
+            ["entities"] = Utils.getFileContent(entities_file)
         };
         ps["i"] = item;
 
@@ -401,7 +435,7 @@ public class DevManageController : FwController
 
         var entities_file = fw.config("template") + DevCodeGen.ENTITIES_PATH;
         string filedata = (string)item["entities"];
-        FW.setFileContent(entities_file, ref filedata);
+        Utils.setFileContent(entities_file, ref filedata);
 
         try
         {

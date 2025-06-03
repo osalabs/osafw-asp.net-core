@@ -1,0 +1,181 @@
+<script type="text/x-template" id="list-table-row-template">
+    <tr :data-id="id"
+        :title="row_title"
+        :class="fwStore.hchecked_rows[id] ? 'selected' : ''"
+        @click="(event) => onClickRow(event,row)"
+        @dblclick="(event) => onDblClickRow(event,row)">
+
+        <td class="list-row-cb d-print-none"><input class="multicb" type="checkbox" v-model="fwStore.hchecked_rows[id]"></td>
+        <list-row-btn v-if="uioptions.isButtonsLeft && uioptions.rowButtons!==false"
+                      :row="row"
+                      :is_left="uioptions.isButtonsLeft"
+                      :is_readonly="fwStore.is_readonly"
+                      :buttons="uioptions.rowButtons"
+                      @view="onRowView(row)"
+                      @edit="onRowEdit(row)"
+                      @quickedit="onRowQuickEdit(row)"
+                      @delete="onRowDelete(row)"
+                      @custom="onRowCustom(row)">
+            <template #btn-prepend>
+                <slot name="list-row-btn-prepend" :row="row"></slot>
+            </template>
+            <template #btn-append>
+                <slot name="list-row-btn-append" :row="row"></slot>
+            </template>
+        </list-row-btn>
+
+        <template v-for="header in fwStore.list_headers" :key="header.field_name">
+            <td v-if="!fwStore.is_list_edit">
+                <slot :name="'cell-'+header.field_name"
+                      :row="row"
+                      :col="header">
+                    <template v-if="header.formatter" v-html="header.formatter(row, fieldValueByName(row, header.field_name))">
+                    </template>
+                    <template v-else>
+                        {{fieldValueByName(row, header.field_name)}}
+                    </template>
+                </slot>
+            </td>
+            <td v-else
+                :class="(fwStore.cells_saving[id+'-'+header.field_name]?'cell-success-fade':'')+(fwStore.cells_errors[id+'-'+header.field_name]?' cell-invalid':'')">
+                <list-cell-ro v-if="header.is_ro || row._meta?.is_ro || row._meta?.ro_fields?.includes(header.field_name)" :row="row" :col="header"></list-cell-ro>
+
+                <list-cell-input v-else-if="['input','email','number','date_popup','textarea'].includes(header.input_type)"
+                                 :rowId="id" :row="row" :col="header"
+                                 :error="fwStore.cells_errors[id+'-'+header.field_name]"
+                                 @change="onCellChange($event, row, header)"
+                                 @keyup="fwStore.onCellKeyup($event, row, header)"
+                                 @navigate="onCellNavigate($event)"
+                                 @btnClick="fwStore.onCellBtnClick($event)"></list-cell-input>
+                <list-cell-select v-else-if="header.input_type=='select' || header.input_type=='radio'"
+                                  :rowId="id" :row="row" :col="header"
+                                  :error="fwStore.cells_errors[id+'-'+header.field_name]"
+                                  :options="fwStore.lookupByDef(header)"
+                                  @change="onCellChange($event, row, header)"
+                                  @btnClick="fwStore.onCellBtnClick($event)"></list-cell-select>
+                <list-cell-checkbox v-else-if="header.input_type=='cb' || header.input_type=='yesno'"
+                                    :rowId="id" :row="row" :col="header"
+                                    @change="onCellChange($event, row, header)"
+                                    @navigate="onCellNavigate($event)"
+                                    @btnClick="fwStore.onCellBtnClick($event)"></list-cell-checkbox>
+
+                <div v-else class="text-danger">{{fieldValueByName(row, header.field_name)}}</div>
+            </td>
+        </template>
+
+        <list-row-btn v-if="!uioptions.isButtonsLeft && uioptions.rowButtons!==false"
+                      :row="row"
+                      :is_left="uioptions.isButtonsLeft"
+                      :is_readonly="fwStore.is_readonly"
+                      :buttons="uioptions.rowButtons"
+                      @view="onRowView(row)"
+                      @edit="onRowEdit(row)"
+                      @quickedit="onRowQuickEdit(row)"
+                      @delete="onRowDelete(row)"
+                      @custom="onRowCustom(row)">
+            <template #btn-prepend>
+                <slot name="list-row-btn-prepend" :row="row"></slot>
+            </template>
+            <template #btn-append>
+                <slot name="list-row-btn-append" :row="row"></slot>
+            </template>
+        </list-row-btn>
+    </tr>
+</script>
+
+<script type="module">
+    import { mapStores } from 'pinia';
+
+    fwApp.component('list-table-row', {
+        template: '#list-table-row-template',
+        props: {
+            row: { type: Object, required: true },
+        },
+
+        computed: {
+            ...mapStores(useFwStore),
+            uioptions() {
+                return this.fwStore.uioptions.list.table ?? {};
+            },
+            id() {
+                return this.row[this.fwStore.field_id];
+            },
+            row_title() {
+                return this.fwStore.is_list_edit ? '' : this.uioptions.rowTitle;
+            }
+        },
+
+        methods: {
+            fieldValueByName(row, field_name) {
+                return row[field_name];
+            },
+            //click on row - select/unselect row
+            onClickRow(e, row) {
+                //console.log('onClickRow',e);
+                var tag = e.target.tagName.toLowerCase();
+                if (['a', 'button', 'input', 'textarea', 'select', 'option'].includes(tag)) {
+                    return; // skip toggling if clicked on a link/button/etc
+                }
+                this.fwStore.hchecked_rows[this.id] = !this.fwStore.hchecked_rows[this.id];
+            },
+
+            async onDblClickRow(e, row) {
+                if (this.fwStore.is_list_edit) return;
+                if (this.uioptions.rowDblClick === 'view') {
+                    this.onRowView(row);
+                } else if (this.uioptions.rowDblClick === 'edit') {
+                    this.onRowEdit(row);
+                } else if (this.uioptions.rowDblClick === 'quickedit') {
+                    await this.onRowQuickEdit(row);
+                } else {
+                    await this.fwStore.onRowDblClick(row);
+                }
+            },
+
+            onRowView(row) {
+                this.fwStore.openViewScreen(this.id);
+            },
+            onRowEdit(row) {
+                this.fwStore.openEditScreen(this.id);
+            },
+            async onRowQuickEdit(row) {
+                await this.fwStore.openEditPane(this.id);
+            },
+            async onRowDelete(row) {
+                console.log("TODO confirm modal onRowDelete", this.id);
+                await this.fwStore.deleteRow(this.id);
+                await this.fwStore.loadIndexDebounced(); //reload list to show changes
+            },
+            async onRowCustom(row) {
+                this.fwStore.onRowBtnCustomClick(row);
+            },
+
+            // inline editing events
+            onCellChange(e, row, col) {
+                this.fwStore.saveCell(row, col);
+                if (e.keyCode === 13) {
+                    // if pressing Enter => navigate down
+                    this.onCellNavigate({ dir: 'down', row, col });
+                }
+            },
+            onCellNavigate({ dir, row, col }) {
+                const rowIndex = this.fwStore.list_rows.findIndex(
+                    r => r[this.fwStore.field_id] === this.id
+                );
+                let nextIndex = (dir === 'up') ? rowIndex - 1 : rowIndex + 1;
+                if (nextIndex < 0 || nextIndex >= this.fwStore.list_rows.length) return; //no row to go
+
+                let nextRow = this.fwStore.list_rows[nextIndex];
+                this.$nextTick(() => {
+                    const el = this.findCell(nextRow, col);
+                    el?.focus();
+                });
+            },
+            findCell(row, col) {
+                const row_id = row[this.fwStore.field_id];
+                const cell_id = 'cell-' + row_id + '-' + col.field_name;
+                return document.getElementById(cell_id);
+            }
+        }
+    });
+</script>

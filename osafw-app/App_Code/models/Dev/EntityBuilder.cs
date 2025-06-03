@@ -19,7 +19,7 @@ class DevEntityBuilder
 
     public static void createDBJsonFromExistingDB(string dbname, FW fw)
     {
-        var db = new DB(fw, (Hashtable)((Hashtable)fw.config("db"))[dbname], dbname);
+        var db = fw.getDB(dbname);
 
         var entities = DevEntityBuilder.dbschema2entities(db);
 
@@ -645,7 +645,7 @@ class DevEntityBuilder
     public static T loadJson<T>(string filename) where T : new()
     {
         T result;
-        result = (T)Utils.jsonDecode(FW.getFileContent(filename));
+        result = (T)Utils.jsonDecode(Utils.getFileContent(filename));
         result ??= new T();
         return result;
     }
@@ -665,7 +665,7 @@ class DevEntityBuilder
 
         // Cast the data to object to ensure the custom converter handles it
         json_str = JsonSerializer.Serialize(data, data.GetType(), options);
-        FW.setFileContent(filename, ref json_str);
+        Utils.setFileContent(filename, ref json_str);
     }
 
     // important - pass data as ArrayList or Hashtable to trigger custom converter
@@ -682,7 +682,7 @@ class DevEntityBuilder
         options.Converters.Add(converter);
 
         json_str = JsonSerializer.Serialize(data, data.GetType(), options);
-        FW.setFileContent(filename, ref json_str);
+        Utils.setFileContent(filename, ref json_str);
     }
 
 

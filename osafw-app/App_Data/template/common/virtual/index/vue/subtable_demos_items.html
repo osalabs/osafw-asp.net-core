@@ -1,0 +1,195 @@
+<script type="text/x-template" id="subtable_demos_items-template">
+    <div class="border rounded p-3">
+        <!-- view subtable -->
+        <table v-if="def.type=='subtable'" class="table table-sm">
+            <thead>
+            <tr>
+                <th class="col">ID</th>
+                <th class="col">Demo Dict</th>
+                <th class="col">Title</th>
+                <th class="col">Notes</th>
+                <th class="col">Y/N</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr v-for="row in list_rows" :key="row.id">
+                <td>{{row.id}}</td>
+                <td>{{lookupIname('DemoDicts', row.demo_dicts_id)}}</td>
+                <td>{{row.iname}}</td>
+                <td style="white-space: pre;">{{row.idesc}}</td>
+                <td>
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" :checked="row.is_checkbox==1" disabled>
+                        <label class="form-check-label"></label>
+                    </div>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+
+        <template v-else-if="def.type=='subtable_edit'">
+            <table class="mb-3 w-100">
+                <thead>
+                <tr>
+                    <th class="col">ID</th>
+                    <th class="col">Demo Dict</th>
+                    <th class="col">Title</th>
+                    <th class="col">Notes</th>
+                    <th class="col">Y/N</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr v-for="row in list_rows" :key="row.id">
+                    <td>
+                        <template v-if="!row.is_new">
+                            {{row.id}}
+                        </template>
+                        <template v-if="row.is_new">
+                            (new)
+                        </template>
+                    </td>
+                    <td>
+                        <select v-model="row.demo_dicts_id"
+                                :class="'form-select'+(error(row, 'demo_dicts_id')?' is-invalid':'')">
+                            <option value="">- select -</option>
+                            <option v-for="lookup in fwStore.lookups.DemoDicts" :value="lookup.id">{{lookup.iname}}
+                            </option>
+                        </select>
+                        <div v-if="error(row, 'demo_dicts_id')" class="invalid-tooltip">{{error_text(row,
+                            'demo_dicts_id')}}
+                        </div>
+                    </td>
+                    <td style="min-width:150px">
+                        <!--simple input sample-->
+                        <!--input v-model="row.iname"
+                               type="input"
+                               :class="'form-control'+(error(row, 'iname')?' is-invalid':'')"-->
+
+                        <!-- autocomplete -->
+                        <autocomplete
+                                v-model="row.iname"
+                                placeholder="Start typing..."
+                                :url="autocomplete_url"
+                                :class="(error(row, 'iname')?' is-invalid':'')"
+                        />
+                        <div v-if="error(row, 'iname')" class="invalid-tooltip">{{error_text(row, 'iname')}}</div>
+                    </td>
+                    <td>
+                            <textarea v-model="row.idesc"
+                                      :class="'form-control'+(error(row, 'idesc')?' is-invalid':'')"
+                                      rows="1"></textarea>
+                        <div v-if="error(row, 'idesc')" class="invalid-tooltip">{{error_text(row, 'idesc')}}</div>
+                    </td>
+                    <td>
+                        <div class="form-check form-check-inline">
+                            <input :checked="row.is_checkbox===true || row.is_checkbox===1 || row.is_checkbox==='1'"
+                                   @change="$e => row.is_checkbox = $e.target.checked ? 1 : 0"
+                                   class="form-check-input"
+                                   type="checkbox"
+                                   :id="'is_checkbox-'+row.model+'#'+row.id">
+                            <label class="form-check-label" :for="'is_checkbox-'+row.model+'#'+row.id">Yes</label>
+                        </div>
+                    </td>
+                    <td class="text-end">
+                        <button type="button" class="btn btn-link text-danger" title="Delete"
+                                @click="onDeleteRow(row.id)"><i class="bi bi-x"></i></button>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+
+            <button type="button" class="btn btn-sm btn-secondary" @click="onAdd"><i class="bi bi-plus-circle"></i> Add
+                More
+            </button>
+
+        </template>
+
+    </div>
+</script>
+
+<script type="module">
+    import {mapStores} from 'pinia';
+    import Multiselect from 'Multiselect';
+
+    fwApp.component('subtable_demos_items', {
+        template: '#subtable_demos_items-template',
+        props: {
+            def: {
+                type: Object,
+                required: true
+            },
+            lookups: {
+                type: Object,
+                required: true
+            },
+            form: {
+                type: Object,
+                required: true
+            }
+        },
+        components: {
+            Multiselect
+        },
+        data: () => ({
+            sample_value: 0,
+            autocomplete_url: '/Admin/Demos/(Autocomplete)?q='
+        }),
+        computed: {
+            ...mapStores(useFwStore), //accessible via this.fwStore
+            list_rows() {
+                return this.form.subtables?.[this.def.field] ?? [];
+            },
+        },
+        mounted() {
+            console.log('subtable-demos_items mounted');
+        },
+        unmounted() {
+            console.log('subtable-demos_items unmounted');
+        },
+        updated() {
+            //console.log('subtable-demos_items updated');
+        },
+        methods: {
+            error(row, field_name) {
+                const key = 'item-' + this.def.field + '#' + row.id + '[' + field_name + ']';
+                return this.form.save_result?.error?.details?.[key] ?? false;
+            },
+            error_text(row, field_name) {
+                return window.fwConst.ERR_CODES_MAP[this.error(row.id, field_name)];
+            },
+            lookupIname(lookup, id) {
+                const options = this.fwStore.lookups[lookup] ?? [];
+                const option = options.find(option => option.id == id);
+                return option?.iname ?? '';
+            },
+            async onAdd() {
+                //add to list_rows
+                this.list_rows.push({
+                    id: 'new-' + Date.now(),
+                    demo_dicts_id: '',
+                    iname: '',
+                    idesc: '',
+                    is_checkbox: 0,
+                    is_new: true
+                });
+                //focus on the last rows first input
+                this.$nextTick(() => {
+                    var lastRow = this.$el.querySelector('table tbody tr:last-child');
+                    var firstInput = lastRow.querySelector('input:not([type=hidden]), select, textarea');
+                    if (firstInput) firstInput.focus();
+                });
+            },
+            async onDeleteRow(id) {
+                //can't modify this.list_rows directly as it's readonly computed property
+                // update fwStore.edit_data.subtables.<field> instead - TODO refactor better
+                this.fwStore.edit_data.subtables[this.def.field] = this.list_rows.filter(row => row.id != id);
+                // and trigger form change for the this.$el form
+                this.triggerChange();
+            },
+            triggerChange() {
+                this.$el.dispatchEvent(new Event('change', {bubbles: true}));
+            },
+        }
+    });
+</script>

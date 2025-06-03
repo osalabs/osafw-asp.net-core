@@ -1,9 +1,10 @@
 ### Common Issues
-- **Issue 1:** [Description of Issue]
-  - **Solution:** [Steps to Resolve]
+- **Application fails to start**
+  - **Solution:** verify the database connection string in `appsettings.json`.
 
-- **Issue 2:** [Description of Issue]
-  - **Solution:** [Steps to Resolve]
+- **Unexpected 500 errors**
+  - **Solution:** review `/App_Data/logs/main.log` for details and ensure database connectivity.
 
 ### Support
-For further assistance, please contact [Support Contact Information] or refer to the detailed [Technical Documentation](#).
+For further assistance, email `<~GLOBAL[support_email]>` or consult the full technical documentation.
+
