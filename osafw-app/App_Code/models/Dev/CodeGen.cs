@@ -637,10 +637,16 @@ class DevCodeGen
 
     public void updateControllerConfig(Hashtable entity, Hashtable config, ArrayList entities = null)
     {
-        string model_name = (string)entity["model_name"];
-        string table_name = (string)entity["table"];
+        string model_name = entity["model_name"].toStr();
+        var model = fw.model(model_name);
+
+        string table_name = entity["table"].toStr();
+        if (string.IsNullOrEmpty(table_name))
+            table_name = model.table_name;
+
         var controller_options = (Hashtable)entity["controller"] ?? [];
-        string controller_type = (string)controller_options["type"];
+        string controller_title = controller_options["title"].toStr() ?? Utils.name2human(model_name);
+        string controller_type = controller_options["type"].toStr();
         fw.logger($"updating config for controller({controller_type})=", controller_options["url"]);
 
         var sys_fields = Utils.qh(SYS_FIELDS);
@@ -729,7 +735,7 @@ class DevCodeGen
                 continue; //skip unnecessary fields
 
             string fld_name = fld["name"].toStr();
-            fw.logger("field name=", fld_name, fld);
+            //fw.logger("field name=", fld_name, fld);
 
             if (fld["fw_name"].toStr() == "")
                 fld["fw_name"] = Utils.name2fw(fld_name); // system name using fw standards
@@ -1025,7 +1031,7 @@ class DevCodeGen
 
         if (controller_type == "vue")
         {
-            config["is_dynamic_index_edit"] = false; // by default disable list editing        
+            config["is_dynamic_index_edit"] = controller_options["is_dynamic_index_edit"] ?? false; // by default disable list editing
             config["list_edit"] = table_name;
             config["edit_list_defaults"] = list_defaults.edit;
             config["edit_list_map"] = hFieldsMapEdit;
@@ -1042,6 +1048,12 @@ class DevCodeGen
         config["is_dynamic_showform"] = controller_options.ContainsKey("is_dynamic_showform") ? controller_options["is_dynamic_showform"] : true;
         if ((bool)config["is_dynamic_showform"])
             configAddTabs(config, "showform_fields", showFormFieldsTabs);
+
+        //titles
+        config["list_title"] = controller_title;
+        config["view_title"] = $"View {controller_title} Record";
+        config["edit_title"] = $"Edit {controller_title} Record";
+        config["add_new_title"] = $"Add New {controller_title} Record";
 
         // remove all commented items - name start with "#"
         foreach (var key in config.Keys.Cast<string>().ToArray())

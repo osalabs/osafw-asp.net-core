@@ -86,6 +86,15 @@ public abstract class FwModel : IDisposable
     }
 
     /// <summary>
+    /// return table name as quoted identifier to use in SQL queries
+    /// </summary>
+    /// <returns></returns>
+    public virtual string qTable()
+    {
+        return db.qid(this.table_name);
+    }
+
+    /// <summary>
     /// standard stub for check access for particular record
     /// </summary>
     /// <param name="id"></param>
