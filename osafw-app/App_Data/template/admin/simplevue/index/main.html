@@ -1,10 +1,10 @@
 <div id="fw-app"
   data-base_url="<~../url>"
 >
-  <div v-if="simpleStore.is_loading">Loading...</div>
+  <div v-if="fwStore.is_loading">Loading...</div>
   <div v-else>
     <ul>
-      <li v-for="row in simpleStore.data.rows" :key="row.id">{{ row.iname }}</li>
+      <li v-for="row in fwStore.data.rows" :key="row.id">{{ row.iname }}</li>
     </ul>
   </div>
 </div>

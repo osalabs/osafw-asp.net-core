@@ -17,7 +17,7 @@ public class AdminSimpleVueController : FwController
         model = fw.model<DemoDicts>();
     }
 
-    public override Hashtable IndexAction()
+    public Hashtable IndexAction()
     {
         Hashtable ps = [];
         if (fw.isJsonExpected())
