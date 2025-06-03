@@ -866,6 +866,14 @@ public class FW : IDisposable
 
             basedir += "/" + this.route.action; // add action dir to controller's directory
         }
+        else
+        {
+            // if override controller basedir - also add route action
+            if (ps.ContainsKey("_basedir_controller"))
+                basedir = (string)ps["_basedir_controller"] + "/" + this.route.action;
+        }
+
+
         basedir = basedir.ToLower(); // make sure it's lower case
 
         string page = parsePage(basedir, layout, ps);
@@ -1117,6 +1125,13 @@ public class FW : IDisposable
         {
             controller.checkAccess();
             ps = (Hashtable)actionMethod.Invoke(controller, parameters);
+
+            // check/override _basedir from controller for non-json requests
+            if (ps != null && !isJsonExpected() && !ps.ContainsKey("_basedir_controller") && !string.IsNullOrEmpty(controller.template_basedir))
+            {
+                logger("TRACE", $"Controller [{controller.GetType()}] template_basedir override to [{controller.template_basedir}]");
+                ps["_basedir_controller"] = controller.template_basedir;
+            }
 
             //special case for export - IndexAction+export_format is set - call exportList without parser
             if (actionMethod.Name == (ACTION_INDEX + ACTION_SUFFIX) && controller.export_format.Length > 0)
@@ -1377,8 +1392,8 @@ public class FW : IDisposable
             code = 403;
             tpl_dir += "/4xx";
         }
-        else if (Ex is ApplicationException)
-            //Server Error
+        else
+            //Server Error - ApplicationException or any other
             code = 500;
 
         if (code > 0 && !this.response.HasStarted)
@@ -1483,6 +1498,7 @@ public class FW : IDisposable
                 throw new AuthException("Bad access - Not authorized (4)");
 
             c = new FwVirtualController(this, fwcon);
+            //already initialized in constructor
         }
         else
         {
@@ -1501,10 +1517,11 @@ public class FW : IDisposable
 
                 //note, Role-Based Access - checked in callController right before calling action
             }
+
+            // initialize
+            c.init(this);
         }
 
-        // initialize
-        c.init(this);
         controllers[controller_name] = c;
 
         return c;

@@ -19,8 +19,9 @@ public abstract class FwController
     public static string route_default_action = ""; // supported values - "" (use Default Parser for unknown actions), Index (use IndexAction for unknown actions), Show (assume action is id and use ShowAction)
     public string route_onerror = ""; //route redirect action name in case ApplicationException occurs in current route, if empty - 500 error page returned
 
-    public string base_url; // base url for the controller
-    public string base_url_suffix; // additional base url suffix
+    public string base_url;               // base url for the controller
+    public string base_url_suffix;        // additional base url suffix
+    public string template_basedir = "";  // templates base dir for the controller, if not set - [/route_prefix]/route_controller used
 
     public Hashtable form_new_defaults;   // optional, defaults for the fields in new form, overridden by item passed from request
     public string required_fields;        // optional, default required fields, space-separated
@@ -1062,6 +1063,7 @@ public abstract class FwController
         ps["is_userlists"] = this.is_userlists;
         ps["is_readonly"] = is_readonly;
         ps["is_list_edit"] = is_list_edit;
+        ps["controller_config"] = this.config;
 
         //for RBAC
         ps["rbac"] = rbac;
