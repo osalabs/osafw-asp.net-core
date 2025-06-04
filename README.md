@@ -13,6 +13,7 @@ Created as simplified and lightweight alternative to other ASP.NET frameworks li
   - data stored by default in SQL Server database [using db.net](https://github.com/osalabs/db.net) ([detailed docs](README_DB.md))
 - RESTful with some practical enhancements
 - integrated auth - simple flat access levels auth
+- optional Passkey login support via WebAuthn
  - UI based on [Bootstrap 5](http://getbootstrap.com) with minimal custom CSS and themes support - it's easy to customize or apply your own theme (see [README_THEMES](osafw-app/App_Data/README_THEMES))
 - use of well-known 3rd party libraries: [jQuery](http://jquery.com), [jQuery Form](https://github.com/malsup/form), jGrowl, markdown libs, etc...
 - dynamic controllers with JSON configuration (`FwDynamicController`) and Vue.js powered UI (`FwVueController`)
