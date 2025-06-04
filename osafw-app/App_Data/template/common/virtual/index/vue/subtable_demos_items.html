@@ -136,7 +136,7 @@
             autocomplete_url: '/Admin/Demos/(Autocomplete)?q='
         }),
         computed: {
-            ...mapStores(useFwStore), //accessible via this.fwStore
+            ...mapStores(fwStore), //accessible via this.fwStore
             list_rows() {
                 return this.form.subtables?.[this.def.field] ?? [];
             },

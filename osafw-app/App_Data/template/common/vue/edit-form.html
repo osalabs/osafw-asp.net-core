@@ -54,7 +54,7 @@
             sample_value: 0,
         }),
         computed: {
-            ...mapStores(useFwStore), //accessible via this.fwStore
+            ...mapStores(fwStore), //accessible via this.fwStore
             current_id() {
                 return this.fwStore.current_id ?? 0;
             },

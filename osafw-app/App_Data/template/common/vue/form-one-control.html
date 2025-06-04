@@ -270,7 +270,7 @@
             is_att_select_modal: false
         }),
         computed: {
-            ...mapStores(useFwStore), //accessible via this.fwStore
+            ...mapStores(fwStore), //accessible via this.fwStore
             item: function () {
                 return this.form.i; //this comes from fwStore.edit_data, so has .id
             },

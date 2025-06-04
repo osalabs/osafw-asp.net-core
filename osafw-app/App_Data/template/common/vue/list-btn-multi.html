@@ -25,7 +25,7 @@
         data: () => ({
         }),
         computed: {
-            ...mapStores(useFwStore), //accessible via this.fwStore
+            ...mapStores(fwStore), //accessible via this.fwStore
             uioptions() {
                 return this.fwStore.uioptions.list.btnMulti ?? {};
             }

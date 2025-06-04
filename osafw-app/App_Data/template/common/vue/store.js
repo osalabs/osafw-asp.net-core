@@ -762,4 +762,4 @@ const useFwStore = defineStore('fw', {
     getters: getters,
     actions: actions,
 });
-window.useFwStore = useFwStore; //make store available for components in html below
+window.fwStore = useFwStore; //make store available for components in html below

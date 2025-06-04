@@ -93,7 +93,7 @@
         },
 
         computed: {
-            ...mapStores(useFwStore),
+            ...mapStores(fwStore),
             uioptions() {
                 return this.fwStore.uioptions.list.table ?? {};
             },
