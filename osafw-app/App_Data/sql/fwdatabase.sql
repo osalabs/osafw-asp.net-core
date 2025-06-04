@@ -486,7 +486,7 @@ CREATE TABLE menu_items (
 );
 -- INSERT INTO menu_items (iname, url, icon, controller) VALUES ('Test Menu Item', '/Admin/Demos', 'list-ul', 'AdminDemos');
 DROP TABLE IF EXISTS user_filters;
-CREATE TABLE   (
+CREATE TABLE user_filters (
   id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
   icode                 NVARCHAR(128) NOT NULL, -- related screen, ex: GLOBAL[controller.action]
 
