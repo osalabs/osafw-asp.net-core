@@ -661,7 +661,7 @@ public class AdminLookupManagerController : FwController
     // TODO for lookup tables
     public Hashtable AutocompleteAction()
     {
-        List<string> items = model_tables.getAutocompleteList(reqs("q"));
+        List<string> items = model_tables.listAutocomplete(reqs("q"));
 
         return new Hashtable() { { "_json", items } };
     }

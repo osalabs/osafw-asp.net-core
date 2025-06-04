@@ -150,7 +150,7 @@ public class AdminDemosController : FwAdminController
 
     public Hashtable AutocompleteAction()
     {
-        List<string> items = model_related.getAutocompleteList(reqs("q"));
+        List<string> items = model_related.listAutocomplete(reqs("q"));
 
         return new Hashtable() { { "_json", items } };
     }

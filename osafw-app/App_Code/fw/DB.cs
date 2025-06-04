@@ -1033,8 +1033,9 @@ public class DB : IDisposable
     /// <param name="where">where conditions</param>
     /// <param name="field_name">optional field name, if empty - first field returned</param>
     /// <param name="order_by">optional order by (MUST be quoted)</param>
+    /// <param name="limit">optional limit, if -1 - no limit applied</param>
     /// <returns></returns>
-    public List<string> col(string table, Hashtable where, string field_name, string order_by = "")
+    public List<string> col(string table, Hashtable where, string field_name, string order_by = "", int limit = -1)
     {
         field_name ??= "";
 
@@ -1042,7 +1043,7 @@ public class DB : IDisposable
             field_name = "*";
         else
             field_name = qid(field_name);
-        var qp = buildSelect(table, where, order_by, select_fields: field_name);
+        var qp = buildSelect(table, where, order_by, limit, field_name);
         return colp(qp.sql, qp.@params);
     }
 
