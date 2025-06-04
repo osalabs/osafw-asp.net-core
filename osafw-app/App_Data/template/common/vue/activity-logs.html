@@ -27,7 +27,7 @@
             sample_value: 0,
         }),
         computed: {
-            ...mapStores(useFwStore) //accessible via this.fwStore
+            ...mapStores(fwStore) //accessible via this.fwStore
         },
         mounted() {
             console.log('activity-logs mounted');

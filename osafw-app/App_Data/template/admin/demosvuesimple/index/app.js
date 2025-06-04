@@ -1,4 +1,4 @@
 // override app defaults:
 let fwApp = {
 };
-<~/common/vue/app.js>
+<~/common/vue/app_simple.js>

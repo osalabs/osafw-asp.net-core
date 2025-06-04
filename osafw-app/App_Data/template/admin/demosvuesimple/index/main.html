@@ -1,0 +1,16 @@
+<div id="fw-app"
+  data-base_url="<~../url>"
+>
+  <h1><~title></h1>
+
+  <button class="btn btn-primary" @click="fwStore.loadData()"><i class="bi bi-arrow-clockwise"></i> Reload</button>
+  <button class="btn btn-secondary ms-2" @click="fwStore.count++"><i class="bi bi-plus"></i> Counter <span class="badge text-bg-success">{{fwStore.count}}</span></button>
+  <span class="badge text-bg-info ms-2">Double: {{fwStore.doubleCount}}</span>
+
+  <div v-if="fwStore.is_loading">Loading...</div>
+  <div v-else>
+    <ul>
+      <li v-for="row in fwStore.data.rows" :key="row.id">{{ row.iname }}</li>
+    </ul>
+  </div>
+</div>

@@ -1,30 +1,33 @@
 //load store.js first with const useFwStore
 
-const mainApp = {
+let mainApp = {
     //data: () => ({
     //    counter: 0
     //}),
     computed: {
     },
+    setup() {
+        const fwStore = useFwStore()
+        return { fwStore } //everything returned here is reactive & template-visible
+    },
     async mounted() {
         console.log('mainApp mounted');
-        const fwStore = useFwStore();
         // assign all data from this.$el.parentElement.dataset to keys existing in fwStore
-        fwStore.saveToStore(this.$el.parentElement.dataset);
-        fwStore.initApi();
+        this.fwStore.saveToStore(this.$el.parentElement.dataset);
+        this.fwStore.initApi();
 
-        if (fwStore.current_screen) {
-            await fwStore.loadInitial();
-            await fwStore.setCurrentScreen(fwStore.current_screen, fwStore.current_id);
+        if (this.fwStore.current_screen) {
+            await this.fwStore.loadInitial();
+            await this.fwStore.setCurrentScreen(this.fwStore.current_screen, this.fwStore.current_id);
         } else {
-            fwStore.current_screen = 'list';
+            this.fwStore.current_screen = 'list';
         }
 
         //handle back/forward browser nav
         window.addEventListener('popstate', (e) => {
             let state = window.history.state;
             if (state?.screen) {
-                fwStore.setCurrentScreen(state.screen, state.id);
+                this.fwStore.setCurrentScreen(state.screen, state.id);
             }
         })
     },
@@ -38,11 +41,15 @@ const mainApp = {
     }
 };
 
-const app = createApp(mainApp);
-window.fwApp = app; //make app available for components below in html
+//merge in fwApp if defined
+if (typeof fwApp !== 'undefined') {
+    mainApp = AppUtils.deepMerge(mainApp, fwApp);
+}
 
-const pinia = createPinia();
-app.use(pinia);
+const app = createApp(mainApp);
+app.use(createPinia());
+
+window.fwApp = app; //make app available for components below in html
 
 //components - add load to vue_components
 

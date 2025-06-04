@@ -18,11 +18,19 @@
         </a>
     </p>
     <p v-else-if="def.type=='plaintext_autocomplete'" class="form-control-plaintext" style="white-space: pre-line">
-        {{item[def.field+'_iname']??'-'}}
+        <template v-if="def.lookup_by_value">
+            {{item[def.field]??'-'}}
+        </template>
+        <template v-else>
+            {{item[def.field+'_iname']??'-'}}
+        </template>
     </p>
     <p v-else-if="def.type=='markdown'" class="form-control-plaintext" style="white-space: pre-line">{{value}} TODO markdown</p>
     <p v-else-if="def.type=='noescape'" class="form-control-plaintext" v-html="value"></p>
     <p v-else-if="def.type=='float'" class="form-control-plaintext">{{Number(value).toFixed(2)}}</p>
+    <p v-else-if="def.type=='plaintext_currency'" class="form-control-plaintext">
+        {{ currencySymbol }}{{ formatCurrency(value) }}
+    </p>
     <div v-else-if="def.type=='checkbox'" class="form-check">
         <input type="checkbox" class="form-check-input" :checked="value" disabled="disabled">
         <label class="form-check-label">`Yes`</label>
@@ -106,6 +114,21 @@
                 </div>
             </div>
         </div>
+    </template>
+
+    <template v-if="def.type=='currency'">
+        <div class="input-group">
+            <span class="input-group-text">{{ currencySymbol }}</span>
+            <input class="form-control"
+                   type="text"
+                   v-model="value"
+                   :class="class_control+(is_invalid?' is-invalid':'')"
+                   :maxlength="def.maxlength"
+                   :required="def.required"
+                   :placeholder="def.placeholder"
+                   @blur="onCurrencyBlur">
+        </div>
+        <form-control-help-block :text="def.help_text" />
     </template>
 
     <div v-else-if="def.type=='group_id' || def.type=='group_id_addnew'">
@@ -270,7 +293,7 @@
             is_att_select_modal: false
         }),
         computed: {
-            ...mapStores(useFwStore), //accessible via this.fwStore
+            ...mapStores(fwStore), //accessible via this.fwStore
             item: function () {
                 return this.form.i; //this comes from fwStore.edit_data, so has .id
             },
@@ -285,10 +308,18 @@
             },
             value_autocomplete: {
                 get() {
-                    return this.form.i[this.def.field + '_iname'];
+                    if (this.def.lookup_by_value) {
+                        return this.form.i[this.def.field];
+                    } else {
+                        return this.form.i[this.def.field + '_iname'];
+                    }
                 },
                 set(new_value) {
-                    this.$emit('update-form-field', { field: this.def.field + '_iname', value: new_value });
+                    if (this.def.lookup_by_value) {
+                        this.$emit('update-form-field', { field: this.def.field, value: new_value });
+                    } else {
+                        this.$emit('update-form-field', { field: this.def.field + '_iname', value: new_value });
+                    }
                 }
             },
             multi_rows() {
@@ -353,6 +384,10 @@
                     }
                 }
                 return '';
+            },
+            currencySymbol() {
+                // Use def.currency_symbol if provided, else default to "$"
+                return this.def.currency_symbol || '$';
             }
         },
         mounted() {
@@ -398,6 +433,18 @@
                 if (!this.form.att_links) return;
                 this.form.att_links = this.form.att_links.filter(id => id != att_id);
                 this.fwStore.saveEditDataDebounced();
+            },
+            formatCurrency(val) {
+                let num = Number(val);
+                if (isNaN(num)) return val;
+                return num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            },
+            onCurrencyBlur(e) {
+                // Optionally format value on blur
+                let num = Number(this.value);
+                if (!isNaN(num)) {
+                    this.value = num.toFixed(2);
+                }
             }
         }
     });
