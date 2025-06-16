@@ -6,6 +6,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections;
 using System.IO;
@@ -54,7 +55,9 @@ public class FW : IDisposable
     public Hashtable FormErrors; // for storing form id's with error messages, put to ps['error']['details'] for parser
     public Exception last_file_exception; // set by getFileContent, getFileLines in case of exception
 
-    public FwCache cache = new(); // cache instance
+    public static IServiceProvider service_provider; // DI service provider
+
+    public FwCache cache; // cache instance injected
     public DB db;
     public FwLogger flogger = new();
 
@@ -96,15 +99,24 @@ public class FW : IDisposable
     // helper to initialize DB instance based on configuration name
     public DB getDB(string config_name = "main")
     {
+        if (config_name == "main" && service_provider != null)
+        {
+            var db = service_provider.GetRequiredService<DB>();
+            db.setLogger(this.logger);
+            if (context != null)
+                db.setContext(context);
+            return db;
+        }
+
         Hashtable dbconfig = (Hashtable)config("db");
         Hashtable conf = (Hashtable)dbconfig[config_name];
 
-        var db = new DB(conf, config_name);
-        db.setLogger(this.logger);
+        var db2 = new DB(conf, config_name);
+        db2.setLogger(this.logger);
         if (context != null)
-            db.setContext(context);
+            db2.setContext(context);
 
-        return db;
+        return db2;
     }
 
     // begin processing one request
@@ -131,6 +143,11 @@ public class FW : IDisposable
             this.request = context.Request;
             this.response = context.Response;
         }
+
+        if (service_provider != null)
+            this.cache = service_provider.GetRequiredService<FwCache>();
+        else
+            this.cache = new FwCache();
 
         FwConfig.init(context, configuration);
 

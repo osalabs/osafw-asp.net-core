@@ -1,11 +1,29 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace osafw.Tests
 {
     [TestClass()]
     public class FwCacheTests
     {
+        private ServiceProvider provider;
+
+        [TestInitialize]
+        public void Setup()
+        {
+            var services = new ServiceCollection();
+            services.AddMemoryCache();
+            provider = services.BuildServiceProvider();
+            FwCache.MemoryCache = provider.GetRequiredService<IMemoryCache>();
+        }
+
+        [TestCleanup]
+        public void TearDown()
+        {
+            provider.Dispose();
+        }
         [TestMethod()]
         public void getValueTest()
         {
