@@ -132,7 +132,8 @@ public class FW : IDisposable
             this.response = context.Response;
         }
 
-        FwConfig.init(context, configuration);
+        // pass host explicitly so FwConfig can cache per-host settings
+        FwConfig.init(context, configuration, context?.Request.Host.ToString());
 
         var env = config("config_override").toStr();
         flogger = new FwLogger((LogLevel)config("log_level"), config("log").toStr(), config("site_root").toStr(), config("log_max_size").toLong());

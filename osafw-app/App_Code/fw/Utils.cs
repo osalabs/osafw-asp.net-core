@@ -726,6 +726,66 @@ public class Utils
         }
     }
 
+    /// <summary>
+    /// Recursively deep-clones a <see cref="Hashtable"/>, including any child
+    /// Hashtables and ArrayLists it contains.
+    /// Primitive CLR types, strings and immutable value types are copied by
+    /// reference because they are already thread-safe and stateless.
+    /// </summary>
+    /// <remarks>
+    /// * Cycles are not expected
+    /// * Collections other than <see cref="Hashtable"/> or <see cref="ArrayList"/>
+    ///   are cloned shallowly (reference copy) to avoid surprises
+    /// </remarks>
+    public static Hashtable cloneHashDeep(Hashtable source)
+    {
+        if (source == null) return null;
+
+        Hashtable clone = new(source.Count);
+        foreach (DictionaryEntry entry in source)
+            clone[entry.Key] = cloneObject(entry.Value);
+
+        return clone;
+    }
+
+    // helpers
+    private static object cloneObject(object value)
+    {
+        switch (value)
+        {
+            case null:
+                return null;
+
+            case Hashtable ht:
+                return cloneHashDeep(ht);
+
+            case ArrayList list:
+                return cloneArrayListDeep(list);
+
+            // most BCL value types & strings are immutable – safe to copy ref
+            case string or ValueType:
+                return value;
+
+            // let user-defined classes decide how to clone themselves
+            case ICloneable cloneable:
+                return cloneable.Clone();
+
+            default:
+                // fallback: shallow copy (reference) – adjust if need more
+                return value;
+        }
+    }
+
+    private static ArrayList cloneArrayListDeep(ArrayList list)
+    {
+        ArrayList clone = new(list.Count);
+        foreach (var item in list)
+            clone.Add(cloneObject(item));
+
+        return clone;
+    }
+    // ****** cloneHashDeep end
+
     public static string bytes2str(long b)
     {
         string result = b.ToString();

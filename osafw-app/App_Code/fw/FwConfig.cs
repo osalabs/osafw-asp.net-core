@@ -1,91 +1,104 @@
 ﻿// App Configuration class
 //
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
-// (c) 2009-2021 Oleg Savchuk www.osalabs.com
+// (c) 2009-2025 Oleg Savchuk www.osalabs.com
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading;
 
 namespace osafw;
 
-public class FwConfig
+public static class FwConfig
 {
-    public static string hostname;
-    public static Hashtable settings;
-    public static string route_prefixes_rx = "";
-    public static readonly char path_separator = Path.DirectorySeparatorChar;
-    public static IConfiguration configuration;
+    // public API
+    public static string hostname => (settings?["hostname"] as string) ?? "";
 
+    /// <summary>Per-request, host-specific settings bucket.</summary>
+    public static Hashtable settings { get => _current.Value; private set => _current.Value = value; }
+
+    // internals
+    private static readonly AsyncLocal<Hashtable> _current = new();                // per-async-flow bucket
+    private static readonly ConcurrentDictionary<string, Hashtable> _hostCache = new();
+    private static IConfiguration configuration;                                   // appsettings.* provider
     private static readonly object locker = new();
 
-    public static void init(HttpContext context, IConfiguration configuration, string hostname = "")
+    public static readonly char path_separator = Path.DirectorySeparatorChar;
+
+    public static string getRoutePrefixesRX()
     {
-        // appSettings is Shared, so it's lifetime same as application lifetime
-        // if appSettings already initialized no need to read web.config again
-        lock (locker)
-        {
-            if (settings != null && settings.Count > 0 && settings.ContainsKey("_SETTINGS_OK"))
-            {
-                // already initialized, but re-init web-related settings on each request
-                if (context != null)
-                    initWeb(context, hostname);
-                return;
-            }
+        if (settings["_route_prefixes_rx"] is string rx && rx.Length > 0) return rx;
 
-            FwConfig.configuration = configuration;
-            FwConfig.hostname = hostname;
-            initDefaults(context, hostname);
-            readSettings();
+        // convert settings["route_prefixes"] Hashtable (ex: /Admin => True) to ArrayList routePrefixes
+        var routePrefixes = new ArrayList((settings["route_prefixes"] as Hashtable ?? []).Keys);
 
-            if (string.IsNullOrEmpty(hostname))
-            {
-                //if no hostname - use environment
-                var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "";
-                overrideSettingsByName(environment, settings);
-            }
-            else
-                overrideSettingsByName(hostname, settings, true);
-
-            settings["_SETTINGS_OK"] = true; // just a marker to ensure we have all settings set
-        }
+        var escaped = from string p in routePrefixes orderby p.Length descending select Regex.Escape(p);
+        rx = @"^(" + string.Join("|", escaped) + @")(/.*)?$";
+        settings["_route_prefixes_rx"] = rx;                            // memoise
+        return rx;
     }
 
-    // reload settings
+    /// <remarks>Called exactly once per _http request_ by FW.</remarks>
+    public static void init(HttpContext ctx, IConfiguration cfg, string host = null)
+    {
+        configuration ??= cfg;                                          // record for offline tools
+
+        host ??= ctx?.Request.Host.ToString() ?? "";
+        settings = _hostCache.GetOrAdd(host, _ => buildForHost(ctx, host));
+        // Some fields (ports, protocol) may vary per request even for same host - rebuild those cheap bits every time.
+        overrideContextSettings(ctx, host, settings);
+    }
+
+    // clears cache entry for request's host.
     public static void reload(FW fw)
     {
-        initDefaults(fw.context, FwConfig.hostname);
-        readSettings();
-        overrideSettingsByName(hostname, settings, true);
+        _hostCache.TryRemove(hostname, out _);     // force re-build on next request
+        init(fw.context, configuration, fw.context?.Request.Host.ToString());
     }
 
-    // update web-specific settings like hostname and ROOT_URL
-    private static void initWeb(HttpContext context, string hostname = "")
+    // One-time base (read-only) initialisation shared by all hosts.
+    private static Lazy<Hashtable> _base = new(() =>
     {
-        overrideContextSettings(context, hostname);
-        overrideSettingsByName(hostname, settings, true);
-    }
+        var tmp = new Hashtable();
+        initDefaults(null, "", ref tmp);
+        readSettings(configuration, ref tmp);                                     // appsettings:appSettings
+        return tmp;
+    }, LazyThreadSafetyMode.ExecutionAndPublication);
 
+    private static Hashtable buildForHost(HttpContext? ctx, string host)
+    {
+        // clone deep - each host gets its own mutable copy
+        var hs = Utils.cloneHashDeep(_base.Value);
+
+        overrideSettingsByName(string.IsNullOrEmpty(host) ?
+                Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "" : host,
+            hs, true);
+
+        overrideContextSettings(ctx, host, hs);
+        return hs;
+    }
     // 
     /// <summary>
     /// init default settings
     /// </summary>
     /// <param name="context">can be null for offline execution</param>
     /// <param name="hostname"></param>
-    private static void initDefaults(HttpContext context, string hostname = "")
+    private static void initDefaults(HttpContext context, string hostname, ref Hashtable st)
     {
-        settings = new Hashtable
+        st = new Hashtable
         {
             ["hostname"] = "",
             ["ROOT_URL"] = "",
             ["ROOT_DOMAIN"] = "",
         };
 
-        overrideContextSettings(context, hostname);
+        overrideContextSettings(context, hostname, st);
 
         string PhysicalApplicationPath;
         string basedir = AppDomain.CurrentDomain.BaseDirectory; //application root directory
@@ -102,18 +115,18 @@ public class FwConfig
             PhysicalApplicationPath = basedir.Substring(0, basedir.IndexOf($@"{path_separator}bin"));
         }
 
-        settings["site_root"] = Regex.Replace(PhysicalApplicationPath, @$"\{path_separator}$", ""); // removed last \ if any
+        st["site_root"] = Regex.Replace(PhysicalApplicationPath, @$"\{path_separator}$", ""); // removed last \ if any
 
         // default or theme template dir
         // make absolute path to templates from site root
-        settings["template"] = (string)settings["site_root"] + $@"{path_separator}App_Data{path_separator}template";
+        st["template"] = (string)st["site_root"] + $@"{path_separator}App_Data{path_separator}template";
 
-        settings["log"] = settings["site_root"] + $@"{path_separator}App_Data{path_separator}logs{path_separator}main.log";
-        settings["log_max_size"] = 100 * 1024 * 1024; // 100 MB is max log size
-        settings["tmp"] = Utils.getTmpDir(); // TODO not used? remove?
+        st["log"] = st["site_root"] + $@"{path_separator}App_Data{path_separator}logs{path_separator}main.log";
+        st["log_max_size"] = 100 * 1024 * 1024; // 100 MB is max log size
+        st["tmp"] = Utils.getTmpDir(); // TODO not used? remove?
 
-        settings["lang"] ??= "en"; // default language
-        settings["is_lang_update"] ??= false; // default language update flag
+        st["lang"] ??= "en"; // default language
+        st["is_lang_update"] ??= false; // default language update flag
     }
 
     public static void readSettingsSection(IConfigurationSection section, ref Hashtable settings)
@@ -134,57 +147,28 @@ public class FwConfig
     }
 
     // read setting into appSettings
-    private static void readSettings()
+    private static void readSettings(IConfiguration cfg, ref Hashtable st)
     {
-        var valuesSection = configuration.GetSection("appSettings");
+        var valuesSection = cfg.GetSection("appSettings");
         foreach (IConfigurationSection section in valuesSection.GetChildren())
         {
-            readSettingsSection(section, ref settings);
+            readSettingsSection(section, ref st);
         }
     }
 
-    // prefixes used so Dispatcher will know that url starts not with a full controller name, but with a prefix, need to be added to controller name
-    // return regexp str that cut the prefix from the url, second capturing group captures rest of url after the prefix
-    public static string getRoutePrefixesRX()
+    private static void overrideContextSettings(HttpContext ctx, string host, Hashtable st)
     {
-        if (string.IsNullOrEmpty(route_prefixes_rx))
-        {
-            // prepare regexp - escape all prefixes
-            ArrayList r = [];
-            var route_prefixes = (Hashtable)settings["route_prefixes"];
-            if (route_prefixes != null)
-            {
-                //sort prefixes, so longer prefixes mathced first, also escape to use in regex
-                var prefixes = from string prefix in route_prefixes.Keys orderby prefix.Length descending, prefix select Regex.Escape(prefix);
-                route_prefixes_rx = @"^(" + string.Join("|", prefixes) + @")(/.*)?$";
-            }
-        }
+        if (ctx == null) return;
+        var req = ctx.Request;
 
-        return route_prefixes_rx;
-    }
+        st["hostname"] = host;
+        string appBase = req.PathBase;
+        st["ROOT_URL"] = Regex.Replace(appBase, @"/$", "");
 
-
-    public static void overrideContextSettings(HttpContext context, string hostname = "")
-    {
-        if (context == null) return;
-
-        HttpRequest req = context.Request;
-        if (string.IsNullOrEmpty(hostname))
-            hostname = context.Request.Host.ToString();
-
-        settings["hostname"] = hostname;
-        FwConfig.hostname = hostname;
-
-        string ApplicationPath = req.PathBase;
-        settings["ROOT_URL"] = Regex.Replace(ApplicationPath, @"/$", "");
-
-        string http = "http://";
-        if (context.GetServerVariable("HTTPS") == "on")
-            http = "https://";
-        string port = ":" + context.GetServerVariable("SERVER_PORT");
-        if (port == ":80" || port == ":443")
-            port = "";
-        settings["ROOT_DOMAIN"] = http + context.GetServerVariable("SERVER_NAME") + port;
+        bool isHttps = ctx.GetServerVariable("HTTPS") == "on";
+        string port = ctx.GetServerVariable("SERVER_PORT");
+        string portPart = (port == "80" || port == "443") ? "" : ":" + port;
+        st["ROOT_DOMAIN"] = (isHttps ? "https://" : "http://") + ctx.GetServerVariable("SERVER_NAME") + portPart;
     }
 
     public static void overrideSettingsByName(string override_name, Hashtable settings, bool is_regex_match = false)
