@@ -71,7 +71,7 @@ public static class FwConfig
         return tmp;
     }, LazyThreadSafetyMode.ExecutionAndPublication);
 
-    private static Hashtable buildForHost(HttpContext? ctx, string host)
+    private static Hashtable buildForHost(HttpContext ctx, string host)
     {
         // clone deep - each host gets its own mutable copy
         var hs = Utils.cloneHashDeep(_base.Value);

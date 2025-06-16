@@ -455,72 +455,28 @@ class DevCodeGen
 
     private void createLookup(Hashtable entity)
     {
-        var ltable = fw.model<LookupManagerTables>().oneByTname((string)entity["table"]);
+        string model_name = (string)entity["model_name"];
+        var controller_options = (Hashtable)entity["controller"] ?? [];
+        string controller_url = (string)controller_options["url"];
+        string controller_title = (string)controller_options["title"];
 
-        string columns = "";
-        string column_names = "";
-        string column_types = "";
-        bool is_first = true;
+        var icode = controller_url.Replace("/", ""); // /Admin/LogTypes => AdminLogTypes
 
-        var hfks = Utils.array2hashtable((ArrayList)entity["foreign_keys"], "column");
-
-        var fields = (ArrayList)entity["fields"];
-        foreach (Hashtable field in fields)
+        var item = new Hashtable
         {
-            var fw_name = (string)field["fw_name"];
-            if (fw_name == "icode" || fw_name == "iname" || fw_name == "idesc")
-            {
-                columns += (!is_first ? "," : "") + fw_name;
-                column_names += (!is_first ? "," : "") + field["iname"];
-                column_types += (!is_first ? "," : "") + "";
-            }
-            else
-            {
-                columns += (!is_first ? "," : "") + field["name"];
-                column_names += (!is_first ? "," : "") + field["iname"];
-
-                //check if lookup table
-                var ctype = "";
-                if (hfks.ContainsKey(field["name"]))
-                {
-                    var fk = (Hashtable)hfks[field["name"]];
-                    ctype = fk["pk_table"] + "." + fk["pk_column"] + ":iname"; //iname as default, might not work for non-fw tables
-                }
-
-                column_types += (!is_first ? "," : "") + ctype;
-            }
-            is_first = false;
-        }
-
-        //var fields = Utils.array2hashtable((ArrayList)entity["fields"], "fw_name");
-        //if (fields.ContainsKey("icode"))
-        //{
-        //    columns += (columns.Length > 0 ? "," : "") + "icode";
-        //    column_names += (column_names.Length > 0 ? "," : "") + ((Hashtable)fields["icode"])["iname"];
-        //}
-        //if (fields.ContainsKey("iname"))
-        //{
-        //    columns += (columns.Length > 0 ? "," : "") + "iname";
-        //    column_names += (column_names.Length > 0 ? "," : "") + ((Hashtable)fields["iname"])["iname"];
-        //}
-        //if (fields.ContainsKey("idesc"))
-        //{
-        //    columns += (columns.Length > 0 ? "," : "") + "idesc";
-        //    column_names += (column_names.Length > 0 ? "," : "") + ((Hashtable)fields["idesc"])["iname"];
-        //}
-
-        Hashtable item = new()
-        {
-            { "tname", entity["table"] },
-            { "iname", entity["iname"] },
-            { "columns", columns },
-            { "column_names", column_names },
-            { "column_types", column_types }
+            {"igroup", "User" },
+            { "icode", icode },
+            { "url", controller_url },
+            { "iname", controller_title },
+            { "model", model_name },
+            { "access_level", Users.ACL_MANAGER }
         };
-        if (ltable.Count > 0)// replace
-            fw.model<LookupManagerTables>().update(ltable["id"].toInt(), item);
+
+        var lookup = fw.model<FwControllers>().oneByIcode(icode);
+        if (lookup.Count > 0)
+            fw.model<FwControllers>().add(item);
         else
-            fw.model<LookupManagerTables>().add(item);
+            fw.model<FwControllers>().update(lookup["id"].toInt(), item);
     }
 
     public bool createController(Hashtable entity, ArrayList entities)

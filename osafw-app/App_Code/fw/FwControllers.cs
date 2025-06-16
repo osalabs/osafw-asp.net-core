@@ -3,6 +3,9 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2025 Oleg Savchuk www.osalabs.com
 
+
+using System.Collections;
+
 namespace osafw;
 
 public class FwControllers : FwModel
@@ -11,5 +14,14 @@ public class FwControllers : FwModel
     {
         db_config = "";
         table_name = "fwcontrollers";
+    }
+
+    public DBList listGrouped()
+    {
+        return db.array(table_name, new Hashtable
+        {
+            ["status"] = db.opNOT(STATUS_DELETED),
+            ["access_level"] = db.opLE(fw.userAccessLevel)
+        }, "igroup, iname");
     }
 }

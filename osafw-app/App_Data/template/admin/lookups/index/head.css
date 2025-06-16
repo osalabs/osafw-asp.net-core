@@ -4,7 +4,3 @@
 .list-items a:hover {
  background-color:#eee;
 }
-
-.list-items a + h4 {
-  margin-top: 2rem;
-}

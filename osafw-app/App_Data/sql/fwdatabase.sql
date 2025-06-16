@@ -377,41 +377,6 @@ CREATE TABLE activity_logs (
   INDEX IX_activity_logs_users_id (users_id)
 );
 
-
-/*Lookup Manager Tables*/
-DROP TABLE IF EXISTS lookup_manager_tables;
-CREATE TABLE lookup_manager_tables (
-  id INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
-
-  tname                 NVARCHAR(255) NOT NULL DEFAULT '', /*table name*/
-  iname                 NVARCHAR(255) NOT NULL DEFAULT '', /*human table name*/
-  idesc                 NVARCHAR(MAX),                     /*table internal description*/
-  igroup                NVARCHAR(64) NOT NULL DEFAULT '',  -- group name, if set - tables grouped under same group name
-
-  is_one_form           TINYINT NOT NULL DEFAULT 0,        /*1 - lookup table cotains one row, use form view*/
-  is_custom_form        TINYINT NOT NULL DEFAULT 0,        /*1 - use custom form template, named by lowercase(tname)*/
-  header_text           NVARCHAR(MAX),                     /*text to show in header when editing table*/
-  footer_text           NVARCHAR(MAX),                     /*text to show in footer when editing table*/
-  column_id             NVARCHAR(255),                     /*table id column, if empty - use id*/
-
-  list_columns          NVARCHAR(MAX),                     /*comma-separated field list to display on list view, if defined - bo table edit mode available*/
-  columns               NVARCHAR(MAX),                     /*comma-separated field list to display, if empty - all fields displayed*/
-  column_names          NVARCHAR(MAX),                     /*comma-separated column list of column names, if empty - use field name*/
-  column_types          NVARCHAR(MAX),                     /*comma-separated column list of column types/lookups (" "-string(default),readonly,textarea,checkbox,tname.IDfield:INAMEfield-lookup table), if empty - use standard input[text]*/
-  column_groups         NVARCHAR(MAX),                     /*comma-separated column list of groups column related to, if empty - don't include column in group*/
-  url                   NVARCHAR(255) NOT NULL DEFAULT '', /*if defined - redirected to this URL instead of LookupManager forms*/
-
-  access_level          TINYINT NULL,                       -- min access level, if NULL - use Lookup Manager's acl
-
-  status                TINYINT NOT NULL DEFAULT 0,                /*0-ok, 127-deleted*/
-  add_time              DATETIME2 NOT NULL DEFAULT getdate(),  /*date record added*/
-  add_users_id          INT DEFAULT 0,                        /*user added record*/
-  upd_time              DATETIME2,
-  upd_users_id          INT DEFAULT 0,
-
-  INDEX UX_lookup_manager_tables_tname (tname)
-);
-
 /*user custom views*/
 DROP TABLE IF EXISTS user_views;
 CREATE TABLE user_views (
