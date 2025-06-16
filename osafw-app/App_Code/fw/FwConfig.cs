@@ -30,7 +30,13 @@ public class FwConfig
         lock (locker)
         {
             if (settings != null && settings.Count > 0 && settings.ContainsKey("_SETTINGS_OK"))
+            {
+                // already initialized, but re-init web-related settings on each request
+                if (context != null)
+                    initWeb(context, hostname);
                 return;
+            }
+
             FwConfig.configuration = configuration;
             FwConfig.hostname = hostname;
             initDefaults(context, hostname);
@@ -57,6 +63,13 @@ public class FwConfig
         overrideSettingsByName(hostname, settings, true);
     }
 
+    // update web-specific settings like hostname and ROOT_URL
+    private static void initWeb(HttpContext context, string hostname = "")
+    {
+        overrideContextSettings(context, hostname);
+        overrideSettingsByName(hostname, settings, true);
+    }
+
     // 
     /// <summary>
     /// init default settings
@@ -72,26 +85,7 @@ public class FwConfig
             ["ROOT_DOMAIN"] = "",
         };
 
-        if (context != null)
-        {
-            HttpRequest req = context.Request;
-
-            if (string.IsNullOrEmpty(hostname))
-                hostname = context.Request.Host.ToString();
-            //hostname = context.GetServerVariable("HTTP_HOST") ?? "";
-            settings["hostname"] = hostname;
-
-            string ApplicationPath = req.PathBase;
-            settings["ROOT_URL"] = Regex.Replace(ApplicationPath, @"/$", ""); // removed last / if any
-
-            string http = "http://";
-            if (context.GetServerVariable("HTTPS") == "on")
-                http = "https://";
-            string port = ":" + context.GetServerVariable("SERVER_PORT");
-            if (port == ":80" || port == ":443")
-                port = "";
-            settings["ROOT_DOMAIN"] = http + context.GetServerVariable("SERVER_NAME") + port;
-        }
+        overrideContextSettings(context, hostname);
 
         string PhysicalApplicationPath;
         string basedir = AppDomain.CurrentDomain.BaseDirectory; //application root directory
@@ -109,6 +103,10 @@ public class FwConfig
         }
 
         settings["site_root"] = Regex.Replace(PhysicalApplicationPath, @$"\{path_separator}$", ""); // removed last \ if any
+
+        // default or theme template dir
+        // make absolute path to templates from site root
+        settings["template"] = (string)settings["site_root"] + $@"{path_separator}App_Data{path_separator}template";
 
         settings["log"] = settings["site_root"] + $@"{path_separator}App_Data{path_separator}logs{path_separator}main.log";
         settings["log_max_size"] = 100 * 1024 * 1024; // 100 MB is max log size
@@ -165,6 +163,30 @@ public class FwConfig
         return route_prefixes_rx;
     }
 
+
+    public static void overrideContextSettings(HttpContext context, string hostname = "")
+    {
+        if (context == null) return;
+
+        HttpRequest req = context.Request;
+        if (string.IsNullOrEmpty(hostname))
+            hostname = context.Request.Host.ToString();
+
+        settings["hostname"] = hostname;
+        FwConfig.hostname = hostname;
+
+        string ApplicationPath = req.PathBase;
+        settings["ROOT_URL"] = Regex.Replace(ApplicationPath, @"/$", "");
+
+        string http = "http://";
+        if (context.GetServerVariable("HTTPS") == "on")
+            http = "https://";
+        string port = ":" + context.GetServerVariable("SERVER_PORT");
+        if (port == ":80" || port == ":443")
+            port = "";
+        settings["ROOT_DOMAIN"] = http + context.GetServerVariable("SERVER_NAME") + port;
+    }
+
     public static void overrideSettingsByName(string override_name, Hashtable settings, bool is_regex_match = false)
     {
         Hashtable overs = (Hashtable)settings["override"];
@@ -185,21 +207,22 @@ public class FwConfig
         }
 
         // convert strings to specific types
-        LogLevel log_level = LogLevel.INFO; // default log level if No or Wrong level in config
+        LogLevel log_level = LogLevel.INFO; // default log level if none or Wrong level in config
         if (settings.ContainsKey("log_level") && settings["log_level"] != null)
-            Enum.TryParse<LogLevel>((string)settings["log_level"], true, out log_level);
+        {
+            if (settings["log_level"].GetType() != typeof(LogLevel))
+            {
+                Enum.TryParse<LogLevel>((string)settings["log_level"], true, out log_level);
+                settings["log_level"] = log_level;
+            }
+        }
+        else
+            settings["log_level"] = log_level;
 
-        settings["log_level"] = log_level;
 
         // default settings that depend on other settings
         if (!settings.ContainsKey("ASSETS_URL"))
             settings["ASSETS_URL"] = settings["ROOT_URL"] + "/assets";
-
-        // default or theme template dir
-        if (!settings.ContainsKey("template"))
-            settings["template"] = $@"{path_separator}App_Data{path_separator}template";
-        // make absolute path to templates from site root
-        settings["template"] = (string)settings["site_root"] + settings["template"];
     }
 
     /// <summary>
