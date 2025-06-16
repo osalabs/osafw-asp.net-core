@@ -256,7 +256,7 @@ public class DevManageController : FwController
         var model_name = item["model_name"].toStr().Trim();
         var controller_url = item["controller_url"].toStr().Trim();
         var controller_title = item["controller_title"].toStr().Trim();
-        var controller_type = item["controller_type"].toStr().Trim(); // empty("dynamic") or "vue"
+        var controller_type = item["controller_type"].toStr().Trim(); // empty("dynamic") or "vue" or "lookup" or "api"
 
         var config_file = fw.config("template") + DevCodeGen.DB_JSON_PATH;
         var entities = DevEntityBuilder.loadJson<ArrayList>(config_file);

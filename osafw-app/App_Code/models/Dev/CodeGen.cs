@@ -464,19 +464,46 @@ class DevCodeGen
 
         var item = new Hashtable
         {
-            {"igroup", "User" },
+            { "igroup", "User" },
             { "icode", icode },
             { "url", controller_url },
             { "iname", controller_title },
             { "model", model_name },
-            { "access_level", Users.ACL_MANAGER }
+            { "access_level", Users.ACL_MANAGER },
+            { "is_lookup", 1 }
         };
+
+        //make/append to sql update file  in App_Date/sql/updates/updYYYY-MM-DD.sql with insert
+        var upd_file = fw.config("site_root") + "/App_Data/sql/updates/upd" + DateTime.Now.ToString("yyyy-MM-dd") + ".sql";
+        var upd_sql = "";
 
         var lookup = fw.model<FwControllers>().oneByIcode(icode);
         if (lookup.Count > 0)
-            fw.model<FwControllers>().add(item);
-        else
+        {
             fw.model<FwControllers>().update(lookup["id"].toInt(), item);
+            upd_sql = Environment.NewLine + $@"UPDATE fwcontrollers SET 
+                            igroup={db.q(item["igroup"])}, 
+                            url={db.q(item["url"])}, 
+                            iname={db.q(item["iname"])}, 
+                            model={db.q(item["model"])}, 
+                            access_level={db.qi(item["access_level"])},
+                            is_lookup=1
+                        WHERE icode={db.q(item["icode"])}" + Environment.NewLine;
+        }
+        else
+        {
+            fw.model<FwControllers>().add(item);
+            upd_sql = Environment.NewLine + $@"INSERT INTO fwcontrollers (igroup, icode, url, iname, model, access_level, is_lookup) VALUES (
+                            {db.q(item["igroup"])},
+                            {db.q(item["icode"])},
+                            {db.q(item["url"])},
+                            {db.q(item["iname"])},
+                            {db.q(item["model"])},
+                            {db.qi(item["access_level"])},
+                            1
+                        )" + Environment.NewLine;
+        }
+        Utils.setFileContent(upd_file, ref upd_sql, true);
     }
 
     public bool createController(Hashtable entity, ArrayList entities)
@@ -485,6 +512,7 @@ class DevCodeGen
         var controller_options = (Hashtable)entity["controller"] ?? [];
         string controller_url = (string)controller_options["url"];
         string controller_title = (string)controller_options["title"];
+        string controller_type = controller_options["type"].toStr(); // ""(dynamic), "vue", "lookup", "api"
 
         if (controller_url == "")
         {
@@ -505,8 +533,9 @@ class DevCodeGen
         // save back to entity as it can be used by caller
         controller_options["url"] = controller_url;
         controller_options["title"] = controller_title;
+        entity["controller"] = controller_options;
 
-        if (controller_options["is_lookup"].toBool())
+        if (controller_options["is_lookup"].toBool() || controller_type == "lookup")
         {
             // if requested controller as a lookup table - just add/update lookup tables, no actual controller creation
             this.createLookup(entity);
