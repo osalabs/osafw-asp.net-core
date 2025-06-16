@@ -4,6 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace osafw.Tests
 {
@@ -11,13 +12,17 @@ namespace osafw.Tests
     public class DBTests
     {
         private readonly string connstr = "Server=(local);Database=demo;Trusted_Connection=True;TrustServerCertificate=true;";
+        private ServiceProvider provider = null;
         private DB db = null;
         private string table_name = "for_unit_testing";
 
         [TestInitialize()]
         public void Startup()
         {
-            db = new DB(connstr, "SQL", "main");
+            var services = new ServiceCollection();
+            services.AddScoped<DB>(_ => new DB(connstr, "SQL", "main"));
+            provider = services.BuildServiceProvider();
+            db = provider.GetRequiredService<DB>();
             db.connect();
             // create tables for testing
             db.exec($"DROP TABLE IF EXISTS {table_name}");
@@ -34,6 +39,7 @@ namespace osafw.Tests
         {
             db.exec($"DROP TABLE {table_name}");
             db.disconnect();
+            provider.Dispose();
         }
 
         [TestMethod()]

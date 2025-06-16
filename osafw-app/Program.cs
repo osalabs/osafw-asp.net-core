@@ -141,14 +141,19 @@ public static class Program
         // Windows Active Directory authentication support (optional)
         // builder.Services.AddAuthentication(NegotiateDefaults.AuthenticationScheme).AddNegotiate();
 
-        // Memory cache 
+        // Memory cache
         builder.Services.AddMemoryCache();
+
+        // register FW core services
+        builder.Services.AddFwServices(builder.Configuration);
 
         // Uncomment to enable scheduled tasks
         // builder.Services.AddHostedService<FwCronService>();
 
         // Build the WebApplication
         var app = builder.Build();
+
+        FW.service_provider = app.Services;
 
         //-------------------------------
         // Configure the middleware pipeline
