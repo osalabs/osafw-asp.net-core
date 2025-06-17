@@ -33,7 +33,7 @@ public class FwSelfTest
     }
 
     public string test_email = ""; // if empty, will use "test"+mail_from
-    public string existing_tables = "fwsessions fwentities users settings spages att att_links att_categories log_types activity_logs lookup_manager_tables user_views user_lists user_lists_items"; // check if these tables exists
+    public string existing_tables = "fwsessions fwkeys fwentities fwcron fwcontrollers fwupdates users users_cookies settings spages att att_links att_categories log_types activity_logs user_views user_lists user_lists_items menu_items user_filters"; // check if these tables exists
     public string exclude_controllers = "";
 
     public FwSelfTest(FW fw)
