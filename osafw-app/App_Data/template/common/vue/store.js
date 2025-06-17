@@ -63,8 +63,6 @@ let state = {
                 isDelete: true,
                 isUserlists: true,
                 buttons: [], // label, url, icon, title (for tooltip), class
-            //    custom: false,
-            //    custom_url: ''
             }
         },
         view: {
@@ -564,13 +562,13 @@ let actions = {
         }
     },
 
-    async customCheckedRows() {
-        if (!this.uioptions.list.btnMulti?.custom_url) return;
+    async customCheckedRows(url) {
         try {
             const req = { XSS: this.XSS };
             req.cb = this.checkedRows;
             if (!Object.keys(req.cb).length) return;
-            const api = mande(this.uioptions.list.btnMulti.custom_url);
+
+            const api = mande(url);
             await api.post('', req);
             this.hchecked_rows = {};
         } catch (error) {

@@ -10,14 +10,16 @@
                 :disabled="fwStore.is_readonly || !fwStore.countCheckedRows">
             `Delete`
         </button>
-        <button v-if="uioptions.custom"
-                type="button"
-                class="btn btn-primary me-2"
-                @click="onCustom"
-                :disabled="fwStore.is_readonly || !fwStore.countCheckedRows">
-            {{uioptions.custom}}
-        </button>
         <list-btn-userlists v-if="fwStore.is_userlists && uioptions.isUserlists" />
+
+        <template v-for="btn in uioptions.buttons">
+            <button type="button"
+                    :class="btn.class??'btn btn-default me-2'"
+                    @click="onCustom(btn.url)"
+                    :disabled="fwStore.is_readonly || !fwStore.countCheckedRows">
+                <i :class="btn.icon" v-if="btn.icon"></i> {{btn.label}}
+            </button>
+        </template>
         <slot></slot>
     </div>
 </script>
@@ -45,8 +47,8 @@
             onDelete(e) {
                 this.fwStore.deleteCheckedRows();
             },
-            onCustom(e) {
-                this.fwStore.customCheckedRows();
+            onCustom(url) {
+                this.fwStore.customCheckedRows(url);
             },
         }
     });

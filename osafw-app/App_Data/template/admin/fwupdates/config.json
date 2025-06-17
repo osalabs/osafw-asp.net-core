@@ -76,8 +76,14 @@
       "btnMulti": {
         "isDelete": false,
         "isUserlists": false,
-        "custom": "Apply",
-        "custom_url": "/Dev/Manage/(ApplyFwUpdates)"
+        "buttons": [
+          {
+            "label": "Apply",
+            "icon": "bi bi-play-fill",
+            "class": "btn btn-primary me-2",
+            "url": "/Dev/Manage/(ApplyFwUpdates)"
+          }
+        ]
       }
     }
   }
