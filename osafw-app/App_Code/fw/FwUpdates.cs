@@ -134,6 +134,40 @@ public class FwUpdates : FwModel
         return getCount(new int[] { STATUS_ACTIVE });
     }
 
+    public void markAllPendingApplied()
+    {
+        db.update(table_name,
+            DB.h(
+                "status", STATUS_APPLIED,
+                "applied_time", DB.NOW
+            ),
+            DB.h("status", STATUS_ACTIVE)
+        );
+        fw.Session("FW_UPDATES_CTR", "0");
+    }
+
+    public void applyList(ArrayList ids, bool is_echo = false)
+    {
+        foreach (int id in ids)
+        {
+            applyOne(id, is_echo);
+        }
+        fw.Session("FW_UPDATES_CTR", "0");
+    }
+
+    public void refreshViews(bool is_echo = false)
+    {
+        var views_file = fw.config("site_root") + @"\App_Data\sql\views.sql";
+        if (is_echo)
+            fw.rw("Applying views file: " + views_file);
+
+        // ignore errors for views
+        db.execMultipleSQL(Utils.getFileContent(views_file), true);
+
+        FwCache.clear();
+        db.clearSchemaCache();
+    }
+
     public void checkApplyIfDev()
     {
         if (!fw.config("IS_DEV").toBool())

@@ -252,7 +252,7 @@ public class FW : IDisposable
         if (value == null)
         {
             // read mode - return current flash
-            return ((Hashtable)this.G["_flash"])[name];
+            return ((Hashtable)this.G["_flash"])[name] ?? "";
         }
         else
         {

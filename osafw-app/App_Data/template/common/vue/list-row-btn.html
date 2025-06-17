@@ -22,11 +22,17 @@
             </template>
             <a href="#" class="text-danger" @click.prevent="$emit('delete', $event)" :disabled="isReadonly"><i class="bi bi-x"></i></a>
         </template>
-        <template v-if="co_buttons.custom">
-            <template v-if="co_buttons.view || co_buttons.edit || co_buttons.quickedit || co_buttons.delete">
+        <template v-for="(btn, index) in co_buttons.buttons">
+            <template v-if="index || co_buttons.view || co_buttons.edit || co_buttons.quickedit || co_buttons.delete">
                 &nbsp;&#183;&nbsp;
             </template>
-            <a href="#" @click.prevent="$emit('custom', $event)" :disabled="isReadonly" class="on-view-pane">{{co_buttons.custom}}</a>
+            <a href="#" 
+               @click.prevent="$emit('custom', {url: btn.url, post: btn.post??false, e: $event})" 
+               :disabled="isReadonly" 
+               class="on-view-pane" 
+               :class="btn.class"
+               :title="btn.title"
+               ><i :class="btn.icon" v-if="btn.icon"></i> {{btn.label}}</a>
         </template>
 
         <slot name="btn-append" :row="row"></slot>

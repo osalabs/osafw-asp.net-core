@@ -11,6 +11,7 @@ window.fwConst = {
 
 let state = {
     global: {}, //global config
+    flash: {}, //flash messages from server to display on startup
     XSS: '', // token
     me_id: 0, // current user id
     access_level: 0, // user access level
@@ -30,6 +31,7 @@ let state = {
             header: { // list-header, can be false
                 btnAddNew: true,
                 count: true,
+                buttons: [] // custom - label, url, icon, title (for tooltip), class, post(true|false)
             },
             filters: { // list-filters, can be false
                 s: { // search input, can be false
@@ -44,11 +46,14 @@ let state = {
             table: { //list-table
                 isButtonsLeft: null, //null - use global.is_list_btn_left
                 rowTitle: 'Double click to Edit',
+                nl2br: false, // true if table cells should show line breaks
+                maxRowHeight: 0, // max row height in px, 0 - no limit
                 rowButtons: { // list-row-btn, can be false as whole
                     view: true,
                     edit: true,
                     quickedit: true,
-                    delete: true
+                    delete: true,
+                    buttons: [] // custom - label, url (/id will be appended), icon, title (for tooltip), class, post(true|false)
                 },
                 rowDblClick: 'view', // view|edit|quickedit or else override store onRowDblClick
                 pagination: { // list-pagination, can be false
@@ -57,7 +62,8 @@ let state = {
             },
             btnMulti: { //list-btn-multi, can be false
                 isDelete: true,
-                isUserlists: true
+                isUserlists: true,
+                buttons: [], // custom - label, url, icon, title (for tooltip), class
             }
         },
         view: {
@@ -102,6 +108,7 @@ let state = {
     related_id: 0, // related model id
     return_url: '', // return url if controller called from other place expecting user's return
     field_id: 'id', // model's id field name
+    view_list_custom: [], // used for cellFormatter
     list_headers: [], // list headers, array of {field_name:"", field_name_visible:"", is_sortable:bool, is_checked:bool, search_value:null|"", is_ro:bool, input_type:"input|select|date"}
     is_list_search_open: false, // true if list search is open by user
     count: 0, // total list rows count
@@ -118,8 +125,8 @@ let state = {
     //standard lookups
     lookups_std: {
         statusf: [
-            { id: 0, iname: 'Active' },
-            { id: 10, iname: 'Inactive' }
+            { id: 0, iname: 'Active', bgcolor: 'bg-primary' },
+            { id: 10, iname: 'Inactive', bgcolor: 'bg-secondary' }
         ],
         statusf_admin: [
             { id: 0, iname: 'Active' },
@@ -329,7 +336,15 @@ let actions = {
     //save to store each key from data if such key exists in store
     saveToStore(data) {
         Object.keys(data).forEach(key => {
-            if (this.$state[key] !== undefined) this.$state[key] = data[key];
+            if (key == "store") { // special store-level json - merge into $state itself
+                try {
+                    this.$state = AppUtils.deepMerge(this.$state, JSON.parse(data.store));
+                } catch (e) {
+                    console.error('Error parsing JSON for key:', key, e);
+                }                
+            } else if (this.$state[key] !== undefined) {
+                this.$state[key] = data[key];
+            }
         });
     },
 
@@ -341,6 +356,15 @@ let actions = {
         if (data.showform_fields) {
             this.enrichEditableListHeaders();
         }
+    },
+
+    // called when app mounted
+    async afterMounted() {
+        //show flash success or error message if exists
+        if (this.flash.success)
+            Toast(this.flash.success, { theme: 'text-bg-success' });
+        if (this.flash.error)
+            Toast(this.flash.error, { theme: 'text-bg-danger' });
     },
 
     // load init and lookup scopes only
@@ -439,14 +463,48 @@ let actions = {
     async onCellBtnClick({ event, row, col }) {
         console.log('onCellBtnClick:', event, row[this.field_id], col.field);
     },
-    async onRowBtnCustomClick(row) {
-        console.log('onRowBtnCustomClick:', row);
+    // helper to handle custom URL click from row button
+    async customUrlClick(id, url, post) {
+        try {
+            const api = mande(url + '/' + id);
+            let response;
+            if (post) {
+                response = await api.post('', { XSS: this.XSS });
+            } else {
+                response = await api.get('');
+            }
+            if (response?.message) {
+                Toast(response.message, { theme: 'text-bg-success' });
+            }
+
+            this.reloadIndex();
+        } catch (error) {
+            console.error(error);
+            this.handleError(error, 'onRowBtnCustomClick');
+        }
+    },
+    // event contains: url, post, e
+    async onRowBtnCustomClick(row, event) {
+        if (event.url) {
+            await this.customUrlClick(row[this.field_id], event.url, event.post);            
+        } else {
+            console.log('onRowBtnCustomClick:', row, event);
+        }
     },
     async onRowDblClick(row) {
         console.log('onRowDblClick:', row);
     },
     async onCellKeyup(event, row, col) {
         //console.log('onCellKeyup:', event, row, col);
+    },
+    //format cell value for display if header field is in view_list_custom
+    cellFormatter(row, header) {
+        if (header.field_name == "status") {
+            // default - format status as badge
+            const value = row[header.field_name];
+            const status = this.lookups_std.statusf.find(s => s.id == value) || { iname: value, id: 0, bgcolor: 'bg-secondary' };
+            return '<span class="badge ' + status.bgcolor + '" >'+AppUtils.htmlescape(status.iname)+'</span>';
+        }
     },
     async saveCell(row, col) {
         let id = row[this.field_id];
@@ -525,6 +583,27 @@ let actions = {
             this.handleError(error, 'deleteCheckedRows');
         } finally {
             //reload list to show changes
+            this.loadIndex();
+        }
+    },
+
+    async customCheckedRows(url) {
+        try {
+            const req = { XSS: this.XSS };
+            req.cb = this.checkedRows;
+            if (!Object.keys(req.cb).length) return;
+
+            const api = mande(url);
+            const response = await api.post('', req);
+            this.hchecked_rows = {};
+
+            if (response?.message) {
+                Toast(response.message, { theme: 'text-bg-success' });
+            }
+
+        } catch (error) {
+            this.handleError(error, 'customCheckedRows');
+        } finally {
             this.loadIndex();
         }
     },

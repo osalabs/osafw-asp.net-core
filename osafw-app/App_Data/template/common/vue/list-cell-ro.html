@@ -1,5 +1,5 @@
 <script type="text/x-template" id="list-cell-ro-template">
-    <div class="ro">{{row[col.field_name]}}</div>
+    <div class="ro" :style="styles">{{row[col.field_name]}}</div>
 </script>
 
 <script type="module">
@@ -13,7 +13,21 @@
             col: {
                 type: Object,
                 required: true
+            },
+            uioptions: {
+                type: Object,
+                required: false
             }
-        },
+        },        
+        computed: {
+            styles() {
+                if (this.uioptions?.maxRowHeight) {
+                    return { maxHeight: this.uioptions.maxRowHeight + 'px', overflow: 'auto' };
+                }
+                return {};
+            }
+        }
+
+
     });
 </script>

@@ -121,116 +121,70 @@ public class DevManageController : FwController
             return ps;
     }
 
-    public Hashtable ShowDBUpdatesAction()
+    #region Fw Updates
+    public void RefreshViewsAction()
     {
-        Hashtable ps = [];
+        checkXSS();
+        fw.model<FwUpdates>().refreshViews();
+        fw.flash("success", "Views refreshed");
+        fw.redirect("/Admin/FwUpdates");
+    }
 
-        // show list of available db updates
-        var updates_root = fw.config("site_root") + @"\App_Data\sql\updates";
-        if (System.IO.Directory.Exists(updates_root))
+    public void MarkFwUpdatesAppliedAction()
+    {
+        checkXSS();
+        fw.model<FwUpdates>().markAllPendingApplied();
+        fw.flash("success", "All pending updates marked as applied");
+        fw.redirect("/Admin/FwUpdates");
+    }
+
+    public Hashtable ApplyFwUpdateAction(int id)
+    {
+        checkXSS();
+        fw.model<FwUpdates>().applyOne(id);
+
+        if (fw.isJsonExpected())
         {
-            string[] files = System.IO.Directory.GetFiles(updates_root);
-
-            ArrayList rows = [];
-            foreach (string file in files)
-                rows.Add(new Hashtable() { { "filename", System.IO.Path.GetFileName(file) } });
-            ps["rows"] = rows;
+            var ps = new Hashtable();
+            ps["message"] = "Update applied";
+            return new Hashtable { { "_json", ps } };
         }
         else
         {
-            ps["is_nodir"] = true;
-            ps["updates_root"] = updates_root;
+            fw.flash("success", "Update applied");
+            fw.redirect("/Admin/FwUpdates");
+            return null;
         }
-
-        return ps;
     }
 
-    public void SaveDBUpdatesAction()
+    public Hashtable ApplyFwUpdatesAction()
     {
         checkXSS();
+        var ids = reqh("cb").Keys.Cast<string>().Select(x => x.toInt()).ToList();
+        fw.model<FwUpdates>().applyList(new ArrayList(ids));
 
-        var is_view_only = (reqi("ViewsOnly") == 1);
-        var ctr = 0;
-
-        rw("<html><body>");
-
-        try
+        if (fw.isJsonExpected())
         {
-            if (!is_view_only)
-            {
-                // apply selected updates
-                var updates_root = fw.config("site_root") + @"\App_Data\sql\updates";
-                var item = reqh("item");
-                foreach (string filename in item.Keys)
-                {
-                    var filepath = updates_root + @"\" + filename;
-                    rw("applying: " + filepath);
-                    ctr += exec_multi_sql(Utils.getFileContent(filepath));
-                }
-                rw("Done, " + ctr + " statements executed");
-            }
-
-            // refresh views
-            ctr = 0;
-            var views_file = fw.config("site_root") + @"\App_Data\sql\views.sql";
-            rw("Applying views file: " + views_file);
-            // for views - ignore errors
-            ctr = exec_multi_sql(Utils.getFileContent(views_file), true);
-            rw("Done, " + ctr + " statements executed");
-
-            rw("<b>All Done</b>");
+            var ps = new Hashtable();
+            ps["message"] = "Updates applied";
+            return new Hashtable { { "_json", ps } };
         }
-        catch (Exception ex)
+        else
         {
-            rw("got an error");
-            rw("<span style='color:red'>" + ex.Message + "</span>");
+            fw.flash("success", "Updates applied");
+            fw.redirect("/Admin/FwUpdates");
+            return null;
         }
-
-        // and last - reset db schema cache
-        FwCache.clear();
-        db.clearSchemaCache();
     }
-    // TODO move these functions to DB?
-    private int exec_multi_sql(string sql, bool is_ignore_errors = false)
+
+    public void ReloadFwUpdatesAction()
     {
-        var result = 0;
-        // launch the query
-        //sql = strip_comments_sql(sql);
-        String[] asql = DB.splitMultiSQL(sql);
-        foreach (string sqlone1 in asql)
-        {
-            var sqlone = sqlone1.Trim();
-            if (sqlone.Length > 0)
-            {
-                if (is_ignore_errors)
-                {
-                    try
-                    {
-                        db.exec(sqlone);
-                        result += 1;
-                    }
-                    catch (Exception ex)
-                    {
-                        rw(sqlone);
-                        rw("<span style='color:red'>" + ex.Message + "</span>");
-                        rw("");
-                    }
-                }
-                else
-                {
-                    rw($"<pre>{sqlone}</pre>");
-                    db.exec(sqlone);
-                    result += 1;
-                }
-            }
-        }
-        return result;
+        checkXSS();
+        fw.model<FwUpdates>().loadUpdates();
+        fw.flash("success", "New Updates reloaded from disk");
+        fw.redirect("/Admin/FwUpdates");
     }
-    private static string strip_comments_sql(string sql)
-    {
-        return Regex.Replace(sql, @"/\*.+?\*/", " ", RegexOptions.Singleline);
-    }
-
+    #endregion
 
     public void CreateModelAction()
     {

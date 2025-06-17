@@ -11,6 +11,16 @@
             `Delete`
         </button>
         <list-btn-userlists v-if="fwStore.is_userlists && uioptions.isUserlists" />
+
+        <template v-for="btn in uioptions.buttons">
+            <button type="button"
+                    :class="btn.class??'btn btn-default me-2'"
+                    :title="btn.title"
+                    @click="onCustom(btn.url)"
+                    :disabled="fwStore.is_readonly || !fwStore.countCheckedRows">
+                <i :class="btn.icon" v-if="btn.icon"></i> {{btn.label}}
+            </button>
+        </template>
         <slot></slot>
     </div>
 </script>
@@ -37,6 +47,9 @@
         methods: {
             onDelete(e) {
                 this.fwStore.deleteCheckedRows();
+            },
+            onCustom(url) {
+                this.fwStore.customCheckedRows(url);
             },
         }
     });
