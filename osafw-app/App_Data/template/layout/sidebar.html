@@ -93,13 +93,11 @@
           <i class="bi bi-tools"></i> `Direct DB Access`
         </a>
       </li>
-      <~dbupdates_menu if="SESSION[FW_UPDATES_CTR]" inline>
       <li class="nav-item" >
         <a href="<~ROOT_URL>/Admin/FwUpdates" class="nav-link link-body-emphasis <~/common/active ifeq="GLOBAL[controller]" value="AdminFwUpdates">">
-          <i class="bi bi-tools"></i> `DB Updates` <span class="badge text-bg-secondary"><~SESSION[FW_UPDATES_CTR]></span>
+          <i class="bi bi-tools"></i> `DB Updates` <~dbupdates_badge if="SESSION[FW_UPDATES_CTR]" inline><span class="badge text-bg-secondary"><~SESSION[FW_UPDATES_CTR]></span></~dbupdates_badge>
         </a>
       </li>
-      </~dbupdates_menu>
       <~dev_menu if="GLOBAL[IS_DEV]" inline>
       <li class="nav-item" >
         <a href="<~/dev/url>/Manage" class="nav-link link-body-emphasis <~/common/active ifeq="GLOBAL[controller]" value="DevManage">">

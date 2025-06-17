@@ -138,7 +138,6 @@ public class FwVueController : FwDynamicController
         ps["is_userlists"] = this.is_userlists;
         ps["is_readonly"] = is_readonly;
         ps["is_list_edit"] = is_list_edit;
-        ps["uioptions"] = this.config["uioptions"];
     }
 
     /// <summary>
@@ -276,6 +275,13 @@ public class FwVueController : FwDynamicController
                 ps["id"] = route.id;
             }
 
+            //flsh messages if any
+            ps["flash"] = new Hashtable()
+            {
+                ["success"] = fw.flash("success"),
+                ["error"] = fw.flash("error"),
+            };
+            ps["uioptions"] = this.config["uioptions"];
             ps = setPS(ps);
         }
 

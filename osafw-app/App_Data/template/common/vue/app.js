@@ -30,6 +30,8 @@ let mainApp = {
                 this.fwStore.setCurrentScreen(state.screen, state.id);
             }
         })
+
+        this.fwStore.afterMounted();
     },
     updated() {
         //console.log('mainApp updated');

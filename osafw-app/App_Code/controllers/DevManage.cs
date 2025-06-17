@@ -121,13 +121,18 @@ public class DevManageController : FwController
             return ps;
     }
 
+    #region Fw Updates
     public void RefreshViewsAction()
     {
-        fw.model<FwUpdates>().refreshViews(true);
+        checkXSS();
+        fw.model<FwUpdates>().refreshViews();
+        fw.flash("success", "Views refreshed");
+        fw.redirect("/Admin/FwUpdates");
     }
 
     public void MarkFwUpdatesAppliedAction()
     {
+        checkXSS();
         fw.model<FwUpdates>().markAllPendingApplied();
         fw.flash("success", "All pending updates marked as applied");
         fw.redirect("/Admin/FwUpdates");
@@ -135,17 +140,21 @@ public class DevManageController : FwController
 
     public void ApplyFwUpdateAction(int id)
     {
-        fw.model<FwUpdates>().applyOne(id, true);
+        checkXSS();
+        fw.model<FwUpdates>().applyOne(id);
+        fw.flash("success", "Update applied");
         fw.redirect("/Admin/FwUpdates");
     }
 
     public void ApplyFwUpdatesAction()
     {
+        checkXSS();
         var ids = reqh("cb").Keys.Cast<string>().Select(x => x.toInt()).ToList();
         fw.model<FwUpdates>().applyList(new ArrayList(ids));
+        fw.flash("success", "Updates applied");
         fw.redirect("/Admin/FwUpdates");
     }
-
+    #endregion
 
     public void CreateModelAction()
     {

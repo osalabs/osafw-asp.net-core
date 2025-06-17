@@ -11,6 +11,7 @@ window.fwConst = {
 
 let state = {
     global: {}, //global config
+    flash: {}, //flash messages from server to display on startup
     XSS: '', // token
     me_id: 0, // current user id
     access_level: 0, // user access level
@@ -30,7 +31,7 @@ let state = {
             header: { // list-header, can be false
                 btnAddNew: true,
                 count: true,
-                buttons: []
+                buttons: [] // label, url, icon, title (for tooltip), class, post(true|false)
             },
             filters: { // list-filters, can be false
                 s: { // search input, can be false
@@ -61,8 +62,9 @@ let state = {
             btnMulti: { //list-btn-multi, can be false
                 isDelete: true,
                 isUserlists: true,
-                custom: false,
-                custom_url: ''
+                buttons: [], // label, url, icon, title (for tooltip), class
+            //    custom: false,
+            //    custom_url: ''
             }
         },
         view: {
@@ -334,8 +336,13 @@ let actions = {
     //save to store each key from data if such key exists in store
     saveToStore(data) {
         Object.keys(data).forEach(key => {
-            if (key === 'uioptions') {
-                this.$state.uioptions = AppUtils.deepMerge(this.$state.uioptions, data[key]);
+            if (key.endsWith('Json')) { // i.e. data-key-json
+                let json_key = key.slice(0, -4); // remove Json suffix
+                try {
+                    this.$state[json_key] = AppUtils.deepMerge(this.$state[json_key], JSON.parse(data[key]));
+                } catch (e) {
+                    console.error('Error parsing JSON for key:', json_key, e);
+                }                
             } else if (this.$state[key] !== undefined) {
                 this.$state[key] = data[key];
             }
@@ -350,6 +357,15 @@ let actions = {
         if (data.showform_fields) {
             this.enrichEditableListHeaders();
         }
+    },
+
+    // called when app mounted
+    async afterMounted() {
+        //show flash success or error message if exists
+        if (this.flash.success)
+            Toast(this.flash.success, { theme: 'text-bg-success' });
+        if (this.flash.error)
+            Toast(this.flash.error, { theme: 'text-bg-danger' });
     },
 
     // load init and lookup scopes only
