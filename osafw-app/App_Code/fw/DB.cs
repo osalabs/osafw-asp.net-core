@@ -18,6 +18,7 @@
 using MySqlConnector;
 #endif
 
+using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
 using System;
 using System.Collections;
@@ -223,7 +224,12 @@ public class DB : IDisposable
     public static string last_sql = ""; // last executed sql
     public static int SQL_QUERY_CTR = 0; // counter for SQL queries during request
 
-    protected readonly FW fw; // for now only used for: fw.logger and fw.context (for request-level cacheing of multi-db connections)
+    // optional external logger delegate
+    public delegate void LoggerDelegate(LogLevel level, params object[] args);
+    protected LoggerDelegate ext_logger;
+
+    // context for request level cache for multi-db connections
+    protected HttpContext context;
 
     public string db_name = "";
     public string dbtype = DBTYPE_SQLSRV; // SQL=SQL Server, OLE=OleDB, MySQL=MySQL
@@ -237,7 +243,9 @@ public class DB : IDisposable
     private string limit_method = "TOP"; // for SQL Server 2005+, for MySQL - LIMIT, for OLE - depends on provider
     private string offset_method = "FETCH NEXT"; // for SQL Server 2012+, for MySQL - LIMIT, for OLE - depends on provider
     protected Dictionary<string, Hashtable> schema = []; // schema for currently connected db
+
     private DbConnection conn; // actual db connection - SqlConnection or OleDbConnection
+    private DbTransaction tran; // current transaction (if any)
 
     protected bool is_check_ole_types = false; // if true - checks for unsupported OLE types during readRow
     protected readonly Hashtable UNSUPPORTED_OLE_TYPES = Utils.qh("DBTYPE_IDISPATCH DBTYPE_IUNKNOWN"); // also? DBTYPE_ARRAY DBTYPE_VECTOR DBTYPE_BYTES
@@ -274,16 +282,11 @@ public class DB : IDisposable
     /// <summary>
     ///  construct new DB object with
     ///  </summary>
-    ///  <param name="fw">framework reference</param>
-    ///  <param name="conf">config hashtable with "connection_string" and "type" keys. If none - fw.config("db")("main") used</param>
+    ///  <param name="conf">config hashtable with "connection_string" and "type" keys</param>
     ///  <param name="db_name">database human name, only used for logger</param>
-    public DB(FW fw, Hashtable conf = null, string db_name = "main")
+    public DB(Hashtable conf, string db_name = "main")
     {
-        this.fw = fw;
-        if (conf != null)
-            this.conf = conf;
-        else
-            this.conf = (Hashtable)((Hashtable)fw.config("db"))["main"];
+        this.conf = conf ?? throw new ArgumentNullException(nameof(conf));
 
         this.dbtype = (string)this.conf["type"];
         this.connstr = (string)this.conf["connection_string"];
@@ -293,7 +296,13 @@ public class DB : IDisposable
         init();
     }
 
-    public DB(string connstr, string type, string db_name)
+    /// <summary>
+    /// construct new DB object with connection string and type
+    /// </summary>
+    /// <param name="connstr">connection string</param>
+    /// <param name="type">type of db: SQL, OLE, MySQL</param>
+    /// <param name="db_name"> human name of database, only used for logger</param>
+    public DB(string connstr, string type, string db_name = "main")
     {
         this.conf["type"] = type;
         this.conf["connection_string"] = connstr;
@@ -333,11 +342,24 @@ public class DB : IDisposable
             quotes = "[]"; // for SQL Server, Access
     }
 
+    public void setLogger(LoggerDelegate logger)
+    {
+        this.ext_logger = logger;
+    }
+
     public void logger(LogLevel level, params object[] args)
     {
-        if (args.Length == 0 || fw == null)
+        if (args.Length == 0 || ext_logger == null)
             return;
-        fw.logger(level, args);
+        ext_logger(level, args);
+    }
+
+    /// <summary>
+    /// set optional context for request level cache storage (ex: HttpContext.Items)
+    /// </summary>
+    public void setContext(HttpContext context)
+    {
+        this.context = context;
     }
 
     /// <summary>
@@ -349,9 +371,9 @@ public class DB : IDisposable
         var cache_key = "DB#" + connstr;
 
         // first, try to get connection from request cache (so we will use only one connection per db server - TBD make configurable?)
-        if (conn == null && fw != null)
+        if (conn == null && context != null)
         {
-            var db_cache = (Hashtable)fw.context.Items["DB"] ?? [];
+            var db_cache = (Hashtable)context.Items["DB"] ?? [];
             conn = (DbConnection)db_cache[cache_key];
         }
 
@@ -360,12 +382,12 @@ public class DB : IDisposable
         {
             schema = []; // reset schema cache
             conn = createConnection(connstr, (string)conf["type"]);
-            //if fw defined - store connection in request cache
-            if (fw != null)
+            //if cache defined - store connection in request cache
+            if (context != null)
             {
-                var db_cache = (Hashtable)fw.context.Items["DB"] ?? [];
+                var db_cache = (Hashtable)context.Items["DB"] ?? [];
                 db_cache[cache_key] = conn;
-                fw.context.Items["DB"] = db_cache;
+                context.Items["DB"] = db_cache;
             }
         }
 
@@ -428,6 +450,36 @@ public class DB : IDisposable
         return result;
     }
 
+    // transactions support
+
+    public DbTransaction begin()
+    {
+        connect();
+        tran = conn.BeginTransaction();
+        return tran;
+    }
+
+    public void commit()
+    {
+        if (tran == null)
+            return;
+
+        tran.Commit();
+        tran.Dispose();
+        tran = null;
+    }
+
+    public void rollback()
+    {
+        if (tran == null)
+            return;
+
+        tran.Rollback();
+        tran.Dispose();
+        tran = null;
+
+    }
+
     [SupportedOSPlatform("windows")]
     public void check_create_mdb(string filepath)
     {
@@ -474,6 +526,10 @@ public class DB : IDisposable
             };
             foreach (string p in @params.Keys)
                 dbcomm.Parameters.AddWithValue(p, @params[p]);
+
+            if (tran != null)
+                dbcomm.Transaction = (SqlTransaction)tran;
+
             dbread = dbcomm.ExecuteReader();
         }
         else if (dbtype == DBTYPE_OLE && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -489,6 +545,9 @@ public class DB : IDisposable
                 dbcomm.Parameters.AddWithValue("?", pvalue);
             }
 
+            if (tran != null)
+                dbcomm.Transaction = (OleDbTransaction)tran;
+
             dbread = dbcomm.ExecuteReader();
         }
 #if isMySQL
@@ -497,6 +556,10 @@ public class DB : IDisposable
             var dbcomm = new MySqlCommand(sql, (MySqlConnection)conn);
             foreach (string p in @params.Keys)
                 dbcomm.Parameters.AddWithValue(p, @params[p]);
+
+            if (tran != null)
+                dbcomm.Transaction = (MySqlTransaction)tran;
+
             dbread = dbcomm.ExecuteReader();
         }
 #endif
@@ -600,8 +663,11 @@ public class DB : IDisposable
             {
                 CommandTimeout = sql_command_timeout
             };
-                foreach (string p in @params.Keys)
-                    dbcomm.Parameters.AddWithValue(p, @params[p]);
+            foreach (string p in @params.Keys)
+                dbcomm.Parameters.AddWithValue(p, @params[p]);
+
+            if (tran != null)
+                dbcomm.Transaction = (SqlTransaction)tran;
 
             if (is_get_identity)
                 result = dbcomm.ExecuteScalar().toInt();
@@ -620,6 +686,10 @@ public class DB : IDisposable
                 //logger(LogLevel.INFO, "DB:", db_name, " ", "param: ", p, " = ", pvalue);
                 dbcomm.Parameters.AddWithValue("?", pvalue);
             }
+
+            if (tran != null)
+                dbcomm.Transaction = (OleDbTransaction)tran;
+
             result = dbcomm.ExecuteNonQuery();
         }
 #if isMySQL
@@ -629,6 +699,9 @@ public class DB : IDisposable
             dbcomm.CommandTimeout = sql_command_timeout;
                 foreach (string p in @params.Keys)
                     dbcomm.Parameters.AddWithValue(p, @params[p]);
+
+            if (tran != null)
+                dbcomm.Transaction = (MySqlTransaction)tran;
 
             result = dbcomm.ExecuteNonQuery();
 
@@ -960,8 +1033,9 @@ public class DB : IDisposable
     /// <param name="where">where conditions</param>
     /// <param name="field_name">optional field name, if empty - first field returned</param>
     /// <param name="order_by">optional order by (MUST be quoted)</param>
+    /// <param name="limit">optional limit, if -1 - no limit applied</param>
     /// <returns></returns>
-    public List<string> col(string table, Hashtable where, string field_name, string order_by = "")
+    public List<string> col(string table, Hashtable where, string field_name, string order_by = "", int limit = -1)
     {
         field_name ??= "";
 
@@ -969,7 +1043,7 @@ public class DB : IDisposable
             field_name = "*";
         else
             field_name = qid(field_name);
-        var qp = buildSelect(table, where, order_by, select_fields: field_name);
+        var qp = buildSelect(table, where, order_by, limit, field_name);
         return colp(qp.sql, qp.@params);
     }
 
@@ -1031,11 +1105,12 @@ public class DB : IDisposable
     }
 
     // string will be Left(RTrim(str),length)
-    // TODO move to Utils since its not belong DB
     public string left(string str, int length)
     {
         if (string.IsNullOrEmpty(str)) return "";
-        return str.TrimStart()[..length];
+        str = str.TrimStart();
+        str = str.Length > length ? str[..length] : str;
+        return str;
     }
 
     // create "IN (1,2,3)" sql or IN (NULL) if empty params passed
@@ -1117,11 +1192,11 @@ public class DB : IDisposable
 
         // Determine start and end quote characters
         if (this.quotes.Length == 2)
-            {
+        {
             startQuote = this.quotes[0].ToString();
             endQuote = this.quotes[1].ToString();
-            }
-            else
+        }
+        else
         {
             startQuote = endQuote = this.quotes;
         }
@@ -1138,11 +1213,11 @@ public class DB : IDisposable
 
             // Wrap the part with quote characters
             parts[i] = $"{startQuote}{part}{endQuote}";
-            }
+        }
 
         // Join the parts back together with '.'
         return string.Join(".", parts);
-        }
+    }
 
 
     [Obsolete("use qid() instead")]

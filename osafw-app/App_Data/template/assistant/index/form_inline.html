@@ -1,0 +1,11 @@
+<form class="row row-cols-lg-auto g-1" method="POST" action="<~/assistant/url>">
+  <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
+
+  <div class="col-12">
+    <input id="prompt" name="item[prompt]" class="form-control form-control-sm" placeholder="How can I help you today?" required value="<~i[prompt]>">
+  </div>
+  <div class="col-12">
+    <button class="btn btn-primary btn-sm" type="submit">Get Response</button>
+  </div>
+
+</form>

@@ -33,7 +33,7 @@ public class FwSelfTest
     }
 
     public string test_email = ""; // if empty, will use "test"+mail_from
-    public string existing_tables = "fwsessions fwentities users settings spages att att_links att_categories log_types activity_logs lookup_manager_tables user_views user_lists user_lists_items"; // check if these tables exists
+    public string existing_tables = "fwsessions fwkeys fwentities fwcron fwcontrollers fwupdates users users_cookies settings spages att att_links att_categories log_types activity_logs user_views user_lists user_lists_items menu_items user_filters"; // check if these tables exists
     public string exclude_controllers = "";
 
     public FwSelfTest(FW fw)
@@ -96,7 +96,7 @@ public class FwSelfTest
         {
             string upload_filepath = UploadUtils.getUploadDir(fw, "selftest", 1) + "/txt";
             string file_data = "test";
-            FW.setFileContent(upload_filepath, ref file_data);
+            Utils.setFileContent(upload_filepath, ref file_data);
             File.Delete(upload_filepath);
             plus_ok();
             echo("upload dir", "OK");
@@ -223,7 +223,12 @@ public class FwSelfTest
                     //var bufferingFeature2 = fw.context.Features.Get<IHttpResponseBodyFeature>();
                     //bufferingFeature2?.DisableBuffering();
 
-                    fw._auth(controller_name, FW.ACTION_INDEX);
+                    var route = new FwRoute
+                    {
+                        controller = controller_name,
+                        action = FW.ACTION_INDEX
+                    };
+                    fw._auth(route);
                     fw.setController(controller_name, FW.ACTION_INDEX);
 
                     FwController new_controller = (FwController)Activator.CreateInstance(calledType);
@@ -247,7 +252,12 @@ public class FwSelfTest
                 else
                 {
                     // test using SelfTest
-                    fw._auth(controller_name, "SelfTest");
+                    var route = new FwRoute
+                    {
+                        controller = controller_name,
+                        action = "SelfTest"
+                    };
+                    fw._auth(route);
 
                     FwController new_controller = (FwController)Activator.CreateInstance(calledType);
                     new_controller.init(fw);

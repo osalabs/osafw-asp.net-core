@@ -74,9 +74,7 @@ public abstract class FwModel : IDisposable
         this.fw = fw;
         if (!string.IsNullOrEmpty(this.db_config))
         {
-            Hashtable dbconfig = (Hashtable)fw.config("db");
-            Hashtable config_details = (Hashtable)dbconfig[this.db_config];
-            this.db = new DB(fw, config_details, this.db_config);
+            this.db = fw.getDB(this.db_config);
         }
         else
             this.db = fw.db;
@@ -85,6 +83,15 @@ public abstract class FwModel : IDisposable
     public virtual DB getDB()
     {
         return db;
+    }
+
+    /// <summary>
+    /// return table name as quoted identifier to use in SQL queries
+    /// </summary>
+    /// <returns></returns>
+    public virtual string qTable()
+    {
+        return db.qid(this.table_name);
     }
 
     /// <summary>
@@ -136,6 +143,14 @@ public abstract class FwModel : IDisposable
             return one(iid);
         else
             return [];
+    }
+
+    // return one specific field for the row, uncached
+    public virtual object oneField(int id, string field_name)
+    {
+        Hashtable where = [];
+        where[this.field_id] = id;
+        return db.value(table_name, where, field_name);
     }
 
     public virtual DBList multi(ICollection ids)
@@ -264,6 +279,20 @@ public abstract class FwModel : IDisposable
         return db.array(table_name, where, getOrderBy());
     }
 
+    /// <summary>
+    /// list records by where condition optionally limited and ordered
+    /// </summary>
+    /// <param name="where"></param>
+    /// <param name="limit">TODO</param>
+    /// <param name="offset">TODO</param>
+    /// <param name="orderby"></param>
+    /// <returns></returns>
+    public virtual DBList listByWhere(Hashtable where = null, int limit = -1, int offset = 0, string orderby = "")
+    {
+        where ??= [];
+        return db.array(table_name, where, orderby != "" ? orderby : getOrderBy());
+    }
+
     // return count of all non-deleted or with specified statuses
     public virtual long getCount(IList statuses = null, int? since_days = null)
     {
@@ -314,6 +343,14 @@ public abstract class FwModel : IDisposable
             if (!string.IsNullOrEmpty(field_id) && item.Count > 0)
                 fw.cache.setRequestValue(this.cache_prefix + item[field_id], item);
         }
+        return item;
+    }
+
+    public virtual DBRow oneByIcodeOrFail(string icode)
+    {
+        var item = oneByIcode(icode);
+        if (item.Count == 0)
+            throw new NotFoundException();
         return item;
     }
 
@@ -523,15 +560,11 @@ public abstract class FwModel : IDisposable
     // methods from fw - just for a covenience, so no need to use "fw.", as they are used quite frequently
     public void logger(params object[] args)
     {
-        if (args.Length == 0)
-            return;
-        fw._logger(LogLevel.DEBUG, ref args);
+        fw.logger(args);
     }
     public void logger(LogLevel level, params object[] args)
     {
-        if (args.Length == 0)
-            return;
-        fw._logger(level, ref args);
+        fw.logger(level, args);
     }
     #endregion
 
@@ -591,14 +624,21 @@ public abstract class FwModel : IDisposable
         return FormUtils.selectOptions(this.listSelectOptions(), sel_id);
     }
 
-    public virtual List<string> getAutocompleteList(string q)
+    public virtual List<string> listAutocomplete(string q, int limit = 5)
     {
         Hashtable where = [];
         where[field_iname] = db.opLIKE("%" + q + "%");
         if (!string.IsNullOrEmpty(field_status))
             where[field_status] = db.opNOT(STATUS_DELETED);
-        return db.col(table_name, where, field_iname);
+        return db.col(table_name, where, field_iname, field_iname, limit);
     }
+
+    [ObsoleteAttribute("This method is deprecated. Use listAutocomplete instead.", true)]
+    public virtual List<string> getAutocompleteList(string q)
+    {
+        return listAutocomplete(q, 5);
+    }
+
     #endregion
 
     #region support for junction models/tables
@@ -1170,6 +1210,22 @@ public abstract class FwModel : IDisposable
             }
             // ADD OTHER CONVERSIONS HERE if necessary
         }
+    }
+
+    /// <summary>
+    /// filter list of items for json output
+    /// </summary>
+    /// <param name="rows"></param>
+    /// <returns></returns>
+    public virtual ArrayList filterListForJson(IList rows)
+    {
+        ArrayList result = [];
+        foreach (Hashtable row in rows)
+        {
+            filterForJson(row);
+            result.Add(row);
+        }
+        return result;
     }
 
     /// <summary>

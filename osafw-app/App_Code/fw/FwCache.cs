@@ -37,7 +37,10 @@ public class FwCache
     // clear whole cache
     public static void clear()
     {
-        MemoryCache.Dispose();
+        if (MemoryCache is MemoryCache memoryCache)
+        {
+            memoryCache.Compact(1.0); //remove all entries
+        }
     }
 
     protected static object serialize(object data)

@@ -1,9 +1,13 @@
-﻿using System;
+using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Spreadsheet;
+using Microsoft.Playwright;
+using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
-
-// see also http://stackoverflow.com/questions/1331926/calling-wkhtmltopdf-to-generate-pdf-from-html/1698839#1698839
+using System.Threading.Tasks;
 
 namespace osafw;
 
@@ -23,23 +27,17 @@ public class ConvUtils
             options["disposition"] = "attachment";
         }
 
-        ParsePage parser = new(fw);
         ps["IS_PRINT_MODE"] = true;
-        string html_data = parser.parse_page(bdir, tpl_name, ps);
+        string html_data = fw.parsePage(bdir, tpl_name, ps);
 
         html_data = _replace_specials(html_data);
 
-        string html_file = Utils.getTmpFilename() + ".html";
         string pdf_file = Utils.getTmpFilename() + ".pdf";
-        // fw.logger("INFO", "html file = " & html_file)
         // fw.logger("INFO", "pdf file = " & pdf_file)
-
-        // remove_old_files()
-        FW.setFileContent(html_file, ref html_data);
 
         if (string.IsNullOrEmpty(out_filename) || !Regex.IsMatch(out_filename, @"[\/\\]"))
         {
-            html2pdf(fw, html_file, pdf_file, options);
+            html2pdf(fw, html_data, pdf_file, options).GetAwaiter().GetResult();
 
             if (string.IsNullOrEmpty(out_filename))
             {
@@ -49,50 +47,69 @@ public class ConvUtils
             Utils.cleanupTmpFiles(); // this will cleanup temporary .pdf, can't delete immediately as file_response may not yet finish transferring file
         }
         else
-            html2pdf(fw, html_file, out_filename, options);
-        // remove tmp html file
-        File.Delete(html_file);
+        {
+            html2pdf(fw, html_data, out_filename, options).GetAwaiter().GetResult();
+        }
 
         return html_data;
     }
 
-    // !uses CONF var FW.config("pdf_converter") for converted command line
-    // !and FW.config("pdf_converter_args") - MUST include %IN %OUT which will be replaced by input and output file paths accordingly
-    // TODO: example: FW.config("html_converter_args")=" -po Landscape" - for landscape mode
-    // all params for TotalHTMLConverter: http://www.coolutils.com/help/TotalHTMLConverter/Commandlineparameters.php
-    // all params for WkHTMLtoPDF: http://wkhtmltopdf.org/usage/wkhtmltopdf.txt
     // options:
     // landscape = True - will produce landscape output
-    public static void html2pdf(FW fw, string htmlfile, string filename, Hashtable options = null)
+    public static async Task html2pdf(FW fw, string html_data, string filename, Hashtable options = null)
     {
-        if (htmlfile.Length < 1 | filename.Length < 1)
+        if (filename.Length < 1)
+        {
             throw new ApplicationException("Wrong filename");
-        System.Diagnostics.ProcessStartInfo info = new();
-        System.Diagnostics.Process process = new();
+        }
 
-        string cmdline = (string)FwConfig.settings["pdf_converter_args"];
-        cmdline = cmdline.Replace("%IN", "\"" + htmlfile + "\"");
-        cmdline = cmdline.Replace("%OUT", "\"" + filename + "\"");
-        if (options != null && options["landscape"].toBool())
+        try
         {
-            cmdline = " -O Landscape " + cmdline;
-        }
-        if (options != null && options.ContainsKey("cmd"))
-        {
-            cmdline = options["cmd"] + " " + cmdline;
-        }
-        info.FileName = (string)FwConfig.settings["pdf_converter"];
-        info.Arguments = cmdline;
+            using var playwright = await Playwright.CreateAsync();
+            await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
+            {
+                Headless = true,
+                Channel = "chromium"
+            });
 
-        fw.logger(LogLevel.DEBUG, "exec: ", info.FileName, " ", info.Arguments);
-        process.StartInfo = info;
-        process.Start();
-        process.WaitForExit();
-        if (process.ExitCode != 0)
-        {
-            fw.logger(LogLevel.ERROR, "Exit code:", process.ExitCode);
+            var context = await browser.NewContextAsync();
+            var page = await context.NewPageAsync();
+
+            await page.SetContentAsync(html_data);
+
+            var pdfOptions = new PagePdfOptions
+            {
+                Path = filename,
+                Format = "Letter",
+                PrintBackground = true,
+                Margin = new Margin
+                {
+                    Top = "5mm",
+                    Right = "10mm",
+                    Bottom = "5mm",
+                    Left = "10mm"
+                },
+                Landscape = false,
+                Scale = 0.8f,
+                DisplayHeaderFooter = false,
+                HeaderTemplate = string.Empty,
+                FooterTemplate = string.Empty,
+                PreferCSSPageSize = false,
+                Tagged = true
+            };
+
+            if (options is not null && options["landscape"].toBool())
+            {
+                pdfOptions.Landscape = true;
+            }
+
+            await page.PdfAsync(pdfOptions);
         }
-        process.Close();
+        catch (Exception ex)
+        {
+            fw.logger(LogLevel.ERROR, "PDF generation failed: ", ex.Message);
+            throw;
+        }
     }
 
     // TODO - currently it just parse html and save it under .doc extension (Word capable opening it), but need redo with real converter
@@ -101,8 +118,7 @@ public class ConvUtils
     // if out_filename cotains "\" or "/" - save pdf file to this path
     public static string parsePageDoc(FW fw, ref string bdir, ref string tpl_name, ref Hashtable ps, string out_filename = "")
     {
-        ParsePage parser = new(fw);
-        string html_data = parser.parse_page(bdir, tpl_name, ps);
+        string html_data = fw.parsePage(bdir, tpl_name, ps);
 
         html_data = _replace_specials(html_data);
 
@@ -114,7 +130,7 @@ public class ConvUtils
         // remove_old_files()
         // TODO fw.set_file_content(html_file, html_data)
         // TEMPORARY - store html right to .doc file
-        FW.setFileContent(doc_file, ref html_data);
+        Utils.setFileContent(doc_file, ref html_data);
 
         if (string.IsNullOrEmpty(out_filename) || !Regex.IsMatch(out_filename, @"[\/]"))
         {
@@ -162,9 +178,8 @@ public class ConvUtils
     // if out_filename cotains "\" or "/" - save pdf file to this path
     public static string parsePageExcel(FW fw, ref string bdir, ref string tpl_name, ref Hashtable ps, string out_filename = "")
     {
-        ParsePage parser = new(fw);
         ps["IS_PRINT_MODE"] = true;
-        string html_data = parser.parse_page(bdir, tpl_name, ps);
+        string html_data = fw.parsePage(bdir, tpl_name, ps);
 
         html_data = _replace_specials(html_data);
 
@@ -174,7 +189,7 @@ public class ConvUtils
         fw.logger(LogLevel.DEBUG, "xls file = ", xls_file);
 
         // remove_old_files()
-        FW.setFileContent(html_file, ref html_data);
+        Utils.setFileContent(html_file, ref html_data);
 
         if (string.IsNullOrEmpty(out_filename) || !Regex.IsMatch(out_filename, @"[\/\\]"))
         {
@@ -200,9 +215,8 @@ public class ConvUtils
     // simple version of parse_page_xls - i.e. it's usual html file, just output as xls (Excel opens it successfully, however displays a warning)
     public static string parsePageExcelSimple(FW fw, string bdir, string tpl_name, Hashtable ps, string out_filename = "")
     {
-        ParsePage parser = new(fw);
         ps["IS_PRINT_MODE"] = true;
-        string html_data = parser.parse_page(bdir, tpl_name, ps);
+        string html_data = fw.parsePage(bdir, tpl_name, ps);
 
         html_data = _replace_specials(html_data);
 
@@ -219,7 +233,7 @@ public class ConvUtils
         }
         else
         {
-            FW.setFileContent(out_filename, ref html_data);
+            Utils.setFileContent(out_filename, ref html_data);
         }
 
         return html_data;
@@ -231,5 +245,216 @@ public class ConvUtils
         html_data = html_data.Replace(((char)(153)).ToString(), "<sup><small>TM</small></sup>");
         html_data = html_data.Replace(((char)(174)).ToString(), "<sup><small>R</small></sup>");
         return html_data;
+    }
+
+    private static Dictionary<string, int> xlsxGetMaxCharacterWidth(ArrayList rows, IList<string> headers)
+    {
+        var maxColWidth = new Dictionary<string, int>();
+
+        foreach (string header in headers)
+        {
+            maxColWidth.Add(header, header.Length < 10 ? 10 : header.Length);
+        }
+
+        foreach (Hashtable cells in rows)
+        {
+            foreach (string cell in cells.Keys)
+            {
+                var cellValue = cells[cell].toStr();
+                var cellTextLength = cellValue.Length;
+
+                if (!maxColWidth.ContainsKey(cell))
+                    maxColWidth.Add(cell, cell.Length == 0 ? 50 : cell.Length);
+
+                if (cellTextLength > maxColWidth[cell])
+                    maxColWidth[cell] = cellTextLength;
+            }
+        }
+
+        return maxColWidth;
+    }
+
+    private static Columns xlxsAutoSizeCells(ArrayList rows, IList<string> headers)
+    {
+        var maxColWidth = xlsxGetMaxCharacterWidth(rows, headers);
+        var columns = new Columns();
+        double maxWidth = 10;
+
+        UInt32Value iter = 1;
+        foreach (string item in headers)
+        {
+            var val = maxColWidth[item];
+            var width = ((val * maxWidth + 5) / maxWidth * 256) / 256;
+            Column col = new Column
+            {
+                BestFit = true,
+                Min = iter,
+                Max = iter,
+                CustomWidth = true,
+                Width = (double)width
+            };
+            columns.Append(col);
+            iter += 1;
+        }
+        return columns;
+    }
+
+    private static Stylesheet xlsxStylesheet()
+    {
+        var _Fonts = new Fonts();
+        _Fonts.Append(new Font());
+        _Fonts.Append(new Font(new Bold()));
+        _Fonts.Append(new Font(new Bold()));
+
+        var _Fills = new Fills(new Fill());
+        var _Borders = new Borders(new Border());
+        _Borders.Append(new Border());
+
+        var border = new Border();
+        var topBorder = new TopBorder
+        {
+            Style = BorderStyleValues.Medium
+        };
+        border.TopBorder = topBorder;
+        _Borders.Append(border);
+
+        var _CellFormats = new CellFormats();
+        _CellFormats.Append(new CellFormat());
+
+        var cellFormat = new CellFormat
+        {
+            FontId = 1,
+            FillId = 0,
+            BorderId = 1
+        };
+        _CellFormats.Append(cellFormat); // header
+
+        cellFormat = new CellFormat
+        {
+            FontId = 1,
+            FillId = 0,
+            BorderId = 2
+        };
+        _CellFormats.Append(cellFormat); // footer
+
+        return new Stylesheet(_Fonts, _Fills, _Borders, _CellFormats);
+    }
+
+    /// <summary>
+    /// Create xls file form hashtable where key is sheet name and value is rows array of hashtables with table data
+    /// * <param name = "headers">XLS headers row, comma-separated format</param>
+    /// * <param name = "xls_export_fields" > empty, * or Utils.qw format</param>
+    /// * <param name = "rows" > DB array</param>
+    /// </summary>
+    /// <param name="sheetsData"></param>
+
+
+    /// <summary>
+    /// Create native xlsx file 
+    /// </summary>
+    /// <param name="fw"></param>
+    /// <param name="headers"></param>
+    /// <param name="fields"></param>
+    /// <param name="rows"></param>
+    /// <param name="out_filename">if empty or set to just filename (no path) - write to browser, if path - write to file</param>
+    /// <returns></returns>
+    /// <exception cref="UserException"></exception>
+    public static void exportNativeExcel(FW fw, IList<string> headers, IList<string> fields, ArrayList rows, string out_filename = "")
+    {
+        var is_browser = false;
+        if (string.IsNullOrEmpty(out_filename) || !Regex.IsMatch(out_filename, @"[\/\\]"))
+        {
+            is_browser = true;
+            if (string.IsNullOrEmpty(out_filename))
+                out_filename = "output";
+        }
+
+        var fileName = is_browser ? Path.GetTempPath() + Utils.uuid() + ".xlsx" : out_filename;
+
+        // create the workbook
+        using (var doc = SpreadsheetDocument.Create(fileName, SpreadsheetDocumentType.Workbook))
+        {
+            doc.AddWorkbookPart();
+            doc.WorkbookPart.Workbook = new Workbook();
+            // create the worksheet to workbook relation
+            Sheets sheets = doc.WorkbookPart.Workbook.AppendChild(new Sheets());
+
+            var sheetsOrder = new ArrayList();
+            sheetsOrder.Add("Sheet1");
+
+            UInt32Value sheetNumber = 0;
+            foreach (string sheetName in sheetsOrder)
+            {
+                sheetNumber += 1;
+
+                var _SheetData = new SheetData();
+                var _WorksheetPart = doc.WorkbookPart.AddNewPart<WorksheetPart>();
+
+                var s = new Sheet
+                {
+                    Id = doc.WorkbookPart.GetIdOfPart(_WorksheetPart),
+                    SheetId = sheetNumber,
+                    Name = sheetName
+                };
+                sheets.AppendChild(s);
+
+                var headerRow = new Row();
+                var i = 0;
+                // create header row
+                foreach (string ColumnName in fields)
+                {
+                    var cell = new Cell
+                    {
+                        StyleIndex = 1,
+                        DataType = CellValues.String,
+                        CellValue = new CellValue(headers[i])
+                    };
+                    headerRow.AppendChild(cell);
+                    i++;
+                }
+                _SheetData.AppendChild(headerRow);
+
+                // create data rows
+                foreach (Hashtable row in rows)
+                {
+                    var newRow = new Row();
+                    foreach (string col in fields)
+                    {
+                        var cell = new Cell
+                        {
+                            StyleIndex = 0,
+                            // Set style index 2 for bold text, can be using to highlight totals, etc
+                            //    .StyleIndex = 2;
+                            DataType = CellValues.String
+                        };
+                        if (row.ContainsKey(col))
+                        {
+                            cell.CellValue = new CellValue(row[col].toStr());
+                        }
+
+                        newRow.AppendChild(cell);
+                    }
+                    _SheetData.AppendChild(newRow);
+                }
+
+                _WorksheetPart.Worksheet = new Worksheet();
+                _WorksheetPart.Worksheet.Append(xlxsAutoSizeCells(rows, fields));
+                _WorksheetPart.Worksheet.Append(_SheetData);
+            }
+
+            var _StylePart = doc.WorkbookPart.AddNewPart<WorkbookStylesPart>();
+            _StylePart.Stylesheet = xlsxStylesheet();
+            _StylePart.Stylesheet.Save();
+
+            // save workbook
+            doc.WorkbookPart.Workbook.Save();
+        }
+
+        if (is_browser)
+        {
+            fw.fileResponse(fileName, out_filename + ".xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "attachment");
+            Utils.cleanupTmpFiles();
+        }
+
     }
 }

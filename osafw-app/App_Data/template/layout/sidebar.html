@@ -47,6 +47,11 @@
         </a>
       </li>
       <li class="nav-item">
+        <a href="<~/admin/demosvuesimple/url>" class="nav-link link-body-emphasis <~/common/active ifeq="GLOBAL[controller]" value="AdminDemosVueSimple">">
+          <i class="bi bi-list-ul"></i> `Demo Vue Simple`
+        </a>
+      </li>
+      <li class="nav-item">
         <a href="<~/admin/demodicts/url>" class="nav-link link-body-emphasis <~/common/active ifeq="GLOBAL[controller]" value="AdminDemoDicts">">
           <i class="bi bi-list-ul"></i> `Demo Dict`
         </a>
@@ -62,7 +67,7 @@
         </a>
       </li>
       <li class="nav-item">
-        <a href="<~/admin/lookupmanager/url>" class="nav-link link-body-emphasis <~/common/active ifeq="GLOBAL[controller]" value="AdminLookupManager">">
+        <a href="<~/admin/lookups/url>" class="nav-link link-body-emphasis <~/common/active ifeq="GLOBAL[controller]" value="AdminLookups">">
           <i class="bi bi-search"></i> `Lookup Manager`
         </a>
       </li>
@@ -72,7 +77,7 @@
       <li class="nav-item nav-header bg-secondary-subtle"><a href="#" class="nav-link disabled">`Admin Menu`</a></li>
       <li class="nav-item">
         <a href="<~/admin/users/url>" class="nav-link link-body-emphasis <~/common/active ifeq="GLOBAL[controller]" value="AdminUsers">">
-          <i class="bi bi-person-lines-fill"></i> `Manage Members`
+          <i class="bi bi-person-lines-fill"></i> `Users`
         </a>
       </li>
       <li class="nav-item" >
@@ -86,6 +91,11 @@
       <li class="nav-item" >
         <a href="<~/admin/db/url>" class="nav-link link-body-emphasis <~/common/active ifeq="GLOBAL[controller]" value="AdminDB">" target="_blank">
           <i class="bi bi-tools"></i> `Direct DB Access`
+        </a>
+      </li>
+      <li class="nav-item" >
+        <a href="<~ROOT_URL>/Admin/FwUpdates" class="nav-link link-body-emphasis <~/common/active ifeq="GLOBAL[controller]" value="AdminFwUpdates">">
+          <i class="bi bi-tools"></i> `DB Updates` <~dbupdates_badge if="SESSION[FW_UPDATES_CTR]" inline><span class="badge text-bg-secondary"><~SESSION[FW_UPDATES_CTR]></span></~dbupdates_badge>
         </a>
       </li>
       <~dev_menu if="GLOBAL[IS_DEV]" inline>

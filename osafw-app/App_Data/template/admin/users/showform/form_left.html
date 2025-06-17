@@ -1,7 +1,7 @@
 <div class="row form-row">
   <label class="col-form-label required col-md-3" for="ehack">Em<span style="display:none">hack: disable autofill for Chrome</span>ail</label>
   <div class="col">
-    <input id="ehack" name="item[ehack]" maxlength="128" value="<~i[email]>" type="text" class="form-control" autocomplete="off">
+    <input id="ehack" name="item[ehack]" maxlength="255" value="<~i[email]>" type="text" class="form-control" autocomplete="off">
     <p class="err-EXISTS">`This email already exists in our database`</p>
     <p class="err-EMAIL">`Invalid email address`</p>
   </div>
@@ -117,10 +117,10 @@
   <div class="col-6 col-sm-4 col-md-3 col-lg-4 col-xl-3">
     <div class="card text-center att-info" <~/common/display_none unless="att">>
       <input name="item[att_id]" value="<~i[att_id]>" type="hidden">
-      <img class="card-img-top" src="<~/att/url>/<~att[id]>?preview=1&size=s" alt="">
+      <img class="card-img-top" src="<~/att/url>/<~att[icode]>?preview=1&size=s" alt="">
       <div class="card-body text-truncate">
         <p class="card-text att-iname"><~att[iname]></p>
-        <a href="<~/att/url>/<~att[id]>" target="_blank" class="btn btn-default btn-sm" title="`Download`"><i class="bi bi-cloud-download-fill"></i></a>
+        <a href="<~/att/url>/<~att[icode]>" target="_blank" class="btn btn-default btn-sm" title="`Download`"><i class="bi bi-cloud-download-fill"></i></a>
         <button type="button" class="btn btn-default btn-sm on-remove-att text-danger" title="`Remove`"><i class="bi bi-x-circle-fill"></i></button>
       </div>
     </div>

@@ -80,11 +80,19 @@ public class FwVueController : FwDynamicController
                 var dtype = def["type"].toStr();
                 if (dtype == "autocomplete" || dtype == "plaintext_autocomplete")
                 {
-                    var ac_model = fw.model(model_name);
-                    if (ac_model != null)
+                    if (def["lookup_by_value"].toBool())
                     {
-                        var ac_item = ac_model.one(row[field_name]);
-                        row[field_name + "_iname"] = ac_item["iname"];
+                        // Use the value itself
+                        row[field_name + "_iname"] = row[field_name];
+                    }
+                    else
+                    {
+                        var ac_model = fw.model(model_name);
+                        if (ac_model != null)
+                        {
+                            var ac_item = ac_model.one(row[field_name]);
+                            row[field_name + "_iname"] = ac_item["iname"];
+                        }
                     }
                 }
             }
@@ -100,7 +108,7 @@ public class FwVueController : FwDynamicController
         ps["XSS"] = fw.Session("XSS");
         ps["access_level"] = fw.userAccessLevel;
         ps["me_id"] = fw.userId;
-        //some specific from global fw.G;            
+        //some specific from global fw.G;
         var global = new Hashtable();
         foreach (var key in Utils.qw(global_keys))
         {
@@ -115,6 +123,7 @@ public class FwVueController : FwDynamicController
         ps["select_userviews"] = fw.model<UserViews>().listSelectByIcode(UserViews.icodeByUrl(base_url, is_list_edit));
 
         ps["field_id"] = model0.field_id;
+        ps["view_list_custom"] = Utils.qh(this.view_list_custom, "1");
 
         //return view form definitions
         ps["show_fields"] = this.config["show_fields"];
@@ -267,6 +276,16 @@ public class FwVueController : FwDynamicController
                 ps["id"] = route.id;
             }
 
+            //override store if necessary
+            Hashtable store = this.config["store"] as Hashtable ?? [];
+            //add flash messages if any
+            store["flash"] = new Hashtable()
+            {
+                ["success"] = fw.flash("success"),
+                ["error"] = fw.flash("error"),
+            };
+
+            ps["store"] = store;
             ps = setPS(ps);
         }
 
@@ -305,11 +324,18 @@ public class FwVueController : FwDynamicController
             var dtype = def["type"].toStr();
             if (dtype == "autocomplete" || dtype == "plaintext_autocomplete")
             {
-                var ac_model = fw.model(model_name);
-                if (ac_model != null)
+                if (def["lookup_by_value"].toBool())
                 {
-                    var ac_item = ac_model.one(item[field_name]);
-                    item[field_name + "_iname"] = ac_item["iname"];
+                    item[field_name + "_iname"] = item[field_name];
+                }
+                else
+                {
+                    var ac_model = fw.model(model_name);
+                    if (ac_model != null)
+                    {
+                        var ac_item = ac_model.one(item[field_name]);
+                        item[field_name + "_iname"] = ac_item["iname"];
+                    }
                 }
             }
             else if (dtype == "multi" || dtype == "multicb" || dtype == "multicb_prio")

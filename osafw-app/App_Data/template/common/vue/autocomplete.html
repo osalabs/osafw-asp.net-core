@@ -1,13 +1,13 @@
 <script type="text/x-template" id="autocomplete-template">
     <input ref="input"
-            type="text"
-            :data-autocomplete="url"
-            :placeholder="placeholder"
-            :required="required"
-            :readonly="readonly"
-            :pattern="pattern"
-            :class="'form-control' + ($attrs.class ? ' ' + $attrs.class : '')"
-            v-model="value" />
+           type="text"
+           :data-autocomplete="url"
+           :placeholder="placeholder"
+           :required="required"
+           :readonly="readonly"
+           :pattern="pattern"
+           :class="'form-control' + ($attrs.class ? ' ' + $attrs.class : '')"
+           v-model="value" />
 </script>
 
 <script type="module">
@@ -60,11 +60,11 @@
         mounted() {
             // Initialize the autocomplete instance
             this.autocompleteInstance = new BootstrapSimpleAutocomplete(this.$refs.input, {
-            // Optional: customize as needed
-            //    debounceDelay: 300, 
-            //    minQueryLength: 1,
-            //    fetchFunction: this.fetchData,
-            //    renderItem: this.renderItem,
+                // Optional: customize as needed
+                //    debounceDelay: 300,
+                //    minQueryLength: 1,
+                //    fetchFunction: this.fetchData,
+                //    renderItem: this.renderItem,
             });
 
             // Listen for the autocomplete.select event
@@ -83,18 +83,18 @@
                 this.value = selectedValue;
                 this.$emit('select', selectedValue);
             },
-        // customize if needed
-        //    fetchData(query) {
-        //        return fetch(`${this.url}${encodeURIComponent(query)}`, {
-        //            headers: {
-        //                Accept: 'application/json',
-        //            },
-        //        }).then((response) => response.json());
-        //    },
-        //    renderItem(option, query, index) {
-        //        // Optional: customize the rendering of dropdown items
-        //        return this.autocompleteInstance.defaultRenderItem(option, query, index);
-        //    },
+            // customize if needed
+            //    fetchData(query) {
+            //        return fetch(`${this.url}${encodeURIComponent(query)}`, {
+            //            headers: {
+            //                Accept: 'application/json',
+            //            },
+            //        }).then((response) => response.json());
+            //    },
+            //    renderItem(option, query, index) {
+            //        // Optional: customize the rendering of dropdown items
+            //        return this.autocompleteInstance.defaultRenderItem(option, query, index);
+            //    },
         },
     });
 </script>

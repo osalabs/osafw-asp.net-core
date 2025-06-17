@@ -51,6 +51,9 @@ body {
 .nowrap {
   white-space: nowrap;
 }
+.nl2br {
+  white-space: pre-wrap;
+}
 .modal-overflowed {
   max-height: 450px;
   overflow: auto;
@@ -133,15 +136,6 @@ h1 .badge {
  font-size: 1.25rem;
  vertical-align: middle;
 }
-
-/*fixes for twitter-typeahead*/
-.twitter-typeahead {
-  width:100%
-}
-  .twitter-typeahead .tt-hint {
-    top: -1px !important;
-    left: -1px !important;
-  }
 
 .fw-card {
 /*  background-color: #fff;
@@ -613,11 +607,5 @@ a.thumbnail:hover {
   .table-striped > tbody > tr:nth-of-type(odd) > td {
     background-color: #f9f9f9 !important;
     -webkit-print-color-adjust: exact !important;
-  }
-
-  /* https://github.com/wkhtmltopdf/wkhtmltopdf/issues/2135 */
-  .wk-img-transparency-fix {
-    z-index: 100;
-    position: relative;
   }
 }

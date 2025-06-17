@@ -47,7 +47,6 @@ public class LoginController : FwController
 
         ps["i"] = item;
         ps["err_ctr"] = fw.G["err_ctr"].toInt() + 1;
-        ps["ERR"] = fw.FormErrors;
         return ps;
     }
 

@@ -1,0 +1,14 @@
+<div class="row list-items">
+    <~list_cols repeat inline>
+        <div class="col-sm-<~col_sm>">
+            <~list_groups repeat inline>
+                <h3><~igroup></h3>
+                <div class="list-group">
+                <~list_rows repeat inline>
+                    <a href="<~url>" class="list-group-item"><~iname></a>
+                </~list_rows>
+                </div>
+            </~list_groups>
+        </div>
+    </~list_cols>
+</div>

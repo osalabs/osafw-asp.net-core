@@ -1,113 +1,106 @@
 <script type="text/x-template" id="view-header-template">
-  <div class="float-end pt-1 d-print-none">
-    <a @click.prevent="onNext(true)" href="#" class="btn btn-link"><i class="bi bi-arrow-left-circle"></i> `Prev`</a>
-    <a @click.prevent="onNext()" href="#" class="btn btn-link">`Next` <i class="bi bi-arrow-right-circle"></i></a>
-  </div>
-
-  <nav class="d-print-none">
-    <a href="#" @click.prevent="fwStore.openListScreen">{{fwStore.list_title}}</a> <span class="text-muted">/</span>
-  </nav>
-  
-  <h1>
-      <span v-if="fwStore.is_loading_item"
-                  class="spinner-border" role="status" aria-hidden="true"></span>
-      {{fwStore.view_title}}
-  </h1>
-
-  <slot name="beforeButtons"></slot>
-
-  <div class="btn-std d-print-none">
-    <a v-if="fwStore.return_url"
-      class="btn btn-default me-1"
-      :href="fwStore.return_url"
-    ><i class="bi bi-arrow-left-circle"></i> `Return Back`</a>
-    <a v-else
-      class="btn btn-default me-1"
-      href="#"
-      @click.prevent="onBack"
-    ><i class="bi bi-arrow-left-circle"></i> `Back to List`</a>
-    <div class="btn-group" v-if="uioptions.btnAddNew || $slots.group || fwStore.return_url">
-      <a v-if="uioptions.btnAddNew"
-        class="btn btn-default"
-        href="#"
-        @click.prevent="onAddNew"
-        :disabled="fwStore.is_readonly"
-      ><i class="bi bi-plus-lg"></i> `Add New`</a>
-      <a v-if="current_id"
-        class="btn btn-default"
-        href="#"
-        @click.prevent="onEdit"
-        :disabled="fwStore.is_readonly"
-      ><i class="bi bi-pencil-fill"></i> `Edit`</a>
-      <slot name="group"></slot>
+    <div class="float-end pt-1 d-print-none">
+        <a @click.prevent="onNext(true)" href="#" class="btn btn-link"><i class="bi bi-arrow-left-circle"></i> `Prev`</a>
+        <a @click.prevent="onNext()" href="#" class="btn btn-link">`Next` <i class="bi bi-arrow-right-circle"></i></a>
     </div>
-    <!--TODO /common/form/btn_userlists if="is_userlists"-->
 
-    <a v-if="item.status!=127"
-      class="btn btn-default float-end ms-1"
-      href="#"
-      @click.prevent="onDelete"
-    ><span class="text-danger"><i class="bi bi-x-circle-fill"></i></span> `Delete`</a>
-    <template v-if="item.status==127">
-      <a v-if="fwStore.access_level==100"
-        class="btn btn-danger float-end ms-1"
-        href="#"
-        @click.prevent="onDelete"
-      ><i class="bi bi-x-square-fill"></i> `Permanent Delete`</a>
-      <a class="btn btn-default float-end ms-1"
-        href="#"
-        @click.prevent="onRestore"
-      ><span class="text-success"><i class="bi bi-check-circle-fill"></i></span> `Restore Deleted`</a>
-    </template>
+    <nav class="d-print-none">
+        <a href="#" @click.prevent="fwStore.openListScreen">{{fwStore.list_title}}</a> <span class="text-muted">/</span>
+    </nav>
 
-   <slot></slot>
-  </div>
+    <h1>
+        <span v-if="fwStore.is_loading_item"
+              class="spinner-border" role="status" aria-hidden="true"></span>
+        {{fwStore.view_title}}
+    </h1>
 
-  <slot name="afterButtons"></slot>
+    <slot name="beforeButtons"></slot>
+
+    <div class="btn-std d-print-none">
+        <a v-if="fwStore.return_url"
+           class="btn btn-default me-1"
+           :href="fwStore.return_url"><i class="bi bi-arrow-left-circle"></i> `Return Back`</a>
+        <a v-else
+           class="btn btn-default me-1"
+           href="#"
+           @click.prevent="onBack"><i class="bi bi-arrow-left-circle"></i> `Back to List`</a>
+        <div class="btn-group" v-if="uioptions.btnAddNew || $slots.group || fwStore.return_url">
+            <a v-if="uioptions.btnAddNew"
+               class="btn btn-default"
+               href="#"
+               @click.prevent="onAddNew"
+               :disabled="fwStore.is_readonly"><i class="bi bi-plus-lg"></i> `Add New`</a>
+            <a v-if="current_id"
+               class="btn btn-default"
+               href="#"
+               @click.prevent="onEdit"
+               :disabled="fwStore.is_readonly"><i class="bi bi-pencil-fill"></i> `Edit`</a>
+            <slot name="group"></slot>
+        </div>
+        <!--TODO /common/form/btn_userlists if="is_userlists"-->
+
+        <a v-if="item.status!=127"
+           class="btn btn-default float-end ms-1"
+           href="#"
+           @click.prevent="onDelete"><span class="text-danger"><i class="bi bi-x-circle-fill"></i></span> `Delete`</a>
+        <template v-if="item.status==127">
+            <a v-if="fwStore.access_level==100"
+               class="btn btn-danger float-end ms-1"
+               href="#"
+               @click.prevent="onDelete"><i class="bi bi-x-square-fill"></i> `Permanent Delete`</a>
+            <a class="btn btn-default float-end ms-1"
+               href="#"
+               @click.prevent="onRestore"><span class="text-success"><i class="bi bi-check-circle-fill"></i></span> `Restore Deleted`</a>
+        </template>
+
+        <slot></slot>
+    </div>
+
+    <slot name="afterButtons"></slot>
 
 </script>
 
 <script type="module">
-import { mapStores } from 'pinia';
+    import { mapStores } from 'pinia';
 
-fwApp.component('view-header', {
-  template: '#view-header-template',
-  data: () => ({
-  }),
-  computed: {
-    ...mapStores(useFwStore), //accessible via this.fwStore
-    uioptions(){
-      return this.fwStore.uioptions.view.header??false;
-    },
-    current_id() {
-      return this.fwStore.current_id ?? 0;
-    },
-    item(){
-      return this.fwStore.edit_data?.i ?? [];
-    }
-  },
-  methods: {
-    onAddNew(e){
-      this.fwStore.openEditScreen(0);
-    },
-    onEdit(e){
-      this.fwStore.openEditScreen(this.current_id);
-    },
-    onBack() {
-      this.fwStore.openListScreen();
-    },
-    async onDelete(e){
-      await this.fwStore.deleteRow(this.current_id);
-      this.fwStore.openListScreen();
-    },
-    async onRestore(e){
-      await this.fwStore.restoreRow(this.current_id);
-      await this.fwStore.loadItem(this.current_id);
-    },
-    async onNext(is_prev){
-      const id = await this.fwStore.getNextID(this.current_id, is_prev);
-      await this.fwStore.openViewScreen(id);
-    }
-  }
-});
+    fwApp.component('view-header', {
+        template: '#view-header-template',
+        data: () => ({
+        }),
+        computed: {
+            ...mapStores(fwStore), //accessible via this.fwStore
+            uioptions() {
+                return this.fwStore.uioptions.view.header ?? false;
+            },
+            current_id() {
+                return this.fwStore.current_id ?? 0;
+            },
+            item() {
+                return this.fwStore.edit_data?.i ?? [];
+            }
+        },
+        methods: {
+            onAddNew(e) {
+                this.fwStore.openEditScreen(0);
+            },
+            onEdit(e) {
+                this.fwStore.openEditScreen(this.current_id);
+            },
+            onBack() {
+                this.fwStore.openListScreen();
+            },
+            async onDelete(e) {
+                await this.fwStore.deleteRow(this.current_id);
+                this.fwStore.openListScreen();
+            },
+            async onRestore(e) {
+                await this.fwStore.restoreRow(this.current_id);
+                await this.fwStore.loadItem(this.current_id);
+            },
+            async onNext(is_prev) {
+                const id = await this.fwStore.getNextID(this.current_id, is_prev);
+                await this.fwStore.openViewScreen(id);
+            }
+        }
+    });
 </script>

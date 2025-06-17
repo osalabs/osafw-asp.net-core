@@ -1,103 +1,103 @@
 <script type="text/x-template" id="edit-form-template">
-  <div v-if="save_result && !save_result.success && save_result.err_msg>''" class="alert alert-danger">{{save_result.err_msg}}</div>
-  <form v-if="fwStore.edit_data !== null"
-    id="FEdit"
-    class="fw-card"
-    @submit.prevent="saveChanges"
-    @change.prevent="onChange"
-  >
-    <fieldset>
-      <form-one-def v-for="(def,index) in preparedDefs"
-        :key="index"
-        :form="fwStore.edit_data"
-        @update-form-field="onUpdateFormField"
-        @cancel-form="onCancelForm"
-        :def="def"
-        :lookups="fwStore.lookups"
-      />
-    </fieldset>
-
-    <div class="d-block d-lg-none">
-      <div class="row form-row">
-        <div class="col-md-3 text-end">
-          <p v-if="save_result" class="form-control-plaintext">
-            <span v-if="save_result.success" class="badge bg-success">saved</span>
-            <span v-if="!save_result.success" class="badge bg-danger">not saved</span>
-          </p>
-        </div>
-        <div class="col">
-          <button type="submit" class="btn btn-primary me-1" :disabled="fwStore.is_readonly">`Save`</button>
-          <button type="button" class="btn btn-default" @click="onCancelForm">`Cancel`</button>
-        </div>
-      </div>
+    <div v-if="fwStore.savedStatus===false && fwStore.savedErrorMessage>''" class="alert alert-danger">
+        {{fwStore.savedErrorMessage}}
     </div>
-  </form>
-  <template v-else>
-    <div v-if="fwStore.is_loading_item" class="text-center"><span class="spinner-border" role="status" aria-hidden="true"></span></div>
-  </template>
+    <form v-if="fwStore.edit_data !== null"
+          id="FEdit"
+          class="fw-card"
+          @submit.prevent="saveChanges"
+          @change.prevent="onChange">
+        <fieldset>
+            <form-one-def v-for="(def,index) in preparedDefs"
+                          :key="index"
+                          :form="fwStore.edit_data"
+                          @update-form-field="onUpdateFormField"
+                          @cancel-form="onCancelForm"
+                          :def="def"
+                          :lookups="fwStore.lookups" />
+        </fieldset>
+
+        <div class="d-block d-lg-none">
+            <div class="row form-row">
+                <div class="col-md-3 text-end">
+                    <p v-if="fwStore.savedStatus!=null" class="form-control-plaintext">
+                        <span v-if="fwStore.savedStatus" class="badge bg-success">saved</span>
+                        <span v-if="!fwStore.savedStatus" class="badge bg-danger">not saved</span>
+                    </p>
+                </div>
+                <div class="col">
+                    <button type="submit" class="btn btn-primary me-1" :disabled="fwStore.is_readonly">`Save`</button>
+                    <button type="button" class="btn btn-default" @click="onCancelForm">`Cancel`</button>
+                </div>
+            </div>
+        </div>
+    </form>
+    <template v-else>
+        <div v-if="fwStore.is_loading_item" class="text-center"><span class="spinner-border" role="status" aria-hidden="true"></span></div>
+    </template>
 </script>
 
 <script type="module">
-import { mapStores } from 'pinia';
+    import { mapStores } from 'pinia';
 
-fwApp.component('edit-form', {
-  template: '#edit-form-template',
-  props: {
-    sampleProp: {
-      type: String,
-      required: false,
-      default: ''
-    }
-  },
-  emits: ['on-sample-event'],
-  data: () => ({
-    sample_value: 0,
-  }),
-  computed: {
-    ...mapStores(useFwStore), //accessible via this.fwStore
-    current_id() {
-      return this.fwStore.current_id ?? 0;
-    },
-    save_result() {
-      return this.fwStore.edit_data?.save_result;
-    },
-    preparedDefs(){
-      if (this.current_id) {
-          return this.fwStore.treeShowFormFields;
-      }
-      // some adjustments for add new
-      const fields = this.fwStore.showform_fields;
-      fields.forEach(def => {
-        if (def.type=='added' || def.type=='updated') def.class='d-none';
-      });
-      return this.fwStore.fieldsToTree(fields);
-    }
-  },
-  async mounted(){
-    console.log('edit-form mounted');
-  },
-  unmounted(){
-    console.log('edit-form unmounted');
-  },
-  updated(){
-    //console.log('edit-form updated');
-  },
-  methods: {
-    onUpdateFormField({ field, value }) {
-      this.fwStore.edit_data.i[field] = value;
-      this.saveChanges(3000); //if just value updated - longer debounce delay
-    },
-    onChange() {
-      if (this.current_id){
-        this.saveChanges(); //only auto-save if edit
-      }
-    },
-    saveChanges(delay) {
-      this.fwStore.saveEditDataDebounced(delay);
-    },
-    onCancelForm() {
-      this.fwStore.openListScreen();
-    },
-  }
-});
+    fwApp.component('edit-form', {
+        template: '#edit-form-template',
+        props: {
+            sampleProp: {
+                type: String,
+                required: false,
+                default: ''
+            }
+        },
+        emits: ['on-sample-event'],
+        data: () => ({
+            sample_value: 0,
+        }),
+        computed: {
+            ...mapStores(fwStore), //accessible via this.fwStore
+            current_id() {
+                return this.fwStore.current_id ?? 0;
+            },
+            save_result() {
+                return this.fwStore.edit_data?.save_result;
+            },
+            preparedDefs() {
+                if (this.current_id) {
+                    return this.fwStore.treeShowFormFields;
+                }
+                // some adjustments for add new
+                const fields = this.fwStore.showform_fields;
+                fields.forEach(def => {
+                    if (def.type == 'added' || def.type == 'updated') def.class = 'd-none';
+                });
+                return this.fwStore.fieldsToTree(fields);
+            }
+        },
+        async mounted() {
+            console.log('edit-form mounted');
+        },
+        unmounted() {
+            console.log('edit-form unmounted');
+        },
+        updated() {
+            //console.log('edit-form updated');
+        },
+        methods: {
+            onUpdateFormField({ field, value }) {
+                this.fwStore.edit_data.i[field] = value;
+                this.saveChanges(3000); //if just value updated - longer debounce delay
+            },
+            onChange() {
+                if (this.current_id) {
+                    this.saveChanges(); //only auto-save if edit
+                }
+            },
+            saveChanges(delay) {
+                this.fwStore.saveEditDataDebounced(delay);
+            },
+            onCancelForm() {
+                this.fwStore.openListScreen();
+            },
+        }
+    });
 </script>

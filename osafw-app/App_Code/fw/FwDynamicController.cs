@@ -616,7 +616,7 @@ public class FwDynamicController : FwController
         else
         {
             //items = ac_model.listSelectOptionsAutocomplete(q);
-            items = ac_model.getAutocompleteList(q);
+            items = ac_model.listAutocomplete(q);
         }
 
         return new Hashtable() { { "_json", items } };

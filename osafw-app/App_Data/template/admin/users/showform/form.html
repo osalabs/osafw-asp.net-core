@@ -1,4 +1,4 @@
-<form id="FEdit" class="fw-card" method="post" data-check-changes <~/common/form/data_autosave if="id"> autocomplete="off" action="<~../url><~uu1 if="id" inline>/<~id></~uu1>" data-errors="<~ERR json>">
+<form id="FEdit" class="fw-card" method="post" data-check-changes <~/common/form/data_autosave if="id"> autocomplete="off" action="<~../url><~uu1 if="id" inline>/<~id></~uu1>" data-errors="<~error[details] json>">
  <input type="hidden" name="XSS" value="<~session[XSS]>">
  <input type="hidden" name="return_url" value="<~return_url>">
  <div class="d-none">
@@ -15,7 +15,10 @@
       </div>
       <div class="col-lg-6">
         <~/common/form/id>
-        <~/common/form/group_status>
+        <~form_status if="id">
+        <~/common/form/added if="id">
+        <~/common/form/updated if="i[upd_users_id]">
+
         <div class="row form-row">
           <label class="col-form-label col-md-3" for="status">`Last Login Time`</label>
           <div class="col-md-3">

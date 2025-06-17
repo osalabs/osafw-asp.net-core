@@ -1,398 +1,451 @@
 <script type="text/x-template" id="form-one-control-template">
-  <p v-if="def.type=='id'" class="form-control-plaintext">{{value}}<template v-if="!value">(`new`)</template></p>
-
-  <p v-else-if="def.type=='plaintext'" class="form-control-plaintext" style="white-space: pre-line">
-    {{def.lookup_model ? lookupValue : value}}
-  </p>
-  <p v-else-if="def.type=='plaintext_link'" class="form-control-plaintext">
-    <a :href="(def.admin_url ? def.admin_url : '/Admin/'+def.lookup_model)+'/'+value">{{lookupValue}}<template if="!lookupValue">{{value}}</template></a>
-  </p>
-  <p v-else-if="def.type=='plaintext_autocomplete'" class="form-control-plaintext" style="white-space: pre-line">
-    {{item[def.field+'_iname']??'-'}}
-  </p>
-  <p v-else-if="def.type=='markdown'" class="form-control-plaintext" style="white-space: pre-line">{{value}} TODO markdown</p>
-  <p v-else-if="def.type=='noescape'" class="form-control-plaintext" v-html="value"></p>
-  <p v-else-if="def.type=='float'" class="form-control-plaintext">{{Number(value).toFixed(2)}}</p>
-  <div v-else-if="def.type=='checkbox'" class="form-check">
-    <input type="checkbox" class="form-check-input" :checked="value" disabled="disabled">
-    <label class="form-check-label">`Yes`</label>
-  </div>
-  <p v-else-if="def.type=='date'" class="form-control-plaintext">{{formatDate(value)}}</p>
-  <p v-else-if="def.type=='date_long'" class="form-control-plaintext">{{formatDateLong(value)}}</p>
-  <p v-else-if="def.type=='added'" class="form-control-plaintext">{{item.add_time}} by {{form.add_users_id_name}}</p>
-  <p v-else-if="def.type=='updated'" class="form-control-plaintext">
-    <template v-if="form.upd_users_id_name">{{item.upd_time}} by {{form.upd_users_id_name}}</template>
-  </p>
-  <template v-else-if="def.type=='multi'">
-    <div :class="'field-multi-value'+(def.lookup_checked_only?'h-auto':'')">
-      <div v-for="row in multi_rows" :key="row.id" class="form-check">
-        <input type="checkbox" class="form-check-input" disabled :checked="row.is_checked">
-        <label class="form-check-label">{{row.iname}}</label>
-      </div>
-    </div>
-    <form-control-help-block :text="def.help_text" />
-  </template>
-  <template v-else-if="def.type=='att'">
-    <div v-if="value>0" class="card text-center att-info">
-      <img :src="attachments[value]?.url_preview??''">
-      <div class="card-body">
-        <p class="card-text att-iname">{{attachments[value]?.iname??''}}</p>
-          <a :href="attachments[value]?.url??''" target="_blank" class="btn btn-default"><i class="bi bi-cloud-download-fill"></i> `Download`</a>
-      </div>
-    </div>
-  </template>
-  <template v-else-if="def.type=='att_edit'">
-    <div class="row">
-        <div class="col-3 col-lg-5">
-            <p><button type="button" class="btn btn-default" @click="is_att_select_modal=true"><i class="bi bi-file-earmark-image"></i> `Select/Upload`</button></p>
-            <att-select v-if="is_att_select_modal"
-              :category="def.att_category"
-              @hidden="is_att_select_modal=false"
-              @selected="onAttSelected"
-            ></att-select>
-        </div>
-        <div class="col">
-            <div v-if="value>0" class="card text-center att-info">
-              <img class="card-img-top" :src="attachments[value]?.url_preview??''" alt="">
-              <div class="card-body text-truncate">
-                <p class="card-text att-iname">{{attachments[value]?.iname??''}}</p>
-                <a :href="attachments[value]?.url??''" target="_blank" class="btn btn-default" title="`Download`"><i class="bi bi-cloud-download-fill"></i></a>
-                <button type="button" class="btn btn-default ms-1" @click="this.value=''" title="`Remove`"><i class="bi bi-x-circle-fill"></i></button>
-              </div>
-            </div>
-        </div>
-    </div>
-  </template>
-  <template v-else-if="def.type=='att_links'">
-    <div class="row att-list">
-        <div v-for="att_id in att_links" :key="att_id" class="col">
-          <div class="card att-info">
-            <img class="card-img-top" :src="attachments[att_id]?.url_preview??''" alt="">
-            <div class="card-body text-truncate">
-                <p class="card-text att-iname">{{attachments[att_id]?.iname??''}}</p>
-                <a :href="attachments[att_id]?.url??''" target="_blank" class="btn btn-default"><i class="bi bi-cloud-download-fill"></i> `Download`</a>
-            </div>
-          </div>
-        </div>
-    </div>
-  </template>
-  <template v-else-if="def.type=='att_links_edit'">
-    <p><button type="button" class="btn btn-default" @click="is_att_select_modal=true"><i class="bi bi-file-earmark-image"></i> `Select/Upload`</button></p>
-    <att-select v-if="is_att_select_modal"
-      :category="def.att_category"
-      @hidden="is_att_select_modal=false"
-      @selected="onAttLinkSelected"
-    ></att-select>
-
-    <div class="row att-list">
-        <div v-for="att_id in att_links" :key="att_id" class="col">
-          <div class="card att-info">
-            <img class="card-img-top" :src="attachments[att_id]?.url_preview??''" alt="">
-            <div class="card-body text-truncate">
-                <p class="card-text att-iname">{{attachments[att_id]?.iname??''}}</p>
-                <a :href="attachments[att_id]?.url??''" target="_blank" class="btn btn-default"><i class="bi bi-cloud-download-fill"></i></a>
-                <button type="button" class="btn btn-default ms-1" @click="onAttLinkDelete(att_id)" title="`Remove`"><i class="bi bi-x-circle-fill"></i></button>
-            </div>
-          </div>
-        </div>
-    </div>
-  </template>
-
-  <div v-else-if="def.type=='group_id' || def.type=='group_id_addnew'">
-    <div class="float-end d-none d-lg-block">
-      <template v-if="!item.id">
-        <button type="submit" class="btn btn-primary">Save</button>
-        <button v-if="def.type=='group_id_addnew'" type="submit" class="btn btn-secondary" name="route_return" value="New">Save and Add New</button>
-        <button type="button" class="btn btn-default" @click="$emit('cancel-form')">Cancel</button>
-      </template>
-    </div>
-    <p class="form-control-plaintext">
-      <template v-if="value">{{value}}</template>
-      <template v-if="!value">(`new`)</template>
+    <p v-if="def.type=='id'" class="form-control-plaintext">
+        {{value}}
+        <template v-if="!value">
+            (`new`)
+        </template>
     </p>
-  </div>
 
-  <template v-else-if="def.type=='select'">
-    <select class="form-select"
-      v-model="value"
-      :class="class_control"
-      :multiple="def.multiple"
-      :required="def.required"
-    >
-      <option v-if="def.is_option0" value="0">{{def.option0_title ?? '- select -'}}</option>
-      <option v-if="def.is_option_empty" value="">{{def.option0_title ?? '- select -'}}</option>
-      <option v-for="lrow in lookupOptions"
-          :key="def.field_name+'#'+lrow.id"
-          :value="lrow.id"
-      >{{lrow.iname}}</option>
-    </select>
-    <p class="err-EXISTS">{{def.err_exists_msg ? def.err_exists_msg : 'This name already exists in our database'}}</p>
-    <form-control-help-block :text="def.help_text" />
-  </template>
-
-  <template v-else-if="['input','email','number','date_popup'].includes(def.type)">
-    <input class="form-control"
-      :type="inputType"
-      v-model="value"
-      :class="class_control+(is_invalid?' is-invalid':'')"
-      :maxlength="def.maxlength"
-      :required="def.required"
-      :placeholder="def.placeholder"
-      :min="def.min"
-      :max="def.max"
-      :step="def.step"
-      :pattern="def.pattern"
-    >
-    <p class="err-EXISTS">{{def.err_exists_msg ? def.err_exists_msg : 'This name already exists in our database'}}</p>
-    <p class="err-EMAIL">`Invalid Email`</p>
-    <p class="err-WRONG">`Invalid`</p>
-    <form-control-help-block :text="def.help_text" />
-  </template>
-
-  <template v-else-if="def.type=='textarea'">
-    <textarea class="form-control"
-      v-model="value"
-      :class="class_control"
-      :rows="def.rows"
-      :maxlength="def.maxlength"
-      :required="def.required"
-      :placeholder="def.placeholder"
-    >{{value}}</textarea>
-    <form-control-help-block :text="def.help_text" />
-  </template>
-
-  <template v-else-if="def.type=='cb'">
-    <div class="form-check form-check-inline">
-      <input class="form-check-input"
-        :id="'list-edit-pane-cb-'+def.field"
-        type="checkbox"
-        v-model="value"
-        true-value="1"
-        false-value="0"
-      >
-      <label class="form-check-label" :for="'list-edit-pane-cb-'+def.field">Yes</label>
+    <p v-else-if="def.type=='plaintext'" class="form-control-plaintext" style="white-space: pre-line">
+        {{def.lookup_model ? lookupValue : value}}
+    </p>
+    <p v-else-if="def.type=='plaintext_link'" class="form-control-plaintext">
+        <a :href="(def.admin_url ? def.admin_url : '/Admin/'+def.lookup_model)+'/'+value">
+            {{lookupValue}}
+            <template v-if="!lookupValue">
+                {{value}}
+            </template>
+        </a>
+    </p>
+    <p v-else-if="def.type=='plaintext_autocomplete'" class="form-control-plaintext" style="white-space: pre-line">
+        <template v-if="def.lookup_by_value">
+            {{item[def.field]??'-'}}
+        </template>
+        <template v-else>
+            {{item[def.field+'_iname']??'-'}}
+        </template>
+    </p>
+    <p v-else-if="def.type=='markdown'" class="form-control-plaintext" style="white-space: pre-line">{{value}} TODO markdown</p>
+    <p v-else-if="def.type=='noescape'" class="form-control-plaintext" v-html="value"></p>
+    <p v-else-if="def.type=='float'" class="form-control-plaintext">{{Number(value).toFixed(2)}}</p>
+    <p v-else-if="def.type=='plaintext_currency'" class="form-control-plaintext">
+        {{ currencySymbol }}{{ formatCurrency(value) }}
+    </p>
+    <div v-else-if="def.type=='checkbox'" class="form-check">
+        <input type="checkbox" class="form-check-input" :checked="value" disabled="disabled">
+        <label class="form-check-label">`Yes`</label>
     </div>
-  </template>
+    <p v-else-if="def.type=='date'" class="form-control-plaintext">{{formatDate(value)}}</p>
+    <p v-else-if="def.type=='date_long'" class="form-control-plaintext">{{formatDateLong(value)}}</p>
+    <p v-else-if="def.type=='added'" class="form-control-plaintext">{{item.add_time}} by {{form.add_users_id_name}}</p>
+    <p v-else-if="def.type=='updated'" class="form-control-plaintext">
+        <template v-if="form.upd_users_id_name">
+            {{item.upd_time}} by {{form.upd_users_id_name}}
+        </template>
+    </p>
+    <template v-else-if="def.type=='multi'">
+        <div :class="'field-multi-value'+(def.lookup_checked_only?'h-auto':'')">
+            <div v-for="row in multi_rows" :key="row.id" class="form-check">
+                <input type="checkbox" class="form-check-input" disabled :checked="row.is_checked">
+                <label class="form-check-label">{{row.iname}}</label>
+            </div>
+        </div>
+        <form-control-help-block :text="def.help_text" />
+    </template>
+    <template v-else-if="def.type=='att'">
+        <div v-if="value>0" class="card text-center att-info">
+            <img :src="attachments[value]?.url_preview??''">
+            <div class="card-body">
+                <p class="card-text att-iname">{{attachments[value]?.iname??''}}</p>
+                <a :href="attachments[value]?.url??''" target="_blank" class="btn btn-default"><i class="bi bi-cloud-download-fill"></i> `Download`</a>
+            </div>
+        </div>
+    </template>
+    <template v-else-if="def.type=='att_edit'">
+        <div class="row">
+            <div class="col-3 col-lg-5">
+                <p><button type="button" class="btn btn-default" @click="is_att_select_modal=true"><i class="bi bi-file-earmark-image"></i> `Select/Upload`</button></p>
+                <att-select v-if="is_att_select_modal"
+                            :category="def.att_category"
+                            @hidden="is_att_select_modal=false"
+                            @selected="onAttSelected"></att-select>
+            </div>
+            <div class="col">
+                <div v-if="value>0" class="card text-center att-info">
+                    <img class="card-img-top" :src="attachments[value]?.url_preview??''" alt="">
+                    <div class="card-body text-truncate">
+                        <p class="card-text att-iname">{{attachments[value]?.iname??''}}</p>
+                        <a :href="attachments[value]?.url??''" target="_blank" class="btn btn-default" title="`Download`"><i class="bi bi-cloud-download-fill"></i></a>
+                        <button type="button" class="btn btn-default ms-1" @click="this.value=''" title="`Remove`"><i class="bi bi-x-circle-fill"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+    <template v-else-if="def.type=='att_links'">
+        <div class="row att-list">
+            <div v-for="att_id in att_links" :key="att_id" class="col">
+                <div class="card att-info">
+                    <img class="card-img-top" :src="attachments[att_id]?.url_preview??''" alt="">
+                    <div class="card-body text-truncate">
+                        <p class="card-text att-iname">{{attachments[att_id]?.iname??''}}</p>
+                        <a :href="attachments[att_id]?.url??''" target="_blank" class="btn btn-default"><i class="bi bi-cloud-download-fill"></i> `Download`</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+    <template v-else-if="def.type=='att_links_edit'">
+        <p><button type="button" class="btn btn-default" @click="is_att_select_modal=true"><i class="bi bi-file-earmark-image"></i> `Select/Upload`</button></p>
+        <att-select v-if="is_att_select_modal"
+                    :category="def.att_category"
+                    @hidden="is_att_select_modal=false"
+                    @selected="onAttLinkSelected"></att-select>
 
-  <template v-else-if="def.type=='radio'">
-    <div v-for="(lrow, index) in lookupOptions"
-      :key="lrow.id"
-      class="form-check"
-      :class="def.is_inline ? 'form-check-inline' : ''"
-    >
-      <input type="radio" :id="'list-edit-pane-'+def.field+'$'+index" class="form-check-input" :value="lrow.id" v-model="value">
-      <label class="form-check-label" :for="'list-edit-pane-'+def.field+'$'+index">{{lrow.iname}}</label>
+        <div class="row att-list">
+            <div v-for="att_id in att_links" :key="att_id" class="col">
+                <div class="card att-info">
+                    <img class="card-img-top" :src="attachments[att_id]?.url_preview??''" alt="">
+                    <div class="card-body text-truncate">
+                        <p class="card-text att-iname">{{attachments[att_id]?.iname??''}}</p>
+                        <a :href="attachments[att_id]?.url??''" target="_blank" class="btn btn-default"><i class="bi bi-cloud-download-fill"></i></a>
+                        <button type="button" class="btn btn-default ms-1" @click="onAttLinkDelete(att_id)" title="`Remove`"><i class="bi bi-x-circle-fill"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template v-if="def.type=='currency'">
+        <div class="input-group">
+            <span class="input-group-text">{{ currencySymbol }}</span>
+            <input class="form-control"
+                   type="text"
+                   v-model="value"
+                   :class="class_control+(is_invalid?' is-invalid':'')"
+                   :maxlength="def.maxlength"
+                   :required="def.required"
+                   :placeholder="def.placeholder"
+                   @blur="onCurrencyBlur">
+        </div>
+        <form-control-help-block :text="def.help_text" />
+    </template>
+
+    <div v-else-if="def.type=='group_id' || def.type=='group_id_addnew'">
+        <div class="float-end d-none d-lg-block">
+            <template v-if="!item.id">
+                <button type="submit" class="btn btn-primary">Save</button>
+                <button v-if="def.type=='group_id_addnew'" type="submit" class="btn btn-secondary" name="route_return" value="New">Save and Add New</button>
+                <button type="button" class="btn btn-default" @click="$emit('cancel-form')">Cancel</button>
+            </template>
+        </div>
+        <p class="form-control-plaintext">
+            <template v-if="value">
+                {{value}}
+            </template>
+            <template v-if="!value">
+                (`new`)
+            </template>
+        </p>
     </div>
-  </template>
 
-  <template v-else-if="def.type=='yesno'">
-    <div v-for="(lrow, index) in [{id:0, iname:'No'},{id:1, iname:'Yes'}]"
-      :key="lrow.id"
-      class="form-check"
-      :class="def.is_inline ? 'form-check-inline' : ''"
-    >
-      <input type="radio" :id="'list-edit-pane-'+def.field+'$'+index" class="form-check-input" :value="lrow.id" v-model="value">
-      <label class="form-check-label" :for="'list-edit-pane-'+def.field+'$'+index">{{lrow.iname}}</label>
-    </div>
-  </template>
+    <template v-else-if="def.type=='select'">
+        <select class="form-select"
+                v-model="value"
+                :class="class_control"
+                :multiple="def.multiple"
+                :required="def.required">
+            <option v-if="def.is_option0" value="0">{{def.option0_title ?? '- select -'}}</option>
+            <option v-if="def.is_option_empty" value="">{{def.option0_title ?? '- select -'}}</option>
+            <option v-for="lrow in lookupOptions"
+                    :key="def.field_name+'#'+lrow.id"
+                    :value="lrow.id">
+                {{lrow.iname}}
+            </option>
+        </select>
+        <p class="err-EXISTS">{{def.err_exists_msg ? def.err_exists_msg : 'This name already exists in our database'}}</p>
+        <form-control-help-block :text="def.help_text" />
+    </template>
 
-  <template v-else-if="def.type=='autocomplete'">
-    <autocomplete
-      v-model="value_autocomplete"
-      :placeholder="def.placeholder"
-      :url="def.autocomplete_url"
-      :required="def.required"
-      :readonly="def.readonly"
-      :pattern="def.pattern"
-      :class="class_control"
-    />
-    <form-control-help-block :text="def.help_text" />
-  </template>
+    <template v-else-if="['input','email','number','date_popup'].includes(def.type)">
+        <input class="form-control"
+               :type="inputType"
+               v-model="value"
+               :class="class_control+(is_invalid?' is-invalid':'')"
+               :maxlength="def.maxlength"
+               :required="def.required"
+               :placeholder="def.placeholder"
+               :min="def.min"
+               :max="def.max"
+               :step="def.step"
+               :pattern="def.pattern">
+        <p class="err-EXISTS">{{def.err_exists_msg ? def.err_exists_msg : 'This name already exists in our database'}}</p>
+        <p class="err-EMAIL">`Invalid Email`</p>
+        <p class="err-WRONG">`Invalid`</p>
+        <form-control-help-block :text="def.help_text" />
+    </template>
 
-  <template v-else-if="def.type=='multicb'">
-    <div class="field-multi-value">
-      <input v-model="multi_search"
-        type="text" class="form-control form-control-sm mb-1" placeholder="type to filter...">
-      <div v-for="row in multi_rows" :key="row.id"
-        class="form-check" data-s="<~id upper> - <~iname upper>">
-        <input type="checkbox"
-          v-model="row.is_checked"
-          class="form-check-input"
-          value="1"
-          :id="def.field+'$'+row.id"
-        >
-        <label class="form-check-label" :for="def.field+'$'+row.id">{{row.iname}}</label>
-      </div>
-    </div>
-    <form-control-help-block :text="def.help_text" />
-  </template>
+    <template v-else-if="def.type=='textarea'">
+        <textarea class="form-control"
+                  v-model="value"
+                  :class="class_control"
+                  :rows="def.rows"
+                  :maxlength="def.maxlength"
+                  :required="def.required"
+                  :placeholder="def.placeholder">{{value}}</textarea>
+        <form-control-help-block :text="def.help_text" />
+    </template>
 
-  <template v-else-if="def.type=='subtable' || def.type=='subtable_edit'">
-    <component :is="'subtable_'+def.field" :def="def" :lookups="lookups" :form="form"></component>
-    <form-control-help-block :text="def.help_text" />
-  </template>
+    <template v-else-if="def.type=='cb'">
+        <div class="form-check form-check-inline">
+            <input class="form-check-input"
+                   :id="'list-edit-pane-cb-'+def.field"
+                   type="checkbox"
+                   v-model="value"
+                   true-value="1"
+                   false-value="0">
+            <label class="form-check-label" :for="'list-edit-pane-cb-'+def.field">Yes</label>
+        </div>
+    </template>
 
-  <div v-if="is_invalid && !is_invalid_true" class="invalid-feedback">{{error_text}}</div>
+    <template v-else-if="def.type=='radio'">
+        <div v-for="(lrow, index) in lookupOptions"
+             :key="lrow.id"
+             class="form-check"
+             :class="def.is_inline ? 'form-check-inline' : ''">
+            <input type="radio" :id="'list-edit-pane-'+def.field+'$'+index" class="form-check-input" :value="lrow.id" v-model="value">
+            <label class="form-check-label" :for="'list-edit-pane-'+def.field+'$'+index">{{lrow.iname}}</label>
+        </div>
+    </template>
+
+    <template v-else-if="def.type=='yesno'">
+        <div v-for="(lrow, index) in [{id:0, iname:'No'},{id:1, iname:'Yes'}]"
+             :key="lrow.id"
+             class="form-check"
+             :class="def.is_inline ? 'form-check-inline' : ''">
+            <input type="radio" :id="'list-edit-pane-'+def.field+'$'+index" class="form-check-input" :value="lrow.id" v-model="value">
+            <label class="form-check-label" :for="'list-edit-pane-'+def.field+'$'+index">{{lrow.iname}}</label>
+        </div>
+    </template>
+
+    <template v-else-if="def.type=='autocomplete'">
+        <autocomplete v-model="value_autocomplete"
+                      :placeholder="def.placeholder"
+                      :url="def.autocomplete_url"
+                      :required="def.required"
+                      :readonly="def.readonly"
+                      :pattern="def.pattern"
+                      :class="class_control" />
+        <form-control-help-block :text="def.help_text" />
+    </template>
+
+    <template v-else-if="def.type=='multicb'">
+        <div class="field-multi-value">
+            <input v-model="multi_search"
+                   type="text" class="form-control form-control-sm mb-1" placeholder="type to filter...">
+            <div v-for="row in multi_rows" :key="row.id"
+                 class="form-check">
+                <input type="checkbox"
+                       v-model="row.is_checked"
+                       class="form-check-input"
+                       value="1"
+                       :id="def.field+'$'+row.id">
+                <label class="form-check-label" :for="def.field+'$'+row.id">{{row.iname}}</label>
+            </div>
+        </div>
+        <form-control-help-block :text="def.help_text" />
+    </template>
+
+    <template v-else-if="def.type=='subtable' || def.type=='subtable_edit'">
+        <component :is="'subtable_'+def.field" :def="def" :lookups="lookups" :form="form"></component>
+        <form-control-help-block :text="def.help_text" />
+    </template>
+
+    <div v-if="is_invalid && !is_invalid_true" class="invalid-feedback">{{error_text}}</div>
 </script>
 
 <script type="module">
-import { mapStores } from 'pinia';
-import Multiselect from 'Multiselect';
+    import { mapStores } from 'pinia';
+    import Multiselect from 'Multiselect';
 
-fwApp.component('form-one-control', {
-  template: '#form-one-control-template',
-  props: {
-    def: {
-      type: Object,
-      required: true
-    },
-    lookups: {
-      type: Object,
-      required: true
-    },
-    form: {
-      type: Object,
-      required: true
-    }
-  },
-  emits: ['update-form-field', 'cancel-form'],
-  components: {
-    Multiselect
-  },
-  data: () => ({
-    multi_search: '',
-    is_att_select_modal: false
-  }),
-  computed:{
-    ...mapStores(useFwStore), //accessible via this.fwStore
-    item: function(){
-      return this.form.i; //this comes from fwStore.edit_data, so has .id
-    },
+    fwApp.component('form-one-control', {
+        template: '#form-one-control-template',
+        props: {
+            def: {
+                type: Object,
+                required: true
+            },
+            lookups: {
+                type: Object,
+                required: true
+            },
+            form: {
+                type: Object,
+                required: true
+            }
+        },
+        emits: ['update-form-field', 'cancel-form'],
+        components: {
+            Multiselect
+        },
+        data: () => ({
+            multi_search: '',
+            is_att_select_modal: false
+        }),
+        computed: {
+            ...mapStores(fwStore), //accessible via this.fwStore
+            item: function () {
+                return this.form.i; //this comes from fwStore.edit_data, so has .id
+            },
 
-    value: {
-      get() {
-        return this.form.i[this.def.field];
-      },
-      set(new_value) {
-        this.$emit('update-form-field', { field: this.def.field, value: new_value });
-      }
-    },
-    value_autocomplete: {
-      get() {
-        return this.form.i[this.def.field+'_iname'];
-      },
-      set(new_value) {
-        this.$emit('update-form-field', { field: this.def.field+'_iname', value: new_value });
-      }
-    },
-    multi_rows(){
-      const rows = this.form.multi_rows[this.def.field]??[];
-      if (this.multi_search > '') {
-        return rows.filter(row => row.iname.toLowerCase().includes(this.multi_search.toLowerCase()));
-      } else {
-        return rows;
-      }
-    },
-    attachments() {
-      return this.form.attachments ?? {};
-    },
-    att_links() {
-      return this.form.att_links ?? [];
-    },
+            value: {
+                get() {
+                    return this.form.i[this.def.field];
+                },
+                set(new_value) {
+                    this.$emit('update-form-field', { field: this.def.field, value: new_value });
+                }
+            },
+            value_autocomplete: {
+                get() {
+                    if (this.def.lookup_by_value) {
+                        return this.form.i[this.def.field];
+                    } else {
+                        return this.form.i[this.def.field + '_iname'];
+                    }
+                },
+                set(new_value) {
+                    if (this.def.lookup_by_value) {
+                        this.$emit('update-form-field', { field: this.def.field, value: new_value });
+                    } else {
+                        this.$emit('update-form-field', { field: this.def.field + '_iname', value: new_value });
+                    }
+                }
+            },
+            multi_rows() {
+                const rows = this.form.multi_rows?.[this.def.field] ?? [];
+                if (this.multi_search > '') {
+                    return rows.filter(row => row.iname.toLowerCase().includes(this.multi_search.toLowerCase()));
+                } else {
+                    return rows;
+                }
+            },
+            attachments() {
+                return this.form.attachments ?? {};
+            },
+            att_links() {
+                return this.form.att_links ?? [];
+            },
 
-    error() {
-      return this.form.save_result?.ERR?.[this.def.field] ?? false;
-    },
-    error_text() {
-      return window.fwConst.ERR_CODES_MAP[this.error];
-    },
-    is_invalid() {
-      return !!this.error;
-    },
-    is_invalid_true() {
-      return this.error===true;
-    },
-    class_control() {
-      return (this.def.class_control ?? '')+(this.is_invalid?' is-invalid':'');
-    },
-    inputType: function(){
-      const TYPE_MAP={
-        text: 'text',
-        email: 'email',
-        number: 'number',
-        date: 'date',
-        date_popup: 'date',
-        password: 'password',
-        textarea: 'text'
-      };
-      let type = this.def.type ?? 'text';
-      return TYPE_MAP[type]??'text';
-    },
-    lookupOptions: function(){
-      var lookup_model = this.def.lookup_model;
-      if (lookup_model) {
-          return this.lookups[lookup_model] ?? [];
-      }
-      var lookup_tpl = this.def.lookup_tpl;
-      if (lookup_tpl) {
-          return this.lookups[lookup_tpl] ?? [];
-      }
-      return [];
-    },
-    lookupValue: function () {
-      //return from lookupOptions an iname by id=value
-      for (var i = 0; i < this.lookupOptions.length; i++) {
-        if (this.lookupOptions[i].id == this.value) {
-            return this.lookupOptions[i].iname;
+            error() {
+                return this.form.save_result?.error?.details?.[this.def.field] ?? false;
+            },
+            error_text() {
+                return window.fwConst.ERR_CODES_MAP[this.error];
+            },
+            is_invalid() {
+                return !!this.error;
+            },
+            is_invalid_true() {
+                return this.error === true;
+            },
+            class_control() {
+                return (this.def.class_control ?? '') + (this.is_invalid ? ' is-invalid' : '');
+            },
+            inputType: function () {
+                const TYPE_MAP = {
+                    text: 'text',
+                    email: 'email',
+                    number: 'number',
+                    date: 'date',
+                    date_popup: 'date',
+                    password: 'password',
+                    textarea: 'text'
+                };
+                let type = this.def.type ?? 'text';
+                return TYPE_MAP[type] ?? 'text';
+            },
+            lookupOptions: function () {
+                var lookup_model = this.def.lookup_model;
+                if (lookup_model) {
+                    return this.lookups[lookup_model] ?? [];
+                }
+                var lookup_tpl = this.def.lookup_tpl;
+                if (lookup_tpl) {
+                    return this.lookups[lookup_tpl] ?? [];
+                }
+                return [];
+            },
+            lookupValue: function () {
+                //return from lookupOptions an iname by id=value
+                for (var i = 0; i < this.lookupOptions.length; i++) {
+                    if (this.lookupOptions[i].id == this.value) {
+                        return this.lookupOptions[i].iname;
+                    }
+                }
+                return '';
+            },
+            currencySymbol() {
+                // Use def.currency_symbol if provided, else default to "$"
+                return this.def.currency_symbol || '$';
+            }
+        },
+        mounted() {
+            //console.log("form-one-control mounted", this.def);
+        },
+        methods: {
+            formatDate(str) {
+                //return date as MM/dd/yyyy
+                return new Date(str).toLocaleDateString("en-US", { month: 'numeric', day: 'numeric', year: 'numeric' });
+            },
+            formatDateLong(str) {
+                //return date as MM/dd/yyyy hh:mm:ss
+                return new Date(str).toLocaleDateString("en-US", { month: 'numeric', day: 'numeric', year: 'numeric' }) + " " + new Date(str).toLocaleTimeString("en-US", { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            },
+            async autocompleteOptions(query, select$) {
+                let id = 0;
+                if (query === null) {
+                    //initial load - return preloaded name
+                    return [this.item[this.def.field + '_iname'] ?? ''];
+                }
+                return await this.fwStore.autocompleteOptions(query, this.def.autocomplete_url, this.def.lookup_model, id);
+            },
+            onAttSelected(att) {
+                //add to this.attachments[att.id] if not present
+                if (!this.attachments[att.id]) {
+                    this.attachments[att.id] = att;
+                }
+                this.value = att.id;
+                this.fwStore.saveEditDataDebounced();
+            },
+            onAttLinkSelected(att) {
+                if (!this.attachments[att.id]) {
+                    this.attachments[att.id] = att;
+                }
+                //add value to att_links if not present
+                if (!this.att_links.includes(att.id)) {
+                    this.att_links.push(att.id);
+                    this.fwStore.saveEditDataDebounced();
+                }
+            },
+            onAttLinkDelete(att_id) {
+                //remove from this.form.att_links, this.att_links as it's computed
+                if (!this.form.att_links) return;
+                this.form.att_links = this.form.att_links.filter(id => id != att_id);
+                this.fwStore.saveEditDataDebounced();
+            },
+            formatCurrency(val) {
+                let num = Number(val);
+                if (isNaN(num)) return val;
+                return num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            },
+            onCurrencyBlur(e) {
+                // Optionally format value on blur
+                let num = Number(this.value);
+                if (!isNaN(num)) {
+                    this.value = num.toFixed(2);
+                }
+            }
         }
-      }
-      return '';
-    }
-  },
-  mounted(){
-    //console.log("form-one-control mounted", this.def);
-  },
-  methods: {
-    formatDate(str){
-      //return date as MM/dd/yyyy
-      return new Date(str).toLocaleDateString("en-US", { month: 'numeric', day: 'numeric', year: 'numeric' });
-    },
-    formatDateLong(str){
-      //return date as MM/dd/yyyy hh:mm:ss
-      return new Date(str).toLocaleDateString("en-US", { month: 'numeric', day: 'numeric', year: 'numeric' }) + " " + new Date(str).toLocaleTimeString("en-US", { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    },
-    async autocompleteOptions(query, select$){
-      let id = 0;
-      if (query === null){
-        //initial load - return preloaded name
-        return [ this.item[this.def.field+'_iname']??'' ];
-      }
-      return await this.fwStore.autocompleteOptions(query, this.def.autocomplete_url, this.def.lookup_model, id);
-    },
-    onAttSelected(att) {
-      //add to this.attachments[att.id] if not present
-      if (!this.attachments[att.id]){
-         this.attachments[att.id] = att;
-      }
-      this.value = att.id;
-      this.fwStore.saveEditDataDebounced();
-    },
-    onAttLinkSelected(att) {
-      if (!this.attachments[att.id]) {
-        this.attachments[att.id] = att;
-      }
-      //add value to att_links if not present
-      if (!this.att_links.includes(att.id)){
-        this.att_links.push(att.id);
-        this.fwStore.saveEditDataDebounced();
-      }
-    },
-    onAttLinkDelete(att_id) {
-      //remove from this.form.att_links, this.att_links as it's computed
-      if (!this.form.att_links) return;
-      this.form.att_links = this.form.att_links.filter(id => id != att_id);
-      this.fwStore.saveEditDataDebounced();
-    }
-  }
-});
+    });
 </script>

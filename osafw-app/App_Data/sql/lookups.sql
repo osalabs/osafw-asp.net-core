@@ -1,10 +1,13 @@
 -- fill initial data for lookups here
 
--- lookup manager table definitions
-insert into lookup_manager_tables (tname, iname, access_level) VALUES
-('log_types','Log Types', 100)
-, ('att_categories','Upload Categories', NULL)
+-- lookups in virtual controllers
+INSERT INTO fwcontrollers (igroup, icode, url, iname, model, access_level)
+VALUES ('System', 'AdminLogTypes', '/Admin/LogTypes', 'Log Types', 'FwLogTypes', 100),
+       ('System', 'AdminAttCategories', '/Admin/AttCategories', 'Upload Categories', 'AttCategories', 50),
+       ('System', 'AdminFwUpdates', '/Admin/FwUpdates', 'FW Updates', 'FwUpdates', 100)
 ;
+UPDATE fwcontrollers
+SET is_lookup=1;
 
 -- att_categories
 INSERT INTO att_categories (icode, iname) VALUES
@@ -19,6 +22,7 @@ INSERT INTO att_categories (icode, iname) VALUES
 INSERT INTO log_types (itype, icode, iname) VALUES (0, 'added', 'Record Added');
 INSERT INTO log_types (itype, icode, iname) VALUES (0, 'updated', 'Record Updated');
 INSERT INTO log_types (itype, icode, iname) VALUES (0, 'deleted', 'Record Deleted');
+INSERT INTO log_types (itype, icode, iname) VALUES (0, 'executed', 'Code Executed');
 -- for user login audit
 INSERT INTO log_types (itype, icode, iname) VALUES (0, 'login', 'User Login');
 INSERT INTO log_types (itype, icode, iname) VALUES (0, 'logoff', 'User Logoff');
@@ -28,3 +32,6 @@ INSERT INTO log_types (itype, icode, iname) VALUES (0, 'chpwd', 'User changed lo
 INSERT INTO log_types (itype, icode, iname) VALUES (10, 'comment', 'Comment');
 
 update log_types set prio=id; -- set default priority
+
+-- fwcron tasks
+-- insert into fwcron(icode, cron) values ('example_sleep', '* * * * *') - example task to run every minute

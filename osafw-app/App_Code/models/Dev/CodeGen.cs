@@ -40,14 +40,14 @@ class DevCodeGen
 
     public static void replaceInFile(string filepath, Hashtable strings)
     {
-        var content = FW.getFileContent(filepath);
+        var content = Utils.getFileContent(filepath);
         if (content.Length == 0)
             return;
 
         foreach (string str in strings.Keys)
             content = content.Replace(str, (string)strings[str]);
 
-        FW.setFileContent(filepath, ref content);
+        Utils.setFileContent(filepath, ref content);
     }
 
     // replaces strings in all files under defined dir
@@ -302,7 +302,7 @@ class DevCodeGen
         }
 
         var sql_file = fw.config("site_root") + DevCodeGen.DB_SQL_PATH;
-        FW.setFileContent(sql_file, ref database_sql);
+        Utils.setFileContent(sql_file, ref database_sql);
     }
 
     public void createModelsAndControllersFromDBJson()
@@ -334,7 +334,7 @@ class DevCodeGen
         if (is_junction)
         {
             //for junction tables - use DemosDemoDicts.cs as a template
-            mdemo = FW.getFileContent(path + @"\DemosDemoDicts.cs");
+            mdemo = Utils.getFileContent(path + @"\DemosDemoDicts.cs");
             if (mdemo == "")
                 throw new ApplicationException("Can't open DemosDemoDicts.cs");
 
@@ -374,7 +374,7 @@ class DevCodeGen
             //for regular tables - use DemoDicts.cs as a template
 
             // copy DemoDicts.cs to model_name.cs
-            mdemo = FW.getFileContent(path + @"\DemoDicts.cs");
+            mdemo = Utils.getFileContent(path + @"\DemoDicts.cs");
             if (mdemo == "")
                 throw new ApplicationException("Can't open DemoDicts.cs");
 
@@ -450,77 +450,60 @@ class DevCodeGen
         }
 
         // copy demo model to model_name.cs
-        FW.setFileContent(path + @"\" + model_name + ".cs", ref mdemo);
+        Utils.setFileContent(path + @"\" + model_name + ".cs", ref mdemo);
     }
 
     private void createLookup(Hashtable entity)
     {
-        var ltable = fw.model<LookupManagerTables>().oneByTname((string)entity["table"]);
+        string model_name = (string)entity["model_name"];
+        var controller_options = (Hashtable)entity["controller"] ?? [];
+        string controller_url = (string)controller_options["url"];
+        string controller_title = (string)controller_options["title"];
 
-        string columns = "";
-        string column_names = "";
-        string column_types = "";
-        bool is_first = true;
+        var icode = controller_url.Replace("/", ""); // /Admin/LogTypes => AdminLogTypes
 
-        var hfks = Utils.array2hashtable((ArrayList)entity["foreign_keys"], "column");
-
-        var fields = (ArrayList)entity["fields"];
-        foreach (Hashtable field in fields)
+        var item = new Hashtable
         {
-            var fw_name = (string)field["fw_name"];
-            if (fw_name == "icode" || fw_name == "iname" || fw_name == "idesc")
-            {
-                columns += (!is_first ? "," : "") + fw_name;
-                column_names += (!is_first ? "," : "") + field["iname"];
-                column_types += (!is_first ? "," : "") + "";
-            }
-            else
-            {
-                columns += (!is_first ? "," : "") + field["name"];
-                column_names += (!is_first ? "," : "") + field["iname"];
-
-                //check if lookup table
-                var ctype = "";
-                if (hfks.ContainsKey(field["name"]))
-                {
-                    var fk = (Hashtable)hfks[field["name"]];
-                    ctype = fk["pk_table"] + "." + fk["pk_column"] + ":iname"; //iname as default, might not work for non-fw tables
-                }
-
-                column_types += (!is_first ? "," : "") + ctype;
-            }
-            is_first = false;
-        }
-
-        //var fields = Utils.array2hashtable((ArrayList)entity["fields"], "fw_name");
-        //if (fields.ContainsKey("icode"))
-        //{
-        //    columns += (columns.Length > 0 ? "," : "") + "icode";
-        //    column_names += (column_names.Length > 0 ? "," : "") + ((Hashtable)fields["icode"])["iname"];
-        //}
-        //if (fields.ContainsKey("iname"))
-        //{
-        //    columns += (columns.Length > 0 ? "," : "") + "iname";
-        //    column_names += (column_names.Length > 0 ? "," : "") + ((Hashtable)fields["iname"])["iname"];
-        //}
-        //if (fields.ContainsKey("idesc"))
-        //{
-        //    columns += (columns.Length > 0 ? "," : "") + "idesc";
-        //    column_names += (column_names.Length > 0 ? "," : "") + ((Hashtable)fields["idesc"])["iname"];
-        //}
-
-        Hashtable item = new()
-        {
-            { "tname", entity["table"] },
-            { "iname", entity["iname"] },
-            { "columns", columns },
-            { "column_names", column_names },
-            { "column_types", column_types }
+            { "igroup", "User" },
+            { "icode", icode },
+            { "url", controller_url },
+            { "iname", controller_title },
+            { "model", model_name },
+            { "access_level", Users.ACL_MANAGER },
+            { "is_lookup", 1 }
         };
-        if (ltable.Count > 0)// replace
-            fw.model<LookupManagerTables>().update(ltable["id"].toInt(), item);
+
+        //make/append to sql update file  in App_Date/sql/updates/updYYYY-MM-DD.sql with insert
+        var upd_file = fw.config("site_root") + "/App_Data/sql/updates/upd" + DateTime.Now.ToString("yyyy-MM-dd") + ".sql";
+        var upd_sql = "";
+
+        var lookup = fw.model<FwControllers>().oneByIcode(icode);
+        if (lookup.Count > 0)
+        {
+            fw.model<FwControllers>().update(lookup["id"].toInt(), item);
+            upd_sql = Environment.NewLine + $@"UPDATE fwcontrollers SET 
+                            igroup={db.q(item["igroup"])}, 
+                            url={db.q(item["url"])}, 
+                            iname={db.q(item["iname"])}, 
+                            model={db.q(item["model"])}, 
+                            access_level={db.qi(item["access_level"])},
+                            is_lookup=1
+                        WHERE icode={db.q(item["icode"])}" + Environment.NewLine;
+        }
         else
-            fw.model<LookupManagerTables>().add(item);
+        {
+            fw.model<FwControllers>().add(item);
+            upd_sql = Environment.NewLine + $@"INSERT INTO fwcontrollers (igroup, icode, url, iname, model, access_level, is_lookup) VALUES (
+                            {db.q(item["igroup"])},
+                            {db.q(item["icode"])},
+                            {db.q(item["url"])},
+                            {db.q(item["iname"])},
+                            {db.q(item["model"])},
+                            {db.qi(item["access_level"])},
+                            1
+                        )" + Environment.NewLine;
+        }
+        Utils.setFileContent(upd_file, ref upd_sql, true);
     }
 
     public bool createController(Hashtable entity, ArrayList entities)
@@ -529,6 +512,7 @@ class DevCodeGen
         var controller_options = (Hashtable)entity["controller"] ?? [];
         string controller_url = (string)controller_options["url"];
         string controller_title = (string)controller_options["title"];
+        string controller_type = controller_options["type"].toStr(); // ""(dynamic), "vue", "lookup", "api"
 
         if (controller_url == "")
         {
@@ -549,8 +533,9 @@ class DevCodeGen
         // save back to entity as it can be used by caller
         controller_options["url"] = controller_url;
         controller_options["title"] = controller_title;
+        entity["controller"] = controller_options;
 
-        if (controller_options["is_lookup"].toBool())
+        if (controller_options["is_lookup"].toBool() || controller_type == "lookup")
         {
             // if requested controller as a lookup table - just add/update lookup tables, no actual controller creation
             this.createLookup(entity);
@@ -566,7 +551,8 @@ class DevCodeGen
             controller_from_class = "AdminDemosVue";
             controller_from_url = "/Admin/DemosVue";
             controller_from_title = "Demo Vue";
-        };
+        }
+        ;
 
         entity["controller"] = controller_options; //write back
 
@@ -595,7 +581,7 @@ class DevCodeGen
         // this should be last as under VS auto-rebuild can lock template files
         // copy DemosController .cs to controller .cs
         var path = fw.config("site_root") + @"\App_Code\controllers";
-        var mdemo = FW.getFileContent(path + @$"\{controller_from_class}.cs");
+        var mdemo = Utils.getFileContent(path + @$"\{controller_from_class}.cs");
         if (mdemo == "")
             throw new ApplicationException($"Can't open {controller_from_class}.cs");
 
@@ -605,7 +591,7 @@ class DevCodeGen
         mdemo = mdemo.Replace("DemoDicts", model_name);
         mdemo = mdemo.Replace("Demos", model_name);
 
-        FW.setFileContent(path + @"\" + controller_name + ".cs", ref mdemo);
+        Utils.setFileContent(path + @"\" + controller_name + ".cs", ref mdemo);
 
         // add controller to sidebar menu
         updateMenuItem(controller_url, controller_title);
@@ -634,12 +620,18 @@ class DevCodeGen
         DevEntityBuilder.saveJsonController(config, config_file);
     }
 
-    public void updateControllerConfig(Hashtable entity, Hashtable config, ArrayList entities)
+    public void updateControllerConfig(Hashtable entity, Hashtable config, ArrayList entities = null)
     {
-        string model_name = (string)entity["model_name"];
-        string table_name = (string)entity["table"];
+        string model_name = entity["model_name"].toStr();
+        var model = fw.model(model_name);
+
+        string table_name = entity["table"].toStr();
+        if (string.IsNullOrEmpty(table_name))
+            table_name = model.table_name;
+
         var controller_options = (Hashtable)entity["controller"] ?? [];
-        string controller_type = (string)controller_options["type"];
+        string controller_title = controller_options["title"].toStr() ?? Utils.name2human(model_name);
+        string controller_type = controller_options["type"].toStr();
         fw.logger($"updating config for controller({controller_type})=", controller_options["url"]);
 
         var sys_fields = Utils.qh(SYS_FIELDS);
@@ -651,9 +643,9 @@ class DevCodeGen
             // TODO deprecate reading from db, always use entity info
             DB db;
             if (entity["db_config"].toStr().Length > 0)
-                db = new DB(fw, (Hashtable)((Hashtable)fw.config("db"))[entity["db_config"]], (string)entity["db_config"]);
+                db = fw.getDB((string)entity["db_config"]);
             else
-                db = new DB(fw);
+                db = fw.db;
             fields = db.loadTableSchemaFull(table_name);
             entity["foreign_keys"] = db.listForeignKeys(table_name);
 
@@ -664,8 +656,11 @@ class DevCodeGen
                 tables[tbl] = new Hashtable();
         }
         else
+        {
+            entities ??= [];
             foreach (Hashtable tentity in entities)
                 tables[tentity["table"]] = tentity;
+        }
 
         var is_fw = entity["is_fw"].toBool();
 
@@ -707,7 +702,8 @@ class DevCodeGen
 
         List<Hashtable> formTabs = [
             //default
-            new Hashtable {
+            new Hashtable
+            {
                 ["tab"] = "",
                 ["label"] = "Main"
             }
@@ -724,7 +720,7 @@ class DevCodeGen
                 continue; //skip unnecessary fields
 
             string fld_name = fld["name"].toStr();
-            fw.logger("field name=", fld_name, fld);
+            //fw.logger("field name=", fld_name, fld);
 
             if (fld["fw_name"].toStr() == "")
                 fld["fw_name"] = Utils.name2fw(fld_name); // system name using fw standards
@@ -1020,7 +1016,7 @@ class DevCodeGen
 
         if (controller_type == "vue")
         {
-            config["is_dynamic_index_edit"] = false; // by default disable list editing        
+            config["is_dynamic_index_edit"] = controller_options["is_dynamic_index_edit"] ?? false; // by default disable list editing
             config["list_edit"] = table_name;
             config["edit_list_defaults"] = list_defaults.edit;
             config["edit_list_map"] = hFieldsMapEdit;
@@ -1037,6 +1033,12 @@ class DevCodeGen
         config["is_dynamic_showform"] = controller_options.ContainsKey("is_dynamic_showform") ? controller_options["is_dynamic_showform"] : true;
         if ((bool)config["is_dynamic_showform"])
             configAddTabs(config, "showform_fields", showFormFieldsTabs);
+
+        //titles
+        config["list_title"] = controller_title;
+        config["view_title"] = $"View {controller_title} Record";
+        config["edit_title"] = $"Edit {controller_title} Record";
+        config["add_new_title"] = $"Add New {controller_title} Record";
 
         // remove all commented items - name start with "#"
         foreach (var key in config.Keys.Cast<string>().ToArray())
@@ -1424,6 +1426,58 @@ class DevCodeGen
                         def["value"] = tag + ">";
                         break;
                     }
+            }
+        }
+    }
+
+    public void createReport(string repcode)
+    {
+        repcode = FwReports.cleanupRepcode(repcode);
+        if (string.IsNullOrEmpty(repcode))
+            throw new UserException("No report code");
+
+        var report_class = FwReports.repcodeToClass(repcode);
+        var reports_path = fw.config("site_root") + @"\App_Code\models\Reports";
+        var src_file = reports_path + @"\Sample.cs";
+        var dest_file = reports_path + @"\" + report_class.Replace("Report", "") + ".cs";
+
+        if (File.Exists(dest_file))
+            throw new UserException("Such report already exists");
+
+        var content = Utils.getFileContent(src_file);
+        if (content == "")
+            throw new ApplicationException("Can't open Sample.cs");
+
+        content = content.Replace("SampleReport", report_class);
+        content = content.Replace("Sample report", Utils.capitalize(repcode) + " Report");
+
+        Utils.setFileContent(dest_file, ref content);
+
+        // copy templates
+        var tpl_from = fw.config("template") + "/admin/reports/sample";
+        var tpl_to = fw.config("template") + "/admin/reports/" + repcode.ToLower();
+        Utils.CopyDirectory(tpl_from, tpl_to, true);
+
+        // Add link to /Admin/Reports screen (main.html)
+        var reports_index_file = fw.config("template") + "/admin/reports/index/main.html";
+        var html = Utils.getFileContent(reports_index_file);
+        if (!string.IsNullOrEmpty(html))
+        {
+            // Find the hidden template div (use escaped quotes for normal string)
+            // <~tplcodegen if="0" inline><a href="<~../url>/<~tpl-code>" class="list-group-item"><~tpl-title></a></~tplcodegen>
+            var pattern = "(<~tplcodegen.+?>(.+?)</~tplcodegen>)";
+            var match = Regex.Match(html, pattern, RegexOptions.Singleline);
+            if (match.Success)
+            {
+                var wholeDiv = match.Groups[1].Value;
+                var hiddenDiv = match.Groups[2].Value;
+                // Replace placeholders
+                var newDiv = hiddenDiv
+                    .Replace("<~tpl-code>", repcode)
+                    .Replace("<~tpl-title>", Utils.capitalize(repcode) + " Report");
+                // Insert before the hidden div
+                html = html.Replace(wholeDiv, newDiv + "\n" + wholeDiv);
+                Utils.setFileContent(reports_index_file, ref html);
             }
         }
     }

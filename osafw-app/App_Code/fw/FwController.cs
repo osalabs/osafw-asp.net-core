@@ -19,8 +19,9 @@ public abstract class FwController
     public static string route_default_action = ""; // supported values - "" (use Default Parser for unknown actions), Index (use IndexAction for unknown actions), Show (assume action is id and use ShowAction)
     public string route_onerror = ""; //route redirect action name in case ApplicationException occurs in current route, if empty - 500 error page returned
 
-    public string base_url; // base url for the controller
-    public string base_url_suffix; // additional base url suffix
+    public string base_url;               // base url for the controller
+    public string base_url_suffix;        // additional base url suffix
+    public string template_basedir = "";  // templates base dir for the controller, if not set - [/route_prefix]/route_controller used
 
     public Hashtable form_new_defaults;   // optional, defaults for the fields in new form, overridden by item passed from request
     public string required_fields;        // optional, default required fields, space-separated
@@ -108,16 +109,32 @@ public abstract class FwController
     // load controller config from json in template dir (based on base_url)
     public virtual void loadControllerConfig(string config_filename = "config.json")
     {
+        if (string.IsNullOrEmpty(base_url))
+        {
+            // silent fail as it could happen for virtual controllers
+            logger(LogLevel.TRACE, "no base_url set, cannot load config");
+            return;
+        }
+
         var conf_file0 = base_url.ToLower() + "/" + config_filename;
+        logger(LogLevel.TRACE, "loading config from:", conf_file0);
+
         var conf_file = fw.config("template") + "/" + conf_file0;
         if (!System.IO.File.Exists(conf_file))
             throw new ApplicationException("Controller Config file not found in templates: " + conf_file0);
 
-        this.config = (Hashtable)Utils.jsonDecode(FW.getFileContent(conf_file));
-        if (this.config == null)
+        var config = (Hashtable)Utils.jsonDecode(Utils.getFileContent(conf_file));
+        if (config == null)
             throw new ApplicationException("Controller Config is invalid, check json in templates: " + conf_file0);
+
+        loadControllerConfig(config);
+    }
+
+    public virtual void loadControllerConfig(Hashtable config)
+    {
+        this.config = config;
         // logger("loaded config:")
-        // logger(Me.config)
+        // logger(config)
 
         var model_name = this.config["model"].toStr();
         if (!string.IsNullOrEmpty(model_name))
@@ -316,15 +333,11 @@ public abstract class FwController
     // methods from fw - just for a covenience, so no need to use "fw.", as they are used quite frequently
     public void logger(params object[] args)
     {
-        if (args.Length == 0)
-            return;
-        fw._logger(LogLevel.DEBUG, ref args);
+        fw.logger(args);
     }
     public void logger(LogLevel level, params object[] args)
     {
-        if (args.Length == 0)
-            return;
-        fw._logger(level, ref args);
+        fw.logger(level, args);
     }
 
     public virtual void checkXSS()
@@ -423,7 +436,7 @@ public abstract class FwController
     }
 
     /// <summary>
-    /// Validate required fields are non-empty and set global fw.ERR[field] values in case of errors
+    /// Validate required fields are non-empty and set global fw.FormErrors[field] values in case of errors
     /// </summary>
     /// <param name="id">id of the record, 0 if new record to add (for existing records - do not require fields not present in item)</param>
     /// <param name="item">fields/values to validate</param>
@@ -477,8 +490,8 @@ public abstract class FwController
     /// Check validation result (validate_required)
     /// </summary>
     /// <param name="result">to use from external validation check</param>
-    /// <remarks>throw ValidationException exception if global ERR non-empty.
-    /// Also set global ERR[INVALID] if ERR non-empty, but ERR[REQUIRED] not true
+    /// <remarks>throw ValidationException exception if global FormErrors non-empty.
+    /// Also set global FormErrors[INVALID] if FormErrors non-empty, but FormErrors[REQUIRED] not true
     /// </remarks>
     public virtual void validateCheckResult(bool result = true)
     {
@@ -946,15 +959,25 @@ public abstract class FwController
             var ps = new Hashtable();
             var _json = new Hashtable()
             {
-                {"success",success},
                 {"id",id},
                 {"is_new",is_new},
                 {"location",location},
-                {"err_msg",fw.G["err_msg"]}
+                {"success",success}, //legacy TODO DEPRECATE
             };
-            // add ERR field errors to response if any
+            if (!success)
+            {
+                // set error message if any
+                _json["err_msg"] = fw.G["err_msg"]; // legacy TODO DEPRECATE
+                _json["error"] = new Hashtable() { { "message", fw.G["err_msg"] } };
+            }
+
+            // add FormErrors field errors to response if any
             if (fw.FormErrors.Count > 0)
-                _json["ERR"] = fw.FormErrors;
+            {
+                if (_json["error"] is not Hashtable)
+                    _json["error"] = new Hashtable();
+                ((Hashtable)_json["error"])["details"] = fw.FormErrors;
+            }
 
             if (more_json != null)
                 Utils.mergeHash(_json, more_json);
@@ -969,7 +992,7 @@ public abstract class FwController
             if (success)
                 fw.redirect(location);
             else
-                fw.routeRedirect(action, new[] { id.ToString() });
+                fw.routeRedirect(action, [id.ToString()]);
         }
         return null;
     }
@@ -1040,6 +1063,7 @@ public abstract class FwController
         ps["is_userlists"] = this.is_userlists;
         ps["is_readonly"] = is_readonly;
         ps["is_list_edit"] = is_list_edit;
+        ps["controller_config"] = this.config;
 
         //for RBAC
         ps["rbac"] = rbac;

@@ -1,93 +1,90 @@
 <script type="text/x-template" id="edit-header-template">
-  <div class="float-end pt-1 d-print-none">
-    <a @click.prevent="onNext(true)" href="#" class="btn btn-link"><i class="bi bi-arrow-left-circle"></i> `Prev`</a>
-    <a @click.prevent="onNext()" href="#" class="btn btn-link">`Next` <i class="bi bi-arrow-right-circle"></i></a>
-  </div>
+    <div class="float-end pt-1 d-print-none">
+        <a @click.prevent="onNext(true)" href="#" class="btn btn-link"><i class="bi bi-arrow-left-circle"></i> `Prev`</a>
+        <a @click.prevent="onNext()" href="#" class="btn btn-link">`Next` <i class="bi bi-arrow-right-circle"></i></a>
+    </div>
 
-  <nav class="d-print-none">
-    <a href="#" @click.prevent="fwStore.openListScreen">{{fwStore.list_title}}</a> <span class="text-muted">/</span>
-  </nav>
-  <h1 v-if="!current_id">{{fwStore.add_new_title}}</h1>
-  <h1 v-if="current_id">{{fwStore.edit_title}}</h1>
+    <nav class="d-print-none">
+        <a href="#" @click.prevent="fwStore.openListScreen">{{fwStore.list_title}}</a> <span class="text-muted">/</span>
+    </nav>
+    <h1 v-if="!current_id">{{fwStore.add_new_title}}</h1>
+    <h1 v-if="current_id">{{fwStore.edit_title}}</h1>
 
-  <div class="float-end">
-    <span v-if="save_result" class="form-saved-status-global mt-1 me-2">
-      <span v-if="save_result.success" class="badge bg-success">saved</span>
-      <span v-if="!save_result.success" class="badge bg-danger">not saved</span>
-    </span>
-    <template v-if="!current_id" inline>
-      <button type="button" class="btn btn-primary me-1" :disabled="fwStore.is_readonly" @click="saveChanges">`Save`</button>
-      <button type="button" class="btn btn-secondary me-1" :disabled="fwStore.is_readonly" @click="saveChanges('New')">`Save and Add New`</button>
-      <button type="button" class="btn btn-default" @click="onCancelForm">`Cancel`</button>
-    </template>
-  </div>
+    <div class="float-end">
+        <span v-if="fwStore.savedStatus!==null" class="form-saved-status-global mt-1 me-2">
+            <span v-if="fwStore.savedStatus" class="badge bg-success">saved</span>
+            <span v-if="!fwStore.savedStatus" class="badge bg-danger">not saved</span>
+        </span>
+        <template v-if="!current_id" inline>
+            <button type="button" class="btn btn-primary me-1" :disabled="fwStore.is_readonly" @click="saveChanges">`Save`</button>
+            <button type="button" class="btn btn-secondary me-1" :disabled="fwStore.is_readonly" @click="saveChanges('New')">`Save and Add New`</button>
+            <button type="button" class="btn btn-default" @click="onCancelForm">`Cancel`</button>
+        </template>
+    </div>
 
-  <div class="btn-std d-print-none">
-      <a v-if="fwStore.return_url"
-         class="btn btn-default me-1"
-         :href="fwStore.return_url"><i class="bi bi-arrow-left-circle"></i> `Return Back`</a>
-      <a v-else
-         class="btn btn-default me-1"
-         href="#"
-         @click.prevent="onCancelForm"><i class="bi bi-arrow-left-circle"></i> `Back to List`</a>
-      <div class="btn-group" v-if="uioptions.btnAddNew || $slots.group || fwStore.return_url">
-          <a v-if="uioptions.btnAddNew"
-             class="btn btn-default"
-             href="#"
-             @click.prevent="onAddNew"
-             :disabled="fwStore.is_readonly"><i class="bi bi-plus-lg"></i> `Add New`</a>
-          <a v-if="current_id"
-             class="btn btn-default"
-             href="#"
-             @click.prevent="onView"><i class="bi bi-eye"></i> `View`</a>
-      <slot name="group"></slot>
-   </div>
-   <slot></slot>
-  </div>
+    <div class="btn-std d-print-none">
+        <a v-if="fwStore.return_url"
+           class="btn btn-default me-1"
+           :href="fwStore.return_url"><i class="bi bi-arrow-left-circle"></i> `Return Back`</a>
+        <a v-else
+           class="btn btn-default me-1"
+           href="#"
+           @click.prevent="onCancelForm"><i class="bi bi-arrow-left-circle"></i> `Back to List`</a>
+        <div class="btn-group" v-if="uioptions.btnAddNew || $slots.group">
+            <a v-if="uioptions.btnAddNew"
+               class="btn btn-default"
+               href="#"
+               @click.prevent="onAddNew"
+               :disabled="fwStore.is_readonly"><i class="bi bi-plus-lg"></i> `Add New`</a>
+            <a v-if="current_id"
+               class="btn btn-default"
+               href="#"
+               @click.prevent="onView"><i class="bi bi-eye"></i> `View`</a>
+            <slot name="group"></slot>
+        </div>
+        <slot></slot>
+    </div>
 </script>
 
 <script type="module">
-import { mapStores } from 'pinia';
+    import { mapStores } from 'pinia';
 
-fwApp.component('edit-header', {
-  template: '#edit-header-template',
-  data: () => ({
-  }),
-  computed: {
-    ...mapStores(useFwStore), //accessible via this.fwStore
-    uioptions(){
-      return this.fwStore.uioptions.edit.header??false;
-    },
-    current_id() {
-      return this.fwStore.current_id ?? 0;
-    },
-    id() {
-      return this.fwStore.edit_data?.id ?? 0;
-    },
-    save_result() {
-      return this.fwStore.edit_data?.save_result;
-    },
-  },
-  methods: {
-    onAddNew(e){
-      this.fwStore.openEditScreen(0);
-    },
-    onView(e){
-      this.fwStore.openViewScreen(this.id);
-    },
-    saveChanges(route_return) {
-      if (route_return){
-        this.fwStore.edit_data.route_return=route_return;
-      }
-      this.fwStore.saveEditDataDebounced();
-    },
-    onCancelForm() {
-      this.fwStore.openListScreen();
-    },
-    async onNext(is_prev){
-      const id = await this.fwStore.getNextID(this.current_id, is_prev);
-      await this.fwStore.openEditScreen(id);
-    }
-  }
-});
+    fwApp.component('edit-header', {
+        template: '#edit-header-template',
+        data: () => ({
+        }),
+        computed: {
+            ...mapStores(fwStore), //accessible via this.fwStore
+            uioptions() {
+                return this.fwStore.uioptions.edit.header ?? false;
+            },
+            current_id() {
+                return this.fwStore.current_id ?? 0;
+            },
+            id() {
+                return this.fwStore.edit_data?.id ?? 0;
+            }
+        },
+        methods: {
+            onAddNew(e) {
+                this.fwStore.openEditScreen(0);
+            },
+            onView(e) {
+                this.fwStore.openViewScreen(this.id);
+            },
+            saveChanges(route_return) {
+                if (route_return) {
+                    this.fwStore.edit_data.route_return = route_return;
+                }
+                this.fwStore.saveEditDataDebounced();
+            },
+            onCancelForm() {
+                this.fwStore.openListScreen();
+            },
+            async onNext(is_prev) {
+                const id = await this.fwStore.getNextID(this.current_id, is_prev);
+                await this.fwStore.openEditScreen(id);
+            }
+        }
+    });
 </script>

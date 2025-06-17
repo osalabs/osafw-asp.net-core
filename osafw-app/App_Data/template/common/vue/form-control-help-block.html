@@ -1,13 +1,13 @@
 <script type="text/x-template" id="form-control-help-block-template">
-  <small v-if="text && text.length>0"
-    class="form-text">{{text}}</small>
+    <small v-if="text && text.length>0"
+           class="form-text">{{text}}</small>
 </script>
 
 <script type="module">
-fwApp.component('form-control-help-block', {
-  template: '#form-control-help-block-template',
-  props: {
-    text: String
-  },
-});
+    fwApp.component('form-control-help-block', {
+        template: '#form-control-help-block-template',
+        props: {
+            text: String
+        },
+    });
 </script>

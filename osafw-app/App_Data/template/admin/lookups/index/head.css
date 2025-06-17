@@ -1,0 +1,6 @@
+.list-items a {
+ text-align:left;
+}
+.list-items a:hover {
+ background-color:#eee;
+}

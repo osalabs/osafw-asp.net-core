@@ -1,0 +1,19 @@
+<form class="fw-card" method="POST" action="<~/assistant/url>">
+  <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
+
+  <~prompt_form unless="llm_form" inline>
+    <h3>How can I help you today, <~user[fname]>?</h3>
+    <div class="mb-3">
+      <textarea id="prompt" name="item[prompt]" class="form-control" placeholder="Your prompt..." required><~i[prompt]></textarea>
+    </div>
+    <p>
+     Samples: "Show all employees"
+    </p>
+  </~prompt_form>
+
+  <~./additional_form if="llm_form">
+
+  <div class="text-center">
+    <button class="btn btn-primary" type="submit">Get Response</button>
+  </div>
+</form>

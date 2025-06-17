@@ -1,18 +1,17 @@
-﻿#pragma warning disable CA1416 // some methods are Windows only
+﻿//uncomment to enable ExcelDataReader - install ExcelDataReader NuGet package and ExcelDataReader.DataSet (for CSV)
+//#define ExcelDataReader
+#if ExcelDataReader
+using ExcelDataReader;
+#endif
 
 using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Data.OleDb;
-using System.Drawing;
-using System.Drawing.Drawing2D;
-using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Runtime.Versioning;
 using System.Security.Authentication;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -25,8 +24,6 @@ namespace osafw;
 
 public class Utils
 {
-    public const string OLEDB_PROVIDER = "Microsoft.ACE.OLEDB.12.0"; // used for import from CSV/Excel, change it to your provider if necessary
-
     public const string TMP_PREFIX = "osafw"; // prefix for temp directory where framework stores temporary files
 
     public const string MIME_MAP = "doc|application/msword docx|application/msword xls|application/vnd.ms-excel xlsx|application/vnd.ms-excel ppt|application/vnd.ms-powerpoint pptx|application/vnd.ms-powerpoint csv|text/csv pdf|application/pdf html|text/html zip|application/x-zip-compressed jpg|image/jpeg jpeg|image/jpeg gif|image/gif png|image/png wmv|video/x-ms-wmv avi|video/x-msvideo mp4|video/mp4";
@@ -429,111 +426,62 @@ public class Utils
         return (string)mime_map[ext] ?? "application/octet-stream";
     }
 
-    /* <summary>
-    * helper for importing csv files. Example:
-    *    Utils.importCSV(fw, AddressOf importer, "c:\import.csv")
-    *    void importer(row as Hashtable)
-    *       ...your custom import code
-    *    End void
-    * </summary>
-    * <param name="fw">fw instance</param>
-    * <param name="callback">callback to custom code, accept one row of fields(as Hashtable)</param>
-    * <param name="filepath">.csv file name to import</param>
-    */
-    [SupportedOSPlatform("windows")]
-    public static void importCSV(FW fw, Action<Hashtable> callback, string filepath, bool is_header = true)
+    /// <summary>
+    /// Stream rows from an Excel/CSV file and invoke a callback for each row.
+    /// </summary>
+    /// <param name="fw">FW instance (logger, etc.)</param>
+    /// <param name="rowCallback">
+    ///     Your delegate that receives <c>(sheetName, rowFields)</c>.  
+    ///     Return <c>false</c> to stop the import prematurely.
+    /// </param>
+    /// <param name="filePath">Path to .xlsx, .xls, or .csv file.</param>
+    /// <param name="isHeaderRow">
+    ///     If <c>true</c> the first row becomes the column list;
+    ///     otherwise the columns are called F0, F1, …
+    /// </param>  
+    public static void ImportSpreadsheet(string filePath, Func<string, Hashtable, bool> rowCallback, bool isHeaderRow = true)
     {
-        string dir = Path.GetDirectoryName(filepath);
-        string filename = Path.GetFileName(filepath);
+#if ExcelDataReader
+        // ExcelDataReader needs this once per process for legacy encodings
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
-        string ConnectionString = "Provider=" + OLEDB_PROVIDER + ";" +
-                                  "Data Source=" + dir + ";" +
-                                  "Extended Properties=\"Text;HDR=" + (is_header ? "Yes" : "No") + ";IMEX=1;FORMAT=Delimited\";";
+        using var stream = File.OpenRead(filePath);
+        using IExcelDataReader reader = Path.GetExtension(filePath).Equals(".csv", StringComparison.OrdinalIgnoreCase)
+            ? ExcelReaderFactory.CreateCsvReader(stream)   // low‑memory CSV reader
+            : ExcelReaderFactory.CreateReader(stream);     // .xlsx / .xls
 
-        using (OleDbConnection cn = new(ConnectionString))
+        do
         {
-            cn.Open();
+            string sheetName = reader.Name ?? "Sheet1";
+            List<string> headers = null;      // lazily initialised so no per‑row realloc
 
-            string WorkSheetName = filename;
-            // quote as table name
-            WorkSheetName = WorkSheetName.Replace("[", "");
-            WorkSheetName = WorkSheetName.Replace("]", "");
-
-            string sql = "select * from [" + WorkSheetName + "]";
-            OleDbCommand dbcomm = new(sql, cn);
-            OleDbDataReader dbread = dbcomm.ExecuteReader();
-
-            while (dbread.Read())
+            while (reader.Read())
             {
-                Hashtable row = [];
-                for (int i = 0; i < dbread.FieldCount; i++)
+                // build headers once
+                if (isHeaderRow && headers == null)
                 {
-                    string value = dbread[i].ToString();
-                    string name = dbread.GetName(i).ToString();
-                    row.Add(name, value);
+                    headers = new List<string>(reader.FieldCount);
+                    for (int i = 0; i < reader.FieldCount; i++)
+                        headers.Add(reader.GetValue(i)?.ToString() ?? $"F{i}");
+                    continue;                  // move to first data row
                 }
 
-                // logger(h)
-                callback(row);
-            }
-
-            dbread.Close();
-        }
-    }
-
-    /* <summary>
-    * helper for importing Excel files. Example:
-    *    Utils.importExcel(fw, AddressOf importer, "c:\import.xlsx")
-    *    void importer(sheet_name as String, rows as ArrayList)
-    *       ...your custom import code
-    *    End void
-    * </summary>
-    * <param name="fw">fw instance</param>
-    * <param name="callback">callback to custom code, accept worksheet name and all rows(as ArrayList of Hashtables). Returns bool - to continue after first page or break.</param>
-    * <param name="filepath">.xlsx file name to import</param>
-    * <param name="is_header"></param>
-    * <returns></returns>
-    */
-    [SupportedOSPlatform("windows")]
-    public static Hashtable importExcel(FW fw, Func<string, ArrayList, bool> callback, string filepath, bool is_header = true)
-    {
-        Hashtable result = [];
-        Hashtable conf = [];
-        conf["type"] = "OLE";
-        conf["connection_string"] = "Provider=" + OLEDB_PROVIDER + ";Data Source=" + filepath + ";Extended Properties=\"Excel 12.0 Xml;HDR=" + (is_header ? "Yes" : "No") + ";ReadOnly=True;IMEX=1\"";
-        DB accdb = new(fw, conf);
-        OleDbConnection conn = (OleDbConnection)accdb.connect();
-        var schema = conn.GetOleDbSchemaTable(OleDbSchemaGuid.Tables, null);
-
-        if (schema == null || schema.Rows.Count < 1)
-        {
-            throw new ApplicationException("No worksheets found in the Excel file");
-        }
-
-        Hashtable where = [];
-        for (int i = 0; i < schema.Rows.Count; i++)
-        {
-            string sheet_name_full = schema.Rows[i]["TABLE_NAME"].ToString();
-            string sheet_name = sheet_name_full.Replace("\"", "");
-            sheet_name = sheet_name.Replace("'", "");
-            sheet_name = sheet_name[..^1]; // remove trailing $
-            try
-            {
-                ArrayList rows = accdb.array(sheet_name_full, where);
-                if (!callback(sheet_name, rows))
+                var row = new Hashtable(reader.FieldCount);
+                for (int i = 0; i < reader.FieldCount; i++)
                 {
-                    break;
+                    string colName = headers != null && i < headers.Count ? headers[i] : $"F{i}";
+                    row[colName] = reader.GetValue(i);     // keep native types where possible
                 }
 
-            }
-            catch (Exception ex)
-            {
-                throw new ApplicationException("Error while reading data from [" + sheet_name + "] sheet: " + ex.Message);
+                // let caller process the row; stop if they ask
+                if (!rowCallback(sheetName, row))
+                    return;
             }
         }
-        // close connection to release the file
-        accdb.disconnect();
-        return result;
+        while (reader.NextResult());           // advance to next worksheet
+#else
+        throw new NotSupportedException("ExcelDataReader is not available. Please install the NuGet package and enable in Utils");
+#endif
     }
 
     public static string toCSVRow(Hashtable row, Array fields)
@@ -636,8 +584,7 @@ public class Utils
         fw.response.Headers.ContentDisposition = $"attachment; filename=\"{filename}\"";
 
         //output headers
-        ParsePage parser = new(fw);
-        var filedata = parser.parse_page(tpl_dir, "xls_head.html", ps);
+        var filedata = fw.parsePage(tpl_dir, "xls_head.html", ps);
         fw.responseWrite(filedata);
 
         //output rows in chunks to save memory and keep connection alive
@@ -663,7 +610,7 @@ public class Utils
             //write to output every 10000 rows
             if (buffer.Count >= 10000)
             {
-                filedata = parser.parse_page(tpl_dir, "xls_rows.html", psbuffer);
+                filedata = fw.parsePage(tpl_dir, "xls_rows.html", psbuffer);
                 fw.responseWrite(filedata);
                 buffer.Clear();
             }
@@ -672,191 +619,20 @@ public class Utils
         //output if something left
         if (buffer.Count > 0)
         {
-            filedata = parser.parse_page(tpl_dir, "xls_rows.html", psbuffer);
+            filedata = fw.parsePage(tpl_dir, "xls_rows.html", psbuffer);
             fw.responseWrite(filedata);
         }
 
         //output footer
-        filedata = parser.parse_page(tpl_dir, "xls_foot.html", ps);
+        filedata = fw.parsePage(tpl_dir, "xls_foot.html", ps);
         fw.responseWrite(filedata);
 
         //simpler but uses more memory and for large results browser might give up waiting results from connection
         //ParsePage parser = new(fw);
         //string tpl_dir = "/common/list/export";
-        //string page = parser.parse_page(tpl_dir, "xls.html", ps);
+        //string page = fw.parsePage(tpl_dir, "xls.html", ps);
         //await HttpResponseWritingExtensions.WriteAsync(fw.response, page);
     }
-
-    // Detect orientation and auto-rotate correctly
-    public static bool rotateImage(System.Drawing.Image image)
-    {
-        bool result = false;
-        var rot = RotateFlipType.RotateNoneFlipNone;
-
-        PropertyItem[] props = image.PropertyItems;
-
-        foreach (PropertyItem p in props)
-        {
-            if (p.Id == 274)
-            {
-                switch (BitConverter.ToInt16(p.Value, 0))
-                {
-                    case 1:
-                        rot = RotateFlipType.RotateNoneFlipNone;
-                        break;
-                    case 3:
-                        rot = RotateFlipType.Rotate180FlipNone;
-                        break;
-                    case 6:
-                        rot = RotateFlipType.Rotate90FlipNone;
-                        break;
-                    case 8:
-                        rot = RotateFlipType.Rotate270FlipNone;
-                        break;
-                }
-            }
-        }
-
-        if (rot != RotateFlipType.RotateNoneFlipNone)
-        {
-            image.RotateFlip(rot);
-            result = true;
-        }
-        return result;
-    }
-
-    // resize image in from_file to w/h and save to to_file
-    // (optional)w and h - mean max weight and max height (i.e. image will not be upsized if it's smaller than max w/h)
-    // if no w/h passed - then no resizing occurs, just conversion (based on destination extension)
-    // return false if no resize performed (if image already smaller than necessary). Note if to_file is not same as from_file - to_file will have a copy of the from_file
-    public static bool resizeImage(string from_file, string to_file, int w = -1, int h = -1)
-    {
-        FileStream stream = new(from_file, FileMode.Open, FileAccess.Read);
-
-        // Create new image.
-        System.Drawing.Image image = System.Drawing.Image.FromStream(stream);
-
-        // Detect orientation and auto-rotate correctly
-        rotateImage(image);
-
-        // Calculate proportional max width and height.
-        int oldWidth = image.Width;
-        int oldHeight = image.Height;
-
-        if (w == -1)
-            w = oldWidth;
-        if (h == -1)
-            h = oldHeight;
-
-        if (oldWidth / (double)w >= 1 | oldHeight / (double)h >= 1)
-        {
-        }
-        else
-        {
-            // image already smaller no resize required - keep sizes same
-            image.Dispose();
-            stream.Close();
-            if (to_file != from_file)
-                // but if destination file is different - make a copy
-                File.Copy(from_file, to_file);
-            return false;
-        }
-
-        if (((double)oldWidth / (double)oldHeight) > ((double)w / (double)h))
-        {
-            double ratio = (double)w / (double)oldWidth;
-            h = (int)(oldHeight * ratio);
-        }
-        else
-        {
-            double ratio = (double)h / (double)oldHeight;
-            w = (int)(oldWidth * ratio);
-        }
-
-        // Create a new bitmap with the same resolution as the original image.
-        Bitmap bitmap = new(w, h, PixelFormat.Format24bppRgb);
-        bitmap.SetResolution(image.HorizontalResolution, image.VerticalResolution);
-
-        // Create a new graphic.
-        Graphics gr = Graphics.FromImage(bitmap);
-        gr.Clear(Color.White);
-        gr.InterpolationMode = InterpolationMode.HighQualityBicubic;
-        gr.SmoothingMode = SmoothingMode.HighQuality;
-        gr.PixelOffsetMode = PixelOffsetMode.HighQuality;
-        gr.CompositingQuality = CompositingQuality.HighQuality;
-
-        // Create a scaled image based on the original.
-        gr.DrawImage(image, new Rectangle(0, 0, w, h), new Rectangle(0, 0, oldWidth, oldHeight), GraphicsUnit.Pixel);
-        gr.Dispose();
-
-        // Save the scaled image.
-        string ext = UploadUtils.getUploadFileExt(to_file);
-        ImageFormat out_format = image.RawFormat;
-        EncoderParameters EncoderParameters = null;
-        ImageCodecInfo ImageCodecInfo = null;
-
-        if (ext == ".gif")
-        {
-            out_format = ImageFormat.Gif;
-        }
-        else if (ext == ".jpg")
-        {
-            out_format = ImageFormat.Jpeg;
-            // set jpeg quality to 80
-            ImageCodecInfo = GetEncoderInfo(out_format);
-            System.Drawing.Imaging.Encoder encoder = System.Drawing.Imaging.Encoder.Quality;
-            EncoderParameters = new EncoderParameters(1);
-            EncoderParameters.Param[0] = new EncoderParameter(encoder, System.Convert.ToInt32(80L));
-        }
-        else if (ext == ".png")
-        {
-            out_format = ImageFormat.Png;
-        }
-
-        // close read stream before writing as to_file might be same as from_file
-        image.Dispose();
-        stream.Close();
-
-        if (EncoderParameters == null)
-        {
-            bitmap.Save(to_file, out_format); // image.RawFormat
-        }
-        else
-        {
-            bitmap.Save(to_file, ImageCodecInfo, EncoderParameters);
-        }
-        bitmap.Dispose();
-
-        // if( contentType == "image/gif" )
-        // {
-        // Using (thumbnail)
-        // {
-        // OctreeQuantizer quantizer = new OctreeQuantizer ( 255 , 8 ) ;
-        // using ( Bitmap quantized = quantizer.Quantize ( bitmap ) )
-        // {
-        // Response.ContentType = "image/gif";
-        // quantized.Save ( Response.OutputStream , ImageFormat.Gif ) ;
-        // }
-        // }
-        // }
-
-        return true;
-    }
-
-    private static ImageCodecInfo GetEncoderInfo(ImageFormat format)
-    {
-        ImageCodecInfo[] encoders;
-        encoders = ImageCodecInfo.GetImageEncoders();
-
-        int j = 0;
-        while (j < encoders.Length)
-        {
-            if (encoders[j].FormatID == format.Guid) return encoders[j];
-            j += 1;
-        }
-        return null;
-
-    } // GetEncoderInfo
 
     /// <summary>
     /// return file size by path, if file not exists or not accessible - return 0
@@ -929,7 +705,7 @@ public class Utils
 
     // deep hash merge, i.e. if hash2 contains values that is hash value - go in it and copy such values to hash2 at same place accordingly
     // recursive
-    public static void mergeHashDeep(ref Hashtable hash1, ref Hashtable hash2)
+    public static void mergeHashDeep(Hashtable hash1, Hashtable hash2)
     {
         if (hash2 != null)
         {
@@ -942,13 +718,73 @@ public class Utils
                         hash1[key] = new Hashtable();
                     Hashtable _hash1 = (Hashtable)hash1[key];
                     Hashtable _hash2 = ht;
-                    mergeHashDeep(ref _hash1, ref _hash2);
+                    mergeHashDeep(_hash1, _hash2);
                 }
                 else
                     hash1[key] = hash2[key];
             }
         }
     }
+
+    /// <summary>
+    /// Recursively deep-clones a <see cref="Hashtable"/>, including any child
+    /// Hashtables and ArrayLists it contains.
+    /// Primitive CLR types, strings and immutable value types are copied by
+    /// reference because they are already thread-safe and stateless.
+    /// </summary>
+    /// <remarks>
+    /// * Cycles are not expected
+    /// * Collections other than <see cref="Hashtable"/> or <see cref="ArrayList"/>
+    ///   are cloned shallowly (reference copy) to avoid surprises
+    /// </remarks>
+    public static Hashtable cloneHashDeep(Hashtable source)
+    {
+        if (source == null) return null;
+
+        Hashtable clone = new(source.Count);
+        foreach (DictionaryEntry entry in source)
+            clone[entry.Key] = cloneObject(entry.Value);
+
+        return clone;
+    }
+
+    // helpers
+    private static object cloneObject(object value)
+    {
+        switch (value)
+        {
+            case null:
+                return null;
+
+            case Hashtable ht:
+                return cloneHashDeep(ht);
+
+            case ArrayList list:
+                return cloneArrayListDeep(list);
+
+            // most BCL value types & strings are immutable – safe to copy ref
+            case string or ValueType:
+                return value;
+
+            // let user-defined classes decide how to clone themselves
+            case ICloneable cloneable:
+                return cloneable.Clone();
+
+            default:
+                // fallback: shallow copy (reference) – adjust if need more
+                return value;
+        }
+    }
+
+    private static ArrayList cloneArrayListDeep(ArrayList list)
+    {
+        ArrayList clone = new(list.Count);
+        foreach (var item in list)
+            clone.Add(cloneObject(item));
+
+        return clone;
+    }
+    // ****** cloneHashDeep end
 
     public static string bytes2str(long b)
     {
@@ -1415,7 +1251,7 @@ public class Utils
     public static Hashtable array2hashtable(IList arr, string key)
     {
         Hashtable result = [];
-        foreach (Hashtable item in arr)
+        foreach (IDictionary item in arr)
             result[item[key]] = item;
         return result;
     }
@@ -1741,6 +1577,124 @@ public class Utils
     public static void deleteCookie(FW fw, string name)
     {
         fw.response.Cookies.Delete(name);
+    }
+
+    public static void prepareRowsHeaders(ArrayList rows, ArrayList headers)
+    {
+        if (rows.Count > 0)
+        {
+            if (headers.Count == 0)
+            {
+                var keys = ((Hashtable)rows[0]).Keys;
+                var fields = new string[keys.Count];
+                keys.CopyTo(fields, 0);
+                foreach (var key in fields)
+                    headers.Add(new Hashtable() { { "field_name", key } });
+            }
+
+            foreach (Hashtable row in rows)
+            {
+                ArrayList cols = [];
+                foreach (Hashtable hf in headers)
+                {
+                    var fieldname = hf["field_name"].ToString();
+                    cols.Add(new Hashtable()
+                    {
+                        {"row",row},
+                        {"field_name",fieldname},
+                        {"data",row[fieldname]}
+                    });
+                }
+                row["cols"] = cols;
+            }
+        }
+    }
+
+    /// <summary>
+    /// return file content OR "" if no file exists or some other error happened (ignore errors)
+    /// </summary>
+    /// <param name="filename"></param>
+    /// <returns></returns>
+    public static string getFileContent(string filename)
+    {
+        return getFileContent(filename, out _);
+    }
+
+    /// <summary>
+    /// return file content OR "" if no file exists or some other error happened (see error)
+    /// </summary>
+    /// <param name="filename"></param>
+    /// <param name="error"></param>
+    /// <returns></returns>
+    public static string getFileContent(string filename, out Exception error)
+    {
+        error = null;
+        string result = "";
+
+        //For Windows - replace Unix-style separators / to \
+        if (FwConfig.path_separator == '\\')
+            filename = filename.Replace('/', FwConfig.path_separator);
+
+        if (!File.Exists(filename))
+            return result;
+
+        try
+        {
+            result = File.ReadAllText(filename);
+        }
+        catch (Exception ex)
+        {
+            error = ex;
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// return array of file lines OR empty array if no file exists or some other error happened (ignore errors)
+    /// </summary>
+    /// <param name="filename"></param>
+    /// <returns></returns>
+    public static string[] getFileLines(string filename)
+    {
+        return getFileLines(filename, out _);
+    }
+
+    /// <summary>
+    /// return array of file lines OR empty array if no file exists or some other error happened (see error)
+    /// </summary>
+    /// <param name="filename"></param>
+    /// <returns></returns>
+    public static string[] getFileLines(string filename, out Exception error)
+    {
+        error = null;
+        string[] result = [];
+        try
+        {
+            result = File.ReadAllLines(filename);
+        }
+        catch (Exception ex)
+        {
+            error = ex;
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// replace or append file content
+    /// </summary>
+    /// <param name="filename"></param>
+    /// <param name="fileData"></param>
+    /// <param name="isAppend">False by default </param>
+    public static void setFileContent(string filename, ref string fileData, bool isAppend = false)
+    {
+        //For Windows - replace Unix-style separators / to \
+        if (FwConfig.path_separator == '\\')
+            filename = filename.Replace('/', FwConfig.path_separator);
+
+        using (StreamWriter sw = new(filename, isAppend))
+        {
+            sw.Write(fileData);
+        }
     }
 
 }

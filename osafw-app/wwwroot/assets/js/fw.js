@@ -562,11 +562,11 @@ window.fw={
     }
 
     function form_handle_errors($f, data, hint_options){
-      if (data.ERR) {
-        //auto-save error - highlight errors
-        fw.process_form_errors($f, data.ERR);
-      }
-      fw.error(data.err_msg || 'Auto-save error. Server error occurred. Try again later.', hint_options);
+            if (data.error?.details) {
+                //auto-save error - highlight errors
+                fw.process_form_errors($f, data.error?.details);
+            }
+            fw.error(data.error?.message || 'Auto-save error. Server error occurred. Try again later.', hint_options);
     }
 
     function form_autosave($f) {
@@ -592,7 +592,7 @@ window.fw={
               //console.log('ajaxSubmit success', data);
               $('#fw-form-msg').hide();
               fw.clean_form_errors($f);
-              if (data.success){
+              if (!data.error) {
                   set_saved_status($f, false);
                   if (data.is_new && data.location) {
                       window.location = data.location; //reload screen for new items
@@ -908,7 +908,8 @@ window.fw={
           var startPos = myField.selectionStart;
           var endPos = myField.selectionEnd;
           myField.value = myField.value.substring(0, startPos) + myValue + myField.value.substring(endPos, myField.value.length);
-          myField.selectionStart = startPos + myValue.length; myField.selectionEnd = startPos + myValue.length;
+          myField.selectionStart = startPos + myValue.length;
+          myField.selectionEnd = startPos + myValue.length;
       } else {
           myField.value += myValue;
       }

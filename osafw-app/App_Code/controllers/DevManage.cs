@@ -73,8 +73,7 @@ public class DevManageController : FwController
 
         FwCache.clear();
         db.clearSchemaCache();
-        var pp = new ParsePage(fw);
-        pp.clear_cache();
+        fw.parsePageInstance().clear_cache();
 
         fw.redirect(base_url);
     }
@@ -98,116 +97,94 @@ public class DevManageController : FwController
         fw.redirect(base_url);
     }
 
-    public Hashtable ShowDBUpdatesAction()
+    // generate documentation PDF
+    public Hashtable DocsAction()
     {
-        Hashtable ps = [];
+        var is_export = reqs("format");
 
-        // show list of available db updates
-        var updates_root = fw.config("site_root") + @"\App_Data\sql\updates";
-        if (System.IO.Directory.Exists(updates_root))
+        var ps = new Hashtable();
+        ps["is_rbac"] = fw.model<Users>().isRoles();
+        ps["access_levels"] = FormUtils.selectTplOptions("/common/sel/access_level.sel");
+
+        ps["is_S3"] = S3.IS_ENABLED;
+
+        if (!Utils.isEmpty(is_export))
         {
-            string[] files = System.IO.Directory.GetFiles(updates_root);
+            logger("exporting");
+            var layout = (string)fw.G["PAGE_LAYOUT_PRINT"];
+            var options = new Hashtable();
+            options["disposition"] = "inline";
+            ConvUtils.parsePagePdf(fw, "/dev/manage/docs", layout, ps, "documentation", options);
+            return null;
+        }
+        else
+            return ps;
+    }
 
-            ArrayList rows = [];
-            foreach (string file in files)
-                rows.Add(new Hashtable() { { "filename", System.IO.Path.GetFileName(file) } });
-            ps["rows"] = rows;
+    #region Fw Updates
+    public void RefreshViewsAction()
+    {
+        checkXSS();
+        fw.model<FwUpdates>().refreshViews();
+        fw.flash("success", "Views refreshed");
+        fw.redirect("/Admin/FwUpdates");
+    }
+
+    public void MarkFwUpdatesAppliedAction()
+    {
+        checkXSS();
+        fw.model<FwUpdates>().markAllPendingApplied();
+        fw.flash("success", "All pending updates marked as applied");
+        fw.redirect("/Admin/FwUpdates");
+    }
+
+    public Hashtable ApplyFwUpdateAction(int id)
+    {
+        checkXSS();
+        fw.model<FwUpdates>().applyOne(id);
+
+        if (fw.isJsonExpected())
+        {
+            var ps = new Hashtable();
+            ps["message"] = "Update applied";
+            return new Hashtable { { "_json", ps } };
         }
         else
         {
-            ps["is_nodir"] = true;
-            ps["updates_root"] = updates_root;
+            fw.flash("success", "Update applied");
+            fw.redirect("/Admin/FwUpdates");
+            return null;
         }
-
-        return ps;
     }
 
-    public void SaveDBUpdatesAction()
+    public Hashtable ApplyFwUpdatesAction()
     {
         checkXSS();
+        var ids = reqh("cb").Keys.Cast<string>().Select(x => x.toInt()).ToList();
+        fw.model<FwUpdates>().applyList(new ArrayList(ids));
 
-        var is_view_only = (reqi("ViewsOnly") == 1);
-        var ctr = 0;
-
-        rw("<html><body>");
-
-        try
+        if (fw.isJsonExpected())
         {
-            if (!is_view_only)
-            {
-                // apply selected updates
-                var updates_root = fw.config("site_root") + @"\App_Data\sql\updates";
-                var item = reqh("item");
-                foreach (string filename in item.Keys)
-                {
-                    var filepath = updates_root + @"\" + filename;
-                    rw("applying: " + filepath);
-                    ctr += exec_multi_sql(FW.getFileContent(filepath));
-                }
-                rw("Done, " + ctr + " statements executed");
-            }
-
-            // refresh views
-            ctr = 0;
-            var views_file = fw.config("site_root") + @"\App_Data\sql\views.sql";
-            rw("Applying views file: " + views_file);
-            // for views - ignore errors
-            ctr = exec_multi_sql(FW.getFileContent(views_file), true);
-            rw("Done, " + ctr + " statements executed");
-
-            rw("<b>All Done</b>");
+            var ps = new Hashtable();
+            ps["message"] = "Updates applied";
+            return new Hashtable { { "_json", ps } };
         }
-        catch (Exception ex)
+        else
         {
-            rw("got an error");
-            rw("<span style='color:red'>" + ex.Message + "</span>");
+            fw.flash("success", "Updates applied");
+            fw.redirect("/Admin/FwUpdates");
+            return null;
         }
-
-        // and last - reset db schema cache
-        FwCache.clear();
-        db.clearSchemaCache();
     }
-    // TODO move these functions to DB?
-    private int exec_multi_sql(string sql, bool is_ignore_errors = false)
+
+    public void ReloadFwUpdatesAction()
     {
-        var result = 0;
-        // launch the query
-        //sql = strip_comments_sql(sql);
-        String[] asql = DB.splitMultiSQL(sql);
-        foreach (string sqlone1 in asql)
-        {
-            var sqlone = sqlone1.Trim();
-            if (sqlone.Length > 0)
-            {
-                if (is_ignore_errors)
-                {
-                    try
-                    {
-                        db.exec(sqlone);
-                        result += 1;
-                    }
-                    catch (Exception ex)
-                    {
-                        rw(sqlone);
-                        rw("<span style='color:red'>" + ex.Message + "</span>");
-                        rw("");
-                    }
-                }
-                else
-                {
-                    rw($"<pre>{sqlone}</pre>");
-                    db.exec(sqlone);
-                    result += 1;
-                }
-            }
-        }
-        return result;
+        checkXSS();
+        fw.model<FwUpdates>().loadUpdates();
+        fw.flash("success", "New Updates reloaded from disk");
+        fw.redirect("/Admin/FwUpdates");
     }
-    private static string strip_comments_sql(string sql)
-    {
-        return Regex.Replace(sql, @"/\*.+?\*/", " ", RegexOptions.Singleline);
-    }
-
+    #endregion
 
     public void CreateModelAction()
     {
@@ -233,7 +210,7 @@ public class DevManageController : FwController
         var model_name = item["model_name"].toStr().Trim();
         var controller_url = item["controller_url"].toStr().Trim();
         var controller_title = item["controller_title"].toStr().Trim();
-        var controller_type = item["controller_type"].toStr().Trim(); // empty("dynamic") or "vue"
+        var controller_type = item["controller_type"].toStr().Trim(); // empty("dynamic") or "vue" or "lookup" or "api"
 
         var config_file = fw.config("template") + DevCodeGen.DB_JSON_PATH;
         var entities = DevEntityBuilder.loadJson<ArrayList>(config_file);
@@ -258,6 +235,17 @@ public class DevManageController : FwController
 
         fw.flash("controller_created", controller_name);
         fw.flash("controller_url", controller_url);
+        fw.redirect(base_url);
+    }
+
+    public void CreateReportAction()
+    {
+        var item = reqh("item");
+        var repcode = item["report_code"].toStr().Trim();
+
+        DevCodeGen.init(fw).createReport(repcode);
+
+        fw.flash("success", repcode + " report created");
         fw.redirect(base_url);
     }
 
@@ -287,10 +275,9 @@ public class DevManageController : FwController
         {
             ["fields"] = fields
         };
-        ParsePage parser = new(fw);
-        string content = parser.parse_page(tpl_to + "/show", "/common/form/show/extract/form.html", ps);
+        string content = fw.parsePage(tpl_to + "/show", "/common/form/show/extract/form.html", ps);
         content = Regex.Replace(content, @"^(?:[\t ]*(?:\r?\n|\r))+", "", RegexOptions.Multiline); // remove empty lines
-        FW.setFileContent(tpl_path + "/show/form.html", ref content);
+        Utils.setFileContent(tpl_path + "/show/form.html", ref content);
 
         // extract ShowAction
         config["is_dynamic_showform"] = false;
@@ -300,11 +287,10 @@ public class DevManageController : FwController
         {
             ["fields"] = fields
         };
-        parser = new ParsePage(fw);
-        content = parser.parse_page(tpl_to + "/show", "/common/form/showform/extract/form.html", ps);
+        content = fw.parsePage(tpl_to + "/show", "/common/form/showform/extract/form.html", ps);
         content = Regex.Replace(content, @"^(?:[\t ]*(?:\r?\n|\r))+", "", RegexOptions.Multiline); // remove empty lines
         content = Regex.Replace(content, "&lt;~(.+?)&gt;", "<~$1>"); // unescape tags
-        FW.setFileContent(tpl_path + "/showform/form.html", ref content);
+        Utils.setFileContent(tpl_path + "/showform/form.html", ref content);
 
         // 'TODO here - also modify controller code ShowFormAction to include listSelectOptions, multi_datarow, comboForDate, autocomplete name, etc...
 
@@ -330,7 +316,9 @@ public class DevManageController : FwController
             dbtype = "OLE";
 
         // Try
-        var db = new DB(fw, new Hashtable() { { "connection_string", connstr }, { "type", dbtype } });
+        var db = new DB(connstr, dbtype, "main");
+        db.setLogger(fw.logger);
+        db.setContext(fw.context);
 
         var entities = DevEntityBuilder.dbschema2entities(db);
 
@@ -387,7 +375,7 @@ public class DevManageController : FwController
         var entities_file = fw.config("template") + DevCodeGen.ENTITIES_PATH;
         Hashtable item = new()
         {
-            ["entities"] = FW.getFileContent(entities_file)
+            ["entities"] = Utils.getFileContent(entities_file)
         };
         ps["i"] = item;
 
@@ -401,7 +389,7 @@ public class DevManageController : FwController
 
         var entities_file = fw.config("template") + DevCodeGen.ENTITIES_PATH;
         string filedata = (string)item["entities"];
-        FW.setFileContent(entities_file, ref filedata);
+        Utils.setFileContent(entities_file, ref filedata);
 
         try
         {

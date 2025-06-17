@@ -1,86 +1,83 @@
 <script type="text/x-template" id="list-edit-pane-template">
-  <div ref="pane" class="container-fluid list-edit-pane" :class="{ 'is-visible': fwStore.is_list_edit_pane }">
-    <button type="button" class="btn-close float-end mt-2" aria-label="Close" @click="closePane"></button>
-    <span v-if="save_result" class="form-saved-status float-end mt-1 me-2">
-      <span v-if="save_result.success" class="badge bg-success">saved</span>
-      <span v-if="!save_result.success" class="badge bg-danger">not saved</span>
-    </span>
-    <h2>Edit Record</h2>
-    <div v-if="save_result && !save_result.success && save_result.err_msg>''" class="alert alert-danger">{{save_result.err_msg}}</div>
-    <form v-if="fwStore.edit_data !== null"
-      class="fw-card"
-      @submit.prevent="saveChanges"
-      @change.prevent="onChange"
-    >
-      <fieldset>
-        <form-one-def v-for="(def,index) in fwStore.treeShowFormFields"
-          :key="index"
-          :form="fwStore.edit_data"
-          @update-form-field="onUpdateFormField"
-          @cancel-form="onCancelForm"
-          :def="def"
-          :lookups="fwStore.lookups"
-        />
-      </fieldset>
-    </form>
-    <template v-else>
-      <div v-if="fwStore.is_loading_item" class="text-center"><span class="spinner-border" role="status" aria-hidden="true"></span></div>
-    </template>
-  </div>
+    <div ref="pane" class="container-fluid list-edit-pane" :class="{ 'is-visible': fwStore.is_list_edit_pane }">
+        <button type="button" class="btn-close float-end mt-2" aria-label="Close" @click="closePane"></button>
+        <span v-if="fwStore.savedStatus!==null" class="form-saved-status float-end mt-1 me-2">
+            <span v-if="fwStore.savedStatus" class="badge bg-success">saved</span>
+            <span v-if="!fwStore.savedStatus" class="badge bg-danger">not saved</span>
+        </span>
+        <h2>Edit Record</h2>
+        <div v-if="fwStore.savedStatus===false && fwStore.savedErrorMessage>''" class="alert alert-danger">
+            {{fwStore.savedErrorMessage}}
+        </div>
+        <form v-if="fwStore.edit_data !== null"
+              class="fw-card"
+              @submit.prevent="saveChanges"
+              @change.prevent="onChange">
+            <fieldset>
+                <form-one-def v-for="(def,index) in fwStore.treeShowFormFields"
+                              :key="index"
+                              :form="fwStore.edit_data"
+                              @update-form-field="onUpdateFormField"
+                              @cancel-form="onCancelForm"
+                              :def="def"
+                              :lookups="fwStore.lookups" />
+            </fieldset>
+        </form>
+        <template v-else>
+            <div v-if="fwStore.is_loading_item" class="text-center"><span class="spinner-border" role="status" aria-hidden="true"></span></div>
+        </template>
+    </div>
 </script>
 
 <script type="module">
-import { mapStores } from 'pinia';
+    import { mapStores } from 'pinia';
 
-fwApp.component('list-edit-pane', {
-  template: '#list-edit-pane-template',
-  props: [],
-  computed: {
-    ...mapStores(useFwStore), //accessible via this.fwStore
-    save_result() {
-      return this.fwStore.edit_data?.save_result;
-    },
-  },
-  mounted() {
-    console.log('list-edit-pane mounted');
-    document.addEventListener('click', this.handleClickOutside);
-  },
-  beforeUnmount() {
-    console.log('list-edit-pane beforeUnmount');
-    document.removeEventListener('click', this.handleClickOutside);
-  },
-  methods: {
-    //click outside pane closes pane    
-    handleClickOutside(e) {
-      if (this.fwStore.is_list_edit_pane
-        && this.$refs.pane
-        && !this.$refs.pane.contains(e.target)
-        && !e.target.classList.contains('on-quickedit') // except when clicked on something with on-quickedit class (button that opens pane)
-        && !e.target.closest('.modal') //and except clicked on something within a modal
-        ) {
-        this.closePane();
-      }
-    },
-    onUpdateFormField({ field, value }) {
-      //console.log('list-edit-pane updateFormField', { field, value });
-      this.fwStore.edit_data.i[field] = value;
-    },
-    onChange() {
-      //console.log('list-edit-pane onChange');
-      this.saveChanges(); //save changes whenever form changed
-    },
-    saveChanges() {
-      // Implement save logic here
-      // console.log('list-edit-pane saveChanges');
-      this.fwStore.saveEditDataDebounced();
-    },
-    onCancelForm() {
-      this.closePane();
-    },
-    closePane() {
-      this.fwStore.is_list_edit_pane=false;
-      this.fwStore.clearEditData();
-    }
-  }
-});
+    fwApp.component('list-edit-pane', {
+        template: '#list-edit-pane-template',
+        props: [],
+        computed: {
+            ...mapStores(fwStore) //accessible via this.fwStore
+        },
+        mounted() {
+            console.log('list-edit-pane mounted');
+            document.addEventListener('click', this.handleClickOutside);
+        },
+        beforeUnmount() {
+            console.log('list-edit-pane beforeUnmount');
+            document.removeEventListener('click', this.handleClickOutside);
+        },
+        methods: {
+            //click outside pane closes pane
+            handleClickOutside(e) {
+                if (this.fwStore.is_list_edit_pane
+                    && this.$refs.pane
+                    && !this.$refs.pane.contains(e.target)
+                    && !e.target.classList.contains('on-quickedit') // except when clicked on something with on-quickedit class (button that opens pane)
+                    && !e.target.closest('.modal') //and except clicked on something within a modal
+                ) {
+                    this.closePane();
+                }
+            },
+            onUpdateFormField({ field, value }) {
+                //console.log('list-edit-pane updateFormField', { field, value });
+                this.fwStore.edit_data.i[field] = value;
+            },
+            onChange() {
+                //console.log('list-edit-pane onChange');
+                this.saveChanges(); //save changes whenever form changed
+            },
+            saveChanges() {
+                // Implement save logic here
+                // console.log('list-edit-pane saveChanges');
+                this.fwStore.saveEditDataDebounced();
+            },
+            onCancelForm() {
+                this.closePane();
+            },
+            closePane() {
+                this.fwStore.is_list_edit_pane = false;
+                this.fwStore.clearEditData();
+            }
+        }
+    });
 </script>

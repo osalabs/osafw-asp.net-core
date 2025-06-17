@@ -1,48 +1,53 @@
 <script type="text/x-template" id="screens">
-  <template v-if="fwStore.current_screen=='list'">
-    <list-header v-if="fwStore.uioptions.list.header"></list-header>
-    <list-filters v-if="fwStore.uioptions.list.filters"></list-filters>
-    <list-table v-if="fwStore.uioptions.list.table">
-      <!--template #list-row-btn-prepend="props"><button class="btn btn-sm btn-default" @click.prevent="console.log(props.row)">Custom Button</button></template>
-      <template #list-row-btn-append="props"><button class="btn btn-sm btn-default" @click.prevent="console.log(props.row)">Custom Button</button></template-->
-    </list-table>
-  </template>
-  <template v-else-if="fwStore.current_screen=='view'">
-    <view-header></view-header>
-    <view-form></view-form>
-    <activity-logs v-if="fwStore.is_activity_logs"></activity-logs>
-  </template>
-  <template v-else-if="fwStore.current_screen=='edit'">
-    <edit-header></edit-header>
-    <edit-form></edit-form>
-  </template>
-  <template v-else>
-    Loading...
-  </template>
+    <template v-if="fwStore.current_screen=='list'">
+        <list-header v-if="fwStore.uioptions.list.header"></list-header>
+        <list-filters v-if="fwStore.uioptions.list.filters"></list-filters>
+        <list-table v-if="fwStore.uioptions.list.table">
+            <!--template #list-row-btn-prepend="props"><button class="btn btn-sm btn-default" @click.prevent="console.log(props.row)">Custom Button</button></template>
+            <template #list-row-btn-append="props"><button class="btn btn-sm btn-default" @click.prevent="console.log(props.row)">Custom Button</button></template-->
+            <!--template #cell-status="{ row, col }">
+              <span :class="['badge', row.status==='Active' ? 'bg-success':'bg-secondary']">
+                {{ row.status }}
+              </span>
+            </template-->
+        </list-table>
+    </template>
+    <template v-else-if="fwStore.current_screen=='view'">
+        <view-header></view-header>
+        <view-form></view-form>
+        <activity-logs v-if="fwStore.is_activity_logs"></activity-logs>
+    </template>
+    <template v-else-if="fwStore.current_screen=='edit'">
+        <edit-header></edit-header>
+        <edit-form></edit-form>
+    </template>
+    <template v-else>
+        Loading...
+    </template>
 </script>
 
 <script type="module">
-import { mapStores } from 'pinia';
+    import { mapStores } from 'pinia';
 
-fwApp.component('screens', {
-  template: '#screens',
-  props: {
-    screen: {
-      type: String,
-      default: 'list'
-    },
-    id: {
-      type: [String, Number],
-      default: ''
-    }
-  },
-  computed: {
-    ...mapStores(useFwStore) //accessible via this.fwStore
-  },
-  mounted(){
-    if (this.screen){
-      this.fwStore.setCurrentScreen(this.screen, this.id);
-    }
-  }
-});
+    fwApp.component('screens', {
+        template: '#screens',
+        props: {
+            screen: {
+                type: String,
+                default: 'list'
+            },
+            id: {
+                type: [String, Number],
+                default: ''
+            }
+        },
+        computed: {
+            ...mapStores(fwStore) //accessible via this.fwStore
+        },
+        mounted() {
+            if (this.screen) {
+                this.fwStore.setCurrentScreen(this.screen, this.id);
+            }
+        }
+    });
 </script>

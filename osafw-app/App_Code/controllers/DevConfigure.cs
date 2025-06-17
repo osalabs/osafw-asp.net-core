@@ -53,7 +53,7 @@ public class DevConfigureController : FwController
         {
             try
             {
-                db = new DB(fw);
+                db = fw.getDB();
                 db.connect();
                 ps["is_db_conn"] = true;
 
@@ -100,7 +100,7 @@ public class DevConfigureController : FwController
         {
             var path = dir_or_filepath + (is_dir ? "" : "osafw_writable_check.txt");
             string V = "osafw";
-            FW.setFileContent(path, ref V);
+            Utils.setFileContent(path, ref V);
             File.Delete(path);
             result = true;
         }
@@ -127,7 +127,7 @@ public class DevConfigureController : FwController
             if (File.Exists(sql_file))
             {
                 logger("Executing sql file:", sql_file);
-                sql_ctr += db.execMultipleSQL(FW.getFileContent(sql_file));
+                sql_ctr += db.execMultipleSQL(Utils.getFileContent(sql_file));
             }
         }
 
@@ -143,4 +143,30 @@ public class DevConfigureController : FwController
         return ps;
     }
 
+    public Hashtable ApplyUpdatesAction()
+    {
+        if (!fw.config("IS_DEV").toBool())
+            throw new AuthException("Not in a DEV mode");
+
+        fw.model<FwUpdates>().loadUpdates();
+
+        // apply updates - if any and echo results. If error happens we stay on this page
+        try
+        {
+            fw.model<FwUpdates>().applyPending(true);
+        }
+        catch (Exception ex)
+        {
+            fw.rw("Error: " + ex.Message);
+            fw.rw("");
+            fw.rw("<b>Press F5 to continue applying updates</b><br>");
+            fw.rw("or go to <a href='/Admin/FwUpdates'>Admin FwUpdates</a>");
+            fw.rw("or go to <a href='/Login'>Login</a><br>");
+            return null;
+        }
+
+        // all success - show link back to home
+        fw.rw("All updates applied successfully. <a href='/'>Back to Home</a>");
+        return null;
+    }
 }
