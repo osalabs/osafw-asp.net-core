@@ -47,6 +47,7 @@ let state = {
                 isButtonsLeft: null, //null - use global.is_list_btn_left
                 rowTitle: 'Double click to Edit',
                 nl2br: false, // true if table cells should show line breaks
+                maxRowHeight: 0, // max row height in px, 0 - no limit
                 rowButtons: { // list-row-btn, can be false as whole
                     view: true,
                     edit: true,
@@ -107,7 +108,7 @@ let state = {
     related_id: 0, // related model id
     return_url: '', // return url if controller called from other place expecting user's return
     field_id: 'id', // model's id field name
-    list_headers: [], // list headers, array of {field_name:"", field_name_visible:"", is_sortable:bool, is_checked:bool, search_value:null|"", is_ro:bool, input_type:"input|select|date"}
+    list_headers: [], // list headers, array of {field_name:"", field_name_visible:"", is_sortable:bool, is_checked:bool, search_value:null|"", is_ro:bool, input_type:"input|select|date", formatter(row, value)}
     is_list_search_open: false, // true if list search is open by user
     count: 0, // total list rows count
     list_rows: [], // array of row objects to display, row can contain _meta object {is_ro:bool, ro_fields:[read only field names]}

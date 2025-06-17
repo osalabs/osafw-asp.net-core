@@ -31,14 +31,12 @@
                       :col="header">
                     <template v-if="header.formatter" v-html="header.formatter(row, fieldValueByName(row, header.field_name))">
                     </template>
-                    <template v-else>
-                        {{fieldValueByName(row, header.field_name)}}
-                    </template>
+                    <list-cell-ro v-else :row="row" :col="header" :uioptions="uioptions"></list-cell-ro>
                 </slot>
             </td>
             <td v-else
                 :class="(fwStore.cells_saving[id+'-'+header.field_name]?'cell-success-fade':'')+(fwStore.cells_errors[id+'-'+header.field_name]?' cell-invalid':'')">
-                <list-cell-ro v-if="header.is_ro || row._meta?.is_ro || row._meta?.ro_fields?.includes(header.field_name)" :row="row" :col="header"></list-cell-ro>
+                <list-cell-ro v-if="header.is_ro || row._meta?.is_ro || row._meta?.ro_fields?.includes(header.field_name)" :row="row" :col="header" :uioptions="uioptions"></list-cell-ro>
 
                 <list-cell-input v-else-if="['input','email','number','date_popup','textarea'].includes(header.input_type)"
                                  :rowId="id" :row="row" :col="header"
@@ -59,7 +57,7 @@
                                     @navigate="onCellNavigate($event)"
                                     @btnClick="fwStore.onCellBtnClick($event)"></list-cell-checkbox>
 
-                <div v-else class="text-danger">{{fieldValueByName(row, header.field_name)}}</div>
+                <list-cell-ro v-else :class="text-danger" :row="row" :col="header" :uioptions="uioptions"></list-cell-ro>
             </td>
         </template>
 
