@@ -108,7 +108,8 @@ let state = {
     related_id: 0, // related model id
     return_url: '', // return url if controller called from other place expecting user's return
     field_id: 'id', // model's id field name
-    list_headers: [], // list headers, array of {field_name:"", field_name_visible:"", is_sortable:bool, is_checked:bool, search_value:null|"", is_ro:bool, input_type:"input|select|date", formatter(row, value)}
+    view_list_custom: [], // used for cellFormatter
+    list_headers: [], // list headers, array of {field_name:"", field_name_visible:"", is_sortable:bool, is_checked:bool, search_value:null|"", is_ro:bool, input_type:"input|select|date"}
     is_list_search_open: false, // true if list search is open by user
     count: 0, // total list rows count
     list_rows: [], // array of row objects to display, row can contain _meta object {is_ro:bool, ro_fields:[read only field names]}
@@ -124,8 +125,8 @@ let state = {
     //standard lookups
     lookups_std: {
         statusf: [
-            { id: 0, iname: 'Active' },
-            { id: 10, iname: 'Inactive' }
+            { id: 0, iname: 'Active', bgcolor: 'bg-primary' },
+            { id: 10, iname: 'Inactive', bgcolor: 'bg-secondary' }
         ],
         statusf_admin: [
             { id: 0, iname: 'Active' },
@@ -495,6 +496,15 @@ let actions = {
     },
     async onCellKeyup(event, row, col) {
         //console.log('onCellKeyup:', event, row, col);
+    },
+    //format cell value for display if header field is in view_list_custom
+    cellFormatter(row, header) {
+        if (header.field_name == "status") {
+            // default - format status as badge
+            const value = row[header.field_name];
+            const status = this.lookups_std.statusf.find(s => s.id == value) || { iname: value, id: 0, bgcolor: 'bg-secondary' };
+            return '<span class="badge ' + status.bgcolor + '" >'+AppUtils.htmlescape(status.iname)+'</span>';
+        }
     },
     async saveCell(row, col) {
         let id = row[this.field_id];

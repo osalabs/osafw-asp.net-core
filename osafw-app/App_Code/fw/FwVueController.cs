@@ -123,6 +123,7 @@ public class FwVueController : FwDynamicController
         ps["select_userviews"] = fw.model<UserViews>().listSelectByIcode(UserViews.icodeByUrl(base_url, is_list_edit));
 
         ps["field_id"] = model0.field_id;
+        ps["view_list_custom"] = Utils.qh(this.view_list_custom, "1");
 
         //return view form definitions
         ps["show_fields"] = this.config["show_fields"];

@@ -29,8 +29,7 @@
                 <slot :name="'cell-'+header.field_name"
                       :row="row"
                       :col="header">
-                    <template v-if="header.formatter" v-html="header.formatter(row, fieldValueByName(row, header.field_name))">
-                    </template>
+                    <div v-if="fwStore.view_list_custom.hasOwnProperty(header.field_name)" v-html="fwStore.cellFormatter(row, header)"></div>
                     <list-cell-ro v-else :row="row" :col="header" :uioptions="uioptions"></list-cell-ro>
                 </slot>
             </td>

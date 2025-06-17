@@ -11,26 +11,58 @@
 
   "store": {
     "lookups_std": {
-      "statusf_admin": [
+      "statusf": [
         {
           "id": 0,
-          "iname": "Active"
+          "iname": "Active",
+          "bgcolor": "bg-primary"
         },
         {
           "id": 10,
-          "iname": "Inactive"
+          "iname": "Inactive",
+          "bgcolor": "bg-secondary"
         },
         {
           "id": 20,
-          "iname": "Failed"
+          "iname": "Failed",
+          "bgcolor": "bg-danger"
         },
         {
           "id": 30,
-          "iname": "Applied"
+          "iname": "Applied",
+          "bgcolor": "bg-success"
         },
         {
           "id": 127,
-          "iname": "[Deleted]"
+          "iname": "[Deleted]",
+          "bgcolor": "bg-dark"
+        }
+      ],
+      "statusf_admin": [
+        {
+          "id": 0,
+          "iname": "Active",
+          "bgcolor": "bg-primary"
+        },
+        {
+          "id": 10,
+          "iname": "Inactive",
+          "bgcolor": "bg-secondary"
+        },
+        {
+          "id": 20,
+          "iname": "Failed",
+          "bgcolor": "bg-danger"
+        },
+        {
+          "id": 30,
+          "iname": "Applied",
+          "bgcolor": "bg-success"
+        },
+        {
+          "id": 127,
+          "iname": "[Deleted]",
+          "bgcolor": "bg-dark"
         }
       ]
     },
