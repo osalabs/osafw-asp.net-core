@@ -275,13 +275,16 @@ public class FwVueController : FwDynamicController
                 ps["id"] = route.id;
             }
 
-            //flsh messages if any
-            ps["flash"] = new Hashtable()
+            //override store if necessary
+            Hashtable store = this.config["store"] as Hashtable ?? [];
+            //add flash messages if any
+            store["flash"] = new Hashtable()
             {
                 ["success"] = fw.flash("success"),
                 ["error"] = fw.flash("error"),
             };
-            ps["uioptions"] = this.config["uioptions"];
+
+            ps["store"] = store;
             ps = setPS(ps);
         }
 

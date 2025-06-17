@@ -333,10 +333,9 @@ let actions = {
     //save to store each key from data if such key exists in store
     saveToStore(data) {
         Object.keys(data).forEach(key => {
-            if (key.endsWith('Json')) { // i.e. data-key-json
-                let json_key = key.slice(0, -4); // remove Json suffix
+            if (key == "store") { // special store-level json - merge into $state itself
                 try {
-                    this.$state[json_key] = AppUtils.deepMerge(this.$state[json_key], JSON.parse(data[key]));
+                    this.$state = AppUtils.deepMerge(this.$state, JSON.parse(data.store));
                 } catch (e) {
                     console.error('Error parsing JSON for key:', json_key, e);
                 }                

@@ -6,15 +6,15 @@
   "view_list_defaults": "iname status applied_time idesc last_error",
   "view_list_map": {
     "iname": "File",
-    "idesc": "SQL"    
+    "idesc": "SQL"
   },
 
-  "uioptions": {
-    "lookupsTODO": {
-      "status": [
+  "store": {
+    "lookups_std": {
+      "statusf_admin": [
         {
           "id": 0,
-          "iname": "New"
+          "iname": "Active"
         },
         {
           "id": 10,
@@ -27,79 +27,85 @@
         {
           "id": 30,
           "iname": "Applied"
+        },
+        {
+          "id": 127,
+          "iname": "[Deleted]"
         }
       ]
     },
-    "list": {
-      "header": {
-        "btnAddNew": false,
-        "buttons": [
-          {
-            "label": "Apply All Pending",
-            "icon": "bi bi-play-fill",
-            "class": "btn btn-primary me-2",
-            "url": "/Dev/Configure/(ApplyUpdates)",
-            "post": true
-          },
-          {
-            "label": "Mark All Pending as Applied",
-            "icon": "bi bi-check2-circle",
-            "class": "btn btn-secondary me-2",
-            "url": "/Dev/Manage/(MarkFwUpdatesApplied)",
-            "post": true
-          },
-          {
-            "label": "Refresh Views only",
-            "icon": "bi bi-arrow-clockwise",
-            "class": "btn btn-info me-2",
-            "url": "/Dev/Manage/(RefreshViews)",
-            "post": true
-          },
-          {
-            "label": "Reload from Files",
-            "title": "New update files only",
-            "icon": "bi bi-arrow-repeat",
-            "class": "btn btn-warning me-2",
-            "url": "/Dev/Manage/(ReloadFwUpdates)",
-            "post": true
+    "uioptions": {
+      "list": {
+        "header": {
+          "btnAddNew": false,
+          "buttons": [
+            {
+              "label": "Apply All Pending",
+              "icon": "bi bi-play-fill",
+              "class": "btn btn-primary me-2",
+              "url": "/Dev/Configure/(ApplyUpdates)",
+              "post": true
+            },
+            {
+              "label": "Mark All Pending as Applied",
+              "icon": "bi bi-check2-circle",
+              "class": "btn btn-secondary me-2",
+              "url": "/Dev/Manage/(MarkFwUpdatesApplied)",
+              "post": true
+            },
+            {
+              "label": "Refresh Views only",
+              "icon": "bi bi-arrow-clockwise",
+              "class": "btn btn-info me-2",
+              "url": "/Dev/Manage/(RefreshViews)",
+              "post": true
+            },
+            {
+              "label": "Reload from Files",
+              "title": "New update files only",
+              "icon": "bi bi-arrow-repeat",
+              "class": "btn btn-warning me-2",
+              "url": "/Dev/Manage/(ReloadFwUpdates)",
+              "post": true
+            }
+          ]
+        },
+        "filters": {
+          "userlists": false,
+          "export": false,
+          "print": false,
+          "status": true
+        },
+        "table": {
+          "rowButtons": {
+            "view": true,
+            "edit": false,
+            "delete": false,
+            "quickedit": false,
+            "buttons": [
+              {
+                "label": "Apply",
+                "icon": "bi bi-play-fill",
+                "title": "Apply this update",
+                "post": true,
+                "url": "/Dev/Manage/(ApplyFwUpdate)"
+              }
+            ]
           }
-        ]
-      },
-      "filters": {
-        "userlists": false,
-        "export": false,
-        "print": false,
-        "status": true
-      },
-      "table": {
-        "rowButtons": {
-          "view": true,
-          "edit": false,
-          "delete": false,
-          "quickedit": false,
+        },
+        "btnMulti": {
+          "isDelete": false,
+          "isUserlists": false,
           "buttons": [
             {
               "label": "Apply",
+              "title": "Apply all selected updates",
               "icon": "bi bi-play-fill",
-              "title": "Apply this update",
-              "post": true,
-              "url": "/Dev/Manage/(ApplyFwUpdate)"
+              "class": "btn btn-primary me-2",
+              "url": "/Dev/Manage/(ApplyFwUpdates)"
             }
           ]
         }
-      },
-      "btnMulti": {
-        "isDelete": false,
-        "isUserlists": false,
-        "buttons": [
-          {
-            "label": "Apply",
-            "title": "Apply all selected updates",
-            "icon": "bi bi-play-fill",
-            "class": "btn btn-primary me-2",
-            "url": "/Dev/Manage/(ApplyFwUpdates)"
-          }
-        ]
       }
     }
   }
