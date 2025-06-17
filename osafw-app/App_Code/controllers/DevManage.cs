@@ -138,20 +138,50 @@ public class DevManageController : FwController
         fw.redirect("/Admin/FwUpdates");
     }
 
-    public void ApplyFwUpdateAction(int id)
+    public Hashtable ApplyFwUpdateAction(int id)
     {
         checkXSS();
         fw.model<FwUpdates>().applyOne(id);
-        fw.flash("success", "Update applied");
-        fw.redirect("/Admin/FwUpdates");
+
+        if (fw.isJsonExpected())
+        {
+            var ps = new Hashtable();
+            ps["message"] = "Update applied";
+            return new Hashtable { { "_json", ps } };
+        }
+        else
+        {
+            fw.flash("success", "Update applied");
+            fw.redirect("/Admin/FwUpdates");
+            return null;
+        }
     }
 
-    public void ApplyFwUpdatesAction()
+    public Hashtable ApplyFwUpdatesAction()
     {
         checkXSS();
         var ids = reqh("cb").Keys.Cast<string>().Select(x => x.toInt()).ToList();
         fw.model<FwUpdates>().applyList(new ArrayList(ids));
-        fw.flash("success", "Updates applied");
+
+        if (fw.isJsonExpected())
+        {
+            var ps = new Hashtable();
+            ps["message"] = "Updates applied";
+            return new Hashtable { { "_json", ps } };
+        }
+        else
+        {
+            fw.flash("success", "Updates applied");
+            fw.redirect("/Admin/FwUpdates");
+            return null;
+        }
+    }
+
+    public void ReloadFwUpdatesAction()
+    {
+        checkXSS();
+        fw.model<FwUpdates>().loadUpdates();
+        fw.flash("success", "New Updates reloaded from disk");
         fw.redirect("/Admin/FwUpdates");
     }
     #endregion

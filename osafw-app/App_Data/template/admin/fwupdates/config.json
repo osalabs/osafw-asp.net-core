@@ -54,6 +54,14 @@
             "class": "btn btn-info me-2",
             "url": "/Dev/Manage/(RefreshViews)",
             "post": true
+          },
+          {
+            "label": "Reload from Files",
+            "title": "New update files only",
+            "icon": "bi bi-arrow-repeat",
+            "class": "btn btn-warning me-2",
+            "url": "/Dev/Manage/(ReloadFwUpdates)",
+            "post": true
           }
         ]
       },
@@ -66,11 +74,18 @@
       "table": {
         "rowButtons": {
           "view": true,
-          "custom": "Apply",
-          "custom_url": "/Dev/Manage/(ApplyFwUpdate)",
           "edit": false,
           "delete": false,
-          "quickedit": false
+          "quickedit": false,
+          "buttons": [
+            {
+              "label": "Apply",
+              "icon": "bi bi-play-fill",
+              "title": "Apply this update",
+              "post": true,
+              "url": "/Dev/Manage/(ApplyFwUpdate)"
+            }
+          ]
         }
       },
       "btnMulti": {
@@ -79,6 +94,7 @@
         "buttons": [
           {
             "label": "Apply",
+            "title": "Apply all selected updates",
             "icon": "bi bi-play-fill",
             "class": "btn btn-primary me-2",
             "url": "/Dev/Manage/(ApplyFwUpdates)"

@@ -31,7 +31,7 @@ let state = {
             header: { // list-header, can be false
                 btnAddNew: true,
                 count: true,
-                buttons: [] // label, url, icon, title (for tooltip), class, post(true|false)
+                buttons: [] // custom - label, url, icon, title (for tooltip), class, post(true|false)
             },
             filters: { // list-filters, can be false
                 s: { // search input, can be false
@@ -51,8 +51,7 @@ let state = {
                     edit: true,
                     quickedit: true,
                     delete: true,
-                    custom: false,
-                    custom_url: ''
+                    buttons: [] // custom - label, url (/id will be appended), icon, title (for tooltip), class, post(true|false)
                 },
                 rowDblClick: 'view', // view|edit|quickedit or else override store onRowDblClick
                 pagination: { // list-pagination, can be false
@@ -62,7 +61,7 @@ let state = {
             btnMulti: { //list-btn-multi, can be false
                 isDelete: true,
                 isUserlists: true,
-                buttons: [], // label, url, icon, title (for tooltip), class
+                buttons: [], // custom - label, url, icon, title (for tooltip), class
             }
         },
         view: {
@@ -462,17 +461,32 @@ let actions = {
     async onCellBtnClick({ event, row, col }) {
         console.log('onCellBtnClick:', event, row[this.field_id], col.field);
     },
-    async onRowBtnCustomClick(row) {
-        if (this.uioptions.list.table.rowButtons?.custom_url) {
-            try {
-                const api = mande(this.uioptions.list.table.rowButtons.custom_url + '/' + row[this.field_id]);
-                await api.post('', { XSS: this.XSS });
-                this.reloadIndex();
-            } catch (error) {
-                this.handleError(error, 'onRowBtnCustomClick');
+    // helper to handle custom URL click from row button
+    async customUrlClick(id, url, post) {
+        try {
+            const api = mande(url + '/' + id);
+            let response;
+            if (post) {
+                response = await api.post('', { XSS: this.XSS });
+            } else {
+                response = await api.get('');
             }
+            if (response?.message) {
+                Toast(response.message, { theme: 'text-bg-success' });
+            }
+
+            this.reloadIndex();
+        } catch (error) {
+            console.error(error);
+            this.handleError(error, 'onRowBtnCustomClick');
+        }
+    },
+    // event contains: url, post, e
+    async onRowBtnCustomClick(row, event) {
+        if (event.url) {
+            await this.customUrlClick(row[this.field_id], event.url, event.post);            
         } else {
-            console.log('onRowBtnCustomClick:', row);
+            console.log('onRowBtnCustomClick:', row, event);
         }
     },
     async onRowDblClick(row) {
@@ -569,8 +583,13 @@ let actions = {
             if (!Object.keys(req.cb).length) return;
 
             const api = mande(url);
-            await api.post('', req);
+            const response = await api.post('', req);
             this.hchecked_rows = {};
+
+            if (response?.message) {
+                Toast(response.message, { theme: 'text-bg-success' });
+            }
+
         } catch (error) {
             this.handleError(error, 'customCheckedRows');
         } finally {

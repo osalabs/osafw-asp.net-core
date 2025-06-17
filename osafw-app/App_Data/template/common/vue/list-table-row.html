@@ -15,7 +15,7 @@
                       @edit="onRowEdit(row)"
                       @quickedit="onRowQuickEdit(row)"
                       @delete="onRowDelete(row)"
-                      @custom="onRowCustom(row)">
+                      @custom="onRowCustom(row, $event)">
             <template #btn-prepend>
                 <slot name="list-row-btn-prepend" :row="row"></slot>
             </template>
@@ -72,7 +72,7 @@
                       @edit="onRowEdit(row)"
                       @quickedit="onRowQuickEdit(row)"
                       @delete="onRowDelete(row)"
-                      @custom="onRowCustom(row)">
+                      @custom="onRowCustom(row, $event)">
             <template #btn-prepend>
                 <slot name="list-row-btn-prepend" :row="row"></slot>
             </template>
@@ -146,8 +146,8 @@
                 await this.fwStore.deleteRow(this.id);
                 await this.fwStore.loadIndexDebounced(); //reload list to show changes
             },
-            async onRowCustom(row) {
-                this.fwStore.onRowBtnCustomClick(row);
+            async onRowCustom(row, e) {
+                this.fwStore.onRowBtnCustomClick(row, e);
             },
 
             // inline editing events
