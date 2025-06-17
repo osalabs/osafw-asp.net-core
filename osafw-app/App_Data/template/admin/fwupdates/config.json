@@ -1,3 +1,20 @@
 {
-    "is_dynamic_index_edit": false
+  "model": "FwUpdates",
+  "is_dynamic_index_edit": false,
+  "search_fields": "iname idesc",
+  "uioptions": {
+    "list": {
+      "header": {
+        "btnAddNew": false,
+        "buttons": [
+          {"label": "Apply All Pending", "class": "btn btn-primary", "url": "/Dev/Configure/(ApplyUpdates)", "post": true},
+          {"label": "Mark All Pending as Applied", "class": "btn btn-secondary", "url": "/Dev/Manage/(MarkFwUpdatesApplied)", "post": true},
+          {"label": "Refresh Views only", "class": "btn btn-info", "url": "/Dev/Manage/(RefreshViews)", "post": true}
+        ]
+      },
+      "filters": {"userlists": false, "export": false, "print": false, "status": true},
+      "table": {"rowButtons": {"view": true, "custom": "Apply", "custom_url": "/Dev/Manage/(ApplyFwUpdate)", "edit": false, "delete": false, "quickedit": false}},
+      "btnMulti": {"isDelete": false, "isUserlists": false, "custom": "Apply", "custom_url": "/Dev/Manage/(ApplyFwUpdates)"}
+    }
+  }
 }

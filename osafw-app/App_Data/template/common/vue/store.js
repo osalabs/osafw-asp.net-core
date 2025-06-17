@@ -30,6 +30,7 @@ let state = {
             header: { // list-header, can be false
                 btnAddNew: true,
                 count: true,
+                buttons: []
             },
             filters: { // list-filters, can be false
                 s: { // search input, can be false
@@ -48,7 +49,9 @@ let state = {
                     view: true,
                     edit: true,
                     quickedit: true,
-                    delete: true
+                    delete: true,
+                    custom: false,
+                    custom_url: ''
                 },
                 rowDblClick: 'view', // view|edit|quickedit or else override store onRowDblClick
                 pagination: { // list-pagination, can be false
@@ -57,7 +60,9 @@ let state = {
             },
             btnMulti: { //list-btn-multi, can be false
                 isDelete: true,
-                isUserlists: true
+                isUserlists: true,
+                custom: false,
+                custom_url: ''
             }
         },
         view: {
@@ -329,7 +334,11 @@ let actions = {
     //save to store each key from data if such key exists in store
     saveToStore(data) {
         Object.keys(data).forEach(key => {
-            if (this.$state[key] !== undefined) this.$state[key] = data[key];
+            if (key === 'uioptions') {
+                this.$state.uioptions = AppUtils.deepMerge(this.$state.uioptions, data[key]);
+            } else if (this.$state[key] !== undefined) {
+                this.$state[key] = data[key];
+            }
         });
     },
 
@@ -440,7 +449,17 @@ let actions = {
         console.log('onCellBtnClick:', event, row[this.field_id], col.field);
     },
     async onRowBtnCustomClick(row) {
-        console.log('onRowBtnCustomClick:', row);
+        if (this.uioptions.list.table.rowButtons?.custom_url) {
+            try {
+                const api = mande(this.uioptions.list.table.rowButtons.custom_url + '/' + row[this.field_id]);
+                await api.post('', { XSS: this.XSS });
+                this.reloadIndex();
+            } catch (error) {
+                this.handleError(error, 'onRowBtnCustomClick');
+            }
+        } else {
+            console.log('onRowBtnCustomClick:', row);
+        }
     },
     async onRowDblClick(row) {
         console.log('onRowDblClick:', row);
@@ -525,6 +544,22 @@ let actions = {
             this.handleError(error, 'deleteCheckedRows');
         } finally {
             //reload list to show changes
+            this.loadIndex();
+        }
+    },
+
+    async customCheckedRows() {
+        if (!this.uioptions.list.btnMulti?.custom_url) return;
+        try {
+            const req = { XSS: this.XSS };
+            req.cb = this.checkedRows;
+            if (!Object.keys(req.cb).length) return;
+            const api = mande(this.uioptions.list.btnMulti.custom_url);
+            await api.post('', req);
+            this.hchecked_rows = {};
+        } catch (error) {
+            this.handleError(error, 'customCheckedRows');
+        } finally {
             this.loadIndex();
         }
     },

@@ -138,6 +138,7 @@ public class FwVueController : FwDynamicController
         ps["is_userlists"] = this.is_userlists;
         ps["is_readonly"] = is_readonly;
         ps["is_list_edit"] = is_list_edit;
+        ps["uioptions"] = this.config["uioptions"];
     }
 
     /// <summary>

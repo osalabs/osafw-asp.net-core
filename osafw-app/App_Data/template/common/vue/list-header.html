@@ -16,7 +16,14 @@
                    href="#"
                    @click.prevent="onAddNew"
                    :disabled="fwStore.is_readonly"><i class="bi bi-plus-lg"></i> `Add New`</a>
-                <slot name="group"></slot>
+               <slot name="group"></slot>
+                <template v-for="btn in uioptions.buttons">
+                    <form v-if="btn.post" :action="btn.url" method="post" class="d-inline">
+                        <input type="hidden" name="XSS" :value="fwStore.XSS" />
+                        <button type="submit" class="btn" :class="btn.class">{{btn.label}}</button>
+                    </form>
+                    <a v-else :href="btn.url" class="btn" :class="btn.class">{{btn.label}}</a>
+                </template>
             </div>
             <slot></slot>
         </div>

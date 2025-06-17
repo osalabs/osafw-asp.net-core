@@ -10,6 +10,13 @@
                 :disabled="fwStore.is_readonly || !fwStore.countCheckedRows">
             `Delete`
         </button>
+        <button v-if="uioptions.custom"
+                type="button"
+                class="btn btn-primary me-2"
+                @click="onCustom"
+                :disabled="fwStore.is_readonly || !fwStore.countCheckedRows">
+            {{uioptions.custom}}
+        </button>
         <list-btn-userlists v-if="fwStore.is_userlists && uioptions.isUserlists" />
         <slot></slot>
     </div>
@@ -37,6 +44,9 @@
         methods: {
             onDelete(e) {
                 this.fwStore.deleteCheckedRows();
+            },
+            onCustom(e) {
+                this.fwStore.customCheckedRows();
             },
         }
     });
