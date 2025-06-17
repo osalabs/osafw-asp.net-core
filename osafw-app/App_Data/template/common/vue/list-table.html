@@ -11,7 +11,7 @@
                 <table :class="'table table-stripedX table-hover list ' + (fwStore.is_list_edit?'list-edit ':'') + fwStore.list_user_view.density">
                     <list-table-header />
 
-                    <tbody class="table-group-divider">
+                    <tbody class="table-group-divider" :class="uioptions.nl2br ? 'nl2br' :'' ">
                         <template v-for="row in fwStore.list_rows" :key="row[fwStore.field_id]">
                             <list-table-row :row="row">
                                 <!-- Forward standard prepend/append row-button slots -->

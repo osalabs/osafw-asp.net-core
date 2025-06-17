@@ -46,6 +46,7 @@ let state = {
             table: { //list-table
                 isButtonsLeft: null, //null - use global.is_list_btn_left
                 rowTitle: 'Double click to Edit',
+                nl2br: false, // true if table cells should show line breaks
                 rowButtons: { // list-row-btn, can be false as whole
                     view: true,
                     edit: true,
