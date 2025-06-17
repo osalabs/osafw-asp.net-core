@@ -505,6 +505,7 @@ let actions = {
             const status = this.lookups_std.statusf.find(s => s.id == value) || { iname: value, id: 0, bgcolor: 'bg-secondary' };
             return '<span class="badge ' + status.bgcolor + '" >'+AppUtils.htmlescape(status.iname)+'</span>';
         }
+        return row[header.field_name] ?? '';
     },
     async saveCell(row, col) {
         let id = row[this.field_id];
