@@ -116,6 +116,7 @@ Parses file templates and replaces <~tags> with values from hashtable
 using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Globalization;
 using System.IO;
 using System.Text;
@@ -147,8 +148,8 @@ public class ParsePage
     private static readonly Regex RX_LAST_SLASH = new(@"[^\/]+$", RegexOptions.Compiled);
     private static readonly Regex RX_EXT = new(@"\.[^\/]+$", RegexOptions.Compiled);
 
-    private static readonly Hashtable FILE_CACHE = [];
-    private static readonly Hashtable LANG_CACHE = [];
+    private static readonly ConcurrentDictionary<string, Hashtable> FILE_CACHE = new();
+    private static readonly ConcurrentDictionary<string, Hashtable> LANG_CACHE = new();
     private static readonly string[] IFOPERS = ["if", "unless", "ifne", "ifeq", "ifgt", "iflt", "ifge", "ifle"];
 
     private const string DATE_FORMAT_DEF = "M/d/yyyy"; // for US, TODO make based on user settigns (with fallback to server's settings)
@@ -188,7 +189,7 @@ public class ParsePage
             globalsGetter = options.GlobalsGetter;
             session = options.Session;
             loggerAction = options.Logger;
-            if (LANG_CACHE[lang] == null && !string.IsNullOrEmpty(TMPL_PATH))
+            if (!LANG_CACHE.ContainsKey(lang) && !string.IsNullOrEmpty(TMPL_PATH))
                 load_lang();
         }
         lang_evaluator = new MatchEvaluator(this.lang_replacer);
@@ -426,9 +427,8 @@ public class ParsePage
         // logger("preacaching [" & filename & "]")
 
         // check and get from cache
-        if (FILE_CACHE.ContainsKey(filename))
+        if (FILE_CACHE.TryGetValue(filename, out Hashtable cached_item))
         {
-            Hashtable cached_item = (Hashtable)FILE_CACHE[filename];
             // if debug is off - don't check modify time for better performance (but app restart would be necessary if template changed)
             if (is_check_file_modifications)
             {
@@ -1348,7 +1348,7 @@ public class ParsePage
         var input = str;
         if (!string.IsNullOrEmpty(context))
             input += "|" + context;
-        Hashtable cache = (Hashtable)LANG_CACHE[lang];
+        Hashtable cache = (Hashtable)LANG_CACHE.GetOrAdd(lang, _ => []);
         string result = (string)cache[input];
         if (string.IsNullOrEmpty(result))
         {
@@ -1379,8 +1379,7 @@ public class ParsePage
         // logger("load lang: " & TMPL_PATH & "\" & lang & ".txt")
         var lines = Utils.getFileLines(TMPL_PATH + @"\lang\" + lang + ".txt");
 
-        if (LANG_CACHE[lang] == null)
-            LANG_CACHE[lang] = new Hashtable();
+        LANG_CACHE.GetOrAdd(lang, _ => []);
 
         foreach (string line1 in lines)
         {
@@ -1403,6 +1402,7 @@ public class ParsePage
         Utils.setFileContent(TMPL_PATH + @"\lang\" + lang + ".txt", ref filedata, true);
 
         // also add to lang cache
+        LANG_CACHE.GetOrAdd(lang, _ => []);
         ((Hashtable)LANG_CACHE[lang])[str.Trim()] = "";
     }
 
