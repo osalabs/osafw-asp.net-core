@@ -13,25 +13,33 @@ Websites contains many pages, but usually most of pages have same layout (i.e. t
 
 Templates contains special tags `<~tag>`, which replaced by actual data passed to ParsePage engine or by content of other templates (i.e. templates may include other templates).
 
-TODO - add mermaid here how templates works
+```mermaid
+graph TD
+    A["Data tag=value"] -->|"Passed to"| B["ParsePage Engine"]
+    B -->|Loads| C["Main Layout Template (e.g. layout.html)"]
+    C -->|Includes| D["Sub-Templates Directory (e.g. /test)"]
+    D -->|Loads| E["Sub-Template Files (e.g. title.html, main.html)"]
+    C -->|Includes| F["Common Templates (e.g. /common/footer)"]
+    E -->|"May include"| F
+    C -->|Contains| G["Template Tags <~tag>"]
+    G -->|"Replaced by"| H["Data or Sub-Template Content"]
+    F -->|Reusable| H
+    H -->|Combined| I["Final HTML Output"]
+```
+
+This diagram shows how the ParsePage engine combines data, main layout, sub-templates, and common templates to generate the final HTML output. Template tags are replaced by data or sub-template content recursively.
 
 ## Sample
 
 ### Sample code.
-This will load `layout.html` layout and insert/parse sub-templates from `/test` directory, then output to browser;
-```php
-$ps=array(
+This will load `layout.html` layout and insert/parse sub-templates from `/test` directory, then output to browser;$ps=array(
   'data' => 'Hello World!',
   'more_data' => 12345,
 );
 parse_page('/test', '/layout.html', $ps);
-```
-
 ### Sample main template:
 
-_/layout.html_
-```html
-<!DOCTYPE html>
+_/layout.html_<!DOCTYPE html>
 <html lang="en"><head></head>
 <body>
   <h1><~title></h1>
@@ -39,25 +47,14 @@ _/layout.html_
   <~/common/footer>
 </body>
 </html>
-```
-
 ### Sub-templates for test page:
 
-_/test/title.html_
-```html
-Test page header
-```
-
+_/test/title.html_Test page header
 _/test/main.html_
-```html
 <p><~data></p>
 <p><~more_data></p>
-```
 
-
-this will output:
-```html
-<!DOCTYPE html>
+this will output:<!DOCTYPE html>
 <html lang="en"><head></head>
 <body>
   <h1>Test page header</h1>
@@ -66,23 +63,17 @@ this will output:
   <footer>site footer<footer>
 </body>
 </html>
-```
-
 ## Documentation
 
 ### /template directory structure
 
 All templates should be placed under single directory accessible by website code, we name it `/template` (relative to website root).
-**Sample** structure:
-```
-layout.html  - main template for website pages
+**Sample** structure:layout.html  - main template for website pages
 layout_print.html - main template for printed pages
 layout_simple.html - main template for website pages with some simpler layout
 common/ - directory with common sub-templates used by multiple layouts
 home/ - directory with sub-templates for website Home page
 contact/ - directory with sub-templates for website Contact page
-```
-
 ---
 
 ### Code
@@ -254,17 +245,9 @@ User: John (user)
 </pre>
       </td>
       <td>
-
-```
   <~rows repeat>
-```
-
-rows.html template file:
-```
-  <~fname>
+rows.html template file:  <~fname>
   <~comma unless="repeat.last" inline>,</~comma>
-```
-
 </td>
       <td>
         John, Emma, Walter
@@ -276,36 +259,22 @@ rows.html template file:
 - `sub` - this tag tells parser to use sub-hashtable for parse sub-template (PS variable should contain reference to hashtable)
 - `inline` - this tag tells parser that sub-template is not in file - it's between <~tag>...</~tag> , useful in combination with 'repeat' and 'if'. In case of 'if' tag name doesn't really matter and not need to exists in PS. **Note** if you have 2 or more inline tags with exactly the same name and attributes in same template file, content of all of them will be replaced by inline sub-template of the first tag. In the example below it will output "sold!" in both cases (i.e. not "already sold"):
   - workaround for this - use different labels. For below example just add "2" like `<~somelabel2...</~somelabel2>`
-  - **Important - use `</~tag>` for closing tags, i.e. backslash then tilde**
-```
-     <~somelabel inline if="is_sold">
+  - **Important - use `</~tag>` for closing tags, i.e. backslash then tilde**     <~somelabel inline if="is_sold">
        <div>sold!</div>
      </~somelabel>
      ...other content in same file...
      <~somelabel inline if="is_sold">
        <div>already sold</div>
-     </~somelabel>
-```
-  
+     </~somelabel>  
 
-- `parent` - this tag needs to be read from parent's PS var, not from current PS hashtable (usually used inside `repeat` sub-templates), example:
-```
-     <~rows repeat inline>
+- `parent` - this tag needs to be read from parent's PS var, not from current PS hashtable (usually used inside `repeat` sub-templates), example:     <~rows repeat inline>
        <~var_in_rows> <~var_in_parent_ps parent>
      </~rows>
-```
-
-`PARSEPAGE.TOP` and `PARSEPAGE.PARENT` can be used in tag expressions to access values from the top-most or parent hashtables directly:
-```
-  <~PARSEPAGE.TOP[user][id]>
+`PARSEPAGE.TOP` and `PARSEPAGE.PARENT` can be used in tag expressions to access values from the top-most or parent hashtables directly:  <~PARSEPAGE.TOP[user][id]>
   <~some_subtag sub="child" inline>
     Parent name: <~PARSEPAGE.PARENT[name]>
   </~some_subtag>
-```
-
-`select="var"` - load a file and use it as `value|display` list for `<select>` options. If `multi` attribute is used parser splits selected values by delimiter (comma by default) so several options can be pre-selected.
-```
-     <select name="item[fruit]">
+`select="var"` - load a file and use it as `value|display` list for `<select>` options. If `multi` attribute is used parser splits selected values by delimiter (comma by default) so several options can be pre-selected.     <select name="item[fruit]">
        <option value=""> - select a fruit -</option>
        <~./fruits.sel select="fruit">
      </select>
@@ -321,8 +290,6 @@ rows.html template file:
      30|Grape
 
      if PS contains 'fruit'=>10 then Apple will be selected by default.
-```
-
 - `radio="var" name="YYY" [delim="ZZZ"]` - this tag tell parser to load file and use it as value|display for <input type=radio> html tags, example: `<~fradio.sel radio="fradio" name="item[fradio]" delim="&nbsp;">`
 - `selvalue="var"` - display value (fetched from the tag name file) for the var (example: to display 'select' and 'radio' values in List view), example: `<~fcombo.sel selvalue="fcombo">`
   - **Note**, it doesn't work for direct values, you can't write `<~fcombo.sel selvalue="10">`. Instead put 10 into PS var and use var name.
@@ -393,36 +360,20 @@ Cherry
 ### Commenting tags
 
 - to comment a `<~sometag>` so it won't be displayed just prepend it with '#', for example: `<~#sometag>`. It will be replaced with empty string without parsing
-- to comment an inline tag like `<~rows repeat inline>...</~rows>`, just wrap it into other inline tag with false condition, for example:
-```
-  <~hide if="#" inline>
+- to comment an inline tag like `<~rows repeat inline>...</~rows>`, just wrap it into other inline tag with false condition, for example:  <~hide if="#" inline>
     <~rows repeat inline>...</~rows>
   </~hide>
-```
-
 ### Multi-language support
 
 PHP and ASP.NET implementations support multi-lanugage templates.
 Text that need to be replaced according to user's display language should be placed in templates between backtick characters.
 Parser then look for replacements in `/template/lang/$lang.txt` files, where `$lang` is "en", "es", "ua", for example.
-You need to create these files and fill with replacements in this format:
-```
-  english string === string in another language
-```
-Default lanugage is English, so en.txt doesn't need be created.
+You need to create these files and fill with replacements in this format:  english string === string in another languageDefault lanugage is English, so en.txt doesn't need be created.
 
 Note that `.js` template files are not parsed for backtick language strings automatically.
 
-For example, you have a template:
-```
-  `Hello` <~username>
-```
-
-And `/template/lang/es.txt` file for Spanish translations contains line:
-```
-    Hello === Hola
-```
-
+For example, you have a template:  `Hello` <~username>
+And `/template/lang/es.txt` file for Spanish translations contains line:    Hello === Hola
 If user's language is English, parser will output `Hello John`.
 And if user's language will be Spanish, parser will output `Hola John`.
 
