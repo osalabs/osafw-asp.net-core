@@ -30,6 +30,9 @@ public static class Program
         // the installer will remove any out-of-sync Chromium versions and
         // install the browser binary matching the library version,
         // ensuring compatibility between Playwright and the browser.
+
+        // use install_playwright.bat first to prepare this folder/permissions
+        Environment.SetEnvironmentVariable("PLAYWRIGHT_BROWSERS_PATH", @"C:\Program Files\pw-browsers");
         Microsoft.Playwright.Program.Main(
         [
             "install",          // invoke Playwright installer
