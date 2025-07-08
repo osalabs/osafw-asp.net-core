@@ -28,11 +28,16 @@ http://demo.engineeredit.com/ - this is how it looks in action right after insta
 ## Documentation
 
 ### Development
-1. in Visual Studio open `osafw-asp.net-core.sln` (you may "save as" solution with your project name)
-2. press Ctrl+F5 to run (or F5 if you really need debugger)
-3. review debug log in `/osafw-app/App_Data/logs/main.log`
-4. edit or create new controllers and models in `/osafw-app/App_Code/controllers` and `/osafw-app/App_Code/models`
-5. modify templates in `/osafw-app/App_Data/template`
+1. clone this git repository
+  - delete files in `/osafw-app/App_Data/sql/updates` - these are framework updates, not need for your fresh app
+2. in Visual Studio open `osafw-asp.net-core.sln` (you may "save as" solution with your project name)
+3. press Ctrl+F5 to run (or F5 if you really need debugger)
+4. open in browser https://localhost:PORT/Dev/Configure and check configuration. If database not configured:
+  - create `demo` database (or other name you have in appsettings.json)
+  - click "Initialize DB"
+5. review debug log in `/osafw-app/App_Data/logs/main.log`
+6. edit or create new controllers and models in `/osafw-app/App_Code/controllers` and `/osafw-app/App_Code/models`
+7. modify templates in `/osafw-app/App_Data/template`
 
 ### Deployment
 All the details can be found in the [Microsoft docs](https://learn.microsoft.com/aspnet/core/host-and-deploy/iis/?view=aspnetcore-8.0)
@@ -367,7 +372,7 @@ Another debug function that might be helpful is `fw.rw()` - but it output it's p
 - db updates:
   - first, make changes in `/App_Data/sql/database.sql` - this file is used to create db from scratch
   - then create a file `/App_Data/sql/updates/updYYYY-MM-DD[-123].sql` with all the CREATE, ALTER, UPDATE... - this will allow to apply just this update to existing database instances
-- use `fw.route_redirect()` if you got request to one Controller.Action, but need to continue processing in another Controller.Action
+- use `fw.routeRedirect()` if you got request to one Controller.Action, but need to continue processing in another Controller.Action
   - for example, if for a logged user you need to show detailed data and always skip list view - in the `IndexAction()` just use `fw.routeRedirect("ShowForm")`
 - uploads
   - save all public-readable uploads under `/wwwroot/upload` (default, see `UPLOAD_DIR` in `appsettings.json`)

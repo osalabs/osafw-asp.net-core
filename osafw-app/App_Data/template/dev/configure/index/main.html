@@ -46,7 +46,7 @@
             <td><~ok if="is_db_tables"><~fail unless="is_db_tables"></td>
             <td>
                 <~failmsg3 unless="is_db_tables" inline>
-                    Looks like your database is empty. Run <i>db/database.sql</i> against it with a command like:<br>
+                    Looks like your database is not created or empty. Create, then run <i>db/database.sql</i> against it with a command like:<br>
                     <code>mysql -u root -p &lt; db/database.sql</code>
                     <br>
                     or using <a href="http://phpminiadmin.sourceforge.net/" target="_blank">phpMiniAdmin</a>

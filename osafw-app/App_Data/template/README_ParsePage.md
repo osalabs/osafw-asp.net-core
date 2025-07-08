@@ -13,9 +13,19 @@ Websites contains many pages, but usually most of pages have same layout (i.e. t
 
 Templates contains special tags `<~tag>`, which replaced by actual data passed to ParsePage engine or by content of other templates (i.e. templates may include other templates).
 
-TODO - add image here how templates works
+TODO - add mermaid here how templates works
 
 ## Sample
+
+### Sample code.
+This will load `layout.html` layout and insert/parse sub-templates from `/test` directory, then output to browser;
+```php
+$ps=array(
+  'data' => 'Hello World!',
+  'more_data' => 12345,
+);
+parse_page('/test', '/layout.html', $ps);
+```
 
 ### Sample main template:
 
@@ -44,22 +54,6 @@ _/test/main.html_
 <p><~more_data></p>
 ```
 
-### Common Sub-templates:
-
-_/common/footer.html_
-```html
-<footer>site footer<footer>
-```
-
-### Sample code.
-This will load `layout.html` layout and insert/parse sub-templates from `/test` directory, then output to browser;
-```php
-$ps=array(
-  'data' => 'Hello World!',
-  'more_data' => 12345,
-);
-parse_page('/test', '/layout.html', $ps);
-```
 
 this will output:
 ```html
@@ -89,17 +83,19 @@ home/ - directory with sub-templates for website Home page
 contact/ - directory with sub-templates for website Contact page
 ```
 
+---
+
 ### Code
 
 Generally ParsePage called as following (depending on language syntax will differ):
 
-`parse_page(BASE_DIR, PAGE_TPL_FILE, PS, [OUTPUT_FILENAME])`
+`parse_page(BASE_DIR, LAYOUT_TPL_FILE, PS, [OUTPUT_FILENAME])`
 
 There is also a helper `parse_json(PS)` which returns a JSON string representation of the passed hashtable.
 
 where:
 - `BASE_DIR` - directory (relative to /template) with sub-templates for current page
-- `PAGE_TPL_FILE` - path (relative to /template) to main page template/layout used for current page
+- `LAYOUT_TPL_FILE` - path (relative to /template) to main page template/layout used for current page
 - `PS` - "parse strings" - associative array (hashtable) with variable names/values to be replaced in templates
 - `OUTPUT_FILENAME` - optional, output file name, if defined ParsePage will write output to this file, instead of output to browser
 
@@ -430,3 +426,48 @@ And `/template/lang/es.txt` file for Spanish translations contains line:
 If user's language is English, parser will output `Hello John`.
 And if user's language will be Spanish, parser will output `Hola John`.
 
+---
+
+### Common Templates (`/common`)
+
+The `/common` directory contains reusable sub-templates and utility files that can be included from any page or layout. 
+These help keep your templates DRY and consistent. Below are the most important templates and their usage:
+
+#### Utility and HTML Attribute Templates
+- **active.html**: Outputs `active` (for menu highlighting). Usage: `<~/common/active>`
+- **checked.html**: Outputs `checked="checked"` (for form checkboxes). Usage: `<~/common/checked>`
+- **disabled.html**: Outputs `disabled="disabled"` (for form elements). Usage: `<~/common/disabled>`
+- **clactive.html**: Outputs `class="active"` (for menu or tab highlighting). Usage: `<~/common/clactive>`
+- **comma.html**: Outputs a comma, used in lists. Usage: `<~/common/comma>` (with `unless="repeat.last"` to avoid trailing comma).
+- **dot.html**: Outputs a dot wrapped in nbsp, used as visaul delimiter. Usage: `<~/common/dot>`
+- **char/**: misc character templates Usage: `<~/common/char/gt>` outputs `&gt;`.
+
+#### JavaScript Components and CSS Includes
+- **ajaxform.html**: Includes jQuery Form plugin. Usage: `<~/common/ajaxform>`
+- **att.html**: Includes attachment selection modal. Usage: `<~/common/att>`
+- **autocomplete.html**: Includes Bootstrap Simple Autocomplete JS. Usage: `<~/common/autocomplete>`
+- **bootstrap_select.html**: Includes Bootstrap Select JS/CSS and related helpers for styled selects. Initializes on all `.selectpicker` elements. Usage: `<~/common/bootstrap_select>`
+- **calendar.html**: Includes Bootstrap Datepicker JS/CSS and datepicker initialization on all `.date` elements. Usage: `<~/common/calendar>`
+- **html_editor.html**: Includes HTML editor (TinyMCE) JS/CSS and initialize it on all `.fw-html-editor` elements. Usage: `<~/common/html_editor>`
+- **markdown_editor.html**: Includes Markdown editor JS/CSS and initializes it on all `textarea.markdown` elements. Usage: `<~/common/markdown_editor>`
+- **sortable.html**: Includes jQuery UI Sortable JS and initializes on `.fw-sortable` elements. Usage: `<~/common/sortable>`
+- **uploader.html**: Includes File Upload JS/CSS. Usage: `<~/common/uploader>`
+
+#### Select/Option List Templates (`/common/sel`)
+- **sel/access_level.sel**: List of access levels for user roles. Usage: `<select><~/common/sel/access_level.sel select="access_level"></select>`.
+- **sel/country.sel**: List of countries. Usage: `<select><~/common/sel/country.sel select="country"></select>`.
+- **sel/state.sel**: List of US states. Usage: `<select><~/common/sel/state.sel select="state"></select>`.
+- **sel/status.sel**: List of common statuses (Active, Inactive, etc.). Usage: `<select><~/common/sel/status.sel select="status"></select>`.
+- **sel/yn.sel**: Yes/No options with 1|0 values. Usage: `<select><~/common/sel/yn.sel select="field"></select>`.
+- **sel/yn_char.sel**: Yes/No options with 'Y'|'N' values. Usage: `<select><~/common/sel/yn_char.sel select="field"></select>`.
+
+#### Other Common Templates
+- **list/** - Directory with common templates for list screens.
+- **form/** - Directory with common templates for form screens.
+- **form/show/** - Directory with common templates for showing records. Used in Dynamic controllers.
+- **form/showform/** - Directory with common templates for edit forms. Used in Dynamic controllers.
+- **form/showdelete/** - Directory with common templates for delete confirmation screens.
+- **activitylogs/** - Directory with common templates for displaying activity logs.
+- **vue/** - Directory with Vue.js components for Vue-based controllers.
+- **virtual/** - Directory with standard templates for Virtual controllers.
+- **icons/** - Directory for custom svg icons.
