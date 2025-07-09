@@ -825,6 +825,10 @@ public class FwDynamicController : FwController
             string dtype = (string)def["type"]; // type is required
             string field = def["field"].toStr();
 
+            if (def.ContainsKey("append") && def["append"] is ICollection coll1 && coll1.Count > 0
+                || def.ContainsKey("prepend") && def["prepend"] is ICollection coll2 && coll2.Count > 0)
+                def["is_input_group"] = true;
+
             if (id == 0 && (dtype == "added" || dtype == "updated"))
                 // special case - hide if new item screen
                 def["class"] = "d-none";
@@ -1021,6 +1025,7 @@ public class FwDynamicController : FwController
                         def["value"] = FormUtils.intToTimeStr(def["value"].toInt());
                 }
             }
+
         }
         return fields;
     }

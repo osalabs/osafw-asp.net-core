@@ -276,8 +276,17 @@
                     "lookup_model": "DemoDicts",
                     "type": "select",
                     "is_option_empty": true,
-                    "class_contents": "col-md-3",
-                    "class_control": "on-refresh"
+                    "class_contents": "col-md-6",
+                    "class_control": "on-refresh",
+                    "append": [
+                      {
+                        "class": "btn-secondary",
+                        "icon": "bi bi-plus",
+                        "label": "Add New",
+                        "hint": "Add New Record",
+                        "url": "/Admin/DemoDicts/new?"
+                      }
+                    ]
                 },
                 {
                     "field": "iname",
