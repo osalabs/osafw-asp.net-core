@@ -485,3 +485,50 @@ These help keep your templates DRY and consistent. Below are the most important 
 - **vue/** - Directory with Vue.js components for Vue-based controllers.
 - **virtual/** - Directory with standard templates for Virtual controllers.
 - **icons/** - Directory for custom svg icons.
+
+---
+
+## Default File Structure for /index, /show, /showform Directories
+
+When creating templates for dynamic controllers (such as admin CRUD screens), the following subdirectories and files are commonly used under each entity's template folder (e.g. `/template/admin/demosdynamic`). Each subdirectory corresponds to a controller action:
+
+### /index
+Used for the list (index) view. Typical files:
+- **main.html**: Main entry point for the list page. Includes title, filter, table, and buttons.
+- **title.html**: Page title for the list view.
+- **list_table.html**: Table markup for displaying the list of records. Usually includes or overrides common list templates.
+- **list_row_btn.html**: Custom buttons for each row in the list.
+- **list_filter_more.html**: Additional filter fields for the list.
+- **btn_multidel_more.html**: Additional multi-delete buttons (optional, can be removed if empty).
+- **col_custom.html**: Custom column rendering (optional).
+- **onload.js**: JS to run on jquery page load (optional, can be removed if empty).
+- **load_script.html**: Additional scripts to include (optional, can be removed if empty).
+- **return_url.html, row_click_url.html, userlist_entity.html**: Advanced customizations (optional).
+
+### /show
+Used for the view (read-only) details page. Typical files:
+- **main.html**: Main entry point for the show page. Includes navigation, buttons, and the form.
+- **title.html**: Page title for the show view.
+- **form.html**: Renders the fields for the record. Can use repeat to render each field, or override for custom fields.
+- **custom_field.html**: Custom rendering for specific fields (optional).
+- **subtable.html, subtable_demos_items.html**: For related subtables (optional, can be removed if no subtables used in specific controller).
+- **btn_std_more.html**: Additional standard buttons (optional, can be removed if empty).
+- **userlist_entity.html, return_url.html**: Advanced customizations (optional).
+- **onload.js, load_script.html**: JavaScript and scripts for the show page (optional, can be removed if empty).
+
+### /showform
+Used for the add/edit (form) page. Typical files:
+- **main.html**: Main entry point for the form page. Includes navigation, buttons, and the form.
+- **title.html**: Page title for the form (add/edit) view.
+- **form.html**: Renders the form fields. Can use repeat to render each field, or override for custom fields.
+- **subtable.html, subtable_demos_items.html**: For related subtables (optional, can be removed if no subtables used in specific controller).
+- **btn_std_more.html**: Additional standard buttons (optional, can be removed if empty).
+- **onload.js**: JS to run on jquery page load (optional, can be removed if empty).
+- **load_script.html**: Additional scripts to include, typically: `<~/common/calendar>` (optional, can be removed if empty).
+
+#### Notes
+- Any file in these folders can be created to override the default/common template behavior for that specific entity or view.
+- If a file is missing, the ParsePage engine will render empty content for that part.
+- Use these files to customize the look, layout, or logic for a specific entity's list, view, or form screens.
+
+**Example:** See `template/admin/demosdynamic` for a real-world structure and customizations.

@@ -33,7 +33,8 @@ public class FwReports
 {
     //template paths
     public const string TPL_BASE_DIR = "/admin/reports";
-    public const string TPL_EXPORT_PDF = "/admin/reports/common/pdf.html";
+    //public const string TPL_EXPORT_PDF = "/admin/reports/common/pdf.html"; //this is simplified template for wkhtmltopdf
+    public const string TPL_EXPORT_PDF = "/layout_print.html"; // normal print template with latest bootstrap styles, good with Playwright
     public const string TPL_EXPORT_XLS = "/admin/reports/common/xls.html";
 
     public const string TO_BROWSER = "";
