@@ -200,7 +200,7 @@
                 },
                 {
                     "field": "demo_dicts_link",
-                    "label": "DemoDicts via Link Table",
+                    "label": "DemoDicts via Junction Table",
                     "type": "multi",
                     "model": "DemosDemoDicts"
                 },
@@ -435,7 +435,7 @@
                 },
                 {
                     "field": "demo_dicts_link",
-                    "label": "DemoDicts via Link Table",
+                    "label": "DemoDicts via Junction Table",
                     "type": "multicb",
                     "model": "DemosDemoDicts"
                 },

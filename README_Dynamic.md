@@ -70,6 +70,36 @@ Renders:
 </div>
 ```
 
+More examples:
+```json
+  //display formatted currency value
+  {
+      "type": "plaintext_currency",
+      "field": "price",
+      "label": "Price"
+  },
+
+  //currency input with custom symbol
+  {
+      "type": "currency",
+      "field": "price",
+      "currency_symbol": "EUR", // if ommitted, defaults to "$"
+      "label": "Price"
+  },
+
+  //list of uploaded files from `att` where entity = current's model table and item_id = current id
+  {
+      "type": "att_files",
+      "field": "notused",
+      "label": "Photos"
+  },
+
+  //Show ID, Submit and Add New buttons
+  {
+      "type": "group_id_addnew",
+  },
+```
+
 |Field name|Description|Example|
 |---|---|---|
 |type|required, Element type, see values in table below|select - renders as `<select>` html|
@@ -114,8 +144,8 @@ Renders:
 |conv|value converter for display/save (e.g. time_from_seconds)|time_from_seconds|
 |default_time|default time for datetime_popup fields|now|
 |is_custom|placeholder processed manually in code|true|
-|prepend|to use with `FwVueController`, array of buttons to prepend to the cell in list edit mode|same as for `append`|
-|append|to use with `FwVueController`, array of buttons to append to the cell in list edit mode|
+|prepend|array of buttons to prepend to the cell in list edit mode (Vue) or to the form input (Dynamic)|same as for `append`|
+|append|array of buttons to append to the cell in list edit mode (Vue) or to the form input (Dynamic)|
 ```
         [{
           "event": "add", // only used in FwVueController
