@@ -136,9 +136,12 @@ Renders:
 |col_end|end of the `div.col`|
 |row_end|end of the `div.row`|
 |_available for both show_fields and showform_fields_||
+|header|Section header text, rendered as `<h5>` tag and horizontal lines|
 |plaintext|Plain text value|
-|plaintext_link|Plain text with a link to "admin_url"|
-|plaintext_autocomplete|Plain text name from "lookup_model" by id in field|
+|plaintext_link|Plain text with a link to `admin_url`|
+|plaintext_autocomplete|Plain text name from `lookup_model` by id in field|
+|plaintext_yesno|Plain text Yes/No value based on value|
+|plaintext_currency|Formatted currency value, also uses `currency_symbol`(default $)|
 |markdown|Markdown text (server-side rendered)|
 |noescape|Value without htmlescape|
 |float|Value formatted with 2 decimal digits|
@@ -161,7 +164,9 @@ Renders:
 |textarea|textarea html block|
 |email|input type="email" html block|
 |number|input type="number" html block|
-|autocomplete|input type="text" with autocomplete using "autocomplete_url"|
+|password|input type="password" html block|
+|currency|input-group with `currency_symbol` (default $) and type="text"|
+|autocomplete|input type="text" with autocomplete using `autocomplete_url`|
 |multicb|Multi-selection list with checkboxes|
 |multicb_prio|Multi-selection list with checkboxes and priority|
 |radio|radio options block|
