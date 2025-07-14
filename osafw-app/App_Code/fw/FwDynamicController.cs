@@ -148,9 +148,7 @@ public class FwDynamicController : FwController
     public virtual Hashtable ShowAction(int id = 0)
     {
         Hashtable ps = [];
-        var item = model0.one(id);
-        if (item.Count == 0)
-            throw new NotFoundException();
+        var item = modelOneOrFail(id);
 
         // added/updated should be filled before dynamic fields
         setAddUpdUser(ps, item);
@@ -208,7 +206,7 @@ public class FwDynamicController : FwController
             if (id > 0)
             {
                 // edit screen
-                item = model0.one(id);
+                item = modelOneOrFail(id);
             }
             else
             {
@@ -222,7 +220,7 @@ public class FwDynamicController : FwController
         else
         {
             // read from db
-            Hashtable itemdb = model0.one(id);
+            Hashtable itemdb = modelOne(id);
             // and merge new values from the form
             Utils.mergeHash(itemdb, item);
             item = itemdb;
@@ -298,7 +296,7 @@ public class FwDynamicController : FwController
 
         Validate(id, item);
         // load old record if necessary
-        // Dim item_old As Hashtable = model0.one(id)
+        // Dim item_old As Hashtable = modelOne(id)
 
         Hashtable itemdb = FormUtils.filter(item, this.save_fields);
         FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
@@ -495,7 +493,7 @@ public class FwDynamicController : FwController
 
         var ps = new Hashtable()
         {
-            {"i", model0.one(id)},
+            {"i", modelOneOrFail(id)},
             {"related_id", this.related_id},
             {"return_url", this.return_url},
             {"base_url", this.base_url},

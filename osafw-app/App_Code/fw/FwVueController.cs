@@ -306,9 +306,7 @@ public class FwVueController : FwDynamicController
         var mode = reqs("mode"); // view or edit
 
         Hashtable ps = [];
-        Hashtable item = model0.one(id);
-        if (item.Count == 0)
-            throw new NotFoundException();
+        Hashtable item = modelOneOrFail(id);
 
         // addtionally, if we have autocomplete fields - preload their values
         var multi_rows = new Hashtable();
@@ -430,7 +428,7 @@ public class FwVueController : FwDynamicController
 
         Validate(id, item);
         // load old record if necessary
-        // Dim item_old As Hashtable = model0.one(id)
+        // Dim item_old As Hashtable = modelOne(id)
 
         Hashtable itemdb = FormUtils.filter(item, this.save_fields);
         FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());

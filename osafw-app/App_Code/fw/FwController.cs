@@ -855,6 +855,27 @@ public abstract class FwController
     }
 
     /// <summary>
+    /// Return one item from controller's model. For simpler overriding in child controllers.
+    /// </summary>
+    /// <param name="id"></param>
+    /// <returns></returns>
+    /// <exception cref="NotFoundException"></exception>
+    public virtual Hashtable modelOneOrFail(int id)
+    {
+        var item = modelOne(id);
+        if (item.Count == 0)
+            throw new NotFoundException();
+
+        return item;
+    }
+
+    // for simpler overriding in child controllers
+    public virtual Hashtable modelOne(int id)
+    {
+        return model0.one(id);
+    }
+
+    /// <summary>
     /// return url for afterSave based on:
     /// if return_url set (and no add new form requested) - go to return_url
     /// id:
