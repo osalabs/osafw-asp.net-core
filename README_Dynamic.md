@@ -102,6 +102,12 @@ Renders:
 |lookup_field|field name from lookup table/model to display|iname|
 |lookup_key|key column for lookup_table|code|
 |lookup_params|additional params passed to lookup model methods|status=1|
+|lookup_by_value|for autocomplete fields - store value instead of lookup id|true|
+|is_by_linked|for `multi`/`multicb` - link by secondary id in junction model|true|
+|model|junction or subtable model name for `multi*` and `subtable*` types|DemosItems|
+|save_fields|comma-separated fields saved for each subtable row|iname qty|
+|save_fields_checkboxes|checkbox fields saved for each subtable row|`is_active|0`|
+|required_fields|required columns for validating each subtable row|iname qty|
 |validate|Simple validation codes: exists, isemail, isphone, isdate, isfloat|"exists isemail" - input value validated if such value already exists, validate if value is an email|
 |att_category|For type="att_edit", att category new upload will be related to|"general"(default)|
 |att_post_prefix|For type="att_edit", name prefix for the inputs with ids `att[<~id>]`|"att"(default)|
@@ -140,6 +146,7 @@ Renders:
 |date|Date in default format - M/d/yyyy|
 |date_long|Date in long format - M/d/yyyy hh:mm:ss|
 |multi|Multi-selection list with checkboxes (read-only)|
+|multi_prio|Multi-selection list with priorities|
 |att|Block for displaying one attachment/file|
 |att_links|Block for displaying multiple attachments/files|
 |att_files|Block for displaying multiple attachments/files|
@@ -156,16 +163,18 @@ Renders:
 |number|input type="number" html block|
 |autocomplete|input type="text" with autocomplete using "autocomplete_url"|
 |multicb|Multi-selection list with checkboxes|
+|multicb_prio|Multi-selection list with checkboxes and priority|
 |radio|radio options block|
 |yesno|radio options block with Yes(1)/No(2) only|
 |cb|single checkbox block|
 |date_popup|date selection input with popup calendar block|
+|date_combo|date selection using separate day, month and year combos|
 |datetime_popup|date and time selection input with popup calendar block|
+|time|time input in HH:MM format|
 |att_edit|Block for selection/upload one attachment/file|
 |att_links_edit|Block for selection/upload multiple attachments/files (select existing or upload via Att modal)|
 |att_files_edit|Block for selection/upload multiple attachments/files (direct upload)|
-|subtable_edit|Block for editing related records in a subtable|
-
+|subtable_edit|Block for editing related records in a subtable; uses `model`, `save_fields` and `save_fields_checkboxes`, validates `required_fields` on each row|
 
 ### form_tabs
 
