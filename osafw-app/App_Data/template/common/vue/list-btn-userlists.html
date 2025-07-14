@@ -27,7 +27,7 @@
     </div>
 
     <div class="modal fade" ref="modal_create">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
             <form @submit.prevent="onCreateSubmit">
 
                 <div class="modal-content">
@@ -35,7 +35,7 @@
                         <h5 class="modal-title">Create New List</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <div class="modal-body modal-overflowed">
+                    <div class="modal-body">
                         <div class="row">
                             <label class="control-label col-sm-2" for="userlists-iname">New List Title</label>
                             <div class="col-sm-10">

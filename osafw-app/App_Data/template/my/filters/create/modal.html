@@ -1,5 +1,5 @@
 <div class="modal fade" id="modal-create-userfilter">
-  <div class="modal-dialog modal-lg">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <form method="post" action="<~/my/filters/url>">
      <input type="hidden" name="XSS" value="<~session[XSS]>">
      <input type="hidden" name="return_url" value="<~../url>">
@@ -10,7 +10,7 @@
             <h5 class="modal-title"><~./title></h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
-        <div class="modal-body modal-overflowed">
+        <div class="modal-body">
             <div class="row">
               <label class="control-label col-sm-3" for="filter_iname">`New Filter Title`</label>
               <div class="col">

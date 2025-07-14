@@ -48,18 +48,8 @@ body {
 .w100 {
   width: 100px;
 }
-.nowrap {
-  white-space: nowrap;
-}
 .nl2br {
   white-space: pre-wrap;
-}
-.modal-overflowed {
-  max-height: 450px;
-  overflow: auto;
-}
-.modal-wider .modal-dialog{
-  max-width: 850px;
 }
 
 /****** fw elements */

@@ -1,5 +1,5 @@
 <div class="modal fade" tabindex="-1" role="dialog" id="modal-custom-cols" data-load-url="<~../url>/(UserViews)<~/common/list/relidq>">
-  <div class="modal-dialog modal-lg" role="document">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable" role="document">
   <form method="post" action="<~../url>/(SaveUserViews)">
     <input type="hidden" name="XSS" value="<~session[XSS]>">
     <input type="hidden" name="return_url" value="<~../url>/<~/common/list/relidq>">
@@ -18,13 +18,13 @@
 </div>
 
 <div class="modal fade" id="modal-create-userview">
-  <div class="modal-dialog">
+  <div class="modal-dialog modal-dialog-scrollable">
       <div class="modal-content bg-light">
           <div class="modal-header">
               <h5 class="modal-title">Save New View</h5>
               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
-          <div class="modal-body modal-overflowed">
+          <div class="modal-body">
               <div class="row">
                 <label class="control-label col-sm-3" for="view_iname">`Title`</label>
                 <div class="col">
