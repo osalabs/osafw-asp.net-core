@@ -182,6 +182,7 @@ class DevCodeGen
         var table_name = (string)entity["table"];
         var result = "CREATE TABLE " + db.qid(table_name, false) + " (" + Environment.NewLine;
 
+        var indexes = (Hashtable)entity["indexes"] ?? null;
         var i = 1;
         var fields = (ArrayList)entity["fields"];
         foreach (Hashtable field in fields)
@@ -193,7 +194,12 @@ class DevCodeGen
 
             fsql += "  " + db.qid(field_name, false).PadRight(21, ' ') + " " + entityFieldToSQLType(field);
             if (field["is_identity"].toBool())
-                fsql += " IDENTITY(1, 1) PRIMARY KEY CLUSTERED";
+            {
+                fsql += " IDENTITY(1, 1)";
+                if (indexes == null || !indexes.ContainsKey("PK"))
+                    fsql += " PRIMARY KEY CLUSTERED";
+            }
+
             fsql += field["is_nullable"].toBool() ? "" : " NOT NULL";
             fsql += entityFieldToSQLDefault(field);
             fsql += entityFieldToSQLForeignKey(field, entity);
@@ -205,7 +211,6 @@ class DevCodeGen
             i += 1;
         }
 
-        Hashtable indexes = (Hashtable)entity["indexes"] ?? null;
         if (indexes != null)
         {
             //sort indexes keys this way: PK (always first), then by number in suffix - UX1, IX2, UX3, IX4, IX5, IX6, ...
@@ -1310,6 +1315,8 @@ class DevCodeGen
             sff["type"] = "password";
         if (ui.ContainsKey("select"))
             sff["type"] = "select";
+        if (ui.ContainsKey("radio"))
+            sff["type"] = "radio";
         if (ui.ContainsKey("time"))
         {
             sf["type"] = "plaintext";

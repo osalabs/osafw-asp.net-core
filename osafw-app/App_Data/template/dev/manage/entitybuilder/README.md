@@ -46,7 +46,7 @@ This format allows you to define database entities and fields in a concise and i
 - **Syntax**:
 
   ```plaintext
-  FieldName [Type(Length)] [NULL|NOT NULL] [DEFAULT(Value)] [UNIQUE] [UI:options]
+  FieldName [Type(Length)] [NULL|NOT NULL] [DEFAULT(Value)] [UNIQUE|PRIMARY] [UI:options]
   ```
 
 - **Defaults**:
@@ -65,6 +65,7 @@ This format allows you to define database entities and fields in a concise and i
     - use `getdate` or `now` without parentheses for current datetime
     - Specify `DEFAULT()` to disable default values
   - **UNIQUE**: Adds a unique constraint.
+  - **PRIMARY**: Marks this field as the primary key (remove the default `id` field first)
   - **UI Options**: Controls how the field is rendered in the UI.
 
 - **UI Options**:
@@ -110,6 +111,20 @@ This format allows you to define database entities and fields in a concise and i
   - **Syntax**:
     - `INDEX (Field1, Field2, ...)`
     - `UNIQUE INDEX (Field1, Field2, ...)`
+    - `PRIMARY (Field1, Field2, ...)` -- define composite primary key
+
+**Custom Primary Key Examples**
+```plaintext
+table_name
+id remove
+id PRIMARY FK(orders.id)
+
+another_table
+id remove
+field1 int
+field2 varchar
+PRIMARY (field1, field2)
+```
 
 ## Junction Tables
 

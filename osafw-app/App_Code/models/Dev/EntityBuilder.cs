@@ -151,6 +151,14 @@ class DevEntityBuilder
                     continue;
                 }
 
+                // check PRIMARY KEY definition
+                match = Regex.Match(line, @"PRIMARY\s*\((.*?)\)", RegexOptions.IgnoreCase);
+                if (match.Success)
+                {
+                    indexes["PK"] = match.Groups[1].Value;
+                    continue;
+                }
+
                 // check junction table from line
                 // entityname junction
                 if (line.EndsWith("junction"))
@@ -180,11 +188,22 @@ class DevEntityBuilder
                     {
                         foreignKeys.Add((Dictionary<string, string>)fkvalue);
                         field.Remove("foreign_key");
-                        //also for each foreign key add index (unless it's already added as unique)
-                        if (!indexes.ContainsValue(field["name"].ToString()))
-                            indexes["IX" + (indexes.Count + 1)] = field["name"].ToString();
+                        //also for each foreign key add index (unless it's already added as unique or is primary key)
+                        var fieldNameForIndex = field["name"].ToString();
+                        bool isUnique = indexes.ContainsValue(fieldNameForIndex);
+                        bool isPrimary = (indexes.ContainsKey("PK") && indexes["PK"].Split(',').Select(f => f.Trim()).Contains(fieldNameForIndex))
+                            || (field["is_primary"] ?? false).toBool();
+                        if (!isUnique && !isPrimary)
+                            indexes["IX" + (indexes.Count + 1)] = fieldNameForIndex;
                     }
 
+                    // Handle primary key defined on a field
+                    if (field.TryGetValue("is_primary", out object pvalue))
+                    {
+                        if ((bool)pvalue)
+                            indexes["PK"] = field["name"].ToString();
+                        field.Remove("is_primary");
+                    }
                 }
             } //entity lines loop
 
@@ -308,7 +327,7 @@ class DevEntityBuilder
 
     // parse single field line
     // syntax:
-    // FieldName [Type(Length)] [NULL|NOT NULL] [DEFAULT(Value)] [UNIQUE] [UI:option,option(some other value),option,...]
+    // FieldName [Type(Length)] [NULL|NOT NULL] [DEFAULT(Value)] [UNIQUE|PRIMARY] [UI:option,option(some other value),option,...]
     // FieldName.id [NULL] [UI:option,option(some other value),option,...] -- foreign key
     // FieldName FK(TableName.FieldName) [NULL] [UI:option,option(some other value),option,...] -- foreign key
     private static Dictionary<string, object> ParseField(string line, string comment)
@@ -318,7 +337,7 @@ class DevEntityBuilder
 
         // Split line into parts
         var tokens = Regex.Split(line, @"\s+");
-        if (tokens.Length == 0)
+        if (tokens.Length == 0 || string.IsNullOrWhiteSpace(tokens[0]))
             return null;
 
         int index = 0;
@@ -341,6 +360,7 @@ class DevEntityBuilder
         }
 
         field["unique"] = Regex.IsMatch(line, @"\bUNIQUE\b", RegexOptions.IgnoreCase);
+        field["is_primary"] = Regex.IsMatch(line, @"\bPRIMARY\b", RegexOptions.IgnoreCase);
 
         // extract UI options
         string ui = Regex.Match(line, @"\bUI:(.*)", RegexOptions.IgnoreCase).Groups[1].Value;
@@ -360,11 +380,13 @@ class DevEntityBuilder
 
         // Field name is always first
         string fieldName = tokens[index++];
+        if (string.IsNullOrWhiteSpace(fieldName))
+            return null;
         // can be in form "table_name.id" => make "table_name_id"
-        if (fieldName[^3..] == ".id")
+        if (fieldName.EndsWith(".id"))
         {
             // this is foreign key field
-            var pk_table = Utils.name2fw(Regex.Replace(fieldName, @"\.id$", ""));  // Customers.id => customers
+            var pk_table = Utils.name2fw(Regex.Replace(fieldName, @"\.id$", ""));  // Customers.id => customers            
             fieldName = pk_table + "_id";
             field["name"] = pk_table + "_id";
             field["iname"] = Utils.name2human(fieldName);
@@ -381,10 +403,11 @@ class DevEntityBuilder
             return field;
         }
 
-        //check if this if FK(TableName.FieldName) syntax
-        if (tokens.Length > 1 && tokens[index].StartsWith("FK(", StringComparison.OrdinalIgnoreCase))
+        // Scan all tokens for FK(TableName.FieldName) syntax (not just at index)
+        string fkToken = tokens.FirstOrDefault(t => t.StartsWith("FK(", StringComparison.OrdinalIgnoreCase) && t.EndsWith(")"));
+        if (!string.IsNullOrEmpty(fkToken))
         {
-            var fkParts = tokens[index][3..^1].Split('.');
+            var fkParts = fkToken[3..^1].Split('.');
             if (fkParts.Length == 2)
             {
                 field["name"] = fieldName;
@@ -398,17 +421,17 @@ class DevEntityBuilder
                     ["pk_table"] = Utils.name2fw(fkParts[0]),
                     ["pk_column"] = fkParts[1]
                 };
-
-                return field;
             }
             else
                 throw new Exception("Invalid foreign key syntax at line: " + line);
         }
-
-        // normal field
-        field["name"] = fieldName;
-        field["iname"] = Utils.name2human(fieldName);
-        field["fw_name"] = Utils.name2fw(fieldName);
+        else
+        {
+            // normal field
+            field["name"] = fieldName;
+            field["iname"] = Utils.name2human(fieldName);
+            field["fw_name"] = Utils.name2fw(fieldName);
+        }
 
         // check and extract DEFAULT value
         var defaultMatch = Regex.Match(line, @"DEFAULT\((.*?)\)", RegexOptions.IgnoreCase);
