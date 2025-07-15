@@ -25,7 +25,9 @@ Common config keys include:
 - `route_return` – action to redirect after save
 - `is_userlists` – enable UserLists support
 
-There are samples for the one `show_fields` or `showform_fields` element:
+**"show_fields" and "showform_fields"**
+
+There are samples for the one `show_fields` or `showform_fields` element - single field definition:
 
 ```json
   //minimal setup to display the field value
@@ -100,7 +102,9 @@ More examples:
   },
 ```
 
-|Field name|Description|Example|
+**available params for one field definition**
+
+|Param name|Description|Example|
 |---|---|---|
 |type|required, Element type, see values in table below|select - renders as `<select>` html|
 |field|Field name from database.table or arbitrary name for non-db block|demo_dicts_id - in case of select id value won't be displayed, but used to select active list element|
@@ -145,7 +149,7 @@ More examples:
 |default_time|default time for datetime_popup fields|now|
 |is_custom|placeholder processed manually in code|true|
 |prepend|array of buttons to prepend to the cell in list edit mode (Vue) or to the form input (Dynamic)|same as for `append`|
-|append|array of buttons to append to the cell in list edit mode (Vue) or to the form input (Dynamic)|
+|append|array of buttons to append to the cell in list edit mode (Vue) or to the form input (Dynamic)||
 ```
         [{
           "event": "add", // only used in FwVueController
@@ -156,7 +160,38 @@ More examples:
         }]
 ```
 
-##### type values
+|Param name|Description|Example|
+|---|---|---|
+|filter_for|Designates the `select` field as a filter for another `select` field. Used with "filter_field" and "filter_by" and another field definition||
+```
+        {
+            "field": "parent_demo_dicts_id",
+            "type": "select",
+            "label": "Parent DemoDicts Filter",
+            "lookup_model": "DemoDicts",
+            "filter_for": "parent_id",
+            "filter_field": "demo_dicts_id",
+            "class_control": "selectpicker on-refresh",
+            "is_option_empty": true,
+            "option0_title": "- select to show only Parents with this DemoDicts -",
+            "attrs_control": "data-live-search=\"true\""
+        },
+        {
+            "field": "parent_id",
+            "label": "Parent",
+            "lookup_model": "Demos",
+            "lookup_params": "parent",
+            "filter_by": "parent_demo_dicts_id",
+            "filter_field": "demo_dicts_id",
+            "type": "select",
+            "is_option0": true,
+            "option0_title": "- none -",
+            "class_contents": "col-md-3",
+            "attrs_control": "data-noautosave=\"true\""
+        },
+```
+
+**available values for "type" param**
 
 |Type|Description|
 |---|---|
