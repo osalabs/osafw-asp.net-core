@@ -8,6 +8,7 @@ using System.Collections;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Text.Json;
 
 namespace osafw;
 
@@ -579,5 +580,70 @@ public class DevManageController : FwController
 
         fw.flash("success", $"App build successfull. Models created: {models_ctr}, Controllers created: {controllers_ctr}");
         fw.redirect(base_url + "/(AppCreator)?reload=1");
+    }
+
+    public Hashtable ConfigEditorAction()
+    {
+        Hashtable ps = [];
+
+        var controller_name = reqs("controller");
+        ps["controller_name"] = controller_name;
+
+        var select_controllers = new ArrayList();
+        foreach (string cname in DevEntityBuilder.listControllers())
+            select_controllers.Add(DB.h("id", cname, "iname", cname));
+        ps["select_controllers"] = select_controllers;
+
+        if (!string.IsNullOrEmpty(controller_name))
+        {
+            var type = Type.GetType(FW.FW_NAMESPACE_PREFIX + controller_name, false);
+            if (type != null && typeof(FwDynamicController).IsAssignableFrom(type))
+            {
+                var cInstance = (FwDynamicController)Activator.CreateInstance(type);
+                cInstance.init(fw);
+
+                var tpl_path = fw.config("template") + cInstance.base_url.ToLower();
+                var config_file = tpl_path + "/config.json";
+                if (System.IO.File.Exists(config_file))
+                {
+                    var config = DevEntityBuilder.loadJson<Hashtable>(config_file);
+                    ps["config_json"] = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
+                }
+                else
+                    ps["config_json"] = "{}";
+            }
+            else
+                ps["config_json"] = "{}";
+        }
+        else
+            ps["config_json"] = "{}";
+
+        return ps;
+    }
+
+    public Hashtable ConfigEditorSaveAction()
+    {
+        checkXSS();
+
+        var controller_name = reqs("controller");
+        var config_json = reqs("config");
+
+        if (string.IsNullOrEmpty(controller_name))
+            throw new UserException("No controller specified");
+
+        var type = Type.GetType(FW.FW_NAMESPACE_PREFIX + controller_name, false) ?? throw new UserException("No controller found");
+        if (!typeof(FwDynamicController).IsAssignableFrom(type))
+            throw new UserException("Controller not dynamic");
+
+        var config = (Hashtable)Utils.jsonDecode(config_json);
+
+        var cInstance = (FwDynamicController)Activator.CreateInstance(type);
+        cInstance.init(fw);
+        var tpl_path = fw.config("template") + cInstance.base_url.ToLower();
+        var config_file = tpl_path + "/config.json";
+
+        DevEntityBuilder.saveJsonController(config, config_file);
+
+        return new Hashtable { { "_json", new Hashtable { { "success", true } } } };
     }
 }
