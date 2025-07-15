@@ -226,6 +226,8 @@ CREATE TABLE users (
   lang                  NVARCHAR(16) NOT NULL DEFAULT 'en', -- user interface language
   ui_theme              TINYINT NOT NULL DEFAULT 0, -- 0--default theme
   ui_mode               TINYINT NOT NULL DEFAULT 0, -- 0--auto, 10-light, 20-dark
+  dt_format             NVARCHAR(32) NOT NULL DEFAULT 'M/d/yyyy',
+  timezone              NVARCHAR(64) NOT NULL DEFAULT 'UTC',
 
   idesc                 NVARCHAR(MAX),
   att_id                INT NULL FOREIGN KEY REFERENCES att(id),                -- avatar

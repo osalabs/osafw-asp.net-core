@@ -28,6 +28,9 @@ public class Utils
 
     public const string MIME_MAP = "doc|application/msword docx|application/msword xls|application/vnd.ms-excel xlsx|application/vnd.ms-excel ppt|application/vnd.ms-powerpoint pptx|application/vnd.ms-powerpoint csv|text/csv pdf|application/pdf html|text/html zip|application/x-zip-compressed jpg|image/jpeg jpeg|image/jpeg gif|image/gif png|image/png wmv|video/x-ms-wmv avi|video/x-msvideo mp4|video/mp4";
 
+    // timezone used by the database (all datetimes stored in this zone)
+    public const string DB_TIMEZONE = "UTC";
+
     // pre-initialize for performance
     private static readonly JsonSerializerOptions jsonSerializerOptions = new() { WriteIndented = false };
     private static readonly JsonSerializerOptions jsonSerializerOptionsPretty = new() { WriteIndented = true };

@@ -924,34 +924,40 @@ public class ParsePage
                 if (attr_count > 0 && hattrs.ContainsKey("date"))
                 {
                     string dformat = (string)hattrs["date"];
+                    var g = globalsGetter();
+                    string basefmt = g.ContainsKey("dt_format") ? g["dt_format"].toStr() : DATE_FORMAT_DEF;
+                    if (string.IsNullOrEmpty(basefmt)) basefmt = DATE_FORMAT_DEF;
+
                     switch (dformat)
                     {
                         case "":
-                            {
-                                dformat = DATE_FORMAT_DEF;
-                                break;
-                            }
+                            dformat = basefmt;
+                            break;
 
                         case "short":
-                            {
-                                dformat = DATE_FORMAT_SHORT;
-                                break;
-                            }
+                            dformat = basefmt + " HH:mm";
+                            break;
 
                         case "long":
-                            {
-                                dformat = DATE_FORMAT_LONG;
-                                break;
-                            }
+                            dformat = basefmt + " HH:mm:ss";
+                            break;
 
                         case "sql":
-                            {
-                                dformat = DATE_FORMAT_SQL;
-                                break;
-                            }
+                            dformat = DATE_FORMAT_SQL;
+                            break;
                     }
                     if (DateTime.TryParse(value, out DateTime dt))
+                    {
+                        string tzid = g.ContainsKey("timezone") ? g["timezone"].toStr() : "UTC";
+                        try
+                        {
+                            var tz = TimeZoneInfo.FindSystemTimeZoneById(tzid);
+                            dt = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(dt, DateTimeKind.Utc), tz);
+                        }
+                        catch { }
+
                         value = dt.ToString(dformat, System.Globalization.DateTimeFormatInfo.InvariantInfo);
+                    }
                     attr_count -= 1;
                 }
                 if (attr_count > 0 && hattrs.ContainsKey("trim"))
