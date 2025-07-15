@@ -30,12 +30,36 @@ public class Demos : FwModel
         return isExistsByField(uniq_key, not_id, "email");
     }
 
-    public virtual ArrayList listSelectOptionsParent()
+    public virtual ArrayList listSelectOptionsParent(Hashtable where = null)
     {
-        Hashtable where = [];
+        where ??= [];
+
         where["parent_id"] = 0;
         where["status"] = db.opNOT(STATUS_DELETED);
+
         return db.array(table_name, where, "iname", Utils.qw("id iname"));
+    }
+
+    // override to process custom lookup_params
+    public override ArrayList listSelectOptions(Hashtable def = null)
+    {
+        var item = def["i"] as Hashtable;
+        item ??= [];
+
+        var lookup_params = def["lookup_params"].toStr();
+        logger("LOOKUP PARAMS: ", lookup_params);
+        var hparams = Utils.qh(lookup_params); // ex: parent demo_dicts_id|parent_demo_dicts_id
+        var where = new Hashtable();
+        if (hparams.ContainsKey("demo_dicts_id"))
+        {
+            var field_name = hparams["demo_dicts_id"].toStr();
+            where["demo_dicts_id"] = item[field_name];
+        }
+
+        if (hparams.ContainsKey("parent"))
+            return listSelectOptionsParent(where);
+
+        return base.listSelectOptions(def);
     }
 
     // demo for DB generics

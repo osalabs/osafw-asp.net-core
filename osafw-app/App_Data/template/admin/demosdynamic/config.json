@@ -261,9 +261,20 @@
                 "class": "col-lg-6"
             },
                 {
+                    "field": "parent_demo_dicts_id",
+                    "type": "select",
+                    "label": "Parent DemoDicts Filter",
+                    "lookup_model": "DemoDicts",
+                    "class_control": "selectpicker on-refresh",
+                    "is_option_empty": true,
+                    "option0_title": "- select to show only Parents with this DemoDicts -",
+                    "attrs_control": "data-live-search=\"true\""
+                },
+                {
                     "field": "parent_id",
-                    "label": "Parent (TODO)",
+                    "label": "Parent",
                     "lookup_model": "Demos",
+                    "lookup_params": "parent demo_dicts_id|parent_demo_dicts_id",
                     "type": "select",
                     "is_option0": true,
                     "option0_title": "- none -",

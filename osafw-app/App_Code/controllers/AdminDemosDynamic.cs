@@ -3,6 +3,8 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2023 Oleg Savchuk www.osalabs.com
 
+using System.Collections;
+
 namespace osafw;
 
 public class AdminDemosDynamicController : FwDynamicController
@@ -31,4 +33,12 @@ public class AdminDemosDynamicController : FwDynamicController
         // list_sortmap["fdate_pop_str"] = "fdate_pop";
     }
 
+    // override as we need to preset parent_demo_dicts_id filter from parent item
+    public override Hashtable modelOne(int id)
+    {
+        var item = base.modelOne(id);
+        var parent_item = fw.model<Demos>().one(item["parent_id"]);
+        item["parent_demo_dicts_id"] = parent_item["demo_dicts_id"];
+        return item;
+    }
 }
