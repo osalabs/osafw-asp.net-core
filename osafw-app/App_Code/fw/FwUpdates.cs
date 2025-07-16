@@ -84,7 +84,6 @@ public class FwUpdates : FwModel
         {
             applyOne(row["id"].toInt(), is_echo);
         }
-        fw.Session("FW_UPDATES_CTR", "0");
     }
 
     public void applyOne(int id, bool is_echo = false)
@@ -127,6 +126,12 @@ public class FwUpdates : FwModel
                 fw.rw("<b style='color:red'>" + row["iname"] + " failed</b>");
             throw; // re-throw
         }
+
+        fw.Session("FW_UPDATES_CTR", fw.model<FwUpdates>().getCountPending().toStr());
+
+        //clear caches as db structure might be changed
+        FwCache.clear();
+        db.clearSchemaCache();
     }
 
     public long getCountPending()
@@ -152,7 +157,6 @@ public class FwUpdates : FwModel
         {
             applyOne(id, is_echo);
         }
-        fw.Session("FW_UPDATES_CTR", "0");
     }
 
     public void refreshViews(bool is_echo = false)
