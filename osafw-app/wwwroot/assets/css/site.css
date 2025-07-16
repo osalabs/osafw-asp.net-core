@@ -150,16 +150,16 @@ h1 .badge {
 /****** layout */
 .sidebar {
   width: var(--fw-sidebar-width);
-  z-index: 100;
-
-  display: flex!important;
-  position: fixed;
-  left: 0;
-  bottom: 0;
-  top: 0;
-  overflow:auto;
   padding: 0;
   color: #000;
+}
+@media (min-width: 768px) {
+  .sidebar {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    z-index: 100;
+  }
 }
 
   .sidebar .nav-pills .nav-link.active {
@@ -176,17 +176,13 @@ h1 .badge {
   }
 
 main {
-  margin-left: var(--fw-sidebar-width);
 }
 .site-footer {
 }
 
-.no-sidebar .sidebar:not(.show,.collapsing) {
-  display: none!important;
+.no-sidebar #sidebar {
+  display: none !important;
 }
-  .no-sidebar main {
-    margin-left: 0;
-  }
   .no-sidebar .site-navbar {
     display: block !important;
   }
@@ -195,14 +191,6 @@ main {
   }
 
 
-@media screen and (max-width: 768px) {
-  .sidebar:not(.show,.collapsing) {
-    display: none!important;
-  }
-  main {
-    margin-left: 0;
-  }
-}
 
 /****** list screens */
 .btn-std {
@@ -424,7 +412,6 @@ table.list-edit tbody td {
 }
   #list-btn-multi.position-sticky {
     background-color: rgba(var(--bs-tertiary-bg-rgb),0.5);
-    left: var(--fw-sidebar-width);
     padding-bottom: var(--fw-spacer);
     z-index: 1055;
   }
