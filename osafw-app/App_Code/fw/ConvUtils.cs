@@ -13,6 +13,42 @@ namespace osafw;
 
 public class ConvUtils
 {
+    private static bool playwrightInstalled = false; // to avoid multiple installs in parallel requests
+    private static readonly object playwrightLock = new();
+
+    public static void ensurePlaywrightInstalled(FW fw)
+    {
+        if (playwrightInstalled) return;
+        lock (playwrightLock)
+        {
+            if (playwrightInstalled) return;
+            // Read PLAYWRIGHT_BROWSERS_PATH from config
+            string browsersPath = fw.config("PLAYWRIGHT_BROWSERS_PATH").toStr();
+            if (string.IsNullOrEmpty(browsersPath))
+            {
+                Environment.SetEnvironmentVariable("PLAYWRIGHT_BROWSERS_PATH", browsersPath);
+            }
+
+            try
+            {
+                Microsoft.Playwright.Program.Main([
+                    "install",
+                    "chromium",
+                    "--with-deps",
+                    "--no-shell"
+                ]);
+                playwrightInstalled = true;
+            }
+            catch (Exception ex)
+            {
+                // Optionally log error
+                fw.logger(LogLevel.ERROR, "Failed to install Playwright: ", ex.Message);
+            }
+        }
+    }
+
+
+
     // parse template and generate pdf
     // bdir - base directory for templates, can contain:
     //    - tpl_name file for layout template
@@ -24,6 +60,8 @@ public class ConvUtils
     // see html2pdf() method for options
     public static string parsePagePdf(FW fw, string bdir, string tpl_name, Hashtable ps, string out_filename = "", Hashtable options = null)
     {
+        ensurePlaywrightInstalled(fw);
+
         options ??= [];
         if (!options.ContainsKey("disposition"))
         {

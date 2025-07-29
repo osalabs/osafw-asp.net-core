@@ -67,6 +67,14 @@ public class DevManageController : FwController
         sr.Close();
     }
 
+    public void InitPlaywrightAction()
+    {
+        ConvUtils.ensurePlaywrightInstalled(fw);
+
+        fw.flash("success", "Playwright initialized");
+        fw.redirect(base_url);
+    }
+
     public void ResetCacheAction()
     {
         fw.flash("success", "Application Caches cleared");

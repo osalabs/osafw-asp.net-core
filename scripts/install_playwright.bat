@@ -5,3 +5,5 @@ mkdir "%PW%"
 icacls "%PW%" /grant "IIS_IUSRS:(OI)(CI)M" /T
 setx PLAYWRIGHT_BROWSERS_PATH "%PW%" /M
 echo Re-start IIS (or reboot) so worker processes pick up the new variable.
+
+pause
