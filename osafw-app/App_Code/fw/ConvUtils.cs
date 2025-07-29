@@ -14,11 +14,14 @@ namespace osafw;
 public class ConvUtils
 {
     // parse template and generate pdf
+    // bdir - base directory for templates, can contain:
+    //    - tpl_name file for layout template
+    //    - "pdf_header.html" and "pdf_footer.html" files for header and footer (note, these fields should contain their own css styles)
     // Note: set IS_PRINT_MODE=True hf var which is become available in templates
     // if out_filename ="" or doesn't contain "\" or "/" - output pdf file to browser
     // if out_filename cotains "\" or "/" - save pdf file to this path
     // options:
-    // landscape = True - will produce landscape output
+    // see html2pdf() method for options
     public static string parsePagePdf(FW fw, string bdir, string tpl_name, Hashtable ps, string out_filename = "", Hashtable options = null)
     {
         options ??= [];
@@ -29,6 +32,8 @@ public class ConvUtils
 
         ps["IS_PRINT_MODE"] = true;
         string html_data = fw.parsePage(bdir, tpl_name, ps);
+        options["header"] = fw.parsePage(bdir, "pdf_header.html", ps);
+        options["footer"] = fw.parsePage(bdir, "pdf_footer.html", ps);
 
         html_data = _replace_specials(html_data);
 
@@ -56,12 +61,22 @@ public class ConvUtils
 
     // options:
     // landscape = True - will produce landscape output
+    // header = HTML string to be used as header
+    // footer = HTML string to be used as footer
+    // scale = float value to scale the output (default 0.8)
+    // set margins:
+    // margin_top = "5mm"
+    // margin_right = "10mm"
+    // margin_bottom = "5mm"
+    // margin_left = "10mm"
     public static async Task html2pdf(FW fw, string html_data, string filename, Hashtable options = null)
     {
         if (filename.Length < 1)
         {
             throw new ApplicationException("Wrong filename");
         }
+
+        options ??= [];
 
         try
         {
@@ -84,24 +99,19 @@ public class ConvUtils
                 PrintBackground = true,
                 Margin = new Margin
                 {
-                    Top = "5mm",
-                    Right = "10mm",
-                    Bottom = "5mm",
-                    Left = "10mm"
+                    Top = options.ContainsKey("margin_top") ? options["margin_top"].toStr() : "5mm",
+                    Right = options.ContainsKey("margin_right") ? options["margin_right"].toStr() : "10mm",
+                    Bottom = options.ContainsKey("margin_bottom") ? options["margin_bottom"].toStr() : "5mm",
+                    Left = options.ContainsKey("margin_left") ? options["margin_left"].toStr() : "10mm"
                 },
-                Landscape = false,
-                Scale = 0.8f,
-                DisplayHeaderFooter = false,
-                HeaderTemplate = string.Empty,
-                FooterTemplate = string.Empty,
+                Landscape = options["landscape"].toBool(),
+                Scale = options.ContainsKey("scale") ? options["scale"].toFloat() : 0.8f,
+                DisplayHeaderFooter = !String.IsNullOrEmpty(options["footer"].toStr()) || !String.IsNullOrEmpty(options["header"].toStr()),
+                HeaderTemplate = options["header"].toStr(),
+                FooterTemplate = options["footer"].toStr(),
                 PreferCSSPageSize = false,
                 Tagged = true
             };
-
-            if (options is not null && options["landscape"].toBool())
-            {
-                pdfOptions.Landscape = true;
-            }
 
             await page.PdfAsync(pdfOptions);
         }
