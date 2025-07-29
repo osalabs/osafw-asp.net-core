@@ -180,7 +180,7 @@ main {
 .site-footer {
 }
 
-.no-sidebar #sidebar {
+.no-sidebar #sidebar:not(.show) {
   display: none !important;
 }
   .no-sidebar .site-navbar {
