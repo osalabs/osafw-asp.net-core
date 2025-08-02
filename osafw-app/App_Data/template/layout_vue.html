@@ -6,19 +6,21 @@
   <body class="<~body_class>">
     <~/layout/header>
 
-    <div class="container-fluid">
-      <div class="sidebar" id="sidebar">
+  <div class="container-fluid">
+    <div class="row">
+      <nav class="sidebar col-md-3 col-lg-2 collapse d-md-block" id="sidebar">
         <div class="d-flex flex-column flex-shrink-0 p-3 bg-body-tertiary w-100 d-print-none">
           <~/layout/sidebar unless="hide_std_sidebar">
           <~sidebar>
           <~/layout/sidebar_my>
           <~#/layout/footer>
         </div>
-      </div>
-      <main>
+      </nav>
+      <main class="col">
           <~main>
       </main>
     </div>
+  </div>
 
     <~/layout/vue/sys_footer>
   </body>
