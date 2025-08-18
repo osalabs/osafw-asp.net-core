@@ -48,7 +48,7 @@ public class MainController : FwController
         one["value_class"] = "text-warning";
         one["badge_value"] = Utils.percentChange(fw.model<Spages>().getCount(STATUSES, DIFF_DAYS), fw.model<Spages>().getCount(STATUSES, DIFF_DAYS * 2));
         one["badge_class"] = "text-bg-warning";
-        one["icon"] = "pages";
+        one["icon"] = "bi-file-earmark-richtext";
         panes["plate1"] = one;
 
         one = [];
@@ -59,7 +59,7 @@ public class MainController : FwController
         one["value_class"] = "text-info";
         one["badge_value"] = Utils.percentChange(fw.model<Att>().getCount(STATUSES, DIFF_DAYS), fw.model<Att>().getCount(STATUSES, DIFF_DAYS * 2));
         one["badge_class"] = "text-bg-info";
-        one["icon"] = "uploads";
+        one["icon"] = "bi-cloud-upload";
         panes["plate2"] = one;
 
         one = [];
@@ -70,7 +70,7 @@ public class MainController : FwController
         one["value_class"] = "text-success";
         one["badge_value"] = Utils.percentChange(fw.model<Users>().getCount(STATUSES, DIFF_DAYS), fw.model<Users>().getCount(STATUSES, DIFF_DAYS * 2));
         one["badge_class"] = "text-bg-success";
-        one["icon"] = "users";
+        one["icon"] = "bi-people";
         panes["plate3"] = one;
 
         one = [];
@@ -81,7 +81,7 @@ public class MainController : FwController
         one["value_class"] = "";
         one["badge_value"] = Utils.percentChange(fw.model<FwActivityLogs>().getCountByLogIType(FwLogTypes.ITYPE_SYSTEM, STATUSES, DIFF_DAYS), fw.model<FwActivityLogs>().getCountByLogIType(FwLogTypes.ITYPE_SYSTEM, STATUSES, DIFF_DAYS * 2));
         one["badge_class"] = "text-bg-secondary";
-        one["icon"] = "events";
+        one["icon"] = "bi-clock";
         panes["plate4"] = one;
 
         one = [];
