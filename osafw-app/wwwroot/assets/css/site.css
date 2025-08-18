@@ -176,11 +176,12 @@ h1 .badge {
   }
 
 main {
+  min-width: 0;
 }
 .site-footer {
 }
 
-.no-sidebar #sidebar:not(.show) {
+.no-sidebar #sidebar:not(.show,.collapsing) {
   display: none !important;
 }
   .no-sidebar .site-navbar {
@@ -189,8 +190,6 @@ main {
   .no-sidebar .site-navbar .navbar-toggler {
     display: block !important;
   }
-
-
 
 /****** list screens */
 .btn-std {
