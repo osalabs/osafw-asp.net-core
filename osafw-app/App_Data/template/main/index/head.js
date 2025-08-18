@@ -1,10 +1,9 @@
 var is_dark_mode = document.documentElement.getAttribute('data-bs-theme')=='dark';
-window.Chart.defaults = $.extend(true, window.Chart.defaults, {
+Chart.defaults.set({
     responsive: true,
     maintainAspectRatio: false,
     color: '#999999',
     font: {
-        color: '#999999',
         size: 15,
         family: '',
     },
@@ -35,7 +34,7 @@ window.Chart.defaults = $.extend(true, window.Chart.defaults, {
             borderColor: '#007bff',
             backgroundColor: '#007bff',
             fill: false,
-            borderCapStyle: "rounded"
+            borderCapStyle: "rounded",
         },
         rectangle: {
             backgroundColor: '#007bff'
@@ -61,76 +60,78 @@ window.Chart.defaults = $.extend(true, window.Chart.defaults, {
     },
 });
 
-window.Chart.overrides = $.extend(true, window.Chart.overrides, {
-    bar: {
-        maxBarThickness: 10,
-        scales: {
-            x: {
-                grid: {
-                    drawBorder: false,
-                    drawOnChartArea: false,
-                    drawTicks: false
-                },
-                ticks: {
-                    padding: 10
-                }
+Chart.overrides.bar = {
+    ...Chart.overrides.bar,
+    maxBarThickness: 10,
+    scales: {
+        x: {
+            grid: {
+                drawBorder: false,
+                drawOnChartArea: false,
+                drawTicks: false
             },
-            y: {
-                grid: {
-                    borderDash: [3],
-                    borderDashOffset: [2],
-                    color: '#dddddd',
-                    drawBorder: false,
-                    drawTicks: false,
-                    lineWidth: 1,
-                },
-                beginAtZero: true,
-                ticks: {
-                    padding: 5,
-                    callback: function(a) {
-                        if ((a % 10)===0)
-                            return a;
-                    }
-                }
+            ticks: {
+                padding: 10
             }
-        }
-    },
-    line: {
-        scales: {
-            x: {
-                grid: {
-                    drawBorder: false,
-                    drawOnChartArea: false,
-                    drawTicks: false
-                },
-                ticks: {
-                    padding: 10
-                }
+        },
+        y: {
+            grid: {
+                borderDash: [3],
+                borderDashOffset: 2,
+                color: '#dddddd',
+                drawBorder: false,
+                drawTicks: false,
+                lineWidth: 1,
             },
-            y: {
-                grid: {
-                    borderDash: [3],
-                    borderDashOffset: [2],
-                    color: '#dddddd',
-                    drawBorder: false,
-                    drawTicks: false,
-                    lineWidth: 1,
-                },
-                beginAtZero: true,
-                ticks: {
-                    padding: 5,
-                    callback: function(a) {
-                        if ((a % 10)===0)
-                            return a;
-                    }
+            beginAtZero: true,
+            ticks: {
+                padding: 5,
+                callback: function(a) {
+                    if ((a % 10)===0)
+                        return a;
                 }
             }
         }
     }
-});
+};
+
+Chart.overrides.line = {
+    ...Chart.overrides.line,
+    scales: {
+        x: {
+            grid: {
+                drawBorder: false,
+                drawOnChartArea: false,
+                drawTicks: false
+            },
+            ticks: {
+                padding: 10
+            }
+        },
+        y: {
+            grid: {
+                borderDash: [3],
+                borderDashOffset: 2,
+                color: '#dddddd',
+                drawBorder: false,
+                drawTicks: false,
+                lineWidth: 1,
+            },
+            beginAtZero: true,
+            ticks: {
+                padding: 5,
+                callback: function(a) {
+                    if ((a % 10)===0)
+                        return a;
+                }
+            }
+        }
+    }
+};
 
 <~theme1.js ifeq="GLOBAL[ui_theme]" value="1">
 <~theme2.js ifeq="GLOBAL[ui_theme]" value="2">
 <~theme30.js ifeq="GLOBAL[ui_theme]" value="30">
 
-//console.log(window.Chart.defaults);
+//console.log(Chart.defaults);
+
