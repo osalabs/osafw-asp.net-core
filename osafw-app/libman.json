@@ -65,7 +65,7 @@
     },
     {
       "provider": "jsdelivr",
-      "library": "chart.js@^4",
+      "library": "chart.js@4.5.0",
       "destination": "wwwroot/assets/lib/chartjs",
       "files": [
         "dist/chart.umd.min.js"
