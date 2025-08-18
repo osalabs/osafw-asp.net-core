@@ -257,6 +257,8 @@ table.list > thead > tr > th[data-sort]:not(.active-sort):after {
 
 .pagination select {
   margin-left: calc(var(--bs-border-width) * -1);
+  margin-top: 0;
+  margin-bottom: 0;
   border-top-left-radius: 0 !important;
   border-bottom-left-radius: 0 !important;
   border-top-right-radius: var(--bs-pagination-border-radius) !important;
