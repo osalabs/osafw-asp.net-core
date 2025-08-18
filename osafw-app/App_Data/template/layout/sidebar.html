@@ -8,7 +8,7 @@
       <~./beta if="GLOBAL[is_test]">
    </h3>
 </div>
-<ul class="nav nav-pills flex-column mb-auto mt-3">
+<ul class="nav nav-pills flex-column mt-3">
   <~logged_menu if="SESSION[user_id]" inline>
     <li class="nav-item">
       <a href="<~/main/url>" class="nav-link link-body-emphasis <~/common/active ifeq="GLOBAL[controller]" value="Main">">

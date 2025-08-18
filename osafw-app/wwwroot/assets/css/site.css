@@ -152,6 +152,7 @@ h1 .badge {
   width: var(--fw-sidebar-width);
   padding: 0;
   color: #000;
+  position: relative;
 }
 @media (min-width: 768px) {
   .sidebar {
@@ -159,6 +160,24 @@ h1 .badge {
     top: 0;
     height: 100vh;
     z-index: 100;
+  }
+}
+
+.sidebar > .d-flex {
+  min-height: 100%;
+}
+
+.sidebar-user-menu {
+  position: absolute;
+  left: var(--fw-spacer);
+  right: var(--fw-spacer);
+  bottom: 0;
+  padding: var(--fw-spacer);
+}
+
+@media (max-width: 767px) {
+  .sidebar-user-menu {
+    position: relative;
   }
 }
 
@@ -184,6 +203,9 @@ main {
 .no-sidebar #sidebar:not(.show,.collapsing) {
   display: none !important;
 }
+  .no-sidebar .sidebar {
+    height: calc(100vh - 56px); /* 56px is typical Bootstrap header height */
+  }
   .no-sidebar .site-navbar {
     display: block !important;
   }
