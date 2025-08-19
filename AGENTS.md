@@ -54,8 +54,9 @@ Unit tests are located in `osafw-tests`. Run them with:
 ## Helpful Docs
 
 - `README.md` – framework overview, development & deployment notes, naming conventions and best practices.
-- `README_DB.md` – description of `DB.cs` helper and SQL utilities.
-- `App_Data/template/README_ParsePage.md` – ParsePage template engine reference.
+- `docs/db.md` – description of `DB.cs` helper and SQL utilities.
+- `docs/dynamic.md` – dynamic and Vue controllers reference.
+- `docs/parsepage.md` – ParsePage template engine reference.
 - `App_Data/template/dev/manage/entitybuilder/README.md` – entity definition format used by the scaffolding tools.
 
 ## Common Tasks
