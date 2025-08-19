@@ -1,0 +1,86 @@
+/* Shadows theme */
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600&display=swap');
+
+:root,
+[data-bs-theme=light]{
+  --bs-primary: #6658dd;
+  --theme-color: #6658dd;
+  --theme-body-color: #6c757d;
+  --theme-hover-bg: #eef0f4;
+  --theme-table-striped-bg: #f5f6f9;
+  --fw-body-bg: #f5f6f8;
+  --fw-pane-bg: #ffffff;
+  --bs-nav-pills-link-active-bg: var(--theme-color);
+  --bs-nav-pills-link-active-color: #fff;
+  --theme-font-family: "Nunito",sans-serif;
+}
+
+[data-bs-theme=dark]{
+  --bs-primary: #6658dd;
+  --theme-color: #6658dd;
+  --theme-body-color: #aeb8c5;
+  --theme-hover-bg: #384953;
+  --theme-table-striped-bg: #37444e;
+  --fw-body-bg: #313a46;
+  --fw-pane-bg: #3b4654;
+  --bs-nav-pills-link-active-bg: var(--theme-color);
+  --bs-nav-pills-link-active-color: #fff;
+  --theme-font-family: "Nunito",sans-serif;
+}
+
+body {
+  font-family: var(--theme-font-family);
+  color: var(--theme-body-color);
+  background-color: var(--fw-body-bg);
+}
+
+h1, h3, .h3 {
+  font-weight: 600;
+  font-family: var(--theme-font-family);
+  color: var(--bs-emphasis-color);
+}
+
+.fw-card {
+  background-color: var(--fw-pane-bg);
+  border-radius: .25rem;
+  padding: 1rem 1rem 0.25rem 1rem;
+  box-shadow: 0 2px 6px rgba(3, 27, 78, 0.06);
+}
+
+.sidebar .nav-link {
+  font-weight: 600;
+  font-size: .875rem;
+  color: var(--theme-body-color) !important;
+  border-radius: 0.25rem;
+}
+
+.sidebar .nav-link:hover {
+  background-color: var(--theme-hover-bg);
+  color: var(--bs-body-color) !important;
+}
+
+.sidebar .nav-link.active {
+  background-color: var(--theme-color);
+  color: #fff !important;
+}
+
+.sidebar .bi {
+  color: var(--theme-body-color);
+}
+
+.sidebar .nav-link.active .bi {
+  color: #fff;
+}
+
+.table {
+  color: var(--theme-body-color);
+  --bs-table-striped-bg: var(--theme-table-striped-bg);
+  --bs-table-hover-bg: var(--theme-hover-bg);
+}
+
+.btn-default {
+  color: #fff;
+  border-color: transparent;
+  background-color: var(--theme-color);
+  box-shadow: 0 2px 6px rgba(102, 88, 221, 0.5);
+}
