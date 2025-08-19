@@ -15,7 +15,7 @@ Created as simplified and lightweight alternative to other ASP.NET frameworks li
 - integrated auth - simple flat access levels auth
 - UI based on [Bootstrap 5](http://getbootstrap.com) with minimal custom CSS and themes support - it's easy to customize or apply your own theme (see [README_THEMES](osafw-app/App_Data/README_THEMES))
 - use of well-known 3rd party libraries: [jQuery](http://jquery.com), [jQuery Form](https://github.com/malsup/form), jGrowl, markdown libs, etc...
-- extensible dashboard panels with chart, table and progress templates ([docs/panels.md](docs/panels.md))
+- extensible dashboard panels with charts, table and progress templates ([docs/dashboard.md](docs/dashboard.md))
 - dynamic controllers with JSON configuration (`FwDynamicController`) and Vue.js powered UI (`FwVueController`) ([detailed docs](README_Dynamic.md))
 - base API controller (`FwApiController`) for building REST APIs
 - attachments handling with optional Amazon S3 storage
@@ -39,7 +39,6 @@ http://demo.engineeredit.com/ - this is how it looks in action right after insta
 5. review debug log in `/osafw-app/App_Data/logs/main.log`
 6. edit or create new controllers and models in `/osafw-app/App_Code/controllers` and `/osafw-app/App_Code/models`
 7. modify templates in `/osafw-app/App_Data/template`
-8. customize dashboard panels – see [docs/panels.md](docs/panels.md)
 
 ### Deployment
 All the details can be found in the [Microsoft docs](https://learn.microsoft.com/aspnet/core/host-and-deploy/iis/?view=aspnetcore-8.0)

@@ -176,7 +176,7 @@ public class MainController : FwController
         panes["linechart"] = one;
 
         one = [];
-        one["type"] = "area";
+        one["type"] = "areachart";
         one["title"] = "Events Area";
         one["id"] = "events_area";
         one["rows"] = db.arrayp("with zzz as ("
@@ -186,7 +186,7 @@ public class MainController : FwController
             + " group by CAST(al.idate as date) order by CAST(al.idate as date) desc", 14)
             + ")"
             + " select CONCAT(MONTH(idate),'/',DAY(idate)) as ilabel, ivalue from zzz order by idate", DB.h());
-        panes["area"] = one;
+        panes["areachart"] = one;
 
         one = [];
         one["type"] = "progress";

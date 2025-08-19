@@ -10,21 +10,21 @@ The framework ships with several panel types:
 - `barchart` – bar chart using Chart.js
 - `piechart` – doughnut chart using Chart.js
 - `linechart` – line chart using Chart.js
+- `areachart` – area chart (line with filled region)
 - `table` – simple data table
 - `html` – raw HTML block
-- `area` – area chart (line with filled region)
 - `progress` – Bootstrap progress bar
 
 ## Creating a Custom Panel Type
 
-1. **Create a template** named `type_<name>.html` in `App_Data/template/main/index`.
+1. **Create a template** named `type_NAME.html` in `App_Data/template/main/index`.
 2. **Register the template** in `std_pane.html` by adding a line:
    ```html
-   <~type_<name> ifeq="type" value="<name>">
+   <~type_NAME ifeq="type" value="NAME">
    ```
-3. **Provide data** in the controller. Add a hashtable to the `panes` collection in `MainController.IndexAction()` (or another controller) with at least a `type` field:
+3. **Provide data** in the controller. Add a hashtable to the `panes` collection in `MainController.IndexAction()` with at least a `type` field:
    ```csharp
-   var one = [];
+   one = [];
    one["type"] = "progress";
    one["title"] = "Active Users";
    one["percent"] = 75;
