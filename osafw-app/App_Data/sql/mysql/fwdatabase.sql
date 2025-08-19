@@ -100,6 +100,9 @@ CREATE TABLE users (
   phone                 VARCHAR(16) NOT NULL DEFAULT '',
   lang                  VARCHAR(16) NOT NULL DEFAULT 'en', -- user interface language
 
+  dt_format             VARCHAR(32) NOT NULL DEFAULT 'M/d/yyyy',
+  timezone              VARCHAR(64) NOT NULL DEFAULT 'UTC',
+
   idesc                 TEXT,
   att_id                INT NULL,                -- avatar
 
