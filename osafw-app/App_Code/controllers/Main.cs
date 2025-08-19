@@ -205,11 +205,6 @@ public class MainController : FwController
     {
         fw.Session("ui_theme", form_id);
         var fields = new Hashtable() { { "ui_theme", form_id } };
-        if (form_id == "30")
-        {
-            fields["ui_mode"] = "10"; //for blue theme - enforce light color mode
-            fw.Session("ui_mode", "10");
-        }
 
         fw.model<Users>().update(fw.userId, fields);
 

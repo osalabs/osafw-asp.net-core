@@ -1,32 +1,39 @@
 //blue theme
+const styles = getComputedStyle(document.documentElement);
+const themeColor = styles.getPropertyValue('--theme-color').trim() || '#2c7be5';
+const bodyColor = styles.getPropertyValue('--theme-body-color').trim() || '#748194';
+const paneBg = styles.getPropertyValue('--fw-body-bg').trim() || '#0b1727';
+const borderColor = styles.getPropertyValue('--bs-border-color').trim() || '#dddddd';
+const fontFamily = styles.getPropertyValue('--bs-body-font-family').trim();
+
 window.Chart.defaults = $.extend(true, window.Chart.defaults, {
-    color: '#748194',
+    color: bodyColor,
     font: {
-        color: '#748194',
+        color: bodyColor,
         size: 13,
-        family: '',
+        family: fontFamily,
     },
     elements: {
         point: {
             radius: 0,
-            backgroundColor: '#0b1727'
+            backgroundColor: paneBg
         },
         bar: {
-            backgroundColor: '#2c7be5'
+            backgroundColor: themeColor
         },
         line: {
             tension: 0.4,
             borderWidth: 3,
-            borderColor: '#2c7be5',
-            backgroundColor: '#2c7be5',
+            borderColor: themeColor,
+            backgroundColor: themeColor,
             fill: false,
             borderCapStyle: "rounded"
         },
         rectangle: {
-            backgroundColor: '#2c7be5'
+            backgroundColor: themeColor
         },
         arc: {
-            backgroundColor: '#0b1727',
+            backgroundColor: paneBg,
             borderColor: '#ffffff',
             borderWidth: 4
         }
@@ -34,7 +41,7 @@ window.Chart.defaults = $.extend(true, window.Chart.defaults, {
     doughnut: {
         cutoutPercentage: 80,
         backgroundColor: [
-            '#2c7be5',
+            themeColor,
             '#27bcfd',
             '#00d27a',
             '#adb4c1',
@@ -64,12 +71,12 @@ window.Chart.overrides = $.extend(true, window.Chart.overrides, {
                 grid: {
                     borderDash: [3],
                     borderDashOffset: [2],
-                    color: '#dddddd',
+                    color: borderColor,
                     drawBorder: false,
                     drawTicks: false,
                     lineWidth: 0,
                     zeroLineWidth: 0,
-                    zeroLineColor: '#dddddd',
+                    zeroLineColor: borderColor,
                     zeroLineBorderDash: [3],
                     zeroLineBorderDashOffset: [2]
                 },
@@ -101,12 +108,12 @@ window.Chart.overrides = $.extend(true, window.Chart.overrides, {
                 grid: {
                     borderDash: [3],
                     borderDashOffset: [2],
-                    color: '#dddddd',
+                    color: borderColor,
                     drawBorder: false,
                     drawTicks: false,
                     lineWidth: 0,
                     zeroLineWidth: 0,
-                    zeroLineColor: '#dddddd',
+                    zeroLineColor: borderColor,
                     zeroLineBorderDash: [3],
                     zeroLineBorderDashOffset: [2]
                 },
