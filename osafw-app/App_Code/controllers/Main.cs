@@ -175,6 +175,29 @@ public class MainController : FwController
             + " select CONCAT(MONTH(idate),'/',DAY(idate)) as ilabel, ivalue from zzz order by idate", DB.h());
         panes["linechart"] = one;
 
+        // Example for area chart
+        //one = [];
+        //one["type"] = "areachart";
+        //one["title"] = "Events Area";
+        //one["id"] = "events_area";
+        //one["rows"] = db.arrayp("with zzz as ("
+        //    + db.limit("select CAST(al.idate as date) as idate, count(*) as ivalue "
+        //    + " from activity_logs al, log_types lt "
+        //    + "where al.log_types_id=lt.id"
+        //    + " group by CAST(al.idate as date) order by CAST(al.idate as date) desc", 14)
+        //    + ")"
+        //    + " select CONCAT(MONTH(idate),'/',DAY(idate)) as ilabel, ivalue from zzz order by idate", DB.h());
+        //panes["areachart"] = one;
+
+        one = [];
+        one["type"] = "progress";
+        one["title"] = "Active Users";
+        long totalUsers = fw.model<Users>().getCount();
+        long activeUsers = fw.model<Users>().getCount(STATUSES);
+        one["percent"] = totalUsers == 0 ? 0 : activeUsers * 100 / totalUsers;
+        one["progress_class"] = "bg-success";
+        panes["progress"] = one;
+
         return ps;
     }
 
