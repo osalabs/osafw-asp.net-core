@@ -153,6 +153,7 @@ h1 .badge {
   padding: 0;
   color: #000;
   position: relative;
+  overflow-y: auto;
 }
 @media (min-width: 768px) {
   .sidebar {
@@ -163,22 +164,27 @@ h1 .badge {
   }
 }
 
-.sidebar > .d-flex {
-  min-height: 100%;
-}
+  .sidebar > .d-flex {
+    min-height: 100%;
+  }
+  .sidebar .bi-pin-angle{
+    display: none;
+  }
 
 .sidebar-user-menu {
-  position: absolute;
-  left: var(--fw-spacer);
-  right: var(--fw-spacer);
-  bottom: 0;
-  padding: var(--fw-spacer);
+  margin-top: auto;
+  padding-top: var(--fw-spacer);
 }
 
 @media (max-width: 767px) {
-  .sidebar-user-menu {
+  .sidebar {
+    height: calc(100vh - 56px);
+    overflow-y: auto;
+  }
+/*  .sidebar-user-menu {
     position: relative;
   }
+*/
 }
 
   .sidebar .nav-pills .nav-link.active {
@@ -206,6 +212,12 @@ main {
   .no-sidebar .sidebar {
     height: calc(100vh - 56px); /* 56px is typical Bootstrap header height */
   }
+    .no-sidebar .sidebar .bi-three-dots-vertical{
+      display: none;
+    }
+    .no-sidebar .sidebar .bi-pin-angle{
+      display: inline-block;
+    }
   .no-sidebar .site-navbar {
     display: block !important;
   }
