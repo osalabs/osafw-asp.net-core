@@ -470,3 +470,6 @@ CREATE TABLE user_filters (
 -- run roles.sql if roles support required and also uncomment #define isRoles in Users model
 
 -- after this file - run lookups.sql
+
+-- and after migration/data import performed - run the following to rebuild all indexes:
+-- exec sp_msforeachtable 'SET QUOTED_IDENTIFIER ON; ALTER INDEX ALL ON ? REBUILD'

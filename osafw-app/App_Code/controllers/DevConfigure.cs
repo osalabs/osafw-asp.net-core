@@ -145,7 +145,8 @@ public class DevConfigureController : FwController
 
     public Hashtable ApplyUpdatesAction()
     {
-        if (!fw.config("IS_DEV").toBool())
+        //only allow apply updates if in DEV mode or if user is site admin
+        if (!fw.config("IS_DEV").toBool() && !fw.model<Users>().isSiteAdmin())
             throw new AuthException("Not in a DEV mode");
 
         fw.model<FwUpdates>().loadUpdates();

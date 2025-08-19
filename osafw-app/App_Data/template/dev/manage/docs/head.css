@@ -1,3 +1,27 @@
 .page-break-after {
   page-break-after: always;
 }
+
+.docs-cover {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  text-align: center;
+}
+
+.docs-cover h1 {
+  font-size: 3rem;
+  font-weight: 300;
+  margin-bottom: 1rem;
+}
+
+.docs-cover .lead {
+  font-size: 1.25rem;
+  color: var(--bs-secondary-color);
+}
+
+.tab-pane {
+  margin-top: 1rem;
+}

@@ -569,13 +569,23 @@ public abstract class FwModel : IDisposable
     #endregion
 
     #region select options and autocomplete
-    // override if id/iname differs in table
+    // override if id/iname differs in table or to process custom lookup_params and filter_for/filter_field
     // def - in dynamic controller - field definition (also contains "i" and "ps", "lookup_params", ...) or you could use it to pass additional params
     public virtual ArrayList listSelectOptions(Hashtable def = null)
     {
         Hashtable where = [];
         if (!string.IsNullOrEmpty(field_status))
             where[field_status] = db.opNOT(STATUS_DELETED);
+
+        // Support filter_by/filter_field from config
+        if (def != null && def.ContainsKey("filter_by") && def.ContainsKey("filter_field"))
+        {
+            var item = def["i"] as Hashtable ?? [];
+            var filter_by = def["filter_by"].toStr();
+            var filter_field = def["filter_field"].toStr();
+            if (item.ContainsKey(filter_by))
+                where[filter_field] = item[filter_by];
+        }
 
         ArrayList select_fields =
         [

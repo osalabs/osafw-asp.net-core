@@ -7,15 +7,15 @@
 This documentation describes the structure and deployment of the application built with OSAFW ASP.NET Core. It includes installation, maintenance and troubleshooting guidelines. The same content can be exported as a PDF using the button above.
 
 ### Terminology
-- **Project Name:** %%Project Name%%
-- **Project Code:** %%ProjectCode%%
+- **Project Name:** <~GLOBAL[SITE_NAME]>
+- **Project Code:** <~GLOBAL[PROJECT_CODE]>
   *This short code is reused for repository names, the application folder, the database and the IIS site name.*
 - **Short Description:**
   %%Provide a brief description of where, how, and by whom the system will be used. Include a link to the client website if applicable.%%
 
 ### Technology Stack
 - **Backend:** .NET Core C#
-- **Database:** SQL Server %%(or MySQL)%%
+- **Database:** <~db_type>
 
 ### Security Considerations
 - **Role-Based Access Control (RBAC):** <~/common/sel/yn_bool.sel selvalue="is_rbac">

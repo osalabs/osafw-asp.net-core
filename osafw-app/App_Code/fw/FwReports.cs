@@ -26,7 +26,6 @@ using System;
 using System.Collections;
 using System.Linq;
 
-
 namespace osafw;
 
 public class FwReports
@@ -67,7 +66,6 @@ public class FwReports
     protected string list_sortdef; // = "iname asc";
     protected Hashtable list_sortmap; // = Utils.qh("id|id iname|iname add_time|add_time status|status");
     protected string list_orderby = "1"; // sql for order by clause, set in getData() via setListSorting(), default by first column if no other sorting set
-
 
     public static string cleanupRepcode(string repcode)
     {

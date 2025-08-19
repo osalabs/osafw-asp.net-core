@@ -148,9 +148,7 @@ public class FwDynamicController : FwController
     public virtual Hashtable ShowAction(int id = 0)
     {
         Hashtable ps = [];
-        var item = model0.one(id);
-        if (item.Count == 0)
-            throw new NotFoundException();
+        var item = modelOneOrFail(id);
 
         // added/updated should be filled before dynamic fields
         setAddUpdUser(ps, item);
@@ -208,7 +206,7 @@ public class FwDynamicController : FwController
             if (id > 0)
             {
                 // edit screen
-                item = model0.one(id);
+                item = modelOneOrFail(id);
             }
             else
             {
@@ -222,7 +220,7 @@ public class FwDynamicController : FwController
         else
         {
             // read from db
-            Hashtable itemdb = model0.one(id);
+            Hashtable itemdb = modelOne(id);
             // and merge new values from the form
             Utils.mergeHash(itemdb, item);
             item = itemdb;
@@ -298,7 +296,7 @@ public class FwDynamicController : FwController
 
         Validate(id, item);
         // load old record if necessary
-        // Dim item_old As Hashtable = model0.one(id)
+        // Dim item_old As Hashtable = modelOne(id)
 
         Hashtable itemdb = FormUtils.filter(item, this.save_fields);
         FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
@@ -495,7 +493,7 @@ public class FwDynamicController : FwController
 
         var ps = new Hashtable()
         {
-            {"i", model0.one(id)},
+            {"i", modelOneOrFail(id)},
             {"related_id", this.related_id},
             {"return_url", this.return_url},
             {"base_url", this.base_url},
@@ -708,7 +706,7 @@ public class FwDynamicController : FwController
     /// <returns></returns>
     public virtual ArrayList prepareShowFields(Hashtable item, Hashtable ps)
     {
-        var id = item["id"].toInt();
+        var id = item[model0.field_id].toInt();
 
         ArrayList fields = getConfigShowFormFieldsByTab("show_fields");
         foreach (Hashtable def in fields)
@@ -811,12 +809,22 @@ public class FwDynamicController : FwController
 
     public virtual ArrayList prepareShowFormFields(Hashtable item, Hashtable ps)
     {
-        var id = item["id"].toInt();
+        var id = item[model0.field_id].toInt();
 
         var subtable_add = reqh("subtable_add");
         var subtable_del = reqh("subtable_del");
 
         var fields = getConfigShowFormFieldsByTab("showform_fields") ?? throw new ApplicationException("Controller config.json doesn't contain 'showform_fields'");
+
+        // build index by field if necessary
+        Hashtable hfields = null;
+        var is_get_existing = false;
+        if (isGet() && !Utils.isEmpty(id))
+        {
+            is_get_existing = true;
+            hfields = Utils.array2hashtable(fields, "field");
+        }
+
         foreach (Hashtable def in fields)
         {
             //logger(def);
@@ -824,6 +832,17 @@ public class FwDynamicController : FwController
             def["ps"] = ps; // ref to whole ps
             string dtype = (string)def["type"]; // type is required
             string field = def["field"].toStr();
+
+            // for just loaded forms for existing items - pre-load filter's values into "item"
+            if (is_get_existing && def.ContainsKey("filter_for"))
+            {
+                var filter_for_field = def["filter_for"].toStr();
+                var filter_field = def["filter_field"].toStr();
+
+                var def_for = hfields[filter_for_field] as Hashtable;
+                var filtered_item = fw.model(def_for["lookup_model"].toStr()).one(item[def_for["field"]]);
+                item[field] = filtered_item[filter_field];
+            }
 
             if (def.ContainsKey("append") && def["append"] is ICollection coll1 && coll1.Count > 0
                 || def.ContainsKey("prepend") && def["prepend"] is ICollection coll2 && coll2.Count > 0)

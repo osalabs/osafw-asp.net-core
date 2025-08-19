@@ -13,8 +13,9 @@ Created as simplified and lightweight alternative to other ASP.NET frameworks li
   - data stored by default in SQL Server database [using db.net](https://github.com/osalabs/db.net) ([detailed docs](README_DB.md))
 - RESTful with some practical enhancements
 - integrated auth - simple flat access levels auth
- - UI based on [Bootstrap 5](http://getbootstrap.com) with minimal custom CSS and themes support - it's easy to customize or apply your own theme (see [README_THEMES](osafw-app/App_Data/README_THEMES))
+- UI based on [Bootstrap 5](http://getbootstrap.com) with minimal custom CSS and themes support - it's easy to customize or apply your own theme (see [README_THEMES](osafw-app/App_Data/README_THEMES))
 - use of well-known 3rd party libraries: [jQuery](http://jquery.com), [jQuery Form](https://github.com/malsup/form), jGrowl, markdown libs, etc...
+- extensible dashboard panels with charts, table and progress templates ([docs/dashboard.md](docs/dashboard.md))
 - dynamic controllers with JSON configuration (`FwDynamicController`) and Vue.js powered UI (`FwVueController`) ([detailed docs](README_Dynamic.md))
 - base API controller (`FwApiController`) for building REST APIs
 - attachments handling with optional Amazon S3 storage
@@ -219,7 +220,9 @@ Another debug function that might be helpful is `fw.rw()` - but it output it's p
 - use `logger()` and review `/App_Data/logs/main.log` if you stuck
   - make sure you have `log_level` set to `DEBUG` in `appsettings.json`
 
-### How to quickly create a Report
+### Reports
+
+**How to quickly create a Report**
 - all reports accessed via `AdminReportsController`
   - `IndexAction` - shows a list of all available reports (basically renders static html template with a link to specific reports)
   - `ShowAction` - based on passed report code calls related Report model
@@ -239,6 +242,22 @@ Another debug function that might be helpful is `fw.rw()` - but it output it's p
     - `report_html.html` - for report table/layout/appearance
   - add link to a new report to `\App_Data\template\reports\index\main.html`
 
+**PDF Export for reports setup**
+PDF Reports done by generating report html and then converting it into pdf using Playwright (Chromium).
+
+To enable PDF export using Playwright (Chromium):
+
+1. **Configure PLAYWRIGHT_BROWSERS_PATH** in `appsettings.json`. By default it's `C:\Program Files\pw-browsers`. (If you set it to empty it will use current user `AppData\Local` folder)
+2. **Run scripts\install_playwright.bat** to setup folder permissions before first PDF export.
+3. **Lazy Initialization**
+   - Playwright browser install will run automatically the first time a PDF report is generated.
+   - If there are issues with Playwright, normal app workflow is not affected.
+4. **Manual Initialization**
+   - Developers can manually trigger Playwright install from `/Dev/Manage` (look for the "Init Playwright" link).
+5. **Troubleshooting**
+   - If PDF export fails, check `/App_Data/logs/main.log` for errors.
+   - Ensure the browser path is writable and accessible by the IIS user.
+
 ### Background Service for Scheduled Tasks
 
 Framework includes a background service for scheduled tasks (like send emails, run reports, etc...). Uses **Cronos** nuget package.
@@ -246,3 +265,12 @@ To enable:
 - in Program.cs uncomment `builder.Services.AddHostedService<FwCronService>();`
 - add tasks like `insert into fwcron(icode, cron) values ('example_sleep', '* * * * *')` - example task to run every minute
 - update `FwCron.runJobAction` to call acutal code for tasks
+
+---
+
+## Playwright PDF Export Setup
+
+
+---
+
+For more technical details, see comments in `ConvUtils.cs` and `FwReports.cs`.

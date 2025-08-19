@@ -1,6 +1,6 @@
 ### Prerequisites
 - **.NET SDK:** [.NET Core/ASP.NET Core SDK Version]
-- **Database Server:** SQL Server [or other]
+- **Database Server:** <~db_type>
 - **Operating System:** [Windows/Linux/MacOS]
 
 ### AWS EC2 Windows Web Server Setup

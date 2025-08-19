@@ -3,6 +3,8 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2023 Oleg Savchuk www.osalabs.com
 
+using System.Collections;
+
 namespace osafw;
 
 public class AdminDemosDynamicController : FwDynamicController
@@ -30,5 +32,4 @@ public class AdminDemosDynamicController : FwDynamicController
         // override sortmap for date fields
         // list_sortmap["fdate_pop_str"] = "fdate_pop";
     }
-
 }

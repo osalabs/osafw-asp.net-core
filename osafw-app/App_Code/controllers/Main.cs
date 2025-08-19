@@ -48,7 +48,7 @@ public class MainController : FwController
         one["value_class"] = "text-warning";
         one["badge_value"] = Utils.percentChange(fw.model<Spages>().getCount(STATUSES, DIFF_DAYS), fw.model<Spages>().getCount(STATUSES, DIFF_DAYS * 2));
         one["badge_class"] = "text-bg-warning";
-        one["icon"] = "pages";
+        one["icon"] = "bi-file-earmark-richtext";
         panes["plate1"] = one;
 
         one = [];
@@ -59,7 +59,7 @@ public class MainController : FwController
         one["value_class"] = "text-info";
         one["badge_value"] = Utils.percentChange(fw.model<Att>().getCount(STATUSES, DIFF_DAYS), fw.model<Att>().getCount(STATUSES, DIFF_DAYS * 2));
         one["badge_class"] = "text-bg-info";
-        one["icon"] = "uploads";
+        one["icon"] = "bi-cloud-upload";
         panes["plate2"] = one;
 
         one = [];
@@ -70,7 +70,7 @@ public class MainController : FwController
         one["value_class"] = "text-success";
         one["badge_value"] = Utils.percentChange(fw.model<Users>().getCount(STATUSES, DIFF_DAYS), fw.model<Users>().getCount(STATUSES, DIFF_DAYS * 2));
         one["badge_class"] = "text-bg-success";
-        one["icon"] = "users";
+        one["icon"] = "bi-people";
         panes["plate3"] = one;
 
         one = [];
@@ -81,7 +81,7 @@ public class MainController : FwController
         one["value_class"] = "";
         one["badge_value"] = Utils.percentChange(fw.model<FwActivityLogs>().getCountByLogIType(FwLogTypes.ITYPE_SYSTEM, STATUSES, DIFF_DAYS), fw.model<FwActivityLogs>().getCountByLogIType(FwLogTypes.ITYPE_SYSTEM, STATUSES, DIFF_DAYS * 2));
         one["badge_class"] = "text-bg-secondary";
-        one["icon"] = "events";
+        one["icon"] = "bi-clock";
         panes["plate4"] = one;
 
         one = [];
@@ -174,6 +174,29 @@ public class MainController : FwController
             + ")"
             + " select CONCAT(MONTH(idate),'/',DAY(idate)) as ilabel, ivalue from zzz order by idate", DB.h());
         panes["linechart"] = one;
+
+        // Example for area chart
+        //one = [];
+        //one["type"] = "areachart";
+        //one["title"] = "Events Area";
+        //one["id"] = "events_area";
+        //one["rows"] = db.arrayp("with zzz as ("
+        //    + db.limit("select CAST(al.idate as date) as idate, count(*) as ivalue "
+        //    + " from activity_logs al, log_types lt "
+        //    + "where al.log_types_id=lt.id"
+        //    + " group by CAST(al.idate as date) order by CAST(al.idate as date) desc", 14)
+        //    + ")"
+        //    + " select CONCAT(MONTH(idate),'/',DAY(idate)) as ilabel, ivalue from zzz order by idate", DB.h());
+        //panes["areachart"] = one;
+
+        one = [];
+        one["type"] = "progress";
+        one["title"] = "Active Users";
+        long totalUsers = fw.model<Users>().getCount();
+        long activeUsers = fw.model<Users>().getCount(STATUSES);
+        one["percent"] = totalUsers == 0 ? 0 : activeUsers * 100 / totalUsers;
+        one["progress_class"] = "bg-success";
+        panes["progress"] = one;
 
         return ps;
     }

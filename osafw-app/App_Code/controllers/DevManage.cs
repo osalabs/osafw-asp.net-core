@@ -67,6 +67,14 @@ public class DevManageController : FwController
         sr.Close();
     }
 
+    public void InitPlaywrightAction()
+    {
+        ConvUtils.ensurePlaywrightInstalled(fw);
+
+        fw.flash("success", "Playwright initialized");
+        fw.redirect(base_url);
+    }
+
     public void ResetCacheAction()
     {
         fw.flash("success", "Application Caches cleared");
@@ -107,6 +115,7 @@ public class DevManageController : FwController
         ps["access_levels"] = FormUtils.selectTplOptions("/common/sel/access_level.sel");
 
         ps["is_S3"] = S3.IS_ENABLED;
+        ps["db_type"] = fw.getDB().dbtype;
 
         if (!Utils.isEmpty(is_export))
         {

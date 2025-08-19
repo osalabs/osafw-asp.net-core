@@ -25,7 +25,9 @@ Common config keys include:
 - `route_return` – action to redirect after save
 - `is_userlists` – enable UserLists support
 
-There are samples for the one `show_fields` or `showform_fields` element:
+**"show_fields" and "showform_fields"**
+
+There are samples for the one `show_fields` or `showform_fields` element - single field definition:
 
 ```json
   //minimal setup to display the field value
@@ -70,7 +72,39 @@ Renders:
 </div>
 ```
 
-|Field name|Description|Example|
+More examples:
+```json
+  //display formatted currency value
+  {
+      "type": "plaintext_currency",
+      "field": "price",
+      "label": "Price"
+  },
+
+  //currency input with custom symbol
+  {
+      "type": "currency",
+      "field": "price",
+      "currency_symbol": "EUR", // if ommitted, defaults to "$"
+      "label": "Price"
+  },
+
+  //list of uploaded files from `att` where entity = current's model table and item_id = current id
+  {
+      "type": "att_files",
+      "field": "notused",
+      "label": "Photos"
+  },
+
+  //Show ID, Submit and Add New buttons
+  {
+      "type": "group_id_addnew",
+  },
+```
+
+**available params for one field definition**
+
+|Param name|Description|Example|
 |---|---|---|
 |type|required, Element type, see values in table below|select - renders as `<select>` html|
 |field|Field name from database.table or arbitrary name for non-db block|demo_dicts_id - in case of select id value won't be displayed, but used to select active list element|
@@ -114,8 +148,8 @@ Renders:
 |conv|value converter for display/save (e.g. time_from_seconds)|time_from_seconds|
 |default_time|default time for datetime_popup fields|now|
 |is_custom|placeholder processed manually in code|true|
-|prepend|to use with `FwVueController`, array of buttons to prepend to the cell in list edit mode|same as for `append`|
-|append|to use with `FwVueController`, array of buttons to append to the cell in list edit mode|
+|prepend|array of buttons to prepend to the cell in list edit mode (Vue) or to the form input (Dynamic)|same as for `append`|
+|append|array of buttons to append to the cell in list edit mode (Vue) or to the form input (Dynamic)||
 ```
         [{
           "event": "add", // only used in FwVueController
@@ -126,7 +160,38 @@ Renders:
         }]
 ```
 
-##### type values
+|Param name|Description|Example|
+|---|---|---|
+|filter_for|Designates the `select` field as a filter for another `select` field. Used with "filter_field" and "filter_by" and another field definition||
+```
+        {
+            "field": "parent_demo_dicts_id",
+            "type": "select",
+            "label": "Parent DemoDicts Filter",
+            "lookup_model": "DemoDicts",
+            "filter_for": "parent_id",
+            "filter_field": "demo_dicts_id",
+            "class_control": "selectpicker on-refresh",
+            "is_option_empty": true,
+            "option0_title": "- select to show only Parents with this DemoDicts -",
+            "attrs_control": "data-live-search=\"true\""
+        },
+        {
+            "field": "parent_id",
+            "label": "Parent",
+            "lookup_model": "Demos",
+            "lookup_params": "parent",
+            "filter_by": "parent_demo_dicts_id",
+            "filter_field": "demo_dicts_id",
+            "type": "select",
+            "is_option0": true,
+            "option0_title": "- none -",
+            "class_contents": "col-md-3",
+            "attrs_control": "data-noautosave=\"true\""
+        },
+```
+
+**available values for "type" param**
 
 |Type|Description|
 |---|---|
@@ -136,9 +201,12 @@ Renders:
 |col_end|end of the `div.col`|
 |row_end|end of the `div.row`|
 |_available for both show_fields and showform_fields_||
+|header|Section header text, rendered as `<h5>` tag and horizontal lines|
 |plaintext|Plain text value|
-|plaintext_link|Plain text with a link to "admin_url"|
-|plaintext_autocomplete|Plain text name from "lookup_model" by id in field|
+|plaintext_link|Plain text with a link to `admin_url`|
+|plaintext_autocomplete|Plain text name from `lookup_model` by id in field|
+|plaintext_yesno|Plain text Yes/No value based on value|
+|plaintext_currency|Formatted currency value, also uses `currency_symbol`(default $)|
 |markdown|Markdown text (server-side rendered)|
 |noescape|Value without htmlescape|
 |float|Value formatted with 2 decimal digits|
@@ -161,7 +229,9 @@ Renders:
 |textarea|textarea html block|
 |email|input type="email" html block|
 |number|input type="number" html block|
-|autocomplete|input type="text" with autocomplete using "autocomplete_url"|
+|password|input type="password" html block|
+|currency|input-group with `currency_symbol` (default $) and type="text"|
+|autocomplete|input type="text" with autocomplete using `autocomplete_url`|
 |multicb|Multi-selection list with checkboxes|
 |multicb_prio|Multi-selection list with checkboxes and priority|
 |radio|radio options block|

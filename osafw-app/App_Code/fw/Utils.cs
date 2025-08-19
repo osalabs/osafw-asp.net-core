@@ -1252,7 +1252,11 @@ public class Utils
     {
         Hashtable result = [];
         foreach (IDictionary item in arr)
+        {
+            if (!item.Contains(key) || item[key] == null)
+                continue;
             result[item[key]] = item;
+        }
         return result;
     }
 
