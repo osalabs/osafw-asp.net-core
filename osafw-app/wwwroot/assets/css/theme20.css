@@ -2,22 +2,27 @@
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600&display=swap');
 
 :root,
-[data-bs-theme=light]{
-  --bs-primary: #6658dd;
-  --theme-color: #6658dd;
-  --theme-body-color: #6c757d;
-  --theme-hover-bg: #eef0f4;
-  --theme-table-striped-bg: #f5f6f9;
-  --fw-body-bg: #f5f6f8;
-  --fw-pane-bg: #ffffff;
-  --bs-nav-pills-link-active-bg: var(--theme-color);
-  --bs-nav-pills-link-active-color: #fff;
-  --theme-font-family: "Nunito",sans-serif;
+[data-bs-theme=light] {
+    --bs-primary: #8793FF;
+    --theme-color: #8793FF;
+    --theme-body-color: #6c757d;
+    --theme-hover-bg: #eef0f4;
+    --theme-table-striped-bg: #f5f6f9;
+    --fw-body-bg: #f5f6f8;
+    --fw-pane-bg: #ffffff;
+    --bs-nav-pills-link-active-bg: var(--theme-color);
+    --bs-nav-pills-link-active-color: #fff;
+    --bs-success-rgb: 40, 167, 69;
+    --theme-nav-link-color: #8391a2 !important;
+    --theme-font-family: "Nunito",sans-serif;
+    --theme-font-size: 0.9rem;
+    --theme-sidebar-bg: #313a46;
+    --theme-shadow: 0px 0px 35px 0px rgba(154, 161, 171, 0.15);
 }
 
 [data-bs-theme=dark]{
-  --bs-primary: #6658dd;
-  --theme-color: #6658dd;
+  --bs-primary: #8793FF;
+  --theme-color: #8793FF;
   --theme-body-color: #aeb8c5;
   --theme-hover-bg: #384953;
   --theme-table-striped-bg: #37444e;
@@ -30,13 +35,19 @@
 
 body {
   font-family: var(--theme-font-family);
+  font-size: var(--theme-body-font-size);
   color: var(--theme-body-color);
   background-color: var(--fw-body-bg);
 }
 
 h1, h3, .h3 {
   font-weight: 600;
-  font-family: var(--theme-font-family);
+}
+h1 {
+  font-size: 1.125rem;
+  line-height: 4.68rem;
+}
+h3, .h3 {
   color: var(--bs-emphasis-color);
 }
 
@@ -47,35 +58,78 @@ h1, h3, .h3 {
   box-shadow: 0 2px 6px rgba(3, 27, 78, 0.06);
 }
 
-.sidebar .nav-link {
-  font-weight: 600;
-  font-size: .875rem;
-  color: var(--theme-body-color) !important;
-  border-radius: 0.25rem;
+.card {
+  box-shadow: var(--theme-shadow);
+  border: 0px;
+  border-radius: .25rem;
+  --bs-card-spacer-x: 1.5rem !important;
+  --bs-card-spacer-y: 1.5rem !important;
 }
 
-.sidebar .nav-link:hover {
-  background-color: var(--theme-hover-bg);
-  color: var(--bs-body-color) !important;
+.sidebar {
+  background-color: var(--theme-sidebar-bg);
+  box-shadow: var(--theme-shadow);
+  color: #aeb8c5;
 }
 
-.sidebar .nav-link.active {
-  background-color: var(--theme-color);
-  color: #fff !important;
-}
+  .sidebar .nav-link {
+    font-weight: 400;
+    font-size: .94rem;
+    border-radius: 0;
+    background-color: transparent;
+    padding: 10px 1rem;
+  }
 
-.sidebar .bi {
-  color: var(--theme-body-color);
-}
+    .sidebar .nav-link:hover {
+      color: #fff !important;
+      background-color: transparent;
+    }
 
-.sidebar .nav-link.active .bi {
-  color: #fff;
+    .sidebar .nav-link.active {
+      color: #fff !important;
+      font-weight: 500;
+      background-color: transparent;
+    }
+
+  .sidebar .nav-header {
+    text-transform: uppercase;
+    background-color: transparent !important;
+  }
+
+    .sidebar .nav-header .nav-link {
+      font-size: .70rem;
+      font-weight: 700;
+      color: var(--theme-nav-link-color);
+      letter-spacing: 0.04rem;
+      padding-left: 1rem;
+    }
+
+  .sidebar .bi {
+    color: inherit;
+  }
+  .sidebar .bi::before {
+    font-weight: 700 !important;
+    padding-right: 1rem;
+  }
+
+    .sidebar .nav-link.active .bi {
+      color: #fff;
+    }
+.sidebar-user-menu .dropdown-menu {
+  background-color: var(--theme-sidebar-bg);
 }
+  .sidebar-user-menu .dropdown-menu .dropdown-item{
+    color: #aeb8c5;
+  }
+
 
 .table {
   color: var(--theme-body-color);
   --bs-table-striped-bg: var(--theme-table-striped-bg);
   --bs-table-hover-bg: var(--theme-hover-bg);
+}
+.table > :not(caption) > * > * {
+  color: var(--theme-body-color);
 }
 
 .btn-default {
@@ -83,4 +137,19 @@ h1, h3, .h3 {
   border-color: transparent;
   background-color: var(--theme-color);
   box-shadow: 0 2px 6px rgba(102, 88, 221, 0.5);
+}
+
+.dashboard-card .pane-title,
+.dashboard-card .card-subtitle {
+  font-size: .75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--bs-secondary-color);
+  letter-spacing: .05em;
+}
+
+.dashboard-card .display-5 {
+  font-size: 2rem;
+  font-weight: 600;
+  color: var(--bs-emphasis-color);
 }

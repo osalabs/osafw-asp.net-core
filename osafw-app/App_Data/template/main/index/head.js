@@ -1,11 +1,30 @@
-var is_dark_mode = document.documentElement.getAttribute('data-bs-theme')=='dark';
+﻿let is_dark_mode = document.documentElement.getAttribute('data-bs-theme') == 'dark';
+const styles = getComputedStyle(document.documentElement);
+let themeColor = '#007bff';
+let bodyColor = '#999999';
+let paneBg = '#333333';
+let borderColor = styles.getPropertyValue('--bs-border-color').trim() || '#dddddd';
+let fontFamily = styles.getPropertyValue('--bs-body-font-family').trim();
+
+let themePalette = [
+    themeColor,
+    '#3295FF',
+    '#66AFFF',
+    '#99CAFF',
+    '#B2D7FF',
+    '#CCE4FF',
+    '#E5F1FF',
+    '#F2F8FF'
+];
+Chart.defaults.plugins.colors = { enabled: false }; //disable built-in colors plugin as we use custom colors
+
 Chart.defaults.set({
     responsive: true,
     maintainAspectRatio: false,
-    color: '#999999',
+    color: bodyColor,
     font: {
         size: 15,
-        family: '',
+        family: fontFamily,
     },
     layout: {
         padding: 0
@@ -20,43 +39,39 @@ Chart.defaults.set({
             }
         },
     },
-    elements: {
-        point: {
-            radius: 0,
-            backgroundColor: '#333333'
-        },
+    datasets: {
         bar: {
-            backgroundColor: '#007bff'
+            backgroundColor: themeColor,
+            borderColor: themeColor,
+            borderRadius: 20,
         },
         line: {
-            tension: 0.4,
+            borderColor: themeColor,
+            backgroundColor: themeColor,
             borderWidth: 3,
-            borderColor: '#007bff',
-            backgroundColor: '#007bff',
+            tension: 0.4,
             fill: false,
             borderCapStyle: "rounded",
         },
+    },
+    // in v3/v4, dataset-level defaults has priority over elements-level
+    elements: {
+        point: {
+            radius: 0,
+            backgroundColor: paneBg
+        },
         rectangle: {
-            backgroundColor: '#007bff'
+            backgroundColor: themeColor
         },
         arc: {
-            backgroundColor: '#333333',
+            backgroundColor: paneBg,
             borderColor: (is_dark_mode ? '#222' : '#fff'),
             borderWidth: 2
         }
     },
 
     doughnut: {
-        backgroundColor: [
-            '#007bff',
-            '#3295FF',
-            '#66AFFF',
-            '#99CAFF',
-            '#B2D7FF',
-            '#CCE4FF',
-            '#E5F1FF',
-            '#F2F8FF'
-        ]
+        backgroundColor: themePalette
     },
 });
 
@@ -78,7 +93,7 @@ Chart.overrides.bar = {
             grid: {
                 borderDash: [3],
                 borderDashOffset: 2,
-                color: '#dddddd',
+                color: borderColor,
                 drawBorder: false,
                 drawTicks: false,
                 lineWidth: 1,
@@ -112,7 +127,7 @@ Chart.overrides.line = {
             grid: {
                 borderDash: [3],
                 borderDashOffset: 2,
-                color: '#dddddd',
+                color: borderColor,
                 drawBorder: false,
                 drawTicks: false,
                 lineWidth: 1,
@@ -131,6 +146,7 @@ Chart.overrides.line = {
 
 <~theme1.js ifeq="GLOBAL[ui_theme]" value="1">
 <~theme2.js ifeq="GLOBAL[ui_theme]" value="2">
+<~theme20.js ifeq="GLOBAL[ui_theme]" value="20">
 <~theme30.js ifeq="GLOBAL[ui_theme]" value="30">
 
 //console.log(Chart.defaults);

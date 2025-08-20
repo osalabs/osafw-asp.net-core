@@ -11,6 +11,7 @@
   --fw-btn-default-color: var(--bs-emphasis-color);
   --fw-btn-default-bg: var(--bs-light);
   --fw-btn-default-border: var(--bs-light-border-subtle);
+  --theme-nav-link-color: RGBA(var(--bs-emphasis-color-rgb),var(--bs-link-opacity,1)) !important;
 }
 
 [data-bs-theme=dark] {
@@ -151,6 +152,7 @@ h1 .badge {
 .sidebar {
   width: var(--fw-sidebar-width);
   padding: 0;
+  background-color: rgba(var(--bs-tertiary-bg-rgb),var(--bs-bg-opacity));
   color: #000;
   position: relative;
   overflow-y: auto;
@@ -181,12 +183,14 @@ h1 .badge {
     height: calc(100vh - 56px);
     overflow-y: auto;
   }
-/*  .sidebar-user-menu {
-    position: relative;
-  }
-*/
 }
+  .sidebar .site-title {
+    color: var(--theme-nav-link-color);
+  }
 
+  .sidebar .nav-link {
+    color: var(--theme-nav-link-color);
+  }
   .sidebar .nav-pills .nav-link.active {
     color: var(--bs-nav-pills-link-active-color) !important; /*fix active nav text color for light mode*/
   }
