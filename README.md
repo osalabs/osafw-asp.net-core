@@ -9,14 +9,14 @@ Created as simplified and lightweight alternative to other ASP.NET frameworks li
 - MVC-like
   - code, data, templates are split
   - code consists of: controllers, models, framework core and optional 3rd party libs
-- uses [ParsePage template engine](https://github.com/osalabs/parsepage) ([detailed docs](osafw-app/App_Data/template/README_ParsePage.md))
-  - data stored by default in SQL Server database [using db.net](https://github.com/osalabs/db.net) ([detailed docs](README_DB.md))
+- uses [ParsePage template engine](https://github.com/osalabs/parsepage) ([detailed docs](docs/parsepage.md))
+  - data stored by default in SQL Server database [using db.net](https://github.com/osalabs/db.net) ([detailed docs](docs/db.md))
 - RESTful with some practical enhancements
 - integrated auth - simple flat access levels auth
 - UI based on [Bootstrap 5](http://getbootstrap.com) with minimal custom CSS and themes support - it's easy to customize or apply your own theme (see [README_THEMES](osafw-app/App_Data/README_THEMES))
 - use of well-known 3rd party libraries: [jQuery](http://jquery.com), [jQuery Form](https://github.com/malsup/form), jGrowl, markdown libs, etc...
 - extensible dashboard panels with charts, table and progress templates ([docs/dashboard.md](docs/dashboard.md))
-- dynamic controllers with JSON configuration (`FwDynamicController`) and Vue.js powered UI (`FwVueController`) ([detailed docs](README_Dynamic.md))
+- dynamic controllers with JSON configuration (`FwDynamicController`) and Vue.js powered UI (`FwVueController`) ([detailed docs](docs/dynamic.md))
 - base API controller (`FwApiController`) for building REST APIs
 - attachments handling with optional Amazon S3 storage
 - auto database updates and environment self-tests (`FwUpdates`, `FwSelfTest`)

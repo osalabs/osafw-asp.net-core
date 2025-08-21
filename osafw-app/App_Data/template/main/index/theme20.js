@@ -1,19 +1,17 @@
 //blue theme
-themeColor = styles.getPropertyValue('--theme-color').trim() || '#2c7be5';
-bodyColor = styles.getPropertyValue('--theme-body-color').trim() || '#748194';
-paneBg = styles.getPropertyValue('--fw-body-bg').trim() || '#0b1727';
-borderColor = styles.getPropertyValue('--bs-border-color').trim() || '#dddddd';
-fontFamily = styles.getPropertyValue('--bs-body-font-family').trim();
+themeColor = styles.getPropertyValue('--theme-color').trim() || '#8793FF';
+bodyColor = styles.getPropertyValue('--theme-body-color').trim() || '#6c757d';
+paneBg = styles.getPropertyValue('--fw-body-bg').trim() || '#f5f6f8';
 
 themePalette = [
-    themeColor,
-    '#27bcfd',
-    '#00d27a',
-    '#adb4c1',
-    '#6ab1f2',
-    '#63dbfe',
-    '#00e8b1',
-    '#d2d7de'
+            themeColor,
+            '#1abc9c',
+            '#fa5c7c',
+            '#4fc6e1',
+            '#6c757d',
+            '#f1f3fa',
+            '#3688fc',
+            '#dee2e6'
 ];
 
 Chart.defaults.set({
@@ -27,14 +25,14 @@ Chart.defaults.set({
         bar: {
             backgroundColor: themeColor,
             borderColor: themeColor,
-            borderRadius: 5,
+            borderRadius: 0,
         },
         line: {
             borderColor: themeColor,
             backgroundColor: themeColor,
-            borderWidth: 5,
-            tension: 0.4,
-            fill: true,
+            borderWidth: 3,
+            tension: 0.2,
+            fill: false,
             borderCapStyle: "rounded",
         },
     },
@@ -48,14 +46,14 @@ Chart.defaults.set({
             backgroundColor: themeColor
         },
         arc: {
-            backgroundColor: paneBg,
-            borderColor: (is_dark_mode ? '#222' : '#fff'),
+            backgroundColor: '#313a46',
+            borderColor: (is_dark_mode ? '#444' : '#fff'),
             borderWidth: 4
         }
     },
     doughnut: {
         backgroundColor: themePalette
-    },
+    }
 });
 
 Chart.overrides.bar = {
@@ -65,11 +63,11 @@ Chart.overrides.bar = {
         x: {
             grid: {
                 drawBorder: false,
-                drawOnChartArea: false,
+                drawOnChartArea: true, // Enable grid lines
                 drawTicks: false
             },
             ticks: {
-                padding: 10
+                padding: 5
             }
         },
         y: {
@@ -79,6 +77,7 @@ Chart.overrides.bar = {
                 color: borderColor,
                 drawBorder: false,
                 drawTicks: false,
+                drawOnChartArea: true, // Enable grid lines
                 lineWidth: 0,
                 zeroLineWidth: 0,
                 zeroLineColor: borderColor,
@@ -96,10 +95,11 @@ Chart.overrides.bar = {
         }
     }
 };
+
 Chart.overrides.line = {
     ...Chart.overrides.line,
     maxBarThickness: 10,
-    scales: {
+    Xscales: {
         x: {
             grid: {
                 drawBorder: false,
