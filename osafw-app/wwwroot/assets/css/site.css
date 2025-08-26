@@ -177,11 +177,41 @@ h1 .badge {
   margin-top: auto;
   padding-top: var(--fw-spacer);
 }
+.on-sidebar-toggler {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color .15s, color .15s;
+}
+  .on-sidebar-toggler:hover {
+    background-color: var(--bs-primary);
+    color: var(--bs-white) !important;
+  }
+  .on-sidebar-toggler:hover .bi {
+    color: var(--bs-white) !important;
+  }
 
 @media (max-width: 767px) {
   .sidebar {
+    width: var(--fw-sidebar-width);
     height: calc(100vh - 56px);
     overflow-y: auto;
+    --bs-bg-opacity: 1;
+  }
+  #sidebar.show {
+    position: absolute;
+    top: 56px;
+    left: 0;
+    z-index: 1030;
+  }
+  #sidebar.collapsing {
+    position: absolute;
+    top: 56px;
+    left: 0;
+    z-index: 1030;
   }
   .sidebar-toggler-show {
     display: none;
