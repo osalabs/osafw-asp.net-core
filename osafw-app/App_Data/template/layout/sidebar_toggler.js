@@ -14,6 +14,9 @@ document.addEventListener('DOMContentLoaded', function () {
         document.body.classList.toggle('no-sidebar');
         var isCollapsed = document.body.classList.contains('no-sidebar');
         sessionStorage.setItem('sidebar-collapsed', isCollapsed);
+        if (isCollapsed) {
+            document.getElementById('sidebar').classList.remove('show');
+        }
       }
     });
   });

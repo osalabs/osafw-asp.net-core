@@ -125,6 +125,9 @@ h3, .h3 {
     .sidebar .nav-link.active .bi {
       color: #fff;
     }
+.sidebar-toggler-show .bi:before {
+    font-weight: 700 !important;
+}
 .sidebar-user-menu .dropdown-menu {
   background-color: var(--theme-sidebar-bg);
 }

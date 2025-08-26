@@ -169,7 +169,7 @@ h1 .badge {
   .sidebar > .d-flex {
     min-height: 100%;
   }
-  .sidebar .bi-pin-angle{
+  .sidebar .sidebar-toggler-pin {
     display: none;
   }
 
@@ -182,6 +182,9 @@ h1 .badge {
   .sidebar {
     height: calc(100vh - 56px);
     overflow-y: auto;
+  }
+  .sidebar-toggler-show {
+    display: none;
   }
 }
   .sidebar .site-title {
@@ -216,10 +219,10 @@ main {
   .no-sidebar .sidebar {
     height: calc(100vh - 56px); /* 56px is typical Bootstrap header height */
   }
-    .no-sidebar .sidebar .bi-three-dots-vertical{
+    .no-sidebar .sidebar .sidebar-toggler-hide {
       display: none;
     }
-    .no-sidebar .sidebar .bi-pin-angle{
+    .no-sidebar .sidebar .sidebar-toggler-pin {
       display: inline-block;
     }
   .no-sidebar .site-navbar {
