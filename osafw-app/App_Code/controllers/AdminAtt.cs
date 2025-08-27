@@ -112,7 +112,8 @@ public class AdminAttController : FwAdminController
             fw.flash("updated", 1);
 
             // Proceed upload - for edit - just one file
-            model.uploadOne(id, 0, false);
+            if (fw.request.Form.Files.Count > 0)
+                model.uploadOne(id, 0, false);
         }
         else
         {
