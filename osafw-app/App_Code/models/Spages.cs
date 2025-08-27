@@ -134,6 +134,8 @@ public class Spages : FwModel
     public ArrayList getPagesTree(ArrayList rows, int parent_id, int level = 0, string parent_url = "")
     {
         ArrayList result = [];
+        if (level > 20) // prevent infinite loop (max 20 levels)
+            return result;
 
         foreach (Hashtable row in rows)
         {
@@ -213,13 +215,17 @@ public class Spages : FwModel
     /// <param name="id">record id</param>
     /// <returns>URL like /page/subpage/subsubpage</returns>
     /// <remarks>RECURSIVE!</remarks>
-    public string getFullUrl(int id)
+    public string getFullUrl(int id, int level = 0)
     {
-        if (id == 0)
+        if (id == 0 || level > 20) // prevent infinite loop
             return "";
 
         var item = one(id);
-        return getFullUrl(item["parent_id"].toInt()) + "/" + item["url"];
+        // protect from infinite loop - if parent_id = id (data error)
+        var parent_id = item["parent_id"].toInt();
+        if (parent_id == id)
+            return "/" + item["url"];
+        return getFullUrl(parent_id, level + 1) + "/" + item["url"];
     }
 
     /// <summary>

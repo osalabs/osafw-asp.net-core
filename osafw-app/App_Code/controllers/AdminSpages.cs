@@ -175,6 +175,30 @@ public class AdminSpagesController : FwAdminController
         if (result && model.isExistsByUrl((string)item["url"], item["parent_id"].toInt(), id))
             fw.FormErrors["url"] = "EXISTS";
 
+        if (result)
+        {
+            // Prevent setting parent_id to itself or its descendants
+            int parent_id = item["parent_id"].toInt();
+            if (id > 0 && parent_id > 0)
+            {
+                if (parent_id == id)
+                {
+                    fw.FormErrors["parent_id"] = true;
+                    throw new UserException("Page cannot be its own parent");
+                }
+                // Check if parent_id is a descendant of current page
+                var parentChain = model.listParents(parent_id);
+                foreach (Hashtable parentItem in parentChain)
+                {
+                    if (parentItem["id"].toInt() == id)
+                    {
+                        fw.FormErrors["parent_id"] = true;
+                        throw new UserException("Page cannot be a parent of its own descendant");
+                    }
+                }
+            }
+        }
+
         //if (result && model0.isExists(item["iname"], id)){
         //    fw.FERR["iname"] = "EXISTS";
         //}
