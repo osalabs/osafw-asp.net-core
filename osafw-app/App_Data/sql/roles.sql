@@ -100,10 +100,10 @@ GO
 
 --- fill tables
 
-insert into lookup_manager_tables (tname, iname, url, access_level) VALUES
-('permissions','Permissions', '', 100)
-, ('resources','Resources', '', 100)
-, ('roles','Roles', '/Admin/Roles', 100)
+INSERT INTO fwcontrollers (igroup, icode, url, iname, model, access_level)
+VALUES ('RBAC', 'AdminPermissions', '/Admin/Permissions', 'Permissions', 'Permissions', 100),
+       ('RBAC', 'AdminResources', '/Admin/Resources', 'Resources', 'Resources', 100),
+       ('RBAC', 'AdminRoles', '/Admin/Roles', 'Roles', 'Roles', 100);
 GO
 
 -- default Permissions

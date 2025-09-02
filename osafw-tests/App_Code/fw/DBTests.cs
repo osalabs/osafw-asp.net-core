@@ -508,11 +508,11 @@ namespace osafw.Tests
         [TestMethod()]
         public void tablesTest()
         {
-            string[] tablesToCheck = Utils.qw("users att settings lookup_manager_tables menu_items att_categories fwsessions");
+            string[] tablesToCheck = Utils.qw("users att settings menu_items att_categories fwsessions");
             ArrayList tables = db.tables();
             foreach (var tableName in tablesToCheck)
             {
-                Assert.IsTrue(tables.IndexOf(tableName) >= 0);
+                Assert.IsTrue(tables.IndexOf(tableName) >= 0, tableName + " not found");
             }
         }
 

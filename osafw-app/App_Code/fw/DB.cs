@@ -769,8 +769,23 @@ public class DB : IDisposable
             {
                 if (is_check_ole_types && UNSUPPORTED_OLE_TYPES.ContainsKey(dbread.GetDataTypeName(i))) continue;
 
-                string value = dbread[i].ToString();
+                //string value = dbread[i].ToString();
+                //string name = dbread.GetName(i);
+
+                object dbval = dbread.IsDBNull(i) ? null : dbread.GetValue(i);
                 string name = dbread.GetName(i);
+                string value;
+                if (dbval is DateTime dt)
+                {
+                    var dtype = dbread.GetDataTypeName(i).ToLower();
+                    if (dtype == "date")
+                        value = dt.ToString("yyyy-MM-dd", System.Globalization.DateTimeFormatInfo.InvariantInfo);
+                    else
+                        value = dt.ToString();
+                }
+                else
+                    value = dbval?.ToString() ?? "";
+
                 result.Add(name, value);
             }
             catch (Exception)
@@ -1529,6 +1544,11 @@ public class DB : IDisposable
                 else
                     result = field_value.toLong();
             }
+            else if (field_type == "date")
+            {
+                var dt = this.qd(field_value);
+                result = dt?.Date ?? (object)DBNull.Value;
+            }
             else if (field_type == "datetime")
             {
                 result = this.qd(field_value);
@@ -1989,6 +2009,8 @@ public class DB : IDisposable
         string result;
         if (Regex.IsMatch(field_type, "int"))
             result = "int";
+        else if (field_type == "date")
+            result = field_type;
         else if (field_type == "datetime")
             result = field_type;
         else if (field_type == "float")
@@ -2326,13 +2348,17 @@ public class DB : IDisposable
 
             case "datetime":
             case "datetime2":
-            case "date":
             case "smalldatetime":
                 {
                     result = "datetime";
                     break;
                 }
 
+            case "date":
+                {
+                    result = "date";
+                    break;
+                }
             default:
                 {
                     result = "varchar";
@@ -2486,8 +2512,9 @@ public class DB : IDisposable
             or (int)OleDbType.Currency => "decimal",
 
             (int)OleDbType.Date
-            or (int)OleDbType.DBDate
-            or (int)OleDbType.DBTimeStamp => "datetime",
+            or (int)OleDbType.DBDate => "date",
+
+            (int)OleDbType.DBTimeStamp => "datetime",
 
             // "text", "ntext", "varchar", "longvarchar" "nvarchar", "char", "nchar", "wchar", "varwchar", "longvarwchar", "dbtime":
             _ => "varchar",

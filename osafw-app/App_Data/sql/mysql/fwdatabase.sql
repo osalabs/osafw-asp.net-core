@@ -249,38 +249,6 @@ CREATE TABLE event_log (
   FOREIGN KEY (events_id) REFERENCES events(id)
 ) DEFAULT CHARSET=utf8mb4;
 
-/*Lookup Manager Tables*/
-DROP TABLE IF EXISTS lookup_manager_tables;
-CREATE TABLE lookup_manager_tables (
-  id                    INT NOT NULL auto_increment,
-
-  tname                 VARCHAR(255) NOT NULL DEFAULT '', /*table name*/
-  iname                 VARCHAR(255) NOT NULL DEFAULT '', /*human table name*/
-  idesc                 TEXT,                     /*table internal description*/
-
-  is_one_form           TINYINT NOT NULL DEFAULT 0,        /*1 - lookup table cotains one row, use form view*/
-  is_custom_form        TINYINT NOT NULL DEFAULT 0,        /*1 - use custom form template, named by lowercase(tname)*/
-  header_text           TEXT,                     /*text to show in header when editing table*/
-  footer_text           TEXT,                     /*text to show in footer when editing table*/
-  column_id             VARCHAR(255),                     /*table id column, if empty - use id*/
-
-  list_columns          TEXT,                     /*comma-separated field list to display on list view, if defined - bo table edit mode available*/
-  columns               TEXT,                     /*comma-separated field list to display, if empty - all fields displayed*/
-  column_names          TEXT,                     /*comma-separated column list of column names, if empty - use field name*/
-  column_types          TEXT,                     /*comma-separated column list of column types/lookups (" "-string(default),readonly,textarea,checkbox,tname.IDfield:INAMEfield-lookup table), if empty - use standard input[text]*/
-  column_groups         TEXT,                     /*comma-separated column list of groups column related to, if empty - don't include column in group*/
-  url                   VARCHAR(255) NOT NULL DEFAULT '', /*if defined - redirected to this URL instead of LookupManager forms*/
-
-  status                TINYINT NOT NULL DEFAULT 0,                /*0-ok, 127-deleted*/
-  add_time              TIMESTAMP DEFAULT CURRENT_TIMESTAMP,  /*date record added*/
-  add_users_id          INT DEFAULT 0,                        /*user added record*/
-  upd_time              TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  upd_users_id          INT DEFAULT 0,
-
-  PRIMARY KEY (id),
-  UNIQUE KEY UX_lookup_manager_tables_tname (tname)
-) DEFAULT CHARSET=utf8mb4;
-
 /*user custom views*/
 DROP TABLE IF EXISTS user_views;
 CREATE TABLE user_views (

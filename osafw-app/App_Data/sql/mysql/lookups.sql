@@ -1,10 +1,5 @@
 -- fill initial data for lookups here
 
--- lookup manager table definitions
-insert into lookup_manager_tables (tname, iname) VALUES
-('events','Events')
-;
-
 -- att_categories
 INSERT INTO att_categories (icode, iname) VALUES
 ('general', 'General images')

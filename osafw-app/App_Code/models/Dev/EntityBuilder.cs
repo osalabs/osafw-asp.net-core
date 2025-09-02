@@ -15,7 +15,7 @@ namespace osafw;
 
 class DevEntityBuilder
 {
-    const string FW_TABLES = "fwsessions fwentities att_categories att att_links users settings spages log_types activity_logs lookup_manager_tables user_views user_lists user_lists_items menu_items";
+    const string FW_TABLES = "fwsessions fwkeys fwentities fwcron fwcontrollers fwupdates att_categories att att_links users settings spages log_types activity_logs user_views user_lists user_lists_items menu_items user_filters";
 
     public static void createDBJsonFromExistingDB(string dbname, FW fw)
     {
