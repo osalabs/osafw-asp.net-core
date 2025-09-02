@@ -117,8 +117,10 @@ using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
@@ -150,6 +152,8 @@ public class ParsePage
 
     private static readonly ConcurrentDictionary<string, Hashtable> FILE_CACHE = new();
     private static readonly ConcurrentDictionary<string, Hashtable> LANG_CACHE = new();
+    private static Dictionary<string, Dictionary<string, Func<object, object>>> class_mapping_cache = []; // cache for object property/field getters
+
     private static readonly string[] IFOPERS = ["if", "unless", "ifne", "ifeq", "ifgt", "iflt", "ifge", "ifle"];
 
     private const string DATE_FORMAT_DEF = "M/d/yyyy"; // for US, TODO make based on user settigns (with fallback to server's settings)
@@ -263,7 +267,7 @@ public class ParsePage
         {
             tag_full = tag_match.Groups[1].Value;
             if (TAGSEEN.ContainsKey(tag_full))
-                continue; // each tag (tag_full) parsed just once and replaces all occurencies of the tag in the page
+                continue; // each tag (tag_full) parsed just once and replaces all occurences of the tag in the page
             TAGSEEN.Add(tag_full, 1);
 
             tag = tag_full;
@@ -543,6 +547,13 @@ public class ParsePage
                 string k;
                 for (int i = start_pos; i <= parts.Length - 1; i++)
                 {
+                    // if ptr is null - break
+                    if (ptr == null || ptr is string str)
+                    {
+                        ptr = ""; // no such key in array/hash/object or ptr is not array/hash/object at all
+                        break;
+                    }
+
                     k = Regex.Replace(parts[i], @"\].*?", ""); // remove last ]
                     if (ptr is Array array)
                     {
@@ -592,9 +603,13 @@ public class ParsePage
                     }
                     else
                     {
-                        // looks like there are just no such key in array/hash OR ptr is not an array/hash at all - so return empty value
-                        ptr = "";
-                        break;
+                        // try to get property/field value from arbitrary object
+                        ptr = valueFromObjectByName(ptr, k);
+                        if (ptr == null)
+                        {
+                            ptr = ""; // no such property/field in object
+                            break;
+                        }
                     }
                 }
                 tag_value = ptr;
@@ -617,8 +632,17 @@ public class ParsePage
                 if (!string.IsNullOrEmpty(value))
                     tag_value = value;
             }
+            else if (hf != null)
+            {
+                // try to get property/field value from arbitrary object
+                ptr = valueFromObjectByName(hf, tag);
+                if (ptr != null)
+                    tag_value = ptr;
+                else
+                    is_found_last_hfvalue = false;
+            }
             else if (tag == "ROOT_URL" || tag == "ROOT_DOMAIN")
-                tag_value = globalsGetter()[tag];
+                tag_value = globalsGetter()[tag]; // special name tags, see above
             else
                 is_found_last_hfvalue = false;
         }
@@ -634,7 +658,7 @@ public class ParsePage
 
     private string _attr_sub(string tag, string tpl_name, Hashtable hf, Hashtable attrs, string inline_tpl, Hashtable parent_hf, object tag_value)
     {
-        Hashtable sub_hf = [];
+        Hashtable sub_hf = null;
         string sub = (string)attrs["sub"];
         if (!string.IsNullOrEmpty(sub))
             // if sub attr contains name - use it to get value from hf (instead using tag_value)
@@ -642,13 +666,16 @@ public class ParsePage
 
         if (tag_value is DBRow row)
             sub_hf = row.toHashtable();
-
-        if (tag_value is Hashtable ht)
-        {
+        else if (tag_value is Hashtable ht)
             sub_hf = ht;
+        else if (tag_value != null)
+            sub_hf = objectToHashtable(tag_value);
+
+        if (sub_hf == null)
+        {
+            logger(LogLevel.DEBUG, "ParsePage - not a collection passed for a SUB tag=", tag, ", sub=" + sub);
+            sub_hf = [];
         }
-        else
-            logger(LogLevel.DEBUG, "ParsePage - not a Hash passed for a SUB tag=", tag, ", sub=" + sub);
 
         return _parse_page(tag_tplpath(tag, tpl_name), sub_hf, inline_tpl, parent_hf, attrs);
     }
@@ -811,13 +838,12 @@ public class ParsePage
     {
         Hashtable uftagi1;
         if (uftag[i] is DBRow row)
-        {
             uftagi1 = row;
-        }
+        else if (uftag[i] is Hashtable ht)
+            uftagi1 = ht;
         else
-        {
-            uftagi1 = (Hashtable)uftag[i];
-        }
+            uftagi1 = objectToHashtable(uftag[i]) ?? [];
+
         Hashtable uftagi = (Hashtable)uftagi1.Clone(); // make a shallow copy as we modify this level
         int cnt = uftag.Count;
 
@@ -1067,7 +1093,7 @@ public class ParsePage
         hpage_ref = hpage_ref.Replace("<~" + tag_full + ">", value);
     }
 
-    // if attrs["multi") ]efined - attrs["select") ]an contain strings with separator in attrs["multi") ]default ",") for multiple select
+    // if attrs["multi"] defined - attrs["select"] can contain strings with separator in attrs["multi"] (default ",") for multiple select
     private string _attr_select(string tag, string tpl_name, Hashtable hf, Hashtable attrs)
     {
         StringBuilder result = new();
@@ -1409,5 +1435,97 @@ public class ParsePage
     private void logger(LogLevel level, params string[] args)
     {
         loggerAction?.Invoke(level, args);
+    }
+
+    /// <summary>
+    /// Get readable public instance properties and fields (lowercased for further comparison) of object,
+    /// cached by class name in class_mapping_cache. Values are getter delegates to fetch from object instance.
+    /// </summary>
+    /// <param name="o"></param>
+    /// <returns>Dictionary of property/field name to getter delegate</returns>
+    private static Dictionary<string, Func<object, object>> objectMembers(object o)
+    {
+        Type type = o.GetType();
+        if (!class_mapping_cache.TryGetValue(type.FullName, out var value))
+        {
+            var dict = new Dictionary<string, Func<object, object>>(StringComparer.OrdinalIgnoreCase);
+
+            // properties
+            var props = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
+            for (int i = 0; i < props.Length; i++)
+            {
+                var prop = props[i];
+                if (!prop.CanRead || prop.GetIndexParameters().Length > 0)
+                    continue; // skip write-only and indexer properties
+
+                string key = prop.Name;
+                if (!dict.ContainsKey(key))
+                {
+                    dict[key] = (obj) =>
+                    {
+                        try { return prop.GetValue(obj); }
+                        catch { return null; }
+                    };
+                }
+            }
+
+            // fields
+            var fields = type.GetFields(BindingFlags.Public | BindingFlags.Instance);
+            for (int i = 0; i < fields.Length; i++)
+            {
+                var field = fields[i];
+                string key = field.Name;
+                if (!dict.ContainsKey(key))
+                {
+                    dict[key] = (obj) =>
+                    {
+                        try { return field.GetValue(obj); }
+                        catch { return null; }
+                    };
+                }
+            }
+
+            value = dict;
+            class_mapping_cache[type.FullName] = value;
+        }
+
+        return value;
+    }
+
+    private static object valueFromObjectByName(object o, string name)
+    {
+        var getters = objectMembers(o);
+        if (getters.TryGetValue(name, out var getter))
+        {
+            return getter(o);
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Convert object public properties and fields to Hashtable
+    /// </summary>
+    /// <param name="o"></param>
+    /// <returns></returns>
+    private static Hashtable objectToHashtable(object o)
+    {
+        Hashtable result = [];
+        // return empty hashtable if null or it's a simple type
+        if (o == null || o is string || o is ValueType)
+            return result;
+
+        var getters = objectMembers(o);
+        foreach (var kvp in getters)
+        {
+            try
+            {
+                var val = kvp.Value(o);
+                if (val != null)
+                    result[kvp.Key] = val;
+            }
+            catch { }
+        }
+
+        return result;
     }
 }

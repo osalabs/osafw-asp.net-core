@@ -1,6 +1,7 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 
 namespace osafw.Tests
 {
@@ -90,6 +91,28 @@ namespace osafw.Tests
 
             string r = new ParsePage(null).parse_string(tpl, ps);
             Assert.AreEqual("1<br/>2<br/>3<br/>4<br/>1<br/>2<br/>3<br/>4<br/>1<br/>2<br/>3<br/>4<br/>", r);
+        }
+
+        private class User
+        {
+            public int id { get; set; }
+            public string Name { get; set; }
+        }
+
+        [TestMethod()]
+        public void parse_string_objectTest()
+        {
+            string tpl = "User ID:<~user[id]>;Username:<~user[Name]>;<~all_users repeat inline><~id>-<~Name>;</~all_users>";
+            var u1 = new User { id = 1, Name = "John" };
+            var u2 = new User { id = 2, Name = "Amy" };
+            var ps = new Hashtable
+            {
+                { "user", u1 },
+                { "all_users", new List<User> { u1, u2 } }
+            };
+
+            string r = new ParsePage(null).parse_string(tpl, ps);
+            Assert.AreEqual("User ID:1;Username:John;1-John;2-Amy;", r);
         }
 
         [TestMethod()]
@@ -334,7 +357,7 @@ namespace osafw.Tests
 
 
         [TestMethod()]
-        public void parse_string_ratioTest()
+        public void parse_string_radioTest()
         {
             /*string tpl = "<~fradio radio=\"fradio\" name=\"item[fradio]\" delim=\"&nbsp;\">";
             string tpl_result = "<select name = \"item[fruit]\">" +
