@@ -176,6 +176,37 @@ Test: &lt;b&gt;test&lt;/b&gt;
   </tbody>
 </table>
 
+### Objects support
+
+It's also possible to pass objects (with public properties/fields) to ParsePage engine and use them in templates.
+Example:
+
+```csharp
+public class User {
+    public int id { get; set; }
+    public string Name { get; set; }
+    public string Email; // public field
+}
+
+var u1 = new User { id = 1, Name = "John", Email = "john@email.com" };
+var u2 = new User { id = 2, Name = "Amy", Email = "amy@email.com" };
+var ps = new Hashtable {
+    { "user", u1 },
+    { "all_users", new List<User> { u1, u2 } }
+};
+```
+
+And related template:
+
+```
+User ID:<~user[id]>;
+Username:<~user[Name]>;
+Email:<~user[Email]>;
+
+<~all_users repeat inline>
+  <~id> - <~Name> - <~Email>;
+</~all_users>
+```
 
 ### Supported attributes
 
@@ -185,7 +216,7 @@ Test: &lt;b&gt;test&lt;/b&gt;
   - `<~tag ifne="var" value="XXX">` - tag/template will be parsed only if var!=XXX
   - `<~tag ifgt="var" value="XXX">` - tag/template will be parsed only if var>XXX
   - `<~tag ifge="var" value="XXX">` - tag/template will be parsed only if var>=XXX
-  - `<~tag iflt="var" value="XXX">` - tag/template will be parsed only if var<XXX
+  - `<~tag iflt="var" value="XXX">` - tag/template will be parsed only if var\<XXX
   - `<~tag ifle="var" value="XXX">` - tag/template will be parsed only if var<=XXX
 - `vvalue` - used with `ifXX` conditions to indicate that value to compare should be read from PS variable
   - `<~tag ifeq="var" vvalue="var2">` - tag parsed if PS['var']==PS['var2']
