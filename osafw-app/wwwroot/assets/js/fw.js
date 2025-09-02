@@ -280,8 +280,9 @@ window.fw={
     fw.setup_file_drop_area();
 
     $(document).on('change', '.on-refresh', function (e) {
-      var $f = $(this).closest('form');
-      $f.find('input[name=refresh]').val(1);
+      var $this = $(this);
+      var $f = $this.closest('form');
+      $f.find('input[name=refresh]').val($this.attr('id') || $this.attr('name') || 1);
       $f.submit();
     });
 

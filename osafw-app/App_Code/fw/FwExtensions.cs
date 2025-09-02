@@ -18,7 +18,8 @@ public static class FwExtensions
     /// <para>- <c>bool</c> returns its own value.</para>
     /// <para>- <c>ICollection</c> returns <c>true</c> if Count &gt; 0, otherwise <c>false</c>.</para>
     /// <para>- A non-zero number returns <c>true</c>, zero returns <c>false</c>.</para>
-    /// <para>- Otherwise, tries <see cref="bool.TryParse"/></para>
+    /// <para>- "true"/"false" strings - <see cref="bool.TryParse"/></para>
+    /// <para>- otherwise check string: non-empty returns <c>true</c>, empty or whitespace or "0" returns <c>false</c>.</para>
     /// </summary>
     /// <param name="o">The object to convert to a boolean.</param>
     /// <returns>The boolean value interpreted from <paramref name="o"/>.</returns>
@@ -40,10 +41,18 @@ public static class FwExtensions
         {
             return true;
         }
-        if (bool.TryParse(o.toStr(), out bool result))
+        var s = o.toStr().Trim();
+        if (bool.TryParse(s, out bool result))
         {
             return result;
         }
+
+        // finally check string
+        if (!string.IsNullOrWhiteSpace(s) && s != "0")
+        {
+            return true;
+        }
+
         return false;
     }
 

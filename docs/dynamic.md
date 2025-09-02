@@ -72,6 +72,8 @@ Renders:
 </div>
 ```
 
+When the control changes, the form will re-submit and include `refresh` parameter with the element id or name.
+
 More examples:
 ```json
   //display formatted currency value
@@ -127,7 +129,7 @@ More examples:
 |attrs|Arbitrary html attributes for the wrapping `div.form-row`|data-something="123"|
 |class_label|Class(es) added to the `label.col-form-label` |col-md-3(default) - set label width|
 |class_contents|Class(es) added to the `div` that wraps input control |col(default) - set control width|
-|class_control|Class(es) added to the input control to change appearance/behaviour|"on-refresh" - forms refreshes(re-submits) when input changed|
+|class_control|Class(es) added to the input control to change appearance/behaviour|"on-refresh" - forms refreshes(re-submits) when input changed and include `refresh` parameter with element id or name|
 |attrs_control|Arbitrary html attributes for the input control|data-something="123"|
 |help_text|Help text displayed as muted text under control block|"Minimum 8 letters and digits required"|
 |admin_url|For type="plaintext_link", controller url, final URL will be: "<~admin_url>/<~lookup_id>"|/Admin/SomeController|

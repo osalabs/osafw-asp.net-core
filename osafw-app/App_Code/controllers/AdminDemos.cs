@@ -103,6 +103,7 @@ public class AdminDemosController : FwAdminController
 
         if (reqb("refresh"))
         {
+            logger("refresh element:", reqs("refresh")); // id or name of the element refreshed OR "1" if no element id/name
             fw.routeRedirect(FW.ACTION_SHOW_FORM, [id]);
             return null;
         }
