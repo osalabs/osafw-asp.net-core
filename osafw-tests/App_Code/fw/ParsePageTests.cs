@@ -95,16 +95,19 @@ namespace osafw.Tests
 
         private class User
         {
+            // properties
             public int id { get; set; }
             public string Name { get; set; }
+            // fields
+            public string Email;
         }
 
         [TestMethod()]
         public void parse_string_objectTest()
         {
-            string tpl = "User ID:<~user[id]>;Username:<~user[Name]>;<~all_users repeat inline><~id>-<~Name>;</~all_users>";
-            var u1 = new User { id = 1, Name = "John" };
-            var u2 = new User { id = 2, Name = "Amy" };
+            string tpl = "User ID:<~user[id]>;Username:<~user[Name]>;Email:<~user[Email]>;<~all_users repeat inline><~id>-<~Name>-<~Email>;</~all_users>";
+            var u1 = new User { id = 1, Name = "John", Email = "john@email.com" };
+            var u2 = new User { id = 2, Name = "Amy", Email = "amy@email.com" };
             var ps = new Hashtable
             {
                 { "user", u1 },
@@ -112,7 +115,7 @@ namespace osafw.Tests
             };
 
             string r = new ParsePage(null).parse_string(tpl, ps);
-            Assert.AreEqual("User ID:1;Username:John;1-John;2-Amy;", r);
+            Assert.AreEqual("User ID:1;Username:John;Email:john@email.com;1-John-john@email.com;2-Amy-amy@email.com;", r);
         }
 
         [TestMethod()]
