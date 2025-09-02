@@ -120,10 +120,12 @@ public enum DBOps : int
 {
     EQ,            // =
     NOT,           // <>
+
     LE,            // <=
     LT,            // <
     GE,            // >=
     GT,            // >
+
     ISNULL,        // IS NULL
     ISNOTNULL,     // IS NOT NULL
     IN,            // IN
@@ -256,11 +258,54 @@ public class DB : IDisposable
     private sealed class ReaderMeta
     {
         public required string[] Names;
-        public required bool[] Skip;
+        public required bool[] IsSkip;
         public required bool[] IsDateTime;
         public required bool[] IsDateOnly;
         public required bool[] IsString;
         public required int FieldCount;
+    }
+
+    private ReaderMeta getReaderMeta(DbDataReader dbread)
+    {
+        if (!readerMetaCache.TryGetValue(dbread, out var meta))
+        {
+            var fieldCount = dbread.FieldCount;
+            string[] names = new string[fieldCount];
+            bool[] skip = new bool[fieldCount];
+            bool[] isDt = new bool[fieldCount];
+            bool[] isDateOnly = new bool[fieldCount];
+            bool[] isStr = new bool[fieldCount];
+
+            for (int i = 0; i < fieldCount; i++)
+            {
+                names[i] = dbread.GetName(i);
+
+                var dtypeName = dbread.GetDataTypeName(i);
+                if (is_check_ole_types && UNSUPPORTED_OLE_TYPES.ContainsKey(dtypeName))
+                {
+                    skip[i] = true;
+                    continue;
+                }
+
+                var ftype = dbread.GetFieldType(i);
+                isStr[i] = (ftype == typeof(string));
+                isDt[i] = (ftype == typeof(DateTime));
+                if (isDt[i])
+                    isDateOnly[i] = dtypeName.Equals("date", StringComparison.OrdinalIgnoreCase);
+            }
+
+            meta = new ReaderMeta
+            {
+                Names = names,
+                IsSkip = skip,
+                IsDateTime = isDt,
+                IsDateOnly = isDateOnly,
+                IsString = isStr,
+                FieldCount = fieldCount
+            };
+            readerMetaCache.Add(dbread, meta);
+        }
+        return meta;
     }
 
     /// <summary>
@@ -774,50 +819,12 @@ public class DB : IDisposable
         if (!dbread.HasRows)
             return []; //if no rows - return empty row
 
-        // obtain or build cached metadata for this reader
-        if (!readerMetaCache.TryGetValue(dbread, out var meta))
-        {
-            var fieldCount = dbread.FieldCount;
-            string[] names = new string[fieldCount];
-            bool[] skip = new bool[fieldCount];
-            bool[] isDt = new bool[fieldCount];
-            bool[] isDateOnly = new bool[fieldCount];
-            bool[] isStr = new bool[fieldCount];
-
-            for (int i = 0; i < fieldCount; i++)
-            {
-                names[i] = dbread.GetName(i);
-
-                var dtypeName = dbread.GetDataTypeName(i);
-                if (is_check_ole_types && UNSUPPORTED_OLE_TYPES.ContainsKey(dtypeName))
-                {
-                    skip[i] = true;
-                    continue;
-                }
-
-                var ftype = dbread.GetFieldType(i);
-                isStr[i] = (ftype == typeof(string));
-                isDt[i] = (ftype == typeof(DateTime));
-                if (isDt[i])
-                    isDateOnly[i] = dtypeName.Equals("date", StringComparison.OrdinalIgnoreCase);
-            }
-
-            meta = new ReaderMeta
-            {
-                Names = names,
-                Skip = skip,
-                IsDateTime = isDt,
-                IsDateOnly = isDateOnly,
-                IsString = isStr,
-                FieldCount = fieldCount
-            };
-            readerMetaCache.Add(dbread, meta);
-        }
+        var meta = getReaderMeta(dbread);
 
         DBRow result = new(meta.FieldCount); //pre-allocate capacity
         for (int i = 0; i < meta.FieldCount; i++)
         {
-            if (meta.Skip[i])
+            if (meta.IsSkip[i])
                 continue;
 
             string value;
@@ -847,13 +854,26 @@ public class DB : IDisposable
         if (!dbread.HasRows)
             return result; //if no rows - return empty row
 
+        var meta = getReaderMeta(dbread);
         var props = getWritableProperties<T>();
-        for (int i = 0; i < dbread.FieldCount; i++)
+        for (int i = 0; i < meta.FieldCount; i++)
         {
-            if (is_check_ole_types && UNSUPPORTED_OLE_TYPES.ContainsKey(dbread.GetDataTypeName(i))) continue;
+            if (meta.IsSkip[i]) continue;
 
-            object value = dbread.IsDBNull(i) ? null : dbread.GetValue(i);
-            setPropertyValue(result, props, dbread.GetName(i), value);
+            object value;
+            if (dbread.IsDBNull(i))
+                value = null;
+            else if (meta.IsDateTime[i])
+            {
+                // keep DateTime value type to avoid boxing to string
+                value = dbread.GetDateTime(i);
+            }
+            else if (meta.IsString[i])
+                value = dbread.GetString(i);
+            else
+                value = dbread.GetValue(i);
+
+            setPropertyValue(result, props, meta.Names[i], value);
         }
         return result;
     }
@@ -1274,7 +1294,7 @@ public class DB : IDisposable
             parts[i] = $"{startQuote}{part}{endQuote}";
         }
 
-        // Join the parts back together with '.'
+        // Join the parts back together with '.' 
         return string.Join(".", parts);
     }
 
