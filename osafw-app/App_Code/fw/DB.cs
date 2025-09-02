@@ -30,6 +30,7 @@ using System.Data.OleDb;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Text;
@@ -249,6 +250,18 @@ public class DB : IDisposable
 
     protected bool is_check_ole_types = false; // if true - checks for unsupported OLE types during readRow
     protected readonly Hashtable UNSUPPORTED_OLE_TYPES = Utils.qh("DBTYPE_IDISPATCH DBTYPE_IUNKNOWN"); // also? DBTYPE_ARRAY DBTYPE_VECTOR DBTYPE_BYTES
+
+    // cache per-reader metadata to avoid repeated reflection and metadata calls while iterating rows
+    private readonly ConditionalWeakTable<DbDataReader, ReaderMeta> readerMetaCache = [];
+    private sealed class ReaderMeta
+    {
+        public required string[] Names;
+        public required bool[] Skip;
+        public required bool[] IsDateTime;
+        public required bool[] IsDateOnly;
+        public required bool[] IsString;
+        public required int FieldCount;
+    }
 
     /// <summary>
     ///  "synax sugar" helper to build Hashtable from list of arguments instead more complex New Hashtable from {...}
@@ -761,37 +774,68 @@ public class DB : IDisposable
         if (!dbread.HasRows)
             return []; //if no rows - return empty row
 
-        int fieldCount = dbread.FieldCount;
-        DBRow result = new(fieldCount); //pre-allocate capacity
-        for (int i = 0; i <= fieldCount - 1; i++)
+        // obtain or build cached metadata for this reader
+        if (!readerMetaCache.TryGetValue(dbread, out var meta))
         {
-            try
+            var fieldCount = dbread.FieldCount;
+            string[] names = new string[fieldCount];
+            bool[] skip = new bool[fieldCount];
+            bool[] isDt = new bool[fieldCount];
+            bool[] isDateOnly = new bool[fieldCount];
+            bool[] isStr = new bool[fieldCount];
+
+            for (int i = 0; i < fieldCount; i++)
             {
-                if (is_check_ole_types && UNSUPPORTED_OLE_TYPES.ContainsKey(dbread.GetDataTypeName(i))) continue;
+                names[i] = dbread.GetName(i);
 
-                //string value = dbread[i].ToString();
-                //string name = dbread.GetName(i);
-
-                object dbval = dbread.IsDBNull(i) ? null : dbread.GetValue(i);
-                string name = dbread.GetName(i);
-                string value;
-                if (dbval is DateTime dt)
+                var dtypeName = dbread.GetDataTypeName(i);
+                if (is_check_ole_types && UNSUPPORTED_OLE_TYPES.ContainsKey(dtypeName))
                 {
-                    var dtype = dbread.GetDataTypeName(i).ToLower();
-                    if (dtype == "date")
-                        value = dt.ToString("yyyy-MM-dd", System.Globalization.DateTimeFormatInfo.InvariantInfo);
-                    else
-                        value = dt.ToString();
+                    skip[i] = true;
+                    continue;
                 }
-                else
-                    value = dbval?.ToString() ?? "";
 
-                result.Add(name, value);
+                var ftype = dbread.GetFieldType(i);
+                isStr[i] = (ftype == typeof(string));
+                isDt[i] = (ftype == typeof(DateTime));
+                if (isDt[i])
+                    isDateOnly[i] = dtypeName.Equals("date", StringComparison.OrdinalIgnoreCase);
             }
-            catch (Exception)
+
+            meta = new ReaderMeta
             {
-                break;
+                Names = names,
+                Skip = skip,
+                IsDateTime = isDt,
+                IsDateOnly = isDateOnly,
+                IsString = isStr,
+                FieldCount = fieldCount
+            };
+            readerMetaCache.Add(dbread, meta);
+        }
+
+        DBRow result = new(meta.FieldCount); //pre-allocate capacity
+        for (int i = 0; i < meta.FieldCount; i++)
+        {
+            if (meta.Skip[i])
+                continue;
+
+            string value;
+            if (dbread.IsDBNull(i))
+                value = "";
+            else if (meta.IsDateTime[i])
+            {
+                var dt = dbread.GetDateTime(i);
+                value = meta.IsDateOnly[i]
+                    ? dt.ToString("yyyy-MM-dd", System.Globalization.DateTimeFormatInfo.InvariantInfo)
+                    : dt.ToString();
             }
+            else if (meta.IsString[i])
+                value = dbread.GetString(i) ?? "";
+            else
+                value = dbread.GetValue(i)?.ToString() ?? "";
+
+            result.Add(meta.Names[i], value);
         }
         return result;
     }
@@ -2128,7 +2172,7 @@ public class DB : IDisposable
                 h["name"] = row["COLUMN_NAME"].ToString();
                 h["type"] = row["DATA_TYPE"];
                 h["fw_type"] = mapTypeOLE2Fw((int)row["DATA_TYPE"]); // meta type
-                h["fw_subtype"] = ((string)Enum.GetName(typeof(OleDbType), row["DATA_TYPE"])).ToLower(); // exact type as string
+                h["fw_subtype"] = ((string)Enum.GetName(typeof(OleDbType), row["DATA_TYPE"]))?.ToLower(); // exact type as string
                 h["is_nullable"] = (bool)row["IS_NULLABLE"] ? 1 : 0;
                 h["default"] = row["COLUMN_DEFAULT"]; // "=Now()" "0" "No"
                 h["maxlen"] = row["CHARACTER_MAXIMUM_LENGTH"];
