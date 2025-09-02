@@ -5,6 +5,9 @@ namespace osafw;
 
 public class TestController : FwController
 {
+
+    public static new int access_level = Users.ACL_SITEADMIN;
+
     public Hashtable IndexAction()
     {
         var ps = new Hashtable();
@@ -33,6 +36,25 @@ public class TestController : FwController
         return [];
     }
 
+    private class TActitivityTypes
+    {
+        public int id { get; set; }
+        public int? reply_id { get; set; }
+        public int log_types_id { get; set; }
+        public int fwentities_id { get; set; }
+        public int? item_id { get; set; }
+        public DateTime idate { get; set; }
+        public int? users_id { get; set; }
+        public string idesc { get; set; }
+        public string payload { get; set; }
+        public byte status { get; set; }
+        public DateTime add_time { get; set; }
+        public int add_users_id { get; set; }
+        public DateTime? upd_time { get; set; }
+        public int? upd_users_id { get; set; }
+
+    }
+
     public void BenchmarkAction()
     {
         DateTime start_time = DateTime.Now;
@@ -58,6 +80,21 @@ public class TestController : FwController
         }
         end_timespan = DateTime.Now - start_time;
         rw("benchmark2: " + end_timespan.TotalSeconds);
+
+        // test with generics
+        start_time = DateTime.Now;
+        for (int i = 0; i < 1000; i++)
+        {
+            var rows = db.arrayp<TActitivityTypes>("select * from activity_logs");
+            foreach (var row in rows)
+            {
+                row.idesc = row.idesc + "ok";
+            }
+        }
+
+        end_timespan = DateTime.Now - start_time;
+        rw("benchmark3: " + end_timespan.TotalSeconds);
+
 
         //rw(FW.dumper(rows));
 
