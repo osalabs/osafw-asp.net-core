@@ -24,7 +24,8 @@ namespace osafw.Tests
             db.exec($@"CREATE TABLE {table_name} (
                         id              INT,
                         iname           NVARCHAR(64) NOT NULL default '',
-                        idatetime       DATETIME2
+                        idatetime       DATETIME2,
+                        fdate           DATE
                     )");
             db.exec($"INSERT INTO {table_name} (id, iname) VALUES (1,'test1'),(2,'test2'),(3,'test3')");
         }
@@ -483,6 +484,15 @@ namespace osafw.Tests
             db.insert(table_name, DB.h("id", 6, "iname", "test6", "idatetime", DB.NOW));
             var r = db.row(table_name, DB.h("id", 6));
             Assert.AreEqual(now_time.ToString(), r["idatetime"], "");
+        }
+
+        [TestMethod()]
+        public void DateFieldReadTest()
+        {
+            var dt = new DateTime(2023, 1, 17);
+            db.insert(table_name, DB.h("id", 7, "iname", "testdate", "fdate", dt));
+            var r = db.row(table_name, DB.h("id", 7));
+            Assert.AreEqual(dt.ToString("yyyy-MM-dd"), r["fdate"]);
         }
 
         [TestMethod()]

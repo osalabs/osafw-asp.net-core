@@ -557,7 +557,7 @@ class DevEntityBuilder
                 break;
 
             case "date":
-                field["fw_type"] = "datetime";
+                field["fw_type"] = "date";
                 field["fw_subtype"] = "date";
                 // Dates are nullable by default if not specified
                 if (!is_notnull)
@@ -566,7 +566,7 @@ class DevEntityBuilder
             case "datetime":
             case "datetime2":
                 field["fw_type"] = "datetime";
-                field["fw_subtype"] = "datetime2";
+                field["fw_subtype"] = token.ToLower();
                 // Dates are nullable by default if not specified
                 if (!is_notnull)
                     field["is_nullable"] = 1;
@@ -617,6 +617,7 @@ class DevEntityBuilder
             "varchar" => "",
             "int" => 0,
             "float" => 0,
+            "date" => null,
             "datetime" => null,
             _ => null,
         };

@@ -93,12 +93,15 @@ class DevCodeGen
                     break;
                 }
 
+            case "date":
+                {
+                    result = "DATE";
+                    break;
+                }
+
             case "datetime":
                 {
-                    if (fw_subtype == "date")
-                        result = "DATE";
-                    else
-                        result = "DATETIME2";
+                    result = "DATETIME2";
                     break;
                 }
 
@@ -863,10 +866,16 @@ class DevCodeGen
                 sff["step"] = 0.1;
                 sff["class_contents"] = "col-md-4";
             }
-            else if (fld["fw_type"].toStr() == "datetime")
+            else if (fld["fw_type"].toStr() == "date")
             {
                 sf["type"] = "date";
                 sff["type"] = "date_popup";
+                sff["class_contents"] = "col-md-5";
+            }
+            else if (fld["fw_type"].toStr() == "datetime")
+            {
+                sf["type"] = "datetime";
+                sff["type"] = "datetime_popup";
                 sff["class_contents"] = "col-md-5";
             }
             else
