@@ -89,7 +89,7 @@ public class DateUtils
     /// <remarks>The method supports two formats: "dd/MM/yyyy" and "MM/dd/yyyy". The format is determined by
     /// the value of  <paramref name="date_format"/>. See DATE_FORMAT_* constants </remarks>
     /// <param name="d">The <see cref="DateTime"/> value to convert.</param>
-    /// <param name="date_format">An integer representing the desired date format. See DATE_FORMAT_* constants.</param>
+    /// <param name="date_format">See DATE_FORMAT_* constants.</param>
     /// <returns>A string representation of the date in the specified format.</returns>
     public static string Date2Str(DateTime d, int date_format)
     {
@@ -129,8 +129,8 @@ public class DateUtils
     /// convert human date input to SQL date
     /// </summary>
     /// <param name="str">human date input per current user settings (see date_format)</param>
-    /// <param name="date_format"></param>
-    /// <param name="time_format"></param>
+    /// <param name="date_format">See DATE_FORMAT_* constants.</param>
+    /// <param name="time_format">See TIME_FORMAT_* constants</param>
     /// <param name="is_time">if true SQL date also has time</param>
     /// <returns>SQL YYYY-MM-DD[ HH:MM:SS]</returns>
     public static string Str2SQL(string str, int date_format, int time_format = TIME_FORMAT_24, bool is_time = false)
@@ -146,27 +146,44 @@ public class DateUtils
         return result;
     }
 
-    // IN: datetime string
-    // OUT: date string
-    // Example: 1/17/2023 12:00:00 AM => 1/17/2023
-    public static string Str2DateOnly(string str)
+    /// <summary>
+    /// convert human date input to date only string per user settings
+    /// </summary>
+    /// <remarks>Example: 1/17/2023 12:00:00 AM => 1/17/2023</remarks>
+    /// <param name="str">date/time string</param>
+    /// <param name="date_format">See DATE_FORMAT_* constants.</param>
+    /// <returns>date string</returns>
+    public static string Str2DateOnly(string str, int date_format)
     {
         string result = str;
-        var dt = str.toDate();
+        string format = mapDateFormat(date_format);
+
+        var dt = str.toDate(format);
         if (Utils.isDate(dt))
         {
-            result = dt.ToShortDateString();
+            result = dt.ToString(format);
         }
         return result;
     }
 
-    // IN: datetime string
-    // OUT: HH:MM
-    public static string ParseDate2TimeStr(string str)
+    /// <summary>
+    /// convert human date input to time only string per user settings
+    /// </summary>
+    /// <remarks>Example: 1/17/2023 3:12 AM => 3:12 AM</remarks>
+    /// <param name="str">date/time string</param>
+    /// <param name="date_format">See DATE_FORMAT_* constants.</param>
+    /// <param name="time_format">See TIME_FORMAT_* constants</param>
+    /// <returns></returns>
+    public static string Str2TimeOnly(string str, int date_format, int time_format)
     {
         string result = "";
-        if (DateTime.TryParse(str, out DateTime tmpdate))
-            result = tmpdate.Hour.ToString("00") + ":" + tmpdate.Minute.ToString("00");
+
+        string format = mapDateFormat(date_format) + " " + mapTimeFormat(time_format);
+        var dt = str.toDate(format);
+        if (Utils.isDate(dt))
+        {
+            result = dt.ToString(mapTimeFormat(time_format));
+        }
 
         return result;
     }

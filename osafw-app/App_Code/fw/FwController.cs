@@ -1255,7 +1255,7 @@ public abstract class FwController
         var data = (string)row[fieldname];
         if ((string)(hconversions[fieldname] ?? "") == "date")
         {
-            data = DateUtils.Str2DateOnly(data);
+            data = DateUtils.Str2DateOnly(data, fw.userDateFormat);
         }
         return data;
     }

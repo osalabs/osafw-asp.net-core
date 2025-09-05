@@ -101,17 +101,17 @@ namespace osafw.Tests
         {
             // Case 1: Test with empty input
             string input1 = "";
-            string result1 = DateUtils.Str2DateOnly(input1);
+            string result1 = DateUtils.Str2DateOnly(input1, DateUtils.DATE_FORMAT_MDY);
             Assert.AreEqual("", result1, "Result should be empty for empty input");
 
             // Case 2: Test with valid datetime string
             string input2 = "1/17/2023 12:00:00 AM";
-            string result2 = DateUtils.Str2DateOnly(input2);
-            Assert.AreEqual("1/17/2023", result2, "Result should be date only");
+            string result2 = DateUtils.Str2DateOnly(input2, DateUtils.DATE_FORMAT_MDY);
+            Assert.AreEqual("01/17/2023", result2, "Result should be date only");
 
             // Case 3: Test with invalid datetime string
             string input3 = "invalid_datetime";
-            string result3 = DateUtils.Str2DateOnly(input3);
+            string result3 = DateUtils.Str2DateOnly(input3, DateUtils.DATE_FORMAT_MDY);
             Assert.AreEqual("invalid_datetime", result3, "Result should remain unchanged for invalid datetime string");
         }
 
@@ -120,32 +120,32 @@ namespace osafw.Tests
         {
             // Case 1: Test with empty input
             string input1 = "";
-            string result1 = DateUtils.Str2DateOnly(input1);
+            string result1 = DateUtils.Str2DateOnly(input1, DateUtils.DATE_FORMAT_MDY);
             Assert.AreEqual("", result1, "Result should be empty for empty input");
 
             // Case 2: Test with valid datetime string in "M/d/yyyy h:mm:ss tt" format
             string input2 = "1/17/2023 12:00:00 AM";
-            string result2 = DateUtils.Str2DateOnly(input2);
-            Assert.AreEqual("1/17/2023", result2, "Result should be date only for 'M/d/yyyy h:mm:ss tt' format");
+            string result2 = DateUtils.Str2DateOnly(input2, DateUtils.DATE_FORMAT_MDY);
+            Assert.AreEqual("01/17/2023", result2, "Result should be date only for 'M/d/yyyy h:mm:ss tt' format");
 
             // Case 3: Test with valid datetime string in "MM/dd/yyyy HH:mm:ss" format
             string input3 = "01/17/2023 00:00:00";
-            string result3 = DateUtils.Str2DateOnly(input3);
-            Assert.AreEqual("1/17/2023", result3, "Result should be date only for 'MM/dd/yyyy HH:mm:ss' format");
+            string result3 = DateUtils.Str2DateOnly(input3, DateUtils.DATE_FORMAT_MDY);
+            Assert.AreEqual("01/17/2023", result3, "Result should be date only for 'MM/dd/yyyy HH:mm:ss' format");
 
             // Case 4: Test with valid datetime string in "yyyy-MM-dd HH:mm:ss" format
             string input4 = "2023-01-17 00:00:00";
-            string result4 = DateUtils.Str2DateOnly(input4);
-            Assert.AreEqual("1/17/2023", result4, "Result should be date only for 'yyyy-MM-dd HH:mm:ss' format");
+            string result4 = DateUtils.Str2DateOnly(input4, DateUtils.DATE_FORMAT_MDY);
+            Assert.AreEqual("01/17/2023", result4, "Result should be date only for 'yyyy-MM-dd HH:mm:ss' format");
 
             // Case 5: Test with valid datetime string in "yyyy/MM/dd HH:mm:ss" format
             string input5 = "2023/01/17 00:00:00";
-            string result5 = DateUtils.Str2DateOnly(input5);
-            Assert.AreEqual("1/17/2023", result5, "Result should be date only for 'yyyy/MM/dd HH:mm:ss' format");
+            string result5 = DateUtils.Str2DateOnly(input5, DateUtils.DATE_FORMAT_MDY);
+            Assert.AreEqual("01/17/2023", result5, "Result should be date only for 'yyyy/MM/dd HH:mm:ss' format");
 
             // Case 6: Test with invalid datetime string
             string input6 = "invalid_datetime";
-            string result6 = DateUtils.Str2DateOnly(input6);
+            string result6 = DateUtils.Str2DateOnly(input6, DateUtils.DATE_FORMAT_MDY);
             Assert.AreEqual("invalid_datetime", result6, "Result should remain unchanged for invalid datetime string");
         }
 
