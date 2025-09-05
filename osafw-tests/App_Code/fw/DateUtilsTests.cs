@@ -1,10 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using osafw;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace osafw.Tests
 {
@@ -17,13 +12,17 @@ namespace osafw.Tests
             DateTime d = DateTime.UtcNow;
             String r = DateUtils.Date2SQL(d);
             Assert.AreEqual(r, d.Year + "-" + d.Month + "-" + d.Day);
+
+            // with time
+            r = DateUtils.Date2SQL(d, true);
+            Assert.AreEqual(r, d.Year + "-" + d.Month + "-" + d.Day + " " + d.Hour + ":" + d.Minute + ":" + d.Second);
         }
 
         [TestMethod()]
         public void Date2StrTest()
         {
             DateTime d = DateTime.UtcNow;
-            String r = DateUtils.Date2Str(d);
+            String r = DateUtils.Date2Str(d, DateUtils.DATE_FORMAT_MDY);
             Assert.AreEqual(r, d.Month + "/" + d.Day + "/" + d.Year);
         }
 
@@ -46,7 +45,7 @@ namespace osafw.Tests
         {
             DateTime d = DateTime.UtcNow;
             string r = DateUtils.Str2SQL(d.ToString("MM/dd/yyyy"));
-            
+
             Assert.AreEqual(r, d.ToString("yyyy-MM-dd"));
         }
 
@@ -157,7 +156,7 @@ namespace osafw.Tests
             long r = DateUtils.Date2JsTimestamp(d);
 
             Assert.AreEqual(r, System.Convert.ToInt64(time.Ticks / (double)10000));
-           
+
         }
     }
 }

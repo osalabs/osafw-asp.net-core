@@ -909,9 +909,9 @@ public class FW : IDisposable
         {
             // prepare date/time formats for ParsePage
             // see template/common/sel for available formats
-            var DateFormat = G["date_format"].toInt() == 10 ? "dd/MM/yyyy" : "MM/dd/yyyy";
-            var DateFormatShort = DateFormat + " " + (G["time_format"].toInt() == 10 ? "HH:mm" : "hh:mm tt");
-            var DateFormatLong = DateFormat + " " + (G["time_format"].toInt() == 10 ? "HH:mm:ss" : "hh:mm:ss tt");
+            var DateFormat = DateUtils.mapDateFormat(G["date_format"].toInt());
+            var DateFormatShort = DateFormat + " " + DateUtils.mapTimeFormat(G["time_format"].toInt());
+            var DateFormatLong = DateFormat + " " + DateUtils.mapTimeWithSecondsFormat(G["time_format"].toInt());
 
             pp_instance = new ParsePage(new ParsePageOptions
             {
