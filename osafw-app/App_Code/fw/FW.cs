@@ -154,6 +154,13 @@ public class FW : IDisposable
         // override default ui_theme/ui_mode with user's settings
         if (!string.IsNullOrEmpty(Session("ui_theme"))) G["ui_theme"] = Session("ui_theme");
         if (!string.IsNullOrEmpty(Session("ui_mode"))) G["ui_mode"] = Session("ui_mode");
+        if (!string.IsNullOrEmpty(Session("date_format"))) G["date_format"] = Session("date_format");
+        if (!string.IsNullOrEmpty(Session("time_format"))) G["time_format"] = Session("time_format");
+        if (!string.IsNullOrEmpty(Session("timezone"))) G["timezone"] = Session("timezone");
+
+        // derived js-friendly formats
+        G["date_format_js"] = (G["date_format"].toInt() == 10) ? "dd/mm/yyyy" : "mm/dd/yyyy";
+        G["time_format_js"] = (G["time_format"].toInt() == 10) ? "HH:mm" : "h:mm tt";
 
         FormErrors = []; // reset errors
         parseForm();
@@ -909,7 +916,10 @@ public class FW : IDisposable
             IsLangUpdate = config("is_lang_update").toBool(),
             GlobalsGetter = () => G,
             Session = context?.Session,
-            Logger = (level, args) => logger(level, args)
+            Logger = (level, args) => logger(level, args),
+            DateFormat = G["date_format"].toInt(),
+            TimeFormat = G["time_format"].toInt(),
+            Timezone = G["timezone"].toStr()
         });
         return pp_instance;
     }

@@ -159,5 +159,25 @@ namespace osafw.Tests
             Assert.AreEqual(r, System.Convert.ToInt64(time.Ticks / (double)10000));
            
         }
+
+        [TestMethod()]
+        public void ParseUserDateTest()
+        {
+            var dt = DateUtils.ParseUserDate("31/12/2024", 10);
+            Assert.AreEqual(2024, dt?.Year);
+            Assert.AreEqual(12, dt?.Month);
+            Assert.AreEqual(31, dt?.Day);
+        }
+
+        [TestMethod()]
+        public void ParseUserDateTimeTest()
+        {
+            var dt = DateUtils.ParseUserDateTime("12/31/2024 09:30 AM", 0, 0, "UTC");
+            Assert.AreEqual(2024, dt?.Year);
+            Assert.AreEqual(12, dt?.Month);
+            Assert.AreEqual(31, dt?.Day);
+            Assert.AreEqual(9, dt?.Hour);
+            Assert.AreEqual(30, dt?.Minute);
+        }
     }
 }

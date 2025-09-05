@@ -93,6 +93,12 @@ public class Users : FwModel
             item["ui_theme"] = fw.config("ui_theme").toInt();
         if (!item.ContainsKey("ui_mode"))
             item["ui_mode"] = fw.config("ui_mode").toInt();
+        if (!item.ContainsKey("date_format"))
+            item["date_format"] = fw.config("date_format").toInt();
+        if (!item.ContainsKey("time_format"))
+            item["time_format"] = fw.config("time_format").toInt();
+        if (!item.ContainsKey("timezone"))
+            item["timezone"] = fw.config("timezone");
 
         return base.add(item);
     }
@@ -320,6 +326,16 @@ public class Users : FwModel
         fw.context.Session.Clear();
         fw.Session("XSS", Utils.getRandStr(16));
 
+        // auto-detect timezone if not set
+        var user = one(id);
+        if (string.IsNullOrEmpty(user["timezone"].toStr()))
+        {
+            string tz = fw.request.Headers["Time-Zone"].toStr();
+            if (string.IsNullOrEmpty(tz)) tz = fw.request.Headers["Timezone"].toStr();
+            if (string.IsNullOrEmpty(tz)) tz = fw.config("timezone").toStr();
+            update(id, DB.h("timezone", tz));
+        }
+
         reloadSession(id);
 
         fw.logActivity(FwLogTypes.ICODE_USERS_LOGIN, FwEntities.ICODE_USERS, id, "IP:" + fw.context.Connection.RemoteIpAddress.ToString());
@@ -350,6 +366,9 @@ public class Users : FwModel
         fw.Session("lang", user["lang"]);
         fw.Session("ui_theme", user["ui_theme"]);
         fw.Session("ui_mode", user["ui_mode"]);
+        fw.Session("date_format", user["date_format"].toStr());
+        fw.Session("time_format", user["time_format"].toStr());
+        fw.Session("timezone", user["timezone"].toStr());
         // fw.SESSION("user", hU)
 
         var fname = user["fname"].Trim();
