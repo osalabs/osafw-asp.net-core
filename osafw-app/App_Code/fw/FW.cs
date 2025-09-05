@@ -108,6 +108,11 @@ public class FW : IDisposable
         get { return userId > 0; }
     }
 
+    public string formatUserDateTime(object o)
+    {
+        return DateUtils.SQL2Str(o.toStr(), userDateFormat, userTimeFormat, userTimezone);
+    }
+
     // helper to initialize DB instance based on configuration name
     public DB getDB(string config_name = "main")
     {

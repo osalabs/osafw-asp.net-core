@@ -93,10 +93,21 @@ public class DateUtils
     /// <returns>A string representation of the date in the specified format.</returns>
     public static string Date2Str(DateTime d, int date_format)
     {
-        if (date_format == DATE_FORMAT_DMY)
-            return d.ToString("dd/MM/yyyy");
-        else
-            return d.ToString("MM/dd/yyyy");
+        return d.ToString(mapDateFormat(date_format));
+    }
+
+    /// <summary>
+    /// Converts the specified <see cref="DateTime"/> to a string representation based on the given date and time format.
+    /// </summary>
+    /// <remarks>The method supports two formats: "dd/MM/yyyy" and "MM/dd/yyyy". The format is determined by
+    /// the value of  <paramref name="date_format"/>. See DATE_FORMAT_* constants </remarks>
+    /// <param name="d">The <see cref="DateTime"/> value to convert.</param>
+    /// <param name="date_format">See DATE_FORMAT_* constants.</param>
+    /// <param name="time_format">See TIME_FORMAT_* constants</param>
+    /// <returns>A string representation of the date in the specified format.</returns>
+    public static string DateTime2Str(DateTime d, int date_format, int time_format)
+    {
+        return d.ToString(mapDateFormat(date_format) + " " + mapTimeFormat(time_format));
     }
 
     /// <summary>
@@ -142,6 +153,33 @@ public class DateUtils
             format += " " + mapTimeFormat(time_format); // use 24h format for sql
         if (DateTime.TryParseExact(str, format, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out DateTime tmpdate))
             result = Date2SQL(tmpdate, is_time);
+
+        return result;
+    }
+
+    /// <summary>
+    /// convert SQL date to human date output, optionally convert from database timezone to user timezone
+    /// </summary>
+    /// <param name="sql_date"></param>
+    /// <param name="date_format"></param>
+    /// <param name="time_format"></param>
+    /// <param name="timezone"></param>
+    /// <returns></returns>
+    public static string SQL2Str(string sql_date, int date_format, int time_format, string timezone = "")
+    {
+        string result = "";
+        var dt = SQL2Date(sql_date);
+        if (dt != null)
+        {
+            if (!string.IsNullOrEmpty(timezone))
+            {
+                // convert from database timezone to user timezone
+                DateTime local_dt = convertTimezone((DateTime)dt, DATABASE_TZ, timezone);
+                result = local_dt.ToString(mapDateFormat(date_format) + " " + mapTimeFormat(time_format));
+            }
+            else
+                result = ((DateTime)dt).ToString(mapDateFormat(date_format) + " " + mapTimeFormat(time_format));
+        }
 
         return result;
     }
@@ -224,5 +262,25 @@ public class DateUtils
         TimeSpan span = new(DateTime.Parse("1/1/1970").Ticks);
         DateTime time = dt.Subtract(span);
         return System.Convert.ToInt64(time.Ticks / (double)10000);
+    }
+
+    public static DateTime convertTimezone(DateTime dt, string from_tz, string to_tz)
+    {
+        if (from_tz == to_tz)
+            return dt;
+        try
+        {
+            TimeZoneInfo tzi_from = TimeZoneInfo.FindSystemTimeZoneById(from_tz);
+            TimeZoneInfo tzi_to = TimeZoneInfo.FindSystemTimeZoneById(to_tz);
+            DateTime dt_utc = TimeZoneInfo.ConvertTimeToUtc(dt, tzi_from);
+            DateTime dt_to = TimeZoneInfo.ConvertTimeFromUtc(dt_utc, tzi_to);
+            return dt_to;
+        }
+        catch (Exception ex)
+        {
+            // invalid timezone
+            Console.WriteLine("DateUtils - invalid timezone conversion from " + from_tz + " to " + to_tz + ": " + ex.Message);
+            return dt;
+        }
     }
 }

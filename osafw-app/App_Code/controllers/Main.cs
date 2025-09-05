@@ -130,6 +130,7 @@ public class MainController : FwController
                 headers.Add(new Hashtable() { { "field_name", key } });
             foreach (Hashtable row in rows)
             {
+                row["On"] = fw.formatUserDateTime(row["On"]);
                 ArrayList cols = [];
                 foreach (var fieldname in fields)
                 {
