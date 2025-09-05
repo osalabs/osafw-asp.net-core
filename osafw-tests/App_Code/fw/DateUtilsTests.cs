@@ -71,9 +71,29 @@ namespace osafw.Tests
         public void Str2SQLTest()
         {
             DateTime d = DateTime.UtcNow;
-            string r = DateUtils.Str2SQL(d.ToString("MM/dd/yyyy"));
+            string r = DateUtils.Str2SQL(d.ToString("MM/dd/yyyy"), DateUtils.DATE_FORMAT_MDY);
+            Assert.AreEqual(d.ToString("yyyy-MM-dd"), r);
+            r = DateUtils.Str2SQL(d.ToString("dd/MM/yyyy"), DateUtils.DATE_FORMAT_DMY);
+            Assert.AreEqual(d.ToString("yyyy-MM-dd"), r);
 
-            Assert.AreEqual(r, d.ToString("yyyy-MM-dd"));
+            r = DateUtils.Str2SQL(d.ToString("MM/dd/yyyy HH:mm"), DateUtils.DATE_FORMAT_MDY, DateUtils.TIME_FORMAT_24, true);
+            Assert.AreEqual(d.ToString("yyyy-MM-dd HH:mm:00"), r);
+            r = DateUtils.Str2SQL(d.ToString("MM/dd/yyyy h:mm tt"), DateUtils.DATE_FORMAT_MDY, DateUtils.TIME_FORMAT_12, true);
+            Assert.AreEqual(d.ToString("yyyy-MM-dd HH:mm:00"), r);
+
+            r = DateUtils.Str2SQL(d.ToString("dd/MM/yyyy HH:mm"), DateUtils.DATE_FORMAT_DMY, DateUtils.TIME_FORMAT_24, true);
+            Assert.AreEqual(d.ToString("yyyy-MM-dd HH:mm:00"), r);
+            r = DateUtils.Str2SQL(d.ToString("dd/MM/yyyy h:mm tt"), DateUtils.DATE_FORMAT_DMY, DateUtils.TIME_FORMAT_12, true);
+            Assert.AreEqual(d.ToString("yyyy-MM-dd HH:mm:00"), r);
+
+            // invalid date should return empty string
+            r = DateUtils.Str2SQL("invalid_date", DateUtils.DATE_FORMAT_MDY);
+            Assert.AreEqual("", r);
+
+            // empty date should return empty string
+            r = DateUtils.Str2SQL("", DateUtils.DATE_FORMAT_MDY);
+            Assert.AreEqual("", r);
+
         }
 
         [TestMethod]

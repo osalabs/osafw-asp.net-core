@@ -125,18 +125,23 @@ public class DateUtils
         return result;
     }
 
-    // IN: MM/DD/YYYY[ HH:MM:SS]
-    // OUT: YYYY-MM-DD[ HH:MM:SS]
-    public static string Str2SQL(string str, bool is_time = false)
+    /// <summary>
+    /// convert human date input to SQL date
+    /// </summary>
+    /// <param name="str">human date input per current user settings (see date_format)</param>
+    /// <param name="date_format"></param>
+    /// <param name="time_format"></param>
+    /// <param name="is_time">if true SQL date also has time</param>
+    /// <returns>SQL YYYY-MM-DD[ HH:MM:SS]</returns>
+    public static string Str2SQL(string str, int date_format, int time_format = TIME_FORMAT_24, bool is_time = false)
     {
         string result = "";
-        if (DateTime.TryParse(str, out DateTime tmpdate))
-        {
-            string format = "yyyy-MM-dd HH:mm:ss";
-            if (!is_time)
-                format = "yyyy-MM-dd";
-            result = tmpdate.ToString(format, System.Globalization.DateTimeFormatInfo.InvariantInfo);
-        }
+        //convert str to DateTime using date_format
+        string format = mapDateFormat(date_format);
+        if (is_time)
+            format += " " + mapTimeFormat(time_format); // use 24h format for sql
+        if (DateTime.TryParseExact(str, format, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out DateTime tmpdate))
+            result = Date2SQL(tmpdate, is_time);
 
         return result;
     }

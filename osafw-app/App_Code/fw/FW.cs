@@ -86,6 +86,21 @@ public class FW : IDisposable
         get { return Session("access_level").toInt(); }
     }
 
+    public int userDateFormat
+    {
+        get { return G["date_format"].toInt((int)DateUtils.DATE_FORMAT_MDY); }
+    }
+
+    public int userTimeFormat
+    {
+        get { return G["time_format"].toInt((int)DateUtils.TIME_FORMAT_12); }
+    }
+
+    public string userTimezone
+    {
+        get { return G["timezone"].toStr(DateUtils.TZ_UTC); }
+    }
+
     // shortcut to obtain if we working under logged in user
     // usage: fw.isLogged
     public bool isLogged
@@ -909,9 +924,9 @@ public class FW : IDisposable
         {
             // prepare date/time formats for ParsePage
             // see template/common/sel for available formats
-            var DateFormat = DateUtils.mapDateFormat(G["date_format"].toInt());
-            var DateFormatShort = DateFormat + " " + DateUtils.mapTimeFormat(G["time_format"].toInt());
-            var DateFormatLong = DateFormat + " " + DateUtils.mapTimeWithSecondsFormat(G["time_format"].toInt());
+            var DateFormat = DateUtils.mapDateFormat(userDateFormat);
+            var DateFormatShort = DateFormat + " " + DateUtils.mapTimeFormat(userTimeFormat);
+            var DateFormatLong = DateFormat + " " + DateUtils.mapTimeWithSecondsFormat(userTimeFormat);
 
             pp_instance = new ParsePage(new ParsePageOptions
             {
@@ -927,7 +942,7 @@ public class FW : IDisposable
                 DateFormatShort = DateFormatShort,
                 DateFormatLong = DateFormatLong,
                 InputTimezone = DateUtils.DATABASE_TZ,
-                OutputTimezone = G["timezone"].toStr(),
+                OutputTimezone = userTimezone,
             });
         }
         return pp_instance;

@@ -835,7 +835,7 @@ public class DB : IDisposable
                 var dt = dbread.GetDateTime(i);
                 value = meta.IsDateOnly[i]
                     ? dt.ToString("yyyy-MM-dd", System.Globalization.DateTimeFormatInfo.InvariantInfo)
-                    : dt.ToString();
+                    : dt.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.DateTimeFormatInfo.InvariantInfo);
             }
             else if (meta.IsString[i])
                 value = dbread.GetString(i) ?? "";

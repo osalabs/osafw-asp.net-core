@@ -1203,17 +1203,21 @@ public abstract class FwModel : IDisposable
 
             var fw_type = (string)field_schema["fw_type"];
             var fw_subtype = (string)field_schema["fw_subtype"];
-            if (fw_subtype == "date")
-            {
-                //if field is exactly DATE - show only date part without time - in YYYY-MM-DD format
-                item[fieldname] = DateUtils.Str2SQL((string)item[fieldname]);
-            }
-            else if (fw_type == "datetime")
-            {
-                //if field is exactly DATETIME - show in YYYY-MM-DD HH:MM:SS format
-                item[fieldname] = DateUtils.Str2SQL((string)item[fieldname], true);
-            }
-            else if (fw_subtype == "bit")
+
+            // TBD might not be necessary as DB returns in SQL format
+            //if (fw_subtype == "date")
+            //{
+            //    //if field is exactly DATE - show only date part without time - in YYYY-MM-DD format
+            //    item[fieldname] = DateUtils.Str2SQL((string)item[fieldname]);
+            //}
+            //else if (fw_type == "datetime")
+            //{
+            //    //if field is exactly DATETIME - show in YYYY-MM-DD HH:MM:SS format
+            //    item[fieldname] = DateUtils.Str2SQL((string)item[fieldname], true);
+            //}
+            //else 
+
+            if (fw_subtype == "bit")
             {
                 //if field is exactly BIT - convert from True/False to 1/0
                 item[fieldname] = item[fieldname].toBool() ? 1 : 0;
