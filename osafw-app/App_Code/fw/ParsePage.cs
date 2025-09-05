@@ -136,6 +136,9 @@ public class ParsePageOptions
     public Func<Hashtable> GlobalsGetter { get; set; } = () => []; // by default - return empty hashtable
     public ISession Session { get; set; }
     public Action<LogLevel, string[]> Logger { get; set; }
+    public int DateFormat { get; set; } = 0;
+    public int TimeFormat { get; set; } = 0;
+    public string Timezone { get; set; } = "UTC";
 }
 
 public class ParsePage
@@ -156,10 +159,11 @@ public class ParsePage
 
     private static readonly string[] IFOPERS = ["if", "unless", "ifne", "ifeq", "ifgt", "iflt", "ifge", "ifle"];
 
-    private const string DATE_FORMAT_DEF = "M/d/yyyy"; // for US, TODO make based on user settigns (with fallback to server's settings)
-    private const string DATE_FORMAT_SHORT = "M/d/yyyy HH:mm";
-    private const string DATE_FORMAT_LONG = "M/d/yyyy HH:mm:ss";
+    private string DATE_FORMAT_DEF;
+    private string DATE_FORMAT_SHORT;
+    private string DATE_FORMAT_LONG;
     private const string DATE_FORMAT_SQL = "yyyy-MM-dd HH:mm:ss";
+    private TimeZoneInfo user_tz = TimeZoneInfo.Utc;
     // "d M yyyy HH:mm"
 
     // for dynamic load of Markdig markdown converter
@@ -195,6 +199,16 @@ public class ParsePage
             loggerAction = options.Logger;
             if (!LANG_CACHE.ContainsKey(lang) && !string.IsNullOrEmpty(TMPL_PATH))
                 load_lang();
+
+            // date/time formats based on options
+            string datePart = options.DateFormat == 10 ? "dd/MM/yyyy" : "MM/dd/yyyy";
+            string timeShort = options.TimeFormat == 10 ? "HH:mm" : "hh:mm tt";
+            string timeLong = options.TimeFormat == 10 ? "HH:mm:ss" : "hh:mm:ss tt";
+            DATE_FORMAT_DEF = datePart;
+            DATE_FORMAT_SHORT = datePart + " " + timeShort;
+            DATE_FORMAT_LONG = datePart + " " + timeLong;
+            try { user_tz = TimeZoneInfo.FindSystemTimeZoneById(options.Timezone ?? "UTC"); }
+            catch { user_tz = TimeZoneInfo.Utc; }
         }
         lang_evaluator = new MatchEvaluator(this.lang_replacer);
     }
@@ -977,7 +991,11 @@ public class ParsePage
                             }
                     }
                     if (DateTime.TryParse(value, out DateTime dt))
+                    {
+                        dt = DateTime.SpecifyKind(dt, DateTimeKind.Utc);
+                        dt = TimeZoneInfo.ConvertTimeFromUtc(dt, user_tz);
                         value = dt.ToString(dformat, System.Globalization.DateTimeFormatInfo.InvariantInfo);
+                    }
                     attr_count -= 1;
                 }
                 if (attr_count > 0 && hattrs.ContainsKey("trim"))

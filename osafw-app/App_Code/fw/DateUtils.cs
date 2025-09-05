@@ -4,12 +4,14 @@
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
 using System;
+using System.Globalization;
 using System.Text.RegularExpressions;
 
 namespace osafw;
 
 public class DateUtils
 {
+    public const string DB_TIMEZONE = "UTC";
     public static string toFormat(object d, string format)
     {
         var dt = d.toDateOrNull();
@@ -98,6 +100,34 @@ public class DateUtils
             result = tmpdate.Hour.ToString("00") + ":" + tmpdate.Minute.ToString("00");
 
         return result;
+    }
+
+    // Parse user date according to selected format
+    public static DateTime? ParseUserDate(string str, int dateFormat)
+    {
+        if (string.IsNullOrEmpty(str)) return null;
+        string format = dateFormat == 10 ? "dd/MM/yyyy" : "MM/dd/yyyy";
+        if (DateTime.TryParseExact(str, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime dt))
+            return dt;
+        return null;
+    }
+
+    // Parse user datetime according to selected formats and timezone, return UTC
+    public static DateTime? ParseUserDateTime(string str, int dateFormat, int timeFormat, string timezone)
+    {
+        if (string.IsNullOrEmpty(str)) return null;
+        string datePart = dateFormat == 10 ? "dd/MM/yyyy" : "MM/dd/yyyy";
+        string timePart = timeFormat == 10 ? "HH:mm" : "hh:mm tt";
+        string format = datePart + " " + timePart;
+        if (DateTime.TryParseExact(str, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime local))
+        {
+            TimeZoneInfo tz;
+            try { tz = TimeZoneInfo.FindSystemTimeZoneById(timezone); }
+            catch { tz = TimeZoneInfo.Utc; }
+            var unspecified = DateTime.SpecifyKind(local, DateTimeKind.Unspecified);
+            return TimeZoneInfo.ConvertTimeToUtc(unspecified, tz);
+        }
+        return null;
     }
 
     // return next day of week
