@@ -154,6 +154,10 @@ public class FW : IDisposable
         // override default ui_theme/ui_mode with user's settings
         if (!string.IsNullOrEmpty(Session("ui_theme"))) G["ui_theme"] = Session("ui_theme");
         if (!string.IsNullOrEmpty(Session("ui_mode"))) G["ui_mode"] = Session("ui_mode");
+        // timezone/date/time format
+        if (!string.IsNullOrEmpty(Session("date_format"))) G["date_format"] = Session("date_format");
+        if (!string.IsNullOrEmpty(Session("time_format"))) G["time_format"] = Session("time_format");
+        if (!string.IsNullOrEmpty(Session("timezone"))) G["timezone"] = Session("timezone");
 
         FormErrors = []; // reset errors
         parseForm();

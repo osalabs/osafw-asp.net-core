@@ -10,6 +10,9 @@ namespace osafw;
 
 public class DateUtils
 {
+
+    public const string TZ_UTC = "UTC";
+
     public static string toFormat(object d, string format)
     {
         var dt = d.toDateOrNull();

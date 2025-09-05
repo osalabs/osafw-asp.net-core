@@ -100,6 +100,13 @@ CREATE TABLE users (
   phone                 VARCHAR(16) NOT NULL DEFAULT '',
   lang                  VARCHAR(16) NOT NULL DEFAULT 'en', -- user interface language
 
+  ui_theme              TINYINT NOT NULL DEFAULT 0, -- 0--default theme
+  ui_mode               TINYINT NOT NULL DEFAULT 0, -- 0--auto, 10-light, 20-dark
+
+  date_format           TINYINT NOT NULL DEFAULT 0, -- 0-MM/DD/YYYY, 10-DD/MM/YYYY
+  time_format           TINYINT NOT NULL DEFAULT 0, -- 0-12h, 10-24h
+  timezone              VARCHAR(64) NOT NULL DEFAULT 'UTC', -- see /common/sel/timezone.sel
+
   idesc                 TEXT,
   att_id                INT NULL,                -- avatar
 

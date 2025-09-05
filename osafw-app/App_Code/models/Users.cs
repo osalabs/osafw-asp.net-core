@@ -94,6 +94,14 @@ public class Users : FwModel
         if (!item.ContainsKey("ui_mode"))
             item["ui_mode"] = fw.config("ui_mode").toInt();
 
+        // set default date/time format and timezone from the config if not set
+        if (!item.ContainsKey("date_format"))
+            item["date_format"] = fw.config("date_format").toInt();
+        if (!item.ContainsKey("time_format"))
+            item["time_format"] = fw.config("time_format").toInt();
+        if (!item.ContainsKey("timezone"))
+            item["timezone"] = fw.config("timezone");
+
         return base.add(item);
     }
 
@@ -314,8 +322,12 @@ public class Users : FwModel
     #endregion
 
     #region Login/Session
-    // fill the session and do all necessary things just user authenticated (and before redirect
-    public void doLogin(int id)
+    /// <summary>
+    /// reset session and fill with user info from id, log login activity, update login time and timezone if provided
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="timezone"></param>
+    public void doLogin(int id, string timezone = "")
     {
         fw.context.Session.Clear();
         fw.Session("XSS", Utils.getRandStr(16));
@@ -323,9 +335,20 @@ public class Users : FwModel
         reloadSession(id);
 
         fw.logActivity(FwLogTypes.ICODE_USERS_LOGIN, FwEntities.ICODE_USERS, id, "IP:" + fw.context.Connection.RemoteIpAddress.ToString());
-        // update login info
+        // update login and timezone
         Hashtable fields = [];
         fields["login_time"] = DB.NOW;
+
+        if (!string.IsNullOrEmpty(timezone))
+        {
+            var user = one(id);
+            if (string.IsNullOrEmpty(user["timezone"]) || user["timezone"] == DateUtils.TZ_UTC)
+            {
+                fields["timezone"] = timezone;
+                fw.Session("timezone", timezone);
+            }
+        }
+
         this.update(id, fields);
 
         //if Site Admin - check for pending db updates
@@ -350,6 +373,9 @@ public class Users : FwModel
         fw.Session("lang", user["lang"]);
         fw.Session("ui_theme", user["ui_theme"]);
         fw.Session("ui_mode", user["ui_mode"]);
+        fw.Session("date_format", user["date_format"]);
+        fw.Session("time_format", user["time_format"]);
+        fw.Session("timezone", user["timezone"]);
         // fw.SESSION("user", hU)
 
         var fname = user["fname"].Trim();
