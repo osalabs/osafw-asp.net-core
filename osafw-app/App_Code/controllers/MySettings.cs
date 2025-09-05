@@ -3,6 +3,7 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
+using System;
 using System.Collections;
 
 namespace osafw;
@@ -20,7 +21,7 @@ public class MySettingsController : FwController
         required_fields = "email"; // default required fields, space-separated
         base_url = "/My/Settings"; // base url for the controller
 
-        save_fields = "email fname lname address1 address2 city state zip phone lang ui_theme ui_mode";
+        save_fields = "email fname lname address1 address2 city state zip phone lang ui_theme ui_mode date_format time_format timezone";
 
         is_readonly = false;//allow update my stuff
     }
@@ -49,6 +50,16 @@ public class MySettingsController : FwController
 
         ps["id"] = id;
         ps["i"] = item;
+
+        ArrayList tz_options = [];
+        foreach (var tz in TimeZoneInfo.GetSystemTimeZones())
+        {
+            Hashtable h = [];
+            h["id"] = tz.Id;
+            h["iname"] = tz.DisplayName;
+            tz_options.Add(h);
+        }
+        ps["timezones"] = tz_options;
 
         return ps;
     }

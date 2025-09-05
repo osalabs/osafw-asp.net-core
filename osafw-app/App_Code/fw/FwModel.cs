@@ -1206,12 +1206,12 @@ public abstract class FwModel : IDisposable
             if (fw_subtype == "date")
             {
                 //if field is exactly DATE - show only date part without time - in YYYY-MM-DD format
-                item[fieldname] = DateUtils.Str2SQL((string)item[fieldname]);
+                item[fieldname] = DateUtils.Str2SQLUser((string)item[fieldname], fw.Session("date_format"), fw.Session("time_format"), fw.Session("timezone"));
             }
             else if (fw_type == "datetime")
             {
                 //if field is exactly DATETIME - show in YYYY-MM-DD HH:MM:SS format
-                item[fieldname] = DateUtils.Str2SQL((string)item[fieldname], true);
+                item[fieldname] = DateUtils.Str2SQLUser((string)item[fieldname], fw.Session("date_format"), fw.Session("time_format"), fw.Session("timezone"), true);
             }
             else if (fw_subtype == "bit")
             {
