@@ -11,11 +11,11 @@ namespace osafw.Tests
         {
             DateTime d = DateTime.UtcNow;
             String r = DateUtils.Date2SQL(d);
-            Assert.AreEqual(r, d.Year + "-" + d.Month + "-" + d.Day);
+            Assert.AreEqual(r, d.ToString("yyyy-MM-dd"));
 
             // with time
             r = DateUtils.Date2SQL(d, true);
-            Assert.AreEqual(r, d.Year + "-" + d.Month + "-" + d.Day + " " + d.Hour + ":" + d.Minute + ":" + d.Second);
+            Assert.AreEqual(r, d.ToString("yyyy-MM-dd HH:mm:ss"));
         }
 
         [TestMethod()]
@@ -23,7 +23,7 @@ namespace osafw.Tests
         {
             DateTime d = DateTime.UtcNow;
             String r = DateUtils.Date2Str(d, DateUtils.DATE_FORMAT_MDY);
-            Assert.AreEqual(r, d.Month + "/" + d.Day + "/" + d.Year);
+            Assert.AreEqual(r, d.ToString("MM/dd/yyyy"));
         }
 
         [TestMethod()]
@@ -38,6 +38,33 @@ namespace osafw.Tests
             Assert.AreEqual(d.Hour, r.Hour);
             Assert.AreEqual(d.Minute, r.Minute);
             Assert.AreEqual(d.Second, r.Second);
+
+            str = d.ToString("yyyy-MM-dd");
+            r = (DateTime)DateUtils.SQL2Date(str);
+            Assert.AreEqual(d.Year, r.Year);
+            Assert.AreEqual(d.Month, r.Month);
+            Assert.AreEqual(d.Day, r.Day);
+            Assert.AreEqual(0, r.Hour);
+            Assert.AreEqual(0, r.Minute);
+            Assert.AreEqual(0, r.Second);
+
+            // not an SQL date - should return null
+            str = "1/1/2000";
+            DateTime? r2 = DateUtils.SQL2Date(str);
+            Assert.AreEqual(null, r2);
+
+            // null input should return null
+            r2 = DateUtils.SQL2Date(null);
+            Assert.AreEqual(null, r2);
+
+            // empty input should return null
+            r2 = DateUtils.SQL2Date("");
+            Assert.AreEqual(null, r2);
+
+            // invalid input should return null
+            r2 = DateUtils.SQL2Date("invalid_date");
+            Assert.AreEqual(null, r2);
+
         }
 
         [TestMethod()]

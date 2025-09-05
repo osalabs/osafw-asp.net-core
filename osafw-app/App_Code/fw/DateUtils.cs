@@ -80,7 +80,6 @@ public class DateUtils
         string format = "yyyy-MM-dd";
         if (is_include_time)
             format = "yyyy-MM-dd HH:mm:ss";
-        // Use "D2" for month and day to ensure leading zeros
         return d.ToString(format, System.Globalization.CultureInfo.InvariantCulture);
     }
 
@@ -101,7 +100,7 @@ public class DateUtils
     }
 
     /// <summary>
-    /// return true if string is date in format MM/DD/YYYY
+    /// return true if string is date in format MM/DD/YYYY or D/M/YYYY
     /// </summary>
     /// <param name="str"></param>
     /// <returns></returns>
@@ -116,16 +115,13 @@ public class DateUtils
 
         if (string.IsNullOrEmpty(str) || str == "0000-00-00" || str == "0000-00-00 00:00:00")
             return result;
-        // yyyy-mm-dd
-        Match m = Regex.Match(str, @"^(\d+)-(\d+)-(\d+)");
-        // hh:mm:ss
-        Match m2 = Regex.Match(str, @"(\d+):(\d+):(\d+)$");
 
-        if (m2.Success)
-            result = new DateTime(System.Convert.ToInt32(m.Groups[1].Value), System.Convert.ToInt32(m.Groups[2].Value), System.Convert.ToInt32(m.Groups[3].Value), System.Convert.ToInt32(m2.Groups[1].Value), System.Convert.ToInt32(m2.Groups[2].Value), System.Convert.ToInt32(m2.Groups[3].Value));
-        else
-            result = new DateTime(System.Convert.ToInt32(m.Groups[1].Value), System.Convert.ToInt32(m.Groups[2].Value), System.Convert.ToInt32(m.Groups[3].Value));
-
+        // Only accept SQL formats
+        if (Regex.IsMatch(str, @"^\d{4}-\d{2}-\d{2}$") || Regex.IsMatch(str, @"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$"))
+        {
+            if (DateTime.TryParse(str, out DateTime tmpdate))
+                result = tmpdate;
+        }
         return result;
     }
 
