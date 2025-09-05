@@ -950,34 +950,36 @@ public class ParsePage
                 if (attr_count > 0 && hattrs.ContainsKey("date"))
                 {
                     string dformat = (string)hattrs["date"];
+                    Hashtable g = globalsGetter?.Invoke();
+                    string date_fmt = session?.GetString("date_fmt") ?? g?["date_fmt"].toStr();
+                    string time_fmt = session?.GetString("time_fmt") ?? g?["time_fmt"].toStr();
+                    string timezone = session?.GetString("timezone") ?? g?["timezone"].toStr();
+                    date_fmt = string.IsNullOrEmpty(date_fmt) ? "MDY" : date_fmt;
+                    time_fmt = string.IsNullOrEmpty(time_fmt) ? "24" : time_fmt;
+                    timezone = string.IsNullOrEmpty(timezone) ? "UTC" : timezone;
+
                     switch (dformat)
                     {
                         case "":
-                            {
-                                dformat = DATE_FORMAT_DEF;
-                                break;
-                            }
-
+                            dformat = DateUtils.getDateFormat(date_fmt);
+                            break;
                         case "short":
-                            {
-                                dformat = DATE_FORMAT_SHORT;
-                                break;
-                            }
-
+                            dformat = DateUtils.getDateTimeFormat(date_fmt, time_fmt, false);
+                            break;
                         case "long":
-                            {
-                                dformat = DATE_FORMAT_LONG;
-                                break;
-                            }
-
+                            dformat = DateUtils.getDateTimeFormat(date_fmt, time_fmt, true);
+                            break;
                         case "sql":
-                            {
-                                dformat = DATE_FORMAT_SQL;
-                                break;
-                            }
+                            dformat = DATE_FORMAT_SQL;
+                            break;
+                        default:
+                            break;
                     }
                     if (DateTime.TryParse(value, out DateTime dt))
-                        value = dt.ToString(dformat, System.Globalization.DateTimeFormatInfo.InvariantInfo);
+                    {
+                        dt = DateUtils.Utc2Tz(dt, timezone);
+                        value = dt.ToString(dformat, CultureInfo.InvariantCulture);
+                    }
                     attr_count -= 1;
                 }
                 if (attr_count > 0 && hattrs.ContainsKey("trim"))

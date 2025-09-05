@@ -3,6 +3,7 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
+using System;
 using System.Collections;
 
 namespace osafw;
@@ -20,7 +21,7 @@ public class MySettingsController : FwController
         required_fields = "email"; // default required fields, space-separated
         base_url = "/My/Settings"; // base url for the controller
 
-        save_fields = "email fname lname address1 address2 city state zip phone lang ui_theme ui_mode";
+        save_fields = "email fname lname address1 address2 city state zip phone lang ui_theme ui_mode date_fmt time_fmt timezone";
 
         is_readonly = false;//allow update my stuff
     }
@@ -47,8 +48,32 @@ public class MySettingsController : FwController
             item = itemdb;
         }
 
+        // ensure defaults if empty
+        if (string.IsNullOrEmpty((string)item["date_fmt"])) item["date_fmt"] = fw.config("date_fmt");
+        if (string.IsNullOrEmpty((string)item["time_fmt"])) item["time_fmt"] = fw.config("time_fmt");
+        if (string.IsNullOrEmpty((string)item["timezone"])) item["timezone"] = fw.config("timezone");
+
         ps["id"] = id;
         ps["i"] = item;
+
+        // options for formats and timezones
+        ArrayList date_fmts = new()
+        {
+            new Hashtable {{"id","MDY"},{"iname","MM/DD/YYYY"}},
+            new Hashtable {{"id","DMY"},{"iname","DD/MM/YYYY"}}
+        };
+        ArrayList time_fmts = new()
+        {
+            new Hashtable {{"id","12"},{"iname","12-hour"}},
+            new Hashtable {{"id","24"},{"iname","24-hour"}}
+        };
+        ArrayList timezones = [];
+        foreach (var tz in TimeZoneInfo.GetSystemTimeZones())
+            timezones.Add(new Hashtable {{"id", tz.Id}, {"iname", tz.DisplayName}});
+
+        ps["date_fmts"] = date_fmts;
+        ps["time_fmts"] = time_fmts;
+        ps["timezones"] = timezones;
 
         return ps;
     }

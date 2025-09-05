@@ -3,7 +3,7 @@
 <script>
     $(document).ready(function() {
         var autoClose = true;
-        $('.date').datepicker({format: 'mm/dd/yyyy', autoclose: autoClose})
+        $('.date').datepicker({format: '<~GLOBAL[date_fmt_js]>', autoclose: autoClose})
             .on('changeDate', function (e) {
                 if (e.viewMode=='years' || e.viewMode=='months' ) return; //do not trigger change yet, while user selecting year/month
                 $(this).find('input').trigger('change');
@@ -22,14 +22,19 @@
             });
 
         //allow to support time - just add "datetime" class
-        function formatAMPM(date) {
+        var TIME_FMT = '<~GLOBAL[time_fmt]>';
+        function formatTime(date) {
           var hours = date.getHours();
           var minutes = date.getMinutes();
-          var ampm = hours >= 12 ? 'PM' : 'AM';
-          hours = hours % 12;
-          hours = hours ? hours : 12; // the hour '0' should be '12'
-          minutes = minutes < 10 ? '0'+minutes : minutes;
-          var strTime = hours + ':' + minutes + ' ' + ampm;
+          var strTime;
+          if (TIME_FMT==='12') {
+            var ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12;
+            hours = hours ? hours : 12;
+            strTime = hours + ':' + minutes.toString().padStart(2,'0') + ' ' + ampm;
+          } else {
+            strTime = hours.toString().padStart(2,'0') + ':' + minutes.toString().padStart(2,'0');
+          }
           return strTime;
         }
 
@@ -37,8 +42,8 @@
             //console.log('datetime change');
             var $this=$(this);
             var deftime = $this.data('default-time');
-            if (deftime=='now') deftime=formatAMPM(new Date());
-            if (!deftime) deftime='9:00 AM';
+            if (deftime=='now') deftime=formatTime(new Date());
+            if (!deftime) deftime = TIME_FMT==='12' ? '9:00 AM' : '09:00';
 
             var $input = $this.find('input');
             var val = $input.val();

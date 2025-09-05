@@ -94,6 +94,13 @@ public class Users : FwModel
         if (!item.ContainsKey("ui_mode"))
             item["ui_mode"] = fw.config("ui_mode").toInt();
 
+        if (!item.ContainsKey("date_fmt"))
+            item["date_fmt"] = fw.config("date_fmt").toStr();
+        if (!item.ContainsKey("time_fmt"))
+            item["time_fmt"] = fw.config("time_fmt").toStr();
+        if (!item.ContainsKey("timezone"))
+            item["timezone"] = fw.config("timezone").toStr();
+
         return base.add(item);
     }
 
@@ -350,6 +357,9 @@ public class Users : FwModel
         fw.Session("lang", user["lang"]);
         fw.Session("ui_theme", user["ui_theme"]);
         fw.Session("ui_mode", user["ui_mode"]);
+        fw.Session("date_fmt", user["date_fmt"]);
+        fw.Session("time_fmt", user["time_fmt"]);
+        fw.Session("timezone", user["timezone"]);
         // fw.SESSION("user", hU)
 
         var fname = user["fname"].Trim();

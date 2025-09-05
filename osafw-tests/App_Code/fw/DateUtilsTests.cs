@@ -157,7 +157,22 @@ namespace osafw.Tests
             long r = DateUtils.Date2JsTimestamp(d);
 
             Assert.AreEqual(r, System.Convert.ToInt64(time.Ticks / (double)10000));
-           
+
+        }
+
+        [TestMethod]
+        public void GetDateTimeFormatTest()
+        {
+            string fmt = DateUtils.getDateTimeFormat("DMY", "12", false);
+            Assert.AreEqual("dd/MM/yyyy hh:mm tt", fmt);
+        }
+
+        [TestMethod]
+        public void Utc2TzTest()
+        {
+            DateTime utc = new(2024, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+            DateTime local = DateUtils.Utc2Tz(utc, "UTC");
+            Assert.AreEqual(utc, local);
         }
     }
 }

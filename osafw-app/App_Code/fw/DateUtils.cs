@@ -4,6 +4,8 @@
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
 using System;
+using System.Collections;
+using System.Globalization;
 using System.Text.RegularExpressions;
 
 namespace osafw;
@@ -38,6 +40,73 @@ public class DateUtils
     public static bool isDateStr(string str)
     {
         return Regex.IsMatch(str, @"^\d{1,2}/\d{1,2}/\d{4}$");
+    }
+
+    public static string getDateFormat(string date_fmt)
+    {
+        return date_fmt == "DMY" ? "dd/MM/yyyy" : "MM/dd/yyyy";
+    }
+
+    public static string getDateTimeFormat(string date_fmt, string time_fmt, bool with_seconds = false)
+    {
+        string df = getDateFormat(date_fmt);
+        string tf = time_fmt == "12" ? (with_seconds ? " hh:mm:ss tt" : " hh:mm tt") : (with_seconds ? " HH:mm:ss" : " HH:mm");
+        return df + tf;
+    }
+
+    public static string getJsDateFormat(string date_fmt)
+    {
+        return date_fmt == "DMY" ? "dd/mm/yyyy" : "mm/dd/yyyy";
+    }
+
+    public static DateTime Utc2Tz(DateTime dt, string timezone)
+    {
+        if (dt.Kind != DateTimeKind.Utc)
+            dt = DateTime.SpecifyKind(dt, DateTimeKind.Utc);
+        try
+        {
+            var tz = TimeZoneInfo.FindSystemTimeZoneById(timezone);
+            return TimeZoneInfo.ConvertTimeFromUtc(dt, tz);
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            return dt;
+        }
+    }
+
+    public static DateTime Tz2Utc(DateTime dt, string timezone)
+    {
+        try
+        {
+            var tz = TimeZoneInfo.FindSystemTimeZoneById(timezone);
+            if (dt.Kind == DateTimeKind.Unspecified)
+                return TimeZoneInfo.ConvertTimeToUtc(dt, tz);
+            return TimeZoneInfo.ConvertTime(dt, tz, TimeZoneInfo.Utc);
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            return dt;
+        }
+    }
+
+    public static string UserStr2SQLDate(string str, string date_fmt)
+    {
+        if (string.IsNullOrEmpty(str)) return "";
+        if (DateTime.TryParseExact(str, getDateFormat(date_fmt), CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime dt))
+            return dt.ToString("yyyy-MM-dd");
+        return "";
+    }
+
+    public static string UserStr2SQLDateTime(string str, string date_fmt, string time_fmt, string timezone)
+    {
+        if (string.IsNullOrEmpty(str)) return "";
+        var formats = new[] { getDateTimeFormat(date_fmt, time_fmt, true), getDateTimeFormat(date_fmt, time_fmt, false) };
+        if (DateTime.TryParseExact(str, formats, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime dt))
+        {
+            var utc = Tz2Utc(dt, timezone);
+            return utc.ToString("yyyy-MM-dd HH:mm:ss");
+        }
+        return "";
     }
 
     public static DateTime? SQL2Date(string str)

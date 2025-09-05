@@ -154,6 +154,12 @@ public class FW : IDisposable
         // override default ui_theme/ui_mode with user's settings
         if (!string.IsNullOrEmpty(Session("ui_theme"))) G["ui_theme"] = Session("ui_theme");
         if (!string.IsNullOrEmpty(Session("ui_mode"))) G["ui_mode"] = Session("ui_mode");
+        if (!string.IsNullOrEmpty(Session("date_fmt"))) G["date_fmt"] = Session("date_fmt");
+        if (!string.IsNullOrEmpty(Session("time_fmt"))) G["time_fmt"] = Session("time_fmt");
+        if (!string.IsNullOrEmpty(Session("timezone"))) G["timezone"] = Session("timezone");
+
+        // derived formats for client side
+        G["date_fmt_js"] = DateUtils.getJsDateFormat(G["date_fmt"].toStr());
 
         FormErrors = []; // reset errors
         parseForm();
