@@ -2,6 +2,7 @@ $(document).on('click', '.on-pwd-hideshow', pwd_hideshow);
 pwd_hideshow();
 
 $('#login').focus();
+$('#timezone').val(Intl.DateTimeFormat().resolvedOptions().timeZone);
 
 function pwd_hideshow(){
   var $chpwd=$('#chpwd');

@@ -20,7 +20,7 @@ public class MySettingsController : FwController
         required_fields = "email"; // default required fields, space-separated
         base_url = "/My/Settings"; // base url for the controller
 
-        save_fields = "email fname lname address1 address2 city state zip phone lang ui_theme ui_mode";
+        save_fields = "email fname lname address1 address2 city state zip phone lang ui_theme ui_mode date_format time_format timezone";
 
         is_readonly = false;//allow update my stuff
     }

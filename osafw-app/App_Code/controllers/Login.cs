@@ -115,7 +115,7 @@ public class LoginController : FwController
                 }
             }
 
-            performLogin(user["id"].toInt(), item["remember"].toStr(), gourl);
+            performLogin(user["id"].toInt(), item["remember"].toStr(), gourl, item["timezone"].toStr());
         }
         catch (ApplicationException ex)
         {
@@ -191,12 +191,22 @@ public class LoginController : FwController
         }
 
         // mfa ok - login
-        performLogin(users_id, fw.Session("mfa_login_remember"), fw.Session("mfa_login_gourl"));
+        performLogin(users_id, fw.Session("mfa_login_remember"), fw.Session("mfa_login_gourl"), "");
     }
 
-    private void performLogin(int users_id, string remember, string gourl)
+    private void performLogin(int users_id, string remember, string gourl, string timezone)
     {
         model.doLogin(users_id);
+
+        if (!string.IsNullOrEmpty(timezone))
+        {
+            var user = model.one(users_id);
+            if (string.IsNullOrEmpty(user["timezone"].toStr()))
+            {
+                model.update(users_id, DB.h("timezone", timezone));
+                fw.Session("timezone", timezone);
+            }
+        }
 
         // Check is login need to be remembered
         if (!Utils.isEmpty(remember))

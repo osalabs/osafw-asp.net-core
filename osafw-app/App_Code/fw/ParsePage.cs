@@ -950,23 +950,28 @@ public class ParsePage
                 if (attr_count > 0 && hattrs.ContainsKey("date"))
                 {
                     string dformat = (string)hattrs["date"];
+                    Hashtable g = globalsGetter();
+                    string userDateFormat = g["date_format"].toStr();
+                    string userTimeFormat = g["time_format"].toStr();
+                    string userTimeFormatLong = userTimeFormat.Contains("H") ? "HH:mm:ss" : "hh:mm:ss tt";
+                    string timezone = g["timezone"].toStr();
                     switch (dformat)
                     {
                         case "":
                             {
-                                dformat = DATE_FORMAT_DEF;
+                                dformat = userDateFormat;
                                 break;
                             }
 
                         case "short":
                             {
-                                dformat = DATE_FORMAT_SHORT;
+                                dformat = userDateFormat + " " + userTimeFormat;
                                 break;
                             }
 
                         case "long":
                             {
-                                dformat = DATE_FORMAT_LONG;
+                                dformat = userDateFormat + " " + userTimeFormatLong;
                                 break;
                             }
 
@@ -977,8 +982,41 @@ public class ParsePage
                             }
                     }
                     if (DateTime.TryParse(value, out DateTime dt))
+                    {
+                        dt = DateTime.SpecifyKind(dt, DateTimeKind.Utc);
+                        try
+                        {
+                            var tz = TimeZoneInfo.FindSystemTimeZoneById(timezone);
+                            dt = TimeZoneInfo.ConvertTimeFromUtc(dt, tz);
+                        }
+                        catch (TimeZoneNotFoundException)
+                        {
+                        }
                         value = dt.ToString(dformat, System.Globalization.DateTimeFormatInfo.InvariantInfo);
+                    }
                     attr_count -= 1;
+                }
+                else if (attr_count == 0)
+                {
+                    Hashtable g = globalsGetter();
+                    string userDateFormat = g["date_format"].toStr();
+                    string userTimeFormat = g["time_format"].toStr();
+                    string userTimeFormatLong = userTimeFormat.Contains("H") ? "HH:mm:ss" : "hh:mm:ss tt";
+                    string timezone = g["timezone"].toStr();
+                    if (DateTime.TryParse(value, out DateTime dt))
+                    {
+                        dt = DateTime.SpecifyKind(dt, DateTimeKind.Utc);
+                        try
+                        {
+                            var tz = TimeZoneInfo.FindSystemTimeZoneById(timezone);
+                            dt = TimeZoneInfo.ConvertTimeFromUtc(dt, tz);
+                        }
+                        catch (TimeZoneNotFoundException)
+                        {
+                        }
+                        string df = dt.TimeOfDay.TotalSeconds > 0 ? userDateFormat + " " + (dt.Second > 0 ? userTimeFormatLong : userTimeFormat) : userDateFormat;
+                        value = dt.ToString(df, System.Globalization.DateTimeFormatInfo.InvariantInfo);
+                    }
                 }
                 if (attr_count > 0 && hattrs.ContainsKey("trim"))
                 {

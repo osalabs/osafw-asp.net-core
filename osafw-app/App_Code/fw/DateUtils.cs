@@ -5,6 +5,7 @@
 
 using System;
 using System.Text.RegularExpressions;
+using System.Globalization;
 
 namespace osafw;
 
@@ -73,6 +74,33 @@ public class DateUtils
         }
 
         return result;
+    }
+
+    public static string UserStr2SQL(string str, string date_format, string time_format, string timezone, bool is_time = false)
+    {
+        if (string.IsNullOrEmpty(str)) return "";
+        string format = is_time ? ($"{date_format} {time_format}") : date_format;
+        if (DateTime.TryParseExact(str, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime tmpdate))
+        {
+            if (is_time)
+            {
+                try
+                {
+                    var tz = TimeZoneInfo.FindSystemTimeZoneById(timezone);
+                    var local = DateTime.SpecifyKind(tmpdate, DateTimeKind.Unspecified);
+                    var utc = TimeZoneInfo.ConvertTimeToUtc(local, tz);
+                    return utc.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+                }
+                catch (TimeZoneNotFoundException)
+                {
+                }
+            }
+            else
+            {
+                return tmpdate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+            }
+        }
+        return "";
     }
 
     // IN: datetime string

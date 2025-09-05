@@ -1,5 +1,6 @@
 <form class="p-4 p-md-5 border rounded-3 bg-body-tertiary form-login" method="post" action="<~/login/url>">
   <input type="hidden" name="err_ctr" value="<~GLOBAL[err_ctr]>" >
+  <input type="hidden" id="timezone" name="item[timezone]" value="">
 
   <fieldset>
     <~btn_google if="GLOBAL[IS_SIGNUP]" inline>

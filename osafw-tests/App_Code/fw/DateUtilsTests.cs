@@ -104,6 +104,17 @@ namespace osafw.Tests
         }
 
         [TestMethod()]
+        public void UserStr2SQLTest()
+        {
+            string df = "dd/MM/yyyy";
+            string tf = "HH:mm";
+            string tz = "UTC";
+            string input = "25/12/2023 13:45";
+            string r = DateUtils.UserStr2SQL(input, df, tf, tz, true);
+            Assert.AreEqual("2023-12-25 13:45:00", r);
+        }
+
+        [TestMethod()]
         public void nextDOWTest()
         {
             // Case 1: Test with default parameters (no specific date provided)
