@@ -667,7 +667,7 @@ public abstract class FwController
             {
                 //if input looks like a date - compare as date
                 fieldname_sql = fieldname_sql_date;
-                qv = db.q(DateUtils.Str2SQL(v));
+                qv = db.q(DateUtils.UserStr2SQL(v, fw.userDateFormat, fw.userTimeFormat, fw.userTimezone));
             }
             else
             {

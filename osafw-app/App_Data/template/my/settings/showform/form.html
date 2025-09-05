@@ -73,6 +73,31 @@
     </div>
 
     <div class="row form-row">
+      <label class="col-form-label col-md-3" for="date_format">`Date Format`</label>
+      <div class="col-md-2">
+        <select id="date_format" name="item[date_format]" class="form-select">
+          <~/common/sel/date_format.sel select="i[date_format]">
+        </select>
+      </div>
+
+      <label class="col-form-label col-md-2" for="time_format">`Time Format`</label>
+      <div class="col-md-2">
+        <select id="time_format" name="item[time_format]" class="form-select">
+          <~/common/sel/time_format.sel select="i[time_format]">
+        </select>
+      </div>
+    </div>
+
+    <div class="row form-row">
+      <label class="col-form-label col-md-3" for="timezone">`Time Zone`</label>
+      <div class="col-md-3">
+        <select id="timezone" name="item[timezone]" class="form-select">
+          <~/common/sel/timezone.sel select="i[timezone]">
+        </select>
+      </div>
+    </div>
+
+    <div class="row form-row">
       <label class="col-form-label col-md-3" for="ui_theme">`Interface Theme`</label>
       <div class="col-md-2">
         <select id="ui_theme" name="item[ui_theme]" class="form-select">

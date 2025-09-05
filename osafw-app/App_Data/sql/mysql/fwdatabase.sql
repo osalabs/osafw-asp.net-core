@@ -99,6 +99,11 @@ CREATE TABLE users (
   zip                   VARCHAR(16) NOT NULL DEFAULT '',
   phone                 VARCHAR(16) NOT NULL DEFAULT '',
   lang                  VARCHAR(16) NOT NULL DEFAULT 'en', -- user interface language
+  ui_theme              TINYINT NOT NULL DEFAULT 0, -- 0--default theme
+  ui_mode               TINYINT NOT NULL DEFAULT 0, -- 0--auto, 10-light, 20-dark
+  date_format           VARCHAR(32) NOT NULL DEFAULT 'MM/dd/yyyy', -- user date format
+  time_format           VARCHAR(32) NOT NULL DEFAULT 'hh:mm tt', -- user time format
+  timezone              VARCHAR(64) NOT NULL DEFAULT 'UTC', -- user timezone
 
   idesc                 TEXT,
   att_id                INT NULL,                -- avatar

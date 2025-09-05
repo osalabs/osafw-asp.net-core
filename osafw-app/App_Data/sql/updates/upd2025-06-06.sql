@@ -1,0 +1,3 @@
+ALTER TABLE users ADD date_format NVARCHAR(32) NOT NULL DEFAULT 'MM/dd/yyyy';
+ALTER TABLE users ADD time_format NVARCHAR(32) NOT NULL DEFAULT 'hh:mm tt';
+ALTER TABLE users ADD timezone NVARCHAR(64) NOT NULL DEFAULT 'UTC';

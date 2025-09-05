@@ -93,6 +93,21 @@ public class FW : IDisposable
         get { return userId > 0; }
     }
 
+    public string userDateFormat
+    {
+        get { return Session("date_format") ?? config("date_format").toStr(); }
+    }
+
+    public string userTimeFormat
+    {
+        get { return Session("time_format") ?? config("time_format").toStr(); }
+    }
+
+    public string userTimezone
+    {
+        get { return Session("timezone") ?? config("timezone").toStr(); }
+    }
+
     // helper to initialize DB instance based on configuration name
     public DB getDB(string config_name = "main")
     {
@@ -148,12 +163,14 @@ public class FW : IDisposable
         G["request_url"] = request?.GetDisplayUrl() ?? "";
         G["current_time"] = DateTime.Now;
 
-        // override default lang with user's lang
+        // override defaults with user's settings
         if (!string.IsNullOrEmpty(Session("lang"))) G["lang"] = Session("lang");
-
-        // override default ui_theme/ui_mode with user's settings
         if (!string.IsNullOrEmpty(Session("ui_theme"))) G["ui_theme"] = Session("ui_theme");
         if (!string.IsNullOrEmpty(Session("ui_mode"))) G["ui_mode"] = Session("ui_mode");
+        if (!string.IsNullOrEmpty(Session("date_format"))) G["date_format"] = Session("date_format");
+        if (!string.IsNullOrEmpty(Session("time_format"))) G["time_format"] = Session("time_format");
+        if (!string.IsNullOrEmpty(Session("timezone"))) G["timezone"] = Session("timezone");
+        G["date_format_js"] = G["date_format"].ToString().ToLower();
 
         FormErrors = []; // reset errors
         parseForm();
