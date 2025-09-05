@@ -10,6 +10,8 @@ namespace osafw;
 
 public class DateUtils
 {
+    public const string DATABASE_TZ = "UTC"; // timezone of the database server
+
 
     public const string TZ_UTC = "UTC";
 

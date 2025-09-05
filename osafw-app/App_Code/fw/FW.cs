@@ -905,16 +905,31 @@ public class FW : IDisposable
     public ParsePage parsePageInstance()
     {
         // if pp_instance not yet set - instantiate
-        pp_instance ??= new ParsePage(new ParsePageOptions
+        if (pp_instance == null)
         {
-            TemplatesRoot = config("template").toStr(),
-            IsCheckFileModifications = (LogLevel)config("log_level") >= LogLevel.DEBUG,
-            Lang = G["lang"].toStr(),
-            IsLangUpdate = config("is_lang_update").toBool(),
-            GlobalsGetter = () => G,
-            Session = context?.Session,
-            Logger = (level, args) => logger(level, args)
-        });
+            // prepare date/time formats for ParsePage
+            // see template/common/sel for available formats
+            var DateFormat = G["date_format"].toInt() == 10 ? "dd/MM/yyyy" : "MM/dd/yyyy";
+            var DateFormatShort = DateFormat + " " + (G["time_format"].toInt() == 10 ? "HH:mm" : "hh:mm tt");
+            var DateFormatLong = DateFormat + " " + (G["time_format"].toInt() == 10 ? "HH:mm:ss" : "hh:mm:ss tt");
+
+            pp_instance = new ParsePage(new ParsePageOptions
+            {
+                TemplatesRoot = config("template").toStr(),
+                IsCheckFileModifications = (LogLevel)config("log_level") >= LogLevel.DEBUG,
+                Lang = G["lang"].toStr(),
+                IsLangUpdate = config("is_lang_update").toBool(),
+                GlobalsGetter = () => G,
+                Session = context?.Session,
+                Logger = (level, args) => logger(level, args),
+
+                DateFormat = DateFormat,
+                DateFormatShort = DateFormatShort,
+                DateFormatLong = DateFormatLong,
+                InputTimezone = DateUtils.DATABASE_TZ,
+                OutputTimezone = G["timezone"].toStr(),
+            });
+        }
         return pp_instance;
     }
 
