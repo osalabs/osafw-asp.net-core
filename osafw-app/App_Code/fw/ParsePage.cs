@@ -91,9 +91,9 @@ Parses file templates and replaces <~tags> with values from hashtable
  support modifiers:
   htmlescape
   date          - format as datetime, sample "d M yyyy HH:mm", see https://docs.microsoft.com/en-us/dotnet/standard/base-types/custom-date-and-time-format-strings
-        <~var date>         output "M/d/yyyy" - date only (TODO - should be formatted per user settings actually)
-        <~var date="short"> output "M/d/yyyy hh:mm" - date and time short (to mins)
-        <~var date="long">  output "M/d/yyyy hh:mm:ss" - date and time long
+        <~var date>         output date only in user's format
+        <~var date="short"> output date and time (to mins) in user's format
+        <~var date="long">  output date and time (with seconds) in user's format
         <~var date="sql">   output "yyyy-MM-dd hh:mm:ss" - sql date and time
   url           - add http:// to begin of string if absent
   number_format - FormatNumber(value, 2) => 12345.12
@@ -156,10 +156,24 @@ public class ParsePage
 
     private static readonly string[] IFOPERS = ["if", "unless", "ifne", "ifeq", "ifgt", "iflt", "ifge", "ifle"];
 
-    private const string DATE_FORMAT_DEF = "M/d/yyyy"; // for US, TODO make based on user settigns (with fallback to server's settings)
-    private const string DATE_FORMAT_SHORT = "M/d/yyyy HH:mm";
-    private const string DATE_FORMAT_LONG = "M/d/yyyy HH:mm:ss";
     private const string DATE_FORMAT_SQL = "yyyy-MM-dd HH:mm:ss";
+
+    private string getDateFormat(string type)
+    {
+        var globals = globalsGetter();
+        string df = session?.GetString("date_format") ?? globals["date_format"].toStr();
+        string tf = session?.GetString("time_format") ?? globals["time_format"].toStr();
+        string datePart = df == "DMY" ? "dd/MM/yyyy" : "MM/dd/yyyy";
+        bool is12 = tf == "12";
+        string timePart = is12 ? "hh:mm tt" : "HH:mm";
+        string timePartLong = is12 ? "hh:mm:ss tt" : "HH:mm:ss";
+        return type switch
+        {
+            "short" => datePart + " " + timePart,
+            "long" => datePart + " " + timePartLong,
+            _ => datePart
+        };
+    }
     // "d M yyyy HH:mm"
 
     // for dynamic load of Markdig markdown converter
@@ -953,31 +967,28 @@ public class ParsePage
                     switch (dformat)
                     {
                         case "":
-                            {
-                                dformat = DATE_FORMAT_DEF;
-                                break;
-                            }
-
+                            dformat = getDateFormat("");
+                            break;
                         case "short":
-                            {
-                                dformat = DATE_FORMAT_SHORT;
-                                break;
-                            }
-
+                            dformat = getDateFormat("short");
+                            break;
                         case "long":
-                            {
-                                dformat = DATE_FORMAT_LONG;
-                                break;
-                            }
-
+                            dformat = getDateFormat("long");
+                            break;
                         case "sql":
-                            {
-                                dformat = DATE_FORMAT_SQL;
-                                break;
-                            }
+                            dformat = DATE_FORMAT_SQL;
+                            break;
                     }
                     if (DateTime.TryParse(value, out DateTime dt))
-                        value = dt.ToString(dformat, System.Globalization.DateTimeFormatInfo.InvariantInfo);
+                    {
+                        var tzid = session?.GetString("timezone") ?? globalsGetter()["timezone"].toStr();
+                        try
+                        {
+                            dt = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(dt, DateTimeKind.Utc), TimeZoneInfo.FindSystemTimeZoneById(tzid));
+                        }
+                        catch { }
+                        value = dt.ToString(dformat, CultureInfo.InvariantInfo);
+                    }
                     attr_count -= 1;
                 }
                 if (attr_count > 0 && hattrs.ContainsKey("trim"))

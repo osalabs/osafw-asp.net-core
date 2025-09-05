@@ -25,6 +25,8 @@ namespace osafw.Tests
             DateTime d = DateTime.UtcNow;
             String r = DateUtils.Date2Str(d);
             Assert.AreEqual(r, d.Month + "/" + d.Day + "/" + d.Year);
+            String r2 = DateUtils.Date2Str(d, "DMY");
+            Assert.AreEqual(r2, d.ToString("dd/MM/yyyy"));
         }
 
         [TestMethod()]
@@ -46,8 +48,16 @@ namespace osafw.Tests
         {
             DateTime d = DateTime.UtcNow;
             string r = DateUtils.Str2SQL(d.ToString("MM/dd/yyyy"));
-            
+
             Assert.AreEqual(r, d.ToString("yyyy-MM-dd"));
+        }
+
+        [TestMethod()]
+        public void Str2SQLUserTest()
+        {
+            string input = "31/12/2023 13:45";
+            string r = DateUtils.Str2SQLUser(input, "DMY", "24", "UTC", true);
+            Assert.AreEqual("2023-12-31 13:45:00", r);
         }
 
         [TestMethod]

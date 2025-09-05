@@ -10,6 +10,7 @@ namespace osafw;
 
 public class DateUtils
 {
+    public const string DB_TIMEZONE = "UTC";
     public static string toFormat(object d, string format)
     {
         var dt = d.toDateOrNull();
@@ -23,11 +24,10 @@ public class DateUtils
         return d.Year + "-" + d.Month + "-" + d.Day;
     }
 
-    // IN: VB Date
-    // OUT: MM/DD/YYYY
-    public static string Date2Str(DateTime d)
+    // OUT: user formatted date, default MDY
+    public static string Date2Str(DateTime d, string date_format = "MDY")
     {
-        return d.Month + "/" + d.Day + "/" + d.Year;
+        return date_format == "DMY" ? d.ToString("dd/MM/yyyy") : d.ToString("MM/dd/yyyy");
     }
 
     /// <summary>
@@ -63,9 +63,22 @@ public class DateUtils
     // OUT: YYYY-MM-DD[ HH:MM:SS]
     public static string Str2SQL(string str, bool is_time = false)
     {
+        return Str2SQLUser(str, "MDY", "24", "UTC", is_time);
+    }
+
+    public static string Str2SQLUser(string str, string date_format, string time_format, string timezone, bool is_time = false)
+    {
         string result = "";
-        if (DateTime.TryParse(str, out DateTime tmpdate))
+        var culture = date_format == "DMY" ? new System.Globalization.CultureInfo("en-GB") : new System.Globalization.CultureInfo("en-US");
+        if (DateTime.TryParse(str, culture, System.Globalization.DateTimeStyles.None, out DateTime tmpdate))
         {
+            try
+            {
+                var tz = TimeZoneInfo.FindSystemTimeZoneById(timezone);
+                tmpdate = TimeZoneInfo.ConvertTimeToUtc(tmpdate, tz);
+            }
+            catch { }
+
             string format = "yyyy-MM-dd HH:mm:ss";
             if (!is_time)
                 format = "yyyy-MM-dd";
@@ -91,11 +104,11 @@ public class DateUtils
 
     // IN: datetime string
     // OUT: HH:MM
-    public static string Date2TimeStr(string str)
+    public static string Date2TimeStr(string str, string time_format = "24")
     {
         string result = "";
         if (DateTime.TryParse(str, out DateTime tmpdate))
-            result = tmpdate.Hour.ToString("00") + ":" + tmpdate.Minute.ToString("00");
+            result = time_format == "12" ? tmpdate.ToString("hh:mm tt") : tmpdate.ToString("HH:mm");
 
         return result;
     }

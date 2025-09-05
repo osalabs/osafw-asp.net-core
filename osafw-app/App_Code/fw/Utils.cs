@@ -1701,4 +1701,9 @@ public class Utils
         }
     }
 
+    public static string DateFormatToJs(string format)
+    {
+        return format == "DMY" ? "dd/mm/yyyy" : "mm/dd/yyyy";
+    }
+
 }
