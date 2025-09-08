@@ -13,7 +13,7 @@ public class FwVueController : FwDynamicController
     public static new int access_level = Users.ACL_SITEADMIN;
 
     // list of keys from fw.G to pass to Vue
-    protected string global_keys = "ROOT_URL is_list_btn_left";
+    protected string global_keys = "ROOT_URL is_list_btn_left date_format time_format timezone";
 
     public override void init(FW fw)
     {

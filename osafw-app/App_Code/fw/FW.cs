@@ -108,6 +108,7 @@ public class FW : IDisposable
         get { return userId > 0; }
     }
 
+    // helper to convert date from database SQL format to logged user format
     public string formatUserDateTime(object o)
     {
         return DateUtils.SQL2Str(o.toStr(), userDateFormat, userTimeFormat, userTimezone);
