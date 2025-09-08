@@ -739,9 +739,14 @@ public class FwDynamicController : FwController
             else if (dtype == "att")
                 def["att"] = fw.model<Att>().one(item[field]);
             else if (dtype == "att_links")
-                def["att_links"] = fw.model<Att>().listLinked(model0.table_name, id.toInt());
+                def["att_links"] = fw.model<Att>().listLinked(model0.table_name, id);
             else if (dtype == "att_files")
-                def["att_files"] = fw.model<Att>().listByEntity(model0.table_name, id.toInt());
+            {
+                var att_list = fw.model<Att>().listByEntityCategory(model0.table_name, id, def["att_category"].toStr());
+                foreach (Hashtable row in att_list)
+                    row["fsize_human"] = Utils.bytes2str(row["fsize"].toLong());
+                def["att_files"] = att_list;
+            }
 
             else if (dtype == "subtable")
             {
@@ -885,9 +890,20 @@ public class FwDynamicController : FwController
                 def["value"] = item[field];
             }
             else if (dtype == "att_links_edit")
-                def["att_links"] = fw.model<Att>().listLinked(model0.table_name, id.toInt());
+                def["att_links"] = fw.model<Att>().listLinked(model0.table_name, id);
             else if (dtype == "att_files_edit")
-                def["att_files"] = fw.model<Att>().listByEntity(model0.table_name, id.toInt());
+            {
+                var att_list = fw.model<Att>().listByEntityCategory(model0.table_name, id, def["att_category"].toStr());
+                foreach (Hashtable row in att_list)
+                    row["fsize_human"] = Utils.bytes2str(row["fsize"].toLong());
+                def["att_files"] = att_list;
+
+                if (!def.ContainsKey("att_post_prefix"))
+                    def["att_post_prefix"] = def["field"];
+                def["fwentities_id"] = fw.model<FwEntities>().idByIcodeOrAdd(model0.table_name);
+                if (!Utils.isEmpty(def["att_category"]))
+                    def["att_category_id"] = fw.model<AttCategories>().oneByIcode(def["att_category"].toStr())["id"] ?? "";
+            }
 
             else if (dtype == "subtable_edit")
             {
@@ -1114,14 +1130,29 @@ public class FwDynamicController : FwController
             }
             else if (type == "att_files_edit")
             {
-                //table_name, item_id
-                var itemdb = new Hashtable {
-                    { "fwentities_id", fw.model<FwEntities>().idByIcodeOrAdd(model0.table_name) },
-                    { "item_id", id }
-                };
-                var addedAtt = fw.model<Att>().uploadMulti(itemdb);
+                // on submit - delete any att records not present in the post (i.e. deleted by user)
+                var att_post_prefix = def["att_post_prefix"].toStr("att");
+                var att_ids = reqh(att_post_prefix) ?? [];
+                var att_category = def["att_category"].toStr();
+                var att_model = fw.model<Att>();
 
+                var existing = att_model.listByEntityCategory(model0.table_name, id, att_category);
+                foreach (Hashtable row in existing)
+                {
+                    if (!att_ids.ContainsKey(row["id"]))
+                        att_model.delete(row["id"].toInt(), true);
+                }
             }
+            //TBD
+            //{
+            //    //table_name, item_id
+            //    var itemdb = new Hashtable {
+            //        { "fwentities_id", fw.model<FwEntities>().idByIcodeOrAdd(model0.table_name) },
+            //        { "item_id", id }
+            //    };
+            //    var addedAtt = fw.model<Att>().uploadMulti(itemdb);
+
+            //}
             else if (type == "multicb")
             {
                 if (Utils.isEmpty(def["model"]))

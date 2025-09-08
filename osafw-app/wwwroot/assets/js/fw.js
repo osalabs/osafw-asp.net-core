@@ -278,6 +278,7 @@ window.fw={
     fw.setup_autosave_form_handlers();
     fw.process_form_errors();
     fw.setup_file_drop_area();
+    fw.setup_att_files_upload();
 
     $(document).on('change', '.on-refresh', function (e) {
       var $this = $(this);
@@ -738,6 +739,85 @@ window.fw={
     });
   },
 
+  setup_att_files_upload: function(){
+    $(document).on('change', '.file-drop-area input[type=file]', function(e){
+      var $input = $(this);
+      var $drop = $input.closest('.file-drop-area');
+      var files = this.files;
+      if (!files.length) return;
+
+      var upload_url = $drop.data('upload-url') || '/Admin/Att';
+      var att_categories_id = $drop.data('att-categories-id');
+      var att_post_prefix = $drop.data('att-post-prefix') || 'att';
+      var item_id = $drop.data('item-id');
+      var fwentities_id = $drop.data('fwentities-id');
+      if (!item_id) { 
+          fw.alert('Save item first');
+          $input.val('');
+          return;
+      }
+
+      var $list = $drop.next('.att-list');
+      Array.from(files).forEach(function(file){
+        var $item = $list.find('.tpl').clone().removeClass('tpl d-none');
+        $item.find('.att-iname').text(file.name);
+        $item.find('.att-size').text('('+fw.bytes2str(file.size)+')');
+        var $progress = $item.find('.progress-bar');
+        $list.append($item);
+
+        var fd = new FormData();
+        fd.append('file1', file);
+        fd.append('item[att_categories_id]', att_categories_id);
+        fd.append('item[fwentities_id]', fwentities_id);
+        fd.append('item[item_id]', item_id);
+
+        $.ajax({
+          url: upload_url,
+          type: 'POST',
+          data: fd,
+          processData: false,
+          contentType: false,
+          dataType: 'json',
+          headers: {'Accept':'application/json'},
+          xhr: function(){
+            var xhr = new window.XMLHttpRequest();
+            xhr.upload.addEventListener('progress', function(evt){
+              if (evt.lengthComputable){
+                var percent = evt.loaded / evt.total * 100;
+                $progress.css('width', percent+'%');
+              }
+            }, false);
+            return xhr;
+          },
+          success: function(res){
+            $item.find('.progress').remove();
+            if (res && res.success){
+              $item.find('.att-iname').html('<a href="'+res.url+'" target="_blank">'+res.iname+'</a>');
+              $item.append('<input type="hidden" name="'+att_post_prefix+'['+res.id+']" value="1">');
+              $drop.closest('form').trigger('autosave');
+            }else{
+              $item.remove();
+              fw.error('Upload failed');
+            }
+            $input.val('');
+          },
+          error: function(){
+            $item.remove();
+            fw.error('Upload failed');
+            $input.val('');
+          }
+        });
+      });
+    });
+
+    $(document).on('click', '.on-remove-att', function(){
+      var $item=$(this).closest('.att-item');
+      var $form=$(this).closest('form');
+      $item.remove();
+      $form.trigger('autosave');
+    });
+  },
+
   delete_btn: function (ael){
     fw.confirm('<strong>ARE YOU SURE</strong> to delete this item?', function(){
       $('#FOneDelete').attr('action', ael.href).submit();
@@ -986,6 +1066,13 @@ window.fw={
       if (score > 60) return "good";
       if (score >= 30) return "weak";
       return "bad";
-  }
+    },
+
+   bytes2str: function(bytes){
+    var units=['B','KB','MB','GB','TB'];
+    var i=0;
+    while(bytes>=1024 && i<units.length-1){bytes/=1024;i++;}
+    return Math.round(bytes*10)/10+' '+units[i];
+  },
 
 };

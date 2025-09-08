@@ -95,7 +95,10 @@ More examples:
   {
       "type": "att_files",
       "field": "notused",
-      "label": "Photos"
+      "label": "Photos",
+      "multiple": true, // optional to enable uploading multiple files at once
+      "att_post_prefix": "docs", // optional input param name (default "att")
+      "att_category": "photos" // optional category icode (you can have multiple uploads on form for different categories)
   },
 
   //Show ID, Submit and Add New buttons
@@ -219,7 +222,7 @@ More examples:
 |multi_prio|Multi-selection list with priorities|
 |att|Block for displaying one attachment/file|
 |att_links|Block for displaying multiple attachments/files|
-|att_files|Block for displaying multiple attachments/files|
+|att_files|Block for displaying multiple attachments/files as a list, optionally filtered by `att_category`|
 |subtable|Block for viewing related records in a subtable|
 |added|Added on date/user block|
 |updated|Updated on date/user block|
@@ -245,7 +248,7 @@ More examples:
 |time|time input in HH:MM format|
 |att_edit|Block for selection/upload one attachment/file|
 |att_links_edit|Block for selection/upload multiple attachments/files (select existing or upload via Att modal)|
-|att_files_edit|Block for selection/upload multiple attachments/files (direct upload)|
+|att_files_edit|Direct file upload with progress; use `att_category` to set category and `att_post_prefix` for multiple components|
 |subtable_edit|Block for editing related records in a subtable; uses `model`, `save_fields` and `save_fields_checkboxes`, validates `required_fields` on each row|
 
 ### form_tabs

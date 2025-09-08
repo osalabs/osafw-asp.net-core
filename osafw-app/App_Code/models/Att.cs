@@ -425,6 +425,28 @@ public class Att : FwModel
         return db.array(table_name, where, "id");
     }
 
+    // return all att files linked via att.fwentities_id and att.item_id and att.att_categories_id
+    public ArrayList listByEntityCategory(string entity_icode, int item_id, string category_icode = "")
+    {
+        var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
+
+        var att_categories_id = 0;
+        if (!string.IsNullOrEmpty(category_icode))
+        {
+            var att_category = fw.model<AttCategories>().oneByIcode(category_icode);
+            if (att_category.Count == 0)
+                return [];
+            att_categories_id = att_category["id"].toInt();
+        }
+
+        Hashtable where = [];
+        where["status"] = STATUS_ACTIVE;
+        where["fwentities_id"] = fwentities_id;
+        where["item_id"] = item_id;
+        where["att_categories_id"] = att_categories_id;
+        return db.array(table_name, where, "id");
+    }
+
     // return one att record with additional check by entity
     public Hashtable oneWithEntityCheck(int id, string entity_icode)
     {
