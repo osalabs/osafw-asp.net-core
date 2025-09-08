@@ -442,15 +442,20 @@ public class FormUtils
         return new ArrayList(str.Split(",").Select(s => s.Trim()).ToList());
     }
 
-    // return date for combo date selection or Nothing if wrong date
-    // sample:
-    // <select name="item[fdate_combo_day]">
-    // <select name="item[fdate_combo_mon]">
-    // <select name="item[fdate_combo_year]">
-    // itemdb("fdate_combo") = FormUtils.date4combo(item, "fdate_combo")
-    public static object dateForCombo(Hashtable item, string field_prefix)
+    /// <summary>
+    /// return SQL date for combo date selection or Nothing if wrong date
+    /// sample:
+    ///   <select name="item[fdate_combo_day]">
+    ///   <select name="item[fdate_combo_mon]">
+    ///   <select name="item[fdate_combo_year]">
+    ///   itemdb["fdate_combo"] = FormUtils.dateForCombo(item, "fdate_combo")
+    /// </summary>
+    /// <param name="item"></param>
+    /// <param name="field_prefix"></param>
+    /// <returns></returns>
+    public static string dateForCombo(Hashtable item, string field_prefix)
     {
-        object result = null;
+        string result = "";
         if (item == null)
             return result;
 
@@ -462,11 +467,11 @@ public class FormUtils
         {
             try
             {
-                result = new DateTime(year, mon, day).ToOADate();
+                result = new DateTime(year, mon, day).ToString("yyyy-MM-dd HH:mm:ss");
             }
             catch (Exception)
             {
-                result = null;
+                result = "";
             }
         }
 

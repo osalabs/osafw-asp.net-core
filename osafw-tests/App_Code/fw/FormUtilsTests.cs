@@ -268,9 +268,10 @@ namespace osafw.Tests
             Assert.IsTrue(result1.ContainsKey("id2"), "Result should contain key 'id2'");
             Assert.IsTrue(result1.ContainsKey("id3"), "Result should contain key 'id3'");
 
-            // Case 2: Throw error for null input
+            // Case 2: For null input - empty hashtable
             string str2 = null;
-            Assert.ThrowsException<NullReferenceException>(() => FormUtils.ids2multi(str2), "Error for null input");
+            Hashtable result2 = FormUtils.ids2multi(str2);
+            Assert.AreEqual(0, result2.Count, "Result should not be null for null input");
 
             // Case 3: Return empty hashtable for empty input
             string str3 = "";
@@ -363,8 +364,8 @@ namespace osafw.Tests
                 { "fdate_combo_mon", "1" },
                 { "fdate_combo_year", "2023" }
             };
-            double? result1 = FormUtils.dateForCombo(item1, "fdate_combo") as double?;
-            Assert.AreEqual(new DateTime(2023, 1, 17).ToOADate(), result1, "Result should be correct OADate for valid date components");
+            string result1 = FormUtils.dateForCombo(item1, "fdate_combo");
+            Assert.AreEqual(new DateTime(2023, 1, 17).ToString("yyyy-MM-dd HH:mm:ss"), result1, "Result should be correct SQL date for valid date components");
 
             // Case 2: Test with missing day component
             Hashtable item2 = new()
@@ -373,8 +374,8 @@ namespace osafw.Tests
                 { "fdate_combo_mon", "1" },
                 { "fdate_combo_year", "2023" }
             };
-            object result2 = FormUtils.dateForCombo(item2, "fdate_combo");
-            Assert.IsNull(result2, "Result should be null for missing day component");
+            string result2 = FormUtils.dateForCombo(item2, "fdate_combo");
+            Assert.IsEmpty(result2, "Result should be empty string for missing day component");
 
             // Case 3: Test with missing month component
             Hashtable item3 = new()
@@ -383,8 +384,8 @@ namespace osafw.Tests
                 { "fdate_combo_mon", "" },
                 { "fdate_combo_year", "2023" }
             };
-            object result3 = FormUtils.dateForCombo(item3, "fdate_combo");
-            Assert.IsNull(result3, "Result should be null for missing month component");
+            string result3 = FormUtils.dateForCombo(item3, "fdate_combo");
+            Assert.IsEmpty(result3, "Result should be empty string for missing month component");
 
             // Case 4: Test with missing year component
             Hashtable item4 = new()
@@ -393,8 +394,8 @@ namespace osafw.Tests
                 { "fdate_combo_mon", "1" },
                 { "fdate_combo_year", "" }
             };
-            object result4 = FormUtils.dateForCombo(item4, "fdate_combo");
-            Assert.IsNull(result4, "Result should be null for missing year component");
+            string result4 = FormUtils.dateForCombo(item4, "fdate_combo");
+            Assert.IsEmpty(result4, "Result should be empty string for missing year component");
 
             // Case 5: Test with invalid date components
             Hashtable item5 = new()
@@ -403,8 +404,8 @@ namespace osafw.Tests
                 { "fdate_combo_mon", "13" }, // Month component out of range
                 { "fdate_combo_year", "-2023" } // Negative year component
             };
-            object result5 = FormUtils.dateForCombo(item5, "fdate_combo");
-            Assert.IsNull(result5, "Result should be null for invalid date components");
+            string result5 = FormUtils.dateForCombo(item5, "fdate_combo");
+            Assert.IsEmpty(result5, "Result should be empty string for invalid date components");
 
             // Case 6: Test with incorrect parameter names
             Hashtable item6 = new()
@@ -413,17 +414,17 @@ namespace osafw.Tests
                 { "month", "1" },
                 { "year", "2023" }
             };
-            object result6 = FormUtils.dateForCombo(item6, "fdate_combo");
-            Assert.IsNull(result6, "Result should be null for incorrect parameter names");
+            string result6 = FormUtils.dateForCombo(item6, "fdate_combo");
+            Assert.IsEmpty(result6, "Result should be empty string for incorrect parameter names");
 
             // Case 7: Test with null item
             Hashtable item7 = null;
-            object result7 = FormUtils.dateForCombo(item7, "fdate_combo");
-            Assert.IsNull(result7, "Result should be null for null item");
+            string result7 = FormUtils.dateForCombo(item7, "fdate_combo");
+            Assert.IsEmpty(result7, "Result should be empty string for null item");
 
             // Case 8: Test with null field_prefix
-            object result8 = FormUtils.dateForCombo(item1, null);
-            Assert.IsNull(result8, "Result should be null for null field_prefix");
+            string result8 = FormUtils.dateForCombo(item1, null);
+            Assert.IsEmpty(result8, "Result should be empty string for null field_prefix");
         }
     }
 }

@@ -91,7 +91,7 @@ Parses file templates and replaces <~tags> with values from hashtable
  support modifiers:
   htmlescape
   date          - format as datetime, sample "d M yyyy HH:mm", see https://docs.microsoft.com/en-us/dotnet/standard/base-types/custom-date-and-time-format-strings
-        <~var date>         output "M/d/yyyy" - date only (TODO - should be formatted per user settings actually)
+        <~var date>         output "M/d/yyyy" - date only (default, formatted per user settings actually)
         <~var date="short"> output "M/d/yyyy hh:mm" - date and time short (to mins)
         <~var date="long">  output "M/d/yyyy hh:mm:ss" - date and time long
         <~var date="sql">   output "yyyy-MM-dd hh:mm:ss" - sql date and time
@@ -136,6 +136,13 @@ public class ParsePageOptions
     public Func<Hashtable> GlobalsGetter { get; set; } = () => []; // by default - return empty hashtable
     public ISession Session { get; set; }
     public Action<LogLevel, string[]> Logger { get; set; }
+
+    // date formats - if empty - use defaults
+    public string DateFormat { get; set; } = "";
+    public string DateFormatShort { get; set; } = "";
+    public string DateFormatLong { get; set; } = "";
+    public string InputTimezone { get; set; } = ""; // timezone of the input date values (i.e. read from db)
+    public string OutputTimezone { get; set; } = ""; // timezone for parsed date output (i.e. to display on site)
 }
 
 public class ParsePage
@@ -156,11 +163,20 @@ public class ParsePage
 
     private static readonly string[] IFOPERS = ["if", "unless", "ifne", "ifeq", "ifgt", "iflt", "ifge", "ifle"];
 
-    private const string DATE_FORMAT_DEF = "M/d/yyyy"; // for US, TODO make based on user settigns (with fallback to server's settings)
+    // defaults for date formats
+    private const string DATE_FORMAT_DEF = "M/d/yyyy";
     private const string DATE_FORMAT_SHORT = "M/d/yyyy HH:mm";
     private const string DATE_FORMAT_LONG = "M/d/yyyy HH:mm:ss";
     private const string DATE_FORMAT_SQL = "yyyy-MM-dd HH:mm:ss";
+    private const string DATE_TIMEZONE_DEF = "UTC";
     // "d M yyyy HH:mm"
+
+    // current date formats - may be changed in constructor based on user settings
+    private static string DateFormat = DATE_FORMAT_DEF;
+    private static string DateFormatShort = DATE_FORMAT_SHORT;
+    private static string DateFormatLong = DATE_FORMAT_LONG;
+    private static string InputTimezone = DATE_TIMEZONE_DEF;
+    private static string OutputTimezone = DATE_TIMEZONE_DEF;
 
     // for dynamic load of Markdig markdown converter
     private static System.Reflection.MethodInfo mMarkdownToHtml;
@@ -190,9 +206,22 @@ public class ParsePage
             is_check_file_modifications = options.IsCheckFileModifications;
             lang = options.Lang ?? "en";
             lang_update = options.IsLangUpdate;
-            globalsGetter = options.GlobalsGetter;
+            globalsGetter = options.GlobalsGetter ?? (() => []); // by default - return empty hashtable
             session = options.Session;
-            loggerAction = options.Logger;
+            loggerAction = options.Logger ?? ((level, messages) => { }); // by default - no logging
+
+            // set date formats based on user settings
+            if (!string.IsNullOrEmpty(options.DateFormat))
+                DateFormat = options.DateFormat;
+            if (!string.IsNullOrEmpty(options.DateFormatShort))
+                DateFormatShort = options.DateFormatShort;
+            if (!string.IsNullOrEmpty(options.DateFormatLong))
+                DateFormatLong = options.DateFormatLong;
+            if (!string.IsNullOrEmpty(options.InputTimezone))
+                InputTimezone = options.InputTimezone;
+            if (!string.IsNullOrEmpty(options.OutputTimezone))
+                OutputTimezone = options.OutputTimezone;
+
             if (!LANG_CACHE.ContainsKey(lang) && !string.IsNullOrEmpty(TMPL_PATH))
                 load_lang();
         }
@@ -954,19 +983,19 @@ public class ParsePage
                     {
                         case "":
                             {
-                                dformat = DATE_FORMAT_DEF;
+                                dformat = DateFormat;
                                 break;
                             }
 
                         case "short":
                             {
-                                dformat = DATE_FORMAT_SHORT;
+                                dformat = DateFormatShort;
                                 break;
                             }
 
                         case "long":
                             {
-                                dformat = DATE_FORMAT_LONG;
+                                dformat = DateFormatLong;
                                 break;
                             }
 
@@ -977,7 +1006,13 @@ public class ParsePage
                             }
                     }
                     if (DateTime.TryParse(value, out DateTime dt))
-                        value = dt.ToString(dformat, System.Globalization.DateTimeFormatInfo.InvariantInfo);
+                    {
+                        // convert to specified timezone
+                        dt = convertTimezone(dt, InputTimezone, OutputTimezone);
+
+                        value = dt.ToString(dformat, DateTimeFormatInfo.InvariantInfo);
+                    }
+
                     attr_count -= 1;
                 }
                 if (attr_count > 0 && hattrs.ContainsKey("trim"))
@@ -1437,6 +1472,27 @@ public class ParsePage
         loggerAction?.Invoke(level, args);
     }
 
+    private DateTime convertTimezone(DateTime dt, string from_tz, string to_tz)
+    {
+        if (from_tz == to_tz)
+            return dt;
+        try
+        {
+            TimeZoneInfo tzi_from = TimeZoneInfo.FindSystemTimeZoneById(from_tz);
+            TimeZoneInfo tzi_to = TimeZoneInfo.FindSystemTimeZoneById(to_tz);
+            DateTime dt_utc = TimeZoneInfo.ConvertTimeToUtc(dt, tzi_from);
+            DateTime dt_to = TimeZoneInfo.ConvertTimeFromUtc(dt_utc, tzi_to);
+            return dt_to;
+        }
+        catch (Exception ex)
+        {
+            // invalid timezone
+            logger(LogLevel.TRACE, "ParsePage - invalid timezone conversion from " + from_tz + " to " + to_tz + ": " + ex.Message);
+            return dt;
+        }
+    }
+
+
     /// <summary>
     /// Get readable public instance properties and fields (lowercased for further comparison) of object,
     /// cached by class name in class_mapping_cache. Values are getter delegates to fetch from object instance.
@@ -1528,4 +1584,5 @@ public class ParsePage
 
         return result;
     }
+
 }

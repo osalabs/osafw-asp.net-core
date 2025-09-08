@@ -30,7 +30,7 @@ public class SampleReport : FwReports
         Hashtable result = [];
         if (!f.ContainsKey("from_date") && !f.ContainsKey("to_date"))
             // set default filters
-            f["from_date"] = DateUtils.Date2Str(DateTime.Now.AddDays(-30));// last 30 days
+            f["from_date"] = DateUtils.Date2Str(DateTime.Now.AddDays(-30), fw.userDateFormat);// last 30 days
         if (!Utils.isEmpty(f["from_date"]) || !Utils.isEmpty(f["to_date"]))
             f["is_dates"] = true;
 

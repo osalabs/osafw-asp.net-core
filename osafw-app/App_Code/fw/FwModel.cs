@@ -382,6 +382,45 @@ public abstract class FwModel : IDisposable
         return isExistsByField(uniq_key, not_id, field_iname);
     }
 
+    // convert user input fields to proper database format before add/update
+    public virtual void convertUserInput(Hashtable item)
+    {
+        var table_schema = getTableSchema();
+        var keys = item.Keys.Cast<string>().ToArray();
+        foreach (string fieldname in keys)
+        {
+            var fieldname_lc = fieldname.ToLower();
+            if (!table_schema.ContainsKey(fieldname_lc)) continue;
+
+            var field_schema = (Hashtable)table_schema[fieldname_lc];
+
+            var fw_type = (string)field_schema["fw_type"];
+            //var fw_subtype = (string)field_schema["fw_subtype"];
+
+            if (fw_type == "date")
+            {
+                // skip if value is DB.NOW object or DateTime object
+                if (item[fieldname] is DateTime || item[fieldname] == DB.NOW)
+                    continue;
+
+                //if field is exactly DATE - convert only date part without time - in YYYY-MM-DD format
+                item[fieldname] = DateUtils.Str2SQL((string)item[fieldname], fw.userDateFormat);
+            }
+            else if (fw_type == "datetime")
+            {
+                // skip if value is DB.NOW object or DateTime object
+                if (item[fieldname] is DateTime || item[fieldname] == DB.NOW)
+                    continue;
+
+                //if field is exactly DATETIME - convert date and time YYYY-MM-DD HH:MM:SS format
+                item[fieldname] = DateUtils.Str2SQL((string)item[fieldname], fw.userDateFormat, fw.userTimeFormat, true);
+            }
+
+            // ADD OTHER CONVERSIONS HERE if necessary
+        }
+    }
+
+
     // add new record and return new record id
     public virtual int add(Hashtable item)
     {
@@ -1201,19 +1240,10 @@ public abstract class FwModel : IDisposable
 
             var field_schema = (Hashtable)table_schema[fieldname_lc];
 
-            var fw_type = (string)field_schema["fw_type"];
+            //var fw_type = (string)field_schema["fw_type"];
             var fw_subtype = (string)field_schema["fw_subtype"];
-            if (fw_subtype == "date")
-            {
-                //if field is exactly DATE - show only date part without time - in YYYY-MM-DD format
-                item[fieldname] = DateUtils.Str2SQL((string)item[fieldname]);
-            }
-            else if (fw_type == "datetime")
-            {
-                //if field is exactly DATETIME - show in YYYY-MM-DD HH:MM:SS format
-                item[fieldname] = DateUtils.Str2SQL((string)item[fieldname], true);
-            }
-            else if (fw_subtype == "bit")
+
+            if (fw_subtype == "bit")
             {
                 //if field is exactly BIT - convert from True/False to 1/0
                 item[fieldname] = item[fieldname].toBool() ? 1 : 0;

@@ -127,6 +127,10 @@ public static class FwConfig
 
         st["lang"] ??= "en"; // default language
         st["is_lang_update"] ??= false; // default language update flag
+
+        st["date_format"] ??= DateUtils.DATE_FORMAT_MDY;
+        st["time_format"] ??= DateUtils.TIME_FORMAT_12;
+        st["timezone"] ??= DateUtils.TZ_UTC;
     }
 
     public static void readSettingsSection(IConfigurationSection section, ref Hashtable settings)

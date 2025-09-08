@@ -22,6 +22,7 @@ Created as simplified and lightweight alternative to other ASP.NET frameworks li
 - auto database updates and environment self-tests (`FwUpdates`, `FwSelfTest`)
 - in-memory caching via `FwCache`
 - optional Entity Builder for quick scaffolding
+- per-user date/time and timezone handling (see "Per-user Date/Time and Timezones" below)
 
 ## Demo
 http://demo.engineeredit.com/ - this is how it looks in action right after installation before customizations
@@ -176,6 +177,15 @@ The following controller fields used above can be defined in controller's `init(
 - **FwApiController** – base class for building authenticated REST APIs
 - **Entity Builder** – text based definition to generate SQL and CRUD scaffolding
 
+### Per-user Date/Time and Timezones
+
+The framework supports per-user formatting and timezone conversion:
+- Defaults come from `appsettings.json` (`appSettings.date_format`, `time_format`, `timezone`) 
+- For each user can be overridden - see `users` table fields `date_format`, `time_format`, `timezone` (e.g. on login/profile save).
+- Rendering in templates uses these values automatically via ParsePage. Inputs are interpreted using the user’s format; output can be converted from database timezone to the user’s timezone.
+
+See the detailed guide with examples and constants in [docs/datetime.md](docs/datetime.md).
+
 ### `FwConfig`
 
 Application configuration available via `fw.config([SettingName])`.
@@ -258,6 +268,8 @@ To enable PDF export using Playwright (Chromium):
    - If PDF export fails, check `/App_Data/logs/main.log` for errors.
    - Ensure the browser path is writable and accessible by the IIS user.
 
+For more technical details, see comments in `ConvUtils.cs` and `FwReports.cs`.
+
 ### Background Service for Scheduled Tasks
 
 Framework includes a background service for scheduled tasks (like send emails, run reports, etc...). Uses **Cronos** nuget package.
@@ -265,12 +277,3 @@ To enable:
 - in Program.cs uncomment `builder.Services.AddHostedService<FwCronService>();`
 - add tasks like `insert into fwcron(icode, cron) values ('example_sleep', '* * * * *')` - example task to run every minute
 - update `FwCron.runJobAction` to call acutal code for tasks
-
----
-
-## Playwright PDF Export Setup
-
-
----
-
-For more technical details, see comments in `ConvUtils.cs` and `FwReports.cs`.

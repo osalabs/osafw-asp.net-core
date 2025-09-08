@@ -1,10 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using osafw;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace osafw.Tests
 {
@@ -16,15 +11,19 @@ namespace osafw.Tests
         {
             DateTime d = DateTime.UtcNow;
             String r = DateUtils.Date2SQL(d);
-            Assert.AreEqual(r, d.Year + "-" + d.Month + "-" + d.Day);
+            Assert.AreEqual(r, d.ToString("yyyy-MM-dd"));
+
+            // with time
+            r = DateUtils.Date2SQL(d, true);
+            Assert.AreEqual(r, d.ToString("yyyy-MM-dd HH:mm:ss"));
         }
 
         [TestMethod()]
         public void Date2StrTest()
         {
             DateTime d = DateTime.UtcNow;
-            String r = DateUtils.Date2Str(d);
-            Assert.AreEqual(r, d.Month + "/" + d.Day + "/" + d.Year);
+            String r = DateUtils.Date2Str(d, DateUtils.DATE_FORMAT_MDY);
+            Assert.AreEqual(d.ToString("M/d/yyyy"), r);
         }
 
         [TestMethod()]
@@ -39,15 +38,62 @@ namespace osafw.Tests
             Assert.AreEqual(d.Hour, r.Hour);
             Assert.AreEqual(d.Minute, r.Minute);
             Assert.AreEqual(d.Second, r.Second);
+
+            str = d.ToString("yyyy-MM-dd");
+            r = (DateTime)DateUtils.SQL2Date(str);
+            Assert.AreEqual(d.Year, r.Year);
+            Assert.AreEqual(d.Month, r.Month);
+            Assert.AreEqual(d.Day, r.Day);
+            Assert.AreEqual(0, r.Hour);
+            Assert.AreEqual(0, r.Minute);
+            Assert.AreEqual(0, r.Second);
+
+            // not an SQL date - should return null
+            str = "1/1/2000";
+            DateTime? r2 = DateUtils.SQL2Date(str);
+            Assert.AreEqual(null, r2);
+
+            // null input should return null
+            r2 = DateUtils.SQL2Date(null);
+            Assert.AreEqual(null, r2);
+
+            // empty input should return null
+            r2 = DateUtils.SQL2Date("");
+            Assert.AreEqual(null, r2);
+
+            // invalid input should return null
+            r2 = DateUtils.SQL2Date("invalid_date");
+            Assert.AreEqual(null, r2);
+
         }
 
         [TestMethod()]
         public void Str2SQLTest()
         {
             DateTime d = DateTime.UtcNow;
-            string r = DateUtils.Str2SQL(d.ToString("MM/dd/yyyy"));
-            
-            Assert.AreEqual(r, d.ToString("yyyy-MM-dd"));
+            string r = DateUtils.Str2SQL(d.ToString("MM/dd/yyyy"), DateUtils.DATE_FORMAT_MDY);
+            Assert.AreEqual(d.ToString("yyyy-MM-dd"), r);
+            r = DateUtils.Str2SQL(d.ToString("dd/MM/yyyy"), DateUtils.DATE_FORMAT_DMY);
+            Assert.AreEqual(d.ToString("yyyy-MM-dd"), r);
+
+            r = DateUtils.Str2SQL(d.ToString("MM/dd/yyyy HH:mm"), DateUtils.DATE_FORMAT_MDY, DateUtils.TIME_FORMAT_24, true);
+            Assert.AreEqual(d.ToString("yyyy-MM-dd HH:mm:00"), r);
+            r = DateUtils.Str2SQL(d.ToString("MM/dd/yyyy h:mm tt"), DateUtils.DATE_FORMAT_MDY, DateUtils.TIME_FORMAT_12, true);
+            Assert.AreEqual(d.ToString("yyyy-MM-dd HH:mm:00"), r);
+
+            r = DateUtils.Str2SQL(d.ToString("dd/MM/yyyy HH:mm"), DateUtils.DATE_FORMAT_DMY, DateUtils.TIME_FORMAT_24, true);
+            Assert.AreEqual(d.ToString("yyyy-MM-dd HH:mm:00"), r);
+            r = DateUtils.Str2SQL(d.ToString("dd/MM/yyyy h:mm tt"), DateUtils.DATE_FORMAT_DMY, DateUtils.TIME_FORMAT_12, true);
+            Assert.AreEqual(d.ToString("yyyy-MM-dd HH:mm:00"), r);
+
+            // invalid date should return empty string
+            r = DateUtils.Str2SQL("invalid_date", DateUtils.DATE_FORMAT_MDY);
+            Assert.AreEqual("", r);
+
+            // empty date should return empty string
+            r = DateUtils.Str2SQL("", DateUtils.DATE_FORMAT_MDY);
+            Assert.AreEqual("", r);
+
         }
 
         [TestMethod]
@@ -55,17 +101,17 @@ namespace osafw.Tests
         {
             // Case 1: Test with empty input
             string input1 = "";
-            string result1 = DateUtils.Str2DateOnly(input1);
+            string result1 = DateUtils.Str2DateOnly(input1, DateUtils.DATE_FORMAT_MDY);
             Assert.AreEqual("", result1, "Result should be empty for empty input");
 
             // Case 2: Test with valid datetime string
             string input2 = "1/17/2023 12:00:00 AM";
-            string result2 = DateUtils.Str2DateOnly(input2);
+            string result2 = DateUtils.Str2DateOnly(input2, DateUtils.DATE_FORMAT_MDY);
             Assert.AreEqual("1/17/2023", result2, "Result should be date only");
 
             // Case 3: Test with invalid datetime string
             string input3 = "invalid_datetime";
-            string result3 = DateUtils.Str2DateOnly(input3);
+            string result3 = DateUtils.Str2DateOnly(input3, DateUtils.DATE_FORMAT_MDY);
             Assert.AreEqual("invalid_datetime", result3, "Result should remain unchanged for invalid datetime string");
         }
 
@@ -74,32 +120,32 @@ namespace osafw.Tests
         {
             // Case 1: Test with empty input
             string input1 = "";
-            string result1 = DateUtils.Str2DateOnly(input1);
+            string result1 = DateUtils.Str2DateOnly(input1, DateUtils.DATE_FORMAT_MDY);
             Assert.AreEqual("", result1, "Result should be empty for empty input");
 
             // Case 2: Test with valid datetime string in "M/d/yyyy h:mm:ss tt" format
             string input2 = "1/17/2023 12:00:00 AM";
-            string result2 = DateUtils.Str2DateOnly(input2);
+            string result2 = DateUtils.Str2DateOnly(input2, DateUtils.DATE_FORMAT_MDY);
             Assert.AreEqual("1/17/2023", result2, "Result should be date only for 'M/d/yyyy h:mm:ss tt' format");
 
             // Case 3: Test with valid datetime string in "MM/dd/yyyy HH:mm:ss" format
             string input3 = "01/17/2023 00:00:00";
-            string result3 = DateUtils.Str2DateOnly(input3);
+            string result3 = DateUtils.Str2DateOnly(input3, DateUtils.DATE_FORMAT_MDY);
             Assert.AreEqual("1/17/2023", result3, "Result should be date only for 'MM/dd/yyyy HH:mm:ss' format");
 
             // Case 4: Test with valid datetime string in "yyyy-MM-dd HH:mm:ss" format
             string input4 = "2023-01-17 00:00:00";
-            string result4 = DateUtils.Str2DateOnly(input4);
+            string result4 = DateUtils.Str2DateOnly(input4, DateUtils.DATE_FORMAT_MDY);
             Assert.AreEqual("1/17/2023", result4, "Result should be date only for 'yyyy-MM-dd HH:mm:ss' format");
 
             // Case 5: Test with valid datetime string in "yyyy/MM/dd HH:mm:ss" format
             string input5 = "2023/01/17 00:00:00";
-            string result5 = DateUtils.Str2DateOnly(input5);
+            string result5 = DateUtils.Str2DateOnly(input5, DateUtils.DATE_FORMAT_MDY);
             Assert.AreEqual("1/17/2023", result5, "Result should be date only for 'yyyy/MM/dd HH:mm:ss' format");
 
             // Case 6: Test with invalid datetime string
             string input6 = "invalid_datetime";
-            string result6 = DateUtils.Str2DateOnly(input6);
+            string result6 = DateUtils.Str2DateOnly(input6, DateUtils.DATE_FORMAT_MDY);
             Assert.AreEqual("invalid_datetime", result6, "Result should remain unchanged for invalid datetime string");
         }
 
@@ -107,8 +153,9 @@ namespace osafw.Tests
         public void nextDOWTest()
         {
             // Case 1: Test with default parameters (no specific date provided)
+            DateTime expected1 = DateTime.Today.AddDays(((int)DayOfWeek.Monday - (int)DateTime.Today.DayOfWeek + 7) % 7 == 0 ? 7 : ((int)DayOfWeek.Monday - (int)DateTime.Today.DayOfWeek + 7) % 7);
             DateTime result1 = DateUtils.nextDOW(DayOfWeek.Monday);
-            Assert.AreEqual(DateTime.Today.AddDays((int)(DayOfWeek.Monday - DateTime.Today.DayOfWeek + 7) % 7), result1, "Result should be next Monday from today's date");
+            Assert.AreEqual(expected1, result1, "Result should be next Monday from today's date");
 
             // Case 2: Test with specific date provided
             DateTime specificDate = new(2023, 2, 10); // February 10, 2023 (Friday)
@@ -157,7 +204,7 @@ namespace osafw.Tests
             long r = DateUtils.Date2JsTimestamp(d);
 
             Assert.AreEqual(r, System.Convert.ToInt64(time.Ticks / (double)10000));
-           
+
         }
     }
 }

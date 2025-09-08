@@ -35,12 +35,12 @@
         <input type="checkbox" class="form-check-input" :checked="value" disabled="disabled">
         <label class="form-check-label">`Yes`</label>
     </div>
-    <p v-else-if="def.type=='date'" class="form-control-plaintext">{{formatDate(value)}}</p>
-    <p v-else-if="def.type=='date_long'" class="form-control-plaintext">{{formatDateLong(value)}}</p>
-    <p v-else-if="def.type=='added'" class="form-control-plaintext">{{item.add_time}} by {{form.add_users_id_name}}</p>
+    <p v-else-if="def.type=='date'" class="form-control-plaintext">{{fwStore.formatDate(value)}}</p>
+    <p v-else-if="def.type=='date_long'" class="form-control-plaintext">{{fwStore.formatDateTime(value)}}</p>
+    <p v-else-if="def.type=='added'" class="form-control-plaintext">{{fwStore.formatDateTime(item.add_time)}} by {{form.add_users_id_name}}</p>
     <p v-else-if="def.type=='updated'" class="form-control-plaintext">
         <template v-if="form.upd_users_id_name">
-            {{item.upd_time}} by {{form.upd_users_id_name}}
+            {{fwStore.formatDateTime(item.upd_time)}} by {{form.upd_users_id_name}}
         </template>
     </p>
     <template v-else-if="def.type=='multi'">
@@ -174,7 +174,7 @@
                :class="class_control+(is_invalid?' is-invalid':'')"
                :maxlength="def.maxlength"
                :required="def.required"
-               :placeholder="def.placeholder"
+               :placeholder="inputPlaceholder"
                :min="def.min"
                :max="def.max"
                :step="def.step"
@@ -367,6 +367,19 @@
                 let type = this.def.type ?? 'text';
                 return TYPE_MAP[type] ?? 'text';
             },
+            inputPlaceholder() {
+                if (this.def.placeholder) return this.def.placeholder;
+                if (this.def.type === 'date_popup') {
+                    // MDY -> mm/dd/yyyy, DMY -> dd/mm/yyyy
+                    return this.fwStore._userLocale() === 'en-GB' ? 'dd/mm/yyyy' : 'mm/dd/yyyy';
+                }
+                if (this.def.type === 'datetime_popup') {
+                    const date = this.fwStore._userLocale() === 'en-GB' ? 'dd/mm/yyyy' : 'mm/dd/yyyy';
+                    const time = this.fwStore._is24h() ? 'HH:mm:ss' : 'h:mm:ss AM/PM';
+                    return date + ' ' + time;
+                }
+                return this.def.placeholder ?? '';
+            },
             lookupOptions: function () {
                 var lookup_model = this.def.lookup_model;
                 if (lookup_model) {
@@ -396,14 +409,6 @@
             //console.log("form-one-control mounted", this.def);
         },
         methods: {
-            formatDate(str) {
-                //return date as MM/dd/yyyy
-                return new Date(str).toLocaleDateString("en-US", { month: 'numeric', day: 'numeric', year: 'numeric' });
-            },
-            formatDateLong(str) {
-                //return date as MM/dd/yyyy hh:mm:ss
-                return new Date(str).toLocaleDateString("en-US", { month: 'numeric', day: 'numeric', year: 'numeric' }) + " " + new Date(str).toLocaleTimeString("en-US", { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            },
             async autocompleteOptions(query, select$) {
                 let id = 0;
                 if (query === null) {

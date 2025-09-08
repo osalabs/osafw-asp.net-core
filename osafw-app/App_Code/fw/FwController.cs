@@ -667,7 +667,7 @@ public abstract class FwController
             {
                 //if input looks like a date - compare as date
                 fieldname_sql = fieldname_sql_date;
-                qv = db.q(DateUtils.Str2SQL(v));
+                qv = db.q(DateUtils.Str2SQL(v, fw.userDateFormat));
             }
             else
             {
@@ -841,6 +841,10 @@ public abstract class FwController
     /// <remarks>Also set fw.FLASH</remarks>
     public virtual int modelAddOrUpdate(int id, Hashtable fields)
     {
+        // make conversions
+        // - for date/time fields - convert from user format to SQL format
+        model0.convertUserInput(fields);
+
         if (id > 0)
         {
             model0.update(id, fields);
@@ -1231,10 +1235,18 @@ public abstract class FwController
             if (!table_schema.ContainsKey(fieldname_lc)) continue;
             var field_schema = (Hashtable)table_schema[fieldname_lc];
 
-            //if field is exactly DATE - show only date part without time
-            if ((string)field_schema["fw_subtype"] == "date")
+            var fw_type = field_schema["fw_type"].toStr();
+
+
+            if (fw_type == "date")
             {
+                //if field is exactly DATE - show only date part without time and format per user settings
                 result[fieldname] = "date";
+            }
+            else if (fw_type == "datetime")
+            {
+                // if fields is date and time - we'll format it as date and time per user settings
+                result[fieldname] = "datetime";
             }
             // ADD OTHER CONVERSIONS HERE if necessary
         }
@@ -1252,10 +1264,15 @@ public abstract class FwController
     /// <returns></returns>
     public virtual string applyViewListConversions(string fieldname, Hashtable row, Hashtable hconversions)
     {
-        var data = (string)row[fieldname];
-        if ((string)(hconversions[fieldname] ?? "") == "date")
+        var data = row[fieldname].toStr();
+        var conversion = hconversions[fieldname].toStr();
+        if (conversion == "date")
         {
-            data = DateUtils.Str2DateOnly(data);
+            data = DateUtils.Str2DateOnly(data, fw.userDateFormat);
+        }
+        else if (conversion == "datetime")
+        {
+            data = fw.formatUserDateTime(data);
         }
         return data;
     }

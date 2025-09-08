@@ -1,4 +1,3 @@
-
 // define some global constants
 window.fwConst = {
     ERR_CODES_MAP: {
@@ -331,6 +330,50 @@ let actions = {
 
             return header;
         });
+    },
+
+    // Date/Time formatting helpers (per-user formats & timezone)
+    _userLocale() {
+        // pick locale by user formats: MDY->en-US, DMY->en-GB
+        const isDMY = (this.global.date_format ?? 0) == 10;
+        return isDMY ? 'en-GB' : 'en-US';
+    },
+    _is24h() {
+        return (this.global.time_format ?? 0) == 10;
+    },
+    _timeZone() {
+        return this.global.timezone || 'UTC';
+    },
+    _sqlToDate(sql) {
+        if (!sql) return null;
+        // support 'YYYY-MM-DD' or 'YYYY-MM-DD HH:mm:ss'
+        let t = String(sql).trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(t)) {
+            t = t + 'T00:00:00Z';
+        } else if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(t)) {
+            t = t.replace(' ', 'T') + 'Z';
+        }
+        let d = new Date(t);
+        if (isNaN(d.getTime())) return null;
+        return d; // UTC date
+    },
+    formatDate(sql) {
+        const d = this._sqlToDate(sql);
+        if (!d) return sql ?? '';
+        return d.toLocaleDateString(this._userLocale(), { timeZone: this._timeZone() });
+    },
+    formatDateTime(sql, withSeconds = true) {
+        const d = this._sqlToDate(sql);
+        if (!d) return sql ?? '';
+        // build options per 12/24h
+        const opts = {
+            timeZone: this._timeZone(),
+            year: 'numeric', month: 'numeric', day: 'numeric',
+            hour: '2-digit', minute: '2-digit',
+            hour12: !this._is24h(),
+        };
+        if (withSeconds) opts.second = '2-digit';
+        return d.toLocaleString(this._userLocale(), opts);
     },
 
     //save to store each key from data if such key exists in store

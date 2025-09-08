@@ -86,11 +86,32 @@ public class FW : IDisposable
         get { return Session("access_level").toInt(); }
     }
 
+    public int userDateFormat
+    {
+        get { return G["date_format"].toInt((int)DateUtils.DATE_FORMAT_MDY); }
+    }
+
+    public int userTimeFormat
+    {
+        get { return G["time_format"].toInt((int)DateUtils.TIME_FORMAT_12); }
+    }
+
+    public string userTimezone
+    {
+        get { return G["timezone"].toStr(DateUtils.TZ_UTC); }
+    }
+
     // shortcut to obtain if we working under logged in user
     // usage: fw.isLogged
     public bool isLogged
     {
         get { return userId > 0; }
+    }
+
+    // helper to convert date from database SQL format to logged user format
+    public string formatUserDateTime(object o)
+    {
+        return DateUtils.SQL2Str(o.toStr(), userDateFormat, userTimeFormat, userTimezone);
     }
 
     // helper to initialize DB instance based on configuration name
@@ -154,6 +175,10 @@ public class FW : IDisposable
         // override default ui_theme/ui_mode with user's settings
         if (!string.IsNullOrEmpty(Session("ui_theme"))) G["ui_theme"] = Session("ui_theme");
         if (!string.IsNullOrEmpty(Session("ui_mode"))) G["ui_mode"] = Session("ui_mode");
+        // timezone/date/time format
+        if (!string.IsNullOrEmpty(Session("date_format"))) G["date_format"] = Session("date_format");
+        if (!string.IsNullOrEmpty(Session("time_format"))) G["time_format"] = Session("time_format");
+        if (!string.IsNullOrEmpty(Session("timezone"))) G["timezone"] = Session("timezone");
 
         FormErrors = []; // reset errors
         parseForm();
@@ -901,16 +926,31 @@ public class FW : IDisposable
     public ParsePage parsePageInstance()
     {
         // if pp_instance not yet set - instantiate
-        pp_instance ??= new ParsePage(new ParsePageOptions
+        if (pp_instance == null)
         {
-            TemplatesRoot = config("template").toStr(),
-            IsCheckFileModifications = (LogLevel)config("log_level") >= LogLevel.DEBUG,
-            Lang = G["lang"].toStr(),
-            IsLangUpdate = config("is_lang_update").toBool(),
-            GlobalsGetter = () => G,
-            Session = context?.Session,
-            Logger = (level, args) => logger(level, args)
-        });
+            // prepare date/time formats for ParsePage
+            // see template/common/sel for available formats
+            var DateFormat = DateUtils.mapDateFormat(userDateFormat);
+            var DateFormatShort = DateFormat + " " + DateUtils.mapTimeFormat(userTimeFormat);
+            var DateFormatLong = DateFormat + " " + DateUtils.mapTimeWithSecondsFormat(userTimeFormat);
+
+            pp_instance = new ParsePage(new ParsePageOptions
+            {
+                TemplatesRoot = config("template").toStr(),
+                IsCheckFileModifications = (LogLevel)config("log_level") >= LogLevel.DEBUG,
+                Lang = G["lang"].toStr(),
+                IsLangUpdate = config("is_lang_update").toBool(),
+                GlobalsGetter = () => G,
+                Session = context?.Session,
+                Logger = (level, args) => logger(level, args),
+
+                DateFormat = DateFormat,
+                DateFormatShort = DateFormatShort,
+                DateFormatLong = DateFormatLong,
+                InputTimezone = DateUtils.DATABASE_TZ,
+                OutputTimezone = userTimezone,
+            });
+        }
         return pp_instance;
     }
 

@@ -1,8 +1,10 @@
 <script type="text/x-template" id="list-cell-ro-template">
-    <div class="ro" :style="styles">{{row[col.field_name]}}</div>
+    <div class="ro" :style="styles">{{ formatted }}</div>
 </script>
 
 <script type="module">
+    import { mapStores } from 'pinia';
+
     fwApp.component('list-cell-ro', {
         template: '#list-cell-ro-template',
         props: {
@@ -18,13 +20,41 @@
                 type: Object,
                 required: false
             }
-        },        
+        },
         computed: {
+            ...mapStores(fwStore),
             styles() {
                 if (this.uioptions?.maxRowHeight) {
                     return { maxHeight: this.uioptions.maxRowHeight + 'px', overflow: 'auto' };
                 }
                 return {};
+            },
+            formatted() {
+                const v = this.row[this.col.field_name] ?? '';
+                if (v === '') return '';
+
+                const type = this.col.input_type || this.col.type;
+
+                // Explicit types from headers
+                if (type === 'date' || type === 'date_popup') {
+                    return this.fwStore.formatDate(v);
+                }
+                if (type === 'datetime' || type === 'datetime_popup' || type === 'added' || type === 'updated') {
+                    return this.fwStore.formatDateTime(v);
+                }
+
+                // Fallback: detect SQL date/time strings automatically
+                //if (typeof v === 'string') {
+                //    const sv = v.trim();
+                //    if (/^\d{4}-\d{2}-\d{2}$/.test(sv)) {
+                //        return this.fwStore.formatDate(sv);
+                //    }
+                //    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(sv)) {
+                //        return this.fwStore.formatDateTime(sv);
+                //    }
+                //}
+
+                return v;
             }
         }
     });
