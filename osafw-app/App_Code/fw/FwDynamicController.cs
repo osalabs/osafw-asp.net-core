@@ -1074,7 +1074,7 @@ public class FwDynamicController : FwController
                     fields[field] = lookup_model.findOrAddByIname(field_value, out _);
             }
             else if (type == "date_combo")
-                fields[field] = FormUtils.dateForCombo(item, field).ToString();
+                fields[field] = FormUtils.dateForCombo(item, field);
             else if (type == "time")
                 fields[field] = FormUtils.timeStrToInt((string)fields[field]); // ftime - convert from HH:MM to int (0-24h in seconds)
             else if (type == "number")

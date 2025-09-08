@@ -58,6 +58,8 @@ public class AdminDemosController : FwAdminController
         ps["dict_link_auto"] = model_related.one(item["dict_link_auto_id"].toInt());
         ps["multi_datarow"] = model_related.listWithChecked((string)item["dict_link_multi"]);
         ps["multi_datarow_link"] = fw.model<DemosDemoDicts>().listLinkedByMainId(id);
+        FormUtils.comboForDate((string)item["fdate_combo"], ps, "fdate_combo");
+
         ps["att"] = fw.model<Att>().one(item["att_id"].toInt());
         ps["att_links"] = fw.model<Att>().listLinked(model.table_name, id);
 
