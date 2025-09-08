@@ -13,8 +13,8 @@ public class DateUtils
     public const string DATABASE_TZ = "UTC"; // timezone of the database server
 
     // keep in sync with template/common/sel/date_format.sel
-    public const int DATE_FORMAT_MDY = 0; // MM/DD/YYYY
-    public const int DATE_FORMAT_DMY = 10; // DD/MM/YYYY
+    public const int DATE_FORMAT_MDY = 0; // M/D/YYYY
+    public const int DATE_FORMAT_DMY = 10; // D/M/YYYY
 
     // keep in sync with template/common/sel/time_format.sel
     public const int TIME_FORMAT_12 = 0;
@@ -24,25 +24,25 @@ public class DateUtils
 
     public static string mapDateFormat(int date_format)
     {
-        string result = "MM/dd/yyyy";
+        string result = "M/d/yyyy";
         if (date_format == DATE_FORMAT_DMY)
-            result = "dd/MM/yyyy";
+            result = "d/M/yyyy";
         return result;
     }
 
     public static string mapTimeFormat(int time_format)
     {
-        string result = "hh:mm tt";
+        string result = "h:mm tt";
         if (time_format == TIME_FORMAT_24)
-            result = "HH:mm";
+            result = "H:mm";
         return result;
     }
 
     public static string mapTimeWithSecondsFormat(int time_format)
     {
-        string result = "hh:mm:ss tt";
+        string result = "h:mm:ss tt";
         if (time_format == TIME_FORMAT_24)
-            result = "HH:mm:ss";
+            result = "H:mm:ss";
         return result;
     }
 
@@ -120,6 +120,17 @@ public class DateUtils
         return Regex.IsMatch(str, @"^\d{1,2}/\d{1,2}/\d{4}$");
     }
 
+    /// <summary>
+    /// Determines whether the specified string is in a valid SQL date/datetime format.
+    /// </summary>
+    /// <param name="str">The string to validate as a SQL date or datetime.</param>
+    /// <returns><see langword="true"/> if the string matches the format "yyyy-MM-dd" or "yyyy-MM-dd HH:mm:ss"; otherwise, <see
+    /// langword="false"/>.</returns>
+    public static bool isDateSQL(string str)
+    {
+        return Regex.IsMatch(str, @"^\d{4}-\d{2}-\d{2}$") || Regex.IsMatch(str, @"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$");
+    }
+
     public static DateTime? SQL2Date(string str)
     {
         DateTime? result = null;
@@ -128,7 +139,7 @@ public class DateUtils
             return result;
 
         // Only accept SQL formats
-        if (Regex.IsMatch(str, @"^\d{4}-\d{2}-\d{2}$") || Regex.IsMatch(str, @"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$"))
+        if (isDateSQL(str))
         {
             if (DateTime.TryParse(str, out DateTime tmpdate))
                 result = tmpdate;
@@ -146,11 +157,14 @@ public class DateUtils
     /// <returns>SQL YYYY-MM-DD[ HH:MM:SS]</returns>
     public static string Str2SQL(string str, int date_format, int time_format = TIME_FORMAT_24, bool is_time = false)
     {
+        if (isDateSQL(str))
+            return str; // already in SQL format
+
         string result = "";
         //convert str to DateTime using date_format
         string format = mapDateFormat(date_format);
         if (is_time)
-            format += " " + mapTimeFormat(time_format); // use 24h format for sql
+            format += " " + mapTimeFormat(time_format); // use format without seconds for input
         if (DateTime.TryParseExact(str, format, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out DateTime tmpdate))
             result = Date2SQL(tmpdate, is_time);
 

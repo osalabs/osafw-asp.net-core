@@ -268,9 +268,10 @@ namespace osafw.Tests
             Assert.IsTrue(result1.ContainsKey("id2"), "Result should contain key 'id2'");
             Assert.IsTrue(result1.ContainsKey("id3"), "Result should contain key 'id3'");
 
-            // Case 2: Throw error for null input
+            // Case 2: For null input - empty hashtable
             string str2 = null;
-            Assert.ThrowsException<NullReferenceException>(() => FormUtils.ids2multi(str2), "Error for null input");
+            Hashtable result2 = FormUtils.ids2multi(str2);
+            Assert.AreEqual(0, result2.Count, "Result should not be null for null input");
 
             // Case 3: Return empty hashtable for empty input
             string str3 = "";

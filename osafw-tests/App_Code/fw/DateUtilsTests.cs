@@ -23,7 +23,7 @@ namespace osafw.Tests
         {
             DateTime d = DateTime.UtcNow;
             String r = DateUtils.Date2Str(d, DateUtils.DATE_FORMAT_MDY);
-            Assert.AreEqual(r, d.ToString("MM/dd/yyyy"));
+            Assert.AreEqual(d.ToString("M/d/yyyy"), r);
         }
 
         [TestMethod()]
@@ -107,7 +107,7 @@ namespace osafw.Tests
             // Case 2: Test with valid datetime string
             string input2 = "1/17/2023 12:00:00 AM";
             string result2 = DateUtils.Str2DateOnly(input2, DateUtils.DATE_FORMAT_MDY);
-            Assert.AreEqual("01/17/2023", result2, "Result should be date only");
+            Assert.AreEqual("1/17/2023", result2, "Result should be date only");
 
             // Case 3: Test with invalid datetime string
             string input3 = "invalid_datetime";
@@ -126,22 +126,22 @@ namespace osafw.Tests
             // Case 2: Test with valid datetime string in "M/d/yyyy h:mm:ss tt" format
             string input2 = "1/17/2023 12:00:00 AM";
             string result2 = DateUtils.Str2DateOnly(input2, DateUtils.DATE_FORMAT_MDY);
-            Assert.AreEqual("01/17/2023", result2, "Result should be date only for 'M/d/yyyy h:mm:ss tt' format");
+            Assert.AreEqual("1/17/2023", result2, "Result should be date only for 'M/d/yyyy h:mm:ss tt' format");
 
             // Case 3: Test with valid datetime string in "MM/dd/yyyy HH:mm:ss" format
             string input3 = "01/17/2023 00:00:00";
             string result3 = DateUtils.Str2DateOnly(input3, DateUtils.DATE_FORMAT_MDY);
-            Assert.AreEqual("01/17/2023", result3, "Result should be date only for 'MM/dd/yyyy HH:mm:ss' format");
+            Assert.AreEqual("1/17/2023", result3, "Result should be date only for 'MM/dd/yyyy HH:mm:ss' format");
 
             // Case 4: Test with valid datetime string in "yyyy-MM-dd HH:mm:ss" format
             string input4 = "2023-01-17 00:00:00";
             string result4 = DateUtils.Str2DateOnly(input4, DateUtils.DATE_FORMAT_MDY);
-            Assert.AreEqual("01/17/2023", result4, "Result should be date only for 'yyyy-MM-dd HH:mm:ss' format");
+            Assert.AreEqual("1/17/2023", result4, "Result should be date only for 'yyyy-MM-dd HH:mm:ss' format");
 
             // Case 5: Test with valid datetime string in "yyyy/MM/dd HH:mm:ss" format
             string input5 = "2023/01/17 00:00:00";
             string result5 = DateUtils.Str2DateOnly(input5, DateUtils.DATE_FORMAT_MDY);
-            Assert.AreEqual("01/17/2023", result5, "Result should be date only for 'yyyy/MM/dd HH:mm:ss' format");
+            Assert.AreEqual("1/17/2023", result5, "Result should be date only for 'yyyy/MM/dd HH:mm:ss' format");
 
             // Case 6: Test with invalid datetime string
             string input6 = "invalid_datetime";
@@ -153,8 +153,9 @@ namespace osafw.Tests
         public void nextDOWTest()
         {
             // Case 1: Test with default parameters (no specific date provided)
+            DateTime expected1 = DateTime.Today.AddDays(((int)DayOfWeek.Monday - (int)DateTime.Today.DayOfWeek + 7) % 7 == 0 ? 7 : ((int)DayOfWeek.Monday - (int)DateTime.Today.DayOfWeek + 7) % 7);
             DateTime result1 = DateUtils.nextDOW(DayOfWeek.Monday);
-            Assert.AreEqual(DateTime.Today.AddDays((int)(DayOfWeek.Monday - DateTime.Today.DayOfWeek + 7) % 7), result1, "Result should be next Monday from today's date");
+            Assert.AreEqual(expected1, result1, "Result should be next Monday from today's date");
 
             // Case 2: Test with specific date provided
             DateTime specificDate = new(2023, 2, 10); // February 10, 2023 (Friday)

@@ -841,6 +841,10 @@ public abstract class FwController
     /// <remarks>Also set fw.FLASH</remarks>
     public virtual int modelAddOrUpdate(int id, Hashtable fields)
     {
+        // make conversions
+        // - for date/time fields - convert from user format to SQL format
+        model0.convertUserInput(fields);
+
         if (id > 0)
         {
             model0.update(id, fields);

@@ -41,7 +41,7 @@ This documentation describes the structure and deployment of the application bui
 - **Main Dashboard Blocks/Types:** customize per project.
 - **Pages Module:** available if content pages are used.
 - **Feedback Functionality:** optional, emails sent to `<~GLOBAL[support_email]>`.
-- **Display Standards:** dates in mm/dd/yyyy, 24-hour time and the metric system.
+- **Display Standards:** dates in <~/common/sel/date_format.sel selvalue="GLOBAL[date_format]"> format, time in <~/common/sel/time_format.sel selvalue="GLOBAL[time_format]"> format and the metric system.
 - **Branding:** colors and logos can be adjusted in the theme files.
 
 ### Hosting Options
