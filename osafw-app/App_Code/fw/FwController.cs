@@ -1235,10 +1235,18 @@ public abstract class FwController
             if (!table_schema.ContainsKey(fieldname_lc)) continue;
             var field_schema = (Hashtable)table_schema[fieldname_lc];
 
-            //if field is exactly DATE - show only date part without time
-            if ((string)field_schema["fw_subtype"] == "date")
+            var fw_type = field_schema["fw_type"].toStr();
+
+
+            if (fw_type == "date")
             {
+                //if field is exactly DATE - show only date part without time and format per user settings
                 result[fieldname] = "date";
+            }
+            else if (fw_type == "datetime")
+            {
+                // if fields is date and time - we'll format it as date and time per user settings
+                result[fieldname] = "datetime";
             }
             // ADD OTHER CONVERSIONS HERE if necessary
         }
@@ -1256,10 +1264,15 @@ public abstract class FwController
     /// <returns></returns>
     public virtual string applyViewListConversions(string fieldname, Hashtable row, Hashtable hconversions)
     {
-        var data = (string)row[fieldname];
-        if ((string)(hconversions[fieldname] ?? "") == "date")
+        var data = row[fieldname].toStr();
+        var conversion = hconversions[fieldname].toStr();
+        if (conversion == "date")
         {
             data = DateUtils.Str2DateOnly(data, fw.userDateFormat);
+        }
+        else if (conversion == "datetime")
+        {
+            data = fw.formatUserDateTime(data);
         }
         return data;
     }
@@ -1288,9 +1301,12 @@ public abstract class FwController
             var afields = Utils.qw(fields);
 
             var hconversions = getViewListConversions(afields);
+            logger("fields:", afields);
+            logger("conversions:", hconversions);
 
             foreach (Hashtable row in list_rows)
             {
+                logger("ROW:", row);
                 ArrayList cols = [];
                 foreach (var fieldname in afields)
                 {

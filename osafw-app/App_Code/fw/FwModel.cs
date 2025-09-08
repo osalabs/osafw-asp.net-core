@@ -1240,21 +1240,8 @@ public abstract class FwModel : IDisposable
 
             var field_schema = (Hashtable)table_schema[fieldname_lc];
 
-            var fw_type = (string)field_schema["fw_type"];
+            //var fw_type = (string)field_schema["fw_type"];
             var fw_subtype = (string)field_schema["fw_subtype"];
-
-            // TBD might not be necessary as DB returns in SQL format
-            //if (fw_type == "date")
-            //{
-            //    //if field is exactly DATE - show only date part without time - in YYYY-MM-DD format
-            //    item[fieldname] = DateUtils.Str2SQL((string)item[fieldname]);
-            //}
-            //else if (fw_type == "datetime")
-            //{
-            //    //if field is exactly DATETIME - show in YYYY-MM-DD HH:MM:SS format
-            //    item[fieldname] = DateUtils.Str2SQL((string)item[fieldname], true);
-            //}
-            //else 
 
             if (fw_subtype == "bit")
             {

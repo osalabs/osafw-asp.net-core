@@ -20,7 +20,7 @@
                 type: Object,
                 required: false
             }
-        },        
+        },
         computed: {
             ...mapStores(fwStore),
             styles() {
@@ -30,15 +30,30 @@
                 return {};
             },
             formatted() {
-                const v = this.row[this.col.field_name];
+                const v = this.row[this.col.field_name] ?? '';
+                if (v === '') return '';
+
                 const type = this.col.input_type || this.col.type;
-                if (!v) return v;
+
+                // Explicit types from headers
                 if (type === 'date' || type === 'date_popup') {
                     return this.fwStore.formatDate(v);
                 }
-                if (type === 'datetime' || type === 'datetime_popup') {
+                if (type === 'datetime' || type === 'datetime_popup' || type === 'added' || type === 'updated') {
                     return this.fwStore.formatDateTime(v);
                 }
+
+                // Fallback: detect SQL date/time strings automatically
+                //if (typeof v === 'string') {
+                //    const sv = v.trim();
+                //    if (/^\d{4}-\d{2}-\d{2}$/.test(sv)) {
+                //        return this.fwStore.formatDate(sv);
+                //    }
+                //    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(sv)) {
+                //        return this.fwStore.formatDateTime(sv);
+                //    }
+                //}
+
                 return v;
             }
         }
