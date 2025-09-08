@@ -1301,12 +1301,9 @@ public abstract class FwController
             var afields = Utils.qw(fields);
 
             var hconversions = getViewListConversions(afields);
-            logger("fields:", afields);
-            logger("conversions:", hconversions);
 
             foreach (Hashtable row in list_rows)
             {
-                logger("ROW:", row);
                 ArrayList cols = [];
                 foreach (var fieldname in afields)
                 {

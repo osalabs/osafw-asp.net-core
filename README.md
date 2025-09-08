@@ -258,6 +258,8 @@ To enable PDF export using Playwright (Chromium):
    - If PDF export fails, check `/App_Data/logs/main.log` for errors.
    - Ensure the browser path is writable and accessible by the IIS user.
 
+For more technical details, see comments in `ConvUtils.cs` and `FwReports.cs`.
+
 ### Background Service for Scheduled Tasks
 
 Framework includes a background service for scheduled tasks (like send emails, run reports, etc...). Uses **Cronos** nuget package.
@@ -265,12 +267,3 @@ To enable:
 - in Program.cs uncomment `builder.Services.AddHostedService<FwCronService>();`
 - add tasks like `insert into fwcron(icode, cron) values ('example_sleep', '* * * * *')` - example task to run every minute
 - update `FwCron.runJobAction` to call acutal code for tasks
-
----
-
-## Playwright PDF Export Setup
-
-
----
-
-For more technical details, see comments in `ConvUtils.cs` and `FwReports.cs`.
