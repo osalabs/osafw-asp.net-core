@@ -6,7 +6,21 @@
   <~/common/form/relid>
   <~list_filter_inputs>
 
-  <~/common/list/filter_search>
-  
-  <~list_filter_more>
+  <div class="row g-2 align-items-center d-print-none">
+    <div class="col-auto">
+      <div class="btn-group">
+        <a class="btn btn-default" href="<~../url>/new<~/common/list/relidq>" <~/common/disabled if="is_readonly">><i class="bi bi-plus-lg"></i> `Add New`</a>
+        <~btn_std_more>
+      </div>
+    </div>
+
+    <~/common/list/fsearch>
+    <~list_filter_more>
+  </div>
+
+  <~more_rows if="list_filter_more_rows" inline>
+    <div class="row g-2 align-items-center d-print-none">
+      <~list_filter_more_rows>
+    </div>
+  </~more_rows>
 </form>
