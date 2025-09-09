@@ -1142,7 +1142,7 @@ public class FwDynamicController : FwController
                         att_model.delete(row["id"].toInt(), true);
                 }
             }
-            //TBD
+            //TBD this is not needed as uploads done via ajax
             //{
             //    //table_name, item_id
             //    var itemdb = new Hashtable {

@@ -93,6 +93,16 @@ public class AdminDemosController : FwAdminController
         ps["att"] = fw.model<Att>().one(item["att_id"]).toHashtable();
         ps["att_links"] = fw.model<Att>().listLinked(model.table_name, id);
 
+        // Files upload sample like in DemosDynamic (att_files_edit)
+        // provide variables required by /common/form/showform/att_files.html
+        ps["fwentity"] = model.table_name; // entity name used by uploader
+        ps["att_category"] = "general";   // sample category
+        ps["att_post_prefix"] = "att_files1"; // hidden fields prefix in the form
+        var att_list = fw.model<Att>().listByEntityCategory(model.table_name, id, ps["att_category"].toStr());
+        foreach (Hashtable row in att_list)
+            row["fsize_human"] = Utils.bytes2str(row["fsize"].toLong());
+        ps["att_files"] = att_list;
+
         return ps;
     }
 
@@ -130,6 +140,21 @@ public class AdminDemosController : FwAdminController
 
         fw.model<DemosDemoDicts>().updateJunctionByMainId(id, reqh("demo_dicts_link"));
         fw.model<AttLinks>().updateJunction(model.table_name, id, reqh("att"));
+
+        // Files upload sample handler (like FwDynamicController att_files_edit)
+        string att_category = "general";
+        string att_post_prefix = "att_files1";
+        if (!(isPatch() && req(att_post_prefix) == null))
+        {
+            var att_ids = reqh(att_post_prefix) ?? [];
+            var att_model = fw.model<Att>();
+            var existing = att_model.listByEntityCategory(model.table_name, id, att_category);
+            foreach (Hashtable row in existing)
+            {
+                if (!att_ids.ContainsKey(row["id"]))
+                    att_model.delete(row["id"].toInt(), true);
+            }
+        }
 
         return this.afterSave(success, id, is_new);
     }
