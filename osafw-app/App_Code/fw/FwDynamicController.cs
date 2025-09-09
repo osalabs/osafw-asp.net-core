@@ -39,6 +39,9 @@ public class FwDynamicController : FwController
         this.setListSearch();
         this.setListSearchStatus(); // status field is not always in table, so keep it separate
 
+        // make list select lean: only fetch visible columns (+ id)
+        setListFields();
+
         // set here non-standard search
         // If f("field") > "" Then
         // Me.list_where &= " and field=" & db.q(f("field"))
@@ -69,6 +72,27 @@ public class FwDynamicController : FwController
 
         return ps;
     }
+
+    // NOTE, only use if list screen columns does not depend on non-visible fields
+    /// <summary>
+    /// Select only visible list fields (+ id) when dynamic index is enabled.
+    /// </summary>
+    //protected override void setListFields()
+    //{
+    //    if (!(is_dynamic_index || (is_dynamic_index_edit && is_list_edit)))
+    //        return; // keep default behaviour - select all fields
+
+    //    var fields = getViewListUserFields();
+    //    var afields = Utils.qw(fields).Where(f => !string.IsNullOrEmpty(f)).ToList();
+
+    //    // ensure id is present
+    //    if (!afields.Contains(model0.field_id))
+    //        afields.Insert(0, model0.field_id);
+
+    //    // quote identifiers only when needed to keep compatibility with subquery aliases
+    //    var quoted = afields.Select(f => db.qid(f, false));
+    //    list_fields = string.Join(", ", quoted);
+    //}
 
     //Prev/Next navigation
     public virtual Hashtable NextAction(string form_id)
@@ -1290,4 +1314,5 @@ public class FwDynamicController : FwController
         }
         return result;
     }
+
 }

@@ -3,8 +3,6 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2023 Oleg Savchuk www.osalabs.com
 
-using System.Collections;
-
 namespace osafw;
 
 public class AdminDemosDynamicController : FwDynamicController
@@ -29,7 +27,9 @@ public class AdminDemosDynamicController : FwDynamicController
         is_userlists = true;
         is_activity_logs = true;  //enable work with activity_logs (comments, history)
 
-        // override sortmap for date fields
-        // list_sortmap["fdate_pop_str"] = "fdate_pop";
+        // override sortmap for additional computed fields
+        // allow sorting by display-friendly date to map to real DB field
+        list_sortmap ??= [];
+        list_sortmap["fdate_pop_str"] = "fdate_pop";
     }
 }
