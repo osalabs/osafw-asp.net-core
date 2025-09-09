@@ -14,6 +14,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Net.Http.Headers;
+using Microsoft.AspNetCore.Authentication;
 using System;
 using System.Collections;
 
@@ -207,10 +208,40 @@ public static class Program
             await next();
         });
 
-        // Finally, map all requests to FW-based handler:
-        app.MapWhen(ctx => ctx.Request != null, appBranch =>
+        // Final handler
+        app.Run(async context =>
         {
-            appBranch.UseMyHandler(); // calls the MyHandlerMiddleware (see HttpMiddleware.cs)
+            var request = context.Request;
+            var response = context.Response;
+
+            // CORS preflight (OPTIONS)
+            if (HttpMethods.IsOptions(request.Method))
+            {
+                response.Clear();
+                response.Headers.AccessControlAllowMethods = "GET, POST, PUT, PATCH, DELETE, OPTIONS";
+                if (request.Headers.TryGetValue("Access-Control-Request-Headers", out var acrh))
+                    response.Headers.AccessControlAllowHeaders = acrh;
+                response.Headers.AccessControlAllowCredentials = "true";
+                // optionally dynamic origin:
+                // var origin = request.Headers["Origin"].ToString();
+                // response.Headers.AccessControlAllowOrigin = string.IsNullOrEmpty(origin) ? "*" : origin;
+                response.StatusCode = StatusCodes.Status204NoContent;
+                return;
+            }
+
+            // Windows Authentication Support
+            if (!context.User.Identity?.IsAuthenticated ?? true)
+            {
+                var path = request.Path.ToString();
+                if (path.StartsWith("/winlogin", StringComparison.CurrentCultureIgnoreCase))
+                {
+                    await context.ChallengeAsync(Microsoft.AspNetCore.Server.IISIntegration.IISDefaults.AuthenticationScheme);
+                    return;
+                }
+            }
+
+            // Call the FW "core" pipeline
+            FW.run(context, app.Configuration);
         });
 
         // Run the application
