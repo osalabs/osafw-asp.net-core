@@ -487,6 +487,7 @@
             "field": "_att_files",
             "label": "Files Upload",
             "type": "att_files_edit",
+            "multiple": true,
             "att_category": "general",
             "att_post_prefix": "att_files1"
         },

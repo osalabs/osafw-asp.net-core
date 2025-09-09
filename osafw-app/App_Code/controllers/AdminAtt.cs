@@ -21,7 +21,7 @@ public class AdminAttController : FwAdminController
 
         base_url = "/Admin/Att"; // base url for the controller
         required_fields = "iname"; // default required fields, space-separated
-        save_fields = "att_categories_id iname status";
+        save_fields = "fwentities_id item_id att_categories_id iname status";
 
         search_fields = "!id iname fname";
         list_sortdef = "iname asc";
@@ -102,6 +102,22 @@ public class AdminAttController : FwAdminController
         // load old record if necessary
         // Dim itemold As Hashtable = model.one(id)
 
+        // set att_categories_id from category icode if provided
+        if (Utils.isEmpty(item["att_categories_id"]) && !Utils.isEmpty(item["att_category"]))
+        {
+            var att_cat = fw.model<AttCategories>().oneByIcode(item["att_category"].toStr());
+            var att_categories_id = att_cat.Count > 0 ? att_cat["id"].toInt() : 0;
+            item["att_categories_id"] = att_categories_id;
+        }
+
+        // set fwentities_id from fwentity if provided
+        if (Utils.isEmpty(item["fwentities_id"]) && !Utils.isEmpty(item["fwentity"]))
+        {
+            var ent = fw.model<FwEntities>().oneByIcode(item["fwentity"].toStr());
+            var fwentities_id = ent.Count > 0 ? ent["id"].toInt() : 0;
+            item["fwentities_id"] = fwentities_id;
+        }
+
         Hashtable itemdb = FormUtils.filter(item, save_fields);
         if (Utils.isEmpty(itemdb["iname"]))
             itemdb["iname"] = "new file upload";
@@ -128,14 +144,14 @@ public class AdminAttController : FwAdminController
         ps["id"] = id;
         if (id > 0)
         {
-            item = model.one(id);
+            var item_new = model.one(id);
             ps["success"] = true;
-            ps["icode"] = item["icode"];
+            ps["icode"] = item_new["icode"];
             ps["url"] = model.getUrl(id);
             ps["url_preview"] = model.getUrlPreview(id);
-            ps["iname"] = item["iname"];
-            ps["is_image"] = item["is_image"];
-            ps["ext"] = item["ext"];
+            ps["iname"] = item_new["iname"];
+            ps["is_image"] = item_new["is_image"];
+            ps["ext"] = item_new["ext"];
         }
         else
             ps["success"] = false;

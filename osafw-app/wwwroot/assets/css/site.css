@@ -100,18 +100,18 @@ a[disabled]
     min-height: 100%;
   }
 
-.file-drop-area {
+.fw-file-drop-area {
     border: 2px dashed #ccc;
     border-radius: 20px;
     position: relative;
     padding: 20px;
     text-align: center;
 }
-  .file-drop-area.highlight {
+  .fw-file-drop-area.highlight {
       background-color: var(--fw-hiliter);
       border-color: var(--bs-primary);
   }
-  .file-drop-area .fake-btn {
+  .fw-file-drop-area .fake-btn {
       cursor: pointer;
   }
 

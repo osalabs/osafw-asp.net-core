@@ -891,18 +891,17 @@ public class FwDynamicController : FwController
             }
             else if (dtype == "att_links_edit")
                 def["att_links"] = fw.model<Att>().listLinked(model0.table_name, id);
+
             else if (dtype == "att_files_edit")
             {
+                def["fwentity"] = model0.table_name;
+                if (!def.ContainsKey("att_post_prefix"))
+                    def["att_post_prefix"] = field;
+
                 var att_list = fw.model<Att>().listByEntityCategory(model0.table_name, id, def["att_category"].toStr());
                 foreach (Hashtable row in att_list)
                     row["fsize_human"] = Utils.bytes2str(row["fsize"].toLong());
                 def["att_files"] = att_list;
-
-                if (!def.ContainsKey("att_post_prefix"))
-                    def["att_post_prefix"] = def["field"];
-                def["fwentities_id"] = fw.model<FwEntities>().idByIcodeOrAdd(model0.table_name);
-                if (!Utils.isEmpty(def["att_category"]))
-                    def["att_category_id"] = fw.model<AttCategories>().oneByIcode(def["att_category"].toStr())["id"] ?? "";
             }
 
             else if (dtype == "subtable_edit")
@@ -1131,7 +1130,7 @@ public class FwDynamicController : FwController
             else if (type == "att_files_edit")
             {
                 // on submit - delete any att records not present in the post (i.e. deleted by user)
-                var att_post_prefix = def["att_post_prefix"].toStr("att");
+                var att_post_prefix = def["att_post_prefix"].toStr(field);
                 var att_ids = reqh(att_post_prefix) ?? [];
                 var att_category = def["att_category"].toStr();
                 var att_model = fw.model<Att>();

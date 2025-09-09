@@ -564,11 +564,11 @@ window.fw={
     }
 
     function form_handle_errors($f, data, hint_options){
-            if (data.error?.details) {
-                //auto-save error - highlight errors
-                fw.process_form_errors($f, data.error?.details);
-            }
-            fw.error(data.error?.message || 'Auto-save error. Server error occurred. Try again later.', hint_options);
+        if (data.error?.details) {
+            //auto-save error - highlight errors
+            fw.process_form_errors($f, data.error?.details);
+        }
+        fw.error(data.error?.message || 'Auto-save error. Server error occurred. Try again later.', hint_options);
     }
 
     function form_autosave($f) {
@@ -704,20 +704,20 @@ window.fw={
   },
 
   /* structure:
-    <div class="file-drop-area">
+    <div class="fw-file-drop-area">
         <span class="fake-btn">Choose files or drag and drop your files here</span>
         <input class="d-none" type="file" multiple >
     </div>
   */
   setup_file_drop_area: function (){
-    document.querySelectorAll('.file-drop-area').forEach(dropArea => {
+    document.querySelectorAll('.fw-file-drop-area').forEach(dropArea => {
         const fileInput = dropArea.querySelector('input[type="file"]');
         const fakeBtn = dropArea.querySelector('.fake-btn');
 
         fakeBtn.onclick = () => fileInput.click();
-        fileInput.onchange = () => {
-            fakeBtn.innerHTML = fileInput.files.length + ' file(s) selected';
-        };
+        //fileInput.onchange = () => {
+        //    fakeBtn.innerHTML = fileInput.files.length + ' file(s) selected';
+        //};
 
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
             dropArea.addEventListener(eventName, (e) => {
@@ -740,19 +740,21 @@ window.fw={
   },
 
   setup_att_files_upload: function(){
-    $(document).on('change', '.file-drop-area input[type=file]', function(e){
+    $(document).on('change', '.fw-file-drop-area input[type=file]', function(e){
       var $input = $(this);
-      var $drop = $input.closest('.file-drop-area');
+      var $drop = $input.closest('.fw-file-drop-area');
       var files = this.files;
       if (!files.length) return;
 
+      this.value = null; //cleanup files input
+
       var upload_url = $drop.data('upload-url') || '/Admin/Att';
-      var att_categories_id = $drop.data('att-categories-id');
-      var att_post_prefix = $drop.data('att-post-prefix') || 'att';
+      var att_category = $drop.data('att-category'); // optional
+      var att_post_prefix = $drop.data('att-post-prefix'); // should be set to related field name from config.json
       var item_id = $drop.data('item-id');
-      var fwentities_id = $drop.data('fwentities-id');
+      var fwentity = $drop.data('fwentity');
       if (!item_id) { 
-          fw.alert('Save item first');
+          fw.alert('Save record first');
           $input.val('');
           return;
       }
@@ -767,8 +769,9 @@ window.fw={
 
         var fd = new FormData();
         fd.append('file1', file);
-        fd.append('item[att_categories_id]', att_categories_id);
-        fd.append('item[fwentities_id]', fwentities_id);
+        fd.append('XSS', $input.closest('form').find('input[name=XSS]').val());
+        fd.append('item[att_category]', att_category);
+        fd.append('item[fwentity]', fwentity);
         fd.append('item[item_id]', item_id);
 
         $.ajax({
@@ -778,7 +781,8 @@ window.fw={
           processData: false,
           contentType: false,
           dataType: 'json',
-          headers: {'Accept':'application/json'},
+          headers: { 'Accept': 'application/json' },
+
           xhr: function(){
             var xhr = new window.XMLHttpRequest();
             xhr.upload.addEventListener('progress', function(evt){
@@ -791,13 +795,13 @@ window.fw={
           },
           success: function(res){
             $item.find('.progress').remove();
-            if (res && res.success){
-              $item.find('.att-iname').html('<a href="'+res.url+'" target="_blank">'+res.iname+'</a>');
-              $item.append('<input type="hidden" name="'+att_post_prefix+'['+res.id+']" value="1">');
-              $drop.closest('form').trigger('autosave');
+            if (res && !res.error){
+              $item.find('.att-iname').attr("href", res.url).text(res.iname);
+              $item.find('.att-post-prefix').attr("name", att_post_prefix + '[' + res.id + ']').val(1);
+              //$drop.closest('form').trigger('autosave');
             }else{
               $item.remove();
-              fw.error('Upload failed');
+              fw.error(data.error?.message || 'Upload failed');
             }
             $input.val('');
           },
@@ -807,6 +811,7 @@ window.fw={
             $input.val('');
           }
         });
+
       });
     });
 
@@ -1066,10 +1071,10 @@ window.fw={
       if (score > 60) return "good";
       if (score >= 30) return "weak";
       return "bad";
-    },
+  },
 
    bytes2str: function(bytes){
-    var units=['B','KB','MB','GB','TB'];
+    var units=['B','KiB','MiB','GiB','TiB'];
     var i=0;
     while(bytes>=1024 && i<units.length-1){bytes/=1024;i++;}
     return Math.round(bytes*10)/10+' '+units[i];

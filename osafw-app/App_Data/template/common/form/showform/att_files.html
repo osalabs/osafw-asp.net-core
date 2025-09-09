@@ -1,25 +1,25 @@
-<div class="file-drop-area" 
-  data-upload-url="<~/admin/att/url>" 
-  data-att-categories-id="<~att_category_id>" 
-  data-att-post-prefix="<~att_post_prefix>" 
-  data-item-id="<~i[id]>" 
-  data-fwentities-id="<~fwentities_id>">
+<div class="fw-file-drop-area"
+  data-upload-url="<~/admin/att/url>"
+  data-att-category="<~att_category>"
+  data-att-post-prefix="<~att_post_prefix>"
+  data-item-id="<~i[id]>"
+  data-fwentity="<~fwentity>">
   <span class="fake-btn"><i class="bi bi-cloud-upload"></i> Choose files or drag and drop your files here</span>
-  <input class="d-none" type="file" name="file" <~/common/multiple if="multiple">>
+  <input class="d-none" data-noautosave type="file" name="file" <~/common/multiple if="multiple">>
 </div>
 
-<div class="att-list list-group mt-3">
+<div class="att-list mt-3">
   <~att_files repeat inline>
-    <div class="att-item list-group-item d-flex align-items-center">
-      <span class="flex-grow-1 text-truncate"><a href="<~/att/url>/<~icode>" target="_blank"><~iname></a> (<~fsize_human>)</span>
+    <div class="att-item d-flex align-items-center">
+      <~/common/dot><span class="text-truncate"><a href="<~/att/url>/<~icode>" target="_blank"><~iname></a> <span class="text-muted ms-2">(<~fsize_human>)</span></span>
       <button type="button" class="btn btn-sm btn-link text-danger on-remove-att"><i class="bi bi-x-circle-fill"></i></button>
-      <input type="hidden" name="<~att_post_prefix>[<~id>]" value="1">
+      <input type="hidden" name="<~PARSEPAGE.PARENT[att_post_prefix]>[<~id>]" value="1">
     </div>
   </~att_files>
-  <div class="att-item list-group-item d-flex align-items-center tpl d-none">
-    <span class="flex-grow-1 text-truncate att-iname"></span>
-    <span class="att-size text-muted ms-2"></span>
-    <div class="progress flex-grow-1 ms-2"><div class="progress-bar" style="width:0%"></div></div>
-    <button type="button" class="btn btn-sm btn-link text-danger on-remove-att ms-2"><i class="bi bi-x-circle-fill"></i></button>
+  <div class="att-item d-flex align-items-center tpl d-none">
+    <~/common/dot><span class="text-truncate"><a href="#" target="_blank" class="att-iname"><~iname></a> <span class="att-size text-muted ms-2"></span></span>
+    <div class="progress flex-grow-1 mx-2"><div class="progress-bar progress-bar-striped progress-bar-animated" style="width:0%"></div></div>
+    <button type="button" class="btn btn-sm btn-link text-danger on-remove-att"><i class="bi bi-x-circle-fill"></i></button>
+    <input type="hidden" name="<~att_post_prefix>[0]" value="1" class="att-post-prefix">
   </div>
 </div>
