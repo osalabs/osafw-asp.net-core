@@ -116,6 +116,35 @@
         </div>
     </template>
 
+    <template v-else-if="def.type=='att_files'">
+        <div class="att-list mt-2">
+            <div v-for="att_id in att_files" :key="'afile-'+att_id" class="att-item d-flex align-items-center">
+                &nbsp;&#183;&nbsp;<span class="text-truncate"><a :href="attachments[att_id]?.url??'#'" target="_blank">{{attachments[att_id]?.iname??att_id}}</a> <span class="text-muted ms-2">({{bytes2str(attachments[att_id]?.fsize??0)}})</span></span>
+            </div>
+        </div>
+    </template>
+
+    <template v-else-if="def.type=='att_files_edit'">
+        <div class="fw-file-drop-area"
+             :data-upload-url="'/Admin/Att'"
+             :data-att-category="def.att_category"
+             :data-att-post-prefix="att_post_prefix"
+             :data-item-id="item.id"
+             :data-fwentity="fwStore.fwentity">
+            <button type="button" class="btn" @click="onChooseFiles"><i class="bi bi-cloud-upload"></i> Choose files or drag and drop your files here</button>
+            <input ref="fileInput" class="d-none" data-noautosave type="file" name="file" :multiple="def.multiple" @change="onAttFilesInputChange">
+        </div>
+
+        <div class="att-list mt-3">
+            <div v-for="att_id in att_files" :key="'afile-edit-'+att_id" class="att-item d-flex align-items-center">
+                <!-- hidden input to persist selected file on autosave/submit -->
+                <input type="hidden" class="att-post-prefix" :name="att_post_prefix+'['+att_id+']'" value="1">
+                &nbsp;&#183;&nbsp;<span class="text-truncate"><a :href="attachments[att_id]?.url??'#'" target="_blank" class="att-iname">{{attachments[att_id]?.iname??att_id}}</a> <span class="att-size text-muted ms-2">({{bytes2str(attachments[att_id]?.fsize??0)}})</span></span>
+                <button type="button" class="btn btn-sm btn-link text-danger on-remove-att" @click.prevent="onAttFileDelete(att_id)"><i class="bi bi-x-circle-fill"></i></button>
+            </div>
+        </div>
+    </template>
+
     <template v-if="def.type=='currency'">
         <div class="input-group">
             <span class="input-group-text">{{ currencySymbol }}</span>
@@ -338,6 +367,13 @@
             att_links() {
                 return this.form.att_links ?? [];
             },
+            att_files() {
+                // per-field list of files
+                return this.form.att_files?.[this.def.field] ?? [];
+            },
+            att_post_prefix() {
+                return this.def.att_post_prefix || this.def.field;
+            },
 
             error() {
                 return this.form.save_result?.error?.details?.[this.def.field] ?? false;
@@ -425,6 +461,8 @@
                 this.value = att.id;
                 this.fwStore.saveEditDataDebounced();
             },
+
+            // att links
             onAttLinkSelected(att) {
                 if (!this.attachments[att.id]) {
                     this.attachments[att.id] = att;
@@ -441,6 +479,58 @@
                 this.form.att_links = this.form.att_links.filter(id => id != att_id);
                 this.fwStore.saveEditDataDebounced();
             },
+
+            // att files
+            onAttFileDelete(att_id) {
+                if (!this.form.att_files) return;
+                // per-field removal
+                const field = this.def.field;
+                if (!this.form.att_files[field]) return;
+                this.form.att_files[field] = this.form.att_files[field].filter(id => id != att_id);
+                this.fwStore.saveEditDataDebounced();
+            },
+            onChooseFiles() {
+                const input = this.$refs.fileInput;
+                if (input && typeof input.click === 'function') input.click();
+            },
+            async onAttFilesInputChange(e) {
+                if (e && e.stopImmediatePropagation) e.stopImmediatePropagation();
+                const files = e.target.files;
+                if (!files || !files.length) return;
+                if (!this.item.id) { Toast('Save record first', { theme: 'text-bg-warning' }); e.target.value = ''; return; }
+
+                const upload_url = '/Admin/Att';
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const fd = new FormData();
+                    fd.append('file1', file);
+                    fd.append('XSS', this.fwStore.XSS);
+                    fd.append('item[att_category]', this.def.att_category ?? '');
+                    fd.append('item[fwentity]', this.fwStore.fwentity ?? '');
+                    fd.append('item[item_id]', this.item.id);
+
+                    try {
+                        const res = await fetch(upload_url, { method: 'POST', headers: { 'Accept': 'application/json' }, body: fd });
+                        const data = await res.json();
+                        if (data && !data.error && data.id) {
+                            //add to attachments map and att_files ids per field
+                            if (!this.form.attachments) this.form.attachments = {};
+                            this.form.attachments[data.id] = data;
+                            if (!this.form.att_files) this.form.att_files = {};
+                            if (!this.form.att_files[this.def.field]) this.form.att_files[this.def.field] = [];
+                            if (!this.form.att_files[this.def.field].includes(data.id)) this.form.att_files[this.def.field].push(data.id);
+                            this.fwStore.saveEditDataDebounced();
+                        } else {
+                            Toast(data?.error?.message || 'Upload failed', { theme: 'text-bg-danger' });
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        Toast('Upload failed', { theme: 'text-bg-danger' });
+                    }
+                }
+                e.target.value = '';
+            },
+
             formatCurrency(val) {
                 let num = Number(val);
                 if (isNaN(num)) return val;
@@ -452,6 +542,9 @@
                 if (!isNaN(num)) {
                     this.value = num.toFixed(2);
                 }
+            },
+            bytes2str(bytes) {
+                return AppUtils.bytes2str(bytes);
             },
             renderMarkdown(text) {
                 if (!md && window.markdownit) {
@@ -476,7 +569,7 @@
                                         let aclasses = tokens[idx].attrs.filter(el => el[0] == 'class');
                                         class_name += ' ' + aclasses.map(el => el[1]).join(' ');
                                     }
-                                    return '<div class="'+class_name+'">';
+                                    return '<div class="' + class_name + '">';
                                 } else {
                                     return '</div>';
                                 }

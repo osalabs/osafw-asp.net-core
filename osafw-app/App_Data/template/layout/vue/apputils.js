@@ -35,6 +35,12 @@ const AppUtils = {
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#39;');
-    }
+    },
 
+    bytes2str: function (bytes) {
+        var units = ['B', 'KiB', 'MiB', 'GiB', 'TiB'];
+        var i = 0;
+        while (bytes >= 1024 && i < units.length - 1) { bytes /= 1024; i++; }
+        return Math.round(bytes * 10) / 10 + ' ' + units[i];
+    },
 };

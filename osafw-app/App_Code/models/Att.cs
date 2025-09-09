@@ -647,7 +647,7 @@ public class Att : FwModel
     public override void filterForJson(Hashtable item)
     {
         //leave only specific keys
-        var keys = Utils.qh("id icode att_categories_id iname is_image ext url url_preview");
+        var keys = Utils.qh("id icode att_categories_id iname is_image fsize ext url url_preview");
         foreach (var key in new ArrayList(item.Keys))
         {
             if (!keys.ContainsKey(key))

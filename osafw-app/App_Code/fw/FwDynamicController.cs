@@ -1129,12 +1129,13 @@ public class FwDynamicController : FwController
             }
             else if (type == "att_files_edit")
             {
-                // on submit - delete any att records not present in the post (i.e. deleted by user)
+                // per-field prefix support
                 var att_post_prefix = def["att_post_prefix"].toStr(field);
                 var att_ids = reqh(att_post_prefix) ?? [];
                 var att_category = def["att_category"].toStr();
                 var att_model = fw.model<Att>();
 
+                // delete any files in this category not present in the posted list
                 var existing = att_model.listByEntityCategory(model0.table_name, id, att_category);
                 foreach (Hashtable row in existing)
                 {
@@ -1142,16 +1143,6 @@ public class FwDynamicController : FwController
                         att_model.delete(row["id"].toInt(), true);
                 }
             }
-            //TBD this is not needed as uploads done via ajax
-            //{
-            //    //table_name, item_id
-            //    var itemdb = new Hashtable {
-            //        { "fwentities_id", fw.model<FwEntities>().idByIcodeOrAdd(model0.table_name) },
-            //        { "item_id", id }
-            //    };
-            //    var addedAtt = fw.model<Att>().uploadMulti(itemdb);
-
-            //}
             else if (type == "multicb")
             {
                 if (Utils.isEmpty(def["model"]))

@@ -151,6 +151,7 @@ public class AdminAttController : FwAdminController
             ps["url_preview"] = model.getUrlPreview(id);
             ps["iname"] = item_new["iname"];
             ps["is_image"] = item_new["is_image"];
+            ps["fsize"] = item_new["fsize"];
             ps["ext"] = item_new["ext"];
         }
         else

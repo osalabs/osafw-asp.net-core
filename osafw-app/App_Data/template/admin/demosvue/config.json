@@ -280,6 +280,12 @@
                     "type": "att_links"
                 },
                 {
+                    "field": "_att_files",
+                    "label": "Files Upload",
+                    "type": "att_files",
+                    "att_category": "general"
+                },
+                {
                     "field": "status",
                     "label": "Status",
                     "type": "plaintext",
@@ -527,6 +533,14 @@
                     "label": "Multiple Attachments",
                     "type": "att_links_edit",
                     "att_post_prefix": "att"
+                },
+                {
+                    "field": "_att_files",
+                    "label": "Files Upload",
+                    "type": "att_files_edit",
+                    "multiple": true,
+                    "att_category": "general",
+                    "att_post_prefix": "att_files1"
                 },
                 {
                     "field": "status",

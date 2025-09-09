@@ -1073,7 +1073,7 @@ window.fw={
       return "bad";
   },
 
-   bytes2str: function(bytes){
+  bytes2str: function(bytes){
     var units=['B','KiB','MiB','GiB','TiB'];
     var i=0;
     while(bytes>=1024 && i<units.length-1){bytes/=1024;i++;}

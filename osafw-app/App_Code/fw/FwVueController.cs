@@ -139,6 +139,9 @@ public class FwVueController : FwDynamicController
         ps["is_userlists"] = this.is_userlists;
         ps["is_readonly"] = is_readonly;
         ps["is_list_edit"] = is_list_edit;
+
+        // fwentity for uploads
+        ps["fwentity"] = model0.table_name;
     }
 
     /// <summary>
@@ -188,11 +191,8 @@ public class FwVueController : FwDynamicController
 
         // extract lookups from config and add to ps
         var lookups = new Hashtable();
-        //foreach (Hashtable header in list_headers) // only for headers
         foreach (Hashtable def in showform_fields)
         {
-            //var field_name = (string)header["field_name"];
-            //var def = (Hashtable)hfields[field_name] ?? null;
             if (def == null)
                 continue;
 
@@ -313,6 +313,7 @@ public class FwVueController : FwDynamicController
         var subtables = new Hashtable();
         var attachments = new Hashtable(); //att_id => att item
         var att_links = new ArrayList(); //linked att ids
+        var att_files = new Hashtable(); // per-field: field => [ids]
 
         var fields = (ArrayList)this.config[mode == "edit" ? "showform_fields" : "show_fields"];
         foreach (Hashtable def in fields)
@@ -377,6 +378,7 @@ public class FwVueController : FwDynamicController
                     if (att_item.Count > 0)
                     {
                         fw.model<Att>().filterForJson(att_item);
+                        // add size for display
                         attachments[att_id] = att_item;
                     }
                 }
@@ -391,6 +393,19 @@ public class FwVueController : FwDynamicController
                     att_links.Add(att_item["id"]);
                 }
             }
+            else if (dtype == "att_files" || dtype == "att_files_edit")
+            {
+                var category = def["att_category"].toStr();
+                var att_items = fw.model<Att>().listByEntityCategory(model0.table_name, id, category);
+                var ids = new ArrayList();
+                foreach (Hashtable att_item in att_items)
+                {
+                    fw.model<Att>().filterForJson(att_item);
+                    attachments[att_item["id"]] = att_item;
+                    ids.Add(att_item["id"]);
+                }
+                att_files[field_name] = ids;
+            }
         }
 
         if (multi_rows.Count > 0)
@@ -401,6 +416,8 @@ public class FwVueController : FwDynamicController
             ps["attachments"] = attachments;
         if (att_links.Count > 0)
             ps["att_links"] = att_links;
+        if (att_files.Count > 0)
+            ps["att_files"] = att_files;
 
         // fill added/updated too
         setAddUpdUser(ps, item);

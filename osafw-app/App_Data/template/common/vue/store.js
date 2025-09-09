@@ -16,6 +16,7 @@ let state = {
     access_level: 0, // user access level
     base_url: '', // base url for the controller
     api: null, // mande instance
+    fwentity: '', // related entity, for uploads
     list_title: '', //list screen title
     view_title: '',
     edit_title: '',
@@ -718,6 +719,23 @@ let actions = {
                 req.att = {};
                 this.edit_data.att_links.forEach(att_id => {
                     req.att[att_id] = 1;
+                });
+            }
+
+            //also submit attachments (att_files) as att_post_prefix[ID]=1 (or field_name[ID]=1)
+            if (this.edit_data.att_files) {
+                Object.keys(this.edit_data.att_files).forEach(field_name => {
+                    // find att_post_prefix from field definition
+                    let def = this.showform_fields.find(f => f.field == field_name);
+                    let att_post_prefix = def?.att_post_prefix ?? field_name;
+
+                    let att_ids = this.edit_data.att_files[field_name] ?? [];
+                    if (att_ids.length) {
+                        req[att_post_prefix] = req[att_post_prefix] || {};
+                        att_ids.forEach(att_id => {
+                            req[att_post_prefix][att_id] = 1;
+                        });
+                    }
                 });
             }
 
