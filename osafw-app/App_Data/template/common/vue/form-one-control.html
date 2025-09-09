@@ -125,17 +125,28 @@
     </template>
 
     <template v-else-if="def.type=='att_files_edit'">
-        <div class="fw-file-drop-area"
+        <div :class="['fw-file-drop-area', { highlight: is_dragover }]"
              :data-upload-url="'/Admin/Att'"
              :data-att-category="def.att_category"
              :data-att-post-prefix="att_post_prefix"
              :data-item-id="item.id"
-             :data-fwentity="fwStore.fwentity">
+             :data-fwentity="fwStore.fwentity"
+             @dragenter.prevent.stop="onDropEnter"
+             @dragover.prevent.stop="onDropOver"
+             @dragleave.prevent.stop="onDropLeave"
+             @drop.prevent.stop="onDrop">
             <button type="button" class="btn" @click="onChooseFiles"><i class="bi bi-cloud-upload"></i> Choose files or drag and drop your files here</button>
             <input ref="fileInput" class="d-none" data-noautosave type="file" name="file" :multiple="def.multiple" @change="onAttFilesInputChange">
         </div>
 
         <div class="att-list mt-3">
+            <!-- uploading items with progress -->
+            <div v-for="(up, idx) in uploading_files" :key="'afile-up-'+idx" class="att-item d-flex align-items-center">
+                &nbsp;&#183;&nbsp;<span class="text-truncate"><span class="att-iname">{{up.name}}</span> <span class="att-size text-muted ms-2">({{bytes2str(up.size||0)}})</span></span>
+                <div class="progress flex-grow-1 mx-2"><div class="progress-bar progress-bar-striped progress-bar-animated" :style="{width: (up.progress||0) + '%'}"></div></div>
+            </div>
+
+            <!-- existing uploaded files -->
             <div v-for="att_id in att_files" :key="'afile-edit-'+att_id" class="att-item d-flex align-items-center">
                 <!-- hidden input to persist selected file on autosave/submit -->
                 <input type="hidden" class="att-post-prefix" :name="att_post_prefix+'['+att_id+']'" value="1">
@@ -321,7 +332,11 @@
         },
         data: () => ({
             multi_search: '',
-            is_att_select_modal: false
+            is_att_select_modal: false,
+            // drag&drop highlight state for att_files_edit
+            is_dragover: false,
+            // uploading items state for att_files_edit
+            uploading_files: []
         }),
         computed: {
             ...mapStores(fwStore), //accessible via this.fwStore
@@ -495,13 +510,31 @@
             },
             async onAttFilesInputChange(e) {
                 if (e && e.stopImmediatePropagation) e.stopImmediatePropagation();
-                const files = e.target.files;
+                const files = e?.target?.files;
                 if (!files || !files.length) return;
-                if (!this.item.id) { Toast('Save record first', { theme: 'text-bg-warning' }); e.target.value = ''; return; }
+                await this.uploadFiles(files);
+                if (e && e.target) e.target.value = '';
+            },
+            // drag & drop highlight handlers
+            onDropEnter() { this.is_dragover = true; },
+            onDropOver() { this.is_dragover = true; },
+            onDropLeave() { this.is_dragover = false; },
+            async onDrop(e) {
+                this.is_dragover = false;
+                const files = e.dataTransfer?.files;
+                if (!files || !files.length) return;
+                await this.uploadFiles(files);
+            },
+            async uploadFiles(files) {
+                if (!this.item.id) { Toast('Save record first', { theme: 'text-bg-warning' }); return; }
 
                 const upload_url = '/Admin/Att';
+                // iterate files and upload with progress
                 for (let i = 0; i < files.length; i++) {
                     const file = files[i];
+                    const upItem = { name: file.name, size: file.size, progress: 0 };
+                    this.uploading_files.push(upItem);
+
                     const fd = new FormData();
                     fd.append('file1', file);
                     fd.append('XSS', this.fwStore.XSS);
@@ -510,25 +543,54 @@
                     fd.append('item[item_id]', this.item.id);
 
                     try {
-                        const res = await fetch(upload_url, { method: 'POST', headers: { 'Accept': 'application/json' }, body: fd });
-                        const data = await res.json();
-                        if (data && !data.error && data.id) {
-                            //add to attachments map and att_files ids per field
-                            if (!this.form.attachments) this.form.attachments = {};
-                            this.form.attachments[data.id] = data;
-                            if (!this.form.att_files) this.form.att_files = {};
-                            if (!this.form.att_files[this.def.field]) this.form.att_files[this.def.field] = [];
-                            if (!this.form.att_files[this.def.field].includes(data.id)) this.form.att_files[this.def.field].push(data.id);
-                            this.fwStore.saveEditDataDebounced();
-                        } else {
-                            Toast(data?.error?.message || 'Upload failed', { theme: 'text-bg-danger' });
-                        }
+                        await new Promise((resolve) => {
+                            const xhr = new XMLHttpRequest();
+                            xhr.open('POST', upload_url, true);
+                            xhr.setRequestHeader('Accept', 'application/json');
+                            xhr.upload.onprogress = (evt) => {
+                                if (evt.lengthComputable) {
+                                    upItem.progress = Math.round((evt.loaded / evt.total) * 100);
+                                }
+                            };
+                            xhr.onload = () => {
+                                // remove from uploading list
+                                const idx = this.uploading_files.indexOf(upItem);
+                                if (idx !== -1) this.uploading_files.splice(idx, 1);
+
+                                try {
+                                    const data = JSON.parse(xhr.responseText || '{}');
+                                    if (xhr.status >= 200 && xhr.status < 300 && data && !data.error && data.id) {
+                                        //add to attachments map and att_files ids per field
+                                        if (!this.form.attachments) this.form.attachments = {};
+                                        this.form.attachments[data.id] = data;
+                                        if (!this.form.att_files) this.form.att_files = {};
+                                        if (!this.form.att_files[this.def.field]) this.form.att_files[this.def.field] = [];
+                                        if (!this.form.att_files[this.def.field].includes(data.id)) this.form.att_files[this.def.field].push(data.id);
+                                        this.fwStore.saveEditDataDebounced();
+                                    } else {
+                                        Toast(data?.error?.message || 'Upload failed', { theme: 'text-bg-danger' });
+                                    }
+                                } catch (err) {
+                                    console.error(err);
+                                    Toast('Upload failed', { theme: 'text-bg-danger' });
+                                }
+                                resolve();
+                            };
+                            xhr.onerror = () => {
+                                const idx = this.uploading_files.indexOf(upItem);
+                                if (idx !== -1) this.uploading_files.splice(idx, 1);
+                                Toast('Upload failed', { theme: 'text-bg-danger' });
+                                resolve();
+                            };
+                            xhr.send(fd);
+                        });
                     } catch (err) {
+                        const idx = this.uploading_files.indexOf(upItem);
+                        if (idx !== -1) this.uploading_files.splice(idx, 1);
                         console.error(err);
                         Toast('Upload failed', { theme: 'text-bg-danger' });
                     }
                 }
-                e.target.value = '';
             },
 
             formatCurrency(val) {
