@@ -748,11 +748,11 @@ window.fw={
 
       this.value = null; //cleanup files input
 
-      var upload_url = $drop.data('upload-url') || '/Admin/Att';
-      var att_category = $drop.data('att-category'); // optional
-      var att_post_prefix = $drop.data('att-post-prefix'); // should be set to related field name from config.json
       var item_id = $drop.data('item-id');
-      var fwentity = $drop.data('fwentity');
+      var upload_url = $drop.data('upload-url');
+      var att_category = $drop.data('att-category') || ''; // optional
+      var att_post_prefix = $drop.data('att-post-prefix') || ''; // should be set to related field name from config.json      
+      var fwentity = $drop.data('fwentity') || '';
       if (!item_id) { 
           fw.alert('Save record first');
           $input.val('');
@@ -770,8 +770,8 @@ window.fw={
         var fd = new FormData();
         fd.append('file1', file);
         fd.append('XSS', $input.closest('form').find('input[name=XSS]').val());
-        fd.append('item[att_category]', att_category);
-        fd.append('item[fwentity]', fwentity);
+        if (att_category) fd.append('item[att_category]', att_category);
+        if (fwentity) fd.append('item[fwentity]', fwentity);
         fd.append('item[item_id]', item_id);
 
         $.ajax({

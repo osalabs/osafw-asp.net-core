@@ -24,6 +24,8 @@ public class FwDynamicController : FwController
         base.init(fw);
     }
 
+    #region Standard REST Actions - Index/Show/ShowForm/Save
+
     /// <summary>
     /// contains logic to display list screen
     /// Note! if query contains "export" - early empty result returned and FW will call exportList() after this
@@ -329,7 +331,9 @@ public class FwDynamicController : FwController
 
         return this.afterSave(success, id, is_new);
     }
+    #endregion
 
+    #region Validation
     /// <summary>
     /// Performs submitted form validation for required field and simple validations: exits, isemail, isphone, isdate, isfloat.
     /// If more complex validation required - just override this and call just necessary validation
@@ -349,20 +353,6 @@ public class FwDynamicController : FwController
 
         this.validateCheckResult();
     }
-
-    /// <summary>
-    /// return config for show/showform fields by tab
-    /// </summary>
-    /// <param name="prefix">show_fields or showform_fields</param>
-    /// <param name="tab">optional tab code, if ommited - form_tab used</param>
-    /// <returns></returns>
-    protected virtual ArrayList getConfigShowFormFieldsByTab(string prefix, string tab = null)
-    {
-        tab ??= form_tab;
-        var key = prefix + (tab.Length > 0 ? "_" + tab : "");
-        return (ArrayList)config[key];
-    }
-
 
     protected virtual bool validateRequiredDynamic(int id, Hashtable item)
     {
@@ -510,7 +500,9 @@ public class FwDynamicController : FwController
 
         return result;
     }
+    #endregion
 
+    #region Delete/Restore Actions
     public virtual void ShowDeleteAction(int id)
     {
         fw.model<Users>().checkReadOnly();
@@ -565,7 +557,9 @@ public class FwDynamicController : FwController
         fw.flash("record_updated", 1);
         return this.afterSave(true, id);
     }
+    #endregion Actions
 
+    #region Bulk Actions
     public virtual Hashtable SaveMultiAction()
     {
         route_onerror = FW.ACTION_INDEX;
@@ -591,8 +585,9 @@ public class FwDynamicController : FwController
 
         return this.afterSave(true, new Hashtable() { { "ctr", ctr } });
     }
+    #endregion
 
-    // ********************* support for autocomlete related items
+    #region support for autocomlete related items
     public virtual Hashtable AutocompleteAction()
     {
         var q = reqs("q"); //required - query string
@@ -643,8 +638,9 @@ public class FwDynamicController : FwController
 
         return new Hashtable() { { "_json", items } };
     }
+    #endregion
 
-    // ********************* support for customizable list screen
+    #region support for customizable list screen
     public virtual void UserViewsAction(int id = 0)
     {
         Hashtable ps = [];
@@ -704,8 +700,9 @@ public class FwDynamicController : FwController
 
         return afterSave(true, null, false, "no_action", return_url);
     }
+    #endregion
 
-    //********************* support for sortable rows
+    #region support for sortable rows
     public Hashtable SaveSortAction()
     {
         var ps = new Hashtable() { { "success", true } };
@@ -719,8 +716,78 @@ public class FwDynamicController : FwController
 
         return new Hashtable() { { "_json", ps } };
     }
+    #endregion
 
-    // ''''' HELPERS for dynamic fields
+    #region Att Files support
+
+    // upload one or many files to the Att storage and link to the current entity and id
+    // json only response
+    public Hashtable SaveAttFilesAction(int id)
+    {
+        var item = reqh("item");
+
+        // validation
+        if (id == 0)
+            throw new UserException("Invalid ID");
+        if (fw.request.Form.Files.Count == 0 || fw.request.Form.Files[0] == null || fw.request.Form.Files[0].Length == 0)
+            throw new UserException("No file(s) selected");
+
+        var modelAtt = fw.model<Att>();
+        var att_cat = fw.model<AttCategories>().oneByIcode(item["att_category"].toStr());
+        var ent = fw.model<FwEntities>().oneByIcode(model0.table_name);
+        var itemdb = new Hashtable()
+        {
+            { "item_id", id },
+            { "att_categories_id", att_cat.Count > 0 ? att_cat["id"].toInt() : null },
+            { "fwentities_id", ent.Count > 0 ? ent["id"].toInt() : null },
+            { "status", FwModel.STATUS_ACTIVE }
+        };
+
+        var att_id = 0;
+        var addedAtt = modelAtt.uploadMulti(itemdb);
+        if (addedAtt.Count > 0)
+            att_id = (int)((Hashtable)addedAtt[0])["id"];
+
+        // make same response as in AdminAtt.SaveAction
+        // if select in popup - return json
+        var ps = new Hashtable();
+        var _json = new Hashtable();
+        _json["id"] = att_id;
+        if (att_id > 0)
+        {
+            var item_new = modelAtt.one(att_id);
+            _json["icode"] = item_new["icode"];
+            _json["url"] = modelAtt.getUrl(att_id);
+            _json["url_preview"] = modelAtt.getUrlPreview(att_id);
+            _json["iname"] = item_new["iname"];
+            _json["is_image"] = item_new["is_image"];
+            _json["fsize"] = item_new["fsize"];
+            _json["ext"] = item_new["ext"];
+        }
+        else
+            _json["error"] = new Hashtable() { { "message", "File upload error" } };
+
+        ps["_json"] = _json;
+        return ps;
+    }
+
+
+    #endregion
+
+    #region HELPERS for dynamic fields
+
+    /// <summary>
+    /// return config for show/showform fields by tab
+    /// </summary>
+    /// <param name="prefix">show_fields or showform_fields</param>
+    /// <param name="tab">optional tab code, if ommited - form_tab used</param>
+    /// <returns></returns>
+    protected virtual ArrayList getConfigShowFormFieldsByTab(string prefix, string tab = null)
+    {
+        tab ??= form_tab;
+        var key = prefix + (tab.Length > 0 ? "_" + tab : "");
+        return (ArrayList)config[key];
+    }
 
     /// <summary>
     /// prepare data for fields repeat in ShowAction based on config.json show_fields parameter
@@ -918,7 +985,8 @@ public class FwDynamicController : FwController
 
             else if (dtype == "att_files_edit")
             {
-                def["fwentity"] = model0.table_name;
+                if (!def.ContainsKey("att_upload_url"))
+                    def["att_upload_url"] = this.base_url + "/(SaveAttFiles)/" + id;
                 if (!def.ContainsKey("att_post_prefix"))
                     def["att_post_prefix"] = field;
 
@@ -1315,4 +1383,5 @@ public class FwDynamicController : FwController
         return result;
     }
 
+    #endregion
 }
