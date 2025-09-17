@@ -216,7 +216,7 @@ Email:<~user[Email]>;
   - `<~tag ifne="var" value="XXX">` - tag/template will be parsed only if var!=XXX
   - `<~tag ifgt="var" value="XXX">` - tag/template will be parsed only if var>XXX
   - `<~tag ifge="var" value="XXX">` - tag/template will be parsed only if var>=XXX
-  - `<~tag iflt="var" value="XXX">` - tag/template will be parsed only if var\<XXX
+  - `<~tag iflt="var" value="XXX">` - tag/template will be parsed only if var<XXX
   - `<~tag ifle="var" value="XXX">` - tag/template will be parsed only if var<=XXX
 - `vvalue` - used with `ifXX` conditions to indicate that value to compare should be read from PS variable
   - `<~tag ifeq="var" vvalue="var2">` - tag parsed if PS['var']==PS['var2']
@@ -310,6 +310,7 @@ rows.html template file:
   <~comma unless="repeat.last" inline>,</~comma>
 ```
 
+
 </td>
       <td>
         John, Emma, Walter
@@ -340,6 +341,7 @@ rows.html template file:
      </~rows>
 ```
 
+
 `PARSEPAGE.TOP` and `PARSEPAGE.PARENT` can be used in tag expressions to access values from the top-most or parent hashtables directly:
 ```
   <~PARSEPAGE.TOP[user][id]>
@@ -347,6 +349,7 @@ rows.html template file:
     Parent name: <~PARSEPAGE.PARENT[name]>
   </~some_subtag>
 ```
+
 
 `select="var"` - load a file and use it as `value|display` list for `<select>` options. If `multi` attribute is used parser splits selected values by delimiter (comma by default) so several options can be pre-selected.
 ```
@@ -408,6 +411,7 @@ Cherry
   - `<~tag number_format>` - for 123456.789 outputs 123,456.79
   - `<~tag number_format="1" nfthousands="">` - for 123456.789 outputs 123456.8 (no comma)
 - `currency` - formats number as currency string
+- `bytes` - formats numeric value (bytes) into a human-readable string using KiB/MiB/GiB. Example: `<~file_size bytes>` -> `12.35 MiB`.
 - `date` - will format tag value as date, format depends on language: [PHP](http://php.net/manual/en/function.date.php), [ASP.NET](https://docs.microsoft.com/en-us/dotnet/standard/base-types/custom-date-and-time-format-strings)
   - `<~tag date>` or `<~tag date="d M Y H:i">`
   - however support several cross-language values:

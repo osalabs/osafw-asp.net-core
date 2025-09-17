@@ -62,11 +62,7 @@ public class AdminDemosController : FwAdminController
 
         ps["att"] = fw.model<Att>().one(item["att_id"].toInt());
         ps["att_links"] = fw.model<Att>().listLinked(model.table_name, id);
-
-        var att_list = fw.model<Att>().listByEntityCategory(model0.table_name, id, AttCategories.CAT_GENERAL);
-        foreach (Hashtable row in att_list)
-            row["fsize_human"] = Utils.bytes2str(row["fsize"].toLong());
-        ps["att_files"] = att_list;
+        ps["att_files"] = fw.model<Att>().listByEntityCategory(model0.table_name, id, AttCategories.CAT_GENERAL);
 
         if (is_activity_logs)
         {
@@ -103,10 +99,7 @@ public class AdminDemosController : FwAdminController
         ps["att_upload_url"] = this.base_url + "/(SaveAttFiles)/" + id;
         ps["att_category"] = AttCategories.CAT_GENERAL;   // sample category
         ps["att_post_prefix"] = "att_files1"; // hidden fields prefix in the form
-        var att_list = fw.model<Att>().listByEntityCategory(model.table_name, id, ps["att_category"].toStr());
-        foreach (Hashtable row in att_list)
-            row["fsize_human"] = Utils.bytes2str(row["fsize"].toLong());
-        ps["att_files"] = att_list;
+        ps["att_files"] = fw.model<Att>().listByEntityCategory(model.table_name, id, ps["att_category"].toStr());
 
         return ps;
     }

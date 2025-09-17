@@ -19,7 +19,7 @@
       <div class="col-md-9">
         <input id="iname" name="item[iname]" maxlength="128" value="<~i[iname]>" type="text" class="form-control">
         <~stats_block if="id" inline>
-          <small class="form-text">File size: <~fsize_human>. Original file name: <~i[fname]></small>
+          <small class="form-text">File size: <~i[fsize] bytes>. Original file name: <~i[fname]></small>
         </~stats_block>
       </div>
     </div>

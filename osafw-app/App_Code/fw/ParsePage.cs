@@ -98,6 +98,7 @@ Parses file templates and replaces <~tags> with values from hashtable
   url           - add http:// to begin of string if absent
   number_format - FormatNumber(value, 2) => 12345.12
   currency      - FormatCurrency(value, 2) => $12,345.12
+  bytes         - Utils.bytes2str(value) => 12.1 MB
   truncate      - truncate with options <~tag truncate="80" trchar="..." trword="1" trend="1">
   strip_tags
   trim
@@ -974,6 +975,12 @@ public class ParsePage
                 if (attr_count > 0 && hattrs.ContainsKey("currency"))
                 {
                     value = value.toFloat().ToString("C2");
+                    attr_count -= 1;
+                }
+                if (attr_count > 0 && hattrs.ContainsKey("bytes"))
+                {
+                    // format numeric value (bytes) to human-readable string
+                    value = Utils.bytes2str(value.toLong());
                     attr_count -= 1;
                 }
                 if (attr_count > 0 && hattrs.ContainsKey("date"))

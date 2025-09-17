@@ -55,7 +55,6 @@ public class AdminAttController : FwAdminController
         base.getListRows();
         foreach (Hashtable row in this.list_rows)
         {
-            row["fsize_human"] = Utils.bytes2str(row["fsize"].toLong());
             if (row["is_image"].toInt() == 1)
             {
                 row["url_s"] = model.getUrl(row["id"].toInt(), "s");
@@ -80,7 +79,6 @@ public class AdminAttController : FwAdminController
         var ps = base.ShowFormAction(id);
         var item = (Hashtable)ps["i"];
 
-        ps["fsize_human"] = Utils.bytes2str(item["fsize"].toLong());
         ps["url"] = model.getUrl(id);
         if (item["is_image"].toInt() == 1)
             ps["url_m"] = model.getUrl(id, "m");

@@ -845,12 +845,7 @@ public class FwDynamicController : FwController
             else if (dtype == "att_links")
                 def["att_links"] = fw.model<Att>().listLinked(model0.table_name, id);
             else if (dtype == "att_files")
-            {
-                var att_list = fw.model<Att>().listByEntityCategory(model0.table_name, id, def["att_category"].toStr());
-                foreach (Hashtable row in att_list)
-                    row["fsize_human"] = Utils.bytes2str(row["fsize"].toLong());
-                def["att_files"] = att_list;
-            }
+                def["att_files"] = fw.model<Att>().listByEntityCategory(model0.table_name, id, def["att_category"].toStr());
 
             else if (dtype == "subtable")
             {
@@ -1000,10 +995,7 @@ public class FwDynamicController : FwController
                 if (!def.ContainsKey("att_post_prefix"))
                     def["att_post_prefix"] = field;
 
-                var att_list = fw.model<Att>().listByEntityCategory(model0.table_name, id, def["att_category"].toStr());
-                foreach (Hashtable row in att_list)
-                    row["fsize_human"] = Utils.bytes2str(row["fsize"].toLong());
-                def["att_files"] = att_list;
+                def["att_files"] = fw.model<Att>().listByEntityCategory(model0.table_name, id, def["att_category"].toStr());
             }
 
             else if (dtype == "subtable_edit")

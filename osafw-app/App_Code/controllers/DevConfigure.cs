@@ -88,7 +88,7 @@ public class DevConfigureController : FwController
         var log_path = (string)fw.config("log");
         ps["is_error_log"] = isWritable(log_path);
 
-        ps["error_log_size"] = Utils.bytes2str(Utils.fileSize(log_path));
+        ps["error_log_size"] = Utils.fileSize(log_path);
 
         return ps;
     }

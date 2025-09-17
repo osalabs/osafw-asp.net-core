@@ -67,7 +67,7 @@
         <tr>
             <td>/logs/main.log</td>
             <td><~ok if="is_error_log"><~fail unless="is_error_log"></td>
-            <td><~GLOBAL[site_error_log]> <~error_log_size>
+            <td><~GLOBAL[site_error_log]> <~error_log_size bytes>
                 <~failmsg5 unless="is_error_log" inline>
                     Ensure webserver can write to this file, so you can see debug/error info
                 </~failmsg5>
