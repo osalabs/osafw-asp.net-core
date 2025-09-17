@@ -1,21 +1,23 @@
 <input type="hidden" name="f[is_search]" value="<~f[is_search]>">
-<div class="row form-row">
-  <label class="col-form-label col-md-2 col-xl-1" for="fstatus">`Status`</label>
-  <div class="col-md-3 col-lg-2">
+<div class="col-auto">
+  <div class="input-group">
+    <span class="input-group-text">`Status`</span>
     <select id="fstatus" name="f[status]" class="form-select">
       <option value="">`- all -`</option>
       <~../statusf.sel select="f[status]" iflt="SESSION[access_level]" value="100">
       <~../status.sel select="f[status]" ifeq="SESSION[access_level]" value="100">
     </select>
   </div>
+</div>
 
-  <label class="col-form-label col-md-2 col-xl-1" for="faccess_level">`Access Level`</label>
-  <div class="col-md-3 col-lg-2">
+<div class="col-auto">
+  <div class="input-group">
+    <span class="input-group-text">`Access Level`</span>
     <select id="faccess_level" name="f[access_level]" class="form-select">
       <option value="">`- all -`</option>
       <~/common/sel/access_level.sel select="f[access_level]">
     </select>
   </div>
-
-  <~/common/list/fexport>
 </div>
+
+<~/common/list/fexport>
