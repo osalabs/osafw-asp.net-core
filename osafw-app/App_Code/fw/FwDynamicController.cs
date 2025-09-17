@@ -1272,10 +1272,9 @@ public class FwDynamicController : FwController
     /// <summary>
     /// Processes and updates attachment files associated with a specific entity and category.
     /// </summary>
-    /// <remarks>This method handles the addition, update, or deletion of attachment records based on the
-    /// provided input.  If the operation is a PATCH request and the relevant attachment field is not present in the
-    /// request, no changes are made. Attachments not included in the provided list are deleted from the specified
-    /// category.</remarks>
+    /// <remarks>Attachments not included in the provided list are deleted from the specified
+    /// category. If the operation is a PATCH request and the relevant attachment field is not present in the
+    /// request, no changes are made. </remarks>
     /// <param name="id">The unique identifier of the entity to which the attachments belong.</param>
     /// <param name="fields">posted and saved main item data (use in overrides as needed)</param>
     /// <param name="def">field definition</param>

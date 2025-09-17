@@ -9,6 +9,11 @@ namespace osafw;
 
 public class AttCategories : FwModel
 {
+    public const string CAT_GENERAL = "general";
+    public const string CAT_USERS = "users";
+    public const string CAT_FILES = "files";
+    public const string CAT_SPAGE_BANNER = "spage_banner";
+
     public AttCategories() : base()
     {
         table_name = "att_categories";

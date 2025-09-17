@@ -1231,7 +1231,7 @@ class DevCodeGen
                     sff["type"] = "att_edit";
                     sff["label"] = "Attachment";
                     //sff["class_contents"] = "col-md-4";
-                    sff["att_category"] = "general";
+                    sff["att_category"] = AttCategories.CAT_GENERAL;
                     sff.Remove("class_contents");
                     sff.Remove("lookup_model");
                     sff.Remove("is_option0");

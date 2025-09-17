@@ -63,6 +63,11 @@ public class AdminDemosController : FwAdminController
         ps["att"] = fw.model<Att>().one(item["att_id"].toInt());
         ps["att_links"] = fw.model<Att>().listLinked(model.table_name, id);
 
+        var att_list = fw.model<Att>().listByEntityCategory(model0.table_name, id, AttCategories.CAT_GENERAL);
+        foreach (Hashtable row in att_list)
+            row["fsize_human"] = Utils.bytes2str(row["fsize"].toLong());
+        ps["att_files"] = att_list;
+
         if (is_activity_logs)
         {
             initFilter();
@@ -95,8 +100,8 @@ public class AdminDemosController : FwAdminController
 
         // Files upload sample like in DemosDynamic (att_files_edit)
         // provide variables required by /common/form/showform/att_files.html
-        ps["fwentity"] = model.table_name; // entity name used by uploader
-        ps["att_category"] = "general";   // sample category
+        ps["att_upload_url"] = this.base_url + "/(SaveAttFiles)/" + id;
+        ps["att_category"] = AttCategories.CAT_GENERAL;   // sample category
         ps["att_post_prefix"] = "att_files1"; // hidden fields prefix in the form
         var att_list = fw.model<Att>().listByEntityCategory(model.table_name, id, ps["att_category"].toStr());
         foreach (Hashtable row in att_list)
@@ -141,20 +146,12 @@ public class AdminDemosController : FwAdminController
         fw.model<DemosDemoDicts>().updateJunctionByMainId(id, reqh("demo_dicts_link"));
         fw.model<AttLinks>().updateJunction(model.table_name, id, reqh("att"));
 
-        // Files upload sample handler (like FwDynamicController att_files_edit)
-        string att_category = "general";
-        string att_post_prefix = "att_files1";
-        if (!(isPatch() && req(att_post_prefix) == null))
+        processSaveAttFiles(id, item, new Hashtable()
         {
-            var att_ids = reqh(att_post_prefix) ?? [];
-            var att_model = fw.model<Att>();
-            var existing = att_model.listByEntityCategory(model.table_name, id, att_category);
-            foreach (Hashtable row in existing)
-            {
-                if (!att_ids.ContainsKey(row["id"]))
-                    att_model.delete(row["id"].toInt(), true);
-            }
-        }
+            { "field", "att_files1" },
+            { "att_post_prefix", "att_files1" },
+            { "att_category", AttCategories.CAT_GENERAL }
+        });
 
         return this.afterSave(success, id, is_new);
     }
@@ -181,5 +178,80 @@ public class AdminDemosController : FwAdminController
         List<string> items = model_related.listAutocomplete(reqs("q"));
 
         return new Hashtable() { { "_json", items } };
+    }
+
+    // upload one or many files to the Att storage and link to the current entity and id
+    // json only response
+    public Hashtable SaveAttFilesAction(int id)
+    {
+        var item = reqh("item");
+
+        // validation
+        if (id == 0)
+            throw new UserException("Invalid ID");
+        if (fw.request.Form.Files.Count == 0 || fw.request.Form.Files[0] == null || fw.request.Form.Files[0].Length == 0)
+            throw new UserException("No file(s) selected");
+
+        var modelAtt = fw.model<Att>();
+        var att_cat = fw.model<AttCategories>().oneByIcode(item["att_category"].toStr());
+        var ent = fw.model<FwEntities>().oneByIcode(model0.table_name);
+        var itemdb = new Hashtable()
+        {
+            { "item_id", id },
+            { "att_categories_id", att_cat.Count > 0 ? att_cat["id"].toInt() : null },
+            { "fwentities_id", ent.Count > 0 ? ent["id"].toInt() : null },
+            { "status", FwModel.STATUS_ACTIVE }
+        };
+
+        var att_id = 0;
+        var addedAtt = modelAtt.uploadMulti(itemdb);
+        if (addedAtt.Count > 0)
+            att_id = (int)((Hashtable)addedAtt[0])["id"];
+
+        // make same response as in AdminAtt.SaveAction
+        // if select in popup - return json
+        var ps = new Hashtable();
+        var _json = new Hashtable();
+        _json["id"] = att_id;
+        if (att_id > 0)
+        {
+            var item_new = modelAtt.one(att_id);
+            _json["icode"] = item_new["icode"];
+            _json["url"] = modelAtt.getUrl(att_id);
+            _json["url_preview"] = modelAtt.getUrlPreview(att_id);
+            _json["iname"] = item_new["iname"];
+            _json["is_image"] = item_new["is_image"];
+            _json["fsize"] = item_new["fsize"];
+            _json["ext"] = item_new["ext"];
+        }
+        else
+            _json["error"] = new Hashtable() { { "message", "File upload error" } };
+
+        ps["_json"] = _json;
+        return ps;
+    }
+
+    // Files upload sample handler (same as FwDynamicController for att_files_edit)
+    protected virtual void processSaveAttFiles(int id, Hashtable fields, Hashtable def)
+    {
+        var field = def["field"].toStr();
+
+        // per-field prefix support
+        var att_post_prefix = def["att_post_prefix"].toStr(field);
+        // if PATCH - only update is post param is present (otherwise it will delete all records)
+        if (isPatch() && req(att_post_prefix) == null)
+            return;
+
+        var att_ids = reqh(att_post_prefix);
+        var att_category = def["att_category"].toStr();
+        var att_model = fw.model<Att>();
+
+        // delete any files in this category not present in the posted list
+        var existing = att_model.listByEntityCategory(model0.table_name, id, att_category);
+        foreach (Hashtable row in existing)
+        {
+            if (!att_ids.ContainsKey(row["id"]))
+                att_model.delete(row["id"].toInt(), true);
+        }
     }
 }
