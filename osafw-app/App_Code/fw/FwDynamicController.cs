@@ -382,7 +382,6 @@ public class FwDynamicController : FwController
         bool result = true;
 
         var is_new = (id == 0);
-        var subtable_del = reqh("subtable_del");
 
         ArrayList fields = getConfigShowFormFieldsByTab("showform_fields");
         foreach (Hashtable def in fields)
@@ -395,34 +394,7 @@ public class FwDynamicController : FwController
 
             if (type == "subtable_edit")
             {
-                //validate subtable rows
-                var sub_model = fw.model((string)def["model"]);
-
-                var save_fields = (string)def["required_fields"] ?? "";
-                var save_fields_checkboxes = (string)def["save_fields_checkboxes"];
-
-                //check if we delete specific row
-                var del_id = (string)subtable_del[field] ?? "";
-
-                // row ids submitted as: item-<~field>[<~id>]
-                // input name format: item-<~field>#<~id>[field_name]
-                var hids = reqh("item-" + field);
-                // sort hids.Keys, so numerical keys - first and keys staring with "new-" will be last
-                var sorted_keys = hids.Keys.Cast<string>().OrderBy(x => x.StartsWith("new-") ? 1 : 0).ThenBy(x => x).ToList();
-                foreach (string row_id in sorted_keys)
-                {
-                    if (row_id == del_id) continue; //skip deleted row
-
-                    var row_item = reqh("item-" + field + "#" + row_id);
-                    Hashtable itemdb = FormUtils.filter(row_item, save_fields);
-                    FormUtils.filterCheckboxes(itemdb, row_item, save_fields_checkboxes, isPatch());
-
-                    if (row_id.StartsWith("new-"))
-                        itemdb[sub_model.junction_field_main_id] = id;
-
-                    //VAILIDATE itemdb
-                    var is_valid = validateSubtableRowDynamic(row_id, itemdb, def);
-                }
+                validateSubtableDynamic(id, item, def);
             }
             else
             {
@@ -466,6 +438,47 @@ public class FwDynamicController : FwController
 
         }
         return result;
+    }
+
+    /// <summary>
+    /// validate all posted subtable rows for the given subtable definition
+    /// </summary>
+    /// <param name="id">related item id</param>
+    /// <param name="item">posted item (use in overrides as needed)</param>
+    /// <param name="def">field definition</param>
+    protected virtual void validateSubtableDynamic(int id, Hashtable item, Hashtable def)
+    {
+        var subtable_del = reqh("subtable_del");
+        var field = def["field"].toStr();
+
+        //validate subtable rows
+        var sub_model = fw.model(def["model"].toStr());
+
+        var save_fields = def["required_fields"].toStr();
+        var save_fields_checkboxes = def["save_fields_checkboxes"].toStr();
+
+        //check if we delete specific row
+        var del_id = subtable_del[field].toStr();
+
+        // row ids submitted as: item-<~field>[<~id>]
+        // input name format: item-<~field>#<~id>[field_name]
+        var hids = reqh("item-" + field);
+        // sort hids.Keys, so numerical keys - first and keys staring with "new-" will be last
+        var sorted_keys = hids.Keys.Cast<string>().OrderBy(x => x.StartsWith("new-") ? 1 : 0).ThenBy(x => x).ToList();
+        foreach (string row_id in sorted_keys)
+        {
+            if (row_id == del_id) continue; //skip deleted row
+
+            var row_item = reqh("item-" + field + "#" + row_id);
+            Hashtable itemdb = FormUtils.filter(row_item, save_fields);
+            FormUtils.filterCheckboxes(itemdb, row_item, save_fields_checkboxes, isPatch());
+
+            if (row_id.StartsWith("new-"))
+                itemdb[sub_model.junction_field_main_id] = id;
+
+            //VAILIDATE itemdb
+            var is_valid = validateSubtableRowDynamic(row_id, itemdb, def);
+        }
     }
 
     /// <summary>
@@ -907,9 +920,6 @@ public class FwDynamicController : FwController
     {
         var id = item[model0.field_id].toInt();
 
-        var subtable_add = reqh("subtable_add");
-        var subtable_del = reqh("subtable_del");
-
         var fields = getConfigShowFormFieldsByTab("showform_fields") ?? throw new ApplicationException("Controller config.json doesn't contain 'showform_fields'");
 
         // build index by field if necessary
@@ -998,59 +1008,7 @@ public class FwDynamicController : FwController
 
             else if (dtype == "subtable_edit")
             {
-                // subtable functionality
-                var sub_model = fw.model((string)def["model"]);
-                var list_rows = new ArrayList();
-
-                if (isGet())
-                {
-                    if (id > 0)
-                    {
-                        list_rows = sub_model.listByMainId(id, def); //list related rows from db
-                    }
-                    else
-                        sub_model.prepareSubtableAddNew(list_rows, id, def); //add at least one row
-                }
-                else
-                {
-                    //check if we deleted specific row
-                    var del_id = (string)subtable_del[field] ?? "";
-
-                    //copy list related rows from the form
-                    // row ids submitted as: item-<~field>[<~id>]
-                    // input name format: item-<~field>#<~id>[field_name]
-                    var hids = reqh("item-" + field);
-                    // sort hids.Keys, so numerical keys - first and keys staring with "new-" will be last
-                    var sorted_keys = hids.Keys.Cast<string>().OrderBy(x => x.StartsWith("new-") ? 1 : 0).ThenBy(x => x).ToList();
-                    foreach (string row_id in sorted_keys)
-                    {
-                        if (row_id == del_id) continue; //skip deleted row
-
-                        var row_item = reqh("item-" + field + "#" + row_id);
-                        row_item["id"] = row_id;
-
-                        list_rows.Add(row_item);
-                    }
-                }
-
-                //delete row clicked
-                //if (subtable_del.ContainsKey(field))
-                //{
-                //    var del_id = (string)subtable_del[field];
-                //    // delete with LINQ from the form list (actual delete from db will be on save)
-                //    list_rows = new ArrayList((from Hashtable d in list_rows
-                //                               where (string)d["id"] != del_id
-                //                               select d).ToList());
-                //}
-
-                //add new clicked
-                if (subtable_add.ContainsKey(field))
-                    sub_model.prepareSubtableAddNew(list_rows, id, def);
-
-                //prepare rows for display (add selects, etc..)
-                sub_model.prepareSubtable(list_rows, id, def);
-
-                def["list_rows"] = list_rows;
+                prepareShowFormSubtable(id, item, def);
             }
             else
             {
@@ -1156,6 +1114,76 @@ public class FwDynamicController : FwController
         return fields;
     }
 
+    /// <summary>
+    /// Prepares the data and structure for displaying and editing a subtable in a form.
+    /// </summary>
+    /// <remarks>This method handles both GET and POST requests. For GET requests, it retrieves the existing
+    /// subtable rows from the database or initializes new rows if none exist. For POST requests, it processes
+    /// user-submitted data, including adding new rows, deleting rows, and updating existing rows. The prepared rows are
+    /// stored in the <c>def["list_rows"]</c> key for rendering in the form.</remarks>
+    /// <param name="id">The identifier of the main record associated with the subtable. A value greater than 0 indicates an existing
+    /// record; otherwise, a new record is assumed.</param>
+    /// <param name="item">current form data, including any user-submitted values.</param>
+    /// <param name="def">field definition</param>
+    protected virtual void prepareShowFormSubtable(int id, Hashtable item, Hashtable def)
+    {
+        var subtable_add = reqh("subtable_add");
+        var subtable_del = reqh("subtable_del");
+
+        string field = def["field"].toStr();
+
+        var sub_model = fw.model((string)def["model"]);
+        var list_rows = new ArrayList();
+
+        if (isGet())
+        {
+            if (id > 0)
+                list_rows = sub_model.listByMainId(id, def); //list related rows from db
+            else
+                sub_model.prepareSubtableAddNew(list_rows, id, def); //add at least one row
+        }
+        else
+        {
+            //check if we deleted specific row
+            var del_id = (string)subtable_del[field] ?? "";
+
+            //copy list related rows from the form
+            // row ids submitted as: item-<~field>[<~id>]
+            // input name format: item-<~field>#<~id>[field_name]
+            var hids = reqh("item-" + field);
+            // sort hids.Keys, so numerical keys - first and keys staring with "new-" will be last
+            var sorted_keys = hids.Keys.Cast<string>().OrderBy(x => x.StartsWith("new-") ? 1 : 0).ThenBy(x => x).ToList();
+            foreach (string row_id in sorted_keys)
+            {
+                if (row_id == del_id) continue; //skip deleted row
+
+                var row_item = reqh("item-" + field + "#" + row_id);
+                row_item["id"] = row_id;
+
+                list_rows.Add(row_item);
+            }
+        }
+
+        //delete row clicked
+        //if (subtable_del.ContainsKey(field))
+        //{
+        //    var del_id = (string)subtable_del[field];
+        //    // delete with LINQ from the form list (actual delete from db will be on save)
+        //    list_rows = new ArrayList((from Hashtable d in list_rows
+        //                               where (string)d["id"] != del_id
+        //                               select d).ToList());
+        //}
+
+        //add new clicked
+        if (subtable_add.ContainsKey(field))
+            sub_model.prepareSubtableAddNew(list_rows, id, def);
+
+        //prepare rows for display (add selects, etc..)
+        sub_model.prepareSubtable(list_rows, id, def);
+
+        def["list_rows"] = list_rows;
+    }
+
     // auto-process fields BEFORE record saved to db
     protected virtual void processSaveShowFormFields(int id, Hashtable fields)
     {
@@ -1199,8 +1227,6 @@ public class FwDynamicController : FwController
     // auto-process fields AFTER record saved to db
     protected virtual void processSaveShowFormFieldsAfter(int id, Hashtable fields)
     {
-        var subtable_del = reqh("subtable_del");
-
         var fields_update = new Hashtable();
 
         // for now we just look if we have att_links_edit field and update att links
@@ -1210,106 +1236,30 @@ public class FwDynamicController : FwController
             string type = (string)def["type"];
             if (type == "att_links_edit")
             {
-                var att_post_param = "att";
+                var att_post_prefix = "att";
                 if (def.ContainsKey("att_post_prefix"))
-                    att_post_param = (string)def["att_post_prefix"];
+                    att_post_prefix = (string)def["att_post_prefix"];
                 // if PATCH - only update is post param is present (otherwise it will delete all records)
-                if (isPatch() && req(att_post_param) == null)
+                if (isPatch() && req(att_post_prefix) == null)
                     continue;
 
-                fw.model<AttLinks>().updateJunction(model0.table_name, id, reqh(att_post_param));
+                fw.model<AttLinks>().updateJunction(model0.table_name, id, reqh(att_post_prefix));
             }
             else if (type == "att_files_edit")
             {
-                // per-field prefix support
-                var att_post_prefix = def["att_post_prefix"].toStr(field);
-                var att_ids = reqh(att_post_prefix) ?? [];
-                var att_category = def["att_category"].toStr();
-                var att_model = fw.model<Att>();
-
-                // delete any files in this category not present in the posted list
-                var existing = att_model.listByEntityCategory(model0.table_name, id, att_category);
-                foreach (Hashtable row in existing)
-                {
-                    if (!att_ids.ContainsKey(row["id"]))
-                        att_model.delete(row["id"].toInt(), true);
-                }
+                processSaveAttFiles(id, fields, def);
             }
             else if (type == "multicb")
             {
-                if (Utils.isEmpty(def["model"]))
-                {
-                    // multiple checkboxes -> non-junction model single comma-delimited field                    
-                    // if PATCH - only update is post param is present (otherwise it will delete all records)
-                    if (isPatch() && req(field + "_multi") == null)
-                        continue;
-
-                    fields_update[field] = FormUtils.multi2ids(reqh(field + "_multi"));
-                }
-                else
-                {
-                    //junction model based
-                    // if PATCH - only update is post param is present (otherwise it will delete all records)
-                    if (isPatch() && req(field + "_multi") == null)
-                        continue;
-
-                    if (def["is_by_linked"].toBool())
-                        //by linked id
-                        fw.model((string)def["model"]).updateJunctionByLinkedId(id, reqh(field + "_multi")); // junction model
-                    else
-                        //by main id
-                        fw.model((string)def["model"]).updateJunctionByMainId(id, reqh(field + "_multi")); // junction model
-                }
+                processSaveMultiCb(id, fields, def, ref fields_update);
             }
             else if (type == "multicb_prio")
             {
-                // if PATCH - only update is post param is present (otherwise it will delete all records)
-                if (isPatch() && req(field + "_multi") == null)
-                    continue;
-
-                fw.model((string)def["model"]).updateJunctionByMainId(id, reqh(field + "_multi")); // junction model
+                processSaveMultiCb(id, fields, def, ref fields_update);
             }
             else if (type == "subtable_edit")
             {
-                //save subtable
-                // if PATCH - only update is post param is present (otherwise it will delete all records)
-                if (isPatch() && req("item-" + field) == null)
-                    continue;
-
-                var sub_model = fw.model((string)def["model"]);
-
-                var save_fields = (string)def["save_fields"];
-                var save_fields_checkboxes = (string)def["save_fields_checkboxes"];
-
-                //check if we delete specific row
-                var del_id = (string)subtable_del[field] ?? "";
-
-                //mark all related records as under update (status=1)
-                sub_model.setUnderUpdateByMainId(id);
-
-                //update and add new rows
-
-                // row ids submitted as: item-<~field>[<~id>]
-                // input name format: item-<~field>#<~id>[field_name]
-                var hids = reqh("item-" + field);
-                // sort hids.Keys, so numerical keys - first and keys staring with "new-" will be last
-                var sorted_keys = hids.Keys.Cast<string>().OrderBy(x => x.StartsWith("new-") ? 1 : 0).ThenBy(x => x).ToList();
-                var junction_field_status = sub_model.getJunctionFieldStatus();
-                foreach (string row_id in sorted_keys)
-                {
-                    if (row_id == del_id) continue; //skip deleted row
-
-                    var row_item = reqh("item-" + field + "#" + row_id);
-                    Hashtable itemdb = FormUtils.filter(row_item, save_fields);
-                    FormUtils.filterCheckboxes(itemdb, row_item, save_fields_checkboxes, isPatch());
-
-                    itemdb[junction_field_status] = FwModel.STATUS_ACTIVE; // mark new and updated existing rows as active
-
-                    modelAddOrUpdateSubtableDynamic(id, row_id, itemdb, def, sub_model);
-                }
-
-                //remove any not updated rows (i.e. those deleted by user)
-                sub_model.deleteUnderUpdateByMainId(id);
+                processSaveSubtable(id, fields, def);
             }
         }
 
@@ -1317,6 +1267,120 @@ public class FwDynamicController : FwController
         {
             model0.update(id, fields_update);
         }
+    }
+
+    /// <summary>
+    /// Processes and updates attachment files associated with a specific entity and category.
+    /// </summary>
+    /// <remarks>This method handles the addition, update, or deletion of attachment records based on the
+    /// provided input.  If the operation is a PATCH request and the relevant attachment field is not present in the
+    /// request, no changes are made. Attachments not included in the provided list are deleted from the specified
+    /// category.</remarks>
+    /// <param name="id">The unique identifier of the entity to which the attachments belong.</param>
+    /// <param name="fields">posted and saved main item data (use in overrides as needed)</param>
+    /// <param name="def">field definition</param>
+    protected virtual void processSaveAttFiles(int id, Hashtable fields, Hashtable def)
+    {
+        var field = def["field"].toStr();
+
+        // per-field prefix support
+        var att_post_prefix = def["att_post_prefix"].toStr(field);
+        // if PATCH - only update is post param is present (otherwise it will delete all records)
+        if (isPatch() && req(att_post_prefix) == null)
+            return;
+
+        var att_ids = reqh(att_post_prefix);
+        var att_category = def["att_category"].toStr();
+        var att_model = fw.model<Att>();
+
+        // delete any files in this category not present in the posted list
+        var existing = att_model.listByEntityCategory(model0.table_name, id, att_category);
+        foreach (Hashtable row in existing)
+        {
+            if (!att_ids.ContainsKey(row["id"]))
+                att_model.delete(row["id"].toInt(), true);
+        }
+    }
+
+    protected virtual void processSaveMultiCb(int id, Hashtable fields, Hashtable def, ref Hashtable fields_update)
+    {
+        var field = def["field"].toStr();
+
+        // if PATCH - only update is post param is present (otherwise it will delete all records)
+        if (isPatch() && req(field + "_multi") == null)
+            return;
+
+        if (Utils.isEmpty(def["model"]))
+        {
+            // multiple checkboxes -> non-junction model single comma-delimited field                    
+            fields_update[field] = FormUtils.multi2ids(reqh(field + "_multi"));
+        }
+        else
+        {
+            //junction model based
+            if (def["is_by_linked"].toBool())
+                //by linked id
+                fw.model((string)def["model"]).updateJunctionByLinkedId(id, reqh(field + "_multi")); // junction model
+            else
+                //by main id
+                fw.model((string)def["model"]).updateJunctionByMainId(id, reqh(field + "_multi")); // junction model
+        }
+    }
+
+    /// <summary>
+    /// Processes and saves data for a subtable associated with a main record.
+    /// </summary>
+    /// <remarks>This method handles the creation, update, and deletion of subtable rows based on the provided
+    /// input.  It ensures that rows are marked as active or deleted as appropriate and processes fields according to
+    /// the specified subtable definition.  If the HTTP request is a PATCH operation and no subtable data is provided
+    /// for the specified field, the method exits without making changes.</remarks>
+    /// <param name="id">The identifier of the main record to which the subtable is related.</param>
+    /// <param name="fields">posted and saved main item data (use in overrides as needed)</param>
+    /// <param name="def">field definition</param>
+    protected virtual void processSaveSubtable(int id, Hashtable fields, Hashtable def)
+    {
+        var subtable_del = reqh("subtable_del");
+
+        var field = def["field"].toStr();
+
+        // if PATCH - only update is post param is present (otherwise it will delete all records)
+        if (isPatch() && req("item-" + field) == null)
+            return;
+
+        var sub_model = fw.model(def["model"].toStr());
+
+        var save_fields = def["save_fields"].toStr();
+        var save_fields_checkboxes = def["save_fields_checkboxes"].toStr();
+
+        //check if we delete specific row
+        var del_id = subtable_del[field].toStr();
+
+        //mark all related records as under update (status=1)
+        sub_model.setUnderUpdateByMainId(id);
+
+        //update and add new rows
+
+        // row ids submitted as: item-<~field>[<~id>]
+        // input name format: item-<~field>#<~id>[field_name]
+        var hids = reqh("item-" + field);
+        // sort hids.Keys, so numerical keys - first and keys staring with "new-" will be last
+        var sorted_keys = hids.Keys.Cast<string>().OrderBy(x => x.StartsWith("new-") ? 1 : 0).ThenBy(x => x).ToList();
+        var junction_field_status = sub_model.getJunctionFieldStatus();
+        foreach (string row_id in sorted_keys)
+        {
+            if (row_id == del_id) continue; //skip deleted row
+
+            var row_item = reqh("item-" + field + "#" + row_id);
+            Hashtable itemdb = FormUtils.filter(row_item, save_fields);
+            FormUtils.filterCheckboxes(itemdb, row_item, save_fields_checkboxes, isPatch());
+
+            itemdb[junction_field_status] = FwModel.STATUS_ACTIVE; // mark new and updated existing rows as active
+
+            modelAddOrUpdateSubtableDynamic(id, row_id, itemdb, def, sub_model);
+        }
+
+        //remove any not updated rows (i.e. those deleted by user)
+        sub_model.deleteUnderUpdateByMainId(id);
     }
 
 
