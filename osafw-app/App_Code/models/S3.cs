@@ -326,12 +326,20 @@ public class S3 : FwModel
             ListObjectsV2Response list = task.Result;
 
             //delete objects in folder first. Note: object can be a folder itself with a zero size if it was created separately with no body and key name ending with "/", so set "is_folder_check" to False here to delete an object and avoid an infinite loop
-            foreach (S3Object entry in list.S3Objects)
+            var list_s3objects = list.S3Objects;
+            if (list_s3objects != null)
+            {
+            foreach (S3Object entry in list_s3objects)
                 deleteObject(entry.Key, false, false);
+            }
 
             //delete subfolders if any
-            foreach (string subfolder in list.CommonPrefixes)
+            var list_common_prefixes = list.CommonPrefixes;
+            if (list_common_prefixes != null)
+            {
+            foreach (string subfolder in list_common_prefixes)
                 deleteObject(subfolder, false);
+            }
         }
 
         DeleteObjectRequest request = new()
