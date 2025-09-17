@@ -126,11 +126,6 @@
 
     <template v-else-if="def.type=='att_files_edit'">
         <div :class="['fw-file-drop-area', { highlight: is_dragover }]"
-             :data-upload-url="'/Admin/Att'"
-             :data-att-category="def.att_category"
-             :data-att-post-prefix="att_post_prefix"
-             :data-item-id="item.id"
-             :data-fwentity="fwStore.fwentity"
              @dragenter.prevent.stop="onDropEnter"
              @dragover.prevent.stop="onDropOver"
              @dragleave.prevent.stop="onDropLeave"
@@ -528,7 +523,7 @@
             async uploadFiles(files) {
                 if (!this.item.id) { Toast('Save record first', { theme: 'text-bg-warning' }); return; }
 
-                const upload_url = '/Admin/Att';
+                const upload_url = this.def.att_upload_url ?? this.fwStore.base_url + "/(SaveAttFiles)/" + this.item.id;
                 // iterate files and upload with progress
                 for (let i = 0; i < files.length; i++) {
                     const file = files[i];
@@ -539,7 +534,7 @@
                     fd.append('file1', file);
                     fd.append('XSS', this.fwStore.XSS);
                     fd.append('item[att_category]', this.def.att_category ?? '');
-                    fd.append('item[fwentity]', this.fwStore.fwentity ?? '');
+                    //fd.append('item[fwentity]', this.fwStore.fwentity ?? '');
                     fd.append('item[item_id]', this.item.id);
 
                     try {

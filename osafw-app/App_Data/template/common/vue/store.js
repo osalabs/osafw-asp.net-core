@@ -16,7 +16,6 @@ let state = {
     access_level: 0, // user access level
     base_url: '', // base url for the controller
     api: null, // mande instance
-    fwentity: '', // related entity, for uploads
     list_title: '', //list screen title
     view_title: '',
     edit_title: '',
