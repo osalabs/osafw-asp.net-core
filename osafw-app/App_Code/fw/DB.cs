@@ -1379,7 +1379,7 @@ public class DB : IDisposable
         else if (limit_method == "LIMIT")
             result = sql + " LIMIT " + limit;
         else
-            result = Regex.Replace(sql, @"^(select )", @"$1 TOP " + limit + " ", RegexOptions.IgnoreCase);
+            result = Regex.Replace(sql, @"^\s*(select)\s", @"$1 TOP " + limit + " ", RegexOptions.IgnoreCase);
 
         return result;
     }
