@@ -300,7 +300,7 @@ public class Att : FwModel
         if (size != "s" && size != "m")
             size = "";
 
-        var max_age = new TimeSpan(CACHE_DAYS, 0, 0, 0);
+        var max_age = (int)(new TimeSpan(CACHE_DAYS, 0, 0, 0).TotalSeconds);
         fw.response.Headers.CacheControl = $"private, max-age={max_age}"; // use public only if all uploads are public
         fw.response.Headers.Pragma = "cache";
         fw.response.Headers.Expires = DateTime.Now.AddDays(CACHE_DAYS).ToString("R"); // cache for several days, this allows browser not to send any requests to server during this period (unless F5)
