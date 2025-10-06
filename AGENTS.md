@@ -8,10 +8,10 @@ On subsequent tasks, it skips Bootstrap and only runs the task + self‑reflecti
 -->
 
 <!-- BEGIN: AGENTS-STATE
-status: pending            # agent MUST switch to 'bootstrapped' on first run
+status: bootstrapped
 version: v4
-created_at: PENDING        # agent MUST stamp today's date (YYYY-MM-DD) on first run
-last_reflection: null
+bootstrapped_at: 2025-10-06
+last_reflection: 2025-10-06
 -->
 <!-- END: AGENTS-STATE -->
 
@@ -88,7 +88,16 @@ Prefer **general, scalable** methods by default. If you use a narrow one‑off m
 
 Keep this concise and informative. Populate on Bootstrap and refresh when structure changes.
 
-> *(to be filled by Repository Analysis Pass during Bootstrap)*
+1. `osafw-app/App_Code/controllers/` — MVC-style controllers inheriting from `FwController` derivatives and handling routing logic.
+2. `osafw-app/App_Code/models/` — Data access layer built on `FwModel`, encapsulating CRUD and business rules.
+3. `osafw-app/App_Code/fw/` — Framework core helpers including caching, updates, and shared utilities.
+4. `osafw-app/App_Data/sql/` — Baseline SQL schema plus incremental update scripts consumed by `FwUpdates`.
+5. `osafw-app/App_Data/template/` — ParsePage templates organized by controller/view for HTML rendering.
+6. `osafw-app/wwwroot/assets/` — Project-specific frontend assets (CSS, JS, images) shipped with the framework.
+7. `osafw-app/wwwroot/lib/` & `libman.json` — Client-side dependencies managed via LibMan.
+8. `osafw-app/appsettings.json` — Application configuration (DB connection, mail, logging, layout settings).
+9. `osafw-tests/` — MSTest project providing automated coverage for framework components.
+10. `docs/` — Developer documentation covering database helpers, ParsePage, dashboard, and datetime utilities.
 
 ---
 
@@ -96,7 +105,14 @@ Keep this concise and informative. Populate on Bootstrap and refresh when struct
 
 Provide canonical commands per OS for: `build`, `test`, `run`, `format`, `lint`, `typecheck`. Prefer existing project scripts (npm/composer/make/dotnet/etc.). If multiple apply, pick the simplest general method; list alternates in task notes.
 
-> *(to be filled by Repository Analysis Pass during Bootstrap)*
+| Action    | Linux/macOS                                   | Windows PowerShell                               |
+|-----------|-----------------------------------------------|--------------------------------------------------|
+| build     | `dotnet build osafw-asp.net-core.sln`         | `dotnet build osafw-asp.net-core.sln`            |
+| test      | `dotnet test osafw-asp.net-core.sln`          | `dotnet test osafw-asp.net-core.sln`             |
+| run       | `dotnet run --project osafw-app/osafw-app.csproj` | `dotnet run --project osafw-app/osafw-app.csproj` |
+| format    | `dotnet format osafw-asp.net-core.sln`        | `dotnet format osafw-asp.net-core.sln`           |
+| lint      | `dotnet format --verify-no-changes`           | `dotnet format --verify-no-changes`              |
+| typecheck | `dotnet build osafw-asp.net-core.sln`         | `dotnet build osafw-asp.net-core.sln`            |
 
 ---
 
@@ -353,18 +369,9 @@ Feature: Core flow example
 ## Heuristics (auto‑curated; keep ≤7 bullets)
 
 <!-- BEGIN: AUTO-HEURISTICS -->
-* (empty)
+* 2025-10-06 — Prefer editing controllers under `osafw-app/App_Code/controllers` and keep action methods suffixed with `Action` to match routing.
+* 2025-10-06 — Maintain SQL schema in `App_Data/sql/database.sql` and versioned updates in `App_Data/sql/updates/`.
+* 2025-10-06 — Store ParsePage templates in lowercase directories under `App_Data/template/<controller>/<view>` to align with dispatcher conventions.
+* 2025-10-06 — Run `dotnet test` before committing to catch regressions in framework components.
 <!-- END: AUTO-HEURISTICS -->
 
-<!-- BEGIN: BOOTSTRAP-TODO
-Checklist to be completed and then this block MUST be deleted by the agent on first run:
-
-- [ ] Create docs/agents/{tasks,domain,specs,adr}
-- [ ] Write Embedded Payloads
-- [ ] Generate Repo Map (§4) and Command Palette (§5)
-- [ ] Populate DOMAIN.md, glossary.md, knowledge.yaml
-- [ ] Add 3–7 repo‑specific heuristics dated today
-- [ ] Update AGENTS‑STATE (status: bootstrapped, stamp dates)
-- [ ] Commit: 'chore(agents): bootstrap + analyze repo'
-
-END: BOOTSTRAP-TODO -->

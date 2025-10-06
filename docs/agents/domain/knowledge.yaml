@@ -1,0 +1,38 @@
+version: 1
+entities:
+  - id: osafw_app
+    fields:
+      path: osafw-app/
+      description: Main ASP.NET Core web project containing controllers, models, and framework core.
+      templating: ParsePage templates under App_Data/template.
+    invariants:
+      - Controllers reside in App_Code/controllers and map to RESTful routes.
+      - Models inherit from FwModel under App_Code/models.
+    source: README.md#directory-structure
+  - id: osafw_tests
+    fields:
+      path: osafw-tests/
+      description: MSTest project containing unit tests for the framework.
+    invariants:
+      - Executed via dotnet test osafw-tests/osafw-tests.csproj.
+    source: README.md#documentation
+relations:
+  - from: osafw_app
+    to: sql_server
+    type: persistence
+    source: docs/db.md
+  - from: osafw_app
+    to: parsepage
+    type: templating
+    source: docs/parsepage.md
+ids:
+  - name: libman_manifest
+    location: osafw-app/wwwroot/libman.json
+  - name: app_settings
+    location: osafw-app/appsettings.json
+policies:
+  - rule: Run dotnet test before committing changes to ensure framework stability.
+    source: README.md#documentation
+  - rule: Apply SQL updates sequentially using App_Data/sql/updates scripts.
+    source: README.md#deployment
+events: []
