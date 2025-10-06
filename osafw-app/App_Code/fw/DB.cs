@@ -224,7 +224,7 @@ public class DB : IDisposable
     // caches - lifetime = app lifetime
     protected static ConcurrentDictionary<string, ConcurrentDictionary<string, ArrayList>> schemafull_cache = new(); // full schema, connstr => table => [field => full schema]
     protected static ConcurrentDictionary<string, ConcurrentDictionary<string, Hashtable>> schema_cache = new(); // schema, connstr => table => [field => type]
-    private static ConcurrentDictionary<string, ConcurrentDictionary<string, Hashtable>> schema_fk_cache; // foreign keys, connstr => table => [field => referenced table]
+    protected static ConcurrentDictionary<string, ConcurrentDictionary<string, Hashtable>> schema_fk_cache = new(); // foreign keys, connstr => table => [field => referenced table]
     protected static ConcurrentDictionary<string, Dictionary<string, PropertyInfo>> class_mapping_cache = new(); // for converting DB object to class
 
     public static string last_sql = ""; // last executed sql
@@ -1943,7 +1943,7 @@ public class DB : IDisposable
     /// </summary>
     /// <param name="table">table name</param>
     /// <param name="where">where conditions</param>
-    /// <param name="order_by">optional order by string, MUST already be quoted!</param>
+    /// <param name="order_by">optional order by string, MUST BE QUOTED</param>
     /// <param name="limit">optional limit number of results</param>
     /// <param name="select_fields">optional (default "*") fields to select, MUST already be quoted!</param>
     /// <returns></returns>
@@ -2102,23 +2102,21 @@ public class DB : IDisposable
     // }
     public Hashtable tableForeignKeys(string table)
     {
-        if (schema_fk_cache == null)
-            schema_fk_cache = [];
-        if (!schema_fk_cache.ContainsKey(connstr))
-            schema_fk_cache[connstr] = [];
+        var cache = schema_fk_cache.GetOrAdd(connstr ?? string.Empty, _ => new ConcurrentDictionary<string, Hashtable>());
 
-        var cache = schema_fk_cache[connstr];
-        if (cache.TryGetValue(table, out Hashtable value))
-            return value;
-
-        var result = new Hashtable();
-        ArrayList fields = listForeignKeys(table);
-        foreach (Hashtable row in fields)
-            result[row["column"].ToString().ToLower()] = row;
-
-        cache[table] = result;
-
-        return result;
+        // Get or compute mapping for the table
+        return cache.GetOrAdd(table, _ =>
+        {
+            var fields = listForeignKeys(table);
+            var result = new Hashtable(fields.Count);
+            foreach (var row in fields)
+            {
+                var col = row["column"];
+                if (!string.IsNullOrEmpty(col))
+                    result[col.ToLowerInvariant()] = row;
+            }
+            return result;
+        });
     }
 
     //return full table schema as hashtable fieldname => {name=>..., type=>,...}
@@ -2259,9 +2257,9 @@ public class DB : IDisposable
     }
 
     // return database foreign keys, optionally filtered by table (that contains foreign keys)
-    public ArrayList listForeignKeys(string table = "")
+    public DBList listForeignKeys(string table = "")
     {
-        ArrayList result = [];
+        DBList result = [];
         if (dbtype == DBTYPE_SQLSRV)
         {
             var where = "";
@@ -2336,15 +2334,15 @@ public class DB : IDisposable
 
             foreach (DataRow row in schemaTable.Rows)
             {
-                result.Add(new Hashtable()
+                result.Add(new DBRow()
                 {
-                    {"table", row["FK_TABLE_NAME"]},
-                    {"column", row["FK_COLUMN_NAME"]},
-                    {"name", row["FK_NAME"]},
-                    {"pk_table", row["PK_TABLE_NAME"]},
-                    {"pk_column", row["PK_COLUMN_NAME"]},
-                    {"on_update", row["UPDATE_RULE"]},
-                    {"on_delete", row["DELETE_RULE"]}
+                    {"table", row["FK_TABLE_NAME"].toStr()},
+                    {"column", row["FK_COLUMN_NAME"].toStr()},
+                    {"name", row["FK_NAME"].toStr()},
+                    {"pk_table", row["PK_TABLE_NAME"].toStr()},
+                    {"pk_column", row["PK_COLUMN_NAME"].toStr()},
+                    {"on_update", row["UPDATE_RULE"].toStr()},
+                    {"on_delete", row["DELETE_RULE"].toStr()}
                 });
             }
         }
