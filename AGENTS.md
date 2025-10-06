@@ -373,5 +373,6 @@ Feature: Core flow example
 * 2025-10-06 — Maintain SQL schema in `App_Data/sql/database.sql` and versioned updates in `App_Data/sql/updates/`.
 * 2025-10-06 — Store ParsePage templates in lowercase directories under `App_Data/template/<controller>/<view>` to align with dispatcher conventions.
 * 2025-10-06 — Run `dotnet test` before committing to catch regressions in framework components.
+* 2025-10-06 — Use thread-safe collections (e.g., `ConcurrentDictionary`) for shared caches to avoid runtime corruption under load.
 <!-- END: AUTO-HEURISTICS -->
 
