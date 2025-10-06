@@ -1,0 +1,15 @@
+version: 1
+runtime:
+  os: linux
+  shell: bash
+  dotnet: "8.0"
+telemetry:
+  model: gpt-5-codex
+  freshness: 30d
+commands:
+  build: dotnet build osafw-asp.net-core.sln
+  test: dotnet test osafw-asp.net-core.sln
+  run: dotnet run --project osafw-app/osafw-app.csproj
+notes:
+  - Repository uses standard .NET SDK tooling; no custom CLIs required.
+  - Keep NuGet packages restored before offline work.

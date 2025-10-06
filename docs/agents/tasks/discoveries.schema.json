@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Task Discoveries",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["date","title","category","scope","evidence","recommendation"],
+    "properties": {
+      "date": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+      "title": { "type": "string", "maxLength": 120 },
+      "evidence": { "type": "string", "maxLength": 400 },
+      "category": { "type": "string", "enum": ["tooling","domain","process"] },
+      "scope": { "type": "string", "enum": ["task","project"] },
+      "source_paths": { "type": "array", "items": { "type": "string" } },
+      "recommendation": { "type": "string", "maxLength": 400 },
+      "promotion_candidate": { "type": "boolean", "default": true },
+      "expires": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+      "tags": { "type": "array", "items": { "type": "string" } },
+      "links": { "type": "array", "items": { "type": "string", "format": "uri" } }
+    },
+    "additionalProperties": false
+  }
+}
