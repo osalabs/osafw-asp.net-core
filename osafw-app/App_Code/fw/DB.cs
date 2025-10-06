@@ -22,6 +22,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
@@ -220,9 +221,9 @@ public class DB : IDisposable
     // db.array("demos", DB.h("upd_time", db.opGT(DB.NOW))); - get all rows with upd_time > current datetime
     public static readonly object NOW = new();
 
-    protected static Dictionary<string, Dictionary<string, ArrayList>> schemafull_cache = []; // cache for the full schema, lifetime = app lifetime
-    protected static Dictionary<string, Dictionary<string, Hashtable>> schema_cache = []; // cache for the schema, lifetime = app lifetime
-    protected static Dictionary<string, Dictionary<string, PropertyInfo>> class_mapping_cache = []; // cache for converting DB object to class
+    protected static ConcurrentDictionary<string, ConcurrentDictionary<string, ArrayList>> schemafull_cache = new(); // cache for the full schema, lifetime = app lifetime
+    protected static ConcurrentDictionary<string, ConcurrentDictionary<string, Hashtable>> schema_cache = new(); // cache for the schema, lifetime = app lifetime
+    protected static ConcurrentDictionary<string, Dictionary<string, PropertyInfo>> class_mapping_cache = new(); // cache for converting DB object to class
 
     public static string last_sql = ""; // last executed sql
     public static int SQL_QUERY_CTR = 0; // counter for SQL queries during request
@@ -2101,11 +2102,7 @@ public class DB : IDisposable
     public ArrayList loadTableSchemaFull(string table)
     {
         // check if full schema already there
-        if (!schemafull_cache.TryGetValue(connstr, out var cache))
-        {
-            cache = [];
-            schemafull_cache[connstr] = cache;
-        }
+        var cache = schemafull_cache.GetOrAdd(connstr ?? string.Empty, _ => new ConcurrentDictionary<string, ArrayList>());
 
         if (cache.TryGetValue(table, out ArrayList value))
             return value;
@@ -2225,9 +2222,7 @@ public class DB : IDisposable
         }
 
         // save to cache
-        cache[table] = result;
-
-        return result;
+        return cache.GetOrAdd(table, result);
     }
 
     // return database foreign keys, optionally filtered by table (that contains foreign keys)
@@ -2339,29 +2334,23 @@ public class DB : IDisposable
         if (schema.TryGetValue(table, out var cachedSchema))
             return cachedSchema;
 
-        if (!schema_cache.TryGetValue(connstr, out var connSchemaCache))
+        var connSchemaCache = schema_cache.GetOrAdd(connstr ?? string.Empty, _ => new ConcurrentDictionary<string, Hashtable>());
+
+        if (connSchemaCache.TryGetValue(table, out var cachedTableSchema))
         {
-            connSchemaCache = [];
-            schema_cache[connstr] = connSchemaCache;
+            schema[table] = cachedTableSchema;
+            return cachedTableSchema;
         }
 
-        if (!connSchemaCache.ContainsKey(table))
-        {
-            ArrayList fields = loadTableSchemaFull(table);
-            Hashtable h = new(fields.Count);
-            foreach (Hashtable row in fields)
-                h[row["name"].ToString().ToLower()] = row["fw_type"];
+        ArrayList fields = loadTableSchemaFull(table);
+        Hashtable h = new(fields.Count);
+        foreach (Hashtable row in fields)
+            h[row["name"].ToString().ToLower()] = row["fw_type"];
 
-            schema[table] = h;
-            connSchemaCache[table] = h;
-        }
-        else
-        {
-            // fw.logger("schema_cache HIT " & current_db & "." & table)
-            schema[table] = connSchemaCache[table];
-        }
+        schema[table] = h;
+        connSchemaCache[table] = h;
 
-        return (Hashtable)schema[table];
+        return h;
     }
 
     public void clearSchemaCache()
@@ -2375,7 +2364,7 @@ public class DB : IDisposable
     // This method for unit tests
     public bool isSchemaCacheEmpty()
     {
-        return schemafull_cache.Count == 0 && schema_cache.Count == 0 && schema.Count == 0;
+        return schemafull_cache.IsEmpty && schema_cache.IsEmpty && schema.Count == 0;
     }
 
     // map SQL Server type to FW's
@@ -2441,19 +2430,14 @@ public class DB : IDisposable
     protected static Dictionary<string, PropertyInfo> getWritableProperties<T>()
     {
         Type type = typeof(T);
-        if (!class_mapping_cache.TryGetValue(type.FullName, out var value))
-        {
-            value = type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                        .Where(prop => prop.CanWrite)
-                        .ToDictionary(prop =>
-                        {
-                            var attr = prop.GetCustomAttribute<DBNameAttribute>(false);
-                            return attr?.Description ?? prop.Name;
-                        });
-            class_mapping_cache[type.FullName] = value;
-        }
-
-        return value;
+        return class_mapping_cache.GetOrAdd(type.FullName, _ =>
+            type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .Where(prop => prop.CanWrite)
+                .ToDictionary(prop =>
+                {
+                    var attr = prop.GetCustomAttribute<DBNameAttribute>(false);
+                    return attr?.Description ?? prop.Name;
+                }));
     }
 
     /// <summary>

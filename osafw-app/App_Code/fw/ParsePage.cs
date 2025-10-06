@@ -160,7 +160,7 @@ public class ParsePage
 
     private static readonly ConcurrentDictionary<string, Hashtable> FILE_CACHE = new();
     private static readonly ConcurrentDictionary<string, Hashtable> LANG_CACHE = new();
-    private static Dictionary<string, Dictionary<string, Func<object, object>>> class_mapping_cache = []; // cache for object property/field getters
+    private static readonly ConcurrentDictionary<string, Dictionary<string, Func<object, object>>> class_mapping_cache = new(); // cache for object property/field getters
 
     private static readonly string[] IFOPERS = ["if", "unless", "ifne", "ifeq", "ifgt", "iflt", "ifge", "ifle"];
 
@@ -1509,7 +1509,7 @@ public class ParsePage
     private static Dictionary<string, Func<object, object>> objectMembers(object o)
     {
         Type type = o.GetType();
-        if (!class_mapping_cache.TryGetValue(type.FullName, out var value))
+        return class_mapping_cache.GetOrAdd(type.FullName, _ =>
         {
             var dict = new Dictionary<string, Func<object, object>>(StringComparer.OrdinalIgnoreCase);
 
@@ -1548,11 +1548,8 @@ public class ParsePage
                 }
             }
 
-            value = dict;
-            class_mapping_cache[type.FullName] = value;
-        }
-
-        return value;
+            return dict;
+        });
     }
 
     private static object valueFromObjectByName(object o, string name)
