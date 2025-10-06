@@ -143,7 +143,7 @@ public class FwLogger : IDisposable
 
         StringBuilder str_prefix = new(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"));
         str_prefix.Append(' ').Append(level.ToString()).Append(' ');
-        str_prefix.Append(Environment.ProcessId).Append(' ');
+        str_prefix.Append(Environment.ProcessId).Append(':').Append(Environment.CurrentManagedThreadId).Append(' ');
 
         StringBuilder str_stack = new();
         StackTrace st = new(true);
