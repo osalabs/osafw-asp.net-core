@@ -221,9 +221,11 @@ public class DB : IDisposable
     // db.array("demos", DB.h("upd_time", db.opGT(DB.NOW))); - get all rows with upd_time > current datetime
     public static readonly object NOW = new();
 
-    protected static ConcurrentDictionary<string, ConcurrentDictionary<string, ArrayList>> schemafull_cache = new(); // cache for the full schema, lifetime = app lifetime
-    protected static ConcurrentDictionary<string, ConcurrentDictionary<string, Hashtable>> schema_cache = new(); // cache for the schema, lifetime = app lifetime
-    protected static ConcurrentDictionary<string, Dictionary<string, PropertyInfo>> class_mapping_cache = new(); // cache for converting DB object to class
+    // caches - lifetime = app lifetime
+    protected static ConcurrentDictionary<string, ConcurrentDictionary<string, ArrayList>> schemafull_cache = new(); // full schema, connstr => table => [field => full schema]
+    protected static ConcurrentDictionary<string, ConcurrentDictionary<string, Hashtable>> schema_cache = new(); // schema, connstr => table => [field => type]
+    private static ConcurrentDictionary<string, ConcurrentDictionary<string, Hashtable>> schema_fk_cache; // foreign keys, connstr => table => [field => referenced table]
+    protected static ConcurrentDictionary<string, Dictionary<string, PropertyInfo>> class_mapping_cache = new(); // for converting DB object to class
 
     public static string last_sql = ""; // last executed sql
     public static int SQL_QUERY_CTR = 0; // counter for SQL queries during request
@@ -2084,6 +2086,37 @@ public class DB : IDisposable
             result = field_type;
         else
             result = "varchar";
+
+        return result;
+    }
+
+    // return array of foreign keys in the table as array of hashtables
+    // {
+    //   name=>"constraint name",
+    //   table=>"table name",
+    //   column=>"column name",
+    //   pk_table=>"referenced table name",
+    //   pk_column=>"referenced column name",
+    //   on_update=>"RESTRICT|CASCADE|SET NULL|NO ACTION",
+    //   on_delete=>"RESTRICT|CASCADE|SET NULL|NO ACTION"
+    // }
+    public Hashtable tableForeignKeys(string table)
+    {
+        if (schema_fk_cache == null)
+            schema_fk_cache = [];
+        if (!schema_fk_cache.ContainsKey(connstr))
+            schema_fk_cache[connstr] = [];
+
+        var cache = schema_fk_cache[connstr];
+        if (cache.TryGetValue(table, out Hashtable value))
+            return value;
+
+        var result = new Hashtable();
+        ArrayList fields = listForeignKeys(table);
+        foreach (Hashtable row in fields)
+            result[row["column"].ToString().ToLower()] = row;
+
+        cache[table] = result;
 
         return result;
     }
