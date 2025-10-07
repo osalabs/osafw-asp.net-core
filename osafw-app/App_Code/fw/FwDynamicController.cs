@@ -265,7 +265,6 @@ public class FwDynamicController : FwController
 
         // TODO
         // ps["select_options_parent_id") ] model.listSelectOptionsParent()
-        // FormUtils.comboForDate(item["fdate_combo"], ps, "fdate_combo")
 
         // Example: how to modify field definition
         //var fields = (ArrayList)ps["fields"];
@@ -906,6 +905,18 @@ public class FwDynamicController : FwController
                     if ((string)def["conv"] == "time_from_seconds")
                         def["value"] = FormUtils.intToTimeStr(def["value"].toInt());
                 }
+
+                // special handling for date combo: prepare select defaults
+                if (dtype == "date_combo")
+                {
+                    // fill day/mon/year into item and def selects
+                    if (FormUtils.comboForDate(def["value"].toStr(), item, field))
+                    {
+                        def["select_day"] = item[$"{field}_day"]; // selected day
+                        def["select_mon"] = item[$"{field}_mon"]; // selected month
+                        def["select_year"] = item[$"{field}_year"]; // selected year
+                    }
+                }
             }
         }
         return fields;
@@ -1200,8 +1211,6 @@ public class FwDynamicController : FwController
                 else
                     fields[field] = lookup_model.findOrAddByIname(field_value, out _);
             }
-            else if (type == "date_combo")
-                fields[field] = FormUtils.dateForCombo(item, field);
             else if (type == "time")
                 fields[field] = FormUtils.timeStrToInt((string)fields[field]); // ftime - convert from HH:MM to int (0-24h in seconds)
             else if (type == "number")
@@ -1252,6 +1261,10 @@ public class FwDynamicController : FwController
             else if (type == "subtable_edit")
             {
                 processSaveSubtable(id, fields, def);
+            }
+            else if (type == "date_combo")
+            {
+                fields_update[field] = FormUtils.dateForCombo(reqh("item"), field);
             }
         }
 

@@ -467,7 +467,7 @@ public class FormUtils
         {
             try
             {
-                result = new DateTime(year, mon, day).ToString("yyyy-MM-dd HH:mm:ss");
+                result = new DateTime(year, mon, day).ToString("yyyy-MM-dd");
             }
             catch (Exception)
             {

@@ -365,7 +365,7 @@ namespace osafw.Tests
                 { "fdate_combo_year", "2023" }
             };
             string result1 = FormUtils.dateForCombo(item1, "fdate_combo");
-            Assert.AreEqual(new DateTime(2023, 1, 17).ToString("yyyy-MM-dd HH:mm:ss"), result1, "Result should be correct SQL date for valid date components");
+            Assert.AreEqual(new DateTime(2023, 1, 17).ToString("yyyy-MM-dd"), result1, "Result should be correct SQL date for valid date components");
 
             // Case 2: Test with missing day component
             Hashtable item2 = new()

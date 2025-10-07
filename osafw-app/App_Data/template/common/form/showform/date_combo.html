@@ -1,0 +1,16 @@
+<div class="fdate-combo d-inline-flex">
+  <select id="<~field>_day" name="item[<~field>_day]" class="form-select <~class_control>">
+    <option value="">`- day -`</option>
+    <~/common/sel/date_day.sel select="i[select_day]">
+  </select>
+  <select id="<~field>_mon" name="item[<~field>_mon]" class="form-select <~class_control>">
+    <option value="">`- month -`</option>
+    <~/common/sel/date_mon.sel select="i[select_mon]">
+  </select>
+  <select id="<~field>_year" name="item[<~field>_year]" class="form-select <~class_control>">
+    <option value="">`- year -`</option>
+    <~/common/sel/date_year.sel select="i[select_year]">
+  </select>
+</div>
+<~./validation_errors if="errors">
+<~./help_block if="help_text">
