@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Mail;
 using System.Reflection;
@@ -46,6 +47,7 @@ public class FW : IDisposable
 
     private readonly Hashtable models = []; // model's singletons cache
     private readonly Hashtable controllers = []; // controller's singletons cache
+    private const string ControllerActionsCacheKeyPrefix = "fw:controller-actions:";
     private ParsePage pp_instance; // for parsePage()
 
     public Hashtable FORM;
@@ -396,29 +398,43 @@ public class FW : IDisposable
                 if (url == route_key)
                 {
                     string rdest = (string)routes[route_key];
-                    Match m1 = Regex.Match(rdest, "^(?:(GET|POST|PUT|PATCH|DELETE) )?(.+)");
-                    if (m1.Success)
+                    if (string.IsNullOrEmpty(rdest))
                     {
-                        // override method
-                        if (!string.IsNullOrEmpty(m1.Groups[1].Value)) route.method = m1.Groups[1].Value;
-                        if (m1.Groups[2].Value.StartsWith('/'))
+                        logger(LogLevel.WARN, "Wrong route destination: " + rdest);
+                        continue;
+                    }
+
+                    string destination = rdest;
+                    string overrideMethod = null;
+
+                    int spaceIndex = destination.IndexOf(' ');
+                    if (spaceIndex > 0)
+                    {
+                        string candidate = destination[..spaceIndex];
+                        if (METHOD_ALLOWED.ContainsKey(candidate))
                         {
-                            // if started from / - this is redirect url
-                            url = m1.Groups[2].Value;
-                        }
-                        else
-                        {
-                            // it's a direct class-method to call, no further REST processing required
-                            is_routes_found = true;
-                            string[] sroute = m1.Groups[2].Value.Split("::", 2);
-                            route.controller = Utils.routeFixChars(sroute[0]);
-                            if (sroute.GetUpperBound(1) > 0)
-                                route.action_raw = sroute[1];
-                            break;
+                            overrideMethod = candidate;
+                            destination = destination[(spaceIndex + 1)..].TrimStart();
                         }
                     }
-                    else
-                        logger(LogLevel.WARN, "Wrong route destination: " + rdest);
+
+                    if (!string.IsNullOrEmpty(overrideMethod))
+                        route.method = overrideMethod;
+
+                    if (destination.StartsWith('/'))
+                    {
+                        // if started from / - this is redirect url
+                        url = destination;
+                        continue;
+                    }
+
+                    // it's a direct class-method to call, no further REST processing required
+                    is_routes_found = true;
+                    string[] sroute = destination.Split("::", 2);
+                    route.controller = Utils.routeFixChars(sroute[0]);
+                    if (sroute.Length > 1)
+                        route.action_raw = sroute[1];
+                    break;
                 }
             }
         }
@@ -720,28 +736,37 @@ public class FW : IDisposable
 
         // after perpare_FORM - grouping for names like XXX[YYYY] -> FORM{XXX}=@{YYYY1, YYYY2, ...}
         Hashtable SQ = [];
-        string k;
-        string sk;
-
         Hashtable f = [];
-        foreach (string s in input.Keys)
+        foreach (DictionaryEntry entry in input)
         {
-            Match m = Regex.Match(s, @"^([^\]]+)\[([^\]]+)\]$");
-            if (m.Groups.Count > 1)
+            if (entry.Key is not string name)
+                continue;
+
+            var value = entry.Value;
+            var bracketPos = name.IndexOf('[');
+            if (bracketPos > 0 && name.EndsWith("]", StringComparison.Ordinal))
             {
-                // complex name
-                k = m.Groups[1].ToString();
-                sk = m.Groups[2].ToString();
-                if (!SQ.ContainsKey(k))
-                    SQ[k] = new Hashtable();
-                ((Hashtable)SQ[k])[sk] = input[s];
+                var mainKey = name[..bracketPos];
+                var subKey = name.Substring(bracketPos + 1, name.Length - bracketPos - 2);
+                if (subKey.Length == 0)
+                {
+                    f[name] = value;
+                    continue;
+                }
+
+                if (!SQ.ContainsKey(mainKey))
+                    SQ[mainKey] = new Hashtable();
+
+                ((Hashtable)SQ[mainKey])[subKey] = value;
             }
             else
-                f[s] = input[s];
+            {
+                f[name] = value;
+            }
         }
 
-        foreach (string s in SQ.Keys)
-            f[s] = SQ[s];
+        foreach (DictionaryEntry entry in SQ)
+            f[(string)entry.Key] = entry.Value;
 
         // also parse json in request body if any
         if (request.ContentType?[.."application/json".Length] == "application/json")
@@ -749,9 +774,16 @@ public class FW : IDisposable
             try
             {
                 //read json from request body
-                using (StreamReader reader = new(request.Body, Encoding.UTF8))
+                using StreamReader reader = new(request.Body, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, bufferSize: 4096, leaveOpen: true);
+                if (request.Body.CanSeek)
+                    request.Body.Seek(0, SeekOrigin.Begin);
+
+                string json = reader.ReadToEnd();
+                if (request.Body.CanSeek)
+                    request.Body.Seek(0, SeekOrigin.Begin);
+
+                if (!string.IsNullOrEmpty(json))
                 {
-                    string json = reader.ReadToEndAsync().Result; // TODO await
                     postedJson = (Hashtable)Utils.jsonDecode(json);
                     logger(LogLevel.TRACE, "REQUESTED JSON:", postedJson);
 
@@ -1038,46 +1070,8 @@ public class FW : IDisposable
 
         // ---------------------------------
         // choose proper overload for Action
-        MethodInfo actionMethod = null;
-        // collect all instance public methods called Action
-        var candidates = controllerClass.GetMethods(BindingFlags.Public | BindingFlags.Instance);
-
         bool isIdNumeric = int.TryParse(route.id, out _);
-        MethodInfo declaredFallback = null;   // declared in the controller itself
-        MethodInfo anyFallback = null;  // declared anywhere – ultimate fallback
-
-        foreach (var m in candidates)
-        {
-            if (m.Name != route.action + ACTION_SUFFIX)
-                continue;
-
-            // remember the very first match in case we need it later
-            anyFallback ??= m;
-            if (m.DeclaringType == controllerClass && declaredFallback == null)
-                declaredFallback = m;
-
-            var p = m.GetParameters();
-            if (p.Length != 1)               // framework only supports one-arg actions
-                continue;
-
-            Type paramT = p[0].ParameterType;
-
-            // top priority
-            if (!isIdNumeric && paramT == typeof(string))
-            {
-                actionMethod = m;            // best possible match – use it
-                break;
-            }
-            if (isIdNumeric && (paramT == typeof(int) || paramT == typeof(long)))
-            {
-                actionMethod = m;            // best possible match – use it
-                break;
-            }
-        }
-
-        // fallbacks
-        actionMethod ??= declaredFallback;
-        actionMethod ??= anyFallback;
+        var actionMethod = resolveActionMethod(controllerClass, route.action, isIdNumeric);
 
         if (actionMethod == null)
         {
@@ -1207,7 +1201,96 @@ public class FW : IDisposable
             parser(ps);
     }
 
-    // 
+    #region controller action method resolution with caching
+    private sealed class ControllerActionCache
+    {
+        private readonly Dictionary<string, MethodInfo> stringHandlers;
+        private readonly Dictionary<string, MethodInfo> numericHandlers;
+        private readonly Dictionary<string, MethodInfo> declaredFallback;
+        private readonly Dictionary<string, MethodInfo> anyFallback;
+
+        public ControllerActionCache(
+            Dictionary<string, MethodInfo> stringHandlers,
+            Dictionary<string, MethodInfo> numericHandlers,
+            Dictionary<string, MethodInfo> declaredFallback,
+            Dictionary<string, MethodInfo> anyFallback)
+        {
+            this.stringHandlers = stringHandlers;
+            this.numericHandlers = numericHandlers;
+            this.declaredFallback = declaredFallback;
+            this.anyFallback = anyFallback;
+        }
+
+        public bool TryGetString(string actionName, out MethodInfo method) => stringHandlers.TryGetValue(actionName, out method);
+
+        public bool TryGetNumeric(string actionName, out MethodInfo method) => numericHandlers.TryGetValue(actionName, out method);
+
+        public bool TryGetDeclaredFallback(string actionName, out MethodInfo method) => declaredFallback.TryGetValue(actionName, out method);
+
+        public bool TryGetAnyFallback(string actionName, out MethodInfo method) => anyFallback.TryGetValue(actionName, out method);
+    }
+
+    private static MethodInfo resolveActionMethod(Type controllerClass, string actionName, bool isIdNumeric)
+    {
+        if (string.IsNullOrEmpty(actionName))
+            return null;
+
+        var cacheKey = ControllerActionsCacheKeyPrefix + controllerClass.AssemblyQualifiedName;
+        if (FwCache.getValue(cacheKey) is not ControllerActionCache cache)
+        {
+            cache = buildControllerActionCache(controllerClass);
+            FwCache.setValue(cacheKey, cache, 86400); // cache for a day to avoid repeated reflection
+        }
+
+        if (!isIdNumeric && cache.TryGetString(actionName, out var stringHandler))
+            return stringHandler;
+
+        if (isIdNumeric && cache.TryGetNumeric(actionName, out var numericHandler))
+            return numericHandler;
+
+        if (cache.TryGetDeclaredFallback(actionName, out var declared))
+            return declared;
+
+        cache.TryGetAnyFallback(actionName, out var any);
+        return any;
+    }
+
+    private static ControllerActionCache buildControllerActionCache(Type controllerClass)
+    {
+        var stringHandlers = new Dictionary<string, MethodInfo>(StringComparer.OrdinalIgnoreCase);
+        var numericHandlers = new Dictionary<string, MethodInfo>(StringComparer.OrdinalIgnoreCase);
+        var declaredFallback = new Dictionary<string, MethodInfo>(StringComparer.OrdinalIgnoreCase);
+        var anyFallback = new Dictionary<string, MethodInfo>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var method in controllerClass.GetMethods(BindingFlags.Public | BindingFlags.Instance))
+        {
+            if (!method.Name.EndsWith(ACTION_SUFFIX, StringComparison.Ordinal))
+                continue;
+
+            var actionName = method.Name[..^ACTION_SUFFIX.Length];
+
+            if (!anyFallback.ContainsKey(actionName))
+                anyFallback[actionName] = method;
+
+            if (method.DeclaringType == controllerClass && !declaredFallback.ContainsKey(actionName))
+                declaredFallback[actionName] = method;
+
+            var parameters = method.GetParameters();
+            if (parameters.Length != 1)
+                continue;
+
+            var parameterType = parameters[0].ParameterType;
+            if (parameterType == typeof(string))
+                stringHandlers[actionName] = method;
+            else if (parameterType == typeof(int) || parameterType == typeof(long))
+                numericHandlers[actionName] = method;
+        }
+
+        return new ControllerActionCache(stringHandlers, numericHandlers, declaredFallback, anyFallback);
+    }
+
+    #endregion
+
     /// <summary>
     /// output file to response with given content type and disposition
     /// </summary>
