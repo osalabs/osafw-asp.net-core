@@ -81,6 +81,7 @@ public abstract class FwController
 
     protected Hashtable rbac = [];               // RBAC for the current user, read in init()
 
+    private const string ControllerConfigCacheKeyPrefix = "fw:controller-config:";
 
     protected FwController(FW fw = null)
     {
@@ -106,6 +107,36 @@ public abstract class FwController
         rbac = fw.model<Users>().getRBAC();
     }
 
+    // load controller config (usually from config.json) with caching based on file last write time
+    public virtual Hashtable getControllerConfigCached(string full_path)
+    {
+        var lastWriteTimeUtc = System.IO.File.GetLastWriteTimeUtc(full_path);
+
+        var cacheKey = ControllerConfigCacheKeyPrefix + full_path.ToLowerInvariant();
+        if (FwCache.getValue(cacheKey) is Hashtable cached &&
+            cached["lastWriteTimeUtc"] is DateTime cachedWriteTime &&
+            cachedWriteTime == lastWriteTimeUtc)
+        {
+            if (cached["template"] is Hashtable cachedTemplate)
+                return Utils.cloneHashDeep(cachedTemplate); // CACHE HIT - return a clone of the cached template
+        }
+
+        // CACHE MISS - load from file
+        var parsed = (Hashtable)Utils.jsonDecode(Utils.getFileContent(full_path));
+        if (parsed == null)
+            return null; // invalid json, let caller handle it
+
+        // store a pristine copy so subsequent loads can reuse the parsed structure without re-reading JSON
+        var cacheEntry = new Hashtable
+        {
+            ["lastWriteTimeUtc"] = lastWriteTimeUtc,
+            ["template"] = parsed,
+        };
+        FwCache.setValue(cacheKey, cacheEntry, 3600);
+
+        return Utils.cloneHashDeep(parsed);
+    }
+
     // load controller config from json in template dir (based on base_url)
     public virtual void loadControllerConfig(string config_filename = "config.json")
     {
@@ -123,10 +154,7 @@ public abstract class FwController
         if (!System.IO.File.Exists(conf_file))
             throw new ApplicationException("Controller Config file not found in templates: " + conf_file0);
 
-        var config = (Hashtable)Utils.jsonDecode(Utils.getFileContent(conf_file));
-        if (config == null)
-            throw new ApplicationException("Controller Config is invalid, check json in templates: " + conf_file0);
-
+        var config = getControllerConfigCached(conf_file) ?? throw new ApplicationException("Controller Config is invalid, check json in templates: " + conf_file0);
         loadControllerConfig(config);
     }
 

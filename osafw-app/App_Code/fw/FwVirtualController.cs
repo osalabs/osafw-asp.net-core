@@ -58,7 +58,7 @@ public class FwVirtualController : FwVueController
         if (File.Exists(conf_file))
         {
             is_conf_found = true;
-            Hashtable file_config = (Hashtable)Utils.jsonDecode(Utils.getFileContent(conf_file));
+            Hashtable file_config = getControllerConfigCached(conf_file);
             if (file_config == null)
             {
                 logger(LogLevel.WARN, "Error decoding config from " + conf_file);
@@ -76,7 +76,7 @@ public class FwVirtualController : FwVueController
             conf_file = fw.config("template") + "/common/virtual/config.json";
             if (File.Exists(conf_file))
             {
-                Hashtable file_config = (Hashtable)Utils.jsonDecode(Utils.getFileContent(conf_file));
+                Hashtable file_config = getControllerConfigCached(conf_file);
                 if (file_config == null)
                 {
                     logger(LogLevel.WARN, "Error decoding config from " + conf_file);
