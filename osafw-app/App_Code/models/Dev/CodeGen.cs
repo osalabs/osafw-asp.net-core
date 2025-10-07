@@ -655,7 +655,7 @@ class DevCodeGen
             else
                 db = fw.db;
             fields = db.loadTableSchemaFull(table_name);
-            entity["foreign_keys"] = db.listForeignKeys(table_name);
+            entity["foreign_keys"] = db.listForeignKeys(table_name).toArrayList();
 
             if (!entity.ContainsKey("is_fw"))
                 entity["is_fw"] = true; // TODO actually detect if there any fields to be normalized

@@ -693,7 +693,7 @@ public class Utils
     }
     public static void mergeHash(DBRow hash1, DBRow hash2)
     {
-        if (hash2 != null)
+        if (hash2 != null && hash2.Count > 0)
         {
             // make static copy of hash2.keys, so even if hash2.keys changing (ex: hash1 is same as hash2) it will not affect the loop
             foreach (string key in hash2.Keys)
