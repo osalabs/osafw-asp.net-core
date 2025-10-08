@@ -1,4 +1,0 @@
-os: { windows: "Windows 10/11", linux: "Debian" }
-shells: { windows: "PowerShell (?5.1)", linux: "Bash" }
-runtimes: { node: "18+", python: "3.10+", php: "N/A", dotnet: "8.0" }
-entrypoints: { build: {windows:"dotnet build",linux:"dotnet build"}, test:{windows:"dotnet test",linux:"dotnet test"}, run:{windows:"dotnet run --project osafw-app",linux:"dotnet run --project osafw-app"} }
