@@ -25,7 +25,7 @@
 - don't store secrets or large logs.
 </post-process>
 
-Whenever AGENTS.md updated - make copy of it to .github/copilot-instructions.md
+Whenever AGENTS.md updated - make copy of it to top level /.github/copilot-instructions.md
 
 ## Project Overview
 - osafw-asp.net-core is an opinionated ASP.NET Core (.NET 8) web framework/template for building data-heavy admin and CRUD apps.
