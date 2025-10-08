@@ -778,7 +778,7 @@ public class FW : IDisposable
                 if (request.Body.CanSeek)
                     request.Body.Seek(0, SeekOrigin.Begin);
 
-                string json = reader.ReadToEnd();
+                string json = reader.ReadToEndAsync().GetAwaiter().GetResult();
                 if (request.Body.CanSeek)
                     request.Body.Seek(0, SeekOrigin.Begin);
 
