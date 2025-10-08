@@ -1,0 +1,1 @@
+Follow the instructions from osafw-app/AGENTS.md
