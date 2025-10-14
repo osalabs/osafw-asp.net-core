@@ -1,4 +1,4 @@
-<!-- AGENTS.md - Universal, Auto-Bootstrapping (v6) -->
+<!-- AGENTS.md - Universal, Auto-Bootstrapping (v6.1) -->
 
 # Process/Workflow for each user query
 0. Bootstrap (IMPORTANT!) - if you see this item, perform steps in <bootstrap> even if it takes additional efforts - it will save you time for user's tasks
@@ -24,9 +24,10 @@
 
 3. Post-process - after user's query is completely resolved, perform self-reflection, self-improvement, and optimization of the entire process/workflow, see steps in <post-process>
 <post-process>
+- goal is to gather and maintain project knowledge for coding agents to be more effective in future tasks
 - review task summary file, make sure it's complete
 - classify discoveries:
-  - STABLE FACT - add to domain.md or glossary.md or AGENTS.md relevant section
+  - STABLE FACT - add to domain.md or glossary.md or AGENTS.md relevant section. You can also create a new section in AGENTS.md if enough facts of the same type are discovered (but do not change more than 20% of AGENTS.md content in one go).
   - HEURISTIC - add to heuristics.md, timestamp new heuristics and expire or revise anything older than 90 days.
   - ONE-OFF - keep in task summary file only
 - if a substantial business decision changed, add an ADR under `docs/agents/adr/`.
@@ -47,6 +48,10 @@ Whenever AGENTS.md updated - make copy of it to .github/copilot-instructions.md
 <!-- TODO fill by bootstrap -->
 
 ## Helpful Docs
+- `docs/agents/heuristics.md` - heuristics for this project
+- `docs/agents/domain.md` - domain/business knowledge
+- `docs/agents/glossary.md` - glossary of terms
+- `README.md` - osafw framework documentation
 <!-- TODO fill by bootstrap -->
 
 ## Common Tasks
