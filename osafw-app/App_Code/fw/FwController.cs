@@ -938,7 +938,7 @@ public abstract class FwController
 
     public virtual TRow modelOneOrFailT<TRow>(int id) where TRow : class, new()
     {
-        return ensureTypedModel<TRow>().oneOrFailT(id);
+        return ensureTypedModel<TRow>().oneTOrFail(id);
     }
 
     // for simpler overriding in child controllers

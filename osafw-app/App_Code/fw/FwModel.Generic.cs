@@ -66,7 +66,7 @@ public abstract class FwModel<TRow> : FwModel where TRow : class, new()
         return iid > 0 ? oneT(iid) : null;
     }
 
-    public virtual TRow oneOrFailT(int id)
+    public virtual TRow oneTOrFail(int id)
     {
         var row = oneT(id);
         if (isRowEmpty(row))
