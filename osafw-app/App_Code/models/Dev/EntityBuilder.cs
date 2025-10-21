@@ -17,6 +17,8 @@ class DevEntityBuilder
 {
     const string FW_TABLES = "fwsessions fwkeys fwentities fwcron fwcontrollers fwupdates att_categories att att_links users settings spages log_types activity_logs user_views user_lists user_lists_items menu_items user_filters";
 
+    private static readonly Regex CsIdentifierRegex = new(@"^[A-Za-z_][A-Za-z0-9_]*$", RegexOptions.Compiled);
+
     public static void createDBJsonFromExistingDB(string dbname, FW fw)
     {
         var db = fw.getDB(dbname);
@@ -386,7 +388,7 @@ class DevEntityBuilder
         if (fieldName.EndsWith(".id"))
         {
             // this is foreign key field
-            var pk_table = Utils.name2fw(Regex.Replace(fieldName, @"\.id$", ""));  // Customers.id => customers            
+            var pk_table = Utils.name2fw(Regex.Replace(fieldName, @"\.id$", ""));  // Customers.id => customers
             fieldName = pk_table + "_id";
             field["name"] = pk_table + "_id";
             field["iname"] = Utils.name2human(fieldName);
@@ -400,6 +402,7 @@ class DevEntityBuilder
                 ["pk_column"] = "id"
             };
 
+            ensureFieldCsMetadata(field);
             return field;
         }
 
@@ -421,6 +424,7 @@ class DevEntityBuilder
                     ["pk_table"] = Utils.name2fw(fkParts[0]),
                     ["pk_column"] = fkParts[1]
                 };
+                ensureFieldCsMetadata(field);
             }
             else
                 throw new Exception("Invalid foreign key syntax at line: " + line);
@@ -459,6 +463,7 @@ class DevEntityBuilder
         if (!field.ContainsKey("default") && field["is_nullable"].Equals(0))
             field["default"] = GetDefaultValueForType(field["fw_type"].ToString());
 
+        ensureFieldCsMetadata(field);
         return field;
     }
 
@@ -587,7 +592,7 @@ class DevEntityBuilder
 
         foreach (var option in options)
         {
-            var parts = option.Split(['(', ')'], StringSplitOptions.RemoveEmptyEntries);
+            var parts = option.Split(new[] { '(', ')' }, StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length == 1)
             {
                 result[parts[0].Trim()] = true;
@@ -633,7 +638,7 @@ class DevEntityBuilder
         bool isIdentity = false,
         object defaultValue = null)
     {
-        return new Dictionary<string, object>
+        var field = new Dictionary<string, object>
         {
             ["name"] = name,
             ["iname"] = iname,
@@ -646,6 +651,9 @@ class DevEntityBuilder
             ["numeric_precision"] = null,
             ["default"] = defaultValue
         };
+
+        ensureFieldCsMetadata(field);
+        return field;
     }
 
     public static bool isFwTableName(string table_name)
@@ -678,6 +686,7 @@ class DevEntityBuilder
     public static void saveJsonEntity(object data, string filename)
     {
         string json_str;
+        ensureEntitiesCsMetadata(data);
         //use custom converter to output keys in specific order
         JsonSerializerOptions options = new()
         {
@@ -773,6 +782,7 @@ class DevEntityBuilder
         {
             fldschema["fw_name"] = Utils.name2fw((string)fldschema["name"]);
             fldschema["iname"] = Utils.name2human((string)fldschema["name"]);
+            ensureFieldCsMetadata(fldschema);
         }
         // result("xxxx") = "yyyy"
         // attrs used to build UI
@@ -785,6 +795,170 @@ class DevEntityBuilder
         // is_identity
 
         return result;
+    }
+
+    private static void ensureEntityCsMetadata(object entity)
+    {
+        if (entity is not IDictionary dict)
+            return;
+
+        if (!dict.Contains("fields"))
+            return;
+
+        if (dict["fields"] is not IList fields)
+            return;
+
+        foreach (var field in fields)
+        {
+            ensureFieldCsMetadata(field);
+        }
+    }
+
+    private static void ensureFieldCsMetadata(object field)
+    {
+        switch (field)
+        {
+            case IDictionary dict:
+                ensureFieldCsMetadataDictionary(dict);
+                break;
+            case IDictionary<string, object> generic:
+                ensureFieldCsMetadataGeneric(generic);
+                break;
+        }
+    }
+
+    private static void ensureFieldCsMetadataDictionary(IDictionary field)
+    {
+        if (field == null)
+            return;
+
+        if (!field.Contains("name"))
+            return;
+
+        var columnName = field["name"].toStr();
+        if (columnName.Length == 0)
+            return;
+
+        if (!field.Contains("fw_name") || field["fw_name"].toStr().Length == 0)
+            field["fw_name"] = Utils.name2fw(columnName);
+
+        if (!field.Contains("cs_property") || field["cs_property"].toStr().Length == 0)
+        {
+            field["cs_property"] = buildCsPropertyName(columnName, field["fw_name"].toStr());
+        }
+
+        if (!field.Contains("cs_type") || field["cs_type"].toStr().Length == 0)
+        {
+            field["cs_type"] = buildCsType(field);
+        }
+    }
+
+    private static string buildCsPropertyName(string columnName, string fallback)
+    {
+        if (CsIdentifierRegex.IsMatch(columnName))
+            return columnName;
+
+        var candidate = fallback;
+        if (candidate.Length == 0)
+            candidate = Utils.name2fw(columnName);
+
+        if (candidate.Length == 0)
+            candidate = "field";
+
+        if (!CsIdentifierRegex.IsMatch(candidate))
+            candidate = "_" + candidate;
+
+        return candidate;
+    }
+
+    private static string buildCsType(object field)
+    {
+        var fwType = getFieldValue(field, "fw_type").toStr();
+        var fwSubtype = getFieldValue(field, "fw_subtype").toStr();
+        var isNullable = getFieldValue(field, "is_nullable").toInt() == 1;
+
+        string baseType = fwType switch
+        {
+            "int" => (fwSubtype == "boolean" || fwSubtype == "bit") ? "bool" : "int",
+            "float" => fwSubtype == "decimal" ? "decimal" : "double",
+            "date" => "DateTime",
+            "datetime" => "DateTime",
+            _ => "string",
+        };
+
+        bool isValueType = baseType != "string" && baseType != "object";
+        if (isNullable && isValueType)
+            return baseType + "?";
+
+        return baseType;
+    }
+
+    private static void ensureFieldCsMetadataGeneric(IDictionary<string, object> field)
+    {
+        if (field == null)
+            return;
+
+        if (!field.TryGetValue("name", out var rawName))
+            return;
+
+        var columnName = rawName.toStr();
+        if (columnName.Length == 0)
+            return;
+
+        if (!field.TryGetValue("fw_name", out var rawFwName) || rawFwName.toStr().Length == 0)
+            field["fw_name"] = Utils.name2fw(columnName);
+
+        if (!field.TryGetValue("cs_property", out var rawProperty) || rawProperty.toStr().Length == 0)
+        {
+            field["cs_property"] = buildCsPropertyName(columnName, field["fw_name"].toStr());
+        }
+
+        if (!field.TryGetValue("cs_type", out var rawType) || rawType.toStr().Length == 0)
+        {
+            field["cs_type"] = buildCsType(field);
+        }
+    }
+
+    private static object getFieldValue(object field, string key)
+    {
+        return field switch
+        {
+            IDictionary dict when dict.Contains(key) => dict[key],
+            IDictionary<string, object> generic when generic.TryGetValue(key, out var value) => value,
+            _ => null,
+        };
+    }
+
+    internal static string fieldCSType(object field)
+    {
+        ensureFieldCsMetadata(field);
+        return getFieldValue(field, "cs_type").toStr();
+    }
+
+    internal static string fieldCSProperty(object field)
+    {
+        ensureFieldCsMetadata(field);
+        return getFieldValue(field, "cs_property").toStr();
+    }
+
+    internal static string fieldColumnName(object field)
+    {
+        ensureFieldCsMetadata(field);
+        return getFieldValue(field, "name").toStr();
+    }
+
+    internal static void ensureEntitiesCsMetadata(object data)
+    {
+        switch (data)
+        {
+            case IList list:
+                foreach (var item in list)
+                    ensureEntityCsMetadata(item);
+                break;
+            case IDictionary dict:
+                ensureEntityCsMetadata(dict);
+                break;
+        }
     }
 
     public static List<string> listModels()
@@ -824,7 +998,7 @@ class DevEntityBuilder
             //country_name = prefix + "Country";
         }
 
-        return
+        ArrayList result =
         [
             new Hashtable()
             {
@@ -892,5 +1066,10 @@ class DevEntityBuilder
                 {"fw_subtype","nvarchar"}
             }
         ];
+
+        foreach (IDictionary field in result)
+            ensureFieldCsMetadata(field);
+
+        return result;
     }
 }

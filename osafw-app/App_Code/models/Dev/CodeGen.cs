@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 // Code generation for Developers
 //
@@ -327,6 +328,7 @@ class DevCodeGen
 
     public void createModel(Hashtable entity)
     {
+        DevEntityBuilder.ensureEntitiesCsMetadata(entity);
         string table_name = (string)entity["table"];
         string model_name = (string)entity["model_name"];
         bool is_junction = entity["is_junction"].toBool();
@@ -456,6 +458,8 @@ class DevCodeGen
 
             mdemo = mdemo.Replace("//###CODEGEN", codegen);
         }
+
+        mdemo = replaceRowClass(mdemo, buildRowClass(entity));
 
         // copy demo model to model_name.cs
         Utils.setFileContent(path + @"\" + model_name + ".cs", ref mdemo);
@@ -1514,5 +1518,45 @@ class DevCodeGen
             db.insert("menu_items", fields);
     }
 
+    private static string buildRowClass(IDictionary entity)
+    {
+        if (entity == null || !entity.Contains("fields"))
+            return string.Empty;
 
+        if (entity["fields"] is not IList fields || fields.Count == 0)
+            return string.Empty;
+
+        StringBuilder sb = new();
+        sb.AppendLine("    public class Row");
+        sb.AppendLine("    {");
+
+        foreach (var field in fields)
+        {
+            var propertyName = DevEntityBuilder.fieldCSProperty(field);
+            var csType = DevEntityBuilder.fieldCSType(field);
+
+            if (string.IsNullOrEmpty(propertyName) || string.IsNullOrEmpty(csType))
+                continue;
+
+            var columnName = DevEntityBuilder.fieldColumnName(field);
+            if (!string.Equals(propertyName, columnName, StringComparison.OrdinalIgnoreCase))
+                sb.AppendLine($"        [DBName(\"{columnName}\")]");
+
+            sb.AppendLine($"        public {csType} {propertyName} {{ get; set; }}");
+        }
+
+        sb.AppendLine("    }");
+        sb.AppendLine();
+
+        return sb.ToString();
+    }
+
+    private static string replaceRowClass(string template, string rowClassBlock)
+    {
+        if (string.IsNullOrEmpty(rowClassBlock))
+            return template;
+
+        var regex = new Regex(@"^\s*public class Row\s*\{.*?^\s*\}\s*", RegexOptions.Singleline | RegexOptions.Multiline);
+        return regex.Replace(template, rowClassBlock, 1);
+    }
 }
