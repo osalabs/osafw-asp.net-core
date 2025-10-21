@@ -20,7 +20,7 @@ public static class FwExtensions
     private static readonly ConcurrentDictionary<Type, Dictionary<string, PropertyInfo>> WritablePropertiesCache = new();
     private static readonly ConcurrentDictionary<Type, Dictionary<string, Func<object, object>>> ReadableMembersCache = new();
 
-    private static Dictionary<string, PropertyInfo> GetWritablePropertiesCore(Type type)
+    private static Dictionary<string, PropertyInfo> getWritablePropertiesCore(Type type)
     {
         return WritablePropertiesCache.GetOrAdd(type, static t =>
         {
@@ -42,13 +42,13 @@ public static class FwExtensions
         });
     }
 
-    internal static Dictionary<string, PropertyInfo> GetWritableProperties<T>() => GetWritablePropertiesCore(typeof(T));
+    internal static Dictionary<string, PropertyInfo> getWritableProperties<T>() => getWritablePropertiesCore(typeof(T));
 
-    internal static Dictionary<string, PropertyInfo> GetWritableProperties(this Type type) => GetWritablePropertiesCore(type);
+    internal static Dictionary<string, PropertyInfo> getWritableProperties(this Type type) => getWritablePropertiesCore(type);
 
-    internal static void ClearWritablePropertiesCache() => WritablePropertiesCache.Clear();
+    internal static void clearWritablePropertiesCache() => WritablePropertiesCache.Clear();
 
-    private static void SetPropertyValue<T>(this T obj, PropertyInfo property, object value)
+    private static void setPropertyValue<T>(this T obj, PropertyInfo property, object value)
     {
         if (value is null || value is DBNull)
         {
@@ -85,15 +85,15 @@ public static class FwExtensions
         property.SetValue(obj, convertedValue);
     }
 
-    internal static void SetPropertyValue<T>(this T obj, Dictionary<string, PropertyInfo> props, string field, object value)
+    internal static void setPropertyValue<T>(this T obj, Dictionary<string, PropertyInfo> props, string field, object value)
     {
         if (props.TryGetValue(field, out var property))
         {
-            obj.SetPropertyValue(property, value);
+            obj.setPropertyValue(property, value);
         }
     }
 
-    private static T PopulateObject<T>(IDictionary kv, Dictionary<string, PropertyInfo> props, T obj)
+    private static T populateObject<T>(IDictionary kv, Dictionary<string, PropertyInfo> props, T obj)
     {
         foreach (DictionaryEntry entry in kv)
         {
@@ -101,18 +101,18 @@ public static class FwExtensions
             if (string.IsNullOrEmpty(key))
                 continue;
 
-            obj.SetPropertyValue(props, key, entry.Value);
+            obj.setPropertyValue(props, key, entry.Value);
         }
 
         return obj;
     }
 
-    public static T as<T>(this IDictionary kv) where T : new()
+    public static T @as<T>(this IDictionary kv) where T : new()
     {
         ArgumentNullException.ThrowIfNull(kv);
 
-        var props = GetWritableProperties<T>();
-        return PopulateObject(kv, props, new T());
+        var props = getWritableProperties<T>();
+        return populateObject(kv, props, new T());
     }
 
     public static List<T> asList<T>(this IList rows) where T : new()
@@ -123,7 +123,7 @@ public static class FwExtensions
         if (rows.Count == 0)
             return result;
 
-        var props = GetWritableProperties<T>();
+        var props = getWritableProperties<T>();
         foreach (var item in rows)
         {
             if (item is null)
@@ -137,12 +137,12 @@ public static class FwExtensions
             }
             else if (item is IDictionary dict)
             {
-                result.Add(PopulateObject(dict, props, new T()));
+                result.Add(populateObject(dict, props, new T()));
             }
             else
             {
-                var dict = (IDictionary)item.toKeyValue();
-                result.Add(PopulateObject(dict, props, new T()));
+                var keyValues = (IDictionary)item.toKeyValue();
+                result.Add(populateObject(keyValues, props, new T()));
             }
         }
 
@@ -168,7 +168,7 @@ public static class FwExtensions
             return result;
         }
 
-        var props = GetWritableProperties(dto.GetType());
+        var props = getWritableProperties(dto.GetType());
         Dictionary<string, object> kv = new(props.Count, StringComparer.OrdinalIgnoreCase);
         foreach (var pair in props)
         {
@@ -194,7 +194,7 @@ public static class FwExtensions
             return result;
         }
 
-        var props = dto.GetType().GetWritableProperties();
+        var props = dto.GetType().getWritableProperties();
         Hashtable htResult = new(props.Count);
         foreach (var kv in props)
         {
@@ -209,8 +209,8 @@ public static class FwExtensions
         ArgumentNullException.ThrowIfNull(kv);
         ArgumentNullException.ThrowIfNull(dto);
 
-        var props = dto.GetType().GetWritableProperties();
-        PopulateObject(kv, props, dto);
+        var props = dto.GetType().getWritableProperties();
+        populateObject(kv, props, dto);
     }
 
     public static Dictionary<string, Func<object, object>> getReadableMembers(this object obj)

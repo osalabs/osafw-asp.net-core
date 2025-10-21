@@ -1312,5 +1312,3 @@ public abstract class FwModel : IDisposable
         GC.SuppressFinalize(this);
     }
 }
-
-}

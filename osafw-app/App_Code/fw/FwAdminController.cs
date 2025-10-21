@@ -168,7 +168,7 @@ public class FwAdminController : FwController
         this.validateCheckResult();
     }
 
-    public virtual void Validate<TRow>(int id, TRow dto) where TRow : class, new()
+    public virtual void validate<TRow>(int id, TRow dto) where TRow : class, new()
     {
         ArgumentNullException.ThrowIfNull(dto);
         Validate(id, dto.toHashtable());

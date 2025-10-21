@@ -21,12 +21,12 @@ public abstract class FwModel<TRow> : FwModel where TRow : class, new()
         typedCacheByIcodePrefix = cache_prefix_byicode + "typed.";
     }
 
-    protected virtual bool IsRowEmpty(TRow row)
+    protected virtual bool isRowEmpty(TRow row)
     {
         return row == null;
     }
 
-    protected virtual Hashtable BuildStatusesWhere(IList statuses)
+    protected virtual Hashtable buildStatusesWhere(IList statuses)
     {
         Hashtable where = [];
         if (!string.IsNullOrEmpty(field_status))
@@ -39,32 +39,25 @@ public abstract class FwModel<TRow> : FwModel where TRow : class, new()
         return where;
     }
 
-    protected virtual TRow CacheTypedOne(int id, Func<TRow> loader)
-    {
-        if (fw?.cache == null || id <= 0)
-            return loader();
-
-        var cacheKey = typedCachePrefix + id;
-        if (fw.cache.getRequestValue(cacheKey) is TRow cached)
-            return cached;
-
-        var row = loader();
-        if (!IsRowEmpty(row))
-            fw.cache.setRequestValue(cacheKey, row);
-
-        return row;
-    }
-
     public virtual TRow oneT(int id)
     {
         if (id <= 0)
             return null;
 
-        return CacheTypedOne(id, () =>
-        {
-            var where = DB.h(field_id, id);
+        var where = DB.h(field_id, id);
+
+        if (fw?.cache == null)
             return db.row<TRow>(table_name, where);
-        });
+
+        var cacheKey = typedCachePrefix + id;
+        if (fw.cache.getRequestValue(cacheKey) is TRow cached)
+            return cached;
+
+        var row = db.row<TRow>(table_name, where);
+        if (!isRowEmpty(row))
+            fw.cache.setRequestValue(cacheKey, row);
+
+        return row;
     }
 
     public virtual TRow oneT(object id)
@@ -76,7 +69,7 @@ public abstract class FwModel<TRow> : FwModel where TRow : class, new()
     public virtual TRow oneOrFailT(int id)
     {
         var row = oneT(id);
-        if (IsRowEmpty(row))
+        if (isRowEmpty(row))
             throw new NotFoundException();
         return row;
     }
@@ -95,18 +88,26 @@ public abstract class FwModel<TRow> : FwModel where TRow : class, new()
         if (string.IsNullOrEmpty(field_icode))
             return null;
 
+        var where = DB.h(field_icode, icode);
+
         if (fw?.cache == null)
-            return LoadByIcode(icode);
+            return db.row<TRow>(table_name, where);
 
         var cacheKey = typedCacheByIcodePrefix + icode;
         if (fw.cache.getRequestValue(cacheKey) is TRow cached)
             return cached;
 
-        var row = LoadByIcode(icode);
-        if (!IsRowEmpty(row))
+        var row = db.row<TRow>(table_name, where);
+        if (!isRowEmpty(row))
         {
             fw.cache.setRequestValue(cacheKey, row);
-            CacheByIdFromTypedRow(row);
+            if (!string.IsNullOrEmpty(field_id))
+            {
+                var idValue = row.valueByMemberName(field_id);
+                var iid = idValue.toInt();
+                if (iid > 0)
+                    fw.cache.setRequestValue(typedCachePrefix + iid, row);
+            }
         }
 
         return row;
@@ -115,31 +116,14 @@ public abstract class FwModel<TRow> : FwModel where TRow : class, new()
     public virtual TRow oneByIcodeOrFailT(string icode)
     {
         var row = oneByIcodeT(icode);
-        if (IsRowEmpty(row))
+        if (isRowEmpty(row))
             throw new NotFoundException();
         return row;
     }
 
-    protected virtual TRow LoadByIcode(string icode)
-    {
-        var where = DB.h(field_icode, icode);
-        return db.row<TRow>(table_name, where);
-    }
-
-    protected virtual void CacheByIdFromTypedRow(TRow row)
-    {
-        if (fw?.cache == null || string.IsNullOrEmpty(field_id) || IsRowEmpty(row))
-            return;
-
-        var idValue = row.valueByMemberName(field_id);
-        var iid = idValue.toInt();
-        if (iid > 0)
-            fw.cache.setRequestValue(typedCachePrefix + iid, row);
-    }
-
     public virtual List<TRow> listT(IList statuses = null)
     {
-        var where = BuildStatusesWhere(statuses);
+        var where = buildStatusesWhere(statuses);
         return db.array<TRow>(table_name, where, getOrderBy());
     }
 
@@ -155,9 +139,8 @@ public abstract class FwModel<TRow> : FwModel where TRow : class, new()
         if (ids == null || ids.Count == 0)
             return new List<TRow>();
 
-        object[] arr = new object[ids.Count];
-        ids.CopyTo(arr, 0);
-        return db.array<TRow>(table_name, DB.h("id", db.opIN(arr)));
+        var key = string.IsNullOrEmpty(field_id) ? "id" : field_id;
+        return db.array<TRow>(table_name, DB.h(key, db.opIN(ids)));
     }
 
     public virtual TRow convertUserInput(TRow dto)
@@ -175,17 +158,33 @@ public abstract class FwModel<TRow> : FwModel where TRow : class, new()
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        var fields = dto.toHashtable();
-        PrepareFields(fields, forInsert: true);
+        var fields = dto.toKeyValue();
+        prepareFields(fields, forInsert: true);
 
-        int id = add(fields);
+        if (!string.IsNullOrEmpty(field_add_users_id) && fw?.isLogged == true && !fields.ContainsKey(field_add_users_id))
+            fields[field_add_users_id] = fw.userId;
 
-        var props = typeof(TRow).GetWritableProperties();
+        int id = db.insert(table_name, fields);
+
+        if (is_log_changes)
+        {
+            if (is_log_fields_changed)
+                fw.logActivity(FwLogTypes.ICODE_ADDED, table_name, id, "", new Hashtable(fields));
+            else
+                fw.logActivity(FwLogTypes.ICODE_ADDED, table_name, id);
+        }
+
+        removeCache(id);
+
+        if (!string.IsNullOrEmpty(field_prio) && !fields.ContainsKey(field_prio))
+            db.update(table_name, DB.h(field_prio, id), DB.h(field_id, id));
+
+        var props = typeof(TRow).getWritableProperties();
         if (!string.IsNullOrEmpty(field_id))
-            dto.SetPropertyValue(props, field_id, id);
+            dto.setPropertyValue(props, field_id, id);
 
         if (!string.IsNullOrEmpty(field_add_users_id) && fw?.isLogged == true)
-            dto.SetPropertyValue(props, field_add_users_id, fw.userId);
+            dto.setPropertyValue(props, field_add_users_id, fw.userId);
 
         return id;
     }
@@ -194,23 +193,65 @@ public abstract class FwModel<TRow> : FwModel where TRow : class, new()
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        var fields = dto.toHashtable();
-        PrepareFields(fields, forInsert: false);
+        var fields = dto.toKeyValue();
+        prepareFields(fields, forInsert: false);
 
-        var result = update(id, fields);
+        Hashtable itemChanges = [];
+        if (is_log_changes)
+        {
+            Hashtable itemCompare = new(fields);
+            if (is_under_bulk_update)
+            {
+                itemCompare = (Hashtable)itemCompare.Clone();
+                itemCompare.Remove(field_status);
+            }
+
+            Hashtable itemOld = [];
+            if (!string.IsNullOrEmpty(field_id))
+            {
+                var where = DB.h(field_id, id);
+                var oldRow = db.row<TRow>(table_name, where);
+                if (!isRowEmpty(oldRow))
+                    itemOld = new Hashtable(oldRow.toKeyValue());
+            }
+
+            itemChanges = FormUtils.changesOnly(itemCompare, itemOld);
+        }
+
+        if (!string.IsNullOrEmpty(field_upd_time))
+            fields[field_upd_time] = DB.NOW;
+
+        if (!string.IsNullOrEmpty(field_upd_users_id) && fw?.isLogged == true && !fields.ContainsKey(field_upd_users_id))
+            fields[field_upd_users_id] = fw.userId;
+
+        var whereUpdate = DB.h(field_id, id);
+        db.update(table_name, fields, whereUpdate);
+
+        removeCache(id);
+
+        if (is_log_changes && itemChanges.Count > 0)
+        {
+            if (is_log_fields_changed)
+                fw.logActivity(FwLogTypes.ICODE_UPDATED, table_name, id, "", itemChanges);
+            else
+                fw.logActivity(FwLogTypes.ICODE_UPDATED, table_name, id);
+        }
 
         if (!string.IsNullOrEmpty(field_upd_users_id) && fw?.isLogged == true)
         {
-            var props = typeof(TRow).GetWritableProperties();
-            dto.SetPropertyValue(props, field_upd_users_id, fw.userId);
+            var props = typeof(TRow).getWritableProperties();
+            dto.setPropertyValue(props, field_upd_users_id, fw.userId);
         }
 
-        return result;
+        return true;
     }
 
-    protected virtual void PrepareFields(Hashtable fields, bool forInsert)
+    protected virtual void prepareFields(IDictionary fields, bool forInsert)
     {
-        if (!string.IsNullOrEmpty(field_id) && fields.ContainsKey(field_id))
+        if (fields == null)
+            return;
+
+        if (!string.IsNullOrEmpty(field_id) && fields.Contains(field_id))
         {
             var idValue = fields[field_id];
             var iid = idValue.toInt();
@@ -227,18 +268,18 @@ public abstract class FwModel<TRow> : FwModel where TRow : class, new()
 
         if (forInsert)
         {
-            RemoveIfDefault(fields, field_add_users_id);
-            RemoveIfDefault(fields, field_prio);
+            removeIfDefault(fields, field_add_users_id);
+            removeIfDefault(fields, field_prio);
         }
         else
         {
-            RemoveIfDefault(fields, field_upd_users_id);
+            removeIfDefault(fields, field_upd_users_id);
         }
     }
 
-    protected virtual void RemoveIfDefault(Hashtable fields, string field)
+    protected virtual void removeIfDefault(IDictionary fields, string field)
     {
-        if (string.IsNullOrEmpty(field) || !fields.ContainsKey(field))
+        if (fields == null || string.IsNullOrEmpty(field) || !fields.Contains(field))
             return;
 
         var value = fields[field];

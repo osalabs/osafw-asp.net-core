@@ -852,12 +852,12 @@ public class DB : IDisposable
     //read database row values into generic type
     protected T readRow<T>(DbDataReader dbread) where T : new()
     {
-        T result = new();
         if (!dbread.HasRows)
-            return result; //if no rows - return empty row
+            return default; //if no rows - return empty row
 
+        T result = new();
         var meta = getReaderMeta(dbread);
-        var props = FwExtensions.GetWritableProperties<T>();
+        var props = FwExtensions.getWritableProperties<T>();
         for (int i = 0; i < meta.FieldCount; i++)
         {
             if (meta.IsSkip[i]) continue;
@@ -875,7 +875,7 @@ public class DB : IDisposable
             else
                 value = dbread.GetValue(i);
 
-            result.SetPropertyValue(props, meta.Names[i], value);
+            result.setPropertyValue(props, meta.Names[i], value);
         }
         return result;
     }
@@ -1763,9 +1763,15 @@ public class DB : IDisposable
     public DBOperation opIN(params object[] args)
     {
         object values;
-        if (args.Length == 1 && (args[0].GetType().IsArray) || (args[0] is IList))
+        if (args.Length == 1)
         {
-            values = args[0];
+            var candidate = args[0];
+            if (candidate is string)
+                values = args;
+            else if (candidate is IEnumerable enumerable)
+                values = enumerable;
+            else
+                values = args;
         }
         else
         {
@@ -1787,9 +1793,15 @@ public class DB : IDisposable
     public DBOperation opNOTIN(params object[] args)
     {
         object values;
-        if (args.Length == 1 && (args[0].GetType().IsArray) || (args[0] is IList))
+        if (args.Length == 1)
         {
-            values = args[0];
+            var candidate = args[0];
+            if (candidate is string)
+                values = args;
+            else if (candidate is IEnumerable enumerable)
+                values = enumerable;
+            else
+                values = args;
         }
         else
         {
@@ -2388,7 +2400,7 @@ public class DB : IDisposable
         schemafull_cache.Clear();
         schema_cache.Clear();
         schema.Clear();
-        FwExtensions.ClearWritablePropertiesCache();
+        FwExtensions.clearWritablePropertiesCache();
     }
 
     // This method for unit tests
