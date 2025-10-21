@@ -875,7 +875,7 @@ public class DB : IDisposable
             else
                 value = dbread.GetValue(i);
 
-            FwExtensions.SetPropertyValue(result, props, meta.Names[i], value);
+            result.SetPropertyValue(props, meta.Names[i], value);
         }
         return result;
     }
@@ -915,8 +915,8 @@ public class DB : IDisposable
     public DBRow rowp(string sql, Hashtable @params = null)
     {
         DbDataReader dbread = query(sql, @params);
-        dbread.Read();
-        var result = readRow(dbread);
+        var hasRow = dbread.Read();
+        var result = hasRow ? readRow(dbread) : [];
         dbread.Close();
         return result;
     }
@@ -930,8 +930,8 @@ public class DB : IDisposable
     public T rowp<T>(string sql, Hashtable @params = null) where T : new()
     {
         DbDataReader dbread = query(sql, @params);
-        dbread.Read();
-        var result = readRow<T>(dbread);
+        var hasRow = dbread.Read();
+        var result = hasRow ? readRow<T>(dbread) : default;
         dbread.Close();
         return result;
     }
@@ -1865,7 +1865,7 @@ public class DB : IDisposable
         if (data == null)
             return 0;
 
-        var qp = buildInsert(table, toKeyValue(data));
+        var qp = buildInsert(table, data.toKeyValue());
 
         return insertQueryAndParams(qp);
     }
@@ -1897,7 +1897,7 @@ public class DB : IDisposable
     /// <returns></returns>
     public int update<T>(string table, T data, IDictionary where)
     {
-        var qp = buildUpdate(table, toKeyValue(data), where);
+        var qp = buildUpdate(table, data.toKeyValue(), where);
         return exec(qp.sql, qp.@params);
     }
 
@@ -2450,26 +2450,6 @@ public class DB : IDisposable
         }
 
         return result;
-    }
-
-    public static T toClass<T>(IDictionary kv, Dictionary<string, PropertyInfo> props = null) where T : new()
-    {
-        ArgumentNullException.ThrowIfNull(kv);
-
-        props ??= FwExtensions.GetWritableProperties<T>();
-        return kv.as<T>(props);
-    }
-
-    public static List<T> toClass<T>(IList<IDictionary> list) where T : new()
-    {
-        ArgumentNullException.ThrowIfNull(list);
-        return ((IList)list).asList<T>();
-    }
-
-    public static Dictionary<string, object> toKeyValue<T>(T o)
-    {
-        ArgumentNullException.ThrowIfNull(o);
-        return o.toHashtable().Cast<DictionaryEntry>().ToDictionary(entry => (string)entry.Key, entry => entry.Value);
     }
 
     [SupportedOSPlatform("windows")]

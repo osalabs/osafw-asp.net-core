@@ -121,7 +121,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
@@ -160,7 +159,6 @@ public class ParsePage
 
     private static readonly ConcurrentDictionary<string, Hashtable> FILE_CACHE = new();
     private static readonly ConcurrentDictionary<string, Hashtable> LANG_CACHE = new();
-    private static readonly ConcurrentDictionary<string, Dictionary<string, Func<object, object>>> class_mapping_cache = new(); // cache for object property/field getters
 
     private static readonly string[] IFOPERS = ["if", "unless", "ifne", "ifeq", "ifgt", "iflt", "ifge", "ifle"];
 
@@ -634,7 +632,7 @@ public class ParsePage
                     else
                     {
                         // try to get property/field value from arbitrary object
-                        ptr = valueFromObjectByName(ptr, k);
+                        ptr = ptr?.valueByMemberName(k);
                         if (ptr == null)
                         {
                             ptr = ""; // no such property/field in object
@@ -665,7 +663,7 @@ public class ParsePage
             else if (hf != null)
             {
                 // try to get property/field value from arbitrary object
-                ptr = valueFromObjectByName(hf, tag);
+                ptr = hf.valueByMemberName(tag);
                 if (ptr != null)
                     tag_value = ptr;
                 else
@@ -1497,69 +1495,6 @@ public class ParsePage
             logger(LogLevel.TRACE, "ParsePage - invalid timezone conversion from " + from_tz + " to " + to_tz + ": " + ex.Message);
             return dt;
         }
-    }
-
-
-    /// <summary>
-    /// Get readable public instance properties and fields (lowercased for further comparison) of object,
-    /// cached by class name in class_mapping_cache. Values are getter delegates to fetch from object instance.
-    /// </summary>
-    /// <param name="o"></param>
-    /// <returns>Dictionary of property/field name to getter delegate</returns>
-    private static Dictionary<string, Func<object, object>> objectMembers(object o)
-    {
-        Type type = o.GetType();
-        return class_mapping_cache.GetOrAdd(type.FullName, _ =>
-        {
-            var dict = new Dictionary<string, Func<object, object>>(StringComparer.OrdinalIgnoreCase);
-
-            // properties
-            var props = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
-            for (int i = 0; i < props.Length; i++)
-            {
-                var prop = props[i];
-                if (!prop.CanRead || prop.GetIndexParameters().Length > 0)
-                    continue; // skip write-only and indexer properties
-
-                string key = prop.Name;
-                if (!dict.ContainsKey(key))
-                {
-                    dict[key] = (obj) =>
-                    {
-                        try { return prop.GetValue(obj); }
-                        catch { return null; }
-                    };
-                }
-            }
-
-            // fields
-            var fields = type.GetFields(BindingFlags.Public | BindingFlags.Instance);
-            for (int i = 0; i < fields.Length; i++)
-            {
-                var field = fields[i];
-                string key = field.Name;
-                if (!dict.ContainsKey(key))
-                {
-                    dict[key] = (obj) =>
-                    {
-                        try { return field.GetValue(obj); }
-                        catch { return null; }
-                    };
-                }
-            }
-
-            return dict;
-        });
-    }
-
-    private static object valueFromObjectByName(object o, string name)
-    {
-        var getters = objectMembers(o);
-        if (getters.TryGetValue(name, out var getter))
-        {
-            return getter(o);
-        }
-        return null;
     }
 
 }

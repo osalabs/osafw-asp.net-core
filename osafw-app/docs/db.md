@@ -99,11 +99,11 @@ user.Name = "John Smith";
 db.update<User>("users", user, DB.h("id", id));
 ```
 
-You can convert a dictionary to a typed object using `DB.toClass<T>()`.
+You can convert a dictionary to a typed object using extension helpers:
 
 ```csharp
 Hashtable ht = DB.h("id", 3, "iname", "Alice");
-User typed = DB.toClass<User>(ht);
+User typed = ht.as<User>();
 ```
 
 ## Usage examples

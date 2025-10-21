@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using osafw;
 
 /// <summary>
 /// Provides extension methods for safe type conversions.
@@ -17,24 +18,37 @@ using System.Reflection;
 public static class FwExtensions
 {
     private static readonly ConcurrentDictionary<Type, Dictionary<string, PropertyInfo>> WritablePropertiesCache = new();
+    private static readonly ConcurrentDictionary<Type, Dictionary<string, Func<object, object>>> ReadableMembersCache = new();
 
-    private static Dictionary<string, PropertyInfo> GetWritableProperties(Type type)
+    private static Dictionary<string, PropertyInfo> GetWritablePropertiesCore(Type type)
     {
         return WritablePropertiesCache.GetOrAdd(type, static t =>
-            t.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                .Where(prop => prop.CanWrite)
-                .ToDictionary(prop =>
-                {
-                    var attr = prop.GetCustomAttribute<osafw.DBNameAttribute>(inherit: false);
-                    return attr?.Description ?? prop.Name;
-                }));
+        {
+            var comparer = StringComparer.OrdinalIgnoreCase;
+            var dict = new Dictionary<string, PropertyInfo>(comparer);
+
+            foreach (var prop in t.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+            {
+                if (!prop.CanWrite)
+                    continue;
+
+                var attr = prop.GetCustomAttribute<DBNameAttribute>(inherit: false);
+                var key = attr?.Description ?? prop.Name;
+                if (!dict.ContainsKey(key))
+                    dict[key] = prop;
+            }
+
+            return dict;
+        });
     }
 
-    internal static Dictionary<string, PropertyInfo> GetWritableProperties<T>() => GetWritableProperties(typeof(T));
+    internal static Dictionary<string, PropertyInfo> GetWritableProperties<T>() => GetWritablePropertiesCore(typeof(T));
+
+    internal static Dictionary<string, PropertyInfo> GetWritableProperties(this Type type) => GetWritablePropertiesCore(type);
 
     internal static void ClearWritablePropertiesCache() => WritablePropertiesCache.Clear();
 
-    private static void SetPropertyValue<T>(T obj, PropertyInfo property, object value)
+    private static void SetPropertyValue<T>(this T obj, PropertyInfo property, object value)
     {
         if (value is null || value is DBNull)
         {
@@ -71,11 +85,11 @@ public static class FwExtensions
         property.SetValue(obj, convertedValue);
     }
 
-    internal static void SetPropertyValue<T>(T obj, Dictionary<string, PropertyInfo> props, string field, object value)
+    internal static void SetPropertyValue<T>(this T obj, Dictionary<string, PropertyInfo> props, string field, object value)
     {
         if (props.TryGetValue(field, out var property))
         {
-            SetPropertyValue(obj, property, value);
+            obj.SetPropertyValue(property, value);
         }
     }
 
@@ -87,7 +101,7 @@ public static class FwExtensions
             if (string.IsNullOrEmpty(key))
                 continue;
 
-            SetPropertyValue(obj, props, key, entry.Value);
+            obj.SetPropertyValue(props, key, entry.Value);
         }
 
         return obj;
@@ -98,14 +112,6 @@ public static class FwExtensions
         ArgumentNullException.ThrowIfNull(kv);
 
         var props = GetWritableProperties<T>();
-        return PopulateObject(kv, props, new T());
-    }
-
-    public static T as<T>(this IDictionary kv, Dictionary<string, PropertyInfo> props) where T : new()
-    {
-        ArgumentNullException.ThrowIfNull(kv);
-        ArgumentNullException.ThrowIfNull(props);
-
         return PopulateObject(kv, props, new T());
     }
 
@@ -122,7 +128,6 @@ public static class FwExtensions
         {
             if (item is null)
             {
-                result.Add(default);
                 continue;
             }
 
@@ -136,11 +141,41 @@ public static class FwExtensions
             }
             else
             {
-                result.Add(item.toHashtable().as<T>(props));
+                var dict = (IDictionary)item.toKeyValue();
+                result.Add(PopulateObject(dict, props, new T()));
             }
         }
 
         return result;
+    }
+
+    public static Dictionary<string, object> toKeyValue(this object dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        if (dto is Dictionary<string, object> dictionary)
+            return new Dictionary<string, object>(dictionary, StringComparer.OrdinalIgnoreCase);
+
+        if (dto is IDictionary dict)
+        {
+            Dictionary<string, object> result = new(dict.Count, StringComparer.OrdinalIgnoreCase);
+            foreach (DictionaryEntry entry in dict)
+            {
+                var key = entry.Key?.ToString();
+                if (!string.IsNullOrEmpty(key))
+                    result[key] = entry.Value;
+            }
+            return result;
+        }
+
+        var props = GetWritableProperties(dto.GetType());
+        Dictionary<string, object> kv = new(props.Count, StringComparer.OrdinalIgnoreCase);
+        foreach (var pair in props)
+        {
+            kv[pair.Key] = pair.Value.GetValue(dto);
+        }
+
+        return kv;
     }
 
     public static Hashtable toHashtable(this object dto)
@@ -159,7 +194,7 @@ public static class FwExtensions
             return result;
         }
 
-        var props = GetWritableProperties(dto.GetType());
+        var props = dto.GetType().GetWritableProperties();
         Hashtable htResult = new(props.Count);
         foreach (var kv in props)
         {
@@ -174,8 +209,61 @@ public static class FwExtensions
         ArgumentNullException.ThrowIfNull(kv);
         ArgumentNullException.ThrowIfNull(dto);
 
-        var props = GetWritableProperties(dto.GetType());
+        var props = dto.GetType().GetWritableProperties();
         PopulateObject(kv, props, dto);
+    }
+
+    public static Dictionary<string, Func<object, object>> getReadableMembers(this object obj)
+    {
+        ArgumentNullException.ThrowIfNull(obj);
+
+        var type = obj.GetType();
+        return ReadableMembersCache.GetOrAdd(type, static t =>
+        {
+            var comparer = StringComparer.OrdinalIgnoreCase;
+            var dict = new Dictionary<string, Func<object, object>>(comparer);
+
+            foreach (var prop in t.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+            {
+                if (!prop.CanRead || prop.GetIndexParameters().Length > 0)
+                    continue;
+
+                var key = prop.Name;
+                if (!dict.ContainsKey(key))
+                {
+                    dict[key] = obj =>
+                    {
+                        try { return prop.GetValue(obj); }
+                        catch { return null; }
+                    };
+                }
+            }
+
+            foreach (var field in t.GetFields(BindingFlags.Public | BindingFlags.Instance))
+            {
+                var key = field.Name;
+                if (!dict.ContainsKey(key))
+                {
+                    dict[key] = obj =>
+                    {
+                        try { return field.GetValue(obj); }
+                        catch { return null; }
+                    };
+                }
+            }
+
+            return dict;
+        });
+    }
+
+    public static object valueByMemberName(this object obj, string memberName)
+    {
+        ArgumentNullException.ThrowIfNull(obj);
+        if (string.IsNullOrEmpty(memberName))
+            return null;
+
+        var members = obj.getReadableMembers();
+        return members.TryGetValue(memberName, out var getter) ? getter(obj) : null;
     }
 
     /// <summary>
