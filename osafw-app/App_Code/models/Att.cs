@@ -10,8 +10,29 @@ using System.IO;
 
 namespace osafw;
 
-public class Att : FwModel
+public class Att : FwModel<Att.Row>
 {
+    public class Row
+    {
+        public int id { get; set; }
+        public string icode { get; set; }
+        public int? att_categories_id { get; set; }
+        public int? fwentities_id { get; set; }
+        public int? item_id { get; set; }
+        public int is_s3 { get; set; }
+        public int is_inline { get; set; }
+        public int is_image { get; set; }
+        public string fname { get; set; }
+        public long fsize { get; set; }
+        public string ext { get; set; }
+        public string iname { get; set; }
+        public int status { get; set; }
+        public DateTime add_time { get; set; }
+        public int add_users_id { get; set; }
+        public DateTime? upd_time { get; set; }
+        public int upd_users_id { get; set; }
+    }
+
     public const string IMGURL_0 = "/img/0.gif";
     public const string IMGURL_FILE = "/img/att_file.png";
 

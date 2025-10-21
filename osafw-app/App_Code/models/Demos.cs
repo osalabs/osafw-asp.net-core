@@ -3,22 +3,41 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2023 Oleg Savchuk www.osalabs.com
 
+using System;
 using System.Collections;
 
 namespace osafw;
 
-public class TDemos
+public class Demos : FwModel<Demos.Row>
 {
-    public int id { get; set; }
+    public class Row
+    {
+        public int id { get; set; }
+        public int parent_id { get; set; }
+        public int? demo_dicts_id { get; set; }
+        public string iname { get; set; }
+        public string idesc { get; set; }
+        public string email { get; set; }
+        public int fint { get; set; }
+        public double ffloat { get; set; }
+        public int dict_link_auto_id { get; set; }
+        public string dict_link_multi { get; set; }
+        public int fcombo { get; set; }
+        public int fradio { get; set; }
+        public bool fyesno { get; set; }
+        public int is_checkbox { get; set; }
+        public DateTime? fdate_combo { get; set; }
+        public DateTime? fdate_pop { get; set; }
+        public DateTime? fdatetime { get; set; }
+        public int ftime { get; set; }
+        public int? att_id { get; set; }
+        public int status { get; set; }
+        public DateTime add_time { get; set; }
+        public int add_users_id { get; set; }
+        public DateTime? upd_time { get; set; }
+        public int upd_users_id { get; set; }
+    }
 
-    [DBName("iname")]
-    public string title { get; set; }
-    public int fint { get; set; }
-    public float ffloat { get; set; }
-}
-
-public class Demos : FwModel
-{
     public Demos() : base()
     {
         table_name = "demos";
@@ -65,7 +84,7 @@ public class Demos : FwModel
     // demo for DB generics
     public decimal calcTotal(int id)
     {
-        var item = db.row<TDemos>(table_name, DB.h("id", id));
+        var item = db.row<Row>(table_name, DB.h("id", id));
         return (decimal)item.ffloat * item.fint;
     }
 }

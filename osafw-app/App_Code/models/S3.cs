@@ -40,8 +40,13 @@ using System.Text.RegularExpressions;
 
 namespace osafw;
 
-public class S3 : FwModel
+public class S3 : FwModel<S3.Row>
 {
+    public class Row
+    {
+        public int id { get; set; }
+    }
+
     public string region = "";
     public string bucket = "";
     public string root = "";

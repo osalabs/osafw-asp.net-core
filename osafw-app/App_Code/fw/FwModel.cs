@@ -1312,3 +1312,93 @@ public abstract class FwModel : IDisposable
         GC.SuppressFinalize(this);
     }
 }
+
+public abstract class FwModel<TRow> : FwModel where TRow : class, new()
+{
+    protected FwModel(FW fw = null) : base(fw)
+    {
+    }
+
+    protected virtual Hashtable toHashtable(TRow dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+        return dto.toHashtable();
+    }
+
+    public virtual TRow oneT(int id)
+    {
+        var row = one(id);
+        return row.Count == 0 ? null : row.as<TRow>();
+    }
+
+    public virtual TRow oneT(object id)
+    {
+        var iid = id.toInt();
+        return iid > 0 ? oneT(iid) : null;
+    }
+
+    public virtual TRow oneByInameT(string iname)
+    {
+        var row = oneByIname(iname);
+        return row.Count == 0 ? null : row.as<TRow>();
+    }
+
+    public virtual TRow oneByIcodeT(string icode)
+    {
+        var row = oneByIcode(icode);
+        return row.Count == 0 ? null : row.as<TRow>();
+    }
+
+    public virtual TRow oneByIcodeOrFailT(string icode)
+    {
+        var row = oneByIcodeOrFail(icode);
+        return row.as<TRow>();
+    }
+
+    public virtual List<TRow> listT(IList statuses = null)
+    {
+        var rows = list(statuses);
+        List<TRow> result = new(rows.Count);
+        foreach (IDictionary kv in rows)
+            result.Add(kv.as<TRow>());
+        return result;
+    }
+
+    public virtual List<TRow> multiT(ICollection ids)
+    {
+        var rows = multi(ids);
+        List<TRow> result = new(rows.Count);
+        foreach (IDictionary kv in rows)
+            result.Add(kv.as<TRow>());
+        return result;
+    }
+
+    public virtual TRow oneOrFailT(int id)
+    {
+        var row = one(id);
+        if (row.Count == 0)
+            throw new NotFoundException();
+        return row.as<TRow>();
+    }
+
+    public virtual TRow convertUserInput(TRow dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+        var fields = dto.toHashtable();
+        convertUserInput(fields);
+        fields.applyTo(dto);
+        return dto;
+    }
+
+    public virtual int add(TRow dto)
+    {
+        var fields = toHashtable(dto);
+        return add(fields);
+    }
+
+    public virtual bool update(int id, TRow dto)
+    {
+        var fields = toHashtable(dto);
+        return update(id, fields);
+    }
+}

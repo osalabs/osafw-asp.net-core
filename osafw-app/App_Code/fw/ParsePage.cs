@@ -699,7 +699,7 @@ public class ParsePage
         else if (tag_value is Hashtable ht)
             sub_hf = ht;
         else if (tag_value != null)
-            sub_hf = objectToHashtable(tag_value);
+            sub_hf = tag_value.toHashtable();
 
         if (sub_hf == null)
         {
@@ -872,7 +872,7 @@ public class ParsePage
         else if (uftag[i] is Hashtable ht)
             uftagi1 = ht;
         else
-            uftagi1 = objectToHashtable(uftag[i]) ?? [];
+            uftagi1 = uftag[i].toHashtable();
 
         Hashtable uftagi = (Hashtable)uftagi1.Clone(); // make a shallow copy as we modify this level
         int cnt = uftag.Count;
@@ -1560,33 +1560,6 @@ public class ParsePage
             return getter(o);
         }
         return null;
-    }
-
-    /// <summary>
-    /// Convert object public properties and fields to Hashtable
-    /// </summary>
-    /// <param name="o"></param>
-    /// <returns></returns>
-    private static Hashtable objectToHashtable(object o)
-    {
-        Hashtable result = [];
-        // return empty hashtable if null or it's a simple type
-        if (o == null || o is string || o is ValueType)
-            return result;
-
-        var getters = objectMembers(o);
-        foreach (var kvp in getters)
-        {
-            try
-            {
-                var val = kvp.Value(o);
-                if (val != null)
-                    result[kvp.Key] = val;
-            }
-            catch { }
-        }
-
-        return result;
     }
 
 }

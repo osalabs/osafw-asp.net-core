@@ -886,6 +886,36 @@ public abstract class FwController
         return id;
     }
 
+    protected FwModel<TRow> ensureTypedModel<TRow>() where TRow : class, new()
+    {
+        if (model0 is FwModel<TRow> typedModel)
+            return typedModel;
+
+        var modelName = model0?.GetType().Name ?? "<null>";
+        throw new InvalidOperationException($"Model {modelName} is not typed as {typeof(TRow).Name}.");
+    }
+
+    public virtual int modelAddOrUpdate<TRow>(int id, TRow dto) where TRow : class, new()
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+        var typedModel = ensureTypedModel<TRow>();
+
+        typedModel.convertUserInput(dto);
+
+        if (id > 0)
+        {
+            typedModel.update(id, dto);
+            fw.flash("record_updated", 1);
+        }
+        else
+        {
+            id = typedModel.add(dto);
+            fw.flash("record_added", 1);
+        }
+
+        return id;
+    }
+
     /// <summary>
     /// Return one item from controller's model. For simpler overriding in child controllers.
     /// </summary>
@@ -899,6 +929,16 @@ public abstract class FwController
             throw new NotFoundException();
 
         return item;
+    }
+
+    public virtual TRow modelOneT<TRow>(int id) where TRow : class, new()
+    {
+        return ensureTypedModel<TRow>().oneT(id);
+    }
+
+    public virtual TRow modelOneOrFailT<TRow>(int id) where TRow : class, new()
+    {
+        return ensureTypedModel<TRow>().oneOrFailT(id);
     }
 
     // for simpler overriding in child controllers

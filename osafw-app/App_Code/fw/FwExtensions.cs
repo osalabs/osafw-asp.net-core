@@ -5,13 +5,179 @@
 
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
+using System.Reflection;
 
 /// <summary>
 /// Provides extension methods for safe type conversions.
 /// </summary>
 public static class FwExtensions
 {
+    private static readonly ConcurrentDictionary<Type, Dictionary<string, PropertyInfo>> WritablePropertiesCache = new();
+
+    private static Dictionary<string, PropertyInfo> GetWritableProperties(Type type)
+    {
+        return WritablePropertiesCache.GetOrAdd(type, static t =>
+            t.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .Where(prop => prop.CanWrite)
+                .ToDictionary(prop =>
+                {
+                    var attr = prop.GetCustomAttribute<osafw.DBNameAttribute>(inherit: false);
+                    return attr?.Description ?? prop.Name;
+                }));
+    }
+
+    internal static Dictionary<string, PropertyInfo> GetWritableProperties<T>() => GetWritableProperties(typeof(T));
+
+    internal static void ClearWritablePropertiesCache() => WritablePropertiesCache.Clear();
+
+    private static void SetPropertyValue<T>(T obj, PropertyInfo property, object value)
+    {
+        if (value is null || value is DBNull)
+        {
+            property.SetValue(obj, null);
+            return;
+        }
+
+        var targetType = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
+
+        if (targetType.IsAssignableFrom(value.GetType()))
+        {
+            property.SetValue(obj, value);
+            return;
+        }
+
+        object convertedValue;
+        if (targetType.IsEnum)
+        {
+            convertedValue = value is string str
+                ? Enum.Parse(targetType, str, ignoreCase: true)
+                : Enum.ToObject(targetType, Convert.ChangeType(value, Enum.GetUnderlyingType(targetType)));
+        }
+        else if (targetType == typeof(Guid))
+        {
+            convertedValue = value is Guid guid
+                ? guid
+                : Guid.Parse(value.ToString());
+        }
+        else
+        {
+            convertedValue = Convert.ChangeType(value, targetType);
+        }
+
+        property.SetValue(obj, convertedValue);
+    }
+
+    internal static void SetPropertyValue<T>(T obj, Dictionary<string, PropertyInfo> props, string field, object value)
+    {
+        if (props.TryGetValue(field, out var property))
+        {
+            SetPropertyValue(obj, property, value);
+        }
+    }
+
+    private static T PopulateObject<T>(IDictionary kv, Dictionary<string, PropertyInfo> props, T obj)
+    {
+        foreach (DictionaryEntry entry in kv)
+        {
+            var key = entry.Key?.ToString();
+            if (string.IsNullOrEmpty(key))
+                continue;
+
+            SetPropertyValue(obj, props, key, entry.Value);
+        }
+
+        return obj;
+    }
+
+    public static T as<T>(this IDictionary kv) where T : new()
+    {
+        ArgumentNullException.ThrowIfNull(kv);
+
+        var props = GetWritableProperties<T>();
+        return PopulateObject(kv, props, new T());
+    }
+
+    public static T as<T>(this IDictionary kv, Dictionary<string, PropertyInfo> props) where T : new()
+    {
+        ArgumentNullException.ThrowIfNull(kv);
+        ArgumentNullException.ThrowIfNull(props);
+
+        return PopulateObject(kv, props, new T());
+    }
+
+    public static List<T> asList<T>(this IList rows) where T : new()
+    {
+        ArgumentNullException.ThrowIfNull(rows);
+
+        var result = new List<T>(rows.Count);
+        if (rows.Count == 0)
+            return result;
+
+        var props = GetWritableProperties<T>();
+        foreach (var item in rows)
+        {
+            if (item is null)
+            {
+                result.Add(default);
+                continue;
+            }
+
+            if (item is T typed)
+            {
+                result.Add(typed);
+            }
+            else if (item is IDictionary dict)
+            {
+                result.Add(PopulateObject(dict, props, new T()));
+            }
+            else
+            {
+                result.Add(item.toHashtable().as<T>(props));
+            }
+        }
+
+        return result;
+    }
+
+    public static Hashtable toHashtable(this object dto)
+    {
+        if (dto is null)
+            return [];
+
+        if (dto is Hashtable ht)
+            return (Hashtable)ht.Clone();
+
+        if (dto is IDictionary dict)
+        {
+            Hashtable result = new(dict.Count);
+            foreach (DictionaryEntry entry in dict)
+                result[entry.Key] = entry.Value;
+            return result;
+        }
+
+        var props = GetWritableProperties(dto.GetType());
+        Hashtable htResult = new(props.Count);
+        foreach (var kv in props)
+        {
+            htResult[kv.Key] = kv.Value.GetValue(dto);
+        }
+
+        return htResult;
+    }
+
+    public static void applyTo<T>(this IDictionary kv, T dto)
+    {
+        ArgumentNullException.ThrowIfNull(kv);
+        ArgumentNullException.ThrowIfNull(dto);
+
+        var props = GetWritableProperties(dto.GetType());
+        PopulateObject(kv, props, dto);
+    }
+
     /// <summary>
     /// Converts an object to a boolean.
     /// <para>- <c>null</c> returns <c>false</c>.</para>

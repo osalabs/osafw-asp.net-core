@@ -168,6 +168,12 @@ public class FwAdminController : FwController
         this.validateCheckResult();
     }
 
+    public virtual void Validate<TRow>(int id, TRow dto) where TRow : class, new()
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+        Validate(id, dto.toHashtable());
+    }
+
     public virtual void ShowDeleteAction(int id)
     {
         fw.model<Users>().checkReadOnly();
