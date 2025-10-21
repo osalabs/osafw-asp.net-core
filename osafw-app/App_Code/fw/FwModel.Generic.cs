@@ -74,7 +74,7 @@ public abstract class FwModel<TRow> : FwModel where TRow : class, new()
         return row;
     }
 
-    public virtual TRow oneByInameT(string iname)
+    public virtual TRow oneTByIname(string iname)
     {
         if (string.IsNullOrEmpty(field_iname))
             return null;
@@ -83,7 +83,7 @@ public abstract class FwModel<TRow> : FwModel where TRow : class, new()
         return db.row<TRow>(table_name, where);
     }
 
-    public virtual TRow oneByIcodeT(string icode)
+    public virtual TRow oneTByIcode(string icode)
     {
         if (string.IsNullOrEmpty(field_icode))
             return null;
@@ -113,9 +113,9 @@ public abstract class FwModel<TRow> : FwModel where TRow : class, new()
         return row;
     }
 
-    public virtual TRow oneByIcodeOrFailT(string icode)
+    public virtual TRow oneTByIcodeOrFail(string icode)
     {
-        var row = oneByIcodeT(icode);
+        var row = oneTByIcode(icode);
         if (isRowEmpty(row))
             throw new NotFoundException();
         return row;
@@ -127,7 +127,7 @@ public abstract class FwModel<TRow> : FwModel where TRow : class, new()
         return db.array<TRow>(table_name, where, getOrderBy());
     }
 
-    public virtual List<TRow> listByWhereT(Hashtable where = null, int limit = -1, int offset = 0, string orderby = "")
+    public virtual List<TRow> listTByWhere(Hashtable where = null, int limit = -1, int offset = 0, string orderby = "")
     {
         where ??= [];
         var order = orderby != "" ? orderby : getOrderBy();
@@ -193,57 +193,18 @@ public abstract class FwModel<TRow> : FwModel where TRow : class, new()
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        var fields = dto.toKeyValue();
+        var fields = dto.toHashtable();
         prepareFields(fields, forInsert: false);
 
-        Hashtable itemChanges = [];
-        if (is_log_changes)
-        {
-            Hashtable itemCompare = new(fields);
-            if (is_under_bulk_update)
-            {
-                itemCompare = (Hashtable)itemCompare.Clone();
-                itemCompare.Remove(field_status);
-            }
+        var updated = base.update(id, fields);
 
-            Hashtable itemOld = [];
-            if (!string.IsNullOrEmpty(field_id))
-            {
-                var where = DB.h(field_id, id);
-                var oldRow = db.row<TRow>(table_name, where);
-                if (!isRowEmpty(oldRow))
-                    itemOld = new Hashtable(oldRow.toKeyValue());
-            }
-
-            itemChanges = FormUtils.changesOnly(itemCompare, itemOld);
-        }
-
-        if (!string.IsNullOrEmpty(field_upd_time))
-            fields[field_upd_time] = DB.NOW;
-
-        if (!string.IsNullOrEmpty(field_upd_users_id) && fw?.isLogged == true && !fields.ContainsKey(field_upd_users_id))
-            fields[field_upd_users_id] = fw.userId;
-
-        var whereUpdate = DB.h(field_id, id);
-        db.update(table_name, fields, whereUpdate);
-
-        removeCache(id);
-
-        if (is_log_changes && itemChanges.Count > 0)
-        {
-            if (is_log_fields_changed)
-                fw.logActivity(FwLogTypes.ICODE_UPDATED, table_name, id, "", itemChanges);
-            else
-                fw.logActivity(FwLogTypes.ICODE_UPDATED, table_name, id);
-        }
-
-        if (!string.IsNullOrEmpty(field_upd_users_id) && fw?.isLogged == true)
+        if (updated && !string.IsNullOrEmpty(field_upd_users_id) && fw?.isLogged == true)
         {
             var props = typeof(TRow).getWritableProperties();
             dto.setPropertyValue(props, field_upd_users_id, fw.userId);
         }
 
-        return true;
+        return updated;
     }
 
     protected virtual void prepareFields(IDictionary fields, bool forInsert)
