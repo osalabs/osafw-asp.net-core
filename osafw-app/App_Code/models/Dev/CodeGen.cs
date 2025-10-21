@@ -20,6 +20,8 @@ class DevCodeGen
     public const string ENTITIES_PATH = "/dev/entities.txt";
     public const string SYS_FIELDS = "id status add_time add_users_id upd_time upd_users_id"; // system fields
 
+    private static readonly Regex CsIdentifierRegex = new(@"^[A-Za-z_][A-Za-z0-9_]*$", RegexOptions.Compiled);
+
     private readonly FW fw;
     private readonly DB db;
 
@@ -328,7 +330,6 @@ class DevCodeGen
 
     public void createModel(Hashtable entity)
     {
-        DevEntityBuilder.ensureEntitiesCsMetadata(entity);
         string table_name = (string)entity["table"];
         string model_name = (string)entity["model_name"];
         bool is_junction = entity["is_junction"].toBool();
@@ -1532,14 +1533,14 @@ class DevCodeGen
 
         foreach (var field in fields)
         {
-            var propertyName = DevEntityBuilder.fieldCSProperty(field);
-            var csType = DevEntityBuilder.fieldCSType(field);
+            var propertyName = buildRowPropertyName(field);
+            var csType = buildRowPropertyType(field);
 
             if (string.IsNullOrEmpty(propertyName) || string.IsNullOrEmpty(csType))
                 continue;
 
-            var columnName = DevEntityBuilder.fieldColumnName(field);
-            if (!string.Equals(propertyName, columnName, StringComparison.OrdinalIgnoreCase))
+            var columnName = getFieldColumnName(field);
+            if (columnName.Length > 0 && !string.Equals(propertyName, columnName, StringComparison.OrdinalIgnoreCase))
                 sb.AppendLine($"        [DBName(\"{columnName}\")]");
 
             sb.AppendLine($"        public {csType} {propertyName} {{ get; set; }}");
@@ -1558,5 +1559,92 @@ class DevCodeGen
 
         var regex = new Regex(@"^\s*public class Row\s*\{.*?^\s*\}\s*", RegexOptions.Singleline | RegexOptions.Multiline);
         return regex.Replace(template, rowClassBlock, 1);
+    }
+
+    private static string buildRowPropertyName(object field)
+    {
+        var columnName = getFieldColumnName(field);
+        if (columnName.Length == 0)
+            return string.Empty;
+
+        if (CsIdentifierRegex.IsMatch(columnName))
+            return columnName;
+
+        var candidate = getFieldValue(field, "fw_name").toStr();
+        if (candidate.Length == 0)
+            candidate = Utils.name2fw(columnName);
+        if (candidate.Length == 0)
+            candidate = "field";
+
+        candidate = Regex.Replace(candidate, @"[^A-Za-z0-9_]", "_");
+        candidate = Regex.Replace(candidate, @"_+", "_");
+        candidate = candidate.Trim('_');
+
+        if (candidate.Length == 0)
+            candidate = "field";
+
+        if (!char.IsLetter(candidate[0]) && candidate[0] != '_')
+            candidate = "_" + candidate;
+
+        if (!CsIdentifierRegex.IsMatch(candidate))
+        {
+            var chars = candidate.ToCharArray();
+            if (chars.Length == 0)
+                return "_field";
+
+            if (!char.IsLetter(chars[0]) && chars[0] != '_')
+                chars[0] = '_';
+
+            for (int i = 1; i < chars.Length; i++)
+            {
+                var ch = chars[i];
+                if (!char.IsLetterOrDigit(ch) && ch != '_')
+                    chars[i] = '_';
+            }
+
+            candidate = new string(chars);
+        }
+
+        return candidate;
+    }
+
+    private static string buildRowPropertyType(object field)
+    {
+        var fwType = getFieldValue(field, "fw_type").toStr().ToLowerInvariant();
+        var fwSubtype = getFieldValue(field, "fw_subtype").toStr().ToLowerInvariant();
+        bool isNullable = getFieldValue(field, "is_nullable").toInt() == 1;
+
+        string baseType = fwType switch
+        {
+            "int" => fwSubtype == "bit" || fwSubtype == "boolean" ? "bool" : "int",
+            "float" => fwSubtype == "decimal" || fwSubtype == "currency" || fwSubtype == "numeric" ? "decimal" : "double",
+            "date" => "DateTime",
+            "datetime" => "DateTime",
+            _ => "string",
+        };
+
+        bool isValueType = baseType != "string";
+        if (isNullable && isValueType)
+            return baseType + "?";
+
+        return baseType;
+    }
+
+    private static string getFieldColumnName(object field)
+    {
+        return getFieldValue(field, "name").toStr();
+    }
+
+    private static object getFieldValue(object field, string key)
+    {
+        switch (field)
+        {
+            case IDictionary dict when dict.Contains(key):
+                return dict[key];
+            case IDictionary<string, object> generic when generic.TryGetValue(key, out var value):
+                return value;
+            default:
+                return null;
+        }
     }
 }

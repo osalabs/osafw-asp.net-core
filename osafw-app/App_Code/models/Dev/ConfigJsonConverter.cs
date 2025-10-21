@@ -41,8 +41,6 @@ public class ConfigJsonConverter : System.Text.Json.Serialization.JsonConverter<
         "maxlen",
         "is_nullable",
         "is_identity",
-        "cs_property",
-        "cs_type",
         "numeric_precision",
         "numeric_scale",
         "charset",
