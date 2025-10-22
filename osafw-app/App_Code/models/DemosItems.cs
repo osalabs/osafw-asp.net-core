@@ -3,12 +3,28 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2023 Oleg Savchuk www.osalabs.com
 
+using System;
 using System.Collections;
 
 namespace osafw;
 
-public class DemosItems : FwModel
+public class DemosItems : FwModel<DemosItems.Row>
 {
+    public class Row
+    {
+        public int id { get; set; }
+        public int demos_id { get; set; }
+        public int? demo_dicts_id { get; set; }
+        public string iname { get; set; }
+        public string idesc { get; set; }
+        public int is_checkbox { get; set; }
+        public int status { get; set; }
+        public DateTime add_time { get; set; }
+        public int add_users_id { get; set; }
+        public DateTime? upd_time { get; set; }
+        public int upd_users_id { get; set; }
+    }
+
     public DemosItems() : base()
     {
         db_config = "";

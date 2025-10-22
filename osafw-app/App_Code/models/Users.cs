@@ -16,8 +16,47 @@ using static BCrypt.Net.BCrypt;
 
 namespace osafw;
 
-public class Users : FwModel
+public class Users : FwModel<Users.Row>
 {
+    public class Row
+    {
+        public int id { get; set; }
+        public string email { get; set; }
+        public string pwd { get; set; }
+        public int access_level { get; set; }
+        public int is_readonly { get; set; }
+        public string iname { get; set; }
+        public string fname { get; set; }
+        public string lname { get; set; }
+        public string title { get; set; }
+        public string address1 { get; set; }
+        public string address2 { get; set; }
+        public string city { get; set; }
+        public string state { get; set; }
+        public string zip { get; set; }
+        public string phone { get; set; }
+        public string lang { get; set; }
+        public int ui_theme { get; set; }
+        public int ui_mode { get; set; }
+        public int date_format { get; set; }
+        public int time_format { get; set; }
+        public string timezone { get; set; }
+        public string idesc { get; set; }
+        public int? att_id { get; set; }
+        public DateTime? login_time { get; set; }
+        public string pwd_reset { get; set; }
+        public DateTime? pwd_reset_time { get; set; }
+        public string mfa_secret { get; set; }
+        public string mfa_recovery { get; set; }
+        public DateTime? mfa_added { get; set; }
+        public string login { get; set; }
+        public int status { get; set; }
+        public DateTime add_time { get; set; }
+        public int add_users_id { get; set; }
+        public DateTime? upd_time { get; set; }
+        public int upd_users_id { get; set; }
+    }
+
     // ACL constants
     public const int ACL_VISITOR = 0; //non-logged visitor
     public const int ACL_MEMBER = 1; //min access level for users
