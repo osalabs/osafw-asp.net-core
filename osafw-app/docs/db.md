@@ -215,3 +215,134 @@ ArrayList fkeys = db.listForeignKeys("orders");
 ```
 
 Refer to the `DB.cs` source for detailed behaviour of each method.
+
+## Working with models: typed vs. hashtable flows
+
+`FwModel` continues to support the original Hashtable-based CRUD helpers, but you can now opt into strongly typed DTOs by inheriting from `FwModel<TRow>`. Both approaches are supported by the same controller APIs, so choose the one that fits your project or mix them within the same application.
+
+### Hashtable workflow (legacy)
+
+1. **Model definition** – inherit from `FwModel` and configure metadata in the constructor.
+   ```csharp
+   public class Users : FwModel
+   {
+       public Users() : base()
+       {
+           table_name = "users";
+           field_id = "id";
+           field_iname = "iname";
+           field_status = "status";
+       }
+   }
+   ```
+
+2. **Read operations** – use `Hashtable`/`DBRow` results.
+   ```csharp
+   var users = fw.model<Users>();
+
+   Hashtable user = users.one(5);        // single row
+   ArrayList list = users.list();        // filtered list
+   Hashtable mustExist = users.oneOrFail(5);
+   ```
+
+3. **Write operations** – provide dictionaries with field/value pairs.
+   ```csharp
+   var fields = DB.h("iname", "Alice", "status", 0);
+   int id = users.add(fields);
+
+   var updated = DB.h("iname", "Alice Johnson");
+   users.update(id, updated);
+
+   users.delete(id, soft: true);
+   ```
+
+4. **Controllers** – call `modelAddOrUpdate` with Hashtables or reuse the lower-level helpers directly.
+   ```csharp
+   public override int SaveAction(int id = 0)
+   {
+       var item = reqh();
+       return modelAddOrUpdate(id, item);
+   }
+   ```
+
+This style is flexible when fields are dynamic, but you lose compile-time checks and IntelliSense.
+
+### Typed workflow
+
+1. **Model definition** – inherit from `FwModel<TRow>` and describe your DTO inside the model.
+   ```csharp
+   public class Users : FwModel<Users.Row>
+   {
+       public class Row
+       {
+           public int id { get; set; }
+
+           [DBName("iname")]
+           public string title { get; set; }
+
+           public int status { get; set; }
+           public DateTime add_time { get; set; }
+       }
+   }
+   ```
+
+   Property names follow the same naming rules as controller `fw_name` metadata. Use `[DBName]` only when a property should map to a differently named column.
+
+2. **Read operations** – call the `oneT*`/`listT*` helpers which return strongly typed rows.
+   ```csharp
+   var users = fw.model<Users>();
+
+   Users.Row row = users.oneT(5);
+   Users.Row byCode = users.oneTByIcode("demo");
+   List<Users.Row> active = users.listT();
+   Users.Row mustExist = users.oneTOrFail(5);
+   ```
+
+3. **Write operations** – pass DTO instances; the framework handles conversions and metadata updates.
+   ```csharp
+   var dto = new Users.Row
+   {
+       title = "Alice",
+       status = Users.STATUS_ACTIVE,
+   };
+
+   int id = users.add(dto);
+
+   dto.title = "Alice Johnson";
+   users.update(id, dto);
+
+   users.delete(id, soft: true);
+   ```
+
+   `FwModel<TRow>.convertUserInput(dto)` applies the same filtering rules as the hashtable pipeline, so controllers that massage form input can reuse those helpers without leaving the typed flow.
+
+4. **Controllers** – prefer the typed overloads for validation and persistence.
+   ```csharp
+   public override int SaveAction(int id = 0)
+   {
+       var dto = new Users.Row();
+       reqh().applyTo(dto);                // populate from request
+
+       Validate(id, dto);                  // typed validation overload
+       return modelAddOrUpdate(id, dto);   // calls add/update on the typed model
+   }
+   ```
+
+   You can still access `modelOne(id)` or call `modelAddOrUpdate(id, Hashtable)` when a controller needs the dynamic behaviour.
+
+5. **Conversions** – extension helpers bridge the two styles when needed.
+   ```csharp
+   Hashtable raw = dto.toHashtable();  // DTO → Hashtable
+   Users.Row typed = raw.@as<Users.Row>();
+   List<Users.Row> typedList = rows.asList<Users.Row>();
+   ```
+
+### Choosing an approach
+
+| Scenario | Recommended flow |
+| --- | --- |
+| Rapid scaffolding, dynamic field sets | Hashtable/`DBRow` |
+| Long-term maintenance, DTO-first design, strong tooling | `FwModel<TRow>` |
+| Hybrid (legacy controllers slowly migrating) | Mix: use typed models for new areas, convert with extension helpers when interacting with older code |
+
+Typed models deliver compile-time safety and better IDE support while remaining compatible with existing controllers and templates. Both flows share the same caching, logging and permission mechanics, so adopting generics does not require rewriting your business logic in one go.
