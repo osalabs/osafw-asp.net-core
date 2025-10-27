@@ -3,6 +3,7 @@
 - Iteratively aligned naming and helper conventions (`oneT*`, lowercase methods, controller wrappers) to match framework style without redundant conversions.
 - Simplified developer scaffolding by deriving typed `Row` classes directly from existing entity metadata during code generation and report/model templates.
 - Documented both CRUD workflows in `docs/crud.md`, updated `db.md` to point at the guide, and linked the new documentation from the repository README for easy discovery.
+- Corrected CRUD guide examples to match current method signatures, deletion behaviour, and DTO identity handling after reviewer feedback.
 
 ## Commands that worked (build/test/run)
 - `dotnet build`
@@ -24,6 +25,7 @@
 - Mirror untyped method prefixes when introducing typed variants for easy discovery.
 - Treat nullable numeric/date fields as `?` value types during generation; leave reference types as-is.
 - Add new developer guides alongside existing documentation hubs to keep discovery friction low.
+- Validate documentation snippets directly against source code to avoid drifting API usage in examples.
 
 ## Self-reflection
 - Multiple feedback rounds highlighted the risk of over-design—next time, trust existing metadata earlier to reduce churn.

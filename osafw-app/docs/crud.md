@@ -25,12 +25,17 @@ public class Users : FwModel
 ```csharp
 var users = fw.model<Users>();
 
-Hashtable row = users.one(5);                 // load a single record
-ArrayList active = users.list(new Hashtable   // list by filter
+DBRow row = users.one(5);                     // load a single record
+DBList active = users.list(new ArrayList      // filter by status list
+{
+    FwModel.STATUS_ACTIVE,
+});
+DBList filtered = users.listByWhere(new Hashtable // custom where expression
 {
     ["status"] = 0,
+    ["access_level"] = DB.opGT(0),
 });
-Hashtable required = users.oneOrFail(5);      // throws if not found
+DBRow required = users.oneOrFail(5);          // throws if not found
 ```
 
 ### Writing data
@@ -40,7 +45,7 @@ var users = fw.model<Users>();
 var fresh = new Hashtable
 {
     ["iname"] = "Alice",
-    ["status"] = 0,
+    ["status"] = FwModel.STATUS_ACTIVE,
 };
 int id = users.add(fresh);                    // insert
 
@@ -50,7 +55,8 @@ var changes = new Hashtable
 };
 users.update(id, changes);                    // update
 
-users.delete(id, soft: true);                 // soft delete (uses field_status)
+users.delete(id);                             // soft delete (uses field_status)
+users.delete(id, true);                       // pass true to delete permanently
 ```
 
 > `DB.h()` remains a handy helper when you only need one or two keys, but `new Hashtable { ... }` keeps examples explicit.
@@ -112,16 +118,24 @@ var users = fw.model<Users>();
 
 var dto = new Users.Row
 {
+    // No need to set id here; add() will populate it on success
     title = "Alice",
-    status = Users.STATUS_ACTIVE,
+    status = FwModel.STATUS_ACTIVE,
 };
 int id = users.add(dto);                          // insert DTO
+int generatedId = dto.id;                         // add() populates the identity
 
-dto.title = "Alice Johnson";
-users.update(id, dto);                            // update DTO
+var existing = users.oneT(id);                    // load current values
+existing.title = "Alice Johnson";
+users.update(id, existing);                       // update DTO
 
-users.delete(id, soft: true);                     // reuses base behaviour
+users.delete(id);                                 // soft delete (status=127)
+
+// When only a couple of fields need to change, either load the row first as above
+// or fall back to the Hashtable overload: users.update(id, new Hashtable { ["status"] = FwModel.STATUS_INACTIVE });
 ```
+
+`FwModel.add(TRow dto)` writes any generated identity or audit columns back onto the DTO, so the `id` property stays in sync without extra queries. For partial updates stick with the loaded DTO instance (ensuring unchanged fields remain intact) or call the Hashtable overload to patch a narrow set of columns without constructing temporary classes.
 
 ### Controllers
 ```csharp
@@ -139,10 +153,12 @@ public override int SaveAction(int id = 0)
 The extension helpers in `FwExtensions` let you bridge the styles whenever needed:
 
 ```csharp
+var users = fw.model<Users>();
 Hashtable item = reqh();                 // data from request
 Users.Row dto = item.@as<Users.Row>();   // Hashtable -> DTO
 
 Hashtable payload = dto.toHashtable();   // DTO -> Hashtable
+DBList rows = users.list();              // untyped query
 List<Users.Row> typed = rows.asList<Users.Row>();
 ```
 
