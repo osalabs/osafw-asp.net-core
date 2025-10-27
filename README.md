@@ -12,6 +12,7 @@ Created as simplified and lightweight alternative to other ASP.NET frameworks li
 - uses [ParsePage template engine](https://github.com/osalabs/parsepage) ([detailed docs](osafw-app/docs/parsepage.md))
   - data stored by default in SQL Server database [using db.net](https://github.com/osalabs/db.net) ([detailed docs](osafw-app/docs/db.md))
 - RESTful with some practical enhancements
+- flexible CRUD flows with Hashtables or typed DTOs ([guide](osafw-app/docs/crud.md))
 - integrated auth - simple flat access levels auth
 - UI based on [Bootstrap 5](http://getbootstrap.com) with minimal custom CSS and themes support - it's easy to customize or apply your own theme (see [README_THEMES](osafw-app/App_Data/README_THEMES))
 - use of well-known 3rd party libraries: [jQuery](http://jquery.com), [jQuery Form](https://github.com/malsup/form), jGrowl, markdown libs, etc...
@@ -28,6 +29,8 @@ Created as simplified and lightweight alternative to other ASP.NET frameworks li
 http://demo.engineeredit.com/ - this is how it looks in action right after installation before customizations
 
 ## Documentation
+
+- [CRUD workflows with `FwModel`](osafw-app/docs/crud.md) – compare Hashtable and typed DTO approaches for standard operations.
 
 ### Development
 1. clone this git repository

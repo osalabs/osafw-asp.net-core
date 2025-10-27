@@ -4,6 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using osafw;
 
 namespace osafw.Tests
 {
@@ -139,9 +140,9 @@ namespace osafw.Tests
         [TestMethod()]
         public void rowTypedTest()
         {
-            var row = db.row<TDemos>(table_name, DB.h("id", 1));
+            var row = db.row<Demos.Row>(table_name, DB.h("id", 1));
             Assert.AreEqual(1, row.id);
-            Assert.AreEqual("test1", row.title);
+            Assert.AreEqual("test1", row.iname);
         }
 
         [TestMethod()]
@@ -165,15 +166,15 @@ namespace osafw.Tests
         [TestMethod()]
         public void arrayTypedTest()
         {
-            List<TDemos> rows = db.array<TDemos>(table_name, DB.h());
+            List<Demos.Row> rows = db.array<Demos.Row>(table_name, DB.h());
             foreach (var row in rows)
             {
                 Assert.IsTrue(row.id > 0);
-                Assert.IsTrue(row.title.Length > 0);
+                Assert.IsTrue(row.iname.Length > 0);
             }
-            Assert.AreEqual("test1", rows[0].title);
-            Assert.AreEqual("test2", rows[1].title);
-            Assert.AreEqual("test3", rows[2].title);
+            Assert.AreEqual("test1", rows[0].iname);
+            Assert.AreEqual("test2", rows[1].iname);
+            Assert.AreEqual("test3", rows[2].iname);
         }
 
         [TestMethod()]

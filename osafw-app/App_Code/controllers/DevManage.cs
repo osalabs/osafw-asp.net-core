@@ -201,12 +201,12 @@ public class DevManageController : FwController
         var table_name = item["table_name"].toStr().Trim();
         var model_name = item["model_name"].toStr().Trim();
 
-        Hashtable entity = new()
-        {
-            { "table", table_name },
-            { "model_name", model_name },
-            { "db_config", "" }
-        };
+        Hashtable entity = DevEntityBuilder.table2entity(fw.db, table_name) ?? [];
+        entity["table"] = table_name;
+        if (model_name.Length > 0)
+            entity["model_name"] = model_name;
+        if (!entity.ContainsKey("db_config"))
+            entity["db_config"] = fw.db.db_name;
         DevCodeGen.init(fw).createModel(entity);
 
         fw.flash("success", model_name + ".cs model created");
