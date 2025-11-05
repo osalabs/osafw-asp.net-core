@@ -103,7 +103,7 @@ You can convert a dictionary to a typed object using extension helpers:
 
 ```csharp
 Hashtable ht = DB.h("id", 3, "iname", "Alice");
-User typed = ht.@as<User>();
+User typed = ht.to<User>();
 ```
 
 ## Usage examples

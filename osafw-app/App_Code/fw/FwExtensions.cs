@@ -107,7 +107,7 @@ public static class FwExtensions
         return obj;
     }
 
-    public static T @as<T>(this IDictionary kv) where T : new()
+    public static T to<T>(this IDictionary kv) where T : new()
     {
         ArgumentNullException.ThrowIfNull(kv);
 
@@ -115,7 +115,7 @@ public static class FwExtensions
         return populateObject(kv, props, new T());
     }
 
-    public static List<T> asList<T>(this IList rows) where T : new()
+    public static List<T> toList<T>(this IList rows) where T : new()
     {
         ArgumentNullException.ThrowIfNull(rows);
 

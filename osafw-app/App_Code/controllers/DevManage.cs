@@ -206,7 +206,7 @@ public class DevManageController : FwController
         if (model_name.Length > 0)
             entity["model_name"] = model_name;
         if (!entity.ContainsKey("db_config"))
-            entity["db_config"] = fw.db.db_name;
+            entity["db_config"] = "";
         DevCodeGen.init(fw).createModel(entity);
 
         fw.flash("success", model_name + ".cs model created");

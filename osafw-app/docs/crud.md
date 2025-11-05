@@ -155,11 +155,11 @@ The extension helpers in `FwExtensions` let you bridge the styles whenever neede
 ```csharp
 var users = fw.model<Users>();
 Hashtable item = reqh();                 // data from request
-Users.Row dto = item.@as<Users.Row>();   // Hashtable -> DTO
+Users.Row dto = item.to<Users.Row>();     // Hashtable -> DTO
 
 Hashtable payload = dto.toHashtable();   // DTO -> Hashtable
 DBList rows = users.list();              // untyped query
-List<Users.Row> typed = rows.asList<Users.Row>();
+List<Users.Row> typed = rows.toList<Users.Row>();
 ```
 
 Use whichever approach suits each feature. Many teams keep Hashtables for quick admin tools while adopting typed rows for core business entities.
