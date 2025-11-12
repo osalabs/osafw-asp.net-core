@@ -5,9 +5,18 @@
 */
 
 window.fw={
-  HTML_LOADING : '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Loading...',
+  HTML_LOADING: '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Loading...',
+  HTML_SPINNER_CT: '<span class="fw-spinner-container"> <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span></span',
+  HTML_SPINNER_SM: '<span class="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span>',
   ICON_SORT_ASC: '<svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-arrow-down" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M8 1a.5.5 0 0 1 .5.5v11.793l3.146-3.147a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 .708-.708L7.5 13.293V1.5A.5.5 0 0 1 8 1z"/></svg>',
   ICON_SORT_DESC: '<svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-arrow-up" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M8 15a.5.5 0 0 0 .5-.5V2.707l3.146 3.147a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 1 0 .708.708L7.5 2.707V14.5a.5.5 0 0 0 .5.5z"/></svg>',
+  PWD_PROGRESS_BAR: '<div class="progress mt-1"><div class="progress-bar" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div></div>',
+  // messages
+  MSG_UNSAVED_CHANGES: 'There are unsaved changes.\nDo you really want to Cancel editing the Form?',
+  MSG_UNSAVED_CHANGES_CONFIRM: '<strong>There are unsaved changes.</strong><br>Do you really want to Cancel editing the Form?',
+  MSG_AUTOSAVE_ERROR: 'Auto-save error. Server error occurred. Try again later.',
+  MSG_UPLOAD_FAILED: 'Upload failed',
+  MSG_DELETE_CONFIRM: '<strong>ARE YOU SURE</strong> to delete this item?',
 
   // requires https://github.com/osalabs/bootstrap-toaster
   ok: function (str, options){
@@ -332,7 +341,7 @@ window.fw={
     var $form = $('<form action="' + url + '" method="post"></form>');
 
     if (is_spinner){
-      var spinner = $('<span class="fw-spinner-container"> <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span></span');
+      var spinner = $(fw.HTML_SPINNER_CT);
       $el.prop('disabled', true).append(spinner); // Add spinner and disable button
     }
 
@@ -462,7 +471,7 @@ window.fw={
           }
       });
       if (is_changed){
-          return 'There are unsaved changes.\nDo you really want to Cancel editing the Form?';
+          return fw.MSG_UNSAVED_CHANGES;
       }
     });
   },
@@ -482,7 +491,7 @@ window.fw={
     }
 
     if ( $f.data('is-changed')===true ){
-      fw.confirm('<strong>There are unsaved changes.</strong><br>Do you really want to Cancel editing the Form?', function (){
+      fw.confirm(fw.MSG_UNSAVED_CHANGES_CONFIRM, function (){
         $f.data('is-changed', false);//force false so beforeunload will pass
         window.location=url;
       });
@@ -568,7 +577,7 @@ window.fw={
             //auto-save error - highlight errors
             fw.process_form_errors($f, data.error?.details);
         }
-        fw.error(data.error?.message || 'Auto-save error. Server error occurred. Try again later.', hint_options);
+        fw.error(data.error?.message || fw.MSG_AUTOSAVE_ERROR, hint_options);
     }
 
     function form_autosave($f) {
@@ -652,7 +661,7 @@ window.fw={
       var is_spinner = $html.find('.spinner-border').length>0;
 
       if (is_working){
-        if (!is_spinner) $html.prepend('<span class="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span>');
+        if (!is_spinner) $html.prepend(fw.HTML_SPINNER_SM);
       }else{
         if (is_spinner) $html.find('.spinner-border').remove();
       }
@@ -801,13 +810,13 @@ window.fw={
               //$drop.closest('form').trigger('autosave');
             }else{
               $item.remove();
-              fw.error(data.error?.message || 'Upload failed');
+              fw.error(data.error?.message || fw.MSG_UPLOAD_FAILED);
             }
             $input.val('');
           },
           error: function(){
             $item.remove();
-            fw.error('Upload failed');
+            fw.error(fw.MSG_UPLOAD_FAILED);
             $input.val('');
           }
         });
@@ -824,7 +833,7 @@ window.fw={
   },
 
   delete_btn: function (ael){
-    fw.confirm('<strong>ARE YOU SURE</strong> to delete this item?', function(){
+    fw.confirm(fw.MSG_DELETE_CONFIRM, function(){
       $('#FOneDelete').attr('action', ael.href).submit();
     });
     return false;
@@ -1020,7 +1029,7 @@ window.fw={
 
       var $pr = $this.parent().find('.progress');
       if (!$pr.length){
-          $pr = $('<div class="progress mt-1"><div class="progress-bar" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div></div>').appendTo($this.parent());
+          $pr = $(fw.PWD_PROGRESS_BAR).appendTo($this.parent());
       }
       var $bar = $pr.find('.progress-bar');
       $bar.css('width', wbar+'%');

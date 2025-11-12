@@ -3,6 +3,7 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
+using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -558,6 +559,10 @@ public abstract class FwModel : IDisposable
     {
         return UploadUtils.uploadFile(fw, table_name, id, out filepath, file_index, is_skip_check);
     }
+    public virtual bool uploadFile(int id, out string filepath, IFormFile file, bool is_skip_check = false)
+    {
+        return UploadUtils.uploadFile(fw, table_name, id, out filepath, file, is_skip_check);
+    }
 
     // return upload dir for the module name and id related to FW.config("site_root")/upload
     // id splitted to 1000
@@ -725,7 +730,7 @@ public abstract class FwModel : IDisposable
         ArrayList result = [];
         if (!string.IsNullOrEmpty(field_prio))
             result.AddRange((from Hashtable h in lookup_rows
-                             orderby ((Hashtable)h["_link"])[field_prio], h["is_checked"] descending
+                             orderby ((Hashtable)h?["_link"])?[field_prio] ?? "", h["is_checked"] descending
                              select h).ToList());
         else
             result.AddRange((from Hashtable h in lookup_rows
@@ -862,7 +867,7 @@ public abstract class FwModel : IDisposable
     /// <returns></returns>
     public virtual ArrayList listWithChecked(string sel_ids, Hashtable def = null)
     {
-        List<string> ids = new(sel_ids.Split(","));
+        List<string> ids = Utils.isEmpty(sel_ids) ? [] : new(sel_ids.Split(","));
         return this.listWithChecked(ids, def);
     }
 

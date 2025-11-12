@@ -118,9 +118,7 @@ public class UploadUtils
     {
         IFormFile file = fw.request.Form.Files[input_name];
 
-        filepath = uploadFileSave(fw, module_name, id, file, is_skip_check);
-
-        return !string.IsNullOrEmpty(filepath);
+        return uploadFile(fw, module_name, id, out filepath, file, is_skip_check);
     }
 
     // this one based on file index, not input name
@@ -131,8 +129,12 @@ public class UploadUtils
             return false;
         IFormFile file = fw.request.Form.Files[file_index];
 
-        filepath = uploadFileSave(fw, module_name, id, file, is_skip_check);
+        return uploadFile(fw, module_name, id, out filepath, file, is_skip_check);
+    }
 
+    public static bool uploadFile(FW fw, string module_name, int id, out string filepath, IFormFile file, bool is_skip_check = false)
+    {
+        filepath = uploadFileSave(fw, module_name, id, file, is_skip_check);
         return !string.IsNullOrEmpty(filepath);
     }
 

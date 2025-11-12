@@ -384,7 +384,7 @@ let actions = {
                     this.$state = AppUtils.deepMerge(this.$state, JSON.parse(data.store));
                 } catch (e) {
                     console.error('Error parsing JSON for key:', key, e);
-                }                
+                }
             } else if (this.$state[key] !== undefined) {
                 this.$state[key] = data[key];
             }
