@@ -3,12 +3,30 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
+using System;
 using System.Collections;
 
 namespace osafw;
 
-public class Settings : FwModel
+public class Settings : FwModel<Settings.Row>
 {
+    public class Row
+    {
+        public int id { get; set; }
+        public string icat { get; set; }
+        public string icode { get; set; }
+        public string ivalue { get; set; }
+        public string iname { get; set; }
+        public string idesc { get; set; }
+        public int input { get; set; }
+        public string allowed_values { get; set; }
+        public int is_user_edit { get; set; }
+        public DateTime add_time { get; set; }
+        public int add_users_id { get; set; }
+        public DateTime? upd_time { get; set; }
+        public int upd_users_id { get; set; }
+    }
+
     public Settings() : base()
     {
         table_name = "settings";

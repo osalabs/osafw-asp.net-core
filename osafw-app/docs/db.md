@@ -99,11 +99,11 @@ user.Name = "John Smith";
 db.update<User>("users", user, DB.h("id", id));
 ```
 
-You can convert a dictionary to a typed object using `DB.toClass<T>()`.
+You can convert a dictionary to a typed object using extension helpers:
 
 ```csharp
 Hashtable ht = DB.h("id", 3, "iname", "Alice");
-User typed = DB.toClass<User>(ht);
+User typed = ht.to<User>();
 ```
 
 ## Usage examples
@@ -214,4 +214,4 @@ Hashtable schema = db.tableSchemaFull("users");
 ArrayList fkeys = db.listForeignKeys("orders");
 ```
 
-Refer to the `DB.cs` source for detailed behaviour of each method.
+Refer to the `DB.cs` source for detailed behaviour of each method. For full CRUD examples using both Hashtable-based and typed models see [`docs/crud.md`](./crud.md).

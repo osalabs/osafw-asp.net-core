@@ -121,7 +121,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
@@ -160,7 +159,6 @@ public class ParsePage
 
     private static readonly ConcurrentDictionary<string, Hashtable> FILE_CACHE = new();
     private static readonly ConcurrentDictionary<string, Hashtable> LANG_CACHE = new();
-    private static readonly ConcurrentDictionary<string, Dictionary<string, Func<object, object>>> class_mapping_cache = new(); // cache for object property/field getters
 
     private static readonly string[] IFOPERS = ["if", "unless", "ifne", "ifeq", "ifgt", "iflt", "ifge", "ifle"];
 
@@ -634,7 +632,7 @@ public class ParsePage
                     else
                     {
                         // try to get property/field value from arbitrary object
-                        ptr = valueFromObjectByName(ptr, k);
+                        ptr = ptr?.valueByMemberName(k);
                         if (ptr == null)
                         {
                             ptr = ""; // no such property/field in object
@@ -665,7 +663,7 @@ public class ParsePage
             else if (hf != null)
             {
                 // try to get property/field value from arbitrary object
-                ptr = valueFromObjectByName(hf, tag);
+                ptr = hf.valueByMemberName(tag);
                 if (ptr != null)
                     tag_value = ptr;
                 else
@@ -699,7 +697,7 @@ public class ParsePage
         else if (tag_value is Hashtable ht)
             sub_hf = ht;
         else if (tag_value != null)
-            sub_hf = objectToHashtable(tag_value);
+            sub_hf = tag_value.toHashtable();
 
         if (sub_hf == null)
         {
@@ -872,7 +870,7 @@ public class ParsePage
         else if (uftag[i] is Hashtable ht)
             uftagi1 = ht;
         else
-            uftagi1 = objectToHashtable(uftag[i]) ?? [];
+            uftagi1 = uftag[i].toHashtable();
 
         Hashtable uftagi = (Hashtable)uftagi1.Clone(); // make a shallow copy as we modify this level
         int cnt = uftag.Count;
@@ -1497,96 +1495,6 @@ public class ParsePage
             logger(LogLevel.TRACE, "ParsePage - invalid timezone conversion from " + from_tz + " to " + to_tz + ": " + ex.Message);
             return dt;
         }
-    }
-
-
-    /// <summary>
-    /// Get readable public instance properties and fields (lowercased for further comparison) of object,
-    /// cached by class name in class_mapping_cache. Values are getter delegates to fetch from object instance.
-    /// </summary>
-    /// <param name="o"></param>
-    /// <returns>Dictionary of property/field name to getter delegate</returns>
-    private static Dictionary<string, Func<object, object>> objectMembers(object o)
-    {
-        Type type = o.GetType();
-        return class_mapping_cache.GetOrAdd(type.FullName, _ =>
-        {
-            var dict = new Dictionary<string, Func<object, object>>(StringComparer.OrdinalIgnoreCase);
-
-            // properties
-            var props = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
-            for (int i = 0; i < props.Length; i++)
-            {
-                var prop = props[i];
-                if (!prop.CanRead || prop.GetIndexParameters().Length > 0)
-                    continue; // skip write-only and indexer properties
-
-                string key = prop.Name;
-                if (!dict.ContainsKey(key))
-                {
-                    dict[key] = (obj) =>
-                    {
-                        try { return prop.GetValue(obj); }
-                        catch { return null; }
-                    };
-                }
-            }
-
-            // fields
-            var fields = type.GetFields(BindingFlags.Public | BindingFlags.Instance);
-            for (int i = 0; i < fields.Length; i++)
-            {
-                var field = fields[i];
-                string key = field.Name;
-                if (!dict.ContainsKey(key))
-                {
-                    dict[key] = (obj) =>
-                    {
-                        try { return field.GetValue(obj); }
-                        catch { return null; }
-                    };
-                }
-            }
-
-            return dict;
-        });
-    }
-
-    private static object valueFromObjectByName(object o, string name)
-    {
-        var getters = objectMembers(o);
-        if (getters.TryGetValue(name, out var getter))
-        {
-            return getter(o);
-        }
-        return null;
-    }
-
-    /// <summary>
-    /// Convert object public properties and fields to Hashtable
-    /// </summary>
-    /// <param name="o"></param>
-    /// <returns></returns>
-    private static Hashtable objectToHashtable(object o)
-    {
-        Hashtable result = [];
-        // return empty hashtable if null or it's a simple type
-        if (o == null || o is string || o is ValueType)
-            return result;
-
-        var getters = objectMembers(o);
-        foreach (var kvp in getters)
-        {
-            try
-            {
-                var val = kvp.Value(o);
-                if (val != null)
-                    result[kvp.Key] = val;
-            }
-            catch { }
-        }
-
-        return result;
     }
 
 }

@@ -42,6 +42,7 @@ namespace osafw;
 
 public class S3 : FwModel
 {
+
     public string region = "";
     public string bucket = "";
     public string root = "";

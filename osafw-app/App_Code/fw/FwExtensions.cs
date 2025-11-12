@@ -5,13 +5,267 @@
 
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
+using System.Reflection;
+using osafw;
 
 /// <summary>
 /// Provides extension methods for safe type conversions.
 /// </summary>
 public static class FwExtensions
 {
+    private static readonly ConcurrentDictionary<Type, Dictionary<string, PropertyInfo>> WritablePropertiesCache = new();
+    private static readonly ConcurrentDictionary<Type, Dictionary<string, Func<object, object>>> ReadableMembersCache = new();
+
+    private static Dictionary<string, PropertyInfo> getWritablePropertiesCore(Type type)
+    {
+        return WritablePropertiesCache.GetOrAdd(type, static t =>
+        {
+            var comparer = StringComparer.OrdinalIgnoreCase;
+            var dict = new Dictionary<string, PropertyInfo>(comparer);
+
+            foreach (var prop in t.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+            {
+                if (!prop.CanWrite)
+                    continue;
+
+                var attr = prop.GetCustomAttribute<DBNameAttribute>(inherit: false);
+                var key = attr?.Description ?? prop.Name;
+                if (!dict.ContainsKey(key))
+                    dict[key] = prop;
+            }
+
+            return dict;
+        });
+    }
+
+    internal static Dictionary<string, PropertyInfo> getWritableProperties<T>() => getWritablePropertiesCore(typeof(T));
+
+    internal static Dictionary<string, PropertyInfo> getWritableProperties(this Type type) => getWritablePropertiesCore(type);
+
+    internal static void clearWritablePropertiesCache() => WritablePropertiesCache.Clear();
+
+    private static void setPropertyValue<T>(this T obj, PropertyInfo property, object value)
+    {
+        if (value is null || value is DBNull)
+        {
+            property.SetValue(obj, null);
+            return;
+        }
+
+        var targetType = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
+
+        if (targetType.IsAssignableFrom(value.GetType()))
+        {
+            property.SetValue(obj, value);
+            return;
+        }
+
+        object convertedValue;
+        if (targetType.IsEnum)
+        {
+            convertedValue = value is string str
+                ? Enum.Parse(targetType, str, ignoreCase: true)
+                : Enum.ToObject(targetType, Convert.ChangeType(value, Enum.GetUnderlyingType(targetType)));
+        }
+        else if (targetType == typeof(Guid))
+        {
+            convertedValue = value is Guid guid
+                ? guid
+                : Guid.Parse(value.ToString());
+        }
+        else
+        {
+            convertedValue = Convert.ChangeType(value, targetType);
+        }
+
+        property.SetValue(obj, convertedValue);
+    }
+
+    internal static void setPropertyValue<T>(this T obj, Dictionary<string, PropertyInfo> props, string field, object value)
+    {
+        if (props.TryGetValue(field, out var property))
+        {
+            obj.setPropertyValue(property, value);
+        }
+    }
+
+    private static T populateObject<T>(IDictionary kv, Dictionary<string, PropertyInfo> props, T obj)
+    {
+        foreach (DictionaryEntry entry in kv)
+        {
+            var key = entry.Key?.ToString();
+            if (string.IsNullOrEmpty(key))
+                continue;
+
+            obj.setPropertyValue(props, key, entry.Value);
+        }
+
+        return obj;
+    }
+
+    public static T to<T>(this IDictionary kv) where T : new()
+    {
+        ArgumentNullException.ThrowIfNull(kv);
+
+        var props = getWritableProperties<T>();
+        return populateObject(kv, props, new T());
+    }
+
+    public static List<T> toList<T>(this IList rows) where T : new()
+    {
+        ArgumentNullException.ThrowIfNull(rows);
+
+        var result = new List<T>(rows.Count);
+        if (rows.Count == 0)
+            return result;
+
+        var props = getWritableProperties<T>();
+        foreach (var item in rows)
+        {
+            if (item is null)
+            {
+                continue;
+            }
+
+            if (item is T typed)
+            {
+                result.Add(typed);
+            }
+            else if (item is IDictionary dict)
+            {
+                result.Add(populateObject(dict, props, new T()));
+            }
+            else
+            {
+                var keyValues = (IDictionary)item.toKeyValue();
+                result.Add(populateObject(keyValues, props, new T()));
+            }
+        }
+
+        return result;
+    }
+
+    public static Dictionary<string, object> toKeyValue(this object dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        if (dto is Dictionary<string, object> dictionary)
+            return new Dictionary<string, object>(dictionary, StringComparer.OrdinalIgnoreCase);
+
+        if (dto is IDictionary dict)
+        {
+            Dictionary<string, object> result = new(dict.Count, StringComparer.OrdinalIgnoreCase);
+            foreach (DictionaryEntry entry in dict)
+            {
+                var key = entry.Key?.ToString();
+                if (!string.IsNullOrEmpty(key))
+                    result[key] = entry.Value;
+            }
+            return result;
+        }
+
+        var props = getWritableProperties(dto.GetType());
+        Dictionary<string, object> kv = new(props.Count, StringComparer.OrdinalIgnoreCase);
+        foreach (var pair in props)
+        {
+            kv[pair.Key] = pair.Value.GetValue(dto);
+        }
+
+        return kv;
+    }
+
+    public static Hashtable toHashtable(this object dto)
+    {
+        if (dto is null)
+            return [];
+
+        if (dto is Hashtable ht)
+            return (Hashtable)ht.Clone();
+
+        if (dto is IDictionary dict)
+        {
+            Hashtable result = new(dict.Count);
+            foreach (DictionaryEntry entry in dict)
+                result[entry.Key] = entry.Value;
+            return result;
+        }
+
+        var props = dto.GetType().getWritableProperties();
+        Hashtable htResult = new(props.Count);
+        foreach (var kv in props)
+        {
+            htResult[kv.Key] = kv.Value.GetValue(dto);
+        }
+
+        return htResult;
+    }
+
+    public static void applyTo<T>(this IDictionary kv, T dto)
+    {
+        ArgumentNullException.ThrowIfNull(kv);
+        ArgumentNullException.ThrowIfNull(dto);
+
+        var props = dto.GetType().getWritableProperties();
+        populateObject(kv, props, dto);
+    }
+
+    public static Dictionary<string, Func<object, object>> getReadableMembers(this object obj)
+    {
+        ArgumentNullException.ThrowIfNull(obj);
+
+        var type = obj.GetType();
+        return ReadableMembersCache.GetOrAdd(type, static t =>
+        {
+            var comparer = StringComparer.OrdinalIgnoreCase;
+            var dict = new Dictionary<string, Func<object, object>>(comparer);
+
+            foreach (var prop in t.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+            {
+                if (!prop.CanRead || prop.GetIndexParameters().Length > 0)
+                    continue;
+
+                var key = prop.Name;
+                if (!dict.ContainsKey(key))
+                {
+                    dict[key] = obj =>
+                    {
+                        try { return prop.GetValue(obj); }
+                        catch { return null; }
+                    };
+                }
+            }
+
+            foreach (var field in t.GetFields(BindingFlags.Public | BindingFlags.Instance))
+            {
+                var key = field.Name;
+                if (!dict.ContainsKey(key))
+                {
+                    dict[key] = obj =>
+                    {
+                        try { return field.GetValue(obj); }
+                        catch { return null; }
+                    };
+                }
+            }
+
+            return dict;
+        });
+    }
+
+    public static object valueByMemberName(this object obj, string memberName)
+    {
+        ArgumentNullException.ThrowIfNull(obj);
+        if (string.IsNullOrEmpty(memberName))
+            return null;
+
+        var members = obj.getReadableMembers();
+        return members.TryGetValue(memberName, out var getter) ? getter(obj) : null;
+    }
+
     /// <summary>
     /// Converts an object to a boolean.
     /// <para>- <c>null</c> returns <c>false</c>.</para>

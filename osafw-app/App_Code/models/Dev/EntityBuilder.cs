@@ -713,54 +713,44 @@ class DevEntityBuilder
 
     // ****************************** PRIVATE HELPERS (move to Dev model?)
 
+    public static Hashtable table2entity(DB db, string table_name)
+    {
+        if (string.IsNullOrEmpty(table_name) || table_name.StartsWith("MSys", StringComparison.Ordinal))
+            return null;
+
+        var tblschema = db.loadTableSchemaFull(table_name);
+
+        Hashtable controller_options = [];
+        Hashtable table_entity = new()
+        {
+            ["db_config"] = db.db_name,
+            ["table"] = table_name,
+            ["fw_name"] = Utils.name2fw(table_name),
+            ["iname"] = Utils.name2human(table_name),
+            ["fields"] = tableschema2fields(tblschema),
+            ["foreign_keys"] = db.listForeignKeys(table_name).toArrayList(),
+            ["controller_options"] = controller_options,
+        };
+
+        table_entity["model_name"] = tablenameToModel((string)table_entity["fw_name"]);
+        controller_options["url"] = "/Admin/" + table_entity["model_name"];
+        controller_options["title"] = Utils.name2human((string)table_entity["model_name"]);
+
+        var fields = Utils.array2hashtable((ArrayList)table_entity["fields"], "name");
+        table_entity["is_fw"] = fields.Contains("id") && fields.Contains("status") && fields.Contains("add_time") && fields.Contains("add_users_id");
+
+        return table_entity;
+    }
+
     public static ArrayList dbschema2entities(DB db)
     {
         ArrayList result = [];
-        // Access System tables:
-        // MSysAccessStorage
-        // MSysAccessXML
-        // MSysACEs
-        // MSysComplexColumns
-        // MSysNameMap
-        // MSysNavPaneGroupCategories
-        // MSysNavPaneGroups
-        // MSysNavPaneGroupToObjects
-        // MSysNavPaneObjectIDs
-        // MSysObjects
-        // MSysQueries
-        // MSysRelationships
-        // MSysResources
         var tables = db.tables();
         foreach (string tblname in tables)
         {
-            if (tblname.StartsWith("MSys", StringComparison.Ordinal))
-                continue;
-
-            // get table schema
-            var tblschema = db.loadTableSchemaFull(tblname);
-            // logger(tblschema)
-
-            Hashtable controller_options = [];
-            Hashtable table_entity = new()
-            {
-                ["db_config"] = db.db_name,
-                ["table"] = tblname,
-                ["fw_name"] = Utils.name2fw(tblname), // new table name using fw standards
-                ["iname"] = Utils.name2human(tblname), // human table name
-                ["fields"] = tableschema2fields(tblschema),
-                ["foreign_keys"] = db.listForeignKeys(tblname).toArrayList(),
-                ["controller_options"] = controller_options,
-            };
-
-            table_entity["model_name"] = tablenameToModel((string)table_entity["fw_name"]); // potential Model Name
-            controller_options["url"] = "/Admin/" + table_entity["model_name"]; // potential Controller URL/Name/Title
-            controller_options["title"] = Utils.name2human((string)table_entity["model_name"]);
-
-            // set is_fw flag - if it's fw compatible (contains id,iname,status,add_time,add_users_id)
-            var fields = Utils.array2hashtable((ArrayList)table_entity["fields"], "name");
-            // AndAlso fields.Contains("iname")
-            table_entity["is_fw"] = fields.Contains("id") && fields.Contains("status") && fields.Contains("add_time") && fields.Contains("add_users_id");
-            result.Add(table_entity);
+            var table_entity = table2entity(db, tblname);
+            if (table_entity != null)
+                result.Add(table_entity);
         }
 
         return result;
