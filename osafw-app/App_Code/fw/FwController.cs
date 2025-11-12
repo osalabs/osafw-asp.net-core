@@ -45,6 +45,7 @@ public abstract class FwController
     protected ArrayList list_rows;               // list rows returned from db (array of hashes)
     protected ArrayList list_headers;            // list headers with misc meta info per column
     protected ArrayList list_pager;              // pager for the list from FormUtils.getPager
+    protected int list_pagesize_export = 10000;  // max pagesize for export (to avoid memory issues on large exports), override in controller if needed
     protected string list_sortdef;               // required for Index, default list sorting: name asc|desc
     protected Hashtable list_sortmap;            // required for Index, sortmap fields
     protected Hashtable list_user_view;          // optional, user view settings for the list screen from UserViews model
@@ -824,7 +825,7 @@ public abstract class FwController
         {
             is_export = true;
             pagenum = 0;
-            pagesize = 100000;
+            pagesize = list_pagesize_export;
         }
 
         if (string.IsNullOrEmpty(list_view))
