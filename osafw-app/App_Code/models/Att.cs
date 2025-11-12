@@ -49,12 +49,15 @@ public class Att : FwModel
     /// <param name="id"></param>
     /// <param name="file"></param>
     /// <param name="is_new"></param>
-    /// <returns> return hashtable with added files information id, fname, fsize, ext and filepath</returns>
+    /// <returns> return hashtable with added files information id, fname, fsize, ext and filepath or null if upload failed or no files</returns>
     /// </returns>
     public Hashtable uploadOne(int id, IFormFile file, bool is_new = false)
     {
         Hashtable result = null;
-        if (uploadFile(id, out string filepath, file.Name, true))
+        if (fw.request.Form.Files.Count == 0)
+            return result;
+
+        if (uploadFile(id, out string filepath, file, true))
         {
             logger("uploaded to [" + filepath + "]");
             string ext = UploadUtils.getUploadFileExt(filepath);
@@ -110,7 +113,7 @@ public class Att : FwModel
                 itemdb["status"] = STATUS_UNDER_UPDATE; // under upload
                 var id = this.add(itemdb);
 
-                var resone = this.uploadOne(id, i, true);
+                var resone = this.uploadOne(id, file, true);
                 if (resone != null)
                 {
                     resone["id"] = id;

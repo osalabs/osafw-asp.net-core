@@ -95,6 +95,7 @@ public class AdminAttController : FwAdminController
         Hashtable ps = [];
         Hashtable item = reqh("item");
         var is_new = (id == 0);
+        var location = "";
 
         Validate(id, item);
         // load old record if necessary
@@ -125,9 +126,8 @@ public class AdminAttController : FwAdminController
             model.update(id, itemdb);
             fw.flash("updated", 1);
 
-            // Proceed upload - for edit - just one file
-            if (fw.request.Form.Files.Count > 0)
-                model.uploadOne(id, 0, false);
+            // Proceed upload, if any - for edit - just one file
+            model.uploadOne(id, 0, false);
         }
         else
         {
@@ -136,6 +136,7 @@ public class AdminAttController : FwAdminController
             if (addedAtt.Count > 0)
                 id = (int)((Hashtable)addedAtt[0])["id"];
             fw.flash("added", 1);
+            location = base_url;
         }
 
         // if select in popup - return json
@@ -157,7 +158,7 @@ public class AdminAttController : FwAdminController
 
         fw.flash("success", "File uploaded");
 
-        return this.afterSave(true, id, is_new, FW.ACTION_SHOW_FORM, "", ps);
+        return this.afterSave(true, id, is_new, FW.ACTION_SHOW_FORM, location, ps);
     }
 
     public override void Validate(int id, Hashtable item)
