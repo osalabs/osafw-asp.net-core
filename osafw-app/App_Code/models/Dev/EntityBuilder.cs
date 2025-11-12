@@ -587,7 +587,8 @@ class DevEntityBuilder
 
         foreach (var option in options)
         {
-            var parts = option.Split(['(', ')'], StringSplitOptions.RemoveEmptyEntries);
+            // keep "new[] { '(', ')' }" for compatibility with older C# versions
+            var parts = option.Split(new[] { '(', ')' }, StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length == 1)
             {
                 result[parts[0].Trim()] = true;
