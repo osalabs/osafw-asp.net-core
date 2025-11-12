@@ -1454,6 +1454,38 @@ public class Utils
         return result;
     }
 
+    public static Hashtable getPostedJson(FW fw)
+    {
+        var result = new Hashtable();
+        try
+        {
+            // read json from request body asynchronously to avoid sync IO under IIS/Kestrel restrictions
+            if (fw.request.Body.CanSeek)
+                fw.request.Body.Seek(0, SeekOrigin.Begin);
+
+            using StreamReader reader = new(fw.request.Body, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, bufferSize: 4096, leaveOpen: true);
+
+            // use async read to prevent InvalidOperationException: Synchronous operations are disallowed
+            string json = reader.ReadToEndAsync().GetAwaiter().GetResult();
+
+            if (fw.request.Body.CanSeek)
+                fw.request.Body.Seek(0, SeekOrigin.Begin);
+
+            if (!string.IsNullOrEmpty(json))
+            {
+                result = (Hashtable)Utils.jsonDecode(json);
+                fw.logger(LogLevel.TRACE, "REQUESTED JSON:", result);
+            }
+        }
+        catch (Exception ex)
+        {
+            fw.logger(LogLevel.WARN, "Request JSON parse error", ex.ToString());
+        }
+
+        return result;
+    }
+
+
     // convert/normalize external table/field name to fw standard name
     // "SomeCrazy/Name" => "some_crazy_name"
     public static string name2fw(string str)

@@ -771,31 +771,9 @@ public class FW : IDisposable
         // also parse json in request body if any
         if (request.ContentType?[.."application/json".Length] == "application/json")
         {
-            try
-            {
-                //read json from request body
-                using StreamReader reader = new(request.Body, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, bufferSize: 4096, leaveOpen: true);
-                if (request.Body.CanSeek)
-                    request.Body.Seek(0, SeekOrigin.Begin);
-
-                string json = reader.ReadToEndAsync().GetAwaiter().GetResult();
-                if (request.Body.CanSeek)
-                    request.Body.Seek(0, SeekOrigin.Begin);
-
-                if (!string.IsNullOrEmpty(json))
-                {
-                    postedJson = (Hashtable)Utils.jsonDecode(json);
-                    logger(LogLevel.TRACE, "REQUESTED JSON:", postedJson);
-
-                    if (postedJson != null)
-                        // merge json into FORM, but all values should be stingified in FORM
-                        Utils.mergeHash(f, (Hashtable)Utils.jsonStringifyValues(postedJson));
-                }
-            }
-            catch (Exception ex)
-            {
-                logger(LogLevel.WARN, "Request JSON parse error", ex.ToString());
-            }
+            postedJson = Utils.getPostedJson(this);
+            // merge json into FORM, but all values should be stingified in FORM
+            Utils.mergeHash(f, (Hashtable)Utils.jsonStringifyValues(postedJson));
         }
 
         // logger(f)
