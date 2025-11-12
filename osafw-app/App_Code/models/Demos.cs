@@ -24,7 +24,12 @@ public class Demos : FwModel<Demos.Row>
         public string dict_link_multi { get; set; }
         public int fcombo { get; set; }
         public int fradio { get; set; }
-        public bool fyesno { get; set; }
+        private int _fyesno;
+        public bool fyesno
+        {
+            get { return _fyesno != 0; }
+            set { _fyesno = value ? 1 : 0; }
+        }
         public int is_checkbox { get; set; }
         public DateTime? fdate_combo { get; set; }
         public DateTime? fdate_pop { get; set; }
