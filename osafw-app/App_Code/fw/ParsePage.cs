@@ -305,7 +305,7 @@ public class ParsePage
             get_tag_attrs(ref tag, attrs);
 
             // skip # commented tags and tags that not pass if
-            if (tag[0] != '#' && _attr_if(attrs, hf))
+            if (tag[0] != '#' && _attr_if(attrs, hf, parent_hf))
             {
                 string inline_tpl = "";
 
@@ -711,7 +711,7 @@ public class ParsePage
     }
 
     // Check for misc if attrs
-    private bool _attr_if(Hashtable attrs, Hashtable hf)
+    private bool _attr_if(Hashtable attrs, Hashtable hf, Hashtable parent_hf = null)
     {
         if (attrs.Count == 0)
             return true; // if there are no if operation - return true anyway and early
@@ -733,7 +733,7 @@ public class ParsePage
         if (string.IsNullOrEmpty(eqvar))
             return false; // return false if var need to be compared is empty
 
-        object eqvalue = hfvalue(eqvar, hf);
+        object eqvalue = hfvalue(eqvar, hf, parent_hf);
         eqvalue ??= "";
 
         // detect if eqvalue is integer
@@ -746,7 +746,7 @@ public class ParsePage
         {
             if (attrs.ContainsKey("vvalue"))
             {
-                ravalue = hfvalue((string)attrs["vvalue"], hf);
+                ravalue = hfvalue((string)attrs["vvalue"], hf, parent_hf);
                 ravalue ??= "";
             }
             else
