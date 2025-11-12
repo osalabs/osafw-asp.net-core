@@ -27,6 +27,7 @@
             <th v-for="header in fwStore.list_headers" :key="header.field_name">
                 <input type="text" class="form-control form-control-sm"
                        v-model="header.search_value"
+                       :disabled="isCalculatedField(header.field_name)"
                        @change="fwStore.loadIndexDebounced"
                        @keyup.enter.stop="fwStore.loadIndexDebounced">
             </th>
@@ -57,6 +58,9 @@
                 set: function (val) {
                     this.cb_check_all = val;
                 },
+            },
+            listCalculatedFields(){
+                return Object.values(this.fwStore.list_calculated_fields ?? {});
             }
         },
         methods: {
@@ -90,6 +94,9 @@
             },
             resetCheckedRows() {
                 this.fwStore.hchecked_rows = {};
+            },
+            isCalculatedField(fieldName) {
+                return this.listCalculatedFields.includes(fieldName);
             }
         }
     });

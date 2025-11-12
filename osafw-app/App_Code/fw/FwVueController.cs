@@ -114,6 +114,7 @@ public class FwVueController : FwDynamicController
         {
             global[key] = fw.G[key];
         }
+        global["user_iname"] = fw.model<Users>().iname(fw.userId);
         ps["global"] = global;
 
         setViewList(false); // initialize list_headers and related
@@ -255,6 +256,14 @@ public class FwVueController : FwDynamicController
         }
         else
         {
+            // if it's export - just get list_rows scope and return
+            if (export_format.Length > 0)
+            {
+                setScopeListRows(ps);
+
+                return ps;
+            }
+
             // else - this is initial non-json page load - return layout/js to the browser, then Vue will load data via API
             // if url is /ID or /ID/edit or /new - add screen, id to ps so Vue app will switch to related screen
             var route = fw.getRoute(fw.request.Path);

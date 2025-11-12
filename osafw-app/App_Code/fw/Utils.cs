@@ -492,7 +492,7 @@ public class Utils
         {
             if (!is_first) result.Append(',');
 
-            string str = (string)row[fld] ?? ""; // non-null guard
+            string str = row[fld].toStr(); // non-null guard
 
             // escape double quotes + quote if value has line breaks, double quotes, commas
             // https://www.ietf.org/rfc/rfc4180.txt
