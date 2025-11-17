@@ -304,7 +304,7 @@ namespace osafw.Tests
 
             // Case 2: Throw error for null input
             ArrayList col2 = null;
-            Assert.ThrowsException<NullReferenceException>(() => FormUtils.col2comma_str(col2), "Error for null input");
+            Assert.ThrowsExactly<NullReferenceException>(() => FormUtils.col2comma_str(col2), "Expected NullReferenceException for null input");
 
             // Case 3: Return empty string for empty input
             ArrayList col3 = [];
