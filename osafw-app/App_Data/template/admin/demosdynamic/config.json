@@ -47,9 +47,11 @@
         "iname": "Title",
         "email": "Email",
         "add_time": "Added on",
+        "upd_time": "Updated on",
         "status": "Status",
         "fdate_pop_str": "Date popup Formatted",
         "fdate_pop": "Date popup",
+        "fdatetime": "Date and time",
         "id": "id"
     },
     "view_list_custom": "iname status demo_dicts_iname",

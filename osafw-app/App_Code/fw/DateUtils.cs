@@ -10,7 +10,7 @@ namespace osafw;
 
 public class DateUtils
 {
-    public const string DATABASE_TZ = "UTC"; // timezone of the database server
+    public const string DATABASE_TZ = "Central Standard Time"; // timezone of the database server, default "UTC"
 
     // keep in sync with template/common/sel/date_format.sel
     public const int DATE_FORMAT_MDY = 0; // M/D/YYYY
