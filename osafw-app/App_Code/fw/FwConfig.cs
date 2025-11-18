@@ -131,6 +131,7 @@ public static class FwConfig
         st["date_format"] ??= DateUtils.DATE_FORMAT_MDY;
         st["time_format"] ??= DateUtils.TIME_FORMAT_12;
         st["timezone"] ??= DateUtils.TZ_UTC;
+        st["timezone_db"] ??= DateUtils.DEFAULT_DATABASE_TZ;
     }
 
     public static void readSettingsSection(IConfigurationSection section, ref Hashtable settings)

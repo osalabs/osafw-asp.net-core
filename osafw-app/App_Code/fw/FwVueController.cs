@@ -96,7 +96,31 @@ public class FwVueController : FwDynamicController
                     }
                 }
             }
+
+            var display = buildDisplayValues(row);
+            if (display.Count > 0)
+                row["_display"] = display;
         }
+    }
+
+    protected virtual Hashtable buildDisplayValues(Hashtable source)
+    {
+        Hashtable display = [];
+
+        appendDisplayValue(display, source, model0.field_add_time);
+        appendDisplayValue(display, source, model0.field_upd_time);
+
+        return display;
+    }
+
+    private void appendDisplayValue(Hashtable display, Hashtable source, string fieldName)
+    {
+        if (string.IsNullOrEmpty(fieldName) || !source.ContainsKey(fieldName))
+            return;
+
+        var formatted = fw.formatUserDateTime(source[fieldName]);
+        if (!string.IsNullOrEmpty(formatted))
+            display[fieldName] = formatted;
     }
 
     /// <summary>
@@ -429,6 +453,10 @@ public class FwVueController : FwDynamicController
         setAddUpdUser(ps, item);
 
         model0.filterForJson(item);
+
+        var displayValues = buildDisplayValues(item);
+        if (displayValues.Count > 0)
+            ps["display_values"] = displayValues;
 
         ps["id"] = id;
         ps["i"] = item;
