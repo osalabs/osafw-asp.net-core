@@ -5,30 +5,22 @@
 
 using System;
 using System.Text.RegularExpressions;
+using System.Threading;
 
 namespace osafw;
 
 public class DateUtils
 {
-    private static string databaseTimezoneCache = TZ_UTC;
+    public const string DEFAULT_DATABASE_TZ = "Central Standard Time"; // timezone of the database server, default "UTC"
+    private static readonly AsyncLocal<string?> _databaseTimezone = new();
 
-    public static string DATABASE_TZ
+    public static string DATABASE_TZ => _databaseTimezone.Value ?? DEFAULT_DATABASE_TZ;
+
+    public static void Configure(string? databaseTimezone)
     {
-        get
-        {
-            var settings = FwConfig.settings;
-            if (settings != null && settings.ContainsKey("timezone_db"))
-            {
-                var tz = settings["timezone_db"].toStr();
-                if (!string.IsNullOrEmpty(tz))
-                {
-                    databaseTimezoneCache = tz;
-                    return tz;
-                }
-            }
-
-            return databaseTimezoneCache;
-        }
+        _databaseTimezone.Value = string.IsNullOrEmpty(databaseTimezone)
+            ? DEFAULT_DATABASE_TZ
+            : databaseTimezone;
     }
 
     // keep in sync with template/common/sel/date_format.sel

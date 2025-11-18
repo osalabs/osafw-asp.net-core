@@ -51,6 +51,7 @@ public static class FwConfig
 
         host ??= ctx?.Request.Host.ToString() ?? "";
         settings = _hostCache.GetOrAdd(host, _ => buildForHost(ctx, host));
+        DateUtils.Configure(settings["timezone_db"]?.ToString());
         // Some fields (ports, protocol) may vary per request even for same host - rebuild those cheap bits every time.
         overrideContextSettings(ctx, host, settings);
     }
