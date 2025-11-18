@@ -1,19 +1,20 @@
 # Per-user Date/Time and Timezone Support
 
-This framework provides first-class support for storing timestamps in the database and presenting/editing them using each user’s preferred date/time formats and timezone.
+- All timestamps are assumed to be in the database timezone configured via `appSettings.timezone_db` (available at runtime as `DateUtils.DATABASE_TZ`, default: `UTC`).
 
-## Storage vs. presentation
+- `appSettings.timezone_db` default timezone of the database/server. Example: `"UTC"` (override per-environment as needed).
+  - `DateUtils.DATABASE_TZ` returns the configured `appSettings.timezone_db` value (source tz for DB values)
 - Database values are read in SQL formats:
   - Date: `YYYY-MM-DD`
   - Datetime: `YYYY-MM-DD HH:mm:ss`
 - All timestamps are assumed to be in the database timezone `DateUtils.DATABASE_TZ` (default: `UTC`).
-- On output, values can be converted to the user’s timezone and formatted with the user’s date/time formats.
+- On output, values can be converted to the userâ€™s timezone and formatted with the userâ€™s date/time formats.
 
 ## Global defaults (appsettings.json)
-appSettings keys define defaults applied for anonymous users or when there’s no per-user override:
-- `appSettings.date_format` – default date format id (see constants below). Example: `0` (MDY)
-- `appSettings.time_format` – default time format id. Example: `0` (12h)
-- `appSettings.timezone` – default timezone id. Example: `"UTC"`
+appSettings keys define defaults applied for anonymous users or when thereâ€™s no per-user override:
+- `appSettings.date_format` â€“ default date format id (see constants below). Example: `0` (MDY)
+- `appSettings.time_format` â€“ default time format id. Example: `0` (12h)
+- `appSettings.timezone` â€“ default timezone id. Example: `"UTC"`
 
 These values are available at runtime via `fw.config("date_format")`, `fw.config("time_format")`, `fw.config("timezone")` and are copied into `fw.G`.
 
@@ -46,7 +47,7 @@ DateUtils exposes constants and helpers:
   - `DateUtils.mapTimeWithSecondsFormat(int)`
 
 ## Converting for display
-- Generic helper: `fw.formatUserDateTime(dbValue)` – takes an SQL date/datetime string and returns a user-formatted string with timezone conversion from `DATABASE_TZ` to the user’s timezone.
+- Generic helper: `fw.formatUserDateTime(dbValue)` â€“ takes an SQL date/datetime string and returns a user-formatted string with timezone conversion from `DATABASE_TZ` to the userâ€™s timezone.
 - Low level: `DateUtils.SQL2Str(sql, fw.userDateFormat, fw.userTimeFormat, fw.userTimezone)`
 - ParsePage templates are preconfigured from FW:
   - `DateFormat` = `mapDateFormat(userDateFormat)`
@@ -66,7 +67,7 @@ Notes:
 
 ## Timezone conversion utilities
 - `DateUtils.convertTimezone(DateTime dt, string from_tz, string to_tz)`
-- `DateUtils.SQL2Str(string sqlDate, int dateFormat, int timeFormat, string timezone = "")` – when `timezone` is provided, it converts from `DATABASE_TZ` to the user timezone before formatting.
+- `DateUtils.SQL2Str(string sqlDate, int dateFormat, int timeFormat, string timezone = "")` â€“ when `timezone` is provided, it converts from `DATABASE_TZ` to the user timezone before formatting.
 
 ## Typical usage
 - Show a timestamp from DB:
@@ -74,7 +75,7 @@ Notes:
 - Accept a date from a form and save:
   - Controller builds `item` from request, Model calls `convertUserInput(item)`, then `add/update`.
 
-## Choosing the user’s timezone
+## Choosing the userâ€™s timezone
 Timezones must match Windows time zone IDs (used by `TimeZoneInfo.FindSystemTimeZoneById`). Examples: `"UTC"`, `"Pacific Standard Time"`, `"Europe/Berlin"`.
 
 If an invalid timezone is supplied, `DateUtils.convertTimezone` logs the issue and returns the original `DateTime`.

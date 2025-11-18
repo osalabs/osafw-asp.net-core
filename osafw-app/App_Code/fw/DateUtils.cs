@@ -10,7 +10,26 @@ namespace osafw;
 
 public class DateUtils
 {
-    public const string DATABASE_TZ = "Central Standard Time"; // timezone of the database server, default "UTC"
+    private static string databaseTimezoneCache = TZ_UTC;
+
+    public static string DATABASE_TZ
+    {
+        get
+        {
+            var settings = FwConfig.settings;
+            if (settings != null && settings.ContainsKey("timezone_db"))
+            {
+                var tz = settings["timezone_db"].toStr();
+                if (!string.IsNullOrEmpty(tz))
+                {
+                    databaseTimezoneCache = tz;
+                    return tz;
+                }
+            }
+
+            return databaseTimezoneCache;
+        }
+    }
 
     // keep in sync with template/common/sel/date_format.sel
     public const int DATE_FORMAT_MDY = 0; // M/D/YYYY

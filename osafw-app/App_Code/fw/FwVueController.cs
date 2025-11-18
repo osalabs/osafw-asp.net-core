@@ -65,6 +65,7 @@ public class FwVueController : FwDynamicController
         foreach (Hashtable row in list_rows)
         {
             model0.filterForJson(row);
+            formatAddUpdDateTimes(row);
 
             //added/updated username - it's readonly so we can replace _id fields with names
             if (!string.IsNullOrEmpty(model0.field_add_users_id) && row.ContainsKey(model0.field_add_users_id))
@@ -97,6 +98,24 @@ public class FwVueController : FwDynamicController
                 }
             }
         }
+    }
+
+    protected virtual void formatAddUpdDateTimes(Hashtable row)
+    {
+        formatUserDateTimeField(row, model0.field_add_time);
+        formatUserDateTimeField(row, model0.field_upd_time);
+    }
+
+    private void formatUserDateTimeField(Hashtable row, string fieldName)
+    {
+        if (row == null || string.IsNullOrEmpty(fieldName) || !row.ContainsKey(fieldName))
+            return;
+
+        var value = row[fieldName];
+        if (Utils.isEmpty(value))
+            return;
+
+        row[fieldName] = fw.formatUserDateTime(value);
     }
 
     /// <summary>
@@ -429,6 +448,7 @@ public class FwVueController : FwDynamicController
         setAddUpdUser(ps, item);
 
         model0.filterForJson(item);
+        formatAddUpdDateTimes(item);
 
         ps["id"] = id;
         ps["i"] = item;
