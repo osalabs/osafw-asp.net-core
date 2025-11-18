@@ -37,10 +37,10 @@
     </div>
     <p v-else-if="def.type=='date'" class="form-control-plaintext">{{fwStore.formatDate(value)}}</p>
     <p v-else-if="def.type=='date_long'" class="form-control-plaintext">{{fwStore.formatDateTime(value)}}</p>
-    <p v-else-if="def.type=='added'" class="form-control-plaintext">{{displayDateTime('add_time', item.add_time)}} by {{form.add_users_id_name}}</p>
+    <p v-else-if="def.type=='added'" class="form-control-plaintext">{{fwStore.formatDateTime(item.add_time)}} by {{form.add_users_id_name}}</p>
     <p v-else-if="def.type=='updated'" class="form-control-plaintext">
         <template v-if="form.upd_users_id_name">
-            {{displayDateTime('upd_time', item.upd_time)}} by {{form.upd_users_id_name}}
+            {{fwStore.formatDateTime(item.upd_time)}} by {{form.upd_users_id_name}}
         </template>
     </p>
     <template v-else-if="def.type=='multi'">
@@ -455,13 +455,6 @@
             //console.log("form-one-control mounted", this.def);
         },
         methods: {
-            displayDateTime(field, value) {
-                const displayValues = this.form.display_values;
-                if (displayValues && displayValues[field] !== undefined && displayValues[field] !== null) {
-                    return displayValues[field];
-                }
-                return this.fwStore.formatDateTime(value);
-            },
             async autocompleteOptions(query, select$) {
                 let id = 0;
                 if (query === null) {
