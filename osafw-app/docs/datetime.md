@@ -7,7 +7,6 @@
 - Database values are read in SQL formats:
   - Date: `YYYY-MM-DD`
   - Datetime: `YYYY-MM-DD HH:mm:ss`
-- All timestamps are assumed to be in the database timezone `DateUtils.DATABASE_TZ` (default: `UTC`).
 - On output, values can be converted to the user’s timezone and formatted with the user’s date/time formats.
 
 ## Global defaults (appsettings.json)

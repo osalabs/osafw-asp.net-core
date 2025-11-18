@@ -64,8 +64,10 @@ public class FwVueController : FwDynamicController
 
         foreach (Hashtable row in list_rows)
         {
+            if (!string.IsNullOrEmpty(model0.field_add_time)) row[model0.field_add_time] = fw.formatUserDateTime(row[model0.field_add_time]??"");
+            if (!string.IsNullOrEmpty(model0.field_upd_time)) row[model0.field_upd_time] = fw.formatUserDateTime(row[model0.field_upd_time]??"");
+
             model0.filterForJson(row);
-            formatAddUpdDateTimes(row);
 
             //added/updated username - it's readonly so we can replace _id fields with names
             if (!string.IsNullOrEmpty(model0.field_add_users_id) && row.ContainsKey(model0.field_add_users_id))
@@ -100,24 +102,6 @@ public class FwVueController : FwDynamicController
         }
     }
 
-    protected virtual void formatAddUpdDateTimes(Hashtable row)
-    {
-        formatUserDateTimeField(row, model0.field_add_time);
-        formatUserDateTimeField(row, model0.field_upd_time);
-    }
-
-    private void formatUserDateTimeField(Hashtable row, string fieldName)
-    {
-        if (row == null || string.IsNullOrEmpty(fieldName) || !row.ContainsKey(fieldName))
-            return;
-
-        var value = row[fieldName];
-        if (Utils.isEmpty(value))
-            return;
-
-        row[fieldName] = fw.formatUserDateTime(value);
-    }
-
     /// <summary>
     /// set data for initial scope for Vue controller
     /// </summary>
@@ -133,7 +117,7 @@ public class FwVueController : FwDynamicController
         {
             global[key] = fw.G[key];
         }
-        global["user_iname"] = fw.model<Users>().iname(fw.userId);
+        global["user_iname"] = fw.model<Users>().iname(fw.userId); 
         ps["global"] = global;
 
         setViewList(false); // initialize list_headers and related
@@ -447,9 +431,11 @@ public class FwVueController : FwDynamicController
         // fill added/updated too
         setAddUpdUser(ps, item);
 
-        model0.filterForJson(item);
-        formatAddUpdDateTimes(item);
+        if (!string.IsNullOrEmpty(model0.field_add_time)) item[model0.field_add_time] = fw.formatUserDateTime(item[model0.field_add_time] ?? "");
+        if (!string.IsNullOrEmpty(model0.field_upd_time)) item[model0.field_upd_time] = fw.formatUserDateTime(item[model0.field_upd_time] ?? "");
 
+        model0.filterForJson(item);
+        
         ps["id"] = id;
         ps["i"] = item;
         ps["_json"] = true;
