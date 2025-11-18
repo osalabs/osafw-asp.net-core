@@ -33,6 +33,10 @@
                 const v = this.row[this.col.field_name] ?? '';
                 if (v === '') return '';
 
+                const customDisplay = this.row._display?.[this.col.field_name];
+                if (customDisplay !== undefined)
+                    return customDisplay;
+
                 const type = this.col.input_type || this.col.type;
 
                 // Explicit types from headers
