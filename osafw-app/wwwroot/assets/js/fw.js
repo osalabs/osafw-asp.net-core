@@ -752,7 +752,7 @@ window.fw={
     $(document).on('change', '.fw-file-drop-area input[type=file]', function(e){
       var $input = $(this);
       var $drop = $input.closest('.fw-file-drop-area');
-      var files = this.files;
+      var files = Array.from(this.files || []); // making copy as array as below we clear input
       if (!files.length) return;
 
       this.value = null; //cleanup files input
@@ -769,7 +769,7 @@ window.fw={
       }
 
       var $list = $drop.next('.att-list');
-      Array.from(files).forEach(function(file){
+      files.forEach(function(file){
         var $item = $list.find('.tpl').clone().removeClass('tpl d-none');
         $item.find('.att-iname').text(file.name);
         $item.find('.att-size').text('('+fw.bytes2str(file.size)+')');
