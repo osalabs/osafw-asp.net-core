@@ -77,9 +77,10 @@ public static class FwConfig
         // clone deep - each host gets its own mutable copy
         var hs = Utils.cloneHashDeep(_base.Value);
 
-        overrideSettingsByName(string.IsNullOrEmpty(host) ?
-                Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "" : host,
-            hs, true);
+        if (string.IsNullOrEmpty(host))
+            overrideSettingsByName(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "", hs, false); // use env name override if no host
+        else
+            overrideSettingsByName(host, hs, true);
 
         overrideContextSettings(ctx, host, hs);
         return hs;
