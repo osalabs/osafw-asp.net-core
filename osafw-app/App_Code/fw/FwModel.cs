@@ -384,6 +384,7 @@ public abstract class FwModel : IDisposable
     }
 
     // convert user input fields to proper database format before add/update
+    // including timezone conversion of datetime values to internal UTC
     public virtual void convertUserInput(Hashtable item)
     {
         var table_schema = getTableSchema();
@@ -409,12 +410,47 @@ public abstract class FwModel : IDisposable
             }
             else if (fw_type == "datetime")
             {
-                // skip if value is DB.NOW object or DateTime object
-                if (item[fieldname] is DateTime || item[fieldname] == DB.NOW)
-                    continue;
+                if (item[fieldname] is DateTime dt)
+                {
+                    // normalize DateTime inputs from UI or other sources to UTC
+                    if (dt.Kind == DateTimeKind.Unspecified)
+                    {
+                        var utc = DateUtils.convertTimezone(dt, fw.userTimezone, DateUtils.TZ_UTC);
+                        item[fieldname] = DateTime.SpecifyKind(utc, DateTimeKind.Utc);
+                    }
+                    else if (dt.Kind == DateTimeKind.Local)
+                        item[fieldname] = dt.ToUniversalTime();
+                    else if (dt.Kind != DateTimeKind.Utc)
+                        item[fieldname] = DateTime.SpecifyKind(dt, DateTimeKind.Utc);
+                }
+                else if (item[fieldname] == DB.NOW)
+                {
+                    // leave NOW untouched, DB will set current timestamp
+                }
+                else if (string.IsNullOrEmpty(item[fieldname].toStr()))
+                {
+                    // empty strings become NULL
+                    item[fieldname] = DBNull.Value;
+                }
+                else
+                {
+                    // parse strings and convert from user's timezone to UTC
+                    var str = item[fieldname].toStr();
+                    DateTime? parsed = null;
+                    if (DateUtils.isDateSQL(str))
+                    {
+                        parsed = DateUtils.SQL2Date(str);
+                    }
+                    else
+                    {
+                        var format = DateUtils.mapDateFormat(fw.userDateFormat) + " " + DateUtils.mapTimeFormat(fw.userTimeFormat);
+                        parsed = str.toDateOrNull(format);
+                        if (parsed != null)
+                            parsed = DateUtils.convertTimezone((DateTime)parsed, fw.userTimezone, DateUtils.TZ_UTC);
+                    }
 
-                //if field is exactly DATETIME - convert date and time YYYY-MM-DD HH:MM:SS format
-                item[fieldname] = DateUtils.Str2SQL((string)item[fieldname], fw.userDateFormat, fw.userTimeFormat, true);
+                    item[fieldname] = parsed == null ? DBNull.Value : DateTime.SpecifyKind((DateTime)parsed, DateTimeKind.Utc);
+                }
             }
 
             // ADD OTHER CONVERSIONS HERE if necessary

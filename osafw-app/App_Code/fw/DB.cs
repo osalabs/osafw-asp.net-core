@@ -225,6 +225,7 @@ public class DB : IDisposable
     protected static ConcurrentDictionary<string, ConcurrentDictionary<string, ArrayList>> schemafull_cache = new(); // full schema, connstr => table => [field => full schema]
     protected static ConcurrentDictionary<string, ConcurrentDictionary<string, Hashtable>> schema_cache = new(); // schema, connstr => table => [field => type]
     protected static ConcurrentDictionary<string, ConcurrentDictionary<string, Hashtable>> schema_fk_cache = new(); // foreign keys, connstr => table => [field => referenced table]
+    protected static ConcurrentDictionary<string, string> timezone_cache = new(); // resolved db timezones per connection string
     protected static ConcurrentDictionary<string, Dictionary<string, PropertyInfo>> class_mapping_cache = new(); // for converting DB object to class
 
     public static string last_sql = ""; // last executed sql
@@ -242,6 +243,7 @@ public class DB : IDisposable
     public int sql_command_timeout = 30; // default command timeout, override in model for long queries (in reports or export, for example)
     protected readonly Hashtable conf = [];  // config contains: connection_string, type
     protected readonly string connstr = "";
+    private TimeZoneInfo? timezoneInfo;
 
     private string quotes = "[]"; // for SQL Server - [], for MySQL - `, for OLE - depends on provider
     private string sql_ole_identity = "SELECT @@identity"; // default OLE identity query
@@ -423,6 +425,42 @@ public class DB : IDisposable
         this.context = context;
     }
 
+    private TimeZoneInfo DbTimezoneInfo
+    {
+        get
+        {
+            if (timezoneInfo != null)
+                return timezoneInfo;
+
+            var tzId = conf["timezone"].toStr();
+
+            if (string.IsNullOrEmpty(tzId))
+            {
+                var cache_key = $"{dbtype}:{connstr}";
+                if (!timezone_cache.TryGetValue(cache_key, out tzId) || string.IsNullOrEmpty(tzId))
+                {
+                    tzId = detectTimezoneFromDb();
+                    timezone_cache[cache_key] = tzId;
+                }
+            }
+
+            try
+            {
+                timezoneInfo = TimeZoneInfo.FindSystemTimeZoneById(tzId);
+            }
+            catch (Exception ex)
+            {
+                logger(LogLevel.WARN, "DB timezone resolve failed for ", db_name, " tz=", tzId, " error=", ex.Message);
+                timezoneInfo = TimeZoneInfo.Utc;
+            }
+
+            return timezoneInfo;
+        }
+    }
+
+    private bool isDbTimezoneUTC => DbTimezoneInfo.Id == TimeZoneInfo.Utc.Id;
+    }
+
     /// <summary>
     /// connect to DB server using connection string defined in web.config appSettings, key db|main|connection_string (by default)
     /// </summary>
@@ -511,6 +549,94 @@ public class DB : IDisposable
         return result;
     }
 
+    private string detectTimezoneFromDb()
+    {
+        try
+        {
+            var tz_sql = dbtype switch
+            {
+                DBTYPE_SQLSRV => "SELECT DATENAME(TZOFFSET, SYSDATETIMEOFFSET()) AS Offset;",
+#if isMySQL
+                DBTYPE_MYSQL => "SELECT @@system_time_zone;",
+#endif
+                _ => "",
+            };
+
+            if (!string.IsNullOrEmpty(tz_sql))
+            {
+                var tz = valuep(tz_sql).toStr();
+                if (!string.IsNullOrEmpty(tz))
+                {
+                    if (dbtype == DBTYPE_SQLSRV && TimeSpan.TryParse(tz, out var offset))
+                    {
+                        var tzInfo = TimeZoneInfo.GetSystemTimeZones().FirstOrDefault(tzinfo => tzinfo.BaseUtcOffset == offset);
+                        if (tzInfo != null)
+                            return tzInfo.Id;
+                    }
+                    else
+                        return tz;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            logger(LogLevel.WARN, "DB timezone autodetect failed for ", db_name, ": ", ex.Message);
+        }
+
+        return DateUtils.TZ_UTC;
+    }
+
+    /// <summary>
+    /// Convert DateTime from DB timezone to UTC. Date-only values keep unspecified kind with no conversion.
+    /// </summary>
+    private DateTime convertDbDateTimeToUtc(DateTime dt, bool isDateOnly = false)
+    {
+        if (isDateOnly)
+            return DateTime.SpecifyKind(dt, DateTimeKind.Unspecified);
+
+        if (isDbTimezoneUTC)
+            return dt.Kind == DateTimeKind.Utc ? dt : DateTime.SpecifyKind(dt, DateTimeKind.Utc);
+
+        var unspecified = DateTime.SpecifyKind(dt, DateTimeKind.Unspecified);
+        return TimeZoneInfo.ConvertTimeToUtc(unspecified, DbTimezoneInfo);
+    }
+
+    /// <summary>
+    /// Convert UTC DateTime into DB timezone. Assumes input is UTC.
+    /// </summary>
+    private DateTime convertUtcToDb(DateTime dtUtc)
+    {
+        if (isDbTimezoneUTC)
+            return dtUtc;
+
+        return TimeZoneInfo.ConvertTimeFromUtc(dtUtc, DbTimezoneInfo);
+    }
+
+    /// <summary>
+    /// Normalize parameter values before sending to DB, converting UTC DateTime to DB timezone and preserving date-only values.
+    /// </summary>
+    private object convertParamValue(object value)
+    {
+        if (value == NOW)
+            return value;
+
+        if (value is DateTime dt)
+        {
+            if (dt.Kind == DateTimeKind.Unspecified)
+                return dt; // treat as date-only/no timezone
+
+            DateTime utc = dt.Kind switch
+            {
+                DateTimeKind.Utc => dt,
+                DateTimeKind.Local => dt.ToUniversalTime(),
+                _ => DateTime.SpecifyKind(dt, DateTimeKind.Utc),
+            };
+            return convertUtcToDb(utc);
+        }
+
+        return value;
+    }
+
     // transactions support
 
     public DbTransaction begin()
@@ -586,7 +712,7 @@ public class DB : IDisposable
                 CommandTimeout = sql_command_timeout
             };
             foreach (string p in @params.Keys)
-                dbcomm.Parameters.AddWithValue(p, @params[p]);
+                dbcomm.Parameters.AddWithValue(p, convertParamValue(@params[p]));
 
             if (tran != null)
                 dbcomm.Transaction = (SqlTransaction)tran;
@@ -603,7 +729,7 @@ public class DB : IDisposable
                 // p name is without "@", but @params may or may not contain "@" prefix
                 var pvalue = @params.ContainsKey(p) ? @params[p] : @params["@" + p];
                 //logger(LogLevel.INFO, "DB:", db_name, " ", "param: ", p, " = ", pvalue);
-                dbcomm.Parameters.AddWithValue("?", pvalue);
+                dbcomm.Parameters.AddWithValue("?", convertParamValue(pvalue));
             }
 
             if (tran != null)
@@ -616,7 +742,7 @@ public class DB : IDisposable
         {
             var dbcomm = new MySqlCommand(sql, (MySqlConnection)conn);
             foreach (string p in @params.Keys)
-                dbcomm.Parameters.AddWithValue(p, @params[p]);
+                dbcomm.Parameters.AddWithValue(p, convertParamValue(@params[p]));
 
             if (tran != null)
                 dbcomm.Transaction = (MySqlTransaction)tran;
@@ -725,7 +851,7 @@ public class DB : IDisposable
                 CommandTimeout = sql_command_timeout
             };
             foreach (string p in @params.Keys)
-                dbcomm.Parameters.AddWithValue(p, @params[p]);
+                dbcomm.Parameters.AddWithValue(p, convertParamValue(@params[p]));
 
             if (tran != null)
                 dbcomm.Transaction = (SqlTransaction)tran;
@@ -745,7 +871,7 @@ public class DB : IDisposable
                 // p name is without "@", but @params may or may not contain "@" prefix
                 var pvalue = @params.ContainsKey(p) ? @params[p] : @params["@" + p];
                 //logger(LogLevel.INFO, "DB:", db_name, " ", "param: ", p, " = ", pvalue);
-                dbcomm.Parameters.AddWithValue("?", pvalue);
+                dbcomm.Parameters.AddWithValue("?", convertParamValue(pvalue));
             }
 
             if (tran != null)
@@ -759,7 +885,7 @@ public class DB : IDisposable
             var dbcomm = new MySqlCommand(sql, (MySqlConnection)conn);
             dbcomm.CommandTimeout = sql_command_timeout;
                 foreach (string p in @params.Keys)
-                    dbcomm.Parameters.AddWithValue(p, @params[p]);
+                    dbcomm.Parameters.AddWithValue(p, convertParamValue(@params[p]));
 
             if (tran != null)
                 dbcomm.Transaction = (MySqlTransaction)tran;
@@ -836,9 +962,19 @@ public class DB : IDisposable
             else if (meta.IsDateTime[i])
             {
                 var dt = dbread.GetDateTime(i);
-                value = meta.IsDateOnly[i]
-                    ? dt.ToString("yyyy-MM-dd", System.Globalization.DateTimeFormatInfo.InvariantInfo)
-                    : dt.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.DateTimeFormatInfo.InvariantInfo);
+                if (meta.IsDateOnly[i])
+                {
+                    value = dt.ToString("yyyy-MM-dd", System.Globalization.DateTimeFormatInfo.InvariantInfo);
+                }
+                else
+                {
+                    if (!isDbTimezoneUTC)
+                        dt = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(dt, DateTimeKind.Unspecified), DbTimezoneInfo);
+                    else if (dt.Kind != DateTimeKind.Utc)
+                        dt = DateTime.SpecifyKind(dt, DateTimeKind.Utc);
+
+                    value = dt.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.DateTimeFormatInfo.InvariantInfo);
+                }
             }
             else if (meta.IsString[i])
                 value = dbread.GetString(i) ?? "";
@@ -868,8 +1004,17 @@ public class DB : IDisposable
                 value = null;
             else if (meta.IsDateTime[i])
             {
+                var dt = dbread.GetDateTime(i);
+                if (!meta.IsDateOnly[i])
+                {
+                    if (!isDbTimezoneUTC)
+                        dt = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(dt, DateTimeKind.Unspecified), DbTimezoneInfo);
+                    else if (dt.Kind != DateTimeKind.Utc)
+                        dt = DateTime.SpecifyKind(dt, DateTimeKind.Utc);
+                }
+
                 // keep DateTime value type to avoid boxing to string
-                value = dbread.GetDateTime(i);
+                value = dt;
             }
             else if (meta.IsString[i])
                 value = dbread.GetString(i);
@@ -1138,6 +1283,9 @@ public class DB : IDisposable
             result = dbread[0]; //read first
             break; // just return first row
         }
+
+        if (result is DateTime dt)
+            result = convertDbDateTimeToUtc(dt);
 
         dbread.Close();
         return result;

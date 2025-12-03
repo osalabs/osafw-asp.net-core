@@ -64,8 +64,8 @@ public class FwVueController : FwDynamicController
 
         foreach (Hashtable row in list_rows)
         {
-            if (!string.IsNullOrEmpty(model0.field_add_time)) row[model0.field_add_time] = fw.formatUserDateTime(row[model0.field_add_time]??"");
-            if (!string.IsNullOrEmpty(model0.field_upd_time)) row[model0.field_upd_time] = fw.formatUserDateTime(row[model0.field_upd_time]??"");
+            if (!string.IsNullOrEmpty(model0.field_add_time)) row[model0.field_add_time] = fw.formatUserDateTime(row[model0.field_add_time] ?? "");
+            if (!string.IsNullOrEmpty(model0.field_upd_time)) row[model0.field_upd_time] = fw.formatUserDateTime(row[model0.field_upd_time] ?? "");
 
             model0.filterForJson(row);
 
