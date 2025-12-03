@@ -1281,13 +1281,21 @@ public abstract class FwModel : IDisposable
 
             var field_schema = (Hashtable)table_schema[fieldname_lc];
 
-            //var fw_type = (string)field_schema["fw_type"];
+            var fw_type = (string)field_schema["fw_type"];
             var fw_subtype = (string)field_schema["fw_subtype"];
 
             if (fw_subtype == "bit")
             {
                 //if field is exactly BIT - convert from True/False to 1/0
                 item[fieldname] = item[fieldname].toBool() ? 1 : 0;
+            }
+            else if (fw_type == "date")
+            {
+                item[fieldname] = DateUtils.Str2DateOnly(item[fieldname].toStr(), fw.userDateFormat);
+            }
+            else if (fw_type == "datetime")
+            {
+                item[fieldname] = fw.formatUserDateTime(item[fieldname]);
             }
             // ADD OTHER CONVERSIONS HERE if necessary
         }

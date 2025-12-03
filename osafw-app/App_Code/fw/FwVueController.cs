@@ -64,9 +64,6 @@ public class FwVueController : FwDynamicController
 
         foreach (Hashtable row in list_rows)
         {
-            if (!string.IsNullOrEmpty(model0.field_add_time)) row[model0.field_add_time] = fw.formatUserDateTime(row[model0.field_add_time] ?? "");
-            if (!string.IsNullOrEmpty(model0.field_upd_time)) row[model0.field_upd_time] = fw.formatUserDateTime(row[model0.field_upd_time] ?? "");
-
             model0.filterForJson(row);
 
             //added/updated username - it's readonly so we can replace _id fields with names
@@ -431,11 +428,8 @@ public class FwVueController : FwDynamicController
         // fill added/updated too
         setAddUpdUser(ps, item);
 
-        if (!string.IsNullOrEmpty(model0.field_add_time)) item[model0.field_add_time] = fw.formatUserDateTime(item[model0.field_add_time] ?? "");
-        if (!string.IsNullOrEmpty(model0.field_upd_time)) item[model0.field_upd_time] = fw.formatUserDateTime(item[model0.field_upd_time] ?? "");
+        model0.filterForJson(item);        
 
-        model0.filterForJson(item);
-        
         ps["id"] = id;
         ps["i"] = item;
         ps["_json"] = true;
