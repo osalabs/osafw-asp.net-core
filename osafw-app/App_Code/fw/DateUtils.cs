@@ -5,24 +5,11 @@
 
 using System;
 using System.Text.RegularExpressions;
-using System.Threading;
 
 namespace osafw;
 
 public class DateUtils
 {
-    public const string DEFAULT_DATABASE_TZ = "Central Standard Time"; // timezone of the database server, default "UTC"
-    private static readonly AsyncLocal<string?> _databaseTimezone = new();
-
-    public static string DATABASE_TZ => _databaseTimezone.Value ?? DEFAULT_DATABASE_TZ;
-
-    public static void Configure(string? databaseTimezone)
-    {
-        _databaseTimezone.Value = string.IsNullOrEmpty(databaseTimezone)
-            ? DEFAULT_DATABASE_TZ
-            : databaseTimezone;
-    }
-
     // keep in sync with template/common/sel/date_format.sel
     public const int DATE_FORMAT_MDY = 0; // M/D/YYYY
     public const int DATE_FORMAT_DMY = 10; // D/M/YYYY
@@ -178,33 +165,6 @@ public class DateUtils
             format += " " + mapTimeFormat(time_format); // use format without seconds for input
         if (DateTime.TryParseExact(str, format, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out DateTime tmpdate))
             result = Date2SQL(tmpdate, is_time);
-
-        return result;
-    }
-
-    /// <summary>
-    /// convert SQL date to human date output, optionally convert from database timezone to user timezone
-    /// </summary>
-    /// <param name="sql_date"></param>
-    /// <param name="date_format"></param>
-    /// <param name="time_format"></param>
-    /// <param name="timezone"></param>
-    /// <returns></returns>
-    public static string SQL2Str(string sql_date, int date_format, int time_format, string timezone = "")
-    {
-        string result = "";
-        var dt = SQL2Date(sql_date);
-        if (dt != null)
-        {
-            if (!string.IsNullOrEmpty(timezone))
-            {
-                // convert from database timezone to user timezone
-                DateTime local_dt = convertTimezone((DateTime)dt, DATABASE_TZ, timezone);
-                result = local_dt.ToString(mapDateFormat(date_format) + " " + mapTimeFormat(time_format));
-            }
-            else
-                result = ((DateTime)dt).ToString(mapDateFormat(date_format) + " " + mapTimeFormat(time_format));
-        }
 
         return result;
     }
