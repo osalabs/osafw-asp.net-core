@@ -106,7 +106,7 @@ public class FW : IDisposable
     /// <summary>
     /// Convert an internal UTC datetime (DateTime or SQL string) into a user-visible string using the current user's timezone/format.
     /// </summary>
-    public string formatUserDateTime(object value)
+    public string formatUserDateTime(object value, bool isISO = false)
     {
         if (value == null)
             return "";
@@ -125,7 +125,14 @@ public class FW : IDisposable
             : DateTime.SpecifyKind((DateTime)dt, DateTimeKind.Utc);
 
         var local = DateUtils.convertTimezone(utc, DateUtils.TZ_UTC, userTimezone);
-        var format = DateUtils.mapDateFormat(userDateFormat) + " " + DateUtils.mapTimeFormat(userTimeFormat);
+
+        var format = "";
+        if (isISO)
+            //return in ISO format with timezone offset - for json
+            format = "yyyy-MM-ddTHH:mm:sszzz";
+        else
+            format = DateUtils.mapDateFormat(userDateFormat) + " " + DateUtils.mapTimeFormat(userTimeFormat);
+            
         return local.ToString(format);
     }
 

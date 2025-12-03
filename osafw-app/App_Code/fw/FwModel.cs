@@ -1295,7 +1295,7 @@ public abstract class FwModel : IDisposable
             }
             else if (fw_type == "datetime")
             {
-                item[fieldname] = fw.formatUserDateTime(item[fieldname]);
+                item[fieldname] = fw.formatUserDateTime(item[fieldname], true); //ISO format
             }
             // ADD OTHER CONVERSIONS HERE if necessary
         }
