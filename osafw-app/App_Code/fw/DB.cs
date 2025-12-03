@@ -244,6 +244,8 @@ public class DB : IDisposable
     protected readonly Hashtable conf = [];  // config contains: connection_string, type
     protected readonly string connstr = "";
     private TimeZoneInfo? timezoneInfo;
+    private bool isTimezoneInited;
+    private bool isTimezoneResolving;
 
     private string quotes = "[]"; // for SQL Server - [], for MySQL - `, for OLE - depends on provider
     private string sql_ole_identity = "SELECT @@identity"; // default OLE identity query
@@ -429,36 +431,58 @@ public class DB : IDisposable
     {
         get
         {
-            if (timezoneInfo != null)
-                return timezoneInfo;
-
-            var tzId = conf["timezone"].toStr();
-
-            if (string.IsNullOrEmpty(tzId))
-            {
-                var cache_key = $"{dbtype}:{connstr}";
-                if (!timezone_cache.TryGetValue(cache_key, out tzId) || string.IsNullOrEmpty(tzId))
-                {
-                    tzId = detectTimezoneFromDb();
-                    timezone_cache[cache_key] = tzId;
-                }
-            }
-
-            try
-            {
-                timezoneInfo = TimeZoneInfo.FindSystemTimeZoneById(tzId);
-            }
-            catch (Exception ex)
-            {
-                logger(LogLevel.WARN, "DB timezone resolve failed for ", db_name, " tz=", tzId, " error=", ex.Message);
-                timezoneInfo = TimeZoneInfo.Utc;
-            }
-
-            return timezoneInfo;
+            initTimezoneInfo(isAllowQuery: false); // make sure timezone is inited, but don't try to query (should already be called in connect())
+            return timezoneInfo ?? TimeZoneInfo.Utc;
         }
     }
 
     private bool isDbTimezoneUTC => DbTimezoneInfo.Id == TimeZoneInfo.Utc.Id;
+
+    private void initTimezoneInfo(bool isAllowQuery = true)
+    {
+        if (isTimezoneInited || isTimezoneResolving)
+            return;
+
+        timezoneInfo ??= TimeZoneInfo.Utc;
+        isTimezoneResolving = true;
+
+        try
+        {
+
+            var tzId = conf["timezone"].toStr();
+            var cache_key = $"{dbtype}:{connstr}";
+
+            if (string.IsNullOrEmpty(tzId))
+            {
+                if (!timezone_cache.TryGetValue(cache_key, out tzId) || string.IsNullOrEmpty(tzId))
+                {
+                    if (isAllowQuery)
+                    {
+                        tzId = detectTimezoneFromDb();
+                        timezone_cache[cache_key] = tzId;
+                    }
+                }
+            }
+
+            if (!string.IsNullOrEmpty(tzId))
+            {
+                try
+                {
+                    timezoneInfo = TimeZoneInfo.FindSystemTimeZoneById(tzId);
+                }
+                catch (Exception ex)
+                {
+                    logger(LogLevel.WARN, "DB timezone resolve failed for ", db_name, " tz=", tzId, " error=", ex.Message);
+                    timezoneInfo = TimeZoneInfo.Utc;
+                }
+                isTimezoneInited = true;
+            }
+        }
+        finally
+        {
+            isTimezoneResolving = false;
+        }
+    }
 
     /// <summary>
     /// connect to DB server using connection string defined in web.config appSettings, key db|main|connection_string (by default)
@@ -492,6 +516,9 @@ public class DB : IDisposable
         // if it's disconnected - re-connect
         if (conn.State != ConnectionState.Open)
             conn.Open();
+
+        if (!isTimezoneInited)
+            initTimezoneInfo();
 
         if (this.dbtype == DBTYPE_OLE)
             is_check_ole_types = true;
@@ -550,23 +577,27 @@ public class DB : IDisposable
 
     private string detectTimezoneFromDb()
     {
+        logger(LogLevel.INFO, "DB timezone autodetect for ", db_name, "...");
         try
         {
-            var tz_sql = dbtype switch
+            // get server offset in hours and minutes
+            var offset_sql = dbtype switch
             {
-                DBTYPE_SQLSRV => "SELECT DATENAME(TZOFFSET, SYSDATETIMEOFFSET()) AS Offset;",
+                DBTYPE_SQLSRV => "SELECT DATENAME(TZOFFSET, SYSDATETIMEOFFSET())",
 #if isMySQL
-                DBTYPE_MYSQL => "SELECT @@system_time_zone;",
+                DBTYPE_MYSQL => "SELECT TIME_FORMAT(TIMEDIFF(NOW(), UTC_TIMESTAMP), '%H:%i')", 
 #endif
                 _ => "",
             };
 
-            if (!string.IsNullOrEmpty(tz_sql))
+            if (!string.IsNullOrEmpty(offset_sql))
             {
-                var tz = valuep(tz_sql).toStr();
-                if (!string.IsNullOrEmpty(tz))
+                logger(LogLevel.INFO, "DB timezone autodetect query for ", db_name, ": ", offset_sql);
+                var hm_offset = valuep(offset_sql).toStr();
+                logger(LogLevel.INFO, "DB timezone autodetect offset for ", db_name, ": ", hm_offset);
+                if (!string.IsNullOrEmpty(hm_offset))
                 {
-                    if (dbtype == DBTYPE_SQLSRV && TimeSpan.TryParse(tz, out var offset))
+                    if (TimeSpan.TryParse(hm_offset, out var offset))
                     {
                         // match by current offset (includes DST) instead of BaseUtcOffset to avoid off-by-one-hour errors
                         var nowUtc = DateTime.UtcNow;
@@ -581,8 +612,6 @@ public class DB : IDisposable
                             return found.Id;
                         }
                     }
-                    else
-                        return tz;
                 }
             }
         }
