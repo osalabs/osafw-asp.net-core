@@ -459,7 +459,6 @@ public class DB : IDisposable
     }
 
     private bool isDbTimezoneUTC => DbTimezoneInfo.Id == TimeZoneInfo.Utc.Id;
-    }
 
     /// <summary>
     /// connect to DB server using connection string defined in web.config appSettings, key db|main|connection_string (by default)
@@ -1294,7 +1293,20 @@ public class DB : IDisposable
         }
 
         if (result is DateTime dt)
-            result = convertDbDateTimeToUtc(dt);
+        {
+            var isDateOnly = false;
+            try
+            {
+                var typeName = dbread.GetDataTypeName(0);
+                isDateOnly = string.Equals(typeName, "date", StringComparison.OrdinalIgnoreCase);
+            }
+            catch
+            {
+                // ignore metadata errors and fall back to datetime conversion
+            }
+
+            result = convertDbDateTimeToUtc(dt, isDateOnly);
+        }
 
         dbread.Close();
         return result;
