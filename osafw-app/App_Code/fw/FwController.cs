@@ -893,7 +893,7 @@ public abstract class FwController
             return typedModel;
 
         var modelName = model0?.GetType().Name ?? "<null>";
-        throw new InvalidOperationException($"Model {modelName} is not typed as {typeof(TRow).Name}.");
+        throw new InvalidOperationException($"Model {modelName} is not typed as {typeof(TRow).FullName}.");
     }
 
     public virtual int modelAddOrUpdate<TRow>(int id, TRow dto) where TRow : class, new()
