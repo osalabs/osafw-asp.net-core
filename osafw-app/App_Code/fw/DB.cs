@@ -569,9 +569,18 @@ public class DB : IDisposable
                 {
                     if (dbtype == DBTYPE_SQLSRV && TimeSpan.TryParse(tz, out var offset))
                     {
-                        var tzInfo = TimeZoneInfo.GetSystemTimeZones().FirstOrDefault(tzinfo => tzinfo.BaseUtcOffset == offset);
-                        if (tzInfo != null)
-                            return tzInfo.Id;
+                        // match by current offset (includes DST) instead of BaseUtcOffset to avoid off-by-one-hour errors
+                        var nowUtc = DateTime.UtcNow;
+                        var candidates = TimeZoneInfo.GetSystemTimeZones()
+                            .Where(tzinfo => tzinfo.GetUtcOffset(nowUtc) == offset)
+                            .ToList();
+
+                        if (candidates.Count > 0)
+                        {
+                            var preferred = candidates.FirstOrDefault(tzinfo => tzinfo.Id.EndsWith("Standard Time", StringComparison.OrdinalIgnoreCase));
+                            var found = preferred ?? candidates[0];
+                            return found.Id;
+                        }
                     }
                     else
                         return tz;

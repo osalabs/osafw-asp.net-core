@@ -420,8 +420,8 @@ public abstract class FwModel : IDisposable
                     }
                     else if (dt.Kind == DateTimeKind.Local)
                         item[fieldname] = dt.ToUniversalTime();
-                    else if (dt.Kind != DateTimeKind.Utc)
-                        item[fieldname] = DateTime.SpecifyKind(dt, DateTimeKind.Utc);
+                    else
+                        item[fieldname] = dt.Kind == DateTimeKind.Utc ? dt : DateTime.SpecifyKind(dt, DateTimeKind.Utc);
                 }
                 else if (item[fieldname] == DB.NOW)
                 {
