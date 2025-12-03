@@ -1291,7 +1291,12 @@ public abstract class FwModel : IDisposable
             }
             else if (fw_type == "date")
             {
-                item[fieldname] = DateUtils.Str2DateOnly(item[fieldname].toStr(), fw.userDateFormat);
+                DateTime? dt = item[fieldname] switch
+                {
+                    DateTime d => d,
+                    _ => DateUtils.SQL2Date(item[fieldname].toStr()),
+                };
+                item[fieldname] = dt == null ? "" : DateUtils.Date2SQL((DateTime)dt);
             }
             else if (fw_type == "datetime")
             {

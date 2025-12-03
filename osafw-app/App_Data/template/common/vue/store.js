@@ -332,7 +332,7 @@ let actions = {
         });
     },
 
-    // Date/Time formatting helpers (per-user formats & timezone)
+    // Date/Time formatting helpers (per-user formats, timezone already applied on backend)
     _userLocale() {
         // pick locale by user formats: MDY->en-US, DMY->en-GB
         const isDMY = (this.global.date_format ?? 0) == 10;
@@ -341,24 +341,24 @@ let actions = {
     _is24h() {
         return (this.global.time_format ?? 0) == 10;
     },
-    _timeZone() {
-        return this.global.timezone || 'UTC';
-    },
     _dateFromServer(value) {
         if (!value) return null;
         if (value instanceof Date) return value;
 
-        let t = String(value).trim();
+        const t = String(value).trim();
 
-        // already ISO with timezone or Z
-        const hasTimezone = /T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,7})?)?(Z|[+-]\d{2}:?\d{2})$/i.test(t);
-        if (!hasTimezone) {
-            // legacy SQL formats - assume UTC coming from backend
-            if (/^\d{4}-\d{2}-\d{2}$/.test(t)) {
-                t = `${t}T00:00:00Z`;
-            } else if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(t)) {
-                t = t.replace(' ', 'T') + 'Z';
-            }
+        // date only
+        const mDate = t.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (mDate) {
+            const [, y, m, d] = mDate;
+            return new Date(Number(y), Number(m) - 1, Number(d));
+        }
+
+        // datetime (ignore timezone offsets as backend already sends user timezone)
+        const mDateTime = t.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,7})?)?(?:Z|[+-]\d{2}:?\d{2})?$/i);
+        if (mDateTime) {
+            const [, y, m, d, hh, mm, ss = '0'] = mDateTime;
+            return new Date(Number(y), Number(m) - 1, Number(d), Number(hh), Number(mm), Number(ss));
         }
 
         const d = new Date(t);
@@ -369,20 +369,23 @@ let actions = {
     formatDate(value) {
         const d = this._dateFromServer(value);
         if (!d) return value ?? '';
-        return d.toLocaleDateString(this._userLocale(), { timeZone: this._timeZone() });
+        return new Intl.DateTimeFormat(this._userLocale(), {
+            year: 'numeric',
+            month: 'numeric',
+            day: 'numeric',
+        }).format(d);
     },
     formatDateTime(value, withSeconds = true) {
         const d = this._dateFromServer(value);
         if (!d) return value ?? '';
-        // build options per 12/24h, only format using user timezone provided by backend
+        // build options per 12/24h, use value as-is without timezone conversion
         const opts = {
-            timeZone: this._timeZone(),
             year: 'numeric', month: 'numeric', day: 'numeric',
             hour: '2-digit', minute: '2-digit',
             hour12: !this._is24h(),
         };
         if (withSeconds) opts.second = '2-digit';
-        return d.toLocaleString(this._userLocale(), opts);
+        return new Intl.DateTimeFormat(this._userLocale(), opts).format(d);
     },
 
     //save to store each key from data if such key exists in store
