@@ -577,7 +577,6 @@ public class DB : IDisposable
 
     private string detectTimezoneFromDb()
     {
-        logger(LogLevel.INFO, "DB timezone autodetect for ", db_name, "...");
         try
         {
             // get server offset in hours and minutes
@@ -592,9 +591,7 @@ public class DB : IDisposable
 
             if (!string.IsNullOrEmpty(offset_sql))
             {
-                logger(LogLevel.INFO, "DB timezone autodetect query for ", db_name, ": ", offset_sql);
                 var hm_offset = valuep(offset_sql).toStr();
-                logger(LogLevel.INFO, "DB timezone autodetect offset for ", db_name, ": ", hm_offset);
                 if (!string.IsNullOrEmpty(hm_offset))
                 {
                     if (TimeSpan.TryParse(hm_offset, out var offset))
