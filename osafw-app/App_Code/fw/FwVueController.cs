@@ -114,7 +114,7 @@ public class FwVueController : FwDynamicController
         {
             global[key] = fw.G[key];
         }
-        global["user_iname"] = fw.model<Users>().iname(fw.userId);
+        global["user_iname"] = fw.model<Users>().iname(fw.userId); 
         ps["global"] = global;
 
         setViewList(false); // initialize list_headers and related
@@ -428,7 +428,7 @@ public class FwVueController : FwDynamicController
         // fill added/updated too
         setAddUpdUser(ps, item);
 
-        model0.filterForJson(item);
+        model0.filterForJson(item);        
 
         ps["id"] = id;
         ps["i"] = item;
