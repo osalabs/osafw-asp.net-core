@@ -13,9 +13,9 @@ public class UserLists : FwModel<UserLists.Row>
     public class Row
     {
         public int id { get; set; }
-        public string entity { get; set; }
-        public string iname { get; set; }
-        public string idesc { get; set; }
+        public string entity { get; set; } = string.Empty;
+        public string iname { get; set; } = string.Empty;
+        public string idesc { get; set; } = string.Empty;
         public int status { get; set; }
         public DateTime add_time { get; set; }
         public int add_users_id { get; set; }
@@ -33,7 +33,7 @@ public class UserLists : FwModel<UserLists.Row>
 
     public int countItems(int id)
     {
-        return (int)db.value(table_items, new Hashtable() { { "user_lists_id", id } }, "count(*)");
+        return db.value(table_items, new Hashtable() { { "user_lists_id", id } }, "count(*)").toInt();
     }
 
     public ArrayList listSelectOptionsEntities()

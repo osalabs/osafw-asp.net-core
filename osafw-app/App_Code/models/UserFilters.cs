@@ -13,9 +13,9 @@ public class UserFilters : FwModel<UserFilters.Row>
     public class Row
     {
         public int id { get; set; }
-        public string icode { get; set; }
-        public string iname { get; set; }
-        public string idesc { get; set; }
+        public string icode { get; set; } = string.Empty;
+        public string iname { get; set; } = string.Empty;
+        public string idesc { get; set; } = string.Empty;
         public int is_system { get; set; }
         public int is_shared { get; set; }
         public int status { get; set; }

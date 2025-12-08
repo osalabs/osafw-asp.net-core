@@ -13,12 +13,12 @@ public class UserViews : FwModel<UserViews.Row>
     public class Row
     {
         public int id { get; set; }
-        public string icode { get; set; }
-        public string fields { get; set; }
-        public string iname { get; set; }
+        public string icode { get; set; } = string.Empty;
+        public string fields { get; set; } = string.Empty;
+        public string iname { get; set; } = string.Empty;
         public int is_system { get; set; }
         public int is_shared { get; set; }
-        public string density { get; set; }
+        public string density { get; set; } = string.Empty;
         public int status { get; set; }
         public DateTime add_time { get; set; }
         public int add_users_id { get; set; }
