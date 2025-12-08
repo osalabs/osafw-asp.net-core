@@ -87,7 +87,7 @@ public class DBRow : Dictionary<string, string>
     }
     public static explicit operator DBRow(Hashtable row)
     {
-        return row == null ? null : new DBRow(row);
+        return new DBRow(row ?? []);
     }
     public Hashtable toHashtable()
     {
@@ -139,7 +139,7 @@ public enum DBOps : int
 public class DBOperation
 {
     public DBOps op;
-    public string opstr; // string value for op
+    public string opstr = ""; // string value for op
     public bool is_value = true; // if false - operation is unary (no value)
     public object? value; // can be array for IN, NOT IN, OR
     public string sql = ""; // raw value to be used in sql query string if !is_value
@@ -328,7 +328,10 @@ public class DB : IDisposable
 
         Hashtable result = new(args.Length);
         for (var i = 0; i <= args.Length - 1; i += 2)
-            result[args[i]] = args[i + 1];
+        {
+            var key = args[i] ?? string.Empty;
+            result[key] = args[i + 1];
+        }
 
         return result;
     }
@@ -352,8 +355,8 @@ public class DB : IDisposable
     {
         this.conf = conf ?? throw new ArgumentNullException(nameof(conf));
 
-        this.dbtype = (string)this.conf["type"];
-        this.connstr = (string)this.conf["connection_string"];
+        this.dbtype = this.conf["type"].toStr();
+        this.connstr = this.conf["connection_string"].toStr();
 
         this.db_name = db_name;
 
@@ -371,8 +374,8 @@ public class DB : IDisposable
         this.conf["type"] = type;
         this.conf["connection_string"] = connstr;
 
-        this.dbtype = (string)this.conf["type"];
-        this.connstr = (string)this.conf["connection_string"];
+        this.dbtype = this.conf["type"].toStr();
+        this.connstr = this.conf["connection_string"].toStr();
 
         this.db_name = db_name;
 
@@ -494,7 +497,7 @@ public class DB : IDisposable
         // first, try to get connection from request cache (so we will use only one connection per db server - TBD make configurable?)
         if (conn == null && context != null)
         {
-            var db_cache = (Hashtable)context.Items["DB"] ?? [];
+            var db_cache = context.Items["DB"] as Hashtable ?? [];
             conn = db_cache[cache_key] as DbConnection;
         }
 
@@ -502,11 +505,11 @@ public class DB : IDisposable
         if (conn == null)
         {
             schema = []; // reset schema cache
-            conn = createConnection(connstr, (string)conf["type"]);
+            conn = createConnection(connstr, conf["type"].toStr());
             //if cache defined - store connection in request cache
             if (context != null)
             {
-                var db_cache = (Hashtable)context.Items["DB"] ?? [];
+                var db_cache = context.Items["DB"] as Hashtable ?? [];
                 if (conn != null)
                 {
                     db_cache[cache_key] = conn;
@@ -653,7 +656,7 @@ public class DB : IDisposable
     /// <summary>
     /// Normalize parameter values before sending to DB, converting UTC DateTime to DB timezone and preserving date-only values.
     /// </summary>
-    private object convertParamValue(object value)
+    private object? convertParamValue(object? value)
     {
         if (value == NOW)
             return value;
@@ -680,7 +683,7 @@ public class DB : IDisposable
     public DbTransaction begin()
     {
         connect();
-        tran = conn.BeginTransaction();
+        tran = conn!.BeginTransaction();
         return tran;
     }
 
@@ -800,29 +803,30 @@ public class DB : IDisposable
     /// </summary>
     /// <param name="sql"></param>
     /// <param name="params">if input params null - make empty hashtable</param>
-    private static void expandParams(ref string sql, ref Hashtable @params)
+    private static void expandParams(ref string sql, ref Hashtable? @params)
     {
-        if (@params != null)
+        if (@params == null)
         {
-            foreach (string p in @params.Keys.Cast<string>().ToList())
+            @params = [];
+            return;
+        }
+
+        foreach (string p in @params.Keys.Cast<string>().ToList())
+        {
+            if (@params[p] is IList arr)
             {
-                if (@params[p] is IList arr)
+                var arrstr = new StringBuilder();
+                for (var i = 0; i <= arr.Count - 1; i++)
                 {
-                    var arrstr = new StringBuilder();
-                    for (var i = 0; i <= arr.Count - 1; i++)
-                    {
-                        var pnew = p + "_" + i.ToString();
-                        @params[pnew] = arr[i];
-                        if (i > 0) arrstr.Append(',');
-                        arrstr.Append("@" + pnew);
-                    }
-                    sql = sql.Replace("@" + p, arrstr.ToString());
-                    @params.Remove(p);
+                    var pnew = p + "_" + i.ToString();
+                    @params[pnew] = arr[i];
+                    if (i > 0) arrstr.Append(',');
+                    arrstr.Append("@" + pnew);
                 }
+                sql = sql.Replace("@" + p, arrstr.ToString());
+                @params.Remove(p);
             }
         }
-        else
-            @params = [];
     }
 
     private void logQueryAndParams(string sql, Hashtable @params)
@@ -2248,10 +2252,12 @@ public class DB : IDisposable
             //}
 
             // skip any system tables or views (VIEW, ACCESS TABLE, SYSTEM TABLE)
-            if ((string)row["TABLE_TYPE"] != "TABLE" && (string)row["TABLE_TYPE"] != "BASE TABLE" && (string)row["TABLE_TYPE"] != "PASS-THROUGH")
+            var tableType = row["TABLE_TYPE"].toStr();
+            if (tableType != "TABLE" && tableType != "BASE TABLE" && tableType != "PASS-THROUGH")
                 continue;
-            string tblname = row["TABLE_NAME"].ToString();
-            result.Add(tblname);
+            string tblname = row["TABLE_NAME"].toStr();
+            if (tblname.Length > 0)
+                result.Add(tblname);
         }
 
         return result;
@@ -2266,10 +2272,11 @@ public class DB : IDisposable
         foreach (DataRow row in dataTable.Rows)
         {
             // skip non-views
-            if (row["TABLE_TYPE"].ToString() != "VIEW") continue;
+            if (row["TABLE_TYPE"].toStr() != "VIEW") continue;
 
-            string tblname = row["TABLE_NAME"].ToString();
-            result.Add(tblname);
+            string tblname = row["TABLE_NAME"].toStr();
+            if (tblname.Length > 0)
+                result.Add(tblname);
         }
 
         return result;
@@ -2280,9 +2287,11 @@ public class DB : IDisposable
         connect();
         loadTableSchema(table);
         field_name = field_name.ToLower();
-        if (!(schema[table]).ContainsKey(field_name))
+        if (!schema.TryGetValue(table, out var tableSchema) || !tableSchema.ContainsKey(field_name))
             return "";
-        string field_type = (string)schema[table][field_name];
+        string field_type = tableSchema[field_name].toStr();
+        if (field_type.Length == 0)
+            return "";
 
         string result;
         if (Regex.IsMatch(field_type, "int"))
@@ -2376,8 +2385,9 @@ public class DB : IDisposable
             result = arrayp(sql, DB.h("@table_name", table));
             foreach (Hashtable row in result)
             {
-                row["fw_type"] = mapTypeSQL2Fw((string)row["type"]); // meta type
-                row["fw_subtype"] = ((string)row["type"]).ToLower();
+                var subtype = row["type"].toStr();
+                row["fw_type"] = mapTypeSQL2Fw(subtype); // meta type
+                row["fw_subtype"] = subtype.ToLowerInvariant();
             }
         }
         else if (dbtype == DBTYPE_MYSQL)
@@ -2404,8 +2414,9 @@ public class DB : IDisposable
             result = arrayp(sql, DB.h("@table_name", table, "@db_name", conn.Database));
             foreach (Hashtable row in result)
             {
-                row["fw_type"] = mapTypeSQL2Fw((string)row["type"]); // meta type
-                row["fw_subtype"] = ((string)row["type"]).ToLower();
+                var subtype = row["type"].toStr();
+                row["fw_type"] = mapTypeSQL2Fw(subtype); // meta type
+                row["fw_subtype"] = subtype.ToLowerInvariant();
             }
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -2428,33 +2439,34 @@ public class DB : IDisposable
                 // DATETIME_PRECISION=0
                 // DESCRIPTION
                 var h = new Hashtable();
-                h["name"] = row["COLUMN_NAME"].ToString();
-                h["type"] = row["DATA_TYPE"];
-                h["fw_type"] = mapTypeOLE2Fw((int)row["DATA_TYPE"]); // meta type
-                h["fw_subtype"] = ((string)Enum.GetName(typeof(OleDbType), row["DATA_TYPE"]))?.ToLower(); // exact type as string
-                h["is_nullable"] = (bool)row["IS_NULLABLE"] ? 1 : 0;
+                var dataType = row["DATA_TYPE"].toInt();
+                h["name"] = row["COLUMN_NAME"].toStr();
+                h["type"] = dataType;
+                h["fw_type"] = mapTypeOLE2Fw(dataType); // meta type
+                h["fw_subtype"] = (Enum.GetName(typeof(OleDbType), dataType) ?? string.Empty).ToLowerInvariant(); // exact type as string
+                h["is_nullable"] = row["IS_NULLABLE"].toBool() ? 1 : 0;
                 h["default"] = row["COLUMN_DEFAULT"]; // "=Now()" "0" "No"
                 h["maxlen"] = row["CHARACTER_MAXIMUM_LENGTH"];
                 h["numeric_precision"] = row["NUMERIC_PRECISION"];
                 h["numeric_scale"] = row["NUMERIC_SCALE"];
                 h["charset"] = row["CHARACTER_SET_NAME"];
                 h["collation"] = row["COLLATION_NAME"];
-                h["pos"] = row["ORDINAL_POSITION"];
+                h["pos"] = row["ORDINAL_POSITION"].toInt();
                 h["is_identity"] = 0;
                 h["desc"] = row["DESCRIPTION"];
-                h["column_flags"] = row["COLUMN_FLAGS"];
+                h["column_flags"] = row["COLUMN_FLAGS"].toInt();
                 fieldslist.Add(h);
             }
 
             // order by ORDINAL_POSITION
-            fieldslist = [.. fieldslist.OrderBy(h => (long)h["pos"])];
+            fieldslist = [.. fieldslist.OrderBy(h => h["pos"].toLong())];
             result.AddRange(fieldslist);
 
             // now detect identity (because order is important)
             foreach (Hashtable h in result)
             {
                 // actually this also triggers for Long Integers, so for now - only first field that match conditions will be an identity
-                if ((int)h["type"] == (int)OleDbType.Integer && (int)h["column_flags"] == 90)
+                if (h["type"].toInt() == (int)OleDbType.Integer && h["column_flags"].toInt() == 90)
                 {
                     h["is_identity"] = 1;
                     break;
@@ -2569,7 +2581,7 @@ public class DB : IDisposable
         if (dbtype != DBTYPE_SQLSRV && dbtype != DBTYPE_OLE && dbtype != DBTYPE_MYSQL)
         {
             if (schema.Count == 0)
-                schema = (Dictionary<string, Hashtable>)conf["schema"];
+                schema = (Dictionary<string, Hashtable>?)conf["schema"] ?? new Dictionary<string, Hashtable>();
         }
 
         // check if schema already there
@@ -2587,7 +2599,12 @@ public class DB : IDisposable
         ArrayList fields = loadTableSchemaFull(table);
         Hashtable h = new(fields.Count);
         foreach (Hashtable row in fields)
-            h[row["name"].ToString().ToLower()] = row["fw_type"];
+        {
+            var fieldName = row["name"].toStr();
+            if (fieldName.Length == 0)
+                continue;
+            h[fieldName.ToLowerInvariant()] = row["fw_type"];
+        }
 
         schema[table] = h;
         connSchemaCache[table] = h;
