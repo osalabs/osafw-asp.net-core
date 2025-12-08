@@ -320,7 +320,7 @@ public class DB : IDisposable
     ///  </summary>
     ///  <param name="args">even number of args required</param>
     ///  <returns></returns>
-    public static Hashtable h(params object[] args)
+    public static Hashtable h(params object?[] args)
     {
         if (args.Length == 0) return [];
         if (args.Length % 2 != 0)
@@ -1166,7 +1166,7 @@ public class DB : IDisposable
         return readArray<T>(dbread);
     }
 
-    protected string buildSelectFields(ICollection aselect_fields = null)
+    protected string buildSelectFields(ICollection? aselect_fields = null)
     {
         string result = "*";
         if (aselect_fields != null)
@@ -1403,7 +1403,7 @@ public class DB : IDisposable
     {
         return insql(parameters.Split(","));
     }
-    public string insql(IList parameters)
+    public string insql(IList? parameters)
     {
         if (parameters == null || parameters.Count == 0)
             return " IN (NULL)";
@@ -1426,7 +1426,7 @@ public class DB : IDisposable
         return insqli(parameters.Split(","));
     }
 
-    public string insqli(IList parameters)
+    public string insqli(IList? parameters)
     {
         if (parameters == null || parameters.Count == 0)
             return " IN (NULL)";
@@ -1517,7 +1517,7 @@ public class DB : IDisposable
     }
 
     // if length defined - string will be Left(Trim(str),length) before quoted
-    public string q(string str, int length = 0)
+    public string q(string? str, int length = 0)
     {
         str ??= "";
 
@@ -1527,7 +1527,7 @@ public class DB : IDisposable
     }
 
     // simple just replace quotes, don't add start/end single quote - for example, for use with LIKE
-    public string qq(string str)
+    public string qq(string? str)
     {
         str ??= "";
 
@@ -1535,19 +1535,19 @@ public class DB : IDisposable
     }
 
     // simple quote as Integer Value
-    public int qi(object str)
+    public int qi(object? str)
     {
         return str.toInt();
     }
 
     // simple quote as Float Value
-    public double qf(object str)
+    public double qf(object? str)
     {
         return str.toFloat();
     }
 
     // simple quote as Decimal Value
-    public decimal qdec(object str)
+    public decimal qdec(object? str)
     {
         return str.toDecimal();
     }
