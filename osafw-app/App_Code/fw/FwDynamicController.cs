@@ -353,6 +353,12 @@ public class FwDynamicController : FwController
         this.validateCheckResult();
     }
 
+    public virtual void Validate<TRow>(int id, TRow dto) where TRow : class, new()
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+        Validate(id, dto.toHashtable());
+    }
+
     protected virtual bool validateRequiredDynamic(int id, Hashtable item)
     {
         var result = true;

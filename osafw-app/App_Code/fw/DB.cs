@@ -226,7 +226,6 @@ public class DB : IDisposable
     protected static ConcurrentDictionary<string, ConcurrentDictionary<string, Hashtable>> schema_cache = new(); // schema, connstr => table => [field => type]
     protected static ConcurrentDictionary<string, ConcurrentDictionary<string, Hashtable>> schema_fk_cache = new(); // foreign keys, connstr => table => [field => referenced table]
     protected static ConcurrentDictionary<string, string> timezone_cache = new(); // resolved db timezones per connection string
-    protected static ConcurrentDictionary<string, Dictionary<string, PropertyInfo>> class_mapping_cache = new(); // for converting DB object to class
 
     public static string last_sql = ""; // last executed sql
     public static int SQL_QUERY_CTR = 0; // counter for SQL queries during request
@@ -1023,12 +1022,12 @@ public class DB : IDisposable
     //read database row values into generic type
     protected T readRow<T>(DbDataReader dbread) where T : new()
     {
-        T result = new();
         if (!dbread.HasRows)
-            return result; //if no rows - return empty row
+            return default; //if no rows - return empty row
 
+        T result = new();
         var meta = getReaderMeta(dbread);
-        var props = getWritableProperties<T>();
+        var props = FwExtensions.getWritableProperties<T>();
         for (int i = 0; i < meta.FieldCount; i++)
         {
             if (meta.IsSkip[i]) continue;
@@ -1055,7 +1054,7 @@ public class DB : IDisposable
             else
                 value = dbread.GetValue(i);
 
-            setPropertyValue(result, props, meta.Names[i], value);
+            result.setPropertyValue(props, meta.Names[i], value);
         }
         return result;
     }
@@ -1095,8 +1094,8 @@ public class DB : IDisposable
     public DBRow rowp(string sql, Hashtable @params = null)
     {
         DbDataReader dbread = query(sql, @params);
-        dbread.Read();
-        var result = readRow(dbread);
+        var hasRow = dbread.Read();
+        var result = hasRow ? readRow(dbread) : [];
         dbread.Close();
         return result;
     }
@@ -1110,8 +1109,8 @@ public class DB : IDisposable
     public T rowp<T>(string sql, Hashtable @params = null) where T : new()
     {
         DbDataReader dbread = query(sql, @params);
-        dbread.Read();
-        var result = readRow<T>(dbread);
+        var hasRow = dbread.Read();
+        var result = hasRow ? readRow<T>(dbread) : default;
         dbread.Close();
         return result;
     }
@@ -1959,9 +1958,15 @@ public class DB : IDisposable
     public DBOperation opIN(params object[] args)
     {
         object values;
-        if (args.Length == 1 && (args[0].GetType().IsArray) || (args[0] is IList))
+        if (args.Length == 1)
         {
-            values = args[0];
+            var candidate = args[0];
+            if (candidate is string)
+                values = args;
+            else if (candidate is IEnumerable enumerable)
+                values = enumerable;
+            else
+                values = args;
         }
         else
         {
@@ -1983,9 +1988,15 @@ public class DB : IDisposable
     public DBOperation opNOTIN(params object[] args)
     {
         object values;
-        if (args.Length == 1 && (args[0].GetType().IsArray) || (args[0] is IList))
+        if (args.Length == 1)
         {
-            values = args[0];
+            var candidate = args[0];
+            if (candidate is string)
+                values = args;
+            else if (candidate is IEnumerable enumerable)
+                values = enumerable;
+            else
+                values = args;
         }
         else
         {
@@ -2061,7 +2072,7 @@ public class DB : IDisposable
         if (data == null)
             return 0;
 
-        var qp = buildInsert(table, toKeyValue(data));
+        var qp = buildInsert(table, data.toKeyValue());
 
         return insertQueryAndParams(qp);
     }
@@ -2093,7 +2104,7 @@ public class DB : IDisposable
     /// <returns></returns>
     public int update<T>(string table, T data, IDictionary where)
     {
-        var qp = buildUpdate(table, toKeyValue(data), where);
+        var qp = buildUpdate(table, data.toKeyValue(), where);
         return exec(qp.sql, qp.@params);
     }
 
@@ -2584,7 +2595,7 @@ public class DB : IDisposable
         schemafull_cache.Clear();
         schema_cache.Clear();
         schema.Clear();
-        class_mapping_cache.Clear();
+        FwExtensions.clearWritablePropertiesCache();
     }
 
     // This method for unit tests
@@ -2647,117 +2658,6 @@ public class DB : IDisposable
 
         return result;
     }
-
-    /// <summary>
-    /// Get writable properties of class T
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <returns></returns>
-    protected static Dictionary<string, PropertyInfo> getWritableProperties<T>()
-    {
-        Type type = typeof(T);
-        return class_mapping_cache.GetOrAdd(type.FullName, _ =>
-            type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                .Where(prop => prop.CanWrite)
-                .ToDictionary(prop =>
-                {
-                    var attr = prop.GetCustomAttribute<DBNameAttribute>(false);
-                    return attr?.Description ?? prop.Name;
-                }));
-    }
-
-    /// <summary>
-    /// To make this work generic class should gave get and set for every property that expected to be converted.
-    /// Use DBName attribute if field name in DB is defferent the in object class
-    /// 
-    /// Example:
-    /// class UsersRow
-    /// {
-    ///    public int id { get; set; }
-    ///    [DBName("iname")]
-    ///    public string name { get; set; }
-    /// }
-    /// var ht = new Hashtable() { { "id", 1 }, { "iname", "John" } };
-    /// var myClass = DB.toClass<UsersRow>(ht);
-    /// 
-    /// </summary>
-    /// <typeparam name="T">Class that hastable be converted to</typeparam>
-    /// <param name="kv">key-value pairs where keys has the same name as class properties</param>
-    /// <returns>class of passed generic type</returns>
-    public static T toClass<T>(IDictionary kv, Dictionary<string, PropertyInfo> props = null) where T : new()
-    {
-        ArgumentNullException.ThrowIfNull(kv);
-
-        T obj = new();
-
-        props ??= getWritableProperties<T>();
-        foreach (DictionaryEntry entry in kv)
-        {
-            string key = entry.Key?.ToString();
-            if (key == null)
-                continue;
-
-            setPropertyValue(obj, props, key, entry.Value);
-        }
-
-        return obj;
-    }
-
-    // convert list of IDictionaries to list of specific clas sobjects
-    public static List<T> toClass<T>(IList<IDictionary> list) where T : new()
-    {
-        ArgumentNullException.ThrowIfNull(list);
-        var result = new List<T>(list.Count);
-        var props = getWritableProperties<T>();
-        foreach (IDictionary kv in list)
-        {
-            result.Add(toClass<T>(kv, props));
-        }
-        return result;
-    }
-
-    public static Dictionary<string, object> toKeyValue<T>(T o)
-    {
-        Dictionary<string, object> result = [];
-
-        var props = getWritableProperties<T>();
-        foreach (var prop in props)
-        {
-            result[prop.Key] = prop.Value.GetValue(o);
-        }
-        return result;
-    }
-
-    /// <summary>
-    /// set property value of object according to field/value pair
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <param name="obj"></param>
-    /// <param name="props"></param>
-    /// <param name="field"></param>
-    /// <param name="value"></param>
-    protected static void setPropertyValue<T>(T obj, Dictionary<string, PropertyInfo> props, string field, object value) where T : new()
-    {
-        if (props.TryGetValue(field, out PropertyInfo property))
-        {
-            if (value == null)
-                property.SetValue(obj, null);
-            else
-            {
-                // Handle nullable types by extracting the underlying type if necessary
-                Type targetType = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
-
-                // Special handling for enums
-                object convertedValue;
-                if (targetType.IsEnum)
-                    convertedValue = Enum.Parse(targetType, value.ToString());
-                else
-                    convertedValue = Convert.ChangeType(value, targetType);
-                property.SetValue(obj, convertedValue);
-            }
-        }
-    }
-
 
     [SupportedOSPlatform("windows")]
     // map OLE type to FW's

@@ -8,8 +8,20 @@ using System.Collections;
 
 namespace osafw;
 
-public class RolesResourcesPermissions : FwModel
+public class RolesResourcesPermissions : FwModel<RolesResourcesPermissions.Row>
 {
+    public class Row
+    {
+        public int roles_id { get; set; }
+        public int resources_id { get; set; }
+        public int permissions_id { get; set; }
+        public int status { get; set; }
+        public DateTime add_time { get; set; }
+        public int add_users_id { get; set; }
+        public DateTime? upd_time { get; set; }
+        public int upd_users_id { get; set; }
+    }
+
     public const string CACHE_KEY_UPDATED = "roles_resources_permissions_updated";
 
     const string KEY_DELIM = "#";

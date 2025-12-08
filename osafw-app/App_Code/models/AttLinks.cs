@@ -3,12 +3,23 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2024 Oleg Savchuk www.osalabs.com
 
+using System;
 using System.Collections;
 
 namespace osafw;
 
-public class AttLinks : FwModel
+public class AttLinks : FwModel<AttLinks.Row>
 {
+    public class Row
+    {
+        public int att_id { get; set; }
+        public int fwentities_id { get; set; }
+        public int item_id { get; set; }
+        public int status { get; set; }
+        public DateTime add_time { get; set; }
+        public int add_users_id { get; set; }
+    }
+
     public const string field_entity = "fwentities_id";
 
     public AttLinks() : base()

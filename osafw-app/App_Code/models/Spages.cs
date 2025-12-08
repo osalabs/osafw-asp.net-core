@@ -10,8 +10,35 @@ using System.Text.RegularExpressions;
 
 namespace osafw;
 
-public class Spages : FwModel
+public class Spages : FwModel<Spages.Row>
 {
+    public class Row
+    {
+        public int id { get; set; }
+        public int parent_id { get; set; }
+        public string url { get; set; }
+        public string iname { get; set; }
+        public string idesc { get; set; }
+        public int? head_att_id { get; set; }
+        public string idesc_left { get; set; }
+        public string idesc_right { get; set; }
+        public string meta_keywords { get; set; }
+        public string meta_description { get; set; }
+        public DateTime? pub_time { get; set; }
+        public string template { get; set; }
+        public int prio { get; set; }
+        public int is_home { get; set; }
+        public string redirect_url { get; set; }
+        public string custom_head { get; set; }
+        public string custom_css { get; set; }
+        public string custom_js { get; set; }
+        public int status { get; set; }
+        public DateTime add_time { get; set; }
+        public int add_users_id { get; set; }
+        public DateTime? upd_time { get; set; }
+        public int upd_users_id { get; set; }
+    }
+
     public Spages() : base()
     {
         table_name = "spages";
