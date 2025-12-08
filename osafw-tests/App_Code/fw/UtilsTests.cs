@@ -771,8 +771,8 @@ namespace osafw.Tests
             Assert.AreEqual("newValue3", ((Hashtable)rows3[1])["key3"]);
 
             // Case 4: Null rows and null fields
-            Assert.ThrowsException<NullReferenceException>(() => Utils.arrayInject(null, []), "Null rows should throw ArgumentNullException");
-            Assert.ThrowsException<NullReferenceException>(() => Utils.arrayInject([new Hashtable { { "key1", "value1" } }], null), "Null fields should throw ArgumentNullException");
+            Assert.ThrowsExactly<NullReferenceException>(() => Utils.arrayInject(null, []), "Null rows should throw ArgumentNullException");
+            Assert.ThrowsExactly<NullReferenceException>(() => Utils.arrayInject([new Hashtable { { "key1", "value1" } }], null), "Null fields should throw ArgumentNullException");
         }
 
         [TestMethod()]
@@ -904,7 +904,7 @@ namespace osafw.Tests
             Assert.AreEqual("Children", Utils.name2human("children"));
 
             // Case 7: Null input
-            Assert.ThrowsException<System.NullReferenceException>(() => Utils.name2human(null));
+            Assert.ThrowsExactly<System.NullReferenceException>(() => Utils.name2human(null));
         }
 
         [TestMethod()]

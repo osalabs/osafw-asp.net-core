@@ -103,17 +103,44 @@ public class FW : IDisposable
         get { return G["timezone"].toStr(DateUtils.TZ_UTC); }
     }
 
+    /// <summary>
+    /// Convert an internal UTC datetime (DateTime or SQL string) into a user-visible string using the current user's timezone/format.
+    /// </summary>
+    public string formatUserDateTime(object value, bool isISO = false)
+    {
+        if (value == null)
+            return "";
+
+        DateTime? dt = value switch
+        {
+            DateTime d => d,
+            _ => DateUtils.SQL2Date(value.toStr()),
+        };
+
+        if (dt == null)
+            return "";
+
+        var utc = ((DateTime)dt).Kind == DateTimeKind.Utc
+            ? (DateTime)dt
+            : DateTime.SpecifyKind((DateTime)dt, DateTimeKind.Utc);
+
+        var local = DateUtils.convertTimezone(utc, DateUtils.TZ_UTC, userTimezone);
+
+        var format = "";
+        if (isISO)
+            //return in ISO format with timezone offset - for json
+            format = "yyyy-MM-ddTHH:mm:sszzz";
+        else
+            format = DateUtils.mapDateFormat(userDateFormat) + " " + DateUtils.mapTimeFormat(userTimeFormat);
+            
+        return local.ToString(format);
+    }
+
     // shortcut to obtain if we working under logged in user
     // usage: fw.isLogged
     public bool isLogged
     {
         get { return userId > 0; }
-    }
-
-    // helper to convert date from database SQL format to logged user format
-    public string formatUserDateTime(object o)
-    {
-        return DateUtils.SQL2Str(o.toStr(), userDateFormat, userTimeFormat, userTimezone);
     }
 
     // helper to initialize DB instance based on configuration name
@@ -957,7 +984,7 @@ public class FW : IDisposable
                 DateFormat = DateFormat,
                 DateFormatShort = DateFormatShort,
                 DateFormatLong = DateFormatLong,
-                InputTimezone = DateUtils.DATABASE_TZ,
+                // data arrives in UTC; ParsePage uses its default InputTimezone (UTC) and converts output for the user
                 OutputTimezone = userTimezone,
             });
         }

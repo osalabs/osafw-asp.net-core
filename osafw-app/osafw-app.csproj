@@ -1,28 +1,26 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>osafw</RootNamespace>
-    <LibManRestoreOnBuild>false</LibManRestoreOnBuild>
-    <LibManRestoreOnPublish>false</LibManRestoreOnPublish>
-    <LibraryRestore>False</LibraryRestore>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AWSSDK.S3" Version="4.0.0.7" />
+    <PackageReference Include="AWSSDK.S3" Version="4.0.11.3" />
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
     <PackageReference Include="DocumentFormat.OpenXml" Version="3.3.0" />
-    <PackageReference Include="Markdig" Version="0.41.1" />
-    <PackageReference Include="Microsoft.Playwright" Version="1.52.0" />
-    <PackageReference Include="Microsoft.Extensions.Caching.SqlServer" Version="9.0.5" />
-    <PackageReference Include="Microsoft.SemanticKernel" Version="1.54.0" />
+    <PackageReference Include="Markdig" Version="0.43.0" />
+    <PackageReference Include="Microsoft.Playwright" Version="1.56.0" />
+    <PackageReference Include="Microsoft.Extensions.Caching.SqlServer" Version="10.0.0" />
+    <PackageReference Include="Microsoft.SemanticKernel" Version="1.67.1" />
     <PackageReference Include="Microsoft.Web.LibraryManager.Build" Version="3.0.71" />
     <PackageReference Include="Otp.NET" Version="1.4.0" />
-    <PackageReference Include="QRCoder" Version="1.6.0" />
-    <PackageReference Include="System.Data.Odbc" Version="9.0.5" />
-    <PackageReference Include="System.Data.OleDb" Version="9.0.5" />
-    <PackageReference Include="System.Drawing.Common" Version="9.0.5" />
-    <PackageReference Include="Cronos" Version="0.11.0" />
+    <PackageReference Include="QRCoder" Version="1.7.0" />
+    <PackageReference Include="System.Data.Odbc" Version="10.0.0" />
+    <PackageReference Include="System.Data.OleDb" Version="10.0.0" />
+    <PackageReference Include="System.Drawing.Common" Version="10.0.0" />
+    <PackageReference Include="Cronos" Version="0.11.1" />
     
     <!-- uncomment if use Windows authentication -->
     <!--PackageReference Include="Microsoft.AspNetCore.Authentication.Negotiate" Version="7.0.10" /-->

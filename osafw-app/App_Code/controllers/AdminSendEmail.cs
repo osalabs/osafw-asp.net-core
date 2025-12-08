@@ -33,7 +33,7 @@ public class AdminSendEmailController : FwAdminController
             ["port"] = mailSettings["port"].toInt(),
             ["username"] = mailSettings["username"].toStr(),
             ["password"] = mailSettings["password"].toStr(),
-            ["is_ssl"] = mailSettings["is_ssl"].toInt(),
+            ["is_ssl"] = mailSettings["is_ssl"].toBool()
         };
     }
 

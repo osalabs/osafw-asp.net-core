@@ -871,7 +871,7 @@ public abstract class FwController
     public virtual int modelAddOrUpdate(int id, Hashtable fields)
     {
         // make conversions
-        // - for date/time fields - convert from user format to SQL format
+        // - for date/time fields - convert from user format to UTC/SQL format
         model0.convertUserInput(fields);
 
         if (id > 0)
@@ -1341,7 +1341,7 @@ public abstract class FwController
         }
         else if (conversion == "datetime")
         {
-            data = fw.formatUserDateTime(data);
+            data = fw.formatUserDateTime(row[fieldname]);
         }
         return data;
     }
