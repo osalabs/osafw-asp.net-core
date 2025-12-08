@@ -243,7 +243,7 @@ public class Utils
     /// </summary>
     /// <param name="o"></param>
     /// <returns></returns>
-    public static bool isDate(object o)
+    public static bool isDate(object? o)
     {
         var dt = o.toDateOrNull();
         return dt != null && ((DateTime)dt) != DateTime.MinValue;

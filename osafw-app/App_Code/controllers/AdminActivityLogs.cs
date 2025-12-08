@@ -14,13 +14,13 @@ public class AdminActivityLogsController : FwController
 {
     public static new int access_level = Users.ACL_MEMBER; // any logged in user can add comments
 
-    protected FwActivityLogs model;
+    protected FwActivityLogs model = null!;
 
     public override void init(FW fw)
     {
         base.init(fw);
         model0 = fw.model<FwActivityLogs>();
-        model = model0 as FwActivityLogs;
+        model = (FwActivityLogs)model0;
 
         base_url = "/Admin/ActivityLogs";
         db = model.getDB();
@@ -33,12 +33,12 @@ public class AdminActivityLogsController : FwController
             return_url = (string)fw.config("LOGGED_DEFAULT_URL");
     }
 
-    public virtual Hashtable IndexAction()
+    public virtual Hashtable? IndexAction()
     {
         //if error - save it to flash as we doing redirect
         if (!Utils.isEmpty(fw.G["err_msg"]))
         {
-            fw.flash("error", fw.G["err_msg"]);
+            fw.flash("error", fw.G["err_msg"]!);
             if (fw.FormErrors.Count > 0) logger(fw.FormErrors);
         }
         fw.redirect(return_url);
@@ -47,7 +47,7 @@ public class AdminActivityLogsController : FwController
 
     //save new comment/note or custom event
     //requires
-    public virtual Hashtable SaveAction(int id = 0)
+    public virtual Hashtable? SaveAction(int id = 0)
     {
         route_onerror = FW.ACTION_INDEX;
 
