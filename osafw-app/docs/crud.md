@@ -1,11 +1,14 @@
 # CRUD workflows with `FwModel`
 
-The framework offers two complementary ways to work with database rows. You can keep using lightweight `Hashtable`/`ArrayList` collections for maximum flexibility, or describe your rows as strongly typed DTOs by inheriting from `FwModel<TRow>`. Both flows share the same routing, permissions, and caching behaviour, so you can pick whichever fits each controller.
+The framework offers two complementary ways to work with database rows. 
+You can keep using lightweight `Hashtable`/`ArrayList` collections for maximum flexibility, or describe your rows as strongly typed DTOs by inheriting from `FwModel<TRow>`. 
+Both flows share the same routing, permissions, and caching behaviour, so you can pick whichever fits each controller.
 
 ## Hashtable workflow
 
 ### Why use Hashtables?
-Hashtable-based models were selected for the initial release because they are quick to scaffold and easy to extend. A row is simply a set of key/value pairs, making it trivial to add optional fields, merge dynamic metadata, or echo submitted data back to templates without defining dedicated classes.
+Hashtable-based models were selected for the initial release because they are quick to scaffold and easy to extend. 
+A row is simply a set of key/value pairs, making it trivial to add optional fields, merge dynamic metadata, or echo submitted data back to templates without defining dedicated classes.
 
 ### Model setup
 ```csharp
@@ -75,7 +78,8 @@ public override int SaveAction(int id = 0)
 ## Typed workflow
 
 ### When to choose DTOs?
-Typed rows shine when you prefer compile-time checks, IDE navigation, and consistent naming across controllers, models, and templates. They are ideal once your schema stabilises or when business logic benefits from strongly typed properties.
+Typed rows shine when you prefer compile-time checks, IDE navigation, and consistent naming across controllers, models, and templates. 
+They are ideal once your schema stabilises or when business logic benefits from strongly typed properties.
 
 ### Model setup
 ```csharp
@@ -119,7 +123,7 @@ var users = fw.model<Users>();
 var dto = new Users.Row
 {
     // No need to set id here; add() will populate it on success
-    title = "Alice",
+    title = "Alice",                              // maps to iname
     status = FwModel.STATUS_ACTIVE,
 };
 int id = users.add(dto);                          // insert DTO
@@ -135,7 +139,9 @@ users.delete(id);                                 // soft delete (status=127)
 // or fall back to the Hashtable overload: users.update(id, new Hashtable { ["status"] = FwModel.STATUS_INACTIVE });
 ```
 
-`FwModel.add(TRow dto)` writes any generated identity or audit columns back onto the DTO, so the `id` property stays in sync without extra queries. For partial updates stick with the loaded DTO instance (ensuring unchanged fields remain intact) or call the Hashtable overload to patch a narrow set of columns without constructing temporary classes.
+`FwModel.add(TRow dto)` writes any generated identity or audit columns back onto the DTO, so the `id` property stays in sync without extra queries. 
+For partial updates stick with the loaded DTO instance (ensuring unchanged fields remain intact) 
+or call the Hashtable overload to patch a narrow set of columns without constructing temporary classes.
 
 ### Controllers
 ```csharp

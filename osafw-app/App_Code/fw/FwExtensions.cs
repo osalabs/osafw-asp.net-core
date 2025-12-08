@@ -107,6 +107,18 @@ public static class FwExtensions
         return obj;
     }
 
+    /// <summary>
+    /// Creates a new instance of type T and populates its writable properties with values from the specified
+    /// dictionary.
+    /// </summary>
+    /// <remarks>Only writable properties of type T are populated. If a property in T does not have a
+    /// corresponding key in the dictionary, its value is not set. Type conversion may occur if the dictionary value
+    /// type differs from the property type. This method does not populate read-only properties.</remarks>
+    /// <typeparam name="T">The type of object to create and populate. Must have a public parameterless constructor.</typeparam>
+    /// <param name="kv">The dictionary containing property names and values to assign to the new object. Keys should correspond to
+    /// property names of type T.</param>
+    /// <returns>A new instance of type T with its writable properties set to the corresponding values from the dictionary.
+    /// Properties without matching keys remain at their default values.</returns>
     public static T to<T>(this IDictionary kv) where T : new()
     {
         ArgumentNullException.ThrowIfNull(kv);
@@ -115,6 +127,18 @@ public static class FwExtensions
         return populateObject(kv, props, new T());
     }
 
+    /// <summary>
+    /// Converts an <see cref="IList"/> of objects to a list of type <typeparamref name="T"/>, mapping dictionary
+    /// entries or key-value pairs to properties of <typeparamref name="T"/> where possible.
+    /// </summary>
+    /// <remarks>Items in <paramref name="rows"/> that are <see langword="null"/> are skipped. If an item is
+    /// an <see cref="IDictionary"/> or convertible to key-value pairs, its entries are mapped to writable properties of
+    /// <typeparamref name="T"/> by name. Items already of type <typeparamref name="T"/> are added directly.</remarks>
+    /// <typeparam name="T">The type of objects to create for each item in the list. Must have a public parameterless constructor.</typeparam>
+    /// <param name="rows">The collection of items to convert. Each item may be an instance of <typeparamref name="T"/>, an <see
+    /// cref="IDictionary"/>, or an object convertible to key-value pairs. Cannot be <see langword="null"/>.</param>
+    /// <returns>A <see cref="List{T}"/> containing the converted items. The list will be empty if <paramref name="rows"/>
+    /// contains no items.</returns>
     public static List<T> toList<T>(this IList rows) where T : new()
     {
         ArgumentNullException.ThrowIfNull(rows);
@@ -148,7 +172,18 @@ public static class FwExtensions
 
         return result;
     }
-
+    
+    /// <summary>
+    /// Converts an object to a dictionary of key-value pairs, using property names as keys and property values as
+    /// values.
+    /// </summary>
+    /// <remarks>If the input object is a dictionary, its entries are copied with case-insensitive keys. For
+    /// other objects, only public writable properties are included. This method is useful for serializing objects or
+    /// preparing data for APIs that require key-value pairs.</remarks>
+    /// <param name="dto">The object to convert to a key-value dictionary. Cannot be null. If the object is already a dictionary, its
+    /// entries are copied; otherwise, public writable properties are used.</param>
+    /// <returns>A dictionary containing the object's properties and their values, or the original dictionary's entries if the
+    /// object is a dictionary. Keys are compared using case-insensitive ordinal comparison.</returns>
     public static Dictionary<string, object> toKeyValue(this object dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
@@ -178,6 +213,17 @@ public static class FwExtensions
         return kv;
     }
 
+    /// <summary>
+    /// Converts the specified object to a <see cref="System.Collections.Hashtable"/> representation, mapping its
+    /// properties or dictionary entries to key-value pairs.
+    /// </summary>
+    /// <remarks>If <paramref name="dto"/> is already a <see cref="System.Collections.Hashtable"/>, a shallow
+    /// clone is returned. If it is an <see cref="System.Collections.IDictionary"/>, its entries are copied. For other
+    /// objects, all writable properties are included as keys in the resulting hashtable.</remarks>
+    /// <param name="dto">The object to convert. Can be a dictionary, hashtable, or an object with writable properties. If <paramref
+    /// name="dto"/> is <see langword="null"/>, an empty hashtable is returned.</param>
+    /// <returns>A <see cref="System.Collections.Hashtable"/> containing the key-value pairs from the input object. Returns an
+    /// empty hashtable if <paramref name="dto"/> is <see langword="null"/>.</returns>
     public static Hashtable toHashtable(this object dto)
     {
         if (dto is null)
@@ -204,6 +250,17 @@ public static class FwExtensions
         return htResult;
     }
 
+    /// <summary>
+    /// Populates the writable properties of the specified object with values from the given key-value dictionary.
+    /// </summary>
+    /// <remarks>Only writable properties of <paramref name="dto"/> that match keys in <paramref name="kv"/>
+    /// will be set. Properties without corresponding keys in the dictionary remain unchanged. This method does not
+    /// perform type conversion; values in the dictionary must be compatible with the property types.</remarks>
+    /// <typeparam name="T">The type of the object whose properties will be set. Must be a reference type.</typeparam>
+    /// <param name="kv">An <see cref="IDictionary"/> containing key-value pairs to apply to the object's properties. Keys should
+    /// correspond to property names.</param>
+    /// <param name="dto">The object whose writable properties will be set using values from <paramref name="kv"/>. Cannot be <see
+    /// langword="null"/>.</param>
     public static void applyTo<T>(this IDictionary kv, T dto)
     {
         ArgumentNullException.ThrowIfNull(kv);
@@ -213,6 +270,17 @@ public static class FwExtensions
         populateObject(kv, props, dto);
     }
 
+    /// <summary>
+    /// Retrieves a dictionary of public readable property and field names mapped to delegates that return their values
+    /// for the specified object instance.
+    /// </summary>
+    /// <remarks>Property and field names are compared using case-insensitive ordinal comparison. Indexed
+    /// properties are excluded. The returned delegates handle exceptions by returning null if a member cannot be
+    /// accessed. The dictionary is cached per type for improved performance.</remarks>
+    /// <param name="obj">The object instance whose public readable properties and fields are to be accessed. Cannot be null.</param>
+    /// <returns>A dictionary where each key is the name of a public readable property or field, and each value is a delegate
+    /// that, when invoked with the object instance, returns the corresponding property's or field's value. If a member
+    /// cannot be read, the delegate returns null.</returns>
     public static Dictionary<string, Func<object, object>> getReadableMembers(this object obj)
     {
         ArgumentNullException.ThrowIfNull(obj);
@@ -256,6 +324,14 @@ public static class FwExtensions
         });
     }
 
+    /// <summary>
+    /// Retrieves the value of a public property or field from the specified object by its member name.
+    /// </summary>
+    /// <remarks>This method uses reflection to access public properties and fields. Only readable members are
+    /// considered. If the member does not exist or is not readable, the method returns null.</remarks>
+    /// <param name="obj">The object instance from which to retrieve the member value. Cannot be null.</param>
+    /// <param name="memberName">The name of the public property or field to retrieve. If null or empty, the method returns null.</param>
+    /// <returns>The value of the specified member if found; otherwise, null.</returns>
     public static object valueByMemberName(this object obj, string memberName)
     {
         ArgumentNullException.ThrowIfNull(obj);
