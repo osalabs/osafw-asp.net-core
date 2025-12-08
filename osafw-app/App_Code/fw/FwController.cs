@@ -1209,9 +1209,15 @@ public abstract class FwController
     public virtual void setAddUpdUser(Hashtable ps, Hashtable item)
     {
         if (!string.IsNullOrEmpty(model0.field_add_users_id) && item.ContainsKey(model0.field_add_users_id))
-            ps["add_users_id_name"] = fw.model<Users>().iname(item[model0.field_add_users_id]);
+        {
+            var addUsersId = item[model0.field_add_users_id];
+            ps["add_users_id_name"] = addUsersId == null ? "" : fw.model<Users>().iname(addUsersId);
+        }
         if (!string.IsNullOrEmpty(model0.field_upd_users_id) && item.ContainsKey(model0.field_upd_users_id))
-            ps["upd_users_id_name"] = fw.model<Users>().iname(item[model0.field_upd_users_id]);
+        {
+            var updUsersId = item[model0.field_upd_users_id];
+            ps["upd_users_id_name"] = updUsersId == null ? "" : fw.model<Users>().iname(updUsersId);
+        }
     }
 
     // ********************************** dynamic controller support

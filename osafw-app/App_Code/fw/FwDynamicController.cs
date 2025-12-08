@@ -900,7 +900,10 @@ public class FwDynamicController : FwController
                 {
                     // select options
                     var options = def["options"] as Hashtable;
-                    def["value"] = options[item[field]];
+                    if (options != null && options.ContainsKey(item[field]))
+                        def["value"] = options[item[field]];
+                    else
+                        def["value"] = "";
                 }
                 else
                     def["value"] = item[field];
@@ -1434,7 +1437,7 @@ public class FwDynamicController : FwController
     /// <param name="fields"></param>
     /// <param name="field_name"></param>
     /// <returns></returns>
-    protected Hashtable defByFieldname(string field_name, ArrayList fields)
+    protected Hashtable? defByFieldname(string field_name, ArrayList fields)
     {
         foreach (Hashtable def in fields)
         {

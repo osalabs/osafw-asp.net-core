@@ -334,7 +334,7 @@ public class Utils
     /// </summary>
     /// <param name="o"></param>
     /// <returns></returns>
-    public static bool isFloat(object o)
+    public static bool isFloat(object? o)
     {
         return o != null && double.TryParse(o.ToString(), out double _);
     }
@@ -344,7 +344,7 @@ public class Utils
     /// </summary>
     /// <param name="o"></param>
     /// <returns></returns>
-    public static bool isInt(object o)
+    public static bool isInt(object? o)
     {
         return o != null && int.TryParse(o.ToString(), out int _);
     }
@@ -354,7 +354,7 @@ public class Utils
     /// </summary>
     /// <param name="o"></param>
     /// <returns></returns>
-    public static bool isLong(object o)
+    public static bool isLong(object? o)
     {
         return o != null && long.TryParse(o.ToString(), out long _);
     }
@@ -372,7 +372,7 @@ public class Utils
     /// </summary>
     /// <param name="o"></param>
     /// <returns></returns>
-    public static bool isEmpty(object o)
+    public static bool isEmpty(object? o)
     {
         if (o == null) return true;
         if (o is string s) return s.Trim() == "";
@@ -415,11 +415,11 @@ public class Utils
     /// </summary>
     /// <param name="ext">extension - doc, .jpg, ... (dot is optional)</param>
     /// <returns></returns>
-    public static string ext2mime(string ext)
+    public static string ext2mime(string? ext)
     {
         Hashtable mime_map = qh(MIME_MAP);
-        ext = ext.ToLower(); //to lower
-                             //remove first dot if any
+        ext = ext.toStr().ToLower(); //to lower
+                                    //remove first dot if any
         if (ext.StartsWith('.'))
             ext = ext[1..];
 
@@ -537,6 +537,8 @@ public class Utils
         {
             fields = Utils.qw(csv_export_fields);
         }
+
+        fields ??= Array.Empty<string>();
 
         csv.Append(headers_str + "\r\n");
         foreach (Hashtable row in rows)
@@ -934,7 +936,7 @@ public class Utils
     // convert all values in hierarchical Hashtable/ArrayList json structure to strings
     // returns new object
     // RECURSIVE
-    public static object jsonStringifyValues(object json)
+    public static object jsonStringifyValues(object? json)
     {
         if (json is Hashtable ht)
         {
@@ -1488,9 +1490,9 @@ public class Utils
 
     // convert/normalize external table/field name to fw standard name
     // "SomeCrazy/Name" => "some_crazy_name"
-    public static string name2fw(string str)
+    public static string name2fw(string? str)
     {
-        string result = str;
+        string result = str ?? string.Empty;
         result = Regex.Replace(result, @"^tbl|dbo", "", RegexOptions.IgnoreCase); // remove tbl,dbo prefixes if any
         result = Regex.Replace(result, @"([A-Z]+)", "_$1"); // split CamelCase to underscore, but keep abbrs together ZIP/Code -> zip_code
 
@@ -1505,9 +1507,9 @@ public class Utils
 
     // convert some system name to human-friendly name'
     // "system_name_id" => "System Name ID"
-    public static string name2human(string str)
+    public static string name2human(string? str)
     {
-        string str_lc = str.ToLower();
+        string str_lc = (str ?? string.Empty).ToLower();
         if (str_lc == "icode") return "Code";
         if (str_lc == "iname") return "Name";
         if (str_lc == "idesc") return "Description";

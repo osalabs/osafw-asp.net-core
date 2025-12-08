@@ -1506,9 +1506,9 @@ public class DB : IDisposable
         return "[" + str + "]";
     }
 
-    public string q(object str, int length = 0)
+    public string q(object? str, int length = 0)
     {
-        return q((string)str, length);
+        return q(str.toStr(), length);
     }
 
     // if length defined - string will be Left(Trim(str),length) before quoted
