@@ -1249,9 +1249,9 @@ public abstract class FwController
 
             foreach (string k in keys)
             {
-                // Dim v = Replace(k, "&nbsp;", " ")
-                // Dim asub() As String = Split(v, "|", 2)
-                // If UBound(asub) < 1 Then Throw New ApplicationException("Wrong Format for view_list_map")
+                // var v = k.Replace("&nbsp;", " ");
+                // var parts = v.Split('|', 2);
+                // if (parts.Length < 2) throw new ApplicationException("Wrong Format for view_list_map");
                 if (fields_added.ContainsKey(k))
                     continue;
 

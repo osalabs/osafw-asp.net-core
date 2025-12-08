@@ -231,8 +231,8 @@ public class S3 : FwModel
     }
 
     // alternative hi-level way to upload - use TransferUtility
-    // Dim fileTransferUtility = New Amazon.S3.Transfer.TransferUtility(client)
-    // fileTransferUtility.Upload()
+    // var fileTransferUtility = new Amazon.S3.Transfer.TransferUtility(client);
+    // fileTransferUtility.Upload(file.OpenReadStream(), this.bucket, this.root + key);
 
     /// <summary>
     /// download file from S3 to specific local filepath

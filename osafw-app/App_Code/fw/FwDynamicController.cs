@@ -321,7 +321,7 @@ public class FwDynamicController : FwController
 
         Validate(id, item);
         // load old record if necessary
-        // Dim item_old As Hashtable = modelOne(id)
+        // var itemOld = modelOne(id);
 
         Hashtable itemdb = FormUtils.filter(item, this.save_fields);
         FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());

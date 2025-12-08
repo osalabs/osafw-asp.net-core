@@ -124,7 +124,7 @@ public class AdminDemosController : FwAdminController
 
         Validate(id, item);
         // load old record if necessary
-        // Dim item_old As Hashtable = model.one(id)
+        // var itemOld = model.one(id);
 
         Hashtable itemdb = FormUtils.filter(item, this.save_fields);
         FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
