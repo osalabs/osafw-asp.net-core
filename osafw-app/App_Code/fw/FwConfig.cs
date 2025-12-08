@@ -21,7 +21,7 @@ public static class FwConfig
     public static string hostname => (settings?["hostname"] as string) ?? "";
 
     /// <summary>Per-request, host-specific settings bucket.</summary>
-    public static Hashtable settings { get => _current.Value; private set => _current.Value = value; }
+    public static Hashtable settings { get => _current.Value ??= new Hashtable(); private set => _current.Value = value; }
 
     // internals
     private static readonly AsyncLocal<Hashtable> _current = new();                // per-async-flow bucket
@@ -72,7 +72,7 @@ public static class FwConfig
         return tmp;
     }, LazyThreadSafetyMode.ExecutionAndPublication);
 
-    private static Hashtable buildForHost(HttpContext ctx, string host)
+    private static Hashtable buildForHost(HttpContext? ctx, string host)
     {
         // clone deep - each host gets its own mutable copy
         var hs = Utils.cloneHashDeep(_base.Value);
@@ -91,7 +91,7 @@ public static class FwConfig
     /// </summary>
     /// <param name="context">can be null for offline execution</param>
     /// <param name="hostname"></param>
-    private static void initDefaults(HttpContext context, string hostname, ref Hashtable st)
+    private static void initDefaults(HttpContext? context, string hostname, ref Hashtable st)
     {
         st = new Hashtable
         {
@@ -162,7 +162,7 @@ public static class FwConfig
         }
     }
 
-    private static void overrideContextSettings(HttpContext ctx, string host, Hashtable st)
+    private static void overrideContextSettings(HttpContext? ctx, string host, Hashtable st)
     {
         if (ctx == null) return;
         var req = ctx.Request;
@@ -226,7 +226,8 @@ public static class FwConfig
         readSettingsSection(configuration.GetSection("appSettings"), ref appSettings);
 
         // The “appSettings” itself might be nested inside the hash
-        var settings = (Hashtable)appSettings["appSettings"];
+        var settings = (Hashtable?)appSettings["appSettings"] ?? new Hashtable();
+        appSettings["appSettings"] = settings;
         // Override by name if environment-based overrides are used
         overrideSettingsByName(environment, settings);
 

@@ -15,13 +15,13 @@ public class Demos : FwModel<Demos.Row>
         public int id { get; set; }
         public int parent_id { get; set; }
         public int? demo_dicts_id { get; set; }
-        public string iname { get; set; }
-        public string idesc { get; set; }
-        public string email { get; set; }
+        public string iname { get; set; } = string.Empty;
+        public string idesc { get; set; } = string.Empty;
+        public string email { get; set; } = string.Empty;
         public int fint { get; set; }
         public double ffloat { get; set; }
         public int dict_link_auto_id { get; set; }
-        public string dict_link_multi { get; set; }
+        public string dict_link_multi { get; set; } = string.Empty;
         public int fcombo { get; set; }
         public int fradio { get; set; }
         private int _fyesno;

@@ -524,10 +524,11 @@ public abstract class FwController
     /// </remarks>
     public virtual void validateCheckResult(bool result = true)
     {
-        if (fw.FormErrors.ContainsKey("REQUIRED") && (bool)fw.FormErrors["REQUIRED"])
+        var hasRequired = fw.FormErrors.ContainsKey("REQUIRED") && fw.FormErrors["REQUIRED"] is true;
+        if (hasRequired)
             result = false;
 
-        if (fw.FormErrors.Count > 0 && (!fw.FormErrors.ContainsKey("REQUIRED") || !(bool)fw.FormErrors["REQUIRED"]))
+        if (fw.FormErrors.Count > 0 && !hasRequired)
         {
             fw.FormErrors["INVALID"] = true;
             result = false;
