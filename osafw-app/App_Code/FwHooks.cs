@@ -12,15 +12,16 @@ public sealed class FwHooks
     // called from FW.run before request dispatch
     public static void initRequest(FW fw)
     {
-        // Dim main_menu As ArrayList = FwCache.get_value("main_menu")
-
-        // If IsNothing(main_menu) OrElse main_menu.Count = 0 Then
-        // 'create main menu if not yet
-        // main_menu = fw.model(Of Settings).get_main_menu()
-        // FwCache.set_value("main_menu", main_menu)
-        // End If
-
-        // fw.G("main_menu") = main_menu
+        // var mainMenu = FwCache.get_value("main_menu") as ArrayList;
+        //
+        // if (mainMenu == null || mainMenu.Count == 0)
+        // {
+        //     // create main menu if not yet
+        //     mainMenu = fw.model<Settings>().get_main_menu();
+        //     FwCache.set_value("main_menu", mainMenu);
+        // }
+        //
+        // fw.G("main_menu", mainMenu);
 
         // if user not logged - check permanent cookie and auto login user
         if (fw.userId == 0)

@@ -240,10 +240,10 @@ public class ParsePage
         Hashtable parent_hf = [];
         // Return _parse_page(tpl_name, hf, "", "", parent_hf)
 
-        // Dim start_time = DateTime.Now
+        // var startTime = DateTime.Now;
         var result = _parse_page(tpl_name, hf, "", parent_hf);
-        // Dim end_timespan As TimeSpan = DateTime.Now - start_time
-        // logger("ParsePage speed: " & String.Format("{0:0.000}", 1 / end_timespan.TotalSeconds) & "/s")
+        // var endTimespan = DateTime.Now - startTime;
+        // logger($"ParsePage speed: {1 / endTimespan.TotalSeconds:0.000}/s");
         return result;
     }
 
