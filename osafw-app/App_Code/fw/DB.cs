@@ -736,9 +736,10 @@ public class DB : IDisposable
         connect();
 
         //shallow copy to avoid modifying original
-        Hashtable @params = in_params != null ? (Hashtable)in_params.Clone() : [];
+        Hashtable @params = in_params != null ? (Hashtable)in_params.Clone() : new Hashtable();
 
         expandParams(ref sql, ref @params);
+        @params ??= new Hashtable();
 
         logQueryAndParams(sql, @params);
 
@@ -748,7 +749,8 @@ public class DB : IDisposable
         DbDataReader dbread;
         if (dbtype == DBTYPE_SQLSRV)
         {
-            var dbcomm = new SqlCommand(sql, (SqlConnection)conn)
+            var connection = (SqlConnection)conn!;
+            var dbcomm = new SqlCommand(sql, connection)
             {
                 CommandTimeout = sql_command_timeout
             };
@@ -764,7 +766,7 @@ public class DB : IDisposable
         {
             var sql1 = convertNamedToPositional(sql, out List<string> paramNames);
             //logger(LogLevel.INFO, "DB:", db_name, " ", sql1);
-            var dbcomm = new OleDbCommand(sql1, (OleDbConnection)conn);
+            var dbcomm = new OleDbCommand(sql1, (OleDbConnection)conn!);
             foreach (string p in paramNames)
             {
                 // p name is without "@", but @params may or may not contain "@" prefix
@@ -803,14 +805,8 @@ public class DB : IDisposable
     /// </summary>
     /// <param name="sql"></param>
     /// <param name="params">if input params null - make empty hashtable</param>
-    private static void expandParams(ref string sql, ref Hashtable? @params)
+    private static void expandParams(ref string sql, ref Hashtable @params)
     {
-        if (@params == null)
-        {
-            @params = [];
-            return;
-        }
-
         foreach (string p in @params.Keys.Cast<string>().ToList())
         {
             if (@params[p] is IList arr)
@@ -873,6 +869,7 @@ public class DB : IDisposable
     {
         connect();
 
+        @params ??= new Hashtable();
         expandParams(ref sql, ref @params);
 
         logQueryAndParams(sql, @params);
@@ -888,7 +885,7 @@ public class DB : IDisposable
                 //TODO test with OLE
                 sql += ";SELECT SCOPE_IDENTITY()";
             }
-            var dbcomm = new SqlCommand(sql, (SqlConnection)conn)
+            var dbcomm = new SqlCommand(sql, (SqlConnection)conn!)
             {
                 CommandTimeout = sql_command_timeout
             };
@@ -907,7 +904,7 @@ public class DB : IDisposable
         {
             var sql1 = convertNamedToPositional(sql, out List<string> paramNames);
             //logger(LogLevel.INFO, "DB:", db_name, " ", sql1);
-            var dbcomm = new OleDbCommand(sql1, (OleDbConnection)conn);
+            var dbcomm = new OleDbCommand(sql1, (OleDbConnection)conn!);
             foreach (string p in paramNames)
             {
                 // p name is without "@", but @params may or may not contain "@" prefix
@@ -1032,7 +1029,7 @@ public class DB : IDisposable
     protected T readRow<T>(DbDataReader dbread) where T : new()
     {
         if (!dbread.HasRows)
-            return default; //if no rows - return empty row
+            return new T(); //if no rows - return empty row
 
         T result = new();
         var meta = getReaderMeta(dbread);
@@ -1041,7 +1038,7 @@ public class DB : IDisposable
         {
             if (meta.IsSkip[i]) continue;
 
-            object value;
+            object? value;
             if (dbread.IsDBNull(i))
                 value = null;
             else if (meta.IsDateTime[i])
@@ -1063,7 +1060,7 @@ public class DB : IDisposable
             else
                 value = dbread.GetValue(i);
 
-            result.setPropertyValue(props, meta.Names[i], value);
+            result.setPropertyValue(props, meta.Names[i], value!);
         }
         return result;
     }
@@ -1119,7 +1116,7 @@ public class DB : IDisposable
     {
         DbDataReader dbread = query(sql, @params);
         var hasRow = dbread.Read();
-        var result = hasRow ? readRow<T>(dbread) : default;
+        var result = hasRow ? readRow<T>(dbread) : new T();
         dbread.Close();
         return result;
     }
@@ -1181,20 +1178,41 @@ public class DB : IDisposable
                 // arraylist of hashtables with "field","alias" keys - usable for the case when we need same field to be selected more than once with different aliases
                 foreach (Hashtable asf in aselect_fields)
                 {
-                    quoted.Add(this.qid((string)asf["field"]) + " as " + this.qid((string)asf["alias"]));
+                    var field = asf["field"].toStr();
+                    var alias = asf["alias"].toStr();
+                    if (field.Length == 0)
+                        continue;
+
+                    if (alias.Length == 0)
+                        alias = field;
+
+                    quoted.Add(this.qid(field) + " as " + this.qid(alias));
                 }
             }
             else if (aselect_fields is IDictionary)
             {
-                foreach (string field in (aselect_fields as IDictionary).Keys)
+                var dict = (IDictionary)aselect_fields;
+                foreach (DictionaryEntry entry in dict)
                 {
-                    quoted.Add(this.qid(field) + " as " + this.qid((string)(aselect_fields as IDictionary)[field]));// field as alias
+                    var field = entry.Key.toStr();
+                    var alias = entry.Value.toStr();
+                    if (field.Length == 0)
+                        continue;
+
+                    if (alias.Length == 0)
+                        alias = field;
+
+                    quoted.Add(this.qid(field) + " as " + this.qid(alias));// field as alias
                 }
             }
             else
             {
-                foreach (string field in aselect_fields)
+                foreach (var fieldObj in aselect_fields)
                 {
+                    var field = fieldObj.toStr();
+                    if (field.Length == 0)
+                        continue;
+
                     quoted.Add(this.qid(field));
                 }
             }
@@ -1277,7 +1295,7 @@ public class DB : IDisposable
     {
         List<string> result = new(DBList.DEFAULT_CAPACITY);
         while (dbread.Read())
-            result.Add(dbread[0].ToString());
+            result.Add(dbread[0]?.ToString() ?? "");
 
         dbread.Close();
         return result;
@@ -1318,11 +1336,11 @@ public class DB : IDisposable
 
     public object readValue(DbDataReader dbread)
     {
-        object result = null;
+        object result = "";
 
         while (dbread.Read())
         {
-            result = dbread[0]; //read first
+            result = dbread[0] ?? ""; //read first
             break; // just return first row
         }
 
@@ -1643,7 +1661,8 @@ public class DB : IDisposable
 
         foreach (string fname in fields.Keys)
         {
-            var dbop = field2Op(table, fname, fields[fname], is_for_where);
+            var fieldValue = fields[fname] ?? DBNull.Value;
+            var dbop = field2Op(table, fname, fieldValue, is_for_where);
 
             var delim = $" {dbop.opstr} ";
             var param_name = reW.Replace(fname, "_") + suffix; // replace any non-alphanum in param names and add suffix
@@ -1658,20 +1677,33 @@ public class DB : IDisposable
                 if (dbop.op == DBOps.BETWEEN)
                 {
                     // special case for between
-                    @params[param_name + "_1"] = ((IList)dbop.value)[0];
-                    @params[param_name + "_2"] = ((IList)dbop.value)[1];
+                    var list = dbop.value as IList;
+                    if (list != null && list.Count >= 2)
+                    {
+                        @params[param_name + "_1"] = list[0];
+                        @params[param_name + "_2"] = list[1];
+                    }
+                    else
+                    {
+                        @params[param_name + "_1"] = DBNull.Value;
+                        @params[param_name + "_2"] = DBNull.Value;
+                    }
                     // BETWEEN @p1 AND @p2
                     sql += $"@{param_name}_1 AND @{param_name}_2";
                 }
                 else if (dbop.op == DBOps.IN || dbop.op == DBOps.NOTIN)
                 {
-                    List<string> sql_params = new(((IList)dbop.value).Count);
-                    var i = 1;
-                    foreach (var pvalue in (IList)dbop.value)
+                    List<string> sql_params = [];
+                    var list = dbop.value as IList;
+                    if (list != null)
                     {
-                        @params[param_name + "_" + i] = pvalue;
-                        sql_params.Add("@" + param_name + "_" + i);
-                        i += 1;
+                        var i = 1;
+                        foreach (var pvalue in list)
+                        {
+                            @params[param_name + "_" + i] = pvalue;
+                            sql_params.Add("@" + param_name + "_" + i);
+                            i += 1;
+                        }
                     }
                     // [NOT] IN (@p1,@p2,@p3...)
                     sql += "(" + (sql_params.Count > 0 ? string.Join(",", sql_params) : "NULL") + ")";
@@ -1738,28 +1770,43 @@ public class DB : IDisposable
         connect();
         loadTableSchema(table);
         field_name = field_name.ToLower();
-        Hashtable schema_table = schema[table];
-        if (!schema_table.ContainsKey(field_name))
+        if (!schema.TryGetValue(table, out var schema_table_obj) || schema_table_obj is not Hashtable schema_table || !schema_table.ContainsKey(field_name))
         {
             //logger(LogLevel.DEBUG, "schema_table:", schema_table);
             throw new ApplicationException("field " + db_name + "." + table + "." + field_name + " does not defined in FW.config(\"schema\") ");
         }
 
-        string field_type = (string)schema_table[field_name];
+        string field_type = schema_table[field_name].toStr();
         //logger(LogLevel.DEBUG, "field2Op IN: ", table, ".", field_name, " ", field_type, " ", dbop.op, " ", dbop.value);
 
         // db operation
         if (dbop.op == DBOps.IN || dbop.op == DBOps.NOTIN)
         {
-            ArrayList result = new(((IList)dbop.value).Count);
-            foreach (var pvalue in (IList)dbop.value)
-                result.Add(field2typed(field_type, pvalue));
-            dbop.value = result;
+            var list = dbop.value as IList;
+            if (list == null || list.Count == 0)
+            {
+                dbop.value = new ArrayList();
+            }
+            else
+            {
+                ArrayList result = new(list.Count);
+                foreach (var pvalue in list)
+                    result.Add(field2typed(field_type, pvalue));
+                dbop.value = result;
+            }
         }
         else if (dbop.op == DBOps.BETWEEN)
         {
-            ((IList)dbop.value)[0] = field2typed(field_type, ((IList)dbop.value)[0]);
-            ((IList)dbop.value)[1] = field2typed(field_type, ((IList)dbop.value)[1]);
+            var list = dbop.value as IList;
+            if (list == null || list.Count < 2)
+            {
+                dbop.value = new ArrayList() { field2typed(field_type, DBNull.Value), field2typed(field_type, DBNull.Value) };
+            }
+            else
+            {
+                list[0] = field2typed(field_type, list[0]);
+                list[1] = field2typed(field_type, list[1]);
+            }
         }
         else
         {
@@ -1779,7 +1826,7 @@ public class DB : IDisposable
         return dbop;
     }
 
-    public object field2typed(string field_type, object field_value)
+    public object field2typed(string field_type, object? field_value)
     {
         object result = DBNull.Value;
 
@@ -1821,8 +1868,8 @@ public class DB : IDisposable
             }
             else if (field_type == "datetime")
             {
-                result = this.qd(field_value);
-                result ??= DBNull.Value;
+                var dt = this.qd(field_value);
+                result = dt ?? (object)DBNull.Value;
             }
             else if (field_type == "float")
                 result = field_value.toFloat();
@@ -2113,6 +2160,9 @@ public class DB : IDisposable
     /// <returns></returns>
     public int update<T>(string table, T data, IDictionary where)
     {
+        if (data == null)
+            throw new ArgumentNullException(nameof(data));
+
         var qp = buildUpdate(table, data.toKeyValue(), where);
         return exec(qp.sql, qp.@params);
     }
@@ -2355,7 +2405,7 @@ public class DB : IDisposable
         // check if full schema already there
         var cache = schemafull_cache.GetOrAdd(connstr ?? string.Empty, _ => new ConcurrentDictionary<string, ArrayList>());
 
-        if (cache.TryGetValue(table, out ArrayList value))
+        if (cache.TryGetValue(table, out ArrayList? value) && value != null)
             return value;
 
         // cache miss
@@ -2411,7 +2461,7 @@ public class DB : IDisposable
                         AND t.table_name = @table_name
                         AND t.table_schema = @db_name
                       order by c.ORDINAL_POSITION";
-            result = arrayp(sql, DB.h("@table_name", table, "@db_name", conn.Database));
+            result = arrayp(sql, DB.h("@table_name", table, "@db_name", conn?.Database ?? string.Empty));
             foreach (Hashtable row in result)
             {
                 var subtype = row["type"].toStr();
@@ -2423,11 +2473,14 @@ public class DB : IDisposable
         {
             // OLE DB (Access or other providers)
             string[] tableParts = table.Split('.');
-            string schemaName = tableParts.Length > 1 ? tableParts[0] : null;
+            string? schemaName = tableParts.Length > 1 ? tableParts[0] : null;
             string tableName = tableParts.Length > 1 ? tableParts[1] : table;
 
             //restritcitons array: [TABLE_CATALOG, TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME]
-            DataTable schemaTable = ((OleDbConnection)conn).GetOleDbSchemaTable(OleDbSchemaGuid.Columns, [null, schemaName, tableName, null]);
+            var oleConn = (OleDbConnection?)conn;
+            DataTable? schemaTable = oleConn?.GetOleDbSchemaTable(OleDbSchemaGuid.Columns, [null, schemaName, tableName, null]);
+            if (schemaTable == null)
+                return result;
 
             List<Hashtable> fieldslist = new(schemaTable.Rows.Count);
             foreach (DataRow row in schemaTable.Rows)
@@ -2547,11 +2600,12 @@ public class DB : IDisposable
         {
             // OLE DB (Access or other providers)
             string[] tableParts = table.Split('.');
-            string schemaName = tableParts.Length > 1 ? tableParts[0] : null;
+            string? schemaName = tableParts.Length > 1 ? tableParts[0] : null;
             string tableName = tableParts.Length > 1 ? tableParts[1] : table;
 
             //restritcitons array: [TABLE_CATALOG, TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME]
-            DataTable schemaTable = ((OleDbConnection)conn).GetOleDbSchemaTable(OleDbSchemaGuid.Foreign_Keys, [null, schemaName, tableName, null]);
+            var oleConn = (OleDbConnection?)conn;
+            DataTable? schemaTable = oleConn?.GetOleDbSchemaTable(OleDbSchemaGuid.Foreign_Keys, [null, schemaName, tableName, null]);
             if (schemaTable == null)
                 return result;
 
