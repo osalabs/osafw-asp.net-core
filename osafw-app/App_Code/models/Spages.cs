@@ -16,22 +16,22 @@ public class Spages : FwModel<Spages.Row>
     {
         public int id { get; set; }
         public int parent_id { get; set; }
-        public string url { get; set; }
-        public string iname { get; set; }
-        public string idesc { get; set; }
+        public string url { get; set; } = string.Empty;
+        public string iname { get; set; } = string.Empty;
+        public string idesc { get; set; } = string.Empty;
         public int? head_att_id { get; set; }
-        public string idesc_left { get; set; }
-        public string idesc_right { get; set; }
-        public string meta_keywords { get; set; }
-        public string meta_description { get; set; }
+        public string idesc_left { get; set; } = string.Empty;
+        public string idesc_right { get; set; } = string.Empty;
+        public string meta_keywords { get; set; } = string.Empty;
+        public string meta_description { get; set; } = string.Empty;
         public DateTime? pub_time { get; set; }
-        public string template { get; set; }
+        public string template { get; set; } = string.Empty;
         public int prio { get; set; }
         public int is_home { get; set; }
-        public string redirect_url { get; set; }
-        public string custom_head { get; set; }
-        public string custom_css { get; set; }
-        public string custom_js { get; set; }
+        public string redirect_url { get; set; } = string.Empty;
+        public string custom_head { get; set; } = string.Empty;
+        public string custom_css { get; set; } = string.Empty;
+        public string custom_js { get; set; } = string.Empty;
         public int status { get; set; }
         public DateTime add_time { get; set; }
         public int add_users_id { get; set; }
