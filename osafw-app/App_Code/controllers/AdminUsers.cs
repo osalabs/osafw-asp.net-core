@@ -12,7 +12,7 @@ public class AdminUsersController : FwDynamicController
 {
     public static new int access_level = Users.ACL_ADMIN;
 
-    protected Users model;
+    protected Users model = null!;
 
     public override void init(FW fw)
     {

@@ -85,10 +85,19 @@ public static class FwExtensions
         property.SetValue(obj, convertedValue);
     }
 
-    internal static void setPropertyValue<T>(this T obj, Dictionary<string, PropertyInfo> props, string field, object value)
+    internal static void setPropertyValue<T>(this T obj, Dictionary<string, PropertyInfo> props, string field, object? value)
     {
         if (props.TryGetValue(field, out var property))
         {
+            if (value == null)
+            {
+                if (property.PropertyType.IsValueType && Nullable.GetUnderlyingType(property.PropertyType) == null)
+                    return; // cannot assign null to non-nullable value type
+
+                property.SetValue(obj, null);
+                return;
+            }
+
             obj.setPropertyValue(property, value);
         }
     }
