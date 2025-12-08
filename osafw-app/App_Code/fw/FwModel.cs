@@ -50,11 +50,11 @@ public abstract class FwModel : IDisposable
     public bool is_under_bulk_update = false; // true when perform bulk updates like modelAddOrUpdateSubtableDynamic (disables log changes for status)
 
     // for junction models like UsersCompanies that link 2 tables via junction table, ex users_companies
-    public FwModel junction_model_main;   // main model (first entity), initialize in init(), ex fw.model<Users>()
-    public string junction_field_main_id; // id field name for main, ex users_id
-    public FwModel junction_model_linked;   // linked model (second entity), initialize in init()
-    public string junction_field_linked_id; // id field name for linked, ex companies_id
-    public string junction_field_status; // custom junction status field name, using this.field_status if not set
+    public FwModel? junction_model_main;   // main model (first entity), initialize in init(), ex fw.model<Users>()
+    public string junction_field_main_id = string.Empty; // id field name for main, ex users_id
+    public FwModel? junction_model_linked;   // linked model (second entity), initialize in init()
+    public string junction_field_linked_id = string.Empty; // id field name for linked, ex companies_id
+    public string junction_field_status = string.Empty; // custom junction status field name, using this.field_status if not set
 
     protected string cache_prefix = "fwmodel.one."; // default cache prefix for caching items
     protected string cache_prefix_byicode = "fwmodel.onebyicode."; // default cache prefix for caching items by icode
@@ -133,7 +133,7 @@ public abstract class FwModel : IDisposable
             normalizeNames(item);
             fw.cache.setRequestValue(cache_key, item);
         }
-        return item;
+        return item ?? new DBRow();
     }
 
     //overload of one() to accept id of any type, so no need to explicitly convert by caller
@@ -1124,7 +1124,7 @@ public abstract class FwModel : IDisposable
         foreach (Hashtable row in list_rows)
         {
             //if row_id starts with "new-" - set flag is_new
-            row["is_new"] = row["id"].ToString().StartsWith("new-");
+            row["is_new"] = row["id"].toStr().StartsWith("new-");
 
             // for non-Vue - add def to each row
             if (!fw.isJsonExpected())
@@ -1279,10 +1279,10 @@ public abstract class FwModel : IDisposable
             var fieldname_lc = fieldname.ToLower();
             if (!table_schema.ContainsKey(fieldname_lc)) continue;
 
-            var field_schema = (Hashtable)table_schema[fieldname_lc];
+            var field_schema = table_schema[fieldname_lc] as Hashtable ?? [];
 
-            var fw_type = (string)field_schema["fw_type"];
-            var fw_subtype = (string)field_schema["fw_subtype"];
+            var fw_type = field_schema["fw_type"].toStr();
+            var fw_subtype = field_schema["fw_subtype"].toStr();
 
             if (fw_subtype == "bit")
             {

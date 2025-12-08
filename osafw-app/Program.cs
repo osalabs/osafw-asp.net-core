@@ -35,13 +35,17 @@ public static class Program
         var isDevelopmentEnv = settings["IS_DEV"].toBool();
 
         // Retrieve main DB connection info
-        var dbSection = (Hashtable)settings["db"];
-        var mainDB = (Hashtable)dbSection["main"];
-        var connStr = (string)mainDB["connection_string"];
-        var dbType = (string)mainDB["type"];
+        var dbSection = settings["db"] as Hashtable ?? [];
+        var mainDB = dbSection["main"] as Hashtable ?? [];
+        var connStr = mainDB["connection_string"].toStr();
+        var dbType = mainDB["type"].toStr();
+        if (string.IsNullOrEmpty(connStr) || string.IsNullOrEmpty(dbType))
+            throw new ApplicationException("Main DB configuration is missing");
 
         // Site name used in data-protection app name
-        var appName = (string)(settings["SITE_NAME"] ?? "osafw");
+        var appName = settings["SITE_NAME"].toStr();
+        if (string.IsNullOrEmpty(appName))
+            appName = "osafw";
 
         //-------------------------------
         // Service registration

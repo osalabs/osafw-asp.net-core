@@ -6,13 +6,13 @@ namespace osafw;
 
 public class FwCache
 {
-    public static IMemoryCache MemoryCache { get; set; }
+    public static IMemoryCache MemoryCache { get; set; } = new MemoryCache(new MemoryCacheOptions());
 
     public Hashtable request_cache = []; // request level cache
 
     // ******** application-level cache with IMemoryCache ***********
 
-    public static object getValue(string key)
+    public static object? getValue(string key)
     {
         return MemoryCache.Get(key);
     }
@@ -23,7 +23,7 @@ public class FwCache
     /// <param name="key"></param>
     /// <param name="value"></param>
     /// <param name="expire_seconds"></param>
-    public static void setValue(string key, object value, int expire_seconds = 3600)
+    public static void setValue(string key, object? value, int expire_seconds = 3600)
     {
         MemoryCache.Set(key, value, TimeSpan.FromSeconds(expire_seconds));
     }
@@ -43,7 +43,7 @@ public class FwCache
         }
     }
 
-    protected static object serialize(object data)
+    protected static object? serialize(object? data)
     {
         if (data == null)
             return null;
@@ -60,7 +60,7 @@ public class FwCache
         }
     }
 
-    protected static object deserialize(object data)
+    protected static object? deserialize(object? data)
     {
         if (data == null)
         {
@@ -90,12 +90,12 @@ public class FwCache
     /// </summary>
     /// <param name="key"></param>
     /// <returns>Hashtable, ArrayList, other value or null - since objects in cache serialized using json when stored</returns>
-    public object getRequestValue(string key)
+    public object? getRequestValue(string key)
     {
         var result = request_cache[key];
         return deserialize(result);
     }
-    public void setRequestValue(string key, object value)
+    public void setRequestValue(string key, object? value)
     {
         request_cache[key] = serialize(value);
     }

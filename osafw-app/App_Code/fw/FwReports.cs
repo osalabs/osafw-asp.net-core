@@ -39,10 +39,10 @@ public class FwReports
     public const string TO_BROWSER = "";
     public const string TO_STRING = "string";
 
-    public string report_code;
-    public string format; // report format, if empty - html, other options: html, csv, pdf, xls
+    public string report_code = string.Empty;
+    public string format = string.Empty; // report format, if empty - html, other options: html, csv, pdf, xls
     public string render_to = ""; // output to: empty(browser), "string"(render returns string, for html only), "/file/path"(render saves to file)
-    public Hashtable f; // report filters/options
+    public Hashtable f = []; // report filters/options
                         // render options for html to pdf/xls/etc... convertor
     public Hashtable f_data = []; //filters data, like dropdown options
 
@@ -53,18 +53,18 @@ public class FwReports
         //{"pdf_filename", "absolute path to save pdf to or just a filename (without extension) for browser output"} //define in report class
     };
 
-    protected FW fw;
-    protected DB db;
+    protected FW fw = null!;
+    protected DB db = null!;
     public Hashtable ps = []; // final data for template rendering
     public long list_count;      // count of list rows returned from db
-    public ArrayList list_rows;  // list rows returned from db (array of hashes)
+    public ArrayList list_rows = [];  // list rows returned from db (array of hashes)
 
     // access level for the report, default - Manager level.
     // Note, if you lower it for the specific report - you may want to update AdminReports access level as well
     protected int access_level = Users.ACL_MANAGER;
     // for sorting by click on column headers, define in report class
-    protected string list_sortdef; // = "iname asc";
-    protected Hashtable list_sortmap; // = Utils.qh("id|id iname|iname add_time|add_time status|status");
+    protected string list_sortdef = string.Empty; // = "iname asc";
+    protected Hashtable list_sortmap = []; // = Utils.qh("id|id iname|iname add_time|add_time status|status");
     protected string list_orderby = "1"; // sql for order by clause, set in getData() via setListSorting(), default by first column if no other sorting set
 
     public static string cleanupRepcode(string repcode)
@@ -114,7 +114,14 @@ public class FwReports
             throw new UserException("Wrong Report Code");
 
         var reportType = Type.GetType(FW.FW_NAMESPACE_PREFIX + report_class_name, true, true);
-        FwReports report = (FwReports)Activator.CreateInstance(reportType);
+        if (reportType == null)
+            throw new UserException("Report class not found");
+
+        var instance = Activator.CreateInstance(reportType) as FwReports;
+        if (instance == null)
+            throw new UserException("Report initialization failed");
+
+        FwReports report = instance;
         report.init(fw, repcode, f);
         report.checkAccess();
         return report;
@@ -175,9 +182,9 @@ public class FwReports
     {
         this.fw = fw;
         this.db = fw.db;
-        this.report_code = report_code;
-        this.f = f;
-        this.format = (string)f["format"];
+        this.report_code = report_code ?? string.Empty;
+        this.f = f ?? [];
+        this.format = f["format"] as string ?? string.Empty;
     }
 
     // called from createInstance to check if logged user has access to the report
@@ -203,12 +210,14 @@ public class FwReports
 
     public virtual void setListSorting()
     {
-        string sortby = (string)f["sortby"] ?? "";
-        string sortdir = (string)f["sortdir"] ?? "";
+        string sortby = f["sortby"] as string ?? string.Empty;
+        string sortdir = f["sortdir"] as string ?? string.Empty;
 
-        string sortdef_field = null;
-        string sortdef_dir = null;
-        Utils.split2(" ", list_sortdef, ref sortdef_field, ref sortdef_dir);
+        string sortdef_field = string.Empty;
+        string sortdef_dir = string.Empty;
+        Utils.split2(" ", list_sortdef ?? string.Empty, ref sortdef_field, ref sortdef_dir);
+
+        list_sortmap ??= [];
 
         // validation/mapping
         if (string.IsNullOrEmpty(sortby) || string.IsNullOrEmpty(((string)list_sortmap[sortby] ?? "").Trim()))
@@ -272,14 +281,14 @@ public class FwReports
         ps["IS_EXPORT_PDF"] = false;
         ps["IS_EXPORT_XLS"] = false;
 
-        string base_dir = TPL_BASE_DIR + '/' + report_code.ToLower();
+        string base_dir = TPL_BASE_DIR + '/' + report_code.ToLowerInvariant();
         switch (this.format)
         {
             case "pdf":
                 {
                     ((Hashtable)ps["f"])["edit"] = false; // force any edit modes off
                     ps["IS_EXPORT_PDF"] = true; //use as <~PARSEPAGE.TOP[IS_EXPORT_PDF]> in templates
-                    string out_filename = Utils.isEmpty(render_options["pdf_filename"]) ? report_code : (string)render_options["pdf_filename"];
+                    string out_filename = Utils.isEmpty(render_options["pdf_filename"]) ? report_code : (render_options["pdf_filename"] as string ?? string.Empty);
                     if (isFileRender())
                         out_filename = render_to;
 
@@ -290,7 +299,7 @@ public class FwReports
             case "xls":
                 {
                     ps["IS_EXPORT_XLS"] = true; //use as <~PARSEPAGE.TOP[IS_EXPORT_XLS]> in templates
-                    var out_filename = Utils.isEmpty(render_options["xls_filename"]) ? report_code : (string)render_options["xls_filename"];
+                    var out_filename = Utils.isEmpty(render_options["xls_filename"]) ? report_code : (render_options["xls_filename"] as string ?? string.Empty);
                     if (isFileRender())
                         out_filename = render_to;
 
@@ -300,9 +309,9 @@ public class FwReports
 
             case "xlsx":
                 {
-                    var out_filename = Utils.isEmpty(render_options["xls_filename"]) ? report_code : (string)render_options["xls_filename"];
+                    var out_filename = Utils.isEmpty(render_options["xls_filename"]) ? report_code : (render_options["xls_filename"] as string ?? string.Empty);
                     // TODO make headers as array of readable values, not the same as fields names
-                    var headers = (list_rows[0] as Hashtable).Keys.Cast<string>().ToArray();
+                    var headers = list_rows.Count > 0 ? (list_rows[0] as Hashtable)?.Keys.Cast<string>().ToArray() ?? Array.Empty<string>() : Array.Empty<string>();
                     var fields = headers;
 
                     ConvUtils.exportNativeExcel(fw, headers, fields, list_rows, out_filename);
@@ -328,9 +337,9 @@ public class FwReports
                     {
                         ps["IS_PRINT_MODE"] = true;
 
-                        var layout = (string)fw.G["PAGE_LAYOUT_PRINT"];
+                        var layout = fw.G["PAGE_LAYOUT_PRINT"] as string ?? string.Empty;
                         if (ps.ContainsKey("_layout"))
-                            layout = (string)ps["_layout"];
+                            layout = ps["_layout"] as string ?? layout;
 
                         result = fw.parsePage(base_dir, layout, ps);
 

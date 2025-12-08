@@ -212,7 +212,11 @@ public class ConvUtils
         System.Diagnostics.ProcessStartInfo info = new();
         System.Diagnostics.Process process = new();
 
-        info.FileName = (string)fw.config()["html_converter"];
+        var converterPath = fw.config("html_converter").toStr();
+        if (string.IsNullOrEmpty(converterPath))
+            throw new ApplicationException("html_converter path is not configured");
+
+        info.FileName = converterPath;
         info.Arguments = "\"" + htmlfile + "\" \"" + xlsfile + "\" -c xls -AutoSize";
         process.StartInfo = info;
         process.Start();

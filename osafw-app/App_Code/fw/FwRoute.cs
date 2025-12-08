@@ -9,14 +9,14 @@ namespace osafw;
 
 public class FwRoute
 {
-    public string controller_path; // store /Prefix/Prefix2/Controller - to use in parser a default path for templates
-    public string method;
-    public string prefix;
-    public string controller;
-    public string action;
-    public string action_raw;
-    public string id;
-    public string action_more; // new, edit, delete, etc
-    public string format; // html, json, pjax
-    public ArrayList @params;
+    public string controller_path = string.Empty; // store /Prefix/Prefix2/Controller - to use in parser a default path for templates
+    public string method = string.Empty;
+    public string prefix = string.Empty;
+    public string controller = string.Empty;
+    public string action = string.Empty;
+    public string action_raw = string.Empty;
+    public string id = string.Empty;
+    public string action_more = string.Empty; // new, edit, delete, etc
+    public string format = string.Empty; // html, json, pjax
+    public ArrayList @params = new();
 }

@@ -146,11 +146,12 @@ public class FwActivityLogs : FwModel
                     last_fields = [];
                 }
 
-                Hashtable payload = (Hashtable)Utils.jsonDecode(row["payload"]);
-                Hashtable fields = (Hashtable)payload["fields"] ?? null;
-                if (fields != null)
-                {
-                    foreach (string key in fields.Keys)
+            var payloadObj = Utils.jsonDecode(row["payload"]);
+            var payload = payloadObj as Hashtable ?? [];
+            Hashtable? fields = payload["fields"] as Hashtable;
+            if (fields != null)
+            {
+                foreach (string key in fields.Keys)
                     {
                         //if key is password, pass, pwd - hide value
                         var value = fields[key];
