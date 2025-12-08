@@ -5,8 +5,13 @@
   data-att-post-prefix="<~att_post_prefix>"
   data-item-id="<~i[id]>"
 >
-  <span class="fake-btn"><i class="bi bi-cloud-upload"></i> Choose files or drag and drop your files here</span>
-  <input class="d-none" data-noautosave type="file" name="file" <~/common/multiple if="multiple">>
+  <~nobtn_block unless="i[id]" inline>
+   <span class="text-muted">To add files - Save the record first</span>
+  </~nobtn_block>
+  <~btn_block if="i[id]" inline>
+   <span class="fake-btn"><i class="bi bi-cloud-upload"></i> Choose files or drag and drop your files here</span>
+   <input class="d-none" data-noautosave type="file" name="file" <~/common/multiple if="multiple">>
+  </~btn_block>
 </div>
 
 <div class="att-list mt-3">

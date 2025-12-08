@@ -18,6 +18,33 @@ window.fw={
   MSG_UPLOAD_FAILED: 'Upload failed',
   MSG_DELETE_CONFIRM: '<strong>ARE YOU SURE</strong> to delete this item?',
 
+  // Unified helper: updates saved/unsaved status and optional progress spinner
+  // is_changed: true/false updates internal changed flag, pass undefined to keep previous value
+  // is_progress: true - show spinner, false - hide spinner, undefined - keep previous spinner state
+  set_form_saved_status: function ($form, is_changed, is_progress) {
+    var $f = $($form);
+    if (!$f.length) return;
+
+    // update changed flag if explicitly passed
+    if (typeof is_changed === 'boolean') {
+      $f.data('is-changed', is_changed);
+    }
+    var changed = $f.data('is-changed') === true;
+
+    // determine spinner state
+    if (typeof is_progress === 'boolean') {
+      $f.data('is-progress', is_progress);
+    }
+    var isProgress = $f.data('is-progress') === true;
+
+    var cls = changed ? 'bg-danger' : 'bg-success';
+    var txt = changed ? 'not saved' : 'saved';
+    var html = (isProgress ? fw.HTML_SPINNER_SM : '') + ' <span class="badge ' + cls + '">' + txt + '</span>';
+
+    $f.find('.form-saved-status').html(html);
+    $('.form-saved-status-global').html(html);
+  },
+
   // requires https://github.com/osalabs/bootstrap-toaster
   ok: function (str, options){
     options = $.extend({}, options);
@@ -530,7 +557,7 @@ window.fw={
 
       var $f = $(this);
       //console.log('on form input', $f, e);
-      set_saved_status($f, true);
+      fw.set_form_saved_status($f, true); // mark changed
 
       //refresh timeout
       clearTimeout(to_autosave);
@@ -568,7 +595,7 @@ window.fw={
     });
 
     function form_reset_state($f) {
-      set_progress($f, false);
+      fw.set_form_saved_status($f, undefined, false); // hide spinner only
       $f.data('is-ajaxsubmit', false);
     }
 
@@ -595,7 +622,7 @@ window.fw={
       }
 
       //console.log('before ajaxSubmit', $f);
-      set_progress($f, true);
+      fw.set_form_saved_status($f, undefined, true); // show spinner
       $f.ajaxSubmit({
           dataType: 'json',
           success: function (data) {
@@ -604,7 +631,7 @@ window.fw={
               $('#fw-form-msg').hide();
               fw.clean_form_errors($f);
               if (!data.error) {
-                  set_saved_status($f, false);
+                  fw.set_form_saved_status($f, false); // saved
                   if (data.is_new && data.location) {
                       window.location = data.location; //reload screen for new items
                   }
@@ -630,47 +657,6 @@ window.fw={
           $f.trigger('autosave');
       }
     }
-
-    function set_saved_status($f, is_changed){
-      $f=$($f);
-      if ($f.data('is-changed')===is_changed){
-        return;//no changes
-      }
-
-      var $html = $('<span>').append($f[0]._saved_status);
-      var spinner = $('<span>').append($html.find('.spinner-border').clone()).html();
-      var cls='', txt='';
-      if (is_changed==true){ //not saved
-          $f.data('is-changed', true);
-          cls='bg-danger';
-          txt='not saved';
-      }else if (is_changed==false){ //saved
-          $f.data('is-changed', false);
-          cls='bg-success';
-          txt='saved';
-      }
-      var html=spinner+'<span class="badge '+cls+'">'+txt+'</span>';
-      $f[0]._saved_status=html;
-      $f.find('.form-saved-status').html(html);
-      $('.form-saved-status-global').html(html);
-    }
-
-    function set_progress($f, is_working){
-      $f=$($f);
-      var $html = $('<span>').append($f[0]._saved_status);
-      var is_spinner = $html.find('.spinner-border').length>0;
-
-      if (is_working){
-        if (!is_spinner) $html.prepend(fw.HTML_SPINNER_SM);
-      }else{
-        if (is_spinner) $html.find('.spinner-border').remove();
-      }
-
-      $f[0]._saved_status=$html.html();
-      $f.find('.form-saved-status').html($html.html());
-      $('.form-saved-status-global').html($html.html());
-    }
-
   },
 
   //cleanup any exisitng form errors
@@ -743,7 +729,7 @@ window.fw={
         dropArea.ondrop = (e) => {
             let files = e.dataTransfer.files;
             fileInput.files = files;
-            fileInput.onchange();
+            fileInput.dispatchEvent(new Event('change', { bubbles: true }))
         };
     });
   },
@@ -753,6 +739,7 @@ window.fw={
       var $input = $(this);
       var $drop = $input.closest('.fw-file-drop-area');
       var files = Array.from(this.files || []); // making copy as array as below we clear input
+      var $form = $drop.closest('form');
       if (!files.length) return;
 
       this.value = null; //cleanup files input
@@ -808,6 +795,9 @@ window.fw={
               $item.find('.att-iname').attr("href", res.url).text(res.iname);
               $item.find('.att-post-prefix').attr("name", att_post_prefix + '[' + res.id + ']').val(1);
               //$drop.closest('form').trigger('autosave');
+              if ($form.length){
+                fw.set_form_saved_status($form, false);
+              }
             }else{
               $item.remove();
               fw.error(data.error?.message || fw.MSG_UPLOAD_FAILED);

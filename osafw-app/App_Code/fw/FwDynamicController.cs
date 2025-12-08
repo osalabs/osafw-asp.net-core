@@ -740,7 +740,7 @@ public class FwDynamicController : FwController
 
     // upload one or many files to the Att storage and link to the current entity and id
     // json only response
-    public Hashtable SaveAttFilesAction(int id)
+    public virtual Hashtable SaveAttFilesAction(int id)
     {
         var item = reqh("item");
 
