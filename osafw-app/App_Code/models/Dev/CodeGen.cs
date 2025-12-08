@@ -23,7 +23,7 @@ class DevCodeGen
     private readonly DB db;
 
     //constructor - accept fw
-    public DevCodeGen(FW fw, DB db = null)
+    public DevCodeGen(FW fw, DB? db = null)
     {
         this.fw = fw;
         if (db == null)
@@ -33,7 +33,7 @@ class DevCodeGen
             this.db = db;
     }
 
-    public static DevCodeGen init(FW fw, DB db = null)
+    public static DevCodeGen init(FW fw, DB? db = null)
     {
         return new DevCodeGen(fw, db);
     }
@@ -164,7 +164,7 @@ class DevCodeGen
 
         foreach (Hashtable fk in entity["foreign_keys"] as ArrayList ?? new ArrayList())
         {
-            fw.logger("CHECK FK:", fk["column"], "=", field["name"]);
+            fw.logger("CHECK FK:", fk["column"].toStr(), "=", field["name"].toStr());
             if (fk["column"].toStr() == field["name"].toStr())
             {
                 //build FK name as FK_TABLE_FIELDWITHOUTID
@@ -466,7 +466,7 @@ class DevCodeGen
     private void createLookup(Hashtable entity)
     {
         string model_name = (string)entity["model_name"];
-        var controller_options = (Hashtable)entity["controller"] ?? [];
+        var controller_options = entity["controller"] as Hashtable ?? new Hashtable();
         string controller_url = (string)controller_options["url"];
         string controller_title = (string)controller_options["title"];
 
@@ -519,7 +519,7 @@ class DevCodeGen
     public bool createController(Hashtable entity, ArrayList entities)
     {
         string model_name = (string)entity["model_name"];
-        var controller_options = (Hashtable)entity["controller"] ?? [];
+        var controller_options = entity["controller"] as Hashtable ?? new Hashtable();
         string controller_url = (string)controller_options["url"];
         string controller_title = (string)controller_options["title"];
         string controller_type = controller_options["type"].toStr(); // ""(dynamic), "vue", "lookup", "api"
@@ -642,12 +642,12 @@ class DevCodeGen
         var controller_options = (Hashtable)entity["controller"] ?? [];
         string controller_title = controller_options["title"].toStr() ?? Utils.name2human(model_name);
         string controller_type = controller_options["type"].toStr();
-        fw.logger($"updating config for controller({controller_type})=", controller_options["url"]);
+        fw.logger($"updating config for controller({controller_type})=", controller_options["url"].toStr());
 
         var sys_fields = Utils.qh(SYS_FIELDS);
 
         Hashtable tables = []; // hindex by table name to entities
-        ArrayList fields = (ArrayList)entity["fields"];
+        ArrayList fields = entity["fields"] as ArrayList ?? new ArrayList();
         if (fields == null)
         {
             // TODO deprecate reading from db, always use entity info
@@ -679,7 +679,7 @@ class DevCodeGen
         foreach (Hashtable fld in fields)
             hfields[fld["name"].toStr()] = fld;
 
-        var foreign_keys = (ArrayList)entity["foreign_keys"] ?? [];
+        var foreign_keys = entity["foreign_keys"] as ArrayList ?? new ArrayList();
         //add system user fields to fake foreign keys, so it can generate list query with user names
         var hforeign_keys = Utils.array2hashtable(foreign_keys, "column"); // column -> fk info
         if (hfields.ContainsKey("add_users_id") && !hforeign_keys.ContainsKey("add_users_id"))
