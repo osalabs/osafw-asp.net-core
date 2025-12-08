@@ -75,10 +75,10 @@ public abstract class FwController
 
     protected bool is_readonly = false;          // true if user is readonly, no actions modifying data allowed
 
-    protected string route_return;               // FW.ACTION_SHOW or _INDEX to return (usually after SaveAction, default ACTION_SHOW_FORM)
-    protected string return_url;                 // url to return after SaveAction successfully completed, passed via request
-    protected string related_id;                 // related id, passed via request. Controller should limit view to items related to this id
-    protected string related_field_name;         // if set (in Controller) and $related_id passed - list will be filtered on this field
+    protected string route_return = FW.ACTION_SHOW_FORM; // FW.ACTION_SHOW or _INDEX to return (usually after SaveAction, default ACTION_SHOW_FORM)
+    protected string return_url = string.Empty;          // url to return after SaveAction successfully completed, passed via request
+    protected string related_id = string.Empty;          // related id, passed via request. Controller should limit view to items related to this id
+    protected string related_field_name = string.Empty;  // if set (in Controller) and $related_id passed - list will be filtered on this field
 
     protected Hashtable rbac = [];               // RBAC for the current user, read in init()
 

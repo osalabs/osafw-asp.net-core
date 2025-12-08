@@ -76,7 +76,7 @@ public class FormUtils
 
         string[] asel;
         if (is_multi)
-            asel = isel.Split(",");
+            asel = isel.Split(",", StringSplitOptions.None);
         else
         {
             asel = new string[1];
@@ -93,11 +93,11 @@ public class FormUtils
         StringBuilder result = new();
         foreach (Hashtable item in arr)
         {
-            text = Utils.htmlescape((string)item["iname"]);
+            text = Utils.htmlescape(item["iname"].toStr());
             if (item.ContainsKey("id"))
-                val = (string)item["id"];
+                val = item["id"].toStr();
             else
-                val = (string)item["iname"];
+                val = item["iname"].toStr();
 
             result.Append("<option value=\"").Append(Utils.htmlescape(val)).Append('"');
             if (item.ContainsKey("class"))
