@@ -1607,7 +1607,7 @@ public class Utils
 
     public static string getCookie(FW fw, string name)
     {
-        return fw.request.Cookies[name];
+        return fw.request.Cookies[name].toStr();
     }
 
     public static void deleteCookie(FW fw, string name)
@@ -1633,7 +1633,7 @@ public class Utils
                 ArrayList cols = [];
                 foreach (Hashtable hf in headers)
                 {
-                    var fieldname = hf["field_name"].ToString();
+                    var fieldname = hf["field_name"].toStr();
                     cols.Add(new Hashtable()
                     {
                         {"row",row},
@@ -1662,7 +1662,7 @@ public class Utils
     /// <param name="filename"></param>
     /// <param name="error"></param>
     /// <returns></returns>
-    public static string getFileContent(string filename, out Exception error)
+    public static string getFileContent(string filename, out Exception? error)
     {
         error = null;
         string result = "";
@@ -1700,7 +1700,7 @@ public class Utils
     /// </summary>
     /// <param name="filename"></param>
     /// <returns></returns>
-    public static string[] getFileLines(string filename, out Exception error)
+    public static string[] getFileLines(string filename, out Exception? error)
     {
         error = null;
         string[] result = [];

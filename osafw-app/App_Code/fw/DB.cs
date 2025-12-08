@@ -2331,7 +2331,7 @@ public class DB : IDisposable
         var result = new Hashtable();
         ArrayList fields = loadTableSchemaFull(table);
         foreach (Hashtable row in fields)
-            result[row["name"].ToString().ToLower()] = row;
+            result[row["name"].toStr().ToLowerInvariant()] = row;
 
         return result;
     }

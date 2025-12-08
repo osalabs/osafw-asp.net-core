@@ -1551,7 +1551,11 @@ class DevCodeGen
             if (!string.Equals(propertyName, columnName, StringComparison.OrdinalIgnoreCase))
                 sb.AppendLine($"        [DBName(\"{columnName}\")]");
 
-            sb.AppendLine($"        public {csType} {propertyName} {{ get; set; }}");
+            var initializer = buildRowPropertyInitializer(dict, csType);
+            if (initializer.Length > 0)
+                sb.AppendLine($"        public {csType} {propertyName} {{ get; set; }} = {initializer};");
+            else
+                sb.AppendLine($"        public {csType} {propertyName} {{ get; set; }};");
         }
 
         sb.AppendLine("    }");
@@ -1589,5 +1593,15 @@ class DevCodeGen
             return baseType + "?";
 
         return baseType;
+    }
+
+    private static string buildRowPropertyInitializer(IDictionary field, string csType)
+    {
+        bool isNullable = field["is_nullable"].toBool();
+
+        if (csType == "string" && !isNullable)
+            return "string.Empty";
+
+        return string.Empty;
     }
 }

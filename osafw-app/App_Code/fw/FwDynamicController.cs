@@ -15,7 +15,7 @@ public class FwDynamicController : FwController
 {
     public static new int access_level = Users.ACL_SITEADMIN;
 
-    protected FwModel model_related;
+    protected FwModel? model_related;
 
     protected static readonly string[] DEF_TYPES_STRUCTURE = ["row", "row_end", "col", "col_end", "header"];
 
@@ -1218,7 +1218,7 @@ public class FwDynamicController : FwController
                     fields[field] = lookup_model.findOrAddByIname(field_value, out _);
             }
             else if (type == "time")
-                fields[field] = FormUtils.timeStrToInt((string)fields[field]); // ftime - convert from HH:MM to int (0-24h in seconds)
+                fields[field] = FormUtils.timeStrToInt(fields[field].toStr()); // ftime - convert from HH:MM to int (0-24h in seconds)
             else if (type == "number")
             {
                 // no need to do this as DB knows if field nullable and convert empty string to NULL
@@ -1239,13 +1239,13 @@ public class FwDynamicController : FwController
         // for now we just look if we have att_links_edit field and update att links
         foreach (Hashtable def in getConfigShowFormFieldsByTab("showform_fields"))
         {
-            string field = (string)def["field"];
-            string type = (string)def["type"];
+            string field = def["field"].toStr();
+            string type = def["type"].toStr();
             if (type == "att_links_edit")
             {
                 var att_post_prefix = "att";
                 if (def.ContainsKey("att_post_prefix"))
-                    att_post_prefix = (string)def["att_post_prefix"];
+                    att_post_prefix = def["att_post_prefix"].toStr();
                 // if PATCH - only update is post param is present (otherwise it will delete all records)
                 if (isPatch() && req(att_post_prefix) == null)
                     continue;
