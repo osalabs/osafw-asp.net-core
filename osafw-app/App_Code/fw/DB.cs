@@ -231,11 +231,11 @@ public class DB : IDisposable
     public static int SQL_QUERY_CTR = 0; // counter for SQL queries during request
 
     // optional external logger delegate
-    public delegate void LoggerDelegate(LogLevel level, params object[] args);
-    protected LoggerDelegate ext_logger;
+    public delegate void LoggerDelegate(LogLevel level, params object?[] args);
+    protected LoggerDelegate? ext_logger;
 
     // context for request level cache for multi-db connections
-    protected HttpContext context;
+    protected HttpContext? context;
 
     public string db_name = "";
     public string dbtype = DBTYPE_SQLSRV; // SQL=SQL Server, OLE=OleDB, MySQL=MySQL
@@ -253,8 +253,8 @@ public class DB : IDisposable
     private string offset_method = "FETCH NEXT"; // for SQL Server 2012+, for MySQL - LIMIT, for OLE - depends on provider
     protected Dictionary<string, Hashtable> schema = []; // schema for currently connected db
 
-    private DbConnection conn; // actual db connection - SqlConnection or OleDbConnection
-    private DbTransaction tran; // current transaction (if any)
+    private DbConnection? conn; // actual db connection - SqlConnection or OleDbConnection
+    private DbTransaction? tran; // current transaction (if any)
 
     protected bool is_check_ole_types = false; // if true - checks for unsupported OLE types during readRow
     protected readonly Hashtable UNSUPPORTED_OLE_TYPES = Utils.qh("DBTYPE_IDISPATCH DBTYPE_IUNKNOWN"); // also? DBTYPE_ARRAY DBTYPE_VECTOR DBTYPE_BYTES
@@ -411,7 +411,7 @@ public class DB : IDisposable
         this.ext_logger = logger;
     }
 
-    public void logger(LogLevel level, params object[] args)
+    public void logger(LogLevel level, params object?[] args)
     {
         if (args.Length == 0 || ext_logger == null)
             return;
@@ -495,7 +495,7 @@ public class DB : IDisposable
         if (conn == null && context != null)
         {
             var db_cache = (Hashtable)context.Items["DB"] ?? [];
-            conn = (DbConnection)db_cache[cache_key];
+            conn = db_cache[cache_key] as DbConnection;
         }
 
         // if still no connection - re-make it
@@ -507,13 +507,16 @@ public class DB : IDisposable
             if (context != null)
             {
                 var db_cache = (Hashtable)context.Items["DB"] ?? [];
-                db_cache[cache_key] = conn;
-                context.Items["DB"] = db_cache;
+                if (conn != null)
+                {
+                    db_cache[cache_key] = conn;
+                    context.Items["DB"] = db_cache;
+                }
             }
         }
 
         // if it's disconnected - re-connect
-        if (conn.State != ConnectionState.Open)
+        if (conn!.State != ConnectionState.Open)
             conn.Open();
 
         if (!isTimezoneInited)
@@ -538,7 +541,9 @@ public class DB : IDisposable
     /// <returns></returns>
     public DbConnection getConnection()
     {
-        return conn;
+        if (conn == null)
+            connect();
+        return conn!;
     }
 
     public DbConnection createConnection(string connstr, string dbtype = "SQL")
