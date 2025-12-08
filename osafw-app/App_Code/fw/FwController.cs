@@ -495,7 +495,8 @@ public abstract class FwController
                 if (!is_new && !is_fld_exists)
                     continue; // for existing records - do not require fields not present in item (so we can update only some fields)
 
-                if (!string.IsNullOrEmpty(fld) && (!is_fld_exists || ((string)item[fld]).Trim() == ""))
+                var fldValue = item[fld].toStr();
+                if (!string.IsNullOrEmpty(fld) && (!is_fld_exists || string.IsNullOrEmpty(fldValue.Trim())))
                 {
                     result = false;
                     form_errors[fld] = true;
@@ -553,11 +554,11 @@ public abstract class FwController
         if (this.list_sortmap == null)
             throw new Exception("No sort order mapping defined, define in list_sortmap");
 
-        string sortby = (string)this.list_filter["sortby"] ?? "";
-        string sortdir = (string)this.list_filter["sortdir"] ?? "";
+        string sortby = this.list_filter?["sortby"].toStr() ?? string.Empty;
+        string sortdir = this.list_filter?["sortdir"].toStr() ?? string.Empty;
 
-        string sortdef_field = null;
-        string sortdef_dir = null;
+        string sortdef_field = string.Empty;
+        string sortdef_dir = string.Empty;
         Utils.split2(" ", this.list_sortdef, ref sortdef_field, ref sortdef_dir);
 
         // validation/mapping

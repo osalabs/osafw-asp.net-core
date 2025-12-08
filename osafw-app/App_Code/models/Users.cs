@@ -125,7 +125,7 @@ public class Users : FwModel<Users.Row>
 
         if (!item.ContainsKey("pwd"))
             item["pwd"] = Utils.getRandStr(8); // generate password
-        item["pwd"] = this.hashPwd((string)item["pwd"]);
+        item["pwd"] = this.hashPwd(item["pwd"].toStr());
 
         // set ui_theme/ui_mode form the config if not set
         if (!item.ContainsKey("ui_theme"))
@@ -149,7 +149,7 @@ public class Users : FwModel<Users.Row>
         if (id == 0) return false;//no anonymous updates
 
         if (item.ContainsKey("pwd"))
-            item["pwd"] = this.hashPwd((string)item["pwd"]);
+            item["pwd"] = this.hashPwd(item["pwd"].toStr());
         return base.update(id, item);
     }
 

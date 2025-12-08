@@ -281,7 +281,7 @@ public static class FwExtensions
     /// <returns>A dictionary where each key is the name of a public readable property or field, and each value is a delegate
     /// that, when invoked with the object instance, returns the corresponding property's or field's value. If a member
     /// cannot be read, the delegate returns null.</returns>
-    public static Dictionary<string, Func<object, object>> getReadableMembers(this object? obj)
+    public static Dictionary<string, Func<object, object?>> getReadableMembers(this object? obj)
     {
         ArgumentNullException.ThrowIfNull(obj);
 
@@ -289,7 +289,7 @@ public static class FwExtensions
         return ReadableMembersCache.GetOrAdd(type, static t =>
         {
             var comparer = StringComparer.OrdinalIgnoreCase;
-            var dict = new Dictionary<string, Func<object, object>>(comparer);
+            var dict = new Dictionary<string, Func<object, object?>>(comparer);
 
             foreach (var prop in t.GetProperties(BindingFlags.Public | BindingFlags.Instance))
             {
@@ -334,7 +334,7 @@ public static class FwExtensions
     /// <param name="obj">The object instance from which to retrieve the member value. Cannot be null.</param>
     /// <param name="memberName">The name of the public property or field to retrieve. If null or empty, the method returns null.</param>
     /// <returns>The value of the specified member if found; otherwise, null.</returns>
-    public static object valueByMemberName(this object? obj, string memberName)
+    public static object? valueByMemberName(this object? obj, string memberName)
     {
         ArgumentNullException.ThrowIfNull(obj);
         if (string.IsNullOrEmpty(memberName))

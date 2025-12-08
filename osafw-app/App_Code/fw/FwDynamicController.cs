@@ -312,7 +312,7 @@ public class FwDynamicController : FwController
         if (reqb("refresh"))
         {
             fw.routeRedirect(FW.ACTION_SHOW_FORM, [id]);
-            return null;
+            return [];
         }
 
         Hashtable item = reqh("item");

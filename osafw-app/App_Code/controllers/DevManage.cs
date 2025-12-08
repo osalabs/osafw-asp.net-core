@@ -266,7 +266,15 @@ public class DevManageController : FwController
         if (!DevEntityBuilder.listControllers().Contains(controller_name))
             throw new NotFoundException("No controller found");
 
-        FwDynamicController cInstance = (FwDynamicController)Activator.CreateInstance(Type.GetType(FW.FW_NAMESPACE_PREFIX + controller_name, true));
+        var controllerType = Type.GetType(FW.FW_NAMESPACE_PREFIX + controller_name, true);
+        if (controllerType == null)
+            throw new UserException("Controller type not found");
+
+        var controllerInstance = Activator.CreateInstance(controllerType) as FwDynamicController;
+        if (controllerInstance == null)
+            throw new UserException("Controller initialization failed");
+
+        FwDynamicController cInstance = controllerInstance;
         cInstance.init(fw);
 
         var tpl_to = cInstance.base_url.ToLower();

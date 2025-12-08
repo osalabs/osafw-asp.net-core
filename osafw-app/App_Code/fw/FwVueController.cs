@@ -31,7 +31,7 @@ public class FwVueController : FwDynamicController
         var is_id_in_fields = false;
         foreach (Hashtable header in list_headers)
         {
-            var field_name = (string)header["field_name"];
+            var field_name = header["field_name"].toStr();
             quoted_fields.Add(db.qid(field_name));
             if (field_name == model0.field_id)
                 is_id_in_fields = true;
@@ -50,7 +50,7 @@ public class FwVueController : FwDynamicController
     {
         //extract autocomplete fields
         var ac_fields = new ArrayList();
-        var fields = (ArrayList)this.config["showform_fields"];
+        var fields = this.config["showform_fields"] as ArrayList ?? new ArrayList();
         foreach (Hashtable def in fields)
         {
             //var field_name = def["field"].toStr();
@@ -87,10 +87,10 @@ public class FwVueController : FwDynamicController
                     }
                     else
                     {
-                        var ac_model = fw.model(model_name);
-                        if (ac_model != null)
-                        {
-                            var ac_item = ac_model.one(row[field_name]);
+                    var ac_model = fw.model(model_name);
+                    if (ac_model != null)
+                    {
+                        var ac_item = ac_model.one(row[field_name]);
                             row[field_name + "_iname"] = ac_item["iname"];
                         }
                     }

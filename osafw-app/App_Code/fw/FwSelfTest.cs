@@ -68,15 +68,17 @@ public class FwSelfTest
 
         // log_level: higher than debug - OK, debug - warn, trace or below - red (not for prod)
         var log_level = (LogLevel)fw.config("log_level");
+        var logName = Enum.GetName(typeof(LogLevel), log_level) ?? string.Empty;
+
         if (log_level >= LogLevel.TRACE)
         {
             plus_err();
-            echo("log_level", Enum.GetName(typeof(LogLevel), log_level), Result.ERR);
+            echo("log_level", logName, Result.ERR);
         }
         else if (log_level == LogLevel.DEBUG)
         {
             plus_warn();
-            echo("log_level", Enum.GetName(typeof(LogLevel), log_level), Result.WARN);
+            echo("log_level", logName, Result.WARN);
         }
         else
         {

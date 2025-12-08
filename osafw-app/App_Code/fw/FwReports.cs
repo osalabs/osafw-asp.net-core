@@ -114,7 +114,14 @@ public class FwReports
             throw new UserException("Wrong Report Code");
 
         var reportType = Type.GetType(FW.FW_NAMESPACE_PREFIX + report_class_name, true, true);
-        FwReports report = (FwReports)Activator.CreateInstance(reportType);
+        if (reportType == null)
+            throw new UserException("Report class not found");
+
+        var instance = Activator.CreateInstance(reportType) as FwReports;
+        if (instance == null)
+            throw new UserException("Report initialization failed");
+
+        FwReports report = instance;
         report.init(fw, repcode, f);
         report.checkAccess();
         return report;
@@ -208,7 +215,9 @@ public class FwReports
 
         string sortdef_field = string.Empty;
         string sortdef_dir = string.Empty;
-        Utils.split2(" ", list_sortdef, ref sortdef_field, ref sortdef_dir);
+        Utils.split2(" ", list_sortdef ?? string.Empty, ref sortdef_field, ref sortdef_dir);
+
+        list_sortmap ??= [];
 
         // validation/mapping
         if (string.IsNullOrEmpty(sortby) || string.IsNullOrEmpty(((string)list_sortmap[sortby] ?? "").Trim()))

@@ -23,6 +23,9 @@ public class ImageUtils
         {
             if (p.Id == 274)
             {
+                if (p.Value == null || p.Value.Length < 2)
+                    continue;
+
                 switch (BitConverter.ToInt16(p.Value, 0))
                 {
                     case 1:
