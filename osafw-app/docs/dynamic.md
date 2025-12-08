@@ -93,37 +93,53 @@ pick a `type`, set the required keys, and copy an example you can paste into `co
 - Starts a Bootstrap `div.row` wrapper; pairs with `row_end`.
 - Combine with `col`/`col_end` to create multi-column layouts.
 ```json
-{"type": "row"}
+{
+  "type": "row"
+}
 ```
 
 #### type: col
 - Starts a column inside a row; default class `col`. Use `class_contents` to change width.
 ```json
-{"type": "col", "class_contents": "col-md-6"}
+{
+  "type": "col",
+  "class_contents": "col-md-6"
+}
 ```
 
 #### type: col_end
 - Ends the current column wrapper.
 ```json
-{"type": "col_end"}
+{
+  "type": "col_end"
+}
 ```
 
 #### type: row_end
 - Ends the current row wrapper.
 ```json
-{"type": "row_end"}
+{
+  "type": "row_end"
+}
 ```
 
 #### type: header
 - Section header rendered as `<h5>` with horizontal rule.
 ```json
-{"type": "header", "label": "General"}
+{
+  "type": "header",
+  "label": "General"
+}
 ```
 
 #### type: plaintext
 - Read-only text value; standard `label`, `class_*` keys apply.
 ```json
-{"type": "plaintext", "field": "iname", "label": "Title"}
+{
+  "type": "plaintext",
+  "field": "iname",
+  "label": "Title"
+}
 ```
 
 #### type: plaintext_link
@@ -141,79 +157,139 @@ pick a `type`, set the required keys, and copy an example you can paste into `co
 #### type: plaintext_autocomplete
 - Shows the lookup name (via `lookup_model` or `lookup_table`/`lookup_field`) for the stored id.
 ```json
-{"type": "plaintext_autocomplete", "field": "demo_dicts_id", "label": "Category", "lookup_model": "DemoDicts"}
+{
+  "type": "plaintext_autocomplete",
+  "field": "demo_dicts_id",
+  "label": "Category",
+  "lookup_model": "DemoDicts"
+}
 ```
 
 #### type: plaintext_yesno
 - Renders `Yes`/`No` from a boolean/flag value.
 ```json
-{"type": "plaintext_yesno", "field": "is_active", "label": "Active"}
+{
+  "type": "plaintext_yesno",
+  "field": "is_active",
+  "label": "Active"
+}
 ```
 
 #### type: plaintext_currency
 - Read-only currency; optional `currency_symbol` (default `$`) and `conv` for formatting.
 ```json
-{"type": "plaintext_currency", "field": "price", "label": "Price", "currency_symbol": "EUR"}
+{
+  "type": "plaintext_currency",
+  "field": "price",
+  "label": "Price",
+  "currency_symbol": "EUR"
+}
 ```
 
 #### type: markdown
 - Server-side rendered markdown block; accepts `noescape` style content.
 ```json
-{"type": "markdown", "field": "idesc", "label": "Description"}
+{
+  "type": "markdown",
+  "field": "idesc",
+  "label": "Description"
+}
 ```
 
 #### type: noescape
 - Outputs the raw value without HTML escaping.
 ```json
-{"type": "noescape", "field": "html_block", "label": "Raw HTML"}
+{
+  "type": "noescape",
+  "field": "html_block",
+  "label": "Raw HTML"
+}
 ```
 
 #### type: float
 - Shows a numeric value with two decimal places.
 ```json
-{"type": "float", "field": "amount", "label": "Amount"}
+{
+  "type": "float",
+  "field": "amount",
+  "label": "Amount"
+}
 ```
 
 #### type: checkbox
 - Read-only checkbox; mark as checked when the value equals the true flag (defaults to `1`).
 ```json
-{"type": "checkbox", "field": "is_done", "label": "Completed"}
+{
+  "type": "checkbox",
+  "field": "is_done",
+  "label": "Completed"
+}
 ```
 
 #### type: date
 - Formats a date value as `M/d/yyyy`.
 ```json
-{"type": "date", "field": "due_date", "label": "Due"}
+{
+  "type": "date",
+  "field": "due_date",
+  "label": "Due"
+}
 ```
 
 #### type: date_long
 - Formats date/time as `M/d/yyyy hh:mm:ss`.
 ```json
-{"type": "date_long", "field": "updated_time", "label": "Updated"}
+{
+  "type": "date_long",
+  "field": "updated_time",
+  "label": "Updated"
+}
 ```
 
 #### type: multi
 - Read-only list of related records with checkboxes; set `lookup_model`/`lookup_field`. Supports `is_by_linked` for alt ids.
 ```json
-{"type": "multi", "field": "tags", "label": "Tags", "lookup_model": "DemoDicts", "lookup_field": "iname"}
+{
+  "type": "multi",
+  "field": "tags",
+  "label": "Tags",
+  "lookup_model": "DemoDicts",
+  "lookup_field": "iname"
+}
 ```
 
 #### type: multi_prio
 - Read-only multi-select with priorities; usually paired with a junction model.
 ```json
-{"type": "multi_prio", "field": "roles", "label": "Roles", "lookup_model": "Roles", "lookup_field": "iname"}
+{
+  "type": "multi_prio",
+  "field": "roles",
+  "label": "Roles",
+  "lookup_model": "Roles",
+  "lookup_field": "iname"
+}
 ```
 
 #### type: att
 - Displays a single attachment (first match) for the current record.
 ```json
-{"type": "att", "field": "photo", "label": "Photo", "att_category": "photos"}
+{
+  "type": "att",
+  "field": "photo",
+  "label": "Photo",
+  "att_category": "photos"
+}
 ```
 
 #### type: att_links
 - Shows multiple attachment links.
 ```json
-{"type": "att_links", "field": "docs", "label": "Documents", "att_category": "general"}
+{
+  "type": "att_links",
+  "field": "docs",
+  "label": "Documents",
+  "att_category": "general"
+}
 ```
 
 #### type: att_files
@@ -231,31 +307,46 @@ pick a `type`, set the required keys, and copy an example you can paste into `co
 #### type: subtable
 - Read-only table of related records; supply `model` plus `save_fields`/`lookup_*` on the model side as needed.
 ```json
-{"type": "subtable", "field": "items", "label": "Items", "model": "DemosItems"}
+{
+  "type": "subtable",
+  "field": "items",
+  "label": "Items",
+  "model": "DemosItems"
+}
 ```
 
 #### type: added
 - Standard added-on/by block (uses framework metadata).
 ```json
-{"type": "added", "label": "Added"}
+{
+  "type": "added",
+  "label": "Added"
+}
 ```
 
 #### type: updated
 - Standard updated-on/by block.
 ```json
-{"type": "updated", "label": "Updated"}
+{
+  "type": "updated",
+  "label": "Updated"
+}
 ```
 
 #### type: group_id
 - Hidden id field with Submit/Cancel buttons. Accepts `class`/`attrs` for layout tweaks.
 ```json
-{"type": "group_id"}
+{
+  "type": "group_id"
+}
 ```
 
 #### type: group_id_addnew
 - Same as `group_id` plus "Submit and Add New" button.
 ```json
-{"type": "group_id_addnew"}
+{
+  "type": "group_id_addnew"
+}
 ```
 
 #### type: select
@@ -305,37 +396,67 @@ Filtered select pair example:
 #### type: input
 - Single-line text input; supports `maxlength`, `placeholder`, `validate`, `prepend`/`append` button addons.
 ```json
-{"type": "input", "field": "iname", "label": "Title", "maxlength": 255}
+{
+  "type": "input",
+  "field": "iname",
+  "label": "Title",
+  "maxlength": 255
+}
 ```
 
 #### type: textarea
 - Multiline text; configure `rows`, `maxlength`, `placeholder`.
 ```json
-{"type": "textarea", "field": "idesc", "label": "Description", "rows": 5}
+{
+  "type": "textarea",
+  "field": "idesc",
+  "label": "Description",
+  "rows": 5
+}
 ```
 
 #### type: email
 - Email input with browser validation.
 ```json
-{"type": "email", "field": "email", "label": "Email", "required": true}
+{
+  "type": "email",
+  "field": "email",
+  "label": "Email",
+  "required": true
+}
 ```
 
 #### type: number
 - Numeric input with `min`, `max`, `step` and optional `conv`.
 ```json
-{"type": "number", "field": "qty", "label": "Quantity", "min": 0, "step": 1}
+{
+  "type": "number",
+  "field": "qty",
+  "label": "Quantity",
+  "min": 0,
+  "step": 1
+}
 ```
 
 #### type: password
 - Password input; often used without `label` when embedded.
 ```json
-{"type": "password", "field": "pass", "label": "Password"}
+{
+  "type": "password",
+  "field": "pass",
+  "label": "Password"
+}
 ```
 
 #### type: currency
 - Input-group with currency symbol (default `$`); accepts `currency_symbol` and `conv`.
 ```json
-{"type": "currency", "field": "price", "label": "Price", "currency_symbol": "EUR"}
+{
+  "type": "currency",
+  "field": "price",
+  "label": "Price",
+  "currency_symbol": "EUR"
+}
 ```
 
 #### type: autocomplete
@@ -378,43 +499,76 @@ Filtered select pair example:
 #### type: radio
 - Radio buttons from lookup values; `is_inline` lays them out horizontally.
 ```json
-{"type": "radio", "field": "status", "label": "Status", "lookup_tpl": "/common/sel/status.sel", "is_inline": true}
+{
+  "type": "radio",
+  "field": "status",
+  "label": "Status",
+  "lookup_tpl": "/common/sel/status.sel",
+  "is_inline": true
+}
 ```
 
 #### type: yesno
 - Convenience radio group for Yes/No (1/2); supports `is_inline`.
 ```json
-{"type": "yesno", "field": "is_active", "label": "Active", "is_inline": true}
+{
+  "type": "yesno",
+  "field": "is_active",
+  "label": "Active",
+  "is_inline": true
+}
 ```
 
 #### type: cb
 - Single checkbox input.
 ```json
-{"type": "cb", "field": "is_active", "label": "Active"}
+{
+  "type": "cb",
+  "field": "is_active",
+  "label": "Active"
+}
 ```
 
 #### type: date_popup
 - Date picker with calendar popup.
 ```json
-{"type": "date_popup", "field": "due_date", "label": "Due Date"}
+{
+  "type": "date_popup",
+  "field": "due_date",
+  "label": "Due Date"
+}
 ```
 
 #### type: date_combo
 - Separate day/month/year combos; useful for locales without date pickers.
 ```json
-{"type": "date_combo", "field": "dob", "label": "Birth Date"}
+{
+  "type": "date_combo",
+  "field": "dob",
+  "label": "Birth Date"
+}
 ```
 
 #### type: datetime_popup
 - Date and time picker; supports `default_time` and `conv`.
 ```json
-{"type": "datetime_popup", "field": "start_time", "label": "Start", "default_time": "09:00"}
+{
+  "type": "datetime_popup",
+  "field": "start_time",
+  "label": "Start",
+  "default_time": "09:00"
+}
 ```
 
 #### type: time
 - HH:MM time input; combine with `conv` for storage as seconds if needed.
 ```json
-{"type": "time", "field": "start_at", "label": "Start Time", "conv": "time_from_seconds"}
+{
+  "type": "time",
+  "field": "start_at",
+  "label": "Start Time",
+  "conv": "time_from_seconds"
+}
 ```
 
 #### type: att_edit
@@ -432,7 +586,12 @@ Filtered select pair example:
 #### type: att_links_edit
 - Attach multiple existing files or upload via Att modal.
 ```json
-{"type": "att_links_edit", "field": "docs", "label": "Documents", "att_category": "general"}
+{
+  "type": "att_links_edit",
+  "field": "docs",
+  "label": "Documents",
+  "att_category": "general"
+}
 ```
 
 #### type: att_files_edit
@@ -468,20 +627,39 @@ Filtered select pair example:
 
 Configuration example:
 ```json
-"form_tabs": [
-  {"tab": "", "label": "Default"},
-  {"tab": "general", "label": "General"},
-  {"tab": "advanced", "label": "Advanced"}
-],
-"showform_fields": [
-  // default tab form fields
-],
-"showform_fields_general": [
-  {"field": "iname", "type": "input", "label": "Title"}
-],
-"showform_fields_advanced": [
-  {"field": "idesc", "type": "textarea", "label": "Description"}
-]
+{
+  "form_tabs": [
+    {
+      "tab": "",
+      "label": "Default"
+    },
+    {
+      "tab": "general",
+      "label": "General"
+    },
+    {
+      "tab": "advanced",
+      "label": "Advanced"
+    }
+  ],
+  "showform_fields": [
+    // default tab form fields
+  ],
+  "showform_fields_general": [
+    {
+      "field": "iname",
+      "type": "input",
+      "label": "Title"
+    }
+  ],
+  "showform_fields_advanced": [
+    {
+      "field": "idesc",
+      "type": "textarea",
+      "label": "Description"
+    }
+  ]
+}
 ```
 
 Each entry defines the tab code (`tab`) and the text shown on the tab (`label`).
