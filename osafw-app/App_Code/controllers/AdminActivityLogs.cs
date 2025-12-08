@@ -19,8 +19,8 @@ public class AdminActivityLogsController : FwController
     public override void init(FW fw)
     {
         base.init(fw);
-        model0 = fw.model<FwActivityLogs>();
-        model = (FwActivityLogs)model0;
+        model = fw.model<FwActivityLogs>();
+        model0 = model;
 
         base_url = "/Admin/ActivityLogs";
         db = model.getDB();

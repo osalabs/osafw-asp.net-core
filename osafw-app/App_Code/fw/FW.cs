@@ -106,7 +106,7 @@ public class FW : IDisposable
     /// <summary>
     /// Convert an internal UTC datetime (DateTime or SQL string) into a user-visible string using the current user's timezone/format.
     /// </summary>
-    public string formatUserDateTime(object value, bool isISO = false)
+    public string formatUserDateTime(object? value, bool isISO = false)
     {
         if (value == null)
             return "";

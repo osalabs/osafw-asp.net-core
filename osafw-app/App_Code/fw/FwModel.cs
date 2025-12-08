@@ -20,12 +20,12 @@ public abstract class FwModel : IDisposable
     public const int STATUS_INACTIVE = 10;
     public const int STATUS_DELETED = 127;
 
-    protected FW fw;
+    protected FW fw = null!;
     protected DB db;
     protected string db_config = ""; // if empty(default) - fw.db used, otherwise - new db connection created based on this config name
 
     public string table_name = ""; // must be assigned in child class
-    protected Hashtable table_schema; // table schema cache (fields, types, etc) - filled on demand
+    protected Hashtable? table_schema; // table schema cache (fields, types, etc) - filled on demand
     public string csv_export_fields = ""; // all or Utils.qw format
     public string csv_export_headers = ""; // comma-separated format
 
@@ -124,7 +124,8 @@ public abstract class FwModel : IDisposable
     public virtual DBRow one(int id)
     {
         var cache_key = this.cache_prefix + id;
-        var item = (DBRow)(Hashtable)fw.cache.getRequestValue(cache_key);
+        var itemObj = fw.cache.getRequestValue(cache_key);
+        DBRow? item = itemObj is Hashtable ht ? (DBRow)ht : null;
         if (item == null)
         {
             Hashtable where = [];
@@ -133,11 +134,11 @@ public abstract class FwModel : IDisposable
             normalizeNames(item);
             fw.cache.setRequestValue(cache_key, item);
         }
-        return item ?? new DBRow();
+        return item ?? [];
     }
 
     //overload of one() to accept id of any type, so no need to explicitly convert by caller
-    public virtual DBRow one(object id)
+    public virtual DBRow one(object? id)
     {
         var iid = id.toInt();
         if (iid > 0)
@@ -147,7 +148,7 @@ public abstract class FwModel : IDisposable
     }
 
     // return one specific field for the row, uncached
-    public virtual object oneField(int id, string field_name)
+    public virtual object? oneField(int id, string field_name)
     {
         Hashtable where = [];
         where[this.field_id] = id;
@@ -215,7 +216,7 @@ public abstract class FwModel : IDisposable
         var row = one(id);
         return row[field_iname];
     }
-    public virtual string iname(object id)
+    public virtual string iname(object? id)
     {
         var result = "";
         var iid = id.toInt();
@@ -331,7 +332,8 @@ public abstract class FwModel : IDisposable
             return [];
 
         var cache_key = this.cache_prefix_byicode + icode;
-        var item = (DBRow)(Hashtable)fw.cache.getRequestValue(cache_key);
+        var itemObj = fw.cache.getRequestValue(cache_key);
+        DBRow? item = itemObj is Hashtable ht ? (DBRow)ht : null;
         if (item == null)
         {
             Hashtable where = [];
@@ -394,10 +396,9 @@ public abstract class FwModel : IDisposable
             var fieldname_lc = fieldname.ToLower();
             if (!table_schema.ContainsKey(fieldname_lc)) continue;
 
-            var field_schema = (Hashtable)table_schema[fieldname_lc];
-
-            var fw_type = (string)field_schema["fw_type"];
-            //var fw_subtype = (string)field_schema["fw_subtype"];
+            var field_schema = table_schema[fieldname_lc] as Hashtable ?? [];
+            var fw_type = field_schema["fw_type"].toStr();
+            //var fw_subtype = field_schema["fw_subtype"].toStr();
 
             if (fw_type == "date")
             {
@@ -406,7 +407,7 @@ public abstract class FwModel : IDisposable
                     continue;
 
                 //if field is exactly DATE - convert only date part without time - in YYYY-MM-DD format
-                item[fieldname] = DateUtils.Str2SQL((string)item[fieldname], fw.userDateFormat);
+                item[fieldname] = DateUtils.Str2SQL(item[fieldname].toStr(), fw.userDateFormat);
             }
             else if (fw_type == "datetime")
             {
@@ -766,7 +767,7 @@ public abstract class FwModel : IDisposable
         ArrayList result = [];
         if (!string.IsNullOrEmpty(field_prio))
             result.AddRange((from Hashtable h in lookup_rows
-                             orderby ((Hashtable)h?["_link"])?[field_prio] ?? "", h["is_checked"] descending
+                             orderby (h?["_link"] as Hashtable)?[field_prio] ?? "", h["is_checked"] descending
                              select h).ToList());
         else
             result.AddRange((from Hashtable h in lookup_rows
@@ -784,6 +785,9 @@ public abstract class FwModel : IDisposable
     /// <returns></returns>
     public virtual ArrayList listLinkedByMainId(int main_id, Hashtable? def = null)
     {
+        if (junction_model_linked == null)
+            throw new ApplicationException("junction_model_linked not defined in model " + this.GetType().Name);            
+
         var linked_rows = listByMainId(main_id, def);
 
         ArrayList lookup_rows = junction_model_linked.list();
@@ -820,6 +824,9 @@ public abstract class FwModel : IDisposable
     /// <returns></returns>
     public virtual ArrayList listMainByLinkedId(int linked_id, Hashtable? def = null)
     {
+        if (junction_model_main == null)
+            throw new ApplicationException("junction_model_main not defined in model " + this.GetType().Name);
+
         var linked_rows = listByLinkedId(linked_id, def);
 
         ArrayList lookup_rows = junction_model_main.list();
@@ -874,7 +881,7 @@ public abstract class FwModel : IDisposable
         {
             var result = new ArrayList();
             result.AddRange((from Hashtable h in rows
-                             where (bool)h["is_checked"]
+                             where h["is_checked"].toBool()
                              select h).ToList());
             return result;
         }

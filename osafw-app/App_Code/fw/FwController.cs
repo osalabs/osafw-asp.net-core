@@ -292,7 +292,7 @@ public abstract class FwController
     /// <param name="iname"></param>
     /// <param name="def">optional default value to return if request value is not set</param>
     /// <returns></returns>
-    public object req(string iname, object? def = null)
+    public object? req(string iname, object? def = null)
     {
         return fw.FORM[iname] ?? def;
     }
@@ -304,8 +304,8 @@ public abstract class FwController
     /// <returns></returns>
     public Hashtable reqh(string iname)
     {
-        if (fw.FORM[iname] != null && fw.FORM[iname].GetType() == typeof(Hashtable))
-            return (Hashtable)fw.FORM[iname];
+        if (fw.FORM[iname] is Hashtable hf)
+            return hf; 
         else
             return [];
     }
@@ -371,7 +371,7 @@ public abstract class FwController
 
     public virtual void checkXSS()
     {
-        if (fw.Session("XSS") != (string)fw.FORM["XSS"])
+        if (fw.Session("XSS") != reqs("XSS"))
             throw new AuthException("XSS Error. Reload the page or try to re-login");
     }
 
