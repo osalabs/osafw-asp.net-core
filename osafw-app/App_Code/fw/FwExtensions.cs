@@ -296,7 +296,8 @@ public static class FwExtensions
                 if (!prop.CanRead || prop.GetIndexParameters().Length > 0)
                     continue;
 
-                var key = prop.Name;
+                var attr = prop.GetCustomAttribute<DBNameAttribute>(inherit: false);
+                var key = attr?.Description ?? prop.Name;
                 if (!dict.ContainsKey(key))
                 {
                     dict[key] = obj =>
@@ -309,7 +310,8 @@ public static class FwExtensions
 
             foreach (var field in t.GetFields(BindingFlags.Public | BindingFlags.Instance))
             {
-                var key = field.Name;
+                var attr = field.GetCustomAttribute<DBNameAttribute>(inherit: false);
+                var key = attr?.Description ?? field.Name;
                 if (!dict.ContainsKey(key))
                 {
                     dict[key] = obj =>
