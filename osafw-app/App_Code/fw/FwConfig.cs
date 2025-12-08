@@ -26,7 +26,7 @@ public static class FwConfig
     // internals
     private static readonly AsyncLocal<Hashtable> _current = new();                // per-async-flow bucket
     private static readonly ConcurrentDictionary<string, Hashtable> _hostCache = new();
-    private static IConfiguration configuration;                                   // appsettings.* provider
+    private static IConfiguration? configuration;                                   // appsettings.* provider
     private static readonly object locker = new();
 
     public static readonly char path_separator = Path.DirectorySeparatorChar;
@@ -45,7 +45,7 @@ public static class FwConfig
     }
 
     /// <remarks>Called exactly once per _http request_ by FW.</remarks>
-    public static void init(HttpContext ctx, IConfiguration cfg, string host = null)
+    public static void init(HttpContext? ctx, IConfiguration cfg, string? host = null)
     {
         configuration ??= cfg;                                          // record for offline tools
 
@@ -67,7 +67,8 @@ public static class FwConfig
     {
         var tmp = new Hashtable();
         initDefaults(null, "", ref tmp);
-        readSettings(configuration, ref tmp);                                     // appsettings:appSettings
+        if (configuration != null)
+            readSettings(configuration, ref tmp);                                     // appsettings:appSettings
         return tmp;
     }, LazyThreadSafetyMode.ExecutionAndPublication);
 

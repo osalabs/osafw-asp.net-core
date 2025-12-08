@@ -58,7 +58,7 @@ public class ConvUtils
     // if out_filename cotains "\" or "/" - save pdf file to this path
     // options:
     // see html2pdf() method for options
-    public static string parsePagePdf(FW fw, string bdir, string tpl_name, Hashtable ps, string out_filename = "", Hashtable options = null)
+    public static string parsePagePdf(FW fw, string bdir, string tpl_name, Hashtable ps, string out_filename = "", Hashtable? options = null)
     {
         ensurePlaywrightInstalled(fw);
 
@@ -107,7 +107,7 @@ public class ConvUtils
     // margin_right = "10mm"
     // margin_bottom = "5mm"
     // margin_left = "10mm"
-    public static async Task html2pdf(FW fw, string html_data, string filename, Hashtable options = null)
+    public static async Task html2pdf(FW fw, string html_data, string filename, Hashtable? options = null)
     {
         if (filename.Length < 1)
         {

@@ -59,7 +59,7 @@ public abstract class FwModel : IDisposable
     protected string cache_prefix = "fwmodel.one."; // default cache prefix for caching items
     protected string cache_prefix_byicode = "fwmodel.onebyicode."; // default cache prefix for caching items by icode
 
-    protected FwModel(FW fw = null)
+    protected FwModel(FW? fw = null)
     {
         if (fw != null)
         {
@@ -267,7 +267,7 @@ public abstract class FwModel : IDisposable
     }
 
     // return standard list of id,iname for all non-deleted OR wtih specified statuses order by by getOrderBy
-    public virtual DBList list(IList statuses = null)
+    public virtual DBList list(IList? statuses = null)
     {
         Hashtable where = [];
         if (!string.IsNullOrEmpty(field_status))
@@ -288,14 +288,14 @@ public abstract class FwModel : IDisposable
     /// <param name="offset">TODO</param>
     /// <param name="orderby"></param>
     /// <returns></returns>
-    public virtual DBList listByWhere(Hashtable where = null, int limit = -1, int offset = 0, string orderby = "")
+    public virtual DBList listByWhere(Hashtable? where = null, int limit = -1, int offset = 0, string orderby = "")
     {
         where ??= [];
         return db.array(table_name, where, orderby != "" ? orderby : getOrderBy());
     }
 
     // return count of all non-deleted or with specified statuses
-    public virtual long getCount(IList statuses = null, int? since_days = null)
+    public virtual long getCount(IList? statuses = null, int? since_days = null)
     {
         Hashtable where = [];
         if (!string.IsNullOrEmpty(field_status))
@@ -651,7 +651,7 @@ public abstract class FwModel : IDisposable
     #region select options and autocomplete
     // override if id/iname differs in table or to process custom lookup_params and filter_for/filter_field
     // def - in dynamic controller - field definition (also contains "i" and "ps", "lookup_params", ...) or you could use it to pass additional params
-    public virtual ArrayList listSelectOptions(Hashtable def = null)
+    public virtual ArrayList listSelectOptions(Hashtable? def = null)
     {
         Hashtable where = [];
         if (!string.IsNullOrEmpty(field_status))
@@ -676,7 +676,7 @@ public abstract class FwModel : IDisposable
     }
 
     // similar to listSelectOptions but returns iname/iname
-    public virtual ArrayList listSelectOptionsName(Hashtable def = null)
+    public virtual ArrayList listSelectOptionsName(Hashtable? def = null)
     {
         Hashtable where = [];
         if (!string.IsNullOrEmpty(field_status))
@@ -691,7 +691,7 @@ public abstract class FwModel : IDisposable
     }
 
     // like listSelectOptions, but for autocomplete by search string q
-    public virtual ArrayList listSelectOptionsAutocomplete(string q, Hashtable def = null)
+    public virtual ArrayList listSelectOptionsAutocomplete(string q, Hashtable? def = null)
     {
         Hashtable where = [];
         where[field_iname] = db.opLIKE("%" + q + "%");
@@ -741,7 +741,7 @@ public abstract class FwModel : IDisposable
     /// <param name="def"></param>
     /// <returns></returns>
     /// <exception cref="NotImplementedException"></exception>
-    public virtual DBList listByMainId(int main_id, Hashtable def = null)
+    public virtual DBList listByMainId(int main_id, Hashtable? def = null)
     {
         if (string.IsNullOrEmpty(junction_field_main_id))
             throw new NotImplementedException();
@@ -749,7 +749,7 @@ public abstract class FwModel : IDisposable
     }
 
     //similar to listByMainId but by linked_id
-    public virtual DBList listByLinkedId(int linked_id, Hashtable def = null)
+    public virtual DBList listByLinkedId(int linked_id, Hashtable? def = null)
     {
         if (string.IsNullOrEmpty(junction_field_linked_id))
             throw new NotImplementedException();
@@ -782,7 +782,7 @@ public abstract class FwModel : IDisposable
     /// <param name="id">main table id</param>
     /// <param name="def">in dynamic controller - field definition (also contains "i" and "ps", "lookup_params", ...) or you could use it to pass additional params</param>
     /// <returns></returns>
-    public virtual ArrayList listLinkedByMainId(int main_id, Hashtable def = null)
+    public virtual ArrayList listLinkedByMainId(int main_id, Hashtable? def = null)
     {
         var linked_rows = listByMainId(main_id, def);
 
@@ -818,7 +818,7 @@ public abstract class FwModel : IDisposable
     /// <param name="linked_id">linked table id</param>
     /// <param name="def">in dynamic controller - field definition (also contains "i" and "ps", "lookup_params", ...) or you could use it to pass additional params</param>
     /// <returns></returns>
-    public virtual ArrayList listMainByLinkedId(int linked_id, Hashtable def = null)
+    public virtual ArrayList listMainByLinkedId(int linked_id, Hashtable? def = null)
     {
         var linked_rows = listByLinkedId(linked_id, def);
 
@@ -847,7 +847,7 @@ public abstract class FwModel : IDisposable
         return lookup_rows;
     }
 
-    protected ArrayList setMultiListChecked(ArrayList rows, List<string> ids, Hashtable def = null)
+    protected ArrayList setMultiListChecked(ArrayList rows, List<string>? ids, Hashtable? def = null)
     {
         var result = rows;
 
@@ -867,7 +867,7 @@ public abstract class FwModel : IDisposable
         return result;
     }
 
-    protected ArrayList filterAndSortChecked(ArrayList rows, Hashtable def = null)
+    protected ArrayList filterAndSortChecked(ArrayList rows, Hashtable? def = null)
     {
         var is_checked_only = def?["lookup_checked_only"].toBool() ?? false;
         if (is_checked_only)
@@ -889,7 +889,7 @@ public abstract class FwModel : IDisposable
     /// <param name="ids">selected ids from the list()</param>
     /// <param name="def">def - in dynamic controller - field definition (also contains "i" and "ps", "lookup_params", ...) or you could use it to pass additional params</param>
     /// <returns></returns>
-    public virtual ArrayList listWithChecked(List<string> ids, Hashtable def = null)
+    public virtual ArrayList listWithChecked(List<string>? ids, Hashtable? def = null)
     {
         var rows = setMultiListChecked(this.list(), ids, def);
         return rows;
@@ -901,7 +901,7 @@ public abstract class FwModel : IDisposable
     /// <param name="sel_ids">comma-separated selected ids from the list()</param>
     /// <param name="def">def - in dynamic controller - field definition (also contains "i" and "ps", "lookup_params", ...) or you could use it to pass additional params</param>
     /// <returns></returns>
-    public virtual ArrayList listWithChecked(string sel_ids, Hashtable def = null)
+    public virtual ArrayList listWithChecked(string sel_ids, Hashtable? def = null)
     {
         List<string> ids = Utils.isEmpty(sel_ids) ? [] : new(sel_ids.Split(","));
         return this.listWithChecked(ids, def);
@@ -1119,7 +1119,7 @@ public abstract class FwModel : IDisposable
 
     #region dynamic subtable component
     // override in your specific models when necessary
-    public virtual void prepareSubtable(ArrayList list_rows, int related_id, Hashtable def = null)
+    public virtual void prepareSubtable(ArrayList list_rows, int related_id, Hashtable? def = null)
     {
         foreach (Hashtable row in list_rows)
         {
@@ -1135,7 +1135,7 @@ public abstract class FwModel : IDisposable
     }
 
     // override in your specific models when necessary, add defaults for new record
-    public virtual void prepareSubtableAddNew(ArrayList list_rows, int related_id, Hashtable def = null)
+    public virtual void prepareSubtableAddNew(ArrayList list_rows, int related_id, Hashtable? def = null)
     {
         var id = "new-" + DateTimeOffset.Now.ToUnixTimeMilliseconds(); //generate unique id based on time for sequental adding
         var item = new Hashtable()

@@ -14,11 +14,6 @@ namespace osafw;
 
 class DevCodeGen
 {
-    private static string SafeStr(object? o, string defaultValue = "") => (o ?? defaultValue).toStr(defaultValue);
-    private static bool SafeBool(object? o) => (o ?? false).toBool();
-    private static int SafeInt(object? o, int defaultValue = 0) => (o ?? defaultValue).toInt(defaultValue);
-
-
     public const string DB_SQL_PATH = "/App_Data/sql/database.sql"; // relative to site_root
     public const string DB_JSON_PATH = "/dev/db.json";
     public const string ENTITIES_PATH = "/dev/entities.txt";
@@ -170,12 +165,12 @@ class DevCodeGen
         foreach (Hashtable fk in entity["foreign_keys"] as ArrayList ?? new ArrayList())
         {
             fw.logger("CHECK FK:", fk["column"], "=", field["name"]);
-            if (SafeStr(fk["column"]) == SafeStr(field["name"]))
+            if (fk["column"].toStr() == field["name"].toStr())
             {
                 //build FK name as FK_TABLE_FIELDWITHOUTID
-                var fk_name = SafeStr(fk["column"]);
+                var fk_name = fk["column"].toStr();
                 fk_name = Regex.Replace(fk_name, "_id$", "", RegexOptions.IgnoreCase);
-                result = " CONSTRAINT FK_" + SafeStr(entity["fw_name"]) + "_" + Utils.name2fw(fk_name) + " FOREIGN KEY REFERENCES " + db.qid(SafeStr(fk["pk_table"]), false) + "(" + db.qid(SafeStr(fk["pk_column"]), false) + ")";
+                result = " CONSTRAINT FK_" + entity["fw_name"].toStr() + "_" + Utils.name2fw(fk_name) + " FOREIGN KEY REFERENCES " + db.qid(fk["pk_table"].toStr(), false) + "(" + db.qid(fk["pk_column"].toStr(), false) + ")";
                 break;
             }
         }
@@ -187,7 +182,7 @@ class DevCodeGen
     // convert db.json entity to SQL CREATE TABLE
     private string entity2SQL(Hashtable entity)
     {
-        var table_name = SafeStr(entity["table"]);
+        var table_name = entity["table"].toStr();
         var result = "CREATE TABLE " + db.qid(table_name, false) + " (" + Environment.NewLine;
 
         var indexes = entity["indexes"] as Hashtable;
@@ -196,24 +191,24 @@ class DevCodeGen
         foreach (Hashtable field in fields)
         {
             var fsql = "";
-            var field_name = SafeStr(field["name"]);
+            var field_name = field["name"].toStr();
             if (field_name == "status")
                 fsql += Environment.NewLine; // add empty line before system fields starting with "status"
 
             fsql += "  " + db.qid(field_name, false).PadRight(21, ' ') + " " + entityFieldToSQLType(field);
-            if (SafeBool(field["is_identity"]))
+            if (field["is_identity"].toBool())
             {
                 fsql += " IDENTITY(1, 1)";
                 if (indexes == null || !indexes.ContainsKey("PK"))
                     fsql += " PRIMARY KEY CLUSTERED";
             }
 
-            fsql += SafeBool(field["is_nullable"]) ? "" : " NOT NULL";
+            fsql += field["is_nullable"].toBool() ? "" : " NOT NULL";
             fsql += entityFieldToSQLDefault(field);
             fsql += entityFieldToSQLForeignKey(field, entity);
             fsql += (i < fields.Count ? "," : "");
             if (field.ContainsKey("comments"))
-                fsql = fsql.PadRight(64, ' ') + "-- " + SafeStr(field["comments"]);
+                fsql = fsql.PadRight(64, ' ') + "-- " + field["comments"].toStr();
 
             result += fsql + Environment.NewLine;
             i += 1;

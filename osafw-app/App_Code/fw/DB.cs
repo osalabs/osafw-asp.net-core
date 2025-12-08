@@ -141,10 +141,10 @@ public class DBOperation
     public DBOps op;
     public string opstr; // string value for op
     public bool is_value = true; // if false - operation is unary (no value)
-    public object value; // can be array for IN, NOT IN, OR
+    public object? value; // can be array for IN, NOT IN, OR
     public string sql = ""; // raw value to be used in sql query string if !is_value
 
-    public DBOperation(DBOps op, object value = null)
+    public DBOperation(DBOps op, object? value = null)
     {
         this.op = op;
         setOpStr();
@@ -723,7 +723,7 @@ public class DB : IDisposable
     /// <param name="params">param => value, value can be IList (example: new int[] {1,2,3}) - then sql query has something like "id IN (@ids)"</param>
     /// <returns></returns>
     /// <exception cref="ApplicationException"></exception>
-    public DbDataReader query(string sql, Hashtable in_params = null)
+    public DbDataReader query(string sql, Hashtable? in_params = null)
     {
         connect();
 
@@ -860,7 +860,7 @@ public class DB : IDisposable
 
     // like query(), but exectute without results (so db reader will be closed), return number of rows affected.
     // if is_get_identity=true - return last inserted id
-    public int exec(string sql, Hashtable @params = null, bool is_get_identity = false)
+    public int exec(string sql, Hashtable? @params = null, bool is_get_identity = false)
     {
         connect();
 
@@ -1091,7 +1091,7 @@ public class DB : IDisposable
     /// <param name="sql"></param>
     /// <param name="params"></param>
     /// <returns></returns>
-    public DBRow rowp(string sql, Hashtable @params = null)
+    public DBRow rowp(string sql, Hashtable? @params = null)
     {
         DbDataReader dbread = query(sql, @params);
         var hasRow = dbread.Read();
@@ -1106,7 +1106,7 @@ public class DB : IDisposable
     /// <param name="sql"></param>
     /// <param name="params"></param>
     /// <returns></returns>
-    public T rowp<T>(string sql, Hashtable @params = null) where T : new()
+    public T rowp<T>(string sql, Hashtable? @params = null) where T : new()
     {
         DbDataReader dbread = query(sql, @params);
         var hasRow = dbread.Read();
@@ -1143,7 +1143,7 @@ public class DB : IDisposable
     /// <param name="sql"></param>
     /// <param name="params"></param>
     /// <returns></returns>
-    public DBList arrayp(string sql, Hashtable @params = null)
+    public DBList arrayp(string sql, Hashtable? @params = null)
     {
         DbDataReader dbread = query(sql, @params);
         return readArray(dbread);
@@ -1155,7 +1155,7 @@ public class DB : IDisposable
     /// <param name="sql"></param>
     /// <param name="params"></param>
     /// <returns></returns>
-    public List<T> arrayp<T>(string sql, Hashtable @params = null) where T : new()
+    public List<T> arrayp<T>(string sql, Hashtable? @params = null) where T : new()
     {
         DbDataReader dbread = query(sql, @params);
         return readArray<T>(dbread);
@@ -1203,13 +1203,13 @@ public class DB : IDisposable
     /// <param name="order_by">optional order by, MUST BE QUOTED</param>
     /// <param name="aselect_fields">optional select fields array or hashtable("field"=>"alias") or arraylist of hashtable("field"=>1,"alias"=>1) for cases if there could be several same fields with diff aliases), if not set * returned</param>
     /// <returns></returns>
-    public DBList array(string table, Hashtable where, string order_by = "", ICollection aselect_fields = null)
+    public DBList array(string table, Hashtable where, string order_by = "", ICollection? aselect_fields = null)
     {
         var qp = buildSelect(table, where, order_by, select_fields: buildSelectFields(aselect_fields));
         return arrayp(qp.sql, qp.@params);
     }
 
-    public List<T> array<T>(string table, Hashtable where, string order_by = "", ICollection aselect_fields = null) where T : new()
+    public List<T> array<T>(string table, Hashtable where, string order_by = "", ICollection? aselect_fields = null) where T : new()
     {
         var qp = buildSelect(table, where, order_by, select_fields: buildSelectFields(aselect_fields));
         return arrayp<T>(qp.sql, qp.@params);
@@ -1280,7 +1280,7 @@ public class DB : IDisposable
     /// <param name="sql"></param>
     /// <param name="params"></param>
     /// <returns></returns>
-    public List<string> colp(string sql, Hashtable @params = null)
+    public List<string> colp(string sql, Hashtable? @params = null)
     {
         DbDataReader dbread = query(sql, @params);
         return readCol(dbread);
@@ -1338,7 +1338,7 @@ public class DB : IDisposable
     }
 
     // return just first value from column
-    public object valuep(string sql, Hashtable @params = null)
+    public object valuep(string sql, Hashtable? @params = null)
     {
         DbDataReader dbread = query(sql, @params);
         return readValue(dbread);
@@ -2114,7 +2114,7 @@ public class DB : IDisposable
     /// <param name="sql"></param>
     /// <param name="params"></param>
     /// <returns></returns>
-    public int updatep(string sql, Hashtable @params = null)
+    public int updatep(string sql, Hashtable? @params = null)
     {
         return exec(sql, @params);
     }
@@ -2137,7 +2137,7 @@ public class DB : IDisposable
     /// <param name="table">table name</param>
     /// <param name="where">optional where, WARNING, if empty - DELETE ALL RECORDS in table</param>
     /// <returns>number of affected rows</returns>
-    public int del(string table, Hashtable where = null)
+    public int del(string table, Hashtable? where = null)
     {
         where ??= [];
         var qp = buildDelete(table, where);

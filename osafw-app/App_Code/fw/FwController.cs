@@ -84,7 +84,7 @@ public abstract class FwController
 
     private const string ControllerConfigCacheKeyPrefix = "fw:controller-config:";
 
-    protected FwController(FW fw = null)
+    protected FwController(FW? fw = null)
     {
         if (fw != null)
         {
@@ -292,7 +292,7 @@ public abstract class FwController
     /// <param name="iname"></param>
     /// <param name="def">optional default value to return if request value is not set</param>
     /// <returns></returns>
-    public object req(string iname, object def = null)
+    public object req(string iname, object? def = null)
     {
         return fw.FORM[iname] ?? def;
     }
@@ -379,7 +379,7 @@ public abstract class FwController
     // NOTE: automatically set to defaults - pagenum=0 and pagesize=MAX_PAGE_ITEMS
     // NOTE: if request param 'dofilter' passed - session filters cleaned
     // sample in IndexAction: me.get_filter()
-    public virtual Hashtable initFilter(string session_key = null)
+    public virtual Hashtable initFilter(string? session_key = null)
     {
         Hashtable f = reqh("f");
 
@@ -456,7 +456,7 @@ public abstract class FwController
     /// clears list_filter and related session key
     /// </summary>
     /// <param name="session_key"></param>
-    public virtual void clearFilter(string session_key = null)
+    public virtual void clearFilter(string? session_key = null)
     {
         Hashtable f = [];
         session_key ??= "_filter_" + fw.G["controller.action"];
@@ -473,7 +473,7 @@ public abstract class FwController
     /// <param name="form_errors">optional - form errors to fill</param>
     /// <returns>true if all required field names non-empty</returns>
     /// <remarks>also set global fw.FormErrors[REQUIRED]=true in case of validation error if no form_errors defined</remarks>
-    public virtual bool validateRequired(int id, Hashtable item, Array fields, Hashtable form_errors = null)
+    public virtual bool validateRequired(int id, Hashtable item, Array fields, Hashtable? form_errors = null)
     {
         bool result = true;
 
@@ -1043,7 +1043,7 @@ public abstract class FwController
     /// <param name="location">redirect to this location if success</param>
     /// <param name="more_json">added to json response</param>
     /// <returns></returns>
-    public virtual Hashtable afterSave(bool success, object id = null, bool is_new = false, string action = "ShowForm", string location = "", Hashtable more_json = null)
+    public virtual Hashtable afterSave(bool success, object? id = null, bool is_new = false, string action = "ShowForm", string location = "", Hashtable? more_json = null)
     {
         if (string.IsNullOrEmpty(location))
             location = this.afterSaveLocation(id.toStr());
@@ -1142,7 +1142,7 @@ public abstract class FwController
         return ps;
     }
 
-    public virtual Hashtable setPS(Hashtable ps = null)
+    public virtual Hashtable setPS(Hashtable? ps = null)
     {
         ps ??= [];
 

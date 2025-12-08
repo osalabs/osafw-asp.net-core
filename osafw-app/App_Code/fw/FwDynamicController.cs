@@ -800,7 +800,7 @@ public class FwDynamicController : FwController
     /// <param name="prefix">show_fields or showform_fields</param>
     /// <param name="tab">optional tab code, if ommited - form_tab used</param>
     /// <returns></returns>
-    protected virtual ArrayList getConfigShowFormFieldsByTab(string prefix, string tab = null)
+    protected virtual ArrayList getConfigShowFormFieldsByTab(string prefix, string? tab = null)
     {
         tab ??= form_tab;
         var key = prefix + (tab.Length > 0 ? "_" + tab : "");
@@ -1403,7 +1403,7 @@ public class FwDynamicController : FwController
     /// <param name="def">subable definition from config.json</param>
     /// <param name="sub_model">optional subtable model, if not passed def[model] will be used</param>
     /// <returns></returns>
-    protected virtual int modelAddOrUpdateSubtableDynamic(int main_id, string row_id, Hashtable fields, Hashtable def, FwModel sub_model = null)
+    protected virtual int modelAddOrUpdateSubtableDynamic(int main_id, string row_id, Hashtable fields, Hashtable def, FwModel? sub_model = null)
     {
         int id;
 

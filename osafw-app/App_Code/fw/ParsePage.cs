@@ -178,18 +178,18 @@ public class ParsePage
     private static string OutputTimezone = DATE_TIMEZONE_DEF;
 
     // for dynamic load of Markdig markdown converter
-    private static System.Reflection.MethodInfo mMarkdownToHtml;
-    private static object MarkdownPipeline;
+    private static System.Reflection.MethodInfo? mMarkdownToHtml;
+    private static object? MarkdownPipeline;
 
-    private readonly Func<Hashtable> globalsGetter;
-    private readonly ISession session;
-    private readonly Action<LogLevel, string[]> loggerAction;
+    private readonly Func<Hashtable> globalsGetter = () => [];
+    private readonly ISession? session;
+    private readonly Action<LogLevel, string[]> loggerAction = (_, _) => { };
     // checks if template files modifies and reload them, depends on config's "log_level"
     // true if level at least DEBUG, false for production as on production there are no tempalte file changes (unless during update, which leads to restart App anyway)
     private readonly bool is_check_file_modifications = false;
-    private readonly string TMPL_PATH;
+    private readonly string TMPL_PATH = "";
     private string basedir = "";
-    private Hashtable data_top; // reference to the topmost hashtable
+    private Hashtable data_top = []; // reference to the topmost hashtable
     private bool is_found_last_hfvalue = false;
     private readonly string lang = "en";
     private readonly bool lang_parse = true; // parse lang strings in `` or not - true - parse(default), false - no
@@ -197,7 +197,7 @@ public class ParsePage
     private readonly MatchEvaluator lang_evaluator;
     private static readonly char path_separator = Path.DirectorySeparatorChar;
 
-    public ParsePage(ParsePageOptions options = null)
+    public ParsePage(ParsePageOptions? options = null)
     {
         if (options != null)
         {
@@ -254,7 +254,7 @@ public class ParsePage
         return _parse_page("", hf, tpl, parent_hf);
     }
 
-    private string _parse_page(string tpl_name, Hashtable hf, string page, Hashtable parent_hf, Hashtable parent_attrs = null)
+    private string _parse_page(string tpl_name, Hashtable hf, string page, Hashtable parent_hf, Hashtable? parent_attrs = null)
     {
         if (tpl_name == null)
         {
