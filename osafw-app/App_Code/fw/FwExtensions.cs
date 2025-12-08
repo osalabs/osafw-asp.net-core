@@ -281,7 +281,7 @@ public static class FwExtensions
     /// <returns>A dictionary where each key is the name of a public readable property or field, and each value is a delegate
     /// that, when invoked with the object instance, returns the corresponding property's or field's value. If a member
     /// cannot be read, the delegate returns null.</returns>
-    public static Dictionary<string, Func<object, object>> getReadableMembers(this object obj)
+    public static Dictionary<string, Func<object, object>> getReadableMembers(this object? obj)
     {
         ArgumentNullException.ThrowIfNull(obj);
 
@@ -334,7 +334,7 @@ public static class FwExtensions
     /// <param name="obj">The object instance from which to retrieve the member value. Cannot be null.</param>
     /// <param name="memberName">The name of the public property or field to retrieve. If null or empty, the method returns null.</param>
     /// <returns>The value of the specified member if found; otherwise, null.</returns>
-    public static object valueByMemberName(this object obj, string memberName)
+    public static object valueByMemberName(this object? obj, string memberName)
     {
         ArgumentNullException.ThrowIfNull(obj);
         if (string.IsNullOrEmpty(memberName))
@@ -355,7 +355,7 @@ public static class FwExtensions
     /// </summary>
     /// <param name="o">The object to convert to a boolean.</param>
     /// <returns>The boolean value interpreted from <paramref name="o"/>.</returns>
-    public static bool toBool(this object o)
+    public static bool toBool(this object? o)
     {
         if (o is null)
         {
@@ -395,7 +395,7 @@ public static class FwExtensions
     /// <param name="o">The object to convert.</param>
     /// <param name="format">If provided, <see cref="DateTime.TryParseExact(string,string[],IFormatProvider,DateTimeStyles,out DateTime)"/> is used.</param>
     /// <returns>A <see cref="DateTime"/>, or <see cref="DateTime.MinValue"/> on failure.</returns>
-    public static DateTime toDate(this object o, string format = "")
+    public static DateTime toDate(this object? o, string format = "")
     {
         if (o is null)
         {
@@ -442,7 +442,7 @@ public static class FwExtensions
     /// <param name="o">The object to convert.</param>
     /// <param name="format">If provided, <see cref="DateTime.TryParseExact(string,string[],IFormatProvider,DateTimeStyles,out DateTime)"/> is used.</param>
     /// <returns>A <see cref="DateTime"/> value, or <c>null</c> on failure.</returns>
-    public static DateTime? toDateOrNull(this object o, string format = "")
+    public static DateTime? toDateOrNull(this object? o, string format = "")
     {
         if (o is null)
         {
@@ -491,7 +491,7 @@ public static class FwExtensions
     /// <param name="o">The object to convert.</param>
     /// <param name="defaultValue">The value returned if conversion fails.</param>
     /// <returns>A decimal representation of the object, or <paramref name="defaultValue"/>.</returns>
-    public static decimal toDecimal(this object o, decimal defaultValue = decimal.Zero)
+    public static decimal toDecimal(this object? o, decimal defaultValue = decimal.Zero)
     {
         if (o is null)
         {
@@ -532,7 +532,7 @@ public static class FwExtensions
     /// <param name="o">The object to convert.</param>
     /// <param name="defaultValue">The value returned if conversion fails.</param>
     /// <returns>A double representation of the object, or <paramref name="defaultValue"/>.</returns>
-    public static double toDouble(this object o, double defaultValue = 0.0)
+    public static double toDouble(this object? o, double defaultValue = 0.0)
     {
         if (o is null)
         {
@@ -573,7 +573,7 @@ public static class FwExtensions
     /// <param name="o">The object to convert.</param>
     /// <param name="defaultValue">The value returned if conversion fails.</param>
     /// <returns>A float representation of the object, or <paramref name="defaultValue"/>.</returns>
-    public static float toFloat(this object o, float defaultValue = 0.0f)
+    public static float toFloat(this object? o, float defaultValue = 0.0f)
     {
         if (o is null)
         {
@@ -614,7 +614,7 @@ public static class FwExtensions
     /// <param name="o">The object to convert.</param>
     /// <param name="defaultValue">The value returned if conversion fails.</param>
     /// <returns>An integer representation of the object, or <paramref name="defaultValue"/>.</returns>
-    public static int toInt(this object o, int defaultValue = 0)
+    public static int toInt(this object? o, int defaultValue = 0)
     {
         if (o is null)
         {
@@ -655,7 +655,7 @@ public static class FwExtensions
     /// <param name="o">The object to convert.</param>
     /// <param name="defaultValue">The value returned if conversion fails.</param>
     /// <returns>A long representation of the object, or <paramref name="defaultValue"/>.</returns>
-    public static long toLong(this object o, long defaultValue = 0)
+    public static long toLong(this object? o, long defaultValue = 0)
     {
         if (o is null)
         {
@@ -693,7 +693,7 @@ public static class FwExtensions
     /// </summary>
     /// <param name="o">The object to convert.</param>
     /// <returns>The string representation of the object, or an empty string if null.</returns>
-    public static string toStr(this object o, string defaultValule = "")
+    public static string toStr(this object? o, string defaultValule = "")
     {
         return o?.ToString() ?? defaultValule;
     }

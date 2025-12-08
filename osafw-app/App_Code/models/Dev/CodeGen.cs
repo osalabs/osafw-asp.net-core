@@ -14,6 +14,10 @@ namespace osafw;
 
 class DevCodeGen
 {
+    private static string SafeStr(object? o, string defaultValue = "") => (o ?? defaultValue).toStr(defaultValue);
+    private static bool SafeBool(object? o) => (o ?? false).toBool();
+    private static int SafeInt(object? o, int defaultValue = 0) => (o ?? defaultValue).toInt(defaultValue);
+
 
     public const string DB_SQL_PATH = "/App_Data/sql/database.sql"; // relative to site_root
     public const string DB_JSON_PATH = "/dev/db.json";
@@ -163,15 +167,15 @@ class DevCodeGen
         if (!entity.ContainsKey("foreign_keys"))
             return result;
 
-        foreach (Hashtable fk in (ArrayList)entity["foreign_keys"])
+        foreach (Hashtable fk in entity["foreign_keys"] as ArrayList ?? new ArrayList())
         {
             fw.logger("CHECK FK:", fk["column"], "=", field["name"]);
-            if ((string)fk["column"] == (string)field["name"])
+            if (SafeStr(fk["column"]) == SafeStr(field["name"]))
             {
                 //build FK name as FK_TABLE_FIELDWITHOUTID
-                var fk_name = (string)fk["column"];
+                var fk_name = SafeStr(fk["column"]);
                 fk_name = Regex.Replace(fk_name, "_id$", "", RegexOptions.IgnoreCase);
-                result = " CONSTRAINT FK_" + entity["fw_name"] + "_" + Utils.name2fw(fk_name) + " FOREIGN KEY REFERENCES " + db.qid((string)fk["pk_table"], false) + "(" + db.qid((string)fk["pk_column"], false) + ")";
+                result = " CONSTRAINT FK_" + SafeStr(entity["fw_name"]) + "_" + Utils.name2fw(fk_name) + " FOREIGN KEY REFERENCES " + db.qid(SafeStr(fk["pk_table"]), false) + "(" + db.qid(SafeStr(fk["pk_column"]), false) + ")";
                 break;
             }
         }
@@ -183,33 +187,33 @@ class DevCodeGen
     // convert db.json entity to SQL CREATE TABLE
     private string entity2SQL(Hashtable entity)
     {
-        var table_name = (string)entity["table"];
+        var table_name = SafeStr(entity["table"]);
         var result = "CREATE TABLE " + db.qid(table_name, false) + " (" + Environment.NewLine;
 
-        var indexes = (Hashtable)entity["indexes"] ?? null;
+        var indexes = entity["indexes"] as Hashtable;
         var i = 1;
-        var fields = (ArrayList)entity["fields"];
+        var fields = entity["fields"] as ArrayList ?? new ArrayList();
         foreach (Hashtable field in fields)
         {
             var fsql = "";
-            var field_name = field["name"].toStr();
+            var field_name = SafeStr(field["name"]);
             if (field_name == "status")
                 fsql += Environment.NewLine; // add empty line before system fields starting with "status"
 
             fsql += "  " + db.qid(field_name, false).PadRight(21, ' ') + " " + entityFieldToSQLType(field);
-            if (field["is_identity"].toBool())
+            if (SafeBool(field["is_identity"]))
             {
                 fsql += " IDENTITY(1, 1)";
                 if (indexes == null || !indexes.ContainsKey("PK"))
                     fsql += " PRIMARY KEY CLUSTERED";
             }
 
-            fsql += field["is_nullable"].toBool() ? "" : " NOT NULL";
+            fsql += SafeBool(field["is_nullable"]) ? "" : " NOT NULL";
             fsql += entityFieldToSQLDefault(field);
             fsql += entityFieldToSQLForeignKey(field, entity);
             fsql += (i < fields.Count ? "," : "");
             if (field.ContainsKey("comments"))
-                fsql = fsql.PadRight(64, ' ') + "-- " + field["comments"];
+                fsql = fsql.PadRight(64, ' ') + "-- " + SafeStr(field["comments"]);
 
             result += fsql + Environment.NewLine;
             i += 1;
