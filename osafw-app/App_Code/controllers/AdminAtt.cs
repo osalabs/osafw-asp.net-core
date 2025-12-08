@@ -99,7 +99,7 @@ public class AdminAttController : FwAdminController
 
         Validate(id, item);
         // load old record if necessary
-        // Dim itemold As Hashtable = model.one(id)
+        // var itemOld = model.one(id);
 
         // set att_categories_id from category icode if provided
         if (Utils.isEmpty(item["att_categories_id"]) && !Utils.isEmpty(item["att_category"]))

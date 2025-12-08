@@ -67,7 +67,7 @@ public class MyPasswordController : FwController
 
         Validate(id, reqh("item"));
         // load old record if necessary
-        // Dim itemdb As Hashtable = Users.one(id)
+        // var itemdb = Users.one(id);
 
         var itemdb = FormUtils.filter(reqh("item"), Utils.qw("email pwd"));
         itemdb["pwd"] = itemdb["pwd"].ToString().Trim();

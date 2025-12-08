@@ -39,7 +39,7 @@ public class MyFeedbackController : FwController
 
         Validate(id, item);
         // load old record if necessary
-        // Dim itemold As Hashtable = model.one(id)
+        // var itemOld = model.one(id);
 
         Hashtable itemdb = FormUtils.filter(item, save_fields);
         var user = fw.model<Users>().one(id);

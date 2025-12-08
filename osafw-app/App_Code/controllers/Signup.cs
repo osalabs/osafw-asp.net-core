@@ -57,7 +57,7 @@ public class SignupController : FwController
         var item = reqh("item");
         Validate(item);
         // load old record if necessary
-        // Dim itemdb As Hashtable = model.one(id)
+        // var itemdb = model.one(id);
 
         var itemdb = FormUtils.filter(item, Utils.qw("email pwd fname lname"));
 

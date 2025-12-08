@@ -197,11 +197,12 @@ public class FwSelfTest
                 // and return FwSelfTest.Result
                 // sample Controller.SelfTest declaration:
                 //
-                // Public Function SelfTest(t As FwSelfTest) As FwSelfTest.Result
-                // Dim res As Boolean = True
-                // res = res AndAlso t.is_true("Inner var check", (var = 1)) = FwSelfTest.Result.OK
-                // Return IIf(res, FwSelfTest.Result.OK, FwSelfTest.Result.ERR)
-                // End Function
+                // public FwSelfTest.Result SelfTest(FwSelfTest t)
+                // {
+                //     var res = true;
+                //     res = res && t.is_true("Inner var check", var == 1) == FwSelfTest.Result.OK;
+                //     return res ? FwSelfTest.Result.OK : FwSelfTest.Result.ERR;
+                // }
 
                 System.Reflection.MethodInfo mInfo = calledType.GetMethod("SelfTest");
                 if (mInfo == null)
