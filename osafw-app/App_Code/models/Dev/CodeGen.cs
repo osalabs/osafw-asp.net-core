@@ -300,7 +300,8 @@ class DevCodeGen
             if (entity.ContainsKey("comments"))
             {
                 //comments can contain new lines - comment each line separately
-                var comments = Regex.Split((string)entity["comments"], "[\r\n]+");
+                var commentsRaw = entity["comments"].toStr();
+                var comments = Regex.Split(commentsRaw, "[\r\n]+");
                 foreach (string comment in comments)
                     database_sql += "-- " + comment + Environment.NewLine;
             }
@@ -327,8 +328,8 @@ class DevCodeGen
 
     public void createModel(Hashtable entity)
     {
-        string table_name = (string)entity["table"];
-        string model_name = (string)entity["model_name"];
+        string table_name = entity["table"].toStr();
+        string model_name = entity["model_name"].toStr();
         bool is_junction = entity["is_junction"].toBool();
 
         if (model_name == "")
@@ -349,24 +350,24 @@ class DevCodeGen
             // replace: DemosDemoDicts => ModelName, demos_demo_dicts => table_name
             mdemo = mdemo.Replace("DemosDemoDicts", model_name);
             mdemo = mdemo.Replace("demos_demo_dicts", table_name);
-            mdemo = mdemo.Replace("db_config = \"\"", "db_config = \"" + entity["db_config"] + "\"");
+            mdemo = mdemo.Replace("db_config = \"\"", "db_config = \"" + entity["db_config"].toStr() + "\"");
 
             // setup junction_* fields from foreign_keys (first is main, second is linked)
             var model_main = "";
             var field_main_id = "";
             var model_linked = "";
             var field_linked_id = "";
-            foreach (Hashtable fk in (ArrayList)entity["foreign_keys"])
+            foreach (Hashtable fk in (entity["foreign_keys"] as ArrayList ?? new ArrayList())) 
             {
                 if (field_main_id == "")
                 {
-                    model_main = DevEntityBuilder.tablenameToModel(Utils.name2fw((string)fk["pk_table"]));
-                    field_main_id = (string)fk["column"];
+                    model_main = DevEntityBuilder.tablenameToModel(Utils.name2fw(fk["pk_table"].toStr()));
+                    field_main_id = fk["column"].toStr();
                 }
                 else
                 {
-                    model_linked = DevEntityBuilder.tablenameToModel(Utils.name2fw((string)fk["pk_table"]));
-                    field_linked_id = (string)fk["column"];
+                    model_linked = DevEntityBuilder.tablenameToModel(Utils.name2fw(fk["pk_table"].toStr()));
+                    field_linked_id = fk["column"].toStr();
                 }
 
             }
@@ -465,10 +466,10 @@ class DevCodeGen
 
     private void createLookup(Hashtable entity)
     {
-        string model_name = (string)entity["model_name"];
+        string model_name = entity["model_name"].toStr();
         var controller_options = entity["controller"] as Hashtable ?? new Hashtable();
-        string controller_url = (string)controller_options["url"];
-        string controller_title = (string)controller_options["title"];
+        string controller_url = controller_options["url"].toStr();
+        string controller_title = controller_options["title"].toStr();
 
         var icode = controller_url.Replace("/", ""); // /Admin/LogTypes => AdminLogTypes
 
@@ -532,7 +533,7 @@ class DevCodeGen
         //if controller url is not defined - default to admin model
         controller_url ??= "/Admin/" + model_name;
 
-        var controller_name = controller_url.Replace("/", "");
+        var controller_name = controller_url.toStr().Replace("/", "");
         if (controller_title == "")
             controller_title = Utils.name2human(model_name);
 
@@ -604,7 +605,7 @@ class DevCodeGen
         Utils.setFileContent(path + @"\" + controller_name + ".cs", ref mdemo);
 
         // add controller to sidebar menu
-        updateMenuItem(controller_url, controller_title);
+        updateMenuItem(controller_url, controller_title.toStr());
 
         return true;
     }
@@ -639,7 +640,7 @@ class DevCodeGen
         if (string.IsNullOrEmpty(table_name))
             table_name = model.table_name;
 
-        var controller_options = (Hashtable)entity["controller"] ?? [];
+        var controller_options = entity["controller"] as Hashtable ?? new Hashtable();
         string controller_title = controller_options["title"].toStr() ?? Utils.name2human(model_name);
         string controller_type = controller_options["type"].toStr();
         fw.logger($"updating config for controller({controller_type})=", controller_options["url"].toStr());
@@ -1041,13 +1042,15 @@ class DevCodeGen
         config["form_tabs"] = formTabs;
 
         //view form
-        config["is_dynamic_show"] = controller_options.ContainsKey("is_dynamic_show") ? controller_options["is_dynamic_show"] : true;
-        if ((bool)config["is_dynamic_show"])
+        var is_dynamic_show = controller_options.ContainsKey("is_dynamic_show") ? controller_options["is_dynamic_show"].toBool() : true;
+        config["is_dynamic_show"] = is_dynamic_show;
+        if (is_dynamic_show)
             configAddTabs(config, "show_fields", showFieldsTabs);
 
         //edit form
-        config["is_dynamic_showform"] = controller_options.ContainsKey("is_dynamic_showform") ? controller_options["is_dynamic_showform"] : true;
-        if ((bool)config["is_dynamic_showform"])
+        var is_dynamic_showform = controller_options.ContainsKey("is_dynamic_showform") ? controller_options["is_dynamic_showform"].toBool() : true;
+        config["is_dynamic_showform"] = is_dynamic_showform;
+        if (is_dynamic_showform)
             configAddTabs(config, "showform_fields", showFormFieldsTabs);
 
         //titles
