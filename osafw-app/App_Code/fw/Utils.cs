@@ -1268,15 +1268,15 @@ public class Utils
     //      "123..."  - use index (by order)
     //      "other value" - use this value
     // return hash: id => id
-    public static Hashtable commastr2hash(string sel_ids, string value = null)
+    public static Hashtable commastr2hash(string? sel_ids, string? value = null)
     {
         Hashtable result = [];
-        ArrayList ids = new(sel_ids.Split(","));
-        for (int i = 0; i < ids.Count; i++)
+        var ids = (sel_ids ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries);
+        for (int i = 0; i < ids.Length; i++)
         {
-            string v = (string)ids[i];
-            //skip empty values
-            if (v == "") continue;
+            var v = ids[i].Trim();
+            if (v.Length == 0)
+                continue; // skip empty values
 
             if (value == null)
             {
@@ -1353,14 +1353,18 @@ public class Utils
     /// <param name="parameters">optional, name/value params if set - post will be used, instead of get</param>
     /// <param name="headers">optional, name/value headers to add to request</param>
     /// <returns>content received. empty string if error</returns>
-    public static string loadUrl(string url, Hashtable parameters = null, Hashtable headers = null)
+    public static string loadUrl(string url, Hashtable? parameters = null, Hashtable? headers = null)
     {
         string content;
         using (HttpClient client = new())
         {
             if (headers != null)
                 foreach (string hkey in headers.Keys)
-                    client.DefaultRequestHeaders.Add(hkey, (string)headers[hkey]);
+                {
+                    var hval = headers[hkey].toStr();
+                    if (hval.Length > 0)
+                        client.DefaultRequestHeaders.Add(hkey, hval);
+                }
 
 
             if (parameters != null)
@@ -1368,7 +1372,7 @@ public class Utils
                 //POST
                 var nv = new Dictionary<string, string>();
                 foreach (string key in parameters.Keys)
-                    nv.Add(key, (string)parameters[key]);
+                    nv[key] = parameters[key].toStr();
 
                 using (HttpContent form = new FormUrlEncodedContent(nv))
                 {
@@ -1412,13 +1416,14 @@ public class Utils
         HttpClient client;
 
         //add certificate if requested
-        if (cert_path != null)
+        if (!string.IsNullOrEmpty(cert_path))
         {
             var handler = new HttpClientHandler
             {
                 SslProtocols = SslProtocols.Tls12
             };
-            handler.ClientCertificates.Add(new X509Certificate2(cert_path));
+            var certificate = X509CertificateLoader.LoadPkcs12FromFile(cert_path, password: null);
+            handler.ClientCertificates.Add(certificate);
 
             client = new(handler);
         }
@@ -1431,12 +1436,18 @@ public class Utils
         {
             //add form fields
             foreach (string name in formFields.Keys)
-                form.Add(new StringContent(formFields[name]), name);
+            {
+                var fvalue = formFields[name].toStr();
+                form.Add(new StringContent(fvalue), name);
+            }
 
             //add files
             foreach (string fileField in files.Keys)
             {
-                var filepath = (string)files[fileField];
+                var filepath = files[fileField].toStr();
+                if (string.IsNullOrEmpty(filepath))
+                    continue;
+
                 using (var fs = new FileStream(filepath, FileMode.Open))
                 {
                     //TODO use some mime mapping class
@@ -1445,7 +1456,7 @@ public class Utils
 
                     var part = new StreamContent(fs);
                     part.Headers.ContentType = MediaTypeHeaderValue.Parse(mimeType);
-                    form.Add(part, "file", "test.txt");
+                    form.Add(part, "file", Path.GetFileName(filepath));
                 }
             }
 
@@ -1521,7 +1532,7 @@ public class Utils
         if (str_lc == "lname") return "Last Name";
         if (str_lc == "midname") return "Middle Name";
 
-        string result = str;
+        string result = str ?? string.Empty;
         result = Regex.Replace(result, @"^tbl|dbo", "", RegexOptions.IgnoreCase); // remove tbl prefix if any
         result = Regex.Replace(result, @"_+", " "); // underscores to spaces
         result = Regex.Replace(result, @"([a-z ])([A-Z]+)", "$1 $2"); // split CamelCase words
@@ -1621,26 +1632,27 @@ public class Utils
     {
         if (rows.Count > 0)
         {
-            if (headers.Count == 0)
+            if (headers.Count == 0 && rows[0] is Hashtable firstRow)
             {
-                var keys = ((Hashtable)rows[0]).Keys;
-                var fields = new string[keys.Count];
-                keys.CopyTo(fields, 0);
-                foreach (var key in fields)
+                var keys = firstRow.Keys.Cast<object?>()
+                    .Select(k => k.toStr())
+                    .Where(k => k.Length > 0)
+                    .ToArray();
+                foreach (var key in keys)
                     headers.Add(new Hashtable() { { "field_name", key } });
             }
 
-            foreach (Hashtable row in rows)
+            foreach (Hashtable row in rows.Cast<object?>().OfType<Hashtable>())
             {
                 ArrayList cols = [];
-                foreach (Hashtable hf in headers)
+                foreach (Hashtable hf in headers.Cast<object?>().OfType<Hashtable>())
                 {
                     var fieldname = hf["field_name"].toStr();
                     cols.Add(new Hashtable()
                     {
                         {"row",row},
                         {"field_name",fieldname},
-                        {"data",row[fieldname]}
+                        {"data", row.ContainsKey(fieldname) ? row[fieldname] : null}
                     });
                 }
                 row["cols"] = cols;

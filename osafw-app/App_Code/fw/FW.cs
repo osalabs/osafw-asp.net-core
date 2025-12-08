@@ -1554,8 +1554,8 @@ public class FW : IDisposable
                 ps["DUMP_STACK"] = Ex.ToString();
 
             ps["DUMP_SQL"] = DB.last_sql;
-            ps["DUMP_FORM"] = FwLogger.dumper(FORM);
-            ps["DUMP_SESSION"] = FwLogger.dumper(context?.Session);
+            ps["DUMP_FORM"] = FwLogger.dumper(FORM ?? new Hashtable());
+            ps["DUMP_SESSION"] = context?.Session != null ? FwLogger.dumper(context.Session) : "null";
         }
 
         parser(tpl_dir, ps);
@@ -1571,7 +1571,8 @@ public class FW : IDisposable
             T m = new();
 
             // initialize
-            typeof(T).GetMethod("init").Invoke(m, [this]);
+            var initMethod = typeof(T).GetMethod("init");
+            initMethod?.Invoke(m, [this]);
 
             models[tt.Name] = m;
         }
@@ -1667,7 +1668,7 @@ public class FW : IDisposable
             {
                 {"fields", changed_fields}
             };
-        this.model<FwActivityLogs>().addSimple(log_types_icode, entity_icode, item_id, iname, payload);
+        this.model<FwActivityLogs>().addSimple(log_types_icode, entity_icode, item_id, iname, payload ?? []);
     }
 
     public void rw(string str)

@@ -1334,13 +1334,13 @@ public class DB : IDisposable
         return colp(qp.sql, qp.@params);
     }
 
-    public object readValue(DbDataReader dbread)
+    public object? readValue(DbDataReader dbread)
     {
-        object result = "";
+        object? result = null;
 
         while (dbread.Read())
         {
-            result = dbread[0] ?? ""; //read first
+            result = dbread[0]; //read first
             break; // just return first row
         }
 
@@ -1365,7 +1365,7 @@ public class DB : IDisposable
     }
 
     // return just first value from column
-    public object valuep(string sql, Hashtable? @params = null)
+    public object? valuep(string sql, Hashtable? @params = null)
     {
         DbDataReader dbread = query(sql, @params);
         return readValue(dbread);
@@ -1384,7 +1384,7 @@ public class DB : IDisposable
     /// <param name="field_name">(if not set - first selected field used) field name, special cases: "1", "count(*)", "SUM(field)", AVG/MAX/MIN,...</param>
     /// <param name="order_by"></param>
     /// <returns></returns>
-    public object value(string table, Hashtable where, string field_name = "", string order_by = "")
+    public object? value(string table, Hashtable where, string field_name = "", string order_by = "")
     {
         field_name ??= "";
 
@@ -1623,7 +1623,11 @@ public class DB : IDisposable
     /// <returns></returns>
     public DateTime Now()
     {
-        return (DateTime)valuep($"SELECT {sqlNOW()}");
+        var val = valuep($"SELECT {sqlNOW()}");
+        if (val is DateTime dt)
+            return dt;
+
+        return DateTime.UtcNow;
     }
 
     /// <summary>
@@ -2073,7 +2077,7 @@ public class DB : IDisposable
 
     protected int insertQueryAndParams(DBQueryAndParams qp)
     {
-        object insert_id;
+        object? insert_id;
 
         if (dbtype == DBTYPE_SQLSRV)
             // SELECT SCOPE_IDENTITY() not always return what we need

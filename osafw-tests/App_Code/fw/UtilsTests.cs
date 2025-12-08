@@ -1,4 +1,4 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -204,7 +204,7 @@ namespace osafw.Tests
             Assert.IsTrue(result2, "Result should be true for valid integer string");
 
             // Case 3: Test null input
-            object input3 = null;
+            object? input3 = null;
             bool result3 = Utils.isFloat(input3);
             Assert.IsFalse(result3, "Result should be false for null input");
 
@@ -254,7 +254,7 @@ namespace osafw.Tests
             Assert.IsTrue(result2, "Result should be true for valid negative integer string");
 
             // Case 3: Test null input
-            object input3 = null;
+            object? input3 = null;
             bool result3 = Utils.isInt(input3);
             Assert.IsFalse(result3, "Result should be false for null input");
 
@@ -293,7 +293,7 @@ namespace osafw.Tests
             Assert.IsTrue(result2, "Result should be true for valid negative long string");
 
             // Case 3: Test null input
-            object input3 = null;
+            object? input3 = null;
             bool result3 = Utils.isLong(input3);
             Assert.IsFalse(result3, "Result should be false for null input");
 
@@ -422,8 +422,10 @@ namespace osafw.Tests
             Assert.AreEqual(h1["BBB"], 2);
             Assert.AreEqual(h1["CCC"], 3);
             Assert.IsInstanceOfType(h1["DDD"], typeof(Hashtable));
-            Assert.IsTrue(((Hashtable)h1["DDD"]).ContainsKey("EEE"));
-            Assert.AreEqual(((Hashtable)h1["DDD"])["EEE"], 5);
+            var inner = h1["DDD"] as Hashtable;
+            Assert.IsNotNull(inner);
+            Assert.IsTrue(inner.ContainsKey("EEE"));
+            Assert.AreEqual(inner["EEE"], 5);
 
         }
 
@@ -475,13 +477,25 @@ namespace osafw.Tests
             Assert.IsTrue(h1.ContainsKey("CCC"));
             Assert.IsTrue(h1.ContainsKey("DDD"));
 
-            Assert.IsTrue((System.Int64)h1["AAA"] == 1);
-            Assert.IsTrue((System.Int64)h1["BBB"] == 2);
-            Assert.IsTrue((System.Int64)h1["CCC"] == 3);
-            Assert.IsTrue((System.Int64)h1["DDD"] == 4);
+            var nAAA = h1["AAA"] as long?;
+            var nBBB = h1["BBB"] as long?;
+            var nCCC = h1["CCC"] as long?;
+            var nDDD = h1["DDD"] as long?;
+
+            Assert.IsNotNull(nAAA);
+            Assert.IsNotNull(nBBB);
+            Assert.IsNotNull(nCCC);
+            Assert.IsNotNull(nDDD);
+
+            Assert.AreEqual(1, nAAA.Value);
+            Assert.AreEqual(2, nBBB.Value);
+            Assert.AreEqual(3, nCCC.Value);
+            Assert.AreEqual(4, nDDD.Value);
 
             Assert.IsInstanceOfType(h1["EEE"], typeof(Hashtable));
-            Assert.AreEqual(((Hashtable)h1["EEE"])["AAA"], "sub");
+            var inner = h1["EEE"] as Hashtable;
+            Assert.IsNotNull(inner);
+            Assert.AreEqual(inner["AAA"], "sub");
         }
 
         [TestMethod()]
@@ -757,22 +771,30 @@ namespace osafw.Tests
             Hashtable fields2 = [];
             Utils.arrayInject(rows2, fields2);
             Assert.AreEqual(2, rows2.Count, "Rows with values and empty fields should result in no changes");
-            Assert.AreEqual("value1", ((Hashtable)rows2[0])["key1"]);
-            Assert.AreEqual("value2", ((Hashtable)rows2[1])["key2"]);
+            var row2_0 = rows2[0] as Hashtable;
+            var row2_1 = rows2[1] as Hashtable;
+            Assert.IsNotNull(row2_0);
+            Assert.IsNotNull(row2_1);
+            Assert.AreEqual("value1", row2_0["key1"]);
+            Assert.AreEqual("value2", row2_1["key2"]);
 
             // Case 3: Rows with values and fields with some new and some existing keys
             ArrayList rows3 = [new Hashtable { { "key1", "value1" } }, new Hashtable { { "key2", "value2" } }];
             Hashtable fields3 = new() { { "key1", "newValue1" }, { "key3", "newValue3" } };
             Utils.arrayInject(rows3, fields3);
             Assert.AreEqual(2, rows3.Count, "Rows with values and fields with some new and some existing keys should merge properly");
-            Assert.AreEqual("newValue1", ((Hashtable)rows3[0])["key1"]);
-            Assert.AreEqual("value2", ((Hashtable)rows3[1])["key2"]);
-            Assert.AreEqual("newValue3", ((Hashtable)rows3[0])["key3"]);
-            Assert.AreEqual("newValue3", ((Hashtable)rows3[1])["key3"]);
+            var row3_0 = rows3[0] as Hashtable;
+            var row3_1 = rows3[1] as Hashtable;
+            Assert.IsNotNull(row3_0);
+            Assert.IsNotNull(row3_1);
+            Assert.AreEqual("newValue1", row3_0["key1"]);
+            Assert.AreEqual("value2", row3_1["key2"]);
+            Assert.AreEqual("newValue3", row3_0["key3"]);
+            Assert.AreEqual("newValue3", row3_1["key3"]);
 
             // Case 4: Null rows and null fields
-            Assert.ThrowsExactly<NullReferenceException>(() => Utils.arrayInject(null, []), "Null rows should throw ArgumentNullException");
-            Assert.ThrowsExactly<NullReferenceException>(() => Utils.arrayInject([new Hashtable { { "key1", "value1" } }], null), "Null fields should throw ArgumentNullException");
+            Assert.ThrowsExactly<NullReferenceException>(() => Utils.arrayInject(null!, []), "Null rows should throw ArgumentNullException");
+            Assert.ThrowsExactly<NullReferenceException>(() => Utils.arrayInject([new Hashtable { { "key1", "value1" } }], null!), "Null fields should throw ArgumentNullException");
         }
 
         [TestMethod()]
@@ -801,13 +823,13 @@ namespace osafw.Tests
             Assert.AreEqual("hello+world", result4, "Space should be encoded as '+'");
 
             // Case 5: String with null value
-            string nullString = null;
-            var x = Utils.urlescape(nullString);
+            string? nullString = null;
+            var x = Utils.urlescape(nullString!);
             Assert.IsNotNull(x);
             //Assert.ThrowsException<ArgumentNullException>(() => Utils.urlescape(nullString), "Null string should throw ArgumentNullException");
 
             // Case 6: String with non-ASCII characters
-            string stringWithNonAscii = "résumé";
+            string stringWithNonAscii = "r�sum�";
             string result6 = Utils.urlescape(stringWithNonAscii);
             Assert.AreEqual("r%c3%a9sum%c3%a9", result6, "Non-ASCII characters should be properly encoded");
 
@@ -817,7 +839,7 @@ namespace osafw.Tests
             Assert.AreEqual("!%40%23%24%25%5e%26*()_%2b-%3d%5b%5d%7b%7d%3b%3a%27%22%5c%7c%2c.%3c%3e%3f%2f%7e%60", result7, "All special characters should be properly encoded");
 
             // Case 8: String with extended ASCII characters
-            string stringWithExtendedAscii = "ü";
+            string stringWithExtendedAscii = "�";
             string result8 = Utils.urlescape(stringWithExtendedAscii);
             Assert.AreEqual("%c3%bc", result8, "Extended ASCII characters should be properly encoded");
 

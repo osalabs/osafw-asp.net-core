@@ -63,8 +63,8 @@ namespace osafw.Tests
         public void FilterTest()
         {
             // Case 1: Filter fields from null item
-            Hashtable item1 = null;
-            Hashtable result1 = FormUtils.filter(item1, new string[] { "field1", "field2" });
+            Hashtable? item1 = null;
+            Hashtable result1 = FormUtils.filter(item1!, new string[] { "field1", "field2" });
             Assert.IsNotNull(result1, "Result should not be null when item is null");
             CollectionAssert.AreEquivalent(new string[] { }, result1.Keys.Cast<string>().ToArray(), "Result should be empty when item is null");
 
@@ -112,7 +112,7 @@ namespace osafw.Tests
 
             // Case 3: Populate itemdb with default values for all fields when item is null
             Hashtable itemdb3 = new() { { "field1", "value1" } };
-            FormUtils.filterCheckboxes(itemdb3, null, new string[] { "field1", "field2" });
+            FormUtils.filterCheckboxes(itemdb3, null!, new string[] { "field1", "field2" });
             Assert.AreEqual("value1", itemdb3["field1"], "Itemdb should be same when item is null");
             Assert.AreEqual(1, itemdb3.Count, "Itemdb should be same when item is null");
 
@@ -126,7 +126,7 @@ namespace osafw.Tests
             // Case 5: Populate itemdb with default values when fields array is null
             Hashtable itemdb5 = [];
             Hashtable item5 = new() { { "field1", "value1" } };
-            FormUtils.filterCheckboxes(itemdb5, item5, (IList)null);
+            FormUtils.filterCheckboxes(itemdb5, item5, (IList)null!);
             Assert.AreEqual(0, itemdb5.Count, "Itemdb should be empty when fields array is null");
 
             // Case 6: Populate itemdb with default values when fields array is empty
@@ -137,7 +137,7 @@ namespace osafw.Tests
 
             // Case 7: Populate itemdb with default values when item is null and fields array is null
             Hashtable itemdb7 = [];
-            FormUtils.filterCheckboxes(itemdb7, null, (IList)null);
+            FormUtils.filterCheckboxes(itemdb7, null!, (IList)null!);
             Assert.AreEqual(0, itemdb7.Count, "Itemdb should be empty when item is null and fields array is null");
         }
 
@@ -160,7 +160,7 @@ namespace osafw.Tests
 
             // Case 3: Populate itemdb with default values for all fields when item is null
             Hashtable itemdb3 = new() { { "field1", "value1" } };
-            FormUtils.filterCheckboxes(itemdb3, null, new string[] { "field1", "field2" });
+            FormUtils.filterCheckboxes(itemdb3, null!, new string[] { "field1", "field2" });
             Assert.AreEqual("value1", itemdb3["field1"], "Itemdb should be same when item is null");
             Assert.AreEqual(1, itemdb3.Count, "Itemdb should be same when item is null");
 
@@ -174,7 +174,7 @@ namespace osafw.Tests
             // Case 5: Populate itemdb with default values when fields array is null
             Hashtable itemdb5 = [];
             Hashtable item5 = new() { { "field1", "value1" } };
-            FormUtils.filterCheckboxes(itemdb5, item5, (IList)null);
+            FormUtils.filterCheckboxes(itemdb5, item5, (IList)null!);
             Assert.AreEqual(0, itemdb5.Count, "Itemdb should be empty when fields array is null");
 
             // Case 6: Populate itemdb with default values when fields array is empty
@@ -185,7 +185,7 @@ namespace osafw.Tests
 
             // Case 7: Populate itemdb with default values when item is null and fields array is null
             Hashtable itemdb7 = [];
-            FormUtils.filterCheckboxes(itemdb7, null, (IList)null);
+            FormUtils.filterCheckboxes(itemdb7, null!, (IList)null!);
             Assert.AreEqual(0, itemdb7.Count, "Itemdb should be empty when item is null and fields array is null");
         }
 
@@ -224,7 +224,7 @@ namespace osafw.Tests
 
             // Case 7: Do not change value for null field names string
             Hashtable itemdb7 = new() { { "field1", "" }, { "field2", "value2" } };
-            FormUtils.filterNullable(itemdb7, (string)null);
+            FormUtils.filterNullable(itemdb7, (string)null!);
             Assert.AreEqual("", itemdb7["field1"], "Value should remain unchanged for null field names string");
         }
 
@@ -237,8 +237,8 @@ namespace osafw.Tests
             Assert.AreEqual("id1,id2,id3", result1, "Result should be comma-separated string of keys");
 
             // Case 2: Return empty string for null input
-            Hashtable items2 = null;
-            string result2 = FormUtils.multi2ids(items2);
+            Hashtable? items2 = null;
+            string result2 = FormUtils.multi2ids(items2 ?? []);
             Assert.AreEqual("", result2, "Result should be empty string for null input");
 
             // Case 3: Return empty string for empty input
@@ -269,8 +269,8 @@ namespace osafw.Tests
             Assert.IsTrue(result1.ContainsKey("id3"), "Result should contain key 'id3'");
 
             // Case 2: For null input - empty hashtable
-            string str2 = null;
-            Hashtable result2 = FormUtils.ids2multi(str2);
+            string? str2 = null;
+            Hashtable result2 = FormUtils.ids2multi(str2!);
             Assert.AreEqual(0, result2.Count, "Result should not be null for null input");
 
             // Case 3: Return empty hashtable for empty input
@@ -303,8 +303,8 @@ namespace osafw.Tests
             Assert.AreEqual("value1,value2,value3", result1, "Result should be comma-separated string of values");
 
             // Case 2: Throw error for null input
-            ArrayList col2 = null;
-            Assert.ThrowsExactly<NullReferenceException>(() => FormUtils.col2comma_str(col2), "Expected NullReferenceException for null input");
+            ArrayList? col2 = null;
+            Assert.ThrowsExactly<NullReferenceException>(() => FormUtils.col2comma_str(col2!), "Expected NullReferenceException for null input");
 
             // Case 3: Return empty string for empty input
             ArrayList col3 = [];
@@ -418,12 +418,12 @@ namespace osafw.Tests
             Assert.IsEmpty(result6, "Result should be empty string for incorrect parameter names");
 
             // Case 7: Test with null item
-            Hashtable item7 = null;
-            string result7 = FormUtils.dateForCombo(item7, "fdate_combo");
+            Hashtable? item7 = null;
+            string result7 = FormUtils.dateForCombo(item7!, "fdate_combo");
             Assert.IsEmpty(result7, "Result should be empty string for null item");
 
             // Case 8: Test with null field_prefix
-            string result8 = FormUtils.dateForCombo(item1, null);
+            string result8 = FormUtils.dateForCombo(item1, null!);
             Assert.IsEmpty(result8, "Result should be empty string for null field_prefix");
         }
     }
