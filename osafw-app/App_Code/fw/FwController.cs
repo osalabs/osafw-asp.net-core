@@ -19,37 +19,37 @@ public abstract class FwController
     public static string route_default_action = ""; // supported values - "" (use Default Parser for unknown actions), Index (use IndexAction for unknown actions), Show (assume action is id and use ShowAction)
     public string route_onerror = ""; //route redirect action name in case ApplicationException occurs in current route, if empty - 500 error page returned
 
-    public string base_url;               // base url for the controller
-    public string base_url_suffix;        // additional base url suffix
+    public string base_url = string.Empty;               // base url for the controller
+    public string base_url_suffix = string.Empty;        // additional base url suffix
     public string template_basedir = "";  // templates base dir for the controller, if not set - [/route_prefix]/route_controller used
 
-    public Hashtable form_new_defaults;   // optional, defaults for the fields in new form, overridden by item passed from request
-    public string required_fields;        // optional, default required fields, space-separated
-    public string save_fields;            // required, fields to save from the form to db, space-separated
-    public string save_fields_checkboxes; // optional, checkboxes fields to save from the form to db, qw string: "field|def_value field2|def_value2"
+    public Hashtable form_new_defaults = [];   // optional, defaults for the fields in new form, overridden by item passed from request
+    public string required_fields = string.Empty;        // optional, default required fields, space-separated
+    public string save_fields = string.Empty;            // required, fields to save from the form to db, space-separated
+    public string save_fields_checkboxes = string.Empty; // optional, checkboxes fields to save from the form to db, qw string: "field|def_value field2|def_value2"
 
-    protected FW fw;
-    protected DB db;
-    protected FwModel model0;
-    protected Hashtable config;                  // controller config, loaded from template dir/config.json
-    protected Hashtable access_actions_to_permissions; // optional, controller-level custom actions to permissions mapping for role-based access checks, e.g. "UIMain" => Permissions.PERMISSION_VIEW . Can also be used to override default actions to permissions
+    protected FW fw = null!;
+    protected DB db = null!;
+    protected FwModel model0 = null!;
+    protected Hashtable config = [];                  // controller config, loaded from template dir/config.json
+    protected Hashtable access_actions_to_permissions = []; // optional, controller-level custom actions to permissions mapping for role-based access checks, e.g. "UIMain" => Permissions.PERMISSION_VIEW . Can also be used to override default actions to permissions
 
-    protected string list_view;                  // table/view to use in list sql, if empty model0.table_name used
+    protected string list_view = string.Empty;                  // table/view to use in list sql, if empty model0.table_name used
     protected string list_fields = "*";          // comma-separated and quoted list of fields to select in list sql
-    protected string list_orderby;               // orderby for the list screen
-    protected Hashtable list_filter;             // filter values for the list screen
-    protected Hashtable list_filter_search;      // filter for the search columns from reqh("search")
+    protected string list_orderby = string.Empty;               // orderby for the list screen
+    protected Hashtable list_filter = [];             // filter values for the list screen
+    protected Hashtable list_filter_search = [];      // filter for the search columns from reqh("search")
     protected Hashtable list_where_params = [];       // any sql params for the list_where
     protected string list_where = " 1=1 ";       // where to use in list sql, default is non-deleted records (see setListSearch() )
     protected long list_count;                    // count of list rows returned from db
-    protected ArrayList list_rows;               // list rows returned from db (array of hashes)
-    protected ArrayList list_headers;            // list headers with misc meta info per column
-    protected ArrayList list_pager;              // pager for the list from FormUtils.getPager
+    protected ArrayList list_rows = [];               // list rows returned from db (array of hashes)
+    protected ArrayList list_headers = [];            // list headers with misc meta info per column
+    protected ArrayList list_pager = [];              // pager for the list from FormUtils.getPager
     protected int list_pagesize_export = 10000;  // max pagesize for export (to avoid memory issues on large exports), override in controller if needed
-    protected string list_sortdef;               // required for Index, default list sorting: name asc|desc
-    protected Hashtable list_sortmap;            // required for Index, sortmap fields
-    protected Hashtable list_user_view;          // optional, user view settings for the list screen from UserViews model
-    protected string search_fields;              // optional, search fields, space-separated
+    protected string list_sortdef = string.Empty;               // required for Index, default list sorting: name asc|desc
+    protected Hashtable list_sortmap = [];            // required for Index, sortmap fields
+    protected Hashtable list_user_view = [];          // optional, user view settings for the list screen from UserViews model
+    protected string search_fields = string.Empty;              // optional, search fields, space-separated
                                                  // fields to search via $s=list_filter["s"), ] - means exact match, not "like"
 
     // editable list support
@@ -63,7 +63,7 @@ public abstract class FwController
     // map of fileld names to screen names
     protected bool is_dynamic_index = false;     // true if controller has dynamic IndexAction, then define below:
     protected string view_list_defaults = "";    // qw list of default columns
-    protected Hashtable view_list_map;           // list of all available columns fieldname|visiblename
+    protected Hashtable view_list_map = [];           // list of all available columns fieldname|visiblename
     protected string view_list_custom = "";      // qw list of custom-formatted fields for the list_table
 
     protected bool is_dynamic_show = false;      // true if controller has dynamic ShowAction, requires "show_fields" to be defined in config.json
@@ -123,9 +123,9 @@ public abstract class FwController
         }
 
         // CACHE MISS - load from file
-        var parsed = (Hashtable)Utils.jsonDecode(Utils.getFileContent(full_path));
-        if (parsed == null)
-            return null; // invalid json, let caller handle it
+        var parsedObj = Utils.jsonDecode(Utils.getFileContent(full_path));
+        if (parsedObj is not Hashtable parsed)
+            throw new ApplicationException("Controller Config is invalid, check json in templates: " + full_path);
 
         // store a pristine copy so subsequent loads can reuse the parsed structure without re-reading JSON
         var cacheEntry = new Hashtable

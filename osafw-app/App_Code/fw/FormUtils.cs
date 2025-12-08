@@ -134,7 +134,7 @@ public class FormUtils
             tpl_path = base_path + "/" + tpl_path;
         }
 
-        var template = (string)FwConfig.settings["template"];
+        var template = FwConfig.settings["template"].toStr();
 
         // translate to absolute path, without any ../
         var path = System.IO.Path.GetFullPath(template + tpl_path);
@@ -185,7 +185,7 @@ public class FormUtils
             tpl_path = base_path + "/" + tpl_path;
         }
 
-        var template = (string)FwConfig.settings["template"];
+        var template = FwConfig.settings["template"].toStr();
 
         // translate to absolute path, without any ../
         var path = System.IO.Path.GetFullPath(template + tpl_path);
@@ -242,12 +242,11 @@ public class FormUtils
     {
         int pagesize = pagesize1.toInt(MAX_PAGE_ITEMS);
 
-        ArrayList pager = null;
+        ArrayList pager = [];
         const int PAD_PAGES = 5;
 
         if (count > pagesize)
         {
-            pager = [];
             int page_count = (int)Math.Ceiling(count / (double)pagesize);
 
             var from_page = pagenum - PAD_PAGES;

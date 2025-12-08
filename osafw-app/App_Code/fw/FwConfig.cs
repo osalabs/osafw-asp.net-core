@@ -59,6 +59,9 @@ public static class FwConfig
     public static void reload(FW fw)
     {
         _hostCache.TryRemove(hostname, out _);     // force re-build on next request
+        if (configuration == null)
+            throw new InvalidOperationException("FwConfig.init must be called before reload");
+
         init(fw.context, configuration, fw.context?.Request.Host.ToString());
     }
 
