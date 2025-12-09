@@ -806,13 +806,13 @@ public class FW : IDisposable
         FORM = f;
     }
 
-    public void logger(params object[] args)
+    public void logger(params object?[] args)
     {
         if (args.Length == 0)
             return;
         flogger.log(LogLevel.DEBUG, ref args);
     }
-    public void logger(LogLevel level, params object[] args)
+    public void logger(LogLevel level, params object?[] args)
     {
         if (args == null || args.Length == 0)
             return;

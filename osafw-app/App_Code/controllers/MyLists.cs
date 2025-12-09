@@ -36,7 +36,7 @@ public class MyListsController : FwAdminController
 
     public override Hashtable setPS(Hashtable? ps = null)
     {
-        ps = base.setPS(ps) ?? [];
+        ps = base.setPS(ps);
         ps["select_entities"] = model.listSelectOptionsEntities();
         return ps;
     }
@@ -86,10 +86,10 @@ public class MyListsController : FwAdminController
             row["ctr"] = model.countItems(row["id"].toInt());
     }
 
-    public override Hashtable ShowFormAction(int id = 0)
+    public override Hashtable? ShowFormAction(int id = 0)
     {
         form_new_defaults = new() { ["entity"] = related_id };
-        return base.ShowFormAction(id) ?? [];
+        return base.ShowFormAction(id);
     }
 
     public override Hashtable? SaveAction(int id = 0)
@@ -131,7 +131,7 @@ public class MyListsController : FwAdminController
         return this.afterSave(success, id, is_new);
     }
 
-    public Hashtable ToggleListAction(int id)
+    public Hashtable? ToggleListAction(int id)
     {
         var item_id = reqi("item_id");
         var ps = new Hashtable();
@@ -144,11 +144,11 @@ public class MyListsController : FwAdminController
         ps["iname"] = user_lists["iname"];
         ps["action"] = (res ? "added" : "removed");
 
-        return afterSave(true, ps) ?? [];
+        return afterSave(true, ps);
     }
 
     // request item_id - could be one id, or comma-separated ids
-    public Hashtable AddToListAction(int id)
+    public Hashtable? AddToListAction(int id)
     {
         Hashtable items = Utils.commastr2hash(reqs("item_id"));
 
@@ -163,11 +163,11 @@ public class MyListsController : FwAdminController
                 fw.model<UserLists>().addItemList(id, item_id);
         }
 
-        return afterSave(true) ?? [];
+        return afterSave(true);
     }
 
     // request item_id - could be one id, or comma-separated ids
-    public Hashtable RemoveFromListAction(int id)
+    public Hashtable? RemoveFromListAction(int id)
     {
         Hashtable items = Utils.commastr2hash(reqs("item_id"));
 
@@ -182,6 +182,6 @@ public class MyListsController : FwAdminController
                 fw.model<UserLists>().delItemList(id, item_id);
         }
 
-        return afterSave(true) ?? [];
+        return afterSave(true);
     }
 }

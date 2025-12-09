@@ -360,11 +360,11 @@ public abstract class FwController
     }
 
     // methods from fw - just for a covenience, so no need to use "fw.", as they are used quite frequently
-    public void logger(params object[] args)
+    public void logger(params object?[] args)
     {
         fw.logger(args);
     }
-    public void logger(LogLevel level, params object[] args)
+    public void logger(LogLevel level, params object?[] args)
     {
         fw.logger(level, args);
     }

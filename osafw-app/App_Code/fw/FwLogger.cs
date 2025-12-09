@@ -45,7 +45,7 @@ public class FwLogger : IDisposable
     private FileStream floggerFS;
     private StreamWriter floggerSW;
 
-    public static string dumper(object dmp_obj, int level = 0) // TODO better type detection(suitable for all collection types)
+    public static string dumper(object? dmp_obj, int level = 0) // TODO better type detection(suitable for all collection types)
     {
         StringBuilder str = new();
         if (dmp_obj == null)
@@ -125,19 +125,19 @@ public class FwLogger : IDisposable
 #endif
     }
 
-    public void log(params object[] args)
+    public void log(params object?[] args)
     {
         if (args.Length == 0) return;
         log(LogLevel.DEBUG, ref args);
     }
 
-    public void log(LogLevel level, params object[] args)
+    public void log(LogLevel level, params object?[] args)
     {
         if (args.Length == 0) return;
         log(level, ref args);
     }
 
-    public void log(LogLevel level, ref object[] args)
+    public void log(LogLevel level, ref object?[] args)
     {
         if (level > log_level) return;
 
