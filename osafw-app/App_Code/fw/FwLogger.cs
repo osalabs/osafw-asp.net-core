@@ -153,8 +153,9 @@ public class FwLogger : IDisposable
             int i = 1;
             StackFrame sf = st.GetFrame(i);
             string fname = sf.GetFileName() ?? "";
-            // skip logger methods and DB internals as we want to know line where logged thing actually called from
-            while (sf.GetMethod().Name == "logger" || fname.EndsWith(Path.DirectorySeparatorChar + "DB.cs"))
+            // skip logger methods, DB internals and FW.getDB's compiler-generated closure method
+            // as we want to know line where the logged thing was actually called from
+            while (sf.GetMethod().Name == "logger" || fname.EndsWith(Path.DirectorySeparatorChar + "DB.cs") || sf.GetMethod().Name.StartsWith("<getDB>"))
             {
                 i += 1;
                 sf = st.GetFrame(i);
