@@ -214,7 +214,7 @@ public class FW : IDisposable
         parseForm();
 
         // save flash to current var and update session as flash is used only for nearest request
-        Hashtable _flash = SessionHashtable("_flash");
+        Hashtable? _flash = SessionHashtable("_flash");
         if (_flash != null) G["_flash"] = _flash;
         SessionHashtable("_flash", []);
     }
@@ -288,9 +288,9 @@ public class FW : IDisposable
         context?.Session.Set(name, BitConverter.GetBytes(value));
     }
 
-    public Hashtable SessionHashtable(string name)
+    public Hashtable? SessionHashtable(string name)
     {
-        string data = context?.Session.GetString(name);
+        string? data = context?.Session.GetString(name);
         return data == null ? null : (Hashtable)Utils.deserialize(data);
     }
     public void SessionHashtable(string name, Hashtable value)
@@ -307,7 +307,7 @@ public class FW : IDisposable
         if (value == null)
         {
             // read mode - return current flash
-            return ((Hashtable)this.G["_flash"])[name] ?? "";
+            return (this.G["_flash"] as Hashtable)?[name] ?? "";
         }
         else
         {
@@ -786,7 +786,7 @@ public class FW : IDisposable
                 if (!SQ.ContainsKey(mainKey))
                     SQ[mainKey] = new Hashtable();
 
-                ((Hashtable)SQ[mainKey])[subKey] = value;
+                ((Hashtable)SQ[mainKey]!)[subKey] = value;
             }
             else
             {
@@ -853,8 +853,8 @@ public class FW : IDisposable
             if (!ps.ContainsKey("error"))
                 ps["error"] = new Hashtable();
 
-            if (!((Hashtable)ps["error"]).ContainsKey("details"))
-                ((Hashtable)ps["error"])["details"] = this.FormErrors; // add form errors if any
+            if (ps["error"] is Hashtable errorTable && !errorTable.ContainsKey("details"))
+                errorTable["details"] = this.FormErrors; // add form errors if any
             logger(LogLevel.DEBUG, "Form errors:", this.FormErrors);
         }
 

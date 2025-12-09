@@ -149,7 +149,7 @@ public static class FwConfig
             settings[section.Key] = new Hashtable();
             foreach (IConfigurationSection sub_section in section.GetChildren())
             {
-                Hashtable s = (Hashtable)settings[section.Key];
+                Hashtable s = (Hashtable)settings[section.Key]!;
                 readSettingsSection(sub_section, ref s);
             }
         }
@@ -182,19 +182,20 @@ public static class FwConfig
 
     public static void overrideSettingsByName(string override_name, Hashtable settings, bool is_regex_match = false)
     {
-        Hashtable overs = (Hashtable)settings["override"];
-        if (overs != null)
+        if (settings["override"] is Hashtable overs)
         {
             foreach (string over_name in overs.Keys)
             {
-                Hashtable over = (Hashtable)overs[over_name];
-                if (!is_regex_match && over_name == override_name
-                    || is_regex_match && Regex.IsMatch(override_name, over["hostname_match"].toStr())
-                    )
+                if (overs[over_name] is Hashtable over)
                 {
-                    settings["config_override"] = over_name;
-                    Utils.mergeHashDeep(settings, over);
-                    break;
+                    if (!is_regex_match && over_name == override_name
+                        || is_regex_match && Regex.IsMatch(override_name, over["hostname_match"].toStr())
+                        )
+                    {
+                        settings["config_override"] = over_name;
+                        Utils.mergeHashDeep(settings, over);
+                        break;
+                    }
                 }
             }
         }

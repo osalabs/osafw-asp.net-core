@@ -202,7 +202,7 @@ public class FwActivityLogs : FwModel
             if (!row.ContainsKey("fields"))
                 continue;
 
-            var fields = (Hashtable)row["fields"];
+            var fields = row["fields"] as Hashtable ?? [];
             var fields_list = new ArrayList();
             foreach (string key in fields.Keys)
             {

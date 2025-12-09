@@ -385,9 +385,7 @@ public abstract class FwController
 
         session_key ??= "_filter_" + fw.G["controller.action"];
 
-        Hashtable sfilter = fw.SessionHashtable(session_key);
-        if (sfilter is null)
-            sfilter = [];
+        Hashtable sfilter = fw.SessionHashtable(session_key) ?? [];
 
         // if not forced filter - merge form filters to session filters
         bool is_dofilter = fw.FORM.ContainsKey("dofilter");
@@ -440,8 +438,7 @@ public abstract class FwController
         if (list_filter_search.Count == 0 && !is_dofilter)
         {
             //read from session
-            list_filter_search = fw.SessionHashtable(session_key_search);
-            list_filter_search ??= [];
+            list_filter_search = fw.SessionHashtable(session_key_search) ?? [];
         }
         else
         {
