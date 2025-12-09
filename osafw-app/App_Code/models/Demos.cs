@@ -54,7 +54,7 @@ public class Demos : FwModel<Demos.Row>
         return isExistsByField(uniq_key, not_id, "email");
     }
 
-    public virtual ArrayList listSelectOptionsParent(Hashtable def = null, Hashtable where = null)
+    public virtual ArrayList listSelectOptionsParent(Hashtable? def = null, Hashtable? where = null)
     {
         where ??= [];
 

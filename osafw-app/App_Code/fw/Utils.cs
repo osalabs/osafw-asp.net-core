@@ -1409,8 +1409,8 @@ public class Utils
     public static string sendFileToUrl(
         string url,
         Hashtable files,
-        System.Collections.Specialized.NameValueCollection formFields = null,
-        string cert_path = null)
+        System.Collections.Specialized.NameValueCollection? formFields = null,
+        string? cert_path = null)
     {
         string result = "";
         HttpClient client;

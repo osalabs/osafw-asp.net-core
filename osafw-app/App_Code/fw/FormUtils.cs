@@ -238,7 +238,7 @@ public class FormUtils
     }
 
     // return pager or Nothing if no paging required
-    public static ArrayList getPager(long count, int pagenum, object pagesize1 = null)
+    public static ArrayList getPager(long count, int pagenum, object? pagesize1 = null)
     {
         int pagesize = pagesize1.toInt(MAX_PAGE_ITEMS);
 

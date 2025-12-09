@@ -135,7 +135,7 @@ public class FwReports
     /// <param name="f"></param>
     /// <param name="ps"></param>
     /// <returns></returns>
-    public static string createHtml(FW fw, string repcode, Hashtable f = null, Hashtable ps = null)
+    public static string createHtml(FW fw, string repcode, Hashtable? f = null, Hashtable? ps = null)
     {
         f ??= [];
 
@@ -146,7 +146,7 @@ public class FwReports
         return report.render(ps);
     }
 
-    public static string createFile(FW fw, string repcode, string format = "", Hashtable f = null, Hashtable ps = null)
+    public static string createFile(FW fw, string repcode, string format = "", Hashtable? f = null, Hashtable? ps = null)
     {
         f ??= [];
         f["format"] = format;

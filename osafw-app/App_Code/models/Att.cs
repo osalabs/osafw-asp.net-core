@@ -593,7 +593,7 @@ public class Att : FwModel<Att.Row>
     /// <param name="fieldnames">qw string of ONLY field names to upload</param>
     /// <returns>number of successuflly uploaded files</returns>
     /// <remarks>also set FLASH error if some files not uploaded</remarks>
-    public int uploadPostedFilesS3(string entity_icode, int item_id, string att_categories_id = null, string fieldnames = "")
+    public int uploadPostedFilesS3(string entity_icode, int item_id, string? att_categories_id = null, string fieldnames = "")
     {
         var result = 0;
         var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
