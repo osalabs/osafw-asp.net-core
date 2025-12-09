@@ -92,9 +92,9 @@ public class AdminSpagesController : FwAdminController
                 ["parent_id"] = parent_id
             };
         }
-        Hashtable ps = base.ShowFormAction(id);
+        var ps = base.ShowFormAction(id) ?? [];
 
-        var item = (Hashtable)ps["i"];
+        var item = ps["i"] as Hashtable ?? [];
         string where = " status<>@status ";
         ArrayList pages_tree = model.tree(where, DB.h("status", FwModel.STATUS_DELETED), "parent_id, prio desc, iname");
         ps["select_options_parent_id"] = model.getPagesTreeSelectHtml(item["parent_id"].toStr(), pages_tree);

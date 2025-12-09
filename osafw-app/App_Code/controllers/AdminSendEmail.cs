@@ -76,7 +76,7 @@ public class AdminSendEmailController : FwAdminController
         {
             ["smtp"] = FormUtils.filter(itemdb, "host port is_ssl username password")
         };
-        var is_sent = fw.sendEmail(itemdb["from"].ToString(), itemdb["to"].ToString(), itemdb["subject"].ToString(), itemdb["body"].ToString(), null, null, "", options);
+        var is_sent = fw.sendEmail(itemdb["from"].toStr(), itemdb["to"].toStr(), itemdb["subject"].toStr(), itemdb["body"].toStr(), null, null, "", options);
 
         var ps = new Hashtable
         {

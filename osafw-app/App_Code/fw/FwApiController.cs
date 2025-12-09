@@ -39,15 +39,13 @@ public class FwApiController : FwController
     {
         // logger(fw.req.Headers)
 
-        var origin = "";
-        if (!string.IsNullOrEmpty(fw.request.Headers.Origin.ToString()))
-            origin = fw.request.Headers.Origin;
-        else
-        {
+        var origin = fw.request.Headers.Origin.toStr();
+        if (string.IsNullOrEmpty(origin)) { 
             // try referrer
-            if (!string.IsNullOrEmpty(fw.request.Headers.Referer.ToString()))
+            var referrer = fw.request.Headers.Referer.toStr();
+            if (!string.IsNullOrEmpty(referrer))
             {
-                var uri = new Uri(fw.request.Headers.Referer);
+                var uri = new Uri(referrer);
                 origin = uri.GetLeftPart(UriPartial.Authority);
             }
         }

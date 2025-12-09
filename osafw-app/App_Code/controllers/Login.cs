@@ -140,7 +140,7 @@ public class LoginController : FwController
         if (users_id == 0)
             fw.redirect(base_url);
 
-        fw.logActivity(FwLogTypes.ICODE_USERS_LOGIN, FwEntities.ICODE_USERS, users_id, "MFA check, IP:" + fw.context.Connection.RemoteIpAddress.ToString());
+        fw.logActivity(FwLogTypes.ICODE_USERS_LOGIN, FwEntities.ICODE_USERS, users_id, "MFA check, IP:" + fw.context.Connection.RemoteIpAddress.toStr());
 
         var ps = new Hashtable() {
             { "hide_sidebar" , true},
@@ -177,7 +177,7 @@ public class LoginController : FwController
         fw.Session("mfa_login_attempts", (mfa_login_attempts + 1).ToString());
 
         var item = reqh("item");
-        var mfs_code = item["code"].ToString();
+        var mfs_code = item["code"].toStr();
 
         if (!model.isValidMFA(users_id, mfs_code))
         {

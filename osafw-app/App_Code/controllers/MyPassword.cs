@@ -70,7 +70,7 @@ public class MyPasswordController : FwController
         // var itemdb = Users.one(id);
 
         var itemdb = FormUtils.filter(reqh("item"), Utils.qw("email pwd"));
-        itemdb["pwd"] = itemdb["pwd"].ToString().Trim();
+        itemdb["pwd"] = itemdb["pwd"].toStr().Trim();
 
         if (id > 0)
         {

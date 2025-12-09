@@ -1122,11 +1122,11 @@ public abstract class FwController
     }
 
     //called when unhandled error happens in action
-    public virtual Hashtable actionError(Exception ex, object[] args)
+    public virtual Hashtable? actionError(Exception? ex, object[] args)
     {
         var edi = ExceptionDispatchInfo.Capture(ex);
 
-        Hashtable ps = null;
+        Hashtable? ps = null;
         if (fw.isJsonExpected())
         {
             edi.Throw(); //exception will be handled in fw.dispatch() and fw.errMsg() called

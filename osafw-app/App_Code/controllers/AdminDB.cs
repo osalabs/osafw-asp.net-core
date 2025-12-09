@@ -111,7 +111,7 @@ public class AdminDBController : FwController
             for (int i = 0; i <= sth.FieldCount - 1; i++)
             {
                 Hashtable tblfld = [];
-                tblfld["value"] = sth[i].ToString();
+                tblfld["value"] = sth[i].toStr();
 
                 fields.Add(tblfld);
             }

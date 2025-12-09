@@ -816,7 +816,7 @@ public class FW : IDisposable
     }
     public void logger(LogLevel level, params object[] args)
     {
-        if (args.Length == 0)
+        if (args == null || args.Length == 0)
             return;
         flogger.log(level, ref args);
     }
@@ -1018,7 +1018,7 @@ public class FW : IDisposable
 
         if (args != null)
         {
-            this.route.id = args[0].ToString(); //first argument goes to id
+            this.route.id = args[0].toStr(); //first argument goes to id
             this.route.@params = new ArrayList(args); // all arguments go to params
         }
 
@@ -1161,11 +1161,11 @@ public class FW : IDisposable
             }
         }
 
-        Hashtable ps = null;
+        Hashtable? ps = null;
         try
         {
             controller.checkAccess();
-            ps = (Hashtable)actionMethod.Invoke(controller, parameters);
+            ps = actionMethod.Invoke(controller, parameters) as Hashtable; // Call Controller Action, if returns null - no ParsePage called
 
             // check/override _basedir from controller for non-json requests
             if (ps != null && !isJsonExpected() && !ps.ContainsKey("_basedir_controller") && !string.IsNullOrEmpty(controller.template_basedir))
@@ -1183,7 +1183,7 @@ public class FW : IDisposable
         }
         catch (TargetInvocationException ex)
         {
-            Exception iex = null;
+            Exception? iex = null;
             if (ex.InnerException != null)
             {
                 iex = ex.InnerException;

@@ -47,7 +47,7 @@ public class PasswordController : FwController
     {
         route_onerror = FW.ACTION_INDEX; //set route to go if error happens
 
-        string login = reqh("item")["login"].ToString().Trim();
+        string login = reqh("item")["login"].toStr().Trim();
 
         if (login.Length == 0)
             throw new UserException("Please enter your Email");

@@ -50,7 +50,7 @@ public class AdminUsersController : FwDynamicController
     public override Hashtable ShowFormAction(int id = 0)
     {
         var ps = base.ShowFormAction(id);
-        Hashtable item = (Hashtable)ps["i"];
+        var item = ps["i"] as Hashtable ?? [];
         ps["att"] = fw.model<Att>().one(item["att_id"]);
 
         ps["is_roles"] = model.isRoles();
@@ -85,7 +85,7 @@ public class AdminUsersController : FwDynamicController
         Hashtable itemdb = FormUtils.filter(item, this.save_fields);
         FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
 
-        itemdb["pwd"] = itemdb["pwd"].ToString().Trim();
+        itemdb["pwd"] = itemdb["pwd"].toStr().Trim();
         if (Utils.isEmpty(itemdb["pwd"]))
             itemdb.Remove("pwd");
 
@@ -165,9 +165,9 @@ public class AdminUsersController : FwDynamicController
         var rows = db.array(model.table_name, [], "id");
         foreach (var row in rows)
         {
-            if (row["pwd"].ToString().Substring(0, 2) == "$2")
+            if (row["pwd"].Substring(0, 2) == "$2")
                 continue; // already hashed
-            var hashed = model.hashPwd(row["pwd"].toStr());
+            var hashed = model.hashPwd(row["pwd"]);
             db.update(model.table_name, new Hashtable() { { "pwd", hashed } }, new Hashtable() { { "id", row["id"] } });
         }
         rw("done");
