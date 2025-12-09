@@ -176,15 +176,15 @@ class DevEntityBuilder
                     fields.Add(field);
 
                     // Handle indexes
-                    if (field.TryGetValue("unique", out object uvalue))
+                    if (field.TryGetValue("unique", out object? uvalue))
                     {
-                        if ((bool)uvalue)
-                            indexes["UX" + (indexes.Count + 1)] = field["name"].ToString();
+                        if (uvalue.toBool())
+                            indexes["UX" + (indexes.Count + 1)] = field["name"].toStr();
                         field.Remove("unique");
                     }
 
                     // Handle foreign keys
-                    if (field.TryGetValue("foreign_key", out object fkvalue))
+                    if (field.TryGetValue("foreign_key", out object? fkvalue))
                     {
                         foreignKeys.Add((Dictionary<string, string>)fkvalue);
                         field.Remove("foreign_key");
@@ -198,10 +198,10 @@ class DevEntityBuilder
                     }
 
                     // Handle primary key defined on a field
-                    if (field.TryGetValue("is_primary", out object pvalue))
+                    if (field.TryGetValue("is_primary", out object? pvalue))
                     {
-                        if ((bool)pvalue)
-                            indexes["PK"] = field["name"].ToString();
+                        if (pvalue.toBool())
+                            indexes["PK"] = field["name"].toStr();
                         field.Remove("is_primary");
                     }
                 }
@@ -330,9 +330,9 @@ class DevEntityBuilder
     // FieldName [Type(Length)] [NULL|NOT NULL] [DEFAULT(Value)] [UNIQUE|PRIMARY] [UI:option,option(some other value),option,...]
     // FieldName.id [NULL] [UI:option,option(some other value),option,...] -- foreign key
     // FieldName FK(TableName.FieldName) [NULL] [UI:option,option(some other value),option,...] -- foreign key
-    private static Dictionary<string, object> ParseField(string line, string comment)
+    private static Dictionary<string, object?>? ParseField(string line, string comment)
     {
-        var field = new Dictionary<string, object>();
+        var field = new Dictionary<string, object?>();
         if (comment.Length > 0) field["comments"] = comment;
 
         // Split line into parts
@@ -370,7 +370,7 @@ class DevEntityBuilder
             field["ui"] = uiOptions;
 
             // Handle 'required' UI option affecting nullability
-            if (uiOptions.TryGetValue("required", out object value) && (bool)value)
+            if (uiOptions.TryGetValue("required", out object? value) && value.toBool())
             {
                 is_nullable = is_null; // if NULL was present - keep it, otherwise set to false
                 field["default"] = null; // enforce no default if field is required
@@ -395,7 +395,7 @@ class DevEntityBuilder
             field["fw_subtype"] = "int";
             field["foreign_key"] = new Dictionary<string, string>
             {
-                ["column"] = field["name"].ToString(),
+                ["column"] = field["name"].toStr(),
                 ["pk_table"] = pk_table,
                 ["pk_column"] = "id"
             };

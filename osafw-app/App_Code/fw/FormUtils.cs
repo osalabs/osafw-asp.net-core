@@ -591,8 +591,8 @@ public class FormUtils
     public static ArrayList listCheckedOrderByPrioIname(ArrayList rows)
     {
         return new ArrayList((from Hashtable h in rows
-                              where (bool)h["is_checked"]
-                              orderby (int)h["prio"] ascending, h["iname"] ascending
+                              where h["is_checked"].toBool()
+                              orderby h["prio"].toInt() ascending, h["iname"] ascending
                               select h).ToList());
     }
 
@@ -600,7 +600,7 @@ public class FormUtils
     public static ArrayList listOrderByPrioIname(ArrayList rows)
     {
         return new ArrayList((from Hashtable h in rows
-                              orderby (bool)h["is_checked"] descending, (int)h["prio"] ascending, h["iname"] ascending
+                              orderby h["is_checked"].toBool() descending, h["prio"].toInt() ascending, h["iname"] ascending
                               select h).ToList());
     }
 

@@ -764,7 +764,7 @@ public class FwDynamicController : FwController
         var att_id = 0;
         var addedAtt = modelAtt.uploadMulti(itemdb);
         if (addedAtt.Count > 0)
-            att_id = (int)((Hashtable)addedAtt[0])["id"];
+            att_id = (addedAtt[0] as Hashtable)!["id"].toInt();
 
         // make same response as in AdminAtt.SaveAction
         // if select in popup - return json

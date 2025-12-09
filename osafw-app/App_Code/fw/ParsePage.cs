@@ -805,9 +805,9 @@ public class ParsePage
         }
 
         bool result = false;
-        if (oper == "if" && (bool)eqvalue == true)
+        if (oper == "if" && eqvalue.toBool())
             result = true;
-        else if (oper == "unless" && (bool)eqvalue == false)
+        else if (oper == "unless" && !eqvalue.toBool())
             result = true;
         else if (oper == "ifeq" && (is_numeric_comparison && eqvalue.toInt() == ravalue.toInt() || !is_numeric_comparison && String.Compare(eqvalue.toStr(), ravalue.toStr()) == 0))
             result = true;

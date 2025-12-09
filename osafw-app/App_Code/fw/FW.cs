@@ -90,12 +90,12 @@ public class FW : IDisposable
 
     public int userDateFormat
     {
-        get { return G["date_format"].toInt((int)DateUtils.DATE_FORMAT_MDY); }
+        get { return G["date_format"].toInt(DateUtils.DATE_FORMAT_MDY); }
     }
 
     public int userTimeFormat
     {
-        get { return G["time_format"].toInt((int)DateUtils.TIME_FORMAT_12); }
+        get { return G["time_format"].toInt(DateUtils.TIME_FORMAT_12); }
     }
 
     public string userTimezone

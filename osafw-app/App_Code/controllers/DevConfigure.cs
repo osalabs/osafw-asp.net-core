@@ -47,7 +47,7 @@ public class DevConfigureController : FwController
         DB db;
         ps["is_db_conn"] = false;
         ps["is_db_tables"] = false;
-        if ((bool)ps["is_db_config"])
+        if (ps["is_db_config"].toBool())
         {
             try
             {
