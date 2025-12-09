@@ -45,8 +45,8 @@ public class TestController : FwController
         public int? item_id { get; set; }
         public DateTime idate { get; set; }
         public int? users_id { get; set; }
-        public string idesc { get; set; }
-        public string payload { get; set; }
+        public string idesc { get; set; } = string.Empty;
+        public string payload { get; set; } = string.Empty;
         public byte status { get; set; }
         public DateTime add_time { get; set; }
         public int add_users_id { get; set; }

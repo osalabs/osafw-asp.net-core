@@ -21,7 +21,7 @@ public abstract class FwModel : IDisposable
     public const int STATUS_DELETED = 127;
 
     protected FW fw = null!;
-    protected DB db;
+    protected DB db = null!;
     protected string db_config = ""; // if empty(default) - fw.db used, otherwise - new db connection created based on this config name
 
     public string table_name = ""; // must be assigned in child class

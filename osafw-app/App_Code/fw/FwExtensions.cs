@@ -18,7 +18,7 @@ using osafw;
 public static class FwExtensions
 {
     private static readonly ConcurrentDictionary<Type, Dictionary<string, PropertyInfo>> WritablePropertiesCache = new();
-    private static readonly ConcurrentDictionary<Type, Dictionary<string, Func<object, object>>> ReadableMembersCache = new();
+    private static readonly ConcurrentDictionary<Type, Dictionary<string, Func<object, object?>>> ReadableMembersCache = new();
 
     private static Dictionary<string, PropertyInfo> getWritablePropertiesCore(Type type)
     {
@@ -201,16 +201,16 @@ public static class FwExtensions
     /// entries are copied; otherwise, public writable properties are used.</param>
     /// <returns>A dictionary containing the object's properties and their values, or the original dictionary's entries if the
     /// object is a dictionary. Keys are compared using case-insensitive ordinal comparison.</returns>
-    public static Dictionary<string, object> toKeyValue(this object dto)
+    public static Dictionary<string, object?> toKeyValue(this object dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        if (dto is Dictionary<string, object> dictionary)
-            return new Dictionary<string, object>(dictionary, StringComparer.OrdinalIgnoreCase);
+        if (dto is Dictionary<string, object?> dictionary)
+            return new Dictionary<string, object?>(dictionary, StringComparer.OrdinalIgnoreCase);
 
         if (dto is IDictionary dict)
         {
-            Dictionary<string, object> result = new(dict.Count, StringComparer.OrdinalIgnoreCase);
+            Dictionary<string, object?> result = new(dict.Count, StringComparer.OrdinalIgnoreCase);
             foreach (DictionaryEntry entry in dict)
             {
                 var key = entry.Key?.ToString();
@@ -221,7 +221,7 @@ public static class FwExtensions
         }
 
         var props = getWritableProperties(dto.GetType());
-        Dictionary<string, object> kv = new(props.Count, StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, object?> kv = new(props.Count, StringComparer.OrdinalIgnoreCase);
         foreach (var pair in props)
         {
             kv[pair.Key] = pair.Value.GetValue(dto);
