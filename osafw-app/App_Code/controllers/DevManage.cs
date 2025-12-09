@@ -335,7 +335,7 @@ public class DevManageController : FwController
         // Try
         var db = new DB(connstr, dbtype, "main");
         db.setLogger(fw.logger);
-        db.setContext(fw.context ?? throw new UserException("Context is not available"));
+        db.setContext(fw.context);
 
         var entities = DevEntityBuilder.dbschema2entities(db);
 

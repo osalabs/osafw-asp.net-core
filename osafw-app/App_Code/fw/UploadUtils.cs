@@ -53,7 +53,8 @@ public class UploadUtils
     {
         bool result = false;
 
-        IFormFile file = up.fw.request.Form.Files[up.field_name];
+        var files = up.fw.request?.Form?.Files;
+        var file = files?.GetFile(up.field_name);
         if (file != null)
         {
             up.orig_filename = file.FileName;
@@ -116,7 +117,8 @@ public class UploadUtils
     // perform file upload for module_name/id and set filepath where it's stored, return true - if upload successful
     public static bool uploadFile(FW fw, string module_name, int id, out string filepath, string input_name = "file1", bool is_skip_check = false)
     {
-        IFormFile file = fw.request.Form.Files[input_name];
+        var files = fw.request?.Form?.Files;
+        var file = files?.GetFile(input_name);
 
         return uploadFile(fw, module_name, id, out filepath, file, is_skip_check);
     }
@@ -125,9 +127,10 @@ public class UploadUtils
     public static bool uploadFile(FW fw, string module_name, int id, out string filepath, int file_index = 0, bool is_skip_check = false)
     {
         filepath = "";
-        if (file_index > fw.request.Form.Files.Count - 1)
+        var files = fw.request?.Form?.Files;
+        if (files == null || file_index > files.Count - 1)
             return false;
-        IFormFile file = fw.request.Form.Files[file_index];
+        var file = files[file_index];
 
         return uploadFile(fw, module_name, id, out filepath, file, is_skip_check);
     }

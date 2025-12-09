@@ -424,7 +424,7 @@ public class DB : IDisposable
     /// <summary>
     /// set optional context for request level cache storage (ex: HttpContext.Items)
     /// </summary>
-    public void setContext(HttpContext context)
+    public void setContext(HttpContext? context)
     {
         this.context = context;
     }
