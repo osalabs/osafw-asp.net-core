@@ -370,8 +370,8 @@ public class Users : FwModel<Users.Row>
     /// <param name="timezone"></param>
     public void doLogin(int id, string timezone = "")
     {
-        var context = fw.context ?? throw new InvalidOperationException("FW context is not initialized");
-        context.Session.Clear();
+        var context = fw.context;
+        context?.Session.Clear();
         fw.Session("XSS", Utils.getRandStr(16));
 
         reloadSession(id);

@@ -427,10 +427,10 @@ public class ConvUtils
         // create the workbook
         using (var doc = SpreadsheetDocument.Create(fileName, SpreadsheetDocumentType.Workbook))
         {
-            doc.AddWorkbookPart();
-            doc.WorkbookPart.Workbook = new Workbook();
+            var workbookPart = doc.AddWorkbookPart();
+            workbookPart.Workbook = new Workbook();
             // create the worksheet to workbook relation
-            Sheets sheets = doc.WorkbookPart.Workbook.AppendChild(new Sheets());
+            Sheets sheets = workbookPart.Workbook.AppendChild(new Sheets());
 
             var sheetsOrder = new ArrayList();
             sheetsOrder.Add("Sheet1");
@@ -441,14 +441,14 @@ public class ConvUtils
                 sheetNumber += 1;
 
                 var _SheetData = new SheetData();
-                var _WorksheetPart = doc.WorkbookPart.AddNewPart<WorksheetPart>();
+                var _WorksheetPart = workbookPart.AddNewPart<WorksheetPart>();
 
-                var s = new Sheet
-                {
-                    Id = doc.WorkbookPart.GetIdOfPart(_WorksheetPart),
-                    SheetId = sheetNumber,
-                    Name = sheetName
-                };
+                    var s = new Sheet
+                    {
+                        Id = workbookPart.GetIdOfPart(_WorksheetPart),
+                        SheetId = sheetNumber,
+                        Name = sheetName
+                    };
                 sheets.AppendChild(s);
 
                 var headerRow = new Row();
@@ -495,13 +495,13 @@ public class ConvUtils
                 _WorksheetPart.Worksheet.Append(_SheetData);
             }
 
-            var _StylePart = doc.WorkbookPart.AddNewPart<WorkbookStylesPart>();
-            _StylePart.Stylesheet = xlsxStylesheet();
-            _StylePart.Stylesheet.Save();
+                var _StylePart = workbookPart.AddNewPart<WorkbookStylesPart>();
+                _StylePart.Stylesheet = xlsxStylesheet();
+                _StylePart.Stylesheet.Save();
 
-            // save workbook
-            doc.WorkbookPart.Workbook.Save();
-        }
+                // save workbook
+                workbookPart.Workbook.Save();
+            }
 
         if (is_browser)
         {

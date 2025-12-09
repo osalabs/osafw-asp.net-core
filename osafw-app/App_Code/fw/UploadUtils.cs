@@ -305,7 +305,9 @@ public class UploadUtils
     // alternative for .NET 4 MimeMapping.GetMimeMapping(FileName)
     public static string mimeMapping(string filename)
     {
-        new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider().TryGetContentType(filename, out string contentType);
-        return contentType ?? "application/octet-stream";
+        var contentType = "application/octet-stream";
+        new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider().TryGetContentType(filename, out contentType);
+        contentType ??= "application/octet-stream";
+        return contentType;
     }
 }
