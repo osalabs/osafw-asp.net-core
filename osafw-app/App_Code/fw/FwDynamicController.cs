@@ -613,7 +613,7 @@ public class FwDynamicController : FwController
         //optional params
         var id = reqi("id"); //specific id, if just need iname for it (used to preload existing id/label for edit form)
         var model_name = reqs("model");
-        FwModel ac_model = null;
+        FwModel? ac_model = null;
         if (string.IsNullOrEmpty(model_name))
         {
             //if no model passed - use model_related
@@ -640,18 +640,20 @@ public class FwDynamicController : FwController
         if (ac_model == null)
             throw new UserException("No model defined");
 
+        var acModel = ac_model;
+
         //ArrayList items;
         List<string> items;
         if (id > 0)
         {
             //var item = ac_model.one(id);
             //items = [new Hashtable() { { "id", id }, { "iname", item["iname"] } }];
-            items = [ac_model.iname(id)];
+            items = [acModel.iname(id)];
         }
         else
         {
             //items = ac_model.listSelectOptionsAutocomplete(q);
-            items = ac_model.listAutocomplete(q);
+            items = acModel.listAutocomplete(q);
         }
 
         return new Hashtable() { { "_json", items } };
@@ -747,7 +749,9 @@ public class FwDynamicController : FwController
         // validation
         if (id == 0)
             throw new UserException("Invalid ID");
-        if (fw.request.Form.Files.Count == 0 || fw.request.Form.Files[0] == null || fw.request.Form.Files[0].Length == 0)
+
+        var files = fw.request?.Form?.Files;
+        if (files == null || files.Count == 0 || files[0] == null || files[0].Length == 0)
             throw new UserException("No file(s) selected");
 
         var modelAtt = fw.model<Att>();
@@ -904,8 +908,9 @@ public class FwDynamicController : FwController
                 {
                     // select options
                     var options = def["options"] as Hashtable;
-                    if (options != null && options.ContainsKey(item[field]))
-                        def["value"] = options[item[field]];
+                    var itemValue = item.ContainsKey(field) ? item[field] : null;
+                    if (options != null && itemValue != null && options.ContainsKey(itemValue))
+                        def["value"] = options[itemValue];
                     else
                         def["value"] = "";
                 }

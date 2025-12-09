@@ -34,7 +34,7 @@ public class AdminRolesController : FwDynamicController
 
     public override Hashtable? ShowAction(int id = 0)
     {
-        var ps = base.ShowAction(id) ?? [];
+        var ps = base.ShowAction(id)!;
         var item = ps["i"] as Hashtable;
         var fields = ps["fields"] as ArrayList ?? [];
 

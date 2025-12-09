@@ -326,7 +326,7 @@ public class FW : IDisposable
         return FwConfig.settings;
     }
     // return just particular setting
-    public object config(string name)
+    public object? config(string name)
     {
         return FwConfig.settings[name];
     }
