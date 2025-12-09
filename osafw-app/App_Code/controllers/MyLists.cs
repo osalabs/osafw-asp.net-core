@@ -36,7 +36,7 @@ public class MyListsController : FwAdminController
 
     public override Hashtable setPS(Hashtable? ps = null)
     {
-        ps = base.setPS(ps);
+        ps = base.setPS(ps) ?? [];
         ps["select_entities"] = model.listSelectOptionsEntities();
         return ps;
     }
@@ -89,7 +89,7 @@ public class MyListsController : FwAdminController
     public override Hashtable ShowFormAction(int id = 0)
     {
         form_new_defaults = new() { ["entity"] = related_id };
-        return base.ShowFormAction(id);
+        return base.ShowFormAction(id) ?? [];
     }
 
     public override Hashtable? SaveAction(int id = 0)
@@ -144,7 +144,7 @@ public class MyListsController : FwAdminController
         ps["iname"] = user_lists["iname"];
         ps["action"] = (res ? "added" : "removed");
 
-        return afterSave(true, ps);
+        return afterSave(true, ps) ?? [];
     }
 
     // request item_id - could be one id, or comma-separated ids
@@ -163,7 +163,7 @@ public class MyListsController : FwAdminController
                 fw.model<UserLists>().addItemList(id, item_id);
         }
 
-        return afterSave(true);
+        return afterSave(true) ?? [];
     }
 
     // request item_id - could be one id, or comma-separated ids
@@ -182,6 +182,6 @@ public class MyListsController : FwAdminController
                 fw.model<UserLists>().delItemList(id, item_id);
         }
 
-        return afterSave(true);
+        return afterSave(true) ?? [];
     }
 }

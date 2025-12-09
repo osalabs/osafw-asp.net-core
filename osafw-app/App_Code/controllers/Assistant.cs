@@ -200,9 +200,13 @@ public class AssistantController : FwController
             resultTask.Wait();
 
             var result = resultTask.Result[^1];
-            var content = result.Content;
-            var usage = result.Metadata["Usage"] as OpenAI.Chat.ChatTokenUsage;
-            logger("LLM usage:", usage.InputTokenCount, " + ", usage.OutputTokenCount, " = ", usage.TotalTokenCount);
+            var content = result.Content ?? string.Empty;
+            OpenAI.Chat.ChatTokenUsage? usage = null;
+            if (result.Metadata?.TryGetValue("Usage", out var usageObj) == true)
+                usage = usageObj as OpenAI.Chat.ChatTokenUsage;
+
+            if (usage != null)
+                logger("LLM usage:", usage.InputTokenCount, " + ", usage.OutputTokenCount, " = ", usage.TotalTokenCount);
             logger("LLM response:", content);
 
             //sometimes content can contain multiple json strings, split by "}\n{" and take the last one 
@@ -214,7 +218,10 @@ public class AssistantController : FwController
             }
 
             parsedResult = JsonSerializer.Deserialize<AssistantResult>(content);
-            logger("AssistantResult:", parsedResult);
+            if (parsedResult != null)
+                logger("AssistantResult:", parsedResult);
+            else
+                logger("AssistantResult parse failed");
 
             fw.model<FwActivityLogs>().addSimple(FwLogTypes.ICODE_ADDED, FwEntities.ICODE_ASSISTANT, 0, userPrompt, (Hashtable?)Utils.jsonDecode(content));
         }
