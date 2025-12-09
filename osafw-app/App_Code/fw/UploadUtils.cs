@@ -135,13 +135,13 @@ public class UploadUtils
         return uploadFile(fw, module_name, id, out filepath, file, is_skip_check);
     }
 
-    public static bool uploadFile(FW fw, string module_name, int id, out string filepath, IFormFile file, bool is_skip_check = false)
+    public static bool uploadFile(FW fw, string module_name, int id, out string filepath, IFormFile? file, bool is_skip_check = false)
     {
         filepath = uploadFileSave(fw, module_name, id, file, is_skip_check);
         return !string.IsNullOrEmpty(filepath);
     }
 
-    public static string uploadFileSave(FW fw, string module_name, int id, IFormFile file, bool is_skip_check = false)
+    public static string uploadFileSave(FW fw, string module_name, int id, IFormFile? file, bool is_skip_check = false)
     {
         string result = "";
         if (file != null && file.Length > 0)
@@ -202,7 +202,7 @@ public class UploadUtils
     // similar to get_upload_dir, but return - DOESN'T check for file existance
     public static string getUploadUrl(FW fw, string module_name, long id, string ext, string size = "")
     {
-        string url = fw.config("ROOT_URL") + "/upload/" + module_name + "/" + (id % 1000) + "/" + id;
+        string url = fw.config("ROOT_URL").toStr() + "/upload/" + module_name + "/" + (id % 1000) + "/" + id;
         if (!string.IsNullOrEmpty(size))
             url += "_" + size;
         url += ext;

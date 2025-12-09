@@ -218,7 +218,7 @@ public static class FwConfig
 
         // default settings that depend on other settings
         if (!settings.ContainsKey("ASSETS_URL"))
-            settings["ASSETS_URL"] = (settings["ROOT_URL"] ?? "").toStr() + "/assets";
+            settings["ASSETS_URL"] = settings["ROOT_URL"].toStr() + "/assets";
     }
 
     /// <summary>

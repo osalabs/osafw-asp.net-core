@@ -13,9 +13,9 @@ public class AttCategories : FwModel<AttCategories.Row>
     public class Row
     {
         public int id { get; set; }
-        public string icode { get; set; }
-        public string iname { get; set; }
-        public string idesc { get; set; }
+        public string icode { get; set; } = "";
+        public string iname { get; set; } = "";
+        public string idesc { get; set; } = "";
         public int prio { get; set; }
         public int status { get; set; }
         public DateTime add_time { get; set; }

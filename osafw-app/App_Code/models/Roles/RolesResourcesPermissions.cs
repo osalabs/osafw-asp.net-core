@@ -26,8 +26,8 @@ public class RolesResourcesPermissions : FwModel<RolesResourcesPermissions.Row>
 
     const string KEY_DELIM = "#";
 
-    public FwModel junction_model_permissions;
-    public string junction_field_permissions_id;
+    public FwModel junction_model_permissions = null!;
+    public string junction_field_permissions_id = "";
 
     public RolesResourcesPermissions() : base()
     {
