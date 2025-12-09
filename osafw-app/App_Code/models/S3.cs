@@ -88,7 +88,7 @@ public class S3 : FwModel
         return "";
     }
 
-    public bool uploadLocalFile(string key, string filepath, string disposition = "", string filename = "", object storage_class = null)
+    public bool uploadLocalFile(string key, string filepath, string disposition = "", string filename = "", object? storage_class = null)
     {
         fw.logger(LogLevel.WARN, "S3 storage is not enabled");
         return false;
@@ -169,7 +169,7 @@ public class S3 : FwModel
     /// <param name="filename">optional filename to include in disposition header</param>
     /// <param name="storage_class">S3 Storage Class, default is Amazon.S3.S3StorageClass.Standard, use 5 times cheaper Amazon.S3.S3StorageClass.GlacierInstantRetrieval for warm archive files.</param>
     /// <returns></returns>
-    public bool uploadLocalFile(string key, string filepath, string disposition = "", string filename = "", S3StorageClass storage_class = null)
+    public bool uploadLocalFile(string key, string filepath, string disposition = "", string filename = "", S3StorageClass? storage_class = null)
     {
         logger("uploading to S3: key=[" + key + "], filepath=[" + filepath + "]");
 

@@ -338,7 +338,7 @@ public class Spages : FwModel<Spages.Row>
     // End Function
 
     // return correct url - TODO
-    public string getUrl(int id, string icode, string url = null)
+    public string getUrl(int id, string icode, string url = "")
     {
         if (!string.IsNullOrEmpty(url))
         {

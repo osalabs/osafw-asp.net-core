@@ -38,7 +38,7 @@ public class FwActivityLogs : FwModel
     /// <param name="payload">optional payload (will be serialized as json)</param>
     /// <returns></returns>
     /// <exception cref="ApplicationException"></exception>
-    public int addSimple(string log_types_icode, string entity_icode, int item_id = 0, string idesc = "", Hashtable payload = null)
+    public int addSimple(string log_types_icode, string entity_icode, int item_id = 0, string idesc = "", Hashtable? payload = null)
     {
         var lt = fw.model<FwLogTypes>().oneByIcode(log_types_icode);
         if (lt.Count == 0)
@@ -66,7 +66,7 @@ public class FwActivityLogs : FwModel
     /// <param name="id">entity item id</param>
     /// <param name="log_types_icodes">optional list of log types(by icode) to filter on</param>
     /// <returns></returns>
-    public DBList listByEntity(string entity_icode, int id, IList log_types_icodes = null)
+    public DBList listByEntity(string entity_icode, int id, IList? log_types_icodes = null)
     {
         var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
         var where = new Hashtable
@@ -218,7 +218,7 @@ public class FwActivityLogs : FwModel
         return result;
     }
 
-    public long getCountByLogIType(int log_itype, IList statuses = null, int? since_days = null)
+    public long getCountByLogIType(int log_itype, IList? statuses = null, int? since_days = null)
     {
         var sql = $@"SELECT count(*) 
                     from {db.qid(table_name)} al 

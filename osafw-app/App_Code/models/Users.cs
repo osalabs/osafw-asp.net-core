@@ -159,13 +159,13 @@ public class Users : FwModel<Users.Row>
     }
 
     // return standard list of id,iname where status=0 order by iname
-    public override DBList list(IList statuses = null)
+    public override DBList list(IList? statuses = null)
     {
         statuses ??= new ArrayList() { STATUS_ACTIVE };
         return base.list(statuses);
     }
 
-    public override ArrayList listSelectOptions(Hashtable def = null)
+    public override ArrayList listSelectOptions(Hashtable? def = null)
     {
         string sql = "select id, fname+' '+lname as iname from " + db.qid(table_name) + " where status=@status order by " + getOrderBy();
         return db.arrayp(sql, DB.h("status", STATUS_ACTIVE));
@@ -510,7 +510,7 @@ public class Users : FwModel<Users.Row>
     ///     edit => true if user has edit permission
     ///     del => true if user has delete permission
     /// </returns>
-    public Hashtable getRBAC(int? users_id = null, string resource_icode = null)
+    public Hashtable getRBAC(int? users_id = null, string? resource_icode = null)
     {
 #if isRoles
         var result = new Hashtable();
@@ -618,7 +618,7 @@ public class Users : FwModel<Users.Row>
     /// <param name="resource_action">resource action like controller's action 'Index' or '' </param>
     /// <param name="resource_action_more">optional additional action string, usually route.action_more to help distinguish sub-actions</param>
     /// <returns></returns>
-    public bool isAccessByRolesResourceAction(int users_id, string resource_icode, string resource_action, string resource_action_more = "", Hashtable access_actions_to_permissions = null)
+    public bool isAccessByRolesResourceAction(int users_id, string resource_icode, string resource_action, string resource_action_more = "", Hashtable? access_actions_to_permissions = null)
     {
         logger("isAccessByRolesResourceAction", DB.h("users_id", users_id, "resource_icode", resource_icode, "resource_action", resource_action, "resource_action_more", resource_action_more));
 #if isRoles

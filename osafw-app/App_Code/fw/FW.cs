@@ -301,7 +301,7 @@ public class FW : IDisposable
     // FLASH - used to pass something to the next request (and only on this request and only if this request does not expect json)
     // get flash value by name
     // set flash value by name - return fw in this case
-    public object flash(string name, object value = null)
+    public object flash(string name, object? value = null)
     {
         if (value == null)
         {
@@ -1011,7 +1011,7 @@ public class FW : IDisposable
             throw new RedirectException();
     }
 
-    public void routeRedirect(string action, string controller, object[] args = null)
+    public void routeRedirect(string action, string controller, object[]? args = null)
     {
         logger(LogLevel.TRACE, $"Route Redirect to [{controller}.{action}]", args);
         setController((!string.IsNullOrEmpty(controller) ? controller : route.controller), action);
@@ -1026,7 +1026,7 @@ public class FW : IDisposable
     }
 
     // same as above just with default controller
-    public void routeRedirect(string action, object[] args = null)
+    public void routeRedirect(string action, object[]? args = null)
     {
         routeRedirect(action, route.controller, args);
     }
@@ -1133,7 +1133,7 @@ public class FW : IDisposable
     }
 
     // Call controller
-    public void callController(FwController controller, MethodInfo actionMethod, object[] args = null)
+    public void callController(FwController controller, MethodInfo actionMethod, object[]? args = null)
     {
         //convert args to parameters with proper types
         System.Reflection.ParameterInfo[] @params = actionMethod.GetParameters();
@@ -1497,7 +1497,7 @@ public class FW : IDisposable
         this.sendEmail("", this.config("admin_email").toStr(), msg[..512], msg);
     }
 
-    public void errMsg(string msg, Exception Ex = null)
+    public void errMsg(string msg, Exception? Ex = null)
     {
         Hashtable ps = [];
         var tpl_dir = "/error";
@@ -1657,18 +1657,18 @@ public class FW : IDisposable
         return c;
     }
 
-    public void logActivity(string log_types_icode, string entity_icode, int item_id = 0, string iname = "", Hashtable changed_fields = null)
+    public void logActivity(string log_types_icode, string entity_icode, int item_id = 0, string iname = "", Hashtable? changed_fields = null)
     {
         if (!is_log_events)
             return;
 
-        Hashtable payload = null;
+        Hashtable? payload = null;
         if (changed_fields != null)
             payload = new Hashtable()
             {
                 {"fields", changed_fields}
             };
-        this.model<FwActivityLogs>().addSimple(log_types_icode, entity_icode, item_id, iname, payload ?? []);
+        this.model<FwActivityLogs>().addSimple(log_types_icode, entity_icode, item_id, iname, payload);
     }
 
     public void rw(string str)

@@ -631,7 +631,7 @@ class DevCodeGen
         DevEntityBuilder.saveJsonController(config, config_file);
     }
 
-    public void updateControllerConfig(Hashtable entity, Hashtable config, ArrayList entities = null)
+    public void updateControllerConfig(Hashtable entity, Hashtable config, ArrayList? entities = null)
     {
         string model_name = entity["model_name"].toStr();
         var model = fw.model(model_name);
@@ -640,7 +640,7 @@ class DevCodeGen
         if (string.IsNullOrEmpty(table_name))
             table_name = model.table_name;
 
-        var controller_options = entity["controller"] as Hashtable ?? new Hashtable();
+        var controller_options = entity["controller"] as Hashtable ?? [];
         string controller_title = controller_options["title"].toStr();
         if (controller_title.Length == 0)
             controller_title = Utils.name2human(model_name);
