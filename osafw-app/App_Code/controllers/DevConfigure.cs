@@ -40,8 +40,8 @@ public class DevConfigureController : FwController
         ps["is_config_env"] = String.IsNullOrEmpty(aspnet_env) || aspnet_env == ps["config_file_name"].toStr();
 
         ps["is_db_config"] = false;
-        var configdb = (Hashtable)fw.config("db");
-        if (configdb != null && configdb["main"] != null && !Utils.isEmpty(((Hashtable)configdb["main"])["connection_string"]))
+        var configdb = (Hashtable?)fw.config("db");
+        if (configdb?["main"] is Hashtable mainDb && !Utils.isEmpty(mainDb?["connection_string"]))
             ps["is_db_config"] = true;
 
         DB db;

@@ -216,7 +216,7 @@ public class AssistantController : FwController
             parsedResult = JsonSerializer.Deserialize<AssistantResult>(content);
             logger("AssistantResult:", parsedResult);
 
-            fw.model<FwActivityLogs>().addSimple(FwLogTypes.ICODE_ADDED, FwEntities.ICODE_ASSISTANT, 0, userPrompt, (Hashtable)Utils.jsonDecode(content));
+            fw.model<FwActivityLogs>().addSimple(FwLogTypes.ICODE_ADDED, FwEntities.ICODE_ASSISTANT, 0, userPrompt, (Hashtable?)Utils.jsonDecode(content));
         }
         catch (Exception ex)
         {

@@ -147,10 +147,11 @@ public class FW : IDisposable
     public DB getDB(string config_name = "main")
     {
         Hashtable dbconfig = (Hashtable)config("db");
-        Hashtable conf = (Hashtable)dbconfig[config_name];
+        Hashtable conf = dbconfig[config_name] as Hashtable ?? [];
 
         var db = new DB(conf, config_name);
-        db.setLogger(this.logger);
+        // Wrap the logger to match DB.LoggerDelegate (object?[])
+        db.setLogger((level, args) => this.logger(level, args!));
         if (context != null)
             db.setContext(context);
 

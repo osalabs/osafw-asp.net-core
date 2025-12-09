@@ -121,9 +121,9 @@ public class MainController : FwController
         one["rows"] = rows;
         var headers = new ArrayList();
         one["headers"] = headers;
-        if (rows.Count > 0)
+        if (rows.Count > 0 && rows[0] is Hashtable firstRow)
         {
-            var keys = ((Hashtable)rows[0]).Keys;
+            var keys = firstRow.Keys;
             var fields = new string[keys.Count];
             keys.CopyTo(fields, 0);
             foreach (var key in fields)

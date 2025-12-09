@@ -225,21 +225,21 @@ public class DevManageController : FwController
         var entities = DevEntityBuilder.loadJson<ArrayList>(config_file);
 
         // emulate entity
-        var entity = new Hashtable()
-        {
-            {"model_name",model_name},
-            {"controller", new Hashtable {
+        var controller = new Hashtable {
                     {"url",controller_url},
                     {"title",controller_title},
                     {"type",controller_type},
-                }
-            },
+                };
+        var entity = new Hashtable()
+        {
+            {"model_name",model_name},
+            {"controller", controller},
             {"table",fw.model(model_name).table_name}
         };
         // table = Utils.name2fw(model_name) - this is not always ok
 
         DevCodeGen.init(fw).createController(entity, entities);
-        controller_url = ((Hashtable)entity["controller"])["url"].toStr();
+        controller_url = controller["url"].toStr();
         var controller_name = controller_url.Replace("/", "");
 
         fw.flash("controller_created", controller_name);
@@ -486,7 +486,7 @@ public class DevManageController : FwController
 
         foreach (Hashtable entity in entities)
         {
-            var controller_options = (Hashtable)entity["controller"] ?? [];
+            var controller_options = entity["controller"] as Hashtable ?? [];
             var controller_url = controller_options["url"].toStr();
             entity["is_model_exists"] = models.Contains(entity["model_name"]);
             controller_options["name"] = controller_url.toStr().Replace("/", "");
@@ -545,7 +545,7 @@ public class DevManageController : FwController
 
             if (item.ContainsKey(key + "is_controller"))
             {
-                var controller_options = (Hashtable)entity["controller"] ?? [];
+                var controller_options = entity["controller"] as Hashtable ?? [];
 
                 // create controller (model must exists)
                 if (item[key + "controller_name"].toStr().Length > 0 && controller_options["name"].toStr() != item[key + "controller_name"].toStr())

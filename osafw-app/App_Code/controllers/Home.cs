@@ -33,14 +33,11 @@ public class HomeController : FwController
 
         //fw.redirect("/Login"); // uncomment to always redirect to login page instead of Home
 
-        Hashtable ps = (Hashtable)FwCache.getValue("home_page");
-
-        if (ps == null || ps.Count == 0)
+        Hashtable ps = FwCache.getValue("home_page") as Hashtable ?? [];
+        if (ps.Count == 0)
         {
             // CACHE MISS
-            ps = [];
-
-            // create home page with heavy queries
+            // create home page with heavy queries here
 
             FwCache.setValue("home_page", ps);
         }
