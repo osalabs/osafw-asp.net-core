@@ -184,7 +184,7 @@ public class FwReports
         this.db = fw.db;
         this.report_code = report_code ?? string.Empty;
         this.f = f ?? [];
-        this.format = f["format"] as string ?? string.Empty;
+        this.format = this.f["format"] as string ?? string.Empty;
     }
 
     // called from createInstance to check if logged user has access to the report

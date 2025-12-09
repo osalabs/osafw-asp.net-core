@@ -42,8 +42,8 @@ public class FwLogger : IDisposable
     public string site_root = "";
     public long log_max_size = 0;
 
-    private FileStream floggerFS = null!;
-    private StreamWriter floggerSW = null!;
+    private FileStream? floggerFS;
+    private StreamWriter? floggerSW;
 
     public static string dumper(object? dmp_obj, int level = 0) // TODO better type detection(suitable for all collection types)
     {
@@ -151,20 +151,30 @@ public class FwLogger : IDisposable
         try
         {
             int i = 1;
-            StackFrame sf = st.GetFrame(i);
-            string fname = sf.GetFileName() ?? "";
+            StackFrame? sf = st.GetFrame(i);
+
             // skip logger methods, DB internals and FW.getDB's compiler-generated closure method
             // as we want to know line where the logged thing was actually called from
-            while (sf.GetMethod().Name == "logger" || fname.EndsWith(Path.DirectorySeparatorChar + "DB.cs") || sf.GetMethod().Name.StartsWith("<getDB>"))
+            while (sf != null)
             {
-                i += 1;
-                sf = st.GetFrame(i);
-                fname = sf.GetFileName() ?? "";
+                string fname = sf.GetFileName() ?? "";
+                var method = sf.GetMethod();
+
+                if (method == null)
+                    break;
+
+                if (method.Name == "logger" || fname.EndsWith(Path.DirectorySeparatorChar + "DB.cs") || method.Name.StartsWith("<getDB>"))
+                {
+                    i += 1;
+                    sf = st.GetFrame(i);
+                    continue;
+                }
+
+                if (!string.IsNullOrEmpty(fname))
+                    str_stack.Append(fname.Replace(site_root, "").Replace(Path.DirectorySeparatorChar + "App_Code", ""));
+                str_stack.Append(':').Append(method.Name).Append(' ').Append(sf.GetFileLineNumber()).Append(" # ");
+                break;
             }
-            fname = sf.GetFileName();
-            if (fname != null)
-                str_stack.Append(fname.Replace(site_root, "").Replace(Path.DirectorySeparatorChar + "App_Code", ""));
-            str_stack.Append(':').Append(sf.GetMethod().Name).Append(' ').Append(sf.GetFileLineNumber()).Append(" # ");
         }
         catch (Exception ex)
         {
@@ -187,12 +197,14 @@ public class FwLogger : IDisposable
                 if (floggerFS == null)
                 {
                     floggerFS = new FileStream(log_file, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
-                    floggerSW = new StreamWriter(floggerFS);
-                    floggerSW.AutoFlush = true;
+                    floggerSW = new StreamWriter(floggerFS)
+                    {
+                        AutoFlush = true,
+                    };
                 }
                 // force seek to end just in case other process added to file
                 floggerFS.Seek(0, SeekOrigin.End);
-                floggerSW.WriteLine(strlog);
+                floggerSW?.WriteLine(strlog);
             }
             catch (Exception ex)
             {

@@ -136,7 +136,7 @@ public class ParsePageOptions
     public bool IsLangUpdate { get; set; } = true;
     public Func<Hashtable> GlobalsGetter { get; set; } = () => []; // by default - return empty hashtable
     public ISession? Session { get; set; }
-    public Action<LogLevel, string[]> Logger { get; set; }
+    public Action<LogLevel, string[]> Logger { get; set; } = (_, _) => { };
 
     // date formats - if empty - use defaults
     public string DateFormat { get; set; } = "";

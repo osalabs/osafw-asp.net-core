@@ -166,7 +166,7 @@ public abstract class FwModel<TRow> : FwModel where TRow : class, new()
 
         int id = db.insert(table_name, fields);
 
-        if (is_log_changes)
+        if (is_log_changes && fw != null)
         {
             if (is_log_fields_changed)
                 fw.logActivity(FwLogTypes.ICODE_ADDED, table_name, id, "", new Hashtable(fields));

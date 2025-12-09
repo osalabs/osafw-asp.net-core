@@ -59,11 +59,11 @@ public class FW : IDisposable
     public DB db;
     public FwLogger flogger = new();
 
-    public HttpContext context;
-    public HttpRequest request;
-    public HttpResponse response;
+    public HttpContext? context;
+    public HttpRequest? request;
+    public HttpResponse? response;
 
-    public string request_url; // current request url (relative to application url)
+    public string request_url = ""; // current request url (relative to application url)
     public FwRoute route = new();
     public TimeSpan request_time; // after dispatch() - total request processing time
 
