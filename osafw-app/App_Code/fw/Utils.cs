@@ -718,7 +718,7 @@ public class Utils
                 {
                     if (hash1[key] is not Hashtable)
                         hash1[key] = new Hashtable();
-                    Hashtable _hash1 = (Hashtable)hash1[key];
+                    Hashtable _hash1 = (Hashtable)hash1[key]!;
                     Hashtable _hash2 = ht;
                     mergeHashDeep(_hash1, _hash2);
                 }

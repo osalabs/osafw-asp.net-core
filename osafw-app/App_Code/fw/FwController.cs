@@ -401,7 +401,7 @@ public abstract class FwController
             if (userfilters_id > 0)
             {
                 var uf = fw.model<UserFilters>().one(userfilters_id);
-                Hashtable f1 = (Hashtable)Utils.jsonDecode(uf["idesc"]);
+                Hashtable? f1 = Utils.jsonDecode(uf["idesc"]) as Hashtable;
                 if (f1 != null)
                     f = f1;
                 if (!uf["is_system"].toBool())
@@ -662,7 +662,7 @@ public abstract class FwController
     /// <summary>
     /// set list_where based on search[] filter
     ///      - exact: "=term" or just "=" - mean empty
-    ///      - Not equals "!=term" or just "!=" - means not empty
+    ///      - Not equals "!=term" or just "!" - means not empty
     ///      - Not contains: "!term"
     ///      - more/less: <=, <, >=, >"
     ///      - and support search by date if search value looks like date in format MM/DD/YYYY
@@ -1067,9 +1067,9 @@ public abstract class FwController
             // add FormErrors field errors to response if any
             if (fw.FormErrors.Count > 0)
             {
-                if (_json["error"] is not Hashtable)
-                    _json["error"] = new Hashtable();
-                ((Hashtable)_json["error"])["details"] = fw.FormErrors;
+                var error = _json["error"] as Hashtable ?? [];
+                error["details"] = fw.FormErrors;
+                _json["error"] = error;
             }
 
             if (more_json != null)
@@ -1085,12 +1085,12 @@ public abstract class FwController
             if (success)
                 fw.redirect(location);
             else
-                fw.routeRedirect(action, [id.ToString()]);
+                fw.routeRedirect(action, [id.toStr()]);
         }
         return null;
     }
 
-    public virtual Hashtable afterSave(bool success, Hashtable more_json)
+    public virtual Hashtable? afterSave(bool success, Hashtable more_json)
     {
         return afterSave(success, "", false, "no_action", "", more_json);
     }
@@ -1305,10 +1305,9 @@ public abstract class FwController
         {
             var fieldname_lc = fieldname.ToLower();
             if (!table_schema.ContainsKey(fieldname_lc)) continue;
-            var field_schema = (Hashtable)table_schema[fieldname_lc];
 
+            var field_schema = (Hashtable)table_schema[fieldname_lc]!;
             var fw_type = field_schema["fw_type"].toStr();
-
 
             if (fw_type == "date")
             {

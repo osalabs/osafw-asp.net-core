@@ -1219,7 +1219,7 @@ public class FwDynamicController : FwController
             if (!showform_fields.ContainsKey(field))
                 continue;
 
-            var def = (Hashtable)showform_fields[field];
+            var def = (Hashtable)showform_fields[field]!;
             string type = def["type"].toStr();
             if (type == "autocomplete")
             {

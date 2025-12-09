@@ -209,7 +209,6 @@ public class FwSelfTest
                 System.Reflection.MethodInfo mInfo = calledType.GetMethod("SelfTest");
                 if (mInfo == null)
                 {
-
                     // if no SelfTest - test IndexAction method
                     mInfo = calledType.GetMethod("IndexAction");
                     if (mInfo == null)
@@ -234,9 +233,15 @@ public class FwSelfTest
                     fw._auth(route);
                     fw.setController(controller_name, FW.ACTION_INDEX);
 
-                    FwController new_controller = (FwController)Activator.CreateInstance(calledType);
+                    if (Activator.CreateInstance(calledType) is not FwController new_controller)
+                    {
+                        plus_err();
+                        echo(t.Name, "Cannot create controller instance", FwSelfTest.Result.ERR);
+                        continue;
+                    }
+
                     new_controller.init(fw);
-                    Hashtable ps = (Hashtable)mInfo.Invoke(new_controller, null);
+                    var ps = (Hashtable?)mInfo.Invoke(new_controller, null);
                     //TODO MIGRATE
                     //fw.response.Clear();
                     //fw.response.BufferOutput = false;
@@ -262,10 +267,21 @@ public class FwSelfTest
                     };
                     fw._auth(route);
 
-                    FwController new_controller = (FwController)Activator.CreateInstance(calledType);
+
+                    if (Activator.CreateInstance(calledType) is not FwController new_controller)
+                    {
+                        plus_err();
+                        echo(t.Name, "Cannot create controller instance", FwSelfTest.Result.ERR);
+                        continue;
+                    }
                     new_controller.init(fw);
-                    Result res = (Result)mInfo.Invoke(new_controller, [this]);
-                    if (res == Result.OK)
+                    var res = (Result?)mInfo.Invoke(new_controller, [this]);
+                    if (res == null)
+                    {
+                        plus_warn();
+                        echo(t.Name, "Empty result", FwSelfTest.Result.WARN);
+                    }
+                    else if (res == Result.OK)
                     {
                         plus_ok();
                         echo(t.Name, "OK");
@@ -273,12 +289,12 @@ public class FwSelfTest
                     else if (res == Result.WARN)
                     {
                         plus_warn();
-                        echo(t.Name, "Warning", res);
+                        echo(t.Name, "Warning", (Result)res);
                     }
                     else if (res == Result.ERR)
                     {
                         plus_err();
-                        echo(t.Name, "Error", res);
+                        echo(t.Name, "Error", (Result)res);
                     }
                 }
             }

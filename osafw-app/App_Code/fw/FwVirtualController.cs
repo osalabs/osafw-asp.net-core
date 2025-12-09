@@ -31,7 +31,7 @@ public class FwVirtualController : FwVueController
         }
 
         //use cached config or create config on the fly
-        var config = (Hashtable)Utils.jsonDecode(fwcontroller["config"].toStr());
+        var config = Utils.jsonDecode(fwcontroller["config"].toStr()) as Hashtable;
         if (config == null)
         {
             var entity = new Hashtable

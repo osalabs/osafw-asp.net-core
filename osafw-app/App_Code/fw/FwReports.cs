@@ -286,7 +286,7 @@ public class FwReports
         {
             case "pdf":
                 {
-                    ((Hashtable)ps["f"])["edit"] = false; // force any edit modes off
+                    f["edit"] = false; // force any edit modes off
                     ps["IS_EXPORT_PDF"] = true; //use as <~PARSEPAGE.TOP[IS_EXPORT_PDF]> in templates
                     string out_filename = Utils.isEmpty(render_options["pdf_filename"]) ? report_code : (render_options["pdf_filename"] as string ?? string.Empty);
                     if (isFileRender())

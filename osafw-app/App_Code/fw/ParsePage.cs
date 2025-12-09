@@ -1427,7 +1427,7 @@ public class ParsePage
         var input = str;
         if (!string.IsNullOrEmpty(context))
             input += "|" + context;
-        Hashtable cache = (Hashtable)LANG_CACHE.GetOrAdd(lang, _ => []);
+        var cache = LANG_CACHE.GetOrAdd(lang, _ => []);
         var result = cache[input].toStr();
         if (string.IsNullOrEmpty(result))
         {
@@ -1469,7 +1469,7 @@ public class ParsePage
             }
             string[] pair = line.Split("===", 2);
             // logger("added to cache:", Trim(pair(0)))
-            ((Hashtable)LANG_CACHE[lang])[pair[0].Trim()] = pair[1].TrimStart();
+            LANG_CACHE[lang][pair[0].Trim()] = pair[1].TrimStart();
         }
     }
 
@@ -1482,7 +1482,7 @@ public class ParsePage
 
         // also add to lang cache
         LANG_CACHE.GetOrAdd(lang, _ => []);
-        ((Hashtable)LANG_CACHE[lang])[str.Trim()] = "";
+        LANG_CACHE[lang][str.Trim()] = "";
     }
 
     private void logger(LogLevel level, params string[] args)
