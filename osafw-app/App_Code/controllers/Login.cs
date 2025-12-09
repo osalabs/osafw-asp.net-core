@@ -130,7 +130,7 @@ public class LoginController : FwController
     {
         fw.logActivity(FwLogTypes.ICODE_USERS_LOGOFF, FwEntities.ICODE_USERS, fw.userId);
         fw.model<Users>().removePermCookie(fw.userId);
-        fw.context.Session.Clear();
+        fw.context?.Session?.Clear();
         fw.redirect(fw.config("UNLOGGED_DEFAULT_URL").toStr());
     }
 
@@ -140,7 +140,8 @@ public class LoginController : FwController
         if (users_id == 0)
             fw.redirect(base_url);
 
-        fw.logActivity(FwLogTypes.ICODE_USERS_LOGIN, FwEntities.ICODE_USERS, users_id, "MFA check, IP:" + fw.context.Connection.RemoteIpAddress.toStr());
+        var remoteIp = fw.context?.Connection?.RemoteIpAddress?.ToString() ?? string.Empty;
+        fw.logActivity(FwLogTypes.ICODE_USERS_LOGIN, FwEntities.ICODE_USERS, users_id, "MFA check, IP:" + remoteIp);
 
         var ps = new Hashtable() {
             { "hide_sidebar" , true},

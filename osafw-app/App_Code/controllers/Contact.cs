@@ -60,7 +60,7 @@ public class ContactController : FwController
         // ip address
         msg_body.Append(Environment.NewLine + Environment.NewLine);
         // https://stackoverflow.com/questions/28664686/how-do-i-get-client-ip-address-in-asp-net-core
-        var ip = fw.context.Connection.RemoteIpAddress;
+        var ip = fw.context?.Connection?.RemoteIpAddress?.ToString() ?? string.Empty;
         msg_body.AppendLine("IP: " + ip);
 
         if (is_spam)
