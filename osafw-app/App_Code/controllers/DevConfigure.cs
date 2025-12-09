@@ -15,8 +15,6 @@ public class DevConfigureController : FwController
 {
     public static new int access_level = Users.ACL_VISITOR;
 
-    protected DemoDicts model;
-
     public override void init(FW fw)
     {
         //base.init(fw); //not using base init as it calls getRBAC which require access to db (and we may not have it yet)

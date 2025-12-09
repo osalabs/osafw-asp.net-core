@@ -9,7 +9,7 @@ namespace osafw;
 
 public class SitemapController : FwController
 {
-    protected Spages model;
+    protected Spages model = null!;
 
     public override void init(FW fw)
     {

@@ -11,7 +11,7 @@ public class AdminDemosVueSimpleController : FwController
 {
     public static new int access_level = Users.ACL_MANAGER;
 
-    protected DemoDicts model;
+    protected DemoDicts model = null!;
 
     public override void init(FW fw)
     {

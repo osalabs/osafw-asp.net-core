@@ -12,7 +12,7 @@ public class MyListsController : FwAdminController
 {
     public static new int access_level = Users.ACL_MEMBER;
 
-    protected UserLists model;
+    protected UserLists model = null!;
 
     public override void init(FW fw)
     {

@@ -10,15 +10,15 @@ namespace osafw;
 
 public class SignupController : FwController
 {
-    protected Users model;
+    protected Users model = null!;
     public static new string route_default_action = FW.ACTION_INDEX;
 
     public override void init(FW fw)
     {
         base.init(fw);
-        model = new();
-        model.init(fw);
+        model = fw.model<Users>();
         model0 = model;
+
         required_fields = "email pwd";
         base_url = "/Signup";
         // override layout

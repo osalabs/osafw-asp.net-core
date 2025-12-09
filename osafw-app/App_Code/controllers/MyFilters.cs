@@ -12,7 +12,7 @@ public class MyFiltersController : FwAdminController
 {
     public static new int access_level = Users.ACL_MEMBER;
 
-    protected UserFilters model;
+    protected UserFilters model = null!;
 
     public override void init(FW fw)
     {

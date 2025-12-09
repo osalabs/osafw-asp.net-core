@@ -11,7 +11,7 @@ public class MyViewsController : FwAdminController
 {
     public static new int access_level = Users.ACL_MEMBER;
 
-    protected UserViews model;
+    protected UserViews model = null!;
 
     public override void init(FW fw)
     {

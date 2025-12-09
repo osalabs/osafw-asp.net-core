@@ -20,7 +20,7 @@ public class AdminDemosVueController : FwVueController
 
         base_url = "/Admin/DemosVue";
         this.loadControllerConfig();
-        model = model0 as Demos;
+        model = model0 as Demos ?? throw new FwConfigUndefinedModelException();
         db = model.getDB(); // model-based controller works with model's db
 
         model_related = fw.model<DemoDicts>();

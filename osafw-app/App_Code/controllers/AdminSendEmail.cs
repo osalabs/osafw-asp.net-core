@@ -12,7 +12,7 @@ public class AdminSendEmailController : FwAdminController
 {
     public static new int access_level = Users.ACL_ADMIN;
 
-    protected Users model;
+    protected Users model = null!;
 
     public override void init(FW fw)
     {
@@ -37,7 +37,7 @@ public class AdminSendEmailController : FwAdminController
         };
     }
 
-    public override Hashtable IndexAction()
+    public override Hashtable? IndexAction()
     {
         fw.redirect(base_url + "/new");
         return null;

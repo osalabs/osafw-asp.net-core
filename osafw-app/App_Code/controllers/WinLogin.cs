@@ -17,7 +17,7 @@ namespace osafw;
 
 public class WinLoginController : FwController
 {
-    protected Users model;
+    protected Users model = null!;
 
     public override void init(FW fw)
     {

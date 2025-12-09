@@ -11,7 +11,7 @@ public class AdminLookupsController : FwController
 {
     public static new int access_level = Users.ACL_MANAGER;
 
-    protected FwControllers model;
+    protected FwControllers model = null!;
 
     public override void init(FW fw)
     {

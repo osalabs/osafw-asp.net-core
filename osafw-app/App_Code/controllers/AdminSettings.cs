@@ -12,7 +12,7 @@ public class AdminSettingsController : FwAdminController
 {
     public static new int access_level = Users.ACL_ADMIN;
 
-    protected Settings model;
+    protected Settings model = null!;
 
     public override void init(FW fw)
     {

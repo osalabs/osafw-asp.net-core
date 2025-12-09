@@ -549,9 +549,9 @@ public abstract class FwController
     /// <remarks></remarks>
     public virtual void setListSorting()
     {
-        if (this.list_sortdef == null)
+        if (this.list_sortdef.Length == 0)
             throw new Exception("No default sort order defined, define in list_sortdef");
-        if (this.list_sortmap == null)
+        if (this.list_sortmap.Count == 0)
             throw new Exception("No sort order mapping defined, define in list_sortmap");
 
         string sortby = this.list_filter["sortby"].toStr();

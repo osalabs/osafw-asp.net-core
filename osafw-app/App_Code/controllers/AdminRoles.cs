@@ -11,7 +11,7 @@ public class AdminRolesController : FwDynamicController
 {
     public static new int access_level = Users.ACL_ADMIN;
 
-    protected Roles model;
+    protected Roles model = null!;
 
     public override void init(FW fw)
     {
@@ -22,7 +22,7 @@ public class AdminRolesController : FwDynamicController
 
         base_url = "/Admin/Roles";
         this.loadControllerConfig();
-        model = model0 as Roles;
+        model = model0 as Roles ?? throw new FwConfigUndefinedModelException();
         db = model.getDB(); // model-based controller works with model's db
 
         model_related = fw.model<Roles>();

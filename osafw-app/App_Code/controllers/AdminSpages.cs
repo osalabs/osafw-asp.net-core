@@ -13,7 +13,7 @@ public class AdminSpagesController : FwAdminController
 {
     public static new int access_level = Users.ACL_MANAGER;
 
-    protected Spages model;
+    protected Spages model = null!;
 
     public override void init(FW fw)
     {
