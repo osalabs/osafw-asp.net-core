@@ -68,9 +68,9 @@ public class FwVueController : FwDynamicController
 
             //added/updated username - it's readonly so we can replace _id fields with names
             if (!string.IsNullOrEmpty(model0.field_add_users_id) && row.ContainsKey(model0.field_add_users_id))
-                row["add_users_id"] = fw.model<Users>().iname(row[model0.field_add_users_id]);
+                row["add_users_id"] = fw.model<Users>().iname(row[model0.field_add_users_id].toInt());
             if (!string.IsNullOrEmpty(model0.field_upd_users_id) && row.ContainsKey(model0.field_upd_users_id))
-                row["upd_users_id"] = fw.model<Users>().iname(row[model0.field_upd_users_id]);
+                row["upd_users_id"] = fw.model<Users>().iname(row[model0.field_upd_users_id].toInt());
 
             //autocomplete fields - add _iname fields
             foreach (Hashtable def in ac_fields)
@@ -153,7 +153,7 @@ public class FwVueController : FwDynamicController
         setListSearch();
         setListSearchStatus();
 
-        if (list_headers == null)
+        if (list_headers.Count == 0)
             setViewList(false); // initialize list_headers and related (can already be initialized in setScopeInitial)
 
         //only select from db visible fields + id, save as comma-separated string into list_fields
@@ -181,7 +181,7 @@ public class FwVueController : FwDynamicController
         if (this.is_userlists)
             this.setUserLists(ps);
 
-        if (list_headers == null)
+        if (list_headers.Count == 0)
             setViewList(false); // initialize list_headers and related (can already be initialized in setScopeInitial)
 
         ArrayList showform_fields = (ArrayList)this.config["showform_fields"];

@@ -72,7 +72,7 @@ public class Permissions : FwModel<Permissions.Row>
         }
 
         //find standard mapping
-        string permission = (string)MAP_ACTIONS_PERMISSIONS[action];
+        var permission = MAP_ACTIONS_PERMISSIONS[action].toStr();
         if (!string.IsNullOrEmpty(permission))
             return permission;
 

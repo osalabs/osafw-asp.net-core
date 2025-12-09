@@ -50,7 +50,7 @@ public class MyMFAController : FwController
         fw.Session("mfa_secret", secret);
 
         Hashtable ps = [];
-        ps["qr_code"] = model.generateMFAQRCode(secret, user["email"], (string)fw.config("SITE_NAME"));
+        ps["qr_code"] = model.generateMFAQRCode(secret, user["email"], fw.config("SITE_NAME").toStr());
         return ps;
     }
 

@@ -38,8 +38,8 @@ public class PasswordResetController : FwController
         if (user.Count == 0 || user["status"].toInt() != 0)
             throw new UserException("Not a valid Email");
 
-        if ((string)user["pwd_reset"] == "" || !model.checkPwd(token, (string)user["pwd_reset"], Users.PWD_RESET_TOKEN_LEN)
-            || (db.Now() - DateTime.Parse((string)user["pwd_reset_time"])).TotalMinutes > PWD_RESET_EXPIRATION)
+        if (user["pwd_reset"] == "" || !model.checkPwd(token, user["pwd_reset"], Users.PWD_RESET_TOKEN_LEN)
+            || (db.Now() - DateTime.Parse(user["pwd_reset_time"])).TotalMinutes > PWD_RESET_EXPIRATION)
         {
             fw.flash("error", "Password reset token expired. Use Forgotten password link again.");
             fw.redirect("/Login");
@@ -69,8 +69,8 @@ public class PasswordResetController : FwController
         if (user.Count == 0 || user["status"].toInt() != 0)
             throw new UserException("Not a valid Email");
 
-        if ((string)user["pwd_reset"] == "" || !model.checkPwd(token, (string)user["pwd_reset"], Users.PWD_RESET_TOKEN_LEN)
-            || (db.Now() - DateTime.Parse((string)user["pwd_reset_time"])).TotalMinutes > PWD_RESET_EXPIRATION)
+        if (user["pwd_reset"] == "" || !model.checkPwd(token, user["pwd_reset"], Users.PWD_RESET_TOKEN_LEN)
+            || (db.Now() - DateTime.Parse(user["pwd_reset_time"])).TotalMinutes > PWD_RESET_EXPIRATION)
         {
             fw.flash("error", "Password reset token expired. Use Forgotten password link again.");
             fw.redirect("/Login");
@@ -98,7 +98,7 @@ public class PasswordResetController : FwController
         if (!result)
             fw.FormErrors["REQ"] = 1;
 
-        if (result && (string)item["pwd"] != (string)item["pwd2"])
+        if (result && item["pwd"].toStr() != item["pwd2"].toStr())
         {
             result = false;
             fw.FormErrors["pwd2"] = "NOTEQUAL";

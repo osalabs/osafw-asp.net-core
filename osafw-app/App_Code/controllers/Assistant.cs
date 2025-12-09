@@ -121,10 +121,10 @@ public class AssistantController : FwController
     {
         var page_name = id.ToLower();
 
-        string tpl_name = (string)fw.G["PAGE_LAYOUT"];
+        string tpl_name = fw.G["PAGE_LAYOUT"].toStr();
         //override layout for specific pages - TODO control via Spages
         //if (page_name == "about")
-        //    tpl_name = (string)fw.config("PAGE_LAYOUT_PUBLIC");
+        //    tpl_name = fw.config("PAGE_LAYOUT_PUBLIC").toStr();
 
         Hashtable ps = new();
         ps["hide_sidebar"] = true; // TODO control via Spages

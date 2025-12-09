@@ -530,7 +530,7 @@ public class FormUtils
     // OUT: false if item(field_name) wrong datetime
     public static bool timeToForm(Hashtable item, string field_name)
     {
-        if (DateTime.TryParse((string)item[field_name], out DateTime dt))
+        if (DateTime.TryParse(item[field_name].toStr(), out DateTime dt))
         {
             item[field_name + "_hh"] = dt.Hour;
             item[field_name + "_mm"] = dt.Minute;
@@ -698,7 +698,7 @@ public class FormUtils
     /// <exception cref="Exception"></exception>
     public static string sqlOrderBy(DB db, string sortby, string sortdir, Hashtable sortmap)
     {
-        string orderby = ((string)sortmap[sortby] ?? "").Trim();
+        string orderby = sortmap[sortby].toStr().Trim();
         if (string.IsNullOrEmpty(orderby))
             throw new Exception("No orderby defined for [" + sortby + "], define in list_sortmap");
 

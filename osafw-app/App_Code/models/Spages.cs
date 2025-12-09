@@ -49,7 +49,7 @@ public class Spages : FwModel<Spages.Row>
     {
         var item_old = one(id);
         // home page cannot be deleted
-        if ((string)item_old["is_home"] != "1")
+        if (!item_old["is_home"].toBool())
             base.delete(id, is_perm);
     }
 
@@ -172,7 +172,7 @@ public class Spages : FwModel<Spages.Row>
                 row2["_level"] = level;
                 // row2["_level1"] level + 1 'to easier use in templates
                 row2["full_url"] = parent_url + "/" + row["url"];
-                row2["children"] = getPagesTree(rows, row["id"].toInt(), level + 1, (string)row["url"]);
+                row2["children"] = getPagesTree(rows, row["id"].toInt(), level + 1, row["url"].toStr());
                 result.Add(row2);
             }
         }
@@ -227,7 +227,7 @@ public class Spages : FwModel<Spages.Row>
         {
             foreach (Hashtable row in pages_tree)
             {
-                result.AppendLine("<option value=\"" + row["id"] + "\"" + ((string)row["id"] == selected_id ? " selected=\"selected\" " : "") + ">" + Utils.strRepeat("&#8212; ", level) + row["iname"] + "</option>");
+                result.AppendLine("<option value=\"" + row["id"] + "\"" + (row["id"].toStr() == selected_id ? " selected=\"selected\" " : "") + ">" + Utils.strRepeat("&#8212; ", level) + row["iname"] + "</option>");
                 // subpages
                 result.Append(getPagesTreeSelectHtml(selected_id, (ArrayList)row["children"], level + 1));
             }
@@ -298,8 +298,9 @@ public class Spages : FwModel<Spages.Row>
             return;
         }
 
-        if (!Utils.isEmpty(item["redirect_url"]))
-            fw.redirect((string)item["redirect_url"]);
+        var redirect_url = item["redirect_url"].toStr();
+        if (!Utils.isEmpty(redirect_url))
+            fw.redirect(redirect_url);
 
         var item_id = item["id"].toInt();
 

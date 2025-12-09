@@ -57,7 +57,7 @@ public class FwApiController : FwController
         // logger(referrer)
 
         // validate referrer is same as our hostname
-        if (string.IsNullOrEmpty(origin) || (origin != "http://" + fw.config("hostname") && origin != "https://" + fw.config("hostname") && origin != (string)fw.config("API_ALLOW_ORIGIN")))
+        if (string.IsNullOrEmpty(origin) || (origin != "http://" + fw.config("hostname") && origin != "https://" + fw.config("hostname") && origin != fw.config("API_ALLOW_ORIGIN").toStr()))
             throw new AuthException("Invalid origin " + origin);
 
         // create headers

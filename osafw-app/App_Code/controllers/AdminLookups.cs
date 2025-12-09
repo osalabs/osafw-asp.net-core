@@ -37,7 +37,7 @@ public class AdminLookupsController : FwController
         var grouped = new Hashtable();
         foreach (Hashtable row in rows)
         {
-            var igroup = (string)row["igroup"];
+            var igroup = row["igroup"].toStr();
             if (!grouped.ContainsKey(igroup))
             {
                 grouped[igroup] = new ArrayList();
@@ -49,7 +49,7 @@ public class AdminLookupsController : FwController
         var allGroups = new ArrayList();
         foreach (DictionaryEntry entry in grouped)
         {
-            var gName = (string)entry.Key;
+            var gName = entry.Key.toStr();
             var gRows = (ArrayList)entry.Value;
             allGroups.Add(new Hashtable
             {

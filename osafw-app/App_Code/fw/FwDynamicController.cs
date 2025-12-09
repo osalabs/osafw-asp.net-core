@@ -1179,10 +1179,10 @@ public class FwDynamicController : FwController
         //delete row clicked
         //if (subtable_del.ContainsKey(field))
         //{
-        //    var del_id = (string)subtable_del[field];
+        //    var del_id = subtable_del[field].toInt();
         //    // delete with LINQ from the form list (actual delete from db will be on save)
         //    list_rows = new ArrayList((from Hashtable d in list_rows
-        //                               where (string)d["id"] != del_id
+        //                               where d["id"].toInt() != del_id
         //                               select d).ToList());
         //}
 
@@ -1225,7 +1225,7 @@ public class FwDynamicController : FwController
             else if (type == "number")
             {
                 // no need to do this as DB knows if field nullable and convert empty string to NULL
-                //if (Utils.qh(save_fields_nullable).ContainsKey(field) && string.IsNullOrEmpty((string)fields[field]))
+                //if (Utils.qh(save_fields_nullable).ContainsKey(field) && string.IsNullOrEmpty(fields[field].toStr()))
                 //    // if field nullable and empty - pass NULL
                 //    fields[field] = null;
                 //else

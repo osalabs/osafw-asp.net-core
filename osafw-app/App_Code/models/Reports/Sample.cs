@@ -53,7 +53,7 @@ public class SampleReport : FwReports
             where += " and al.add_time>=@from_date";
             where_params["@from_date"] = f["from_date"];
         }
-        if (System.DateTime.TryParse((string)f["to_date"], out DateTime to_date))
+        if (System.DateTime.TryParse(f["to_date"].toStr(), out DateTime to_date))
         {
             where += " and al.add_time<@to_date";
             where_params["@to_date"] = to_date.AddDays(1);

@@ -465,12 +465,12 @@ public class ParsePage
             if (is_check_file_modifications)
             {
                 modtime = File.GetLastWriteTime(filename).ToString();
-                string mtmp = (string)cached_item["modtime"];
+                string mtmp = cached_item["modtime"].toStr();
                 if (string.IsNullOrEmpty(mtmp) || mtmp == modtime)
-                    return (string)cached_item["data"];
+                    return cached_item["data"].toStr();
             }
             else
-                return (string)cached_item["data"];
+                return cached_item["data"].toStr();
         }
         else if (is_check_file_modifications)
             modtime = File.GetLastWriteTime(filename).ToString();
@@ -535,7 +535,7 @@ public class ParsePage
     // value (string, hashtable, etc..), empty string ""
     // Or Nothing - tag not present in hf param (only if hf is Hashtable), file lookup will be necessary
     // set is_found to True if tag value found hf/parent_hf (so can be used to detect if there are no tag value at all so no fileseek required)
-    private object hfvalue(string tag, object hf, Hashtable parent_hf = null)
+    private object hfvalue(string tag, object hf, Hashtable? parent_hf = null)
     {
         object tag_value = "";
         object ptr;
@@ -686,8 +686,8 @@ public class ParsePage
 
     private string _attr_sub(string tag, string tpl_name, Hashtable hf, Hashtable attrs, string inline_tpl, Hashtable parent_hf, object tag_value)
     {
-        Hashtable sub_hf = null;
-        string sub = (string)attrs["sub"];
+        Hashtable? sub_hf = null;
+        var sub = attrs["sub"].toStr();
         if (!string.IsNullOrEmpty(sub))
             // if sub attr contains name - use it to get value from hf (instead using tag_value)
             tag_value = hfvalue(sub, hf, parent_hf);
@@ -709,7 +709,7 @@ public class ParsePage
     }
 
     // Check for misc if attrs
-    private bool _attr_if(Hashtable attrs, Hashtable hf, Hashtable parent_hf = null)
+    private bool _attr_if(Hashtable attrs, Hashtable hf, Hashtable? parent_hf = null)
     {
         if (attrs.Count == 0)
             return true; // if there are no if operation - return true anyway and early
@@ -727,7 +727,7 @@ public class ParsePage
         if (string.IsNullOrEmpty(oper))
             return true; // if there are no if operation - return true anyway
 
-        string eqvar = (string)attrs[oper];
+        var eqvar = attrs[oper].toStr();
         if (string.IsNullOrEmpty(eqvar))
             return false; // return false if var need to be compared is empty
 
@@ -744,7 +744,7 @@ public class ParsePage
         {
             if (attrs.ContainsKey("vvalue"))
             {
-                ravalue = hfvalue((string)attrs["vvalue"], hf, parent_hf);
+                ravalue = hfvalue(attrs["vvalue"].toStr(), hf, parent_hf);
                 ravalue ??= "";
             }
             else
@@ -753,7 +753,7 @@ public class ParsePage
             // convert ravalue to boolean if eqvalue is boolean, OR both to string otherwise
             if ((eqvalue) is bool)
             {
-                string ravaluestr = ravalue.ToString().ToLower();
+                string ravaluestr = ravalue.toStr().ToLower();
                 if (ravaluestr == "1" || ravaluestr == "true")
                     ravalue = true;
                 else
@@ -762,15 +762,15 @@ public class ParsePage
             else if (eqvalue is Int32)
             {
                 // convert ravalue to Int32 for int comparisons
-                if (Int32.TryParse(ravalue.ToString(), out _))
+                if (Int32.TryParse(ravalue.toStr(), out _))
                 {
                     is_numeric_comparison = true;
                 }
                 else
                 {
                     // ravalue is not an integer, so try string comparison
-                    ravalue = ravalue.ToString();
-                    eqvalue = eqvalue.ToString();
+                    ravalue = ravalue.toStr();
+                    eqvalue = eqvalue.toStr();
                 }
             }
             else if (eqvalue is ICollection collection)
@@ -782,8 +782,8 @@ public class ParsePage
             }
             else
             {
-                eqvalue = eqvalue.ToString();
-                ravalue = ravalue.ToString();
+                eqvalue = eqvalue.toStr();
+                ravalue = ravalue.toStr();
             }
         }
         else
@@ -797,7 +797,7 @@ public class ParsePage
                 eqvalue = collection.Count > 0;
             else if (eqvalue is not bool)
             {
-                string eqstr = eqvalue.ToString();
+                string eqstr = eqvalue.toStr();
                 eqvalue = !string.IsNullOrEmpty(eqstr) && eqstr != "0" && eqstr.ToLower() != "false";
             }
             else
@@ -809,17 +809,17 @@ public class ParsePage
             result = true;
         else if (oper == "unless" && (bool)eqvalue == false)
             result = true;
-        else if (oper == "ifeq" && (is_numeric_comparison && eqvalue.toInt() == ravalue.toInt() || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) == 0))
+        else if (oper == "ifeq" && (is_numeric_comparison && eqvalue.toInt() == ravalue.toInt() || !is_numeric_comparison && String.Compare(eqvalue.toStr(), ravalue.toStr()) == 0))
             result = true;
-        else if (oper == "ifne" && (is_numeric_comparison && eqvalue.toInt() != ravalue.toInt() || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) != 0))
+        else if (oper == "ifne" && (is_numeric_comparison && eqvalue.toInt() != ravalue.toInt() || !is_numeric_comparison && String.Compare(eqvalue.toStr(), ravalue.toStr()) != 0))
             result = true;
-        else if (oper == "iflt" && (is_numeric_comparison && eqvalue.toInt() < ravalue.toInt() || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) < 0))
+        else if (oper == "iflt" && (is_numeric_comparison && eqvalue.toInt() < ravalue.toInt() || !is_numeric_comparison && String.Compare(eqvalue.toStr(), ravalue.toStr()) < 0))
             result = true;
-        else if (oper == "ifgt" && (is_numeric_comparison && eqvalue.toInt() > ravalue.toInt() || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) > 0))
+        else if (oper == "ifgt" && (is_numeric_comparison && eqvalue.toInt() > ravalue.toInt() || !is_numeric_comparison && String.Compare(eqvalue.toStr(), ravalue.toStr()) > 0))
             result = true;
-        else if (oper == "ifge" && (is_numeric_comparison && eqvalue.toInt() >= ravalue.toInt() || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) >= 0))
+        else if (oper == "ifge" && (is_numeric_comparison && eqvalue.toInt() >= ravalue.toInt() || !is_numeric_comparison && String.Compare(eqvalue.toStr(), ravalue.toStr()) >= 0))
             result = true;
-        else if (oper == "ifle" && (is_numeric_comparison && eqvalue.toInt() <= ravalue.toInt() || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) <= 0))
+        else if (oper == "ifle" && (is_numeric_comparison && eqvalue.toInt() <= ravalue.toInt() || !is_numeric_comparison && String.Compare(eqvalue.toStr(), ravalue.toStr()) <= 0))
             result = true;
 
         return result;
@@ -843,7 +843,7 @@ public class ParsePage
         // Validate: if input doesn't contain array - return "" - nothing to repeat
         if (tag_val_array is not IList)
         {
-            if (tag_val_array != null && tag_val_array.ToString() != "")
+            if (tag_val_array != null && tag_val_array.toStr() != "")
                 logger(LogLevel.DEBUG, "ParsePage - Not an ArrayList passed to repeat tag=", tag);
             return "";
         }
@@ -940,8 +940,9 @@ public class ParsePage
         {
             if (value.Length < 1 && hattrs.ContainsKey("default"))
             {
-                if (!string.IsNullOrEmpty((string)hattrs["default"]))
-                    value = (string)hattrs["default"];
+                var value_default = hattrs["default"].toStr();
+                if (!string.IsNullOrEmpty(value_default))
+                    value = value_default;
                 attr_count -= 1;
             }
 
@@ -959,8 +960,8 @@ public class ParsePage
                 }
                 if (attr_count > 0 && hattrs.ContainsKey("number_format"))
                 {
-                    var precision = (!string.IsNullOrEmpty((string)hattrs["number_format"]) ? hattrs["number_format"].toInt() : 2);
-                    bool groupdigits = !hattrs.ContainsKey("nfthousands") || !string.IsNullOrEmpty((string)hattrs["nfthousands"]); // default - group digits, but if nfthousands empty - don't
+                    var precision = (!string.IsNullOrEmpty(hattrs["number_format"].toStr()) ? hattrs["number_format"].toInt() : 2);
+                    bool groupdigits = !hattrs.ContainsKey("nfthousands") || !string.IsNullOrEmpty(hattrs["nfthousands"].toStr()); // default - group digits, but if nfthousands empty - don't
 
                     value = value.toFloat().ToString("N" + precision, CultureInfo.InvariantCulture);
                     if (!groupdigits)
@@ -983,7 +984,7 @@ public class ParsePage
                 }
                 if (attr_count > 0 && hattrs.ContainsKey("date"))
                 {
-                    string dformat = (string)hattrs["date"];
+                    var dformat = hattrs["date"].toStr();
                     switch (dformat)
                     {
                         case "":
@@ -1042,7 +1043,7 @@ public class ParsePage
                 }
                 if (attr_count > 0 && hattrs.ContainsKey("capitalize"))
                 {
-                    value = Utils.capitalize(value, (string)hattrs["capitalize"]);
+                    value = Utils.capitalize(value, hattrs["capitalize"].toStr());
                     attr_count -= 1;
                 }
                 if (attr_count > 0 && hattrs.ContainsKey("truncate"))
@@ -1100,7 +1101,7 @@ public class ParsePage
                         }
 
                         if (mMarkdownToHtml != null)
-                            value = (string)mMarkdownToHtml.Invoke(null, [value, MarkdownPipeline, null]);
+                            value = mMarkdownToHtml.Invoke(null, [value, MarkdownPipeline, null]).toStr();
                     }
                     catch (Exception ex)
                     {
@@ -1138,14 +1139,15 @@ public class ParsePage
     {
         StringBuilder result = new();
 
-        string sel_value = hfvalue((string)attrs["select"] ?? "", hf).toStr();
+        string sel_value = hfvalue(attrs["select"].toStr(), hf).toStr();
         //fw.logger($"_attr_select: tag={tag}, tpl_name={tpl_name}", attrs, hf[tag]);
 
         var multi_delim = ""; // by default no multiple select
         if (attrs.ContainsKey("multi"))
         {
-            if (!string.IsNullOrEmpty((string)attrs["multi"]))
-                multi_delim = (string)attrs["multi"];
+            var attr_multi = attrs["multi"].toStr();
+            if (!string.IsNullOrEmpty(attr_multi))
+                multi_delim = attr_multi;
             else
                 multi_delim = ",";
         }
@@ -1175,14 +1177,14 @@ public class ParsePage
             string desc;
             foreach (Hashtable item in seloptions)
             {
-                desc = Utils.htmlescape((string)item["iname"]);
+                desc = Utils.htmlescape(item["iname"].toStr());
                 if (item.ContainsKey("id"))
                 {
-                    value = ((string)item["id"]).Trim();
+                    value = item["id"].toStr().Trim();
                 }
                 else
                 {
-                    value = ((string)item["iname"]).Trim();
+                    value = item["iname"].toStr().Trim();
                 }
 
                 // check for selected value before escaping
@@ -1252,9 +1254,9 @@ public class ParsePage
     private string _attr_radio(string tpl_path, Hashtable hf, Hashtable attrs)
     {
         StringBuilder result = new();
-        string sel_value = (string)hfvalue((string)attrs["radio"], hf) ?? "";
-        string name = (string)attrs["name"];
-        string delim = (string)attrs["delim"]; // delimiter class
+        string sel_value = hfvalue(attrs["radio"].toStr(), hf).toStr();
+        string name = attrs["name"].toStr();
+        string delim = attrs["delim"].toStr(); // delimiter class
 
         if (!tpl_path.StartsWith('/'))
             tpl_path = basedir + "/" + tpl_path;
@@ -1316,9 +1318,8 @@ public class ParsePage
     }
     private string _attr_select_name(string tag, string tpl_name, Hashtable hf, Hashtable attrs)
     {
-        string result = "";
-        string sel_value = hfvalue((string)attrs["selvalue"], hf).toStr();
-        sel_value ??= "";
+        var result = "";
+        var sel_value = hfvalue(attrs["selvalue"].toStr(), hf).toStr();
 
         if (hfvalue(tag, hf) is ICollection seloptions)
         {
@@ -1331,13 +1332,13 @@ public class ParsePage
             {
                 if (item.ContainsKey("id"))
                 {
-                    value = ((string)item["id"]).Trim();
+                    value = item["id"].toStr().Trim();
                 }
                 else
                 {
-                    value = ((string)item["iname"]).Trim();
+                    value = item["iname"].toStr().Trim();
                 }
-                desc = (string)item["iname"];
+                desc = item["iname"].toStr();
 
                 if (desc.Length < 1 | value != sel_value) continue;
 
@@ -1415,14 +1416,14 @@ public class ParsePage
         if (!string.IsNullOrEmpty(context))
             input += "|" + context;
         Hashtable cache = (Hashtable)LANG_CACHE.GetOrAdd(lang, _ => []);
-        string result = (string)cache[input];
+        var result = cache[input].toStr();
         if (string.IsNullOrEmpty(result))
         {
             // no translation found
             if (!string.IsNullOrEmpty(context))
             {
                 // if no value with context - try without context
-                result = (string)cache[str];
+                result = cache[str].toStr();
                 if (string.IsNullOrEmpty(result))
                 {
                     // if no such string in cache and we allowed to update lang file - add_lang

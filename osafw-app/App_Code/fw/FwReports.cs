@@ -220,7 +220,7 @@ public class FwReports
         list_sortmap ??= [];
 
         // validation/mapping
-        if (string.IsNullOrEmpty(sortby) || string.IsNullOrEmpty(((string)list_sortmap[sortby] ?? "").Trim()))
+        if (string.IsNullOrEmpty(sortby) || string.IsNullOrEmpty(list_sortmap[sortby].toStr().Trim()))
             sortby = sortdef_field; // use default if initial load or mapping not set
         if (sortdir != "desc" && sortdir != "asc")
             sortdir = sortdef_dir;

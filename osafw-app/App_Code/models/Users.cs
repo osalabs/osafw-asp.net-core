@@ -239,7 +239,7 @@ public class Users : FwModel<Users.Row>
         var user = this.one(id);
         user["pwd_reset_token"] = pwd_reset_token;
 
-        return fw.sendEmailTpl((string)user["email"], "email_pwd.txt", user);
+        return fw.sendEmailTpl(user["email"], "email_pwd.txt", user);
     }
 
     /// <summary>
@@ -558,7 +558,7 @@ public class Users : FwModel<Users.Row>
         var permissions_ids = new List<string>();
         foreach (Hashtable row in rows)
         {
-            permissions_ids.Add((string)row["permissions_id"]);
+            permissions_ids.Add(row["permissions_id"].toStr());
         }
 
         // now read all permissions by ids and set icodes to result
@@ -630,7 +630,7 @@ public class Users : FwModel<Users.Row>
         {
             //check if we have controller's permission's override for the action
             if (access_actions_to_permissions.ContainsKey(permission_icode))
-                permission_icode = (string)access_actions_to_permissions[permission_icode];
+                permission_icode = access_actions_to_permissions[permission_icode].toStr();
         }
 
         var result = isAccessByRolesResourcePermission(users_id, resource_icode, permission_icode);

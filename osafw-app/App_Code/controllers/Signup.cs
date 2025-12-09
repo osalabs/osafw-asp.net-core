@@ -25,7 +25,7 @@ public class SignupController : FwController
         fw.G["PAGE_LAYOUT"] = fw.G["PAGE_LAYOUT_PUBLIC"];
 
         if (!fw.config("IS_SIGNUP").toBool())
-            fw.redirect((string)fw.config("UNLOGGED_DEFAULT_URL"));
+            fw.redirect(fw.config("UNLOGGED_DEFAULT_URL").toStr());
     }
 
     public void IndexAction()
@@ -68,10 +68,10 @@ public class SignupController : FwController
         }
         id = modelAddOrUpdate(id, itemdb);
 
-        fw.sendEmailTpl((string)itemdb["email"], "signup.txt", itemdb);
+        fw.sendEmailTpl(itemdb["email"].toStr(), "signup.txt", itemdb);
 
         model.doLogin(id);
-        fw.redirect((string)fw.config("LOGGED_DEFAULT_URL"));
+        fw.redirect(fw.config("LOGGED_DEFAULT_URL").toStr());
     }
 
     public bool Validate(Hashtable item)
@@ -82,18 +82,18 @@ public class SignupController : FwController
         if (!result)
             msg = "Please fill in all required fields";
 
-        if (result && model.isExists(item["email"], 0))
+        if (result && model.isExists(item["email"].toStr(), 0))
         {
             result = false;
             fw.FormErrors["email"] = "EXISTS";
         }
-        if (result && !FormUtils.isEmail((string)item["email"]))
+        if (result && !FormUtils.isEmail(item["email"].toStr()))
         {
             result = false;
             fw.FormErrors["email"] = "EMAIL";
         }
 
-        if (result && (string)item["pwd"] != (string)item["pwd2"])
+        if (result && item["pwd"].toStr() != item["pwd2"].toStr())
         {
             result = false;
             fw.FormErrors["pwd2"] = "WRONG";

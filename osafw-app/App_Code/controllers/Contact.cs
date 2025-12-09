@@ -34,8 +34,8 @@ public class ContactController : FwController
 
     public void SaveAction()
     {
-        string mail_from = (string)fw.config("mail_from");
-        string mail_to = (string)fw.config("support_email");
+        string mail_from = fw.config("mail_from").toStr();
+        string mail_to = fw.config("support_email").toStr();
         string mail_subject = "Contact Form Submission";
 
         // validation

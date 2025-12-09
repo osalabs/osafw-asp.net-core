@@ -16,7 +16,6 @@ public class AdminAttController : FwAdminController
     public override void init(FW fw)
     {
         base.init(fw);
-        model.init(fw);
         model = fw.model<Att>();
         model0 = model;
 

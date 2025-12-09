@@ -180,7 +180,7 @@ public abstract class FwController
         else
             save_fields = save_fields_raw.toStr();
 
-        form_new_defaults = (Hashtable)this.config["form_new_defaults"];
+        form_new_defaults = this.config["form_new_defaults"] as Hashtable ?? [];
 
         // save_fields_checkboxes could be defined as qw string - check and convert
         var save_fields_checkboxes_raw = this.config["save_fields_checkboxes"];
@@ -213,7 +213,7 @@ public abstract class FwController
             if (raw_view_list_map is IDictionary)
                 view_list_map = (Hashtable)raw_view_list_map;
             else
-                view_list_map = Utils.qh((string)raw_view_list_map);
+                view_list_map = Utils.qh(raw_view_list_map.toStr());
 
             view_list_custom = this.config["view_list_custom"].toStr();
         }
@@ -246,7 +246,7 @@ public abstract class FwController
                     if (raw_edit_list_map is IDictionary)
                         view_list_map = (Hashtable)raw_edit_list_map;
                     else
-                        view_list_map = Utils.qh((string)raw_edit_list_map);
+                        view_list_map = Utils.qh(raw_edit_list_map.toStr());
                 }
             }
         }
@@ -386,7 +386,7 @@ public abstract class FwController
         session_key ??= "_filter_" + fw.G["controller.action"];
 
         Hashtable sfilter = fw.SessionHashtable(session_key);
-        if (sfilter == null || sfilter is not Hashtable)
+        if (sfilter is null)
             sfilter = [];
 
         // if not forced filter - merge form filters to session filters
@@ -554,8 +554,8 @@ public abstract class FwController
         if (this.list_sortmap == null)
             throw new Exception("No sort order mapping defined, define in list_sortmap");
 
-        string sortby = this.list_filter?["sortby"].toStr() ?? string.Empty;
-        string sortdir = this.list_filter?["sortdir"].toStr() ?? string.Empty;
+        string sortby = this.list_filter["sortby"].toStr();
+        string sortdir = this.list_filter["sortdir"].toStr();
 
         string sortdef_field = string.Empty;
         string sortdef_dir = string.Empty;
@@ -567,7 +567,7 @@ public abstract class FwController
         if (sortdir != "desc" && sortdir != "asc")
             sortdir = sortdef_dir;
 
-        string orderby = ((string)this.list_sortmap[sortby] ?? "").Trim();
+        string orderby = this.list_sortmap[sortby].toStr().Trim();
         if (string.IsNullOrEmpty(orderby))
             throw new Exception("No orderby defined for [" + sortby + "], define in list_sortmap");
 
@@ -583,7 +583,7 @@ public abstract class FwController
     /// <remarks>Sample: Me.search_fields="field1 field2,!field3 field4" => field1 LIKE '%$s%' or (field2 LIKE '%$s%' and field3='$s') or field4 LIKE '%$s%'</remarks>
     public virtual void setListSearch()
     {
-        string s = ((string)this.list_filter["s"] ?? "").Trim();
+        string s = this.list_filter["s"].toStr().Trim();
         if (!string.IsNullOrEmpty(s) && !string.IsNullOrEmpty(this.search_fields))
         {
             var is_subquery = false;
@@ -676,7 +676,7 @@ public abstract class FwController
         Hashtable hsearch = list_filter_search;
         foreach (string fieldname in hsearch.Keys)
         {
-            string value = (string)hsearch[fieldname];
+            string value = hsearch[fieldname].toStr();
             if (string.IsNullOrEmpty(value) || (is_dynamic_index && !view_list_map.ContainsKey(fieldname)))
                 continue;
 
@@ -1212,13 +1212,11 @@ public abstract class FwController
     {
         if (!string.IsNullOrEmpty(model0.field_add_users_id) && item.ContainsKey(model0.field_add_users_id))
         {
-            var addUsersId = item[model0.field_add_users_id];
-            ps["add_users_id_name"] = addUsersId == null ? "" : fw.model<Users>().iname(addUsersId);
+            ps["add_users_id_name"] = fw.model<Users>().iname(item[model0.field_add_users_id].toInt());
         }
         if (!string.IsNullOrEmpty(model0.field_upd_users_id) && item.ContainsKey(model0.field_upd_users_id))
         {
-            var updUsersId = item[model0.field_upd_users_id];
-            ps["upd_users_id_name"] = updUsersId == null ? "" : fw.model<Users>().iname(updUsersId);
+            ps["upd_users_id_name"] = fw.model<Users>().iname(item[model0.field_upd_users_id].toInt());
         }
     }
 
@@ -1285,7 +1283,7 @@ public abstract class FwController
     public virtual string getViewListUserFields()
     {
         list_user_view ??= fw.model<UserViews>().oneByIcode(UserViews.icodeByUrl(base_url, is_list_edit)); // base_url is screen identifier
-        var fields = (string)list_user_view["fields"] ?? "";
+        var fields = list_user_view["fields"].toStr();
         return (fields.Length > 0 ? fields : view_list_defaults);
     }
 

@@ -32,7 +32,7 @@ public class AttController : FwController
 
         var id = item["id"].toInt();
 
-        if ((string)item["is_s3"] == "1")
+        if (item["is_s3"].toBool())
             model.redirectS3(item, size);
 
         model.transmitFile(id, size);
@@ -49,7 +49,7 @@ public class AttController : FwController
 
         var id = item["id"].toInt();
 
-        if ((string)item["is_s3"] == "1")
+        if (item["is_s3"].toBool())
         {
             model.redirectS3(item, size);
             return;
@@ -57,7 +57,7 @@ public class AttController : FwController
 
         if (is_preview)
         {
-            if ((string)item["is_image"] == "1")
+            if (item["is_image"].toBool())
             {
                 model.transmitFile(id, size, "inline");
             }

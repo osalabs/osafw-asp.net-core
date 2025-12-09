@@ -407,8 +407,9 @@ public class FW : IDisposable
             // check if method override exits
             if (FORM.ContainsKey("_method"))
             {
-                if (METHOD_ALLOWED.ContainsKey(FORM["_method"]))
-                    route.method = (string)FORM["_method"];
+                var form_method = FORM["_method"].toStr();
+                if (METHOD_ALLOWED.ContainsKey(form_method))
+                    route.method = form_method;
             }
             if (route.method == "HEAD") route.method = "GET"; // for website processing HEAD is same as GET, IIS will send just headers
         }
@@ -424,7 +425,7 @@ public class FW : IDisposable
             {
                 if (url == route_key)
                 {
-                    string rdest = (string)routes[route_key];
+                    string rdest = routes[route_key].toStr();
                     if (string.IsNullOrEmpty(rdest))
                     {
                         logger(LogLevel.WARN, "Wrong route destination: " + rdest);
@@ -609,7 +610,7 @@ public class FW : IDisposable
             logger(LogLevel.DEBUG, Ex.Message);
             // if not logged - just redirect to login
             if (!isLogged)
-                redirect((string)config("UNLOGGED_DEFAULT_URL"), false);
+                redirect(config("UNLOGGED_DEFAULT_URL").toStr(), false);
             else
                 errMsg(Ex.Message);
         }
@@ -689,7 +690,7 @@ public class FW : IDisposable
             || route.action == ACTION_SAVE_MULTI
             || route.action == ACTION_DELETE
             || route.action == ACTION_DELETE_RESTORE)
-            && !string.IsNullOrEmpty(Session("XSS")) && Session("XSS") != (string)FORM["XSS"])
+            && !string.IsNullOrEmpty(Session("XSS")) && Session("XSS") != FORM["XSS"].toStr())
         {
             // XSS validation failed
             // first, check if we are under xss-excluded prefix
@@ -793,7 +794,7 @@ public class FW : IDisposable
         }
 
         foreach (DictionaryEntry entry in SQ)
-            f[(string)entry.Key] = entry.Value;
+            f[entry.Key.toStr()] = entry.Value;
 
         // also parse json in request body if any
         if (request.ContentType?[.."application/json".Length] == "application/json")
@@ -886,30 +887,30 @@ public class FW : IDisposable
 
         if (ps.ContainsKey("_route_redirect"))
         {
-            Hashtable rr = (Hashtable)ps["_route_redirect"];
-            this.routeRedirect((string)rr["method"], (string)rr["controller"], (object[])rr["args"]);
+            var rr = ps["_route_redirect"] as Hashtable ?? [];
+            this.routeRedirect(rr["method"].toStr(), rr["controller"].toStr(), rr["args"] as object[] ?? []);
             return; // no further processing
         }
 
         if (ps.ContainsKey("_redirect"))
         {
-            this.redirect((string)ps["_redirect"]);
+            this.redirect(ps["_redirect"].toStr());
             return; // no further processing
         }
 
         string layout;
         if (format == "pjax")
-            layout = (string)G["PAGE_LAYOUT_PJAX"];
+            layout = G["PAGE_LAYOUT_PJAX"].toStr();
         else
-            layout = (string)G["PAGE_LAYOUT"];
+            layout = G["PAGE_LAYOUT"].toStr();
 
         //override layout from parse strings
         if (ps.ContainsKey("_layout"))
-            layout = (string)ps["_layout"];
+            layout = ps["_layout"].toStr();
 
         //override full basedir
         if (ps.ContainsKey("_basedir"))
-            basedir = (string)ps["_basedir"];
+            basedir = ps["_basedir"].toStr();
 
         if (basedir == "")
         {
@@ -925,7 +926,7 @@ public class FW : IDisposable
 
             // override controller basedir only
             if (ps.ContainsKey("_basedir_controller"))
-                basedir = (string)ps["_basedir_controller"];
+                basedir = ps["_basedir_controller"].toStr();
 
             basedir += "/" + this.route.action; // add action dir to controller's directory
         }
@@ -933,7 +934,7 @@ public class FW : IDisposable
         {
             // if override controller basedir - also add route action
             if (ps.ContainsKey("_basedir_controller"))
-                basedir = (string)ps["_basedir_controller"] + "/" + this.route.action;
+                basedir = ps["_basedir_controller"].toStr() + "/" + this.route.action;
         }
 
 
@@ -1085,7 +1086,7 @@ public class FW : IDisposable
             FieldInfo pInfo = controllerClass.GetField("route_default_action");
             if (pInfo != null)
             {
-                string pvalue = (string)pInfo.GetValue(null);
+                string pvalue = pInfo.GetValue(null).toStr();
                 if (pvalue == ACTION_INDEX)
                 {
                     // = index - use IndexAction for unknown actions
@@ -1342,7 +1343,7 @@ public class FW : IDisposable
         try
         {
             if (mail_from.Length == 0)
-                mail_from = (string)this.config("mail_from"); // default mail from
+                mail_from = this.config("mail_from").toStr(); // default mail from
             mail_subject = Regex.Replace(mail_subject, @"[\r\n]+", " ");
 
             bool is_test = this.config("is_test").toBool();
@@ -1350,7 +1351,7 @@ public class FW : IDisposable
             {
                 string test_email = this.Session("login") ?? ""; //in test mode - try logged user email (if logged)
                 if (test_email.Length == 0)
-                    test_email = (string)this.config("test_email"); //try test_email from config
+                    test_email = this.config("test_email").toStr(); //try test_email from config
 
                 mail_body = mail_body + System.Environment.NewLine + "TEST SEND. PASSED MAIL_TO=[" + mail_to + "]"; //add to the end of the body to preserve html
                 mail_to = test_email;
@@ -1434,7 +1435,7 @@ public class FW : IDisposable
                     fkeys.Sort();
                     foreach (string human_filename in fkeys)
                     {
-                        string filename = (string)filenames[human_filename];
+                        string filename = filenames[human_filename].toStr();
                         System.Net.Mail.Attachment att = new(filename, Utils.ext2mime(Path.GetExtension(filename)))
                         {
                             Name = human_filename,
@@ -1494,7 +1495,7 @@ public class FW : IDisposable
     // send email message to site admin (usually used in case of errors)
     public void sendEmailAdmin(string msg)
     {
-        this.sendEmail("", (string)this.config("admin_email"), msg[..512], msg);
+        this.sendEmail("", this.config("admin_email").toStr(), msg[..512], msg);
     }
 
     public void errMsg(string msg, Exception Ex = null)

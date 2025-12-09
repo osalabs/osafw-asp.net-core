@@ -49,7 +49,7 @@ public class MyFeedbackController : FwController
                 { "i", itemdb },
                 { "url", return_url }
             };
-        fw.sendEmailTpl((string)fw.config("feedback_email"), "feedback.txt", ps, null, null, (string)user["email"]);
+        fw.sendEmailTpl(fw.config("feedback_email").toStr(), "feedback.txt", ps, null, null, user["email"]);
 
         fw.flash("success", "Feedback sent. Thank you.");
 

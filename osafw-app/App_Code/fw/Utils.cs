@@ -71,7 +71,7 @@ public class Utils
     * or "AAA BBB CCC DDD" => AAA=1, BBB=1, CCC=1, DDD=1
     * WARN! replaces all "&nbsp;" to spaces (after convert)
     */
-    public static Hashtable qh(string str, object default_value = null)
+    public static Hashtable qh(string str, object? default_value = null)
     {
         Hashtable result = [];
         if (str != null && str != "")
@@ -81,7 +81,7 @@ public class Utils
             {
                 string v = value.Replace("&nbsp;", " ");
                 string[] avoid = v.Split("|", 2);
-                string val = (string)default_value;
+                string val = default_value.toStr();
                 if (avoid.Length > 1)
                 {
                     val = avoid[1];
@@ -367,7 +367,7 @@ public class Utils
     /// - or for bool it's false
     /// - or for collections - no elements
     /// Example:
-    /// instead of `string.IsNullOrEmpty((string)itemdb["iname"])`
+    /// instead of `string.IsNullOrEmpty(itemdb["iname"].toStr())`
     /// use `isEmpty(itemdb["iname"])`
     /// </summary>
     /// <param name="o"></param>
@@ -423,7 +423,7 @@ public class Utils
         if (ext.StartsWith('.'))
             ext = ext[1..];
 
-        return (string)mime_map[ext] ?? "application/octet-stream";
+        return (mime_map[ext] ?? "application/octet-stream").toStr();
     }
 
     /// <summary>
@@ -825,7 +825,7 @@ public class Utils
     //overload alias for jsonDecode(string)
     public static object jsonDecode(object str)
     {
-        return jsonDecode((string)str);
+        return jsonDecode(str.toStr());
     }
 
     /* <summary>
@@ -1174,12 +1174,12 @@ public class Utils
         int trword = 1;
         int trend = 1;  // if trend=0 trword - ignored
 
-        if (hattrs["truncate"].ToString().Length > 0)
+        if (hattrs["truncate"].toStr().Length > 0)
         {
             int trlen1 = hattrs["truncate"].toInt();
             if (trlen1 > 0) trlen = trlen1;
         }
-        if (hattrs.ContainsKey("trchar")) trchar = (string)hattrs["trchar"];
+        if (hattrs.ContainsKey("trchar")) trchar = hattrs["trchar"].toStr();
         if (hattrs.ContainsKey("trend")) trend = hattrs["trend"].toInt();
         if (hattrs.ContainsKey("trword")) trword = hattrs["trword"].toInt();
 

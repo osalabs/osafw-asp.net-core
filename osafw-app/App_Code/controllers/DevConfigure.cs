@@ -74,7 +74,7 @@ public class DevConfigureController : FwController
         }
 
         ps["is_write_dirs"] = false;
-        string upload_dir = (string)fw.config("site_root") + fw.config("UPLOAD_DIR");
+        string upload_dir = fw.config("site_root").toStr() + fw.config("UPLOAD_DIR").toStr();
         // check if dir is writable
         ps["is_write_dirs"] = isWritable(upload_dir, true);
 
@@ -85,7 +85,7 @@ public class DevConfigureController : FwController
         // obsolete in .net 4
         // If System.Security.SecurityManager.IsGranted(writePermission) Then ps["is_write_dirs") ] True
 
-        var log_path = (string)fw.config("log");
+        var log_path = fw.config("log").toStr();
         ps["is_error_log"] = isWritable(log_path);
 
         ps["error_log_size"] = Utils.fileSize(log_path);

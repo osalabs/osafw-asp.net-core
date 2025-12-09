@@ -111,7 +111,7 @@ User typed = ht.to<User>();
 ### Basic CRUD
 ```csharp
 // read single value
-string name = (string)db.value("users", DB.h("id", 5), "iname");
+string name = db.value("users", DB.h("id", 5), "iname").toStr();
 
 // first row
 DBRow row = db.row("users", DB.h("id", 5));
@@ -147,7 +147,7 @@ db.exec("UPDATE users SET hits=hits+1 WHERE id=@id", DB.h("@id", 1));
 db.update("UPDATE users SET hits=hits+1 WHERE id=@id", DB.h("@id", 1));
 
 // read helpers
-string title = (string)db.valuep("SELECT iname FROM users WHERE id=@id", DB.h("@id", 1));
+string title = db.valuep("SELECT iname FROM users WHERE id=@id", DB.h("@id", 1)).toStr();
 DBRow user = db.rowp("SELECT * FROM users WHERE id=@id", DB.h("@id", 1));
 DBList list = db.arrayp("SELECT * FROM users WHERE status=@s", DB.h("@s", 0));
 List<string> cols = db.colp("SELECT iname FROM users WHERE status=@s", DB.h("@s", 0));

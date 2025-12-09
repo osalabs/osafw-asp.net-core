@@ -124,7 +124,7 @@ public static class FwConfig
 
         // default or theme template dir
         // make absolute path to templates from site root
-        st["template"] = (string)st["site_root"] + $@"{path_separator}App_Data{path_separator}template";
+        st["template"] = st["site_root"] + $@"{path_separator}App_Data{path_separator}template";
 
         st["log"] = st["site_root"] + $@"{path_separator}App_Data{path_separator}logs{path_separator}main.log";
         st["log_max_size"] = 100 * 1024 * 1024; // 100 MB is max log size
@@ -189,7 +189,7 @@ public static class FwConfig
             {
                 Hashtable over = (Hashtable)overs[over_name];
                 if (!is_regex_match && over_name == override_name
-                    || is_regex_match && Regex.IsMatch(override_name, (string)over["hostname_match"])
+                    || is_regex_match && Regex.IsMatch(override_name, over["hostname_match"].toStr())
                     )
                 {
                     settings["config_override"] = over_name;
@@ -205,7 +205,7 @@ public static class FwConfig
         {
             if (settings["log_level"].GetType() != typeof(LogLevel))
             {
-                Enum.TryParse<LogLevel>((string)settings["log_level"], true, out log_level);
+                Enum.TryParse<LogLevel>(settings["log_level"].toStr(), true, out log_level);
                 settings["log_level"] = log_level;
             }
         }

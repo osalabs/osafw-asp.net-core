@@ -53,7 +53,7 @@ public class DevManageController : FwController
     public void DumpLogAction()
     {
         var seek = reqi("seek");
-        string logpath = (string)fw.config("log");
+        string logpath = fw.config("log").toStr();
         rw("Dump of last " + seek + " bytes of the site log");
 
         var fs = new FileStream(logpath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
@@ -106,7 +106,7 @@ public class DevManageController : FwController
     }
 
     // generate documentation PDF
-    public Hashtable DocsAction()
+    public Hashtable? DocsAction()
     {
         var is_export = reqs("format");
 
@@ -120,7 +120,7 @@ public class DevManageController : FwController
         if (!Utils.isEmpty(is_export))
         {
             logger("exporting");
-            var layout = (string)fw.G["PAGE_LAYOUT_PRINT"];
+            var layout = fw.G["PAGE_LAYOUT_PRINT"].toStr();
             var options = new Hashtable();
             options["disposition"] = "inline";
             ConvUtils.parsePagePdf(fw, "/dev/manage/docs", layout, ps, "documentation", options);
@@ -405,7 +405,7 @@ public class DevManageController : FwController
         var is_create_all = reqi("DoMagic") == 1;
 
         var entities_file = fw.config("template") + DevCodeGen.ENTITIES_PATH;
-        string filedata = (string)item["entities"];
+        string filedata = item["entities"].toStr();
         Utils.setFileContent(entities_file, ref filedata);
 
         try
@@ -413,7 +413,7 @@ public class DevManageController : FwController
             if (is_create_all)
             {
                 // create db.json, db, models/controllers
-                DevEntityBuilder.createDBJsonFromText((string)item["entities"], fw);
+                DevEntityBuilder.createDBJsonFromText(item["entities"].toStr(), fw);
                 var CodeGen = DevCodeGen.init(fw);
                 CodeGen.createDatabaseFromDBJson();
                 CodeGen.createDBSQLFromDBJson();
@@ -424,7 +424,7 @@ public class DevManageController : FwController
             else
             {
                 // create db.json only
-                DevEntityBuilder.createDBJsonFromText((string)item["entities"], fw);
+                DevEntityBuilder.createDBJsonFromText(item["entities"].toStr(), fw);
                 fw.flash("success", "template" + DevCodeGen.DB_JSON_PATH + " created");
                 fw.redirect(base_url + "/(DBInitializer)");
             }

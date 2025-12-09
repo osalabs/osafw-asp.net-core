@@ -188,9 +188,9 @@ public class Att : FwModel<Att.Row>
     public string getUrl(Hashtable item, string size = "")
     {
         string result;
-        if ((string)item["is_s3"] == "1")
+        if (item["is_s3"].toBool())
         {
-            result = fw.model<S3>().getSignedUrl(getS3KeyByID((string)item["icode"], size));
+            result = fw.model<S3>().getSignedUrl(getS3KeyByID(item["icode"].toStr(), size));
         }
         else
         {
@@ -275,7 +275,7 @@ public class Att : FwModel<Att.Row>
     {
         var item = one(id);
 
-        string filepath = getUploadImgPath(id, "", (string)item["ext"]);
+        string filepath = getUploadImgPath(id, "", item["ext"].toStr());
         if (!string.IsNullOrEmpty(filepath))
             File.Delete(filepath);
         // for images - also delete s/m thumbnails
@@ -283,7 +283,7 @@ public class Att : FwModel<Att.Row>
         {
             foreach (string size in Utils.qw("s m l"))
             {
-                filepath = getUploadImgPath(id, size, (string)item["ext"]);
+                filepath = getUploadImgPath(id, size, item["ext"].toStr());
                 if (!string.IsNullOrEmpty(filepath))
                     File.Delete(filepath);
             }
@@ -329,7 +329,7 @@ public class Att : FwModel<Att.Row>
         fw.response.Headers.Pragma = "cache";
         fw.response.Headers.Expires = DateTime.Now.AddDays(CACHE_DAYS).ToString("R"); // cache for several days, this allows browser not to send any requests to server during this period (unless F5)
 
-        string filepath = getUploadImgPath(id, size, (string)item["ext"]);
+        string filepath = getUploadImgPath(id, size, item["ext"].toStr());
         if (!File.Exists(filepath))
         {
             fw.response.StatusCode = 404;
@@ -511,7 +511,7 @@ public class Att : FwModel<Att.Row>
         if (fw.userId == 0)
             throw new AuthException(); // denied for non-logged
 
-        var url = fw.model<S3>().getSignedUrl(getS3KeyByID((string)item["icode"], size));
+        var url = fw.model<S3>().getSignedUrl(getS3KeyByID(item["icode"].toStr(), size));
         fw.redirect(url);
     }
 

@@ -188,7 +188,7 @@ public class UploadUtils
     // id splitted to 1000
     public static string getUploadDir(FW fw, string module_name, long id)
     {
-        string dir = (string)fw.config("site_root") + fw.config("UPLOAD_DIR") + @"\" + module_name + @"\" + (id % 1000);
+        string dir = fw.config("site_root").toStr() + fw.config("UPLOAD_DIR") + @"\" + module_name + @"\" + (id % 1000);
 
         if (!Directory.Exists(dir))
             Directory.CreateDirectory(dir);

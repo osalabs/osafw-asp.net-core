@@ -30,7 +30,7 @@ public class AdminActivityLogsController : FwController
 
         //set default return url just for the case
         if (Utils.isEmpty(return_url))
-            return_url = (string)fw.config("LOGGED_DEFAULT_URL");
+            return_url = fw.config("LOGGED_DEFAULT_URL").toStr();
     }
 
     public virtual Hashtable? IndexAction()

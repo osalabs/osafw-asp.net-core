@@ -81,12 +81,12 @@ public class MySettingsController : FwController
         if (!result)
             fw.FormErrors["REQ"] = 1;
 
-        if (result && model.isExists(item["email"], id))
+        if (result && model.isExists(item["email"].toStr(), id))
         {
             result = false;
             fw.FormErrors["email"] = "EXISTS";
         }
-        if (result && !FormUtils.isEmail((string)item["email"]))
+        if (result && !FormUtils.isEmail(item["email"].toStr()))
         {
             result = false;
             fw.FormErrors["email"] = "EMAIL";

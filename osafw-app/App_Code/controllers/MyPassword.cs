@@ -95,13 +95,13 @@ public class MyPasswordController : FwController
             result = false;
             fw.FormErrors["email"] = "EXISTS";
         }
-        if (result && !FormUtils.isEmail((string)item["email"]))
+        if (result && !FormUtils.isEmail(item["email"].toStr()))
         {
             result = false;
             fw.FormErrors["email"] = "EMAIL";
         }
 
-        if (result && model.cleanPwd((string)item["pwd"]) != model.cleanPwd((string)item["pwd2"]))
+        if (result && model.cleanPwd(item["pwd"].toStr()) != model.cleanPwd(item["pwd2"].toStr()))
         {
             result = false;
             fw.FormErrors["pwd2"] = "NOTEQUAL";
@@ -116,7 +116,7 @@ public class MyPasswordController : FwController
         if (result)
         {
             var itemdb = model.one(id);
-            if (!fw.model<Users>().checkPwd((string)item["old_pwd"], itemdb["pwd"]))
+            if (!fw.model<Users>().checkPwd(item["old_pwd"].toStr(), itemdb["pwd"]))
             {
                 fw.FormErrors["old_pwd"] = "WRONG";
             }

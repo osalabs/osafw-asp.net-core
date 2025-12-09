@@ -116,13 +116,13 @@ public class S3 : FwModel
     // root should end with "/" if non-empty
     public AmazonS3Client initClient(string access_key = "", string secret_key = "", string region = "", string bucket = "", string root = "")
     {
-        string akey = (string)(!string.IsNullOrEmpty(access_key) ? access_key : fw.config("AWSAccessKey"));
-        string skey = (string)(!string.IsNullOrEmpty(secret_key) ? secret_key : fw.config("AWSSecretKey"));
+        string akey = (!string.IsNullOrEmpty(access_key) ? access_key : fw.config("AWSAccessKey")).toStr();
+        string skey = (!string.IsNullOrEmpty(secret_key) ? secret_key : fw.config("AWSSecretKey")).toStr();
         // region is defined in web.config "AWSRegion"
 
-        this.region = (string)(!string.IsNullOrEmpty(region) ? region : fw.config("AWSRegion"));
-        this.bucket = (string)(!string.IsNullOrEmpty(bucket) ? bucket : fw.config("S3Bucket"));
-        this.root = (string)(!string.IsNullOrEmpty(root) ? root : fw.config("S3Root"));
+        this.region = (!string.IsNullOrEmpty(region) ? region : fw.config("AWSRegion")).toStr();
+        this.bucket = (!string.IsNullOrEmpty(bucket) ? bucket : fw.config("S3Bucket")).toStr();
+        this.root = (!string.IsNullOrEmpty(root) ? root : fw.config("S3Root")).toStr();
 
         //throw exception if region/bucket/akey/skey is not defined
         if (string.IsNullOrEmpty(this.region) || string.IsNullOrEmpty(this.bucket) || string.IsNullOrEmpty(akey) || string.IsNullOrEmpty(skey))

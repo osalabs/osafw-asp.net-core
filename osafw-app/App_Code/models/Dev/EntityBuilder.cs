@@ -732,9 +732,9 @@ class DevEntityBuilder
             ["controller_options"] = controller_options,
         };
 
-        table_entity["model_name"] = tablenameToModel((string)table_entity["fw_name"]);
+        table_entity["model_name"] = tablenameToModel(table_entity["fw_name"].toStr());
         controller_options["url"] = "/Admin/" + table_entity["model_name"];
-        controller_options["title"] = Utils.name2human((string)table_entity["model_name"]);
+        controller_options["title"] = Utils.name2human(table_entity["model_name"].toStr());
 
         var fields = Utils.array2hashtable((ArrayList)table_entity["fields"], "name");
         table_entity["is_fw"] = fields.Contains("id") && fields.Contains("status") && fields.Contains("add_time") && fields.Contains("add_users_id");
@@ -762,8 +762,8 @@ class DevEntityBuilder
 
         foreach (Hashtable fldschema in schema)
         {
-            fldschema["fw_name"] = Utils.name2fw((string)fldschema["name"]);
-            fldschema["iname"] = Utils.name2human((string)fldschema["name"]);
+            fldschema["fw_name"] = Utils.name2fw(fldschema["name"].toStr());
+            fldschema["iname"] = Utils.name2human(fldschema["name"].toStr());
         }
         // result("xxxx") = "yyyy"
         // attrs used to build UI

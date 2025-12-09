@@ -9,7 +9,7 @@ public class AdminDemosVueController : FwVueController
 {
     public static new int access_level = Users.ACL_MANAGER;
 
-    protected Demos model;
+    protected Demos model = null!;
 
     public override void init(FW fw)
     {

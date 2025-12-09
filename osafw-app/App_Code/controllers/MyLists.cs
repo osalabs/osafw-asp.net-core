@@ -115,7 +115,7 @@ public class MyListsController : FwAdminController
         if (is_new && item.ContainsKey("item_id"))
         {
             // item_id could contain comma-separated ids
-            var hids = Utils.commastr2hash((string)item["item_id"]);
+            var hids = Utils.commastr2hash(item["item_id"].toStr());
             if (hids.Count > 0)
             {
                 // if item id passed - link item with the created list

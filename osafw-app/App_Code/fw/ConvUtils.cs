@@ -86,7 +86,7 @@ public class ConvUtils
             {
                 out_filename = "output";
             }
-            fw.fileResponse(pdf_file, out_filename + ".pdf", "application/pdf", (string)options["disposition"]);
+            fw.fileResponse(pdf_file, out_filename + ".pdf", "application/pdf", options["disposition"].toStr());
             Utils.cleanupTmpFiles(); // this will cleanup temporary .pdf, can't delete immediately as file_response may not yet finish transferring file
         }
         else

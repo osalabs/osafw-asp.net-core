@@ -111,7 +111,7 @@ public class AdminUsersController : FwDynamicController
             result = false;
             fw.FormErrors["ehack"] = "EXISTS";
         }
-        if (result && !FormUtils.isEmail((string)item["email"]))
+        if (result && !FormUtils.isEmail(item["email"].toStr()))
         {
             result = false;
             fw.FormErrors["ehack"] = "EMAIL";
@@ -145,7 +145,7 @@ public class AdminUsersController : FwDynamicController
 
         model.doLogin(id);
 
-        fw.redirect((string)fw.config("LOGGED_DEFAULT_URL"));
+        fw.redirect(fw.config("LOGGED_DEFAULT_URL").toStr());
     }
 
     public Hashtable SendPwdAction(int id)
@@ -167,7 +167,7 @@ public class AdminUsersController : FwDynamicController
         {
             if (row["pwd"].ToString().Substring(0, 2) == "$2")
                 continue; // already hashed
-            var hashed = model.hashPwd((string)row["pwd"]);
+            var hashed = model.hashPwd(row["pwd"].toStr());
             db.update(model.table_name, new Hashtable() { { "pwd", hashed } }, new Hashtable() { { "id", row["id"] } });
         }
         rw("done");

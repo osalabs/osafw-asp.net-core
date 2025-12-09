@@ -90,7 +90,7 @@ public class FwSelfTest
         is_false("IS_DEV", fw.config("IS_DEV").toBool(), "Turned ON");
 
         // template directory should exists - TODO test parser to actually see templates work?
-        is_true("template", Directory.Exists((string)fw.config("template")), (string)fw.config("template"));
+        is_true("template", Directory.Exists(fw.config("template").toStr()), fw.config("template").toStr());
         is_true("access_levels", fw.config("access_levels") != null && ((Hashtable)fw.config("access_levels")).Count > 0, "Not defined");
 
         // UPLOAD_DIR upload dir is writeable
@@ -416,7 +416,7 @@ public class FwSelfTest
     {
         Result res = Result.ERR;
         total_ctr += 1;
-        if (string.IsNullOrEmpty((string)value))
+        if (string.IsNullOrEmpty(value.toStr()))
             err_ctr += 1;
         else
         {
@@ -437,7 +437,7 @@ public class FwSelfTest
     {
         Result res = Result.ERR;
         total_ctr += 1;
-        if (string.IsNullOrEmpty((string)value))
+        if (string.IsNullOrEmpty(value.toStr()))
         {
             ok_ctr += 1;
             err_str = "OK";

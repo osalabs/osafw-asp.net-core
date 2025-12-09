@@ -50,7 +50,7 @@ public class SitemapController : FwController
         foreach (Hashtable row in pages_tree)
         {
             row["full_url"] = parent_url + "/" + row["url"];
-            _add_full_url((ArrayList)row["children"], (string)row["url"]);
+            _add_full_url((ArrayList)row["children"], row["url"].toStr());
         }
     }
 }
