@@ -145,7 +145,7 @@ public class FW : IDisposable
     // helper to initialize DB instance based on configuration name
     public DB getDB(string config_name = "main")
     {
-        Hashtable dbconfig = (Hashtable)config("db");
+        var dbconfig = config("db") as Hashtable ?? [];
         Hashtable conf = dbconfig[config_name] as Hashtable ?? [];
 
         var db = new DB(conf, config_name);

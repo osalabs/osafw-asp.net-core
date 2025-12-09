@@ -363,7 +363,8 @@ public class DevManageController : FwController
         Hashtable ps = [];
         ArrayList dbsources = [];
 
-        foreach (string dbname in ((Hashtable)fw.config("db")).Keys)
+        var dbConfig = fw.config("db") as Hashtable ?? [];
+        foreach (string dbname in dbConfig.Keys)
             dbsources.Add(new Hashtable()
             {
                 {"id",dbname},
@@ -378,7 +379,8 @@ public class DevManageController : FwController
     {
         var item = reqh("item");
         string dbname = item["db"] + "";
-        var dbconfig = ((Hashtable)fw.config("db"))[dbname] ?? throw new UserException("Wrong DB selection");
+        var dbConfigs = fw.config("db") as Hashtable ?? throw new UserException("Wrong DB selection");
+        var dbconfig = dbConfigs[dbname] as Hashtable ?? throw new UserException("Wrong DB selection");
         DevEntityBuilder.createDBJsonFromExistingDB(dbname, fw);
         fw.flash("success", "template" + DevCodeGen.DB_JSON_PATH + " created");
 

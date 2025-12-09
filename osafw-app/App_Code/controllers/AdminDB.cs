@@ -71,7 +71,8 @@ public class AdminDBController : FwController
         }
 
         ArrayList dbsources = [];
-        foreach (string dbname in ((Hashtable)fw.config("db")).Keys)
+        var dbConfig = fw.config("db") as Hashtable ?? [];
+        foreach (string dbname in dbConfig.Keys)
             dbsources.Add(new Hashtable()
             {
                 {"id",dbname},
