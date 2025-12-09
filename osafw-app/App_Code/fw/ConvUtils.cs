@@ -279,8 +279,9 @@ public class ConvUtils
                 out_filename = "output";
             }
             // out to browser
-            fw.response.Headers.ContentType = "application/vnd.ms-excel";
-            fw.response.Headers.ContentDisposition = $"attachment; filename=\"{out_filename}.xls\"";
+            var response = fw.response ?? throw new UserException("Response is not available");
+            response.Headers.ContentType = "application/vnd.ms-excel";
+            response.Headers.ContentDisposition = $"attachment; filename=\"{out_filename}.xls\"";
             fw.responseWrite(html_data);
         }
         else

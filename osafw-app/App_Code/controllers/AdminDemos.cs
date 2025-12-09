@@ -182,7 +182,10 @@ public class AdminDemosController : FwAdminController
         // validation
         if (id == 0)
             throw new UserException("Invalid ID");
-        if (fw.request.Form.Files.Count == 0 || fw.request.Form.Files[0] == null || fw.request.Form.Files[0].Length == 0)
+        var request = fw.request ?? throw new UserException("Request is not available");
+        var files = request.Form?.Files;
+        var firstFile = files == null || files.Count == 0 ? null : files[0];
+        if (firstFile == null || firstFile.Length == 0)
             throw new UserException("No file(s) selected");
 
         var modelAtt = fw.model<Att>();
