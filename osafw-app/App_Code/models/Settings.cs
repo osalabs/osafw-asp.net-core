@@ -88,7 +88,7 @@ public class Settings : FwModel<Settings.Row>
 
     public string getValue(string icode)
     {
-        return oneByIcode(icode)["ivalue"];
+        return oneByIcode(icode)["ivalue"].toStr();
     }
     public void setValue(string icode, string ivalue)
     {
