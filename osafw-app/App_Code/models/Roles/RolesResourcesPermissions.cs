@@ -48,7 +48,7 @@ public class RolesResourcesPermissions : FwModel<RolesResourcesPermissions.Row>
         junction_field_permissions_id = "permissions_id";
     }
 
-    public string matrixKey(object resources_id, object permissions_id)
+    public string matrixKey(object? resources_id, object? permissions_id)
     {
         return resources_id.toStr() + KEY_DELIM + permissions_id.toStr();
     }

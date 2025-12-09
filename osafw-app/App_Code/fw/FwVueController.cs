@@ -266,7 +266,7 @@ public class FwVueController : FwDynamicController
 
             // else - this is initial non-json page load - return layout/js to the browser, then Vue will load data via API
             // if url is /ID or /ID/edit or /new - add screen, id to ps so Vue app will switch to related screen
-            var route = fw.getRoute(fw.request.Path);
+            var route = fw.getRoute(fw.request?.Path ?? string.Empty);
             if (route.action == FW.ACTION_SHOW_FORM)
             {
                 ps["screen"] = "edit";
@@ -306,7 +306,7 @@ public class FwVueController : FwDynamicController
         {
             //direct access to show page - redirect to index
             fw.routeRedirect("Index");
-            return null;
+            return [];
         }
 
         var mode = reqs("mode"); // view or edit

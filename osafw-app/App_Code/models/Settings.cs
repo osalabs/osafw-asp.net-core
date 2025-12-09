@@ -88,7 +88,8 @@ public class Settings : FwModel<Settings.Row>
 
     public string getValue(string icode)
     {
-        return oneByIcode(icode)["ivalue"].toStr();
+        var row = oneByIcode(icode);
+        return row.ContainsKey("ivalue") ? row["ivalue"].toStr() : string.Empty;
     }
     public void setValue(string icode, string ivalue)
     {
