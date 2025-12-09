@@ -78,7 +78,7 @@ public class Demos : FwModel<Demos.Row>
     public override ArrayList listSelectOptions(Hashtable? def = null)
     {
         var lookup_params = def?["lookup_params"].toStr();
-        var hparams = Utils.qh(lookup_params); // ex: parent
+        var hparams = Utils.qh(lookup_params ?? string.Empty); // ex: parent
 
         if (hparams.ContainsKey("parent"))
             return listSelectOptionsParent(def);

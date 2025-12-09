@@ -257,8 +257,10 @@ public class Users : FwModel<Users.Row>
         Hashtable chars = [];
         for (var i = 0; i <= pwd.Length - 1; i++)
         {
-            chars[pwd[i]] = chars[pwd[i]].toInt() + 1;
-            result += (int)(5.0 / (double)chars[pwd[i]]);
+            var count = chars.ContainsKey(pwd[i]) ? chars[pwd[i]].toInt() : 0;
+            count++;
+            chars[pwd[i]] = count;
+            result += (int)(5.0 / (double)count);
         }
 
         // bonus points for mixing it up
@@ -368,7 +370,8 @@ public class Users : FwModel<Users.Row>
     /// <param name="timezone"></param>
     public void doLogin(int id, string timezone = "")
     {
-        fw.context.Session.Clear();
+        var context = fw.context ?? throw new InvalidOperationException("FW context is not initialized");
+        context.Session.Clear();
         fw.Session("XSS", Utils.getRandStr(16));
 
         reloadSession(id);

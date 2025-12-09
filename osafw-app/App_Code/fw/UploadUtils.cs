@@ -219,7 +219,10 @@ public class UploadUtils
 
     public static bool removeUploadImgByPath(FW fw, string path)
     {
-        string dir = System.IO.Path.GetDirectoryName(path);
+        var dir = System.IO.Path.GetDirectoryName(path);
+        if (string.IsNullOrEmpty(dir))
+            return false;
+
         path = dir + @"\" + System.IO.Path.GetFileNameWithoutExtension(path); // cut extension if any
 
         if (!Directory.Exists(dir))

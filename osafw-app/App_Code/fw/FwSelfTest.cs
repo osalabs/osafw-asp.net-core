@@ -183,7 +183,7 @@ public class FwSelfTest
 
             fw.logger("Testing Controller:" + controller_name);
 
-            Type calledType = Type.GetType(FW.FW_NAMESPACE_PREFIX + t.Name, false, true);
+            Type? calledType = Type.GetType(FW.FW_NAMESPACE_PREFIX + t.Name, false, true);
             if (calledType == null)
             {
                 plus_err();
@@ -206,7 +206,7 @@ public class FwSelfTest
                 //     return res ? FwSelfTest.Result.OK : FwSelfTest.Result.ERR;
                 // }
 
-                System.Reflection.MethodInfo mInfo = calledType.GetMethod("SelfTest");
+                System.Reflection.MethodInfo? mInfo = calledType.GetMethod("SelfTest");
                 if (mInfo == null)
                 {
                     // if no SelfTest - test IndexAction method
