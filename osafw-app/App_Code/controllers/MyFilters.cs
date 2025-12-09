@@ -45,6 +45,7 @@ public class MyFiltersController : FwAdminController
     {
         // only logged user lists
         list_where = " add_users_id=@add_users_id";
+        list_where_params ??= [];
         list_where_params["@add_users_id"] = fw.userId;
 
         base.setListSearch();

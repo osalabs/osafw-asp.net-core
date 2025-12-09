@@ -98,7 +98,7 @@ public class Users : FwModel<Users.Row>
     /// </summary>
     /// <param name="id">Object type because if upd_users_id could be null</param>
     /// <returns></returns>
-    public override string iname(object id)
+    public override string iname(object? id)
     {
         string result = "";
 

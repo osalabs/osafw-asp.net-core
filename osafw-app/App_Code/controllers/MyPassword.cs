@@ -90,12 +90,14 @@ public class MyPasswordController : FwController
         if (!result)
             fw.FormErrors["REQ"] = 1;
 
-        if (result && model.isExists(item["email"], id))
+        var email = item["email"].toStr();
+
+        if (result && model.isExists(email, id))
         {
             result = false;
             fw.FormErrors["email"] = "EXISTS";
         }
-        if (result && !FormUtils.isEmail(item["email"].toStr()))
+        if (result && !FormUtils.isEmail(email))
         {
             result = false;
             fw.FormErrors["email"] = "EMAIL";

@@ -4,6 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>osafw</RootNamespace>
     <Nullable>enable</Nullable>
+    <LibraryRestore>false</LibraryRestore>
   </PropertyGroup>
 
   <ItemGroup>

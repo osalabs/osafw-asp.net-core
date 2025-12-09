@@ -470,7 +470,9 @@ namespace osafw.Tests
         public void jsonDecodeTest()
         {
             string s = "{\"AAA\":1,\"BBB\":2,\"CCC\":3,\"DDD\":4,\"EEE\":{\"AAA\": \"sub\"}}";
-            Hashtable h1 = (Hashtable)Utils.jsonDecode(s);
+            var decoded = Utils.jsonDecode(s) as Hashtable;
+            Assert.IsNotNull(decoded);
+            var h1 = decoded!;
 
             Assert.IsTrue(h1.ContainsKey("AAA"));
             Assert.IsTrue(h1.ContainsKey("BBB"));

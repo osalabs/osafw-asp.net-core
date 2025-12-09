@@ -73,9 +73,17 @@ public static class FwExtensions
         }
         else if (targetType == typeof(Guid))
         {
-            convertedValue = value is Guid guid
-                ? guid
-                : Guid.Parse(value.ToString());
+            if (value is Guid guid)
+            {
+                convertedValue = guid;
+            }
+            else
+            {
+                var guidStr = value.toStr();
+                convertedValue = Guid.TryParse(guidStr, out var parsedGuid)
+                    ? parsedGuid
+                    : Guid.Empty;
+            }
         }
         else
         {

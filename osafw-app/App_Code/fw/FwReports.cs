@@ -264,7 +264,7 @@ public class FwReports
     /// render report according to format
     /// </summary>
     /// <param name="ps_more">additional data for the template</param>
-    public virtual string render(Hashtable ps_more = null)
+    public virtual string render(Hashtable? ps_more = null)
     {
         var result = "";
 

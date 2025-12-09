@@ -17,7 +17,7 @@ public class FwApiController : FwController
     protected virtual bool auth()
     {
         var result = false;
-        string x_api_key = fw.request.Headers["X-API-Key"];
+        string x_api_key = fw.request.Headers["X-API-Key"].ToString();
         var api_key = fw.config()["API_KEY"] as string;
 
         //authorize if user logged OR API_KEY configured and matches

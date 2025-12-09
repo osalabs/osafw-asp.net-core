@@ -38,7 +38,7 @@ public class DemosItems : FwModel<DemosItems.Row>
         junction_field_main_id = "demos_id";
     }
 
-    public override void prepareSubtable(ArrayList list_rows, int related_id, Hashtable def = null)
+    public override void prepareSubtable(ArrayList list_rows, int related_id, Hashtable? def = null)
     {
         base.prepareSubtable(list_rows, related_id, def);
 

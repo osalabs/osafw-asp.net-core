@@ -11,10 +11,10 @@ namespace osafw;
 // Define response format types
 public sealed class AssistantResult
 {
-    public string title { get; set; }
-    public string explanation { get; set; }
-    public string sql { get; set; }
-    public string redirect_url { get; set; }
+    public string title { get; set; } = string.Empty;
+    public string explanation { get; set; } = string.Empty;
+    public string sql { get; set; } = string.Empty;
+    public string redirect_url { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -192,7 +192,7 @@ public class AssistantController : FwController
         history.AddUserMessage(userPrompt);
         //history.AddAssistantMessage("response text");
 
-        AssistantResult parsedResult = null;
+        AssistantResult? parsedResult = null;
         try
         {
             // non-streaming completion
