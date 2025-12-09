@@ -184,7 +184,7 @@ public class FwVueController : FwDynamicController
         if (list_headers.Count == 0)
             setViewList(false); // initialize list_headers and related (can already be initialized in setScopeInitial)
 
-        ArrayList showform_fields = (ArrayList)this.config["showform_fields"];
+        var showform_fields = this.config["showform_fields"] as ArrayList ?? [];
         //Hashtable hfields = _fieldsToHash(showform_fields);
 
         // extract lookups from config and add to ps
@@ -321,7 +321,7 @@ public class FwVueController : FwDynamicController
         var att_links = new ArrayList(); //linked att ids
         var att_files = new Hashtable(); // per-field: field => [ids]
 
-        var fields = (ArrayList)this.config[mode == "edit" ? "showform_fields" : "show_fields"];
+        var fields = this.config[mode == "edit" ? "showform_fields" : "show_fields"] as ArrayList ?? [];
         foreach (Hashtable def in fields)
         {
             var field_name = def["field"].toStr();

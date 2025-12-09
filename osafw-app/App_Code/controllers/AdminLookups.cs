@@ -42,7 +42,7 @@ public class AdminLookupsController : FwController
             {
                 grouped[igroup] = new ArrayList();
             }
-            ((ArrayList)grouped[igroup]).Add(row);
+            ((ArrayList)grouped[igroup]!).Add(row);
         }
 
         // 2) Build an array of group-objects: [ 'igroup' => ..., 'list_rows' => [...] ]
@@ -50,7 +50,7 @@ public class AdminLookupsController : FwController
         foreach (DictionaryEntry entry in grouped)
         {
             var gName = entry.Key.toStr();
-            var gRows = (ArrayList)entry.Value;
+            var gRows = (ArrayList)entry.Value!;
             allGroups.Add(new Hashtable
             {
                 ["igroup"] = gName,
@@ -74,7 +74,7 @@ public class AdminLookupsController : FwController
         // 3) Distribute each group to the column with the smallest row count so far
         foreach (Hashtable group in allGroups)
         {
-            var gRows = (ArrayList)group["list_rows"];
+            var gRows = (ArrayList)group["list_rows"]!;
             // Find the column with the smallest row count
             int targetColIndex = 0;
             for (int i = 1; i < columns; i++)
@@ -85,7 +85,7 @@ public class AdminLookupsController : FwController
                 }
             }
             // Assign the group to this column
-            ((ArrayList)((Hashtable)cols[targetColIndex])["list_groups"]).Add(group);
+            ((ArrayList)((Hashtable)cols[targetColIndex]!)["list_groups"]!).Add(group);
             // Update the row count for this column
             colRowCounts[targetColIndex] += gRows.Count;
         }

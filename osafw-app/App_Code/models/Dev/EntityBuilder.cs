@@ -719,6 +719,7 @@ class DevEntityBuilder
             return null;
 
         var tblschema = db.loadTableSchemaFull(table_name);
+        var tblfields = tableschema2fields(tblschema);
 
         Hashtable controller_options = [];
         Hashtable table_entity = new()
@@ -727,7 +728,7 @@ class DevEntityBuilder
             ["table"] = table_name,
             ["fw_name"] = Utils.name2fw(table_name),
             ["iname"] = Utils.name2human(table_name),
-            ["fields"] = tableschema2fields(tblschema),
+            ["fields"] = tblfields,
             ["foreign_keys"] = db.listForeignKeys(table_name).toArrayList(),
             ["controller_options"] = controller_options,
         };
@@ -736,7 +737,7 @@ class DevEntityBuilder
         controller_options["url"] = "/Admin/" + table_entity["model_name"];
         controller_options["title"] = Utils.name2human(table_entity["model_name"].toStr());
 
-        var fields = Utils.array2hashtable((ArrayList)table_entity["fields"], "name");
+        var fields = Utils.array2hashtable(tblfields, "name");
         table_entity["is_fw"] = fields.Contains("id") && fields.Contains("status") && fields.Contains("add_time") && fields.Contains("add_users_id");
 
         return table_entity;

@@ -397,7 +397,8 @@ class DevCodeGen
             var codegen = "";
             if (entity.ContainsKey("fields"))
             {
-                var fields = Utils.array2hashtable((ArrayList)entity["fields"], "name");
+                var entity_fields = entity["fields"] as ArrayList ?? [];
+                var fields = Utils.array2hashtable(entity_fields, "name");
 
                 // detect id and iname fields
                 var i = 1;
@@ -405,7 +406,7 @@ class DevCodeGen
                 Hashtable fld_identity = null;
                 Hashtable fld_iname = null;
                 var is_normalize_names = false;
-                foreach (Hashtable fld in (ArrayList)entity["fields"])
+                foreach (Hashtable fld in entity_fields)
                 {
                     // find identity
                     if (fld_identity == null && fld["is_identity"].toBool())

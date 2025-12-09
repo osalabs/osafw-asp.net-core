@@ -267,9 +267,9 @@ public class FwDynamicController : FwController
         // ps["select_options_parent_id") ] model.listSelectOptionsParent()
 
         // Example: how to modify field definition
-        //var fields = (ArrayList)ps["fields"];
+        //var fields = (ArrayList)ps["fields"]!;
         //var defRadio = defByFieldname("fradio", fields); // find field definition by fieldname
-        //defRadio["type"] = "select"; // let's change 'radio' to 'select' type
+        //defRadio?["type"] = "select"; // let's change 'radio' to 'select' type
 
         ps["id"] = id;
         ps["i"] = item;
@@ -804,7 +804,11 @@ public class FwDynamicController : FwController
     {
         tab ??= form_tab;
         var key = prefix + (tab.Length > 0 ? "_" + tab : "");
-        return (ArrayList)config[key];
+
+        if (config[key] is ArrayList arr)
+            return arr;
+
+        return [];
     }
 
     /// <summary>
@@ -978,27 +982,32 @@ public class FwDynamicController : FwController
                 def["is_structure"] = true;
             else if (dtype == "multicb")
             {
+                ArrayList multi_datarow;
                 if (def.ContainsKey("lookup_model"))
-                    def["multi_datarow"] = fw.model(def["lookup_model"].toStr()).listWithChecked(item[field].toStr(), def);
+                    multi_datarow = fw.model(def["lookup_model"].toStr()).listWithChecked(item[field].toStr(), def);
                 else
                 {
                     if (def["is_by_linked"].toBool())
                         // list main items by linked id from junction model (i.e. list of Users(with checked) for Company from UsersCompanies model)
-                        def["multi_datarow"] = fw.model(def["model"].toStr()).listMainByLinkedId(id, def); //junction model
+                        multi_datarow = fw.model(def["model"].toStr()).listMainByLinkedId(id, def); //junction model
                     else
                         // list linked items by main id from junction model (i.e. list of Companies(with checked) for User from UsersCompanies model)
-                        def["multi_datarow"] = fw.model(def["model"].toStr()).listLinkedByMainId(id, def); //junction model
+                        multi_datarow = fw.model(def["model"].toStr()).listLinkedByMainId(id, def); //junction model
                 }
 
-                foreach (Hashtable row in (ArrayList)def["multi_datarow"]) // contains id, iname, is_checked
+                foreach (Hashtable row in multi_datarow) // contains id, iname, is_checked
                     row["field"] = def["field"];
+
+                def["multi_datarow"] = multi_datarow;
             }
             else if (dtype == "multicb_prio")
             {
-                def["multi_datarow"] = fw.model(def["model"].toStr()).listLinkedByMainId(id, def); // junction model
+                var multi_datarow = fw.model(def["model"].toStr()).listLinkedByMainId(id, def); // junction model
 
-                foreach (Hashtable row in (ArrayList)def["multi_datarow"]) // contains id, iname, is_checked, _link[prio]
+                foreach (Hashtable row in multi_datarow) // contains id, iname, is_checked, _link[prio]
                     row["field"] = def["field"];
+
+                def["multi_datarow"] = multi_datarow;
             }
             else if (dtype == "att_edit")
             {
@@ -1088,9 +1097,10 @@ public class FwDynamicController : FwController
                 }
                 else if (def.ContainsKey("lookup_tpl"))
                 {
-                    def["select_options"] = FormUtils.selectTplOptions(def["lookup_tpl"].toStr(), fw.route.controller_path.ToLower());
+                    var select_options = FormUtils.selectTplOptions(def["lookup_tpl"].toStr(), fw.route.controller_path.ToLower());
+                    def["select_options"] = select_options;
                     def["value"] = item[field];
-                    foreach (Hashtable row in (ArrayList)def["select_options"]) // contains id, iname
+                    foreach (Hashtable row in select_options) // contains id, iname
                     {
                         row["is_inline"] = def["is_inline"];
                         row["field"] = def["field"];
@@ -1100,7 +1110,7 @@ public class FwDynamicController : FwController
                 else if (def.ContainsKey("options"))
                 {
                     //select options as array - convert to arraylist of id => iname
-                    var options = def["options"] as Hashtable;
+                    var options = def["options"] as Hashtable ?? [];
                     var select_options = new ArrayList();
                     foreach (DictionaryEntry entry in options)
                         select_options.Add(new Hashtable() {

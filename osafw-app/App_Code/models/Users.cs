@@ -872,9 +872,7 @@ public class Users : FwModel<Users.Row>
 
     public void loadMenuItems()
     {
-        ArrayList menu_items = (ArrayList)FwCache.getValue("menu_items");
-
-        if (menu_items == null)
+        if (FwCache.getValue("menu_items") is not ArrayList menu_items)
         {
             // read main menu items for sidebar
             menu_items = db.array(table_menu_items, DB.h("status", STATUS_ACTIVE), "iname");

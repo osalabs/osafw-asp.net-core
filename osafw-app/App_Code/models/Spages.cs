@@ -187,7 +187,7 @@ public class Spages : FwModel<Spages.Row>
     /// <param name="level">optional, used in recursive calls</param>
     /// <returns>parsepage AL with "leveler" array added to each row with level>0</returns>
     /// <remarks>RECURSIVE</remarks>
-    public ArrayList getPagesTreeList(ArrayList pages_tree, int level = 0)
+    public ArrayList getPagesTreeList(ArrayList? pages_tree, int level = 0)
     {
         ArrayList result = [];
 
@@ -205,7 +205,7 @@ public class Spages : FwModel<Spages.Row>
                     row["leveler"] = leveler;
                 }
                 // subpages
-                result.AddRange(getPagesTreeList((ArrayList)row["children"], level + 1));
+                result.AddRange(getPagesTreeList((ArrayList?)row["children"], level + 1));
             }
         }
 
@@ -220,7 +220,7 @@ public class Spages : FwModel<Spages.Row>
     /// <param name="level">optional, used in recursive calls</param>
     /// <returns>HTML with options</returns>
     /// <remarks>RECURSIVE</remarks>
-    public string getPagesTreeSelectHtml(string selected_id, ArrayList pages_tree, int level = 0)
+    public string getPagesTreeSelectHtml(string selected_id, ArrayList? pages_tree, int level = 0)
     {
         StringBuilder result = new();
         if (pages_tree != null)
@@ -229,7 +229,7 @@ public class Spages : FwModel<Spages.Row>
             {
                 result.AppendLine("<option value=\"" + row["id"] + "\"" + (row["id"].toStr() == selected_id ? " selected=\"selected\" " : "") + ">" + Utils.strRepeat("&#8212; ", level) + row["iname"] + "</option>");
                 // subpages
-                result.Append(getPagesTreeSelectHtml(selected_id, (ArrayList)row["children"], level + 1));
+                result.Append(getPagesTreeSelectHtml(selected_id, (ArrayList?)row["children"], level + 1));
             }
         }
 

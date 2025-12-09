@@ -132,7 +132,7 @@ public class FW : IDisposable
             format = "yyyy-MM-ddTHH:mm:sszzz";
         else
             format = DateUtils.mapDateFormat(userDateFormat) + " " + DateUtils.mapTimeFormat(userTimeFormat);
-            
+
         return local.ToString(format);
     }
 
@@ -1415,9 +1415,9 @@ public class FW : IDisposable
                 }
 
                 // add BCC if any
-                if (options.ContainsKey("bcc") && !is_test)
+                if (options["bcc"] is ArrayList options_bcc && !is_test)
                 {
-                    foreach (string bcc1 in (ArrayList)options["bcc"])
+                    foreach (string bcc1 in options_bcc)
                     {
                         string bcc = bcc1.Trim();
                         if (string.IsNullOrEmpty(bcc))

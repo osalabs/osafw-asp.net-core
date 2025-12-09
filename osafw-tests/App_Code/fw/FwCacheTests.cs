@@ -102,7 +102,7 @@ namespace osafw.Tests
             // test serialization of IList (arrays)
             ArrayList a = ["1", "2"];
             cache.setRequestValue("testCacheKey4", a);
-            ArrayList r3 = (ArrayList)cache.getRequestValue("testCacheKey4");
+            ArrayList r3 = (ArrayList)cache.getRequestValue("testCacheKey4")!;
             Assert.AreEqual(r3[0], "1");
             Assert.AreEqual(r3[1], "2");
 
