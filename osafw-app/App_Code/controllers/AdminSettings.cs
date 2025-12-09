@@ -56,7 +56,7 @@ public class AdminSettingsController : FwAdminController
         return ps;
     }
 
-    public override Hashtable SaveAction(int id = 0)
+    public override Hashtable? SaveAction(int id = 0)
     {
         route_onerror = FW.ACTION_SHOW_FORM;
         route_return = FW.ACTION_INDEX;

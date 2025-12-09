@@ -170,7 +170,7 @@ public class ImageUtils
         return true;
     }
 
-    private static ImageCodecInfo GetEncoderInfo(ImageFormat format)
+    private static ImageCodecInfo? GetEncoderInfo(ImageFormat format)
     {
         ImageCodecInfo[] encoders;
         encoders = ImageCodecInfo.GetImageEncoders();

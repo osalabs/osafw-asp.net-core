@@ -219,7 +219,7 @@ public class FwDynamicController : FwController
         return ps;
     }
 
-    public virtual Hashtable ShowFormAction(int id = 0)
+    public virtual Hashtable? ShowFormAction(int id = 0)
     {
         // define form_new_defaults via config.json
         // Me.form_new_defaults = New Hashtable From {{"field", "default value"}} 'OR set new form defaults here
@@ -301,7 +301,7 @@ public class FwDynamicController : FwController
         return id;
     }
 
-    public virtual Hashtable SaveAction(int id = 0)
+    public virtual Hashtable? SaveAction(int id = 0)
     {
         route_onerror = FW.ACTION_SHOW_FORM;
 
@@ -536,7 +536,7 @@ public class FwDynamicController : FwController
         fw.parser("/common/form/showdelete", ps);
     }
 
-    public virtual Hashtable DeleteAction(int id)
+    public virtual Hashtable? DeleteAction(int id)
     {
         fw.model<Users>().checkReadOnly();
 
@@ -566,7 +566,7 @@ public class FwDynamicController : FwController
         return this.afterSave(true);
     }
 
-    public virtual Hashtable RestoreDeletedAction(int id)
+    public virtual Hashtable? RestoreDeletedAction(int id)
     {
         fw.model<Users>().checkReadOnly();
 

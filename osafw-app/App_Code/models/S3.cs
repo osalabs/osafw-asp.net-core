@@ -71,12 +71,12 @@ public class S3 : FwModel
 
 #if !is_S3
     //S3 disabled - just use a stub methods
-    public object initClient(string access_key = "", string secret_key = "", string region = "", string bucket = "", string root = "")
+    public object? initClient(string access_key = "", string secret_key = "", string region = "", string bucket = "", string root = "")
     {
         return null;
     }
 
-    public object createFolder(string foldername)
+    public object? createFolder(string foldername)
     {
         fw.logger(LogLevel.WARN, "S3 storage is not enabled");
         return null;
@@ -94,7 +94,7 @@ public class S3 : FwModel
         return false;
     }
 
-    public object deleteObject(string key)
+    public object? deleteObject(string key)
     {
         fw.logger(LogLevel.WARN, "S3 storage is not enabled");
         return null;

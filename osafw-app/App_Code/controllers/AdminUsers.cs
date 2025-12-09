@@ -59,7 +59,7 @@ public class AdminUsersController : FwDynamicController
         return ps;
     }
 
-    public override Hashtable SaveAction(int id = 0)
+    public override Hashtable? SaveAction(int id = 0)
     {
         route_onerror = FW.ACTION_SHOW_FORM; //set route to go if error happens
 

@@ -147,7 +147,7 @@ public class DevManageController : FwController
         fw.redirect("/Admin/FwUpdates");
     }
 
-    public Hashtable ApplyFwUpdateAction(int id)
+    public Hashtable? ApplyFwUpdateAction(int id)
     {
         checkXSS();
         fw.model<FwUpdates>().applyOne(id);
@@ -166,7 +166,7 @@ public class DevManageController : FwController
         }
     }
 
-    public Hashtable ApplyFwUpdatesAction()
+    public Hashtable? ApplyFwUpdatesAction()
     {
         checkXSS();
         var ids = reqh("cb").Keys.Cast<string>().Select(x => x.toInt()).ToList();

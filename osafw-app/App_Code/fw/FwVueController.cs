@@ -436,7 +436,7 @@ public class FwVueController : FwDynamicController
         return ps;
     }
 
-    public override Hashtable SaveAction(int id = 0)
+    public override Hashtable? SaveAction(int id = 0)
     {
         if (this.save_fields == null)
             throw new Exception("No fields to save defined, define in Controller.save_fields");
@@ -468,7 +468,7 @@ public class FwVueController : FwDynamicController
         return ps;
     }
 
-    public override Hashtable ShowFormAction(int id = 0)
+    public override Hashtable? ShowFormAction(int id = 0)
     {
         if (!fw.isJsonExpected())
         {

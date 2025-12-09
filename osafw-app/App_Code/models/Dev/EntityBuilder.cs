@@ -713,7 +713,7 @@ class DevEntityBuilder
 
     // ****************************** PRIVATE HELPERS (move to Dev model?)
 
-    public static Hashtable table2entity(DB db, string table_name)
+    public static Hashtable? table2entity(DB db, string table_name)
     {
         if (string.IsNullOrEmpty(table_name) || table_name.StartsWith("MSys", StringComparison.Ordinal))
             return null;

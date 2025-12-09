@@ -1045,7 +1045,7 @@ public abstract class FwController
     /// <param name="location">redirect to this location if success</param>
     /// <param name="more_json">added to json response</param>
     /// <returns></returns>
-    public virtual Hashtable afterSave(bool success, object? id = null, bool is_new = false, string action = "ShowForm", string location = "", Hashtable? more_json = null)
+    public virtual Hashtable? afterSave(bool success, object? id = null, bool is_new = false, string action = "ShowForm", string location = "", Hashtable? more_json = null)
     {
         if (string.IsNullOrEmpty(location))
             location = this.afterSaveLocation(id.toStr());

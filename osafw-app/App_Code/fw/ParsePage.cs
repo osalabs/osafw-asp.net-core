@@ -121,6 +121,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Reflection.Metadata.Ecma335;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
@@ -134,7 +135,7 @@ public class ParsePageOptions
     public string Lang { get; set; } = "en";
     public bool IsLangUpdate { get; set; } = true;
     public Func<Hashtable> GlobalsGetter { get; set; } = () => []; // by default - return empty hashtable
-    public ISession Session { get; set; }
+    public ISession? Session { get; set; }
     public Action<LogLevel, string[]> Logger { get; set; }
 
     // date formats - if empty - use defaults
@@ -323,7 +324,7 @@ public class ParsePage
                     tag_value = hfvalue(tag, hf, parent_hf);
 
                 // logger("ParsePage - tag: " & tag_full & ", found=" & is_found_last_hfvalue)
-                if (tag_value.ToString().Length > 0)
+                if (tag_value.toStr().Length > 0)
                 {
                     string value;
                     if (attrs.ContainsKey("repeat"))
@@ -347,7 +348,7 @@ public class ParsePage
                         if (attrs.ContainsKey("json"))
                             value = Utils.jsonEncode(tag_value);
                         else
-                            value = tag_value.ToString();
+                            value = tag_value.toStr();
                         if (!string.IsNullOrEmpty(value) && !attrs.ContainsKey("noescape"))
                             value = Utils.htmlescape(value);
                     }
@@ -437,6 +438,18 @@ public class ParsePage
         return Regex.Split(content, "[\r\n]+");
     }
 
+    /// <summary>
+    /// Loads the content of the specified file and caches it for future access. Supports loading multiple files using
+    /// wildcard masks and returns their combined content.
+    /// </summary>
+    /// <remarks>If a wildcard mask is provided in the filename, the method loads and concatenates the
+    /// contents of all matching files. File contents are cached to improve performance on subsequent accesses. When
+    /// file modification checking is enabled, the cache is refreshed if the file has changed. For best performance,
+    /// disable modification checking if template files do not change frequently.</remarks>
+    /// <param name="filename">The path to the file to be loaded. May include a wildcard mask (e.g., "*.txt") to load and combine multiple
+    /// files. The path must refer to an existing file or set of files.</param>
+    /// <returns>A string containing the content of the specified file, or the combined content of all files matching the mask if
+    /// a wildcard is used. Returns an empty string if no files are found.</returns>
     private string precache_file(string filename)
     {
         // if filename contains a mask - load all files via recursive calls and return as a single template
@@ -538,7 +551,7 @@ public class ParsePage
     private object hfvalue(string tag, object hf, Hashtable? parent_hf = null)
     {
         object tag_value = "";
-        object ptr;
+        object? ptr;
         is_found_last_hfvalue = true;
 
         try
@@ -640,15 +653,15 @@ public class ParsePage
                         }
                     }
                 }
-                tag_value = ptr;
+                tag_value = ptr ?? "";
             }
             else if (hf is Hashtable hashtable)
             {
                 // special name tags - ROOT_URL and ROOT_DOMAIN - hardcoded here because of too frequent usage in the site
                 if (tag == "ROOT_URL" || tag == "ROOT_DOMAIN")
-                    tag_value = globalsGetter()[tag];
+                    tag_value = globalsGetter()[tag] ?? "";
                 else if (hashtable.ContainsKey(tag))
-                    tag_value = hashtable[tag];
+                    tag_value = hashtable[tag] ?? "";
                 else
                     // if no such tag in Hashtable
                     is_found_last_hfvalue = false;
@@ -670,7 +683,7 @@ public class ParsePage
                     is_found_last_hfvalue = false;
             }
             else if (tag == "ROOT_URL" || tag == "ROOT_DOMAIN")
-                tag_value = globalsGetter()[tag]; // special name tags, see above
+                tag_value = globalsGetter()[tag] ?? ""; // special name tags, see above
             else
                 is_found_last_hfvalue = false;
         }
@@ -745,10 +758,9 @@ public class ParsePage
             if (attrs.ContainsKey("vvalue"))
             {
                 ravalue = hfvalue(attrs["vvalue"].toStr(), hf, parent_hf);
-                ravalue ??= "";
             }
             else
-                ravalue = attrs["value"];
+                ravalue = attrs["value"] ?? "";
 
             // convert ravalue to boolean if eqvalue is boolean, OR both to string otherwise
             if ((eqvalue) is bool)

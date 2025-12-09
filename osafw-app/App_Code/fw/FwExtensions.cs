@@ -233,7 +233,7 @@ public static class FwExtensions
     /// name="dto"/> is <see langword="null"/>, an empty hashtable is returned.</param>
     /// <returns>A <see cref="System.Collections.Hashtable"/> containing the key-value pairs from the input object. Returns an
     /// empty hashtable if <paramref name="dto"/> is <see langword="null"/>.</returns>
-    public static Hashtable toHashtable(this object dto)
+    public static Hashtable toHashtable(this object? dto)
     {
         if (dto is null)
             return [];

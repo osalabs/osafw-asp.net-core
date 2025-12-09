@@ -41,7 +41,7 @@ public class MyListsController : FwAdminController
         return ps;
     }
 
-    public override Hashtable initFilter(string session_key = null)
+    public override Hashtable initFilter(string? session_key = null)
     {
         base.initFilter(session_key);
         if (!this.list_filter.ContainsKey("entity"))
@@ -92,7 +92,7 @@ public class MyListsController : FwAdminController
         return base.ShowFormAction(id);
     }
 
-    public override Hashtable SaveAction(int id = 0)
+    public override Hashtable? SaveAction(int id = 0)
     {
         route_onerror = FW.ACTION_SHOW_FORM; //set route to go if error happens
 

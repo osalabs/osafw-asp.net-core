@@ -189,7 +189,7 @@ public class FwAdminController : FwController
         fw.parser("/common/form/showdelete", ps);
     }
 
-    public virtual Hashtable DeleteAction(int id)
+    public virtual Hashtable? DeleteAction(int id)
     {
         fw.model<Users>().checkReadOnly();
 
@@ -198,7 +198,7 @@ public class FwAdminController : FwController
         return this.afterSave(true);
     }
 
-    public virtual Hashtable RestoreDeletedAction(int id)
+    public virtual Hashtable? RestoreDeletedAction(int id)
     {
         fw.model<Users>().checkReadOnly();
 
@@ -208,7 +208,7 @@ public class FwAdminController : FwController
         return this.afterSave(true, id);
     }
 
-    public virtual Hashtable SaveMultiAction()
+    public virtual Hashtable? SaveMultiAction()
     {
         route_onerror = FW.ACTION_INDEX;
 

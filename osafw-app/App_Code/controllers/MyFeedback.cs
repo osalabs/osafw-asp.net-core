@@ -32,7 +32,7 @@ public class MyFeedbackController : FwController
         throw new ApplicationException("Not Implemented");
     }
 
-    public Hashtable SaveAction()
+    public Hashtable? SaveAction()
     {
         var item = reqh("item");
         var id = fw.userId;

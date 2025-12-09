@@ -1078,7 +1078,6 @@ public class FW : IDisposable
         // choose proper overload for Action
         bool isIdNumeric = int.TryParse(route.id, out _);
         var actionMethod = resolveActionMethod(controllerClass, route.action, isIdNumeric);
-
         if (actionMethod == null)
         {
             logger(LogLevel.DEBUG, "No method found for controller.action=[", route.controller, ".", route.action, "], checking route_default_action");
@@ -1236,7 +1235,7 @@ public class FW : IDisposable
         public bool TryGetAnyFallback(string actionName, out MethodInfo method) => anyFallback.TryGetValue(actionName, out method);
     }
 
-    private static MethodInfo resolveActionMethod(Type controllerClass, string actionName, bool isIdNumeric)
+    private static MethodInfo? resolveActionMethod(Type controllerClass, string actionName, bool isIdNumeric)
     {
         if (string.IsNullOrEmpty(actionName))
             return null;
@@ -1334,7 +1333,7 @@ public class FW : IDisposable
     ///   "bcc" - bcc email addresses - ArrayList
     /// </param>
     /// <returns>true if sent successfully, false if problem - see fw.last_error_send_email</returns>
-    public bool sendEmail(string mail_from, string mail_to, string mail_subject, string mail_body, IDictionary filenames = null, IList aCC = null, string reply_to = "", Hashtable options = null)
+    public bool sendEmail(string mail_from, string mail_to, string mail_subject, string mail_body, IDictionary? filenames = null, IList? aCC = null, string reply_to = "", Hashtable? options = null)
     {
         bool result = true;
         MailMessage message = null;
@@ -1482,7 +1481,7 @@ public class FW : IDisposable
     }
 
     // shortcut for send_email from template from the /emails template dir
-    public bool sendEmailTpl(string mail_to, string tpl, Hashtable hf, Hashtable filenames = null, ArrayList aCC = null, string reply_to = "", Hashtable options = null)
+    public bool sendEmailTpl(string mail_to, string tpl, Hashtable hf, Hashtable? filenames = null, ArrayList? aCC = null, string reply_to = "", Hashtable? options = null)
     {
         Regex r = new(@"[\n\r]+");
         string subj_body = parsePage("/emails", tpl, hf);
@@ -1600,7 +1599,7 @@ public class FW : IDisposable
     /// <param name="controller_name">controller </param>
     /// <returns></returns>
     /// <exception cref="ApplicationException"></exception>
-    public FwController controller(string controller_name, bool is_auth_check = true)
+    public FwController? controller(string controller_name, bool is_auth_check = true)
     {
         ////validate - name should end with "Controller"
         //if (!controller_name.EndsWith("Controller", StringComparison.OrdinalIgnoreCase))

@@ -739,7 +739,7 @@ public class Utils
     /// * Collections other than <see cref="Hashtable"/> or <see cref="ArrayList"/>
     ///   are cloned shallowly (reference copy) to avoid surprises
     /// </remarks>
-    public static Hashtable cloneHashDeep(Hashtable source)
+    public static Hashtable? cloneHashDeep(Hashtable? source)
     {
         if (source == null) return null;
 
@@ -751,7 +751,7 @@ public class Utils
     }
 
     // helpers
-    private static object cloneObject(object value)
+    private static object? cloneObject(object? value)
     {
         switch (value)
         {
@@ -823,7 +823,7 @@ public class Utils
     }
 
     //overload alias for jsonDecode(string)
-    public static object jsonDecode(object str)
+    public static object? jsonDecode(object str)
     {
         return jsonDecode(str.toStr());
     }
@@ -835,7 +835,7 @@ public class Utils
     * <returns>value or Hashtable (objects) or ArrayList (arrays) or null if cannot be converted</returns>
     * <remarks></remarks>
     */
-    public static object jsonDecode(string str)
+    public static object? jsonDecode(string str)
     {
         if (string.IsNullOrEmpty(str))
             return null;
@@ -906,7 +906,7 @@ public class Utils
     }
 
     // RECURSIVE
-    private static object jsonDecodeValue(ref Utf8JsonReader reader)
+    private static object? jsonDecodeValue(ref Utf8JsonReader reader)
     {
         //rw("jsonDecodeValue: " + reader.TokenType.ToString());
         switch (reader.TokenType)

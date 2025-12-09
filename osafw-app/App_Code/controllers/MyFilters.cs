@@ -33,7 +33,7 @@ public class MyFiltersController : FwAdminController
         related_id = reqs("related_id");
     }
 
-    public override Hashtable initFilter(string session_key = null)
+    public override Hashtable initFilter(string? session_key = null)
     {
         base.initFilter(session_key);
         if (!this.list_filter.ContainsKey("icode"))
@@ -64,7 +64,7 @@ public class MyFiltersController : FwAdminController
         return ps;
     }
 
-    public override Hashtable SaveAction(int id = 0)
+    public override Hashtable? SaveAction(int id = 0)
     {
         route_onerror = FW.ACTION_SHOW_FORM; //set route to go if error happens
 
