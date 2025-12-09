@@ -618,8 +618,8 @@ public class FormUtils
 
         foreach (var key in item.Keys)
         {
-            object vnew = item[key];
-            object vold = itemold[key];
+            object? vnew = item[key];
+            object? vold = itemold.ContainsKey(key) ? itemold[key] : null;
 
             // If both are dates, compare only the date part.
             var dtNew = vnew.toDate();
@@ -709,8 +709,8 @@ public class FormUtils
             // go thru each order field
             for (int i = 0; i <= aorderby.Length - 1; i++)
             {
-                string field = null;
-                string order = null;
+                string field = string.Empty;
+                string order = string.Empty;
                 Utils.split2(@"\s+", aorderby[i].Trim(), ref field, ref order);
 
                 if (order == "desc")
@@ -725,8 +725,8 @@ public class FormUtils
             // quote
             for (int i = 0; i <= aorderby.Length - 1; i++)
             {
-                string field = null;
-                string order = null;
+                string field = string.Empty;
+                string order = string.Empty;
                 Utils.split2(@"\s+", aorderby[i].Trim(), ref field, ref order);
                 aorderby[i] = db.qid(field) + " " + order;
             }

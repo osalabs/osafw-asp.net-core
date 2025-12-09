@@ -53,7 +53,8 @@ public class UploadUtils
     {
         bool result = false;
 
-        IFormFile file = up.fw.request.Form.Files[up.field_name];
+        var files = up.fw.request?.Form?.Files;
+        var file = files?.GetFile(up.field_name);
         if (file != null)
         {
             up.orig_filename = file.FileName;
@@ -116,7 +117,8 @@ public class UploadUtils
     // perform file upload for module_name/id and set filepath where it's stored, return true - if upload successful
     public static bool uploadFile(FW fw, string module_name, int id, out string filepath, string input_name = "file1", bool is_skip_check = false)
     {
-        IFormFile file = fw.request.Form.Files[input_name];
+        var files = fw.request?.Form?.Files;
+        var file = files?.GetFile(input_name);
 
         return uploadFile(fw, module_name, id, out filepath, file, is_skip_check);
     }
@@ -125,20 +127,21 @@ public class UploadUtils
     public static bool uploadFile(FW fw, string module_name, int id, out string filepath, int file_index = 0, bool is_skip_check = false)
     {
         filepath = "";
-        if (file_index > fw.request.Form.Files.Count - 1)
+        var files = fw.request?.Form?.Files;
+        if (files == null || file_index > files.Count - 1)
             return false;
-        IFormFile file = fw.request.Form.Files[file_index];
+        var file = files[file_index];
 
         return uploadFile(fw, module_name, id, out filepath, file, is_skip_check);
     }
 
-    public static bool uploadFile(FW fw, string module_name, int id, out string filepath, IFormFile file, bool is_skip_check = false)
+    public static bool uploadFile(FW fw, string module_name, int id, out string filepath, IFormFile? file, bool is_skip_check = false)
     {
         filepath = uploadFileSave(fw, module_name, id, file, is_skip_check);
         return !string.IsNullOrEmpty(filepath);
     }
 
-    public static string uploadFileSave(FW fw, string module_name, int id, IFormFile file, bool is_skip_check = false)
+    public static string uploadFileSave(FW fw, string module_name, int id, IFormFile? file, bool is_skip_check = false)
     {
         string result = "";
         if (file != null && file.Length > 0)
@@ -199,7 +202,7 @@ public class UploadUtils
     // similar to get_upload_dir, but return - DOESN'T check for file existance
     public static string getUploadUrl(FW fw, string module_name, long id, string ext, string size = "")
     {
-        string url = fw.config("ROOT_URL") + "/upload/" + module_name + "/" + (id % 1000) + "/" + id;
+        string url = fw.config("ROOT_URL").toStr() + "/upload/" + module_name + "/" + (id % 1000) + "/" + id;
         if (!string.IsNullOrEmpty(size))
             url += "_" + size;
         url += ext;
@@ -216,7 +219,10 @@ public class UploadUtils
 
     public static bool removeUploadImgByPath(FW fw, string path)
     {
-        string dir = System.IO.Path.GetDirectoryName(path);
+        var dir = System.IO.Path.GetDirectoryName(path);
+        if (string.IsNullOrEmpty(dir))
+            return false;
+
         path = dir + @"\" + System.IO.Path.GetFileNameWithoutExtension(path); // cut extension if any
 
         if (!Directory.Exists(dir))
@@ -299,7 +305,10 @@ public class UploadUtils
     // alternative for .NET 4 MimeMapping.GetMimeMapping(FileName)
     public static string mimeMapping(string filename)
     {
-        new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider().TryGetContentType(filename, out string contentType);
-        return contentType ?? "application/octet-stream";
+        var provider = new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
+        if (provider.TryGetContentType(filename, out var contentType) && !string.IsNullOrEmpty(contentType))
+            return contentType;
+
+        return "application/octet-stream";
     }
 }

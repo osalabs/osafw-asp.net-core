@@ -171,7 +171,7 @@ public class FwDynamicController : FwController
         return new Hashtable { { "_redirect", url }, { "id", go_id } };
     }
 
-    public virtual Hashtable ShowAction(int id = 0)
+    public virtual Hashtable? ShowAction(int id = 0)
     {
         Hashtable ps = [];
         var item = modelOneOrFail(id);
@@ -578,7 +578,7 @@ public class FwDynamicController : FwController
     #endregion Actions
 
     #region Bulk Actions
-    public virtual Hashtable SaveMultiAction()
+    public virtual Hashtable? SaveMultiAction()
     {
         route_onerror = FW.ACTION_INDEX;
 
@@ -670,7 +670,7 @@ public class FwDynamicController : FwController
         fw.parser("/common/list/userviews", ps);
     }
 
-    public virtual Hashtable SaveUserViewsAction()
+    public virtual Hashtable? SaveUserViewsAction()
     {
         var fld = reqh("fld");
         var load_id = reqi("load_id");

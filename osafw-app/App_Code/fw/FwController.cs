@@ -684,7 +684,7 @@ public abstract class FwController
             var fieldname_sql_date = $"TRY_CONVERT(DATE, {qfieldname})"; //for date search
 
             string op = value[..1];
-            string op2 = value.Length >= 2 ? value[..2] : null;
+            string op2 = value.Length >= 2 ? value[..2] : string.Empty;
 
             string v = value[1..];
             if (op2 == "!=" || op2 == "<=" || op2 == ">=")

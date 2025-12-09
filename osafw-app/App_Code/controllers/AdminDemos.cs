@@ -47,7 +47,7 @@ public class AdminDemosController : FwAdminController
             row["demo_dicts"] = model_related.one(row["demo_dicts_id"].toInt()).toHashtable();
     }
 
-    public override Hashtable ShowAction(int id)
+    public override Hashtable? ShowAction(int id)
     {
         Hashtable ps = base.ShowAction(id) ?? [];
         Hashtable item = ps["i"] as Hashtable ?? [];
@@ -182,7 +182,9 @@ public class AdminDemosController : FwAdminController
         // validation
         if (id == 0)
             throw new UserException("Invalid ID");
-        if (fw.request.Form.Files.Count == 0 || fw.request.Form.Files[0] == null || fw.request.Form.Files[0].Length == 0)
+        var files = fw.request!.Form?.Files;
+        var firstFile = files == null || files.Count == 0 ? null : files[0];
+        if (firstFile == null || firstFile.Length == 0)
             throw new UserException("No file(s) selected");
 
         var modelAtt = fw.model<Att>();

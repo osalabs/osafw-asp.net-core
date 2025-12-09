@@ -182,7 +182,7 @@ public class FwLogger : IDisposable
         }
 
         StringBuilder str = new();
-        foreach (object dmp_obj in args)
+        foreach (object? dmp_obj in args)
             str.Append(dumper(dmp_obj));
 
         var strlog = str_prefix + str_stack.ToString() + str.ToString();

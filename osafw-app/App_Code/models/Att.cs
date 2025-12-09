@@ -15,17 +15,17 @@ public class Att : FwModel<Att.Row>
     public class Row
     {
         public int id { get; set; }
-        public string icode { get; set; }
+        public string icode { get; set; } = string.Empty;
         public int? att_categories_id { get; set; }
         public int? fwentities_id { get; set; }
         public int? item_id { get; set; }
         public int is_s3 { get; set; }
         public int is_inline { get; set; }
         public int is_image { get; set; }
-        public string fname { get; set; }
+        public string fname { get; set; } = string.Empty;
         public long fsize { get; set; }
-        public string ext { get; set; }
-        public string iname { get; set; }
+        public string ext { get; set; } = string.Empty;
+        public string iname { get; set; } = string.Empty;
         public int status { get; set; }
         public DateTime add_time { get; set; }
         public int add_users_id { get; set; }
@@ -53,15 +53,24 @@ public class Att : FwModel<Att.Row>
     }
 
     // overload by file index
-    public Hashtable uploadOne(int id, int file_index, bool is_new = false)
+    public Hashtable? uploadOne(int id, int file_index, bool is_new = false)
     {
-        return uploadOne(id, fw.request.Form.Files[file_index], is_new);
+        var files = fw.request?.Form?.Files;
+        if (files == null || file_index >= files.Count)
+            throw new UserException("No file(s) selected");
+
+        return uploadOne(id, files[file_index], is_new);
     }
 
     // overload by file name
-    public Hashtable uploadOne(int id, string input_name, bool is_new = false)
+    public Hashtable? uploadOne(int id, string input_name, bool is_new = false)
     {
-        return uploadOne(id, fw.request.Form.Files[input_name], is_new);
+        var files = fw.request?.Form?.Files;
+        var fileByName = files?.GetFile(input_name);
+        if (fileByName == null)
+            throw new UserException("No file(s) selected");
+
+        return uploadOne(id, fileByName, is_new);
     }
 
     /// <summary>
@@ -72,10 +81,11 @@ public class Att : FwModel<Att.Row>
     /// <param name="is_new"></param>
     /// <returns> return hashtable with added files information id, fname, fsize, ext and filepath or null if upload failed or no files</returns>
     /// </returns>
-    public Hashtable uploadOne(int id, IFormFile file, bool is_new = false)
+    public Hashtable? uploadOne(int id, IFormFile file, bool is_new = false)
     {
-        Hashtable result = null;
-        if (fw.request.Form.Files.Count == 0)
+        Hashtable? result = null;
+        var requestFiles = fw.request?.Form?.Files;
+        if (requestFiles == null || requestFiles.Count == 0 || file == null)
             return result;
 
         if (uploadFile(id, out string filepath, file, true))
@@ -124,9 +134,13 @@ public class Att : FwModel<Att.Row>
     {
         ArrayList result = [];
 
-        for (var i = 0; i <= fw.request.Form.Files.Count - 1; i++)
+        var files = fw.request?.Form?.Files;
+        if (files == null || files.Count == 0)
+            return result;
+
+        for (var i = 0; i <= files.Count - 1; i++)
         {
-            var file = fw.request.Form.Files[i];
+            var file = files[i];
             if (file.Length > 0)
             {
                 // add att db record
