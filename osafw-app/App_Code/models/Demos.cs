@@ -75,9 +75,9 @@ public class Demos : FwModel<Demos.Row>
     }
 
     // override to process custom lookup_params
-    public override ArrayList listSelectOptions(Hashtable def = null)
+    public override ArrayList listSelectOptions(Hashtable? def = null)
     {
-        var lookup_params = def["lookup_params"].toStr();
+        var lookup_params = def?["lookup_params"].toStr();
         var hparams = Utils.qh(lookup_params); // ex: parent
 
         if (hparams.ContainsKey("parent"))

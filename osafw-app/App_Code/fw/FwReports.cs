@@ -184,7 +184,7 @@ public class FwReports
         this.db = fw.db;
         this.report_code = report_code ?? string.Empty;
         this.f = f ?? [];
-        this.format = f["format"] as string ?? string.Empty;
+        this.format = this.f["format"].toStr();
     }
 
     // called from createInstance to check if logged user has access to the report
@@ -264,7 +264,7 @@ public class FwReports
     /// render report according to format
     /// </summary>
     /// <param name="ps_more">additional data for the template</param>
-    public virtual string render(Hashtable ps_more = null)
+    public virtual string render(Hashtable? ps_more = null)
     {
         var result = "";
 
@@ -326,7 +326,10 @@ public class FwReports
                         Utils.setFileContent(render_to, ref content);
                     }
                     else
-                        Utils.writeCSVExport(fw.response, report_code + ".csv", "", "", list_rows);
+                    {
+                        var response = fw.response ?? throw new InvalidOperationException("Response is not available");
+                        Utils.writeCSVExport(response, report_code + ".csv", "", "", list_rows);
+                    }
                     break;
                 }
 

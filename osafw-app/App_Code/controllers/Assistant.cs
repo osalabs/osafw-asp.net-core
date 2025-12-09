@@ -11,10 +11,10 @@ namespace osafw;
 // Define response format types
 public sealed class AssistantResult
 {
-    public string title { get; set; }
-    public string explanation { get; set; }
-    public string sql { get; set; }
-    public string redirect_url { get; set; }
+    public string title { get; set; } = string.Empty;
+    public string explanation { get; set; } = string.Empty;
+    public string sql { get; set; } = string.Empty;
+    public string redirect_url { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -192,7 +192,7 @@ public class AssistantController : FwController
         history.AddUserMessage(userPrompt);
         //history.AddAssistantMessage("response text");
 
-        AssistantResult parsedResult = null;
+        AssistantResult? parsedResult = null;
         try
         {
             // non-streaming completion
@@ -200,9 +200,13 @@ public class AssistantController : FwController
             resultTask.Wait();
 
             var result = resultTask.Result[^1];
-            var content = result.Content;
-            var usage = result.Metadata["Usage"] as OpenAI.Chat.ChatTokenUsage;
-            logger("LLM usage:", usage.InputTokenCount, " + ", usage.OutputTokenCount, " = ", usage.TotalTokenCount);
+            var content = result.Content ?? string.Empty;
+            OpenAI.Chat.ChatTokenUsage? usage = null;
+            if (result.Metadata?.TryGetValue("Usage", out var usageObj) == true)
+                usage = usageObj as OpenAI.Chat.ChatTokenUsage;
+
+            if (usage != null)
+                logger("LLM usage:", usage.InputTokenCount, " + ", usage.OutputTokenCount, " = ", usage.TotalTokenCount);
             logger("LLM response:", content);
 
             //sometimes content can contain multiple json strings, split by "}\n{" and take the last one 

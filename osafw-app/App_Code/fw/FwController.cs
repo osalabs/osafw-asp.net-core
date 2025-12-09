@@ -119,7 +119,7 @@ public abstract class FwController
             cachedWriteTime == lastWriteTimeUtc)
         {
             if (cached["template"] is Hashtable cachedTemplate)
-                return Utils.cloneHashDeep(cachedTemplate); // CACHE HIT - return a clone of the cached template
+                return Utils.cloneHashDeep(cachedTemplate) ?? []; // CACHE HIT - return a clone of the cached template
         }
 
         // CACHE MISS - load from file
@@ -135,7 +135,7 @@ public abstract class FwController
         };
         FwCache.setValue(cacheKey, cacheEntry, 3600);
 
-        return Utils.cloneHashDeep(parsed);
+        return Utils.cloneHashDeep(parsed) ?? [];
     }
 
     // load controller config from json in template dir (based on base_url)
@@ -360,11 +360,11 @@ public abstract class FwController
     }
 
     // methods from fw - just for a covenience, so no need to use "fw.", as they are used quite frequently
-    public void logger(params object[] args)
+    public void logger(params object?[] args)
     {
         fw.logger(args);
     }
-    public void logger(LogLevel level, params object[] args)
+    public void logger(LogLevel level, params object?[] args)
     {
         fw.logger(level, args);
     }

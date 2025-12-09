@@ -17,7 +17,10 @@ public class FwApiController : FwController
     protected virtual bool auth()
     {
         var result = false;
-        string x_api_key = fw.request.Headers["X-API-Key"];
+        var request = fw.request ?? throw new InvalidOperationException("Request is not available");
+        var response = fw.response ?? throw new InvalidOperationException("Response is not available");
+
+        string x_api_key = request.Headers["X-API-Key"].ToString();
         var api_key = fw.config()["API_KEY"] as string;
 
         //authorize if user logged OR API_KEY configured and matches
@@ -26,7 +29,7 @@ public class FwApiController : FwController
 
         if (!result)
         {
-            fw.response.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;
+            response.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;
             throw new AuthException("API auth error");
         }
 
@@ -37,12 +40,15 @@ public class FwApiController : FwController
     // and if auth requested - check authorization
     protected virtual void prepare(bool isAuth = true)
     {
+        var request = fw.request ?? throw new InvalidOperationException("Request is not available");
+        var response = fw.response ?? throw new InvalidOperationException("Response is not available");
+
         // logger(fw.req.Headers)
 
-        var origin = fw.request.Headers.Origin.toStr();
-        if (string.IsNullOrEmpty(origin)) { 
+        var origin = request.Headers.Origin.toStr();
+        if (string.IsNullOrEmpty(origin)) {
             // try referrer
-            var referrer = fw.request.Headers.Referer.toStr();
+            var referrer = request.Headers.Referer.toStr();
             if (!string.IsNullOrEmpty(referrer))
             {
                 var uri = new Uri(referrer);
@@ -59,9 +65,9 @@ public class FwApiController : FwController
             throw new AuthException("Invalid origin " + origin);
 
         // create headers
-        fw.response.Headers.AccessControlAllowOrigin = origin;
-        fw.response.Headers.AccessControlAllowCredentials = "true";
-        fw.response.Headers.AccessControlAllowMethods = "GET, POST, PUT, DELETE, OPTIONS";
+        response.Headers.AccessControlAllowOrigin = origin;
+        response.Headers.AccessControlAllowCredentials = "true";
+        response.Headers.AccessControlAllowMethods = "GET, POST, PUT, DELETE, OPTIONS";
 
         // check auth
         if (isAuth)

@@ -35,8 +35,9 @@ public class WinLoginController : FwController
     public void IndexAction()
     {
         string username = "";
-        bool isAuthenticated = fw.context.User.Identity.IsAuthenticated;
-        string authUser = fw.context.User.Identity.Name;
+        var identity = fw.context?.User?.Identity;
+        bool isAuthenticated = identity?.IsAuthenticated ?? false;
+        string authUser = identity?.Name ?? string.Empty;
         logger(LogLevel.INFO, "Win Login isAuthenticated=", isAuthenticated);
         logger(LogLevel.INFO, "Win Login authUser=", authUser);
 

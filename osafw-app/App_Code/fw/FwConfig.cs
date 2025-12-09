@@ -78,10 +78,10 @@ public static class FwConfig
     private static Hashtable buildForHost(HttpContext? ctx, string host)
     {
         // clone deep - each host gets its own mutable copy
-        var hs = Utils.cloneHashDeep(_base.Value);
+        var hs = Utils.cloneHashDeep(_base.Value) ?? [];
 
         if (string.IsNullOrEmpty(host))
-            overrideSettingsByName(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "", hs, false); // use env name override if no host
+            overrideSettingsByName(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? string.Empty, hs, false); // use env name override if no host
         else
             overrideSettingsByName(host, hs, true);
 
@@ -174,10 +174,12 @@ public static class FwConfig
         string appBase = req.PathBase;
         st["ROOT_URL"] = Regex.Replace(appBase, @"/$", "");
 
-        bool isHttps = ctx.GetServerVariable("HTTPS") == "on";
-        string port = ctx.GetServerVariable("SERVER_PORT");
+        var httpsValue = ctx.GetServerVariable("HTTPS") ?? string.Empty;
+        bool isHttps = httpsValue.Equals("on", StringComparison.OrdinalIgnoreCase);
+        string port = ctx.GetServerVariable("SERVER_PORT") ?? "80";
         string portPart = (port == "80" || port == "443") ? "" : ":" + port;
-        st["ROOT_DOMAIN"] = (isHttps ? "https://" : "http://") + ctx.GetServerVariable("SERVER_NAME") + portPart;
+        var serverName = ctx.GetServerVariable("SERVER_NAME") ?? host;
+        st["ROOT_DOMAIN"] = (isHttps ? "https://" : "http://") + serverName + portPart;
     }
 
     public static void overrideSettingsByName(string override_name, Hashtable settings, bool is_regex_match = false)

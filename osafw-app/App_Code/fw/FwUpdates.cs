@@ -24,10 +24,10 @@ public class FwUpdates : FwModel
     //comparer for sorting files by name without extension
     private class FileNameWithoutExtComparer : IComparer<string>
     {
-        public int Compare(string x, string y)
+        public int Compare(string? x, string? y)
         {
-            string xname = System.IO.Path.GetFileNameWithoutExtension(x);
-            string yname = System.IO.Path.GetFileNameWithoutExtension(y);
+            string xname = System.IO.Path.GetFileNameWithoutExtension(x ?? string.Empty);
+            string yname = System.IO.Path.GetFileNameWithoutExtension(y ?? string.Empty);
             return xname.CompareTo(yname);
         }
     }

@@ -59,11 +59,11 @@ public class FW : IDisposable
     public DB db;
     public FwLogger flogger = new();
 
-    public HttpContext context;
-    public HttpRequest request;
-    public HttpResponse response;
+    public HttpContext? context;
+    public HttpRequest? request;
+    public HttpResponse? response;
 
-    public string request_url; // current request url (relative to application url)
+    public string request_url = ""; // current request url (relative to application url)
     public FwRoute route = new();
     public TimeSpan request_time; // after dispatch() - total request processing time
 
@@ -806,13 +806,13 @@ public class FW : IDisposable
         FORM = f;
     }
 
-    public void logger(params object[] args)
+    public void logger(params object?[] args)
     {
         if (args.Length == 0)
             return;
         flogger.log(LogLevel.DEBUG, ref args);
     }
-    public void logger(LogLevel level, params object[] args)
+    public void logger(LogLevel level, params object?[] args)
     {
         if (args == null || args.Length == 0)
             return;

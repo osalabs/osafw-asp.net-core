@@ -98,7 +98,7 @@ public class Users : FwModel<Users.Row>
     /// </summary>
     /// <param name="id">Object type because if upd_users_id could be null</param>
     /// <returns></returns>
-    public override string iname(object id)
+    public override string iname(object? id)
     {
         string result = "";
 
@@ -373,7 +373,8 @@ public class Users : FwModel<Users.Row>
 
         reloadSession(id);
 
-        fw.logActivity(FwLogTypes.ICODE_USERS_LOGIN, FwEntities.ICODE_USERS, id, "IP:" + fw.context.Connection.RemoteIpAddress.ToString());
+        var ip = Utils.getIP(fw.context);
+        fw.logActivity(FwLogTypes.ICODE_USERS_LOGIN, FwEntities.ICODE_USERS, id, "IP:" + ip);
         // update login and timezone
         Hashtable fields = [];
         fields["login_time"] = DB.NOW;

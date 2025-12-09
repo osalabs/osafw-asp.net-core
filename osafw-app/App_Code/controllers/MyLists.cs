@@ -86,7 +86,7 @@ public class MyListsController : FwAdminController
             row["ctr"] = model.countItems(row["id"].toInt());
     }
 
-    public override Hashtable ShowFormAction(int id = 0)
+    public override Hashtable? ShowFormAction(int id = 0)
     {
         form_new_defaults = new() { ["entity"] = related_id };
         return base.ShowFormAction(id);
@@ -131,7 +131,7 @@ public class MyListsController : FwAdminController
         return this.afterSave(success, id, is_new);
     }
 
-    public Hashtable ToggleListAction(int id)
+    public Hashtable? ToggleListAction(int id)
     {
         var item_id = reqi("item_id");
         var ps = new Hashtable();
@@ -148,7 +148,7 @@ public class MyListsController : FwAdminController
     }
 
     // request item_id - could be one id, or comma-separated ids
-    public Hashtable AddToListAction(int id)
+    public Hashtable? AddToListAction(int id)
     {
         Hashtable items = Utils.commastr2hash(reqs("item_id"));
 
@@ -167,7 +167,7 @@ public class MyListsController : FwAdminController
     }
 
     // request item_id - could be one id, or comma-separated ids
-    public Hashtable RemoveFromListAction(int id)
+    public Hashtable? RemoveFromListAction(int id)
     {
         Hashtable items = Utils.commastr2hash(reqs("item_id"));
 

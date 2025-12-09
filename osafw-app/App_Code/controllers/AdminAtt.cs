@@ -179,7 +179,8 @@ public class AdminAttController : FwAdminController
 
         if (itemdb["fsize"].toInt() == 0)
         {
-            if (fw.request.Form.Files.Count == 0 || fw.request.Form.Files[0] == null || fw.request.Form.Files[0].Length == 0)
+            var files = fw.request?.Form?.Files;
+            if (files == null || files.Count == 0 || files[0] == null || files[0].Length == 0)
             {
                 fw.FormErrors["file1"] = "NOFILE";
             }
