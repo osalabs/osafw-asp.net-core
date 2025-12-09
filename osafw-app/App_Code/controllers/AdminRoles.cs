@@ -36,10 +36,10 @@ public class AdminRolesController : FwDynamicController
     {
         var ps = base.ShowAction(id);
         var item = ps["i"] as Hashtable;
-        var fields = ps["fields"] as ArrayList;
+        var fields = ps["fields"] as ArrayList ?? [];
 
         // roles_resources_permissions matrix
-        var defMatrix = defByFieldname("roles_resources_permissions", fields);
+        var defMatrix = defByFieldname("roles_resources_permissions", fields) ?? [];
         var permissions = fw.model<Permissions>().list();
         defMatrix["permissions_header"] = permissions;
         defMatrix["permissions_count"] = permissions.Count;
@@ -51,12 +51,12 @@ public class AdminRolesController : FwDynamicController
 
     public override Hashtable ShowFormAction(int id = 0)
     {
-        var ps = base.ShowFormAction(id);
-        var item = ps["i"] as Hashtable;
-        var fields = ps["fields"] as ArrayList;
+        var ps = base.ShowFormAction(id)!;
+        var item = (Hashtable)ps["i"]!;
+        var fields = ps["fields"] as ArrayList ?? [];
 
         // roles_resources_permissions matrix
-        var defMatrix = defByFieldname("roles_resources_permissions", fields);
+        var defMatrix = defByFieldname("roles_resources_permissions", fields) ?? [];
         var permissions = fw.model<Permissions>().list();
         defMatrix["permissions_header"] = permissions;
         defMatrix["permissions_count"] = permissions.Count;

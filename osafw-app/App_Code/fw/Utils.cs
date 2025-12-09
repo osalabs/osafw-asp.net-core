@@ -1486,7 +1486,7 @@ public class Utils
 
             if (!string.IsNullOrEmpty(json))
             {
-                result = (Hashtable)Utils.jsonDecode(json);
+                result = Utils.jsonDecode(json) as Hashtable;
                 fw.logger(LogLevel.TRACE, "REQUESTED JSON:", result);
             }
         }

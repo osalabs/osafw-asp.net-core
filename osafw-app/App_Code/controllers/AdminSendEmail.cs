@@ -45,7 +45,7 @@ public class AdminSendEmailController : FwAdminController
 
     public override Hashtable ShowFormAction(int id = 0)
     {
-        var ps = base.ShowFormAction(id);
+        var ps = base.ShowFormAction(id)!;
         ps["test_email"] = fw.Session("login"); // in test mode send to current user
         return ps;
     }

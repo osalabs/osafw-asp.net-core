@@ -57,7 +57,7 @@ public class MyViewsController : FwAdminController
         }
     }
 
-    public override Hashtable setPS(Hashtable ps = null)
+    public override Hashtable setPS(Hashtable? ps = null)
     {
         var result = base.setPS(ps);
         result["select_icodes"] = model.listSelectIcodes();
@@ -67,7 +67,7 @@ public class MyViewsController : FwAdminController
     public override Hashtable ShowFormAction(int id = 0)
     {
         form_new_defaults = new() { ["icode"] = related_id };
-        var ps = base.ShowFormAction(id);
+        var ps = base.ShowFormAction(id)!;
         ps["is_admin"] = fw.model<Users>().isAccessLevel(Users.ACL_ADMIN);
         return ps;
     }

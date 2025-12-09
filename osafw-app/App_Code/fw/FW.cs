@@ -48,13 +48,12 @@ public class FW : IDisposable
     private readonly Hashtable models = []; // model's singletons cache
     private readonly Hashtable controllers = []; // controller's singletons cache
     private const string ControllerActionsCacheKeyPrefix = "fw:controller-actions:";
-    private ParsePage pp_instance; // for parsePage()
+    private ParsePage? pp_instance; // for parsePage()
 
-    public Hashtable FORM;
-    public Hashtable postedJson; // parsed JSON from request body
-    public Hashtable G; // for storing global vars - used in template engine, also stores "_flash"
-    public Hashtable FormErrors; // for storing form id's with error messages, put to ps['error']['details'] for parser
-    public Exception last_file_exception; // set by getFileContent, getFileLines in case of exception
+    public Hashtable FORM = [];
+    public Hashtable postedJson = []; // parsed JSON from request body
+    public Hashtable G = []; // for storing global vars - used in template engine, also stores "_flash"
+    public Hashtable FormErrors = []; // for storing form id's with error messages, put to ps['error']['details'] for parser
 
     public FwCache cache = new(); // cache instance
     public DB db;
@@ -174,7 +173,7 @@ public class FW : IDisposable
         return fw;
     }
 
-    public FW(HttpContext context, IConfiguration configuration)
+    public FW(HttpContext? context, IConfiguration configuration)
     {
         if (context != null)
         {
@@ -210,7 +209,6 @@ public class FW : IDisposable
         if (!string.IsNullOrEmpty(Session("time_format"))) G["time_format"] = Session("time_format");
         if (!string.IsNullOrEmpty(Session("timezone"))) G["timezone"] = Session("timezone");
 
-        FormErrors = []; // reset errors
         parseForm();
 
         // save flash to current var and update session as flash is used only for nearest request
@@ -741,8 +739,7 @@ public class FW : IDisposable
     {
         if (request == null)
         {
-            // offline mode
-            FORM = [];
+            // offline mode FORM = [];
             return;
         }
 

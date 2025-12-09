@@ -40,7 +40,7 @@ public class AdminUsersController : FwDynamicController
         }
     }
 
-    public override Hashtable setPS(Hashtable ps = null)
+    public override Hashtable setPS(Hashtable? ps = null)
     {
         ps = base.setPS(ps);
         ps["is_roles"] = model.isRoles();
@@ -49,8 +49,8 @@ public class AdminUsersController : FwDynamicController
 
     public override Hashtable ShowFormAction(int id = 0)
     {
-        var ps = base.ShowFormAction(id);
-        var item = ps["i"] as Hashtable ?? [];
+        var ps = base.ShowFormAction(id)!;
+        var item = (Hashtable)ps["i"]!;
         ps["att"] = fw.model<Att>().one(item["att_id"]);
 
         ps["is_roles"] = model.isRoles();
@@ -106,7 +106,7 @@ public class AdminUsersController : FwDynamicController
         if (!result)
             fw.FormErrors["REQ"] = 1;
 
-        if (result && model.isExists(item["email"], id))
+        if (result && model.isExists(item["email"].toStr(), id))
         {
             result = false;
             fw.FormErrors["ehack"] = "EXISTS";

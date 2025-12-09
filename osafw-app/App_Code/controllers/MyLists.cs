@@ -34,7 +34,7 @@ public class MyListsController : FwAdminController
         is_readonly = false;//allow update my stuff
     }
 
-    public override Hashtable setPS(Hashtable ps = null)
+    public override Hashtable setPS(Hashtable? ps = null)
     {
         ps = base.setPS(ps);
         ps["select_entities"] = model.listSelectOptionsEntities();
