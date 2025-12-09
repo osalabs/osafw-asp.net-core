@@ -300,13 +300,13 @@ public class FwVueController : FwDynamicController
         return ps;
     }
 
-    public override Hashtable ShowAction(int id = 0)
+    public override Hashtable? ShowAction(int id = 0)
     {
         if (!fw.isJsonExpected())
         {
             //direct access to show page - redirect to index
             fw.routeRedirect("Index");
-            return [];
+            return null;
         }
 
         var mode = reqs("mode"); // view or edit

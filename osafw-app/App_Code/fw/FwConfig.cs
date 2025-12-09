@@ -206,9 +206,14 @@ public static class FwConfig
         LogLevel log_level = LogLevel.INFO; // default log level if none or Wrong level in config
         if (settings.ContainsKey("log_level") && settings["log_level"] != null)
         {
-            if (settings["log_level"].GetType() != typeof(LogLevel))
+            var logLevelValue = settings["log_level"];
+            if (logLevelValue is LogLevel level)
             {
-                Enum.TryParse<LogLevel>(settings["log_level"].toStr(), true, out log_level);
+                log_level = level;
+            }
+            else
+            {
+                Enum.TryParse<LogLevel>(logLevelValue.toStr(), true, out log_level);
                 settings["log_level"] = log_level;
             }
         }

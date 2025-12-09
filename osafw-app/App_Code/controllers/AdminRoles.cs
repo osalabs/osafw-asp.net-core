@@ -32,7 +32,7 @@ public class AdminRolesController : FwDynamicController
         // list_sortmap["fdate_pop_str"] = "fdate_pop";
     }
 
-    public override Hashtable ShowAction(int id = 0)
+    public override Hashtable? ShowAction(int id = 0)
     {
         var ps = base.ShowAction(id);
         var item = ps["i"] as Hashtable;

@@ -47,7 +47,7 @@ public class AdminDemosController : FwAdminController
             row["demo_dicts"] = model_related.one(row["demo_dicts_id"].toInt()).toHashtable();
     }
 
-    public override Hashtable ShowAction(int id)
+    public override Hashtable? ShowAction(int id)
     {
         Hashtable ps = base.ShowAction(id) ?? [];
         Hashtable item = ps["i"] as Hashtable ?? [];
