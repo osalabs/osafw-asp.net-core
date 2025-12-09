@@ -119,7 +119,7 @@ public abstract class FwController
             cachedWriteTime == lastWriteTimeUtc)
         {
             if (cached["template"] is Hashtable cachedTemplate)
-                return Utils.cloneHashDeep(cachedTemplate); // CACHE HIT - return a clone of the cached template
+                return Utils.cloneHashDeep(cachedTemplate) ?? []; // CACHE HIT - return a clone of the cached template
         }
 
         // CACHE MISS - load from file
@@ -135,7 +135,7 @@ public abstract class FwController
         };
         FwCache.setValue(cacheKey, cacheEntry, 3600);
 
-        return Utils.cloneHashDeep(parsed);
+        return Utils.cloneHashDeep(parsed) ?? [];
     }
 
     // load controller config from json in template dir (based on base_url)

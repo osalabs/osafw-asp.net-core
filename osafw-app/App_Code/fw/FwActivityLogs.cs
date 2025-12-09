@@ -113,7 +113,7 @@ public class FwActivityLogs : FwModel
 
         // prepare list of activity records for UI
         // group system consequential changes from the same user within 10 minutes into one fields row
-        Hashtable last_fields = null;
+        Hashtable? last_fields = null;
         var last_add_time = DateTime.MinValue;
         var last_users_id = -1;
         var last_log_types_id = -1;

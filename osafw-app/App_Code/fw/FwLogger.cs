@@ -42,8 +42,8 @@ public class FwLogger : IDisposable
     public string site_root = "";
     public long log_max_size = 0;
 
-    private FileStream floggerFS;
-    private StreamWriter floggerSW;
+    private FileStream floggerFS = null!;
+    private StreamWriter floggerSW = null!;
 
     public static string dumper(object? dmp_obj, int level = 0) // TODO better type detection(suitable for all collection types)
     {
