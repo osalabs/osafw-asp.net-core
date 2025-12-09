@@ -43,7 +43,7 @@ public class MyMFAController : FwController
     {
         var user = model.one(user_id);
 
-        var remoteIp = fw.context?.Connection?.RemoteIpAddress?.ToString() ?? string.Empty;
+        var remoteIp = Utils.getIP(fw.context);
         fw.logActivity(FwLogTypes.ICODE_USERS_LOGIN, FwEntities.ICODE_USERS, user_id, "MFA setup, IP:" + remoteIp);
 
         //generate secret and save to session only (will be saved to db after validation)

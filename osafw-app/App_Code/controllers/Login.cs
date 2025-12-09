@@ -140,7 +140,7 @@ public class LoginController : FwController
         if (users_id == 0)
             fw.redirect(base_url);
 
-        var remoteIp = fw.context?.Connection?.RemoteIpAddress?.ToString() ?? string.Empty;
+        var remoteIp = Utils.getIP(fw.context);
         fw.logActivity(FwLogTypes.ICODE_USERS_LOGIN, FwEntities.ICODE_USERS, users_id, "MFA check, IP:" + remoteIp);
 
         var ps = new Hashtable() {
