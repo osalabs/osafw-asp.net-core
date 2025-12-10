@@ -11,3 +11,8 @@ csharp_style_prefer_index_operator = false
 
 # IDE0028: Simplify collection initialization
 dotnet_style_collection_initializer = false
+
+# Suppress namespace/folder mismatch warnings for shared namespace
+# https://learn.microsoft.com/dotnet/fundamentals/code-analysis/style-rules/ide0043
+# dotnet_style_namespace_match_folder = false is used to disable that rule
+dotnet_style_namespace_match_folder = false:none
