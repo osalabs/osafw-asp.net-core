@@ -3,6 +3,7 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2025 Oleg Savchuk www.osalabs.com
 
+// aliases for commonly used types
 global using ObjDict = System.Collections.Generic.Dictionary<string, object?>;
 global using StrDict = System.Collections.Generic.Dictionary<string, string>;
 global using ObjList = System.Collections.Generic.List<object?>;
@@ -12,6 +13,7 @@ global using StrList = System.Collections.Generic.List<string>;
 global using FwRow = osafw.FwRow;
 global using FwList = osafw.FwList; // List<FwRow>
 
-global using IFwRow = System.Collections.Generic.IDictionary<string, object?>; // FwRow compatible
-global using IFwList = System.Collections.Generic.IList<System.Collections.Generic.IDictionary<string, object?>>; // IList<IFwRow>
-global using IFwEnumerable = System.Collections.Generic.IEnumerable<System.Collections.Generic.IDictionary<string, object?>>; // IEnumerable<IFwRow> for APIs that do not change the collection
+// for function parameters where more generic types are acceptable
+global using FwRowLike = System.Collections.IDictionary; // FwRow compatible
+global using FwListLike = System.Collections.IList;      // IList<IFwRow>
+global using FwItemsLike = System.Collections.IEnumerable; // IEnumerable<IFwRow> for APIs that do not change the collection
