@@ -757,6 +757,16 @@ public class Utils
         return clone;
     }
 
+    //clone deep any dictionary-like object
+    public static IDictionary? cloneDictDeep(IDictionary? source)
+    {
+        if (source == null) return null;
+        IDictionary clone = (IDictionary)Activator.CreateInstance(source.GetType())!;
+        foreach (DictionaryEntry entry in source)
+            clone[entry.Key] = cloneObject(entry.Value);
+        return clone;
+    }
+
     // helpers
     private static object? cloneObject(object? value)
     {

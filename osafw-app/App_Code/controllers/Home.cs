@@ -27,13 +27,13 @@ public class HomeController : FwController
     }
 
     // CACHED as home_page
-    public Hashtable IndexAction()
+    public FwDict IndexAction()
     {
         fw.model<FwUpdates>().checkApplyIfDev();
 
         //fw.redirect("/Login"); // uncomment to always redirect to login page instead of Home
 
-        Hashtable ps = FwCache.getValue("home_page") as Hashtable ?? [];
+        var ps = FwCache.getValue("home_page") as FwDict ?? [];
         if (ps.Count == 0)
         {
             // CACHE MISS
@@ -55,7 +55,7 @@ public class HomeController : FwController
         //if (page_name == "about")
         //    tpl_name = fw.config("PAGE_LAYOUT_PUBLIC").toStr();
 
-        Hashtable ps = [];
+        FwDict ps = [];
         ps["hide_sidebar"] = true; // TODO control via Spages
         ps["page_name"] = page_name;
 
@@ -70,7 +70,7 @@ public class HomeController : FwController
 
     public void TestAction(string id = "")
     {
-        Hashtable hf = [];
+        FwDict hf = [];
         logger("in the TestAction");
         rw("here it is Test");
         rw("id=" + id);

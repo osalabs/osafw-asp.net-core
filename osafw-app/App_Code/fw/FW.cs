@@ -52,7 +52,7 @@ public class FW : IDisposable
 
     public Hashtable FORM = [];
     public Hashtable postedJson = []; // parsed JSON from request body
-    public Hashtable G = []; // for storing global vars - used in template engine, also stores "_flash"
+    public FwDict G = []; // for storing global vars - used in template engine, also stores "_flash"
     public Hashtable FormErrors = []; // for storing form id's with error messages, put to ps['error']['details'] for parser
 
     public FwCache cache = new(); // cache instance
@@ -192,7 +192,7 @@ public class FW : IDisposable
         db = getDB();
         DB.SQL_QUERY_CTR = 0; // reset query counter
 
-        G = (Hashtable)config().Clone(); // by default G contains conf
+        G = config().Clone(); // by default G contains conf
 
         // per request settings
         G["request_url"] = request?.GetDisplayUrl() ?? "";
@@ -321,7 +321,7 @@ public class FW : IDisposable
     }
 
     // return all the settings
-    public Hashtable config()
+    public FwDict config()
     {
         return FwConfig.settings;
     }
@@ -825,7 +825,7 @@ public class FW : IDisposable
     }
 
     // show page from template  /route.controller/route.action = parser('/route.controller/route.action/', $ps)
-    public void parser(Hashtable ps)
+    public void parser(IDictionary ps)
     {
         this.parser((route.controller_path + "/" + route.action).ToLower(), ps);
     }
@@ -839,16 +839,16 @@ public class FW : IDisposable
     //   - layout template - set ps("_layout")="/another_page_layout.html" (relative to SITE_TEMPLATES dir)
     //   - (not for json) to perform route_redirect - set hf("_route_redirect")("method"), hf("_route_redirect")("controller"), hf("_route_redirect")("args")
     //   - (not for json) to perform redirect - set hf("_redirect")="url"
-    public void parser(string basedir, Hashtable ps)
+    public void parser(string basedir, IDictionary ps)
     {
         if (!this.response.HasStarted) this.response.Headers.CacheControl = cache_control;
 
         if (this.FormErrors.Count > 0)
         {
-            if (!ps.ContainsKey("error"))
+            if (!ps.Contains("error"))
                 ps["error"] = new Hashtable();
 
-            if (ps["error"] is Hashtable errorTable && !errorTable.ContainsKey("details"))
+            if (ps["error"] is Hashtable errorTable && !errorTable.Contains("details"))
                 errorTable["details"] = this.FormErrors; // add form errors if any
             logger(LogLevel.DEBUG, "Form errors:", this.FormErrors);
         }
@@ -856,7 +856,7 @@ public class FW : IDisposable
         string format = this.getResponseExpectedFormat();
         if (format == "json")
         {
-            if (ps.ContainsKey("_json"))
+            if (ps.Contains("_json"))
             {
                 if (ps["_json"] is bool b && b == true)
                 {
@@ -881,14 +881,14 @@ public class FW : IDisposable
             return; // no further processing for json
         }
 
-        if (ps.ContainsKey("_route_redirect"))
+        if (ps .Contains("_route_redirect"))
         {
             var rr = ps["_route_redirect"] as Hashtable ?? [];
             this.routeRedirect(rr["method"].toStr(), rr["controller"].toStr(), rr["args"] as object[] ?? []);
             return; // no further processing
         }
 
-        if (ps.ContainsKey("_redirect"))
+        if (ps.Contains("_redirect"))
         {
             this.redirect(ps["_redirect"].toStr());
             return; // no further processing
@@ -901,11 +901,11 @@ public class FW : IDisposable
             layout = G["PAGE_LAYOUT"].toStr();
 
         //override layout from parse strings
-        if (ps.ContainsKey("_layout"))
+        if (ps.Contains("_layout"))
             layout = ps["_layout"].toStr();
 
         //override full basedir
-        if (ps.ContainsKey("_basedir"))
+        if (ps.Contains("_basedir"))
             basedir = ps["_basedir"].toStr();
 
         if (basedir == "")
@@ -921,7 +921,7 @@ public class FW : IDisposable
             basedir += "/" + controller;
 
             // override controller basedir only
-            if (ps.ContainsKey("_basedir_controller"))
+            if (ps.Contains("_basedir_controller"))
                 basedir = ps["_basedir_controller"].toStr();
 
             basedir += "/" + this.route.action; // add action dir to controller's directory
@@ -929,7 +929,7 @@ public class FW : IDisposable
         else
         {
             // if override controller basedir - also add route action
-            if (ps.ContainsKey("_basedir_controller"))
+            if (ps.Contains("_basedir_controller"))
                 basedir = ps["_basedir_controller"].toStr() + "/" + this.route.action;
         }
 
@@ -943,7 +943,7 @@ public class FW : IDisposable
     }
 
     // - show page from template  /controller/action = parser('/controller/action/', $layout, $ps)
-    public void parser(string basedir, string layout, Hashtable ps)
+    public void parser(string basedir, string layout, IDictionary ps)
     {
         ps["_layout"] = layout;
         parser(basedir, ps);
@@ -989,7 +989,7 @@ public class FW : IDisposable
         return pp_instance;
     }
 
-    public string parsePage(string basedir, string layout, Hashtable ps)
+    public string parsePage(string basedir, string layout, IDictionary ps)
     {
         logger(LogLevel.DEBUG, "parsing page bdir=", basedir, ", tpl=", layout);
         ParsePage parser_obj = parsePageInstance();
@@ -1123,7 +1123,7 @@ public class FW : IDisposable
         {
             logger(LogLevel.INFO, "No method found for controller.action=[", route.controller, ".", route.action, "], displaying static page from related templates");
             // if no method - just call FW.parser(hf) - show template from /route.controller/route.action dir
-            parser([]);
+            parser(new FwDict());
         }
         else
             callController(co, actionMethod, args);
@@ -1159,11 +1159,11 @@ public class FW : IDisposable
             }
         }
 
-        Hashtable? ps = null;
+        FwDict? ps = null;
         try
         {
             controller.checkAccess();
-            ps = actionMethod.Invoke(controller, parameters) as Hashtable; // Call Controller Action, if returns null - no ParsePage called
+            ps = actionMethod.Invoke(controller, parameters) as FwDict; // Call Controller Action, if returns null - no ParsePage called
 
             // check/override _basedir from controller for non-json requests
             if (ps != null && !isJsonExpected() && !ps.ContainsKey("_basedir_controller") && !string.IsNullOrEmpty(controller.template_basedir))
