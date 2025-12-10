@@ -14,9 +14,9 @@ public class Resources : FwModel<Resources.Row>
     public class Row
     {
         public int id { get; set; }
-    public string icode { get; set; } = string.Empty;
-    public string iname { get; set; } = string.Empty;
-    public string idesc { get; set; } = string.Empty;
+        public string icode { get; set; } = string.Empty;
+        public string iname { get; set; } = string.Empty;
+        public string idesc { get; set; } = string.Empty;
         public int prio { get; set; }
         public int status { get; set; }
         public DateTime add_time { get; set; }

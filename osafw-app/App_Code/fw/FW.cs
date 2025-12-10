@@ -73,7 +73,7 @@ public class FW : IDisposable
     public string last_error_send_email = "";
     private static readonly char path_separator = Path.DirectorySeparatorChar;
 
-    private DateTime start_time = DateTime.Now; //to track request time
+    private readonly DateTime start_time = DateTime.Now; //to track request time
 
     // shortcut for currently logged users.id
     // usage: fw.userId
@@ -768,7 +768,7 @@ public class FW : IDisposable
 
             var value = entry.Value;
             var bracketPos = name.IndexOf('[');
-            if (bracketPos > 0 && name.EndsWith("]", StringComparison.Ordinal))
+            if (bracketPos > 0 && name.EndsWith(']'))
             {
                 var mainKey = name[..bracketPos];
                 var subKey = name.Substring(bracketPos + 1, name.Length - bracketPos - 2);
@@ -1132,7 +1132,7 @@ public class FW : IDisposable
     // Call controller
     public void callController(FwController controller, MethodInfo actionMethod, object[]? args = null)
     {
-        args ??= Array.Empty<object>();
+        args ??= [];
         //convert args to parameters with proper types
         System.Reflection.ParameterInfo[] @params = actionMethod.GetParameters();
         object[] parameters = new object[@params.Length];
@@ -1206,24 +1206,16 @@ public class FW : IDisposable
     }
 
     #region controller action method resolution with caching
-    private sealed class ControllerActionCache
+    private sealed class ControllerActionCache(
+        Dictionary<string, MethodInfo?> stringHandlers,
+        Dictionary<string, MethodInfo?> numericHandlers,
+        Dictionary<string, MethodInfo?> declaredFallback,
+        Dictionary<string, MethodInfo?> anyFallback)
     {
-        private readonly Dictionary<string, MethodInfo?> stringHandlers;
-        private readonly Dictionary<string, MethodInfo?> numericHandlers;
-        private readonly Dictionary<string, MethodInfo?> declaredFallback;
-        private readonly Dictionary<string, MethodInfo?> anyFallback;
-
-        public ControllerActionCache(
-            Dictionary<string, MethodInfo?> stringHandlers,
-            Dictionary<string, MethodInfo?> numericHandlers,
-            Dictionary<string, MethodInfo?> declaredFallback,
-            Dictionary<string, MethodInfo?> anyFallback)
-        {
-            this.stringHandlers = stringHandlers;
-            this.numericHandlers = numericHandlers;
-            this.declaredFallback = declaredFallback;
-            this.anyFallback = anyFallback;
-        }
+        private readonly Dictionary<string, MethodInfo?> stringHandlers = stringHandlers;
+        private readonly Dictionary<string, MethodInfo?> numericHandlers = numericHandlers;
+        private readonly Dictionary<string, MethodInfo?> declaredFallback = declaredFallback;
+        private readonly Dictionary<string, MethodInfo?> anyFallback = anyFallback;
 
         public bool TryGetString(string actionName, out MethodInfo? method) => stringHandlers.TryGetValue(actionName, out method);
 
@@ -1501,7 +1493,7 @@ public class FW : IDisposable
         Hashtable ps = [];
         var tpl_dir = "/error";
 
-        var code = 0;
+        int code;
         if (Ex is NotFoundException)
         {
             //Not Found
@@ -1553,7 +1545,7 @@ public class FW : IDisposable
                 ps["DUMP_STACK"] = Ex.ToString();
 
             ps["DUMP_SQL"] = DB.last_sql;
-            ps["DUMP_FORM"] = FwLogger.dumper(FORM ?? new Hashtable());
+            ps["DUMP_FORM"] = FwLogger.dumper(FORM ?? []);
             ps["DUMP_SESSION"] = context?.Session != null ? FwLogger.dumper(context.Session) : "null";
         }
 

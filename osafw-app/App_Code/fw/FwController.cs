@@ -401,8 +401,7 @@ public abstract class FwController
             if (userfilters_id > 0)
             {
                 var uf = fw.model<UserFilters>().one(userfilters_id);
-                Hashtable? f1 = Utils.jsonDecode(uf["idesc"]) as Hashtable;
-                if (f1 != null)
+                if (Utils.jsonDecode(uf["idesc"]) is Hashtable f1)
                     f = f1;
                 if (!uf["is_system"].toBool())
                 {
@@ -602,7 +601,7 @@ public abstract class FwController
                 {
                     string fand = afieldsand[j];
                     string param_name = "list_search_" + i + "_" + j;
-                    if (fand.Substring(0, 1) == "!")
+                    if (fand.StartsWith('!'))
                     {
                         // exact match
                         fand = fand.Substring(1);
@@ -707,43 +706,21 @@ public abstract class FwController
                 }
             }
 
-            string op_value;
-            switch (op2)
+            string op_value = op2 switch
             {
                 // first - check for 2-char operators
-                case "!=":
-                    op_value = $" <> {qv}";
-                    break;
-                case "<=":
-                    op_value = $" <= {qv}";
-                    break;
-                case ">=":
-                    op_value = $" >= {qv}";
-                    break;
-                default:
-                    // then check for 1-char operators
-                    switch (op)
-                    {
-                        case "=":
-                            op_value = $" = {qv}";
-                            break;
-                        case "<":
-                            op_value = $" < {qv}";
-                            break;
-                        case ">":
-                            op_value = $" > {qv}";
-                            break;
-                        case "!":
-                            op_value = $" NOT LIKE {db.q($"%{v}%")}";
-                            break;
-                        default:
-                            //default is just LIKE/contains
-                            op_value = $" LIKE {db.q($"%{value}%")}";
-                            break;
-                    }
-                    break;
-            }
-
+                "!=" => $" <> {qv}",
+                "<=" => $" <= {qv}",
+                ">=" => $" >= {qv}",
+                _ => op switch
+                {
+                    "=" => $" = {qv}",
+                    "<" => $" < {qv}",
+                    ">" => $" > {qv}",
+                    "!" => $" NOT LIKE {db.q($"%{v}%")}",
+                    _ => $" LIKE {db.q($"%{value}%")}",//default is just LIKE/contains
+                },// then check for 1-char operators
+            };
             list_where += $" AND {fieldname_sql} {op_value}";
         }
     }
@@ -1297,7 +1274,7 @@ public abstract class FwController
         var result = new Hashtable();
         //use table_name or list_view if it's not subquery
         var list_view_name = model0.table_name;
-        if (!string.IsNullOrEmpty(list_view) && list_view.Substring(0, 1) != "(")
+        if (!string.IsNullOrEmpty(list_view) && !list_view.StartsWith('('))
             list_view_name = list_view;
 
         var table_schema = db.tableSchemaFull(list_view_name);

@@ -15,10 +15,10 @@ namespace osafw.Tests
         public void qwTest()
         {
             string[] r = Utils.qw("test1 test2 test3");
-            Assert.AreEqual(r.Length, 3);
-            Assert.AreEqual(r[0], "test1");
-            Assert.AreEqual(r[1], "test2");
-            Assert.AreEqual(r[2], "test3");
+            Assert.HasCount(3, r);
+            Assert.AreEqual("test1", r[0]);
+            Assert.AreEqual("test2", r[1]);
+            Assert.AreEqual("test3", r[2]);
         }
 
         [TestMethod()]
@@ -27,7 +27,7 @@ namespace osafw.Tests
             IList<string> list = ["test1", "test2", "test3"];
             string r = Utils.qwRevert(list.ToList());
 
-            Assert.AreEqual(r, "test1 test2 test3 ");
+            Assert.AreEqual("test1 test2 test3 ", r);
         }
 
         [TestMethod()]
@@ -36,9 +36,9 @@ namespace osafw.Tests
             string s = "AAA|1 BBB|2 CCC|3 DDD";
             Hashtable h = Utils.qh(s);
 
-            Assert.AreEqual(h["AAA"], "1");
-            Assert.AreEqual(h["BBB"], "2");
-            Assert.AreEqual(h["CCC"], "3");
+            Assert.AreEqual("1", h["AAA"]);
+            Assert.AreEqual("2", h["BBB"]);
+            Assert.AreEqual("3", h["CCC"]);
             Assert.IsNull(h["DDD"]);
         }
 
@@ -54,18 +54,18 @@ namespace osafw.Tests
 
             string r = Utils.qhRevert(h);
 
-            Assert.IsTrue(r.Contains("AAA|1"));
-            Assert.IsTrue(r.Contains("BBB|2"));
-            Assert.IsTrue(r.Contains("CCC|3"));
+            Assert.Contains("AAA|1", r);
+            Assert.Contains("BBB|2", r);
+            Assert.Contains("CCC|3", r);
             int p = r.IndexOf("DDD");
             int n = r.IndexOf("ZZZZ");
             // check is DDD not have value in string
-            Assert.IsTrue(p >= 0);
+            Assert.IsGreaterThanOrEqualTo(0, p);
             if (p < r.Length - 1)
             {
-                Assert.IsTrue(r.Contains("DDD| "));
+                Assert.Contains("DDD| ", r);
             }
-            Assert.IsTrue(n < 0);
+            Assert.IsLessThan(0, n);
         }
 
         [TestMethod()]
@@ -80,12 +80,12 @@ namespace osafw.Tests
             string[] keys = ["DDD", "CCC"];
             Utils.hashFilter(h, keys);
 
-            Assert.AreEqual(h.Keys.Count, 2);
-            Assert.IsFalse(h.Contains("AAA"));
-            Assert.IsFalse(h.Contains("BBB"));
-            Assert.IsTrue(h.Contains("CCC"));
-            Assert.IsTrue(h.Contains("DDD"));
-            Assert.AreEqual(h["CCC"], 3);
+            Assert.HasCount(2, h.Keys);
+            Assert.DoesNotContain("AAA", h);
+            Assert.DoesNotContain("BBB", h);
+            Assert.Contains("CCC", h);
+            Assert.Contains("DDD", h);
+            Assert.AreEqual(3, h["CCC"]);
             Assert.IsNull(h["DDD"]);
 
         }
@@ -95,7 +95,7 @@ namespace osafw.Tests
         {
             string s = "ABC123?!_-'%/\\\"";
             string r = Utils.routeFixChars(s);
-            Assert.AreEqual(r, "ABC123_-");
+            Assert.AreEqual("ABC123_-", r);
         }
 
         [TestMethod()]
@@ -105,8 +105,8 @@ namespace osafw.Tests
             string r1 = "", r2 = "";
             Utils.split2("===", s, ref r1, ref r2);
 
-            Assert.AreEqual(r1, "test1");
-            Assert.AreEqual(r2, "test2");
+            Assert.AreEqual("test1", r1);
+            Assert.AreEqual("test2", r2);
         }
 
         [TestMethod()]
@@ -115,9 +115,9 @@ namespace osafw.Tests
             string s = "1@1.com 2@2.com\r\n3@3.com";
             ArrayList r = Utils.splitEmails(s);
 
-            Assert.AreEqual(r[0], "1@1.com");
-            Assert.AreEqual(r[1], "2@2.com");
-            Assert.AreEqual(r[2], "3@3.com");
+            Assert.AreEqual("1@1.com", r[0]);
+            Assert.AreEqual("2@2.com", r[1]);
+            Assert.AreEqual("3@3.com", r[2]);
         }
 
         [TestMethod()]
@@ -126,7 +126,7 @@ namespace osafw.Tests
             string s = "<html>";
             string r = Utils.htmlescape(s);
 
-            Assert.AreEqual(r, "&lt;html&gt;");
+            Assert.AreEqual("&lt;html&gt;", r);
         }
 
         [TestMethod()]
@@ -135,12 +135,12 @@ namespace osafw.Tests
             string s = "test.com";
             string r = Utils.str2url(s);
 
-            Assert.AreEqual(r, "http://test.com");
+            Assert.AreEqual("http://test.com", r);
 
             s = "http://test.com";
             r = Utils.str2url(s);
 
-            Assert.AreEqual(r, "http://test.com");
+            Assert.AreEqual("http://test.com", r);
         }
 
         [TestMethod()]
@@ -177,7 +177,7 @@ namespace osafw.Tests
         {
             string s = "test text to trim";
             string r = Utils.sTrim(s, 10);
-            Assert.AreEqual(r, "test text ...");
+            Assert.AreEqual("test text ...", r);
 
             r = Utils.sTrim(s, 100);
             Assert.AreEqual(r, s);
@@ -187,7 +187,7 @@ namespace osafw.Tests
         public void getRandStrTest()
         {
             string r = Utils.getRandStr(10);
-            Assert.AreEqual(r.Length, 10);
+            Assert.AreEqual(10, r.Length);
         }
 
         [TestMethod]
@@ -395,10 +395,10 @@ namespace osafw.Tests
             Assert.IsTrue(h1.ContainsKey("CCC"));
             Assert.IsTrue(h1.ContainsKey("DDD"));
 
-            Assert.AreEqual(h1["AAA"], 1);
-            Assert.AreEqual(h1["BBB"], 2);
-            Assert.AreEqual(h1["CCC"], 3);
-            Assert.AreEqual(h1["DDD"], 4);
+            Assert.AreEqual(1, h1["AAA"]);
+            Assert.AreEqual(2, h1["BBB"]);
+            Assert.AreEqual(3, h1["CCC"]);
+            Assert.AreEqual(4, h1["DDD"]);
         }
 
         [TestMethod()]
@@ -418,14 +418,14 @@ namespace osafw.Tests
             Assert.IsTrue(h1.ContainsKey("CCC"));
             Assert.IsTrue(h1.ContainsKey("DDD"));
 
-            Assert.AreEqual(h1["AAA"], 1);
-            Assert.AreEqual(h1["BBB"], 2);
-            Assert.AreEqual(h1["CCC"], 3);
+            Assert.AreEqual(1, h1["AAA"]);
+            Assert.AreEqual(2, h1["BBB"]);
+            Assert.AreEqual(3, h1["CCC"]);
             Assert.IsInstanceOfType(h1["DDD"], typeof(Hashtable));
             var inner = h1["DDD"] as Hashtable;
             Assert.IsNotNull(inner);
             Assert.IsTrue(inner.ContainsKey("EEE"));
-            Assert.AreEqual(inner["EEE"], 5);
+            Assert.AreEqual(5, inner["EEE"]);
 
         }
 
@@ -434,19 +434,19 @@ namespace osafw.Tests
         {
             int val = 123;
             string r = Utils.bytes2str(val);
-            Assert.AreEqual(r, "123 B");
+            Assert.AreEqual("123 B", r);
 
             val = 1024;
             r = Utils.bytes2str(val);
-            Assert.AreEqual(r, "1 KiB");
+            Assert.AreEqual("1 KiB", r);
 
             val = 1024 * 1024;
             r = Utils.bytes2str(val);
-            Assert.AreEqual(r, "1 MiB");
+            Assert.AreEqual("1 MiB", r);
 
             val = 1024 * 1024 * 1024;
             r = Utils.bytes2str(val);
-            Assert.AreEqual(r, "1 GiB");
+            Assert.AreEqual("1 GiB", r);
         }
 
         [TestMethod()]
@@ -459,11 +459,11 @@ namespace osafw.Tests
             h1["DDD"] = 4;
 
             string r = Utils.jsonEncode(h1);
-            Assert.AreEqual(r.IndexOf("{"), 0);
-            Assert.IsTrue(r.Contains("\"AAA\":1"));
-            Assert.IsTrue(r.Contains("\"BBB\":2"));
-            Assert.IsTrue(r.Contains("\"CCC\":3"));
-            Assert.IsTrue(r.Contains("\"DDD\":4"));
+            Assert.AreEqual(0, r.IndexOf("{"));
+            Assert.Contains("\"AAA\":1", r);
+            Assert.Contains("\"BBB\":2", r);
+            Assert.Contains("\"CCC\":3", r);
+            Assert.Contains("\"DDD\":4", r);
         }
 
         [TestMethod()]
@@ -497,7 +497,7 @@ namespace osafw.Tests
             Assert.IsInstanceOfType(h1["EEE"], typeof(Hashtable));
             var inner = h1["EEE"] as Hashtable;
             Assert.IsNotNull(inner);
-            Assert.AreEqual(inner["AAA"], "sub");
+            Assert.AreEqual("sub", inner["AAA"]);
         }
 
         [TestMethod()]
@@ -523,9 +523,9 @@ namespace osafw.Tests
             string s = "test1 test2 test3";
             string r = Utils.capitalize(s);
 
-            Assert.AreEqual(r, "Test1 test2 test3");
+            Assert.AreEqual("Test1 test2 test3", r);
             r = Utils.capitalize(s, "all");
-            Assert.AreEqual(r, "Test1 Test2 Test3");
+            Assert.AreEqual("Test1 Test2 Test3", r);
         }
 
         [TestMethod()]
@@ -533,14 +533,14 @@ namespace osafw.Tests
         {
             string s = "test1";
             string r = Utils.strRepeat(s, 3);
-            Assert.AreEqual(r, "test1test1test1");
+            Assert.AreEqual("test1test1test1", r);
         }
 
         [TestMethod()]
         public void uuidTest()
         {
             string r = Utils.uuid();
-            Assert.AreEqual(r.Length, 36);
+            Assert.AreEqual(36, r.Length);
         }
 
         [TestMethod]
@@ -563,7 +563,7 @@ namespace osafw.Tests
             for (int i = 0; i < 100000; i++)
             {
                 string id = Utils.nanoid();
-                Assert.IsFalse(idSet.Contains(id), "Generated ID should be unique");
+                Assert.DoesNotContain(id, idSet, "Generated ID should be unique");
                 idSet.Add(id);
             }
         }
@@ -575,8 +575,8 @@ namespace osafw.Tests
             string tmp_path = Utils.getTmpDir(prefix);
             string r = Utils.getTmpFilename(prefix);
 
-            Assert.IsTrue(r.StartsWith(tmp_path));
-            Assert.IsTrue(r.Contains(prefix));
+            Assert.StartsWith(tmp_path, r);
+            Assert.Contains(prefix, r);
             Assert.AreEqual(r.Length, tmp_path.Length + prefix.Length + 1 + 31);
         }
 
@@ -591,32 +591,32 @@ namespace osafw.Tests
         {
             string s = "ABC";
             string r = Utils.md5(s);
-            Assert.AreEqual(r, "902fbdd2b1df0c4f70b4a5d23525e932");
+            Assert.AreEqual("902fbdd2b1df0c4f70b4a5d23525e932", r);
         }
 
         [TestMethod()]
         public void toXXTest()
         {
             string r = Utils.toXX("1");
-            Assert.AreEqual(r, "01");
+            Assert.AreEqual("01", r);
         }
 
         [TestMethod()]
         public void num2ordinalTest()
         {
-            Assert.AreEqual(Utils.num2ordinal(1), "1st");
-            Assert.AreEqual(Utils.num2ordinal(2), "2nd");
-            Assert.AreEqual(Utils.num2ordinal(3), "3rd");
-            Assert.AreEqual(Utils.num2ordinal(4), "4th");
+            Assert.AreEqual("1st", Utils.num2ordinal(1));
+            Assert.AreEqual("2nd", Utils.num2ordinal(2));
+            Assert.AreEqual("3rd", Utils.num2ordinal(3));
+            Assert.AreEqual("4th", Utils.num2ordinal(4));
 
-            Assert.AreEqual(Utils.num2ordinal(21), "21st");
-            Assert.AreEqual(Utils.num2ordinal(22), "22nd");
-            Assert.AreEqual(Utils.num2ordinal(23), "23rd");
-            Assert.AreEqual(Utils.num2ordinal(24), "24th");
+            Assert.AreEqual("21st", Utils.num2ordinal(21));
+            Assert.AreEqual("22nd", Utils.num2ordinal(22));
+            Assert.AreEqual("23rd", Utils.num2ordinal(23));
+            Assert.AreEqual("24th", Utils.num2ordinal(24));
 
-            Assert.AreEqual(Utils.num2ordinal(11), "11th");
-            Assert.AreEqual(Utils.num2ordinal(12), "12th");
-            Assert.AreEqual(Utils.num2ordinal(13), "13th");
+            Assert.AreEqual("11th", Utils.num2ordinal(11));
+            Assert.AreEqual("12th", Utils.num2ordinal(12));
+            Assert.AreEqual("13th", Utils.num2ordinal(13));
         }
 
         [TestMethod()]
@@ -766,13 +766,13 @@ namespace osafw.Tests
             ArrayList rows1 = [];
             Hashtable fields1 = [];
             Utils.arrayInject(rows1, fields1);
-            Assert.AreEqual(0, rows1.Count, "Empty rows and fields should result in no changes");
+            Assert.IsEmpty(rows1, "Empty rows and fields should result in no changes");
 
             // Case 2: Rows with values and empty fields
             ArrayList rows2 = [new Hashtable { { "key1", "value1" } }, new Hashtable { { "key2", "value2" } }];
             Hashtable fields2 = [];
             Utils.arrayInject(rows2, fields2);
-            Assert.AreEqual(2, rows2.Count, "Rows with values and empty fields should result in no changes");
+            Assert.HasCount(2, rows2, "Rows with values and empty fields should result in no changes");
             var row2_0 = rows2[0] as Hashtable;
             var row2_1 = rows2[1] as Hashtable;
             Assert.IsNotNull(row2_0);
@@ -784,7 +784,7 @@ namespace osafw.Tests
             ArrayList rows3 = [new Hashtable { { "key1", "value1" } }, new Hashtable { { "key2", "value2" } }];
             Hashtable fields3 = new() { { "key1", "newValue1" }, { "key3", "newValue3" } };
             Utils.arrayInject(rows3, fields3);
-            Assert.AreEqual(2, rows3.Count, "Rows with values and fields with some new and some existing keys should merge properly");
+            Assert.HasCount(2, rows3, "Rows with values and fields with some new and some existing keys should merge properly");
             var row3_0 = rows3[0] as Hashtable;
             var row3_1 = rows3[1] as Hashtable;
             Assert.IsNotNull(row3_0);
@@ -860,12 +860,12 @@ namespace osafw.Tests
         [TestMethod()]
         public void name2fwTest()
         {
-            Assert.AreEqual(Utils.name2fw("dbo.users"), "users");
-            Assert.AreEqual(Utils.name2fw("OrdersProducts/Amount"), "orders_products_amount");
-            Assert.AreEqual(Utils.name2fw("roles&users"), "roles_users");
-            Assert.AreEqual(Utils.name2fw("roles_+__users"), "roles_users");
-            Assert.AreEqual(Utils.name2fw("_JobsDates_"), "jobs_dates");
-            Assert.AreEqual(Utils.name2fw("JOBS_"), "jobs");
+            Assert.AreEqual("users", Utils.name2fw("dbo.users"));
+            Assert.AreEqual("orders_products_amount", Utils.name2fw("OrdersProducts/Amount"));
+            Assert.AreEqual("roles_users", Utils.name2fw("roles&users"));
+            Assert.AreEqual("roles_users", Utils.name2fw("roles_+__users"));
+            Assert.AreEqual("jobs_dates", Utils.name2fw("_JobsDates_"));
+            Assert.AreEqual("jobs", Utils.name2fw("JOBS_"));
         }
 
         [TestMethod()]

@@ -641,6 +641,10 @@ public static class FwExtensions
         {
             return i;
         }
+        if (o is Enum e)
+        {
+            return Convert.ToInt32(e);
+        }
         return o.toStr().toInt(defaultValue);
     }
 

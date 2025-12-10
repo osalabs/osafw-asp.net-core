@@ -21,7 +21,7 @@ public static class FwConfig
     public static string hostname => (settings?["hostname"] as string) ?? "";
 
     /// <summary>Per-request, host-specific settings bucket.</summary>
-    public static Hashtable settings { get => _current.Value ??= new Hashtable(); private set => _current.Value = value; }
+    public static Hashtable settings { get => _current.Value ??= []; private set => _current.Value = value; }
 
     // internals
     private static readonly AsyncLocal<Hashtable> _current = new();                // per-async-flow bucket
@@ -66,7 +66,7 @@ public static class FwConfig
     }
 
     // One-time base (read-only) initialisation shared by all hosts.
-    private static Lazy<Hashtable> _base = new(() =>
+    private static readonly Lazy<Hashtable> _base = new(() =>
     {
         var tmp = new Hashtable();
         initDefaults(null, "", ref tmp);
@@ -107,8 +107,7 @@ public static class FwConfig
 
         string PhysicalApplicationPath;
         string basedir = AppDomain.CurrentDomain.BaseDirectory; //application root directory
-        var bin_index = basedir.IndexOf($@"{path_separator}bin");
-        if (bin_index == -1)
+        if (!basedir.Contains($@"{path_separator}bin"))
         {
             // try to find bin directory - if it's NOT found than we working under published-only site setup,
             // so basedir is our app path
@@ -223,10 +222,7 @@ public static class FwConfig
 
         // default settings that depend on other settings
         if (!settings.ContainsKey("ASSETS_URL"))
-        {
-            var rootUrl = settings.ContainsKey("ROOT_URL") ? settings["ROOT_URL"].toStr() : string.Empty;
-            settings["ASSETS_URL"] = rootUrl + "/assets";
-        }
+            settings["ASSETS_URL"] = settings["ROOT_URL"].toStr() + "/assets";
     }
 
     /// <summary>
@@ -240,11 +236,11 @@ public static class FwConfig
         readSettingsSection(configuration.GetSection("appSettings"), ref appSettings);
 
         // The “appSettings” itself might be nested inside the hash
-        var settings = (Hashtable?)appSettings["appSettings"] ?? new Hashtable();
-        appSettings["appSettings"] = settings;
+        var settings1 = (Hashtable?)appSettings["appSettings"] ?? [];
+        appSettings["appSettings"] = settings1;
         // Override by name if environment-based overrides are used
-        overrideSettingsByName(environment, settings);
+        overrideSettingsByName(environment, settings1);
 
-        return settings;
+        return settings1;
     }
 }

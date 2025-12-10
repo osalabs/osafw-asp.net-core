@@ -39,14 +39,9 @@ using System.Text.RegularExpressions;
 
 namespace osafw;
 
-public class DBNameAttribute : Attribute
+public class DBNameAttribute(string description) : Attribute
 {
-    public string Description { get; set; }
-
-    public DBNameAttribute(string description)
-    {
-        Description = description;
-    }
+    public string Description { get; set; } = description;
 }
 
 public class DBRow : Dictionary<string, string>
@@ -741,10 +736,10 @@ public class DB : IDisposable
         disposeLastQuery();
 
         //shallow copy to avoid modifying original
-        Hashtable @params = in_params != null ? (Hashtable)in_params.Clone() : new Hashtable();
+        Hashtable @params = in_params != null ? (Hashtable)in_params.Clone() : [];
 
         expandParams(ref sql, ref @params);
-        @params ??= new Hashtable();
+        @params ??= [];
 
         logQueryAndParams(sql, @params);
 
@@ -920,7 +915,7 @@ public class DB : IDisposable
     {
         connect();
 
-        @params ??= new Hashtable();
+        @params ??= [];
         expandParams(ref sql, ref @params);
 
         logQueryAndParams(sql, @params);
@@ -1232,9 +1227,8 @@ public class DB : IDisposable
                     quoted.Add(this.qid(field) + " as " + this.qid(alias));
                 }
             }
-            else if (aselect_fields is IDictionary)
+            else if (aselect_fields is IDictionary dict)
             {
-                var dict = (IDictionary)aselect_fields;
                 foreach (DictionaryEntry entry in dict)
                 {
                     var field = entry.Key.toStr();
@@ -1724,8 +1718,7 @@ public class DB : IDisposable
                 if (dbop.op == DBOps.BETWEEN)
                 {
                     // special case for between
-                    var list = dbop.value as IList;
-                    if (list != null && list.Count >= 2)
+                    if (dbop.value is IList list && list.Count >= 2)
                     {
                         @params[param_name + "_1"] = list[0];
                         @params[param_name + "_2"] = list[1];
@@ -1741,8 +1734,7 @@ public class DB : IDisposable
                 else if (dbop.op == DBOps.IN || dbop.op == DBOps.NOTIN)
                 {
                     List<string> sql_params = [];
-                    var list = dbop.value as IList;
-                    if (list != null)
+                    if (dbop.value is IList list)
                     {
                         var i = 1;
                         foreach (var pvalue in list)
@@ -1829,8 +1821,7 @@ public class DB : IDisposable
         // db operation
         if (dbop.op == DBOps.IN || dbop.op == DBOps.NOTIN)
         {
-            var list = dbop.value as IList;
-            if (list == null || list.Count == 0)
+            if (dbop.value is not IList list || list.Count == 0)
             {
                 dbop.value = new ArrayList();
             }
@@ -1844,8 +1835,7 @@ public class DB : IDisposable
         }
         else if (dbop.op == DBOps.BETWEEN)
         {
-            var list = dbop.value as IList;
-            if (list == null || list.Count < 2)
+            if (dbop.value is not IList list || list.Count < 2)
             {
                 dbop.value = new ArrayList() { field2typed(field_type, DBNull.Value), field2typed(field_type, DBNull.Value) };
             }
@@ -2682,7 +2672,7 @@ public class DB : IDisposable
         if (dbtype != DBTYPE_SQLSRV && dbtype != DBTYPE_OLE && dbtype != DBTYPE_MYSQL)
         {
             if (schema.Count == 0)
-                schema = (Dictionary<string, Hashtable>?)conf["schema"] ?? new Dictionary<string, Hashtable>();
+                schema = (Dictionary<string, Hashtable>?)conf["schema"] ?? [];
         }
 
         // check if schema already there

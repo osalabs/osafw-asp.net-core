@@ -31,8 +31,8 @@ public class FwVirtualController : FwVueController
         }
 
         //use cached config or create config on the fly
-        var config = Utils.jsonDecode(fwcontroller["config"].toStr()) as Hashtable;
-        if (config == null)
+        var con_config = Utils.jsonDecode(fwcontroller["config"].toStr()) as Hashtable;
+        if (con_config == null)
         {
             var entity = new Hashtable
             {
@@ -46,8 +46,8 @@ public class FwVirtualController : FwVueController
                     }
                 }
             };
-            config = [];
-            new DevCodeGen(fw, fw.db).updateControllerConfig(entity, config);
+            con_config = [];
+            new DevCodeGen(fw, fw.db).updateControllerConfig(entity, con_config);
             //logger("virtual config:", config);
         }
 
@@ -66,7 +66,7 @@ public class FwVirtualController : FwVueController
             else
             {
                 logger(LogLevel.TRACE, "merging config from:", file_config);
-                Utils.mergeHashDeep(config, file_config);
+                Utils.mergeHashDeep(con_config, file_config);
             }
         }
 
@@ -84,12 +84,12 @@ public class FwVirtualController : FwVueController
                 else
                 {
                     logger(LogLevel.TRACE, "merging config from:", file_config);
-                    Utils.mergeHashDeep(config, file_config);
+                    Utils.mergeHashDeep(con_config, file_config);
                 }
             }
         }
 
-        loadControllerConfig(config);
+        loadControllerConfig(con_config);
     }
 
 }
