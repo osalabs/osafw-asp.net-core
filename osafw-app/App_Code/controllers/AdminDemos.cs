@@ -13,8 +13,8 @@ public class AdminDemosController : FwAdminController
 {
     public static new int access_level = Users.ACL_MANAGER;
 
-    protected Demos model;
-    protected DemoDicts model_related;
+    protected Demos model = null!;
+    protected DemoDicts model_related = null!;
 
     public override void init(FW fw)
     {
@@ -47,18 +47,18 @@ public class AdminDemosController : FwAdminController
             row["demo_dicts"] = model_related.one(row["demo_dicts_id"].toInt()).toHashtable();
     }
 
-    public override Hashtable ShowAction(int id)
+    public override Hashtable? ShowAction(int id)
     {
-        Hashtable ps = base.ShowAction(id);
-        Hashtable item = ps["i"] as Hashtable;
+        Hashtable ps = base.ShowAction(id) ?? [];
+        Hashtable item = ps["i"] as Hashtable ?? [];
         //var id = Utils.f2int(item["id"]);
 
         ps["parent"] = model.one(item["parent_id"].toInt());
         ps["demo_dicts"] = model_related.one(item["demo_dicts_id"].toInt());
         ps["dict_link_auto"] = model_related.one(item["dict_link_auto_id"].toInt());
-        ps["multi_datarow"] = model_related.listWithChecked((string)item["dict_link_multi"]);
+        ps["multi_datarow"] = model_related.listWithChecked(item["dict_link_multi"].toStr());
         ps["multi_datarow_link"] = fw.model<DemosDemoDicts>().listLinkedByMainId(id);
-        FormUtils.comboForDate((string)item["fdate_combo"], ps, "fdate_combo");
+        FormUtils.comboForDate(item["fdate_combo"].toStr(), ps, "fdate_combo");
 
         ps["att"] = fw.model<Att>().one(item["att_id"].toInt());
         ps["att_links"] = fw.model<Att>().listLinked(model.table_name, id);
@@ -71,25 +71,25 @@ public class AdminDemosController : FwAdminController
             list_filter["tab_activity"] = list_filter["tab_activity"].toStr(FwActivityLogs.TAB_COMMENTS);
             ps["list_filter"] = list_filter;
             ps["activity_entity"] = model0.table_name;
-            ps["activity_rows"] = fw.model<FwActivityLogs>().listByEntityForUI(model.table_name, id, (string)list_filter["tab_activity"]);
+            ps["activity_rows"] = fw.model<FwActivityLogs>().listByEntityForUI(model.table_name, id, list_filter["tab_activity"].toStr());
         }
 
         return ps;
     }
 
-    public override Hashtable ShowFormAction(int id = 0)
+    public override Hashtable? ShowFormAction(int id = 0)
     {
         // form_new_defaults = new() { { "iname", "New Item" } }; //set new form defaults if any
-        Hashtable ps = base.ShowFormAction(id);
+        Hashtable ps = base.ShowFormAction(id) ?? [];
 
         // read dropdowns lists from db
-        var item = (Hashtable)ps["i"];
+        var item = ps["i"] as Hashtable ?? [];
         ps["select_options_parent_id"] = model.listSelectOptionsParent();
         ps["select_options_demo_dicts_id"] = model_related.listSelectOptions();
         ps["dict_link_auto_id_iname"] = model_related.iname(item["dict_link_auto_id"]);
         ps["multi_datarow"] = model_related.listWithChecked(item["dict_link_multi"].toStr());
         ps["multi_datarow_link"] = fw.model<DemosDemoDicts>().listLinkedByMainId(id);
-        FormUtils.comboForDate((string)item["fdate_combo"], ps, "fdate_combo");
+        FormUtils.comboForDate(item["fdate_combo"].toStr(), ps, "fdate_combo");
 
         ps["att"] = fw.model<Att>().one(item["att_id"]).toHashtable();
         ps["att_links"] = fw.model<Att>().listLinked(model.table_name, id);
@@ -104,7 +104,7 @@ public class AdminDemosController : FwAdminController
         return ps;
     }
 
-    public override Hashtable SaveAction(int id = 0)
+    public override Hashtable? SaveAction(int id = 0)
     {
         route_onerror = FW.ACTION_SHOW_FORM; //set route to go if error happens
 
@@ -128,10 +128,10 @@ public class AdminDemosController : FwAdminController
 
         Hashtable itemdb = FormUtils.filter(item, this.save_fields);
         FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
-        itemdb["dict_link_auto_id"] = model_related.findOrAddByIname((string)item["dict_link_auto_id_iname"], out _);
+        itemdb["dict_link_auto_id"] = model_related.findOrAddByIname(item["dict_link_auto_id_iname"].toStr(), out _);
         itemdb["dict_link_multi"] = FormUtils.multi2ids(reqh("dict_link_multi"));
         itemdb["fdate_combo"] = FormUtils.dateForCombo(item, "fdate_combo");
-        itemdb["ftime"] = FormUtils.timeStrToInt((string)item["ftime_str"]); // ftime - convert from HH:MM to int (0-24h in seconds)
+        itemdb["ftime"] = FormUtils.timeStrToInt(item["ftime_str"].toStr()); // ftime - convert from HH:MM to int (0-24h in seconds)
         itemdb["fint"] = itemdb["fint"].toInt(); // field accepts only int
 
         id = this.modelAddOrUpdate(id, itemdb);
@@ -153,9 +153,9 @@ public class AdminDemosController : FwAdminController
     {
         bool result = this.validateRequired(id, item, this.required_fields);
 
-        if (result && model.isExists(item["email"], id))
+        if (result && model.isExists(item["email"].toStr(), id))
             fw.FormErrors["email"] = "EXISTS";
-        if (result && !FormUtils.isEmail((string)item["email"]))
+        if (result && !FormUtils.isEmail(item["email"].toStr()))
             fw.FormErrors["email"] = "EMAIL";
 
         //if (result && !SomeOtherValidation())
@@ -182,7 +182,9 @@ public class AdminDemosController : FwAdminController
         // validation
         if (id == 0)
             throw new UserException("Invalid ID");
-        if (fw.request.Form.Files.Count == 0 || fw.request.Form.Files[0] == null || fw.request.Form.Files[0].Length == 0)
+        var files = fw.request!.Form?.Files;
+        var firstFile = files == null || files.Count == 0 ? null : files[0];
+        if (firstFile == null || firstFile.Length == 0)
             throw new UserException("No file(s) selected");
 
         var modelAtt = fw.model<Att>();
@@ -199,7 +201,7 @@ public class AdminDemosController : FwAdminController
         var att_id = 0;
         var addedAtt = modelAtt.uploadMulti(itemdb);
         if (addedAtt.Count > 0)
-            att_id = (int)((Hashtable)addedAtt[0])["id"];
+            att_id = (addedAtt[0] as Hashtable)!["id"].toInt();
 
         // make same response as in AdminAtt.SaveAction
         // if select in popup - return json
@@ -243,7 +245,7 @@ public class AdminDemosController : FwAdminController
         var existing = att_model.listByEntityCategory(model0.table_name, id, att_category);
         foreach (Hashtable row in existing)
         {
-            if (!att_ids.ContainsKey(row["id"]))
+            if (!att_ids.ContainsKey(row["id"].toStr()))
                 att_model.delete(row["id"].toInt(), true);
         }
     }

@@ -1,4 +1,4 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 
@@ -12,7 +12,7 @@ namespace osafw.Tests
         [TestMethod]
         public void toBool_Null_ReturnsFalse()
         {
-            object input = null;
+            object? input = null;
             Assert.IsFalse(input.toBool());
         }
 
@@ -108,7 +108,7 @@ namespace osafw.Tests
         [TestMethod]
         public void toDate_Null_ReturnsMinValue()
         {
-            object input = null;
+            object? input = null;
             Assert.AreEqual(DateTime.MinValue, input.toDate());
         }
 
@@ -149,7 +149,7 @@ namespace osafw.Tests
         [TestMethod]
         public void toDateOrNull_Null_ReturnsNull()
         {
-            object input = null;
+            object? input = null;
             Assert.IsNull(input.toDateOrNull());
         }
 
@@ -198,7 +198,7 @@ namespace osafw.Tests
         [TestMethod]
         public void toDecimal_Null_ReturnsDefault()
         {
-            object input = null;
+            object? input = null;
             Assert.AreEqual(0m, input.toDecimal());
         }
 
@@ -238,7 +238,7 @@ namespace osafw.Tests
         [TestMethod]
         public void toDouble_Null_ReturnsDefault()
         {
-            object input = null;
+            object? input = null;
             Assert.AreEqual(0.0, input.toDouble());
         }
 
@@ -278,7 +278,7 @@ namespace osafw.Tests
         [TestMethod]
         public void toFloat_Null_ReturnsDefault()
         {
-            object input = null;
+            object? input = null;
             Assert.AreEqual(0.0f, input.toFloat());
         }
 
@@ -318,7 +318,7 @@ namespace osafw.Tests
         [TestMethod]
         public void toInt_Null_ReturnsDefault()
         {
-            object input = null;
+            object? input = null;
             Assert.AreEqual(0, input.toInt());
         }
 
@@ -358,7 +358,7 @@ namespace osafw.Tests
         [TestMethod]
         public void toLong_Null_ReturnsDefault()
         {
-            object input = null;
+            object? input = null;
             Assert.AreEqual(0L, input.toLong());
         }
 
@@ -398,7 +398,7 @@ namespace osafw.Tests
         [TestMethod]
         public void toStr_Null_ReturnsEmpty()
         {
-            object input = null;
+            object? input = null;
             Assert.AreEqual(string.Empty, input.toStr());
         }
 

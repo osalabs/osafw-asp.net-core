@@ -3,24 +3,26 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2023 Oleg Savchuk www.osalabs.com
 
+using System;
+
 namespace osafw;
 
 public class AdminDemosDynamicController : FwDynamicController
 {
     public static new int access_level = Users.ACL_MANAGER;
 
-    protected Demos model;
+    protected Demos model = null!;
 
     public override void init(FW fw)
     {
         base.init(fw);
         // use if config doesn't contains model name
-        // model0 = fw.model(Of Demos)()
-        // model = model0
+        // model = fw.model<Demos>();
+        // model0 = model;
 
         base_url = "/Admin/DemosDynamic";
         this.loadControllerConfig();
-        model = model0 as Demos;
+        model = model0 as Demos ?? throw new FwConfigUndefinedModelException();
         db = model.getDB(); // model-based controller works with model's db
 
         model_related = fw.model<DemoDicts>();
@@ -29,7 +31,6 @@ public class AdminDemosDynamicController : FwDynamicController
 
         // override sortmap for additional computed fields
         // allow sorting by display-friendly date to map to real DB field
-        list_sortmap ??= [];
         list_sortmap["fdate_pop_str"] = "fdate_pop";
     }
 }

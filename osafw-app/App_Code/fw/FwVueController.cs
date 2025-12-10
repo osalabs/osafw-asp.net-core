@@ -31,7 +31,7 @@ public class FwVueController : FwDynamicController
         var is_id_in_fields = false;
         foreach (Hashtable header in list_headers)
         {
-            var field_name = (string)header["field_name"];
+            var field_name = header["field_name"].toStr();
             quoted_fields.Add(db.qid(field_name));
             if (field_name == model0.field_id)
                 is_id_in_fields = true;
@@ -50,7 +50,7 @@ public class FwVueController : FwDynamicController
     {
         //extract autocomplete fields
         var ac_fields = new ArrayList();
-        var fields = (ArrayList)this.config["showform_fields"];
+        var fields = this.config["showform_fields"] as ArrayList ?? new ArrayList();
         foreach (Hashtable def in fields)
         {
             //var field_name = def["field"].toStr();
@@ -68,9 +68,9 @@ public class FwVueController : FwDynamicController
 
             //added/updated username - it's readonly so we can replace _id fields with names
             if (!string.IsNullOrEmpty(model0.field_add_users_id) && row.ContainsKey(model0.field_add_users_id))
-                row["add_users_id"] = fw.model<Users>().iname(row[model0.field_add_users_id]);
+                row["add_users_id"] = fw.model<Users>().iname(row[model0.field_add_users_id].toInt());
             if (!string.IsNullOrEmpty(model0.field_upd_users_id) && row.ContainsKey(model0.field_upd_users_id))
-                row["upd_users_id"] = fw.model<Users>().iname(row[model0.field_upd_users_id]);
+                row["upd_users_id"] = fw.model<Users>().iname(row[model0.field_upd_users_id].toInt());
 
             //autocomplete fields - add _iname fields
             foreach (Hashtable def in ac_fields)
@@ -87,10 +87,10 @@ public class FwVueController : FwDynamicController
                     }
                     else
                     {
-                        var ac_model = fw.model(model_name);
-                        if (ac_model != null)
-                        {
-                            var ac_item = ac_model.one(row[field_name]);
+                    var ac_model = fw.model(model_name);
+                    if (ac_model != null)
+                    {
+                        var ac_item = ac_model.one(row[field_name]);
                             row[field_name + "_iname"] = ac_item["iname"];
                         }
                     }
@@ -153,7 +153,7 @@ public class FwVueController : FwDynamicController
         setListSearch();
         setListSearchStatus();
 
-        if (list_headers == null)
+        if (list_headers.Count == 0)
             setViewList(false); // initialize list_headers and related (can already be initialized in setScopeInitial)
 
         //only select from db visible fields + id, save as comma-separated string into list_fields
@@ -181,10 +181,10 @@ public class FwVueController : FwDynamicController
         if (this.is_userlists)
             this.setUserLists(ps);
 
-        if (list_headers == null)
+        if (list_headers.Count == 0)
             setViewList(false); // initialize list_headers and related (can already be initialized in setScopeInitial)
 
-        ArrayList showform_fields = (ArrayList)this.config["showform_fields"];
+        var showform_fields = this.config["showform_fields"] as ArrayList ?? [];
         //Hashtable hfields = _fieldsToHash(showform_fields);
 
         // extract lookups from config and add to ps
@@ -266,7 +266,7 @@ public class FwVueController : FwDynamicController
 
             // else - this is initial non-json page load - return layout/js to the browser, then Vue will load data via API
             // if url is /ID or /ID/edit or /new - add screen, id to ps so Vue app will switch to related screen
-            var route = fw.getRoute(fw.request.Path);
+            var route = fw.getRoute(fw.request?.Path ?? string.Empty);
             if (route.action == FW.ACTION_SHOW_FORM)
             {
                 ps["screen"] = "edit";
@@ -300,7 +300,7 @@ public class FwVueController : FwDynamicController
         return ps;
     }
 
-    public override Hashtable ShowAction(int id = 0)
+    public override Hashtable? ShowAction(int id = 0)
     {
         if (!fw.isJsonExpected())
         {
@@ -321,7 +321,7 @@ public class FwVueController : FwDynamicController
         var att_links = new ArrayList(); //linked att ids
         var att_files = new Hashtable(); // per-field: field => [ids]
 
-        var fields = (ArrayList)this.config[mode == "edit" ? "showform_fields" : "show_fields"];
+        var fields = this.config[mode == "edit" ? "showform_fields" : "show_fields"] as ArrayList ?? [];
         foreach (Hashtable def in fields)
         {
             var field_name = def["field"].toStr();
@@ -395,8 +395,9 @@ public class FwVueController : FwDynamicController
                 foreach (Hashtable att_item in att_items)
                 {
                     fw.model<Att>().filterForJson(att_item);
-                    attachments[att_item["id"]] = att_item;
-                    att_links.Add(att_item["id"]);
+                    var attId = att_item["id"].toInt();
+                    attachments[attId] = att_item;
+                    att_links.Add(attId);
                 }
             }
             else if (dtype == "att_files" || dtype == "att_files_edit")
@@ -407,8 +408,9 @@ public class FwVueController : FwDynamicController
                 foreach (Hashtable att_item in att_items)
                 {
                     fw.model<Att>().filterForJson(att_item);
-                    attachments[att_item["id"]] = att_item;
-                    ids.Add(att_item["id"]);
+                    var attId = att_item["id"].toInt();
+                    attachments[attId] = att_item;
+                    ids.Add(attId);
                 }
                 att_files[field_name] = ids;
             }
@@ -436,7 +438,7 @@ public class FwVueController : FwDynamicController
         return ps;
     }
 
-    public override Hashtable SaveAction(int id = 0)
+    public override Hashtable? SaveAction(int id = 0)
     {
         if (this.save_fields == null)
             throw new Exception("No fields to save defined, define in Controller.save_fields");
@@ -468,7 +470,7 @@ public class FwVueController : FwDynamicController
         return ps;
     }
 
-    public override Hashtable ShowFormAction(int id = 0)
+    public override Hashtable? ShowFormAction(int id = 0)
     {
         if (!fw.isJsonExpected())
         {

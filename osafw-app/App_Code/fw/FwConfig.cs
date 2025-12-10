@@ -21,12 +21,12 @@ public static class FwConfig
     public static string hostname => (settings?["hostname"] as string) ?? "";
 
     /// <summary>Per-request, host-specific settings bucket.</summary>
-    public static Hashtable settings { get => _current.Value; private set => _current.Value = value; }
+    public static Hashtable settings { get => _current.Value ??= new Hashtable(); private set => _current.Value = value; }
 
     // internals
     private static readonly AsyncLocal<Hashtable> _current = new();                // per-async-flow bucket
     private static readonly ConcurrentDictionary<string, Hashtable> _hostCache = new();
-    private static IConfiguration configuration;                                   // appsettings.* provider
+    private static IConfiguration? configuration;                                   // appsettings.* provider
     private static readonly object locker = new();
 
     public static readonly char path_separator = Path.DirectorySeparatorChar;
@@ -45,7 +45,7 @@ public static class FwConfig
     }
 
     /// <remarks>Called exactly once per _http request_ by FW.</remarks>
-    public static void init(HttpContext ctx, IConfiguration cfg, string host = null)
+    public static void init(HttpContext? ctx, IConfiguration cfg, string? host = null)
     {
         configuration ??= cfg;                                          // record for offline tools
 
@@ -59,6 +59,9 @@ public static class FwConfig
     public static void reload(FW fw)
     {
         _hostCache.TryRemove(hostname, out _);     // force re-build on next request
+        if (configuration == null)
+            throw new InvalidOperationException("FwConfig.init must be called before reload");
+
         init(fw.context, configuration, fw.context?.Request.Host.ToString());
     }
 
@@ -67,17 +70,18 @@ public static class FwConfig
     {
         var tmp = new Hashtable();
         initDefaults(null, "", ref tmp);
-        readSettings(configuration, ref tmp);                                     // appsettings:appSettings
+        if (configuration != null)
+            readSettings(configuration, ref tmp);                                     // appsettings:appSettings
         return tmp;
     }, LazyThreadSafetyMode.ExecutionAndPublication);
 
-    private static Hashtable buildForHost(HttpContext ctx, string host)
+    private static Hashtable buildForHost(HttpContext? ctx, string host)
     {
         // clone deep - each host gets its own mutable copy
-        var hs = Utils.cloneHashDeep(_base.Value);
+        var hs = Utils.cloneHashDeep(_base.Value) ?? [];
 
         if (string.IsNullOrEmpty(host))
-            overrideSettingsByName(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "", hs, false); // use env name override if no host
+            overrideSettingsByName(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? string.Empty, hs, false); // use env name override if no host
         else
             overrideSettingsByName(host, hs, true);
 
@@ -90,7 +94,7 @@ public static class FwConfig
     /// </summary>
     /// <param name="context">can be null for offline execution</param>
     /// <param name="hostname"></param>
-    private static void initDefaults(HttpContext context, string hostname, ref Hashtable st)
+    private static void initDefaults(HttpContext? context, string hostname, ref Hashtable st)
     {
         st = new Hashtable
         {
@@ -120,7 +124,7 @@ public static class FwConfig
 
         // default or theme template dir
         // make absolute path to templates from site root
-        st["template"] = (string)st["site_root"] + $@"{path_separator}App_Data{path_separator}template";
+        st["template"] = st["site_root"] + $@"{path_separator}App_Data{path_separator}template";
 
         st["log"] = st["site_root"] + $@"{path_separator}App_Data{path_separator}logs{path_separator}main.log";
         st["log_max_size"] = 100 * 1024 * 1024; // 100 MB is max log size
@@ -145,7 +149,7 @@ public static class FwConfig
             settings[section.Key] = new Hashtable();
             foreach (IConfigurationSection sub_section in section.GetChildren())
             {
-                Hashtable s = (Hashtable)settings[section.Key];
+                Hashtable s = (Hashtable)settings[section.Key]!;
                 readSettingsSection(sub_section, ref s);
             }
         }
@@ -161,7 +165,7 @@ public static class FwConfig
         }
     }
 
-    private static void overrideContextSettings(HttpContext ctx, string host, Hashtable st)
+    private static void overrideContextSettings(HttpContext? ctx, string host, Hashtable st)
     {
         if (ctx == null) return;
         var req = ctx.Request;
@@ -170,27 +174,30 @@ public static class FwConfig
         string appBase = req.PathBase;
         st["ROOT_URL"] = Regex.Replace(appBase, @"/$", "");
 
-        bool isHttps = ctx.GetServerVariable("HTTPS") == "on";
-        string port = ctx.GetServerVariable("SERVER_PORT");
+        var httpsValue = ctx.GetServerVariable("HTTPS") ?? string.Empty;
+        bool isHttps = httpsValue.Equals("on", StringComparison.OrdinalIgnoreCase);
+        string port = ctx.GetServerVariable("SERVER_PORT") ?? "80";
         string portPart = (port == "80" || port == "443") ? "" : ":" + port;
-        st["ROOT_DOMAIN"] = (isHttps ? "https://" : "http://") + ctx.GetServerVariable("SERVER_NAME") + portPart;
+        var serverName = ctx.GetServerVariable("SERVER_NAME") ?? host;
+        st["ROOT_DOMAIN"] = (isHttps ? "https://" : "http://") + serverName + portPart;
     }
 
     public static void overrideSettingsByName(string override_name, Hashtable settings, bool is_regex_match = false)
     {
-        Hashtable overs = (Hashtable)settings["override"];
-        if (overs != null)
+        if (settings["override"] is Hashtable overs)
         {
             foreach (string over_name in overs.Keys)
             {
-                Hashtable over = (Hashtable)overs[over_name];
-                if (!is_regex_match && over_name == override_name
-                    || is_regex_match && Regex.IsMatch(override_name, (string)over["hostname_match"])
-                    )
+                if (overs[over_name] is Hashtable over)
                 {
-                    settings["config_override"] = over_name;
-                    Utils.mergeHashDeep(settings, over);
-                    break;
+                    if (!is_regex_match && over_name == override_name
+                        || is_regex_match && Regex.IsMatch(override_name, over["hostname_match"].toStr())
+                        )
+                    {
+                        settings["config_override"] = over_name;
+                        Utils.mergeHashDeep(settings, over);
+                        break;
+                    }
                 }
             }
         }
@@ -199,9 +206,14 @@ public static class FwConfig
         LogLevel log_level = LogLevel.INFO; // default log level if none or Wrong level in config
         if (settings.ContainsKey("log_level") && settings["log_level"] != null)
         {
-            if (settings["log_level"].GetType() != typeof(LogLevel))
+            var logLevelValue = settings["log_level"];
+            if (logLevelValue is LogLevel level)
             {
-                Enum.TryParse<LogLevel>((string)settings["log_level"], true, out log_level);
+                log_level = level;
+            }
+            else
+            {
+                Enum.TryParse<LogLevel>(logLevelValue.toStr(), true, out log_level);
                 settings["log_level"] = log_level;
             }
         }
@@ -211,7 +223,10 @@ public static class FwConfig
 
         // default settings that depend on other settings
         if (!settings.ContainsKey("ASSETS_URL"))
-            settings["ASSETS_URL"] = settings["ROOT_URL"] + "/assets";
+        {
+            var rootUrl = settings.ContainsKey("ROOT_URL") ? settings["ROOT_URL"].toStr() : string.Empty;
+            settings["ASSETS_URL"] = rootUrl + "/assets";
+        }
     }
 
     /// <summary>
@@ -225,7 +240,8 @@ public static class FwConfig
         readSettingsSection(configuration.GetSection("appSettings"), ref appSettings);
 
         // The “appSettings” itself might be nested inside the hash
-        var settings = (Hashtable)appSettings["appSettings"];
+        var settings = (Hashtable?)appSettings["appSettings"] ?? new Hashtable();
+        appSettings["appSettings"] = settings;
         // Override by name if environment-based overrides are used
         overrideSettingsByName(environment, settings);
 

@@ -11,7 +11,7 @@ public class AdminRolesController : FwDynamicController
 {
     public static new int access_level = Users.ACL_ADMIN;
 
-    protected Roles model;
+    protected Roles model = null!;
 
     public override void init(FW fw)
     {
@@ -22,7 +22,7 @@ public class AdminRolesController : FwDynamicController
 
         base_url = "/Admin/Roles";
         this.loadControllerConfig();
-        model = model0 as Roles;
+        model = model0 as Roles ?? throw new FwConfigUndefinedModelException();
         db = model.getDB(); // model-based controller works with model's db
 
         model_related = fw.model<Roles>();
@@ -32,14 +32,14 @@ public class AdminRolesController : FwDynamicController
         // list_sortmap["fdate_pop_str"] = "fdate_pop";
     }
 
-    public override Hashtable ShowAction(int id = 0)
+    public override Hashtable? ShowAction(int id = 0)
     {
-        var ps = base.ShowAction(id);
+        var ps = base.ShowAction(id)!;
         var item = ps["i"] as Hashtable;
-        var fields = ps["fields"] as ArrayList;
+        var fields = ps["fields"] as ArrayList ?? [];
 
         // roles_resources_permissions matrix
-        var defMatrix = defByFieldname("roles_resources_permissions", fields);
+        var defMatrix = defByFieldname("roles_resources_permissions", fields) ?? [];
         var permissions = fw.model<Permissions>().list();
         defMatrix["permissions_header"] = permissions;
         defMatrix["permissions_count"] = permissions.Count;
@@ -51,12 +51,12 @@ public class AdminRolesController : FwDynamicController
 
     public override Hashtable ShowFormAction(int id = 0)
     {
-        var ps = base.ShowFormAction(id);
-        var item = ps["i"] as Hashtable;
-        var fields = ps["fields"] as ArrayList;
+        var ps = base.ShowFormAction(id)!;
+        var item = (Hashtable)ps["i"]!;
+        var fields = ps["fields"] as ArrayList ?? [];
 
         // roles_resources_permissions matrix
-        var defMatrix = defByFieldname("roles_resources_permissions", fields);
+        var defMatrix = defByFieldname("roles_resources_permissions", fields) ?? [];
         var permissions = fw.model<Permissions>().list();
         defMatrix["permissions_header"] = permissions;
         defMatrix["permissions_count"] = permissions.Count;

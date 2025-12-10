@@ -70,7 +70,7 @@ public class MyPasswordController : FwController
         // var itemdb = Users.one(id);
 
         var itemdb = FormUtils.filter(reqh("item"), Utils.qw("email pwd"));
-        itemdb["pwd"] = itemdb["pwd"].ToString().Trim();
+        itemdb["pwd"] = itemdb["pwd"].toStr().Trim();
 
         if (id > 0)
         {
@@ -90,18 +90,20 @@ public class MyPasswordController : FwController
         if (!result)
             fw.FormErrors["REQ"] = 1;
 
-        if (result && model.isExists(item["email"], id))
+        var email = item["email"].toStr();
+
+        if (result && model.isExists(email, id))
         {
             result = false;
             fw.FormErrors["email"] = "EXISTS";
         }
-        if (result && !FormUtils.isEmail((string)item["email"]))
+        if (result && !FormUtils.isEmail(email))
         {
             result = false;
             fw.FormErrors["email"] = "EMAIL";
         }
 
-        if (result && model.cleanPwd((string)item["pwd"]) != model.cleanPwd((string)item["pwd2"]))
+        if (result && model.cleanPwd(item["pwd"].toStr()) != model.cleanPwd(item["pwd2"].toStr()))
         {
             result = false;
             fw.FormErrors["pwd2"] = "NOTEQUAL";
@@ -116,7 +118,7 @@ public class MyPasswordController : FwController
         if (result)
         {
             var itemdb = model.one(id);
-            if (!fw.model<Users>().checkPwd((string)item["old_pwd"], itemdb["pwd"]))
+            if (!fw.model<Users>().checkPwd(item["old_pwd"].toStr(), itemdb["pwd"]))
             {
                 fw.FormErrors["old_pwd"] = "WRONG";
             }

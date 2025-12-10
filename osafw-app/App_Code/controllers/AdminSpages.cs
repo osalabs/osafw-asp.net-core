@@ -13,7 +13,7 @@ public class AdminSpagesController : FwAdminController
 {
     public static new int access_level = Users.ACL_MANAGER;
 
-    protected Spages model;
+    protected Spages model = null!;
 
     public override void init(FW fw)
     {
@@ -33,9 +33,9 @@ public class AdminSpagesController : FwAdminController
 
     public override void getListRows()
     {
-        if ((string)list_filter["sortby"] == "iname"
-            && (string)list_filter["s"] == ""
-            && ((string)this.list_filter["status"] == "" || (string)this.list_filter["status"] == "0"))
+        if (list_filter["sortby"].toStr() == "iname"
+            && list_filter["s"].toStr() == ""
+            && (this.list_filter["status"].toStr() == "" || this.list_filter["status"].toStr() == "0"))
         {
             // show tree only if sort by title and no search and status by all or active
             this.list_count = db.valuep("select count(*) from " + db.qid(model.table_name) +
@@ -92,9 +92,9 @@ public class AdminSpagesController : FwAdminController
                 ["parent_id"] = parent_id
             };
         }
-        Hashtable ps = base.ShowFormAction(id);
+        var ps = base.ShowFormAction(id) ?? [];
 
-        var item = (Hashtable)ps["i"];
+        var item = ps["i"] as Hashtable ?? [];
         string where = " status<>@status ";
         ArrayList pages_tree = model.tree(where, DB.h("status", FwModel.STATUS_DELETED), "parent_id, prio desc, iname");
         ps["select_options_parent_id"] = model.getPagesTreeSelectHtml(item["parent_id"].toStr(), pages_tree);
@@ -115,7 +115,7 @@ public class AdminSpagesController : FwAdminController
         return ps;
     }
 
-    public override Hashtable SaveAction(int id = 0)
+    public override Hashtable? SaveAction(int id = 0)
     {
         route_onerror = FW.ACTION_SHOW_FORM;
 
@@ -133,13 +133,13 @@ public class AdminSpagesController : FwAdminController
             save_fields2 += " parent_id url status pub_time";
 
         // auto-generate url if it's empty
-        if ((string)item["url"] == "")
+        if (item["url"].toStr() == "")
         {
             item["url"] = item["iname"];
-            item["url"] = Regex.Replace((string)item["url"], @"^\W+", "");
-            item["url"] = Regex.Replace((string)item["url"], @"\W+$", "");
-            item["url"] = Regex.Replace((string)item["url"], @"\W+", "-");
-            if ((string)item["url"] == "")
+            item["url"] = Regex.Replace(item["url"].toStr(), @"^\W+", "");
+            item["url"] = Regex.Replace(item["url"].toStr(), @"\W+$", "");
+            item["url"] = Regex.Replace(item["url"].toStr(), @"\W+", "-");
+            if (item["url"].toStr() == "")
             {
                 if (id > 0)
                     item["url"] = "page-" + id;
@@ -156,7 +156,7 @@ public class AdminSpagesController : FwAdminController
         itemdb["prio"] = itemdb["prio"].toInt();
 
         // if no publish time defined - publish it now
-        if ((string)itemdb["pub_time"] == "")
+        if (itemdb["pub_time"].toStr() == "")
             itemdb["pub_time"] = DB.NOW;
 
         logger("itemdb: ", itemdb);
@@ -172,7 +172,7 @@ public class AdminSpagesController : FwAdminController
     {
         bool result = this.validateRequired(id, item, this.required_fields);
 
-        if (result && model.isExistsByUrl((string)item["url"], item["parent_id"].toInt(), id))
+        if (result && model.isExistsByUrl(item["url"].toStr(), item["parent_id"].toInt(), id))
             fw.FormErrors["url"] = "EXISTS";
 
         if (result)

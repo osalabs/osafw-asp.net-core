@@ -12,7 +12,7 @@ namespace osafw.Tests
     public class DBTests
     {
         private readonly string connstr = "Server=(local);Database=demo;Trusted_Connection=True;TrustServerCertificate=true;";
-        private DB db = null;
+        private DB db = null!;
         private string table_name = "for_unit_testing";
 
         [TestInitialize()]
@@ -191,7 +191,7 @@ namespace osafw.Tests
         [TestMethod()]
         public void valuepTest()
         {
-            string value = (string)db.valuep("SELECT iname FROM " + table_name + " WHERE id=1;");
+            string value = db.valuep("SELECT iname FROM " + table_name + " WHERE id=1;").toStr();
             Assert.AreEqual("test1", value);
         }
 
@@ -199,29 +199,29 @@ namespace osafw.Tests
         public void valueTest()
         {
             // 1. value("table", where)
-            string value = db.value(table_name, DB.h("id", 1)).ToString();
+            string value = db.value(table_name, DB.h("id", 1)).toStr();
             Assert.AreEqual("1", value);
 
             // 2. value("table", where, "field1")
-            value = (string)db.value(table_name, DB.h("id", 1), "iname");
+            value = db.value(table_name, DB.h("id", 1), "iname").toStr();
             Assert.AreEqual("test1", value);
 
             // 3. value("table", where, "1") 'just return 1, useful for exists queries
-            value = (string)db.value(table_name, DB.h("id", 1), "1").ToString();
+            value = db.value(table_name, DB.h("id", 1), "1").toStr();
             Assert.AreEqual("1", value);
 
             // 4. value("table", where, "count(*)", "id asc")
-            value = (string)db.value(table_name, [], "count(*)").ToString();
+            value = db.value(table_name, [], "count(*)").toStr();
             Assert.AreEqual("3", value);
 
             // 5. value("table", where, "MAX(id)")
-            value = (string)db.value(table_name, [], "MAX(id)").ToString();
+            value = db.value(table_name, [], "MAX(id)").toStr();
             Assert.AreEqual("3", value);
 
             //fail test with using bad aggregate function
             try
             {
-                value = (string)db.value(table_name, [], "BAD(id)").ToString();
+                value = db.value(table_name, [], "BAD(id)").toStr();
                 Assert.Fail("Expected exception not thrown");
             }
             catch (Exception ex)
@@ -431,8 +431,9 @@ namespace osafw.Tests
             Assert.IsTrue(r.is_value);
             Assert.AreEqual(DBOps.IN, r.op);
             Assert.AreEqual("IN", r.opstr);
-            Assert.AreEqual("test_value", (string)((object[])r.value)[0]);
-            Assert.AreEqual("test_value2", (string)((object[])r.value)[1]);
+            var values = r.value as object[] ?? throw new AssertFailedException("Expected value array");
+            Assert.AreEqual("test_value", values[0].toStr());
+            Assert.AreEqual("test_value2", values[1].toStr());
         }
 
         [TestMethod()]
@@ -442,8 +443,9 @@ namespace osafw.Tests
             Assert.IsTrue(r.is_value);
             Assert.AreEqual(DBOps.NOTIN, r.op);
             Assert.AreEqual("NOT IN", r.opstr);
-            Assert.AreEqual("test_value", (string)((object[])r.value)[0]);
-            Assert.AreEqual("test_value2", (string)((object[])r.value)[1]);
+            var values = r.value as object[] ?? throw new AssertFailedException("Expected value array");
+            Assert.AreEqual("test_value", values[0].toStr());
+            Assert.AreEqual("test_value2", values[1].toStr());
         }
 
         [TestMethod()]
@@ -453,8 +455,9 @@ namespace osafw.Tests
             Assert.IsTrue(r.is_value);
             Assert.AreEqual(DBOps.BETWEEN, r.op);
             Assert.AreEqual(r.opstr, DBOps.BETWEEN.ToString());
-            Assert.AreEqual("test_value", (string)((object[])r.value)[0]);
-            Assert.AreEqual("test_value2", (string)((object[])r.value)[1]);
+            var values = r.value as object[] ?? throw new AssertFailedException("Expected value array");
+            Assert.AreEqual("test_value", values[0].toStr());
+            Assert.AreEqual("test_value2", values[1].toStr());
         }
 
         [TestMethod()]

@@ -12,7 +12,7 @@ public class MyListsController : FwAdminController
 {
     public static new int access_level = Users.ACL_MEMBER;
 
-    protected UserLists model;
+    protected UserLists model = null!;
 
     public override void init(FW fw)
     {
@@ -34,14 +34,14 @@ public class MyListsController : FwAdminController
         is_readonly = false;//allow update my stuff
     }
 
-    public override Hashtable setPS(Hashtable ps = null)
+    public override Hashtable setPS(Hashtable? ps = null)
     {
         ps = base.setPS(ps);
         ps["select_entities"] = model.listSelectOptionsEntities();
         return ps;
     }
 
-    public override Hashtable initFilter(string session_key = null)
+    public override Hashtable initFilter(string? session_key = null)
     {
         base.initFilter(session_key);
         if (!this.list_filter.ContainsKey("entity"))
@@ -86,13 +86,13 @@ public class MyListsController : FwAdminController
             row["ctr"] = model.countItems(row["id"].toInt());
     }
 
-    public override Hashtable ShowFormAction(int id = 0)
+    public override Hashtable? ShowFormAction(int id = 0)
     {
         form_new_defaults = new() { ["entity"] = related_id };
         return base.ShowFormAction(id);
     }
 
-    public override Hashtable SaveAction(int id = 0)
+    public override Hashtable? SaveAction(int id = 0)
     {
         route_onerror = FW.ACTION_SHOW_FORM; //set route to go if error happens
 
@@ -115,7 +115,7 @@ public class MyListsController : FwAdminController
         if (is_new && item.ContainsKey("item_id"))
         {
             // item_id could contain comma-separated ids
-            var hids = Utils.commastr2hash((string)item["item_id"]);
+            var hids = Utils.commastr2hash(item["item_id"].toStr());
             if (hids.Count > 0)
             {
                 // if item id passed - link item with the created list
@@ -131,7 +131,7 @@ public class MyListsController : FwAdminController
         return this.afterSave(success, id, is_new);
     }
 
-    public Hashtable ToggleListAction(int id)
+    public Hashtable? ToggleListAction(int id)
     {
         var item_id = reqi("item_id");
         var ps = new Hashtable();
@@ -148,7 +148,7 @@ public class MyListsController : FwAdminController
     }
 
     // request item_id - could be one id, or comma-separated ids
-    public Hashtable AddToListAction(int id)
+    public Hashtable? AddToListAction(int id)
     {
         Hashtable items = Utils.commastr2hash(reqs("item_id"));
 
@@ -167,7 +167,7 @@ public class MyListsController : FwAdminController
     }
 
     // request item_id - could be one id, or comma-separated ids
-    public Hashtable RemoveFromListAction(int id)
+    public Hashtable? RemoveFromListAction(int id)
     {
         Hashtable items = Utils.commastr2hash(reqs("item_id"));
 

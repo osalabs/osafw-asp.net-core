@@ -9,7 +9,7 @@ public class DevSelfTestController : FwController
 {
     public static new int access_level = Users.ACL_SITEADMIN;
 
-    protected FwSelfTest Test;
+    protected FwSelfTest Test = null!;
 
     public override void init(FW fw)
     {

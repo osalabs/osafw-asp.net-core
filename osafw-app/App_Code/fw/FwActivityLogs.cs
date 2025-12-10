@@ -38,7 +38,7 @@ public class FwActivityLogs : FwModel
     /// <param name="payload">optional payload (will be serialized as json)</param>
     /// <returns></returns>
     /// <exception cref="ApplicationException"></exception>
-    public int addSimple(string log_types_icode, string entity_icode, int item_id = 0, string idesc = "", Hashtable payload = null)
+    public int addSimple(string log_types_icode, string entity_icode, int item_id = 0, string idesc = "", Hashtable? payload = null)
     {
         var lt = fw.model<FwLogTypes>().oneByIcode(log_types_icode);
         if (lt.Count == 0)
@@ -66,7 +66,7 @@ public class FwActivityLogs : FwModel
     /// <param name="id">entity item id</param>
     /// <param name="log_types_icodes">optional list of log types(by icode) to filter on</param>
     /// <returns></returns>
-    public DBList listByEntity(string entity_icode, int id, IList log_types_icodes = null)
+    public DBList listByEntity(string entity_icode, int id, IList? log_types_icodes = null)
     {
         var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
         var where = new Hashtable
@@ -113,7 +113,7 @@ public class FwActivityLogs : FwModel
 
         // prepare list of activity records for UI
         // group system consequential changes from the same user within 10 minutes into one fields row
-        Hashtable last_fields = null;
+        Hashtable? last_fields = null;
         var last_add_time = DateTime.MinValue;
         var last_users_id = -1;
         var last_log_types_id = -1;
@@ -146,11 +146,12 @@ public class FwActivityLogs : FwModel
                     last_fields = [];
                 }
 
-                Hashtable payload = (Hashtable)Utils.jsonDecode(row["payload"]);
-                Hashtable fields = (Hashtable)payload["fields"] ?? null;
-                if (fields != null)
-                {
-                    foreach (string key in fields.Keys)
+            var payloadObj = Utils.jsonDecode(row["payload"]);
+            var payload = payloadObj as Hashtable ?? [];
+            Hashtable? fields = payload["fields"] as Hashtable;
+            if (fields != null)
+            {
+                foreach (string key in fields.Keys)
                     {
                         //if key is password, pass, pwd - hide value
                         var value = fields[key];
@@ -201,7 +202,7 @@ public class FwActivityLogs : FwModel
             if (!row.ContainsKey("fields"))
                 continue;
 
-            var fields = (Hashtable)row["fields"];
+            var fields = row["fields"] as Hashtable ?? [];
             var fields_list = new ArrayList();
             foreach (string key in fields.Keys)
             {
@@ -217,7 +218,7 @@ public class FwActivityLogs : FwModel
         return result;
     }
 
-    public long getCountByLogIType(int log_itype, IList statuses = null, int? since_days = null)
+    public long getCountByLogIType(int log_itype, IList? statuses = null, int? since_days = null)
     {
         var sql = $@"SELECT count(*) 
                     from {db.qid(table_name)} al 

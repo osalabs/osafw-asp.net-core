@@ -12,7 +12,7 @@ public class AdminSendEmailController : FwAdminController
 {
     public static new int access_level = Users.ACL_ADMIN;
 
-    protected Users model;
+    protected Users model = null!;
 
     public override void init(FW fw)
     {
@@ -25,7 +25,7 @@ public class AdminSendEmailController : FwAdminController
         save_fields = "from to subject body host port username password";
         save_fields_checkboxes = "is_ssl|0";
 
-        Hashtable mailSettings = (Hashtable)fw.config("mail");
+        var mailSettings = fw.config("mail") as Hashtable ?? [];
         form_new_defaults = new Hashtable
         {
             ["from"] = fw.config("mail_from").toStr(),
@@ -37,7 +37,7 @@ public class AdminSendEmailController : FwAdminController
         };
     }
 
-    public override Hashtable IndexAction()
+    public override Hashtable? IndexAction()
     {
         fw.redirect(base_url + "/new");
         return null;
@@ -45,12 +45,12 @@ public class AdminSendEmailController : FwAdminController
 
     public override Hashtable ShowFormAction(int id = 0)
     {
-        var ps = base.ShowFormAction(id);
+        var ps = base.ShowFormAction(id)!;
         ps["test_email"] = fw.Session("login"); // in test mode send to current user
         return ps;
     }
 
-    public override Hashtable SaveAction(int id = 0)
+    public override Hashtable? SaveAction(int id = 0)
     {
         route_onerror = FW.ACTION_SHOW_FORM; //set route to go if error happens
 
@@ -76,7 +76,7 @@ public class AdminSendEmailController : FwAdminController
         {
             ["smtp"] = FormUtils.filter(itemdb, "host port is_ssl username password")
         };
-        var is_sent = fw.sendEmail(itemdb["from"].ToString(), itemdb["to"].ToString(), itemdb["subject"].ToString(), itemdb["body"].ToString(), null, null, "", options);
+        var is_sent = fw.sendEmail(itemdb["from"].toStr(), itemdb["to"].toStr(), itemdb["subject"].toStr(), itemdb["body"].toStr(), null, null, "", options);
 
         var ps = new Hashtable
         {

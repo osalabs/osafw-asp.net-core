@@ -21,35 +21,35 @@ public class Users : FwModel<Users.Row>
     public class Row
     {
         public int id { get; set; }
-        public string email { get; set; }
-        public string pwd { get; set; }
+        public string email { get; set; } = string.Empty;
+        public string pwd { get; set; } = string.Empty;
         public int access_level { get; set; }
         public int is_readonly { get; set; }
-        public string iname { get; set; }
-        public string fname { get; set; }
-        public string lname { get; set; }
-        public string title { get; set; }
-        public string address1 { get; set; }
-        public string address2 { get; set; }
-        public string city { get; set; }
-        public string state { get; set; }
-        public string zip { get; set; }
-        public string phone { get; set; }
-        public string lang { get; set; }
+        public string iname { get; set; } = string.Empty;
+        public string fname { get; set; } = string.Empty;
+        public string lname { get; set; } = string.Empty;
+        public string title { get; set; } = string.Empty;
+        public string address1 { get; set; } = string.Empty;
+        public string address2 { get; set; } = string.Empty;
+        public string city { get; set; } = string.Empty;
+        public string state { get; set; } = string.Empty;
+        public string zip { get; set; } = string.Empty;
+        public string phone { get; set; } = string.Empty;
+        public string lang { get; set; } = string.Empty;
         public int ui_theme { get; set; }
         public int ui_mode { get; set; }
         public int date_format { get; set; }
         public int time_format { get; set; }
-        public string timezone { get; set; }
-        public string idesc { get; set; }
+        public string timezone { get; set; } = string.Empty;
+        public string idesc { get; set; } = string.Empty;
         public int? att_id { get; set; }
         public DateTime? login_time { get; set; }
-        public string pwd_reset { get; set; }
+        public string pwd_reset { get; set; } = string.Empty;
         public DateTime? pwd_reset_time { get; set; }
-        public string mfa_secret { get; set; }
-        public string mfa_recovery { get; set; }
+        public string mfa_secret { get; set; } = string.Empty;
+        public string mfa_recovery { get; set; } = string.Empty;
         public DateTime? mfa_added { get; set; }
-        public string login { get; set; }
+        public string login { get; set; } = string.Empty;
         public int status { get; set; }
         public DateTime add_time { get; set; }
         public int add_users_id { get; set; }
@@ -98,7 +98,7 @@ public class Users : FwModel<Users.Row>
     /// </summary>
     /// <param name="id">Object type because if upd_users_id could be null</param>
     /// <returns></returns>
-    public override string iname(object id)
+    public override string iname(object? id)
     {
         string result = "";
 
@@ -125,7 +125,7 @@ public class Users : FwModel<Users.Row>
 
         if (!item.ContainsKey("pwd"))
             item["pwd"] = Utils.getRandStr(8); // generate password
-        item["pwd"] = this.hashPwd((string)item["pwd"]);
+        item["pwd"] = this.hashPwd(item["pwd"].toStr());
 
         // set ui_theme/ui_mode form the config if not set
         if (!item.ContainsKey("ui_theme"))
@@ -149,7 +149,7 @@ public class Users : FwModel<Users.Row>
         if (id == 0) return false;//no anonymous updates
 
         if (item.ContainsKey("pwd"))
-            item["pwd"] = this.hashPwd((string)item["pwd"]);
+            item["pwd"] = this.hashPwd(item["pwd"].toStr());
         return base.update(id, item);
     }
 
@@ -159,13 +159,13 @@ public class Users : FwModel<Users.Row>
     }
 
     // return standard list of id,iname where status=0 order by iname
-    public override DBList list(IList statuses = null)
+    public override DBList list(IList? statuses = null)
     {
         statuses ??= new ArrayList() { STATUS_ACTIVE };
         return base.list(statuses);
     }
 
-    public override ArrayList listSelectOptions(Hashtable def = null)
+    public override ArrayList listSelectOptions(Hashtable? def = null)
     {
         string sql = "select id, fname+' '+lname as iname from " + db.qid(table_name) + " where status=@status order by " + getOrderBy();
         return db.arrayp(sql, DB.h("status", STATUS_ACTIVE));
@@ -239,7 +239,7 @@ public class Users : FwModel<Users.Row>
         var user = this.one(id);
         user["pwd_reset_token"] = pwd_reset_token;
 
-        return fw.sendEmailTpl((string)user["email"], "email_pwd.txt", user);
+        return fw.sendEmailTpl(user["email"], "email_pwd.txt", user);
     }
 
     /// <summary>
@@ -257,8 +257,10 @@ public class Users : FwModel<Users.Row>
         Hashtable chars = [];
         for (var i = 0; i <= pwd.Length - 1; i++)
         {
-            chars[pwd[i]] = chars[pwd[i]].toInt() + 1;
-            result += (int)(5.0 / (double)chars[pwd[i]]);
+            var count = chars.ContainsKey(pwd[i]) ? chars[pwd[i]].toInt() : 0;
+            count++;
+            chars[pwd[i]] = count;
+            result += (int)(5.0 / (double)count);
         }
 
         // bonus points for mixing it up
@@ -368,12 +370,14 @@ public class Users : FwModel<Users.Row>
     /// <param name="timezone"></param>
     public void doLogin(int id, string timezone = "")
     {
-        fw.context.Session.Clear();
+        var context = fw.context;
+        context?.Session.Clear();
         fw.Session("XSS", Utils.getRandStr(16));
 
         reloadSession(id);
 
-        fw.logActivity(FwLogTypes.ICODE_USERS_LOGIN, FwEntities.ICODE_USERS, id, "IP:" + fw.context.Connection.RemoteIpAddress.ToString());
+        var ip = Utils.getIP(fw.context);
+        fw.logActivity(FwLogTypes.ICODE_USERS_LOGIN, FwEntities.ICODE_USERS, id, "IP:" + ip);
         // update login and timezone
         Hashtable fields = [];
         fields["login_time"] = DB.NOW;
@@ -510,7 +514,7 @@ public class Users : FwModel<Users.Row>
     ///     edit => true if user has edit permission
     ///     del => true if user has delete permission
     /// </returns>
-    public Hashtable getRBAC(int? users_id = null, string resource_icode = null)
+    public Hashtable getRBAC(int? users_id = null, string? resource_icode = null)
     {
 #if isRoles
         var result = new Hashtable();
@@ -558,7 +562,7 @@ public class Users : FwModel<Users.Row>
         var permissions_ids = new List<string>();
         foreach (Hashtable row in rows)
         {
-            permissions_ids.Add((string)row["permissions_id"]);
+            permissions_ids.Add(row["permissions_id"].toStr());
         }
 
         // now read all permissions by ids and set icodes to result
@@ -618,7 +622,7 @@ public class Users : FwModel<Users.Row>
     /// <param name="resource_action">resource action like controller's action 'Index' or '' </param>
     /// <param name="resource_action_more">optional additional action string, usually route.action_more to help distinguish sub-actions</param>
     /// <returns></returns>
-    public bool isAccessByRolesResourceAction(int users_id, string resource_icode, string resource_action, string resource_action_more = "", Hashtable access_actions_to_permissions = null)
+    public bool isAccessByRolesResourceAction(int users_id, string resource_icode, string resource_action, string resource_action_more = "", Hashtable? access_actions_to_permissions = null)
     {
         logger("isAccessByRolesResourceAction", DB.h("users_id", users_id, "resource_icode", resource_icode, "resource_action", resource_action, "resource_action_more", resource_action_more));
 #if isRoles
@@ -630,7 +634,7 @@ public class Users : FwModel<Users.Row>
         {
             //check if we have controller's permission's override for the action
             if (access_actions_to_permissions.ContainsKey(permission_icode))
-                permission_icode = (string)access_actions_to_permissions[permission_icode];
+                permission_icode = access_actions_to_permissions[permission_icode].toStr();
         }
 
         var result = isAccessByRolesResourcePermission(users_id, resource_icode, permission_icode);
@@ -872,9 +876,7 @@ public class Users : FwModel<Users.Row>
 
     public void loadMenuItems()
     {
-        ArrayList menu_items = (ArrayList)FwCache.getValue("menu_items");
-
-        if (menu_items == null)
+        if (FwCache.getValue("menu_items") is not ArrayList menu_items)
         {
             // read main menu items for sidebar
             menu_items = db.array(table_menu_items, DB.h("status", STATUS_ACTIVE), "iname");

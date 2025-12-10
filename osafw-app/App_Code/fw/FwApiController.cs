@@ -17,7 +17,10 @@ public class FwApiController : FwController
     protected virtual bool auth()
     {
         var result = false;
-        string x_api_key = fw.request.Headers["X-API-Key"];
+        var request = fw.request ?? throw new InvalidOperationException("Request is not available");
+        var response = fw.response ?? throw new InvalidOperationException("Response is not available");
+
+        string x_api_key = request.Headers["X-API-Key"].ToString();
         var api_key = fw.config()["API_KEY"] as string;
 
         //authorize if user logged OR API_KEY configured and matches
@@ -26,7 +29,7 @@ public class FwApiController : FwController
 
         if (!result)
         {
-            fw.response.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;
+            response.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;
             throw new AuthException("API auth error");
         }
 
@@ -37,17 +40,18 @@ public class FwApiController : FwController
     // and if auth requested - check authorization
     protected virtual void prepare(bool isAuth = true)
     {
+        var request = fw.request ?? throw new InvalidOperationException("Request is not available");
+        var response = fw.response ?? throw new InvalidOperationException("Response is not available");
+
         // logger(fw.req.Headers)
 
-        var origin = "";
-        if (!string.IsNullOrEmpty(fw.request.Headers.Origin.ToString()))
-            origin = fw.request.Headers.Origin;
-        else
-        {
+        var origin = request.Headers.Origin.toStr();
+        if (string.IsNullOrEmpty(origin)) {
             // try referrer
-            if (!string.IsNullOrEmpty(fw.request.Headers.Referer.ToString()))
+            var referrer = request.Headers.Referer.toStr();
+            if (!string.IsNullOrEmpty(referrer))
             {
-                var uri = new Uri(fw.request.Headers.Referer);
+                var uri = new Uri(referrer);
                 origin = uri.GetLeftPart(UriPartial.Authority);
             }
         }
@@ -57,13 +61,13 @@ public class FwApiController : FwController
         // logger(referrer)
 
         // validate referrer is same as our hostname
-        if (string.IsNullOrEmpty(origin) || (origin != "http://" + fw.config("hostname") && origin != "https://" + fw.config("hostname") && origin != (string)fw.config("API_ALLOW_ORIGIN")))
+        if (string.IsNullOrEmpty(origin) || (origin != "http://" + fw.config("hostname") && origin != "https://" + fw.config("hostname") && origin != fw.config("API_ALLOW_ORIGIN").toStr()))
             throw new AuthException("Invalid origin " + origin);
 
         // create headers
-        fw.response.Headers.AccessControlAllowOrigin = origin;
-        fw.response.Headers.AccessControlAllowCredentials = "true";
-        fw.response.Headers.AccessControlAllowMethods = "GET, POST, PUT, DELETE, OPTIONS";
+        response.Headers.AccessControlAllowOrigin = origin;
+        response.Headers.AccessControlAllowCredentials = "true";
+        response.Headers.AccessControlAllowMethods = "GET, POST, PUT, DELETE, OPTIONS";
 
         // check auth
         if (isAuth)

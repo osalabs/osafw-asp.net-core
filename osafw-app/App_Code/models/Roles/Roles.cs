@@ -12,8 +12,8 @@ public class Roles : FwModel<Roles.Row>
     public class Row
     {
         public int id { get; set; }
-        public string iname { get; set; }
-        public string idesc { get; set; }
+        public string iname { get; set; } = string.Empty;
+        public string idesc { get; set; } = string.Empty;
         public int prio { get; set; }
         public int status { get; set; }
         public DateTime add_time { get; set; }

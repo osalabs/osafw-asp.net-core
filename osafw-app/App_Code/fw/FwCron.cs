@@ -16,11 +16,11 @@ public class TFwCron
 {
     public int id { get; set; }
 
-    public string icode { get; set; }
-    public string iname { get; set; }
-    public string idesc { get; set; }
+    public string icode { get; set; } = string.Empty;
+    public string iname { get; set; } = string.Empty;
+    public string idesc { get; set; } = string.Empty;
 
-    public string cron { get; set; }
+    public string cron { get; set; } = string.Empty;
     public DateTime? next_run { get; set; }
     public DateTime? start_date { get; set; }
     public DateTime? end_date { get; set; }

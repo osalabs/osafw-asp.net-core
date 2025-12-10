@@ -64,19 +64,22 @@ public class FwSelfTest
         // test important config settings
         echo("<strong>Config</strong>");
         echo("hostname: " + fw.config("hostname"));
-        is_notempty("site_root", fw.config("site_root"));
+        var siteRoot = fw.config("site_root") ?? string.Empty;
+        is_notempty("site_root", siteRoot);
 
         // log_level: higher than debug - OK, debug - warn, trace or below - red (not for prod)
-        var log_level = (LogLevel)fw.config("log_level");
+        var log_level = (LogLevel)(fw.config("log_level") ?? LogLevel.INFO);
+        var logName = Enum.GetName(typeof(LogLevel), log_level) ?? string.Empty;
+
         if (log_level >= LogLevel.TRACE)
         {
             plus_err();
-            echo("log_level", Enum.GetName(typeof(LogLevel), log_level), Result.ERR);
+            echo("log_level", logName, Result.ERR);
         }
         else if (log_level == LogLevel.DEBUG)
         {
             plus_warn();
-            echo("log_level", Enum.GetName(typeof(LogLevel), log_level), Result.WARN);
+            echo("log_level", logName, Result.WARN);
         }
         else
         {
@@ -88,8 +91,60 @@ public class FwSelfTest
         is_false("IS_DEV", fw.config("IS_DEV").toBool(), "Turned ON");
 
         // template directory should exists - TODO test parser to actually see templates work?
-        is_true("template", Directory.Exists((string)fw.config("template")), (string)fw.config("template"));
-        is_true("access_levels", fw.config("access_levels") != null && ((Hashtable)fw.config("access_levels")).Count > 0, "Not defined");
+        var templatePath = fw.config("template").toStr();
+        is_true("template", Directory.Exists(templatePath), templatePath);
+        try
+        {
+            var parser = new ParsePage(new ParsePageOptions
+            {
+                TemplatesRoot = templatePath,
+                Logger = (level, messages) => fw.logger(level, messages.Cast<object?>().ToArray()),
+            });
+            var parsedTemplate = parser.parse_string("Hello <~name>", Utils.qh("name", "World"));
+            is_true("template parser", parsedTemplate.Contains("Hello World"), parsedTemplate);
+        }
+        catch (Exception ex)
+        {
+            plus_err();
+            echo("template parser", ex.Message, Result.ERR);
+        }
+
+        var accessLevels = fw.config("access_levels") as Hashtable;
+        is_true("access_levels", accessLevels != null && accessLevels.Count > 0, "Not defined");
+
+        var cacheKey = "selftest_" + Guid.NewGuid().ToString("N");
+        var cacheValue = DateTime.UtcNow.Ticks.ToString();
+        try
+        {
+            FwCache.setValue(cacheKey, cacheValue, 60);
+            var cached = FwCache.getValue(cacheKey)?.ToString() ?? string.Empty;
+            is_true("cache app", cached == cacheValue, cached);
+        }
+        catch (Exception ex)
+        {
+            plus_err();
+            echo("cache app", ex.Message, Result.ERR);
+        }
+        finally
+        {
+            FwCache.remove(cacheKey);
+        }
+
+        try
+        {
+            fw.cache.setRequestValue(cacheKey, cacheValue);
+            var cached = fw.cache.getRequestValue(cacheKey)?.ToString() ?? string.Empty;
+            is_true("cache request", cached == cacheValue, cached);
+        }
+        catch (Exception ex)
+        {
+            plus_err();
+            echo("cache request", ex.Message, Result.ERR);
+        }
+        finally
+        {
+            fw.cache.requestRemove(cacheKey);
+        }
 
         // UPLOAD_DIR upload dir is writeable
         try
@@ -108,11 +163,14 @@ public class FwSelfTest
         }
 
         // emails set
-        is_notempty("mail_from", fw.config("mail_from"));
-        is_notempty("support_email", fw.config("support_email"));
+        var mailFrom = fw.config("mail_from") ?? string.Empty;
+        var supportEmail = fw.config("support_email") ?? string.Empty;
+        is_notempty("mail_from", mailFrom);
+        is_notempty("support_email", supportEmail);
 
         // test send email to "test+mail_from"
-        is_true("Send Emails", fw.sendEmail("", (string.IsNullOrEmpty(test_email) ? "test+" + fw.config("mail_from") : test_email), "test email", "test body"), "Failed");
+        var sendTo = string.IsNullOrEmpty(test_email) ? "test+" + mailFrom : test_email;
+        is_true("Send Emails", fw.sendEmail("", sendTo, "test email", "test body"), "Failed");
 
         try
         {
@@ -181,7 +239,7 @@ public class FwSelfTest
 
             fw.logger("Testing Controller:" + controller_name);
 
-            Type calledType = Type.GetType(FW.FW_NAMESPACE_PREFIX + t.Name, false, true);
+            Type? calledType = Type.GetType(FW.FW_NAMESPACE_PREFIX + t.Name, false, true);
             if (calledType == null)
             {
                 plus_err();
@@ -204,10 +262,9 @@ public class FwSelfTest
                 //     return res ? FwSelfTest.Result.OK : FwSelfTest.Result.ERR;
                 // }
 
-                System.Reflection.MethodInfo mInfo = calledType.GetMethod("SelfTest");
+                System.Reflection.MethodInfo? mInfo = calledType.GetMethod("SelfTest");
                 if (mInfo == null)
                 {
-
                     // if no SelfTest - test IndexAction method
                     mInfo = calledType.GetMethod("IndexAction");
                     if (mInfo == null)
@@ -232,9 +289,15 @@ public class FwSelfTest
                     fw._auth(route);
                     fw.setController(controller_name, FW.ACTION_INDEX);
 
-                    FwController new_controller = (FwController)Activator.CreateInstance(calledType);
+                    if (Activator.CreateInstance(calledType) is not FwController new_controller)
+                    {
+                        plus_err();
+                        echo(t.Name, "Cannot create controller instance", FwSelfTest.Result.ERR);
+                        continue;
+                    }
+
                     new_controller.init(fw);
-                    Hashtable ps = (Hashtable)mInfo.Invoke(new_controller, null);
+                    var ps = (Hashtable?)mInfo.Invoke(new_controller, null);
                     //TODO MIGRATE
                     //fw.response.Clear();
                     //fw.response.BufferOutput = false;
@@ -260,10 +323,21 @@ public class FwSelfTest
                     };
                     fw._auth(route);
 
-                    FwController new_controller = (FwController)Activator.CreateInstance(calledType);
+
+                    if (Activator.CreateInstance(calledType) is not FwController new_controller)
+                    {
+                        plus_err();
+                        echo(t.Name, "Cannot create controller instance", FwSelfTest.Result.ERR);
+                        continue;
+                    }
                     new_controller.init(fw);
-                    Result res = (Result)mInfo.Invoke(new_controller, [this]);
-                    if (res == Result.OK)
+                    var res = (Result?)mInfo.Invoke(new_controller, [this]);
+                    if (res == null)
+                    {
+                        plus_warn();
+                        echo(t.Name, "Empty result", FwSelfTest.Result.WARN);
+                    }
+                    else if (res == Result.OK)
                     {
                         plus_ok();
                         echo(t.Name, "OK");
@@ -271,12 +345,12 @@ public class FwSelfTest
                     else if (res == Result.WARN)
                     {
                         plus_warn();
-                        echo(t.Name, "Warning", res);
+                        echo(t.Name, "Warning", (Result)res);
                     }
                     else if (res == Result.ERR)
                     {
                         plus_err();
-                        echo(t.Name, "Error", res);
+                        echo(t.Name, "Error", (Result)res);
                     }
                 }
             }
@@ -414,7 +488,7 @@ public class FwSelfTest
     {
         Result res = Result.ERR;
         total_ctr += 1;
-        if (string.IsNullOrEmpty((string)value))
+        if (string.IsNullOrEmpty(value.toStr()))
             err_ctr += 1;
         else
         {
@@ -435,7 +509,7 @@ public class FwSelfTest
     {
         Result res = Result.ERR;
         total_ctr += 1;
-        if (string.IsNullOrEmpty((string)value))
+        if (string.IsNullOrEmpty(value.toStr()))
         {
             ok_ctr += 1;
             err_str = "OK";

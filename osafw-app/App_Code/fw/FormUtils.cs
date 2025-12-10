@@ -76,7 +76,7 @@ public class FormUtils
 
         string[] asel;
         if (is_multi)
-            asel = isel.Split(",");
+            asel = isel.Split(",", StringSplitOptions.None);
         else
         {
             asel = new string[1];
@@ -93,11 +93,11 @@ public class FormUtils
         StringBuilder result = new();
         foreach (Hashtable item in arr)
         {
-            text = Utils.htmlescape((string)item["iname"]);
+            text = Utils.htmlescape(item["iname"].toStr());
             if (item.ContainsKey("id"))
-                val = (string)item["id"];
+                val = item["id"].toStr();
             else
-                val = (string)item["iname"];
+                val = item["iname"].toStr();
 
             result.Append("<option value=\"").Append(Utils.htmlescape(val)).Append('"');
             if (item.ContainsKey("class"))
@@ -134,7 +134,7 @@ public class FormUtils
             tpl_path = base_path + "/" + tpl_path;
         }
 
-        var template = (string)FwConfig.settings["template"];
+        var template = FwConfig.settings["template"].toStr();
 
         // translate to absolute path, without any ../
         var path = System.IO.Path.GetFullPath(template + tpl_path);
@@ -185,7 +185,7 @@ public class FormUtils
             tpl_path = base_path + "/" + tpl_path;
         }
 
-        var template = (string)FwConfig.settings["template"];
+        var template = FwConfig.settings["template"].toStr();
 
         // translate to absolute path, without any ../
         var path = System.IO.Path.GetFullPath(template + tpl_path);
@@ -238,16 +238,15 @@ public class FormUtils
     }
 
     // return pager or Nothing if no paging required
-    public static ArrayList getPager(long count, int pagenum, object pagesize1 = null)
+    public static ArrayList getPager(long count, int pagenum, object? pagesize1 = null)
     {
         int pagesize = pagesize1.toInt(MAX_PAGE_ITEMS);
 
-        ArrayList pager = null;
+        ArrayList pager = [];
         const int PAD_PAGES = 5;
 
         if (count > pagesize)
         {
-            pager = [];
             int page_count = (int)Math.Ceiling(count / (double)pagesize);
 
             var from_page = pagenum - PAD_PAGES;
@@ -531,7 +530,7 @@ public class FormUtils
     // OUT: false if item(field_name) wrong datetime
     public static bool timeToForm(Hashtable item, string field_name)
     {
-        if (DateTime.TryParse((string)item[field_name], out DateTime dt))
+        if (DateTime.TryParse(item[field_name].toStr(), out DateTime dt))
         {
             item[field_name + "_hh"] = dt.Hour;
             item[field_name + "_mm"] = dt.Minute;
@@ -592,8 +591,8 @@ public class FormUtils
     public static ArrayList listCheckedOrderByPrioIname(ArrayList rows)
     {
         return new ArrayList((from Hashtable h in rows
-                              where (bool)h["is_checked"]
-                              orderby (int)h["prio"] ascending, h["iname"] ascending
+                              where h["is_checked"].toBool()
+                              orderby h["prio"].toInt() ascending, h["iname"] ascending
                               select h).ToList());
     }
 
@@ -601,7 +600,7 @@ public class FormUtils
     public static ArrayList listOrderByPrioIname(ArrayList rows)
     {
         return new ArrayList((from Hashtable h in rows
-                              orderby (bool)h["is_checked"] descending, (int)h["prio"] ascending, h["iname"] ascending
+                              orderby h["is_checked"].toBool() descending, h["prio"].toInt() ascending, h["iname"] ascending
                               select h).ToList());
     }
 
@@ -619,8 +618,8 @@ public class FormUtils
 
         foreach (var key in item.Keys)
         {
-            object vnew = item[key];
-            object vold = itemold[key];
+            object? vnew = item[key];
+            object? vold = itemold.ContainsKey(key) ? itemold[key] : null;
 
             // If both are dates, compare only the date part.
             var dtNew = vnew.toDate();
@@ -699,7 +698,7 @@ public class FormUtils
     /// <exception cref="Exception"></exception>
     public static string sqlOrderBy(DB db, string sortby, string sortdir, Hashtable sortmap)
     {
-        string orderby = ((string)sortmap[sortby] ?? "").Trim();
+        string orderby = sortmap[sortby].toStr().Trim();
         if (string.IsNullOrEmpty(orderby))
             throw new Exception("No orderby defined for [" + sortby + "], define in list_sortmap");
 
@@ -710,8 +709,8 @@ public class FormUtils
             // go thru each order field
             for (int i = 0; i <= aorderby.Length - 1; i++)
             {
-                string field = null;
-                string order = null;
+                string field = string.Empty;
+                string order = string.Empty;
                 Utils.split2(@"\s+", aorderby[i].Trim(), ref field, ref order);
 
                 if (order == "desc")
@@ -726,8 +725,8 @@ public class FormUtils
             // quote
             for (int i = 0; i <= aorderby.Length - 1; i++)
             {
-                string field = null;
-                string order = null;
+                string field = string.Empty;
+                string order = string.Empty;
                 Utils.split2(@"\s+", aorderby[i].Trim(), ref field, ref order);
                 aorderby[i] = db.qid(field) + " " + order;
             }

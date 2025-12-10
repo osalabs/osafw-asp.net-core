@@ -20,12 +20,12 @@ public abstract class FwModel : IDisposable
     public const int STATUS_INACTIVE = 10;
     public const int STATUS_DELETED = 127;
 
-    protected FW fw;
-    protected DB db;
+    protected FW fw = null!;
+    protected DB db = null!;
     protected string db_config = ""; // if empty(default) - fw.db used, otherwise - new db connection created based on this config name
 
     public string table_name = ""; // must be assigned in child class
-    protected Hashtable table_schema; // table schema cache (fields, types, etc) - filled on demand
+    protected Hashtable? table_schema; // table schema cache (fields, types, etc) - filled on demand
     public string csv_export_fields = ""; // all or Utils.qw format
     public string csv_export_headers = ""; // comma-separated format
 
@@ -50,16 +50,16 @@ public abstract class FwModel : IDisposable
     public bool is_under_bulk_update = false; // true when perform bulk updates like modelAddOrUpdateSubtableDynamic (disables log changes for status)
 
     // for junction models like UsersCompanies that link 2 tables via junction table, ex users_companies
-    public FwModel junction_model_main;   // main model (first entity), initialize in init(), ex fw.model<Users>()
-    public string junction_field_main_id; // id field name for main, ex users_id
-    public FwModel junction_model_linked;   // linked model (second entity), initialize in init()
-    public string junction_field_linked_id; // id field name for linked, ex companies_id
-    public string junction_field_status; // custom junction status field name, using this.field_status if not set
+    public FwModel? junction_model_main;   // main model (first entity), initialize in init(), ex fw.model<Users>()
+    public string junction_field_main_id = string.Empty; // id field name for main, ex users_id
+    public FwModel? junction_model_linked;   // linked model (second entity), initialize in init()
+    public string junction_field_linked_id = string.Empty; // id field name for linked, ex companies_id
+    public string junction_field_status = string.Empty; // custom junction status field name, using this.field_status if not set
 
     protected string cache_prefix = "fwmodel.one."; // default cache prefix for caching items
     protected string cache_prefix_byicode = "fwmodel.onebyicode."; // default cache prefix for caching items by icode
 
-    protected FwModel(FW fw = null)
+    protected FwModel(FW? fw = null)
     {
         if (fw != null)
         {
@@ -124,7 +124,8 @@ public abstract class FwModel : IDisposable
     public virtual DBRow one(int id)
     {
         var cache_key = this.cache_prefix + id;
-        var item = (DBRow)(Hashtable)fw.cache.getRequestValue(cache_key);
+        var itemObj = fw.cache.getRequestValue(cache_key);
+        DBRow? item = itemObj is Hashtable ht ? (DBRow)ht : null;
         if (item == null)
         {
             Hashtable where = [];
@@ -133,11 +134,11 @@ public abstract class FwModel : IDisposable
             normalizeNames(item);
             fw.cache.setRequestValue(cache_key, item);
         }
-        return item;
+        return item ?? [];
     }
 
     //overload of one() to accept id of any type, so no need to explicitly convert by caller
-    public virtual DBRow one(object id)
+    public virtual DBRow one(object? id)
     {
         var iid = id.toInt();
         if (iid > 0)
@@ -147,7 +148,7 @@ public abstract class FwModel : IDisposable
     }
 
     // return one specific field for the row, uncached
-    public virtual object oneField(int id, string field_name)
+    public virtual object? oneField(int id, string field_name)
     {
         Hashtable where = [];
         where[this.field_id] = id;
@@ -215,7 +216,7 @@ public abstract class FwModel : IDisposable
         var row = one(id);
         return row[field_iname];
     }
-    public virtual string iname(object id)
+    public virtual string iname(object? id)
     {
         var result = "";
         var iid = id.toInt();
@@ -267,7 +268,7 @@ public abstract class FwModel : IDisposable
     }
 
     // return standard list of id,iname for all non-deleted OR wtih specified statuses order by by getOrderBy
-    public virtual DBList list(IList statuses = null)
+    public virtual DBList list(IList? statuses = null)
     {
         Hashtable where = [];
         if (!string.IsNullOrEmpty(field_status))
@@ -288,14 +289,14 @@ public abstract class FwModel : IDisposable
     /// <param name="offset">TODO</param>
     /// <param name="orderby"></param>
     /// <returns></returns>
-    public virtual DBList listByWhere(Hashtable where = null, int limit = -1, int offset = 0, string orderby = "")
+    public virtual DBList listByWhere(Hashtable? where = null, int limit = -1, int offset = 0, string orderby = "")
     {
         where ??= [];
         return db.array(table_name, where, orderby != "" ? orderby : getOrderBy());
     }
 
     // return count of all non-deleted or with specified statuses
-    public virtual long getCount(IList statuses = null, int? since_days = null)
+    public virtual long getCount(IList? statuses = null, int? since_days = null)
     {
         Hashtable where = [];
         if (!string.IsNullOrEmpty(field_status))
@@ -331,7 +332,8 @@ public abstract class FwModel : IDisposable
             return [];
 
         var cache_key = this.cache_prefix_byicode + icode;
-        var item = (DBRow)(Hashtable)fw.cache.getRequestValue(cache_key);
+        var itemObj = fw.cache.getRequestValue(cache_key);
+        DBRow? item = itemObj is Hashtable ht ? (DBRow)ht : null;
         if (item == null)
         {
             Hashtable where = [];
@@ -394,10 +396,9 @@ public abstract class FwModel : IDisposable
             var fieldname_lc = fieldname.ToLower();
             if (!table_schema.ContainsKey(fieldname_lc)) continue;
 
-            var field_schema = (Hashtable)table_schema[fieldname_lc];
-
-            var fw_type = (string)field_schema["fw_type"];
-            //var fw_subtype = (string)field_schema["fw_subtype"];
+            var field_schema = table_schema[fieldname_lc] as Hashtable ?? [];
+            var fw_type = field_schema["fw_type"].toStr();
+            //var fw_subtype = field_schema["fw_subtype"].toStr();
 
             if (fw_type == "date")
             {
@@ -406,7 +407,7 @@ public abstract class FwModel : IDisposable
                     continue;
 
                 //if field is exactly DATE - convert only date part without time - in YYYY-MM-DD format
-                item[fieldname] = DateUtils.Str2SQL((string)item[fieldname], fw.userDateFormat);
+                item[fieldname] = DateUtils.Str2SQL(item[fieldname].toStr(), fw.userDateFormat);
             }
             else if (fw_type == "datetime")
             {
@@ -651,7 +652,7 @@ public abstract class FwModel : IDisposable
     #region select options and autocomplete
     // override if id/iname differs in table or to process custom lookup_params and filter_for/filter_field
     // def - in dynamic controller - field definition (also contains "i" and "ps", "lookup_params", ...) or you could use it to pass additional params
-    public virtual ArrayList listSelectOptions(Hashtable def = null)
+    public virtual ArrayList listSelectOptions(Hashtable? def = null)
     {
         Hashtable where = [];
         if (!string.IsNullOrEmpty(field_status))
@@ -676,7 +677,7 @@ public abstract class FwModel : IDisposable
     }
 
     // similar to listSelectOptions but returns iname/iname
-    public virtual ArrayList listSelectOptionsName(Hashtable def = null)
+    public virtual ArrayList listSelectOptionsName(Hashtable? def = null)
     {
         Hashtable where = [];
         if (!string.IsNullOrEmpty(field_status))
@@ -691,7 +692,7 @@ public abstract class FwModel : IDisposable
     }
 
     // like listSelectOptions, but for autocomplete by search string q
-    public virtual ArrayList listSelectOptionsAutocomplete(string q, Hashtable def = null)
+    public virtual ArrayList listSelectOptionsAutocomplete(string q, Hashtable? def = null)
     {
         Hashtable where = [];
         where[field_iname] = db.opLIKE("%" + q + "%");
@@ -741,7 +742,7 @@ public abstract class FwModel : IDisposable
     /// <param name="def"></param>
     /// <returns></returns>
     /// <exception cref="NotImplementedException"></exception>
-    public virtual DBList listByMainId(int main_id, Hashtable def = null)
+    public virtual DBList listByMainId(int main_id, Hashtable? def = null)
     {
         if (string.IsNullOrEmpty(junction_field_main_id))
             throw new NotImplementedException();
@@ -749,7 +750,7 @@ public abstract class FwModel : IDisposable
     }
 
     //similar to listByMainId but by linked_id
-    public virtual DBList listByLinkedId(int linked_id, Hashtable def = null)
+    public virtual DBList listByLinkedId(int linked_id, Hashtable? def = null)
     {
         if (string.IsNullOrEmpty(junction_field_linked_id))
             throw new NotImplementedException();
@@ -766,7 +767,7 @@ public abstract class FwModel : IDisposable
         ArrayList result = [];
         if (!string.IsNullOrEmpty(field_prio))
             result.AddRange((from Hashtable h in lookup_rows
-                             orderby ((Hashtable)h?["_link"])?[field_prio] ?? "", h["is_checked"] descending
+                             orderby (h?["_link"] as Hashtable)?[field_prio] ?? "", h["is_checked"] descending
                              select h).ToList());
         else
             result.AddRange((from Hashtable h in lookup_rows
@@ -782,8 +783,11 @@ public abstract class FwModel : IDisposable
     /// <param name="id">main table id</param>
     /// <param name="def">in dynamic controller - field definition (also contains "i" and "ps", "lookup_params", ...) or you could use it to pass additional params</param>
     /// <returns></returns>
-    public virtual ArrayList listLinkedByMainId(int main_id, Hashtable def = null)
+    public virtual ArrayList listLinkedByMainId(int main_id, Hashtable? def = null)
     {
+        if (junction_model_linked == null)
+            throw new ApplicationException("junction_model_linked not defined in model " + this.GetType().Name);            
+
         var linked_rows = listByMainId(main_id, def);
 
         ArrayList lookup_rows = junction_model_linked.list();
@@ -818,8 +822,11 @@ public abstract class FwModel : IDisposable
     /// <param name="linked_id">linked table id</param>
     /// <param name="def">in dynamic controller - field definition (also contains "i" and "ps", "lookup_params", ...) or you could use it to pass additional params</param>
     /// <returns></returns>
-    public virtual ArrayList listMainByLinkedId(int linked_id, Hashtable def = null)
+    public virtual ArrayList listMainByLinkedId(int linked_id, Hashtable? def = null)
     {
+        if (junction_model_main == null)
+            throw new ApplicationException("junction_model_main not defined in model " + this.GetType().Name);
+
         var linked_rows = listByLinkedId(linked_id, def);
 
         ArrayList lookup_rows = junction_model_main.list();
@@ -847,7 +854,7 @@ public abstract class FwModel : IDisposable
         return lookup_rows;
     }
 
-    protected ArrayList setMultiListChecked(ArrayList rows, List<string> ids, Hashtable def = null)
+    protected ArrayList setMultiListChecked(ArrayList rows, List<string>? ids, Hashtable? def = null)
     {
         var result = rows;
 
@@ -867,14 +874,14 @@ public abstract class FwModel : IDisposable
         return result;
     }
 
-    protected ArrayList filterAndSortChecked(ArrayList rows, Hashtable def = null)
+    protected ArrayList filterAndSortChecked(ArrayList rows, Hashtable? def = null)
     {
         var is_checked_only = def?["lookup_checked_only"].toBool() ?? false;
         if (is_checked_only)
         {
             var result = new ArrayList();
             result.AddRange((from Hashtable h in rows
-                             where (bool)h["is_checked"]
+                             where h["is_checked"].toBool()
                              select h).ToList());
             return result;
         }
@@ -889,7 +896,7 @@ public abstract class FwModel : IDisposable
     /// <param name="ids">selected ids from the list()</param>
     /// <param name="def">def - in dynamic controller - field definition (also contains "i" and "ps", "lookup_params", ...) or you could use it to pass additional params</param>
     /// <returns></returns>
-    public virtual ArrayList listWithChecked(List<string> ids, Hashtable def = null)
+    public virtual ArrayList listWithChecked(List<string>? ids, Hashtable? def = null)
     {
         var rows = setMultiListChecked(this.list(), ids, def);
         return rows;
@@ -901,7 +908,7 @@ public abstract class FwModel : IDisposable
     /// <param name="sel_ids">comma-separated selected ids from the list()</param>
     /// <param name="def">def - in dynamic controller - field definition (also contains "i" and "ps", "lookup_params", ...) or you could use it to pass additional params</param>
     /// <returns></returns>
-    public virtual ArrayList listWithChecked(string sel_ids, Hashtable def = null)
+    public virtual ArrayList listWithChecked(string sel_ids, Hashtable? def = null)
     {
         List<string> ids = Utils.isEmpty(sel_ids) ? [] : new(sel_ids.Split(","));
         return this.listWithChecked(ids, def);
@@ -1119,12 +1126,12 @@ public abstract class FwModel : IDisposable
 
     #region dynamic subtable component
     // override in your specific models when necessary
-    public virtual void prepareSubtable(ArrayList list_rows, int related_id, Hashtable def = null)
+    public virtual void prepareSubtable(ArrayList list_rows, int related_id, Hashtable? def = null)
     {
         foreach (Hashtable row in list_rows)
         {
             //if row_id starts with "new-" - set flag is_new
-            row["is_new"] = row["id"].ToString().StartsWith("new-");
+            row["is_new"] = row["id"].toStr().StartsWith("new-");
 
             // for non-Vue - add def to each row
             if (!fw.isJsonExpected())
@@ -1135,7 +1142,7 @@ public abstract class FwModel : IDisposable
     }
 
     // override in your specific models when necessary, add defaults for new record
-    public virtual void prepareSubtableAddNew(ArrayList list_rows, int related_id, Hashtable def = null)
+    public virtual void prepareSubtableAddNew(ArrayList list_rows, int related_id, Hashtable? def = null)
     {
         var id = "new-" + DateTimeOffset.Now.ToUnixTimeMilliseconds(); //generate unique id based on time for sequental adding
         var item = new Hashtable()
@@ -1279,10 +1286,10 @@ public abstract class FwModel : IDisposable
             var fieldname_lc = fieldname.ToLower();
             if (!table_schema.ContainsKey(fieldname_lc)) continue;
 
-            var field_schema = (Hashtable)table_schema[fieldname_lc];
+            var field_schema = table_schema[fieldname_lc] as Hashtable ?? [];
 
-            var fw_type = (string)field_schema["fw_type"];
-            var fw_subtype = (string)field_schema["fw_subtype"];
+            var fw_type = field_schema["fw_type"].toStr();
+            var fw_subtype = field_schema["fw_subtype"].toStr();
 
             if (fw_subtype == "bit")
             {

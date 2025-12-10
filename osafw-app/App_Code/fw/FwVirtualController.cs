@@ -19,7 +19,7 @@ public class FwVirtualController : FwVueController
 
         //constructor will not load config.json as base_url is not yet set
 
-        this.base_url = (string)fwcontroller["url"];
+        this.base_url = fwcontroller["url"].toStr();
         string controller_basedir = this.base_url.ToLower();
         string template_root = fw.config("template") + controller_basedir;
 
@@ -31,7 +31,7 @@ public class FwVirtualController : FwVueController
         }
 
         //use cached config or create config on the fly
-        var config = (Hashtable)Utils.jsonDecode(fwcontroller["config"]);
+        var config = Utils.jsonDecode(fwcontroller["config"].toStr()) as Hashtable;
         if (config == null)
         {
             var entity = new Hashtable

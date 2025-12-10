@@ -121,6 +121,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Reflection.Metadata.Ecma335;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
@@ -134,8 +135,8 @@ public class ParsePageOptions
     public string Lang { get; set; } = "en";
     public bool IsLangUpdate { get; set; } = true;
     public Func<Hashtable> GlobalsGetter { get; set; } = () => []; // by default - return empty hashtable
-    public ISession Session { get; set; }
-    public Action<LogLevel, string[]> Logger { get; set; }
+    public ISession? Session { get; set; }
+    public Action<LogLevel, string[]> Logger { get; set; } = (_, _) => { };
 
     // date formats - if empty - use defaults
     public string DateFormat { get; set; } = "";
@@ -178,18 +179,18 @@ public class ParsePage
     private static string OutputTimezone = DATE_TIMEZONE_DEF;
 
     // for dynamic load of Markdig markdown converter
-    private static System.Reflection.MethodInfo mMarkdownToHtml;
-    private static object MarkdownPipeline;
+    private static System.Reflection.MethodInfo? mMarkdownToHtml;
+    private static object? MarkdownPipeline;
 
-    private readonly Func<Hashtable> globalsGetter;
-    private readonly ISession session;
-    private readonly Action<LogLevel, string[]> loggerAction;
+    private readonly Func<Hashtable> globalsGetter = () => [];
+    private readonly ISession? session;
+    private readonly Action<LogLevel, string[]> loggerAction = (_, _) => { };
     // checks if template files modifies and reload them, depends on config's "log_level"
     // true if level at least DEBUG, false for production as on production there are no tempalte file changes (unless during update, which leads to restart App anyway)
     private readonly bool is_check_file_modifications = false;
-    private readonly string TMPL_PATH;
+    private readonly string TMPL_PATH = "";
     private string basedir = "";
-    private Hashtable data_top; // reference to the topmost hashtable
+    private Hashtable data_top = []; // reference to the topmost hashtable
     private bool is_found_last_hfvalue = false;
     private readonly string lang = "en";
     private readonly bool lang_parse = true; // parse lang strings in `` or not - true - parse(default), false - no
@@ -197,7 +198,7 @@ public class ParsePage
     private readonly MatchEvaluator lang_evaluator;
     private static readonly char path_separator = Path.DirectorySeparatorChar;
 
-    public ParsePage(ParsePageOptions options = null)
+    public ParsePage(ParsePageOptions? options = null)
     {
         if (options != null)
         {
@@ -254,7 +255,7 @@ public class ParsePage
         return _parse_page("", hf, tpl, parent_hf);
     }
 
-    private string _parse_page(string tpl_name, Hashtable hf, string page, Hashtable parent_hf, Hashtable parent_attrs = null)
+    private string _parse_page(string tpl_name, Hashtable hf, string page, Hashtable parent_hf, Hashtable? parent_attrs = null)
     {
         if (tpl_name == null)
         {
@@ -323,7 +324,7 @@ public class ParsePage
                     tag_value = hfvalue(tag, hf, parent_hf);
 
                 // logger("ParsePage - tag: " & tag_full & ", found=" & is_found_last_hfvalue)
-                if (tag_value.ToString().Length > 0)
+                if (tag_value.toStr().Length > 0)
                 {
                     string value;
                     if (attrs.ContainsKey("repeat"))
@@ -347,7 +348,7 @@ public class ParsePage
                         if (attrs.ContainsKey("json"))
                             value = Utils.jsonEncode(tag_value);
                         else
-                            value = tag_value.ToString();
+                            value = tag_value.toStr();
                         if (!string.IsNullOrEmpty(value) && !attrs.ContainsKey("noescape"))
                             value = Utils.htmlescape(value);
                     }
@@ -437,14 +438,31 @@ public class ParsePage
         return Regex.Split(content, "[\r\n]+");
     }
 
+    /// <summary>
+    /// Loads the content of the specified file and caches it for future access. Supports loading multiple files using
+    /// wildcard masks and returns their combined content.
+    /// </summary>
+    /// <remarks>If a wildcard mask is provided in the filename, the method loads and concatenates the
+    /// contents of all matching files. File contents are cached to improve performance on subsequent accesses. When
+    /// file modification checking is enabled, the cache is refreshed if the file has changed. For best performance,
+    /// disable modification checking if template files do not change frequently.</remarks>
+    /// <param name="filename">The path to the file to be loaded. May include a wildcard mask (e.g., "*.txt") to load and combine multiple
+    /// files. The path must refer to an existing file or set of files.</param>
+    /// <returns>A string containing the content of the specified file, or the combined content of all files matching the mask if
+    /// a wildcard is used. Returns an empty string if no files are found.</returns>
     private string precache_file(string filename)
     {
         // if filename contains a mask - load all files via recursive calls and return as a single template
         if (filename.Contains('*'))
         {
-            string folder = Path.GetDirectoryName(filename);
-            string mask = Path.GetFileName(filename);
-            string[] files = Directory.GetFiles(folder, mask);
+            var folder = Path.GetDirectoryName(filename);
+            var mask = Path.GetFileName(filename);
+            if (string.IsNullOrEmpty(folder))
+                folder = ".";
+            if (string.IsNullOrEmpty(mask))
+                return "";
+
+            string[] files = Directory.Exists(folder) ? Directory.GetFiles(folder, mask) : Array.Empty<string>();
             StringBuilder sb = new();
             foreach (var file in files)
                 sb.Append(precache_file(file));
@@ -459,18 +477,18 @@ public class ParsePage
         // logger("preacaching [" & filename & "]")
 
         // check and get from cache
-        if (FILE_CACHE.TryGetValue(filename, out Hashtable cached_item))
+        if (FILE_CACHE.TryGetValue(filename, out Hashtable? cached_item) && cached_item != null)
         {
             // if debug is off - don't check modify time for better performance (but app restart would be necessary if template changed)
             if (is_check_file_modifications)
             {
                 modtime = File.GetLastWriteTime(filename).ToString();
-                string mtmp = (string)cached_item["modtime"];
+                string mtmp = cached_item["modtime"].toStr();
                 if (string.IsNullOrEmpty(mtmp) || mtmp == modtime)
-                    return (string)cached_item["data"];
+                    return cached_item["data"].toStr();
             }
             else
-                return (string)cached_item["data"];
+                return cached_item["data"].toStr();
         }
         else if (is_check_file_modifications)
             modtime = File.GetLastWriteTime(filename).ToString();
@@ -535,10 +553,10 @@ public class ParsePage
     // value (string, hashtable, etc..), empty string ""
     // Or Nothing - tag not present in hf param (only if hf is Hashtable), file lookup will be necessary
     // set is_found to True if tag value found hf/parent_hf (so can be used to detect if there are no tag value at all so no fileseek required)
-    private object hfvalue(string tag, object hf, Hashtable parent_hf = null)
+    private object hfvalue(string tag, object hf, Hashtable? parent_hf = null)
     {
         object tag_value = "";
-        object ptr;
+        object? ptr;
         is_found_last_hfvalue = true;
 
         try
@@ -640,15 +658,15 @@ public class ParsePage
                         }
                     }
                 }
-                tag_value = ptr;
+                tag_value = ptr ?? "";
             }
             else if (hf is Hashtable hashtable)
             {
                 // special name tags - ROOT_URL and ROOT_DOMAIN - hardcoded here because of too frequent usage in the site
                 if (tag == "ROOT_URL" || tag == "ROOT_DOMAIN")
-                    tag_value = globalsGetter()[tag];
+                    tag_value = globalsGetter()[tag] ?? "";
                 else if (hashtable.ContainsKey(tag))
-                    tag_value = hashtable[tag];
+                    tag_value = hashtable[tag] ?? "";
                 else
                     // if no such tag in Hashtable
                     is_found_last_hfvalue = false;
@@ -670,7 +688,7 @@ public class ParsePage
                     is_found_last_hfvalue = false;
             }
             else if (tag == "ROOT_URL" || tag == "ROOT_DOMAIN")
-                tag_value = globalsGetter()[tag]; // special name tags, see above
+                tag_value = globalsGetter()[tag] ?? ""; // special name tags, see above
             else
                 is_found_last_hfvalue = false;
         }
@@ -686,8 +704,8 @@ public class ParsePage
 
     private string _attr_sub(string tag, string tpl_name, Hashtable hf, Hashtable attrs, string inline_tpl, Hashtable parent_hf, object tag_value)
     {
-        Hashtable sub_hf = null;
-        string sub = (string)attrs["sub"];
+        Hashtable? sub_hf = null;
+        var sub = attrs["sub"].toStr();
         if (!string.IsNullOrEmpty(sub))
             // if sub attr contains name - use it to get value from hf (instead using tag_value)
             tag_value = hfvalue(sub, hf, parent_hf);
@@ -709,7 +727,7 @@ public class ParsePage
     }
 
     // Check for misc if attrs
-    private bool _attr_if(Hashtable attrs, Hashtable hf, Hashtable parent_hf = null)
+    private bool _attr_if(Hashtable attrs, Hashtable hf, Hashtable? parent_hf = null)
     {
         if (attrs.Count == 0)
             return true; // if there are no if operation - return true anyway and early
@@ -727,7 +745,7 @@ public class ParsePage
         if (string.IsNullOrEmpty(oper))
             return true; // if there are no if operation - return true anyway
 
-        string eqvar = (string)attrs[oper];
+        var eqvar = attrs[oper].toStr();
         if (string.IsNullOrEmpty(eqvar))
             return false; // return false if var need to be compared is empty
 
@@ -744,16 +762,15 @@ public class ParsePage
         {
             if (attrs.ContainsKey("vvalue"))
             {
-                ravalue = hfvalue((string)attrs["vvalue"], hf, parent_hf);
-                ravalue ??= "";
+                ravalue = hfvalue(attrs["vvalue"].toStr(), hf, parent_hf);
             }
             else
-                ravalue = attrs["value"];
+                ravalue = attrs["value"] ?? "";
 
             // convert ravalue to boolean if eqvalue is boolean, OR both to string otherwise
             if ((eqvalue) is bool)
             {
-                string ravaluestr = ravalue.ToString().ToLower();
+                string ravaluestr = ravalue.toStr().ToLower();
                 if (ravaluestr == "1" || ravaluestr == "true")
                     ravalue = true;
                 else
@@ -762,15 +779,15 @@ public class ParsePage
             else if (eqvalue is Int32)
             {
                 // convert ravalue to Int32 for int comparisons
-                if (Int32.TryParse(ravalue.ToString(), out _))
+                if (Int32.TryParse(ravalue.toStr(), out _))
                 {
                     is_numeric_comparison = true;
                 }
                 else
                 {
                     // ravalue is not an integer, so try string comparison
-                    ravalue = ravalue.ToString();
-                    eqvalue = eqvalue.ToString();
+                    ravalue = ravalue.toStr();
+                    eqvalue = eqvalue.toStr();
                 }
             }
             else if (eqvalue is ICollection collection)
@@ -782,8 +799,8 @@ public class ParsePage
             }
             else
             {
-                eqvalue = eqvalue.ToString();
-                ravalue = ravalue.ToString();
+                eqvalue = eqvalue.toStr();
+                ravalue = ravalue.toStr();
             }
         }
         else
@@ -797,7 +814,7 @@ public class ParsePage
                 eqvalue = collection.Count > 0;
             else if (eqvalue is not bool)
             {
-                string eqstr = eqvalue.ToString();
+                string eqstr = eqvalue.toStr();
                 eqvalue = !string.IsNullOrEmpty(eqstr) && eqstr != "0" && eqstr.ToLower() != "false";
             }
             else
@@ -805,21 +822,21 @@ public class ParsePage
         }
 
         bool result = false;
-        if (oper == "if" && (bool)eqvalue == true)
+        if (oper == "if" && eqvalue.toBool())
             result = true;
-        else if (oper == "unless" && (bool)eqvalue == false)
+        else if (oper == "unless" && !eqvalue.toBool())
             result = true;
-        else if (oper == "ifeq" && (is_numeric_comparison && eqvalue.toInt() == ravalue.toInt() || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) == 0))
+        else if (oper == "ifeq" && (is_numeric_comparison && eqvalue.toInt() == ravalue.toInt() || !is_numeric_comparison && String.Compare(eqvalue.toStr(), ravalue.toStr()) == 0))
             result = true;
-        else if (oper == "ifne" && (is_numeric_comparison && eqvalue.toInt() != ravalue.toInt() || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) != 0))
+        else if (oper == "ifne" && (is_numeric_comparison && eqvalue.toInt() != ravalue.toInt() || !is_numeric_comparison && String.Compare(eqvalue.toStr(), ravalue.toStr()) != 0))
             result = true;
-        else if (oper == "iflt" && (is_numeric_comparison && eqvalue.toInt() < ravalue.toInt() || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) < 0))
+        else if (oper == "iflt" && (is_numeric_comparison && eqvalue.toInt() < ravalue.toInt() || !is_numeric_comparison && String.Compare(eqvalue.toStr(), ravalue.toStr()) < 0))
             result = true;
-        else if (oper == "ifgt" && (is_numeric_comparison && eqvalue.toInt() > ravalue.toInt() || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) > 0))
+        else if (oper == "ifgt" && (is_numeric_comparison && eqvalue.toInt() > ravalue.toInt() || !is_numeric_comparison && String.Compare(eqvalue.toStr(), ravalue.toStr()) > 0))
             result = true;
-        else if (oper == "ifge" && (is_numeric_comparison && eqvalue.toInt() >= ravalue.toInt() || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) >= 0))
+        else if (oper == "ifge" && (is_numeric_comparison && eqvalue.toInt() >= ravalue.toInt() || !is_numeric_comparison && String.Compare(eqvalue.toStr(), ravalue.toStr()) >= 0))
             result = true;
-        else if (oper == "ifle" && (is_numeric_comparison && eqvalue.toInt() <= ravalue.toInt() || !is_numeric_comparison && String.Compare(eqvalue.ToString(), ravalue.ToString()) <= 0))
+        else if (oper == "ifle" && (is_numeric_comparison && eqvalue.toInt() <= ravalue.toInt() || !is_numeric_comparison && String.Compare(eqvalue.toStr(), ravalue.toStr()) <= 0))
             result = true;
 
         return result;
@@ -843,7 +860,7 @@ public class ParsePage
         // Validate: if input doesn't contain array - return "" - nothing to repeat
         if (tag_val_array is not IList)
         {
-            if (tag_val_array != null && tag_val_array.ToString() != "")
+            if (tag_val_array != null && tag_val_array.toStr() != "")
                 logger(LogLevel.DEBUG, "ParsePage - Not an ArrayList passed to repeat tag=", tag);
             return "";
         }
@@ -940,8 +957,9 @@ public class ParsePage
         {
             if (value.Length < 1 && hattrs.ContainsKey("default"))
             {
-                if (!string.IsNullOrEmpty((string)hattrs["default"]))
-                    value = (string)hattrs["default"];
+                var value_default = hattrs["default"].toStr();
+                if (!string.IsNullOrEmpty(value_default))
+                    value = value_default;
                 attr_count -= 1;
             }
 
@@ -959,8 +977,8 @@ public class ParsePage
                 }
                 if (attr_count > 0 && hattrs.ContainsKey("number_format"))
                 {
-                    var precision = (!string.IsNullOrEmpty((string)hattrs["number_format"]) ? hattrs["number_format"].toInt() : 2);
-                    bool groupdigits = !hattrs.ContainsKey("nfthousands") || !string.IsNullOrEmpty((string)hattrs["nfthousands"]); // default - group digits, but if nfthousands empty - don't
+                    var precision = (!string.IsNullOrEmpty(hattrs["number_format"].toStr()) ? hattrs["number_format"].toInt() : 2);
+                    bool groupdigits = !hattrs.ContainsKey("nfthousands") || !string.IsNullOrEmpty(hattrs["nfthousands"].toStr()); // default - group digits, but if nfthousands empty - don't
 
                     value = value.toFloat().ToString("N" + precision, CultureInfo.InvariantCulture);
                     if (!groupdigits)
@@ -983,7 +1001,7 @@ public class ParsePage
                 }
                 if (attr_count > 0 && hattrs.ContainsKey("date"))
                 {
-                    string dformat = (string)hattrs["date"];
+                    var dformat = hattrs["date"].toStr();
                     switch (dformat)
                     {
                         case "":
@@ -1042,7 +1060,7 @@ public class ParsePage
                 }
                 if (attr_count > 0 && hattrs.ContainsKey("capitalize"))
                 {
-                    value = Utils.capitalize(value, (string)hattrs["capitalize"]);
+                    value = Utils.capitalize(value, hattrs["capitalize"].toStr());
                     attr_count -= 1;
                 }
                 if (attr_count > 0 && hattrs.ContainsKey("truncate"))
@@ -1083,24 +1101,42 @@ public class ParsePage
                         if (mMarkdownToHtml == null)
                         {
                             System.Reflection.Assembly aMarkdig = System.Reflection.Assembly.Load("Markdig");
-                            Type tMarkdown = aMarkdig.GetType("Markdig.Markdown");
-                            Type tMarkdownPipeline = aMarkdig.GetType("Markdig.MarkdownPipeline");
-                            Type tMarkdownPipelineBuilder = aMarkdig.GetType("Markdig.MarkdownPipelineBuilder");
-                            Type tMarkdownExtensions = aMarkdig.GetType("Markdig.MarkdownExtensions");
-                            Type tMarkdownParserContext = aMarkdig.GetType("Markdig.MarkdownParserContext");
+                            Type? tMarkdown = aMarkdig.GetType("Markdig.Markdown");
+                            Type? tMarkdownPipeline = aMarkdig.GetType("Markdig.MarkdownPipeline");
+                            Type? tMarkdownPipelineBuilder = aMarkdig.GetType("Markdig.MarkdownPipelineBuilder");
+                            Type? tMarkdownExtensions = aMarkdig.GetType("Markdig.MarkdownExtensions");
+                            Type? tMarkdownParserContext = aMarkdig.GetType("Markdig.MarkdownParserContext");
 
-                            mMarkdownToHtml = tMarkdown.GetMethod("ToHtml", [typeof(string), tMarkdownPipeline, tMarkdownParserContext]);
+                            if (tMarkdown == null || tMarkdownPipeline == null || tMarkdownPipelineBuilder == null || tMarkdownExtensions == null || tMarkdownParserContext == null)
+                            {
+                                logger(LogLevel.WARN, @"error parsing markdown, install Markdig package");
+                                attr_count = 0;
+                            }
+                            else
+                            {
+                                mMarkdownToHtml = tMarkdown.GetMethod("ToHtml", [typeof(string), tMarkdownPipeline, tMarkdownParserContext]);
 
-                            var configureMethod = tMarkdownExtensions.GetMethod("Configure");
+                                var configureMethod = tMarkdownExtensions.GetMethod("Configure");
 
-                            var pipelineBuilder = Activator.CreateInstance(tMarkdownPipelineBuilder);
-                            configureMethod.Invoke(null, [pipelineBuilder, "common+hardlinebreak+gfm-pipetables+emphasisextras+listextras+footers+citations+abbreviations+figures+bootstrap+medialinks+autoidentifiers+tasklists+autolinks+customcontainers+attributes"]);
+                                var pipelineBuilder = Activator.CreateInstance(tMarkdownPipelineBuilder);
+                                var buildMethod = tMarkdownPipelineBuilder.GetMethod("Build");
 
-                            MarkdownPipeline = tMarkdownPipelineBuilder.GetMethod("Build").Invoke(pipelineBuilder, null);
+                                if (configureMethod == null || pipelineBuilder == null || buildMethod == null)
+                                {
+                                    logger(LogLevel.WARN, @"error parsing markdown, install Markdig package");
+                                    attr_count = 0;
+                                }
+                                else
+                                {
+                                    configureMethod.Invoke(null, [pipelineBuilder, "common+hardlinebreak+gfm-pipetables+emphasisextras+listextras+footers+citations+abbreviations+figures+bootstrap+medialinks+autoidentifiers+tasklists+autolinks+customcontainers+attributes"]);
+
+                                    MarkdownPipeline = buildMethod.Invoke(pipelineBuilder, null);
+                                }
+                            }
                         }
 
-                        if (mMarkdownToHtml != null)
-                            value = (string)mMarkdownToHtml.Invoke(null, [value, MarkdownPipeline, null]);
+                        if (mMarkdownToHtml != null && MarkdownPipeline != null)
+                            value = mMarkdownToHtml.Invoke(null, [value, MarkdownPipeline, null]).toStr();
                     }
                     catch (Exception ex)
                     {
@@ -1138,14 +1174,15 @@ public class ParsePage
     {
         StringBuilder result = new();
 
-        string sel_value = hfvalue((string)attrs["select"] ?? "", hf).toStr();
+        string sel_value = hfvalue(attrs["select"].toStr(), hf).toStr();
         //fw.logger($"_attr_select: tag={tag}, tpl_name={tpl_name}", attrs, hf[tag]);
 
         var multi_delim = ""; // by default no multiple select
         if (attrs.ContainsKey("multi"))
         {
-            if (!string.IsNullOrEmpty((string)attrs["multi"]))
-                multi_delim = (string)attrs["multi"];
+            var attr_multi = attrs["multi"].toStr();
+            if (!string.IsNullOrEmpty(attr_multi))
+                multi_delim = attr_multi;
             else
                 multi_delim = ",";
         }
@@ -1175,14 +1212,14 @@ public class ParsePage
             string desc;
             foreach (Hashtable item in seloptions)
             {
-                desc = Utils.htmlescape((string)item["iname"]);
+                desc = Utils.htmlescape(item["iname"].toStr());
                 if (item.ContainsKey("id"))
                 {
-                    value = ((string)item["id"]).Trim();
+                    value = item["id"].toStr().Trim();
                 }
                 else
                 {
-                    value = ((string)item["iname"]).Trim();
+                    value = item["iname"].toStr().Trim();
                 }
 
                 // check for selected value before escaping
@@ -1252,9 +1289,9 @@ public class ParsePage
     private string _attr_radio(string tpl_path, Hashtable hf, Hashtable attrs)
     {
         StringBuilder result = new();
-        string sel_value = (string)hfvalue((string)attrs["radio"], hf) ?? "";
-        string name = (string)attrs["name"];
-        string delim = (string)attrs["delim"]; // delimiter class
+        string sel_value = hfvalue(attrs["radio"].toStr(), hf).toStr();
+        string name = attrs["name"].toStr();
+        string delim = attrs["delim"].toStr(); // delimiter class
 
         if (!tpl_path.StartsWith('/'))
             tpl_path = basedir + "/" + tpl_path;
@@ -1316,9 +1353,8 @@ public class ParsePage
     }
     private string _attr_select_name(string tag, string tpl_name, Hashtable hf, Hashtable attrs)
     {
-        string result = "";
-        string sel_value = hfvalue((string)attrs["selvalue"], hf).toStr();
-        sel_value ??= "";
+        var result = "";
+        var sel_value = hfvalue(attrs["selvalue"].toStr(), hf).toStr();
 
         if (hfvalue(tag, hf) is ICollection seloptions)
         {
@@ -1331,13 +1367,13 @@ public class ParsePage
             {
                 if (item.ContainsKey("id"))
                 {
-                    value = ((string)item["id"]).Trim();
+                    value = item["id"].toStr().Trim();
                 }
                 else
                 {
-                    value = ((string)item["iname"]).Trim();
+                    value = item["iname"].toStr().Trim();
                 }
-                desc = (string)item["iname"];
+                desc = item["iname"].toStr();
 
                 if (desc.Length < 1 | value != sel_value) continue;
 
@@ -1414,15 +1450,15 @@ public class ParsePage
         var input = str;
         if (!string.IsNullOrEmpty(context))
             input += "|" + context;
-        Hashtable cache = (Hashtable)LANG_CACHE.GetOrAdd(lang, _ => []);
-        string result = (string)cache[input];
+        var cache = LANG_CACHE.GetOrAdd(lang, _ => []);
+        var result = cache[input].toStr();
         if (string.IsNullOrEmpty(result))
         {
             // no translation found
             if (!string.IsNullOrEmpty(context))
             {
                 // if no value with context - try without context
-                result = (string)cache[str];
+                result = cache[str].toStr();
                 if (string.IsNullOrEmpty(result))
                 {
                     // if no such string in cache and we allowed to update lang file - add_lang
@@ -1456,7 +1492,7 @@ public class ParsePage
             }
             string[] pair = line.Split("===", 2);
             // logger("added to cache:", Trim(pair(0)))
-            ((Hashtable)LANG_CACHE[lang])[pair[0].Trim()] = pair[1].TrimStart();
+            LANG_CACHE[lang][pair[0].Trim()] = pair[1].TrimStart();
         }
     }
 
@@ -1469,7 +1505,7 @@ public class ParsePage
 
         // also add to lang cache
         LANG_CACHE.GetOrAdd(lang, _ => []);
-        ((Hashtable)LANG_CACHE[lang])[str.Trim()] = "";
+        LANG_CACHE[lang][str.Trim()] = "";
     }
 
     private void logger(LogLevel level, params string[] args)

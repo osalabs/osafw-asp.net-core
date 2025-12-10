@@ -15,8 +15,8 @@ public class DemosItems : FwModel<DemosItems.Row>
         public int id { get; set; }
         public int demos_id { get; set; }
         public int? demo_dicts_id { get; set; }
-        public string iname { get; set; }
-        public string idesc { get; set; }
+        public string iname { get; set; } = string.Empty;
+        public string idesc { get; set; } = string.Empty;
         public int is_checkbox { get; set; }
         public int status { get; set; }
         public DateTime add_time { get; set; }
@@ -38,7 +38,7 @@ public class DemosItems : FwModel<DemosItems.Row>
         junction_field_main_id = "demos_id";
     }
 
-    public override void prepareSubtable(ArrayList list_rows, int related_id, Hashtable def = null)
+    public override void prepareSubtable(ArrayList list_rows, int related_id, Hashtable? def = null)
     {
         base.prepareSubtable(list_rows, related_id, def);
 

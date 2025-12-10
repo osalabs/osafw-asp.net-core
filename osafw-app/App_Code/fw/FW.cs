@@ -48,23 +48,22 @@ public class FW : IDisposable
     private readonly Hashtable models = []; // model's singletons cache
     private readonly Hashtable controllers = []; // controller's singletons cache
     private const string ControllerActionsCacheKeyPrefix = "fw:controller-actions:";
-    private ParsePage pp_instance; // for parsePage()
+    private ParsePage? pp_instance; // for parsePage()
 
-    public Hashtable FORM;
-    public Hashtable postedJson; // parsed JSON from request body
-    public Hashtable G; // for storing global vars - used in template engine, also stores "_flash"
-    public Hashtable FormErrors; // for storing form id's with error messages, put to ps['error']['details'] for parser
-    public Exception last_file_exception; // set by getFileContent, getFileLines in case of exception
+    public Hashtable FORM = [];
+    public Hashtable postedJson = []; // parsed JSON from request body
+    public Hashtable G = []; // for storing global vars - used in template engine, also stores "_flash"
+    public Hashtable FormErrors = []; // for storing form id's with error messages, put to ps['error']['details'] for parser
 
     public FwCache cache = new(); // cache instance
     public DB db;
     public FwLogger flogger = new();
 
-    public HttpContext context;
-    public HttpRequest request;
-    public HttpResponse response;
+    public HttpContext context = null!;
+    public HttpRequest request = null!;
+    public HttpResponse response = null!;
 
-    public string request_url; // current request url (relative to application url)
+    public string request_url = ""; // current request url (relative to application url)
     public FwRoute route = new();
     public TimeSpan request_time; // after dispatch() - total request processing time
 
@@ -90,12 +89,12 @@ public class FW : IDisposable
 
     public int userDateFormat
     {
-        get { return G["date_format"].toInt((int)DateUtils.DATE_FORMAT_MDY); }
+        get { return G["date_format"].toInt(DateUtils.DATE_FORMAT_MDY); }
     }
 
     public int userTimeFormat
     {
-        get { return G["time_format"].toInt((int)DateUtils.TIME_FORMAT_12); }
+        get { return G["time_format"].toInt(DateUtils.TIME_FORMAT_12); }
     }
 
     public string userTimezone
@@ -106,7 +105,7 @@ public class FW : IDisposable
     /// <summary>
     /// Convert an internal UTC datetime (DateTime or SQL string) into a user-visible string using the current user's timezone/format.
     /// </summary>
-    public string formatUserDateTime(object value, bool isISO = false)
+    public string formatUserDateTime(object? value, bool isISO = false)
     {
         if (value == null)
             return "";
@@ -132,7 +131,7 @@ public class FW : IDisposable
             format = "yyyy-MM-ddTHH:mm:sszzz";
         else
             format = DateUtils.mapDateFormat(userDateFormat) + " " + DateUtils.mapTimeFormat(userTimeFormat);
-            
+
         return local.ToString(format);
     }
 
@@ -146,11 +145,12 @@ public class FW : IDisposable
     // helper to initialize DB instance based on configuration name
     public DB getDB(string config_name = "main")
     {
-        Hashtable dbconfig = (Hashtable)config("db");
-        Hashtable conf = (Hashtable)dbconfig[config_name];
+        var dbconfig = config("db") as Hashtable ?? [];
+        Hashtable conf = dbconfig[config_name] as Hashtable ?? [];
 
         var db = new DB(conf, config_name);
-        db.setLogger(this.logger);
+        // Wrap the logger to match DB.LoggerDelegate (object?[])
+        db.setLogger((level, args) => this.logger(level, args!));
         if (context != null)
             db.setContext(context);
 
@@ -173,20 +173,20 @@ public class FW : IDisposable
         return fw;
     }
 
-    public FW(HttpContext context, IConfiguration configuration)
+    public FW(HttpContext? context, IConfiguration configuration)
     {
-        if (context != null)
-        {
-            this.context = context;
-            this.request = context.Request;
-            this.response = context.Response;
-        }
+        // DefaultHttpContext keeps offline runs usable without null checks while still matching the runtime request surface
+        var currentContext = context ?? new DefaultHttpContext();
+        this.context = currentContext;
+        this.request = currentContext.Request;
+        this.response = currentContext.Response;
 
         // pass host explicitly so FwConfig can cache per-host settings
         FwConfig.init(context, configuration, context?.Request.Host.ToString());
 
         var env = config("config_override").toStr();
-        flogger = new FwLogger((LogLevel)config("log_level"), config("log").toStr(), config("site_root").toStr(), config("log_max_size").toLong());
+        var logLevel = (LogLevel)config("log_level").toInt((int)LogLevel.ERROR);
+        flogger = new FwLogger(logLevel, config("log").toStr(), config("site_root").toStr(), config("log_max_size").toLong());
         flogger.setScope(env, Session("login"));
 
         db = getDB();
@@ -209,11 +209,10 @@ public class FW : IDisposable
         if (!string.IsNullOrEmpty(Session("time_format"))) G["time_format"] = Session("time_format");
         if (!string.IsNullOrEmpty(Session("timezone"))) G["timezone"] = Session("timezone");
 
-        FormErrors = []; // reset errors
         parseForm();
 
         // save flash to current var and update session as flash is used only for nearest request
-        Hashtable _flash = SessionHashtable("_flash");
+        Hashtable? _flash = SessionHashtable("_flash");
         if (_flash != null) G["_flash"] = _flash;
         SessionHashtable("_flash", []);
     }
@@ -287,9 +286,9 @@ public class FW : IDisposable
         context?.Session.Set(name, BitConverter.GetBytes(value));
     }
 
-    public Hashtable SessionHashtable(string name)
+    public Hashtable? SessionHashtable(string name)
     {
-        string data = context?.Session.GetString(name);
+        string? data = context?.Session.GetString(name);
         return data == null ? null : (Hashtable)Utils.deserialize(data);
     }
     public void SessionHashtable(string name, Hashtable value)
@@ -301,12 +300,12 @@ public class FW : IDisposable
     // FLASH - used to pass something to the next request (and only on this request and only if this request does not expect json)
     // get flash value by name
     // set flash value by name - return fw in this case
-    public object flash(string name, object value = null)
+    public object flash(string name, object? value = null)
     {
         if (value == null)
         {
             // read mode - return current flash
-            return ((Hashtable)this.G["_flash"])[name] ?? "";
+            return (this.G["_flash"] as Hashtable)?[name] ?? "";
         }
         else
         {
@@ -327,7 +326,7 @@ public class FW : IDisposable
         return FwConfig.settings;
     }
     // return just particular setting
-    public object config(string name)
+    public object? config(string name)
     {
         return FwConfig.settings[name];
     }
@@ -379,7 +378,8 @@ public class FW : IDisposable
         }
 
         // cut the App path from the begin
-        if (request.PathBase.Value.Length > 1) url = url.Replace(request.PathBase, "");
+        var pathBase = request.PathBase.Value;
+        if (!string.IsNullOrEmpty(pathBase) && pathBase.Length > 1) url = url.Replace(request.PathBase, "");
         url = url.TrimEnd('/'); // cut last / if any
 
         if (!is_url_param)
@@ -407,8 +407,9 @@ public class FW : IDisposable
             // check if method override exits
             if (FORM.ContainsKey("_method"))
             {
-                if (METHOD_ALLOWED.ContainsKey(FORM["_method"]))
-                    route.method = (string)FORM["_method"];
+                var form_method = FORM["_method"].toStr();
+                if (METHOD_ALLOWED.ContainsKey(form_method))
+                    route.method = form_method;
             }
             if (route.method == "HEAD") route.method = "GET"; // for website processing HEAD is same as GET, IIS will send just headers
         }
@@ -416,54 +417,51 @@ public class FW : IDisposable
         string controller_prefix = ""; // prefix without "/", i.e. /Admin/Reports -> AdminReports
 
         // process config special routes (redirects, rewrites)
-        Hashtable routes = (Hashtable)this.config("routes");
+        Hashtable routes = this.config("routes") as Hashtable ?? [];
         bool is_routes_found = false;
-        if (routes != null)
+        foreach (string route_key in routes.Keys)
         {
-            foreach (string route_key in routes.Keys)
+            if (url != route_key)
+                continue;
+
+            string rdest = routes[route_key].toStr();
+            if (string.IsNullOrEmpty(rdest))
             {
-                if (url == route_key)
+                logger(LogLevel.WARN, "Wrong route destination: " + rdest);
+                continue;
+            }
+
+            string destination = rdest;
+            string? overrideMethod = null;
+
+            int spaceIndex = destination.IndexOf(' ');
+            if (spaceIndex > 0)
+            {
+                string candidate = destination[..spaceIndex];
+                if (METHOD_ALLOWED.ContainsKey(candidate))
                 {
-                    string rdest = (string)routes[route_key];
-                    if (string.IsNullOrEmpty(rdest))
-                    {
-                        logger(LogLevel.WARN, "Wrong route destination: " + rdest);
-                        continue;
-                    }
-
-                    string destination = rdest;
-                    string overrideMethod = null;
-
-                    int spaceIndex = destination.IndexOf(' ');
-                    if (spaceIndex > 0)
-                    {
-                        string candidate = destination[..spaceIndex];
-                        if (METHOD_ALLOWED.ContainsKey(candidate))
-                        {
-                            overrideMethod = candidate;
-                            destination = destination[(spaceIndex + 1)..].TrimStart();
-                        }
-                    }
-
-                    if (!string.IsNullOrEmpty(overrideMethod))
-                        route.method = overrideMethod;
-
-                    if (destination.StartsWith('/'))
-                    {
-                        // if started from / - this is redirect url
-                        url = destination;
-                        continue;
-                    }
-
-                    // it's a direct class-method to call, no further REST processing required
-                    is_routes_found = true;
-                    string[] sroute = destination.Split("::", 2);
-                    route.controller = Utils.routeFixChars(sroute[0]);
-                    if (sroute.Length > 1)
-                        route.action_raw = sroute[1];
-                    break;
+                    overrideMethod = candidate;
+                    destination = destination[(spaceIndex + 1)..].TrimStart();
                 }
             }
+
+            if (!string.IsNullOrEmpty(overrideMethod))
+                route.method = overrideMethod;
+
+            if (destination.StartsWith('/'))
+            {
+                // if started from / - this is redirect url
+                url = destination;
+                continue;
+            }
+
+            // it's a direct class-method to call, no further REST processing required
+            is_routes_found = true;
+            string[] sroute = destination.Split("::", 2);
+            route.controller = Utils.routeFixChars(sroute[0]);
+            if (sroute.Length > 1)
+                route.action_raw = sroute[1];
+            break;
         }
 
         if (!is_routes_found)
@@ -609,7 +607,7 @@ public class FW : IDisposable
             logger(LogLevel.DEBUG, Ex.Message);
             // if not logged - just redirect to login
             if (!isLogged)
-                redirect((string)config("UNLOGGED_DEFAULT_URL"), false);
+                redirect(config("UNLOGGED_DEFAULT_URL").toStr(), false);
             else
                 errMsg(Ex.Message);
         }
@@ -689,16 +687,16 @@ public class FW : IDisposable
             || route.action == ACTION_SAVE_MULTI
             || route.action == ACTION_DELETE
             || route.action == ACTION_DELETE_RESTORE)
-            && !string.IsNullOrEmpty(Session("XSS")) && Session("XSS") != (string)FORM["XSS"])
+            && !string.IsNullOrEmpty(Session("XSS")) && Session("XSS") != FORM["XSS"].toStr())
         {
             // XSS validation failed
             // first, check if we are under xss-excluded prefix
-            Hashtable no_xss_prefixes = (Hashtable)this.config("no_xss_prefixes_prefixes");
-            if (no_xss_prefixes == null || !no_xss_prefixes.ContainsKey(route.prefix))
+            Hashtable no_xss_prefixes = this.config("no_xss_prefixes_prefixes") as Hashtable ?? [];
+            if (!no_xss_prefixes.ContainsKey(route.prefix))
             {
                 // second, check if we are under xss-excluded controller
-                Hashtable no_xss = (Hashtable)this.config("no_xss");
-                if (no_xss == null || !no_xss.ContainsKey(route.controller))
+                Hashtable no_xss = this.config("no_xss") as Hashtable ?? [];
+                if (!no_xss.ContainsKey(route.controller))
                 {
                     if (is_die)
                         throw new AuthException("XSS Error. Reload the page or try to re-login");
@@ -713,13 +711,13 @@ public class FW : IDisposable
         // pre-check controller's access level by url
         int current_level = userAccessLevel;
 
-        Hashtable rules = (Hashtable)config("access_levels");
-        if (rules != null && rules.ContainsKey(path))
+        Hashtable rules = (Hashtable?)config("access_levels") ?? [];
+        if (rules.ContainsKey(path))
         {
             if (current_level >= rules[path].toInt())
                 result = 2;
         }
-        else if (rules != null && rules.ContainsKey(path2))
+        else if (rules.ContainsKey(path2))
         {
             if (current_level >= rules[path2].toInt())
                 result = 2;
@@ -739,8 +737,7 @@ public class FW : IDisposable
     {
         if (request == null)
         {
-            // offline mode
-            FORM = [];
+            // offline mode FORM = [];
             return;
         }
 
@@ -784,7 +781,7 @@ public class FW : IDisposable
                 if (!SQ.ContainsKey(mainKey))
                     SQ[mainKey] = new Hashtable();
 
-                ((Hashtable)SQ[mainKey])[subKey] = value;
+                ((Hashtable)SQ[mainKey]!)[subKey] = value;
             }
             else
             {
@@ -793,7 +790,7 @@ public class FW : IDisposable
         }
 
         foreach (DictionaryEntry entry in SQ)
-            f[(string)entry.Key] = entry.Value;
+            f[entry.Key.toStr()] = entry.Value;
 
         // also parse json in request body if any
         if (request.ContentType?[.."application/json".Length] == "application/json")
@@ -807,15 +804,15 @@ public class FW : IDisposable
         FORM = f;
     }
 
-    public void logger(params object[] args)
+    public void logger(params object?[] args)
     {
         if (args.Length == 0)
             return;
         flogger.log(LogLevel.DEBUG, ref args);
     }
-    public void logger(LogLevel level, params object[] args)
+    public void logger(LogLevel level, params object?[] args)
     {
-        if (args.Length == 0)
+        if (args == null || args.Length == 0)
             return;
         flogger.log(level, ref args);
     }
@@ -851,8 +848,8 @@ public class FW : IDisposable
             if (!ps.ContainsKey("error"))
                 ps["error"] = new Hashtable();
 
-            if (!((Hashtable)ps["error"]).ContainsKey("details"))
-                ((Hashtable)ps["error"])["details"] = this.FormErrors; // add form errors if any
+            if (ps["error"] is Hashtable errorTable && !errorTable.ContainsKey("details"))
+                errorTable["details"] = this.FormErrors; // add form errors if any
             logger(LogLevel.DEBUG, "Form errors:", this.FormErrors);
         }
 
@@ -866,8 +863,8 @@ public class FW : IDisposable
                     ps.Remove("_json"); // remove internal flag
                     this.parserJson(ps);
                 }
-                else
-                    this.parserJson(ps["_json"]);// if _json exists - return only this element content
+                    else
+                        this.parserJson(ps["_json"] ?? new Hashtable());// if _json exists - return only this element content
             }
             else
             {
@@ -886,30 +883,30 @@ public class FW : IDisposable
 
         if (ps.ContainsKey("_route_redirect"))
         {
-            Hashtable rr = (Hashtable)ps["_route_redirect"];
-            this.routeRedirect((string)rr["method"], (string)rr["controller"], (object[])rr["args"]);
+            var rr = ps["_route_redirect"] as Hashtable ?? [];
+            this.routeRedirect(rr["method"].toStr(), rr["controller"].toStr(), rr["args"] as object[] ?? []);
             return; // no further processing
         }
 
         if (ps.ContainsKey("_redirect"))
         {
-            this.redirect((string)ps["_redirect"]);
+            this.redirect(ps["_redirect"].toStr());
             return; // no further processing
         }
 
         string layout;
         if (format == "pjax")
-            layout = (string)G["PAGE_LAYOUT_PJAX"];
+            layout = G["PAGE_LAYOUT_PJAX"].toStr();
         else
-            layout = (string)G["PAGE_LAYOUT"];
+            layout = G["PAGE_LAYOUT"].toStr();
 
         //override layout from parse strings
         if (ps.ContainsKey("_layout"))
-            layout = (string)ps["_layout"];
+            layout = ps["_layout"].toStr();
 
         //override full basedir
         if (ps.ContainsKey("_basedir"))
-            basedir = (string)ps["_basedir"];
+            basedir = ps["_basedir"].toStr();
 
         if (basedir == "")
         {
@@ -925,7 +922,7 @@ public class FW : IDisposable
 
             // override controller basedir only
             if (ps.ContainsKey("_basedir_controller"))
-                basedir = (string)ps["_basedir_controller"];
+                basedir = ps["_basedir_controller"].toStr();
 
             basedir += "/" + this.route.action; // add action dir to controller's directory
         }
@@ -933,7 +930,7 @@ public class FW : IDisposable
         {
             // if override controller basedir - also add route action
             if (ps.ContainsKey("_basedir_controller"))
-                basedir = (string)ps["_basedir_controller"] + "/" + this.route.action;
+                basedir = ps["_basedir_controller"].toStr() + "/" + this.route.action;
         }
 
 
@@ -971,10 +968,11 @@ public class FW : IDisposable
             var DateFormatShort = DateFormat + " " + DateUtils.mapTimeFormat(userTimeFormat);
             var DateFormatLong = DateFormat + " " + DateUtils.mapTimeWithSecondsFormat(userTimeFormat);
 
-            pp_instance = new ParsePage(new ParsePageOptions
-            {
-                TemplatesRoot = config("template").toStr(),
-                IsCheckFileModifications = (LogLevel)config("log_level") >= LogLevel.DEBUG,
+                var logLevel = (LogLevel)config("log_level").toInt();
+                pp_instance = new ParsePage(new ParsePageOptions
+                {
+                    TemplatesRoot = config("template").toStr(),
+                    IsCheckFileModifications = logLevel >= LogLevel.DEBUG,
                 Lang = G["lang"].toStr(),
                 IsLangUpdate = config("is_lang_update").toBool(),
                 GlobalsGetter = () => G,
@@ -1010,14 +1008,14 @@ public class FW : IDisposable
             throw new RedirectException();
     }
 
-    public void routeRedirect(string action, string controller, object[] args = null)
+    public void routeRedirect(string action, string controller, object[]? args = null)
     {
         logger(LogLevel.TRACE, $"Route Redirect to [{controller}.{action}]", args);
         setController((!string.IsNullOrEmpty(controller) ? controller : route.controller), action);
 
         if (args != null)
         {
-            this.route.id = args[0].ToString(); //first argument goes to id
+            this.route.id = args[0].toStr(); //first argument goes to id
             this.route.@params = new ArrayList(args); // all arguments go to params
         }
 
@@ -1025,7 +1023,7 @@ public class FW : IDisposable
     }
 
     // same as above just with default controller
-    public void routeRedirect(string action, object[] args = null)
+    public void routeRedirect(string action, object[]? args = null)
     {
         routeRedirect(action, route.controller, args);
     }
@@ -1066,7 +1064,7 @@ public class FW : IDisposable
             route.controller_path = "/Home";
             route.controller = "Home";
             route.action = "NotFound";
-            co = controller(route.controller);
+            co = controller(route.controller) ?? throw new ApplicationException("Home controller not found");
             //we should always have HomeController
         }
         Type controllerClass = co.GetType();
@@ -1077,15 +1075,14 @@ public class FW : IDisposable
         // choose proper overload for Action
         bool isIdNumeric = int.TryParse(route.id, out _);
         var actionMethod = resolveActionMethod(controllerClass, route.action, isIdNumeric);
-
         if (actionMethod == null)
         {
             logger(LogLevel.DEBUG, "No method found for controller.action=[", route.controller, ".", route.action, "], checking route_default_action");
             // no method found - try to get default action
-            FieldInfo pInfo = controllerClass.GetField("route_default_action");
+            FieldInfo? pInfo = controllerClass.GetField("route_default_action");
             if (pInfo != null)
             {
-                string pvalue = (string)pInfo.GetValue(null);
+                string pvalue = pInfo.GetValue(null).toStr();
                 if (pvalue == ACTION_INDEX)
                 {
                     // = index - use IndexAction for unknown actions
@@ -1133,8 +1130,9 @@ public class FW : IDisposable
     }
 
     // Call controller
-    public void callController(FwController controller, MethodInfo actionMethod, object[] args = null)
+    public void callController(FwController controller, MethodInfo actionMethod, object[]? args = null)
     {
+        args ??= Array.Empty<object>();
         //convert args to parameters with proper types
         System.Reflection.ParameterInfo[] @params = actionMethod.GetParameters();
         object[] parameters = new object[@params.Length];
@@ -1153,18 +1151,19 @@ public class FW : IDisposable
                     //cannot convert, use default value for param type if param doesn't have default
                     if (!pi.HasDefaultValue)
                     {
-                        parameters[i] = Activator.CreateInstance(pi.ParameterType);
+                        var defaultValue = Activator.CreateInstance(pi.ParameterType) ?? new object();
+                        parameters[i] = defaultValue;
                     }
                 }
                 //logger("ARG OUT:", parameters[i].GetType().Name, parameters[i]);
             }
         }
 
-        Hashtable ps = null;
+        Hashtable? ps = null;
         try
         {
             controller.checkAccess();
-            ps = (Hashtable)actionMethod.Invoke(controller, parameters);
+            ps = actionMethod.Invoke(controller, parameters) as Hashtable; // Call Controller Action, if returns null - no ParsePage called
 
             // check/override _basedir from controller for non-json requests
             if (ps != null && !isJsonExpected() && !ps.ContainsKey("_basedir_controller") && !string.IsNullOrEmpty(controller.template_basedir))
@@ -1182,7 +1181,7 @@ public class FW : IDisposable
         }
         catch (TargetInvocationException ex)
         {
-            Exception iex = null;
+            Exception? iex = null;
             if (ex.InnerException != null)
             {
                 iex = ex.InnerException;
@@ -1209,16 +1208,16 @@ public class FW : IDisposable
     #region controller action method resolution with caching
     private sealed class ControllerActionCache
     {
-        private readonly Dictionary<string, MethodInfo> stringHandlers;
-        private readonly Dictionary<string, MethodInfo> numericHandlers;
-        private readonly Dictionary<string, MethodInfo> declaredFallback;
-        private readonly Dictionary<string, MethodInfo> anyFallback;
+        private readonly Dictionary<string, MethodInfo?> stringHandlers;
+        private readonly Dictionary<string, MethodInfo?> numericHandlers;
+        private readonly Dictionary<string, MethodInfo?> declaredFallback;
+        private readonly Dictionary<string, MethodInfo?> anyFallback;
 
         public ControllerActionCache(
-            Dictionary<string, MethodInfo> stringHandlers,
-            Dictionary<string, MethodInfo> numericHandlers,
-            Dictionary<string, MethodInfo> declaredFallback,
-            Dictionary<string, MethodInfo> anyFallback)
+            Dictionary<string, MethodInfo?> stringHandlers,
+            Dictionary<string, MethodInfo?> numericHandlers,
+            Dictionary<string, MethodInfo?> declaredFallback,
+            Dictionary<string, MethodInfo?> anyFallback)
         {
             this.stringHandlers = stringHandlers;
             this.numericHandlers = numericHandlers;
@@ -1226,16 +1225,16 @@ public class FW : IDisposable
             this.anyFallback = anyFallback;
         }
 
-        public bool TryGetString(string actionName, out MethodInfo method) => stringHandlers.TryGetValue(actionName, out method);
+        public bool TryGetString(string actionName, out MethodInfo? method) => stringHandlers.TryGetValue(actionName, out method);
 
-        public bool TryGetNumeric(string actionName, out MethodInfo method) => numericHandlers.TryGetValue(actionName, out method);
+        public bool TryGetNumeric(string actionName, out MethodInfo? method) => numericHandlers.TryGetValue(actionName, out method);
 
-        public bool TryGetDeclaredFallback(string actionName, out MethodInfo method) => declaredFallback.TryGetValue(actionName, out method);
+        public bool TryGetDeclaredFallback(string actionName, out MethodInfo? method) => declaredFallback.TryGetValue(actionName, out method);
 
-        public bool TryGetAnyFallback(string actionName, out MethodInfo method) => anyFallback.TryGetValue(actionName, out method);
+        public bool TryGetAnyFallback(string actionName, out MethodInfo? method) => anyFallback.TryGetValue(actionName, out method);
     }
 
-    private static MethodInfo resolveActionMethod(Type controllerClass, string actionName, bool isIdNumeric)
+    private static MethodInfo? resolveActionMethod(Type controllerClass, string actionName, bool isIdNumeric)
     {
         if (string.IsNullOrEmpty(actionName))
             return null;
@@ -1262,10 +1261,10 @@ public class FW : IDisposable
 
     private static ControllerActionCache buildControllerActionCache(Type controllerClass)
     {
-        var stringHandlers = new Dictionary<string, MethodInfo>(StringComparer.OrdinalIgnoreCase);
-        var numericHandlers = new Dictionary<string, MethodInfo>(StringComparer.OrdinalIgnoreCase);
-        var declaredFallback = new Dictionary<string, MethodInfo>(StringComparer.OrdinalIgnoreCase);
-        var anyFallback = new Dictionary<string, MethodInfo>(StringComparer.OrdinalIgnoreCase);
+        var stringHandlers = new Dictionary<string, MethodInfo?>(StringComparer.OrdinalIgnoreCase);
+        var numericHandlers = new Dictionary<string, MethodInfo?>(StringComparer.OrdinalIgnoreCase);
+        var declaredFallback = new Dictionary<string, MethodInfo?>(StringComparer.OrdinalIgnoreCase);
+        var anyFallback = new Dictionary<string, MethodInfo?>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var method in controllerClass.GetMethods(BindingFlags.Public | BindingFlags.Instance))
         {
@@ -1333,16 +1332,16 @@ public class FW : IDisposable
     ///   "bcc" - bcc email addresses - ArrayList
     /// </param>
     /// <returns>true if sent successfully, false if problem - see fw.last_error_send_email</returns>
-    public bool sendEmail(string mail_from, string mail_to, string mail_subject, string mail_body, IDictionary filenames = null, IList aCC = null, string reply_to = "", Hashtable options = null)
+    public bool sendEmail(string mail_from, string mail_to, string mail_subject, string mail_body, IDictionary? filenames = null, IList? aCC = null, string reply_to = "", Hashtable? options = null)
     {
         bool result = true;
-        MailMessage message = null;
+        MailMessage? message = null;
         options ??= [];
 
         try
         {
             if (mail_from.Length == 0)
-                mail_from = (string)this.config("mail_from"); // default mail from
+                mail_from = this.config("mail_from").toStr(); // default mail from
             mail_subject = Regex.Replace(mail_subject, @"[\r\n]+", " ");
 
             bool is_test = this.config("is_test").toBool();
@@ -1350,7 +1349,7 @@ public class FW : IDisposable
             {
                 string test_email = this.Session("login") ?? ""; //in test mode - try logged user email (if logged)
                 if (test_email.Length == 0)
-                    test_email = (string)this.config("test_email"); //try test_email from config
+                    test_email = this.config("test_email").toStr(); //try test_email from config
 
                 mail_body = mail_body + System.Environment.NewLine + "TEST SEND. PASSED MAIL_TO=[" + mail_to + "]"; //add to the end of the body to preserve html
                 mail_to = test_email;
@@ -1415,9 +1414,9 @@ public class FW : IDisposable
                 }
 
                 // add BCC if any
-                if (options.ContainsKey("bcc") && !is_test)
+                if (options["bcc"] is ArrayList options_bcc && !is_test)
                 {
-                    foreach (string bcc1 in (ArrayList)options["bcc"])
+                    foreach (string bcc1 in options_bcc)
                     {
                         string bcc = bcc1.Trim();
                         if (string.IsNullOrEmpty(bcc))
@@ -1434,7 +1433,7 @@ public class FW : IDisposable
                     fkeys.Sort();
                     foreach (string human_filename in fkeys)
                     {
-                        string filename = (string)filenames[human_filename];
+                        string filename = filenames[human_filename].toStr();
                         System.Net.Mail.Attachment att = new(filename, Utils.ext2mime(Path.GetExtension(filename)))
                         {
                             Name = human_filename,
@@ -1446,14 +1445,14 @@ public class FW : IDisposable
                     }
                 }
 
-                using (SmtpClient client = new())
-                {
-                    Hashtable mailSettings = (Hashtable)this.config("mail");
-                    if (options.ContainsKey("smtp"))
+                    using (SmtpClient client = new())
                     {
-                        //override mailSettings from smtp options
-                        Utils.mergeHash(mailSettings, options["smtp"] as Hashtable);
-                    }
+                        Hashtable mailSettings = this.config("mail") as Hashtable ?? [];
+                        if (options.ContainsKey("smtp") && options["smtp"] is Hashtable smtpOptions)
+                        {
+                            //override mailSettings from smtp options
+                            Utils.mergeHash(mailSettings, smtpOptions);
+                        }
                     if (mailSettings.Count > 0)
                     {
                         client.Host = mailSettings["host"].toStr();
@@ -1481,7 +1480,7 @@ public class FW : IDisposable
     }
 
     // shortcut for send_email from template from the /emails template dir
-    public bool sendEmailTpl(string mail_to, string tpl, Hashtable hf, Hashtable filenames = null, ArrayList aCC = null, string reply_to = "", Hashtable options = null)
+    public bool sendEmailTpl(string mail_to, string tpl, Hashtable hf, Hashtable? filenames = null, ArrayList? aCC = null, string reply_to = "", Hashtable? options = null)
     {
         Regex r = new(@"[\n\r]+");
         string subj_body = parsePage("/emails", tpl, hf);
@@ -1494,10 +1493,10 @@ public class FW : IDisposable
     // send email message to site admin (usually used in case of errors)
     public void sendEmailAdmin(string msg)
     {
-        this.sendEmail("", (string)this.config("admin_email"), msg[..512], msg);
+        this.sendEmail("", this.config("admin_email").toStr(), msg[..512], msg);
     }
 
-    public void errMsg(string msg, Exception Ex = null)
+    public void errMsg(string msg, Exception? Ex = null)
     {
         Hashtable ps = [];
         var tpl_dir = "/error";
@@ -1554,8 +1553,8 @@ public class FW : IDisposable
                 ps["DUMP_STACK"] = Ex.ToString();
 
             ps["DUMP_SQL"] = DB.last_sql;
-            ps["DUMP_FORM"] = FwLogger.dumper(FORM);
-            ps["DUMP_SESSION"] = FwLogger.dumper(context?.Session);
+            ps["DUMP_FORM"] = FwLogger.dumper(FORM ?? new Hashtable());
+            ps["DUMP_SESSION"] = context?.Session != null ? FwLogger.dumper(context.Session) : "null";
         }
 
         parser(tpl_dir, ps);
@@ -1571,11 +1570,16 @@ public class FW : IDisposable
             T m = new();
 
             // initialize
-            typeof(T).GetMethod("init").Invoke(m, [this]);
+            var initMethod = typeof(T).GetMethod("init");
+            initMethod?.Invoke(m, [this]);
 
             models[tt.Name] = m;
         }
-        return (T)models[tt.Name];
+
+        if (models[tt.Name] is T typedModel)
+            return typedModel;
+
+        throw new InvalidOperationException($"Model cache entry for {tt.Name} is not of expected type {typeof(T).FullName}.");
     }
 
     // return model object by model class name
@@ -1584,12 +1588,16 @@ public class FW : IDisposable
         if (!models.ContainsKey(model_name))
         {
             Type mt = Type.GetType(FW_NAMESPACE_PREFIX + model_name) ?? throw new ApplicationException("Error initializing model: [" + FW_NAMESPACE_PREFIX + model_name + "] class not found");
-            FwModel m = (FwModel)Activator.CreateInstance(mt);
+            var instance = Activator.CreateInstance(mt) ?? throw new InvalidOperationException($"Could not create model instance for {mt.FullName}");
+            FwModel m = (FwModel)instance;
             // initialize
             m.init(this);
             models[model_name] = m;
         }
-        return (FwModel)models[model_name];
+        if (models[model_name] is FwModel result)
+            return result;
+
+        throw new InvalidOperationException($"Model cache entry for {model_name} is not a FwModel.");
     }
 
     /// <summary>
@@ -1598,17 +1606,17 @@ public class FW : IDisposable
     /// <param name="controller_name">controller </param>
     /// <returns></returns>
     /// <exception cref="ApplicationException"></exception>
-    public FwController controller(string controller_name, bool is_auth_check = true)
+    public FwController? controller(string controller_name, bool is_auth_check = true)
     {
         ////validate - name should end with "Controller"
         //if (!controller_name.EndsWith("Controller", StringComparison.OrdinalIgnoreCase))
         //    throw new ApplicationException($"Controller class name should end on 'Controller': {controller_name}");
 
-        if (controllers.ContainsKey(controller_name))
-            return (FwController)controllers[controller_name];
+        if (controllers.ContainsKey(controller_name) && controllers[controller_name] is FwController cachedController)
+            return cachedController;
 
         FwController c;
-        Type ct = Type.GetType(FW_NAMESPACE_PREFIX + controller_name + "Controller", false, true); // case ignored
+        Type? ct = Type.GetType(FW_NAMESPACE_PREFIX + controller_name + "Controller", false, true); // case ignored
         if (ct == null)
         {
             //if no such controller class - try virtual controllers
@@ -1631,7 +1639,8 @@ public class FW : IDisposable
         }
         else
         {
-            c = (FwController)Activator.CreateInstance(ct);
+            var instance = Activator.CreateInstance(ct) ?? throw new InvalidOperationException($"Could not create controller instance for {ct.FullName}");
+            c = (FwController)instance;
             if (is_auth_check)
             {
                 // controller found
@@ -1656,12 +1665,12 @@ public class FW : IDisposable
         return c;
     }
 
-    public void logActivity(string log_types_icode, string entity_icode, int item_id = 0, string iname = "", Hashtable changed_fields = null)
+    public void logActivity(string log_types_icode, string entity_icode, int item_id = 0, string iname = "", Hashtable? changed_fields = null)
     {
         if (!is_log_events)
             return;
 
-        Hashtable payload = null;
+        Hashtable? payload = null;
         if (changed_fields != null)
             payload = new Hashtable()
             {

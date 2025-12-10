@@ -15,17 +15,17 @@ public class Att : FwModel<Att.Row>
     public class Row
     {
         public int id { get; set; }
-        public string icode { get; set; }
+        public string icode { get; set; } = string.Empty;
         public int? att_categories_id { get; set; }
         public int? fwentities_id { get; set; }
         public int? item_id { get; set; }
         public int is_s3 { get; set; }
         public int is_inline { get; set; }
         public int is_image { get; set; }
-        public string fname { get; set; }
+        public string fname { get; set; } = string.Empty;
         public long fsize { get; set; }
-        public string ext { get; set; }
-        public string iname { get; set; }
+        public string ext { get; set; } = string.Empty;
+        public string iname { get; set; } = string.Empty;
         public int status { get; set; }
         public DateTime add_time { get; set; }
         public int add_users_id { get; set; }
@@ -53,15 +53,24 @@ public class Att : FwModel<Att.Row>
     }
 
     // overload by file index
-    public Hashtable uploadOne(int id, int file_index, bool is_new = false)
+    public Hashtable? uploadOne(int id, int file_index, bool is_new = false)
     {
-        return uploadOne(id, fw.request.Form.Files[file_index], is_new);
+        var files = fw.request?.Form?.Files;
+        if (files == null || file_index >= files.Count)
+            throw new UserException("No file(s) selected");
+
+        return uploadOne(id, files[file_index], is_new);
     }
 
     // overload by file name
-    public Hashtable uploadOne(int id, string input_name, bool is_new = false)
+    public Hashtable? uploadOne(int id, string input_name, bool is_new = false)
     {
-        return uploadOne(id, fw.request.Form.Files[input_name], is_new);
+        var files = fw.request?.Form?.Files;
+        var fileByName = files?.GetFile(input_name);
+        if (fileByName == null)
+            throw new UserException("No file(s) selected");
+
+        return uploadOne(id, fileByName, is_new);
     }
 
     /// <summary>
@@ -72,10 +81,11 @@ public class Att : FwModel<Att.Row>
     /// <param name="is_new"></param>
     /// <returns> return hashtable with added files information id, fname, fsize, ext and filepath or null if upload failed or no files</returns>
     /// </returns>
-    public Hashtable uploadOne(int id, IFormFile file, bool is_new = false)
+    public Hashtable? uploadOne(int id, IFormFile file, bool is_new = false)
     {
-        Hashtable result = null;
-        if (fw.request.Form.Files.Count == 0)
+        Hashtable? result = null;
+        var requestFiles = fw.request?.Form?.Files;
+        if (requestFiles == null || requestFiles.Count == 0 || file == null)
             return result;
 
         if (uploadFile(id, out string filepath, file, true))
@@ -124,9 +134,13 @@ public class Att : FwModel<Att.Row>
     {
         ArrayList result = [];
 
-        for (var i = 0; i <= fw.request.Form.Files.Count - 1; i++)
+        var files = fw.request?.Form?.Files;
+        if (files == null || files.Count == 0)
+            return result;
+
+        for (var i = 0; i <= files.Count - 1; i++)
         {
-            var file = fw.request.Form.Files[i];
+            var file = files[i];
             if (file.Length > 0)
             {
                 // add att db record
@@ -188,9 +202,9 @@ public class Att : FwModel<Att.Row>
     public string getUrl(Hashtable item, string size = "")
     {
         string result;
-        if ((string)item["is_s3"] == "1")
+        if (item["is_s3"].toBool())
         {
-            result = fw.model<S3>().getSignedUrl(getS3KeyByID((string)item["icode"], size));
+            result = fw.model<S3>().getSignedUrl(getS3KeyByID(item["icode"].toStr(), size));
         }
         else
         {
@@ -275,7 +289,7 @@ public class Att : FwModel<Att.Row>
     {
         var item = one(id);
 
-        string filepath = getUploadImgPath(id, "", (string)item["ext"]);
+        string filepath = getUploadImgPath(id, "", item["ext"].toStr());
         if (!string.IsNullOrEmpty(filepath))
             File.Delete(filepath);
         // for images - also delete s/m thumbnails
@@ -283,7 +297,7 @@ public class Att : FwModel<Att.Row>
         {
             foreach (string size in Utils.qw("s m l"))
             {
-                filepath = getUploadImgPath(id, size, (string)item["ext"]);
+                filepath = getUploadImgPath(id, size, item["ext"].toStr());
                 if (!string.IsNullOrEmpty(filepath))
                     File.Delete(filepath);
             }
@@ -329,7 +343,7 @@ public class Att : FwModel<Att.Row>
         fw.response.Headers.Pragma = "cache";
         fw.response.Headers.Expires = DateTime.Now.AddDays(CACHE_DAYS).ToString("R"); // cache for several days, this allows browser not to send any requests to server during this period (unless F5)
 
-        string filepath = getUploadImgPath(id, size, (string)item["ext"]);
+        string filepath = getUploadImgPath(id, size, item["ext"].toStr());
         if (!File.Exists(filepath))
         {
             fw.response.StatusCode = 404;
@@ -340,7 +354,7 @@ public class Att : FwModel<Att.Row>
 
         fw.response.Headers.LastModified = filetime.ToString("R");// this allows browser to send If-Modified-Since request headers (unless Ctrl+F5)
 
-        string ifmodhead = fw.request.Headers.IfModifiedSince;
+        string ifmodhead = fw.request.Headers.IfModifiedSince.ToString();
         if (ifmodhead != null && DateTime.TryParse(ifmodhead, out DateTime ifmod) && ifmod >= filetime)
         {
             fw.response.StatusCode = 304; // not modified
@@ -348,7 +362,7 @@ public class Att : FwModel<Att.Row>
         }
 
         fw.logger(LogLevel.INFO, "Transmit(", disposition, ") filepath [", filepath, "]");
-        string filename = item["fname"].Replace('"', '\'');
+        string filename = item["fname"].toStr().Replace('"', '\'');
         string ext = UploadUtils.getUploadFileExt(filename);
 
         fw.response.Headers.ContentType = Utils.ext2mime(ext);
@@ -511,7 +525,7 @@ public class Att : FwModel<Att.Row>
         if (fw.userId == 0)
             throw new AuthException(); // denied for non-logged
 
-        var url = fw.model<S3>().getSignedUrl(getS3KeyByID((string)item["icode"], size));
+        var url = fw.model<S3>().getSignedUrl(getS3KeyByID(item["icode"].toStr(), size));
         fw.redirect(url);
     }
 
@@ -593,7 +607,7 @@ public class Att : FwModel<Att.Row>
     /// <param name="fieldnames">qw string of ONLY field names to upload</param>
     /// <returns>number of successuflly uploaded files</returns>
     /// <remarks>also set FLASH error if some files not uploaded</remarks>
-    public int uploadPostedFilesS3(string entity_icode, int item_id, string att_categories_id = null, string fieldnames = "")
+    public int uploadPostedFilesS3(string entity_icode, int item_id, string? att_categories_id = null, string fieldnames = "")
     {
         var result = 0;
         var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);

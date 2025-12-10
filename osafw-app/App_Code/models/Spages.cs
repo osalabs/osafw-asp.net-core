@@ -16,22 +16,22 @@ public class Spages : FwModel<Spages.Row>
     {
         public int id { get; set; }
         public int parent_id { get; set; }
-        public string url { get; set; }
-        public string iname { get; set; }
-        public string idesc { get; set; }
+        public string url { get; set; } = string.Empty;
+        public string iname { get; set; } = string.Empty;
+        public string idesc { get; set; } = string.Empty;
         public int? head_att_id { get; set; }
-        public string idesc_left { get; set; }
-        public string idesc_right { get; set; }
-        public string meta_keywords { get; set; }
-        public string meta_description { get; set; }
+        public string idesc_left { get; set; } = string.Empty;
+        public string idesc_right { get; set; } = string.Empty;
+        public string meta_keywords { get; set; } = string.Empty;
+        public string meta_description { get; set; } = string.Empty;
         public DateTime? pub_time { get; set; }
-        public string template { get; set; }
+        public string template { get; set; } = string.Empty;
         public int prio { get; set; }
         public int is_home { get; set; }
-        public string redirect_url { get; set; }
-        public string custom_head { get; set; }
-        public string custom_css { get; set; }
-        public string custom_js { get; set; }
+        public string redirect_url { get; set; } = string.Empty;
+        public string custom_head { get; set; } = string.Empty;
+        public string custom_css { get; set; } = string.Empty;
+        public string custom_js { get; set; } = string.Empty;
         public int status { get; set; }
         public DateTime add_time { get; set; }
         public int add_users_id { get; set; }
@@ -49,7 +49,7 @@ public class Spages : FwModel<Spages.Row>
     {
         var item_old = one(id);
         // home page cannot be deleted
-        if ((string)item_old["is_home"] != "1")
+        if (!item_old["is_home"].toBool())
             base.delete(id, is_perm);
     }
 
@@ -172,7 +172,7 @@ public class Spages : FwModel<Spages.Row>
                 row2["_level"] = level;
                 // row2["_level1"] level + 1 'to easier use in templates
                 row2["full_url"] = parent_url + "/" + row["url"];
-                row2["children"] = getPagesTree(rows, row["id"].toInt(), level + 1, (string)row["url"]);
+                row2["children"] = getPagesTree(rows, row["id"].toInt(), level + 1, row["url"].toStr());
                 result.Add(row2);
             }
         }
@@ -187,7 +187,7 @@ public class Spages : FwModel<Spages.Row>
     /// <param name="level">optional, used in recursive calls</param>
     /// <returns>parsepage AL with "leveler" array added to each row with level>0</returns>
     /// <remarks>RECURSIVE</remarks>
-    public ArrayList getPagesTreeList(ArrayList pages_tree, int level = 0)
+    public ArrayList getPagesTreeList(ArrayList? pages_tree, int level = 0)
     {
         ArrayList result = [];
 
@@ -205,7 +205,7 @@ public class Spages : FwModel<Spages.Row>
                     row["leveler"] = leveler;
                 }
                 // subpages
-                result.AddRange(getPagesTreeList((ArrayList)row["children"], level + 1));
+                result.AddRange(getPagesTreeList((ArrayList?)row["children"], level + 1));
             }
         }
 
@@ -220,16 +220,16 @@ public class Spages : FwModel<Spages.Row>
     /// <param name="level">optional, used in recursive calls</param>
     /// <returns>HTML with options</returns>
     /// <remarks>RECURSIVE</remarks>
-    public string getPagesTreeSelectHtml(string selected_id, ArrayList pages_tree, int level = 0)
+    public string getPagesTreeSelectHtml(string selected_id, ArrayList? pages_tree, int level = 0)
     {
         StringBuilder result = new();
         if (pages_tree != null)
         {
             foreach (Hashtable row in pages_tree)
             {
-                result.AppendLine("<option value=\"" + row["id"] + "\"" + ((string)row["id"] == selected_id ? " selected=\"selected\" " : "") + ">" + Utils.strRepeat("&#8212; ", level) + row["iname"] + "</option>");
+                result.AppendLine("<option value=\"" + row["id"] + "\"" + (row["id"].toStr() == selected_id ? " selected=\"selected\" " : "") + ">" + Utils.strRepeat("&#8212; ", level) + row["iname"] + "</option>");
                 // subpages
-                result.Append(getPagesTreeSelectHtml(selected_id, (ArrayList)row["children"], level + 1));
+                result.Append(getPagesTreeSelectHtml(selected_id, (ArrayList?)row["children"], level + 1));
             }
         }
 
@@ -298,8 +298,9 @@ public class Spages : FwModel<Spages.Row>
             return;
         }
 
-        if (!Utils.isEmpty(item["redirect_url"]))
-            fw.redirect((string)item["redirect_url"]);
+        var redirect_url = item["redirect_url"].toStr();
+        if (!Utils.isEmpty(redirect_url))
+            fw.redirect(redirect_url);
 
         var item_id = item["id"].toInt();
 
@@ -337,7 +338,7 @@ public class Spages : FwModel<Spages.Row>
     // End Function
 
     // return correct url - TODO
-    public string getUrl(int id, string icode, string url = null)
+    public string getUrl(int id, string icode, string url = "")
     {
         if (!string.IsNullOrEmpty(url))
         {

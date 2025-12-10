@@ -17,7 +17,7 @@ namespace osafw;
 
 public class WinLoginController : FwController
 {
-    protected Users model;
+    protected Users model = null!;
 
     public override void init(FW fw)
     {
@@ -35,8 +35,9 @@ public class WinLoginController : FwController
     public void IndexAction()
     {
         string username = "";
-        bool isAuthenticated = fw.context.User.Identity.IsAuthenticated;
-        string authUser = fw.context.User.Identity.Name;
+        var identity = fw.context?.User?.Identity;
+        bool isAuthenticated = identity?.IsAuthenticated ?? false;
+        string authUser = identity?.Name ?? string.Empty;
         logger(LogLevel.INFO, "Win Login isAuthenticated=", isAuthenticated);
         logger(LogLevel.INFO, "Win Login authUser=", authUser);
 
@@ -93,7 +94,7 @@ public class WinLoginController : FwController
                 }
             }
             model.doLogin(usersId);
-            fw.redirect((string)fw.config("LOGGED_DEFAULT_URL"));
+            fw.redirect(fw.config("LOGGED_DEFAULT_URL").toStr());
         }
     }
 

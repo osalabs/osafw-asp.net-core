@@ -12,7 +12,7 @@ public class AdminUsersController : FwDynamicController
 {
     public static new int access_level = Users.ACL_ADMIN;
 
-    protected Users model;
+    protected Users model = null!;
 
     public override void init(FW fw)
     {
@@ -40,7 +40,7 @@ public class AdminUsersController : FwDynamicController
         }
     }
 
-    public override Hashtable setPS(Hashtable ps = null)
+    public override Hashtable setPS(Hashtable? ps = null)
     {
         ps = base.setPS(ps);
         ps["is_roles"] = model.isRoles();
@@ -49,8 +49,8 @@ public class AdminUsersController : FwDynamicController
 
     public override Hashtable ShowFormAction(int id = 0)
     {
-        var ps = base.ShowFormAction(id);
-        Hashtable item = (Hashtable)ps["i"];
+        var ps = base.ShowFormAction(id)!;
+        var item = (Hashtable)ps["i"]!;
         ps["att"] = fw.model<Att>().one(item["att_id"]);
 
         ps["is_roles"] = model.isRoles();
@@ -59,7 +59,7 @@ public class AdminUsersController : FwDynamicController
         return ps;
     }
 
-    public override Hashtable SaveAction(int id = 0)
+    public override Hashtable? SaveAction(int id = 0)
     {
         route_onerror = FW.ACTION_SHOW_FORM; //set route to go if error happens
 
@@ -85,7 +85,7 @@ public class AdminUsersController : FwDynamicController
         Hashtable itemdb = FormUtils.filter(item, this.save_fields);
         FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
 
-        itemdb["pwd"] = itemdb["pwd"].ToString().Trim();
+        itemdb["pwd"] = itemdb["pwd"].toStr().Trim();
         if (Utils.isEmpty(itemdb["pwd"]))
             itemdb.Remove("pwd");
 
@@ -106,12 +106,12 @@ public class AdminUsersController : FwDynamicController
         if (!result)
             fw.FormErrors["REQ"] = 1;
 
-        if (result && model.isExists(item["email"], id))
+        if (result && model.isExists(item["email"].toStr(), id))
         {
             result = false;
             fw.FormErrors["ehack"] = "EXISTS";
         }
-        if (result && !FormUtils.isEmail((string)item["email"]))
+        if (result && !FormUtils.isEmail(item["email"].toStr()))
         {
             result = false;
             fw.FormErrors["ehack"] = "EMAIL";
@@ -145,7 +145,7 @@ public class AdminUsersController : FwDynamicController
 
         model.doLogin(id);
 
-        fw.redirect((string)fw.config("LOGGED_DEFAULT_URL"));
+        fw.redirect(fw.config("LOGGED_DEFAULT_URL").toStr());
     }
 
     public Hashtable SendPwdAction(int id)
@@ -165,9 +165,9 @@ public class AdminUsersController : FwDynamicController
         var rows = db.array(model.table_name, [], "id");
         foreach (var row in rows)
         {
-            if (row["pwd"].ToString().Substring(0, 2) == "$2")
+            if (row["pwd"].Substring(0, 2) == "$2")
                 continue; // already hashed
-            var hashed = model.hashPwd((string)row["pwd"]);
+            var hashed = model.hashPwd(row["pwd"]);
             db.update(model.table_name, new Hashtable() { { "pwd", hashed } }, new Hashtable() { { "id", row["id"] } });
         }
         rw("done");

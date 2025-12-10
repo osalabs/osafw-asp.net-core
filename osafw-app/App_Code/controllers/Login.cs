@@ -32,7 +32,7 @@ public class LoginController : FwController
     {
         Hashtable ps = [];
         if (fw.isLogged)
-            fw.redirect((string)fw.config("LOGGED_DEFAULT_URL"));
+            fw.redirect(fw.config("LOGGED_DEFAULT_URL").toStr());
 
         Hashtable item = reqh("item");
         if (isGet())
@@ -57,10 +57,10 @@ public class LoginController : FwController
             var item = reqh("item");
             var gourl = reqs("gourl");
             string login = item["login"].toStr().Trim();
-            string pwd = (string)item["pwdh"];
+            string pwd = item["pwdh"].toStr();
             // if use field with masked chars - read masked field
-            if ((string)item["chpwd"] == "1")
-                pwd = (string)item["pwd"];
+            if (item["chpwd"].toBool())
+                pwd = item["pwd"].toStr();
             pwd = pwd.Trim();
 
             // for dev config only - login as first admin
@@ -68,7 +68,7 @@ public class LoginController : FwController
             if (fw.config("IS_DEV").toBool() && string.IsNullOrEmpty(login) && pwd == "~")
             {
                 var dev = db.row(model.table_name, DB.h("status", Users.STATUS_ACTIVE, "access_level", Users.ACL_SITEADMIN), "id");
-                login = (string)dev["email"];
+                login = dev["email"];
                 is_dev_login = true;
             }
             else
@@ -130,8 +130,8 @@ public class LoginController : FwController
     {
         fw.logActivity(FwLogTypes.ICODE_USERS_LOGOFF, FwEntities.ICODE_USERS, fw.userId);
         fw.model<Users>().removePermCookie(fw.userId);
-        fw.context.Session.Clear();
-        fw.redirect((string)fw.config("UNLOGGED_DEFAULT_URL"));
+        fw.context?.Session?.Clear();
+        fw.redirect(fw.config("UNLOGGED_DEFAULT_URL").toStr());
     }
 
     public Hashtable MFAAction()
@@ -140,7 +140,8 @@ public class LoginController : FwController
         if (users_id == 0)
             fw.redirect(base_url);
 
-        fw.logActivity(FwLogTypes.ICODE_USERS_LOGIN, FwEntities.ICODE_USERS, users_id, "MFA check, IP:" + fw.context.Connection.RemoteIpAddress.ToString());
+        var remoteIp = Utils.getIP(fw.context);
+        fw.logActivity(FwLogTypes.ICODE_USERS_LOGIN, FwEntities.ICODE_USERS, users_id, "MFA check, IP:" + remoteIp);
 
         var ps = new Hashtable() {
             { "hide_sidebar" , true},
@@ -177,7 +178,7 @@ public class LoginController : FwController
         fw.Session("mfa_login_attempts", (mfa_login_attempts + 1).ToString());
 
         var item = reqh("item");
-        var mfs_code = item["code"].ToString();
+        var mfs_code = item["code"].toStr();
 
         if (!model.isValidMFA(users_id, mfs_code))
         {
@@ -206,7 +207,7 @@ public class LoginController : FwController
         if (!string.IsNullOrEmpty(gourl) && !Regex.IsMatch(gourl, "^http", RegexOptions.IgnoreCase))
             url = gourl;
         else
-            url = (string)fw.config("LOGGED_DEFAULT_URL");
+            url = fw.config("LOGGED_DEFAULT_URL").toStr();
 
         fw.redirect(url);
     }

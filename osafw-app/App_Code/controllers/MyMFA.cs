@@ -43,14 +43,15 @@ public class MyMFAController : FwController
     {
         var user = model.one(user_id);
 
-        fw.logActivity(FwLogTypes.ICODE_USERS_LOGIN, FwEntities.ICODE_USERS, user_id, "MFA setup, IP:" + fw.context.Connection.RemoteIpAddress.ToString());
+        var remoteIp = Utils.getIP(fw.context);
+        fw.logActivity(FwLogTypes.ICODE_USERS_LOGIN, FwEntities.ICODE_USERS, user_id, "MFA setup, IP:" + remoteIp);
 
         //generate secret and save to session only (will be saved to db after validation)
         var secret = model.generateMFASecret();
         fw.Session("mfa_secret", secret);
 
         Hashtable ps = [];
-        ps["qr_code"] = model.generateMFAQRCode(secret, user["email"], (string)fw.config("SITE_NAME"));
+        ps["qr_code"] = model.generateMFAQRCode(secret, user["email"], fw.config("SITE_NAME").toStr());
         return ps;
     }
 

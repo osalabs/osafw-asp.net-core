@@ -26,8 +26,8 @@ public class RolesResourcesPermissions : FwModel<RolesResourcesPermissions.Row>
 
     const string KEY_DELIM = "#";
 
-    public FwModel junction_model_permissions;
-    public string junction_field_permissions_id;
+    public FwModel junction_model_permissions = null!;
+    public string junction_field_permissions_id = "";
 
     public RolesResourcesPermissions() : base()
     {
@@ -48,9 +48,9 @@ public class RolesResourcesPermissions : FwModel<RolesResourcesPermissions.Row>
         junction_field_permissions_id = "permissions_id";
     }
 
-    public string matrixKey(object resources_id, object permissions_id)
+    public string matrixKey(object? resources_id, object? permissions_id)
     {
-        return resources_id + KEY_DELIM + permissions_id;
+        return resources_id.toStr() + KEY_DELIM + permissions_id.toStr();
     }
 
     // extract resources_id and permissions_id from key

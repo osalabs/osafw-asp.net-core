@@ -71,7 +71,7 @@ public class Utils
     * or "AAA BBB CCC DDD" => AAA=1, BBB=1, CCC=1, DDD=1
     * WARN! replaces all "&nbsp;" to spaces (after convert)
     */
-    public static Hashtable qh(string str, object default_value = null)
+    public static Hashtable qh(string str, object? default_value = null)
     {
         Hashtable result = [];
         if (str != null && str != "")
@@ -81,7 +81,7 @@ public class Utils
             {
                 string v = value.Replace("&nbsp;", " ");
                 string[] avoid = v.Split("|", 2);
-                string val = (string)default_value;
+                string val = default_value.toStr();
                 if (avoid.Length > 1)
                 {
                     val = avoid[1];
@@ -184,6 +184,11 @@ public class Utils
         return str;
     }
 
+    public static string getIP(HttpContext? context)
+    {
+        return context?.Connection?.RemoteIpAddress?.ToString() ?? string.Empty;
+    }
+
     public static string base64encode(string str)
     {
         byte[] bytes = Encoding.UTF8.GetBytes(str);
@@ -243,7 +248,7 @@ public class Utils
     /// </summary>
     /// <param name="o"></param>
     /// <returns></returns>
-    public static bool isDate(object o)
+    public static bool isDate(object? o)
     {
         var dt = o.toDateOrNull();
         return dt != null && ((DateTime)dt) != DateTime.MinValue;
@@ -334,7 +339,7 @@ public class Utils
     /// </summary>
     /// <param name="o"></param>
     /// <returns></returns>
-    public static bool isFloat(object o)
+    public static bool isFloat(object? o)
     {
         return o != null && double.TryParse(o.ToString(), out double _);
     }
@@ -344,7 +349,7 @@ public class Utils
     /// </summary>
     /// <param name="o"></param>
     /// <returns></returns>
-    public static bool isInt(object o)
+    public static bool isInt(object? o)
     {
         return o != null && int.TryParse(o.ToString(), out int _);
     }
@@ -354,7 +359,7 @@ public class Utils
     /// </summary>
     /// <param name="o"></param>
     /// <returns></returns>
-    public static bool isLong(object o)
+    public static bool isLong(object? o)
     {
         return o != null && long.TryParse(o.ToString(), out long _);
     }
@@ -367,12 +372,12 @@ public class Utils
     /// - or for bool it's false
     /// - or for collections - no elements
     /// Example:
-    /// instead of `string.IsNullOrEmpty((string)itemdb["iname"])`
+    /// instead of `string.IsNullOrEmpty(itemdb["iname"].toStr())`
     /// use `isEmpty(itemdb["iname"])`
     /// </summary>
     /// <param name="o"></param>
     /// <returns></returns>
-    public static bool isEmpty(object o)
+    public static bool isEmpty(object? o)
     {
         if (o == null) return true;
         if (o is string s) return s.Trim() == "";
@@ -415,15 +420,15 @@ public class Utils
     /// </summary>
     /// <param name="ext">extension - doc, .jpg, ... (dot is optional)</param>
     /// <returns></returns>
-    public static string ext2mime(string ext)
+    public static string ext2mime(string? ext)
     {
         Hashtable mime_map = qh(MIME_MAP);
-        ext = ext.ToLower(); //to lower
-                             //remove first dot if any
+        ext = ext.toStr().ToLower(); //to lower
+                                    //remove first dot if any
         if (ext.StartsWith('.'))
             ext = ext[1..];
 
-        return (string)mime_map[ext] ?? "application/octet-stream";
+        return (mime_map[ext] ?? "application/octet-stream").toStr();
     }
 
     /// <summary>
@@ -523,14 +528,18 @@ public class Utils
     {
         string headers_str = csv_export_headers;
         StringBuilder csv = new();
-        string[] fields = null;
+        string[] fields = Array.Empty<string>();
         if (csv_export_fields == "" || csv_export_fields == "*")
         {
             // just read field names from first row
             if (rows.Count > 0)
             {
-                fields = (rows[0] as Hashtable).Keys.Cast<string>().ToArray();
-                headers_str = string.Join(",", fields);
+                var firstRow = rows[0] as Hashtable;
+                if (firstRow != null)
+                {
+                    fields = firstRow.Keys.Cast<string>().ToArray();
+                    headers_str = string.Join(",", fields);
+                }
             }
         }
         else
@@ -716,7 +725,7 @@ public class Utils
                 {
                     if (hash1[key] is not Hashtable)
                         hash1[key] = new Hashtable();
-                    Hashtable _hash1 = (Hashtable)hash1[key];
+                    Hashtable _hash1 = (Hashtable)hash1[key]!;
                     Hashtable _hash2 = ht;
                     mergeHashDeep(_hash1, _hash2);
                 }
@@ -737,7 +746,7 @@ public class Utils
     /// * Collections other than <see cref="Hashtable"/> or <see cref="ArrayList"/>
     ///   are cloned shallowly (reference copy) to avoid surprises
     /// </remarks>
-    public static Hashtable cloneHashDeep(Hashtable source)
+    public static Hashtable? cloneHashDeep(Hashtable? source)
     {
         if (source == null) return null;
 
@@ -749,7 +758,7 @@ public class Utils
     }
 
     // helpers
-    private static object cloneObject(object value)
+    private static object? cloneObject(object? value)
     {
         switch (value)
         {
@@ -821,9 +830,9 @@ public class Utils
     }
 
     //overload alias for jsonDecode(string)
-    public static object jsonDecode(object str)
+    public static object? jsonDecode(object str)
     {
-        return jsonDecode((string)str);
+        return jsonDecode(str.toStr());
     }
 
     /* <summary>
@@ -833,7 +842,7 @@ public class Utils
     * <returns>value or Hashtable (objects) or ArrayList (arrays) or null if cannot be converted</returns>
     * <remarks></remarks>
     */
-    public static object jsonDecode(string str)
+    public static object? jsonDecode(string str)
     {
         if (string.IsNullOrEmpty(str))
             return null;
@@ -845,7 +854,7 @@ public class Utils
             CommentHandling = JsonCommentHandling.Skip
         };
 
-        object result;
+        object? result;
         try
         {
             var reader = new Utf8JsonReader(jsonUtf8, options);
@@ -861,10 +870,10 @@ public class Utils
         return result;
     }
 
-    private static object jsonDecodeRead(ref Utf8JsonReader reader)
+    private static object? jsonDecodeRead(ref Utf8JsonReader reader)
     {
         //rw("jsonDecodeRead init: " + reader.TokenType.ToString());
-        object result;
+        object? result;
         if (reader.TokenType == JsonTokenType.StartObject)
             result = new Hashtable();
         else if (reader.TokenType == JsonTokenType.StartArray)
@@ -888,7 +897,7 @@ public class Utils
                 if (reader.TokenType != JsonTokenType.PropertyName)
                     throw new JsonException("PropertyName expected");
 
-                string keyName = reader.GetString();
+                string keyName = reader.GetString() ?? string.Empty;
                 //rw("keyName=" + keyName);
                 reader.Read();
                 ht[keyName] = jsonDecodeValue(ref reader);
@@ -904,7 +913,7 @@ public class Utils
     }
 
     // RECURSIVE
-    private static object jsonDecodeValue(ref Utf8JsonReader reader)
+    private static object? jsonDecodeValue(ref Utf8JsonReader reader)
     {
         //rw("jsonDecodeValue: " + reader.TokenType.ToString());
         switch (reader.TokenType)
@@ -934,7 +943,7 @@ public class Utils
     // convert all values in hierarchical Hashtable/ArrayList json structure to strings
     // returns new object
     // RECURSIVE
-    public static object jsonStringifyValues(object json)
+    public static object jsonStringifyValues(object? json)
     {
         if (json is Hashtable ht)
         {
@@ -964,7 +973,7 @@ public class Utils
         }
         else
         {
-            return json.ToString();
+            return json.ToString() ?? string.Empty;
         }
     }
 
@@ -979,7 +988,7 @@ public class Utils
     // return object or Nothing (if error)
     public static object deserialize(string str)
     {
-        return jsonDecode(str);
+        return jsonDecode(str) ?? new Hashtable();
     }
 
     // return Hashtable keys as an array
@@ -1172,12 +1181,12 @@ public class Utils
         int trword = 1;
         int trend = 1;  // if trend=0 trword - ignored
 
-        if (hattrs["truncate"].ToString().Length > 0)
+        if (hattrs["truncate"].toStr().Length > 0)
         {
             int trlen1 = hattrs["truncate"].toInt();
             if (trlen1 > 0) trlen = trlen1;
         }
-        if (hattrs.ContainsKey("trchar")) trchar = (string)hattrs["trchar"];
+        if (hattrs.ContainsKey("trchar")) trchar = hattrs["trchar"].toStr();
         if (hattrs.ContainsKey("trend")) trend = hattrs["trend"].toInt();
         if (hattrs.ContainsKey("trword")) trword = hattrs["trword"].toInt();
 
@@ -1255,7 +1264,7 @@ public class Utils
         {
             if (!item.Contains(key) || item[key] == null)
                 continue;
-            result[item[key]] = item;
+            result[item[key]!] = item;
         }
         return result;
     }
@@ -1266,15 +1275,15 @@ public class Utils
     //      "123..."  - use index (by order)
     //      "other value" - use this value
     // return hash: id => id
-    public static Hashtable commastr2hash(string sel_ids, string value = null)
+    public static Hashtable commastr2hash(string? sel_ids, string? value = null)
     {
         Hashtable result = [];
-        ArrayList ids = new(sel_ids.Split(","));
-        for (int i = 0; i < ids.Count; i++)
+        var ids = (sel_ids ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries);
+        for (int i = 0; i < ids.Length; i++)
         {
-            string v = (string)ids[i];
-            //skip empty values
-            if (v == "") continue;
+            var v = ids[i].Trim();
+            if (v.Length == 0)
+                continue; // skip empty values
 
             if (value == null)
             {
@@ -1351,14 +1360,18 @@ public class Utils
     /// <param name="parameters">optional, name/value params if set - post will be used, instead of get</param>
     /// <param name="headers">optional, name/value headers to add to request</param>
     /// <returns>content received. empty string if error</returns>
-    public static string loadUrl(string url, Hashtable parameters = null, Hashtable headers = null)
+    public static string loadUrl(string url, Hashtable? parameters = null, Hashtable? headers = null)
     {
         string content;
         using (HttpClient client = new())
         {
             if (headers != null)
                 foreach (string hkey in headers.Keys)
-                    client.DefaultRequestHeaders.Add(hkey, (string)headers[hkey]);
+                {
+                    var hval = headers[hkey].toStr();
+                    if (hval.Length > 0)
+                        client.DefaultRequestHeaders.Add(hkey, hval);
+                }
 
 
             if (parameters != null)
@@ -1366,7 +1379,7 @@ public class Utils
                 //POST
                 var nv = new Dictionary<string, string>();
                 foreach (string key in parameters.Keys)
-                    nv.Add(key, (string)parameters[key]);
+                    nv[key] = parameters[key].toStr();
 
                 using (HttpContent form = new FormUrlEncodedContent(nv))
                 {
@@ -1403,20 +1416,21 @@ public class Utils
     public static string sendFileToUrl(
         string url,
         Hashtable files,
-        System.Collections.Specialized.NameValueCollection formFields = null,
-        string cert_path = null)
+        System.Collections.Specialized.NameValueCollection? formFields = null,
+        string? cert_path = null)
     {
         string result = "";
         HttpClient client;
 
         //add certificate if requested
-        if (cert_path != null)
+        if (!string.IsNullOrEmpty(cert_path))
         {
             var handler = new HttpClientHandler
             {
                 SslProtocols = SslProtocols.Tls12
             };
-            handler.ClientCertificates.Add(new X509Certificate2(cert_path));
+            var certificate = X509CertificateLoader.LoadPkcs12FromFile(cert_path, password: null);
+            handler.ClientCertificates.Add(certificate);
 
             client = new(handler);
         }
@@ -1428,13 +1442,22 @@ public class Utils
         using (var form = new MultipartFormDataContent())
         {
             //add form fields
-            foreach (string name in formFields.Keys)
-                form.Add(new StringContent(formFields[name]), name);
+            if (formFields != null)
+            {
+                foreach (string name in formFields.Keys)
+                {
+                    var fvalue = formFields[name].toStr();
+                    form.Add(new StringContent(fvalue), name);
+                }
+            }
 
             //add files
             foreach (string fileField in files.Keys)
             {
-                var filepath = (string)files[fileField];
+                var filepath = files[fileField].toStr();
+                if (string.IsNullOrEmpty(filepath))
+                    continue;
+
                 using (var fs = new FileStream(filepath, FileMode.Open))
                 {
                     //TODO use some mime mapping class
@@ -1443,7 +1466,7 @@ public class Utils
 
                     var part = new StreamContent(fs);
                     part.Headers.ContentType = MediaTypeHeaderValue.Parse(mimeType);
-                    form.Add(part, "file", "test.txt");
+                    form.Add(part, "file", Path.GetFileName(filepath));
                 }
             }
 
@@ -1457,6 +1480,8 @@ public class Utils
     public static Hashtable getPostedJson(FW fw)
     {
         var result = new Hashtable();
+        if (fw.request.Body == null)
+            return result;
         try
         {
             // read json from request body asynchronously to avoid sync IO under IIS/Kestrel restrictions
@@ -1473,7 +1498,7 @@ public class Utils
 
             if (!string.IsNullOrEmpty(json))
             {
-                result = (Hashtable)Utils.jsonDecode(json);
+                result = Utils.jsonDecode(json) as Hashtable ?? [];
                 fw.logger(LogLevel.TRACE, "REQUESTED JSON:", result);
             }
         }
@@ -1488,9 +1513,9 @@ public class Utils
 
     // convert/normalize external table/field name to fw standard name
     // "SomeCrazy/Name" => "some_crazy_name"
-    public static string name2fw(string str)
+    public static string name2fw(string? str)
     {
-        string result = str;
+        string result = str ?? string.Empty;
         result = Regex.Replace(result, @"^tbl|dbo", "", RegexOptions.IgnoreCase); // remove tbl,dbo prefixes if any
         result = Regex.Replace(result, @"([A-Z]+)", "_$1"); // split CamelCase to underscore, but keep abbrs together ZIP/Code -> zip_code
 
@@ -1505,9 +1530,9 @@ public class Utils
 
     // convert some system name to human-friendly name'
     // "system_name_id" => "System Name ID"
-    public static string name2human(string str)
+    public static string name2human(string? str)
     {
-        string str_lc = str.ToLower();
+        string str_lc = (str ?? string.Empty).ToLower();
         if (str_lc == "icode") return "Code";
         if (str_lc == "iname") return "Name";
         if (str_lc == "idesc") return "Description";
@@ -1519,7 +1544,7 @@ public class Utils
         if (str_lc == "lname") return "Last Name";
         if (str_lc == "midname") return "Middle Name";
 
-        string result = str;
+        string result = str ?? string.Empty;
         result = Regex.Replace(result, @"^tbl|dbo", "", RegexOptions.IgnoreCase); // remove tbl prefix if any
         result = Regex.Replace(result, @"_+", " "); // underscores to spaces
         result = Regex.Replace(result, @"([a-z ])([A-Z]+)", "$1 $2"); // split CamelCase words
@@ -1607,7 +1632,7 @@ public class Utils
 
     public static string getCookie(FW fw, string name)
     {
-        return fw.request.Cookies[name];
+        return fw.request.Cookies.TryGetValue(name, out var cookie) ? cookie.toStr() : string.Empty;
     }
 
     public static void deleteCookie(FW fw, string name)
@@ -1619,26 +1644,27 @@ public class Utils
     {
         if (rows.Count > 0)
         {
-            if (headers.Count == 0)
+            if (headers.Count == 0 && rows[0] is Hashtable firstRow)
             {
-                var keys = ((Hashtable)rows[0]).Keys;
-                var fields = new string[keys.Count];
-                keys.CopyTo(fields, 0);
-                foreach (var key in fields)
+                var keys = firstRow.Keys.Cast<object?>()
+                    .Select(k => k.toStr())
+                    .Where(k => k.Length > 0)
+                    .ToArray();
+                foreach (var key in keys)
                     headers.Add(new Hashtable() { { "field_name", key } });
             }
 
-            foreach (Hashtable row in rows)
+            foreach (Hashtable row in rows.Cast<object?>().OfType<Hashtable>())
             {
                 ArrayList cols = [];
-                foreach (Hashtable hf in headers)
+                foreach (Hashtable hf in headers.Cast<object?>().OfType<Hashtable>())
                 {
-                    var fieldname = hf["field_name"].ToString();
+                    var fieldname = hf["field_name"].toStr();
                     cols.Add(new Hashtable()
                     {
                         {"row",row},
                         {"field_name",fieldname},
-                        {"data",row[fieldname]}
+                        {"data", row.ContainsKey(fieldname) ? row[fieldname] : null}
                     });
                 }
                 row["cols"] = cols;
@@ -1662,7 +1688,7 @@ public class Utils
     /// <param name="filename"></param>
     /// <param name="error"></param>
     /// <returns></returns>
-    public static string getFileContent(string filename, out Exception error)
+    public static string getFileContent(string filename, out Exception? error)
     {
         error = null;
         string result = "";
@@ -1700,7 +1726,7 @@ public class Utils
     /// </summary>
     /// <param name="filename"></param>
     /// <returns></returns>
-    public static string[] getFileLines(string filename, out Exception error)
+    public static string[] getFileLines(string filename, out Exception? error)
     {
         error = null;
         string[] result = [];

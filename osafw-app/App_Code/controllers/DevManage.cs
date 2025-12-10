@@ -53,7 +53,7 @@ public class DevManageController : FwController
     public void DumpLogAction()
     {
         var seek = reqi("seek");
-        string logpath = (string)fw.config("log");
+        string logpath = fw.config("log").toStr();
         rw("Dump of last " + seek + " bytes of the site log");
 
         var fs = new FileStream(logpath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
@@ -106,7 +106,7 @@ public class DevManageController : FwController
     }
 
     // generate documentation PDF
-    public Hashtable DocsAction()
+    public Hashtable? DocsAction()
     {
         var is_export = reqs("format");
 
@@ -120,7 +120,7 @@ public class DevManageController : FwController
         if (!Utils.isEmpty(is_export))
         {
             logger("exporting");
-            var layout = (string)fw.G["PAGE_LAYOUT_PRINT"];
+            var layout = fw.G["PAGE_LAYOUT_PRINT"].toStr();
             var options = new Hashtable();
             options["disposition"] = "inline";
             ConvUtils.parsePagePdf(fw, "/dev/manage/docs", layout, ps, "documentation", options);
@@ -147,7 +147,7 @@ public class DevManageController : FwController
         fw.redirect("/Admin/FwUpdates");
     }
 
-    public Hashtable ApplyFwUpdateAction(int id)
+    public Hashtable? ApplyFwUpdateAction(int id)
     {
         checkXSS();
         fw.model<FwUpdates>().applyOne(id);
@@ -166,7 +166,7 @@ public class DevManageController : FwController
         }
     }
 
-    public Hashtable ApplyFwUpdatesAction()
+    public Hashtable? ApplyFwUpdatesAction()
     {
         checkXSS();
         var ids = reqh("cb").Keys.Cast<string>().Select(x => x.toInt()).ToList();
@@ -225,21 +225,21 @@ public class DevManageController : FwController
         var entities = DevEntityBuilder.loadJson<ArrayList>(config_file);
 
         // emulate entity
-        var entity = new Hashtable()
-        {
-            {"model_name",model_name},
-            {"controller", new Hashtable {
+        var controller = new Hashtable {
                     {"url",controller_url},
                     {"title",controller_title},
                     {"type",controller_type},
-                }
-            },
+                };
+        var entity = new Hashtable()
+        {
+            {"model_name",model_name},
+            {"controller", controller},
             {"table",fw.model(model_name).table_name}
         };
         // table = Utils.name2fw(model_name) - this is not always ok
 
         DevCodeGen.init(fw).createController(entity, entities);
-        controller_url = ((Hashtable)entity["controller"])["url"].toStr();
+        controller_url = controller["url"].toStr();
         var controller_name = controller_url.Replace("/", "");
 
         fw.flash("controller_created", controller_name);
@@ -266,7 +266,15 @@ public class DevManageController : FwController
         if (!DevEntityBuilder.listControllers().Contains(controller_name))
             throw new NotFoundException("No controller found");
 
-        FwDynamicController cInstance = (FwDynamicController)Activator.CreateInstance(Type.GetType(FW.FW_NAMESPACE_PREFIX + controller_name, true));
+        var controllerType = Type.GetType(FW.FW_NAMESPACE_PREFIX + controller_name, true);
+        if (controllerType == null)
+            throw new UserException("Controller type not found");
+
+        var controllerInstance = Activator.CreateInstance(controllerType) as FwDynamicController;
+        if (controllerInstance == null)
+            throw new UserException("Controller initialization failed");
+
+        FwDynamicController cInstance = controllerInstance;
         cInstance.init(fw);
 
         var tpl_to = cInstance.base_url.ToLower();
@@ -355,7 +363,8 @@ public class DevManageController : FwController
         Hashtable ps = [];
         ArrayList dbsources = [];
 
-        foreach (string dbname in ((Hashtable)fw.config("db")).Keys)
+        var dbConfig = fw.config("db") as Hashtable ?? [];
+        foreach (string dbname in dbConfig.Keys)
             dbsources.Add(new Hashtable()
             {
                 {"id",dbname},
@@ -370,7 +379,8 @@ public class DevManageController : FwController
     {
         var item = reqh("item");
         string dbname = item["db"] + "";
-        var dbconfig = ((Hashtable)fw.config("db"))[dbname] ?? throw new UserException("Wrong DB selection");
+        var dbConfigs = fw.config("db") as Hashtable ?? throw new UserException("Wrong DB selection");
+        var dbconfig = dbConfigs[dbname] as Hashtable ?? throw new UserException("Wrong DB selection");
         DevEntityBuilder.createDBJsonFromExistingDB(dbname, fw);
         fw.flash("success", "template" + DevCodeGen.DB_JSON_PATH + " created");
 
@@ -397,7 +407,7 @@ public class DevManageController : FwController
         var is_create_all = reqi("DoMagic") == 1;
 
         var entities_file = fw.config("template") + DevCodeGen.ENTITIES_PATH;
-        string filedata = (string)item["entities"];
+        string filedata = item["entities"].toStr();
         Utils.setFileContent(entities_file, ref filedata);
 
         try
@@ -405,7 +415,7 @@ public class DevManageController : FwController
             if (is_create_all)
             {
                 // create db.json, db, models/controllers
-                DevEntityBuilder.createDBJsonFromText((string)item["entities"], fw);
+                DevEntityBuilder.createDBJsonFromText(item["entities"].toStr(), fw);
                 var CodeGen = DevCodeGen.init(fw);
                 CodeGen.createDatabaseFromDBJson();
                 CodeGen.createDBSQLFromDBJson();
@@ -416,7 +426,7 @@ public class DevManageController : FwController
             else
             {
                 // create db.json only
-                DevEntityBuilder.createDBJsonFromText((string)item["entities"], fw);
+                DevEntityBuilder.createDBJsonFromText(item["entities"].toStr(), fw);
                 fw.flash("success", "template" + DevCodeGen.DB_JSON_PATH + " created");
                 fw.redirect(base_url + "/(DBInitializer)");
             }
@@ -478,7 +488,7 @@ public class DevManageController : FwController
 
         foreach (Hashtable entity in entities)
         {
-            var controller_options = (Hashtable)entity["controller"] ?? [];
+            var controller_options = entity["controller"] as Hashtable ?? [];
             var controller_url = controller_options["url"].toStr();
             entity["is_model_exists"] = models.Contains(entity["model_name"]);
             controller_options["name"] = controller_url.toStr().Replace("/", "");
@@ -537,7 +547,7 @@ public class DevManageController : FwController
 
             if (item.ContainsKey(key + "is_controller"))
             {
-                var controller_options = (Hashtable)entity["controller"] ?? [];
+                var controller_options = entity["controller"] as Hashtable ?? [];
 
                 // create controller (model must exists)
                 if (item[key + "controller_name"].toStr().Length > 0 && controller_options["name"].toStr() != item[key + "controller_name"].toStr())

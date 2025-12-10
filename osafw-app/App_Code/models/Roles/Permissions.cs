@@ -14,9 +14,9 @@ public class Permissions : FwModel<Permissions.Row>
     {
         public int id { get; set; }
         public int? resources_id { get; set; }
-        public string icode { get; set; }
-        public string iname { get; set; }
-        public string idesc { get; set; }
+    public string icode { get; set; } = string.Empty;
+    public string iname { get; set; } = string.Empty;
+    public string idesc { get; set; } = string.Empty;
         public int prio { get; set; }
         public int status { get; set; }
         public DateTime add_time { get; set; }
@@ -72,7 +72,7 @@ public class Permissions : FwModel<Permissions.Row>
         }
 
         //find standard mapping
-        string permission = (string)MAP_ACTIONS_PERMISSIONS[action];
+        var permission = MAP_ACTIONS_PERMISSIONS[action].toStr();
         if (!string.IsNullOrEmpty(permission))
             return permission;
 

@@ -12,7 +12,7 @@ public class AdminSettingsController : FwAdminController
 {
     public static new int access_level = Users.ACL_ADMIN;
 
-    protected Settings model;
+    protected Settings model = null!;
 
     public override void init(FW fw)
     {
@@ -46,9 +46,9 @@ public class AdminSettingsController : FwAdminController
         // set new form defaults here if any
         // Me.form_new_defaults = New Hashtable
         // item("field")="default value"
-        Hashtable ps = base.ShowFormAction(id);
+        var ps = base.ShowFormAction(id) ?? [];
 
-        Hashtable item = (Hashtable)ps["i"];
+        var item = ps["i"] as Hashtable ?? [];
         // TODO - multi values for select, checkboxes, radio
         // ps("select_options_parent_id") = FormUtils.select_options_db(db.array("select id, iname from " & model.table_name & " where parent_id=0 and status=0 order by iname"), item("parent_id"))
         // ps("multi_datarow") = fw.model(Of DemoDicts).get_multi_list(item("dict_link_multi"))
@@ -56,7 +56,7 @@ public class AdminSettingsController : FwAdminController
         return ps;
     }
 
-    public override Hashtable SaveAction(int id = 0)
+    public override Hashtable? SaveAction(int id = 0)
     {
         route_onerror = FW.ACTION_SHOW_FORM;
         route_return = FW.ACTION_INDEX;

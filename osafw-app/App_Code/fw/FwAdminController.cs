@@ -18,7 +18,7 @@ public class FwAdminController : FwController
         base.init(fw);
     }
 
-    public virtual Hashtable IndexAction()
+    public virtual Hashtable? IndexAction()
     {
         // get filters from the search form
         this.initFilter();
@@ -48,7 +48,7 @@ public class FwAdminController : FwController
         return ps;
     }
 
-    public virtual Hashtable ShowAction(int id)
+    public virtual Hashtable? ShowAction(int id)
     {
         Hashtable ps = [];
         var item = modelOneOrFail(id);
@@ -80,7 +80,7 @@ public class FwAdminController : FwController
     /// i - hashtable of entity fields
     /// </returns>
     /// <remarks></remarks>
-    public virtual Hashtable ShowFormAction(int id = 0)
+    public virtual Hashtable? ShowFormAction(int id = 0)
     {
         Hashtable ps = [];
         var item = reqh("item"); // set defaults from request params
@@ -123,7 +123,7 @@ public class FwAdminController : FwController
         return ps;
     }
 
-    public virtual Hashtable SaveAction(int id = 0)
+    public virtual Hashtable? SaveAction(int id = 0)
     {
         route_onerror = FW.ACTION_SHOW_FORM;
         // checkXSS() 'no need to check in standard SaveAction, but add to your custom actions that modifies data
@@ -189,7 +189,7 @@ public class FwAdminController : FwController
         fw.parser("/common/form/showdelete", ps);
     }
 
-    public virtual Hashtable DeleteAction(int id)
+    public virtual Hashtable? DeleteAction(int id)
     {
         fw.model<Users>().checkReadOnly();
 
@@ -198,7 +198,7 @@ public class FwAdminController : FwController
         return this.afterSave(true);
     }
 
-    public virtual Hashtable RestoreDeletedAction(int id)
+    public virtual Hashtable? RestoreDeletedAction(int id)
     {
         fw.model<Users>().checkReadOnly();
 
@@ -208,7 +208,7 @@ public class FwAdminController : FwController
         return this.afterSave(true, id);
     }
 
-    public virtual Hashtable SaveMultiAction()
+    public virtual Hashtable? SaveMultiAction()
     {
         route_onerror = FW.ACTION_INDEX;
 

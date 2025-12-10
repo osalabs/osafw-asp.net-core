@@ -31,22 +31,24 @@ namespace osafw.Tests
         {
             DateTime d = DateTime.UtcNow;
             string str = d.ToString("yyyy-MM-dd HH:mm:ss");
-            DateTime r = (DateTime)DateUtils.SQL2Date(str);
-            Assert.AreEqual(d.Year, r.Year);
-            Assert.AreEqual(d.Month, r.Month);
-            Assert.AreEqual(d.Day, r.Day);
-            Assert.AreEqual(d.Hour, r.Hour);
-            Assert.AreEqual(d.Minute, r.Minute);
-            Assert.AreEqual(d.Second, r.Second);
+            var r = DateUtils.SQL2Date(str);
+            Assert.IsNotNull(r);
+            Assert.AreEqual(d.Year, r.Value.Year);
+            Assert.AreEqual(d.Month, r.Value.Month);
+            Assert.AreEqual(d.Day, r.Value.Day);
+            Assert.AreEqual(d.Hour, r.Value.Hour);
+            Assert.AreEqual(d.Minute, r.Value.Minute);
+            Assert.AreEqual(d.Second, r.Value.Second);
 
             str = d.ToString("yyyy-MM-dd");
-            r = (DateTime)DateUtils.SQL2Date(str);
-            Assert.AreEqual(d.Year, r.Year);
-            Assert.AreEqual(d.Month, r.Month);
-            Assert.AreEqual(d.Day, r.Day);
-            Assert.AreEqual(0, r.Hour);
-            Assert.AreEqual(0, r.Minute);
-            Assert.AreEqual(0, r.Second);
+            r = DateUtils.SQL2Date(str);
+            Assert.IsNotNull(r);
+            Assert.AreEqual(d.Year, r.Value.Year);
+            Assert.AreEqual(d.Month, r.Value.Month);
+            Assert.AreEqual(d.Day, r.Value.Day);
+            Assert.AreEqual(0, r.Value.Hour);
+            Assert.AreEqual(0, r.Value.Minute);
+            Assert.AreEqual(0, r.Value.Second);
 
             // not an SQL date - should return null
             str = "1/1/2000";
@@ -54,7 +56,7 @@ namespace osafw.Tests
             Assert.AreEqual(null, r2);
 
             // null input should return null
-            r2 = DateUtils.SQL2Date(null);
+            r2 = DateUtils.SQL2Date(null!);
             Assert.AreEqual(null, r2);
 
             // empty input should return null

@@ -36,3 +36,10 @@ public class NotFoundException : UserException
 
 [Serializable]
 public class RedirectException : Exception { }
+
+// standard exceptions with predefined messages
+[Serializable]
+public class FwConfigUndefinedModelException : ApplicationException
+{
+    public FwConfigUndefinedModelException() : base("'model' is not defined in controller's config.json") { }
+}

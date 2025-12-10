@@ -71,12 +71,12 @@ public class S3 : FwModel
 
 #if !is_S3
     //S3 disabled - just use a stub methods
-    public object initClient(string access_key = "", string secret_key = "", string region = "", string bucket = "", string root = "")
+    public object? initClient(string access_key = "", string secret_key = "", string region = "", string bucket = "", string root = "")
     {
         return null;
     }
 
-    public object createFolder(string foldername)
+    public object? createFolder(string foldername)
     {
         fw.logger(LogLevel.WARN, "S3 storage is not enabled");
         return null;
@@ -88,13 +88,13 @@ public class S3 : FwModel
         return "";
     }
 
-    public bool uploadLocalFile(string key, string filepath, string disposition = "", string filename = "", object storage_class = null)
+    public bool uploadLocalFile(string key, string filepath, string disposition = "", string filename = "", object? storage_class = null)
     {
         fw.logger(LogLevel.WARN, "S3 storage is not enabled");
         return false;
     }
 
-    public object deleteObject(string key)
+    public object? deleteObject(string key)
     {
         fw.logger(LogLevel.WARN, "S3 storage is not enabled");
         return null;
@@ -116,13 +116,13 @@ public class S3 : FwModel
     // root should end with "/" if non-empty
     public AmazonS3Client initClient(string access_key = "", string secret_key = "", string region = "", string bucket = "", string root = "")
     {
-        string akey = (string)(!string.IsNullOrEmpty(access_key) ? access_key : fw.config("AWSAccessKey"));
-        string skey = (string)(!string.IsNullOrEmpty(secret_key) ? secret_key : fw.config("AWSSecretKey"));
+        string akey = (!string.IsNullOrEmpty(access_key) ? access_key : fw.config("AWSAccessKey")).toStr();
+        string skey = (!string.IsNullOrEmpty(secret_key) ? secret_key : fw.config("AWSSecretKey")).toStr();
         // region is defined in web.config "AWSRegion"
 
-        this.region = (string)(!string.IsNullOrEmpty(region) ? region : fw.config("AWSRegion"));
-        this.bucket = (string)(!string.IsNullOrEmpty(bucket) ? bucket : fw.config("S3Bucket"));
-        this.root = (string)(!string.IsNullOrEmpty(root) ? root : fw.config("S3Root"));
+        this.region = (!string.IsNullOrEmpty(region) ? region : fw.config("AWSRegion")).toStr();
+        this.bucket = (!string.IsNullOrEmpty(bucket) ? bucket : fw.config("S3Bucket")).toStr();
+        this.root = (!string.IsNullOrEmpty(root) ? root : fw.config("S3Root")).toStr();
 
         //throw exception if region/bucket/akey/skey is not defined
         if (string.IsNullOrEmpty(this.region) || string.IsNullOrEmpty(this.bucket) || string.IsNullOrEmpty(akey) || string.IsNullOrEmpty(skey))
@@ -169,7 +169,7 @@ public class S3 : FwModel
     /// <param name="filename">optional filename to include in disposition header</param>
     /// <param name="storage_class">S3 Storage Class, default is Amazon.S3.S3StorageClass.Standard, use 5 times cheaper Amazon.S3.S3StorageClass.GlacierInstantRetrieval for warm archive files.</param>
     /// <returns></returns>
-    public bool uploadLocalFile(string key, string filepath, string disposition = "", string filename = "", S3StorageClass storage_class = null)
+    public bool uploadLocalFile(string key, string filepath, string disposition = "", string filename = "", S3StorageClass? storage_class = null)
     {
         logger("uploading to S3: key=[" + key + "], filepath=[" + filepath + "]");
 

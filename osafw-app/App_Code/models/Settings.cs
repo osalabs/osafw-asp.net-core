@@ -13,13 +13,13 @@ public class Settings : FwModel<Settings.Row>
     public class Row
     {
         public int id { get; set; }
-        public string icat { get; set; }
-        public string icode { get; set; }
-        public string ivalue { get; set; }
-        public string iname { get; set; }
-        public string idesc { get; set; }
+        public string icat { get; set; } = string.Empty;
+        public string icode { get; set; } = string.Empty;
+        public string ivalue { get; set; } = string.Empty;
+        public string iname { get; set; } = string.Empty;
+        public string idesc { get; set; } = string.Empty;
         public int input { get; set; }
-        public string allowed_values { get; set; }
+        public string allowed_values { get; set; } = string.Empty;
         public int is_user_edit { get; set; }
         public DateTime add_time { get; set; }
         public int add_users_id { get; set; }
@@ -62,7 +62,7 @@ public class Settings : FwModel<Settings.Row>
     /// <param name="icode"></param>
     /// <returns></returns>
     /// <remarks></remarks>
-    public object readd(string icode)
+    public object? readd(string icode)
     {
         return read(icode).toDateOrNull();
     }
@@ -88,7 +88,8 @@ public class Settings : FwModel<Settings.Row>
 
     public string getValue(string icode)
     {
-        return (string)oneByIcode(icode)["ivalue"];
+        var row = oneByIcode(icode);
+        return row.ContainsKey("ivalue") ? row["ivalue"].toStr() : string.Empty;
     }
     public void setValue(string icode, string ivalue)
     {

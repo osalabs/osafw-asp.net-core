@@ -15,18 +15,18 @@ public abstract class FwModel<TRow> : FwModel where TRow : class, new()
     private readonly string typedCachePrefix;
     private readonly string typedCacheByIcodePrefix;
 
-    protected FwModel(FW fw = null) : base(fw)
+    protected FwModel(FW? fw = null) : base(fw)
     {
         typedCachePrefix = cache_prefix + "typed.";
         typedCacheByIcodePrefix = cache_prefix_byicode + "typed.";
     }
 
-    protected virtual bool isRowEmpty(TRow row)
+    protected virtual bool isRowEmpty(TRow? row)
     {
         return row == null;
     }
 
-    protected virtual Hashtable buildStatusesWhere(IList statuses)
+    protected virtual Hashtable buildStatusesWhere(IList? statuses)
     {
         Hashtable where = [];
         if (!string.IsNullOrEmpty(field_status))
@@ -39,7 +39,7 @@ public abstract class FwModel<TRow> : FwModel where TRow : class, new()
         return where;
     }
 
-    public virtual TRow oneT(int id)
+    public virtual TRow? oneT(int id)
     {
         if (id <= 0)
             return null;
@@ -60,7 +60,7 @@ public abstract class FwModel<TRow> : FwModel where TRow : class, new()
         return row;
     }
 
-    public virtual TRow oneT(object id)
+    public virtual TRow? oneT(object id)
     {
         var iid = id.toInt();
         return iid > 0 ? oneT(iid) : null;
@@ -71,10 +71,10 @@ public abstract class FwModel<TRow> : FwModel where TRow : class, new()
         var row = oneT(id);
         if (isRowEmpty(row))
             throw new NotFoundException();
-        return row;
+        return row!;
     }
 
-    public virtual TRow oneTByIname(string iname)
+    public virtual TRow? oneTByIname(string iname)
     {
         if (string.IsNullOrEmpty(field_iname))
             return null;
@@ -83,7 +83,7 @@ public abstract class FwModel<TRow> : FwModel where TRow : class, new()
         return db.row<TRow>(table_name, where);
     }
 
-    public virtual TRow oneTByIcode(string icode)
+    public virtual TRow? oneTByIcode(string icode)
     {
         if (string.IsNullOrEmpty(field_icode))
             return null;
@@ -118,23 +118,23 @@ public abstract class FwModel<TRow> : FwModel where TRow : class, new()
         var row = oneTByIcode(icode);
         if (isRowEmpty(row))
             throw new NotFoundException();
-        return row;
+        return row!;
     }
 
-    public virtual List<TRow> listT(IList statuses = null)
+    public virtual List<TRow> listT(IList? statuses = null)
     {
         var where = buildStatusesWhere(statuses);
         return db.array<TRow>(table_name, where, getOrderBy());
     }
 
-    public virtual List<TRow> listTByWhere(Hashtable where = null, int limit = -1, int offset = 0, string orderby = "")
+    public virtual List<TRow> listTByWhere(Hashtable? where = null, int limit = -1, int offset = 0, string orderby = "")
     {
         where ??= [];
         var order = orderby != "" ? orderby : getOrderBy();
         return db.array<TRow>(table_name, where, order);
     }
 
-    public virtual List<TRow> multiT(ICollection ids)
+    public virtual List<TRow> multiT(ICollection? ids)
     {
         if (ids == null || ids.Count == 0)
             return new List<TRow>();
@@ -166,7 +166,7 @@ public abstract class FwModel<TRow> : FwModel where TRow : class, new()
 
         int id = db.insert(table_name, fields);
 
-        if (is_log_changes)
+        if (is_log_changes && fw != null)
         {
             if (is_log_fields_changed)
                 fw.logActivity(FwLogTypes.ICODE_ADDED, table_name, id, "", new Hashtable(fields));
@@ -207,7 +207,7 @@ public abstract class FwModel<TRow> : FwModel where TRow : class, new()
         return updated;
     }
 
-    protected virtual void prepareFields(IDictionary fields, bool forInsert)
+    protected virtual void prepareFields(IDictionary? fields, bool forInsert)
     {
         if (fields == null)
             return;

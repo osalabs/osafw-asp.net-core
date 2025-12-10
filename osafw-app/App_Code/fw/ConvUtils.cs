@@ -58,7 +58,7 @@ public class ConvUtils
     // if out_filename cotains "\" or "/" - save pdf file to this path
     // options:
     // see html2pdf() method for options
-    public static string parsePagePdf(FW fw, string bdir, string tpl_name, Hashtable ps, string out_filename = "", Hashtable options = null)
+    public static string parsePagePdf(FW fw, string bdir, string tpl_name, Hashtable ps, string out_filename = "", Hashtable? options = null)
     {
         ensurePlaywrightInstalled(fw);
 
@@ -86,7 +86,7 @@ public class ConvUtils
             {
                 out_filename = "output";
             }
-            fw.fileResponse(pdf_file, out_filename + ".pdf", "application/pdf", (string)options["disposition"]);
+            fw.fileResponse(pdf_file, out_filename + ".pdf", "application/pdf", options["disposition"].toStr());
             Utils.cleanupTmpFiles(); // this will cleanup temporary .pdf, can't delete immediately as file_response may not yet finish transferring file
         }
         else
@@ -107,7 +107,7 @@ public class ConvUtils
     // margin_right = "10mm"
     // margin_bottom = "5mm"
     // margin_left = "10mm"
-    public static async Task html2pdf(FW fw, string html_data, string filename, Hashtable options = null)
+    public static async Task html2pdf(FW fw, string html_data, string filename, Hashtable? options = null)
     {
         if (filename.Length < 1)
         {
@@ -212,7 +212,11 @@ public class ConvUtils
         System.Diagnostics.ProcessStartInfo info = new();
         System.Diagnostics.Process process = new();
 
-        info.FileName = (string)fw.config()["html_converter"];
+        var converterPath = fw.config("html_converter").toStr();
+        if (string.IsNullOrEmpty(converterPath))
+            throw new ApplicationException("html_converter path is not configured");
+
+        info.FileName = converterPath;
         info.Arguments = "\"" + htmlfile + "\" \"" + xlsfile + "\" -c xls -AutoSize";
         process.StartInfo = info;
         process.Start();
@@ -275,8 +279,9 @@ public class ConvUtils
                 out_filename = "output";
             }
             // out to browser
-            fw.response.Headers.ContentType = "application/vnd.ms-excel";
-            fw.response.Headers.ContentDisposition = $"attachment; filename=\"{out_filename}.xls\"";
+            var response = fw.response ?? throw new UserException("Response is not available");
+            response.Headers.ContentType = "application/vnd.ms-excel";
+            response.Headers.ContentDisposition = $"attachment; filename=\"{out_filename}.xls\"";
             fw.responseWrite(html_data);
         }
         else
@@ -422,10 +427,10 @@ public class ConvUtils
         // create the workbook
         using (var doc = SpreadsheetDocument.Create(fileName, SpreadsheetDocumentType.Workbook))
         {
-            doc.AddWorkbookPart();
-            doc.WorkbookPart.Workbook = new Workbook();
+            var workbookPart = doc.AddWorkbookPart();
+            workbookPart.Workbook = new Workbook();
             // create the worksheet to workbook relation
-            Sheets sheets = doc.WorkbookPart.Workbook.AppendChild(new Sheets());
+            Sheets sheets = workbookPart.Workbook.AppendChild(new Sheets());
 
             var sheetsOrder = new ArrayList();
             sheetsOrder.Add("Sheet1");
@@ -436,14 +441,14 @@ public class ConvUtils
                 sheetNumber += 1;
 
                 var _SheetData = new SheetData();
-                var _WorksheetPart = doc.WorkbookPart.AddNewPart<WorksheetPart>();
+                var _WorksheetPart = workbookPart.AddNewPart<WorksheetPart>();
 
-                var s = new Sheet
-                {
-                    Id = doc.WorkbookPart.GetIdOfPart(_WorksheetPart),
-                    SheetId = sheetNumber,
-                    Name = sheetName
-                };
+                    var s = new Sheet
+                    {
+                        Id = workbookPart.GetIdOfPart(_WorksheetPart),
+                        SheetId = sheetNumber,
+                        Name = sheetName
+                    };
                 sheets.AppendChild(s);
 
                 var headerRow = new Row();
@@ -490,13 +495,13 @@ public class ConvUtils
                 _WorksheetPart.Worksheet.Append(_SheetData);
             }
 
-            var _StylePart = doc.WorkbookPart.AddNewPart<WorkbookStylesPart>();
-            _StylePart.Stylesheet = xlsxStylesheet();
-            _StylePart.Stylesheet.Save();
+                var _StylePart = workbookPart.AddNewPart<WorkbookStylesPart>();
+                _StylePart.Stylesheet = xlsxStylesheet();
+                _StylePart.Stylesheet.Save();
 
-            // save workbook
-            doc.WorkbookPart.Workbook.Save();
-        }
+                // save workbook
+                workbookPart.Workbook.Save();
+            }
 
         if (is_browser)
         {

@@ -18,7 +18,7 @@ using osafw;
 public static class FwExtensions
 {
     private static readonly ConcurrentDictionary<Type, Dictionary<string, PropertyInfo>> WritablePropertiesCache = new();
-    private static readonly ConcurrentDictionary<Type, Dictionary<string, Func<object, object>>> ReadableMembersCache = new();
+    private static readonly ConcurrentDictionary<Type, Dictionary<string, Func<object, object?>>> ReadableMembersCache = new();
 
     private static Dictionary<string, PropertyInfo> getWritablePropertiesCore(Type type)
     {
@@ -73,9 +73,17 @@ public static class FwExtensions
         }
         else if (targetType == typeof(Guid))
         {
-            convertedValue = value is Guid guid
-                ? guid
-                : Guid.Parse(value.ToString());
+            if (value is Guid guid)
+            {
+                convertedValue = guid;
+            }
+            else
+            {
+                var guidStr = value.toStr();
+                convertedValue = Guid.TryParse(guidStr, out var parsedGuid)
+                    ? parsedGuid
+                    : Guid.Empty;
+            }
         }
         else
         {
@@ -85,10 +93,19 @@ public static class FwExtensions
         property.SetValue(obj, convertedValue);
     }
 
-    internal static void setPropertyValue<T>(this T obj, Dictionary<string, PropertyInfo> props, string field, object value)
+    internal static void setPropertyValue<T>(this T obj, Dictionary<string, PropertyInfo> props, string field, object? value)
     {
         if (props.TryGetValue(field, out var property))
         {
+            if (value == null)
+            {
+                if (property.PropertyType.IsValueType && Nullable.GetUnderlyingType(property.PropertyType) == null)
+                    return; // cannot assign null to non-nullable value type
+
+                property.SetValue(obj, null);
+                return;
+            }
+
             obj.setPropertyValue(property, value);
         }
     }
@@ -184,16 +201,16 @@ public static class FwExtensions
     /// entries are copied; otherwise, public writable properties are used.</param>
     /// <returns>A dictionary containing the object's properties and their values, or the original dictionary's entries if the
     /// object is a dictionary. Keys are compared using case-insensitive ordinal comparison.</returns>
-    public static Dictionary<string, object> toKeyValue(this object dto)
+    public static Dictionary<string, object?> toKeyValue(this object dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        if (dto is Dictionary<string, object> dictionary)
-            return new Dictionary<string, object>(dictionary, StringComparer.OrdinalIgnoreCase);
+        if (dto is Dictionary<string, object?> dictionary)
+            return new Dictionary<string, object?>(dictionary, StringComparer.OrdinalIgnoreCase);
 
         if (dto is IDictionary dict)
         {
-            Dictionary<string, object> result = new(dict.Count, StringComparer.OrdinalIgnoreCase);
+            Dictionary<string, object?> result = new(dict.Count, StringComparer.OrdinalIgnoreCase);
             foreach (DictionaryEntry entry in dict)
             {
                 var key = entry.Key?.ToString();
@@ -204,7 +221,7 @@ public static class FwExtensions
         }
 
         var props = getWritableProperties(dto.GetType());
-        Dictionary<string, object> kv = new(props.Count, StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, object?> kv = new(props.Count, StringComparer.OrdinalIgnoreCase);
         foreach (var pair in props)
         {
             kv[pair.Key] = pair.Value.GetValue(dto);
@@ -224,7 +241,7 @@ public static class FwExtensions
     /// name="dto"/> is <see langword="null"/>, an empty hashtable is returned.</param>
     /// <returns>A <see cref="System.Collections.Hashtable"/> containing the key-value pairs from the input object. Returns an
     /// empty hashtable if <paramref name="dto"/> is <see langword="null"/>.</returns>
-    public static Hashtable toHashtable(this object dto)
+    public static Hashtable toHashtable(this object? dto)
     {
         if (dto is null)
             return [];
@@ -281,7 +298,7 @@ public static class FwExtensions
     /// <returns>A dictionary where each key is the name of a public readable property or field, and each value is a delegate
     /// that, when invoked with the object instance, returns the corresponding property's or field's value. If a member
     /// cannot be read, the delegate returns null.</returns>
-    public static Dictionary<string, Func<object, object>> getReadableMembers(this object obj)
+    public static Dictionary<string, Func<object, object?>> getReadableMembers(this object? obj)
     {
         ArgumentNullException.ThrowIfNull(obj);
 
@@ -289,7 +306,7 @@ public static class FwExtensions
         return ReadableMembersCache.GetOrAdd(type, static t =>
         {
             var comparer = StringComparer.OrdinalIgnoreCase;
-            var dict = new Dictionary<string, Func<object, object>>(comparer);
+            var dict = new Dictionary<string, Func<object, object?>>(comparer);
 
             foreach (var prop in t.GetProperties(BindingFlags.Public | BindingFlags.Instance))
             {
@@ -334,7 +351,7 @@ public static class FwExtensions
     /// <param name="obj">The object instance from which to retrieve the member value. Cannot be null.</param>
     /// <param name="memberName">The name of the public property or field to retrieve. If null or empty, the method returns null.</param>
     /// <returns>The value of the specified member if found; otherwise, null.</returns>
-    public static object valueByMemberName(this object obj, string memberName)
+    public static object? valueByMemberName(this object? obj, string memberName)
     {
         ArgumentNullException.ThrowIfNull(obj);
         if (string.IsNullOrEmpty(memberName))
@@ -355,7 +372,7 @@ public static class FwExtensions
     /// </summary>
     /// <param name="o">The object to convert to a boolean.</param>
     /// <returns>The boolean value interpreted from <paramref name="o"/>.</returns>
-    public static bool toBool(this object o)
+    public static bool toBool(this object? o)
     {
         if (o is null)
         {
@@ -395,7 +412,7 @@ public static class FwExtensions
     /// <param name="o">The object to convert.</param>
     /// <param name="format">If provided, <see cref="DateTime.TryParseExact(string,string[],IFormatProvider,DateTimeStyles,out DateTime)"/> is used.</param>
     /// <returns>A <see cref="DateTime"/>, or <see cref="DateTime.MinValue"/> on failure.</returns>
-    public static DateTime toDate(this object o, string format = "")
+    public static DateTime toDate(this object? o, string format = "")
     {
         if (o is null)
         {
@@ -442,7 +459,7 @@ public static class FwExtensions
     /// <param name="o">The object to convert.</param>
     /// <param name="format">If provided, <see cref="DateTime.TryParseExact(string,string[],IFormatProvider,DateTimeStyles,out DateTime)"/> is used.</param>
     /// <returns>A <see cref="DateTime"/> value, or <c>null</c> on failure.</returns>
-    public static DateTime? toDateOrNull(this object o, string format = "")
+    public static DateTime? toDateOrNull(this object? o, string format = "")
     {
         if (o is null)
         {
@@ -491,7 +508,7 @@ public static class FwExtensions
     /// <param name="o">The object to convert.</param>
     /// <param name="defaultValue">The value returned if conversion fails.</param>
     /// <returns>A decimal representation of the object, or <paramref name="defaultValue"/>.</returns>
-    public static decimal toDecimal(this object o, decimal defaultValue = decimal.Zero)
+    public static decimal toDecimal(this object? o, decimal defaultValue = decimal.Zero)
     {
         if (o is null)
         {
@@ -532,7 +549,7 @@ public static class FwExtensions
     /// <param name="o">The object to convert.</param>
     /// <param name="defaultValue">The value returned if conversion fails.</param>
     /// <returns>A double representation of the object, or <paramref name="defaultValue"/>.</returns>
-    public static double toDouble(this object o, double defaultValue = 0.0)
+    public static double toDouble(this object? o, double defaultValue = 0.0)
     {
         if (o is null)
         {
@@ -573,7 +590,7 @@ public static class FwExtensions
     /// <param name="o">The object to convert.</param>
     /// <param name="defaultValue">The value returned if conversion fails.</param>
     /// <returns>A float representation of the object, or <paramref name="defaultValue"/>.</returns>
-    public static float toFloat(this object o, float defaultValue = 0.0f)
+    public static float toFloat(this object? o, float defaultValue = 0.0f)
     {
         if (o is null)
         {
@@ -614,7 +631,7 @@ public static class FwExtensions
     /// <param name="o">The object to convert.</param>
     /// <param name="defaultValue">The value returned if conversion fails.</param>
     /// <returns>An integer representation of the object, or <paramref name="defaultValue"/>.</returns>
-    public static int toInt(this object o, int defaultValue = 0)
+    public static int toInt(this object? o, int defaultValue = 0)
     {
         if (o is null)
         {
@@ -655,7 +672,7 @@ public static class FwExtensions
     /// <param name="o">The object to convert.</param>
     /// <param name="defaultValue">The value returned if conversion fails.</param>
     /// <returns>A long representation of the object, or <paramref name="defaultValue"/>.</returns>
-    public static long toLong(this object o, long defaultValue = 0)
+    public static long toLong(this object? o, long defaultValue = 0)
     {
         if (o is null)
         {
@@ -693,7 +710,7 @@ public static class FwExtensions
     /// </summary>
     /// <param name="o">The object to convert.</param>
     /// <returns>The string representation of the object, or an empty string if null.</returns>
-    public static string toStr(this object o, string defaultValule = "")
+    public static string toStr(this object? o, string defaultValule = "")
     {
         return o?.ToString() ?? defaultValule;
     }

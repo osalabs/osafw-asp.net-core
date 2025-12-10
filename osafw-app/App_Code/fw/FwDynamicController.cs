@@ -15,7 +15,7 @@ public class FwDynamicController : FwController
 {
     public static new int access_level = Users.ACL_SITEADMIN;
 
-    protected FwModel model_related;
+    protected FwModel? model_related;
 
     protected static readonly string[] DEF_TYPES_STRUCTURE = ["row", "row_end", "col", "col_end", "header"];
 
@@ -70,7 +70,7 @@ public class FwDynamicController : FwController
         if (this.is_userlists)
             this.setUserLists(ps);
 
-        ps["select_userfilters"] = fw.model<UserFilters>().listSelectByIcode((string)fw.G["controller.action"]);
+        ps["select_userfilters"] = fw.model<UserFilters>().listSelectByIcode(fw.G["controller.action"].toStr());
 
         return ps;
     }
@@ -171,7 +171,7 @@ public class FwDynamicController : FwController
         return new Hashtable { { "_redirect", url }, { "id", go_id } };
     }
 
-    public virtual Hashtable ShowAction(int id = 0)
+    public virtual Hashtable? ShowAction(int id = 0)
     {
         Hashtable ps = [];
         var item = modelOneOrFail(id);
@@ -200,7 +200,7 @@ public class FwDynamicController : FwController
             list_filter["tab_activity"] = list_filter["tab_activity"].toStr(FwActivityLogs.TAB_COMMENTS);
             ps["list_filter"] = list_filter;
             ps["activity_entity"] = model0.table_name;
-            ps["activity_rows"] = fw.model<FwActivityLogs>().listByEntityForUI(model0.table_name, id, (string)list_filter["tab_activity"]);
+            ps["activity_rows"] = fw.model<FwActivityLogs>().listByEntityForUI(model0.table_name, id, list_filter["tab_activity"].toStr());
         }
 
         ps["id"] = id;
@@ -219,7 +219,7 @@ public class FwDynamicController : FwController
         return ps;
     }
 
-    public virtual Hashtable ShowFormAction(int id = 0)
+    public virtual Hashtable? ShowFormAction(int id = 0)
     {
         // define form_new_defaults via config.json
         // Me.form_new_defaults = New Hashtable From {{"field", "default value"}} 'OR set new form defaults here
@@ -267,9 +267,9 @@ public class FwDynamicController : FwController
         // ps["select_options_parent_id") ] model.listSelectOptionsParent()
 
         // Example: how to modify field definition
-        //var fields = (ArrayList)ps["fields"];
+        //var fields = (ArrayList)ps["fields"]!;
         //var defRadio = defByFieldname("fradio", fields); // find field definition by fieldname
-        //defRadio["type"] = "select"; // let's change 'radio' to 'select' type
+        //defRadio?["type"] = "select"; // let's change 'radio' to 'select' type
 
         ps["id"] = id;
         ps["i"] = item;
@@ -301,7 +301,7 @@ public class FwDynamicController : FwController
         return id;
     }
 
-    public virtual Hashtable SaveAction(int id = 0)
+    public virtual Hashtable? SaveAction(int id = 0)
     {
         route_onerror = FW.ACTION_SHOW_FORM;
 
@@ -391,11 +391,11 @@ public class FwDynamicController : FwController
         ArrayList fields = getConfigShowFormFieldsByTab("showform_fields");
         foreach (Hashtable def in fields)
         {
-            string field = (string)def["field"];
+            string field = def["field"].toStr();
             if (string.IsNullOrEmpty(field))
                 continue;
 
-            string type = (string)def["type"];
+            string type = def["type"].toStr();
 
             if (type == "subtable_edit")
             {
@@ -404,14 +404,14 @@ public class FwDynamicController : FwController
             else
             {
                 // other types - use "validate" field
-                var val = Utils.qh((string)def["validate"]);
+                var val = Utils.qh(def["validate"].toStr());
                 if (val.Count > 0)
                 {
                     //for existing records only validate submitted fields
                     if (!is_new && !item.ContainsKey(field))
                         continue;
 
-                    string field_value = (string)item[field];
+                    string field_value = item[field].toStr();
 
                     if (val.ContainsKey("exists") && model0.isExistsByField(field_value, id, field))
                     {
@@ -497,7 +497,7 @@ public class FwDynamicController : FwController
     protected virtual bool validateSubtableRowDynamic(string row_id, Hashtable item, Hashtable def)
     {
         var result = true;
-        var required_fields = Utils.qw((string)def["required_fields"] ?? "");
+        var required_fields = Utils.qw(def["required_fields"].toStr());
         if (required_fields.Length == 0)
             return result; //nothing to validate
 
@@ -507,7 +507,7 @@ public class FwDynamicController : FwController
         if (!result)
         {
             //fill global fw.FormErrors with row errors
-            var field = (string)def["field"];
+            var field = def["field"].toStr();
             foreach (var field_name in row_errors.Keys)
             {
                 // row input names format: item-<~field>#<~id>[field_name]
@@ -536,7 +536,7 @@ public class FwDynamicController : FwController
         fw.parser("/common/form/showdelete", ps);
     }
 
-    public virtual Hashtable DeleteAction(int id)
+    public virtual Hashtable? DeleteAction(int id)
     {
         fw.model<Users>().checkReadOnly();
 
@@ -566,7 +566,7 @@ public class FwDynamicController : FwController
         return this.afterSave(true);
     }
 
-    public virtual Hashtable RestoreDeletedAction(int id)
+    public virtual Hashtable? RestoreDeletedAction(int id)
     {
         fw.model<Users>().checkReadOnly();
 
@@ -578,7 +578,7 @@ public class FwDynamicController : FwController
     #endregion Actions
 
     #region Bulk Actions
-    public virtual Hashtable SaveMultiAction()
+    public virtual Hashtable? SaveMultiAction()
     {
         route_onerror = FW.ACTION_INDEX;
 
@@ -613,7 +613,7 @@ public class FwDynamicController : FwController
         //optional params
         var id = reqi("id"); //specific id, if just need iname for it (used to preload existing id/label for edit form)
         var model_name = reqs("model");
-        FwModel ac_model = null;
+        FwModel? ac_model = null;
         if (string.IsNullOrEmpty(model_name))
         {
             //if no model passed - use model_related
@@ -640,18 +640,20 @@ public class FwDynamicController : FwController
         if (ac_model == null)
             throw new UserException("No model defined");
 
+        var acModel = ac_model;
+
         //ArrayList items;
         List<string> items;
         if (id > 0)
         {
             //var item = ac_model.one(id);
             //items = [new Hashtable() { { "id", id }, { "iname", item["iname"] } }];
-            items = [ac_model.iname(id)];
+            items = [acModel.iname(id)];
         }
         else
         {
             //items = ac_model.listSelectOptionsAutocomplete(q);
-            items = ac_model.listAutocomplete(q);
+            items = acModel.listAutocomplete(q);
         }
 
         return new Hashtable() { { "_json", items } };
@@ -670,7 +672,7 @@ public class FwDynamicController : FwController
         fw.parser("/common/list/userviews", ps);
     }
 
-    public virtual Hashtable SaveUserViewsAction()
+    public virtual Hashtable? SaveUserViewsAction()
     {
         var fld = reqh("fld");
         var load_id = reqi("load_id");
@@ -704,7 +706,7 @@ public class FwDynamicController : FwController
             // and then get ordered keys
             List<string> anames = [];
             foreach (var el in ordered)
-                anames.Add((string)el.Key);
+                anames.Add(el.Key.toStr());
             var fields = string.Join(" ", anames);
 
             if (!string.IsNullOrEmpty(iname))
@@ -747,7 +749,9 @@ public class FwDynamicController : FwController
         // validation
         if (id == 0)
             throw new UserException("Invalid ID");
-        if (fw.request.Form.Files.Count == 0 || fw.request.Form.Files[0] == null || fw.request.Form.Files[0].Length == 0)
+
+        var files = fw.request?.Form?.Files;
+        if (files == null || files.Count == 0 || files[0] == null || files[0].Length == 0)
             throw new UserException("No file(s) selected");
 
         var modelAtt = fw.model<Att>();
@@ -764,7 +768,7 @@ public class FwDynamicController : FwController
         var att_id = 0;
         var addedAtt = modelAtt.uploadMulti(itemdb);
         if (addedAtt.Count > 0)
-            att_id = (int)((Hashtable)addedAtt[0])["id"];
+            att_id = (addedAtt[0] as Hashtable)!["id"].toInt();
 
         // make same response as in AdminAtt.SaveAction
         // if select in popup - return json
@@ -800,11 +804,15 @@ public class FwDynamicController : FwController
     /// <param name="prefix">show_fields or showform_fields</param>
     /// <param name="tab">optional tab code, if ommited - form_tab used</param>
     /// <returns></returns>
-    protected virtual ArrayList getConfigShowFormFieldsByTab(string prefix, string tab = null)
+    protected virtual ArrayList getConfigShowFormFieldsByTab(string prefix, string? tab = null)
     {
         tab ??= form_tab;
         var key = prefix + (tab.Length > 0 ? "_" + tab : "");
-        return (ArrayList)config[key];
+
+        if (config[key] is ArrayList arr)
+            return arr;
+
+        return [];
     }
 
     /// <summary>
@@ -821,7 +829,7 @@ public class FwDynamicController : FwController
         foreach (Hashtable def in fields)
         {
             def["i"] = item; // ref to item
-            string dtype = (string)def["type"];
+            string dtype = def["type"].toStr();
             string field = def["field"].toStr();
 
             if (DEF_TYPES_STRUCTURE.Contains(dtype))
@@ -830,21 +838,21 @@ public class FwDynamicController : FwController
             else if (dtype == "multi")
             {
                 if (def.ContainsKey("lookup_model"))
-                    def["multi_datarow"] = fw.model((string)def["lookup_model"]).listWithChecked((string)item[field], def);
+                    def["multi_datarow"] = fw.model(def["lookup_model"].toStr()).listWithChecked(item[field].toStr(), def);
                 else
                 {
                     if (def["is_by_linked"].toBool())
                         // list main items by linked id from junction model (i.e. list of Users(with checked) for Company from UsersCompanies model)
-                        def["multi_datarow"] = fw.model((string)def["model"]).listMainByLinkedId(id, def); //junction model
+                        def["multi_datarow"] = fw.model(def["model"].toStr()).listMainByLinkedId(id, def); //junction model
                     else
                         // list linked items by main id from junction model (i.e. list of Companies(with checked) for User from UsersCompanies model)
-                        def["multi_datarow"] = fw.model((string)def["model"]).listLinkedByMainId(id, def); //junction model
+                        def["multi_datarow"] = fw.model(def["model"].toStr()).listLinkedByMainId(id, def); //junction model
                 }
 
             }
             else if (dtype == "multi_prio")
                 // complex field with prio
-                def["multi_datarow"] = fw.model((string)def["model"]).listLinkedByMainId(id, def); //junction model
+                def["multi_datarow"] = fw.model(def["model"].toStr()).listLinkedByMainId(id, def); //junction model
             else if (dtype == "att")
                 def["att"] = fw.model<Att>().one(item[field]);
             else if (dtype == "att_links")
@@ -855,7 +863,7 @@ public class FwDynamicController : FwController
             else if (dtype == "subtable")
             {
                 // subtable functionality
-                var sub_model = fw.model((string)def["model"]);
+                var sub_model = fw.model(def["model"].toStr());
                 var list_rows = sub_model.listByMainId(id, def); //list related rows from db
                 sub_model.prepareSubtable(list_rows, id, def);
 
@@ -875,13 +883,13 @@ public class FwDynamicController : FwController
                     if (lookup_field == "")
                         lookup_field = "iname";
 
-                    var lookup_row = db.row((string)def["lookup_table"], DB.h(lookup_key, item[field]));
+                    var lookup_row = db.row(def["lookup_table"].toStr(), DB.h(lookup_key, item[field]));
                     def["lookup_row"] = lookup_row;
                     def["value"] = lookup_row[lookup_field];
                 }
                 else if (def.ContainsKey("lookup_model"))
                 {
-                    var lookup_model = fw.model((string)def["lookup_model"]);
+                    var lookup_model = fw.model(def["lookup_model"].toStr());
                     def["lookup_id"] = item[field].toInt();
                     var lookup_row = lookup_model.one(def["lookup_id"]);
                     def["lookup_row"] = lookup_row;
@@ -895,12 +903,16 @@ public class FwDynamicController : FwController
                         def["admin_url"] = "/Admin/" + def["lookup_model"]; // default admin url from model name
                 }
                 else if (def.ContainsKey("lookup_tpl"))
-                    def["value"] = FormUtils.selectTplName((string)def["lookup_tpl"], (string)item[field], fw.route.controller_path.ToLower());
+                    def["value"] = FormUtils.selectTplName(def["lookup_tpl"].toStr(), item[field].toStr(), fw.route.controller_path.ToLower());
                 else if (def.ContainsKey("options"))
                 {
                     // select options
                     var options = def["options"] as Hashtable;
-                    def["value"] = options[item[field]];
+                    var itemValue = item.ContainsKey(field) ? item[field] : null;
+                    if (options != null && itemValue != null && options.ContainsKey(itemValue))
+                        def["value"] = options[itemValue];
+                    else
+                        def["value"] = "";
                 }
                 else
                     def["value"] = item[field];
@@ -908,7 +920,7 @@ public class FwDynamicController : FwController
                 // convertors
                 if (def.ContainsKey("conv"))
                 {
-                    if ((string)def["conv"] == "time_from_seconds")
+                    if (def["conv"].toStr() == "time_from_seconds")
                         def["value"] = FormUtils.intToTimeStr(def["value"].toInt());
                 }
 
@@ -935,7 +947,7 @@ public class FwDynamicController : FwController
         var fields = getConfigShowFormFieldsByTab("showform_fields") ?? throw new ApplicationException("Controller config.json doesn't contain 'showform_fields'");
 
         // build index by field if necessary
-        Hashtable hfields = null;
+        Hashtable hfields = [];
         var is_get_existing = false;
         if (isGet() && !Utils.isEmpty(id))
         {
@@ -948,18 +960,21 @@ public class FwDynamicController : FwController
             //logger(def);
             def["i"] = item; // ref to item
             def["ps"] = ps; // ref to whole ps
-            string dtype = (string)def["type"]; // type is required
+            string dtype = def["type"].toStr(); // type is required
             string field = def["field"].toStr();
 
             // for just loaded forms for existing items - pre-load filter's values into "item"
             if (is_get_existing && def.ContainsKey("filter_for"))
             {
-                var filter_for_field = def["filter_for"].toStr();
-                var filter_field = def["filter_field"].toStr();
+                  var filter_for_field = def["filter_for"].toStr();
+                  var filter_field = def["filter_field"].toStr();
 
-                var def_for = hfields[filter_for_field] as Hashtable;
-                var filtered_item = fw.model(def_for["lookup_model"].toStr()).one(item[def_for["field"]]);
-                item[field] = filtered_item[filter_field];
+                  if (!string.IsNullOrEmpty(filter_for_field) && hfields[filter_for_field] is Hashtable def_for)
+                  {
+                      var defFieldName = def_for["field"].toStr();
+                      var filtered_item = fw.model(def_for["lookup_model"].toStr()).one(item[defFieldName]);
+                      item[field] = filtered_item?[filter_field];
+                  }
             }
 
             if (def.ContainsKey("append") && def["append"] is ICollection coll1 && coll1.Count > 0
@@ -975,27 +990,32 @@ public class FwDynamicController : FwController
                 def["is_structure"] = true;
             else if (dtype == "multicb")
             {
+                ArrayList multi_datarow;
                 if (def.ContainsKey("lookup_model"))
-                    def["multi_datarow"] = fw.model((string)def["lookup_model"]).listWithChecked(item[field].toStr(), def);
+                    multi_datarow = fw.model(def["lookup_model"].toStr()).listWithChecked(item[field].toStr(), def);
                 else
                 {
                     if (def["is_by_linked"].toBool())
                         // list main items by linked id from junction model (i.e. list of Users(with checked) for Company from UsersCompanies model)
-                        def["multi_datarow"] = fw.model((string)def["model"]).listMainByLinkedId(id, def); //junction model
+                        multi_datarow = fw.model(def["model"].toStr()).listMainByLinkedId(id, def); //junction model
                     else
                         // list linked items by main id from junction model (i.e. list of Companies(with checked) for User from UsersCompanies model)
-                        def["multi_datarow"] = fw.model((string)def["model"]).listLinkedByMainId(id, def); //junction model
+                        multi_datarow = fw.model(def["model"].toStr()).listLinkedByMainId(id, def); //junction model
                 }
 
-                foreach (Hashtable row in (ArrayList)def["multi_datarow"]) // contains id, iname, is_checked
+                foreach (Hashtable row in multi_datarow) // contains id, iname, is_checked
                     row["field"] = def["field"];
+
+                def["multi_datarow"] = multi_datarow;
             }
             else if (dtype == "multicb_prio")
             {
-                def["multi_datarow"] = fw.model((string)def["model"]).listLinkedByMainId(id, def); // junction model
+                var multi_datarow = fw.model(def["model"].toStr()).listLinkedByMainId(id, def); // junction model
 
-                foreach (Hashtable row in (ArrayList)def["multi_datarow"]) // contains id, iname, is_checked, _link[prio]
+                foreach (Hashtable row in multi_datarow) // contains id, iname, is_checked, _link[prio]
                     row["field"] = def["field"];
+
+                def["multi_datarow"] = multi_datarow;
             }
             else if (dtype == "att_edit")
             {
@@ -1033,13 +1053,13 @@ public class FwDynamicController : FwController
                     if (lookup_field == "")
                         lookup_field = "iname";
 
-                    var lookup_row = db.row((string)def["lookup_table"], DB.h(lookup_key, item[field]));
+                    var lookup_row = db.row(def["lookup_table"].toStr(), DB.h(lookup_key, item[field]));
                     def["lookup_row"] = lookup_row;
                     def["value"] = lookup_row[lookup_field];
                 }
                 else if (def.ContainsKey("lookup_model"))
                 {
-                    var lookup_model = fw.model((string)def["lookup_model"]);
+                    var lookup_model = fw.model(def["lookup_model"].toStr());
 
                     if (dtype == "select" || dtype == "radio")
                     {
@@ -1085,9 +1105,10 @@ public class FwDynamicController : FwController
                 }
                 else if (def.ContainsKey("lookup_tpl"))
                 {
-                    def["select_options"] = FormUtils.selectTplOptions((string)def["lookup_tpl"], fw.route.controller_path.ToLower());
+                    var select_options = FormUtils.selectTplOptions(def["lookup_tpl"].toStr(), fw.route.controller_path.ToLower());
+                    def["select_options"] = select_options;
                     def["value"] = item[field];
-                    foreach (Hashtable row in (ArrayList)def["select_options"]) // contains id, iname
+                    foreach (Hashtable row in select_options) // contains id, iname
                     {
                         row["is_inline"] = def["is_inline"];
                         row["field"] = def["field"];
@@ -1097,7 +1118,7 @@ public class FwDynamicController : FwController
                 else if (def.ContainsKey("options"))
                 {
                     //select options as array - convert to arraylist of id => iname
-                    var options = def["options"] as Hashtable;
+                    var options = def["options"] as Hashtable ?? [];
                     var select_options = new ArrayList();
                     foreach (DictionaryEntry entry in options)
                         select_options.Add(new Hashtable() {
@@ -1114,7 +1135,7 @@ public class FwDynamicController : FwController
                 // convertors
                 if (def.ContainsKey("conv"))
                 {
-                    if ((string)def["conv"] == "time_from_seconds")
+                    if (def["conv"].toStr() == "time_from_seconds")
                         def["value"] = FormUtils.intToTimeStr(def["value"].toInt());
                 }
             }
@@ -1141,7 +1162,7 @@ public class FwDynamicController : FwController
 
         string field = def["field"].toStr();
 
-        var sub_model = fw.model((string)def["model"]);
+        var sub_model = fw.model(def["model"].toStr());
         var list_rows = new ArrayList();
 
         if (isGet())
@@ -1154,7 +1175,7 @@ public class FwDynamicController : FwController
         else
         {
             //check if we deleted specific row
-            var del_id = (string)subtable_del[field] ?? "";
+            var del_id = subtable_del[field].toStr();
 
             //copy list related rows from the form
             // row ids submitted as: item-<~field>[<~id>]
@@ -1176,10 +1197,10 @@ public class FwDynamicController : FwController
         //delete row clicked
         //if (subtable_del.ContainsKey(field))
         //{
-        //    var del_id = (string)subtable_del[field];
+        //    var del_id = subtable_del[field].toInt();
         //    // delete with LINQ from the form list (actual delete from db will be on save)
         //    list_rows = new ArrayList((from Hashtable d in list_rows
-        //                               where (string)d["id"] != del_id
+        //                               where d["id"].toInt() != del_id
         //                               select d).ToList());
         //}
 
@@ -1206,11 +1227,11 @@ public class FwDynamicController : FwController
             if (!showform_fields.ContainsKey(field))
                 continue;
 
-            var def = (Hashtable)showform_fields[field];
-            string type = (string)def["type"];
+            var def = (Hashtable)showform_fields[field]!;
+            string type = def["type"].toStr();
             if (type == "autocomplete")
             {
-                var lookup_model = fw.model((string)def["lookup_model"]);
+                var lookup_model = fw.model(def["lookup_model"].toStr());
                 var field_value = item[field + "_iname"].toStr(); // autocomplete value is in "${field}_iname"
                 if (def["lookup_by_value"].toBool())
                     fields[field] = field_value; // just by value, not by id
@@ -1218,11 +1239,11 @@ public class FwDynamicController : FwController
                     fields[field] = lookup_model.findOrAddByIname(field_value, out _);
             }
             else if (type == "time")
-                fields[field] = FormUtils.timeStrToInt((string)fields[field]); // ftime - convert from HH:MM to int (0-24h in seconds)
+                fields[field] = FormUtils.timeStrToInt(fields[field].toStr()); // ftime - convert from HH:MM to int (0-24h in seconds)
             else if (type == "number")
             {
                 // no need to do this as DB knows if field nullable and convert empty string to NULL
-                //if (Utils.qh(save_fields_nullable).ContainsKey(field) && string.IsNullOrEmpty((string)fields[field]))
+                //if (Utils.qh(save_fields_nullable).ContainsKey(field) && string.IsNullOrEmpty(fields[field].toStr()))
                 //    // if field nullable and empty - pass NULL
                 //    fields[field] = null;
                 //else
@@ -1239,13 +1260,13 @@ public class FwDynamicController : FwController
         // for now we just look if we have att_links_edit field and update att links
         foreach (Hashtable def in getConfigShowFormFieldsByTab("showform_fields"))
         {
-            string field = (string)def["field"];
-            string type = (string)def["type"];
+            string field = def["field"].toStr();
+            string type = def["type"].toStr();
             if (type == "att_links_edit")
             {
                 var att_post_prefix = "att";
                 if (def.ContainsKey("att_post_prefix"))
-                    att_post_prefix = (string)def["att_post_prefix"];
+                    att_post_prefix = def["att_post_prefix"].toStr();
                 // if PATCH - only update is post param is present (otherwise it will delete all records)
                 if (isPatch() && req(att_post_prefix) == null)
                     continue;
@@ -1307,8 +1328,9 @@ public class FwDynamicController : FwController
         var existing = att_model.listByEntityCategory(model0.table_name, id, att_category);
         foreach (Hashtable row in existing)
         {
-            if (!att_ids.ContainsKey(row["id"]))
-                att_model.delete(row["id"].toInt(), true);
+            var rowId = row["id"];
+            if (rowId != null && !att_ids.ContainsKey(rowId))
+                att_model.delete(rowId.toInt(), true);
         }
     }
 
@@ -1330,10 +1352,10 @@ public class FwDynamicController : FwController
             //junction model based
             if (def["is_by_linked"].toBool())
                 //by linked id
-                fw.model((string)def["model"]).updateJunctionByLinkedId(id, reqh(field + "_multi")); // junction model
+                fw.model(def["model"].toStr()).updateJunctionByLinkedId(id, reqh(field + "_multi")); // junction model
             else
                 //by main id
-                fw.model((string)def["model"]).updateJunctionByMainId(id, reqh(field + "_multi")); // junction model
+                fw.model(def["model"].toStr()).updateJunctionByMainId(id, reqh(field + "_multi")); // junction model
         }
     }
 
@@ -1403,13 +1425,13 @@ public class FwDynamicController : FwController
     /// <param name="def">subable definition from config.json</param>
     /// <param name="sub_model">optional subtable model, if not passed def[model] will be used</param>
     /// <returns></returns>
-    protected virtual int modelAddOrUpdateSubtableDynamic(int main_id, string row_id, Hashtable fields, Hashtable def, FwModel sub_model = null)
+    protected virtual int modelAddOrUpdateSubtableDynamic(int main_id, string row_id, Hashtable fields, Hashtable def, FwModel? sub_model = null)
     {
         int id;
 
         if (sub_model == null)
         {
-            var model_name = (string)def["model"];
+            var model_name = def["model"].toStr();
             sub_model = fw.model(model_name);
         }
 
@@ -1434,7 +1456,7 @@ public class FwDynamicController : FwController
     /// <param name="fields"></param>
     /// <param name="field_name"></param>
     /// <returns></returns>
-    protected Hashtable defByFieldname(string field_name, ArrayList fields)
+    protected Hashtable? defByFieldname(string field_name, ArrayList fields)
     {
         foreach (Hashtable def in fields)
         {
@@ -1451,8 +1473,8 @@ public class FwDynamicController : FwController
         Hashtable result = [];
         foreach (Hashtable fldinfo in fields)
         {
-            if (fldinfo.ContainsKey("field") && !result.ContainsKey((string)fldinfo["field"]))
-                result[(string)fldinfo["field"]] = fldinfo;
+            if (fldinfo.ContainsKey("field") && !result.ContainsKey(fldinfo["field"].toStr()))
+                result[fldinfo["field"].toStr()] = fldinfo;
         }
         return result;
     }

@@ -15,8 +15,6 @@ public class DevConfigureController : FwController
 {
     public static new int access_level = Users.ACL_VISITOR;
 
-    protected DemoDicts model;
-
     public override void init(FW fw)
     {
         //base.init(fw); //not using base init as it calls getRBAC which require access to db (and we may not have it yet)
@@ -42,14 +40,14 @@ public class DevConfigureController : FwController
         ps["is_config_env"] = String.IsNullOrEmpty(aspnet_env) || aspnet_env == ps["config_file_name"].toStr();
 
         ps["is_db_config"] = false;
-        var configdb = (Hashtable)fw.config("db");
-        if (configdb != null && configdb["main"] != null && !Utils.isEmpty(((Hashtable)configdb["main"])["connection_string"]))
+        var configdb = (Hashtable?)fw.config("db");
+        if (configdb?["main"] is Hashtable mainDb && !Utils.isEmpty(mainDb?["connection_string"]))
             ps["is_db_config"] = true;
 
         DB db;
         ps["is_db_conn"] = false;
         ps["is_db_tables"] = false;
-        if ((bool)ps["is_db_config"])
+        if (ps["is_db_config"].toBool())
         {
             try
             {
@@ -74,7 +72,7 @@ public class DevConfigureController : FwController
         }
 
         ps["is_write_dirs"] = false;
-        string upload_dir = (string)fw.config("site_root") + fw.config("UPLOAD_DIR");
+        string upload_dir = fw.config("site_root").toStr() + fw.config("UPLOAD_DIR").toStr();
         // check if dir is writable
         ps["is_write_dirs"] = isWritable(upload_dir, true);
 
@@ -85,7 +83,7 @@ public class DevConfigureController : FwController
         // obsolete in .net 4
         // If System.Security.SecurityManager.IsGranted(writePermission) Then ps["is_write_dirs") ] True
 
-        var log_path = (string)fw.config("log");
+        var log_path = fw.config("log").toStr();
         ps["is_error_log"] = isWritable(log_path);
 
         ps["error_log_size"] = Utils.fileSize(log_path);
@@ -143,7 +141,7 @@ public class DevConfigureController : FwController
         return ps;
     }
 
-    public Hashtable ApplyUpdatesAction()
+    public Hashtable? ApplyUpdatesAction()
     {
         //only allow apply updates if in DEV mode or if user is site admin
         if (!fw.config("IS_DEV").toBool() && !fw.model<Users>().isSiteAdmin())

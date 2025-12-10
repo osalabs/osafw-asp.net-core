@@ -12,7 +12,7 @@ public class MyFiltersController : FwAdminController
 {
     public static new int access_level = Users.ACL_MEMBER;
 
-    protected UserFilters model;
+    protected UserFilters model = null!;
 
     public override void init(FW fw)
     {
@@ -33,7 +33,7 @@ public class MyFiltersController : FwAdminController
         related_id = reqs("related_id");
     }
 
-    public override Hashtable initFilter(string session_key = null)
+    public override Hashtable initFilter(string? session_key = null)
     {
         base.initFilter(session_key);
         if (!this.list_filter.ContainsKey("icode"))
@@ -59,12 +59,12 @@ public class MyFiltersController : FwAdminController
     public override Hashtable ShowFormAction(int id = 0)
     {
         form_new_defaults = new() { ["icode"] = related_id };
-        var ps = base.ShowFormAction(id);
+        var ps = base.ShowFormAction(id)!;
         ps["is_admin"] = fw.userAccessLevel == Users.ACL_ADMIN;
         return ps;
     }
 
-    public override Hashtable SaveAction(int id = 0)
+    public override Hashtable? SaveAction(int id = 0)
     {
         route_onerror = FW.ACTION_SHOW_FORM; //set route to go if error happens
 

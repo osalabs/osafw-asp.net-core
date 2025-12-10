@@ -11,12 +11,12 @@ public class AdminAttController : FwAdminController
 {
     public static new int access_level = Users.ACL_MANAGER;
 
-    protected Att model = new();
+    protected Att model = null!;
 
     public override void init(FW fw)
     {
         base.init(fw);
-        model.init(fw);
+        model = fw.model<Att>();
         model0 = model;
 
         base_url = "/Admin/Att"; // base url for the controller
@@ -68,7 +68,7 @@ public class AdminAttController : FwAdminController
 
     public override Hashtable IndexAction()
     {
-        var ps = base.IndexAction();
+        var ps = base.IndexAction() ?? [];
 
         ps["select_att_categories_ids"] = fw.model<AttCategories>().listSelectOptions();
         return ps;
@@ -76,8 +76,8 @@ public class AdminAttController : FwAdminController
 
     public override Hashtable ShowFormAction(int id = 0)
     {
-        var ps = base.ShowFormAction(id);
-        var item = (Hashtable)ps["i"];
+        var ps = base.ShowFormAction(id) ?? [];
+        var item = ps["i"] as Hashtable ?? [];
 
         ps["url"] = model.getUrl(id);
         if (item["is_image"].toInt() == 1)
@@ -88,7 +88,7 @@ public class AdminAttController : FwAdminController
         return ps;
     }
 
-    public override Hashtable SaveAction(int id = 0)
+    public override Hashtable? SaveAction(int id = 0)
     {
         route_onerror = FW.ACTION_SHOW_FORM; //set route to go if error happens
 
@@ -134,7 +134,7 @@ public class AdminAttController : FwAdminController
             // Proceed upload - for add - could be multiple files
             var addedAtt = model.uploadMulti(itemdb);
             if (addedAtt.Count > 0)
-                id = (int)((Hashtable)addedAtt[0])["id"];
+                id = (addedAtt[0] as Hashtable)!["id"].toInt();
             fw.flash("added", 1);
             location = base_url;
         }
@@ -179,7 +179,8 @@ public class AdminAttController : FwAdminController
 
         if (itemdb["fsize"].toInt() == 0)
         {
-            if (fw.request.Form.Files.Count == 0 || fw.request.Form.Files[0] == null || fw.request.Form.Files[0].Length == 0)
+            var files = fw.request?.Form?.Files;
+            if (files == null || files.Count == 0 || files[0] == null || files[0].Length == 0)
             {
                 fw.FormErrors["file1"] = "NOFILE";
             }

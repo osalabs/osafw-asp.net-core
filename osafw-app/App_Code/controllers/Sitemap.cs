@@ -9,7 +9,7 @@ namespace osafw;
 
 public class SitemapController : FwController
 {
-    protected Spages model;
+    protected Spages model = null!;
 
     public override void init(FW fw)
     {
@@ -42,15 +42,16 @@ public class SitemapController : FwController
         return ps;
     }
 
-    private void _add_full_url(ArrayList pages_tree, string parent_url = "")
+    private void _add_full_url(ArrayList? pages_tree, string parent_url = "")
     {
-        if (pages_tree==null)
+        if (pages_tree == null)
             return;
 
         foreach (Hashtable row in pages_tree)
         {
-            row["full_url"] = parent_url + "/" + row["url"];
-            _add_full_url((ArrayList)row["children"], (string)row["url"]);
+            var urlPart = row["url"].toStr();
+            row["full_url"] = parent_url + "/" + urlPart;
+            _add_full_url((ArrayList?)row["children"], urlPart);
         }
     }
 }

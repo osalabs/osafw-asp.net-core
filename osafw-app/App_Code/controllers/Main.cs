@@ -106,7 +106,7 @@ public class MainController : FwController
         ArrayList rows = db.arrayp("select access_level, count(*) as ivalue from users where status=0 group by access_level order by count(*) desc", DB.h());
         one["rows"] = rows;
         foreach (Hashtable row in rows)
-            row["ilabel"] = FormUtils.selectTplName("/common/sel/access_level.sel", (string)row["access_level"]);
+            row["ilabel"] = FormUtils.selectTplName("/common/sel/access_level.sel", row["access_level"].toStr());
         panes["piechart"] = one;
 
         one = [];
@@ -121,9 +121,9 @@ public class MainController : FwController
         one["rows"] = rows;
         var headers = new ArrayList();
         one["headers"] = headers;
-        if (rows.Count > 0)
+        if (rows.Count > 0 && rows[0] is Hashtable firstRow)
         {
-            var keys = ((Hashtable)rows[0]).Keys;
+            var keys = firstRow.Keys;
             var fields = new string[keys.Count];
             keys.CopyTo(fields, 0);
             foreach (var key in fields)

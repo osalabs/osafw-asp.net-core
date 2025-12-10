@@ -11,7 +11,7 @@ public class AdminLookupsController : FwController
 {
     public static new int access_level = Users.ACL_MANAGER;
 
-    protected FwControllers model;
+    protected FwControllers model = null!;
 
     public override void init(FW fw)
     {
@@ -37,20 +37,20 @@ public class AdminLookupsController : FwController
         var grouped = new Hashtable();
         foreach (Hashtable row in rows)
         {
-            var igroup = (string)row["igroup"];
+            var igroup = row["igroup"].toStr();
             if (!grouped.ContainsKey(igroup))
             {
                 grouped[igroup] = new ArrayList();
             }
-            ((ArrayList)grouped[igroup]).Add(row);
+            ((ArrayList)grouped[igroup]!).Add(row);
         }
 
         // 2) Build an array of group-objects: [ 'igroup' => ..., 'list_rows' => [...] ]
         var allGroups = new ArrayList();
         foreach (DictionaryEntry entry in grouped)
         {
-            var gName = (string)entry.Key;
-            var gRows = (ArrayList)entry.Value;
+            var gName = entry.Key.toStr();
+            var gRows = (ArrayList)entry.Value!;
             allGroups.Add(new Hashtable
             {
                 ["igroup"] = gName,
@@ -74,7 +74,7 @@ public class AdminLookupsController : FwController
         // 3) Distribute each group to the column with the smallest row count so far
         foreach (Hashtable group in allGroups)
         {
-            var gRows = (ArrayList)group["list_rows"];
+            var gRows = (ArrayList)group["list_rows"]!;
             // Find the column with the smallest row count
             int targetColIndex = 0;
             for (int i = 1; i < columns; i++)
@@ -85,7 +85,7 @@ public class AdminLookupsController : FwController
                 }
             }
             // Assign the group to this column
-            ((ArrayList)((Hashtable)cols[targetColIndex])["list_groups"]).Add(group);
+            ((ArrayList)((Hashtable)cols[targetColIndex]!)["list_groups"]!).Add(group);
             // Update the row count for this column
             colRowCounts[targetColIndex] += gRows.Count;
         }

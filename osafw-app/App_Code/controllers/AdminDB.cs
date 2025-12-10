@@ -23,8 +23,8 @@ public class AdminDBController : FwController
         var selected_db = reqs("db", "main");
 
         string sql = reqs("sql");
-        ArrayList tablehead = null;
-        ArrayList tablerows = null;
+        ArrayList tablehead = [];
+        ArrayList tablerows = [];
         int sql_ctr = 0;
         long sql_time = DateTime.Now.Ticks;
 
@@ -71,7 +71,8 @@ public class AdminDBController : FwController
         }
 
         ArrayList dbsources = [];
-        foreach (string dbname in ((Hashtable)fw.config("db")).Keys)
+        var dbConfig = fw.config("db") as Hashtable ?? [];
+        foreach (string dbname in dbConfig.Keys)
             dbsources.Add(new Hashtable()
             {
                 {"id",dbname},
@@ -86,7 +87,7 @@ public class AdminDBController : FwController
         ps["sql_time"] = (DateTime.Now.Ticks - sql_time) / (double)10 / 1000 / 1000; // 100nano/micro/milliseconds/seconds
         ps["head_fields"] = tablehead;
         ps["rows"] = tablerows;
-        if (tablerows != null | tablehead != null)
+        if (tablerows.Count > 0 || tablehead.Count > 0)
             ps["is_results"] = true;
         return ps;
     }
@@ -98,9 +99,9 @@ public class AdminDBController : FwController
 
     private static ArrayList sth2table(DbDataReader sth)
     {
-        if (sth == null || !sth.HasRows)
-            return null;
         ArrayList result = [];
+        if (sth == null || !sth.HasRows)
+            return result;        
 
         while (sth.Read())
         {
@@ -111,7 +112,7 @@ public class AdminDBController : FwController
             for (int i = 0; i <= sth.FieldCount - 1; i++)
             {
                 Hashtable tblfld = [];
-                tblfld["value"] = sth[i].ToString();
+                tblfld["value"] = sth[i].toStr();
 
                 fields.Add(tblfld);
             }
@@ -123,9 +124,9 @@ public class AdminDBController : FwController
 
     private static ArrayList sth2head(DbDataReader sth)
     {
-        if (sth == null)
-            return null;
         ArrayList result = [];
+        if (sth == null)
+            return result;        
 
         for (int i = 0; i <= sth.FieldCount - 1; i++)
         {
@@ -154,7 +155,7 @@ public class AdminDBController : FwController
         DataTable dataTable = conn.GetSchema("Tables");
         foreach (DataRow row in dataTable.Rows)
         {
-            string tblname = row["TABLE_NAME"].ToString();
+            string tblname = row["TABLE_NAME"].toStr();
             if (tblname.StartsWith("MSys"))
                 continue;
 
@@ -178,12 +179,12 @@ public class AdminDBController : FwController
         }
     }
 
-    private int get_tbl_count(string tblname)
+    private long get_tbl_count(string tblname)
     {
-        int result = -1;
+        long result = -1;
         try
         {
-            result = (int)db.value(tblname, [], "count(*)");
+            result = db.value(tblname, [], "count(*)").toLong();
         }
         catch (Exception)
         {

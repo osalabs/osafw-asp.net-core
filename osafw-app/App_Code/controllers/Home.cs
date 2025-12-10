@@ -33,14 +33,11 @@ public class HomeController : FwController
 
         //fw.redirect("/Login"); // uncomment to always redirect to login page instead of Home
 
-        Hashtable ps = (Hashtable)FwCache.getValue("home_page");
-
-        if (ps == null || ps.Count == 0)
+        Hashtable ps = FwCache.getValue("home_page") as Hashtable ?? [];
+        if (ps.Count == 0)
         {
             // CACHE MISS
-            ps = [];
-
-            // create home page with heavy queries
+            // create home page with heavy queries here
 
             FwCache.setValue("home_page", ps);
         }
@@ -53,10 +50,10 @@ public class HomeController : FwController
     {
         var page_name = id.ToLower();
 
-        string tpl_name = (string)fw.G["PAGE_LAYOUT"];
+        string tpl_name = fw.G["PAGE_LAYOUT"].toStr();
         //override layout for specific pages - TODO control via Spages
         //if (page_name == "about")
-        //    tpl_name = (string)fw.config("PAGE_LAYOUT_PUBLIC");
+        //    tpl_name = fw.config("PAGE_LAYOUT_PUBLIC").toStr();
 
         Hashtable ps = [];
         ps["hide_sidebar"] = true; // TODO control via Spages
