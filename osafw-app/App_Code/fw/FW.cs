@@ -175,6 +175,7 @@ public class FW : IDisposable
 
     public FW(HttpContext? context, IConfiguration configuration)
     {
+        // DefaultHttpContext keeps offline runs usable without null checks while still matching the runtime request surface
         var currentContext = context ?? new DefaultHttpContext();
         this.context = currentContext;
         this.request = currentContext.Request;
