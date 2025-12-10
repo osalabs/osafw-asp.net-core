@@ -401,8 +401,7 @@ public abstract class FwController
             if (userfilters_id > 0)
             {
                 var uf = fw.model<UserFilters>().one(userfilters_id);
-                Hashtable? f1 = Utils.jsonDecode(uf["idesc"]) as Hashtable;
-                if (f1 != null)
+                if (Utils.jsonDecode(uf["idesc"]) is Hashtable f1)
                     f = f1;
                 if (!uf["is_system"].toBool())
                 {

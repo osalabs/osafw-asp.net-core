@@ -1132,7 +1132,7 @@ public class FW : IDisposable
     // Call controller
     public void callController(FwController controller, MethodInfo actionMethod, object[]? args = null)
     {
-        args ??= Array.Empty<object>();
+        args ??= [];
         //convert args to parameters with proper types
         System.Reflection.ParameterInfo[] @params = actionMethod.GetParameters();
         object[] parameters = new object[@params.Length];
@@ -1553,7 +1553,7 @@ public class FW : IDisposable
                 ps["DUMP_STACK"] = Ex.ToString();
 
             ps["DUMP_SQL"] = DB.last_sql;
-            ps["DUMP_FORM"] = FwLogger.dumper(FORM ?? new Hashtable());
+            ps["DUMP_FORM"] = FwLogger.dumper(FORM ?? []);
             ps["DUMP_SESSION"] = context?.Session != null ? FwLogger.dumper(context.Session) : "null";
         }
 

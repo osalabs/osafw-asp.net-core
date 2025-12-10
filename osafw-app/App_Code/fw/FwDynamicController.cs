@@ -907,9 +907,8 @@ public class FwDynamicController : FwController
                 else if (def.ContainsKey("options"))
                 {
                     // select options
-                    var options = def["options"] as Hashtable;
-                    var itemValue = item.ContainsKey(field) ? item[field] : null;
-                    if (options != null && itemValue != null && options.ContainsKey(itemValue))
+                    var itemValue = item[field].toStr();
+                    if (def["options"] is Hashtable options && options.ContainsKey(itemValue))
                         def["value"] = options[itemValue];
                     else
                         def["value"] = "";

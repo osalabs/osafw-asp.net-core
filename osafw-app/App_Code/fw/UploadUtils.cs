@@ -9,9 +9,9 @@ using System.IO;
 
 namespace osafw;
 
-    public class UploadParams
-    {
-        public FW fw = null!;
+public class UploadParams
+{
+    public FW fw = null!;
     // input params:
     public bool is_required = false; // set to True and upload_simple will throw ApplicationException if file required, but not uploaded
     public bool is_mkdir = true; // create save_path if not exists
@@ -21,18 +21,18 @@ namespace osafw;
     public int max_w = 10000; // default max image width
     public int max_h = 10000; // default max iamge height
 
-        public string field_name = string.Empty;
-        public Hashtable allowed_ext = []; // if empty - all exts allowed, exts should be with dots
-        public string save_path = string.Empty;
-        public string save_filename = string.Empty; // without ext, ext will be same as upload file, if empty - use orig filename from upload field
+    public string field_name = string.Empty;
+    public Hashtable allowed_ext = []; // if empty - all exts allowed, exts should be with dots
+    public string save_path = string.Empty;
+    public string save_filename = string.Empty; // without ext, ext will be same as upload file, if empty - use orig filename from upload field
     public ulong max_filesize = 0; // max allowed filesize, if 0 - allow all
 
     // output params:
-        public string orig_filename = string.Empty; // original filename with ext
-        public string full_path = string.Empty; // full path to saved file
-        public string filename = string.Empty; // saved filename with ext
-        public string ext = string.Empty; // saved ext
-        public ulong filesize;
+    public string orig_filename = string.Empty; // original filename with ext
+    public string full_path = string.Empty; // full path to saved file
+    public string filename = string.Empty; // saved filename with ext
+    public string ext = string.Empty; // saved ext
+    public ulong filesize;
 
     // example: Dim up As New UploadParams("file1", ".doc .pdf")
     public UploadParams(FW fw, string field_name, string save_path, string save_filename_noext = "", string allowed_ext_str = "")

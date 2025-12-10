@@ -87,10 +87,10 @@ public class FwVueController : FwDynamicController
                     }
                     else
                     {
-                    var ac_model = fw.model(model_name);
-                    if (ac_model != null)
-                    {
-                        var ac_item = ac_model.one(row[field_name]);
+                        var ac_model = fw.model(model_name);
+                        if (ac_model != null)
+                        {
+                            var ac_item = ac_model.one(row[field_name]);
                             row[field_name + "_iname"] = ac_item["iname"];
                         }
                     }

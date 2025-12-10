@@ -21,7 +21,7 @@ public static class FwConfig
     public static string hostname => (settings?["hostname"] as string) ?? "";
 
     /// <summary>Per-request, host-specific settings bucket.</summary>
-    public static Hashtable settings { get => _current.Value ??= new Hashtable(); private set => _current.Value = value; }
+    public static Hashtable settings { get => _current.Value ??= []; private set => _current.Value = value; }
 
     // internals
     private static readonly AsyncLocal<Hashtable> _current = new();                // per-async-flow bucket
@@ -223,10 +223,7 @@ public static class FwConfig
 
         // default settings that depend on other settings
         if (!settings.ContainsKey("ASSETS_URL"))
-        {
-            var rootUrl = settings.ContainsKey("ROOT_URL") ? settings["ROOT_URL"].toStr() : string.Empty;
-            settings["ASSETS_URL"] = rootUrl + "/assets";
-        }
+            settings["ASSETS_URL"] = settings["ROOT_URL"].toStr() + "/assets";
     }
 
     /// <summary>
