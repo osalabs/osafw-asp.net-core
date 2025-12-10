@@ -58,7 +58,7 @@ public class AdminDBController : FwController
                             DbDataReader sth = db.query(sqlone);
                             tablehead = sth2head(sth);
                             tablerows = sth2table(sth);
-                            sth.Close();
+                            db.closeQuery(sth);
                             sql_ctr += 1;
                         }
                     }

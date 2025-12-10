@@ -230,6 +230,9 @@ public class DB : IDisposable
     public static string last_sql = ""; // last executed sql
     public static int SQL_QUERY_CTR = 0; // counter for SQL queries during request
 
+    private DbCommand? lastQueryCommand;
+    private DbDataReader? lastQueryReader;
+
     // optional external logger delegate
     public delegate void LoggerDelegate(LogLevel level, params object?[] args);
     protected LoggerDelegate? ext_logger;
@@ -735,6 +738,8 @@ public class DB : IDisposable
     {
         connect();
 
+        disposeLastQuery();
+
         //shallow copy to avoid modifying original
         Hashtable @params = in_params != null ? (Hashtable)in_params.Clone() : new Hashtable();
 
@@ -747,56 +752,71 @@ public class DB : IDisposable
         SQL_QUERY_CTR += 1;
 
         DbDataReader dbread;
+        DbCommand dbcomm;
         if (dbtype == DBTYPE_SQLSRV)
         {
             var connection = (SqlConnection)conn!;
-            var dbcomm = new SqlCommand(sql, connection)
+            var sqlCommand = new SqlCommand(sql, connection)
             {
                 CommandTimeout = sql_command_timeout
             };
             foreach (string p in @params.Keys)
-                dbcomm.Parameters.AddWithValue(p, convertParamValue(@params[p]));
+                sqlCommand.Parameters.AddWithValue(p, convertParamValue(@params[p]));
 
             if (tran != null)
-                dbcomm.Transaction = (SqlTransaction)tran;
+                sqlCommand.Transaction = (SqlTransaction)tran;
 
-            dbread = dbcomm.ExecuteReader();
+            dbcomm = sqlCommand;
         }
         else if (dbtype == DBTYPE_OLE && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             var sql1 = convertNamedToPositional(sql, out List<string> paramNames);
             //logger(LogLevel.INFO, "DB:", db_name, " ", sql1);
-            var dbcomm = new OleDbCommand(sql1, (OleDbConnection)conn!);
+            var oleDbCommand = new OleDbCommand(sql1, (OleDbConnection)conn!);
             foreach (string p in paramNames)
             {
                 // p name is without "@", but @params may or may not contain "@" prefix
                 var pvalue = @params.ContainsKey(p) ? @params[p] : @params["@" + p];
                 //logger(LogLevel.INFO, "DB:", db_name, " ", "param: ", p, " = ", pvalue);
-                dbcomm.Parameters.AddWithValue("?", convertParamValue(pvalue));
+                oleDbCommand.Parameters.AddWithValue("?", convertParamValue(pvalue));
             }
 
             if (tran != null)
-                dbcomm.Transaction = (OleDbTransaction)tran;
+                oleDbCommand.Transaction = (OleDbTransaction)tran;
 
-            dbread = dbcomm.ExecuteReader();
+            dbcomm = oleDbCommand;
         }
 #if isMySQL
         else if (dbtype == DBTYPE_MYSQL)
         {
-            var dbcomm = new MySqlCommand(sql, (MySqlConnection)conn);
+            var mySqlCommand = new MySqlCommand(sql, (MySqlConnection)conn)
+            {
+                CommandTimeout = sql_command_timeout
+            };
             foreach (string p in @params.Keys)
-                dbcomm.Parameters.AddWithValue(p, convertParamValue(@params[p]));
+                mySqlCommand.Parameters.AddWithValue(p, convertParamValue(@params[p]));
 
             if (tran != null)
-                dbcomm.Transaction = (MySqlTransaction)tran;
+                mySqlCommand.Transaction = (MySqlTransaction)tran;
 
-            dbread = dbcomm.ExecuteReader();
+            dbcomm = mySqlCommand;
         }
 #endif
         else
             throw new ApplicationException("Unsupported DB Type");
 
-        return dbread;
+        try
+        {
+            dbread = dbcomm.ExecuteReader();
+            lastQueryCommand = dbcomm;
+            lastQueryReader = dbread;
+            return dbread;
+        }
+        catch
+        {
+            dbcomm.Dispose();
+            throw;
+        }
     }
 
     /// <summary>
@@ -837,6 +857,37 @@ public class DB : IDisposable
                 logger(LogLevel.INFO, "DB:", db_name, " ", sql, @params);
         else
             logger(LogLevel.INFO, "DB:", db_name, " ", sql);
+    }
+
+    public void closeQuery(DbDataReader? dbread = null)
+    {
+        var reader = dbread ?? lastQueryReader;
+        if (reader == null)
+        {
+            disposeLastQuery();
+            return;
+        }
+
+        try
+        {
+            reader.Close();
+        }
+        finally
+        {
+            if (ReferenceEquals(reader, lastQueryReader))
+                disposeLastQuery();
+            else
+                reader.Dispose();
+        }
+    }
+
+    private void disposeLastQuery()
+    {
+        lastQueryReader?.Dispose();
+        lastQueryReader = null;
+
+        lastQueryCommand?.Dispose();
+        lastQueryCommand = null;
     }
 
     /// <summary>
@@ -885,7 +936,7 @@ public class DB : IDisposable
                 //TODO test with OLE
                 sql += ";SELECT SCOPE_IDENTITY()";
             }
-            var dbcomm = new SqlCommand(sql, (SqlConnection)conn!)
+            using var dbcomm = new SqlCommand(sql, (SqlConnection)conn!)
             {
                 CommandTimeout = sql_command_timeout
             };
@@ -904,7 +955,7 @@ public class DB : IDisposable
         {
             var sql1 = convertNamedToPositional(sql, out List<string> paramNames);
             //logger(LogLevel.INFO, "DB:", db_name, " ", sql1);
-            var dbcomm = new OleDbCommand(sql1, (OleDbConnection)conn!);
+            using var dbcomm = new OleDbCommand(sql1, (OleDbConnection)conn!);
             foreach (string p in paramNames)
             {
                 // p name is without "@", but @params may or may not contain "@" prefix
@@ -921,10 +972,12 @@ public class DB : IDisposable
 #if isMySQL
         else if (dbtype == DBTYPE_MYSQL)
         {
-            var dbcomm = new MySqlCommand(sql, (MySqlConnection)conn);
-            dbcomm.CommandTimeout = sql_command_timeout;
-                foreach (string p in @params.Keys)
-                    dbcomm.Parameters.AddWithValue(p, convertParamValue(@params[p]));
+            using var dbcomm = new MySqlCommand(sql, (MySqlConnection)conn)
+            {
+                CommandTimeout = sql_command_timeout
+            };
+            foreach (string p in @params.Keys)
+                dbcomm.Parameters.AddWithValue(p, convertParamValue(@params[p]));
 
             if (tran != null)
                 dbcomm.Transaction = (MySqlTransaction)tran;
@@ -1089,7 +1142,7 @@ public class DB : IDisposable
         DbDataReader dbread = query(sql, @params);
         var hasRow = dbread.Read();
         var result = hasRow ? readRow(dbread) : [];
-        dbread.Close();
+        closeQuery(dbread);
         return result;
     }
 
@@ -1104,7 +1157,7 @@ public class DB : IDisposable
         DbDataReader dbread = query(sql, @params);
         var hasRow = dbread.Read();
         var result = hasRow ? readRow<T>(dbread) : new T();
-        dbread.Close();
+        closeQuery(dbread);
         return result;
     }
 
@@ -1115,7 +1168,7 @@ public class DB : IDisposable
         while (dbread.Read())
             result.Add(readRow(dbread));
 
-        dbread.Close();
+        closeQuery(dbread);
         return result;
     }
 
@@ -1126,7 +1179,7 @@ public class DB : IDisposable
         while (dbread.Read())
             result.Add(readRow<T>(dbread));
 
-        dbread.Close();
+        closeQuery(dbread);
         return result;
     }
 
@@ -1284,7 +1337,7 @@ public class DB : IDisposable
         while (dbread.Read())
             result.Add(dbread[0]?.ToString() ?? "");
 
-        dbread.Close();
+        closeQuery(dbread);
         return result;
     }
 
@@ -1347,7 +1400,7 @@ public class DB : IDisposable
             result = convertDbDateTimeToUtc(dt, isDateOnly);
         }
 
-        dbread.Close();
+        closeQuery(dbread);
         return result;
     }
 
@@ -2770,7 +2823,10 @@ public class DB : IDisposable
         if (!disposedValue)
         {
             if (disposing)
+            {
+                disposeLastQuery();
                 this.disconnect();
+            }
         }
         disposedValue = true;
     }
