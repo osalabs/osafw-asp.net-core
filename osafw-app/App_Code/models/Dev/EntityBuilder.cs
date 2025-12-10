@@ -2,6 +2,7 @@
 //
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2024  Oleg Savchuk www.osalabs.com
+#pragma warning disable CS8600, CS8602, CS8603, CS8604, CS8605, CS8620, CS8625
 
 using System;
 using System.Collections;
@@ -10,6 +11,7 @@ using System.Data;
 using System.Linq;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using FieldDict = System.Collections.Generic.Dictionary<string, object?>;
 
 namespace osafw;
 
@@ -37,7 +39,7 @@ class DevEntityBuilder
 
     private static ArrayList ParseEntities(string inputText, FW fw)
     {
-        var entities = new List<Dictionary<string, object>>();
+        var entities = new List<FieldDict>();
         //split inputText by \r\n but leave empty lines (as empty lines delimit entities)
         var lines = Regex.Split(inputText, "\r\n|\n\r|\n|\r");
         int index = 0;
@@ -74,10 +76,10 @@ class DevEntityBuilder
             //fw.logger($"index={index} Parsing entity: " + entityName + " with params: " + entityParams);
             string tableName = Utils.name2fw(entityName);
 
-            var fields = new List<Dictionary<string, object>>();
-            var foreignKeys = new List<Dictionary<string, string>>();
+                    var fields = new List<FieldDict>();
+                    var foreignKeys = new List<Dictionary<string, string>>();
             var indexes = new Dictionary<string, string>();
-            var entity = new Dictionary<string, object>
+            var entity = new FieldDict
             {
                 ["iname"] = Utils.name2human(entityName),
                 ["table"] = tableName,
@@ -95,7 +97,7 @@ class DevEntityBuilder
             //add controller only if "noui" not specified
             if (!entityParams.Contains("noui"))
             {
-                entity["controller"] = new Dictionary<string, object>
+                entity["controller"] = new FieldDict
                 {
                     ["title"] = Utils.name2human(entityName),
                     ["url"] = $"/Admin/" + entity["model_name"],
@@ -106,8 +108,8 @@ class DevEntityBuilder
             if (entityParams.Contains("lookup"))
             {
                 if (entity["controller"] == null)
-                    entity["controller"] = new Dictionary<string, object>();
-                ((Dictionary<string, object>)entity["controller"])["is_lookup"] = true;
+                    entity["controller"] = new FieldDict();
+                ((FieldDict)entity["controller"])["is_lookup"] = true;
             }
 
             bool includeStandardFields = !entityParams.Contains("nostd");
@@ -215,9 +217,9 @@ class DevEntityBuilder
     }
 
     // id, iname, idesc
-    private static void AddStandardFieldsInitial(List<Dictionary<string, object>> fields)
+    private static void AddStandardFieldsInitial(List<FieldDict> fields)
     {
-        var standardFields = new List<Dictionary<string, object>>
+        var standardFields = new List<FieldDict>
             {
                 CreateField("id", "ID", "int", "int", null, false, isIdentity: true),
                 CreateField("iname", "Name", "varchar", "nvarchar", 255, false, defaultValue: ""),
@@ -228,7 +230,7 @@ class DevEntityBuilder
     }
 
     // add fields status
-    private static void AddStandardFieldsStatus(List<Dictionary<string, object>> fields)
+    private static void AddStandardFieldsStatus(List<FieldDict> fields)
     {
         fields.AddRange(
             [
@@ -237,7 +239,7 @@ class DevEntityBuilder
     }
 
     //create 2 fields: add_time, add_users_id
-    private static void AddStandardFieldsAdded(List<Dictionary<string, object>> fields)
+    private static void AddStandardFieldsAdded(List<FieldDict> fields)
     {
         fields.AddRange(
             [
@@ -247,7 +249,7 @@ class DevEntityBuilder
     }
 
     //create 2 fields: upd_time, upd_users_id
-    private static void AddStandardFieldsUpdated(List<Dictionary<string, object>> fields)
+    private static void AddStandardFieldsUpdated(List<FieldDict> fields)
     {
         fields.AddRange(
             [
@@ -256,7 +258,7 @@ class DevEntityBuilder
             ]);
     }
 
-    private static void AddStandardFieldsAfter(List<Dictionary<string, object>> fields)
+    private static void AddStandardFieldsAfter(List<FieldDict> fields)
     {
         // add status, added and updated fields
         AddStandardFieldsStatus(fields);
@@ -264,16 +266,16 @@ class DevEntityBuilder
         AddStandardFieldsUpdated(fields);
     }
 
-    private static void RemoveField(List<Dictionary<string, object>> fields, string fieldName)
+    private static void RemoveField(List<FieldDict> fields, string fieldName)
     {
         fields.RemoveAll(f => f["fw_name"].ToString().Equals(fieldName, StringComparison.OrdinalIgnoreCase));
     }
 
-    private static Dictionary<string, object> ParseJunction(string line, Dictionary<string, object> entity, string comment)
+    private static FieldDict ParseJunction(string line, FieldDict entity, string comment)
     {
         var linked_tblname = Utils.name2fw(line[..^"junction".Length].Trim());
         var junction_tblname = entity["table"] + "_" + linked_tblname;
-        var junction = new Dictionary<string, object>
+        var junction = new FieldDict
         {
             ["db_config"] = entity["db_config"],
             ["table"] = junction_tblname,
@@ -288,7 +290,7 @@ class DevEntityBuilder
         // link fields - one to main table, another - to lookup table
         var field_name1 = entity["table"] + "_id";
         var field_name2 = linked_tblname + "_id";
-        var junction_fields = new List<Dictionary<string, object>>
+        var junction_fields = new List<FieldDict>
                     {
                         CreateField(field_name1,Utils.name2human(entity["table"].ToString()), "int", "int", null, false),
                         CreateField(field_name2, Utils.name2human(linked_tblname), "int", "int", null, false)
@@ -298,15 +300,15 @@ class DevEntityBuilder
         junction["fields"] = junction_fields;
 
         // foreign keys - to main table and lookup table
-        var junction_foreign_keys = new List<Dictionary<string, object>>
+        var junction_foreign_keys = new List<FieldDict>
                     {
-                        new Dictionary<string, object>
+                        new FieldDict
                         {
                             ["column"] = field_name1,
                             ["pk_table"] = entity["table"].ToString(),
                             ["pk_column"] = "id"
                         },
-                        new Dictionary<string, object>
+                        new FieldDict
                         {
                             ["column"] = field_name2,
                             ["pk_table"] = linked_tblname,
@@ -330,9 +332,9 @@ class DevEntityBuilder
     // FieldName [Type(Length)] [NULL|NOT NULL] [DEFAULT(Value)] [UNIQUE|PRIMARY] [UI:option,option(some other value),option,...]
     // FieldName.id [NULL] [UI:option,option(some other value),option,...] -- foreign key
     // FieldName FK(TableName.FieldName) [NULL] [UI:option,option(some other value),option,...] -- foreign key
-    private static Dictionary<string, object?>? ParseField(string line, string comment)
+    private static FieldDict? ParseField(string line, string comment)
     {
-        var field = new Dictionary<string, object?>();
+        var field = new FieldDict();
         if (comment.Length > 0) field["comments"] = comment;
 
         // Split line into parts
@@ -482,7 +484,7 @@ class DevEntityBuilder
     // currency => decimal(18,2)
     // decimal => decimal(18,2)
     // decimal(10,2) => fw_type=float, fw_subtype=decimal, numeric_precision=2
-    private static void ParseDataType(string token, Dictionary<string, object> field, bool is_notnull)
+    private static void ParseDataType(string token, FieldDict field, bool is_notnull)
     {
         // Handle data type and length
         var match = Regex.Match(token, @"(\w+)(?:\((.*?)\))?");
@@ -580,9 +582,9 @@ class DevEntityBuilder
 
     // parse ui options
     // option,option(some other value),option,...
-    private static Dictionary<string, object> ParseUiOptions(string uiOptions)
+    private static FieldDict ParseUiOptions(string uiOptions)
     {
-        var result = new Dictionary<string, object>();
+        var result = new FieldDict();
         var options = uiOptions.Split(',');
 
         foreach (var option in options)
@@ -624,7 +626,7 @@ class DevEntityBuilder
         };
     }
 
-    private static Dictionary<string, object> CreateField(
+    private static FieldDict CreateField(
         string name,
         string iname,
         string fwType,
@@ -632,9 +634,9 @@ class DevEntityBuilder
         int? maxlen,
         bool isNullable,
         bool isIdentity = false,
-        object defaultValue = null)
+        object? defaultValue = null)
     {
-        return new Dictionary<string, object>
+        return new FieldDict
         {
             ["name"] = name,
             ["iname"] = iname,

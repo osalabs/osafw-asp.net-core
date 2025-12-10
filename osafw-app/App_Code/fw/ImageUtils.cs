@@ -1,4 +1,5 @@
-﻿#pragma warning disable CA1416 // some methods are Windows only
+#pragma warning disable CA1416 // some methods are Windows only
+#pragma warning disable CS8600, CS8602, CS8603, CS8604, CS8605, CS8620, CS8625
 
 using System;
 using System.Drawing;
@@ -119,8 +120,8 @@ public class ImageUtils
         // Save the scaled image.
         string ext = UploadUtils.getUploadFileExt(to_file);
         ImageFormat out_format = image.RawFormat;
-        EncoderParameters EncoderParameters = null;
-        ImageCodecInfo ImageCodecInfo = null;
+        EncoderParameters? EncoderParameters = null;
+        ImageCodecInfo? ImageCodecInfo = null;
 
         if (ext == ".gif")
         {
@@ -144,7 +145,7 @@ public class ImageUtils
         image.Dispose();
         stream.Close();
 
-        if (EncoderParameters == null)
+        if (EncoderParameters == null || ImageCodecInfo == null)
         {
             bitmap.Save(to_file, out_format); // image.RawFormat
         }

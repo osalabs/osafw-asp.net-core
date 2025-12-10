@@ -2,6 +2,7 @@
 //
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
+#pragma warning disable CS8600, CS8602, CS8603, CS8604, CS8605, CS8620, CS8625
 
 using Microsoft.AspNetCore.Http;
 using System;

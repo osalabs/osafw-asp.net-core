@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+#pragma warning disable CS8600, CS8602, CS8603, CS8604, CS8605, CS8620, CS8625
 using System.Text.RegularExpressions;
 // Code generation for Developers
 //

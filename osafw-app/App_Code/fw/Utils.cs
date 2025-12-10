@@ -1,5 +1,6 @@
 ﻿//uncomment to enable ExcelDataReader - install ExcelDataReader NuGet package and ExcelDataReader.DataSet (for CSV)
 //#define ExcelDataReader
+#pragma warning disable CS8600, CS8602, CS8603, CS8604, CS8605, CS8620, CS8625
 #if ExcelDataReader
 using ExcelDataReader;
 #endif
@@ -528,14 +529,17 @@ public class Utils
     {
         string headers_str = csv_export_headers;
         StringBuilder csv = new();
-        string[] fields = null;
+        string[]? fields = null;
         if (csv_export_fields == "" || csv_export_fields == "*")
         {
             // just read field names from first row
             if (rows.Count > 0)
             {
-                fields = (rows[0] as Hashtable).Keys.Cast<string>().ToArray();
-                headers_str = string.Join(",", fields);
+                if (rows[0] is Hashtable firstRow)
+                {
+                    fields = firstRow.Keys.Cast<string>().ToArray();
+                    headers_str = string.Join(",", fields);
+                }
             }
         }
         else
