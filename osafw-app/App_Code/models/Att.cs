@@ -362,7 +362,7 @@ public class Att : FwModel<Att.Row>
         }
 
         fw.logger(LogLevel.INFO, "Transmit(", disposition, ") filepath [", filepath, "]");
-        string filename = item["fname"].Replace('"', '\'');
+        string filename = item["fname"].toStr().Replace('"', '\'');
         string ext = UploadUtils.getUploadFileExt(filename);
 
         fw.response.Headers.ContentType = Utils.ext2mime(ext);

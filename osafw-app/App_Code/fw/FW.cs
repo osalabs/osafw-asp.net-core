@@ -145,7 +145,7 @@ public class FW : IDisposable
     // helper to initialize DB instance based on configuration name
     public DB getDB(string config_name = "main")
     {
-        Hashtable dbconfig = (Hashtable)config("db");
+        var dbconfig = config("db") as Hashtable ?? [];
         Hashtable conf = dbconfig[config_name] as Hashtable ?? [];
 
         var db = new DB(conf, config_name);
@@ -326,7 +326,7 @@ public class FW : IDisposable
         return FwConfig.settings;
     }
     // return just particular setting
-    public object config(string name)
+    public object? config(string name)
     {
         return FwConfig.settings[name];
     }
@@ -713,13 +713,13 @@ public class FW : IDisposable
         // pre-check controller's access level by url
         int current_level = userAccessLevel;
 
-        Hashtable rules = (Hashtable)config("access_levels");
-        if (rules != null && rules.ContainsKey(path))
+        Hashtable rules = (Hashtable?)config("access_levels") ?? [];
+        if (rules.ContainsKey(path))
         {
             if (current_level >= rules[path].toInt())
                 result = 2;
         }
-        else if (rules != null && rules.ContainsKey(path2))
+        else if (rules.ContainsKey(path2))
         {
             if (current_level >= rules[path2].toInt())
                 result = 2;

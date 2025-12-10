@@ -64,10 +64,11 @@ public class FwSelfTest
         // test important config settings
         echo("<strong>Config</strong>");
         echo("hostname: " + fw.config("hostname"));
-        is_notempty("site_root", fw.config("site_root"));
+        var siteRoot = fw.config("site_root") ?? string.Empty;
+        is_notempty("site_root", siteRoot);
 
         // log_level: higher than debug - OK, debug - warn, trace or below - red (not for prod)
-        var log_level = (LogLevel)fw.config("log_level");
+        var log_level = (LogLevel)(fw.config("log_level") ?? LogLevel.INFO);
         var logName = Enum.GetName(typeof(LogLevel), log_level) ?? string.Empty;
 
         if (log_level >= LogLevel.TRACE)
@@ -90,8 +91,10 @@ public class FwSelfTest
         is_false("IS_DEV", fw.config("IS_DEV").toBool(), "Turned ON");
 
         // template directory should exists - TODO test parser to actually see templates work?
-        is_true("template", Directory.Exists(fw.config("template").toStr()), fw.config("template").toStr());
-        is_true("access_levels", fw.config("access_levels") != null && ((Hashtable)fw.config("access_levels")).Count > 0, "Not defined");
+        var templatePath = fw.config("template").toStr();
+        is_true("template", Directory.Exists(templatePath), templatePath);
+        var accessLevels = fw.config("access_levels") as Hashtable;
+        is_true("access_levels", accessLevels != null && accessLevels.Count > 0, "Not defined");
 
         // UPLOAD_DIR upload dir is writeable
         try
@@ -110,11 +113,14 @@ public class FwSelfTest
         }
 
         // emails set
-        is_notempty("mail_from", fw.config("mail_from"));
-        is_notempty("support_email", fw.config("support_email"));
+        var mailFrom = fw.config("mail_from") ?? string.Empty;
+        var supportEmail = fw.config("support_email") ?? string.Empty;
+        is_notempty("mail_from", mailFrom);
+        is_notempty("support_email", supportEmail);
 
         // test send email to "test+mail_from"
-        is_true("Send Emails", fw.sendEmail("", (string.IsNullOrEmpty(test_email) ? "test+" + fw.config("mail_from") : test_email), "test email", "test body"), "Failed");
+        var sendTo = string.IsNullOrEmpty(test_email) ? "test+" + mailFrom : test_email;
+        is_true("Send Emails", fw.sendEmail("", sendTo, "test email", "test body"), "Failed");
 
         try
         {

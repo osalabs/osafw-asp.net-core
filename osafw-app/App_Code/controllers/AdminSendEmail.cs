@@ -25,7 +25,7 @@ public class AdminSendEmailController : FwAdminController
         save_fields = "from to subject body host port username password";
         save_fields_checkboxes = "is_ssl|0";
 
-        Hashtable mailSettings = (Hashtable)fw.config("mail");
+        var mailSettings = fw.config("mail") as Hashtable ?? [];
         form_new_defaults = new Hashtable
         {
             ["from"] = fw.config("mail_from").toStr(),
