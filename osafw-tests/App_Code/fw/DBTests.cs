@@ -96,7 +96,7 @@ namespace osafw.Tests
         public void createConnectionTest()
         {
             var result = db.createConnection(connstr);
-            Assert.IsTrue(result.State == System.Data.ConnectionState.Open);
+            Assert.AreEqual(System.Data.ConnectionState.Open, result.State);
         }
 
         [TestMethod()]
@@ -106,7 +106,7 @@ namespace osafw.Tests
 
             dbread.Read();
             Assert.IsTrue(dbread.HasRows);
-            Assert.IsTrue(dbread.FieldCount > 0);
+            Assert.IsGreaterThan(0, dbread.FieldCount);
 
             dbread.Close();
         }
@@ -121,7 +121,7 @@ namespace osafw.Tests
             }
             db.exec("CREATE TABLE exec_unit_testing(id INT)");
             tables = db.tables();
-            Assert.IsTrue(tables.Contains("exec_unit_testing"));
+            Assert.Contains("exec_unit_testing", tables);
             db.exec("DROP TABLE exec_unit_testing");
         }
 
@@ -130,7 +130,7 @@ namespace osafw.Tests
         {
             var row = db.rowp("SELECT * FROM " + table_name + " WHERE id=1;");
 
-            Assert.IsTrue(row.Count > 0);
+            Assert.IsNotEmpty(row);
             Assert.IsTrue(row.ContainsKey("id"));
             Assert.IsTrue(row.ContainsKey("iname"));
             Assert.AreEqual("test1", row["iname"]);
@@ -152,7 +152,7 @@ namespace osafw.Tests
 
             foreach (var row in rows)
             {
-                Assert.IsTrue(row.Count > 0);
+                Assert.IsNotEmpty(row);
                 Assert.IsTrue(row.ContainsKey("id"));
                 Assert.IsTrue(row.ContainsKey("iname"));
             }
@@ -169,8 +169,8 @@ namespace osafw.Tests
             List<Demos.Row> rows = db.array<Demos.Row>(table_name, DB.h());
             foreach (var row in rows)
             {
-                Assert.IsTrue(row.id > 0);
-                Assert.IsTrue(row.iname.Length > 0);
+                Assert.IsGreaterThan(0, row.id);
+                Assert.IsGreaterThan(0, row.iname.Length);
             }
             Assert.AreEqual("test1", rows[0].iname);
             Assert.AreEqual("test2", rows[1].iname);
@@ -516,7 +516,7 @@ namespace osafw.Tests
         {
             db.del(table_name, DB.h("id", 3));
             var r = db.row(table_name, DB.h("id", 3));
-            Assert.IsTrue(r.Count == 0);
+            Assert.IsEmpty(r);
         }
 
         [TestMethod()]
@@ -526,7 +526,7 @@ namespace osafw.Tests
             ArrayList tables = db.tables();
             foreach (var tableName in tablesToCheck)
             {
-                Assert.IsTrue(tables.IndexOf(tableName) >= 0, tableName + " not found");
+                Assert.IsGreaterThanOrEqualTo(0, tables.IndexOf(tableName), tableName + " not found");
             }
         }
 
@@ -536,7 +536,7 @@ namespace osafw.Tests
             db.exec("CREATE VIEW view_for_unit_tests AS SELECT * FROM users");
             ArrayList views = db.views();
             db.exec("DROP VIEW view_for_unit_tests");
-            Assert.IsTrue(views.IndexOf("view_for_unit_tests") >= 0);
+            Assert.IsGreaterThanOrEqualTo(0, views.IndexOf("view_for_unit_tests"));
         }
 
         [TestMethod()]
@@ -555,7 +555,7 @@ namespace osafw.Tests
         public void clearchemaCacheTest()
         {
             Hashtable schema = db.loadTableSchema("users");
-            Assert.IsTrue(db.isSchemaCacheEmpty() == false);
+            Assert.IsFalse(db.isSchemaCacheEmpty());
             db.clearSchemaCache();
             Assert.IsTrue(db.isSchemaCacheEmpty());
         }
@@ -579,21 +579,21 @@ namespace osafw.Tests
                 { "email", "john@example.com" }
             };
             var result = db.prepareParams("demos", fields, "insert");
-            Assert.IsTrue(result.sql.Contains("@iname"));
-            Assert.IsTrue(result.sql.Contains("@email"));
+            Assert.Contains("@iname", result.sql);
+            Assert.Contains("@email", result.sql);
 
             // 2. Test Update
             fields["iname"] = "Jane";
             result = db.prepareParams("demos", fields, "update");
-            Assert.IsTrue(result.sql.Contains("iname = @iname"));
-            Assert.IsTrue(result.sql.Contains("email = @email"));
+            Assert.Contains("iname = @iname", result.sql);
+            Assert.Contains("email = @email", result.sql);
 
             // 3. Test WHERE
             result = db.prepareParams("demos", fields);
             // separate as order of fields is not guaranteed
-            Assert.IsTrue(result.sql.Contains(" AND "), "failed result: " + result.sql);
-            Assert.IsTrue(result.sql.Contains("iname = @iname"), "failed result: " + result.sql);
-            Assert.IsTrue(result.sql.Contains("email = @email"), "failed result: " + result.sql);
+            Assert.Contains(" AND ", result.sql, "failed result: " + result.sql);
+            Assert.Contains("iname = @iname", result.sql, "failed result: " + result.sql);
+            Assert.Contains("email = @email", result.sql, "failed result: " + result.sql);
 
             // 4. Test Empty Fields
             fields.Clear();
@@ -603,12 +603,12 @@ namespace osafw.Tests
             // 5. Test Special Operations (BETWEEN, IN)
             fields["fint"] = db.opIN(new[] { 1, 2, 3 }); // Assuming this will be interpreted as an IN operation
             result = db.prepareParams("demos", fields);
-            Assert.IsTrue(result.sql.Contains("fint IN (@fint_1,@fint_2,@fint_3)"), "failed result: " + result.sql);
+            Assert.Contains("fint IN (@fint_1,@fint_2,@fint_3)", result.sql, "failed result: " + result.sql);
 
             fields.Clear();
             fields["fdate_pop"] = db.opBETWEEN(DateTime.Today, DateTime.Today.AddDays(1));
             result = db.prepareParams("demos", fields);
-            Assert.IsTrue(result.sql.Contains("fdate_pop BETWEEN @fdate_pop_1 AND @fdate_pop_2"), "failed result: " + result.sql);
+            Assert.Contains("fdate_pop BETWEEN @fdate_pop_1 AND @fdate_pop_2", result.sql, "failed result: " + result.sql);
         }
     }
 }

@@ -240,11 +240,11 @@ public static class FwConfig
         readSettingsSection(configuration.GetSection("appSettings"), ref appSettings);
 
         // The “appSettings” itself might be nested inside the hash
-        var settings = (Hashtable?)appSettings["appSettings"] ?? new Hashtable();
-        appSettings["appSettings"] = settings;
+        var settings1 = (Hashtable?)appSettings["appSettings"] ?? [];
+        appSettings["appSettings"] = settings1;
         // Override by name if environment-based overrides are used
-        overrideSettingsByName(environment, settings);
+        overrideSettingsByName(environment, settings1);
 
-        return settings;
+        return settings1;
     }
 }

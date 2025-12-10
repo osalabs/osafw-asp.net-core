@@ -53,19 +53,19 @@ namespace osafw.Tests
             // not an SQL date - should return null
             str = "1/1/2000";
             DateTime? r2 = DateUtils.SQL2Date(str);
-            Assert.AreEqual(null, r2);
+            Assert.IsNull(r2);
 
             // null input should return null
             r2 = DateUtils.SQL2Date(null!);
-            Assert.AreEqual(null, r2);
+            Assert.IsNull(r2);
 
             // empty input should return null
             r2 = DateUtils.SQL2Date("");
-            Assert.AreEqual(null, r2);
+            Assert.IsNull(r2);
 
             // invalid input should return null
             r2 = DateUtils.SQL2Date("invalid_date");
-            Assert.AreEqual(null, r2);
+            Assert.IsNull(r2);
 
         }
 

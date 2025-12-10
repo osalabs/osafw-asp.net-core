@@ -497,13 +497,13 @@ public class FwDynamicController : FwController
     protected virtual bool validateSubtableRowDynamic(string row_id, Hashtable item, Hashtable def)
     {
         var result = true;
-        var required_fields = Utils.qw(def["required_fields"].toStr());
-        if (required_fields.Length == 0)
+        var req_fields = Utils.qw(def["required_fields"].toStr());
+        if (req_fields.Length == 0)
             return result; //nothing to validate
 
         var row_errors = new Hashtable();
         var id = row_id.StartsWith("new-") ? 0 : row_id.toInt();
-        result = this.validateRequired(id, item, required_fields, row_errors);
+        result = this.validateRequired(id, item, req_fields, row_errors);
         if (!result)
         {
             //fill global fw.FormErrors with row errors
@@ -864,10 +864,10 @@ public class FwDynamicController : FwController
             {
                 // subtable functionality
                 var sub_model = fw.model(def["model"].toStr());
-                var list_rows = sub_model.listByMainId(id, def); //list related rows from db
-                sub_model.prepareSubtable(list_rows, id, def);
+                var sub_list_rows = sub_model.listByMainId(id, def); //list related rows from db
+                sub_model.prepareSubtable(sub_list_rows, id, def);
 
-                def["list_rows"] = list_rows;
+                def["list_rows"] = sub_list_rows;
             }
             else
             {
@@ -1163,14 +1163,14 @@ public class FwDynamicController : FwController
         string field = def["field"].toStr();
 
         var sub_model = fw.model(def["model"].toStr());
-        var list_rows = new ArrayList();
+        var sub_list_rows = new ArrayList();
 
         if (isGet())
         {
             if (id > 0)
-                list_rows = sub_model.listByMainId(id, def); //list related rows from db
+                sub_list_rows = sub_model.listByMainId(id, def); //list related rows from db
             else
-                sub_model.prepareSubtableAddNew(list_rows, id, def); //add at least one row
+                sub_model.prepareSubtableAddNew(sub_list_rows, id, def); //add at least one row
         }
         else
         {
@@ -1190,7 +1190,7 @@ public class FwDynamicController : FwController
                 var row_item = reqh("item-" + field + "#" + row_id);
                 row_item["id"] = row_id;
 
-                list_rows.Add(row_item);
+                sub_list_rows.Add(row_item);
             }
         }
 
@@ -1206,12 +1206,12 @@ public class FwDynamicController : FwController
 
         //add new clicked
         if (subtable_add.ContainsKey(field))
-            sub_model.prepareSubtableAddNew(list_rows, id, def);
+            sub_model.prepareSubtableAddNew(sub_list_rows, id, def);
 
         //prepare rows for display (add selects, etc..)
-        sub_model.prepareSubtable(list_rows, id, def);
+        sub_model.prepareSubtable(sub_list_rows, id, def);
 
-        def["list_rows"] = list_rows;
+        def["list_rows"] = sub_list_rows;
     }
 
     // auto-process fields BEFORE record saved to db

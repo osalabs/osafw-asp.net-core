@@ -12,7 +12,7 @@ namespace osafw.Tests
             FwCache.setValue("testCacheKey", "testing");
             var strValue = FwCache.getValue("testCacheKey");
             Assert.IsNotNull(strValue);
-            Assert.AreEqual(strValue.ToString(), "testing");
+            Assert.AreEqual("testing", strValue.ToString());
 
             // test serialization
             Hashtable h = [];
@@ -21,8 +21,8 @@ namespace osafw.Tests
             FwCache.setValue("testCacheKey2", h);
             var r = (Hashtable?)FwCache.getValue("testCacheKey2");
             Assert.IsNotNull(r);
-            Assert.AreEqual(r!["AAA"], "1");
-            Assert.AreEqual(r["BBB"], "2");
+            Assert.AreEqual("1", r!["AAA"]);
+            Assert.AreEqual("2", r["BBB"]);
         }
 
         [TestMethod()]
@@ -31,7 +31,7 @@ namespace osafw.Tests
             FwCache.setValue("testCacheKey", "testing set");
             var strValue = FwCache.getValue("testCacheKey");
             Assert.IsNotNull(strValue);
-            Assert.AreEqual(strValue.ToString(), "testing set");
+            Assert.AreEqual("testing set", strValue.ToString());
 
             // test serialization
             Hashtable h = [];
@@ -40,8 +40,8 @@ namespace osafw.Tests
             FwCache.setValue("testCacheKey2", h);
             var r = (Hashtable?)FwCache.getValue("testCacheKey2");
             Assert.IsNotNull(r);
-            Assert.AreEqual(r!["CCC"], "3");
-            Assert.AreEqual(r["DDD"], "4");
+            Assert.AreEqual("3", r!["CCC"]);
+            Assert.AreEqual("4", r["DDD"]);
         }
 
         [TestMethod()]
@@ -50,7 +50,7 @@ namespace osafw.Tests
             FwCache.setValue("testCacheKey", "testing remove");
             var strValue = FwCache.getValue("testCacheKey");
             Assert.IsNotNull(strValue);
-            Assert.AreEqual(strValue.ToString(), "testing remove");
+            Assert.AreEqual("testing remove", strValue.ToString());
             FwCache.remove("testCacheKey");
             Assert.IsNull(FwCache.getValue("testCacheKey"));
         }
@@ -61,11 +61,11 @@ namespace osafw.Tests
             FwCache.setValue("testCacheKey", "testing remove");
             var firstValue = FwCache.getValue("testCacheKey");
             Assert.IsNotNull(firstValue);
-            Assert.AreEqual(firstValue.ToString(), "testing remove");
+            Assert.AreEqual("testing remove", firstValue.ToString());
             FwCache.setValue("testCacheKey2", "testing remove2");
             var secondValue = FwCache.getValue("testCacheKey2");
             Assert.IsNotNull(secondValue);
-            Assert.AreEqual(secondValue.ToString(), "testing remove2");
+            Assert.AreEqual("testing remove2", secondValue.ToString());
 
             FwCache.clear();
             Assert.IsNull(FwCache.getValue("testCacheKey"));
@@ -81,19 +81,19 @@ namespace osafw.Tests
             cache.setRequestValue("testCacheKey", "testing");
             var strValue = cache.getRequestValue("testCacheKey");
             Assert.IsNotNull(strValue);
-            Assert.AreEqual(strValue.ToString(), "testing");
+            Assert.AreEqual("testing", strValue.ToString());
 
             // test serialization of int
             cache.setRequestValue("testCacheKey2", 123);
-            Assert.AreEqual(cache.getRequestValue("testCacheKey2"), (System.Int64)123);
+            Assert.AreEqual((System.Int64)123, cache.getRequestValue("testCacheKey2"));
 
             // test serialization of decimal
             cache.setRequestValue("testCacheKey3", 123.456);
-            Assert.AreEqual(cache.getRequestValue("testCacheKey3"), (System.Decimal)123.456);
+            Assert.AreEqual((System.Decimal)123.456, cache.getRequestValue("testCacheKey3"));
 
             // test serialization of bool
             cache.setRequestValue("testCacheKey4", true);
-            Assert.AreEqual(cache.getRequestValue("testCacheKey4"), true);
+            Assert.IsTrue((bool?)cache.getRequestValue("testCacheKey4"));
 
             // test serialization of Hashtable
             Hashtable h = [];
@@ -102,8 +102,8 @@ namespace osafw.Tests
             cache.setRequestValue("testCacheKey2", h);
             var r = (Hashtable?)cache.getRequestValue("testCacheKey2");
             Assert.IsNotNull(r);
-            Assert.AreEqual(r!["AAA"], "1");
-            Assert.AreEqual(r["BBB"], "2");
+            Assert.AreEqual("1", r!["AAA"]);
+            Assert.AreEqual("2", r["BBB"]);
 
             // test serialization of DBRow
             DBRow row = [];
@@ -113,16 +113,16 @@ namespace osafw.Tests
             var r2Hash = cache.getRequestValue("testCacheKey3") as Hashtable;
             Assert.IsNotNull(r2Hash);
             var r2 = (DBRow)r2Hash!;
-            Assert.AreEqual(r2["AAA"], "1");
-            Assert.AreEqual(r2["BBB"], "2");
+            Assert.AreEqual("1", r2["AAA"]);
+            Assert.AreEqual("2", r2["BBB"]);
 
             // test serialization of IList (arrays)
             ArrayList a = ["1", "2"];
             cache.setRequestValue("testCacheKey4", a);
             var r3 = (ArrayList?)cache.getRequestValue("testCacheKey4");
             Assert.IsNotNull(r3);
-            Assert.AreEqual(r3![0], "1");
-            Assert.AreEqual(r3[1], "2");
+            Assert.AreEqual("1", r3![0]);
+            Assert.AreEqual("2", r3[1]);
 
             // test object that cannot be serialized to json, so it's stored as is
             cache.setRequestValue("testCacheKey5", new System.IO.MemoryStream());
@@ -137,7 +137,7 @@ namespace osafw.Tests
             cache.setRequestValue("testCacheKey", "testing set");
             var strValue = cache.getRequestValue("testCacheKey");
             Assert.IsNotNull(strValue);
-            Assert.AreEqual(strValue.ToString(), "testing set");
+            Assert.AreEqual("testing set", strValue.ToString());
 
             // test serialization
             Hashtable h = [];
@@ -146,8 +146,8 @@ namespace osafw.Tests
             cache.setRequestValue("testCacheKey2", h);
             var r = (Hashtable?)cache.getRequestValue("testCacheKey2");
             Assert.IsNotNull(r);
-            Assert.AreEqual(r!["CCC"], "3");
-            Assert.AreEqual(r["DDD"], "4");
+            Assert.AreEqual("3", r!["CCC"]);
+            Assert.AreEqual("4", r["DDD"]);
         }
 
         [TestMethod()]
@@ -157,7 +157,7 @@ namespace osafw.Tests
             cache.setRequestValue("testCacheKey", "testing remove");
             var strValue = cache.getRequestValue("testCacheKey");
             Assert.IsNotNull(strValue);
-            Assert.AreEqual(strValue.ToString(), "testing remove");
+            Assert.AreEqual("testing remove", strValue.ToString());
             cache.requestRemove("testCacheKey");
             Assert.IsNull(cache.getRequestValue("testCacheKey"));
         }
@@ -169,11 +169,11 @@ namespace osafw.Tests
             cache.setRequestValue("test_CacheKey", "testing remove");
             var firstValue = cache.getRequestValue("test_CacheKey");
             Assert.IsNotNull(firstValue);
-            Assert.AreEqual(firstValue.ToString(), "testing remove");
+            Assert.AreEqual("testing remove", firstValue.ToString());
             cache.setRequestValue("test_CacheKey2", "testing remove2");
             var secondValue = cache.getRequestValue("test_CacheKey2");
             Assert.IsNotNull(secondValue);
-            Assert.AreEqual(secondValue.ToString(), "testing remove2");
+            Assert.AreEqual("testing remove2", secondValue.ToString());
 
             cache.requestRemoveWithPrefix("test_");
 
@@ -188,11 +188,11 @@ namespace osafw.Tests
             cache.setRequestValue("testCacheKey", "testing remove");
             var firstValue = cache.getRequestValue("testCacheKey");
             Assert.IsNotNull(firstValue);
-            Assert.AreEqual(firstValue.ToString(), "testing remove");
+            Assert.AreEqual("testing remove", firstValue.ToString());
             cache.setRequestValue("testCacheKey2", "testing remove2");
             var secondValue = cache.getRequestValue("testCacheKey2");
             Assert.IsNotNull(secondValue);
-            Assert.AreEqual(secondValue.ToString(), "testing remove2");
+            Assert.AreEqual("testing remove2", secondValue.ToString());
 
             cache.requestClear();
 

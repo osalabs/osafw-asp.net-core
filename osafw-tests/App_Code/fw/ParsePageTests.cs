@@ -27,10 +27,10 @@ namespace osafw.Tests
             string r = p.parse_json(h1);
 
             Assert.AreEqual(0, r.IndexOf("{"));
-            Assert.IsTrue(r.IndexOf("\"AAA\":1") >= 0);
-            Assert.IsTrue(r.IndexOf("\"BBB\":2") >= 0);
-            Assert.IsTrue(r.IndexOf("\"CCC\":3") >= 0);
-            Assert.IsTrue(r.IndexOf("\"DDD\":4") >= 0);
+            Assert.IsGreaterThanOrEqualTo(0, r.IndexOf("\"AAA\":1"));
+            Assert.IsGreaterThanOrEqualTo(0, r.IndexOf("\"BBB\":2"));
+            Assert.IsGreaterThanOrEqualTo(0, r.IndexOf("\"CCC\":3"));
+            Assert.IsGreaterThanOrEqualTo(0, r.IndexOf("\"DDD\":4"));
 
             bool isException = false;
             try
@@ -610,11 +610,11 @@ namespace osafw.Tests
             h1["DDD"] = 4;
             ps["AAA"] = h1;
             string r = new ParsePage(null!).parse_string(tpl, ps);
-            Assert.IsTrue(r.IndexOf("{") == 0);
-            Assert.IsTrue(r.IndexOf("&quot;AAA&quot;:1") >= 0);
-            Assert.IsTrue(r.IndexOf("&quot;BBB&quot;:2") >= 0);
-            Assert.IsTrue(r.IndexOf("&quot;CCC&quot;:3") >= 0);
-            Assert.IsTrue(r.IndexOf("&quot;DDD&quot;:4") >= 0);
+            Assert.AreEqual(0, r.IndexOf("{"));
+            Assert.IsGreaterThanOrEqualTo(0, r.IndexOf("&quot;AAA&quot;:1"));
+            Assert.IsGreaterThanOrEqualTo(0, r.IndexOf("&quot;BBB&quot;:2"));
+            Assert.IsGreaterThanOrEqualTo(0, r.IndexOf("&quot;CCC&quot;:3"));
+            Assert.IsGreaterThanOrEqualTo(0, r.IndexOf("&quot;DDD&quot;:4"));
         }
 
     }
