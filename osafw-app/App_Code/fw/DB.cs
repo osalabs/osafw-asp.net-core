@@ -955,7 +955,10 @@ public class DB : IDisposable
         {
             var sql1 = convertNamedToPositional(sql, out List<string> paramNames);
             //logger(LogLevel.INFO, "DB:", db_name, " ", sql1);
-            using var dbcomm = new OleDbCommand(sql1, (OleDbConnection)conn!);
+            using var dbcomm = new OleDbCommand(sql1, (OleDbConnection)conn!)
+            {
+                CommandTimeout = sql_command_timeout
+            };
             foreach (string p in paramNames)
             {
                 // p name is without "@", but @params may or may not contain "@" prefix
