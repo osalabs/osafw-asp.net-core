@@ -713,13 +713,13 @@ public class FW : IDisposable
         // pre-check controller's access level by url
         int current_level = userAccessLevel;
 
-        Hashtable rules = (Hashtable)config("access_levels");
-        if (rules != null && rules.ContainsKey(path))
+        Hashtable rules = (Hashtable?)config("access_levels") ?? [];
+        if (rules.ContainsKey(path))
         {
             if (current_level >= rules[path].toInt())
                 result = 2;
         }
-        else if (rules != null && rules.ContainsKey(path2))
+        else if (rules.ContainsKey(path2))
         {
             if (current_level >= rules[path2].toInt())
                 result = 2;
