@@ -931,9 +931,9 @@ public abstract class FwController
         return item;
     }
 
-    public virtual TRow modelOneT<TRow>(int id) where TRow : class, new()
+    public virtual TRow? modelOneT<TRow>(int id) where TRow : class, new()
     {
-        return ensureTypedModel<TRow>().oneT(id) ?? new TRow();
+        return ensureTypedModel<TRow>().oneT(id);
     }
 
     public virtual TRow modelOneOrFailT<TRow>(int id) where TRow : class, new()
@@ -1131,7 +1131,7 @@ public abstract class FwController
         else
         {
             //if not json - redirect to route route_onerror if it's defined
-            setFormError(ex);
+            setFormError(ex ?? new Exception("Unknown error"));
 
             if (string.IsNullOrEmpty(route_onerror))
                 edi.Throw(); //re-throw exception

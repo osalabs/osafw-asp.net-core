@@ -402,9 +402,9 @@ class DevCodeGen
 
                 // detect id and iname fields
                 var i = 1;
-                Hashtable fld_int = null;
-                Hashtable fld_identity = null;
-                Hashtable fld_iname = null;
+                Hashtable? fld_int = null;
+                Hashtable? fld_identity = null;
+                Hashtable? fld_iname = null;
                 var is_normalize_names = false;
                 foreach (Hashtable fld in entity_fields)
                 {

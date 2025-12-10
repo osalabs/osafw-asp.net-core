@@ -59,9 +59,9 @@ public class FW : IDisposable
     public DB db;
     public FwLogger flogger = new();
 
-    public HttpContext? context;
-    public HttpRequest? request;
-    public HttpResponse? response;
+    public HttpContext context = null!;
+    public HttpRequest request = null!;
+    public HttpResponse response = null!;
 
     public string request_url = ""; // current request url (relative to application url)
     public FwRoute route = new();
@@ -1063,7 +1063,7 @@ public class FW : IDisposable
             route.controller_path = "/Home";
             route.controller = "Home";
             route.action = "NotFound";
-            co = controller(route.controller);
+            co = controller(route.controller) ?? throw new ApplicationException("Home controller not found");
             //we should always have HomeController
         }
         Type controllerClass = co.GetType();
@@ -1078,7 +1078,7 @@ public class FW : IDisposable
         {
             logger(LogLevel.DEBUG, "No method found for controller.action=[", route.controller, ".", route.action, "], checking route_default_action");
             // no method found - try to get default action
-            FieldInfo pInfo = controllerClass.GetField("route_default_action");
+            FieldInfo? pInfo = controllerClass.GetField("route_default_action");
             if (pInfo != null)
             {
                 string pvalue = pInfo.GetValue(null).toStr();
@@ -1131,6 +1131,7 @@ public class FW : IDisposable
     // Call controller
     public void callController(FwController controller, MethodInfo actionMethod, object[]? args = null)
     {
+        args ??= Array.Empty<object>();
         //convert args to parameters with proper types
         System.Reflection.ParameterInfo[] @params = actionMethod.GetParameters();
         object[] parameters = new object[@params.Length];
@@ -1149,7 +1150,8 @@ public class FW : IDisposable
                     //cannot convert, use default value for param type if param doesn't have default
                     if (!pi.HasDefaultValue)
                     {
-                        parameters[i] = Activator.CreateInstance(pi.ParameterType);
+                        var defaultValue = Activator.CreateInstance(pi.ParameterType) ?? new object();
+                        parameters[i] = defaultValue;
                     }
                 }
                 //logger("ARG OUT:", parameters[i].GetType().Name, parameters[i]);
@@ -1205,16 +1207,16 @@ public class FW : IDisposable
     #region controller action method resolution with caching
     private sealed class ControllerActionCache
     {
-        private readonly Dictionary<string, MethodInfo> stringHandlers;
-        private readonly Dictionary<string, MethodInfo> numericHandlers;
-        private readonly Dictionary<string, MethodInfo> declaredFallback;
-        private readonly Dictionary<string, MethodInfo> anyFallback;
+        private readonly Dictionary<string, MethodInfo?> stringHandlers;
+        private readonly Dictionary<string, MethodInfo?> numericHandlers;
+        private readonly Dictionary<string, MethodInfo?> declaredFallback;
+        private readonly Dictionary<string, MethodInfo?> anyFallback;
 
         public ControllerActionCache(
-            Dictionary<string, MethodInfo> stringHandlers,
-            Dictionary<string, MethodInfo> numericHandlers,
-            Dictionary<string, MethodInfo> declaredFallback,
-            Dictionary<string, MethodInfo> anyFallback)
+            Dictionary<string, MethodInfo?> stringHandlers,
+            Dictionary<string, MethodInfo?> numericHandlers,
+            Dictionary<string, MethodInfo?> declaredFallback,
+            Dictionary<string, MethodInfo?> anyFallback)
         {
             this.stringHandlers = stringHandlers;
             this.numericHandlers = numericHandlers;
@@ -1222,13 +1224,13 @@ public class FW : IDisposable
             this.anyFallback = anyFallback;
         }
 
-        public bool TryGetString(string actionName, out MethodInfo method) => stringHandlers.TryGetValue(actionName, out method);
+        public bool TryGetString(string actionName, out MethodInfo? method) => stringHandlers.TryGetValue(actionName, out method);
 
-        public bool TryGetNumeric(string actionName, out MethodInfo method) => numericHandlers.TryGetValue(actionName, out method);
+        public bool TryGetNumeric(string actionName, out MethodInfo? method) => numericHandlers.TryGetValue(actionName, out method);
 
-        public bool TryGetDeclaredFallback(string actionName, out MethodInfo method) => declaredFallback.TryGetValue(actionName, out method);
+        public bool TryGetDeclaredFallback(string actionName, out MethodInfo? method) => declaredFallback.TryGetValue(actionName, out method);
 
-        public bool TryGetAnyFallback(string actionName, out MethodInfo method) => anyFallback.TryGetValue(actionName, out method);
+        public bool TryGetAnyFallback(string actionName, out MethodInfo? method) => anyFallback.TryGetValue(actionName, out method);
     }
 
     private static MethodInfo? resolveActionMethod(Type controllerClass, string actionName, bool isIdNumeric)
@@ -1258,10 +1260,10 @@ public class FW : IDisposable
 
     private static ControllerActionCache buildControllerActionCache(Type controllerClass)
     {
-        var stringHandlers = new Dictionary<string, MethodInfo>(StringComparer.OrdinalIgnoreCase);
-        var numericHandlers = new Dictionary<string, MethodInfo>(StringComparer.OrdinalIgnoreCase);
-        var declaredFallback = new Dictionary<string, MethodInfo>(StringComparer.OrdinalIgnoreCase);
-        var anyFallback = new Dictionary<string, MethodInfo>(StringComparer.OrdinalIgnoreCase);
+        var stringHandlers = new Dictionary<string, MethodInfo?>(StringComparer.OrdinalIgnoreCase);
+        var numericHandlers = new Dictionary<string, MethodInfo?>(StringComparer.OrdinalIgnoreCase);
+        var declaredFallback = new Dictionary<string, MethodInfo?>(StringComparer.OrdinalIgnoreCase);
+        var anyFallback = new Dictionary<string, MethodInfo?>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var method in controllerClass.GetMethods(BindingFlags.Public | BindingFlags.Instance))
         {
@@ -1332,7 +1334,7 @@ public class FW : IDisposable
     public bool sendEmail(string mail_from, string mail_to, string mail_subject, string mail_body, IDictionary? filenames = null, IList? aCC = null, string reply_to = "", Hashtable? options = null)
     {
         bool result = true;
-        MailMessage message = null;
+        MailMessage? message = null;
         options ??= [];
 
         try
@@ -1442,14 +1444,14 @@ public class FW : IDisposable
                     }
                 }
 
-                using (SmtpClient client = new())
-                {
-                    Hashtable mailSettings = (Hashtable)this.config("mail");
-                    if (options.ContainsKey("smtp"))
+                    using (SmtpClient client = new())
                     {
-                        //override mailSettings from smtp options
-                        Utils.mergeHash(mailSettings, options["smtp"] as Hashtable);
-                    }
+                        Hashtable mailSettings = this.config("mail") as Hashtable ?? [];
+                        if (options.ContainsKey("smtp") && options["smtp"] is Hashtable smtpOptions)
+                        {
+                            //override mailSettings from smtp options
+                            Utils.mergeHash(mailSettings, smtpOptions);
+                        }
                     if (mailSettings.Count > 0)
                     {
                         client.Host = mailSettings["host"].toStr();
@@ -1572,7 +1574,11 @@ public class FW : IDisposable
 
             models[tt.Name] = m;
         }
-        return (T)models[tt.Name];
+
+        if (models[tt.Name] is T typedModel)
+            return typedModel;
+
+        throw new InvalidOperationException($"Model cache entry for {tt.Name} is not of expected type {typeof(T).FullName}.");
     }
 
     // return model object by model class name
@@ -1581,12 +1587,16 @@ public class FW : IDisposable
         if (!models.ContainsKey(model_name))
         {
             Type mt = Type.GetType(FW_NAMESPACE_PREFIX + model_name) ?? throw new ApplicationException("Error initializing model: [" + FW_NAMESPACE_PREFIX + model_name + "] class not found");
-            FwModel m = (FwModel)Activator.CreateInstance(mt);
+            var instance = Activator.CreateInstance(mt) ?? throw new InvalidOperationException($"Could not create model instance for {mt.FullName}");
+            FwModel m = (FwModel)instance;
             // initialize
             m.init(this);
             models[model_name] = m;
         }
-        return (FwModel)models[model_name];
+        if (models[model_name] is FwModel result)
+            return result;
+
+        throw new InvalidOperationException($"Model cache entry for {model_name} is not a FwModel.");
     }
 
     /// <summary>
@@ -1601,11 +1611,11 @@ public class FW : IDisposable
         //if (!controller_name.EndsWith("Controller", StringComparison.OrdinalIgnoreCase))
         //    throw new ApplicationException($"Controller class name should end on 'Controller': {controller_name}");
 
-        if (controllers.ContainsKey(controller_name))
-            return (FwController)controllers[controller_name];
+        if (controllers.ContainsKey(controller_name) && controllers[controller_name] is FwController cachedController)
+            return cachedController;
 
         FwController c;
-        Type ct = Type.GetType(FW_NAMESPACE_PREFIX + controller_name + "Controller", false, true); // case ignored
+        Type? ct = Type.GetType(FW_NAMESPACE_PREFIX + controller_name + "Controller", false, true); // case ignored
         if (ct == null)
         {
             //if no such controller class - try virtual controllers
@@ -1628,7 +1638,8 @@ public class FW : IDisposable
         }
         else
         {
-            c = (FwController)Activator.CreateInstance(ct);
+            var instance = Activator.CreateInstance(ct) ?? throw new InvalidOperationException($"Could not create controller instance for {ct.FullName}");
+            c = (FwController)instance;
             if (is_auth_check)
             {
                 // controller found

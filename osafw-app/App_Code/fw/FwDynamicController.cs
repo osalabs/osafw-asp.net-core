@@ -966,14 +966,15 @@ public class FwDynamicController : FwController
             // for just loaded forms for existing items - pre-load filter's values into "item"
             if (is_get_existing && def.ContainsKey("filter_for"))
             {
-                var filter_for_field = def["filter_for"].toStr();
-                var filter_field = def["filter_field"].toStr();
+                  var filter_for_field = def["filter_for"].toStr();
+                  var filter_field = def["filter_field"].toStr();
 
-                if (hfields[filter_for_field] is Hashtable def_for)
-                {
-                    var filtered_item = fw.model(def_for["lookup_model"].toStr()).one(item[def_for["field"]]);
-                    item[field] = filtered_item?[filter_field];
-                }
+                  if (!string.IsNullOrEmpty(filter_for_field) && hfields[filter_for_field] is Hashtable def_for)
+                  {
+                      var defFieldName = def_for["field"].toStr();
+                      var filtered_item = fw.model(def_for["lookup_model"].toStr()).one(item[defFieldName]);
+                      item[field] = filtered_item?[filter_field];
+                  }
             }
 
             if (def.ContainsKey("append") && def["append"] is ICollection coll1 && coll1.Count > 0
@@ -1319,7 +1320,7 @@ public class FwDynamicController : FwController
         if (isPatch() && req(att_post_prefix) == null)
             return;
 
-        var att_ids = reqh(att_post_prefix) ?? [];
+        var att_ids = reqh(att_post_prefix);
         var att_category = def["att_category"].toStr();
         var att_model = fw.model<Att>();
 
@@ -1327,8 +1328,9 @@ public class FwDynamicController : FwController
         var existing = att_model.listByEntityCategory(model0.table_name, id, att_category);
         foreach (Hashtable row in existing)
         {
-            if (!att_ids.ContainsKey(row["id"]))
-                att_model.delete(row["id"].toInt(), true);
+            var rowId = row["id"];
+            if (rowId != null && !att_ids.ContainsKey(rowId))
+                att_model.delete(rowId.toInt(), true);
         }
     }
 

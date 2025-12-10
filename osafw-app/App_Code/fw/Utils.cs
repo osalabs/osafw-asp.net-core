@@ -1480,7 +1480,7 @@ public class Utils
     public static Hashtable getPostedJson(FW fw)
     {
         var result = new Hashtable();
-        if (fw.request?.Body == null)
+        if (fw.request.Body == null)
             return result;
         try
         {
@@ -1498,7 +1498,7 @@ public class Utils
 
             if (!string.IsNullOrEmpty(json))
             {
-                result = Utils.jsonDecode(json) as Hashtable;
+                result = Utils.jsonDecode(json) as Hashtable ?? [];
                 fw.logger(LogLevel.TRACE, "REQUESTED JSON:", result);
             }
         }
