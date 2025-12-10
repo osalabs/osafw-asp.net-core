@@ -168,7 +168,7 @@ public class Spages : FwModel<Spages.Row>
         {
             if (parent_id == row["parent_id"].toInt())
             {
-                FwRow row2 = (FwRow)row.Clone();
+                FwRow row2 = new(row);
                 row2["_level"] = level;
                 // row2["_level1"] level + 1 'to easier use in templates
                 row2["full_url"] = parent_url + "/" + row["url"];

@@ -736,7 +736,7 @@ public class DB : IDisposable
         disposeLastQuery();
 
         //shallow copy to avoid modifying original
-        FwRow @params = in_params != null ? (FwRow)in_params.Clone() : [];
+        FwRow @params = new(in_params);
 
         expandParams(ref sql, ref @params);
         @params ??= [];

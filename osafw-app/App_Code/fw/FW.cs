@@ -192,7 +192,7 @@ public class FW : IDisposable
         db = getDB();
         DB.SQL_QUERY_CTR = 0; // reset query counter
 
-        G = (FwRow)config().Clone(); // by default G contains conf
+        G = Utils.cloneHashDeep(config())!; // by default G contains conf
 
         // per request settings
         G["request_url"] = request?.GetDisplayUrl() ?? "";

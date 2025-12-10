@@ -889,7 +889,7 @@ public class ParsePage
         else
             uftagi1 = uftag[i].toHashtable();
 
-        FwRow uftagi = (FwRow)uftagi1.Clone(); // make a shallow copy as we modify this level
+        FwRow uftagi = new(uftagi1); // make a shallow copy as we modify this level
         int cnt = uftag.Count;
 
         if (i == 0)

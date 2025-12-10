@@ -498,7 +498,7 @@ public abstract class FwModel : IDisposable
             {
                 // when under bulk update - as existing items updated from status=1 to 0
                 // so we only need to check if other fields changed, not status
-                item_compare = (FwRow)item.Clone();
+                item_compare = new(item);
                 item_compare.Remove(field_status);
             }
             item_changes = FormUtils.changesOnly(item_compare, item_old);

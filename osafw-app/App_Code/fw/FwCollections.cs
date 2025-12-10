@@ -26,6 +26,7 @@ public class FwRow : Hashtable
         get => ContainsKey(key) ? base[key] : null;
         set => base[key] = value;
     }
+
 }
 
 public class FwList : ArrayList

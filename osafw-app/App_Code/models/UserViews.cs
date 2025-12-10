@@ -119,7 +119,7 @@ public class UserViews : FwModel<UserViews.Row>
         else
         {
             // new - add key fields
-            var itemdb_add = (FwRow)itemdb.Clone();
+            FwRow itemdb_add = new(itemdb);
             itemdb_add[field_icode] = icode;
             itemdb_add[field_add_users_id] = fw.userId;
             result = add(itemdb_add);
