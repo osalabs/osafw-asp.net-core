@@ -175,18 +175,17 @@ public class FW : IDisposable
 
     public FW(HttpContext? context, IConfiguration configuration)
     {
-        if (context != null)
-        {
-            this.context = context;
-            this.request = context.Request;
-            this.response = context.Response;
-        }
+        var currentContext = context ?? new DefaultHttpContext();
+        this.context = currentContext;
+        this.request = currentContext.Request;
+        this.response = currentContext.Response;
 
         // pass host explicitly so FwConfig can cache per-host settings
         FwConfig.init(context, configuration, context?.Request.Host.ToString());
 
         var env = config("config_override").toStr();
-        flogger = new FwLogger((LogLevel)config("log_level"), config("log").toStr(), config("site_root").toStr(), config("log_max_size").toLong());
+        var logLevel = (LogLevel)config("log_level").toInt((int)LogLevel.ERROR);
+        flogger = new FwLogger(logLevel, config("log").toStr(), config("site_root").toStr(), config("log_max_size").toLong());
         flogger.setScope(env, Session("login"));
 
         db = getDB();
@@ -378,7 +377,8 @@ public class FW : IDisposable
         }
 
         // cut the App path from the begin
-        if (request.PathBase.Value.Length > 1) url = url.Replace(request.PathBase, "");
+        var pathBase = request.PathBase.Value;
+        if (!string.IsNullOrEmpty(pathBase) && pathBase.Length > 1) url = url.Replace(request.PathBase, "");
         url = url.TrimEnd('/'); // cut last / if any
 
         if (!is_url_param)
@@ -416,54 +416,51 @@ public class FW : IDisposable
         string controller_prefix = ""; // prefix without "/", i.e. /Admin/Reports -> AdminReports
 
         // process config special routes (redirects, rewrites)
-        Hashtable routes = (Hashtable)this.config("routes");
+        Hashtable routes = this.config("routes") as Hashtable ?? [];
         bool is_routes_found = false;
-        if (routes != null)
+        foreach (string route_key in routes.Keys)
         {
-            foreach (string route_key in routes.Keys)
+            if (url != route_key)
+                continue;
+
+            string rdest = routes[route_key].toStr();
+            if (string.IsNullOrEmpty(rdest))
             {
-                if (url == route_key)
+                logger(LogLevel.WARN, "Wrong route destination: " + rdest);
+                continue;
+            }
+
+            string destination = rdest;
+            string? overrideMethod = null;
+
+            int spaceIndex = destination.IndexOf(' ');
+            if (spaceIndex > 0)
+            {
+                string candidate = destination[..spaceIndex];
+                if (METHOD_ALLOWED.ContainsKey(candidate))
                 {
-                    string rdest = routes[route_key].toStr();
-                    if (string.IsNullOrEmpty(rdest))
-                    {
-                        logger(LogLevel.WARN, "Wrong route destination: " + rdest);
-                        continue;
-                    }
-
-                    string destination = rdest;
-                    string overrideMethod = null;
-
-                    int spaceIndex = destination.IndexOf(' ');
-                    if (spaceIndex > 0)
-                    {
-                        string candidate = destination[..spaceIndex];
-                        if (METHOD_ALLOWED.ContainsKey(candidate))
-                        {
-                            overrideMethod = candidate;
-                            destination = destination[(spaceIndex + 1)..].TrimStart();
-                        }
-                    }
-
-                    if (!string.IsNullOrEmpty(overrideMethod))
-                        route.method = overrideMethod;
-
-                    if (destination.StartsWith('/'))
-                    {
-                        // if started from / - this is redirect url
-                        url = destination;
-                        continue;
-                    }
-
-                    // it's a direct class-method to call, no further REST processing required
-                    is_routes_found = true;
-                    string[] sroute = destination.Split("::", 2);
-                    route.controller = Utils.routeFixChars(sroute[0]);
-                    if (sroute.Length > 1)
-                        route.action_raw = sroute[1];
-                    break;
+                    overrideMethod = candidate;
+                    destination = destination[(spaceIndex + 1)..].TrimStart();
                 }
             }
+
+            if (!string.IsNullOrEmpty(overrideMethod))
+                route.method = overrideMethod;
+
+            if (destination.StartsWith('/'))
+            {
+                // if started from / - this is redirect url
+                url = destination;
+                continue;
+            }
+
+            // it's a direct class-method to call, no further REST processing required
+            is_routes_found = true;
+            string[] sroute = destination.Split("::", 2);
+            route.controller = Utils.routeFixChars(sroute[0]);
+            if (sroute.Length > 1)
+                route.action_raw = sroute[1];
+            break;
         }
 
         if (!is_routes_found)
@@ -693,12 +690,12 @@ public class FW : IDisposable
         {
             // XSS validation failed
             // first, check if we are under xss-excluded prefix
-            Hashtable no_xss_prefixes = (Hashtable)this.config("no_xss_prefixes_prefixes");
-            if (no_xss_prefixes == null || !no_xss_prefixes.ContainsKey(route.prefix))
+            Hashtable no_xss_prefixes = this.config("no_xss_prefixes_prefixes") as Hashtable ?? [];
+            if (!no_xss_prefixes.ContainsKey(route.prefix))
             {
                 // second, check if we are under xss-excluded controller
-                Hashtable no_xss = (Hashtable)this.config("no_xss");
-                if (no_xss == null || !no_xss.ContainsKey(route.controller))
+                Hashtable no_xss = this.config("no_xss") as Hashtable ?? [];
+                if (!no_xss.ContainsKey(route.controller))
                 {
                     if (is_die)
                         throw new AuthException("XSS Error. Reload the page or try to re-login");
@@ -865,8 +862,8 @@ public class FW : IDisposable
                     ps.Remove("_json"); // remove internal flag
                     this.parserJson(ps);
                 }
-                else
-                    this.parserJson(ps["_json"]);// if _json exists - return only this element content
+                    else
+                        this.parserJson(ps["_json"] ?? new Hashtable());// if _json exists - return only this element content
             }
             else
             {
@@ -970,10 +967,11 @@ public class FW : IDisposable
             var DateFormatShort = DateFormat + " " + DateUtils.mapTimeFormat(userTimeFormat);
             var DateFormatLong = DateFormat + " " + DateUtils.mapTimeWithSecondsFormat(userTimeFormat);
 
-            pp_instance = new ParsePage(new ParsePageOptions
-            {
-                TemplatesRoot = config("template").toStr(),
-                IsCheckFileModifications = (LogLevel)config("log_level") >= LogLevel.DEBUG,
+                var logLevel = (LogLevel)config("log_level").toInt();
+                pp_instance = new ParsePage(new ParsePageOptions
+                {
+                    TemplatesRoot = config("template").toStr(),
+                    IsCheckFileModifications = logLevel >= LogLevel.DEBUG,
                 Lang = G["lang"].toStr(),
                 IsLangUpdate = config("is_lang_update").toBool(),
                 GlobalsGetter = () => G,

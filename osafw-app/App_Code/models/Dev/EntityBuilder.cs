@@ -37,7 +37,7 @@ class DevEntityBuilder
 
     private static ArrayList ParseEntities(string inputText, FW fw)
     {
-        var entities = new List<Dictionary<string, object>>();
+        var entities = new List<Dictionary<string, object?>>();
         //split inputText by \r\n but leave empty lines (as empty lines delimit entities)
         var lines = Regex.Split(inputText, "\r\n|\n\r|\n|\r");
         int index = 0;
@@ -74,10 +74,10 @@ class DevEntityBuilder
             //fw.logger($"index={index} Parsing entity: " + entityName + " with params: " + entityParams);
             string tableName = Utils.name2fw(entityName);
 
-            var fields = new List<Dictionary<string, object>>();
+            var fields = new List<Dictionary<string, object?>>();
             var foreignKeys = new List<Dictionary<string, string>>();
             var indexes = new Dictionary<string, string>();
-            var entity = new Dictionary<string, object>
+            var entity = new Dictionary<string, object?>
             {
                 ["iname"] = Utils.name2human(entityName),
                 ["table"] = tableName,
@@ -95,7 +95,7 @@ class DevEntityBuilder
             //add controller only if "noui" not specified
             if (!entityParams.Contains("noui"))
             {
-                entity["controller"] = new Dictionary<string, object>
+                entity["controller"] = new Dictionary<string, object?>
                 {
                     ["title"] = Utils.name2human(entityName),
                     ["url"] = $"/Admin/" + entity["model_name"],
@@ -106,8 +106,10 @@ class DevEntityBuilder
             if (entityParams.Contains("lookup"))
             {
                 if (entity["controller"] == null)
-                    entity["controller"] = new Dictionary<string, object>();
-                ((Dictionary<string, object>)entity["controller"])["is_lookup"] = true;
+                    entity["controller"] = new Dictionary<string, object?>();
+                var controller = entity["controller"] as Dictionary<string, object?> ?? new Dictionary<string, object?>();
+                controller["is_lookup"] = true;
+                entity["controller"] = controller;
             }
 
             bool includeStandardFields = !entityParams.Contains("nostd");
@@ -178,24 +180,27 @@ class DevEntityBuilder
                     // Handle indexes
                     if (field.TryGetValue("unique", out object? uvalue))
                     {
-                        if (uvalue.toBool())
-                            indexes["UX" + (indexes.Count + 1)] = field["name"].toStr();
-                        field.Remove("unique");
-                    }
+                    if (uvalue.toBool())
+                        indexes["UX" + (indexes.Count + 1)] = field["name"].toStr();
+                    field.Remove("unique");
+                }
 
-                    // Handle foreign keys
-                    if (field.TryGetValue("foreign_key", out object? fkvalue))
+                // Handle foreign keys
+                if (field.TryGetValue("foreign_key", out object? fkvalue))
+                {
+                    if (fkvalue is Dictionary<string, string> fkDict)
                     {
-                        foreignKeys.Add((Dictionary<string, string>)fkvalue);
+                        foreignKeys.Add(fkDict);
                         field.Remove("foreign_key");
                         //also for each foreign key add index (unless it's already added as unique or is primary key)
-                        var fieldNameForIndex = field["name"].ToString();
+                        var fieldNameForIndex = field["name"].toStr();
                         bool isUnique = indexes.ContainsValue(fieldNameForIndex);
                         bool isPrimary = (indexes.ContainsKey("PK") && indexes["PK"].Split(',').Select(f => f.Trim()).Contains(fieldNameForIndex))
                             || (field["is_primary"] ?? false).toBool();
                         if (!isUnique && !isPrimary)
                             indexes["IX" + (indexes.Count + 1)] = fieldNameForIndex;
                     }
+                }
 
                     // Handle primary key defined on a field
                     if (field.TryGetValue("is_primary", out object? pvalue))
@@ -215,9 +220,9 @@ class DevEntityBuilder
     }
 
     // id, iname, idesc
-    private static void AddStandardFieldsInitial(List<Dictionary<string, object>> fields)
+    private static void AddStandardFieldsInitial(List<Dictionary<string, object?>> fields)
     {
-        var standardFields = new List<Dictionary<string, object>>
+        var standardFields = new List<Dictionary<string, object?>>
             {
                 CreateField("id", "ID", "int", "int", null, false, isIdentity: true),
                 CreateField("iname", "Name", "varchar", "nvarchar", 255, false, defaultValue: ""),
@@ -228,7 +233,7 @@ class DevEntityBuilder
     }
 
     // add fields status
-    private static void AddStandardFieldsStatus(List<Dictionary<string, object>> fields)
+    private static void AddStandardFieldsStatus(List<Dictionary<string, object?>> fields)
     {
         fields.AddRange(
             [
@@ -237,7 +242,7 @@ class DevEntityBuilder
     }
 
     //create 2 fields: add_time, add_users_id
-    private static void AddStandardFieldsAdded(List<Dictionary<string, object>> fields)
+    private static void AddStandardFieldsAdded(List<Dictionary<string, object?>> fields)
     {
         fields.AddRange(
             [
@@ -247,7 +252,7 @@ class DevEntityBuilder
     }
 
     //create 2 fields: upd_time, upd_users_id
-    private static void AddStandardFieldsUpdated(List<Dictionary<string, object>> fields)
+    private static void AddStandardFieldsUpdated(List<Dictionary<string, object?>> fields)
     {
         fields.AddRange(
             [
@@ -256,7 +261,7 @@ class DevEntityBuilder
             ]);
     }
 
-    private static void AddStandardFieldsAfter(List<Dictionary<string, object>> fields)
+    private static void AddStandardFieldsAfter(List<Dictionary<string, object?>> fields)
     {
         // add status, added and updated fields
         AddStandardFieldsStatus(fields);
@@ -264,16 +269,17 @@ class DevEntityBuilder
         AddStandardFieldsUpdated(fields);
     }
 
-    private static void RemoveField(List<Dictionary<string, object>> fields, string fieldName)
+    private static void RemoveField(List<Dictionary<string, object?>> fields, string fieldName)
     {
-        fields.RemoveAll(f => f["fw_name"].ToString().Equals(fieldName, StringComparison.OrdinalIgnoreCase));
+        fields.RemoveAll(f => f["fw_name"].toStr().Equals(fieldName, StringComparison.OrdinalIgnoreCase));
     }
 
-    private static Dictionary<string, object> ParseJunction(string line, Dictionary<string, object> entity, string comment)
+    private static Dictionary<string, object?> ParseJunction(string line, Dictionary<string, object?> entity, string comment)
     {
         var linked_tblname = Utils.name2fw(line[..^"junction".Length].Trim());
-        var junction_tblname = entity["table"] + "_" + linked_tblname;
-        var junction = new Dictionary<string, object>
+        var mainTable = entity["table"].toStr();
+        var junction_tblname = mainTable + "_" + linked_tblname;
+        var junction = new Dictionary<string, object?>
         {
             ["db_config"] = entity["db_config"],
             ["table"] = junction_tblname,
@@ -286,11 +292,11 @@ class DevEntityBuilder
         };
 
         // link fields - one to main table, another - to lookup table
-        var field_name1 = entity["table"] + "_id";
+        var field_name1 = mainTable + "_id";
         var field_name2 = linked_tblname + "_id";
-        var junction_fields = new List<Dictionary<string, object>>
+        var junction_fields = new List<Dictionary<string, object?>>
                     {
-                        CreateField(field_name1,Utils.name2human(entity["table"].ToString()), "int", "int", null, false),
+                        CreateField(field_name1, Utils.name2human(mainTable), "int", "int", null, false),
                         CreateField(field_name2, Utils.name2human(linked_tblname), "int", "int", null, false)
                     };
         AddStandardFieldsStatus(junction_fields);
@@ -298,15 +304,15 @@ class DevEntityBuilder
         junction["fields"] = junction_fields;
 
         // foreign keys - to main table and lookup table
-        var junction_foreign_keys = new List<Dictionary<string, object>>
+        var junction_foreign_keys = new List<Dictionary<string, object?>>
                     {
-                        new Dictionary<string, object>
+                        new Dictionary<string, object?>
                         {
                             ["column"] = field_name1,
-                            ["pk_table"] = entity["table"].ToString(),
+                            ["pk_table"] = mainTable,
                             ["pk_column"] = "id"
                         },
-                        new Dictionary<string, object>
+                        new Dictionary<string, object?>
                         {
                             ["column"] = field_name2,
                             ["pk_table"] = linked_tblname,
@@ -404,7 +410,7 @@ class DevEntityBuilder
         }
 
         // Scan all tokens for FK(TableName.FieldName) syntax (not just at index)
-        string fkToken = tokens.FirstOrDefault(t => t.StartsWith("FK(", StringComparison.OrdinalIgnoreCase) && t.EndsWith(")"));
+        string fkToken = tokens.FirstOrDefault(t => t.StartsWith("FK(", StringComparison.OrdinalIgnoreCase) && t.EndsWith(")")) ?? string.Empty;
         if (!string.IsNullOrEmpty(fkToken))
         {
             var fkParts = fkToken[3..^1].Split('.');
@@ -456,8 +462,8 @@ class DevEntityBuilder
         // already processed above
 
         // Set default value if not specified
-        if (!field.ContainsKey("default") && field["is_nullable"].Equals(0))
-            field["default"] = GetDefaultValueForType(field["fw_type"].ToString());
+            if (!field.ContainsKey("default") && field["is_nullable"].toInt() == 0)
+                field["default"] = GetDefaultValueForType(field["fw_type"].toStr());
 
         return field;
     }
@@ -482,7 +488,7 @@ class DevEntityBuilder
     // currency => decimal(18,2)
     // decimal => decimal(18,2)
     // decimal(10,2) => fw_type=float, fw_subtype=decimal, numeric_precision=2
-    private static void ParseDataType(string token, Dictionary<string, object> field, bool is_notnull)
+    private static void ParseDataType(string token, Dictionary<string, object?> field, bool is_notnull)
     {
         // Handle data type and length
         var match = Regex.Match(token, @"(\w+)(?:\((.*?)\))?");
@@ -490,7 +496,7 @@ class DevEntityBuilder
             throw new Exception("Invalid data type syntax: " + token);
 
         string dataType = match.Groups[1].Value.ToLower();
-        string length = match.Groups[2].Success ? match.Groups[2].Value : null;
+        string length = match.Groups[2].Success ? match.Groups[2].Value : string.Empty;
 
         switch (dataType)
         {
@@ -580,9 +586,9 @@ class DevEntityBuilder
 
     // parse ui options
     // option,option(some other value),option,...
-    private static Dictionary<string, object> ParseUiOptions(string uiOptions)
+    private static Dictionary<string, object?> ParseUiOptions(string uiOptions)
     {
-        var result = new Dictionary<string, object>();
+        var result = new Dictionary<string, object?>();
         var options = uiOptions.Split(',');
 
         foreach (var option in options)
@@ -611,7 +617,7 @@ class DevEntityBuilder
         return result;
     }
 
-    private static object GetDefaultValueForType(string fwType)
+    private static object? GetDefaultValueForType(string fwType)
     {
         return fwType switch
         {
@@ -624,7 +630,7 @@ class DevEntityBuilder
         };
     }
 
-    private static Dictionary<string, object> CreateField(
+    private static Dictionary<string, object?> CreateField(
         string name,
         string iname,
         string fwType,
@@ -632,9 +638,9 @@ class DevEntityBuilder
         int? maxlen,
         bool isNullable,
         bool isIdentity = false,
-        object defaultValue = null)
+        object? defaultValue = null)
     {
-        return new Dictionary<string, object>
+        return new Dictionary<string, object?>
         {
             ["name"] = name,
             ["iname"] = iname,
@@ -669,10 +675,8 @@ class DevEntityBuilder
     // load json with expected type
     public static T loadJson<T>(string filename) where T : new()
     {
-        T result;
-        result = (T)Utils.jsonDecode(Utils.getFileContent(filename));
-        result ??= new T();
-        return result;
+        var decoded = Utils.jsonDecode(Utils.getFileContent(filename));
+        return decoded is T typed ? typed : new T();
     }
 
     // important - pass data as ArrayList or Hashtable to trigger custom converter

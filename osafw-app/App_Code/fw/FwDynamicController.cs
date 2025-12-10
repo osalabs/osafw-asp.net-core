@@ -947,7 +947,7 @@ public class FwDynamicController : FwController
         var fields = getConfigShowFormFieldsByTab("showform_fields") ?? throw new ApplicationException("Controller config.json doesn't contain 'showform_fields'");
 
         // build index by field if necessary
-        Hashtable hfields = null;
+        Hashtable hfields = [];
         var is_get_existing = false;
         if (isGet() && !Utils.isEmpty(id))
         {
@@ -969,9 +969,11 @@ public class FwDynamicController : FwController
                 var filter_for_field = def["filter_for"].toStr();
                 var filter_field = def["filter_field"].toStr();
 
-                var def_for = hfields[filter_for_field] as Hashtable;
-                var filtered_item = fw.model(def_for["lookup_model"].toStr()).one(item[def_for["field"]]);
-                item[field] = filtered_item[filter_field];
+                if (hfields[filter_for_field] is Hashtable def_for)
+                {
+                    var filtered_item = fw.model(def_for["lookup_model"].toStr()).one(item[def_for["field"]]);
+                    item[field] = filtered_item?[filter_field];
+                }
             }
 
             if (def.ContainsKey("append") && def["append"] is ICollection coll1 && coll1.Count > 0
@@ -1317,7 +1319,7 @@ public class FwDynamicController : FwController
         if (isPatch() && req(att_post_prefix) == null)
             return;
 
-        var att_ids = reqh(att_post_prefix);
+        var att_ids = reqh(att_post_prefix) ?? [];
         var att_category = def["att_category"].toStr();
         var att_model = fw.model<Att>();
 
