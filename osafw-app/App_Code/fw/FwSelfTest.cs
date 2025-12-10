@@ -93,8 +93,58 @@ public class FwSelfTest
         // template directory should exists - TODO test parser to actually see templates work?
         var templatePath = fw.config("template").toStr();
         is_true("template", Directory.Exists(templatePath), templatePath);
+        try
+        {
+            var parser = new ParsePage(new ParsePageOptions
+            {
+                TemplatesRoot = templatePath,
+                Logger = (level, messages) => fw.logger(level, messages.Cast<object?>().ToArray()),
+            });
+            var parsedTemplate = parser.parse_string("Hello <~name>", Utils.qh("name", "World"));
+            is_true("template parser", parsedTemplate.Contains("Hello World"), parsedTemplate);
+        }
+        catch (Exception ex)
+        {
+            plus_err();
+            echo("template parser", ex.Message, Result.ERR);
+        }
+
         var accessLevels = fw.config("access_levels") as Hashtable;
         is_true("access_levels", accessLevels != null && accessLevels.Count > 0, "Not defined");
+
+        var cacheKey = "selftest_" + Guid.NewGuid().ToString("N");
+        var cacheValue = DateTime.UtcNow.Ticks.ToString();
+        try
+        {
+            FwCache.setValue(cacheKey, cacheValue, 60);
+            var cached = FwCache.getValue(cacheKey)?.ToString() ?? string.Empty;
+            is_true("cache app", cached == cacheValue, cached);
+        }
+        catch (Exception ex)
+        {
+            plus_err();
+            echo("cache app", ex.Message, Result.ERR);
+        }
+        finally
+        {
+            FwCache.remove(cacheKey);
+        }
+
+        try
+        {
+            fw.cache.setRequestValue(cacheKey, cacheValue);
+            var cached = fw.cache.getRequestValue(cacheKey)?.ToString() ?? string.Empty;
+            is_true("cache request", cached == cacheValue, cached);
+        }
+        catch (Exception ex)
+        {
+            plus_err();
+            echo("cache request", ex.Message, Result.ERR);
+        }
+        finally
+        {
+            fw.cache.requestRemove(cacheKey);
+        }
 
         // UPLOAD_DIR upload dir is writeable
         try
