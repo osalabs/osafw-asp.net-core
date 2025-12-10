@@ -21,11 +21,11 @@ public static class FwConfig
     public static string hostname => (settings?["hostname"] as string) ?? "";
 
     /// <summary>Per-request, host-specific settings bucket.</summary>
-    public static FwRow settings { get => _current.Value ??= []; private set => _current.Value = value; }
+    public static FwDict settings { get => _current.Value ??= []; private set => _current.Value = value; }
 
     // internals
-    private static readonly AsyncLocal<FwRow> _current = new();                // per-async-flow bucket
-    private static readonly ConcurrentDictionary<string, FwRow> _hostCache = new();
+    private static readonly AsyncLocal<FwDict> _current = new();                // per-async-flow bucket
+    private static readonly ConcurrentDictionary<string, FwDict> _hostCache = new();
     private static IConfiguration? configuration;                                   // appsettings.* provider
     private static readonly object locker = new();
 
@@ -36,7 +36,7 @@ public static class FwConfig
         if (settings["_route_prefixes_rx"] is string rx && rx.Length > 0) return rx;
 
         // convert settings["route_prefixes"] FwRow (ex: /Admin => True) to FwList routePrefixes
-        var routePrefixes = new FwList((settings["route_prefixes"] as FwRow ?? []).Keys);
+        var routePrefixes = new FwList((settings["route_prefixes"] as FwDict ?? []).Keys);
 
         var escaped = from string p in routePrefixes orderby p.Length descending select Regex.Escape(p);
         rx = @"^(" + string.Join("|", escaped) + @")(/.*)?$";
@@ -66,16 +66,16 @@ public static class FwConfig
     }
 
     // One-time base (read-only) initialisation shared by all hosts.
-    private static readonly Lazy<FwRow> _base = new(() =>
+    private static readonly Lazy<FwDict> _base = new(() =>
     {
-        var tmp = new FwRow();
+        var tmp = new FwDict();
         initDefaults(null, "", ref tmp);
         if (configuration != null)
             readSettings(configuration, ref tmp);                                     // appsettings:appSettings
         return tmp;
     }, LazyThreadSafetyMode.ExecutionAndPublication);
 
-    private static FwRow buildForHost(HttpContext? ctx, string host)
+    private static FwDict buildForHost(HttpContext? ctx, string host)
     {
         // clone deep - each host gets its own mutable copy
         var hs = Utils.cloneHashDeep(_base.Value) ?? [];
@@ -94,9 +94,9 @@ public static class FwConfig
     /// </summary>
     /// <param name="context">can be null for offline execution</param>
     /// <param name="hostname"></param>
-    private static void initDefaults(HttpContext? context, string hostname, ref FwRow st)
+    private static void initDefaults(HttpContext? context, string hostname, ref FwDict st)
     {
-        st = new FwRow
+        st = new FwDict
         {
             ["hostname"] = "",
             ["ROOT_URL"] = "",
@@ -137,7 +137,7 @@ public static class FwConfig
         st["timezone"] ??= DateUtils.TZ_UTC;
     }
 
-    public static void readSettingsSection(IConfigurationSection section, ref FwRow settings)
+    public static void readSettingsSection(IConfigurationSection section, ref FwDict settings)
     {
         if (section.Value != null)
         {
@@ -145,17 +145,17 @@ public static class FwConfig
         }
         else if (section.Key != null)
         {
-            settings[section.Key] = new FwRow();
+            settings[section.Key] = new FwDict();
             foreach (IConfigurationSection sub_section in section.GetChildren())
             {
-                FwRow s = (FwRow)settings[section.Key]!;
+                FwDict s = (FwDict)settings[section.Key]!;
                 readSettingsSection(sub_section, ref s);
             }
         }
     }
 
     // read setting into appSettings
-    private static void readSettings(IConfiguration cfg, ref FwRow st)
+    private static void readSettings(IConfiguration cfg, ref FwDict st)
     {
         var valuesSection = cfg.GetSection("appSettings");
         foreach (IConfigurationSection section in valuesSection.GetChildren())
@@ -164,7 +164,7 @@ public static class FwConfig
         }
     }
 
-    private static void overrideContextSettings(HttpContext? ctx, string host, FwRow st)
+    private static void overrideContextSettings(HttpContext? ctx, string host, FwDict st)
     {
         if (ctx == null) return;
         var req = ctx.Request;
@@ -181,13 +181,13 @@ public static class FwConfig
         st["ROOT_DOMAIN"] = (isHttps ? "https://" : "http://") + serverName + portPart;
     }
 
-    public static void overrideSettingsByName(string override_name, FwRow settings, bool is_regex_match = false)
+    public static void overrideSettingsByName(string override_name, FwDict settings, bool is_regex_match = false)
     {
-        if (settings["override"] is FwRow overs)
+        if (settings["override"] is FwDict overs)
         {
             foreach (string over_name in overs.Keys)
             {
-                if (overs[over_name] is FwRow over)
+                if (overs[over_name] is FwDict over)
                 {
                     if (!is_regex_match && over_name == override_name
                         || is_regex_match && Regex.IsMatch(override_name, over["hostname_match"].toStr())
@@ -229,14 +229,14 @@ public static class FwConfig
     /// Get settings for the current environment with proper overrides
     /// </summary>
     /// <returns></returns>
-    public static FwRow settingsForEnvironment(IConfiguration configuration)
+    public static FwDict settingsForEnvironment(IConfiguration configuration)
     {
         var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "";
-        var appSettings = new FwRow();
+        var appSettings = new FwDict();
         readSettingsSection(configuration.GetSection("appSettings"), ref appSettings);
 
         // The “appSettings” itself might be nested inside the hash
-        var settings1 = (FwRow?)appSettings["appSettings"] ?? [];
+        var settings1 = (FwDict?)appSettings["appSettings"] ?? [];
         appSettings["appSettings"] = settings1;
         // Override by name if environment-based overrides are used
         overrideSettingsByName(environment, settings1);

@@ -8,7 +8,7 @@ public class FwCache
 {
     public static IMemoryCache MemoryCache { get; set; } = new MemoryCache(new MemoryCacheOptions());
 
-    public FwRow request_cache = []; // request level cache
+    public FwDict request_cache = []; // request level cache
 
     // ******** application-level cache with IMemoryCache ***********
 

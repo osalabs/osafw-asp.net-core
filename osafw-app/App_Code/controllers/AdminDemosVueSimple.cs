@@ -22,9 +22,9 @@ public class AdminDemosVueSimpleController : FwController
         model = fw.model<DemoDicts>();
     }
 
-    public FwRow IndexAction()
+    public FwDict IndexAction()
     {
-        FwRow ps = [];
+        FwDict ps = [];
         if (!fw.isJsonExpected())
             return ps; //just load Vue app html
 

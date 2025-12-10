@@ -26,9 +26,9 @@ public abstract class FwModel<TRow> : FwModel where TRow : class, new()
         return row == null;
     }
 
-    protected virtual FwRow buildStatusesWhere(IList? statuses)
+    protected virtual FwDict buildStatusesWhere(IList? statuses)
     {
-        FwRow where = [];
+        FwDict where = [];
         if (!string.IsNullOrEmpty(field_status))
         {
             if (statuses != null && statuses.Count > 0)
@@ -127,7 +127,7 @@ public abstract class FwModel<TRow> : FwModel where TRow : class, new()
         return db.array<TRow>(table_name, where, getOrderBy());
     }
 
-    public virtual List<TRow> listTByWhere(FwRow? where = null, int limit = -1, int offset = 0, string orderby = "")
+    public virtual List<TRow> listTByWhere(FwDict? where = null, int limit = -1, int offset = 0, string orderby = "")
     {
         where ??= [];
         var order = orderby != "" ? orderby : getOrderBy();
@@ -148,7 +148,7 @@ public abstract class FwModel<TRow> : FwModel where TRow : class, new()
         ArgumentNullException.ThrowIfNull(dto);
 
         var fields = dto.toKeyValue();
-        FwRow htFields = new(fields);
+        FwDict htFields = new(fields);
         convertUserInput(htFields);
         htFields.applyTo(dto);
         return dto;
@@ -169,7 +169,7 @@ public abstract class FwModel<TRow> : FwModel where TRow : class, new()
         if (is_log_changes && fw != null)
         {
             if (is_log_fields_changed)
-                fw.logActivity(FwLogTypes.ICODE_ADDED, table_name, id, "", new FwRow(fields));
+                fw.logActivity(FwLogTypes.ICODE_ADDED, table_name, id, "", new FwDict(fields));
             else
                 fw.logActivity(FwLogTypes.ICODE_ADDED, table_name, id);
         }

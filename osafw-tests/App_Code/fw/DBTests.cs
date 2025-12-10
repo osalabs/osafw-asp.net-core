@@ -41,7 +41,7 @@ namespace osafw.Tests
         [TestMethod()]
         public void hTest()
         {
-            FwRow h = DB.h("AAA", 1, "BBB", 2, "CCC", 3, "DDD", 4);
+            FwDict h = DB.h("AAA", 1, "BBB", 2, "CCC", 3, "DDD", 4);
             Assert.AreEqual(1, h["AAA"]);
             Assert.AreEqual(2, h["BBB"]);
             Assert.AreEqual(3, h["CCC"]);
@@ -542,7 +542,7 @@ namespace osafw.Tests
         [TestMethod()]
         public void tableSchemaFullTest()
         {
-            FwRow schema = db.tableSchemaFull("users");
+            FwDict schema = db.tableSchemaFull("users");
             Assert.IsTrue(schema.ContainsKey("id"));
             Assert.IsTrue(schema.ContainsKey("status"));
             Assert.IsTrue(schema.ContainsKey("add_users_id"));
@@ -554,7 +554,7 @@ namespace osafw.Tests
         [TestMethod()]
         public void clearchemaCacheTest()
         {
-            FwRow schema = db.loadTableSchema("users");
+            FwDict schema = db.loadTableSchema("users");
             Assert.IsFalse(db.isSchemaCacheEmpty());
             db.clearSchemaCache();
             Assert.IsTrue(db.isSchemaCacheEmpty());
@@ -574,7 +574,7 @@ namespace osafw.Tests
         public void prepareParams()
         {
             // 1. Test Insert
-            var fields = new FwRow {
+            var fields = new FwDict {
                 { "iname", "John" },
                 { "email", "john@example.com" }
             };

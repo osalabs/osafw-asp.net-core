@@ -32,10 +32,10 @@ public class AdminRolesController : FwDynamicController
         // list_sortmap["fdate_pop_str"] = "fdate_pop";
     }
 
-    public override FwRow? ShowAction(int id = 0)
+    public override FwDict? ShowAction(int id = 0)
     {
         var ps = base.ShowAction(id)!;
-        var item = ps["i"] as FwRow;
+        var item = ps["i"] as FwDict;
         var fields = ps["fields"] as FwList ?? [];
 
         // roles_resources_permissions matrix
@@ -49,10 +49,10 @@ public class AdminRolesController : FwDynamicController
         return ps;
     }
 
-    public override FwRow ShowFormAction(int id = 0)
+    public override FwDict ShowFormAction(int id = 0)
     {
         var ps = base.ShowFormAction(id)!;
-        var item = (FwRow)ps["i"]!;
+        var item = (FwDict)ps["i"]!;
         var fields = ps["fields"] as FwList ?? [];
 
         // roles_resources_permissions matrix
@@ -66,7 +66,7 @@ public class AdminRolesController : FwDynamicController
         return ps;
     }
 
-    public override int modelAddOrUpdate(int id, FwRow fields)
+    public override int modelAddOrUpdate(int id, FwDict fields)
     {
         id = base.modelAddOrUpdate(id, fields);
 

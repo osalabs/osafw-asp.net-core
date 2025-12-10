@@ -38,13 +38,13 @@ public class DemosItems : FwModel<DemosItems.Row>
         junction_field_main_id = "demos_id";
     }
 
-    public override void prepareSubtable(FwList list_rows, int related_id, FwRow? def = null)
+    public override void prepareSubtable(FwList list_rows, int related_id, FwDict? def = null)
     {
         base.prepareSubtable(list_rows, related_id, def);
 
         // add select options
         var select_demo_dicts = fw.model<DemoDicts>().listSelectOptions();
-        foreach (FwRow row in list_rows)
+        foreach (FwDict row in list_rows)
         {
             row["select_demo_dicts"] = select_demo_dicts;
         }

@@ -43,17 +43,17 @@ public class FW : IDisposable
     public const string ACTION_MORE_DELETE = "delete";
 
     public const string FW_NAMESPACE_PREFIX = "osafw.";
-    public static FwRow METHOD_ALLOWED = Utils.qh("GET POST PUT PATCH DELETE");
+    public static FwDict METHOD_ALLOWED = Utils.qh("GET POST PUT PATCH DELETE");
 
-    private readonly FwRow models = []; // model's singletons cache
-    private readonly FwRow controllers = []; // controller's singletons cache
+    private readonly FwDict models = []; // model's singletons cache
+    private readonly FwDict controllers = []; // controller's singletons cache
     private const string ControllerActionsCacheKeyPrefix = "fw:controller-actions:";
     private ParsePage? pp_instance; // for parsePage()
 
-    public FwRow FORM = [];
-    public FwRow postedJson = []; // parsed JSON from request body
-    public FwRow G = []; // for storing global vars - used in template engine, also stores "_flash"
-    public FwRow FormErrors = []; // for storing form id's with error messages, put to ps['error']['details'] for parser
+    public FwDict FORM = [];
+    public FwDict postedJson = []; // parsed JSON from request body
+    public FwDict G = []; // for storing global vars - used in template engine, also stores "_flash"
+    public FwDict FormErrors = []; // for storing form id's with error messages, put to ps['error']['details'] for parser
 
     public FwCache cache = new(); // cache instance
     public DB db;
@@ -145,8 +145,8 @@ public class FW : IDisposable
     // helper to initialize DB instance based on configuration name
     public DB getDB(string config_name = "main")
     {
-        var dbconfig = config("db") as FwRow ?? [];
-        FwRow conf = dbconfig[config_name] as FwRow ?? [];
+        var dbconfig = config("db") as FwDict ?? [];
+        FwDict conf = dbconfig[config_name] as FwDict ?? [];
 
         var db = new DB(conf, config_name);
         // Wrap the logger to match DB.LoggerDelegate (object?[])
@@ -212,7 +212,7 @@ public class FW : IDisposable
         parseForm();
 
         // save flash to current var and update session as flash is used only for nearest request
-        FwRow? _flash = SessionHashtable("_flash");
+        FwDict? _flash = SessionHashtable("_flash");
         if (_flash != null) G["_flash"] = _flash;
         SessionHashtable("_flash", []);
     }
@@ -286,12 +286,12 @@ public class FW : IDisposable
         context?.Session.Set(name, BitConverter.GetBytes(value));
     }
 
-    public FwRow? SessionHashtable(string name)
+    public FwDict? SessionHashtable(string name)
     {
         string? data = context?.Session.GetString(name);
-        return data == null ? null : (FwRow)Utils.deserialize(data);
+        return data == null ? null : (FwDict)Utils.deserialize(data);
     }
-    public void SessionHashtable(string name, FwRow value)
+    public void SessionHashtable(string name, FwDict value)
     {
         context?.Session.SetString(name, Utils.serialize(value));
     }
@@ -305,14 +305,14 @@ public class FW : IDisposable
         if (value == null)
         {
             // read mode - return current flash
-            return (this.G["_flash"] as FwRow)?[name] ?? "";
+            return (this.G["_flash"] as FwDict)?[name] ?? "";
         }
         else
         {
             if (!isJsonExpected())
             {
                 // write for the next request
-                FwRow _flash = SessionHashtable("_flash") ?? [];
+                FwDict _flash = SessionHashtable("_flash") ?? [];
                 _flash[name] = value;
                 SessionHashtable("_flash", _flash);
             }
@@ -321,7 +321,7 @@ public class FW : IDisposable
     }
 
     // return all the settings
-    public FwRow config()
+    public FwDict config()
     {
         return FwConfig.settings;
     }
@@ -417,7 +417,7 @@ public class FW : IDisposable
         string controller_prefix = ""; // prefix without "/", i.e. /Admin/Reports -> AdminReports
 
         // process config special routes (redirects, rewrites)
-        FwRow routes = this.config("routes") as FwRow ?? [];
+        FwDict routes = this.config("routes") as FwDict ?? [];
         bool is_routes_found = false;
         foreach (string route_key in routes.Keys)
         {
@@ -691,11 +691,11 @@ public class FW : IDisposable
         {
             // XSS validation failed
             // first, check if we are under xss-excluded prefix
-            FwRow no_xss_prefixes = this.config("no_xss_prefixes_prefixes") as FwRow ?? [];
+            FwDict no_xss_prefixes = this.config("no_xss_prefixes_prefixes") as FwDict ?? [];
             if (!no_xss_prefixes.ContainsKey(route.prefix))
             {
                 // second, check if we are under xss-excluded controller
-                FwRow no_xss = this.config("no_xss") as FwRow ?? [];
+                FwDict no_xss = this.config("no_xss") as FwDict ?? [];
                 if (!no_xss.ContainsKey(route.controller))
                 {
                     if (is_die)
@@ -711,7 +711,7 @@ public class FW : IDisposable
         // pre-check controller's access level by url
         int current_level = userAccessLevel;
 
-        FwRow rules = (FwRow?)config("access_levels") ?? [];
+        FwDict rules = (FwDict?)config("access_levels") ?? [];
         if (rules.ContainsKey(path))
         {
             if (current_level >= rules[path].toInt())
@@ -741,7 +741,7 @@ public class FW : IDisposable
             return;
         }
 
-        FwRow input = [];
+        FwDict input = [];
 
         foreach (string s in request.Query.Keys)
         {
@@ -759,8 +759,8 @@ public class FW : IDisposable
         }
 
         // after perpare_FORM - grouping for names like XXX[YYYY] -> FORM{XXX}=@{YYYY1, YYYY2, ...}
-        FwRow SQ = [];
-        FwRow f = [];
+        FwDict SQ = [];
+        FwDict f = [];
         foreach (DictionaryEntry entry in input)
         {
             if (entry.Key is not string name)
@@ -779,9 +779,9 @@ public class FW : IDisposable
                 }
 
                 if (!SQ.ContainsKey(mainKey))
-                    SQ[mainKey] = new FwRow();
+                    SQ[mainKey] = new FwDict();
 
-                ((FwRow)SQ[mainKey]!)[subKey] = value;
+                ((FwDict)SQ[mainKey]!)[subKey] = value;
             }
             else
             {
@@ -797,7 +797,7 @@ public class FW : IDisposable
         {
             postedJson = Utils.getPostedJson(this);
             // merge json into FORM, but all values should be stingified in FORM
-            Utils.mergeHash(f, (FwRow)Utils.jsonStringifyValues(postedJson));
+            Utils.mergeHash(f, (FwDict)Utils.jsonStringifyValues(postedJson));
         }
 
         // logger(f)
@@ -825,7 +825,7 @@ public class FW : IDisposable
     }
 
     // show page from template  /route.controller/route.action = parser('/route.controller/route.action/', $ps)
-    public void parser(FwRow ps)
+    public void parser(FwDict ps)
     {
         this.parser((route.controller_path + "/" + route.action).ToLower(), ps);
     }
@@ -839,16 +839,16 @@ public class FW : IDisposable
     //   - layout template - set ps("_layout")="/another_page_layout.html" (relative to SITE_TEMPLATES dir)
     //   - (not for json) to perform route_redirect - set hf("_route_redirect")("method"), hf("_route_redirect")("controller"), hf("_route_redirect")("args")
     //   - (not for json) to perform redirect - set hf("_redirect")="url"
-    public void parser(string basedir, FwRow ps)
+    public void parser(string basedir, FwDict ps)
     {
         if (!this.response.HasStarted) this.response.Headers.CacheControl = cache_control;
 
         if (this.FormErrors.Count > 0)
         {
             if (!ps.ContainsKey("error"))
-                ps["error"] = new FwRow();
+                ps["error"] = new FwDict();
 
-            if (ps["error"] is FwRow errorTable && !errorTable.ContainsKey("details"))
+            if (ps["error"] is FwDict errorTable && !errorTable.ContainsKey("details"))
                 errorTable["details"] = this.FormErrors; // add form errors if any
             logger(LogLevel.DEBUG, "Form errors:", this.FormErrors);
         }
@@ -864,14 +864,14 @@ public class FW : IDisposable
                     this.parserJson(ps);
                 }
                     else
-                        this.parserJson(ps["_json"] ?? new FwRow());// if _json exists - return only this element content
+                        this.parserJson(ps["_json"] ?? new FwDict());// if _json exists - return only this element content
             }
             else
             {
                 var msg = @"JSON response is not enabled for this Controller.Action (set ps[""_json""])=True or ps[""_json""])=data... to enable).";
                 logger(LogLevel.DEBUG, msg);
 
-                ps = new FwRow()
+                ps = new FwDict()
                 {
                     {"success", false},
                     {"message", msg}
@@ -883,7 +883,7 @@ public class FW : IDisposable
 
         if (ps.ContainsKey("_route_redirect"))
         {
-            var rr = ps["_route_redirect"] as FwRow ?? [];
+            var rr = ps["_route_redirect"] as FwDict ?? [];
             this.routeRedirect(rr["method"].toStr(), rr["controller"].toStr(), rr["args"] as object[] ?? []);
             return; // no further processing
         }
@@ -943,7 +943,7 @@ public class FW : IDisposable
     }
 
     // - show page from template  /controller/action = parser('/controller/action/', $layout, $ps)
-    public void parser(string basedir, string layout, FwRow ps)
+    public void parser(string basedir, string layout, FwDict ps)
     {
         ps["_layout"] = layout;
         parser(basedir, ps);
@@ -989,7 +989,7 @@ public class FW : IDisposable
         return pp_instance;
     }
 
-    public string parsePage(string basedir, string layout, FwRow ps)
+    public string parsePage(string basedir, string layout, FwDict ps)
     {
         logger(LogLevel.DEBUG, "parsing page bdir=", basedir, ", tpl=", layout);
         ParsePage parser_obj = parsePageInstance();
@@ -1159,11 +1159,11 @@ public class FW : IDisposable
             }
         }
 
-        FwRow? ps = null;
+        FwDict? ps = null;
         try
         {
             controller.checkAccess();
-            ps = actionMethod.Invoke(controller, parameters) as FwRow; // Call Controller Action, if returns null - no ParsePage called
+            ps = actionMethod.Invoke(controller, parameters) as FwDict; // Call Controller Action, if returns null - no ParsePage called
 
             // check/override _basedir from controller for non-json requests
             if (ps != null && !isJsonExpected() && !ps.ContainsKey("_basedir_controller") && !string.IsNullOrEmpty(controller.template_basedir))
@@ -1324,7 +1324,7 @@ public class FW : IDisposable
     ///   "bcc" - bcc email addresses - FwList
     /// </param>
     /// <returns>true if sent successfully, false if problem - see fw.last_error_send_email</returns>
-    public bool sendEmail(string mail_from, string mail_to, string mail_subject, string mail_body, IDictionary? filenames = null, IList? aCC = null, string reply_to = "", FwRow? options = null)
+    public bool sendEmail(string mail_from, string mail_to, string mail_subject, string mail_body, IDictionary? filenames = null, IList? aCC = null, string reply_to = "", FwDict? options = null)
     {
         bool result = true;
         MailMessage? message = null;
@@ -1439,8 +1439,8 @@ public class FW : IDisposable
 
                     using (SmtpClient client = new())
                     {
-                        FwRow mailSettings = this.config("mail") as FwRow ?? [];
-                        if (options.ContainsKey("smtp") && options["smtp"] is FwRow smtpOptions)
+                        FwDict mailSettings = this.config("mail") as FwDict ?? [];
+                        if (options.ContainsKey("smtp") && options["smtp"] is FwDict smtpOptions)
                         {
                             //override mailSettings from smtp options
                             Utils.mergeHash(mailSettings, smtpOptions);
@@ -1472,7 +1472,7 @@ public class FW : IDisposable
     }
 
     // shortcut for send_email from template from the /emails template dir
-    public bool sendEmailTpl(string mail_to, string tpl, FwRow hf, FwRow? filenames = null, FwList? aCC = null, string reply_to = "", FwRow? options = null)
+    public bool sendEmailTpl(string mail_to, string tpl, FwDict hf, FwDict? filenames = null, FwList? aCC = null, string reply_to = "", FwDict? options = null)
     {
         Regex r = new(@"[\n\r]+");
         string subj_body = parsePage("/emails", tpl, hf);
@@ -1490,7 +1490,7 @@ public class FW : IDisposable
 
     public void errMsg(string msg, Exception? Ex = null)
     {
-        FwRow ps = [];
+        FwDict ps = [];
         var tpl_dir = "/error";
 
         int code;
@@ -1521,7 +1521,7 @@ public class FW : IDisposable
 
         ps["_json"] = true;
         ps["title"] = msg;
-        ps["error"] = new FwRow
+        ps["error"] = new FwDict
         {
             ["code"] = code,
             ["message"] = msg,
@@ -1657,14 +1657,14 @@ public class FW : IDisposable
         return c;
     }
 
-    public void logActivity(string log_types_icode, string entity_icode, int item_id = 0, string iname = "", FwRow? changed_fields = null)
+    public void logActivity(string log_types_icode, string entity_icode, int item_id = 0, string iname = "", FwDict? changed_fields = null)
     {
         if (!is_log_events)
             return;
 
-        FwRow? payload = null;
+        FwDict? payload = null;
         if (changed_fields != null)
-            payload = new FwRow()
+            payload = new FwDict()
             {
                 {"fields", changed_fields}
             };

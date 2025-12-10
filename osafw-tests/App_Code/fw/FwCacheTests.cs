@@ -15,11 +15,11 @@ namespace osafw.Tests
             Assert.AreEqual("testing", strValue.ToString());
 
             // test serialization
-            FwRow h = [];
+            FwDict h = [];
             h["AAA"] = "1";
             h["BBB"] = "2";
             FwCache.setValue("testCacheKey2", h);
-            var r = (FwRow?)FwCache.getValue("testCacheKey2");
+            var r = (FwDict?)FwCache.getValue("testCacheKey2");
             Assert.IsNotNull(r);
             Assert.AreEqual("1", r!["AAA"]);
             Assert.AreEqual("2", r["BBB"]);
@@ -34,11 +34,11 @@ namespace osafw.Tests
             Assert.AreEqual("testing set", strValue.ToString());
 
             // test serialization
-            FwRow h = [];
+            FwDict h = [];
             h["CCC"] = "3";
             h["DDD"] = "4";
             FwCache.setValue("testCacheKey2", h);
-            var r = (FwRow?)FwCache.getValue("testCacheKey2");
+            var r = (FwDict?)FwCache.getValue("testCacheKey2");
             Assert.IsNotNull(r);
             Assert.AreEqual("3", r!["CCC"]);
             Assert.AreEqual("4", r["DDD"]);
@@ -96,11 +96,11 @@ namespace osafw.Tests
             Assert.IsTrue((bool?)cache.getRequestValue("testCacheKey4"));
 
             // test serialization of FwRow
-            FwRow h = [];
+            FwDict h = [];
             h["AAA"] = "1";
             h["BBB"] = "2";
             cache.setRequestValue("testCacheKey2", h);
-            var r = (FwRow?)cache.getRequestValue("testCacheKey2");
+            var r = (FwDict?)cache.getRequestValue("testCacheKey2");
             Assert.IsNotNull(r);
             Assert.AreEqual("1", r!["AAA"]);
             Assert.AreEqual("2", r["BBB"]);
@@ -110,7 +110,7 @@ namespace osafw.Tests
             row["AAA"] = "1";
             row["BBB"] = "2";
             cache.setRequestValue("testCacheKey3", row);
-            var r2Hash = cache.getRequestValue("testCacheKey3") as FwRow;
+            var r2Hash = cache.getRequestValue("testCacheKey3") as FwDict;
             Assert.IsNotNull(r2Hash);
             var r2 = (DBRow)r2Hash!;
             Assert.AreEqual("1", r2["AAA"]);
@@ -140,11 +140,11 @@ namespace osafw.Tests
             Assert.AreEqual("testing set", strValue.ToString());
 
             // test serialization
-            FwRow h = [];
+            FwDict h = [];
             h["CCC"] = "3";
             h["DDD"] = "4";
             cache.setRequestValue("testCacheKey2", h);
-            var r = (FwRow?)cache.getRequestValue("testCacheKey2");
+            var r = (FwDict?)cache.getRequestValue("testCacheKey2");
             Assert.IsNotNull(r);
             Assert.AreEqual("3", r!["CCC"]);
             Assert.AreEqual("4", r["DDD"]);

@@ -26,7 +26,7 @@ public class AttController : FwController
     {
         string size = reqs("size");
 
-        FwRow item = model.oneByIcode(icode);
+        FwDict item = model.oneByIcode(icode);
         if (item.Count == 0)
             throw new NotFoundException();
 
@@ -43,7 +43,7 @@ public class AttController : FwController
         string size = reqs("size");
         bool is_preview = reqs("preview") == "1";
 
-        FwRow item = model.oneByIcode(icode);
+        FwDict item = model.oneByIcode(icode);
         if (item.Count == 0)
             throw new NotFoundException();
 

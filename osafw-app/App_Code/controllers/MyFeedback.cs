@@ -32,7 +32,7 @@ public class MyFeedbackController : FwController
         throw new ApplicationException("Not Implemented");
     }
 
-    public FwRow? SaveAction()
+    public FwDict? SaveAction()
     {
         var item = reqh("item");
         var id = fw.userId;
@@ -41,9 +41,9 @@ public class MyFeedbackController : FwController
         // load old record if necessary
         // var itemOld = model.one(id);
 
-        FwRow itemdb = FormUtils.filter(item, save_fields);
+        FwDict itemdb = FormUtils.filter(item, save_fields);
         var user = fw.model<Users>().one(id);
-        FwRow ps = new()
+        FwDict ps = new()
             {
                 { "user", user },
                 { "i", itemdb },
@@ -56,7 +56,7 @@ public class MyFeedbackController : FwController
         return afterSave(true);
     }
 
-    public virtual void Validate(int id, FwRow item)
+    public virtual void Validate(int id, FwDict item)
     {
         bool result = this.validateRequired(id, item, this.required_fields);
 

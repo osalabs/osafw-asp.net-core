@@ -25,8 +25,8 @@ public class AdminSendEmailController : FwAdminController
         save_fields = "from to subject body host port username password";
         save_fields_checkboxes = "is_ssl|0";
 
-        var mailSettings = fw.config("mail") as FwRow ?? [];
-        form_new_defaults = new FwRow
+        var mailSettings = fw.config("mail") as FwDict ?? [];
+        form_new_defaults = new FwDict
         {
             ["from"] = fw.config("mail_from").toStr(),
             ["host"] = mailSettings["host"].toStr(),
@@ -37,20 +37,20 @@ public class AdminSendEmailController : FwAdminController
         };
     }
 
-    public override FwRow? IndexAction()
+    public override FwDict? IndexAction()
     {
         fw.redirect(base_url + "/new");
         return null;
     }
 
-    public override FwRow ShowFormAction(int id = 0)
+    public override FwDict ShowFormAction(int id = 0)
     {
         var ps = base.ShowFormAction(id)!;
         ps["test_email"] = fw.Session("login"); // in test mode send to current user
         return ps;
     }
 
-    public override FwRow? SaveAction(int id = 0)
+    public override FwDict? SaveAction(int id = 0)
     {
         route_onerror = FW.ACTION_SHOW_FORM; //set route to go if error happens
 
@@ -63,22 +63,22 @@ public class AdminSendEmailController : FwAdminController
             return null;
         }
 
-        FwRow item = reqh("item");
+        FwDict item = reqh("item");
 
         Validate(id, item);
         // load old record if necessary
         // var itemOld = model.one(id);
 
-        FwRow itemdb = FormUtils.filter(item, this.save_fields);
+        FwDict itemdb = FormUtils.filter(item, this.save_fields);
         FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
 
-        var options = new FwRow
+        var options = new FwDict
         {
             ["smtp"] = FormUtils.filter(itemdb, "host port is_ssl username password")
         };
         var is_sent = fw.sendEmail(itemdb["from"].toStr(), itemdb["to"].toStr(), itemdb["subject"].toStr(), itemdb["body"].toStr(), null, null, "", options);
 
-        var ps = new FwRow
+        var ps = new FwDict
         {
             ["is_sent"] = is_sent,
             ["last_error_send_email"] = fw.last_error_send_email
@@ -87,7 +87,7 @@ public class AdminSendEmailController : FwAdminController
         return ps;
     }
 
-    public override void Validate(int id, FwRow item)
+    public override void Validate(int id, FwDict item)
     {
         bool result = this.validateRequired(id, item, this.required_fields);
 

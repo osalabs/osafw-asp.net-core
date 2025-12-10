@@ -53,7 +53,7 @@ public class Att : FwModel<Att.Row>
     }
 
     // overload by file index
-    public FwRow? uploadOne(int id, int file_index, bool is_new = false)
+    public FwDict? uploadOne(int id, int file_index, bool is_new = false)
     {
         var files = fw.request?.Form?.Files;
         if (files == null || file_index >= files.Count)
@@ -63,7 +63,7 @@ public class Att : FwModel<Att.Row>
     }
 
     // overload by file name
-    public FwRow? uploadOne(int id, string input_name, bool is_new = false)
+    public FwDict? uploadOne(int id, string input_name, bool is_new = false)
     {
         var files = fw.request?.Form?.Files;
         var fileByName = files?.GetFile(input_name);
@@ -81,9 +81,9 @@ public class Att : FwModel<Att.Row>
     /// <param name="is_new"></param>
     /// <returns> return hashtable with added files information id, fname, fsize, ext and filepath or null if upload failed or no files</returns>
     /// </returns>
-    public FwRow? uploadOne(int id, IFormFile file, bool is_new = false)
+    public FwDict? uploadOne(int id, IFormFile file, bool is_new = false)
     {
-        FwRow? result = null;
+        FwDict? result = null;
         var requestFiles = fw.request?.Form?.Files;
         if (requestFiles == null || requestFiles.Count == 0 || file == null)
             return result;
@@ -94,7 +94,7 @@ public class Att : FwModel<Att.Row>
             string ext = UploadUtils.getUploadFileExt(filepath);
 
             // update db with file information
-            FwRow fields = [];
+            FwDict fields = [];
             if (is_new)
                 fields["iname"] = file.FileName;
 
@@ -130,7 +130,7 @@ public class Att : FwModel<Att.Row>
     /// </summary>
     /// <param name="item">files to add to att table, can contain: table_name, item_id, att_categories_id</param>
     /// <returns>db array list of added files information id, fname, fsize, ext, filepath</returns>
-    public FwList uploadMulti(FwRow item)
+    public FwList uploadMulti(FwDict item)
     {
         FwList result = [];
 
@@ -144,7 +144,7 @@ public class Att : FwModel<Att.Row>
             if (file.Length > 0)
             {
                 // add att db record
-                FwRow itemdb = new(item);
+                FwDict itemdb = new(item);
                 itemdb["status"] = STATUS_UNDER_UPDATE; // under upload
                 var id = this.add(itemdb);
 
@@ -165,12 +165,12 @@ public class Att : FwModel<Att.Row>
     {
         var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
 
-        FwRow where = [];
+        FwDict where = [];
         where["fwentities_id"] = fwentities_id;
         where["iname"] = db.opLIKE("TMP#%");
         where["status"] = STATUS_DELETED;
         where["item_id"] = db.opISNULL();
-        db.update(table_name, new FwRow() {
+        db.update(table_name, new FwDict() {
             { "status", STATUS_ACTIVE },
             { "item_id", item_id }
         }, where);
@@ -199,7 +199,7 @@ public class Att : FwModel<Att.Row>
     /// <param name="item"></param>
     /// <param name="size">s,m,l or empty(original size)</param>
     /// <returns></returns>
-    public string getUrl(FwRow item, string size = "")
+    public string getUrl(FwDict item, string size = "")
     {
         string result;
         if (item["is_s3"].toBool())
@@ -252,7 +252,7 @@ public class Att : FwModel<Att.Row>
     {
         return getUrl(id, size) + "&preview=1";
     }
-    public string getUrlPreview(FwRow item, string size = "s")
+    public string getUrlPreview(FwDict item, string size = "s")
     {
         return getUrl(item, size) + "&preview=1";
     }
@@ -384,7 +384,7 @@ public class Att : FwModel<Att.Row>
         var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
 
         string where = "";
-        FwRow @params = [];
+        FwDict @params = [];
         @params["@fwentities_id"] = fwentities_id;
         @params["@item_id"] = item_id;
 
@@ -418,12 +418,12 @@ public class Att : FwModel<Att.Row>
     /// <param name="item_id"></param>
     /// <param name="is_image"></param>
     /// <returns></returns>
-    public FwRow oneFirstLinked(string entity_icode, int item_id, int is_image = -1)
+    public FwDict oneFirstLinked(string entity_icode, int item_id, int is_image = -1)
     {
         var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
 
         string where = "";
-        FwRow @params = new()
+        FwDict @params = new()
         {
             {"@fwentities_id", fwentities_id},
             {"@item_id", item_id},
@@ -454,7 +454,7 @@ public class Att : FwModel<Att.Row>
     {
         var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
 
-        FwRow where = [];
+        FwDict where = [];
         where["status"] = STATUS_ACTIVE;
         where["fwentities_id"] = fwentities_id;
         where["item_id"] = item_id;
@@ -477,7 +477,7 @@ public class Att : FwModel<Att.Row>
             att_categories_id = att_category["id"].toInt();
         }
 
-        FwRow where = [];
+        FwDict where = [];
         where["status"] = STATUS_ACTIVE;
         where["fwentities_id"] = fwentities_id;
         where["item_id"] = item_id;
@@ -486,7 +486,7 @@ public class Att : FwModel<Att.Row>
     }
 
     // return one att record with additional check by entity
-    public FwRow oneWithEntityCheck(int id, string entity_icode)
+    public FwDict oneWithEntityCheck(int id, string entity_icode)
     {
         var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
 
@@ -497,11 +497,11 @@ public class Att : FwModel<Att.Row>
     }
 
     // return one att record by table_name and item_id
-    public FwRow oneByEntity(string entity_icode, int item_id)
+    public FwDict oneByEntity(string entity_icode, int item_id)
     {
         var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
 
-        return db.row(table_name, new FwRow()
+        return db.row(table_name, new FwDict()
         {
             {"fwentities_id",fwentities_id},
             {"item_id",item_id}
@@ -520,7 +520,7 @@ public class Att : FwModel<Att.Row>
     //////////////////// S3 related functions - only works with S3 model if Amazon.S3 installed
 
     // generate signed url and redirect to it, so user download directly from S3
-    public void redirectS3(FwRow item, string size = "")
+    public void redirectS3(FwDict item, string size = "")
     {
         if (fw.userId == 0)
             throw new AuthException(); // denied for non-logged
@@ -565,7 +565,7 @@ public class Att : FwModel<Att.Row>
         if (result)
         {
             // mark as uploaded
-            this.update(id, new FwRow() { { "is_s3", "1" } });
+            this.update(id, new FwDict() { { "is_s3", "1" } });
             // remove local files
             deleteLocalFiles(id);
         }
@@ -648,7 +648,7 @@ public class Att : FwModel<Att.Row>
         foreach (IFormFile file in afiles)
         {
             // first - save to db so we can get att_id
-            FwRow attitem = [];
+            FwDict attitem = [];
             attitem["att_categories_id"] = att_categories_id;
             attitem["fwentities_id"] = fwentities_id;
             attitem["item_id"] = item_id;
@@ -665,7 +665,7 @@ public class Att : FwModel<Att.Row>
 
                 // TODO check response for 200 and if not - error/delete?
                 // once uploaded - mark in db as uploaded
-                fw.model<Att>().update(att_id, new FwRow() { { "status", "0" } });
+                fw.model<Att>().update(att_id, new FwDict() { { "status", "0" } });
 
                 result += 1;
             }
@@ -682,7 +682,7 @@ public class Att : FwModel<Att.Row>
         return result;
     }
 
-    public override void filterForJson(FwRow item)
+    public override void filterForJson(FwDict item)
     {
         //leave only specific keys
         var keys = Utils.qh("id icode att_categories_id iname is_image fsize ext url url_preview");

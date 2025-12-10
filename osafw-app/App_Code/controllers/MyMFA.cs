@@ -39,7 +39,7 @@ public class MyMFAController : FwController
         fw.redirect(base_url + "/new");
     }
 
-    public FwRow ShowFormAction()
+    public FwDict ShowFormAction()
     {
         var user = model.one(user_id);
 
@@ -50,12 +50,12 @@ public class MyMFAController : FwController
         var secret = model.generateMFASecret();
         fw.Session("mfa_secret", secret);
 
-        FwRow ps = [];
+        FwDict ps = [];
         ps["qr_code"] = model.generateMFAQRCode(secret, user["email"], fw.config("SITE_NAME").toStr());
         return ps;
     }
 
-    public FwRow SaveAction()
+    public FwDict SaveAction()
     {
         route_onerror = FW.ACTION_SHOW_FORM_NEW; //set route to go if error happens
         checkXSS();
@@ -80,7 +80,7 @@ public class MyMFAController : FwController
         }
 
         // save to db
-        model.update(user_id, new FwRow {
+        model.update(user_id, new FwDict {
             { "mfa_secret" , fw.Session("mfa_secret") },
             { "mfa_added" , DB.NOW },
             { "mfa_recovery" , string.Join(" ",hashed_codes) },
@@ -94,7 +94,7 @@ public class MyMFAController : FwController
             model.doLogin(user_id);
         }
 
-        return new FwRow()
+        return new FwDict()
         {
             { "recovery_codes" , recovery_codes },
         };

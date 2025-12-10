@@ -717,7 +717,7 @@ class DevEntityBuilder
 
     // ****************************** PRIVATE HELPERS (move to Dev model?)
 
-    public static FwRow? table2entity(DB db, string table_name)
+    public static FwDict? table2entity(DB db, string table_name)
     {
         if (string.IsNullOrEmpty(table_name) || table_name.StartsWith("MSys", StringComparison.Ordinal))
             return null;
@@ -725,8 +725,8 @@ class DevEntityBuilder
         var tblschema = db.loadTableSchemaFull(table_name);
         var tblfields = tableschema2fields(tblschema);
 
-        FwRow controller_options = [];
-        FwRow table_entity = new()
+        FwDict controller_options = [];
+        FwDict table_entity = new()
         {
             ["db_config"] = db.db_name,
             ["table"] = table_name,
@@ -765,7 +765,7 @@ class DevEntityBuilder
     {
         FwList result = new(schema);
 
-        foreach (FwRow fldschema in schema)
+        foreach (FwDict fldschema in schema)
         {
             fldschema["fw_name"] = Utils.name2fw(fldschema["name"].toStr());
             fldschema["iname"] = Utils.name2human(fldschema["name"].toStr());
@@ -822,7 +822,7 @@ class DevEntityBuilder
 
         return
         [
-            new FwRow()
+            new FwDict()
             {
                 {"name",field_name},
                 {"fw_name",Utils.name2fw(field_name)},
@@ -835,7 +835,7 @@ class DevEntityBuilder
                 {"fw_type","varchar"},
                 {"fw_subtype","nvarchar"}
             },
-            new FwRow()
+            new FwDict()
             {
                 {"name",field_name + "2"},
                 {"fw_name",Utils.name2fw(field_name + "2")},
@@ -848,7 +848,7 @@ class DevEntityBuilder
                 {"fw_type","varchar"},
                 {"fw_subtype","nvarchar"}
             },
-            new FwRow()
+            new FwDict()
             {
                 {"name",city_name},
                 {"fw_name",Utils.name2fw(city_name)},
@@ -861,7 +861,7 @@ class DevEntityBuilder
                 {"fw_type","varchar"},
                 {"fw_subtype","nvarchar"}
             },
-            new FwRow()
+            new FwDict()
             {
                 {"name",state_name},
                 {"fw_name",Utils.name2fw(state_name)},
@@ -874,7 +874,7 @@ class DevEntityBuilder
                 {"fw_type","varchar"},
                 {"fw_subtype","nvarchar"}
             },
-            new FwRow()
+            new FwDict()
             {
                 {"name",zip_name},
                 {"fw_name",Utils.name2fw(zip_name)},

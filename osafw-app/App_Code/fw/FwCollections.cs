@@ -9,11 +9,11 @@ using System.Collections.Generic;
 
 namespace osafw;
 
-public class FwRow : Hashtable
+public class FwDict : Hashtable
 {
-    public FwRow() : base(StringComparer.Ordinal) { }
-    public FwRow(int capacity) : base(capacity, StringComparer.Ordinal) { }
-    public FwRow(IDictionary? other) : base(other?.Count ?? 0, StringComparer.Ordinal)
+    public FwDict() : base(StringComparer.Ordinal) { }
+    public FwDict(int capacity) : base(capacity, StringComparer.Ordinal) { }
+    public FwDict(IDictionary? other) : base(other?.Count ?? 0, StringComparer.Ordinal)
     {
         if (other != null)
             foreach (DictionaryEntry e in other)

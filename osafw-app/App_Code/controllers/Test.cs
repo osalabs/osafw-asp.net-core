@@ -8,12 +8,12 @@ public class TestController : FwController
 
     public static new int access_level = Users.ACL_SITEADMIN;
 
-    public FwRow IndexAction()
+    public FwDict IndexAction()
     {
-        var ps = new FwRow();
+        var ps = new FwDict();
         ps["money"] = 1234.5612;
         ps["success"] = true;
-        return new FwRow { { "_json", ps } };
+        return new FwDict { { "_json", ps } };
 
         //rw("<html><form method=\"POST\" action=\"/Test/(Upload)\"><input type=\"file\" name=\"file1\"/><input type=\"submit\"/></form></html>");
         ////FwList users = fw.modelOf(typeof(Users)).list();
@@ -25,7 +25,7 @@ public class TestController : FwController
         //return ps;
     }
 
-    public FwRow UploadAction()
+    public FwDict UploadAction()
     {
 
         String uuid = Utils.uuid();
@@ -119,15 +119,15 @@ public class TestController : FwController
         }
     }
 
-    public FwRow JsonAction()
+    public FwDict JsonAction()
     {
-        var ps = new FwRow();
+        var ps = new FwDict();
         ps["success"] = true;
         ps["message"] = "This is Json!";
-        return new FwRow { { "_json", ps } };
+        return new FwDict { { "_json", ps } };
     }
 
-    public FwRow ExceptionAction()
+    public FwDict ExceptionAction()
     {
         throw new Exception("Test exception");
     }

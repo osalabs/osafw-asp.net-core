@@ -42,11 +42,11 @@ public class FwReports
     public string report_code = string.Empty;
     public string format = string.Empty; // report format, if empty - html, other options: html, csv, pdf, xls
     public string render_to = ""; // output to: empty(browser), "string"(render returns string, for html only), "/file/path"(render saves to file)
-    public FwRow f = []; // report filters/options
+    public FwDict f = []; // report filters/options
                         // render options for html to pdf/xls/etc... convertor
-    public FwRow f_data = []; //filters data, like dropdown options
+    public FwDict f_data = []; //filters data, like dropdown options
 
-    public FwRow render_options = new()
+    public FwDict render_options = new()
     {
         {"cmd", "--page-size Letter --print-media-type"},
         {"landscape", true},
@@ -55,7 +55,7 @@ public class FwReports
 
     protected FW fw = null!;
     protected DB db = null!;
-    public FwRow ps = []; // final data for template rendering
+    public FwDict ps = []; // final data for template rendering
     public long list_count;      // count of list rows returned from db
     public FwList list_rows = [];  // list rows returned from db (array of hashes)
 
@@ -64,7 +64,7 @@ public class FwReports
     protected int access_level = Users.ACL_MANAGER;
     // for sorting by click on column headers, define in report class
     protected string list_sortdef = string.Empty; // = "iname asc";
-    protected FwRow list_sortmap = []; // = Utils.qh("id|id iname|iname add_time|add_time status|status");
+    protected FwDict list_sortmap = []; // = Utils.qh("id|id iname|iname add_time|add_time status|status");
     protected string list_orderby = "1"; // sql for order by clause, set in getData() via setListSorting(), default by first column if no other sorting set
 
     public static string cleanupRepcode(string repcode)
@@ -107,7 +107,7 @@ public class FwReports
     /// <param name="repcode">cleaned report code</param>
     /// <param name="f">filters passed from request</param>
     /// <returns></returns>
-    public static FwReports createInstance(FW fw, string repcode, FwRow f)
+    public static FwReports createInstance(FW fw, string repcode, FwDict f)
     {
         string report_class_name = repcodeToClass(repcode);
         if (string.IsNullOrEmpty(report_class_name))
@@ -135,7 +135,7 @@ public class FwReports
     /// <param name="f"></param>
     /// <param name="ps"></param>
     /// <returns></returns>
-    public static string createHtml(FW fw, string repcode, FwRow? f = null, FwRow? ps = null)
+    public static string createHtml(FW fw, string repcode, FwDict? f = null, FwDict? ps = null)
     {
         f ??= [];
 
@@ -146,7 +146,7 @@ public class FwReports
         return report.render(ps);
     }
 
-    public static string createFile(FW fw, string repcode, string format = "", FwRow? f = null, FwRow? ps = null)
+    public static string createFile(FW fw, string repcode, string format = "", FwDict? f = null, FwDict? ps = null)
     {
         f ??= [];
         f["format"] = format;
@@ -178,7 +178,7 @@ public class FwReports
         // constructor
     }
 
-    public virtual void init(FW fw, string report_code, FwRow f)
+    public virtual void init(FW fw, string report_code, FwDict f)
     {
         this.fw = fw;
         this.db = fw.db;
@@ -264,7 +264,7 @@ public class FwReports
     /// render report according to format
     /// </summary>
     /// <param name="ps_more">additional data for the template</param>
-    public virtual string render(FwRow? ps_more = null)
+    public virtual string render(FwDict? ps_more = null)
     {
         var result = "";
 
@@ -311,7 +311,7 @@ public class FwReports
                 {
                     var out_filename = Utils.isEmpty(render_options["xls_filename"]) ? report_code : (render_options["xls_filename"] as string ?? string.Empty);
                     // TODO make headers as array of readable values, not the same as fields names
-                    var headers = list_rows.Count > 0 ? (list_rows[0] as FwRow)?.Keys.Cast<string>().ToArray() ?? Array.Empty<string>() : Array.Empty<string>();
+                    var headers = list_rows.Count > 0 ? (list_rows[0] as FwDict)?.Keys.Cast<string>().ToArray() ?? Array.Empty<string>() : Array.Empty<string>();
                     var fields = headers;
 
                     ConvUtils.exportNativeExcel(fw, headers, fields, list_rows, out_filename);
@@ -373,11 +373,11 @@ public class FwReports
     protected int _calcPerc(FwList rows)
     {
         int total_ctr = 0;
-        foreach (FwRow row in rows)
+        foreach (FwDict row in rows)
             total_ctr += row["ctr"].toInt();
         if (total_ctr > 0)
         {
-            foreach (FwRow row in rows)
+            foreach (FwDict row in rows)
                 row["perc"] = row["ctr"].toInt() / (double)total_ctr * 100;
         }
         return total_ctr;

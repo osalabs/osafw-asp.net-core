@@ -38,13 +38,13 @@ public class FwActivityLogs : FwModel
     /// <param name="payload">optional payload (will be serialized as json)</param>
     /// <returns></returns>
     /// <exception cref="ApplicationException"></exception>
-    public int addSimple(string log_types_icode, string entity_icode, int item_id = 0, string idesc = "", FwRow? payload = null)
+    public int addSimple(string log_types_icode, string entity_icode, int item_id = 0, string idesc = "", FwDict? payload = null)
     {
         var lt = fw.model<FwLogTypes>().oneByIcode(log_types_icode);
         if (lt.Count == 0)
             throw new ApplicationException("Log type not found for icode=[" + log_types_icode + "]");
         var et_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
-        var fields = new FwRow
+        var fields = new FwDict
         {
             ["log_types_id"] = lt["id"],
             ["fwentities_id"] = et_id,
@@ -69,7 +69,7 @@ public class FwActivityLogs : FwModel
     public DBList listByEntity(string entity_icode, int id, IList? log_types_icodes = null)
     {
         var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
-        var where = new FwRow
+        var where = new FwDict
         {
             {"fwentities_id", fwentities_id },
             {"item_id", id }
@@ -113,7 +113,7 @@ public class FwActivityLogs : FwModel
 
         // prepare list of activity records for UI
         // group system consequential changes from the same user within 10 minutes into one fields row
-        FwRow? last_fields = null;
+        FwDict? last_fields = null;
         var last_add_time = DateTime.MinValue;
         var last_users_id = -1;
         var last_log_types_id = -1;
@@ -147,8 +147,8 @@ public class FwActivityLogs : FwModel
                 }
 
             var payloadObj = Utils.jsonDecode(row["payload"]);
-            var payload = payloadObj as FwRow ?? [];
-            FwRow? fields = payload["fields"] as FwRow;
+            var payload = payloadObj as FwDict ?? [];
+            FwDict? fields = payload["fields"] as FwDict;
             if (fields != null)
             {
                 foreach (string key in fields.Keys)
@@ -176,7 +176,7 @@ public class FwActivityLogs : FwModel
             if (is_merged)
                 continue; // skip this row as it's merged with previous
 
-            var new_row = new FwRow();
+            var new_row = new FwDict();
             new_row["users_id"] = row["users_id"];
             new_row["idesc"] = row["idesc"];
             new_row["idate"] = row["idate"];
@@ -197,16 +197,16 @@ public class FwActivityLogs : FwModel
         }
 
         //and now for each result row with fields - convert fields from FwRow to FwList for ParsePage
-        foreach (FwRow row in result)
+        foreach (FwDict row in result)
         {
             if (!row.ContainsKey("fields"))
                 continue;
 
-            var fields = row["fields"] as FwRow ?? [];
+            var fields = row["fields"] as FwDict ?? [];
             var fields_list = new FwList();
             foreach (string key in fields.Keys)
             {
-                fields_list.Add(new FwRow()
+                fields_list.Add(new FwDict()
                     {
                         {"key",key},
                         {"value",fields[key]}
@@ -226,7 +226,7 @@ public class FwActivityLogs : FwModel
                     where lt.itype=@itype
                      and al.status IN (@statuses)
             ";
-        var p = new FwRow()
+        var p = new FwDict()
         {
             {"itype", log_itype},
             {"statuses", statuses}

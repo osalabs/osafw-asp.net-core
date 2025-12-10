@@ -53,7 +53,7 @@ public class AdminAttController : FwAdminController
     public override void getListRows()
     {
         base.getListRows();
-        foreach (FwRow row in this.list_rows)
+        foreach (FwDict row in this.list_rows)
         {
             if (row["is_image"].toInt() == 1)
             {
@@ -66,7 +66,7 @@ public class AdminAttController : FwAdminController
         }
     }
 
-    public override FwRow IndexAction()
+    public override FwDict IndexAction()
     {
         var ps = base.IndexAction() ?? [];
 
@@ -74,10 +74,10 @@ public class AdminAttController : FwAdminController
         return ps;
     }
 
-    public override FwRow ShowFormAction(int id = 0)
+    public override FwDict ShowFormAction(int id = 0)
     {
         var ps = base.ShowFormAction(id) ?? [];
-        var item = ps["i"] as FwRow ?? [];
+        var item = ps["i"] as FwDict ?? [];
 
         ps["url"] = model.getUrl(id);
         if (item["is_image"].toInt() == 1)
@@ -88,12 +88,12 @@ public class AdminAttController : FwAdminController
         return ps;
     }
 
-    public override FwRow? SaveAction(int id = 0)
+    public override FwDict? SaveAction(int id = 0)
     {
         route_onerror = FW.ACTION_SHOW_FORM; //set route to go if error happens
 
-        FwRow ps = [];
-        FwRow item = reqh("item");
+        FwDict ps = [];
+        FwDict item = reqh("item");
         var is_new = (id == 0);
         var location = "";
 
@@ -117,7 +117,7 @@ public class AdminAttController : FwAdminController
             item["fwentities_id"] = fwentities_id;
         }
 
-        FwRow itemdb = FormUtils.filter(item, save_fields);
+        FwDict itemdb = FormUtils.filter(item, save_fields);
         if (Utils.isEmpty(itemdb["iname"]))
             itemdb["iname"] = "new file upload";
 
@@ -134,7 +134,7 @@ public class AdminAttController : FwAdminController
             // Proceed upload - for add - could be multiple files
             var addedAtt = model.uploadMulti(itemdb);
             if (addedAtt.Count > 0)
-                id = (addedAtt[0] as FwRow)!["id"].toInt();
+                id = (addedAtt[0] as FwDict)!["id"].toInt();
             fw.flash("added", 1);
             location = base_url;
         }
@@ -161,11 +161,11 @@ public class AdminAttController : FwAdminController
         return this.afterSave(true, id, is_new, FW.ACTION_SHOW_FORM, location, ps);
     }
 
-    public override void Validate(int id, FwRow item)
+    public override void Validate(int id, FwDict item)
     {
         // only require file during first upload
         // only require iname during update
-        FwRow itemdb;
+        FwDict itemdb;
         if (id > 0)
         {
             itemdb = model.one(id);
@@ -189,13 +189,13 @@ public class AdminAttController : FwAdminController
         this.validateCheckResult();
     }
 
-    public FwRow SelectAction()
+    public FwDict SelectAction()
     {
-        FwRow ps = [];
+        FwDict ps = [];
         string category_icode = reqs("category");
         int att_categories_id = reqi("att_categories_id");
 
-        FwRow where = [];
+        FwDict where = [];
         where["status"] = 0;
         if (category_icode.Length > 0)
         {
@@ -211,7 +211,7 @@ public class AdminAttController : FwAdminController
 
         var is_json = fw.isJsonExpected();
         FwList rows = db.array(model.table_name, where, "add_time desc");
-        foreach (FwRow row in rows)
+        foreach (FwDict row in rows)
         {
             row["url"] = model.getUrl(row);
             if (is_json)

@@ -17,9 +17,9 @@ public class AdminDBController : FwController
 
     private const string dbpwd = "db321";
 
-    public FwRow IndexAction()
+    public FwDict IndexAction()
     {
-        FwRow ps = [];
+        FwDict ps = [];
         var selected_db = reqs("db", "main");
 
         string sql = reqs("sql");
@@ -71,9 +71,9 @@ public class AdminDBController : FwController
         }
 
         FwList dbsources = [];
-        var dbConfig = fw.config("db") as FwRow ?? [];
+        var dbConfig = fw.config("db") as FwDict ?? [];
         foreach (string dbname in dbConfig.Keys)
-            dbsources.Add(new FwRow()
+            dbsources.Add(new FwDict()
             {
                 {"id",dbname},
                 {"iname",dbname},
@@ -105,13 +105,13 @@ public class AdminDBController : FwController
 
         while (sth.Read())
         {
-            FwRow tblrow = [];
+            FwDict tblrow = [];
             var fields = new FwList();
             tblrow["fields"] = fields;
 
             for (int i = 0; i <= sth.FieldCount - 1; i++)
             {
-                FwRow tblfld = [];
+                FwDict tblfld = [];
                 tblfld["value"] = sth[i].toStr();
 
                 fields.Add(tblfld);
@@ -130,7 +130,7 @@ public class AdminDBController : FwController
 
         for (int i = 0; i <= sth.FieldCount - 1; i++)
         {
-            FwRow tblfld = [];
+            FwDict tblfld = [];
             tblfld["field_name"] = sth.GetName(i);
 
             result.Add(tblfld);
@@ -142,7 +142,7 @@ public class AdminDBController : FwController
     private void show_tables(ref FwList tablehead, ref FwList tablerows)
     {
         tablehead = [];
-        FwRow h = [];
+        FwDict h = [];
         h["field_name"] = "Table";
         tablehead.Add(h);
         h = [];
@@ -159,11 +159,11 @@ public class AdminDBController : FwController
             if (tblname.StartsWith("MSys"))
                 continue;
 
-            FwRow tblrow = [];
+            FwDict tblrow = [];
             var fields = new FwList();
             tblrow["fields"] = fields;
 
-            FwRow tblfld = [];
+            FwDict tblfld = [];
             tblfld["db"] = db.db_name;
             tblfld["value"] = tblname;
             tblfld["is_select_link"] = true;

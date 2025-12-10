@@ -27,11 +27,11 @@ public class SitemapController : FwController
         //true - allow access to all, including visitors
     }
 
-    public FwRow IndexAction()
+    public FwDict IndexAction()
     {
-        FwRow ps = [];
+        FwDict ps = [];
 
-        FwRow item = model.oneByFullUrl(base_url);
+        FwDict item = model.oneByFullUrl(base_url);
 
         FwList pages_tree = model.tree(" status=0 ", [], "parent_id, prio desc, iname");
         _add_full_url(pages_tree);
@@ -47,7 +47,7 @@ public class SitemapController : FwController
         if (pages_tree == null)
             return;
 
-        foreach (FwRow row in pages_tree)
+        foreach (FwDict row in pages_tree)
         {
             var urlPart = row["url"].toStr();
             row["full_url"] = parent_url + "/" + urlPart;

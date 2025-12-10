@@ -27,13 +27,13 @@ public class MainController : FwController
         base.checkAccess();
     }
 
-    public FwRow IndexAction()
+    public FwDict IndexAction()
     {
 
-        FwRow ps = [];
+        FwDict ps = [];
 
-        FwRow one;
-        FwRow panes = [];
+        FwDict one;
+        FwDict panes = [];
         ps["panes"] = panes;
 
         const int DIFF_DAYS = -7;
@@ -105,7 +105,7 @@ public class MainController : FwController
         // one["url") ] "/Admin/Reports/sample"
         FwList rows = db.arrayp("select access_level, count(*) as ivalue from users where status=0 group by access_level order by count(*) desc", DB.h());
         one["rows"] = rows;
-        foreach (FwRow row in rows)
+        foreach (FwDict row in rows)
             row["ilabel"] = FormUtils.selectTplName("/common/sel/access_level.sel", row["access_level"].toStr());
         panes["piechart"] = one;
 
@@ -121,20 +121,20 @@ public class MainController : FwController
         one["rows"] = rows;
         var headers = new FwList();
         one["headers"] = headers;
-        if (rows.Count > 0 && rows[0] is FwRow firstRow)
+        if (rows.Count > 0 && rows[0] is FwDict firstRow)
         {
             var keys = firstRow.Keys;
             var fields = new string[keys.Count];
             keys.CopyTo(fields, 0);
             foreach (var key in fields)
-                headers.Add(new FwRow() { { "field_name", key } });
-            foreach (FwRow row in rows)
+                headers.Add(new FwDict() { { "field_name", key } });
+            foreach (FwDict row in rows)
             {
                 row["On"] = fw.formatUserDateTime(row["On"]);
                 FwList cols = [];
                 foreach (var fieldname in fields)
                 {
-                    cols.Add(new FwRow()
+                    cols.Add(new FwDict()
                     {
                         {"row",row},
                         {"field_name",fieldname},
@@ -205,7 +205,7 @@ public class MainController : FwController
     public void UIThemeAction(string form_id)
     {
         fw.Session("ui_theme", form_id);
-        var fields = new FwRow() { { "ui_theme", form_id } };
+        var fields = new FwDict() { { "ui_theme", form_id } };
 
         fw.model<Users>().update(fw.userId, fields);
 
@@ -215,7 +215,7 @@ public class MainController : FwController
     public void UIModeAction(string form_id)
     {
         fw.Session("ui_mode", form_id);
-        fw.model<Users>().update(fw.userId, new FwRow() { { "ui_mode", form_id } });
+        fw.model<Users>().update(fw.userId, new FwDict() { { "ui_mode", form_id } });
 
         fw.redirect(base_url);
     }

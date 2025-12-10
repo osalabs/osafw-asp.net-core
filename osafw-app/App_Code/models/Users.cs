@@ -83,7 +83,7 @@ public class Users : FwModel<Users.Row>
     #region standard one/add/update overrides
     public DBRow oneByEmail(string email)
     {
-        FwRow where = [];
+        FwDict where = [];
         where["email"] = email;
         return db.row(table_name, where);
     }
@@ -118,7 +118,7 @@ public class Users : FwModel<Users.Row>
         return isExistsByField(uniq_key, not_id, "email");
     }
 
-    public override int add(FwRow item)
+    public override int add(FwDict item)
     {
         if (!item.ContainsKey("access_level"))
             item["access_level"] = Users.ACL_MEMBER;
@@ -144,7 +144,7 @@ public class Users : FwModel<Users.Row>
         return base.add(item);
     }
 
-    public override bool update(int id, FwRow item)
+    public override bool update(int id, FwDict item)
     {
         if (id == 0) return false;//no anonymous updates
 
@@ -165,7 +165,7 @@ public class Users : FwModel<Users.Row>
         return base.list(statuses);
     }
 
-    public override FwList listSelectOptions(FwRow? def = null)
+    public override FwList listSelectOptions(FwDict? def = null)
     {
         string sql = "select id, fname+' '+lname as iname from " + db.qid(table_name) + " where status=@status order by " + getOrderBy();
         return db.arrayp(sql, DB.h("status", STATUS_ACTIVE));
@@ -229,7 +229,7 @@ public class Users : FwModel<Users.Row>
     {
         var pwd_reset_token = Utils.getRandStr(PWD_RESET_TOKEN_LEN);
 
-        FwRow item = new()
+        FwDict item = new()
         {
             {"pwd_reset", this.hashPwd(pwd_reset_token, PWD_RESET_TOKEN_LEN)},
             {"pwd_reset_time", DB.NOW}
@@ -254,7 +254,7 @@ public class Users : FwModel<Users.Row>
             return result;
 
         // award every unique letter until 5 repetitions
-        FwRow chars = [];
+        FwDict chars = [];
         for (var i = 0; i <= pwd.Length - 1; i++)
         {
             var count = chars.ContainsKey(pwd[i]) ? chars[pwd[i]].toInt() : 0;
@@ -264,7 +264,7 @@ public class Users : FwModel<Users.Row>
         }
 
         // bonus points for mixing it up
-        FwRow vars = new()
+        FwDict vars = new()
         {
             {"digits",Regex.IsMatch(pwd, @"\d")},
             {"lower",Regex.IsMatch(pwd, "[a-z]")},
@@ -353,7 +353,7 @@ public class Users : FwModel<Users.Row>
         if (result)
         {
             //if found - update user's recovery codes (as we removed matched one)
-            var item = new FwRow();
+            var item = new FwDict();
             item["mfa_recovery"] = new_recovery_codes.Trim();
             this.update(id, item);
         }
@@ -379,7 +379,7 @@ public class Users : FwModel<Users.Row>
         var ip = Utils.getIP(fw.context);
         fw.logActivity(FwLogTypes.ICODE_USERS_LOGIN, FwEntities.ICODE_USERS, id, "IP:" + ip);
         // update login and timezone
-        FwRow fields = [];
+        FwDict fields = [];
         fields["login_time"] = DB.NOW;
 
         if (!string.IsNullOrEmpty(timezone))
@@ -514,7 +514,7 @@ public class Users : FwModel<Users.Row>
     ///     edit => true if user has edit permission
     ///     del => true if user has delete permission
     /// </returns>
-    public FwRow getRBAC(int? users_id = null, string? resource_icode = null)
+    public FwDict getRBAC(int? users_id = null, string? resource_icode = null)
     {
 #if isRoles
         var result = new FwRow();
@@ -583,9 +583,9 @@ public class Users : FwModel<Users.Row>
     /// return all allowed permissions as { permissions.icode => true }
     /// </summary>
     /// <returns></returns>
-    public FwRow allPermissions()
+    public FwDict allPermissions()
     {
-        var result = new FwRow();
+        var result = new FwDict();
 #if isRoles
         var permissions = fw.model<Permissions>().list();
         foreach (FwRow permission in permissions)
@@ -622,7 +622,7 @@ public class Users : FwModel<Users.Row>
     /// <param name="resource_action">resource action like controller's action 'Index' or '' </param>
     /// <param name="resource_action_more">optional additional action string, usually route.action_more to help distinguish sub-actions</param>
     /// <returns></returns>
-    public bool isAccessByRolesResourceAction(int users_id, string resource_icode, string resource_action, string resource_action_more = "", FwRow? access_actions_to_permissions = null)
+    public bool isAccessByRolesResourceAction(int users_id, string resource_icode, string resource_action, string resource_action_more = "", FwDict? access_actions_to_permissions = null)
     {
         logger("isAccessByRolesResourceAction", DB.h("users_id", users_id, "resource_icode", resource_icode, "resource_action", resource_action, "resource_action_more", resource_action_more));
 #if isRoles
@@ -771,7 +771,7 @@ public class Users : FwModel<Users.Row>
     }
 
     //shortcut to avoid calling UsersRoles directly
-    public void updateLinkedRoles(int users_id, FwRow linked_keys)
+    public void updateLinkedRoles(int users_id, FwDict linked_keys)
     {
 #if isRoles
         fw.model<UsersRoles>().updateJunctionByMainId(users_id, linked_keys);
@@ -886,7 +886,7 @@ public class Users : FwModel<Users.Row>
         // only Menu items user can see per ACL
         var users_acl = fw.userAccessLevel;
         FwList result = [];
-        foreach (FwRow item in menu_items)
+        foreach (FwDict item in menu_items)
         {
             if (item["access_level"].toInt() <= users_acl)
                 result.Add(item);

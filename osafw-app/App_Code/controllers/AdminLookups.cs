@@ -21,9 +21,9 @@ public class AdminLookupsController : FwController
         model = fw.model<FwControllers>();
     }
 
-    public FwRow IndexAction()
+    public FwDict IndexAction()
     {
-        FwRow ps = [];
+        FwDict ps = [];
         var rows = model.listGrouped(); //ordered by igroup (group name), iname, already filtered by access_level
 
         var cols = new FwList(); //will contain array of arrays with "list_groups" keys, which contains array of arrays with "list_rows" keys, which contains $row from $rows
@@ -34,8 +34,8 @@ public class AdminLookupsController : FwController
         var columns = 4;
 
         // 1) Group rows by igroup
-        var grouped = new FwRow();
-        foreach (FwRow row in rows)
+        var grouped = new FwDict();
+        foreach (FwDict row in rows)
         {
             var igroup = row["igroup"].toStr();
             if (!grouped.ContainsKey(igroup))
@@ -51,7 +51,7 @@ public class AdminLookupsController : FwController
         {
             var gName = entry.Key.toStr();
             var gRows = (FwList)entry.Value!;
-            allGroups.Add(new FwRow
+            allGroups.Add(new FwDict
             {
                 ["igroup"] = gName,
                 ["list_rows"] = gRows
@@ -61,7 +61,7 @@ public class AdminLookupsController : FwController
         // Prepare empty columns
         for (int i = 0; i < columns; i++)
         {
-            cols.Add(new FwRow
+            cols.Add(new FwDict
             {
                 ["col_sm"] = (int)(12 / columns), // for Bootstrap's col-sm-x
                 ["list_groups"] = new FwList()
@@ -72,7 +72,7 @@ public class AdminLookupsController : FwController
         var colRowCounts = new int[columns];
 
         // 3) Distribute each group to the column with the smallest row count so far
-        foreach (FwRow group in allGroups)
+        foreach (FwDict group in allGroups)
         {
             var gRows = (FwList)group["list_rows"]!;
             // Find the column with the smallest row count
@@ -85,7 +85,7 @@ public class AdminLookupsController : FwController
                 }
             }
             // Assign the group to this column
-            ((FwList)((FwRow)cols[targetColIndex]!)["list_groups"]!).Add(group);
+            ((FwList)((FwDict)cols[targetColIndex]!)["list_groups"]!).Add(group);
             // Update the row count for this column
             colRowCounts[targetColIndex] += gRows.Count;
         }

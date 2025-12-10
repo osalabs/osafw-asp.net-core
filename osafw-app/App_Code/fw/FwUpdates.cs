@@ -65,7 +65,7 @@ public class FwUpdates : FwModel
                 continue; // already exists in db
 
             string content = System.IO.File.ReadAllText(file);
-            add(new FwRow() {
+            add(new FwDict() {
                 { "iname", filename },
                 { "idesc", content }
             });
@@ -74,13 +74,13 @@ public class FwUpdates : FwModel
 
     public DBList listPending()
     {
-        return db.array(table_name, new FwRow() { { "status", STATUS_ACTIVE } }, "id");
+        return db.array(table_name, new FwDict() { { "status", STATUS_ACTIVE } }, "id");
     }
 
     public void applyPending(bool is_echo = false)
     {
         DBList rows = listPending();
-        foreach (FwRow row in rows)
+        foreach (FwDict row in rows)
         {
             applyOne(row["id"].toInt(), is_echo);
         }
@@ -92,7 +92,7 @@ public class FwUpdates : FwModel
         if (is_echo)
             fw.rw("<b>" + row["iname"] + " applying</b>");
 
-        FwRow uitem = new() {
+        FwDict uitem = new() {
             { "status", STATUS_APPLIED },
             { "applied_time", DB.NOW }
         };

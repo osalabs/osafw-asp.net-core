@@ -71,9 +71,9 @@ public class Utils
     * or "AAA BBB CCC DDD" => AAA=1, BBB=1, CCC=1, DDD=1
     * WARN! replaces all "&nbsp;" to spaces (after convert)
     */
-    public static FwRow qh(string str, object? default_value = null)
+    public static FwDict qh(string str, object? default_value = null)
     {
-        FwRow result = [];
+        FwDict result = [];
         if (str != null && str != "")
         {
             string[] arr = Regex.Split(str, @"\s+");
@@ -104,7 +104,7 @@ public class Utils
 
 
     // remove elements from hash, leave only those which keys passed
-    public static void hashFilter(FwRow hash, string[] keys)
+    public static void hashFilter(FwDict hash, string[] keys)
     {
         FwList all_keys = new(keys);
         FwList to_remove = [];
@@ -422,7 +422,7 @@ public class Utils
     /// <returns></returns>
     public static string ext2mime(string? ext)
     {
-        FwRow mime_map = qh(MIME_MAP);
+        FwDict mime_map = qh(MIME_MAP);
         ext = ext.toStr().ToLower(); //to lower
                                     //remove first dot if any
         if (ext.StartsWith('.'))
@@ -444,7 +444,7 @@ public class Utils
     ///     If <c>true</c> the first row becomes the column list;
     ///     otherwise the columns are called F0, F1, …
     /// </param>  
-    public static void ImportSpreadsheet(string filePath, Func<string, FwRow, bool> rowCallback, bool isHeaderRow = true)
+    public static void ImportSpreadsheet(string filePath, Func<string, FwDict, bool> rowCallback, bool isHeaderRow = true)
     {
 #if ExcelDataReader
         // ExcelDataReader needs this once per process for legacy encodings
@@ -489,7 +489,7 @@ public class Utils
 #endif
     }
 
-    public static string toCSVRow(FwRow row, Array fields)
+    public static string toCSVRow(FwDict row, Array fields)
     {
         StringBuilder result = new();
         bool is_first = true;
@@ -534,7 +534,7 @@ public class Utils
             // just read field names from first row
             if (rows.Count > 0)
             {
-                var firstRow = rows[0] as FwRow;
+                var firstRow = rows[0] as FwDict;
                 if (firstRow != null)
                 {
                     fields = firstRow.Keys.Cast<string>().ToArray();
@@ -548,7 +548,7 @@ public class Utils
         }
 
         csv.Append(headers_str + "\r\n");
-        foreach (FwRow row in rows)
+        foreach (FwDict row in rows)
         {
             csv.Append(Utils.toCSVRow(row, fields) + "\r\n");
         }
@@ -576,12 +576,12 @@ public class Utils
     /// <param name="tpl_dir">template directory</param>
     public static void writeXLSExport(FW fw, string filename, string csv_export_headers, string csv_export_fields, FwList rows, string tpl_dir = "/common/list/export")
     {
-        FwRow ps = [];
+        FwDict ps = [];
 
         FwList headers = [];
         foreach (string str in csv_export_headers.Split(","))
         {
-            FwRow h = [];
+            FwDict h = [];
             h["iname"] = str;
             headers.Add(h);
         }
@@ -600,16 +600,16 @@ public class Utils
         string[] fields = Utils.qw(csv_export_fields);
         //ps["rows"] = rows;
         var buffer = new FwList();
-        var psbuffer = new FwRow() { { "rows", buffer } };
-        foreach (FwRow row in rows)
+        var psbuffer = new FwDict() { { "rows", buffer } };
+        foreach (FwDict row in rows)
         {
-            var rowcopy = new FwRow();
+            var rowcopy = new FwDict();
             Utils.mergeHash(rowcopy, row);
 
             FwList cell = [];
             foreach (string f in fields)
             {
-                FwRow h = [];
+                FwDict h = [];
                 h["value"] = rowcopy[f];
                 cell.Add(h);
             }
@@ -677,7 +677,7 @@ public class Utils
     * <param name="hash2"></param>
     * <remarks></remarks>
     */
-    public static void mergeHash(FwRow hash1, FwRow hash2)
+    public static void mergeHash(FwDict hash1, FwDict hash2)
     {
         if (hash2 != null)
         {
@@ -689,7 +689,7 @@ public class Utils
         }
     }
 
-    public static void mergeHash(DBRow hash1, FwRow hash2)
+    public static void mergeHash(DBRow hash1, FwDict hash2)
     {
         if (hash2 != null)
         {
@@ -714,19 +714,19 @@ public class Utils
 
     // deep hash merge, i.e. if hash2 contains values that is hash value - go in it and copy such values to hash2 at same place accordingly
     // recursive
-    public static void mergeHashDeep(FwRow hash1, FwRow hash2)
+    public static void mergeHashDeep(FwDict hash1, FwDict hash2)
     {
         if (hash2 != null)
         {
             FwList keys = new(hash2.Keys);
             foreach (string key in keys)
             {
-                if (hash2[key] is FwRow ht)
+                if (hash2[key] is FwDict ht)
                 {
-                    if (hash1[key] is not FwRow)
-                        hash1[key] = new FwRow();
-                    FwRow _hash1 = (FwRow)hash1[key]!;
-                    FwRow _hash2 = ht;
+                    if (hash1[key] is not FwDict)
+                        hash1[key] = new FwDict();
+                    FwDict _hash1 = (FwDict)hash1[key]!;
+                    FwDict _hash2 = ht;
                     mergeHashDeep(_hash1, _hash2);
                 }
                 else
@@ -736,21 +736,21 @@ public class Utils
     }
 
     /// <summary>
-    /// Recursively deep-clones a <see cref="FwRow"/>, including any child
+    /// Recursively deep-clones a <see cref="FwDict"/>, including any child
     /// Hashtables and ArrayLists it contains.
     /// Primitive CLR types, strings and immutable value types are copied by
     /// reference because they are already thread-safe and stateless.
     /// </summary>
     /// <remarks>
     /// * Cycles are not expected
-    /// * Collections other than <see cref="FwRow"/> or <see cref="FwList"/>
+    /// * Collections other than <see cref="FwDict"/> or <see cref="FwList"/>
     ///   are cloned shallowly (reference copy) to avoid surprises
     /// </remarks>
-    public static FwRow? cloneHashDeep(FwRow? source)
+    public static FwDict? cloneHashDeep(FwDict? source)
     {
         if (source == null) return null;
 
-        FwRow clone = new(source.Count);
+        FwDict clone = new(source.Count);
         foreach (DictionaryEntry entry in source)
             clone[entry.Key] = cloneObject(entry.Value);
 
@@ -765,7 +765,7 @@ public class Utils
             case null:
                 return null;
 
-            case FwRow ht:
+            case FwDict ht:
                 return cloneHashDeep(ht);
 
             case FwList list:
@@ -875,7 +875,7 @@ public class Utils
         //rw("jsonDecodeRead init: " + reader.TokenType.ToString());
         object? result;
         if (reader.TokenType == JsonTokenType.StartObject)
-            result = new FwRow();
+            result = new FwDict();
         else if (reader.TokenType == JsonTokenType.StartArray)
             result = new FwList();
         else
@@ -891,7 +891,7 @@ public class Utils
             else if (reader.TokenType == JsonTokenType.EndArray || reader.TokenType == JsonTokenType.EndObject)
                 break; //return result
 
-            if (result is FwRow ht)
+            if (result is FwDict ht)
             {
                 //for Hashtble if no key name yet - expect it to appear now
                 if (reader.TokenType != JsonTokenType.PropertyName)
@@ -945,9 +945,9 @@ public class Utils
     // RECURSIVE
     public static object jsonStringifyValues(object? json)
     {
-        if (json is FwRow ht)
+        if (json is FwDict ht)
         {
-            var result = new FwRow();
+            var result = new FwDict();
             foreach (string key in ht.Keys)
                 result[key] = jsonStringifyValues(ht[key]);
             return result;
@@ -988,11 +988,11 @@ public class Utils
     // return object or Nothing (if error)
     public static object deserialize(string str)
     {
-        return jsonDecode(str) ?? new FwRow();
+        return jsonDecode(str) ?? new FwDict();
     }
 
     // return FwRow keys as an array
-    public static string[] hashKeys(FwRow h)
+    public static string[] hashKeys(FwDict h)
     {
         return h.Keys.Cast<string>().ToArray();
     }
@@ -1174,7 +1174,7 @@ public class Utils
     // trword    - 0/1. By default, truncate will attempt to cut off at a word boundary =1.
     // trend     - 0/1. If you want to cut off at the exact character length, pass the optional third parameter of 1.
     //<~tag truncate="80" trchar="..." trword="1" trend="1">
-    public static string str2truncate(string str, FwRow hattrs)
+    public static string str2truncate(string str, FwDict hattrs)
     {
         int trlen = 80;
         string trchar = "...";
@@ -1257,9 +1257,9 @@ public class Utils
 
     // convert array of hashtables to hashtable of hashtables using key
     // example for key="id": [ {id:1, name:"one"}, {id:2, name:"two"} ] => { 1: {id:1, name:"one"}, 2: {id:2, name:"two"} }
-    public static FwRow array2hashtable(IList arr, string key)
+    public static FwDict array2hashtable(IList arr, string key)
     {
-        FwRow result = [];
+        FwDict result = [];
         foreach (IDictionary item in arr)
         {
             if (!item.Contains(key) || item[key] == null)
@@ -1275,9 +1275,9 @@ public class Utils
     //      "123..."  - use index (by order)
     //      "other value" - use this value
     // return hash: id => id
-    public static FwRow commastr2hash(string? sel_ids, string? value = null)
+    public static FwDict commastr2hash(string? sel_ids, string? value = null)
     {
-        FwRow result = [];
+        FwDict result = [];
         var ids = (sel_ids ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries);
         for (int i = 0; i < ids.Length; i++)
         {
@@ -1319,9 +1319,9 @@ public class Utils
     * <param name="rows">db array</param>
     * <param name="fields">keys/values to add</param>
     */
-    public static void arrayInject(FwList rows, FwRow fields)
+    public static void arrayInject(FwList rows, FwDict fields)
     {
-        foreach (FwRow row in rows)
+        foreach (FwDict row in rows)
         {
             // array merge
             foreach (var key in fields.Keys)
@@ -1360,7 +1360,7 @@ public class Utils
     /// <param name="parameters">optional, name/value params if set - post will be used, instead of get</param>
     /// <param name="headers">optional, name/value headers to add to request</param>
     /// <returns>content received. empty string if error</returns>
-    public static string loadUrl(string url, FwRow? parameters = null, FwRow? headers = null)
+    public static string loadUrl(string url, FwDict? parameters = null, FwDict? headers = null)
     {
         string content;
         using (HttpClient client = new())
@@ -1415,7 +1415,7 @@ public class Utils
     /// TODO - combine this method with loadUrl() ?
     public static string sendFileToUrl(
         string url,
-        FwRow files,
+        FwDict files,
         System.Collections.Specialized.NameValueCollection? formFields = null,
         string? cert_path = null)
     {
@@ -1477,9 +1477,9 @@ public class Utils
         return result;
     }
 
-    public static FwRow getPostedJson(FW fw)
+    public static FwDict getPostedJson(FW fw)
     {
-        var result = new FwRow();
+        var result = new FwDict();
         if (fw.request.Body == null)
             return result;
         try
@@ -1498,7 +1498,7 @@ public class Utils
 
             if (!string.IsNullOrEmpty(json))
             {
-                result = Utils.jsonDecode(json) as FwRow ?? [];
+                result = Utils.jsonDecode(json) as FwDict ?? [];
                 fw.logger(LogLevel.TRACE, "REQUESTED JSON:", result);
             }
         }
@@ -1644,23 +1644,23 @@ public class Utils
     {
         if (rows.Count > 0)
         {
-            if (headers.Count == 0 && rows[0] is FwRow firstRow)
+            if (headers.Count == 0 && rows[0] is FwDict firstRow)
             {
                 var keys = firstRow.Keys.Cast<object?>()
                     .Select(k => k.toStr())
                     .Where(k => k.Length > 0)
                     .ToArray();
                 foreach (var key in keys)
-                    headers.Add(new FwRow() { { "field_name", key } });
+                    headers.Add(new FwDict() { { "field_name", key } });
             }
 
-            foreach (FwRow row in rows.Cast<object?>().OfType<FwRow>())
+            foreach (FwDict row in rows.Cast<object?>().OfType<FwDict>())
             {
                 FwList cols = [];
-                foreach (FwRow hf in headers.Cast<object?>().OfType<FwRow>())
+                foreach (FwDict hf in headers.Cast<object?>().OfType<FwDict>())
                 {
                     var fieldname = hf["field_name"].toStr();
-                    cols.Add(new FwRow()
+                    cols.Add(new FwDict()
                     {
                         {"row",row},
                         {"field_name",fieldname},

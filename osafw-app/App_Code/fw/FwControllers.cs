@@ -18,7 +18,7 @@ public class FwControllers : FwModel
 
     public DBList listGrouped()
     {
-        return db.array(table_name, new FwRow
+        return db.array(table_name, new FwDict
         {
             ["status"] = db.opNOT(STATUS_DELETED),
             ["access_level"] = db.opLE(fw.userAccessLevel)

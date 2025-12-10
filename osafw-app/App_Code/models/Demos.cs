@@ -54,7 +54,7 @@ public class Demos : FwModel<Demos.Row>
         return isExistsByField(uniq_key, not_id, "email");
     }
 
-    public virtual FwList listSelectOptionsParent(FwRow? def = null, FwRow? where = null)
+    public virtual FwList listSelectOptionsParent(FwDict? def = null, FwDict? where = null)
     {
         where ??= [];
 
@@ -64,7 +64,7 @@ public class Demos : FwModel<Demos.Row>
         // Support filter_by/filter_field from config
         if (def != null && def.ContainsKey("filter_by") && def.ContainsKey("filter_field"))
         {
-            var item = def["i"] as FwRow ?? [];
+            var item = def["i"] as FwDict ?? [];
             var filter_by = def["filter_by"].toStr();
             var filter_field = def["filter_field"].toStr();
             if (item.ContainsKey(filter_by))
@@ -75,7 +75,7 @@ public class Demos : FwModel<Demos.Row>
     }
 
     // override to process custom lookup_params
-    public override FwList listSelectOptions(FwRow? def = null)
+    public override FwList listSelectOptions(FwDict? def = null)
     {
         var lookup_params = (def?["lookup_params"] ?? string.Empty).toStr();
         var hparams = Utils.qh(lookup_params); // ex: parent

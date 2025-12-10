@@ -40,17 +40,17 @@ public class AdminUsersController : FwDynamicController
         }
     }
 
-    public override FwRow setPS(FwRow? ps = null)
+    public override FwDict setPS(FwDict? ps = null)
     {
         ps = base.setPS(ps);
         ps["is_roles"] = model.isRoles();
         return ps;
     }
 
-    public override FwRow ShowFormAction(int id = 0)
+    public override FwDict ShowFormAction(int id = 0)
     {
         var ps = base.ShowFormAction(id)!;
-        var item = (FwRow)ps["i"]!;
+        var item = (FwDict)ps["i"]!;
         ps["att"] = fw.model<Att>().one(item["att_id"]);
 
         ps["is_roles"] = model.isRoles();
@@ -59,7 +59,7 @@ public class AdminUsersController : FwDynamicController
         return ps;
     }
 
-    public override FwRow? SaveAction(int id = 0)
+    public override FwDict? SaveAction(int id = 0)
     {
         route_onerror = FW.ACTION_SHOW_FORM; //set route to go if error happens
 
@@ -72,7 +72,7 @@ public class AdminUsersController : FwDynamicController
             return null;
         }
 
-        FwRow item = reqh("item");
+        FwDict item = reqh("item");
         var success = true;
         var is_new = (id == 0);
 
@@ -82,7 +82,7 @@ public class AdminUsersController : FwDynamicController
         // load old record if necessary
         // var itemOld = model0.one(id);
 
-        FwRow itemdb = FormUtils.filter(item, this.save_fields);
+        FwDict itemdb = FormUtils.filter(item, this.save_fields);
         FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
 
         itemdb["pwd"] = itemdb["pwd"].toStr().Trim();
@@ -99,7 +99,7 @@ public class AdminUsersController : FwDynamicController
         return this.afterSave(success, id, is_new);
     }
 
-    public override void Validate(int id, FwRow item)
+    public override void Validate(int id, FwDict item)
     {
         bool result = true;
         result &= validateRequired(id, item, Utils.qw(required_fields));
@@ -148,9 +148,9 @@ public class AdminUsersController : FwDynamicController
         fw.redirect(fw.config("LOGGED_DEFAULT_URL").toStr());
     }
 
-    public FwRow SendPwdAction(int id)
+    public FwDict SendPwdAction(int id)
     {
-        FwRow ps = [];
+        FwDict ps = [];
 
         ps["success"] = model.sendPwdReset(id);
         ps["err_msg"] = fw.last_error_send_email;
@@ -168,7 +168,7 @@ public class AdminUsersController : FwDynamicController
             if (row["pwd"].Substring(0, 2) == "$2")
                 continue; // already hashed
             var hashed = model.hashPwd(row["pwd"]);
-            db.update(model.table_name, new FwRow() { { "pwd", hashed } }, new FwRow() { { "id", row["id"] } });
+            db.update(model.table_name, new FwDict() { { "pwd", hashed } }, new FwDict() { { "id", row["id"] } });
         }
         rw("done");
     }

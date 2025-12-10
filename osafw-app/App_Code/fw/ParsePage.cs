@@ -134,7 +134,7 @@ public class ParsePageOptions
     public bool IsCheckFileModifications { get; set; } = false;
     public string Lang { get; set; } = "en";
     public bool IsLangUpdate { get; set; } = true;
-    public Func<FwRow> GlobalsGetter { get; set; } = () => []; // by default - return empty hashtable
+    public Func<FwDict> GlobalsGetter { get; set; } = () => []; // by default - return empty hashtable
     public ISession? Session { get; set; }
     public Action<LogLevel, string[]> Logger { get; set; } = (_, _) => { };
 
@@ -158,8 +158,8 @@ public class ParsePage
     private static readonly Regex RX_LAST_SLASH = new(@"[^\/]+$", RegexOptions.Compiled);
     private static readonly Regex RX_EXT = new(@"\.[^\/]+$", RegexOptions.Compiled);
 
-    private static readonly ConcurrentDictionary<string, FwRow> FILE_CACHE = new();
-    private static readonly ConcurrentDictionary<string, FwRow> LANG_CACHE = new();
+    private static readonly ConcurrentDictionary<string, FwDict> FILE_CACHE = new();
+    private static readonly ConcurrentDictionary<string, FwDict> LANG_CACHE = new();
 
     private static readonly string[] IFOPERS = ["if", "unless", "ifne", "ifeq", "ifgt", "iflt", "ifge", "ifle"];
 
@@ -182,7 +182,7 @@ public class ParsePage
     private static System.Reflection.MethodInfo? mMarkdownToHtml;
     private static object? MarkdownPipeline;
 
-    private readonly Func<FwRow> globalsGetter = () => [];
+    private readonly Func<FwDict> globalsGetter = () => [];
     private readonly ISession? session;
     private readonly Action<LogLevel, string[]> loggerAction = (_, _) => { };
     // checks if template files modifies and reload them, depends on config's "log_level"
@@ -190,7 +190,7 @@ public class ParsePage
     private readonly bool is_check_file_modifications = false;
     private readonly string TMPL_PATH = "";
     private string basedir = "";
-    private FwRow data_top = []; // reference to the topmost hashtable
+    private FwDict data_top = []; // reference to the topmost hashtable
     private bool is_found_last_hfvalue = false;
     private readonly string lang = "en";
     private readonly bool lang_parse = true; // parse lang strings in `` or not - true - parse(default), false - no
@@ -234,11 +234,11 @@ public class ParsePage
     }
 
 
-    public string parse_page(string bdir, string tpl_name, FwRow hf)
+    public string parse_page(string bdir, string tpl_name, FwDict hf)
     {
         this.basedir = bdir;
         this.data_top = hf;
-        FwRow parent_hf = [];
+        FwDict parent_hf = [];
         // Return _parse_page(tpl_name, hf, "", "", parent_hf)
 
         // var startTime = DateTime.Now;
@@ -248,14 +248,14 @@ public class ParsePage
         return result;
     }
 
-    public string parse_string(string tpl, FwRow hf)
+    public string parse_string(string tpl, FwDict hf)
     {
         basedir = "/";
-        FwRow parent_hf = [];
+        FwDict parent_hf = [];
         return _parse_page("", hf, tpl, parent_hf);
     }
 
-    private string _parse_page(string tpl_name, FwRow hf, string page, FwRow parent_hf, FwRow? parent_attrs = null)
+    private string _parse_page(string tpl_name, FwDict hf, string page, FwDict parent_hf, FwDict? parent_attrs = null)
     {
         if (tpl_name == null)
         {
@@ -285,10 +285,10 @@ public class ParsePage
         // parse tags on page
 
         sort_tags(tags_full);
-        FwRow TAGSEEN = [];
+        FwDict TAGSEEN = [];
         string tag_full;
         string tag;
-        FwRow attrs;
+        FwDict attrs;
         object tag_value;
         string v;
 
@@ -314,7 +314,7 @@ public class ParsePage
                         inline_tpl = get_inline_tpl(ref page_orig, ref tag, ref tag_full);
 
                     if (attrs.ContainsKey("session"))
-                        tag_value = hfvalue(tag, session != null ? session : new FwRow());
+                        tag_value = hfvalue(tag, session != null ? session : new FwDict());
                     else if (attrs.ContainsKey("global"))
                         tag_value = hfvalue(tag, globalsGetter());
                     else
@@ -477,7 +477,7 @@ public class ParsePage
         // logger("preacaching [" & filename & "]")
 
         // check and get from cache
-        if (FILE_CACHE.TryGetValue(filename, out FwRow? cached_item) && cached_item != null)
+        if (FILE_CACHE.TryGetValue(filename, out FwDict? cached_item) && cached_item != null)
         {
             // if debug is off - don't check modify time for better performance (but app restart would be necessary if template changed)
             if (is_check_file_modifications)
@@ -503,7 +503,7 @@ public class ParsePage
         }
 
         // get from fs(if not in cache)
-        FwRow cache = [];
+        FwDict cache = [];
         cache["data"] = file_data;
         cache["modtime"] = modtime;
 
@@ -523,7 +523,7 @@ public class ParsePage
     }
 
     // Note: also strip tag to short tag
-    private static void get_tag_attrs(ref string tag, FwRow attrs)
+    private static void get_tag_attrs(ref string tag, FwDict attrs)
     {
         // If Regex.IsMatch(tag, "\s") Then
         if (tag.Contains(' '))
@@ -553,7 +553,7 @@ public class ParsePage
     // value (string, hashtable, etc..), empty string ""
     // Or Nothing - tag not present in hf param (only if hf is FwRow), file lookup will be necessary
     // set is_found to True if tag value found hf/parent_hf (so can be used to detect if there are no tag value at all so no fileseek required)
-    private object hfvalue(string tag, object hf, FwRow? parent_hf = null)
+    private object hfvalue(string tag, object hf, FwDict? parent_hf = null)
     {
         object tag_value = "";
         object? ptr;
@@ -574,7 +574,7 @@ public class ParsePage
                 }
                 else if (parts0 == "SESSION")
                 {
-                    ptr = session != null ? session : new FwRow();
+                    ptr = session != null ? session : new FwDict();
                     start_pos = 1;
                 }
                 else if (parts0 == "PARSEPAGE.TOP")
@@ -611,7 +611,7 @@ public class ParsePage
                             break;
                         }
                     }
-                    else if (ptr is FwRow hashtable)
+                    else if (ptr is FwDict hashtable)
                     {
                         if (hashtable.ContainsKey(k))
                             ptr = hashtable[k];
@@ -660,7 +660,7 @@ public class ParsePage
                 }
                 tag_value = ptr ?? "";
             }
-            else if (hf is FwRow hashtable)
+            else if (hf is FwDict hashtable)
             {
                 // special name tags - ROOT_URL and ROOT_DOMAIN - hardcoded here because of too frequent usage in the site
                 if (tag == "ROOT_URL" || tag == "ROOT_DOMAIN")
@@ -702,9 +702,9 @@ public class ParsePage
         return tag_value;
     }
 
-    private string _attr_sub(string tag, string tpl_name, FwRow hf, FwRow attrs, string inline_tpl, FwRow parent_hf, object tag_value)
+    private string _attr_sub(string tag, string tpl_name, FwDict hf, FwDict attrs, string inline_tpl, FwDict parent_hf, object tag_value)
     {
-        FwRow? sub_hf = null;
+        FwDict? sub_hf = null;
         var sub = attrs["sub"].toStr();
         if (!string.IsNullOrEmpty(sub))
             // if sub attr contains name - use it to get value from hf (instead using tag_value)
@@ -712,7 +712,7 @@ public class ParsePage
 
         if (tag_value is DBRow row)
             sub_hf = row.toHashtable();
-        else if (tag_value is FwRow ht)
+        else if (tag_value is FwDict ht)
             sub_hf = ht;
         else if (tag_value != null)
             sub_hf = tag_value.toHashtable();
@@ -727,7 +727,7 @@ public class ParsePage
     }
 
     // Check for misc if attrs
-    private bool _attr_if(FwRow attrs, FwRow hf, FwRow? parent_hf = null)
+    private bool _attr_if(FwDict attrs, FwDict hf, FwDict? parent_hf = null)
     {
         if (attrs.Count == 0)
             return true; // if there are no if operation - return true anyway and early
@@ -855,7 +855,7 @@ public class ParsePage
     }
 
     // return ready HTML
-    private string _attr_repeat(ref string tag, ref object tag_val_array, ref string tpl_name, ref string inline_tpl, FwRow parent_hf)
+    private string _attr_repeat(ref string tag, ref object tag_val_array, ref string tpl_name, ref string inline_tpl, FwDict parent_hf)
     {
         // Validate: if input doesn't contain array - return "" - nothing to repeat
         if (tag_val_array is not IList)
@@ -879,17 +879,17 @@ public class ParsePage
         return value.ToString();
     }
 
-    private static FwRow proc_repeat_modifiers(IList uftag, int i)
+    private static FwDict proc_repeat_modifiers(IList uftag, int i)
     {
-        FwRow uftagi1;
+        FwDict uftagi1;
         if (uftag[i] is DBRow row)
             uftagi1 = row;
-        else if (uftag[i] is FwRow ht)
+        else if (uftag[i] is FwDict ht)
             uftagi1 = ht;
         else
             uftagi1 = uftag[i].toHashtable();
 
-        FwRow uftagi = new(uftagi1); // make a shallow copy as we modify this level
+        FwDict uftagi = new(uftagi1); // make a shallow copy as we modify this level
         int cnt = uftag.Count;
 
         if (i == 0)
@@ -937,7 +937,7 @@ public class ParsePage
         return result;
     }
 
-    private void tag_replace(ref string hpage_ref, ref string tag_full_ref, ref string value_ref, FwRow hattrs)
+    private void tag_replace(ref string hpage_ref, ref string tag_full_ref, ref string value_ref, FwDict hattrs)
     {
         if (string.IsNullOrEmpty(hpage_ref))
         {
@@ -1170,7 +1170,7 @@ public class ParsePage
     }
 
     // if attrs["multi"] defined - attrs["select"] can contain strings with separator in attrs["multi"] (default ",") for multiple select
-    private string _attr_select(string tag, string tpl_name, FwRow hf, FwRow attrs)
+    private string _attr_select(string tag, string tpl_name, FwDict hf, FwDict attrs)
     {
         StringBuilder result = new();
 
@@ -1210,7 +1210,7 @@ public class ParsePage
             // hf(tag) is FwList of Hashes with "id" and "iname" keys, for example rows returned from db.array('select id, iname from ...')
             // "id" key is optional, if not present - iname will be used for values too
             string desc;
-            foreach (FwRow item in seloptions)
+            foreach (FwDict item in seloptions)
             {
                 desc = Utils.htmlescape(item["iname"].toStr());
                 if (item.ContainsKey("id"))
@@ -1286,7 +1286,7 @@ public class ParsePage
         return result.ToString();
     }
 
-    private string _attr_radio(string tpl_path, FwRow hf, FwRow attrs)
+    private string _attr_radio(string tpl_path, FwDict hf, FwDict attrs)
     {
         StringBuilder result = new();
         string sel_value = hfvalue(attrs["radio"].toStr(), hf).toStr();
@@ -1317,7 +1317,7 @@ public class ParsePage
             if (desc.Length < 1)
                 continue;
 
-            FwRow parent_hf = [];
+            FwDict parent_hf = [];
             desc = _parse_page("", hf, desc, parent_hf, attrs);
 
             if (!attrs.ContainsKey("noescape"))
@@ -1351,7 +1351,7 @@ public class ParsePage
         }
         return result.ToString();
     }
-    private string _attr_select_name(string tag, string tpl_name, FwRow hf, FwRow attrs)
+    private string _attr_select_name(string tag, string tpl_name, FwDict hf, FwDict attrs)
     {
         var result = "";
         var sel_value = hfvalue(attrs["selvalue"].toStr(), hf).toStr();
@@ -1363,7 +1363,7 @@ public class ParsePage
             // "id" key is optional, if not present - iname will be used for values too
 
             string desc;
-            foreach (FwRow item in seloptions)
+            foreach (FwDict item in seloptions)
             {
                 if (item.ContainsKey("id"))
                 {

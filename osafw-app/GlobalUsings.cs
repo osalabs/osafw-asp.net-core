@@ -10,10 +10,10 @@ global using ObjList = System.Collections.Generic.List<object?>;
 global using StrList = System.Collections.Generic.List<string>;
 
 // from fw/FwCollections.cs
-global using FwRow = osafw.FwRow;
-global using FwList = osafw.FwList; // List<object?> with FwRow-friendly interop
+global using FwDict = osafw.FwDict;
+global using FwList = osafw.FwList; // List<object?> with FwDict-friendly interop
 
 // for function parameters where more generic types are acceptable
-global using FwRowLike = System.Collections.IDictionary; // FwRow compatible
-global using FwListLike = System.Collections.IList;      // IList<IFwRow>
-global using FwItemsLike = System.Collections.IEnumerable; // IEnumerable<IFwRow> for APIs that do not change the collection
+global using FwDictLike = System.Collections.IDictionary; // FwDict compatible
+global using FwListLike = System.Collections.IList;      // IList<IFwDict>
+global using FwItemsLike = System.Collections.IEnumerable; // IEnumerable<IFwDict> for APIs that do not change the collection

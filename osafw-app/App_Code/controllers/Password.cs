@@ -26,11 +26,11 @@ public class PasswordController : FwController
         //true - allow access to all, including visitors
     }
 
-    public FwRow IndexAction()
+    public FwDict IndexAction()
     {
-        FwRow ps = [];
+        FwDict ps = [];
 
-        FwRow item = reqh("item");
+        FwDict item = reqh("item");
         if (isGet())
             // set defaults here
             item = [];
@@ -61,9 +61,9 @@ public class PasswordController : FwController
         fw.redirect(base_url + "/(Sent)");
     }
 
-    public FwRow SentAction()
+    public FwDict SentAction()
     {
-        FwRow ps = [];
+        FwDict ps = [];
         ps["hide_sidebar"] = true;
         return ps;
     }

@@ -64,11 +64,11 @@ public class AssistantController : FwController
         //true - allow access to all members
     }
 
-    public FwRow IndexAction()
+    public FwDict IndexAction()
     {
         //todo show list of history
-        FwRow ps = [];
-        FwRow item = reqh("item");
+        FwDict ps = [];
+        FwDict item = reqh("item");
 
         var userPrompt = fw.G["user_prompt"].toStr();
 
@@ -126,7 +126,7 @@ public class AssistantController : FwController
         //if (page_name == "about")
         //    tpl_name = fw.config("PAGE_LAYOUT_PUBLIC").toStr();
 
-        FwRow ps = new();
+        FwDict ps = new();
         ps["hide_sidebar"] = true; // TODO control via Spages
         ps["page_name"] = page_name;
 
@@ -135,9 +135,9 @@ public class AssistantController : FwController
 
     public void SaveAction()
     {
-        FwRow ps = [];
+        FwDict ps = [];
 
-        FwRow item = reqh("item");
+        FwDict item = reqh("item");
         string userPrompt = item["prompt"].toStr();
         if (string.IsNullOrWhiteSpace(userPrompt))
         {
@@ -149,7 +149,7 @@ public class AssistantController : FwController
         string apiKey = fw.config("OPENAI_API_KEY").toStr();
         //string modelId = "gpt-4.1";
         string modelId = "gpt-4.1-mini";
-        var metaps = new FwRow
+        var metaps = new FwDict
         {
             { "current_time", DateTime.Now },
             { "users_id", fw.userId },
@@ -220,7 +220,7 @@ public class AssistantController : FwController
             parsedResult = JsonSerializer.Deserialize<AssistantResult>(content);
             logger("AssistantResult:", parsedResult);
 
-            fw.model<FwActivityLogs>().addSimple(FwLogTypes.ICODE_ADDED, FwEntities.ICODE_ASSISTANT, 0, userPrompt, (FwRow?)Utils.jsonDecode(content));
+            fw.model<FwActivityLogs>().addSimple(FwLogTypes.ICODE_ADDED, FwEntities.ICODE_ASSISTANT, 0, userPrompt, (FwDict?)Utils.jsonDecode(content));
         }
         catch (Exception ex)
         {

@@ -33,7 +33,7 @@ public class AdminActivityLogsController : FwController
             return_url = fw.config("LOGGED_DEFAULT_URL").toStr();
     }
 
-    public virtual FwRow? IndexAction()
+    public virtual FwDict? IndexAction()
     {
         //if error - save it to flash as we doing redirect
         if (!Utils.isEmpty(fw.G["err_msg"]))
@@ -47,7 +47,7 @@ public class AdminActivityLogsController : FwController
 
     //save new comment/note or custom event
     //requires
-    public virtual FwRow? SaveAction(int id = 0)
+    public virtual FwDict? SaveAction(int id = 0)
     {
         route_onerror = FW.ACTION_INDEX;
 
@@ -58,7 +58,7 @@ public class AdminActivityLogsController : FwController
             return null;
         }
 
-        FwRow item = reqh("item");
+        FwDict item = reqh("item");
         var success = true;
         var is_new = (id == 0);
 
@@ -66,7 +66,7 @@ public class AdminActivityLogsController : FwController
         // load old record if necessary
         // var itemOld = model0.one(id);
 
-        FwRow itemdb = FormUtils.filter(item, this.save_fields);
+        FwDict itemdb = FormUtils.filter(item, this.save_fields);
         FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
 
         //for new items - convert log_type and entity to ids
@@ -97,7 +97,7 @@ public class AdminActivityLogsController : FwController
         return this.afterSave(success, id, is_new);
     }
 
-    public virtual void Validate(int id, FwRow item)
+    public virtual void Validate(int id, FwDict item)
     {
         bool result = this.validateRequired(id, item, this.required_fields);
 

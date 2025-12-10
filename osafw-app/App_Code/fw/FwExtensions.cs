@@ -231,31 +231,31 @@ public static class FwExtensions
     }
 
     /// <summary>
-    /// Converts the specified object to a <see cref="FwRow"/> representation, mapping its properties or dictionary entries to
+    /// Converts the specified object to a <see cref="FwDict"/> representation, mapping its properties or dictionary entries to
     /// key-value pairs.
     /// </summary>
-    /// <remarks>If <paramref name="dto"/> is already a <see cref="FwRow"/>, a shallow clone is returned. If it is an
+    /// <remarks>If <paramref name="dto"/> is already a <see cref="FwDict"/>, a shallow clone is returned. If it is an
     /// <see cref="System.Collections.IDictionary"/>, its entries are copied. For other objects, all writable properties are
-    /// included as keys in the resulting <see cref="FwRow"/>.</remarks>
+    /// included as keys in the resulting <see cref="FwDict"/>.</remarks>
     /// <param name="dto">The object to convert. Can be a dictionary or an object with writable properties. If
-    /// <paramref name="dto"/> is <see langword="null"/>, an empty <see cref="FwRow"/> is returned.</param>
-    /// <returns>A <see cref="FwRow"/> containing the key-value pairs from the input object. Returns an empty row if
+    /// <paramref name="dto"/> is <see langword="null"/>, an empty <see cref="FwDict"/> is returned.</param>
+    /// <returns>A <see cref="FwDict"/> containing the key-value pairs from the input object. Returns an empty row if
     /// <paramref name="dto"/> is <see langword="null"/>.</returns>
-    public static FwRow toHashtable(this object? dto)
+    public static FwDict toHashtable(this object? dto)
     {
         if (dto is null)
             return [];
 
-        if (dto is FwRow row)
-            return new FwRow(row);
+        if (dto is FwDict row)
+            return new FwDict(row);
 
         if (dto is IDictionary dict)
         {
-            return new FwRow(dict);
+            return new FwDict(dict);
         }
 
         var props = dto.GetType().getWritableProperties();
-        FwRow htResult = new(props.Count);
+        FwDict htResult = new(props.Count);
         foreach (var kv in props)
         {
             htResult[kv.Key] = kv.Value.GetValue(dto);

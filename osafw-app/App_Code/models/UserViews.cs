@@ -46,7 +46,7 @@ public class UserViews : FwModel<UserViews.Row>
     // return screen record for logged user by id
     public DBRow oneByIcodeId(string icode, int id)
     {
-        var p = new FwRow()
+        var p = new FwDict()
         {
             { field_icode, icode },
             { field_id, id },
@@ -62,7 +62,7 @@ public class UserViews : FwModel<UserViews.Row>
     // by icode/iname/loggeduser
     public DBRow oneByUK(string icode, string iname)
     {
-        return db.row(table_name, new FwRow() {
+        return db.row(table_name, new FwDict() {
             {field_icode, icode },
             {field_iname, iname },
             {field_add_users_id, fw.userId },
@@ -72,7 +72,7 @@ public class UserViews : FwModel<UserViews.Row>
     // add view for logged user with icode, fields, iname
     public int addSimple(string icode, string fields, string iname, string density = "")
     {
-        return add(new FwRow()
+        return add(new FwDict()
         {
             { field_icode, icode },
             { field_iname, iname },
@@ -106,7 +106,7 @@ public class UserViews : FwModel<UserViews.Row>
     /// <param name="fields">comma-separated fields</param>
     /// <param name="iname">view title (for save new view)</param>
     /// <returns>user_views.id</returns>
-    public int updateByIcode(string icode, FwRow itemdb)
+    public int updateByIcode(string icode, FwDict itemdb)
     {
         var item = oneByIcode(icode);
         int result;
@@ -119,7 +119,7 @@ public class UserViews : FwModel<UserViews.Row>
         else
         {
             // new - add key fields
-            FwRow itemdb_add = new(itemdb);
+            FwDict itemdb_add = new(itemdb);
             itemdb_add[field_icode] = icode;
             itemdb_add[field_add_users_id] = fw.userId;
             result = add(itemdb_add);

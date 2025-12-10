@@ -58,7 +58,7 @@ public class ConvUtils
     // if out_filename cotains "\" or "/" - save pdf file to this path
     // options:
     // see html2pdf() method for options
-    public static string parsePagePdf(FW fw, string bdir, string tpl_name, FwRow ps, string out_filename = "", FwRow? options = null)
+    public static string parsePagePdf(FW fw, string bdir, string tpl_name, FwDict ps, string out_filename = "", FwDict? options = null)
     {
         ensurePlaywrightInstalled(fw);
 
@@ -107,7 +107,7 @@ public class ConvUtils
     // margin_right = "10mm"
     // margin_bottom = "5mm"
     // margin_left = "10mm"
-    public static async Task html2pdf(FW fw, string html_data, string filename, FwRow? options = null)
+    public static async Task html2pdf(FW fw, string html_data, string filename, FwDict? options = null)
     {
         if (filename.Length < 1)
         {
@@ -164,7 +164,7 @@ public class ConvUtils
     // parse template and generate doc
     // if out_filename ="" or doesn't contain "\" or "/" - output pdf file to browser
     // if out_filename cotains "\" or "/" - save pdf file to this path
-    public static string parsePageDoc(FW fw, ref string bdir, ref string tpl_name, ref FwRow ps, string out_filename = "")
+    public static string parsePageDoc(FW fw, ref string bdir, ref string tpl_name, ref FwDict ps, string out_filename = "")
     {
         string html_data = fw.parsePage(bdir, tpl_name, ps);
 
@@ -228,7 +228,7 @@ public class ConvUtils
     // Note: set IS_PRINT_MODE=True hf var which is become available in templates
     // if out_filename ="" or doesn't contain "\" or "/" - output pdf file to browser
     // if out_filename cotains "\" or "/" - save pdf file to this path
-    public static string parsePageExcel(FW fw, ref string bdir, ref string tpl_name, ref FwRow ps, string out_filename = "")
+    public static string parsePageExcel(FW fw, ref string bdir, ref string tpl_name, ref FwDict ps, string out_filename = "")
     {
         ps["IS_PRINT_MODE"] = true;
         string html_data = fw.parsePage(bdir, tpl_name, ps);
@@ -265,7 +265,7 @@ public class ConvUtils
     }
 
     // simple version of parse_page_xls - i.e. it's usual html file, just output as xls (Excel opens it successfully, however displays a warning)
-    public static string parsePageExcelSimple(FW fw, string bdir, string tpl_name, FwRow ps, string out_filename = "")
+    public static string parsePageExcelSimple(FW fw, string bdir, string tpl_name, FwDict ps, string out_filename = "")
     {
         ps["IS_PRINT_MODE"] = true;
         string html_data = fw.parsePage(bdir, tpl_name, ps);
@@ -309,7 +309,7 @@ public class ConvUtils
             maxColWidth.Add(header, header.Length < 10 ? 10 : header.Length);
         }
 
-        foreach (FwRow cells in rows)
+        foreach (FwDict cells in rows)
         {
             foreach (string cell in cells.Keys)
             {
@@ -468,7 +468,7 @@ public class ConvUtils
                 _SheetData.AppendChild(headerRow);
 
                 // create data rows
-                foreach (FwRow row in rows)
+                foreach (FwDict row in rows)
                 {
                     var newRow = new Row();
                     foreach (string col in fields)

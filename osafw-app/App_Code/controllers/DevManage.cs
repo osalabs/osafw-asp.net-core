@@ -21,9 +21,9 @@ public class DevManageController : FwController
         base_url = "/Dev/Manage";
     }
 
-    public FwRow IndexAction()
+    public FwDict IndexAction()
     {
-        FwRow ps = [];
+        FwDict ps = [];
 
         // table and views list
         var tables = db.tables();
@@ -33,19 +33,19 @@ public class DevManageController : FwController
         var select_tables = new FwList();
         ps["select_tables"] = select_tables;
         foreach (string table in tables)
-            select_tables.Add(new FwRow() { { "id", table }, { "iname", table } });
+            select_tables.Add(new FwDict() { { "id", table }, { "iname", table } });
 
         // models list - all clasess inherited from FwModel
         var select_models = new FwList();
         ps["select_models"] = select_models;
 
         foreach (string model_name in DevEntityBuilder.listModels())
-            select_models.Add(new FwRow() { { "id", model_name }, { "iname", model_name } });
+            select_models.Add(new FwDict() { { "id", model_name }, { "iname", model_name } });
 
         var select_controllers = new FwList();
         ps["select_controllers"] = select_controllers;
         foreach (string controller_name in DevEntityBuilder.listControllers())
-            select_controllers.Add(new FwRow() { { "id", controller_name }, { "iname", controller_name } });
+            select_controllers.Add(new FwDict() { { "id", controller_name }, { "iname", controller_name } });
 
         return ps;
     }
@@ -106,11 +106,11 @@ public class DevManageController : FwController
     }
 
     // generate documentation PDF
-    public FwRow? DocsAction()
+    public FwDict? DocsAction()
     {
         var is_export = reqs("format");
 
-        var ps = new FwRow();
+        var ps = new FwDict();
         ps["is_rbac"] = fw.model<Users>().isRoles();
         ps["access_levels"] = FormUtils.selectTplOptions("/common/sel/access_level.sel");
 
@@ -121,7 +121,7 @@ public class DevManageController : FwController
         {
             logger("exporting");
             var layout = fw.G["PAGE_LAYOUT_PRINT"].toStr();
-            var options = new FwRow();
+            var options = new FwDict();
             options["disposition"] = "inline";
             ConvUtils.parsePagePdf(fw, "/dev/manage/docs", layout, ps, "documentation", options);
             return null;
@@ -147,16 +147,16 @@ public class DevManageController : FwController
         fw.redirect("/Admin/FwUpdates");
     }
 
-    public FwRow? ApplyFwUpdateAction(int id)
+    public FwDict? ApplyFwUpdateAction(int id)
     {
         checkXSS();
         fw.model<FwUpdates>().applyOne(id);
 
         if (fw.isJsonExpected())
         {
-            var ps = new FwRow();
+            var ps = new FwDict();
             ps["message"] = "Update applied";
-            return new FwRow { { "_json", ps } };
+            return new FwDict { { "_json", ps } };
         }
         else
         {
@@ -166,7 +166,7 @@ public class DevManageController : FwController
         }
     }
 
-    public FwRow? ApplyFwUpdatesAction()
+    public FwDict? ApplyFwUpdatesAction()
     {
         checkXSS();
         var ids = reqh("cb").Keys.Cast<string>().Select(x => x.toInt()).ToList();
@@ -174,9 +174,9 @@ public class DevManageController : FwController
 
         if (fw.isJsonExpected())
         {
-            var ps = new FwRow();
+            var ps = new FwDict();
             ps["message"] = "Updates applied";
-            return new FwRow { { "_json", ps } };
+            return new FwDict { { "_json", ps } };
         }
         else
         {
@@ -201,7 +201,7 @@ public class DevManageController : FwController
         var table_name = item["table_name"].toStr().Trim();
         var model_name = item["model_name"].toStr().Trim();
 
-        FwRow entity = DevEntityBuilder.table2entity(fw.db, table_name) ?? [];
+        FwDict entity = DevEntityBuilder.table2entity(fw.db, table_name) ?? [];
         entity["table"] = table_name;
         if (model_name.Length > 0)
             entity["model_name"] = model_name;
@@ -225,12 +225,12 @@ public class DevManageController : FwController
         var entities = DevEntityBuilder.loadJson<FwList>(config_file);
 
         // emulate entity
-        var controller = new FwRow {
+        var controller = new FwDict {
                     {"url",controller_url},
                     {"title",controller_title},
                     {"type",controller_type},
                 };
-        var entity = new FwRow()
+        var entity = new FwDict()
         {
             {"model_name",model_name},
             {"controller", controller},
@@ -280,15 +280,15 @@ public class DevManageController : FwController
         var tpl_to = cInstance.base_url.ToLower();
         var tpl_path = fw.config("template") + tpl_to;
         var config_file = tpl_path + "/config.json";
-        var config = DevEntityBuilder.loadJson<FwRow>(config_file);
+        var config = DevEntityBuilder.loadJson<FwDict>(config_file);
 
         // extract ShowAction
         config["is_dynamic_show"] = false;
-        FwRow fitem = [];
+        FwDict fitem = [];
         var fields = cInstance.prepareShowFields(fitem, []);
         DevCodeGen.makeValueTags(fields);
 
-        FwRow ps = new()
+        FwDict ps = new()
         {
             ["fields"] = fields
         };
@@ -322,9 +322,9 @@ public class DevManageController : FwController
     }
 
     // analyse database tables and create db.json describing entities, fields and relationships
-    public FwRow AnalyseDBAction()
+    public FwDict AnalyseDBAction()
     {
-        FwRow ps = [];
+        FwDict ps = [];
         var item = reqh("item");
         string connstr = item["connstr"] + "";
 
@@ -358,14 +358,14 @@ public class DevManageController : FwController
 
     // ************************* APP CREATION Actions
     // ************************* DB Analyzer
-    public FwRow DBAnalyzerAction()
+    public FwDict DBAnalyzerAction()
     {
-        FwRow ps = [];
+        FwDict ps = [];
         FwList dbsources = [];
 
-        var dbConfig = fw.config("db") as FwRow ?? [];
+        var dbConfig = fw.config("db") as FwDict ?? [];
         foreach (string dbname in dbConfig.Keys)
-            dbsources.Add(new FwRow()
+            dbsources.Add(new FwDict()
             {
                 {"id",dbname},
                 {"iname",dbname}
@@ -379,20 +379,20 @@ public class DevManageController : FwController
     {
         var item = reqh("item");
         string dbname = item["db"] + "";
-        var dbConfigs = fw.config("db") as FwRow ?? throw new UserException("Wrong DB selection");
-        var dbconfig = dbConfigs[dbname] as FwRow ?? throw new UserException("Wrong DB selection");
+        var dbConfigs = fw.config("db") as FwDict ?? throw new UserException("Wrong DB selection");
+        var dbconfig = dbConfigs[dbname] as FwDict ?? throw new UserException("Wrong DB selection");
         DevEntityBuilder.createDBJsonFromExistingDB(dbname, fw);
         fw.flash("success", "template" + DevCodeGen.DB_JSON_PATH + " created");
 
         fw.redirect(base_url + "/(AppCreator)");
     }
 
-    public FwRow EntityBuilderAction()
+    public FwDict EntityBuilderAction()
     {
-        FwRow ps = [];
+        FwDict ps = [];
 
         var entities_file = fw.config("template") + DevCodeGen.ENTITIES_PATH;
-        FwRow item = new()
+        FwDict item = new()
         {
             ["entities"] = Utils.getFileContent(entities_file)
         };
@@ -439,9 +439,9 @@ public class DevManageController : FwController
         fw.redirect(base_url + "/(EntityBuilder)");
     }
 
-    public FwRow DBInitializerAction()
+    public FwDict DBInitializerAction()
     {
-        FwRow ps = [];
+        FwDict ps = [];
 
         var config_file = fw.config("template") + DevCodeGen.DB_JSON_PATH;
         var entities = DevEntityBuilder.loadJson<FwList>(config_file);
@@ -471,13 +471,13 @@ public class DevManageController : FwController
         }
     }
 
-    public FwRow AppCreatorAction()
+    public FwDict AppCreatorAction()
     {
         // reload session, so sidebar menu will be updated
         if (reqs("reload").Length > 0)
             fw.model<Users>().reloadSession();
 
-        FwRow ps = [];
+        FwDict ps = [];
 
         // tables
         var config_file = fw.config("template") + DevCodeGen.DB_JSON_PATH;
@@ -486,9 +486,9 @@ public class DevManageController : FwController
         var models = DevEntityBuilder.listModels();
         var controllers = DevEntityBuilder.listControllers();
 
-        foreach (FwRow entity in entities)
+        foreach (FwDict entity in entities)
         {
-            var controller_options = entity["controller"] as FwRow ?? [];
+            var controller_options = entity["controller"] as FwDict ?? [];
             var controller_url = controller_options["url"].toStr();
             entity["is_model_exists"] = models.Contains(entity["model_name"]);
             controller_options["name"] = controller_url.toStr().Replace("/", "");
@@ -503,7 +503,7 @@ public class DevManageController : FwController
         if (sortby == "table" || sortby == "model_name")
         {
             //sort entities FwList of Hashtables with linq
-            entities = new FwList(entities.Cast<FwRow>().OrderBy(x => x[sortby]).ToList());
+            entities = new FwList(entities.Cast<FwDict>().OrderBy(x => x[sortby]).ToList());
         }
 
         ps["entities"] = entities;
@@ -525,7 +525,7 @@ public class DevManageController : FwController
         var controllers_ctr = 0;
         var is_updated = false;
         var CodeGen = DevCodeGen.init(fw);
-        foreach (FwRow entity in entities)
+        foreach (FwDict entity in entities)
         {
             if (search.Length > 0
                 && !entity["table"].toStr().Contains(search)
@@ -547,7 +547,7 @@ public class DevManageController : FwController
 
             if (item.ContainsKey(key + "is_controller"))
             {
-                var controller_options = entity["controller"] as FwRow ?? [];
+                var controller_options = entity["controller"] as FwDict ?? [];
 
                 // create controller (model must exists)
                 if (item[key + "controller_name"].toStr().Length > 0 && controller_options["name"].toStr() != item[key + "controller_name"].toStr())

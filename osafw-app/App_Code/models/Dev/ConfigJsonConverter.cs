@@ -12,7 +12,7 @@ using System.Text.Json;
 
 namespace osafw;
 
-public class ConfigJsonConverter : System.Text.Json.Serialization.JsonConverter<FwRow>
+public class ConfigJsonConverter : System.Text.Json.Serialization.JsonConverter<FwDict>
 {
     public readonly List<string> ordered_keys_entity = [
         "iname",
@@ -130,12 +130,12 @@ public class ConfigJsonConverter : System.Text.Json.Serialization.JsonConverter<
     }
 
     //read is not needed, but methods need to implement
-    public override FwRow Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    public override FwDict Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         throw new NotImplementedException();
     }
 
-    public override void Write(Utf8JsonWriter writer, FwRow value, JsonSerializerOptions options)
+    public override void Write(Utf8JsonWriter writer, FwDict value, JsonSerializerOptions options)
     {
         WriteDictionary(writer, value, options);
 

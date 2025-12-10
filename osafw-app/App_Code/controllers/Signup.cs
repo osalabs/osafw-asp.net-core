@@ -33,10 +33,10 @@ public class SignupController : FwController
         fw.routeRedirect(FW.ACTION_SHOW_FORM);
     }
 
-    public FwRow ShowFormAction()
+    public FwDict ShowFormAction()
     {
-        FwRow ps = [];
-        FwRow item = [];
+        FwDict ps = [];
+        FwDict item = [];
 
         if (isGet())
         {
@@ -74,7 +74,7 @@ public class SignupController : FwController
         fw.redirect(fw.config("LOGGED_DEFAULT_URL").toStr());
     }
 
-    public bool Validate(FwRow item)
+    public bool Validate(FwDict item)
     {
         string msg = "";
         bool result = true;

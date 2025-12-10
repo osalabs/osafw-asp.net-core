@@ -38,7 +38,7 @@ class DevCodeGen
         return new DevCodeGen(fw, db);
     }
 
-    public static void replaceInFile(string filepath, FwRow strings)
+    public static void replaceInFile(string filepath, FwDict strings)
     {
         var content = Utils.getFileContent(filepath);
         if (content.Length == 0)
@@ -52,7 +52,7 @@ class DevCodeGen
 
     // replaces strings in all files under defined dir
     // RECURSIVE!
-    private static void replaceInFiles(string dir, FwRow strings)
+    private static void replaceInFiles(string dir, FwDict strings)
     {
         foreach (string filename in Directory.GetFiles(dir))
             replaceInFile(filename, strings);
@@ -62,7 +62,7 @@ class DevCodeGen
             replaceInFiles(foldername, strings);
     }
 
-    private static string entityFieldToSQLType(FwRow entity)
+    private static string entityFieldToSQLType(FwDict entity)
     {
         string result;
 
@@ -120,7 +120,7 @@ class DevCodeGen
         return result;
     }
 
-    private string entityFieldToSQLDefault(FwRow entity)
+    private string entityFieldToSQLDefault(FwDict entity)
     {
         var result = "";
         if (entity["default"] == null)
@@ -155,14 +155,14 @@ class DevCodeGen
 
     // if field is referece to other table - add named foreign key
     // CONSTRAINT FK_entity["table_name")]remotetable FOREIGN KEY REFERENCES remotetable(id)
-    private string entityFieldToSQLForeignKey(FwRow field, FwRow entity)
+    private string entityFieldToSQLForeignKey(FwDict field, FwDict entity)
     {
         var result = "";
 
         if (!entity.ContainsKey("foreign_keys"))
             return result;
 
-        foreach (FwRow fk in entity["foreign_keys"] as FwList ?? new FwList())
+        foreach (FwDict fk in entity["foreign_keys"] as FwList ?? new FwList())
         {
             fw.logger("CHECK FK:", fk["column"].toStr(), "=", field["name"].toStr());
             if (fk["column"].toStr() == field["name"].toStr())
@@ -180,15 +180,15 @@ class DevCodeGen
     }
 
     // convert db.json entity to SQL CREATE TABLE
-    private string entity2SQL(FwRow entity)
+    private string entity2SQL(FwDict entity)
     {
         var table_name = entity["table"].toStr();
         var result = "CREATE TABLE " + db.qid(table_name, false) + " (" + Environment.NewLine;
 
-        var indexes = entity["indexes"] as FwRow;
+        var indexes = entity["indexes"] as FwDict;
         var i = 1;
         var fields = entity["fields"] as FwList ?? new FwList();
-        foreach (FwRow field in fields)
+        foreach (FwDict field in fields)
         {
             var fsql = "";
             var field_name = field["name"].toStr();
@@ -268,7 +268,7 @@ class DevCodeGen
         foreach (var fk in fks)
             db.exec("ALTER TABLE " + db.qid(fk["table_name"], false) + " DROP CONSTRAINT " + db.qid(fk["name"], false));
 
-        foreach (FwRow entity in entities)
+        foreach (FwDict entity in entities)
         {
             var sql = entity2SQL(entity);
             // create db tables directly in db
@@ -292,7 +292,7 @@ class DevCodeGen
         var entities = DevEntityBuilder.loadJson<FwList>(config_file);
 
         var database_sql = "";
-        foreach (FwRow entity in entities)
+        foreach (FwDict entity in entities)
         {
             var sql = entity2SQL(entity);
             // only create App_Data/database.sql
@@ -319,14 +319,14 @@ class DevCodeGen
         var config_file = fw.config("template") + DB_JSON_PATH;
         var entities = DevEntityBuilder.loadJson<FwList>(config_file);
 
-        foreach (FwRow entity in entities)
+        foreach (FwDict entity in entities)
         {
             this.createModel(entity);
             this.createController(entity, entities);
         }
     }
 
-    public void createModel(FwRow entity)
+    public void createModel(FwDict entity)
     {
         string table_name = entity["table"].toStr();
         string model_name = entity["model_name"].toStr();
@@ -357,7 +357,7 @@ class DevCodeGen
             var field_main_id = "";
             var model_linked = "";
             var field_linked_id = "";
-            foreach (FwRow fk in (entity["foreign_keys"] as FwList ?? new FwList()))
+            foreach (FwDict fk in (entity["foreign_keys"] as FwList ?? new FwList()))
             {
                 if (field_main_id == "")
                 {
@@ -402,11 +402,11 @@ class DevCodeGen
 
                 // detect id and iname fields
                 var i = 1;
-                FwRow? fld_int = null;
-                FwRow? fld_identity = null;
-                FwRow? fld_iname = null;
+                FwDict? fld_int = null;
+                FwDict? fld_identity = null;
+                FwDict? fld_iname = null;
                 var is_normalize_names = false;
-                foreach (FwRow fld in entity_fields)
+                foreach (FwDict fld in entity_fields)
                 {
                     // find identity
                     if (fld_identity == null && fld["is_identity"].toBool())
@@ -465,16 +465,16 @@ class DevCodeGen
         Utils.setFileContent(path + @"\" + model_name + ".cs", ref mdemo);
     }
 
-    private void createLookup(FwRow entity)
+    private void createLookup(FwDict entity)
     {
         string model_name = entity["model_name"].toStr();
-        var controller_options = entity["controller"] as FwRow ?? new FwRow();
+        var controller_options = entity["controller"] as FwDict ?? new FwDict();
         string controller_url = controller_options["url"].toStr();
         string controller_title = controller_options["title"].toStr();
 
         var icode = controller_url.Replace("/", ""); // /Admin/LogTypes => AdminLogTypes
 
-        var item = new FwRow
+        var item = new FwDict
         {
             { "igroup", "User" },
             { "icode", icode },
@@ -518,10 +518,10 @@ class DevCodeGen
         Utils.setFileContent(upd_file, ref upd_sql, true);
     }
 
-    public bool createController(FwRow entity, FwList entities)
+    public bool createController(FwDict entity, FwList entities)
     {
         string model_name = entity["model_name"].toStr();
-        var controller_options = entity["controller"] as FwRow ?? new FwRow();
+        var controller_options = entity["controller"] as FwDict ?? new FwDict();
         string controller_url = controller_options["url"].toStr();
         string controller_title = controller_options["title"].toStr();
         string controller_type = controller_options["type"].toStr(); // ""(dynamic), "vue", "lookup", "api"
@@ -580,7 +580,7 @@ class DevCodeGen
 
         // replace in templates: DemoDynamic to Title
         // replace in url.html /Admin/DemosDynamic to controller_url
-        FwRow replacements = new()
+        FwDict replacements = new()
         {
             { controller_from_url, controller_url },
             { controller_from_title, controller_title }
@@ -611,7 +611,7 @@ class DevCodeGen
         return true;
     }
 
-    public void updateControllerConfigJson(FwRow entity, string tpl_to, FwList entities)
+    public void updateControllerConfigJson(FwDict entity, string tpl_to, FwList entities)
     {
         // save_fields - all fields from model table (except id and sytem add_time/user fields)
         // save_fields_checkboxes - empty (TODO based on bit field?)
@@ -624,7 +624,7 @@ class DevCodeGen
         // field NOT NULL and no default - required
         // field has foreign key - add that table as dropdown
         var config_file = tpl_to + "/config.json";
-        var config = DevEntityBuilder.loadJson<FwRow>(config_file);
+        var config = DevEntityBuilder.loadJson<FwDict>(config_file);
 
         updateControllerConfig(entity, config, entities);
 
@@ -632,7 +632,7 @@ class DevCodeGen
         DevEntityBuilder.saveJsonController(config, config_file);
     }
 
-    public void updateControllerConfig(FwRow entity, FwRow config, FwList? entities = null)
+    public void updateControllerConfig(FwDict entity, FwDict config, FwList? entities = null)
     {
         string model_name = entity["model_name"].toStr();
         var model = fw.model(model_name);
@@ -641,7 +641,7 @@ class DevCodeGen
         if (string.IsNullOrEmpty(table_name))
             table_name = model.table_name;
 
-        var controller_options = entity["controller"] as FwRow ?? [];
+        var controller_options = entity["controller"] as FwDict ?? [];
         string controller_title = controller_options["title"].toStr();
         if (controller_title.Length == 0)
             controller_title = Utils.name2human(model_name);
@@ -651,7 +651,7 @@ class DevCodeGen
 
         var sys_fields = Utils.qh(SYS_FIELDS);
 
-        FwRow tables = []; // hindex by table name to entities
+        FwDict tables = []; // hindex by table name to entities
         FwList fields = entity["fields"] as FwList ?? new FwList();
         if (fields == null)
         {
@@ -666,12 +666,12 @@ class DevCodeGen
                 entity["is_fw"] = true; // TODO actually detect if there any fields to be normalized
             var atables = db.tables();
             foreach (string tbl in atables)
-                tables[tbl] = new FwRow();
+                tables[tbl] = new FwDict();
         }
         else
         {
             entities ??= [];
-            foreach (FwRow tentity in entities)
+            foreach (FwDict tentity in entities)
             {
                 if (tentity == null)
                     continue;
@@ -684,8 +684,8 @@ class DevCodeGen
         var is_fw = entity["is_fw"].toBool();
 
         //build index by field name
-        FwRow hfields = []; // name => fld index
-        foreach (FwRow fld in fields)
+        FwDict hfields = []; // name => fld index
+        foreach (FwDict fld in fields)
         {
             var fname = fld["name"].toStr();
             if (fname.Length > 0)
@@ -697,7 +697,7 @@ class DevCodeGen
         var hforeign_keys = Utils.array2hashtable(foreign_keys, "column"); // column -> fk info
         if (hfields.ContainsKey("add_users_id") && !hforeign_keys.ContainsKey("add_users_id"))
         {
-            FwRow fk = new()
+            FwDict fk = new()
             {
                 ["pk_column"] = "id",
                 ["pk_table"] = "users",
@@ -707,7 +707,7 @@ class DevCodeGen
         }
         if (hfields.ContainsKey("upd_users_id") && !hforeign_keys.ContainsKey("add_users_id"))
         {
-            FwRow fk = new()
+            FwDict fk = new()
             {
                 ["pk_column"] = "id",
                 ["pk_table"] = "users",
@@ -719,13 +719,13 @@ class DevCodeGen
 
         FwList saveFields = [];
         FwList saveFieldsNullable = [];
-        FwRow hFieldsMap = [];   // name => iname - map for the view_list_map
-        FwRow hFieldsMapEdit = []; // for Vue editable list
-        FwRow hFieldsMapFW = []; // fw_name => name
+        FwDict hFieldsMap = [];   // name => iname - map for the view_list_map
+        FwDict hFieldsMapEdit = []; // for Vue editable list
+        FwDict hFieldsMapFW = []; // fw_name => name
 
-        List<FwRow> formTabs = [
+        List<FwDict> formTabs = [
             //default
-            new FwRow
+            new FwDict
             {
                 ["tab"] = "",
                 ["label"] = "Main"
@@ -733,12 +733,12 @@ class DevCodeGen
         ]; // show form tabs
 
         // tab => fields
-        Dictionary<string, List<List<FwRow>>> showFieldsTabs = [];  // show fields tabs/columns
-        Dictionary<string, List<List<FwRow>>> showFormFieldsTabs = []; // show form fields tabs/columns
+        Dictionary<string, List<List<FwDict>>> showFieldsTabs = [];  // show fields tabs/columns
+        Dictionary<string, List<List<FwDict>>> showFormFieldsTabs = []; // show form fields tabs/columns
 
-        foreach (FwRow fld in fields)
+        foreach (FwDict fld in fields)
         {
-            var ui = fld["ui"] as FwRow ?? new FwRow(); // ui options for the field
+            var ui = fld["ui"] as FwDict ?? new FwDict(); // ui options for the field
             if (ui.ContainsKey("skip"))
                 continue; //skip unnecessary fields
 
@@ -752,7 +752,7 @@ class DevCodeGen
 
             var is_field_fk = hforeign_keys.ContainsKey(fld_name);
             hFieldsMapEdit[fld_name] = fld["iname"]; //use regular field for Vue editable list
-            if (is_field_fk && hforeign_keys[fld_name] is FwRow fkInfo)
+            if (is_field_fk && hforeign_keys[fld_name] is FwDict fkInfo)
             {
                 var fk_field_name = fkInfo["column"].toStr();
                 if (fk_field_name.Length > 0)
@@ -771,8 +771,8 @@ class DevCodeGen
                 }
             }
 
-            FwRow sf = [];  // show fields
-            FwRow sff = []; // showform fields
+            FwDict sf = [];  // show fields
+            FwDict sff = []; // showform fields
 
             sf["field"] = fld_name;
             sf["label"] = fld["iname"];
@@ -819,7 +819,7 @@ class DevCodeGen
 
                 // check foreign keys - and make type=select
                 var is_fk = false;
-                foreach (FwRow fkinfo in foreign_keys)
+                foreach (FwDict fkinfo in foreign_keys)
                 {
                     if (fkinfo["column"].toStr() == fld_name)
                     {
@@ -934,14 +934,14 @@ class DevCodeGen
             if (m.Success)
             {
                 //table could be a junction table name then
-                var tentity = tables[table] as FwRow ?? new FwRow();
+                var tentity = tables[table] as FwDict ?? new FwDict();
                 var is_junction = tentity["is_junction"].toBool();
                 var junction_model = tentity["model_name"].toStr();
                 string table_name_linked = m.Groups[1].Value;
                 if (!string.IsNullOrEmpty(table_name_linked) && tables.ContainsKey(table_name_linked))
                 {
                     // if tables "TBL2" and "MODELTBL_TBL2" exists - add control for linked table
-                    FwRow sflink = new()
+                    FwDict sflink = new()
                     {
                         { "field", table_name_linked + "_link" },
                         { "label", Utils.name2human(table_name_linked) },
@@ -956,7 +956,7 @@ class DevCodeGen
                     else
                         sflink["lookup_model"] = DevEntityBuilder.tablenameToModel(table_name_linked);
 
-                    FwRow sfflink = new()
+                    FwDict sfflink = new()
                     {
                         { "field", table_name_linked + "_link" },
                         { "label", Utils.name2human(table_name_linked) },
@@ -991,7 +991,7 @@ class DevCodeGen
             config["list_sortdef"] = "iname asc";
         else if (fields.Count > 0)
         {
-            var firstField = fields[0] as FwRow;
+            var firstField = fields[0] as FwDict;
             var fwname = firstField?["fw_name"].toStr();
             if (!string.IsNullOrEmpty(fwname))
                 config["list_sortdef"] = fwname;
@@ -1010,13 +1010,13 @@ class DevCodeGen
             var fk_joins = new FwList();
             for (int i = 0; i < foreign_keys.Count; i++)
             {
-                var fk = foreign_keys[i] as FwRow ?? new FwRow();
+                var fk = foreign_keys[i] as FwDict ?? new FwDict();
                 var alias = $"fk{i}";
                 var tcolumn = fk["column"].toStr();
                 var pk_table = fk["pk_table"].toStr();
                 var pk_column = fk["pk_column"].toStr();
 
-                var field = hfields[tcolumn] as FwRow ?? new FwRow();
+                var field = hfields[tcolumn] as FwDict ?? new FwDict();
                 string sql_join;
                 if (field["is_nullable"].toBool())
                 {
@@ -1087,7 +1087,7 @@ class DevCodeGen
         }
     }
 
-    public static void addToTabColumn(Dictionary<string, List<List<FwRow>>> showFieldsTabs, string tab, int col, FwRow sf)
+    public static void addToTabColumn(Dictionary<string, List<List<FwDict>>> showFieldsTabs, string tab, int col, FwDict sf)
     {
         if (!showFieldsTabs.ContainsKey(tab))
             showFieldsTabs[tab] = [
@@ -1100,9 +1100,9 @@ class DevCodeGen
     }
 
     //add tabs to config[key] and config[key_tab] based on showFieldsTabs and update config["form_tabs"]
-    public static void configAddTabs(FwRow config, string key, Dictionary<string, List<List<FwRow>>> showFieldsTabs)
+    public static void configAddTabs(FwDict config, string key, Dictionary<string, List<List<FwDict>>> showFieldsTabs)
     {
-        var formTabs = config["form_tabs"] as List<FwRow> ?? new List<FwRow>();
+        var formTabs = config["form_tabs"] as List<FwDict> ?? new List<FwDict>();
         config["form_tabs"] = formTabs;
 
         var tabs = new FwList();
@@ -1120,7 +1120,7 @@ class DevCodeGen
             //add tab to formTabs if not exists
             if (!formTabs.Any(x => x != null && x["tab"].toStr() == tab))
             {
-                formTabs.Add(new FwRow
+                formTabs.Add(new FwDict
                 {
                     ["tab"] = tab,
                     ["label"] = Utils.name2human(tab)
@@ -1129,7 +1129,7 @@ class DevCodeGen
         }
     }
 
-    public static FwList makeLayoutForFields(List<List<FwRow>> fieldsCols)
+    public static FwList makeLayoutForFields(List<List<FwDict>> fieldsCols)
     {
         //remove/filter empty columns from showFieldsCols
         var fieldsColsFinal = fieldsCols.Where(x => x.Count > 0).ToList();
@@ -1150,12 +1150,12 @@ class DevCodeGen
         return configFields;
     }
 
-    public static int addToFormColumns(FwRow fld, FwRow sf, FwRow sff,
-        Dictionary<string, List<List<FwRow>>> showFieldsTabs,
-        Dictionary<string, List<List<FwRow>>> showFormFieldsTabs,
-        FwRow sys_fields, FwList fields)
+    public static int addToFormColumns(FwDict fld, FwDict sf, FwDict sff,
+        Dictionary<string, List<List<FwDict>>> showFieldsTabs,
+        Dictionary<string, List<List<FwDict>>> showFormFieldsTabs,
+        FwDict sys_fields, FwList fields)
     {
-        var ui = fld["ui"] as FwRow ?? new FwRow(); // ui options for the field
+        var ui = fld["ui"] as FwDict ?? new FwDict(); // ui options for the field
         var col = 0; //default to left
 
         if (fld["is_identity"].toBool() || sys_fields.Contains(fld["name"] ?? ""))
@@ -1199,13 +1199,13 @@ class DevCodeGen
     //
     // alternatively - just show couple fields
     // If is_fw Then config("view_list_defaults") = "id" & If(hfields.ContainsKey("iname"), " iname", "") & If(hfields.ContainsKey("add_time"), " add_time", "") & If(hfields.ContainsKey("status"), " status", "")
-    public static (string view, string edit) getListDefaults(FwList fields, FwRow hforeign_keys, FwRow sys_fields, bool is_fw)
+    public static (string view, string edit) getListDefaults(FwList fields, FwDict hforeign_keys, FwDict sys_fields, bool is_fw)
     {
         string view_list_defaults = "";
         string edit_list_defaults = "";
 
         int defaults_ctr = 0;
-        var rfields = fields.Cast<FwRow>()
+        var rfields = fields.Cast<FwDict>()
             .Where(fld =>
             {
                 var fname = fld["name"].toStr();
@@ -1218,7 +1218,7 @@ class DevCodeGen
                 return !fld["is_identity"].toBool() && !isLongText && !isSystemNonStatus;
             })
             .OrderByDescending(fld => !fld["is_nullable"].toBool() && fld["default"] == null);
-        foreach (FwRow field in rfields)
+        foreach (FwDict field in rfields)
         {
             var fname = field["name"].toStr();
             if (defaults_ctr > 5 && fname != "status")
@@ -1227,7 +1227,7 @@ class DevCodeGen
             edit_list_defaults += (defaults_ctr == 0 ? "" : " ") + fname; //for edit list we need real field names only
 
             if (hforeign_keys.ContainsKey(fname))
-                fname = (hforeign_keys[fname] as FwRow)?["column"].toStr() + "_iname";
+                fname = (hforeign_keys[fname] as FwDict)?["column"].toStr() + "_iname";
 
             if (!is_fw)
                 fname = field["fw_name"].toStr();
@@ -1241,7 +1241,7 @@ class DevCodeGen
     }
 
     //return true if skip this field
-    public static bool overrideSpecialFields(FwRow fld, FwRow sf, FwRow sff)
+    public static bool overrideSpecialFields(FwDict fld, FwDict sf, FwDict sff)
     {
         var is_skip = false;
         var field_name = fld["name"].toStr();
@@ -1339,9 +1339,9 @@ class DevCodeGen
         return is_skip;
     }
 
-    public static void overrideUIOptions(FwRow fld, FwRow sf, FwRow sff, string model_name)
+    public static void overrideUIOptions(FwDict fld, FwDict sf, FwDict sff, string model_name)
     {
-        var ui = fld["ui"] as FwRow ?? new FwRow(); // ui options for the field
+        var ui = fld["ui"] as FwDict ?? new FwDict(); // ui options for the field
 
         // override ui options
         if (ui.ContainsKey("required"))
@@ -1436,7 +1436,7 @@ class DevCodeGen
 
     public static void makeValueTags(FwList fields)
     {
-        foreach (FwRow def in fields)
+        foreach (FwDict def in fields)
         {
             var tag = "<~i[" + def["field"] + "]";
             switch (def["type"])
@@ -1534,7 +1534,7 @@ class DevCodeGen
     // update by url
     private void updateMenuItem(string controller_url, string controller_title)
     {
-        var fields = new FwRow()
+        var fields = new FwDict()
         {
             {"url",controller_url},
             {"iname",controller_title},
