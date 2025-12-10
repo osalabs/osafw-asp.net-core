@@ -455,9 +455,14 @@ public class ParsePage
         // if filename contains a mask - load all files via recursive calls and return as a single template
         if (filename.Contains('*'))
         {
-            string folder = Path.GetDirectoryName(filename);
-            string mask = Path.GetFileName(filename);
-            string[] files = Directory.GetFiles(folder, mask);
+            var folder = Path.GetDirectoryName(filename);
+            var mask = Path.GetFileName(filename);
+            if (string.IsNullOrEmpty(folder))
+                folder = ".";
+            if (string.IsNullOrEmpty(mask))
+                return "";
+
+            string[] files = Directory.Exists(folder) ? Directory.GetFiles(folder, mask) : Array.Empty<string>();
             StringBuilder sb = new();
             foreach (var file in files)
                 sb.Append(precache_file(file));
@@ -472,7 +477,7 @@ public class ParsePage
         // logger("preacaching [" & filename & "]")
 
         // check and get from cache
-        if (FILE_CACHE.TryGetValue(filename, out Hashtable cached_item))
+        if (FILE_CACHE.TryGetValue(filename, out Hashtable? cached_item) && cached_item != null)
         {
             // if debug is off - don't check modify time for better performance (but app restart would be necessary if template changed)
             if (is_check_file_modifications)
@@ -1096,23 +1101,41 @@ public class ParsePage
                         if (mMarkdownToHtml == null)
                         {
                             System.Reflection.Assembly aMarkdig = System.Reflection.Assembly.Load("Markdig");
-                            Type tMarkdown = aMarkdig.GetType("Markdig.Markdown");
-                            Type tMarkdownPipeline = aMarkdig.GetType("Markdig.MarkdownPipeline");
-                            Type tMarkdownPipelineBuilder = aMarkdig.GetType("Markdig.MarkdownPipelineBuilder");
-                            Type tMarkdownExtensions = aMarkdig.GetType("Markdig.MarkdownExtensions");
-                            Type tMarkdownParserContext = aMarkdig.GetType("Markdig.MarkdownParserContext");
+                            Type? tMarkdown = aMarkdig.GetType("Markdig.Markdown");
+                            Type? tMarkdownPipeline = aMarkdig.GetType("Markdig.MarkdownPipeline");
+                            Type? tMarkdownPipelineBuilder = aMarkdig.GetType("Markdig.MarkdownPipelineBuilder");
+                            Type? tMarkdownExtensions = aMarkdig.GetType("Markdig.MarkdownExtensions");
+                            Type? tMarkdownParserContext = aMarkdig.GetType("Markdig.MarkdownParserContext");
 
-                            mMarkdownToHtml = tMarkdown.GetMethod("ToHtml", [typeof(string), tMarkdownPipeline, tMarkdownParserContext]);
+                            if (tMarkdown == null || tMarkdownPipeline == null || tMarkdownPipelineBuilder == null || tMarkdownExtensions == null || tMarkdownParserContext == null)
+                            {
+                                logger(LogLevel.WARN, @"error parsing markdown, install Markdig package");
+                                attr_count = 0;
+                            }
+                            else
+                            {
+                                mMarkdownToHtml = tMarkdown.GetMethod("ToHtml", [typeof(string), tMarkdownPipeline, tMarkdownParserContext]);
 
-                            var configureMethod = tMarkdownExtensions.GetMethod("Configure");
+                                var configureMethod = tMarkdownExtensions.GetMethod("Configure");
 
-                            var pipelineBuilder = Activator.CreateInstance(tMarkdownPipelineBuilder);
-                            configureMethod.Invoke(null, [pipelineBuilder, "common+hardlinebreak+gfm-pipetables+emphasisextras+listextras+footers+citations+abbreviations+figures+bootstrap+medialinks+autoidentifiers+tasklists+autolinks+customcontainers+attributes"]);
+                                var pipelineBuilder = Activator.CreateInstance(tMarkdownPipelineBuilder);
+                                var buildMethod = tMarkdownPipelineBuilder.GetMethod("Build");
 
-                            MarkdownPipeline = tMarkdownPipelineBuilder.GetMethod("Build").Invoke(pipelineBuilder, null);
+                                if (configureMethod == null || pipelineBuilder == null || buildMethod == null)
+                                {
+                                    logger(LogLevel.WARN, @"error parsing markdown, install Markdig package");
+                                    attr_count = 0;
+                                }
+                                else
+                                {
+                                    configureMethod.Invoke(null, [pipelineBuilder, "common+hardlinebreak+gfm-pipetables+emphasisextras+listextras+footers+citations+abbreviations+figures+bootstrap+medialinks+autoidentifiers+tasklists+autolinks+customcontainers+attributes"]);
+
+                                    MarkdownPipeline = buildMethod.Invoke(pipelineBuilder, null);
+                                }
+                            }
                         }
 
-                        if (mMarkdownToHtml != null)
+                        if (mMarkdownToHtml != null && MarkdownPipeline != null)
                             value = mMarkdownToHtml.Invoke(null, [value, MarkdownPipeline, null]).toStr();
                     }
                     catch (Exception ex)

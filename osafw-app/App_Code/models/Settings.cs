@@ -62,7 +62,7 @@ public class Settings : FwModel<Settings.Row>
     /// <param name="icode"></param>
     /// <returns></returns>
     /// <remarks></remarks>
-    public object readd(string icode)
+    public object? readd(string icode)
     {
         return read(icode).toDateOrNull();
     }

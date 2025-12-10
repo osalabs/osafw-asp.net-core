@@ -354,7 +354,7 @@ public class Att : FwModel<Att.Row>
 
         fw.response.Headers.LastModified = filetime.ToString("R");// this allows browser to send If-Modified-Since request headers (unless Ctrl+F5)
 
-        string ifmodhead = fw.request.Headers.IfModifiedSince;
+        string ifmodhead = fw.request.Headers.IfModifiedSince.ToString();
         if (ifmodhead != null && DateTime.TryParse(ifmodhead, out DateTime ifmod) && ifmod >= filetime)
         {
             fw.response.StatusCode = 304; // not modified

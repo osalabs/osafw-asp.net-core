@@ -931,7 +931,7 @@ public abstract class FwController
         return item;
     }
 
-    public virtual TRow modelOneT<TRow>(int id) where TRow : class, new()
+    public virtual TRow? modelOneT<TRow>(int id) where TRow : class, new()
     {
         return ensureTypedModel<TRow>().oneT(id);
     }
@@ -1121,7 +1121,7 @@ public abstract class FwController
     //called when unhandled error happens in action
     public virtual Hashtable? actionError(Exception? ex, object[] args)
     {
-        var edi = ExceptionDispatchInfo.Capture(ex);
+        var edi = ExceptionDispatchInfo.Capture(ex ?? new Exception("Unknown error"));
 
         Hashtable? ps = null;
         if (fw.isJsonExpected())
@@ -1131,7 +1131,7 @@ public abstract class FwController
         else
         {
             //if not json - redirect to route route_onerror if it's defined
-            setFormError(ex);
+            setFormError(ex ?? new Exception("Unknown error"));
 
             if (string.IsNullOrEmpty(route_onerror))
                 edi.Throw(); //re-throw exception
@@ -1362,7 +1362,10 @@ public abstract class FwController
         list_headers = getViewListArr(fields);
         // add search from user's submit
         foreach (Hashtable header in list_headers)
-            header["search_value"] = list_filter_search[header["field_name"]];
+        {
+            var fieldName = header["field_name"].toStr();
+            header["search_value"] = list_filter_search?[fieldName];
+        }
 
         if (is_cols)
         {

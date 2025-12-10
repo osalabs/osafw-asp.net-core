@@ -395,8 +395,9 @@ public class FwVueController : FwDynamicController
                 foreach (Hashtable att_item in att_items)
                 {
                     fw.model<Att>().filterForJson(att_item);
-                    attachments[att_item["id"]] = att_item;
-                    att_links.Add(att_item["id"]);
+                    var attId = att_item["id"].toInt();
+                    attachments[attId] = att_item;
+                    att_links.Add(attId);
                 }
             }
             else if (dtype == "att_files" || dtype == "att_files_edit")
@@ -407,8 +408,9 @@ public class FwVueController : FwDynamicController
                 foreach (Hashtable att_item in att_items)
                 {
                     fw.model<Att>().filterForJson(att_item);
-                    attachments[att_item["id"]] = att_item;
-                    ids.Add(att_item["id"]);
+                    var attId = att_item["id"].toInt();
+                    attachments[attId] = att_item;
+                    ids.Add(attId);
                 }
                 att_files[field_name] = ids;
             }

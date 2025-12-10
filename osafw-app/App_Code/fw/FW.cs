@@ -59,9 +59,9 @@ public class FW : IDisposable
     public DB db;
     public FwLogger flogger = new();
 
-    public HttpContext? context;
-    public HttpRequest? request;
-    public HttpResponse? response;
+    public HttpContext context = null!;
+    public HttpRequest request = null!;
+    public HttpResponse response = null!;
 
     public string request_url = ""; // current request url (relative to application url)
     public FwRoute route = new();
@@ -175,18 +175,18 @@ public class FW : IDisposable
 
     public FW(HttpContext? context, IConfiguration configuration)
     {
-        if (context != null)
-        {
-            this.context = context;
-            this.request = context.Request;
-            this.response = context.Response;
-        }
+        // DefaultHttpContext keeps offline runs usable without null checks while still matching the runtime request surface
+        var currentContext = context ?? new DefaultHttpContext();
+        this.context = currentContext;
+        this.request = currentContext.Request;
+        this.response = currentContext.Response;
 
         // pass host explicitly so FwConfig can cache per-host settings
         FwConfig.init(context, configuration, context?.Request.Host.ToString());
 
         var env = config("config_override").toStr();
-        flogger = new FwLogger((LogLevel)config("log_level"), config("log").toStr(), config("site_root").toStr(), config("log_max_size").toLong());
+        var logLevel = (LogLevel)config("log_level").toInt((int)LogLevel.ERROR);
+        flogger = new FwLogger(logLevel, config("log").toStr(), config("site_root").toStr(), config("log_max_size").toLong());
         flogger.setScope(env, Session("login"));
 
         db = getDB();
@@ -378,7 +378,8 @@ public class FW : IDisposable
         }
 
         // cut the App path from the begin
-        if (request.PathBase.Value.Length > 1) url = url.Replace(request.PathBase, "");
+        var pathBase = request.PathBase.Value;
+        if (!string.IsNullOrEmpty(pathBase) && pathBase.Length > 1) url = url.Replace(request.PathBase, "");
         url = url.TrimEnd('/'); // cut last / if any
 
         if (!is_url_param)
@@ -416,54 +417,51 @@ public class FW : IDisposable
         string controller_prefix = ""; // prefix without "/", i.e. /Admin/Reports -> AdminReports
 
         // process config special routes (redirects, rewrites)
-        Hashtable routes = (Hashtable)this.config("routes");
+        Hashtable routes = this.config("routes") as Hashtable ?? [];
         bool is_routes_found = false;
-        if (routes != null)
+        foreach (string route_key in routes.Keys)
         {
-            foreach (string route_key in routes.Keys)
+            if (url != route_key)
+                continue;
+
+            string rdest = routes[route_key].toStr();
+            if (string.IsNullOrEmpty(rdest))
             {
-                if (url == route_key)
+                logger(LogLevel.WARN, "Wrong route destination: " + rdest);
+                continue;
+            }
+
+            string destination = rdest;
+            string? overrideMethod = null;
+
+            int spaceIndex = destination.IndexOf(' ');
+            if (spaceIndex > 0)
+            {
+                string candidate = destination[..spaceIndex];
+                if (METHOD_ALLOWED.ContainsKey(candidate))
                 {
-                    string rdest = routes[route_key].toStr();
-                    if (string.IsNullOrEmpty(rdest))
-                    {
-                        logger(LogLevel.WARN, "Wrong route destination: " + rdest);
-                        continue;
-                    }
-
-                    string destination = rdest;
-                    string overrideMethod = null;
-
-                    int spaceIndex = destination.IndexOf(' ');
-                    if (spaceIndex > 0)
-                    {
-                        string candidate = destination[..spaceIndex];
-                        if (METHOD_ALLOWED.ContainsKey(candidate))
-                        {
-                            overrideMethod = candidate;
-                            destination = destination[(spaceIndex + 1)..].TrimStart();
-                        }
-                    }
-
-                    if (!string.IsNullOrEmpty(overrideMethod))
-                        route.method = overrideMethod;
-
-                    if (destination.StartsWith('/'))
-                    {
-                        // if started from / - this is redirect url
-                        url = destination;
-                        continue;
-                    }
-
-                    // it's a direct class-method to call, no further REST processing required
-                    is_routes_found = true;
-                    string[] sroute = destination.Split("::", 2);
-                    route.controller = Utils.routeFixChars(sroute[0]);
-                    if (sroute.Length > 1)
-                        route.action_raw = sroute[1];
-                    break;
+                    overrideMethod = candidate;
+                    destination = destination[(spaceIndex + 1)..].TrimStart();
                 }
             }
+
+            if (!string.IsNullOrEmpty(overrideMethod))
+                route.method = overrideMethod;
+
+            if (destination.StartsWith('/'))
+            {
+                // if started from / - this is redirect url
+                url = destination;
+                continue;
+            }
+
+            // it's a direct class-method to call, no further REST processing required
+            is_routes_found = true;
+            string[] sroute = destination.Split("::", 2);
+            route.controller = Utils.routeFixChars(sroute[0]);
+            if (sroute.Length > 1)
+                route.action_raw = sroute[1];
+            break;
         }
 
         if (!is_routes_found)
@@ -693,12 +691,12 @@ public class FW : IDisposable
         {
             // XSS validation failed
             // first, check if we are under xss-excluded prefix
-            Hashtable no_xss_prefixes = (Hashtable)this.config("no_xss_prefixes_prefixes");
-            if (no_xss_prefixes == null || !no_xss_prefixes.ContainsKey(route.prefix))
+            Hashtable no_xss_prefixes = this.config("no_xss_prefixes_prefixes") as Hashtable ?? [];
+            if (!no_xss_prefixes.ContainsKey(route.prefix))
             {
                 // second, check if we are under xss-excluded controller
-                Hashtable no_xss = (Hashtable)this.config("no_xss");
-                if (no_xss == null || !no_xss.ContainsKey(route.controller))
+                Hashtable no_xss = this.config("no_xss") as Hashtable ?? [];
+                if (!no_xss.ContainsKey(route.controller))
                 {
                     if (is_die)
                         throw new AuthException("XSS Error. Reload the page or try to re-login");
@@ -865,8 +863,8 @@ public class FW : IDisposable
                     ps.Remove("_json"); // remove internal flag
                     this.parserJson(ps);
                 }
-                else
-                    this.parserJson(ps["_json"]);// if _json exists - return only this element content
+                    else
+                        this.parserJson(ps["_json"] ?? new Hashtable());// if _json exists - return only this element content
             }
             else
             {
@@ -970,10 +968,11 @@ public class FW : IDisposable
             var DateFormatShort = DateFormat + " " + DateUtils.mapTimeFormat(userTimeFormat);
             var DateFormatLong = DateFormat + " " + DateUtils.mapTimeWithSecondsFormat(userTimeFormat);
 
-            pp_instance = new ParsePage(new ParsePageOptions
-            {
-                TemplatesRoot = config("template").toStr(),
-                IsCheckFileModifications = (LogLevel)config("log_level") >= LogLevel.DEBUG,
+                var logLevel = (LogLevel)config("log_level").toInt();
+                pp_instance = new ParsePage(new ParsePageOptions
+                {
+                    TemplatesRoot = config("template").toStr(),
+                    IsCheckFileModifications = logLevel >= LogLevel.DEBUG,
                 Lang = G["lang"].toStr(),
                 IsLangUpdate = config("is_lang_update").toBool(),
                 GlobalsGetter = () => G,
@@ -1065,7 +1064,7 @@ public class FW : IDisposable
             route.controller_path = "/Home";
             route.controller = "Home";
             route.action = "NotFound";
-            co = controller(route.controller);
+            co = controller(route.controller) ?? throw new ApplicationException("Home controller not found");
             //we should always have HomeController
         }
         Type controllerClass = co.GetType();
@@ -1080,7 +1079,7 @@ public class FW : IDisposable
         {
             logger(LogLevel.DEBUG, "No method found for controller.action=[", route.controller, ".", route.action, "], checking route_default_action");
             // no method found - try to get default action
-            FieldInfo pInfo = controllerClass.GetField("route_default_action");
+            FieldInfo? pInfo = controllerClass.GetField("route_default_action");
             if (pInfo != null)
             {
                 string pvalue = pInfo.GetValue(null).toStr();
@@ -1133,6 +1132,7 @@ public class FW : IDisposable
     // Call controller
     public void callController(FwController controller, MethodInfo actionMethod, object[]? args = null)
     {
+        args ??= Array.Empty<object>();
         //convert args to parameters with proper types
         System.Reflection.ParameterInfo[] @params = actionMethod.GetParameters();
         object[] parameters = new object[@params.Length];
@@ -1151,7 +1151,8 @@ public class FW : IDisposable
                     //cannot convert, use default value for param type if param doesn't have default
                     if (!pi.HasDefaultValue)
                     {
-                        parameters[i] = Activator.CreateInstance(pi.ParameterType);
+                        var defaultValue = Activator.CreateInstance(pi.ParameterType) ?? new object();
+                        parameters[i] = defaultValue;
                     }
                 }
                 //logger("ARG OUT:", parameters[i].GetType().Name, parameters[i]);
@@ -1207,16 +1208,16 @@ public class FW : IDisposable
     #region controller action method resolution with caching
     private sealed class ControllerActionCache
     {
-        private readonly Dictionary<string, MethodInfo> stringHandlers;
-        private readonly Dictionary<string, MethodInfo> numericHandlers;
-        private readonly Dictionary<string, MethodInfo> declaredFallback;
-        private readonly Dictionary<string, MethodInfo> anyFallback;
+        private readonly Dictionary<string, MethodInfo?> stringHandlers;
+        private readonly Dictionary<string, MethodInfo?> numericHandlers;
+        private readonly Dictionary<string, MethodInfo?> declaredFallback;
+        private readonly Dictionary<string, MethodInfo?> anyFallback;
 
         public ControllerActionCache(
-            Dictionary<string, MethodInfo> stringHandlers,
-            Dictionary<string, MethodInfo> numericHandlers,
-            Dictionary<string, MethodInfo> declaredFallback,
-            Dictionary<string, MethodInfo> anyFallback)
+            Dictionary<string, MethodInfo?> stringHandlers,
+            Dictionary<string, MethodInfo?> numericHandlers,
+            Dictionary<string, MethodInfo?> declaredFallback,
+            Dictionary<string, MethodInfo?> anyFallback)
         {
             this.stringHandlers = stringHandlers;
             this.numericHandlers = numericHandlers;
@@ -1224,13 +1225,13 @@ public class FW : IDisposable
             this.anyFallback = anyFallback;
         }
 
-        public bool TryGetString(string actionName, out MethodInfo method) => stringHandlers.TryGetValue(actionName, out method);
+        public bool TryGetString(string actionName, out MethodInfo? method) => stringHandlers.TryGetValue(actionName, out method);
 
-        public bool TryGetNumeric(string actionName, out MethodInfo method) => numericHandlers.TryGetValue(actionName, out method);
+        public bool TryGetNumeric(string actionName, out MethodInfo? method) => numericHandlers.TryGetValue(actionName, out method);
 
-        public bool TryGetDeclaredFallback(string actionName, out MethodInfo method) => declaredFallback.TryGetValue(actionName, out method);
+        public bool TryGetDeclaredFallback(string actionName, out MethodInfo? method) => declaredFallback.TryGetValue(actionName, out method);
 
-        public bool TryGetAnyFallback(string actionName, out MethodInfo method) => anyFallback.TryGetValue(actionName, out method);
+        public bool TryGetAnyFallback(string actionName, out MethodInfo? method) => anyFallback.TryGetValue(actionName, out method);
     }
 
     private static MethodInfo? resolveActionMethod(Type controllerClass, string actionName, bool isIdNumeric)
@@ -1260,10 +1261,10 @@ public class FW : IDisposable
 
     private static ControllerActionCache buildControllerActionCache(Type controllerClass)
     {
-        var stringHandlers = new Dictionary<string, MethodInfo>(StringComparer.OrdinalIgnoreCase);
-        var numericHandlers = new Dictionary<string, MethodInfo>(StringComparer.OrdinalIgnoreCase);
-        var declaredFallback = new Dictionary<string, MethodInfo>(StringComparer.OrdinalIgnoreCase);
-        var anyFallback = new Dictionary<string, MethodInfo>(StringComparer.OrdinalIgnoreCase);
+        var stringHandlers = new Dictionary<string, MethodInfo?>(StringComparer.OrdinalIgnoreCase);
+        var numericHandlers = new Dictionary<string, MethodInfo?>(StringComparer.OrdinalIgnoreCase);
+        var declaredFallback = new Dictionary<string, MethodInfo?>(StringComparer.OrdinalIgnoreCase);
+        var anyFallback = new Dictionary<string, MethodInfo?>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var method in controllerClass.GetMethods(BindingFlags.Public | BindingFlags.Instance))
         {
@@ -1334,7 +1335,7 @@ public class FW : IDisposable
     public bool sendEmail(string mail_from, string mail_to, string mail_subject, string mail_body, IDictionary? filenames = null, IList? aCC = null, string reply_to = "", Hashtable? options = null)
     {
         bool result = true;
-        MailMessage message = null;
+        MailMessage? message = null;
         options ??= [];
 
         try
@@ -1444,14 +1445,14 @@ public class FW : IDisposable
                     }
                 }
 
-                using (SmtpClient client = new())
-                {
-                    Hashtable mailSettings = (Hashtable)this.config("mail");
-                    if (options.ContainsKey("smtp"))
+                    using (SmtpClient client = new())
                     {
-                        //override mailSettings from smtp options
-                        Utils.mergeHash(mailSettings, options["smtp"] as Hashtable);
-                    }
+                        Hashtable mailSettings = this.config("mail") as Hashtable ?? [];
+                        if (options.ContainsKey("smtp") && options["smtp"] is Hashtable smtpOptions)
+                        {
+                            //override mailSettings from smtp options
+                            Utils.mergeHash(mailSettings, smtpOptions);
+                        }
                     if (mailSettings.Count > 0)
                     {
                         client.Host = mailSettings["host"].toStr();
@@ -1574,7 +1575,11 @@ public class FW : IDisposable
 
             models[tt.Name] = m;
         }
-        return (T)models[tt.Name];
+
+        if (models[tt.Name] is T typedModel)
+            return typedModel;
+
+        throw new InvalidOperationException($"Model cache entry for {tt.Name} is not of expected type {typeof(T).FullName}.");
     }
 
     // return model object by model class name
@@ -1583,12 +1588,16 @@ public class FW : IDisposable
         if (!models.ContainsKey(model_name))
         {
             Type mt = Type.GetType(FW_NAMESPACE_PREFIX + model_name) ?? throw new ApplicationException("Error initializing model: [" + FW_NAMESPACE_PREFIX + model_name + "] class not found");
-            FwModel m = (FwModel)Activator.CreateInstance(mt);
+            var instance = Activator.CreateInstance(mt) ?? throw new InvalidOperationException($"Could not create model instance for {mt.FullName}");
+            FwModel m = (FwModel)instance;
             // initialize
             m.init(this);
             models[model_name] = m;
         }
-        return (FwModel)models[model_name];
+        if (models[model_name] is FwModel result)
+            return result;
+
+        throw new InvalidOperationException($"Model cache entry for {model_name} is not a FwModel.");
     }
 
     /// <summary>
@@ -1603,11 +1612,11 @@ public class FW : IDisposable
         //if (!controller_name.EndsWith("Controller", StringComparison.OrdinalIgnoreCase))
         //    throw new ApplicationException($"Controller class name should end on 'Controller': {controller_name}");
 
-        if (controllers.ContainsKey(controller_name))
-            return (FwController)controllers[controller_name];
+        if (controllers.ContainsKey(controller_name) && controllers[controller_name] is FwController cachedController)
+            return cachedController;
 
         FwController c;
-        Type ct = Type.GetType(FW_NAMESPACE_PREFIX + controller_name + "Controller", false, true); // case ignored
+        Type? ct = Type.GetType(FW_NAMESPACE_PREFIX + controller_name + "Controller", false, true); // case ignored
         if (ct == null)
         {
             //if no such controller class - try virtual controllers
@@ -1630,7 +1639,8 @@ public class FW : IDisposable
         }
         else
         {
-            c = (FwController)Activator.CreateInstance(ct);
+            var instance = Activator.CreateInstance(ct) ?? throw new InvalidOperationException($"Could not create controller instance for {ct.FullName}");
+            c = (FwController)instance;
             if (is_auth_check)
             {
                 // controller found

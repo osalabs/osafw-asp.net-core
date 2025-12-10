@@ -528,22 +528,24 @@ public class Utils
     {
         string headers_str = csv_export_headers;
         StringBuilder csv = new();
-        string[] fields = null;
+        string[] fields = Array.Empty<string>();
         if (csv_export_fields == "" || csv_export_fields == "*")
         {
             // just read field names from first row
             if (rows.Count > 0)
             {
-                fields = (rows[0] as Hashtable).Keys.Cast<string>().ToArray();
-                headers_str = string.Join(",", fields);
+                var firstRow = rows[0] as Hashtable;
+                if (firstRow != null)
+                {
+                    fields = firstRow.Keys.Cast<string>().ToArray();
+                    headers_str = string.Join(",", fields);
+                }
             }
         }
         else
         {
             fields = Utils.qw(csv_export_fields);
         }
-
-        fields ??= Array.Empty<string>();
 
         csv.Append(headers_str + "\r\n");
         foreach (Hashtable row in rows)
@@ -852,7 +854,7 @@ public class Utils
             CommentHandling = JsonCommentHandling.Skip
         };
 
-        object result;
+        object? result;
         try
         {
             var reader = new Utf8JsonReader(jsonUtf8, options);
@@ -868,10 +870,10 @@ public class Utils
         return result;
     }
 
-    private static object jsonDecodeRead(ref Utf8JsonReader reader)
+    private static object? jsonDecodeRead(ref Utf8JsonReader reader)
     {
         //rw("jsonDecodeRead init: " + reader.TokenType.ToString());
-        object result;
+        object? result;
         if (reader.TokenType == JsonTokenType.StartObject)
             result = new Hashtable();
         else if (reader.TokenType == JsonTokenType.StartArray)
@@ -895,7 +897,7 @@ public class Utils
                 if (reader.TokenType != JsonTokenType.PropertyName)
                     throw new JsonException("PropertyName expected");
 
-                string keyName = reader.GetString();
+                string keyName = reader.GetString() ?? string.Empty;
                 //rw("keyName=" + keyName);
                 reader.Read();
                 ht[keyName] = jsonDecodeValue(ref reader);
@@ -971,7 +973,7 @@ public class Utils
         }
         else
         {
-            return json.ToString();
+            return json.ToString() ?? string.Empty;
         }
     }
 
@@ -986,7 +988,7 @@ public class Utils
     // return object or Nothing (if error)
     public static object deserialize(string str)
     {
-        return jsonDecode(str);
+        return jsonDecode(str) ?? new Hashtable();
     }
 
     // return Hashtable keys as an array
@@ -1262,7 +1264,7 @@ public class Utils
         {
             if (!item.Contains(key) || item[key] == null)
                 continue;
-            result[item[key]] = item;
+            result[item[key]!] = item;
         }
         return result;
     }
@@ -1440,10 +1442,13 @@ public class Utils
         using (var form = new MultipartFormDataContent())
         {
             //add form fields
-            foreach (string name in formFields.Keys)
+            if (formFields != null)
             {
-                var fvalue = formFields[name].toStr();
-                form.Add(new StringContent(fvalue), name);
+                foreach (string name in formFields.Keys)
+                {
+                    var fvalue = formFields[name].toStr();
+                    form.Add(new StringContent(fvalue), name);
+                }
             }
 
             //add files
@@ -1475,6 +1480,8 @@ public class Utils
     public static Hashtable getPostedJson(FW fw)
     {
         var result = new Hashtable();
+        if (fw.request.Body == null)
+            return result;
         try
         {
             // read json from request body asynchronously to avoid sync IO under IIS/Kestrel restrictions
@@ -1491,7 +1498,7 @@ public class Utils
 
             if (!string.IsNullOrEmpty(json))
             {
-                result = Utils.jsonDecode(json) as Hashtable;
+                result = Utils.jsonDecode(json) as Hashtable ?? [];
                 fw.logger(LogLevel.TRACE, "REQUESTED JSON:", result);
             }
         }
@@ -1625,7 +1632,7 @@ public class Utils
 
     public static string getCookie(FW fw, string name)
     {
-        return fw.request.Cookies[name].toStr();
+        return fw.request.Cookies.TryGetValue(name, out var cookie) ? cookie.toStr() : string.Empty;
     }
 
     public static void deleteCookie(FW fw, string name)
