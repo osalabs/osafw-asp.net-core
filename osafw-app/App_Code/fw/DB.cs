@@ -1007,11 +1007,7 @@ public class DB : IDisposable
                 }
                 else
                 {
-                    if (!isDbTimezoneUTC)
-                        dt = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(dt, DateTimeKind.Unspecified), DbTimezoneInfo);
-                    else if (dt.Kind != DateTimeKind.Utc)
-                        dt = DateTime.SpecifyKind(dt, DateTimeKind.Utc);
-
+                    dt = convertDbDateTimeToUtc(dt);
                     value = dt.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.DateTimeFormatInfo.InvariantInfo);
                 }
             }
@@ -1043,17 +1039,8 @@ public class DB : IDisposable
                 value = null;
             else if (meta.IsDateTime[i])
             {
-                var dt = dbread.GetDateTime(i);
-                if (!meta.IsDateOnly[i])
-                {
-                    if (!isDbTimezoneUTC)
-                        dt = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(dt, DateTimeKind.Unspecified), DbTimezoneInfo);
-                    else if (dt.Kind != DateTimeKind.Utc)
-                        dt = DateTime.SpecifyKind(dt, DateTimeKind.Utc);
-                }
-
                 // keep DateTime value type to avoid boxing to string
-                value = dt;
+                value = convertDbDateTimeToUtc(dbread.GetDateTime(i), meta.IsDateOnly[i]);
             }
             else if (meta.IsString[i])
                 value = dbread.GetString(i);
