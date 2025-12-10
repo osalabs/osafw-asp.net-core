@@ -35,8 +35,8 @@ public static class Program
         var isDevelopmentEnv = settings["IS_DEV"].toBool();
 
         // Retrieve main DB connection info
-        var dbSection = settings["db"] as Hashtable ?? [];
-        var mainDB = dbSection["main"] as Hashtable ?? [];
+        var dbSection = settings["db"] as FwRow ?? [];
+        var mainDB = dbSection["main"] as FwRow ?? [];
         var connStr = mainDB["connection_string"].toStr();
         var dbType = mainDB["type"].toStr();
         if (string.IsNullOrEmpty(connStr) || string.IsNullOrEmpty(dbType))

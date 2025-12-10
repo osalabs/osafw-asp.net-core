@@ -20,13 +20,13 @@ public class ContactController : FwController
         fw.G["PAGE_LAYOUT"] = fw.G["PAGE_LAYOUT_PUBLIC"];
     }
 
-    public Hashtable IndexAction()
+    public FwRow IndexAction()
     {
-        Hashtable ps = [];
+        FwRow ps = [];
 
         fw.Session("contact_view_time", DateTime.Now.ToString());
 
-        Hashtable page = fw.model<Spages>().oneByFullUrl(base_url);
+        FwRow page = fw.model<Spages>().oneByFullUrl(base_url);
         ps["page"] = page;
         ps["hide_sidebar"] = true;
         return ps;
@@ -47,7 +47,7 @@ public class ContactController : FwController
             // honeypot
             is_spam = true;
 
-        Hashtable sys_fields = Utils.qh("form_format redirect subject submit RAWURL XSS real_email");
+        FwRow sys_fields = Utils.qh("form_format redirect subject submit RAWURL XSS real_email");
 
         StringBuilder msg_body = new();
         foreach (string key in fw.FORM.Keys)
@@ -72,11 +72,11 @@ public class ContactController : FwController
         fw.redirect(base_url + "/(Sent)");
     }
 
-    public Hashtable SentAction(string url = "")
+    public FwRow SentAction(string url = "")
     {
-        Hashtable ps = [];
+        FwRow ps = [];
 
-        Hashtable page = fw.model<Spages>().oneByFullUrl(base_url + "/Sent");
+        FwRow page = fw.model<Spages>().oneByFullUrl(base_url + "/Sent");
         ps["page"] = page;
         ps["hide_sidebar"] = true;
         return ps;

@@ -65,7 +65,7 @@ public class FwUpdates : FwModel
                 continue; // already exists in db
 
             string content = System.IO.File.ReadAllText(file);
-            add(new Hashtable() {
+            add(new FwRow() {
                 { "iname", filename },
                 { "idesc", content }
             });
@@ -74,13 +74,13 @@ public class FwUpdates : FwModel
 
     public DBList listPending()
     {
-        return db.array(table_name, new Hashtable() { { "status", STATUS_ACTIVE } }, "id");
+        return db.array(table_name, new FwRow() { { "status", STATUS_ACTIVE } }, "id");
     }
 
     public void applyPending(bool is_echo = false)
     {
         DBList rows = listPending();
-        foreach (Hashtable row in rows)
+        foreach (FwRow row in rows)
         {
             applyOne(row["id"].toInt(), is_echo);
         }
@@ -92,7 +92,7 @@ public class FwUpdates : FwModel
         if (is_echo)
             fw.rw("<b>" + row["iname"] + " applying</b>");
 
-        Hashtable uitem = new() {
+        FwRow uitem = new() {
             { "status", STATUS_APPLIED },
             { "applied_time", DB.NOW }
         };
@@ -151,7 +151,7 @@ public class FwUpdates : FwModel
         fw.Session("FW_UPDATES_CTR", "0");
     }
 
-    public void applyList(ArrayList ids, bool is_echo = false)
+    public void applyList(FwList ids, bool is_echo = false)
     {
         foreach (int id in ids)
         {

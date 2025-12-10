@@ -67,10 +67,10 @@ public class FormUtils
         return result.ToString();
     }
 
-    // arr is ArrayList of Hashes with "id" and "iname" keys, for example rows returned from db.array('select id, iname from ...')
+    // arr is FwList of Hashes with "id" and "iname" keys, for example rows returned from db.array('select id, iname from ...')
     // "id" key is optional, if not present - iname will be used for values too
     // isel may contain multiple comma-separated values
-    public static string selectOptions(ArrayList arr, string isel, bool is_multi = false)
+    public static string selectOptions(FwList arr, string isel, bool is_multi = false)
     {
         isel ??= "";
 
@@ -91,7 +91,7 @@ public class FormUtils
         string val;
         string text;
         StringBuilder result = new();
-        foreach (Hashtable item in arr)
+        foreach (FwRow item in arr)
         {
             text = Utils.htmlescape(item["iname"].toStr());
             if (item.ContainsKey("id"))
@@ -173,9 +173,9 @@ public class FormUtils
     /// <param name="base_path">required if tpl_path is relative (not start with "/"), then base_path used. base_path itself is relative to template root</param>
     /// <returns></returns>
 
-    public static ArrayList selectTplOptions(string tpl_path, string base_path = "")
+    public static FwList selectTplOptions(string tpl_path, string base_path = "")
     {
-        ArrayList result = [];
+        FwList result = [];
 
         if (!tpl_path.StartsWith('/'))
         {
@@ -207,7 +207,7 @@ public class FormUtils
 
             // desc = ParsePage.RX_LANG.Replace(desc, "$1")
             desc = new Regex("`(.+?)`", RegexOptions.Compiled).Replace(desc, "$1");
-            result.Add(new Hashtable() { { "id", value }, { "iname", desc } });
+            result.Add(new FwRow() { { "id", value }, { "iname", desc } });
         }
 
         return result;
@@ -238,11 +238,11 @@ public class FormUtils
     }
 
     // return pager or Nothing if no paging required
-    public static ArrayList getPager(long count, int pagenum, object? pagesize1 = null)
+    public static FwList getPager(long count, int pagenum, object? pagesize1 = null)
     {
         int pagesize = pagesize1.toInt(MAX_PAGE_ITEMS);
 
-        ArrayList pager = [];
+        FwList pager = [];
         const int PAD_PAGES = 5;
 
         if (count > pagesize)
@@ -259,7 +259,7 @@ public class FormUtils
 
             for (int i = from_page; i <= to_page; i++)
             {
-                Hashtable pager_item = [];
+                FwRow pager_item = [];
                 if (pagenum == i)
                     pager_item["is_cur_page"] = 1;
                 pager_item["pagenum"] = i;
@@ -291,9 +291,9 @@ public class FormUtils
     }
 
     // if is_exists (default true) - only values actually exists in input hash returned
-    public static Hashtable filter(Hashtable item, Array fields, bool is_exists = true)
+    public static FwRow filter(FwRow item, Array fields, bool is_exists = true)
     {
-        Hashtable result = [];
+        FwRow result = [];
         if (item != null)
         {
             foreach (string fld in fields)
@@ -305,7 +305,7 @@ public class FormUtils
         return result;
     }
     // save as above but fields can be passed as qw string
-    public static Hashtable filter(Hashtable item, string fields, bool is_exists = true)
+    public static FwRow filter(FwRow item, string fields, bool is_exists = true)
     {
         return filter(item, Utils.qw(fields), is_exists);
     }
@@ -319,7 +319,7 @@ public class FormUtils
     /// <param name="is_existing_fields_only">if true, then only process fields existing in the item. Usually used with PATCH requests</param>
     /// <param name="default_value">default value for non-exsiting fields in item</param>
     /// <returns>by ref itemdb - add fields with default_value or form value</returns>
-    public static bool filterCheckboxes(Hashtable itemdb, Hashtable item, IList fields, bool is_existing_fields_only = false, string default_value = "0")
+    public static bool filterCheckboxes(FwRow itemdb, FwRow item, IList fields, bool is_existing_fields_only = false, string default_value = "0")
     {
         if (fields == null || fields.Count.Equals(0))
             return false;
@@ -349,13 +349,13 @@ public class FormUtils
     /// <param name="is_existing_fields_only">if true, then only process fields existing in the item. Usually used with PATCH requests</param>
     /// <param name="default_value">default value for non-exsiting fields in item, if default not defined in fields qw string</param>
     /// <returns>by ref itemdb - add fields with default_value or form value</returns>
-    public static bool filterCheckboxes(Hashtable itemdb, Hashtable item, string fields, bool is_existing_fields_only = false, string default_value = "0")
+    public static bool filterCheckboxes(FwRow itemdb, FwRow item, string fields, bool is_existing_fields_only = false, string default_value = "0")
     {
         if (string.IsNullOrEmpty(fields)) return false;
 
         if (item != null)
         {
-            Hashtable hfields = Utils.qh(fields, default_value);
+            FwRow hfields = Utils.qh(fields, default_value);
             foreach (string fld in hfields.Keys)
             {
                 if (item.ContainsKey(fld))
@@ -375,7 +375,7 @@ public class FormUtils
     /// </summary>
     /// <param name="itemdb"></param>
     /// <param name="names"></param>
-    public static void filterNullable(Hashtable itemdb, string names)
+    public static void filterNullable(FwRow itemdb, string names)
     {
         if (string.IsNullOrEmpty(names)) return;
         var anames = Utils.qw(names);
@@ -389,7 +389,7 @@ public class FormUtils
     /// </summary>
     /// <param name="itemdb"></param>
     /// <param name="names"></param>
-    public static void filterNullable(Hashtable itemdb, IList names)
+    public static void filterNullable(FwRow itemdb, IList names)
     {
         if (names == null || names.Count == 0) return;
         foreach (string fld in names)
@@ -404,7 +404,7 @@ public class FormUtils
     // sample:
     // many <input name="dict_link_multi[<~id>]"...>
     // itemdb("dict_link_multi") = FormUtils.multi2ids(reqh("dict_link_multi"))
-    public static string multi2ids(Hashtable items)
+    public static string multi2ids(FwRow items)
     {
         if (items == null || items.Count == 0)
             return "";
@@ -414,16 +414,16 @@ public class FormUtils
 
     // input: comma separated string
     // output: hashtable, keys=ids from input
-    public static Hashtable ids2multi(string str)
+    public static FwRow ids2multi(string str)
     {
-        ArrayList col = comma_str2col(str);
-        Hashtable result = [];
+        FwList col = comma_str2col(str);
+        FwRow result = [];
         foreach (string id in col)
             result[id] = 1;
         return result;
     }
 
-    public static string col2comma_str(ArrayList col)
+    public static string col2comma_str(FwList col)
     {
         return string.Join(",", col.ToArray());
     }
@@ -432,13 +432,13 @@ public class FormUtils
      * convert comma-separated string to arraylist, trimming each element
      * if str is empty - return empty arraylist
      * @param string str
-     * @return ArrayList
+     * @return FwList
      */
-    public static ArrayList comma_str2col(string str)
+    public static FwList comma_str2col(string str)
     {
         if (string.IsNullOrWhiteSpace(str))
             return [];
-        return new ArrayList(str.Split(",").Select(s => s.Trim()).ToList());
+        return new FwList(str.Split(",").Select(s => s.Trim()).ToList());
     }
 
     /// <summary>
@@ -452,7 +452,7 @@ public class FormUtils
     /// <param name="item"></param>
     /// <param name="field_prefix"></param>
     /// <returns></returns>
-    public static string dateForCombo(Hashtable item, string field_prefix)
+    public static string dateForCombo(FwRow item, string field_prefix)
     {
         string result = "";
         if (item == null)
@@ -477,7 +477,7 @@ public class FormUtils
         return result;
     }
 
-    public static bool comboForDate(string value, Hashtable item, string field_prefix)
+    public static bool comboForDate(string value, FwRow item, string field_prefix)
     {
         if (DateTime.TryParse(value, out DateTime dt))
         {
@@ -528,7 +528,7 @@ public class FormUtils
     // convert time from field to 2 form fields with HH and MM suffixes
     // IN: hashtable to make changes in, field_name
     // OUT: false if item(field_name) wrong datetime
-    public static bool timeToForm(Hashtable item, string field_name)
+    public static bool timeToForm(FwRow item, string field_name)
     {
         if (DateTime.TryParse(item[field_name].toStr(), out DateTime dt))
         {
@@ -543,7 +543,7 @@ public class FormUtils
 
     // opposite to timeToForm
     // OUT: false if can't create time from input item
-    public static bool formToTime(Hashtable item, string field_name)
+    public static bool formToTime(FwRow item, string field_name)
     {
         bool result = true;
         int hh = item[field_name + "_hh"].toInt();
@@ -588,18 +588,18 @@ public class FormUtils
     }
 
     //filter list of rows by is_checked=true, then return ordered by prio,iname
-    public static ArrayList listCheckedOrderByPrioIname(ArrayList rows)
+    public static FwList listCheckedOrderByPrioIname(FwList rows)
     {
-        return new ArrayList((from Hashtable h in rows
+        return new FwList((from FwRow h in rows
                               where h["is_checked"].toBool()
                               orderby h["prio"].toInt() ascending, h["iname"] ascending
                               select h).ToList());
     }
 
     // do not filter by checked only, but checked first: ordered by is_checked desc,prio,iname
-    public static ArrayList listOrderByPrioIname(ArrayList rows)
+    public static FwList listOrderByPrioIname(FwList rows)
     {
-        return new ArrayList((from Hashtable h in rows
+        return new FwList((from FwRow h in rows
                               orderby h["is_checked"].toBool() descending, h["prio"].toInt() ascending, h["iname"] ascending
                               select h).ToList());
     }
@@ -612,9 +612,9 @@ public class FormUtils
     /// <param name="item"></param>
     /// <param name="itemold"></param>
     /// TODO: if itemold has a bit field, it returned from db as "True", but item from the form as "1" - so it's always different
-    public static Hashtable changesOnly(Hashtable item, Hashtable itemold)
+    public static FwRow changesOnly(FwRow item, FwRow itemold)
     {
-        var result = new Hashtable();
+        var result = new FwRow();
 
         foreach (var key in item.Keys)
         {
@@ -646,7 +646,7 @@ public class FormUtils
     /// <param name="item2"></param>
     /// <param name="fields">qw-list of fields</param>
     /// <returns>false if no chagnes in passed fields or fields are empty</returns>
-    public static bool isChanged(Hashtable item1, Hashtable item2, string fields)
+    public static bool isChanged(FwRow item1, FwRow item2, string fields)
     {
         var result = false;
         var afields = Utils.qw(fields);
@@ -696,7 +696,7 @@ public class FormUtils
     /// <param name="sortmap">mapping form_name => field_name</param>
     /// <returns></returns>
     /// <exception cref="Exception"></exception>
-    public static string sqlOrderBy(DB db, string sortby, string sortdir, Hashtable sortmap)
+    public static string sqlOrderBy(DB db, string sortby, string sortdir, FwRow sortmap)
     {
         string orderby = sortmap[sortby].toStr().Trim();
         if (string.IsNullOrEmpty(orderby))

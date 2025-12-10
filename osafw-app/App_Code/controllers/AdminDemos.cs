@@ -43,14 +43,14 @@ public class AdminDemosController : FwAdminController
         base.getListRows();
 
         // add/modify rows from db if necessary
-        foreach (Hashtable row in this.list_rows)
+        foreach (FwRow row in this.list_rows)
             row["demo_dicts"] = model_related.one(row["demo_dicts_id"].toInt()).toHashtable();
     }
 
-    public override Hashtable? ShowAction(int id)
+    public override FwRow? ShowAction(int id)
     {
-        Hashtable ps = base.ShowAction(id) ?? [];
-        Hashtable item = ps["i"] as Hashtable ?? [];
+        FwRow ps = base.ShowAction(id) ?? [];
+        FwRow item = ps["i"] as FwRow ?? [];
         //var id = Utils.f2int(item["id"]);
 
         ps["parent"] = model.one(item["parent_id"].toInt());
@@ -77,13 +77,13 @@ public class AdminDemosController : FwAdminController
         return ps;
     }
 
-    public override Hashtable? ShowFormAction(int id = 0)
+    public override FwRow? ShowFormAction(int id = 0)
     {
         // form_new_defaults = new() { { "iname", "New Item" } }; //set new form defaults if any
-        Hashtable ps = base.ShowFormAction(id) ?? [];
+        FwRow ps = base.ShowFormAction(id) ?? [];
 
         // read dropdowns lists from db
-        var item = ps["i"] as Hashtable ?? [];
+        var item = ps["i"] as FwRow ?? [];
         ps["select_options_parent_id"] = model.listSelectOptionsParent();
         ps["select_options_demo_dicts_id"] = model_related.listSelectOptions();
         ps["dict_link_auto_id_iname"] = model_related.iname(item["dict_link_auto_id"]);
@@ -104,7 +104,7 @@ public class AdminDemosController : FwAdminController
         return ps;
     }
 
-    public override Hashtable? SaveAction(int id = 0)
+    public override FwRow? SaveAction(int id = 0)
     {
         route_onerror = FW.ACTION_SHOW_FORM; //set route to go if error happens
 
@@ -118,7 +118,7 @@ public class AdminDemosController : FwAdminController
             return null;
         }
 
-        Hashtable item = reqh("item");
+        FwRow item = reqh("item");
         var success = true;
         var is_new = (id == 0);
 
@@ -126,7 +126,7 @@ public class AdminDemosController : FwAdminController
         // load old record if necessary
         // var itemOld = model.one(id);
 
-        Hashtable itemdb = FormUtils.filter(item, this.save_fields);
+        FwRow itemdb = FormUtils.filter(item, this.save_fields);
         FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
         itemdb["dict_link_auto_id"] = model_related.findOrAddByIname(item["dict_link_auto_id_iname"].toStr(), out _);
         itemdb["dict_link_multi"] = FormUtils.multi2ids(reqh("dict_link_multi"));
@@ -139,7 +139,7 @@ public class AdminDemosController : FwAdminController
         fw.model<DemosDemoDicts>().updateJunctionByMainId(id, reqh("demo_dicts_link"));
         fw.model<AttLinks>().updateJunction(model.table_name, id, reqh("att"));
 
-        processSaveAttFiles(id, item, new Hashtable()
+        processSaveAttFiles(id, item, new FwRow()
         {
             { "field", "att_files1" },
             { "att_post_prefix", "att_files1" },
@@ -149,7 +149,7 @@ public class AdminDemosController : FwAdminController
         return this.afterSave(success, id, is_new);
     }
 
-    public override void Validate(int id, Hashtable item)
+    public override void Validate(int id, FwRow item)
     {
         bool result = this.validateRequired(id, item, this.required_fields);
 
@@ -166,16 +166,16 @@ public class AdminDemosController : FwAdminController
         this.validateCheckResult();
     }
 
-    public Hashtable AutocompleteAction()
+    public FwRow AutocompleteAction()
     {
         List<string> items = model_related.listAutocomplete(reqs("q"));
 
-        return new Hashtable() { { "_json", items } };
+        return new FwRow() { { "_json", items } };
     }
 
     // upload one or many files to the Att storage and link to the current entity and id
     // json only response
-    public Hashtable SaveAttFilesAction(int id)
+    public FwRow SaveAttFilesAction(int id)
     {
         var item = reqh("item");
 
@@ -190,7 +190,7 @@ public class AdminDemosController : FwAdminController
         var modelAtt = fw.model<Att>();
         var att_cat = fw.model<AttCategories>().oneByIcode(item["att_category"].toStr());
         var ent = fw.model<FwEntities>().oneByIcode(model0.table_name);
-        var itemdb = new Hashtable()
+        var itemdb = new FwRow()
         {
             { "item_id", id },
             { "att_categories_id", att_cat.Count > 0 ? att_cat["id"].toInt() : null },
@@ -201,12 +201,12 @@ public class AdminDemosController : FwAdminController
         var att_id = 0;
         var addedAtt = modelAtt.uploadMulti(itemdb);
         if (addedAtt.Count > 0)
-            att_id = (addedAtt[0] as Hashtable)!["id"].toInt();
+            att_id = (addedAtt[0] as FwRow)!["id"].toInt();
 
         // make same response as in AdminAtt.SaveAction
         // if select in popup - return json
-        var ps = new Hashtable();
-        var _json = new Hashtable();
+        var ps = new FwRow();
+        var _json = new FwRow();
         _json["id"] = att_id;
         if (att_id > 0)
         {
@@ -220,14 +220,14 @@ public class AdminDemosController : FwAdminController
             _json["ext"] = item_new["ext"];
         }
         else
-            _json["error"] = new Hashtable() { { "message", "File upload error" } };
+            _json["error"] = new FwRow() { { "message", "File upload error" } };
 
         ps["_json"] = _json;
         return ps;
     }
 
     // Files upload sample handler (same as FwDynamicController for att_files_edit)
-    protected virtual void processSaveAttFiles(int id, Hashtable fields, Hashtable def)
+    protected virtual void processSaveAttFiles(int id, FwRow fields, FwRow def)
     {
         var field = def["field"].toStr();
 
@@ -243,7 +243,7 @@ public class AdminDemosController : FwAdminController
 
         // delete any files in this category not present in the posted list
         var existing = att_model.listByEntityCategory(model0.table_name, id, att_category);
-        foreach (Hashtable row in existing)
+        foreach (FwRow row in existing)
         {
             if (!att_ids.ContainsKey(row["id"].toStr()))
                 att_model.delete(row["id"].toInt(), true);

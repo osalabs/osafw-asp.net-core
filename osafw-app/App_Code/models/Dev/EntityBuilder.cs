@@ -35,7 +35,7 @@ class DevEntityBuilder
         saveJsonEntity(entities, fw.config("template") + DevCodeGen.DB_JSON_PATH);
     }
 
-    private static ArrayList ParseEntities(string inputText, FW fw)
+    private static FwList ParseEntities(string inputText, FW fw)
     {
         var entities = new List<Dictionary<string, object?>>();
         //split inputText by \r\n but leave empty lines (as empty lines delimit entities)
@@ -216,7 +216,7 @@ class DevEntityBuilder
                 AddStandardFieldsAfter(fields);
         }// entities loop
 
-        return new ArrayList(entities);
+        return new FwList(entities);
     }
 
     // id, iname, idesc
@@ -679,7 +679,7 @@ class DevEntityBuilder
         return decoded is T typed ? typed : new T();
     }
 
-    // important - pass data as ArrayList or Hashtable to trigger custom converter
+    // important - pass data as FwList or FwRow to trigger custom converter
     public static void saveJsonEntity(object data, string filename)
     {
         string json_str;
@@ -697,7 +697,7 @@ class DevEntityBuilder
         Utils.setFileContent(filename, ref json_str);
     }
 
-    // important - pass data as ArrayList or Hashtable to trigger custom converter
+    // important - pass data as FwList or FwRow to trigger custom converter
     public static void saveJsonController(object data, string filename)
     {
         string json_str;
@@ -717,7 +717,7 @@ class DevEntityBuilder
 
     // ****************************** PRIVATE HELPERS (move to Dev model?)
 
-    public static Hashtable? table2entity(DB db, string table_name)
+    public static FwRow? table2entity(DB db, string table_name)
     {
         if (string.IsNullOrEmpty(table_name) || table_name.StartsWith("MSys", StringComparison.Ordinal))
             return null;
@@ -725,8 +725,8 @@ class DevEntityBuilder
         var tblschema = db.loadTableSchemaFull(table_name);
         var tblfields = tableschema2fields(tblschema);
 
-        Hashtable controller_options = [];
-        Hashtable table_entity = new()
+        FwRow controller_options = [];
+        FwRow table_entity = new()
         {
             ["db_config"] = db.db_name,
             ["table"] = table_name,
@@ -747,9 +747,9 @@ class DevEntityBuilder
         return table_entity;
     }
 
-    public static ArrayList dbschema2entities(DB db)
+    public static FwList dbschema2entities(DB db)
     {
-        ArrayList result = [];
+        FwList result = [];
         var tables = db.tables();
         foreach (string tblname in tables)
         {
@@ -761,11 +761,11 @@ class DevEntityBuilder
         return result;
     }
 
-    public static ArrayList tableschema2fields(ArrayList schema)
+    public static FwList tableschema2fields(FwList schema)
     {
-        ArrayList result = new(schema);
+        FwList result = new(schema);
 
-        foreach (Hashtable fldschema in schema)
+        foreach (FwRow fldschema in schema)
         {
             fldschema["fw_name"] = Utils.name2fw(fldschema["name"].toStr());
             fldschema["iname"] = Utils.name2human(fldschema["name"].toStr());
@@ -804,7 +804,7 @@ class DevEntityBuilder
     }
 
 
-    private static ArrayList addressFields(string field_name)
+    private static FwList addressFields(string field_name)
     {
         var m = Regex.Match(field_name, "(.*?)(Address)$", RegexOptions.IgnoreCase);
         string prefix = m.Groups[1].Value;
@@ -822,7 +822,7 @@ class DevEntityBuilder
 
         return
         [
-            new Hashtable()
+            new FwRow()
             {
                 {"name",field_name},
                 {"fw_name",Utils.name2fw(field_name)},
@@ -835,7 +835,7 @@ class DevEntityBuilder
                 {"fw_type","varchar"},
                 {"fw_subtype","nvarchar"}
             },
-            new Hashtable()
+            new FwRow()
             {
                 {"name",field_name + "2"},
                 {"fw_name",Utils.name2fw(field_name + "2")},
@@ -848,7 +848,7 @@ class DevEntityBuilder
                 {"fw_type","varchar"},
                 {"fw_subtype","nvarchar"}
             },
-            new Hashtable()
+            new FwRow()
             {
                 {"name",city_name},
                 {"fw_name",Utils.name2fw(city_name)},
@@ -861,7 +861,7 @@ class DevEntityBuilder
                 {"fw_type","varchar"},
                 {"fw_subtype","nvarchar"}
             },
-            new Hashtable()
+            new FwRow()
             {
                 {"name",state_name},
                 {"fw_name",Utils.name2fw(state_name)},
@@ -874,7 +874,7 @@ class DevEntityBuilder
                 {"fw_type","varchar"},
                 {"fw_subtype","nvarchar"}
             },
-            new Hashtable()
+            new FwRow()
             {
                 {"name",zip_name},
                 {"fw_name",Utils.name2fw(zip_name)},

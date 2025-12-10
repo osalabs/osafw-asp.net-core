@@ -11,7 +11,7 @@ global using StrList = System.Collections.Generic.List<string>;
 
 // from fw/FwCollections.cs
 global using FwRow = osafw.FwRow;
-global using FwList = osafw.FwList; // List<FwRow>
+global using FwList = osafw.FwList; // List<object?> with FwRow-friendly interop
 
 // for function parameters where more generic types are acceptable
 global using FwRowLike = System.Collections.IDictionary; // FwRow compatible

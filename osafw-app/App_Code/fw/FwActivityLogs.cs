@@ -38,13 +38,13 @@ public class FwActivityLogs : FwModel
     /// <param name="payload">optional payload (will be serialized as json)</param>
     /// <returns></returns>
     /// <exception cref="ApplicationException"></exception>
-    public int addSimple(string log_types_icode, string entity_icode, int item_id = 0, string idesc = "", Hashtable? payload = null)
+    public int addSimple(string log_types_icode, string entity_icode, int item_id = 0, string idesc = "", FwRow? payload = null)
     {
         var lt = fw.model<FwLogTypes>().oneByIcode(log_types_icode);
         if (lt.Count == 0)
             throw new ApplicationException("Log type not found for icode=[" + log_types_icode + "]");
         var et_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
-        var fields = new Hashtable
+        var fields = new FwRow
         {
             ["log_types_id"] = lt["id"],
             ["fwentities_id"] = et_id,
@@ -69,14 +69,14 @@ public class FwActivityLogs : FwModel
     public DBList listByEntity(string entity_icode, int id, IList? log_types_icodes = null)
     {
         var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
-        var where = new Hashtable
+        var where = new FwRow
         {
             {"fwentities_id", fwentities_id },
             {"item_id", id }
         };
         if (log_types_icodes != null && log_types_icodes.Count > 0)
         {
-            var log_types_ids = new ArrayList();
+            var log_types_ids = new FwList();
             foreach (string icode in log_types_icodes)
             {
                 var log_type = fw.model<FwLogTypes>().oneByIcode(icode);
@@ -95,10 +95,10 @@ public class FwActivityLogs : FwModel
     /// <param name="id"></param>
     /// <param name="tab">"all", "comments" or "history"</param>
     /// <returns></returns>
-    public ArrayList listByEntityForUI(string entity_icode, int id, string tab = "")
+    public FwList listByEntityForUI(string entity_icode, int id, string tab = "")
     {
         // convert tab to log_types_icodes
-        var log_types_icodes = new ArrayList();
+        var log_types_icodes = new FwList();
         switch (tab)
         {
             case TAB_COMMENTS:
@@ -113,12 +113,12 @@ public class FwActivityLogs : FwModel
 
         // prepare list of activity records for UI
         // group system consequential changes from the same user within 10 minutes into one fields row
-        Hashtable? last_fields = null;
+        FwRow? last_fields = null;
         var last_add_time = DateTime.MinValue;
         var last_users_id = -1;
         var last_log_types_id = -1;
 
-        var result = new ArrayList();
+        var result = new FwList();
         var rows = listByEntity(entity_icode, id, log_types_icodes);
         foreach (DBRow row in rows)
         {
@@ -147,8 +147,8 @@ public class FwActivityLogs : FwModel
                 }
 
             var payloadObj = Utils.jsonDecode(row["payload"]);
-            var payload = payloadObj as Hashtable ?? [];
-            Hashtable? fields = payload["fields"] as Hashtable;
+            var payload = payloadObj as FwRow ?? [];
+            FwRow? fields = payload["fields"] as FwRow;
             if (fields != null)
             {
                 foreach (string key in fields.Keys)
@@ -176,7 +176,7 @@ public class FwActivityLogs : FwModel
             if (is_merged)
                 continue; // skip this row as it's merged with previous
 
-            var new_row = new Hashtable();
+            var new_row = new FwRow();
             new_row["users_id"] = row["users_id"];
             new_row["idesc"] = row["idesc"];
             new_row["idate"] = row["idate"];
@@ -196,17 +196,17 @@ public class FwActivityLogs : FwModel
             result.Add(new_row);
         }
 
-        //and now for each result row with fields - convert fields from Hashtable to ArrayList for ParsePage
-        foreach (Hashtable row in result)
+        //and now for each result row with fields - convert fields from FwRow to FwList for ParsePage
+        foreach (FwRow row in result)
         {
             if (!row.ContainsKey("fields"))
                 continue;
 
-            var fields = row["fields"] as Hashtable ?? [];
-            var fields_list = new ArrayList();
+            var fields = row["fields"] as FwRow ?? [];
+            var fields_list = new FwList();
             foreach (string key in fields.Keys)
             {
-                fields_list.Add(new Hashtable()
+                fields_list.Add(new FwRow()
                     {
                         {"key",key},
                         {"value",fields[key]}
@@ -226,7 +226,7 @@ public class FwActivityLogs : FwModel
                     where lt.itype=@itype
                      and al.status IN (@statuses)
             ";
-        var p = new Hashtable()
+        var p = new FwRow()
         {
             {"itype", log_itype},
             {"statuses", statuses}

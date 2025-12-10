@@ -27,7 +27,7 @@ public class SampleReport : FwReports
     {
         base.setFilters();
 
-        Hashtable result = [];
+        FwRow result = [];
         if (!f.ContainsKey("from_date") && !f.ContainsKey("to_date"))
             // set default filters
             f["from_date"] = DateUtils.Date2Str(DateTime.Now.AddDays(-30), fw.userDateFormat);// last 30 days
@@ -47,7 +47,7 @@ public class SampleReport : FwReports
 
         // apply filters from Me.f
         string where = " ";
-        Hashtable where_params = [];
+        FwRow where_params = [];
         if (!Utils.isEmpty(f["from_date"]))
         {
             where += " and al.add_time>=@from_date";
@@ -105,7 +105,7 @@ public class SampleReport : FwReports
         list_count = list_rows.Count;
 
         // perform calculations and add additional info for each result row
-        foreach (Hashtable row in list_rows)
+        foreach (FwRow row in list_rows)
         {
             //row["entity"] = fw.model<FwEntities>().one(row["fwentities_id"]);
             //ps["total_ctr"] = _calcPerc(list_rows); //if you need calculate "perc" for each row based on row["ctr"]

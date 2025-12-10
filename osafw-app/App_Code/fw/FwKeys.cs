@@ -25,7 +25,7 @@ public class FwKeysXmlRepository : IXmlRepository
 
         try
         {
-            var values = db.col(table_name, new Hashtable { { "itype", ITYPE_DATA_PROTECTION_KEY } }, "XmlValue");
+            var values = db.col(table_name, new FwRow { { "itype", ITYPE_DATA_PROTECTION_KEY } }, "XmlValue");
             foreach (var xmlStr in values)
             {
                 var elem = XElement.Parse(xmlStr);
@@ -57,12 +57,12 @@ public class FwKeysXmlRepository : IXmlRepository
         {
 
             // Try to see if a row with the same key id already exists:
-            var where = new Hashtable { { "itype", ITYPE_DATA_PROTECTION_KEY }, { "iname", keyId } };
+            var where = new FwRow { { "itype", ITYPE_DATA_PROTECTION_KEY }, { "iname", keyId } };
             var is_exists = db.value(table_name, where, "1").toBool();
             if (is_exists)
             {
                 // Update existing row
-                db.update(table_name, where, new Hashtable { { "XmlValue", xmlStr }, { "upd_time", DB.NOW } });
+                db.update(table_name, where, new FwRow { { "XmlValue", xmlStr }, { "upd_time", DB.NOW } });
             }
             else
             {
@@ -87,6 +87,6 @@ public class FwKeysXmlRepository : IXmlRepository
     {
         db.exec($@"DELETE FROM {table_name} 
                 WHERE itype=@itype 
-                  AND upd_time < DATEADD(day, -90, GETDATE())", new Hashtable { { "itype", ITYPE_DATA_PROTECTION_KEY } });
+                  AND upd_time < DATEADD(day, -90, GETDATE())", new FwRow { { "itype", ITYPE_DATA_PROTECTION_KEY } });
     }
 }

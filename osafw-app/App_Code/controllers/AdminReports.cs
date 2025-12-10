@@ -18,9 +18,9 @@ public class AdminReportsController : FwController
         base_url = "/Admin/Reports"; // base url for the controller
     }
 
-    public Hashtable IndexAction()
+    public FwRow IndexAction()
     {
-        Hashtable ps = [];
+        FwRow ps = [];
 
         return ps;
     }
@@ -54,7 +54,7 @@ public class AdminReportsController : FwController
             report.getData();
 
         // show or output report according format
-        Hashtable ps = [];
+        FwRow ps = [];
         ps["return_url"] = return_url;
 
         report.render(ps);
@@ -88,7 +88,7 @@ public class AdminReportsController : FwController
         var to_emails = f["to_emails"].toStr();
 
         string mail_subject = "Report " + repcode;
-        Hashtable filenames = [];
+        FwRow filenames = [];
 
         var email_as = f["email_as"].toStr();
         string mail_body;
@@ -100,7 +100,7 @@ public class AdminReportsController : FwController
         }
         else
         {
-            var ps = new Hashtable {
+            var ps = new FwRow {
                 { "_layout", fw.config("PAGE_LAYOUT_EMAIL") }
             };
             var html = FwReports.createHtml(fw, repcode, f, ps);

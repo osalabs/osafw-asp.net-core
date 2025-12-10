@@ -9,42 +9,34 @@ using System.Collections.Generic;
 
 namespace osafw;
 
-public class FwRow : Dictionary<string, object?>
+public class FwRow : Hashtable
 {
     public FwRow() : base(StringComparer.Ordinal) { }
     public FwRow(int capacity) : base(capacity, StringComparer.Ordinal) { }
-    public FwRow(IDictionary<string, object?> other) : base(other, StringComparer.Ordinal) { }
+    public FwRow(IDictionary? other) : base(other?.Count ?? 0, StringComparer.Ordinal)
+    {
+        if (other != null)
+            foreach (DictionaryEntry e in other)
+                this[e.Key] = e.Value;
+    }
 
     // Return null when key is missing without throwing exception
-    public new object? this[string key]
+    public object? this[string key]
     {
-        get => TryGetValue(key, out var v) ? v : null;
+        get => ContainsKey(key) ? base[key] : null;
         set => base[key] = value;
-    }
-
-    // Interop with legacy APIs:
-    public static implicit operator Hashtable(FwRow row)
-    {
-        var h = new Hashtable(row.Count);
-        foreach (var kv in row) h[kv.Key] = kv.Value;
-        return h;
-    }
-    public static explicit operator FwRow(Hashtable h)
-    {
-        var r = new FwRow(h?.Count ?? 0);
-        if (h != null) foreach (DictionaryEntry e in h) r[(string)e.Key] = e.Value;
-        return r;
     }
 }
 
-public class FwList : List<FwRow>
+public class FwList : ArrayList
 {
     public FwList() { }
     public FwList(int capacity) : base(capacity) { }
-    public static implicit operator ArrayList(FwList rows)
+    public FwList(ICollection c) : base(c) { }
+    public FwList(IEnumerable collection)
     {
-        var a = new ArrayList(rows.Count);
-        foreach (var r in rows) a.Add((Hashtable)r);
-        return a;
+        if (collection != null)
+            foreach (var item in collection)
+                Add(item);
     }
 }

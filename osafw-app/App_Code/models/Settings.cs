@@ -81,7 +81,7 @@ public class Settings : FwModel<Settings.Row>
     // just return first row by icode field
     public override DBRow oneByIcode(string icode)
     {
-        Hashtable where = [];
+        FwRow where = [];
         where["icode"] = icode;
         return db.row(table_name, where);
     }
@@ -94,7 +94,7 @@ public class Settings : FwModel<Settings.Row>
     public void setValue(string icode, string ivalue)
     {
         var item = this.oneByIcode(icode);
-        Hashtable fields = [];
+        FwRow fields = [];
         if (item.ContainsKey("id"))
         {
             // exists - update

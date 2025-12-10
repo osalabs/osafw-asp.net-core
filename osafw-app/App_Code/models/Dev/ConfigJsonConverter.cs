@@ -1,5 +1,5 @@
 // Custom json converter for development - ensure keys sorted in expected way in the output
-// Important - pass ArrayList or Hashtable to trigger this converter
+// Important - pass FwList or FwRow to trigger this converter
 //
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2024  Oleg Savchuk www.osalabs.com
@@ -12,7 +12,7 @@ using System.Text.Json;
 
 namespace osafw;
 
-public class ConfigJsonConverter : System.Text.Json.Serialization.JsonConverter<Hashtable>
+public class ConfigJsonConverter : System.Text.Json.Serialization.JsonConverter<FwRow>
 {
     public readonly List<string> ordered_keys_entity = [
         "iname",
@@ -130,12 +130,12 @@ public class ConfigJsonConverter : System.Text.Json.Serialization.JsonConverter<
     }
 
     //read is not needed, but methods need to implement
-    public override Hashtable Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    public override FwRow Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         throw new NotImplementedException();
     }
 
-    public override void Write(Utf8JsonWriter writer, Hashtable value, JsonSerializerOptions options)
+    public override void Write(Utf8JsonWriter writer, FwRow value, JsonSerializerOptions options)
     {
         WriteDictionary(writer, value, options);
 

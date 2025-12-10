@@ -53,7 +53,7 @@ public class Att : FwModel<Att.Row>
     }
 
     // overload by file index
-    public Hashtable? uploadOne(int id, int file_index, bool is_new = false)
+    public FwRow? uploadOne(int id, int file_index, bool is_new = false)
     {
         var files = fw.request?.Form?.Files;
         if (files == null || file_index >= files.Count)
@@ -63,7 +63,7 @@ public class Att : FwModel<Att.Row>
     }
 
     // overload by file name
-    public Hashtable? uploadOne(int id, string input_name, bool is_new = false)
+    public FwRow? uploadOne(int id, string input_name, bool is_new = false)
     {
         var files = fw.request?.Form?.Files;
         var fileByName = files?.GetFile(input_name);
@@ -81,9 +81,9 @@ public class Att : FwModel<Att.Row>
     /// <param name="is_new"></param>
     /// <returns> return hashtable with added files information id, fname, fsize, ext and filepath or null if upload failed or no files</returns>
     /// </returns>
-    public Hashtable? uploadOne(int id, IFormFile file, bool is_new = false)
+    public FwRow? uploadOne(int id, IFormFile file, bool is_new = false)
     {
-        Hashtable? result = null;
+        FwRow? result = null;
         var requestFiles = fw.request?.Form?.Files;
         if (requestFiles == null || requestFiles.Count == 0 || file == null)
             return result;
@@ -94,7 +94,7 @@ public class Att : FwModel<Att.Row>
             string ext = UploadUtils.getUploadFileExt(filepath);
 
             // update db with file information
-            Hashtable fields = [];
+            FwRow fields = [];
             if (is_new)
                 fields["iname"] = file.FileName;
 
@@ -130,9 +130,9 @@ public class Att : FwModel<Att.Row>
     /// </summary>
     /// <param name="item">files to add to att table, can contain: table_name, item_id, att_categories_id</param>
     /// <returns>db array list of added files information id, fname, fsize, ext, filepath</returns>
-    public ArrayList uploadMulti(Hashtable item)
+    public FwList uploadMulti(FwRow item)
     {
-        ArrayList result = [];
+        FwList result = [];
 
         var files = fw.request?.Form?.Files;
         if (files == null || files.Count == 0)
@@ -144,7 +144,7 @@ public class Att : FwModel<Att.Row>
             if (file.Length > 0)
             {
                 // add att db record
-                Hashtable itemdb = new(item);
+                FwRow itemdb = new(item);
                 itemdb["status"] = STATUS_UNDER_UPDATE; // under upload
                 var id = this.add(itemdb);
 
@@ -165,12 +165,12 @@ public class Att : FwModel<Att.Row>
     {
         var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
 
-        Hashtable where = [];
+        FwRow where = [];
         where["fwentities_id"] = fwentities_id;
         where["iname"] = db.opLIKE("TMP#%");
         where["status"] = STATUS_DELETED;
         where["item_id"] = db.opISNULL();
-        db.update(table_name, new Hashtable() {
+        db.update(table_name, new FwRow() {
             { "status", STATUS_ACTIVE },
             { "item_id", item_id }
         }, where);
@@ -199,7 +199,7 @@ public class Att : FwModel<Att.Row>
     /// <param name="item"></param>
     /// <param name="size">s,m,l or empty(original size)</param>
     /// <returns></returns>
-    public string getUrl(Hashtable item, string size = "")
+    public string getUrl(FwRow item, string size = "")
     {
         string result;
         if (item["is_s3"].toBool())
@@ -252,7 +252,7 @@ public class Att : FwModel<Att.Row>
     {
         return getUrl(id, size) + "&preview=1";
     }
-    public string getUrlPreview(Hashtable item, string size = "s")
+    public string getUrlPreview(FwRow item, string size = "s")
     {
         return getUrl(item, size) + "&preview=1";
     }
@@ -379,12 +379,12 @@ public class Att : FwModel<Att.Row>
     /// <param name="is_image"></param>
     /// <param name="category_icode"></param>
     /// <returns></returns>
-    public ArrayList listLinked(string entity_icode, int item_id, int is_image = -1, string category_icode = "")
+    public FwList listLinked(string entity_icode, int item_id, int is_image = -1, string category_icode = "")
     {
         var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
 
         string where = "";
-        Hashtable @params = [];
+        FwRow @params = [];
         @params["@fwentities_id"] = fwentities_id;
         @params["@item_id"] = item_id;
 
@@ -418,12 +418,12 @@ public class Att : FwModel<Att.Row>
     /// <param name="item_id"></param>
     /// <param name="is_image"></param>
     /// <returns></returns>
-    public Hashtable oneFirstLinked(string entity_icode, int item_id, int is_image = -1)
+    public FwRow oneFirstLinked(string entity_icode, int item_id, int is_image = -1)
     {
         var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
 
         string where = "";
-        Hashtable @params = new()
+        FwRow @params = new()
         {
             {"@fwentities_id", fwentities_id},
             {"@item_id", item_id},
@@ -443,18 +443,18 @@ public class Att : FwModel<Att.Row>
     }
 
     // return all att images linked via att_links
-    public ArrayList listLinkedImages(string link_table_name, int id)
+    public FwList listLinkedImages(string link_table_name, int id)
     {
         return listLinked(link_table_name, id, 1);
     }
 
     // return all att files linked via att.fwentities_id and att.item_id
     // is_image = -1 (all - files and images), 0 (files only), 1 (images only)
-    public ArrayList listByEntity(string entity_icode, int item_id, int is_image = -1)
+    public FwList listByEntity(string entity_icode, int item_id, int is_image = -1)
     {
         var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
 
-        Hashtable where = [];
+        FwRow where = [];
         where["status"] = STATUS_ACTIVE;
         where["fwentities_id"] = fwentities_id;
         where["item_id"] = item_id;
@@ -464,7 +464,7 @@ public class Att : FwModel<Att.Row>
     }
 
     // return all att files linked via att.fwentities_id and att.item_id and att.att_categories_id
-    public ArrayList listByEntityCategory(string entity_icode, int item_id, string category_icode = "")
+    public FwList listByEntityCategory(string entity_icode, int item_id, string category_icode = "")
     {
         var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
 
@@ -477,7 +477,7 @@ public class Att : FwModel<Att.Row>
             att_categories_id = att_category["id"].toInt();
         }
 
-        Hashtable where = [];
+        FwRow where = [];
         where["status"] = STATUS_ACTIVE;
         where["fwentities_id"] = fwentities_id;
         where["item_id"] = item_id;
@@ -486,7 +486,7 @@ public class Att : FwModel<Att.Row>
     }
 
     // return one att record with additional check by entity
-    public Hashtable oneWithEntityCheck(int id, string entity_icode)
+    public FwRow oneWithEntityCheck(int id, string entity_icode)
     {
         var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
 
@@ -497,11 +497,11 @@ public class Att : FwModel<Att.Row>
     }
 
     // return one att record by table_name and item_id
-    public Hashtable oneByEntity(string entity_icode, int item_id)
+    public FwRow oneByEntity(string entity_icode, int item_id)
     {
         var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
 
-        return db.row(table_name, new Hashtable()
+        return db.row(table_name, new FwRow()
         {
             {"fwentities_id",fwentities_id},
             {"item_id",item_id}
@@ -520,7 +520,7 @@ public class Att : FwModel<Att.Row>
     //////////////////// S3 related functions - only works with S3 model if Amazon.S3 installed
 
     // generate signed url and redirect to it, so user download directly from S3
-    public void redirectS3(Hashtable item, string size = "")
+    public void redirectS3(FwRow item, string size = "")
     {
         if (fw.userId == 0)
             throw new AuthException(); // denied for non-logged
@@ -565,7 +565,7 @@ public class Att : FwModel<Att.Row>
         if (result)
         {
             // mark as uploaded
-            this.update(id, new Hashtable() { { "is_s3", "1" } });
+            this.update(id, new FwRow() { { "is_s3", "1" } });
             // remove local files
             deleteLocalFiles(id);
         }
@@ -614,7 +614,7 @@ public class Att : FwModel<Att.Row>
         var honlynames = Utils.qh(fieldnames);
 
         // create list of eligible file uploads, check for the ContentLength as any 'input type = "file"' creates a System.Web.HttpPostedFile object even if the file was not attached to the input
-        ArrayList afiles = [];
+        FwList afiles = [];
         if (honlynames.Count > 0)
         {
             // if we only need some fields - skip if not requested field
@@ -648,7 +648,7 @@ public class Att : FwModel<Att.Row>
         foreach (IFormFile file in afiles)
         {
             // first - save to db so we can get att_id
-            Hashtable attitem = [];
+            FwRow attitem = [];
             attitem["att_categories_id"] = att_categories_id;
             attitem["fwentities_id"] = fwentities_id;
             attitem["item_id"] = item_id;
@@ -665,7 +665,7 @@ public class Att : FwModel<Att.Row>
 
                 // TODO check response for 200 and if not - error/delete?
                 // once uploaded - mark in db as uploaded
-                fw.model<Att>().update(att_id, new Hashtable() { { "status", "0" } });
+                fw.model<Att>().update(att_id, new FwRow() { { "status", "0" } });
 
                 result += 1;
             }
@@ -682,11 +682,11 @@ public class Att : FwModel<Att.Row>
         return result;
     }
 
-    public override void filterForJson(Hashtable item)
+    public override void filterForJson(FwRow item)
     {
         //leave only specific keys
         var keys = Utils.qh("id icode att_categories_id iname is_image fsize ext url url_preview");
-        foreach (var key in new ArrayList(item.Keys))
+        foreach (var key in new FwList(item.Keys))
         {
             if (!keys.ContainsKey(key))
                 item.Remove(key);

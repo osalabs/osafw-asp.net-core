@@ -41,7 +41,7 @@ namespace osafw.Tests
         [TestMethod()]
         public void hTest()
         {
-            Hashtable h = DB.h("AAA", 1, "BBB", 2, "CCC", 3, "DDD", 4);
+            FwRow h = DB.h("AAA", 1, "BBB", 2, "CCC", 3, "DDD", 4);
             Assert.AreEqual(1, h["AAA"]);
             Assert.AreEqual(2, h["BBB"]);
             Assert.AreEqual(3, h["CCC"]);
@@ -114,7 +114,7 @@ namespace osafw.Tests
         [TestMethod()]
         public void execTest()
         {
-            ArrayList tables = db.tables();
+            FwList tables = db.tables();
             if (tables.Contains("exec_unit_testing"))
             {
                 db.exec("DROP TABLE exec_unit_testing");
@@ -246,13 +246,13 @@ namespace osafw.Tests
             string result3 = db.insql(strArray);
             Assert.AreEqual(" IN ('a', 'b', 'c')", result3);
 
-            // Test with ArrayList
-            ArrayList list = ["a", "b", "c"];
+            // Test with FwList
+            FwList list = ["a", "b", "c"];
             string result4 = db.insql(list);
             Assert.AreEqual(" IN ('a', 'b', 'c')", result4);
 
-            // Test with empty ArrayList
-            ArrayList emptyList = [];
+            // Test with empty FwList
+            FwList emptyList = [];
             string result5 = db.insql(emptyList);
             Assert.AreEqual(" IN (NULL)", result5);
         }
@@ -276,13 +276,13 @@ namespace osafw.Tests
             string result4 = db.insqli(strArray);
             Assert.AreEqual(" IN (1, 2, 3)", result4);
 
-            // Test with ArrayList
-            ArrayList list = ["1", "2", "3"];
+            // Test with FwList
+            FwList list = ["1", "2", "3"];
             string result5 = db.insqli(list);
             Assert.AreEqual(" IN (1, 2, 3)", result5);
 
-            // Test with empty ArrayList
-            ArrayList emptyList = [];
+            // Test with empty FwList
+            FwList emptyList = [];
             string result6 = db.insqli(emptyList);
             Assert.AreEqual(" IN (NULL)", result6);
         }
@@ -523,7 +523,7 @@ namespace osafw.Tests
         public void tablesTest()
         {
             string[] tablesToCheck = Utils.qw("users att settings menu_items att_categories fwsessions");
-            ArrayList tables = db.tables();
+            FwList tables = db.tables();
             foreach (var tableName in tablesToCheck)
             {
                 Assert.IsGreaterThanOrEqualTo(0, tables.IndexOf(tableName), tableName + " not found");
@@ -534,7 +534,7 @@ namespace osafw.Tests
         public void viewsTest()
         {
             db.exec("CREATE VIEW view_for_unit_tests AS SELECT * FROM users");
-            ArrayList views = db.views();
+            FwList views = db.views();
             db.exec("DROP VIEW view_for_unit_tests");
             Assert.IsGreaterThanOrEqualTo(0, views.IndexOf("view_for_unit_tests"));
         }
@@ -542,7 +542,7 @@ namespace osafw.Tests
         [TestMethod()]
         public void tableSchemaFullTest()
         {
-            Hashtable schema = db.tableSchemaFull("users");
+            FwRow schema = db.tableSchemaFull("users");
             Assert.IsTrue(schema.ContainsKey("id"));
             Assert.IsTrue(schema.ContainsKey("status"));
             Assert.IsTrue(schema.ContainsKey("add_users_id"));
@@ -554,7 +554,7 @@ namespace osafw.Tests
         [TestMethod()]
         public void clearchemaCacheTest()
         {
-            Hashtable schema = db.loadTableSchema("users");
+            FwRow schema = db.loadTableSchema("users");
             Assert.IsFalse(db.isSchemaCacheEmpty());
             db.clearSchemaCache();
             Assert.IsTrue(db.isSchemaCacheEmpty());
@@ -574,7 +574,7 @@ namespace osafw.Tests
         public void prepareParams()
         {
             // 1. Test Insert
-            var fields = new Hashtable {
+            var fields = new FwRow {
                 { "iname", "John" },
                 { "email", "john@example.com" }
             };

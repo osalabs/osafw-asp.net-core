@@ -53,7 +53,7 @@ public class AdminAttController : FwAdminController
     public override void getListRows()
     {
         base.getListRows();
-        foreach (Hashtable row in this.list_rows)
+        foreach (FwRow row in this.list_rows)
         {
             if (row["is_image"].toInt() == 1)
             {
@@ -66,7 +66,7 @@ public class AdminAttController : FwAdminController
         }
     }
 
-    public override Hashtable IndexAction()
+    public override FwRow IndexAction()
     {
         var ps = base.IndexAction() ?? [];
 
@@ -74,10 +74,10 @@ public class AdminAttController : FwAdminController
         return ps;
     }
 
-    public override Hashtable ShowFormAction(int id = 0)
+    public override FwRow ShowFormAction(int id = 0)
     {
         var ps = base.ShowFormAction(id) ?? [];
-        var item = ps["i"] as Hashtable ?? [];
+        var item = ps["i"] as FwRow ?? [];
 
         ps["url"] = model.getUrl(id);
         if (item["is_image"].toInt() == 1)
@@ -88,12 +88,12 @@ public class AdminAttController : FwAdminController
         return ps;
     }
 
-    public override Hashtable? SaveAction(int id = 0)
+    public override FwRow? SaveAction(int id = 0)
     {
         route_onerror = FW.ACTION_SHOW_FORM; //set route to go if error happens
 
-        Hashtable ps = [];
-        Hashtable item = reqh("item");
+        FwRow ps = [];
+        FwRow item = reqh("item");
         var is_new = (id == 0);
         var location = "";
 
@@ -117,7 +117,7 @@ public class AdminAttController : FwAdminController
             item["fwentities_id"] = fwentities_id;
         }
 
-        Hashtable itemdb = FormUtils.filter(item, save_fields);
+        FwRow itemdb = FormUtils.filter(item, save_fields);
         if (Utils.isEmpty(itemdb["iname"]))
             itemdb["iname"] = "new file upload";
 
@@ -134,7 +134,7 @@ public class AdminAttController : FwAdminController
             // Proceed upload - for add - could be multiple files
             var addedAtt = model.uploadMulti(itemdb);
             if (addedAtt.Count > 0)
-                id = (addedAtt[0] as Hashtable)!["id"].toInt();
+                id = (addedAtt[0] as FwRow)!["id"].toInt();
             fw.flash("added", 1);
             location = base_url;
         }
@@ -161,11 +161,11 @@ public class AdminAttController : FwAdminController
         return this.afterSave(true, id, is_new, FW.ACTION_SHOW_FORM, location, ps);
     }
 
-    public override void Validate(int id, Hashtable item)
+    public override void Validate(int id, FwRow item)
     {
         // only require file during first upload
         // only require iname during update
-        Hashtable itemdb;
+        FwRow itemdb;
         if (id > 0)
         {
             itemdb = model.one(id);
@@ -189,13 +189,13 @@ public class AdminAttController : FwAdminController
         this.validateCheckResult();
     }
 
-    public Hashtable SelectAction()
+    public FwRow SelectAction()
     {
-        Hashtable ps = [];
+        FwRow ps = [];
         string category_icode = reqs("category");
         int att_categories_id = reqi("att_categories_id");
 
-        Hashtable where = [];
+        FwRow where = [];
         where["status"] = 0;
         if (category_icode.Length > 0)
         {
@@ -210,8 +210,8 @@ public class AdminAttController : FwAdminController
             where["att_categories_id"] = att_categories_id;
 
         var is_json = fw.isJsonExpected();
-        ArrayList rows = db.array(model.table_name, where, "add_time desc");
-        foreach (Hashtable row in rows)
+        FwList rows = db.array(model.table_name, where, "add_time desc");
+        foreach (FwRow row in rows)
         {
             row["url"] = model.getUrl(row);
             if (is_json)

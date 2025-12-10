@@ -77,7 +77,7 @@ public class WinLoginController : FwController
                 try
                 {
                     // if user not found - add it with minimum level
-                    usersId = fw.model<Users>().add(new Hashtable {
+                    usersId = fw.model<Users>().add(new FwRow {
                         {"email",  username+"@company.tld"},
                         {"access_level", Users.ACL_MEMBER},
                         {"login", username},

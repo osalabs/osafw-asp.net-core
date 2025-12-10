@@ -109,7 +109,7 @@ public class FwSelfTest
             echo("template parser", ex.Message, Result.ERR);
         }
 
-        var accessLevels = fw.config("access_levels") as Hashtable;
+        var accessLevels = fw.config("access_levels") as FwRow;
         is_true("access_levels", accessLevels != null && accessLevels.Count > 0, "Not defined");
 
         var cacheKey = "selftest_" + Guid.NewGuid().ToString("N");
@@ -228,7 +228,7 @@ public class FwSelfTest
             echo("Controllers", "None found", FwSelfTest.Result.ERR);
         }
 
-        Hashtable hexclude = Utils.qh(exclude_controllers);
+        FwRow hexclude = Utils.qh(exclude_controllers);
 
         foreach (var t in aControllers)
         {
@@ -297,7 +297,7 @@ public class FwSelfTest
                     }
 
                     new_controller.init(fw);
-                    var ps = (Hashtable?)mInfo.Invoke(new_controller, null);
+                    var ps = (FwRow?)mInfo.Invoke(new_controller, null);
                     //TODO MIGRATE
                     //fw.response.Clear();
                     //fw.response.BufferOutput = false;

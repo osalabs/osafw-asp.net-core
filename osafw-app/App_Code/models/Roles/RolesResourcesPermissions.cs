@@ -73,7 +73,7 @@ public class RolesResourcesPermissions : FwModel<RolesResourcesPermissions.Row>
     /// <returns></returns>
     public bool isExistsByResourcePermissionRoles(int resources_id, int permissions_id, IList roles_ids)
     {
-        var where = new Hashtable
+        var where = new FwRow
         {
             { "resources_id", resources_id },
             { "permissions_id", permissions_id },
@@ -123,34 +123,34 @@ public class RolesResourcesPermissions : FwModel<RolesResourcesPermissions.Row>
     /// <param name="roles_id"></param>
     /// <param name="resources_id"></param>
     /// <returns></returns>
-    public Hashtable matrixRowByRoleResource(int roles_id, int resources_id)
+    public FwRow matrixRowByRoleResource(int roles_id, int resources_id)
     {
-        var result = new Hashtable();
+        var result = new FwRow();
 
         var rows = listByRoleResource(roles_id, resources_id);
-        foreach (Hashtable row in rows)
+        foreach (FwRow row in rows)
         {
             result[matrixKey(row["resources_id"], row["permissions_id"])] = row;
         }
         return result;
     }
 
-    public ArrayList resourcesMatrixByRole(int roles_id, DBList permissions)
+    public FwList resourcesMatrixByRole(int roles_id, DBList permissions)
     {
         var resources = fw.model<Resources>().list().toArrayList();
 
         // for each resource - get permissions for this role
-        foreach (Hashtable resource in resources)
+        foreach (FwRow resource in resources)
         {
-            var permissions_cols = new ArrayList();
+            var permissions_cols = new FwList();
             resource["permissions_cols"] = permissions_cols;
 
             // load permissions for this resource
             var hpermissions = fw.model<RolesResourcesPermissions>().matrixRowByRoleResource(roles_id, resource["id"].toInt());
 
-            foreach (Hashtable permission in permissions)
+            foreach (FwRow permission in permissions)
             {
-                var permission_col = new Hashtable();
+                var permission_col = new FwRow();
                 //permission_col["resources_id"] = resource["id"];
                 //permission_col["permissions_id"] = permission["id"];
                 var key = fw.model<RolesResourcesPermissions>().matrixKey(resource["id"], permission["id"]);
@@ -163,12 +163,12 @@ public class RolesResourcesPermissions : FwModel<RolesResourcesPermissions.Row>
         return resources;
     }
 
-    internal void updateMatrixByRole(int roles_id, Hashtable hresources_permissions)
+    internal void updateMatrixByRole(int roles_id, FwRow hresources_permissions)
     {
         var permissions = fw.model<Permissions>().list();
 
-        Hashtable fields = [];
-        Hashtable where = [];
+        FwRow fields = [];
+        FwRow where = [];
 
         // set all fields as under update
         fields[field_status] = STATUS_UNDER_UPDATE;

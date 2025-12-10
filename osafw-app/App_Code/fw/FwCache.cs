@@ -8,7 +8,7 @@ public class FwCache
 {
     public static IMemoryCache MemoryCache { get; set; } = new MemoryCache(new MemoryCacheOptions());
 
-    public Hashtable request_cache = []; // request level cache
+    public FwRow request_cache = []; // request level cache
 
     // ******** application-level cache with IMemoryCache ***********
 
@@ -89,7 +89,7 @@ public class FwCache
     /// get value from request cache
     /// </summary>
     /// <param name="key"></param>
-    /// <returns>Hashtable, ArrayList, other value or null - since objects in cache serialized using json when stored</returns>
+    /// <returns>FwRow, FwList, other value or null - since objects in cache serialized using json when stored</returns>
     public object? getRequestValue(string key)
     {
         var result = request_cache[key];
@@ -113,7 +113,7 @@ public class FwCache
     public void requestRemoveWithPrefix(string prefix)
     {
         var plen = prefix.Length;
-        foreach (string key in new ArrayList(request_cache.Keys))
+        foreach (string key in new FwList(request_cache.Keys))
         {
             if (key.Length > plen && key[..plen] == prefix)
             {

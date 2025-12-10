@@ -39,7 +39,7 @@ public class MyMFAController : FwController
         fw.redirect(base_url + "/new");
     }
 
-    public Hashtable ShowFormAction()
+    public FwRow ShowFormAction()
     {
         var user = model.one(user_id);
 
@@ -50,12 +50,12 @@ public class MyMFAController : FwController
         var secret = model.generateMFASecret();
         fw.Session("mfa_secret", secret);
 
-        Hashtable ps = [];
+        FwRow ps = [];
         ps["qr_code"] = model.generateMFAQRCode(secret, user["email"], fw.config("SITE_NAME").toStr());
         return ps;
     }
 
-    public Hashtable SaveAction()
+    public FwRow SaveAction()
     {
         route_onerror = FW.ACTION_SHOW_FORM_NEW; //set route to go if error happens
         checkXSS();
@@ -71,7 +71,7 @@ public class MyMFAController : FwController
         // code is valid, generate recovery codes and save
         // generate 5 recovery codes as random 8-digit numbers using Utils.getRandStr(8) and concatenate into comma-separated string
         var hashed_codes = new List<string>(5);
-        ArrayList recovery_codes = [];
+        FwList recovery_codes = [];
         for (int i = 0; i < 5; i++)
         {
             var code = Utils.getRandStr(8);
@@ -80,7 +80,7 @@ public class MyMFAController : FwController
         }
 
         // save to db
-        model.update(user_id, new Hashtable {
+        model.update(user_id, new FwRow {
             { "mfa_secret" , fw.Session("mfa_secret") },
             { "mfa_added" , DB.NOW },
             { "mfa_recovery" , string.Join(" ",hashed_codes) },
@@ -94,7 +94,7 @@ public class MyMFAController : FwController
             model.doLogin(user_id);
         }
 
-        return new Hashtable()
+        return new FwRow()
         {
             { "recovery_codes" , recovery_codes },
         };

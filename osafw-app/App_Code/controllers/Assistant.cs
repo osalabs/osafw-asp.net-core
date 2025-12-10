@@ -33,7 +33,7 @@ public sealed class LookupPlugin
     /// <param name="query">Free‑text search, e.g. "bathroom"</param>
     /// <returns>JSON array of objects { id: int, iname: string }</returns>
     [KernelFunction, Description("Search a lookup model and return id & iname pairs")]
-    public ArrayList lookup(
+    public FwList lookup(
         [Description("Model name, e.g. IncidentsLocations")] string model,
         [Description("Search phrase, e.g. bathroom")] string query)
     {
@@ -64,11 +64,11 @@ public class AssistantController : FwController
         //true - allow access to all members
     }
 
-    public Hashtable IndexAction()
+    public FwRow IndexAction()
     {
         //todo show list of history
-        Hashtable ps = [];
-        Hashtable item = reqh("item");
+        FwRow ps = [];
+        FwRow item = reqh("item");
 
         var userPrompt = fw.G["user_prompt"].toStr();
 
@@ -88,7 +88,7 @@ public class AssistantController : FwController
                 ps["is_sql_result"] = true;
 
                 // 6) Optionally run the SQL on your DB (be sure to sanitize or check carefully!)
-                ArrayList rows = [];
+                FwList rows = [];
                 db.exec("BEGIN TRANSACTION");
                 try
                 {
@@ -103,7 +103,7 @@ public class AssistantController : FwController
                     fw.redirect(this.base_url);
                 }
 
-                var headers = new ArrayList();
+                var headers = new FwList();
                 Utils.prepareRowsHeaders(rows, headers);
 
                 ps["rows"] = rows;
@@ -126,7 +126,7 @@ public class AssistantController : FwController
         //if (page_name == "about")
         //    tpl_name = fw.config("PAGE_LAYOUT_PUBLIC").toStr();
 
-        Hashtable ps = new();
+        FwRow ps = new();
         ps["hide_sidebar"] = true; // TODO control via Spages
         ps["page_name"] = page_name;
 
@@ -135,9 +135,9 @@ public class AssistantController : FwController
 
     public void SaveAction()
     {
-        Hashtable ps = [];
+        FwRow ps = [];
 
-        Hashtable item = reqh("item");
+        FwRow item = reqh("item");
         string userPrompt = item["prompt"].toStr();
         if (string.IsNullOrWhiteSpace(userPrompt))
         {
@@ -149,7 +149,7 @@ public class AssistantController : FwController
         string apiKey = fw.config("OPENAI_API_KEY").toStr();
         //string modelId = "gpt-4.1";
         string modelId = "gpt-4.1-mini";
-        var metaps = new Hashtable
+        var metaps = new FwRow
         {
             { "current_time", DateTime.Now },
             { "users_id", fw.userId },
@@ -220,7 +220,7 @@ public class AssistantController : FwController
             parsedResult = JsonSerializer.Deserialize<AssistantResult>(content);
             logger("AssistantResult:", parsedResult);
 
-            fw.model<FwActivityLogs>().addSimple(FwLogTypes.ICODE_ADDED, FwEntities.ICODE_ASSISTANT, 0, userPrompt, (Hashtable?)Utils.jsonDecode(content));
+            fw.model<FwActivityLogs>().addSimple(FwLogTypes.ICODE_ADDED, FwEntities.ICODE_ASSISTANT, 0, userPrompt, (FwRow?)Utils.jsonDecode(content));
         }
         catch (Exception ex)
         {

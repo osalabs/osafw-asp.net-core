@@ -38,7 +38,7 @@ class DevCodeGen
         return new DevCodeGen(fw, db);
     }
 
-    public static void replaceInFile(string filepath, Hashtable strings)
+    public static void replaceInFile(string filepath, FwRow strings)
     {
         var content = Utils.getFileContent(filepath);
         if (content.Length == 0)
@@ -52,7 +52,7 @@ class DevCodeGen
 
     // replaces strings in all files under defined dir
     // RECURSIVE!
-    private static void replaceInFiles(string dir, Hashtable strings)
+    private static void replaceInFiles(string dir, FwRow strings)
     {
         foreach (string filename in Directory.GetFiles(dir))
             replaceInFile(filename, strings);
@@ -62,7 +62,7 @@ class DevCodeGen
             replaceInFiles(foldername, strings);
     }
 
-    private static string entityFieldToSQLType(Hashtable entity)
+    private static string entityFieldToSQLType(FwRow entity)
     {
         string result;
 
@@ -120,7 +120,7 @@ class DevCodeGen
         return result;
     }
 
-    private string entityFieldToSQLDefault(Hashtable entity)
+    private string entityFieldToSQLDefault(FwRow entity)
     {
         var result = "";
         if (entity["default"] == null)
@@ -155,14 +155,14 @@ class DevCodeGen
 
     // if field is referece to other table - add named foreign key
     // CONSTRAINT FK_entity["table_name")]remotetable FOREIGN KEY REFERENCES remotetable(id)
-    private string entityFieldToSQLForeignKey(Hashtable field, Hashtable entity)
+    private string entityFieldToSQLForeignKey(FwRow field, FwRow entity)
     {
         var result = "";
 
         if (!entity.ContainsKey("foreign_keys"))
             return result;
 
-        foreach (Hashtable fk in entity["foreign_keys"] as ArrayList ?? new ArrayList())
+        foreach (FwRow fk in entity["foreign_keys"] as FwList ?? new FwList())
         {
             fw.logger("CHECK FK:", fk["column"].toStr(), "=", field["name"].toStr());
             if (fk["column"].toStr() == field["name"].toStr())
@@ -180,15 +180,15 @@ class DevCodeGen
     }
 
     // convert db.json entity to SQL CREATE TABLE
-    private string entity2SQL(Hashtable entity)
+    private string entity2SQL(FwRow entity)
     {
         var table_name = entity["table"].toStr();
         var result = "CREATE TABLE " + db.qid(table_name, false) + " (" + Environment.NewLine;
 
-        var indexes = entity["indexes"] as Hashtable;
+        var indexes = entity["indexes"] as FwRow;
         var i = 1;
-        var fields = entity["fields"] as ArrayList ?? new ArrayList();
-        foreach (Hashtable field in fields)
+        var fields = entity["fields"] as FwList ?? new FwList();
+        foreach (FwRow field in fields)
         {
             var fsql = "";
             var field_name = field["name"].toStr();
@@ -258,7 +258,7 @@ class DevCodeGen
     public void createDatabaseFromDBJson()
     {
         var config_file = fw.config("template") + DB_JSON_PATH;
-        var entities = DevEntityBuilder.loadJson<ArrayList>(config_file);
+        var entities = DevEntityBuilder.loadJson<FwList>(config_file);
 
         // drop all FKs we created before, so we'll be able to drop tables later
         DBList fks = db.arrayp(@"SELECT fk.name, o.name as table_name 
@@ -268,7 +268,7 @@ class DevCodeGen
         foreach (var fk in fks)
             db.exec("ALTER TABLE " + db.qid(fk["table_name"], false) + " DROP CONSTRAINT " + db.qid(fk["name"], false));
 
-        foreach (Hashtable entity in entities)
+        foreach (FwRow entity in entities)
         {
             var sql = entity2SQL(entity);
             // create db tables directly in db
@@ -289,10 +289,10 @@ class DevCodeGen
     public void createDBSQLFromDBJson()
     {
         var config_file = fw.config("template") + DB_JSON_PATH;
-        var entities = DevEntityBuilder.loadJson<ArrayList>(config_file);
+        var entities = DevEntityBuilder.loadJson<FwList>(config_file);
 
         var database_sql = "";
-        foreach (Hashtable entity in entities)
+        foreach (FwRow entity in entities)
         {
             var sql = entity2SQL(entity);
             // only create App_Data/database.sql
@@ -317,16 +317,16 @@ class DevCodeGen
     public void createModelsAndControllersFromDBJson()
     {
         var config_file = fw.config("template") + DB_JSON_PATH;
-        var entities = DevEntityBuilder.loadJson<ArrayList>(config_file);
+        var entities = DevEntityBuilder.loadJson<FwList>(config_file);
 
-        foreach (Hashtable entity in entities)
+        foreach (FwRow entity in entities)
         {
             this.createModel(entity);
             this.createController(entity, entities);
         }
     }
 
-    public void createModel(Hashtable entity)
+    public void createModel(FwRow entity)
     {
         string table_name = entity["table"].toStr();
         string model_name = entity["model_name"].toStr();
@@ -357,7 +357,7 @@ class DevCodeGen
             var field_main_id = "";
             var model_linked = "";
             var field_linked_id = "";
-            foreach (Hashtable fk in (entity["foreign_keys"] as ArrayList ?? new ArrayList()))
+            foreach (FwRow fk in (entity["foreign_keys"] as FwList ?? new FwList()))
             {
                 if (field_main_id == "")
                 {
@@ -397,16 +397,16 @@ class DevCodeGen
             var codegen = "";
             if (entity.ContainsKey("fields"))
             {
-                var entity_fields = entity["fields"] as ArrayList ?? [];
+                var entity_fields = entity["fields"] as FwList ?? [];
                 var fields = Utils.array2hashtable(entity_fields, "name");
 
                 // detect id and iname fields
                 var i = 1;
-                Hashtable? fld_int = null;
-                Hashtable? fld_identity = null;
-                Hashtable? fld_iname = null;
+                FwRow? fld_int = null;
+                FwRow? fld_identity = null;
+                FwRow? fld_iname = null;
                 var is_normalize_names = false;
-                foreach (Hashtable fld in entity_fields)
+                foreach (FwRow fld in entity_fields)
                 {
                     // find identity
                     if (fld_identity == null && fld["is_identity"].toBool())
@@ -465,16 +465,16 @@ class DevCodeGen
         Utils.setFileContent(path + @"\" + model_name + ".cs", ref mdemo);
     }
 
-    private void createLookup(Hashtable entity)
+    private void createLookup(FwRow entity)
     {
         string model_name = entity["model_name"].toStr();
-        var controller_options = entity["controller"] as Hashtable ?? new Hashtable();
+        var controller_options = entity["controller"] as FwRow ?? new FwRow();
         string controller_url = controller_options["url"].toStr();
         string controller_title = controller_options["title"].toStr();
 
         var icode = controller_url.Replace("/", ""); // /Admin/LogTypes => AdminLogTypes
 
-        var item = new Hashtable
+        var item = new FwRow
         {
             { "igroup", "User" },
             { "icode", icode },
@@ -518,10 +518,10 @@ class DevCodeGen
         Utils.setFileContent(upd_file, ref upd_sql, true);
     }
 
-    public bool createController(Hashtable entity, ArrayList entities)
+    public bool createController(FwRow entity, FwList entities)
     {
         string model_name = entity["model_name"].toStr();
-        var controller_options = entity["controller"] as Hashtable ?? new Hashtable();
+        var controller_options = entity["controller"] as FwRow ?? new FwRow();
         string controller_url = controller_options["url"].toStr();
         string controller_title = controller_options["title"].toStr();
         string controller_type = controller_options["type"].toStr(); // ""(dynamic), "vue", "lookup", "api"
@@ -580,7 +580,7 @@ class DevCodeGen
 
         // replace in templates: DemoDynamic to Title
         // replace in url.html /Admin/DemosDynamic to controller_url
-        Hashtable replacements = new()
+        FwRow replacements = new()
         {
             { controller_from_url, controller_url },
             { controller_from_title, controller_title }
@@ -611,7 +611,7 @@ class DevCodeGen
         return true;
     }
 
-    public void updateControllerConfigJson(Hashtable entity, string tpl_to, ArrayList entities)
+    public void updateControllerConfigJson(FwRow entity, string tpl_to, FwList entities)
     {
         // save_fields - all fields from model table (except id and sytem add_time/user fields)
         // save_fields_checkboxes - empty (TODO based on bit field?)
@@ -624,7 +624,7 @@ class DevCodeGen
         // field NOT NULL and no default - required
         // field has foreign key - add that table as dropdown
         var config_file = tpl_to + "/config.json";
-        var config = DevEntityBuilder.loadJson<Hashtable>(config_file);
+        var config = DevEntityBuilder.loadJson<FwRow>(config_file);
 
         updateControllerConfig(entity, config, entities);
 
@@ -632,7 +632,7 @@ class DevCodeGen
         DevEntityBuilder.saveJsonController(config, config_file);
     }
 
-    public void updateControllerConfig(Hashtable entity, Hashtable config, ArrayList? entities = null)
+    public void updateControllerConfig(FwRow entity, FwRow config, FwList? entities = null)
     {
         string model_name = entity["model_name"].toStr();
         var model = fw.model(model_name);
@@ -641,7 +641,7 @@ class DevCodeGen
         if (string.IsNullOrEmpty(table_name))
             table_name = model.table_name;
 
-        var controller_options = entity["controller"] as Hashtable ?? [];
+        var controller_options = entity["controller"] as FwRow ?? [];
         string controller_title = controller_options["title"].toStr();
         if (controller_title.Length == 0)
             controller_title = Utils.name2human(model_name);
@@ -651,8 +651,8 @@ class DevCodeGen
 
         var sys_fields = Utils.qh(SYS_FIELDS);
 
-        Hashtable tables = []; // hindex by table name to entities
-        ArrayList fields = entity["fields"] as ArrayList ?? new ArrayList();
+        FwRow tables = []; // hindex by table name to entities
+        FwList fields = entity["fields"] as FwList ?? new FwList();
         if (fields == null)
         {
             // TODO deprecate reading from db, always use entity info
@@ -666,12 +666,12 @@ class DevCodeGen
                 entity["is_fw"] = true; // TODO actually detect if there any fields to be normalized
             var atables = db.tables();
             foreach (string tbl in atables)
-                tables[tbl] = new Hashtable();
+                tables[tbl] = new FwRow();
         }
         else
         {
             entities ??= [];
-            foreach (Hashtable tentity in entities)
+            foreach (FwRow tentity in entities)
             {
                 if (tentity == null)
                     continue;
@@ -684,20 +684,20 @@ class DevCodeGen
         var is_fw = entity["is_fw"].toBool();
 
         //build index by field name
-        Hashtable hfields = []; // name => fld index
-        foreach (Hashtable fld in fields)
+        FwRow hfields = []; // name => fld index
+        foreach (FwRow fld in fields)
         {
             var fname = fld["name"].toStr();
             if (fname.Length > 0)
                 hfields[fname] = fld;
         }
 
-        var foreign_keys = entity["foreign_keys"] as ArrayList ?? new ArrayList();
+        var foreign_keys = entity["foreign_keys"] as FwList ?? new FwList();
         //add system user fields to fake foreign keys, so it can generate list query with user names
         var hforeign_keys = Utils.array2hashtable(foreign_keys, "column"); // column -> fk info
         if (hfields.ContainsKey("add_users_id") && !hforeign_keys.ContainsKey("add_users_id"))
         {
-            Hashtable fk = new()
+            FwRow fk = new()
             {
                 ["pk_column"] = "id",
                 ["pk_table"] = "users",
@@ -707,7 +707,7 @@ class DevCodeGen
         }
         if (hfields.ContainsKey("upd_users_id") && !hforeign_keys.ContainsKey("add_users_id"))
         {
-            Hashtable fk = new()
+            FwRow fk = new()
             {
                 ["pk_column"] = "id",
                 ["pk_table"] = "users",
@@ -717,15 +717,15 @@ class DevCodeGen
         }
         hforeign_keys = Utils.array2hashtable(foreign_keys, "column"); // refresh in case new foreign keys added above
 
-        ArrayList saveFields = [];
-        ArrayList saveFieldsNullable = [];
-        Hashtable hFieldsMap = [];   // name => iname - map for the view_list_map
-        Hashtable hFieldsMapEdit = []; // for Vue editable list
-        Hashtable hFieldsMapFW = []; // fw_name => name
+        FwList saveFields = [];
+        FwList saveFieldsNullable = [];
+        FwRow hFieldsMap = [];   // name => iname - map for the view_list_map
+        FwRow hFieldsMapEdit = []; // for Vue editable list
+        FwRow hFieldsMapFW = []; // fw_name => name
 
-        List<Hashtable> formTabs = [
+        List<FwRow> formTabs = [
             //default
-            new Hashtable
+            new FwRow
             {
                 ["tab"] = "",
                 ["label"] = "Main"
@@ -733,12 +733,12 @@ class DevCodeGen
         ]; // show form tabs
 
         // tab => fields
-        Dictionary<string, List<List<Hashtable>>> showFieldsTabs = [];  // show fields tabs/columns
-        Dictionary<string, List<List<Hashtable>>> showFormFieldsTabs = []; // show form fields tabs/columns
+        Dictionary<string, List<List<FwRow>>> showFieldsTabs = [];  // show fields tabs/columns
+        Dictionary<string, List<List<FwRow>>> showFormFieldsTabs = []; // show form fields tabs/columns
 
-        foreach (Hashtable fld in fields)
+        foreach (FwRow fld in fields)
         {
-            var ui = fld["ui"] as Hashtable ?? new Hashtable(); // ui options for the field
+            var ui = fld["ui"] as FwRow ?? new FwRow(); // ui options for the field
             if (ui.ContainsKey("skip"))
                 continue; //skip unnecessary fields
 
@@ -752,7 +752,7 @@ class DevCodeGen
 
             var is_field_fk = hforeign_keys.ContainsKey(fld_name);
             hFieldsMapEdit[fld_name] = fld["iname"]; //use regular field for Vue editable list
-            if (is_field_fk && hforeign_keys[fld_name] is Hashtable fkInfo)
+            if (is_field_fk && hforeign_keys[fld_name] is FwRow fkInfo)
             {
                 var fk_field_name = fkInfo["column"].toStr();
                 if (fk_field_name.Length > 0)
@@ -771,8 +771,8 @@ class DevCodeGen
                 }
             }
 
-            Hashtable sf = [];  // show fields
-            Hashtable sff = []; // showform fields
+            FwRow sf = [];  // show fields
+            FwRow sff = []; // showform fields
 
             sf["field"] = fld_name;
             sf["label"] = fld["iname"];
@@ -819,7 +819,7 @@ class DevCodeGen
 
                 // check foreign keys - and make type=select
                 var is_fk = false;
-                foreach (Hashtable fkinfo in foreign_keys)
+                foreach (FwRow fkinfo in foreign_keys)
                 {
                     if (fkinfo["column"].toStr() == fld_name)
                     {
@@ -934,14 +934,14 @@ class DevCodeGen
             if (m.Success)
             {
                 //table could be a junction table name then
-                var tentity = tables[table] as Hashtable ?? new Hashtable();
+                var tentity = tables[table] as FwRow ?? new FwRow();
                 var is_junction = tentity["is_junction"].toBool();
                 var junction_model = tentity["model_name"].toStr();
                 string table_name_linked = m.Groups[1].Value;
                 if (!string.IsNullOrEmpty(table_name_linked) && tables.ContainsKey(table_name_linked))
                 {
                     // if tables "TBL2" and "MODELTBL_TBL2" exists - add control for linked table
-                    Hashtable sflink = new()
+                    FwRow sflink = new()
                     {
                         { "field", table_name_linked + "_link" },
                         { "label", Utils.name2human(table_name_linked) },
@@ -956,7 +956,7 @@ class DevCodeGen
                     else
                         sflink["lookup_model"] = DevEntityBuilder.tablenameToModel(table_name_linked);
 
-                    Hashtable sfflink = new()
+                    FwRow sfflink = new()
                     {
                         { "field", table_name_linked + "_link" },
                         { "label", Utils.name2human(table_name_linked) },
@@ -991,7 +991,7 @@ class DevCodeGen
             config["list_sortdef"] = "iname asc";
         else if (fields.Count > 0)
         {
-            var firstField = fields[0] as Hashtable;
+            var firstField = fields[0] as FwRow;
             var fwname = firstField?["fw_name"].toStr();
             if (!string.IsNullOrEmpty(fwname))
                 config["list_sortdef"] = fwname;
@@ -1006,17 +1006,17 @@ class DevCodeGen
         {
             //we have foreign keys, so for the list screen we need to read FK entites names - build subquery
 
-            var fk_inames = new ArrayList();
-            var fk_joins = new ArrayList();
+            var fk_inames = new FwList();
+            var fk_joins = new FwList();
             for (int i = 0; i < foreign_keys.Count; i++)
             {
-                var fk = foreign_keys[i] as Hashtable ?? new Hashtable();
+                var fk = foreign_keys[i] as FwRow ?? new FwRow();
                 var alias = $"fk{i}";
                 var tcolumn = fk["column"].toStr();
                 var pk_table = fk["pk_table"].toStr();
                 var pk_column = fk["pk_column"].toStr();
 
-                var field = hfields[tcolumn] as Hashtable ?? new Hashtable();
+                var field = hfields[tcolumn] as FwRow ?? new FwRow();
                 string sql_join;
                 if (field["is_nullable"].toBool())
                 {
@@ -1087,7 +1087,7 @@ class DevCodeGen
         }
     }
 
-    public static void addToTabColumn(Dictionary<string, List<List<Hashtable>>> showFieldsTabs, string tab, int col, Hashtable sf)
+    public static void addToTabColumn(Dictionary<string, List<List<FwRow>>> showFieldsTabs, string tab, int col, FwRow sf)
     {
         if (!showFieldsTabs.ContainsKey(tab))
             showFieldsTabs[tab] = [
@@ -1100,12 +1100,12 @@ class DevCodeGen
     }
 
     //add tabs to config[key] and config[key_tab] based on showFieldsTabs and update config["form_tabs"]
-    public static void configAddTabs(Hashtable config, string key, Dictionary<string, List<List<Hashtable>>> showFieldsTabs)
+    public static void configAddTabs(FwRow config, string key, Dictionary<string, List<List<FwRow>>> showFieldsTabs)
     {
-        var formTabs = config["form_tabs"] as List<Hashtable> ?? new List<Hashtable>();
+        var formTabs = config["form_tabs"] as List<FwRow> ?? new List<FwRow>();
         config["form_tabs"] = formTabs;
 
-        var tabs = new ArrayList();
+        var tabs = new FwList();
         foreach (var tab in showFieldsTabs.Keys)
         {
             var showFieldsCols = showFieldsTabs[tab];
@@ -1120,7 +1120,7 @@ class DevCodeGen
             //add tab to formTabs if not exists
             if (!formTabs.Any(x => x != null && x["tab"].toStr() == tab))
             {
-                formTabs.Add(new Hashtable
+                formTabs.Add(new FwRow
                 {
                     ["tab"] = tab,
                     ["label"] = Utils.name2human(tab)
@@ -1129,14 +1129,14 @@ class DevCodeGen
         }
     }
 
-    public static ArrayList makeLayoutForFields(List<List<Hashtable>> fieldsCols)
+    public static FwList makeLayoutForFields(List<List<FwRow>> fieldsCols)
     {
         //remove/filter empty columns from showFieldsCols
         var fieldsColsFinal = fieldsCols.Where(x => x.Count > 0).ToList();
         //here we have 2 or 3 collumns
         var class_col = "col-lg-" + (fieldsColsFinal.Count == 2 ? 6 : 4);
 
-        var configFields = new ArrayList
+        var configFields = new FwList
         {
             Utils.qh("type|row"),
         };
@@ -1150,12 +1150,12 @@ class DevCodeGen
         return configFields;
     }
 
-    public static int addToFormColumns(Hashtable fld, Hashtable sf, Hashtable sff,
-        Dictionary<string, List<List<Hashtable>>> showFieldsTabs,
-        Dictionary<string, List<List<Hashtable>>> showFormFieldsTabs,
-        Hashtable sys_fields, ArrayList fields)
+    public static int addToFormColumns(FwRow fld, FwRow sf, FwRow sff,
+        Dictionary<string, List<List<FwRow>>> showFieldsTabs,
+        Dictionary<string, List<List<FwRow>>> showFormFieldsTabs,
+        FwRow sys_fields, FwList fields)
     {
-        var ui = fld["ui"] as Hashtable ?? new Hashtable(); // ui options for the field
+        var ui = fld["ui"] as FwRow ?? new FwRow(); // ui options for the field
         var col = 0; //default to left
 
         if (fld["is_identity"].toBool() || sys_fields.Contains(fld["name"] ?? ""))
@@ -1199,13 +1199,13 @@ class DevCodeGen
     //
     // alternatively - just show couple fields
     // If is_fw Then config("view_list_defaults") = "id" & If(hfields.ContainsKey("iname"), " iname", "") & If(hfields.ContainsKey("add_time"), " add_time", "") & If(hfields.ContainsKey("status"), " status", "")
-    public static (string view, string edit) getListDefaults(ArrayList fields, Hashtable hforeign_keys, Hashtable sys_fields, bool is_fw)
+    public static (string view, string edit) getListDefaults(FwList fields, FwRow hforeign_keys, FwRow sys_fields, bool is_fw)
     {
         string view_list_defaults = "";
         string edit_list_defaults = "";
 
         int defaults_ctr = 0;
-        var rfields = fields.Cast<Hashtable>()
+        var rfields = fields.Cast<FwRow>()
             .Where(fld =>
             {
                 var fname = fld["name"].toStr();
@@ -1218,7 +1218,7 @@ class DevCodeGen
                 return !fld["is_identity"].toBool() && !isLongText && !isSystemNonStatus;
             })
             .OrderByDescending(fld => !fld["is_nullable"].toBool() && fld["default"] == null);
-        foreach (Hashtable field in rfields)
+        foreach (FwRow field in rfields)
         {
             var fname = field["name"].toStr();
             if (defaults_ctr > 5 && fname != "status")
@@ -1227,7 +1227,7 @@ class DevCodeGen
             edit_list_defaults += (defaults_ctr == 0 ? "" : " ") + fname; //for edit list we need real field names only
 
             if (hforeign_keys.ContainsKey(fname))
-                fname = (hforeign_keys[fname] as Hashtable)?["column"].toStr() + "_iname";
+                fname = (hforeign_keys[fname] as FwRow)?["column"].toStr() + "_iname";
 
             if (!is_fw)
                 fname = field["fw_name"].toStr();
@@ -1241,7 +1241,7 @@ class DevCodeGen
     }
 
     //return true if skip this field
-    public static bool overrideSpecialFields(Hashtable fld, Hashtable sf, Hashtable sff)
+    public static bool overrideSpecialFields(FwRow fld, FwRow sf, FwRow sff)
     {
         var is_skip = false;
         var field_name = fld["name"].toStr();
@@ -1339,9 +1339,9 @@ class DevCodeGen
         return is_skip;
     }
 
-    public static void overrideUIOptions(Hashtable fld, Hashtable sf, Hashtable sff, string model_name)
+    public static void overrideUIOptions(FwRow fld, FwRow sf, FwRow sff, string model_name)
     {
-        var ui = fld["ui"] as Hashtable ?? new Hashtable(); // ui options for the field
+        var ui = fld["ui"] as FwRow ?? new FwRow(); // ui options for the field
 
         // override ui options
         if (ui.ContainsKey("required"))
@@ -1434,9 +1434,9 @@ class DevCodeGen
         }
     }
 
-    public static void makeValueTags(ArrayList fields)
+    public static void makeValueTags(FwList fields)
     {
-        foreach (Hashtable def in fields)
+        foreach (FwRow def in fields)
         {
             var tag = "<~i[" + def["field"] + "]";
             switch (def["type"])
@@ -1534,7 +1534,7 @@ class DevCodeGen
     // update by url
     private void updateMenuItem(string controller_url, string controller_title)
     {
-        var fields = new Hashtable()
+        var fields = new FwRow()
         {
             {"url",controller_url},
             {"iname",controller_title},

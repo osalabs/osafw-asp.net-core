@@ -201,16 +201,16 @@ public static class FwExtensions
     /// entries are copied; otherwise, public writable properties are used.</param>
     /// <returns>A dictionary containing the object's properties and their values, or the original dictionary's entries if the
     /// object is a dictionary. Keys are compared using case-insensitive ordinal comparison.</returns>
-    public static Dictionary<string, object?> toKeyValue(this object dto)
+    public static ObjDict toKeyValue(this object dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        if (dto is Dictionary<string, object?> dictionary)
-            return new Dictionary<string, object?>(dictionary, StringComparer.OrdinalIgnoreCase);
+        if (dto is ObjDict dictionary)
+            return new ObjDict(dictionary, StringComparer.OrdinalIgnoreCase);
 
         if (dto is IDictionary dict)
         {
-            Dictionary<string, object?> result = new(dict.Count, StringComparer.OrdinalIgnoreCase);
+            ObjDict result = new(dict.Count, StringComparer.OrdinalIgnoreCase);
             foreach (DictionaryEntry entry in dict)
             {
                 var key = entry.Key?.ToString();
@@ -221,7 +221,7 @@ public static class FwExtensions
         }
 
         var props = getWritableProperties(dto.GetType());
-        Dictionary<string, object?> kv = new(props.Count, StringComparer.OrdinalIgnoreCase);
+        ObjDict kv = new(props.Count, StringComparer.OrdinalIgnoreCase);
         foreach (var pair in props)
         {
             kv[pair.Key] = pair.Value.GetValue(dto);
@@ -231,34 +231,31 @@ public static class FwExtensions
     }
 
     /// <summary>
-    /// Converts the specified object to a <see cref="System.Collections.Hashtable"/> representation, mapping its
-    /// properties or dictionary entries to key-value pairs.
+    /// Converts the specified object to a <see cref="FwRow"/> representation, mapping its properties or dictionary entries to
+    /// key-value pairs.
     /// </summary>
-    /// <remarks>If <paramref name="dto"/> is already a <see cref="System.Collections.Hashtable"/>, a shallow
-    /// clone is returned. If it is an <see cref="System.Collections.IDictionary"/>, its entries are copied. For other
-    /// objects, all writable properties are included as keys in the resulting hashtable.</remarks>
-    /// <param name="dto">The object to convert. Can be a dictionary, hashtable, or an object with writable properties. If <paramref
-    /// name="dto"/> is <see langword="null"/>, an empty hashtable is returned.</param>
-    /// <returns>A <see cref="System.Collections.Hashtable"/> containing the key-value pairs from the input object. Returns an
-    /// empty hashtable if <paramref name="dto"/> is <see langword="null"/>.</returns>
-    public static Hashtable toHashtable(this object? dto)
+    /// <remarks>If <paramref name="dto"/> is already a <see cref="FwRow"/>, a shallow clone is returned. If it is an
+    /// <see cref="System.Collections.IDictionary"/>, its entries are copied. For other objects, all writable properties are
+    /// included as keys in the resulting <see cref="FwRow"/>.</remarks>
+    /// <param name="dto">The object to convert. Can be a dictionary or an object with writable properties. If
+    /// <paramref name="dto"/> is <see langword="null"/>, an empty <see cref="FwRow"/> is returned.</param>
+    /// <returns>A <see cref="FwRow"/> containing the key-value pairs from the input object. Returns an empty row if
+    /// <paramref name="dto"/> is <see langword="null"/>.</returns>
+    public static FwRow toHashtable(this object? dto)
     {
         if (dto is null)
             return [];
 
-        if (dto is Hashtable ht)
-            return (Hashtable)ht.Clone();
+        if (dto is FwRow row)
+            return new FwRow(row);
 
         if (dto is IDictionary dict)
         {
-            Hashtable result = new(dict.Count);
-            foreach (DictionaryEntry entry in dict)
-                result[entry.Key] = entry.Value;
-            return result;
+            return new FwRow(dict);
         }
 
         var props = dto.GetType().getWritableProperties();
-        Hashtable htResult = new(props.Count);
+        FwRow htResult = new(props.Count);
         foreach (var kv in props)
         {
             htResult[kv.Key] = kv.Value.GetValue(dto);

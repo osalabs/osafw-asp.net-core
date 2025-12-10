@@ -17,14 +17,14 @@ public class AdminDBController : FwController
 
     private const string dbpwd = "db321";
 
-    public Hashtable IndexAction()
+    public FwRow IndexAction()
     {
-        Hashtable ps = [];
+        FwRow ps = [];
         var selected_db = reqs("db", "main");
 
         string sql = reqs("sql");
-        ArrayList tablehead = [];
-        ArrayList tablerows = [];
+        FwList tablehead = [];
+        FwList tablerows = [];
         int sql_ctr = 0;
         long sql_time = DateTime.Now.Ticks;
 
@@ -70,10 +70,10 @@ public class AdminDBController : FwController
             fw.setGlobalError("Error occured: " + ex.Message);
         }
 
-        ArrayList dbsources = [];
-        var dbConfig = fw.config("db") as Hashtable ?? [];
+        FwList dbsources = [];
+        var dbConfig = fw.config("db") as FwRow ?? [];
         foreach (string dbname in dbConfig.Keys)
-            dbsources.Add(new Hashtable()
+            dbsources.Add(new FwRow()
             {
                 {"id",dbname},
                 {"iname",dbname},
@@ -97,21 +97,21 @@ public class AdminDBController : FwController
         fw.routeRedirect(FW.ACTION_INDEX);
     }
 
-    private static ArrayList sth2table(DbDataReader sth)
+    private static FwList sth2table(DbDataReader sth)
     {
-        ArrayList result = [];
+        FwList result = [];
         if (sth == null || !sth.HasRows)
             return result;        
 
         while (sth.Read())
         {
-            Hashtable tblrow = [];
-            var fields = new ArrayList();
+            FwRow tblrow = [];
+            var fields = new FwList();
             tblrow["fields"] = fields;
 
             for (int i = 0; i <= sth.FieldCount - 1; i++)
             {
-                Hashtable tblfld = [];
+                FwRow tblfld = [];
                 tblfld["value"] = sth[i].toStr();
 
                 fields.Add(tblfld);
@@ -122,15 +122,15 @@ public class AdminDBController : FwController
         return result;
     }
 
-    private static ArrayList sth2head(DbDataReader sth)
+    private static FwList sth2head(DbDataReader sth)
     {
-        ArrayList result = [];
+        FwList result = [];
         if (sth == null)
             return result;        
 
         for (int i = 0; i <= sth.FieldCount - 1; i++)
         {
-            Hashtable tblfld = [];
+            FwRow tblfld = [];
             tblfld["field_name"] = sth.GetName(i);
 
             result.Add(tblfld);
@@ -139,10 +139,10 @@ public class AdminDBController : FwController
         return result;
     }
 
-    private void show_tables(ref ArrayList tablehead, ref ArrayList tablerows)
+    private void show_tables(ref FwList tablehead, ref FwList tablerows)
     {
         tablehead = [];
-        Hashtable h = [];
+        FwRow h = [];
         h["field_name"] = "Table";
         tablehead.Add(h);
         h = [];
@@ -159,11 +159,11 @@ public class AdminDBController : FwController
             if (tblname.StartsWith("MSys"))
                 continue;
 
-            Hashtable tblrow = [];
-            var fields = new ArrayList();
+            FwRow tblrow = [];
+            var fields = new FwList();
             tblrow["fields"] = fields;
 
-            Hashtable tblfld = [];
+            FwRow tblfld = [];
             tblfld["db"] = db.db_name;
             tblfld["value"] = tblname;
             tblfld["is_select_link"] = true;

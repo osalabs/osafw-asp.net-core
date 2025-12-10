@@ -40,9 +40,9 @@ public class AttLinks : FwModel<AttLinks.Row>
         junction_field_linked_id = "item_id";
     }
 
-    public virtual Hashtable oneByUK(int att_id, int fwentities_id, int item_id)
+    public virtual FwRow oneByUK(int att_id, int fwentities_id, int item_id)
     {
-        var where = new Hashtable()
+        var where = new FwRow()
         {
             {junction_field_main_id, att_id},
             {junction_field_linked_id, item_id},
@@ -53,7 +53,7 @@ public class AttLinks : FwModel<AttLinks.Row>
 
     public virtual void deleteByAtt(int att_id)
     {
-        var where = new Hashtable()
+        var where = new FwRow()
         {
             {junction_field_main_id, att_id},
         };
@@ -68,7 +68,7 @@ public class AttLinks : FwModel<AttLinks.Row>
 
     public virtual void deleteUnderUpdate(int fwentities_id, int item_id)
     {
-        var where = new Hashtable()
+        var where = new FwRow()
         {
             {junction_field_linked_id, item_id},
             {field_status, STATUS_UNDER_UPDATE},
@@ -77,13 +77,13 @@ public class AttLinks : FwModel<AttLinks.Row>
         is_under_bulk_update = false;
     }
 
-    public virtual void updateJunction(string entity_icode, int item_id, Hashtable att_keys)
+    public virtual void updateJunction(string entity_icode, int item_id, FwRow att_keys)
     {
         if (att_keys == null)
             return;
 
-        Hashtable fields = [];
-        Hashtable where = [];
+        FwRow fields = [];
+        FwRow where = [];
 
         var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
 

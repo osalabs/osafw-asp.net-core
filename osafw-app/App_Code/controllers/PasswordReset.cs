@@ -29,9 +29,9 @@ public class PasswordResetController : FwController
     }
 
     // GET /PasswordReset?login=...&token=...
-    public Hashtable IndexAction()
+    public FwRow IndexAction()
     {
-        Hashtable ps = [];
+        FwRow ps = [];
         var login = reqs("login");
         var token = reqs("token");
         var user = model.oneByEmail(login);
@@ -91,7 +91,7 @@ public class PasswordResetController : FwController
         fw.redirect("/Login");
     }
 
-    public void Validate(int id, Hashtable item)
+    public void Validate(int id, FwRow item)
     {
         bool result = true;
         result &= validateRequired(id, item, Utils.qw("pwd pwd2"));

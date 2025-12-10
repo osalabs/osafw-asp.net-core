@@ -35,7 +35,7 @@ public class Resources : FwModel<Resources.Row>
     //list all non-deleted resource icodes
     public List<string> colIcodes(IList<int>? ids = null)
     {
-        var where = new Hashtable
+        var where = new FwRow
         {
             [field_status] = db.opNOT(STATUS_DELETED)
         };

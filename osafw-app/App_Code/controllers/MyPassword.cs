@@ -28,13 +28,13 @@ public class MyPasswordController : FwController
         fw.redirect(base_url + "/new");
     }
 
-    public Hashtable ShowFormAction()
+    public FwRow ShowFormAction()
     {
         if (reqs("result") == "record_updated")
             fw.G["green_msg"] = "Login/Password has been changed";
 
-        Hashtable ps = [];
-        Hashtable item = reqh("item");
+        FwRow ps = [];
+        FwRow item = reqh("item");
         int id = fw.userId;
 
         if (isGet())
@@ -48,7 +48,7 @@ public class MyPasswordController : FwController
         else
         {
             // read from db
-            Hashtable itemdb = model.one(id);
+            FwRow itemdb = model.one(id);
             // and merge new values from the form
             Utils.mergeHash(itemdb, item);
             item = itemdb;
@@ -83,7 +83,7 @@ public class MyPasswordController : FwController
         afterSave(true, id);
     }
 
-    public void Validate(int id, Hashtable item)
+    public void Validate(int id, FwRow item)
     {
         bool result = true;
         result &= validateRequired(id, item, Utils.qw("email old_pwd pwd pwd2"));

@@ -22,9 +22,9 @@ public class AdminDemosVueSimpleController : FwController
         model = fw.model<DemoDicts>();
     }
 
-    public Hashtable IndexAction()
+    public FwRow IndexAction()
     {
-        Hashtable ps = [];
+        FwRow ps = [];
         if (!fw.isJsonExpected())
             return ps; //just load Vue app html
 

@@ -27,13 +27,13 @@ public class SitemapController : FwController
         //true - allow access to all, including visitors
     }
 
-    public Hashtable IndexAction()
+    public FwRow IndexAction()
     {
-        Hashtable ps = [];
+        FwRow ps = [];
 
-        Hashtable item = model.oneByFullUrl(base_url);
+        FwRow item = model.oneByFullUrl(base_url);
 
-        ArrayList pages_tree = model.tree(" status=0 ", [], "parent_id, prio desc, iname");
+        FwList pages_tree = model.tree(" status=0 ", [], "parent_id, prio desc, iname");
         _add_full_url(pages_tree);
 
         ps["page"] = item;
@@ -42,16 +42,16 @@ public class SitemapController : FwController
         return ps;
     }
 
-    private void _add_full_url(ArrayList? pages_tree, string parent_url = "")
+    private void _add_full_url(FwList? pages_tree, string parent_url = "")
     {
         if (pages_tree == null)
             return;
 
-        foreach (Hashtable row in pages_tree)
+        foreach (FwRow row in pages_tree)
         {
             var urlPart = row["url"].toStr();
             row["full_url"] = parent_url + "/" + urlPart;
-            _add_full_url((ArrayList?)row["children"], urlPart);
+            _add_full_url((FwList?)row["children"], urlPart);
         }
     }
 }

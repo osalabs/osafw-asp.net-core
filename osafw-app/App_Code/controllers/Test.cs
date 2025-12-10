@@ -8,24 +8,24 @@ public class TestController : FwController
 
     public static new int access_level = Users.ACL_SITEADMIN;
 
-    public Hashtable IndexAction()
+    public FwRow IndexAction()
     {
-        var ps = new Hashtable();
+        var ps = new FwRow();
         ps["money"] = 1234.5612;
         ps["success"] = true;
-        return new Hashtable { { "_json", ps } };
+        return new FwRow { { "_json", ps } };
 
         //rw("<html><form method=\"POST\" action=\"/Test/(Upload)\"><input type=\"file\" name=\"file1\"/><input type=\"submit\"/></form></html>");
-        ////ArrayList users = fw.modelOf(typeof(Users)).list();
+        ////FwList users = fw.modelOf(typeof(Users)).list();
 
         ////fw.logger(users);
-        //var ps = new Hashtable();
+        //var ps = new FwRow();
         //ps["user"] = fw.model<Users>().one(1);
 
         //return ps;
     }
 
-    public Hashtable UploadAction()
+    public FwRow UploadAction()
     {
 
         String uuid = Utils.uuid();
@@ -119,15 +119,15 @@ public class TestController : FwController
         }
     }
 
-    public Hashtable JsonAction()
+    public FwRow JsonAction()
     {
-        var ps = new Hashtable();
+        var ps = new FwRow();
         ps["success"] = true;
         ps["message"] = "This is Json!";
-        return new Hashtable { { "_json", ps } };
+        return new FwRow { { "_json", ps } };
     }
 
-    public Hashtable ExceptionAction()
+    public FwRow ExceptionAction()
     {
         throw new Exception("Test exception");
     }

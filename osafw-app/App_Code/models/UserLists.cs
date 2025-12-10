@@ -33,10 +33,10 @@ public class UserLists : FwModel<UserLists.Row>
 
     public int countItems(int id)
     {
-        return db.value(table_items, new Hashtable() { { "user_lists_id", id } }, "count(*)").toInt();
+        return db.value(table_items, new FwRow() { { "user_lists_id", id } }, "count(*)").toInt();
     }
 
-    public ArrayList listSelectOptionsEntities()
+    public FwList listSelectOptionsEntities()
     {
         return db.arrayp(@" SELECT DISTINCT entity AS id, entity AS iname
                                   FROM " + db.qid(table_name) +
@@ -47,24 +47,24 @@ public class UserLists : FwModel<UserLists.Row>
     }
 
     // list for select by entity and for only logged user
-    public ArrayList listSelectByEntity(string entity)
+    public FwList listSelectByEntity(string entity)
     {
-        Hashtable where = [];
+        FwRow where = [];
         where["status"] = STATUS_ACTIVE;
         where["entity"] = entity;
         where["add_users_id"] = fw.userId;
         return db.array(table_name, where, "iname", Utils.qw("id iname"));
     }
 
-    public ArrayList listItemsById(int id)
+    public FwList listItemsById(int id)
     {
-        Hashtable where = [];
+        FwRow where = [];
         where["status"] = STATUS_ACTIVE;
         where["user_lists_id"] = id;
         return db.array(table_items, where, "id desc", Utils.qw("id item_id"));
     }
 
-    public ArrayList listForItem(string entity, int item_id)
+    public FwList listForItem(string entity, int item_id)
     {
         return db.arrayp(@"select t.id, t.iname, @item_id as item_id, ti.id as is_checked
                                  from " + db.qid(table_name) + " t" +
@@ -79,7 +79,7 @@ public class UserLists : FwModel<UserLists.Row>
         if (is_perm)
         {
             // delete list items first
-            Hashtable where = [];
+            FwRow where = [];
             where["user_lists_id"] = id;
             db.del(table_items, where);
         }
@@ -87,14 +87,14 @@ public class UserLists : FwModel<UserLists.Row>
         base.delete(id, is_perm);
     }
 
-    public Hashtable oneItemsByUK(int user_lists_id, int item_id)
+    public FwRow oneItemsByUK(int user_lists_id, int item_id)
     {
         return db.row(table_items, DB.h("user_lists_id", user_lists_id, "item_id", item_id));
     }
 
     public virtual void deleteItems(int id)
     {
-        Hashtable where = [];
+        FwRow where = [];
         where["id"] = id;
         db.del(table_items, where);
 
@@ -105,7 +105,7 @@ public class UserLists : FwModel<UserLists.Row>
     // add new record and return new record id
     public virtual int addItems(int user_lists_id, int item_id)
     {
-        Hashtable item = [];
+        FwRow item = [];
         item["user_lists_id"] = user_lists_id;
         item["item_id"] = item_id;
         item["add_users_id"] = fw.userId;
@@ -122,7 +122,7 @@ public class UserLists : FwModel<UserLists.Row>
     public bool toggleItemList(int user_lists_id, int item_id)
     {
         var result = false;
-        Hashtable litem = oneItemsByUK(user_lists_id, item_id);
+        FwRow litem = oneItemsByUK(user_lists_id, item_id);
         if (litem.Count > 0)
             // remove
             deleteItems(litem["id"].toInt());
@@ -158,7 +158,7 @@ public class UserLists : FwModel<UserLists.Row>
     public bool delItemList(int user_lists_id, int item_id)
     {
         var result = false;
-        Hashtable litem = oneItemsByUK(user_lists_id, item_id);
+        FwRow litem = oneItemsByUK(user_lists_id, item_id);
         if (litem.Count > 0)
         {
             deleteItems(litem["id"].toInt());

@@ -12,7 +12,7 @@ public class FwVirtualController : FwVueController
     public static new int access_level = Users.ACL_SITEADMIN;
 
 
-    public FwVirtualController(FW fw, Hashtable fwcontroller) : base()
+    public FwVirtualController(FW fw, FwRow fwcontroller) : base()
     {
         init(fw);
         template_basedir = "/common/virtual";
@@ -31,13 +31,13 @@ public class FwVirtualController : FwVueController
         }
 
         //use cached config or create config on the fly
-        var con_config = Utils.jsonDecode(fwcontroller["config"].toStr()) as Hashtable;
+        var con_config = Utils.jsonDecode(fwcontroller["config"].toStr()) as FwRow;
         if (con_config == null)
         {
-            var entity = new Hashtable
+            var entity = new FwRow
             {
                 { "model_name", fwcontroller["model"] },
-                { "controller", new Hashtable
+                { "controller", new FwRow
                     {
                         { "url", fwcontroller["url"] },
                         { "title", fwcontroller["iname"] },
@@ -58,7 +58,7 @@ public class FwVirtualController : FwVueController
         if (File.Exists(conf_file))
         {
             is_conf_found = true;
-            Hashtable file_config = getControllerConfigCached(conf_file);
+            FwRow file_config = getControllerConfigCached(conf_file);
             if (file_config == null)
             {
                 logger(LogLevel.WARN, "Error decoding config from " + conf_file);
@@ -76,7 +76,7 @@ public class FwVirtualController : FwVueController
             conf_file = fw.config("template") + "/common/virtual/config.json";
             if (File.Exists(conf_file))
             {
-                Hashtable file_config = getControllerConfigCached(conf_file);
+                FwRow file_config = getControllerConfigCached(conf_file);
                 if (file_config == null)
                 {
                     logger(LogLevel.WARN, "Error decoding config from " + conf_file);

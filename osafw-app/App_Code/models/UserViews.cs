@@ -46,7 +46,7 @@ public class UserViews : FwModel<UserViews.Row>
     // return screen record for logged user by id
     public DBRow oneByIcodeId(string icode, int id)
     {
-        var p = new Hashtable()
+        var p = new FwRow()
         {
             { field_icode, icode },
             { field_id, id },
@@ -62,7 +62,7 @@ public class UserViews : FwModel<UserViews.Row>
     // by icode/iname/loggeduser
     public DBRow oneByUK(string icode, string iname)
     {
-        return db.row(table_name, new Hashtable() {
+        return db.row(table_name, new FwRow() {
             {field_icode, icode },
             {field_iname, iname },
             {field_add_users_id, fw.userId },
@@ -72,7 +72,7 @@ public class UserViews : FwModel<UserViews.Row>
     // add view for logged user with icode, fields, iname
     public int addSimple(string icode, string fields, string iname, string density = "")
     {
-        return add(new Hashtable()
+        return add(new FwRow()
         {
             { field_icode, icode },
             { field_iname, iname },
@@ -106,7 +106,7 @@ public class UserViews : FwModel<UserViews.Row>
     /// <param name="fields">comma-separated fields</param>
     /// <param name="iname">view title (for save new view)</param>
     /// <returns>user_views.id</returns>
-    public int updateByIcode(string icode, Hashtable itemdb)
+    public int updateByIcode(string icode, FwRow itemdb)
     {
         var item = oneByIcode(icode);
         int result;
@@ -119,7 +119,7 @@ public class UserViews : FwModel<UserViews.Row>
         else
         {
             // new - add key fields
-            var itemdb_add = (Hashtable)itemdb.Clone();
+            var itemdb_add = (FwRow)itemdb.Clone();
             itemdb_add[field_icode] = icode;
             itemdb_add[field_add_users_id] = fw.userId;
             result = add(itemdb_add);
@@ -145,7 +145,7 @@ public class UserViews : FwModel<UserViews.Row>
     /// </summary>
     /// <param name="icode"></param>
     /// <returns></returns>
-    public ArrayList listSelectByIcode(string icode)
+    public FwList listSelectByIcode(string icode)
     {
         return db.arrayp("select id, iname from " + db.qid(table_name) +
                         @" where status=0
@@ -159,7 +159,7 @@ public class UserViews : FwModel<UserViews.Row>
     /// list all icodes available for the user
     /// </summary>
     /// <returns></returns>
-    public ArrayList listSelectIcodes()
+    public FwList listSelectIcodes()
     {
         return db.arrayp("select distinct icode as id, icode as iname from " + db.qid(table_name) +
                         @" where status=0 

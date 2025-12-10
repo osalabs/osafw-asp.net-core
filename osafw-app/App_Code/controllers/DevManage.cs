@@ -21,31 +21,31 @@ public class DevManageController : FwController
         base_url = "/Dev/Manage";
     }
 
-    public Hashtable IndexAction()
+    public FwRow IndexAction()
     {
-        Hashtable ps = [];
+        FwRow ps = [];
 
         // table and views list
         var tables = db.tables();
         var views = db.views();
         tables.AddRange(views);
         tables.Sort();
-        var select_tables = new ArrayList();
+        var select_tables = new FwList();
         ps["select_tables"] = select_tables;
         foreach (string table in tables)
-            select_tables.Add(new Hashtable() { { "id", table }, { "iname", table } });
+            select_tables.Add(new FwRow() { { "id", table }, { "iname", table } });
 
         // models list - all clasess inherited from FwModel
-        var select_models = new ArrayList();
+        var select_models = new FwList();
         ps["select_models"] = select_models;
 
         foreach (string model_name in DevEntityBuilder.listModels())
-            select_models.Add(new Hashtable() { { "id", model_name }, { "iname", model_name } });
+            select_models.Add(new FwRow() { { "id", model_name }, { "iname", model_name } });
 
-        var select_controllers = new ArrayList();
+        var select_controllers = new FwList();
         ps["select_controllers"] = select_controllers;
         foreach (string controller_name in DevEntityBuilder.listControllers())
-            select_controllers.Add(new Hashtable() { { "id", controller_name }, { "iname", controller_name } });
+            select_controllers.Add(new FwRow() { { "id", controller_name }, { "iname", controller_name } });
 
         return ps;
     }
@@ -106,11 +106,11 @@ public class DevManageController : FwController
     }
 
     // generate documentation PDF
-    public Hashtable? DocsAction()
+    public FwRow? DocsAction()
     {
         var is_export = reqs("format");
 
-        var ps = new Hashtable();
+        var ps = new FwRow();
         ps["is_rbac"] = fw.model<Users>().isRoles();
         ps["access_levels"] = FormUtils.selectTplOptions("/common/sel/access_level.sel");
 
@@ -121,7 +121,7 @@ public class DevManageController : FwController
         {
             logger("exporting");
             var layout = fw.G["PAGE_LAYOUT_PRINT"].toStr();
-            var options = new Hashtable();
+            var options = new FwRow();
             options["disposition"] = "inline";
             ConvUtils.parsePagePdf(fw, "/dev/manage/docs", layout, ps, "documentation", options);
             return null;
@@ -147,16 +147,16 @@ public class DevManageController : FwController
         fw.redirect("/Admin/FwUpdates");
     }
 
-    public Hashtable? ApplyFwUpdateAction(int id)
+    public FwRow? ApplyFwUpdateAction(int id)
     {
         checkXSS();
         fw.model<FwUpdates>().applyOne(id);
 
         if (fw.isJsonExpected())
         {
-            var ps = new Hashtable();
+            var ps = new FwRow();
             ps["message"] = "Update applied";
-            return new Hashtable { { "_json", ps } };
+            return new FwRow { { "_json", ps } };
         }
         else
         {
@@ -166,17 +166,17 @@ public class DevManageController : FwController
         }
     }
 
-    public Hashtable? ApplyFwUpdatesAction()
+    public FwRow? ApplyFwUpdatesAction()
     {
         checkXSS();
         var ids = reqh("cb").Keys.Cast<string>().Select(x => x.toInt()).ToList();
-        fw.model<FwUpdates>().applyList(new ArrayList(ids));
+        fw.model<FwUpdates>().applyList(new FwList(ids));
 
         if (fw.isJsonExpected())
         {
-            var ps = new Hashtable();
+            var ps = new FwRow();
             ps["message"] = "Updates applied";
-            return new Hashtable { { "_json", ps } };
+            return new FwRow { { "_json", ps } };
         }
         else
         {
@@ -201,7 +201,7 @@ public class DevManageController : FwController
         var table_name = item["table_name"].toStr().Trim();
         var model_name = item["model_name"].toStr().Trim();
 
-        Hashtable entity = DevEntityBuilder.table2entity(fw.db, table_name) ?? [];
+        FwRow entity = DevEntityBuilder.table2entity(fw.db, table_name) ?? [];
         entity["table"] = table_name;
         if (model_name.Length > 0)
             entity["model_name"] = model_name;
@@ -222,15 +222,15 @@ public class DevManageController : FwController
         var controller_type = item["controller_type"].toStr().Trim(); // empty("dynamic") or "vue" or "lookup" or "api"
 
         var config_file = fw.config("template") + DevCodeGen.DB_JSON_PATH;
-        var entities = DevEntityBuilder.loadJson<ArrayList>(config_file);
+        var entities = DevEntityBuilder.loadJson<FwList>(config_file);
 
         // emulate entity
-        var controller = new Hashtable {
+        var controller = new FwRow {
                     {"url",controller_url},
                     {"title",controller_title},
                     {"type",controller_type},
                 };
-        var entity = new Hashtable()
+        var entity = new FwRow()
         {
             {"model_name",model_name},
             {"controller", controller},
@@ -280,15 +280,15 @@ public class DevManageController : FwController
         var tpl_to = cInstance.base_url.ToLower();
         var tpl_path = fw.config("template") + tpl_to;
         var config_file = tpl_path + "/config.json";
-        var config = DevEntityBuilder.loadJson<Hashtable>(config_file);
+        var config = DevEntityBuilder.loadJson<FwRow>(config_file);
 
         // extract ShowAction
         config["is_dynamic_show"] = false;
-        Hashtable fitem = [];
+        FwRow fitem = [];
         var fields = cInstance.prepareShowFields(fitem, []);
         DevCodeGen.makeValueTags(fields);
 
-        Hashtable ps = new()
+        FwRow ps = new()
         {
             ["fields"] = fields
         };
@@ -322,9 +322,9 @@ public class DevManageController : FwController
     }
 
     // analyse database tables and create db.json describing entities, fields and relationships
-    public Hashtable AnalyseDBAction()
+    public FwRow AnalyseDBAction()
     {
-        Hashtable ps = [];
+        FwRow ps = [];
         var item = reqh("item");
         string connstr = item["connstr"] + "";
 
@@ -358,14 +358,14 @@ public class DevManageController : FwController
 
     // ************************* APP CREATION Actions
     // ************************* DB Analyzer
-    public Hashtable DBAnalyzerAction()
+    public FwRow DBAnalyzerAction()
     {
-        Hashtable ps = [];
-        ArrayList dbsources = [];
+        FwRow ps = [];
+        FwList dbsources = [];
 
-        var dbConfig = fw.config("db") as Hashtable ?? [];
+        var dbConfig = fw.config("db") as FwRow ?? [];
         foreach (string dbname in dbConfig.Keys)
-            dbsources.Add(new Hashtable()
+            dbsources.Add(new FwRow()
             {
                 {"id",dbname},
                 {"iname",dbname}
@@ -379,20 +379,20 @@ public class DevManageController : FwController
     {
         var item = reqh("item");
         string dbname = item["db"] + "";
-        var dbConfigs = fw.config("db") as Hashtable ?? throw new UserException("Wrong DB selection");
-        var dbconfig = dbConfigs[dbname] as Hashtable ?? throw new UserException("Wrong DB selection");
+        var dbConfigs = fw.config("db") as FwRow ?? throw new UserException("Wrong DB selection");
+        var dbconfig = dbConfigs[dbname] as FwRow ?? throw new UserException("Wrong DB selection");
         DevEntityBuilder.createDBJsonFromExistingDB(dbname, fw);
         fw.flash("success", "template" + DevCodeGen.DB_JSON_PATH + " created");
 
         fw.redirect(base_url + "/(AppCreator)");
     }
 
-    public Hashtable EntityBuilderAction()
+    public FwRow EntityBuilderAction()
     {
-        Hashtable ps = [];
+        FwRow ps = [];
 
         var entities_file = fw.config("template") + DevCodeGen.ENTITIES_PATH;
-        Hashtable item = new()
+        FwRow item = new()
         {
             ["entities"] = Utils.getFileContent(entities_file)
         };
@@ -439,12 +439,12 @@ public class DevManageController : FwController
         fw.redirect(base_url + "/(EntityBuilder)");
     }
 
-    public Hashtable DBInitializerAction()
+    public FwRow DBInitializerAction()
     {
-        Hashtable ps = [];
+        FwRow ps = [];
 
         var config_file = fw.config("template") + DevCodeGen.DB_JSON_PATH;
-        var entities = DevEntityBuilder.loadJson<ArrayList>(config_file);
+        var entities = DevEntityBuilder.loadJson<FwList>(config_file);
 
         ps["tables"] = entities;
 
@@ -471,24 +471,24 @@ public class DevManageController : FwController
         }
     }
 
-    public Hashtable AppCreatorAction()
+    public FwRow AppCreatorAction()
     {
         // reload session, so sidebar menu will be updated
         if (reqs("reload").Length > 0)
             fw.model<Users>().reloadSession();
 
-        Hashtable ps = [];
+        FwRow ps = [];
 
         // tables
         var config_file = fw.config("template") + DevCodeGen.DB_JSON_PATH;
-        var entities = DevEntityBuilder.loadJson<ArrayList>(config_file);
+        var entities = DevEntityBuilder.loadJson<FwList>(config_file);
 
         var models = DevEntityBuilder.listModels();
         var controllers = DevEntityBuilder.listControllers();
 
-        foreach (Hashtable entity in entities)
+        foreach (FwRow entity in entities)
         {
-            var controller_options = entity["controller"] as Hashtable ?? [];
+            var controller_options = entity["controller"] as FwRow ?? [];
             var controller_url = controller_options["url"].toStr();
             entity["is_model_exists"] = models.Contains(entity["model_name"]);
             controller_options["name"] = controller_url.toStr().Replace("/", "");
@@ -502,8 +502,8 @@ public class DevManageController : FwController
         var sortby = f["sort"].toStr();
         if (sortby == "table" || sortby == "model_name")
         {
-            //sort entities ArrayList of Hashtables with linq
-            entities = new ArrayList(entities.Cast<Hashtable>().OrderBy(x => x[sortby]).ToList());
+            //sort entities FwList of Hashtables with linq
+            entities = new FwList(entities.Cast<FwRow>().OrderBy(x => x[sortby]).ToList());
         }
 
         ps["entities"] = entities;
@@ -517,7 +517,7 @@ public class DevManageController : FwController
         var item = reqh("item");
 
         var config_file = fw.config("template") + DevCodeGen.DB_JSON_PATH;
-        var entities = DevEntityBuilder.loadJson<ArrayList>(config_file);
+        var entities = DevEntityBuilder.loadJson<FwList>(config_file);
 
         // go thru entities and:
         // update checked rows for any user input (like model name changed)
@@ -525,7 +525,7 @@ public class DevManageController : FwController
         var controllers_ctr = 0;
         var is_updated = false;
         var CodeGen = DevCodeGen.init(fw);
-        foreach (Hashtable entity in entities)
+        foreach (FwRow entity in entities)
         {
             if (search.Length > 0
                 && !entity["table"].toStr().Contains(search)
@@ -547,7 +547,7 @@ public class DevManageController : FwController
 
             if (item.ContainsKey(key + "is_controller"))
             {
-                var controller_options = entity["controller"] as Hashtable ?? [];
+                var controller_options = entity["controller"] as FwRow ?? [];
 
                 // create controller (model must exists)
                 if (item[key + "controller_name"].toStr().Length > 0 && controller_options["name"].toStr() != item[key + "controller_name"].toStr())

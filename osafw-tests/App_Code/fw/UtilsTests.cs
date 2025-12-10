@@ -34,7 +34,7 @@ namespace osafw.Tests
         public void qhTest()
         {
             string s = "AAA|1 BBB|2 CCC|3 DDD";
-            Hashtable h = Utils.qh(s);
+            FwRow h = Utils.qh(s);
 
             Assert.AreEqual("1", h["AAA"]);
             Assert.AreEqual("2", h["BBB"]);
@@ -45,7 +45,7 @@ namespace osafw.Tests
         [TestMethod()]
         public void qhRevertTest()
         {
-            Hashtable h = [];
+            FwRow h = [];
             h["AAA"] = "1";
             h["BBB"] = "2";
             h["CCC"] = 3;
@@ -71,7 +71,7 @@ namespace osafw.Tests
         [TestMethod()]
         public void hashFilterTest()
         {
-            Hashtable h = [];
+            FwRow h = [];
             h["AAA"] = "1";
             h["BBB"] = "2";
             h["CCC"] = 3;
@@ -113,7 +113,7 @@ namespace osafw.Tests
         public void splitEmailsTest()
         {
             string s = "1@1.com 2@2.com\r\n3@3.com";
-            ArrayList r = Utils.splitEmails(s);
+            FwList r = Utils.splitEmails(s);
 
             Assert.AreEqual("1@1.com", r[0]);
             Assert.AreEqual("2@2.com", r[1]);
@@ -381,10 +381,10 @@ namespace osafw.Tests
         [TestMethod()]
         public void mergeHashTest()
         {
-            Hashtable h1 = [];
+            FwRow h1 = [];
             h1["AAA"] = 1;
             h1["BBB"] = 2;
-            Hashtable h2 = [];
+            FwRow h2 = [];
             h2["CCC"] = 3;
             h2["DDD"] = 4;
 
@@ -404,12 +404,12 @@ namespace osafw.Tests
         [TestMethod()]
         public void mergeHashDeepTest()
         {
-            Hashtable h1 = [];
+            FwRow h1 = [];
             h1["AAA"] = 1;
             h1["BBB"] = 2;
-            Hashtable h2 = [];
+            FwRow h2 = [];
             h2["CCC"] = 3;
-            h2["DDD"] = new Hashtable() { { "EEE", 5 } };
+            h2["DDD"] = new FwRow() { { "EEE", 5 } };
 
             Utils.mergeHashDeep(h1, h2);
 
@@ -421,8 +421,8 @@ namespace osafw.Tests
             Assert.AreEqual(1, h1["AAA"]);
             Assert.AreEqual(2, h1["BBB"]);
             Assert.AreEqual(3, h1["CCC"]);
-            Assert.IsInstanceOfType(h1["DDD"], typeof(Hashtable));
-            var inner = h1["DDD"] as Hashtable;
+            Assert.IsInstanceOfType(h1["DDD"], typeof(FwRow));
+            var inner = h1["DDD"] as FwRow;
             Assert.IsNotNull(inner);
             Assert.IsTrue(inner.ContainsKey("EEE"));
             Assert.AreEqual(5, inner["EEE"]);
@@ -452,7 +452,7 @@ namespace osafw.Tests
         [TestMethod()]
         public void jsonEncodeTest()
         {
-            Hashtable h1 = [];
+            FwRow h1 = [];
             h1["AAA"] = 1;
             h1["BBB"] = 2;
             h1["CCC"] = 3;
@@ -470,7 +470,7 @@ namespace osafw.Tests
         public void jsonDecodeTest()
         {
             string s = "{\"AAA\":1,\"BBB\":2,\"CCC\":3,\"DDD\":4,\"EEE\":{\"AAA\": \"sub\"}}";
-            var decoded = Utils.jsonDecode(s) as Hashtable;
+            var decoded = Utils.jsonDecode(s) as FwRow;
             Assert.IsNotNull(decoded);
             var h1 = decoded!;
 
@@ -494,8 +494,8 @@ namespace osafw.Tests
             Assert.AreEqual(3, nCCC.Value);
             Assert.AreEqual(4, nDDD.Value);
 
-            Assert.IsInstanceOfType(h1["EEE"], typeof(Hashtable));
-            var inner = h1["EEE"] as Hashtable;
+            Assert.IsInstanceOfType(h1["EEE"], typeof(FwRow));
+            var inner = h1["EEE"] as FwRow;
             Assert.IsNotNull(inner);
             Assert.AreEqual("sub", inner["AAA"]);
         }
@@ -503,7 +503,7 @@ namespace osafw.Tests
         [TestMethod()]
         public void hashKeysTest()
         {
-            Hashtable h1 = [];
+            FwRow h1 = [];
             h1["AAA"] = 1;
             h1["BBB"] = 2;
             h1["CCC"] = 3;
@@ -640,7 +640,7 @@ namespace osafw.Tests
             string s = "1234567890";
 
             //test for truncate
-            Hashtable hattrs = [];
+            FwRow hattrs = [];
             hattrs["truncate"] = "5";
             hattrs["trword"] = "0";
             hattrs["trchar"] = "";
@@ -763,30 +763,30 @@ namespace osafw.Tests
         public void arrayInjectTest()
         {
             // Case 1: Empty rows and empty fields
-            ArrayList rows1 = [];
-            Hashtable fields1 = [];
+            FwList rows1 = [];
+            FwRow fields1 = [];
             Utils.arrayInject(rows1, fields1);
             Assert.IsEmpty(rows1, "Empty rows and fields should result in no changes");
 
             // Case 2: Rows with values and empty fields
-            ArrayList rows2 = [new Hashtable { { "key1", "value1" } }, new Hashtable { { "key2", "value2" } }];
-            Hashtable fields2 = [];
+            FwList rows2 = [new FwRow { { "key1", "value1" } }, new FwRow { { "key2", "value2" } }];
+            FwRow fields2 = [];
             Utils.arrayInject(rows2, fields2);
             Assert.HasCount(2, rows2, "Rows with values and empty fields should result in no changes");
-            var row2_0 = rows2[0] as Hashtable;
-            var row2_1 = rows2[1] as Hashtable;
+            var row2_0 = rows2[0] as FwRow;
+            var row2_1 = rows2[1] as FwRow;
             Assert.IsNotNull(row2_0);
             Assert.IsNotNull(row2_1);
             Assert.AreEqual("value1", row2_0["key1"]);
             Assert.AreEqual("value2", row2_1["key2"]);
 
             // Case 3: Rows with values and fields with some new and some existing keys
-            ArrayList rows3 = [new Hashtable { { "key1", "value1" } }, new Hashtable { { "key2", "value2" } }];
-            Hashtable fields3 = new() { { "key1", "newValue1" }, { "key3", "newValue3" } };
+            FwList rows3 = [new FwRow { { "key1", "value1" } }, new FwRow { { "key2", "value2" } }];
+            FwRow fields3 = new() { { "key1", "newValue1" }, { "key3", "newValue3" } };
             Utils.arrayInject(rows3, fields3);
             Assert.HasCount(2, rows3, "Rows with values and fields with some new and some existing keys should merge properly");
-            var row3_0 = rows3[0] as Hashtable;
-            var row3_1 = rows3[1] as Hashtable;
+            var row3_0 = rows3[0] as FwRow;
+            var row3_1 = rows3[1] as FwRow;
             Assert.IsNotNull(row3_0);
             Assert.IsNotNull(row3_1);
             Assert.AreEqual("newValue1", row3_0["key1"]);
@@ -796,7 +796,7 @@ namespace osafw.Tests
 
             // Case 4: Null rows and null fields
             Assert.ThrowsExactly<NullReferenceException>(() => Utils.arrayInject(null!, []), "Null rows should throw ArgumentNullException");
-            Assert.ThrowsExactly<NullReferenceException>(() => Utils.arrayInject([new Hashtable { { "key1", "value1" } }], null!), "Null fields should throw ArgumentNullException");
+            Assert.ThrowsExactly<NullReferenceException>(() => Utils.arrayInject([new FwRow { { "key1", "value1" } }], null!), "Null fields should throw ArgumentNullException");
         }
 
         [TestMethod()]
@@ -989,11 +989,11 @@ namespace osafw.Tests
             Assert.IsTrue(Utils.isEmpty(false));
             Assert.IsFalse(Utils.isEmpty(true));
             //arraylist
-            Assert.IsTrue(Utils.isEmpty(new ArrayList()));
-            Assert.IsFalse(Utils.isEmpty(new ArrayList() { 1 }));
+            Assert.IsTrue(Utils.isEmpty(new FwList()));
+            Assert.IsFalse(Utils.isEmpty(new FwList() { 1 }));
             //hashtable
-            Assert.IsTrue(Utils.isEmpty(new Hashtable()));
-            Assert.IsFalse(Utils.isEmpty(new Hashtable() { { "1", 1 } }));
+            Assert.IsTrue(Utils.isEmpty(new FwRow()));
+            Assert.IsFalse(Utils.isEmpty(new FwRow() { { "1", 1 } }));
         }
     }
 }

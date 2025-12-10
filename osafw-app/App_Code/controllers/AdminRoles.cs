@@ -32,11 +32,11 @@ public class AdminRolesController : FwDynamicController
         // list_sortmap["fdate_pop_str"] = "fdate_pop";
     }
 
-    public override Hashtable? ShowAction(int id = 0)
+    public override FwRow? ShowAction(int id = 0)
     {
         var ps = base.ShowAction(id)!;
-        var item = ps["i"] as Hashtable;
-        var fields = ps["fields"] as ArrayList ?? [];
+        var item = ps["i"] as FwRow;
+        var fields = ps["fields"] as FwList ?? [];
 
         // roles_resources_permissions matrix
         var defMatrix = defByFieldname("roles_resources_permissions", fields) ?? [];
@@ -49,11 +49,11 @@ public class AdminRolesController : FwDynamicController
         return ps;
     }
 
-    public override Hashtable ShowFormAction(int id = 0)
+    public override FwRow ShowFormAction(int id = 0)
     {
         var ps = base.ShowFormAction(id)!;
-        var item = (Hashtable)ps["i"]!;
-        var fields = ps["fields"] as ArrayList ?? [];
+        var item = (FwRow)ps["i"]!;
+        var fields = ps["fields"] as FwList ?? [];
 
         // roles_resources_permissions matrix
         var defMatrix = defByFieldname("roles_resources_permissions", fields) ?? [];
@@ -66,7 +66,7 @@ public class AdminRolesController : FwDynamicController
         return ps;
     }
 
-    public override int modelAddOrUpdate(int id, Hashtable fields)
+    public override int modelAddOrUpdate(int id, FwRow fields)
     {
         id = base.modelAddOrUpdate(id, fields);
 
