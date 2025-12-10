@@ -39,14 +39,9 @@ using System.Text.RegularExpressions;
 
 namespace osafw;
 
-public class DBNameAttribute : Attribute
+public class DBNameAttribute(string description) : Attribute
 {
-    public string Description { get; set; }
-
-    public DBNameAttribute(string description)
-    {
-        Description = description;
-    }
+    public string Description { get; set; } = description;
 }
 
 public class DBRow : Dictionary<string, string>
