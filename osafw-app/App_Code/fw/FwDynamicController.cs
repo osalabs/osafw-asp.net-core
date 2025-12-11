@@ -366,11 +366,11 @@ public class FwDynamicController : FwController
         {
             // if required_fields not defined - fill from showform_fields
             FwList fields = getConfigShowFormFieldsByTab("showform_fields");
-            FwList req = [];
+            StrList req = [];
             foreach (FwDict def in fields)
             {
                 if (def["required"].toBool())
-                    req.Add(def["field"]);
+                    req.Add(def["field"].toStr());
             }
 
             if (req.Count > 0)

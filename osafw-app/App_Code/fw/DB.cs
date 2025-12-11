@@ -199,7 +199,7 @@ public class DBOperation
 
 public struct DBQueryAndParams
 {
-    public FwList fields; // list of parametrized fields in order
+    public StrList fields; // list of parametrized fields in order
     public string sql; // sql with parameter names, ex: field=@field
     public FwDict @params; // paremeter name => value, ex: field => 123
 }
@@ -1210,7 +1210,7 @@ public class DB : IDisposable
         string result = "*";
         if (aselect_fields != null)
         {
-            FwList quoted = new(aselect_fields.Count);
+            StrList quoted = new(aselect_fields.Count);
             if (aselect_fields is FwList)
             {
                 // arraylist of hashtables with "field","alias" keys - usable for the case when we need same field to be selected more than once with different aliases
@@ -1694,7 +1694,7 @@ public class DB : IDisposable
 
         var join_delimiter = is_for_where ? " AND " : ",";
 
-        FwList fields_list = new(fields.Keys.Count);
+        StrList fields_list = new(fields.Keys.Count);
         List<string> params_sqls = [];
 
         FwDict @params = new(fields.Keys.Count);
@@ -1827,7 +1827,7 @@ public class DB : IDisposable
             }
             else
             {
-                FwList result = new(list.Count);
+                ObjList result = new(list.Count);
                 foreach (var pvalue in list)
                     result.Add(field2typed(field_type, pvalue));
                 dbop.value = result;
@@ -1837,7 +1837,7 @@ public class DB : IDisposable
         {
             if (dbop.value is not IList list || list.Count < 2)
             {
-                dbop.value = new FwList() { field2typed(field_type, DBNull.Value), field2typed(field_type, DBNull.Value) };
+                dbop.value = new ObjList() { field2typed(field_type, DBNull.Value), field2typed(field_type, DBNull.Value) };
             }
             else
             {
@@ -2326,11 +2326,11 @@ public class DB : IDisposable
     }
 
     // return array of table names in current db
-    public FwList tables()
+    public StrList tables()
     {
         DbConnection conn = this.connect();
         DataTable dataTable = conn.GetSchema("Tables");
-        FwList result = new(dataTable.Rows.Count);
+        StrList result = new(dataTable.Rows.Count);
         foreach (DataRow row in dataTable.Rows)
         {
             //fw.logger("************ TABLE"+ row["TABLE_NAME"]);
@@ -2351,11 +2351,11 @@ public class DB : IDisposable
     }
 
     // return array of view names in current db
-    public FwList views()
+    public StrList views()
     {
         DbConnection conn = this.connect();
         DataTable dataTable = conn.GetSchema("Tables");
-        FwList result = new(dataTable.Rows.Count);
+        StrList result = new(dataTable.Rows.Count);
         foreach (DataRow row in dataTable.Rows)
         {
             // skip non-views

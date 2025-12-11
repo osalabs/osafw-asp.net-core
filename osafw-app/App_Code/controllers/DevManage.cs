@@ -170,7 +170,7 @@ public class DevManageController : FwController
     {
         checkXSS();
         var ids = reqh("cb").Keys.Cast<string>().Select(x => x.toInt()).ToList();
-        fw.model<FwUpdates>().applyList(new FwList(ids));
+        fw.model<FwUpdates>().applyList(ids);
 
         if (fw.isJsonExpected())
         {

@@ -416,7 +416,7 @@ public class FormUtils
     // output: hashtable, keys=ids from input
     public static FwDict ids2multi(string str)
     {
-        FwList col = comma_str2col(str);
+        StrList col = comma_str2col(str);
         FwDict result = [];
         foreach (string id in col)
             result[id] = 1;
@@ -432,13 +432,13 @@ public class FormUtils
      * convert comma-separated string to arraylist, trimming each element
      * if str is empty - return empty arraylist
      * @param string str
-     * @return FwList
+     * @return StrList
      */
-    public static FwList comma_str2col(string str)
+    public static StrList comma_str2col(string str)
     {
         if (string.IsNullOrWhiteSpace(str))
             return [];
-        return new FwList(str.Split(",").Select(s => s.Trim()).ToList());
+        return new StrList(str.Split(",").Select(s => s.Trim()));
     }
 
     /// <summary>

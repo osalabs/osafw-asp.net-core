@@ -94,23 +94,28 @@ public class Utils
 
     public static string qhRevert(IDictionary sh)
     {
-        FwList result = [];
+        StrList result = [];
         foreach (string key in sh.Keys)
         {
             result.Add(key.Replace(" ", "&nbsp;") + "|" + sh[key]);
         }
-        return string.Join(" ", result.ToArray());
+        return string.Join(" ", result);
     }
 
 
-    // remove elements from hash, leave only those which keys passed
+    // remove elements from dictionary, leave only those which keys passed
     public static void hashFilter(FwDict hash, string[] keys)
     {
-        FwList all_keys = new(keys);
-        FwList to_remove = [];
+        FwDict all_keys = [];
+        foreach (string key in keys)
+        {
+            all_keys[key] = true;
+        }
+
+        StrList to_remove = [];
         foreach (string key in hash.Keys)
         {
-            if (all_keys.IndexOf(key) < 0)
+            if (!all_keys.ContainsKey(key))
             {
                 to_remove.Add(key);
             }
@@ -154,9 +159,9 @@ public class Utils
 
     // IN: email addresses delimited with ,; space or newline
     // OUT: arraylist of email addresses
-    public static FwList splitEmails(string emails)
+    public static StrList splitEmails(string emails)
     {
-        FwList result = [];
+        StrList result = [];
         string[] arr = Regex.Split(emails, @"[,; \n\r]+");
         foreach (string email in arr)
         {
@@ -718,7 +723,7 @@ public class Utils
     {
         if (hash2 != null)
         {
-            FwList keys = new(hash2.Keys);
+            StrList keys = new(hash2.Keys.Cast<string>());
             foreach (string key in keys)
             {
                 if (hash2[key] is FwDict ht)
@@ -785,9 +790,9 @@ public class Utils
         }
     }
 
-    private static FwList cloneArrayListDeep(FwList list)
+    private static ObjList cloneArrayListDeep(FwList list)
     {
-        FwList clone = new(list.Count);
+        ObjList clone = new(list.Count);
         foreach (var item in list)
             clone.Add(cloneObject(item));
 
@@ -877,7 +882,7 @@ public class Utils
         if (reader.TokenType == JsonTokenType.StartObject)
             result = new FwDict();
         else if (reader.TokenType == JsonTokenType.StartArray)
-            result = new FwList();
+            result = new ObjList();
         else
             //single value
             return jsonDecodeValue(ref reader);
@@ -902,7 +907,7 @@ public class Utils
                 reader.Read();
                 ht[keyName] = jsonDecodeValue(ref reader);
             }
-            else if (result is FwList al)
+            else if (result is ObjList al)
             {
                 al.Add(jsonDecodeValue(ref reader));
             }
@@ -956,7 +961,7 @@ public class Utils
         {
             var result = new FwList();
             for (int i = 0; i < al.Count; i++)
-                result.Add(jsonStringifyValues(al[i]));
+                result.Add((FwDict)jsonStringifyValues(al[i]));
             return result;
         }
         else if (json is string str)
@@ -1220,7 +1225,7 @@ public class Utils
 
         if (sortdir == "desc")
         {
-            FwList order_fields = [];
+            StrList order_fields = [];
             foreach (string fld in orderby.Split(","))
             {
                 string _fld = fld;
@@ -1241,7 +1246,7 @@ public class Utils
                 order_fields.Add(_fld.Trim());
             }
             // result = String.Join(", ", order_fields.ToArray(GetType(String))) // net 2
-            result = string.Join(", ", order_fields.ToArray());  // net 4
+            result = string.Join(", ", order_fields);  // net 4
         }
 
         return result;

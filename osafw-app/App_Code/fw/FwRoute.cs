@@ -18,5 +18,5 @@ public class FwRoute
     public string id = string.Empty;
     public string action_more = string.Empty; // new, edit, delete, etc
     public string format = string.Empty; // html, json, pjax
-    public FwList @params = new();
+    public StrList @params = new();
 }

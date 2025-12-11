@@ -27,7 +27,7 @@ public class FwVueController : FwDynamicController
     /// </summary>
     protected override void setListFields()
     {
-        var quoted_fields = new FwList();
+        var quoted_fields = new StrList();
         var is_id_in_fields = false;
         foreach (FwDict header in list_headers)
         {
@@ -318,7 +318,7 @@ public class FwVueController : FwDynamicController
         var multi_rows = new FwDict();
         var subtables = new FwDict();
         var attachments = new FwDict(); //att_id => att item
-        var att_links = new FwList(); //linked att ids
+        var att_links = new IntList(); //linked att ids
         var att_files = new FwDict(); // per-field: field => [ids]
 
         var fields = this.config[mode == "edit" ? "showform_fields" : "show_fields"] as FwList ?? [];
@@ -404,7 +404,7 @@ public class FwVueController : FwDynamicController
             {
                 var category = def["att_category"].toStr();
                 var att_items = fw.model<Att>().listByEntityCategory(model0.table_name, id, category);
-                var ids = new FwList();
+                var ids = new IntList();
                 foreach (FwDict att_item in att_items)
                 {
                     fw.model<Att>().filterForJson(att_item);

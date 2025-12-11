@@ -6,6 +6,7 @@
 using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 
 namespace osafw;
@@ -614,7 +615,7 @@ public class Att : FwModel<Att.Row>
         var honlynames = Utils.qh(fieldnames);
 
         // create list of eligible file uploads, check for the ContentLength as any 'input type = "file"' creates a System.Web.HttpPostedFile object even if the file was not attached to the input
-        FwList afiles = [];
+        List<IFormFile> afiles = [];
         if (honlynames.Count > 0)
         {
             // if we only need some fields - skip if not requested field

@@ -161,7 +161,7 @@ public class Users : FwModel<Users.Row>
     // return standard list of id,iname where status=0 order by iname
     public override DBList list(IList? statuses = null)
     {
-        statuses ??= new FwList() { STATUS_ACTIVE };
+        statuses ??= new IntList() { STATUS_ACTIVE };
         return base.list(statuses);
     }
 

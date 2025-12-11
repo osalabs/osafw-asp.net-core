@@ -1170,9 +1170,9 @@ public abstract class FwController
 
         var fields = getViewListUserFields();
         // header names
-        FwList headers = [];
+        StrList headers = [];
         foreach (var fld in Utils.qw(fields))
-            headers.Add(view_list_map[fld]);
+            headers.Add(view_list_map[fld].toStr());
 
         string csv_export_headers = string.Join(",", headers.ToArray());
 

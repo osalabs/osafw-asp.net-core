@@ -76,7 +76,7 @@ public class FwActivityLogs : FwModel
         };
         if (log_types_icodes != null && log_types_icodes.Count > 0)
         {
-            var log_types_ids = new FwList();
+            StrList log_types_ids = [];
             foreach (string icode in log_types_icodes)
             {
                 var log_type = fw.model<FwLogTypes>().oneByIcode(icode);
@@ -98,7 +98,7 @@ public class FwActivityLogs : FwModel
     public FwList listByEntityForUI(string entity_icode, int id, string tab = "")
     {
         // convert tab to log_types_icodes
-        var log_types_icodes = new FwList();
+        StrList log_types_icodes = [];
         switch (tab)
         {
             case TAB_COMMENTS:

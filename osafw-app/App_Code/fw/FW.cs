@@ -10,6 +10,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Mail;
 using System.Reflection;
 using System.Text;
@@ -1016,7 +1017,7 @@ public class FW : IDisposable
         if (args != null)
         {
             this.route.id = args[0].toStr(); //first argument goes to id
-            this.route.@params = new FwList(args); // all arguments go to params
+            this.route.@params = new StrList((IEnumerable<string>)args); // all arguments go to params
         }
 
         callRoute();
@@ -1369,7 +1370,7 @@ public class FW : IDisposable
                     message.ReplyToList.Add(reply_to); // .net>=4
 
                 // mail_to may contain several emails delimited by ;
-                FwList amail_to = Utils.splitEmails(mail_to);
+                StrList amail_to = Utils.splitEmails(mail_to);
                 foreach (string email1 in amail_to)
                 {
                     string email = email1.Trim();
@@ -1406,7 +1407,7 @@ public class FW : IDisposable
                 }
 
                 // add BCC if any
-                if (options["bcc"] is FwList options_bcc && !is_test)
+                if (options["bcc"] is StrList options_bcc && !is_test)
                 {
                     foreach (string bcc1 in options_bcc)
                     {
@@ -1421,7 +1422,7 @@ public class FW : IDisposable
                 if (filenames != null)
                 {
                     // sort by human name
-                    FwList fkeys = new(filenames.Keys);
+                    StrList fkeys = new(filenames.Keys.Cast<string>());
                     fkeys.Sort();
                     foreach (string human_filename in fkeys)
                     {

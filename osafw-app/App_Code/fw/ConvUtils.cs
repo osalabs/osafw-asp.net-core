@@ -432,7 +432,7 @@ public class ConvUtils
             // create the worksheet to workbook relation
             Sheets sheets = workbookPart.Workbook.AppendChild(new Sheets());
 
-            var sheetsOrder = new FwList();
+            var sheetsOrder = new StrList();
             sheetsOrder.Add("Sheet1");
 
             UInt32Value sheetNumber = 0;

@@ -151,9 +151,9 @@ public class FwUpdates : FwModel
         fw.Session("FW_UPDATES_CTR", "0");
     }
 
-    public void applyList(FwList ids, bool is_echo = false)
+    public void applyList(IntList ids, bool is_echo = false)
     {
-        foreach (int id in ids)
+        foreach (var id in ids)
         {
             applyOne(id, is_echo);
         }

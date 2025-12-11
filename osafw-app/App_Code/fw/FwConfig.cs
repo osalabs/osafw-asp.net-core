@@ -36,7 +36,7 @@ public static class FwConfig
         if (settings["_route_prefixes_rx"] is string rx && rx.Length > 0) return rx;
 
         // convert settings["route_prefixes"] FwRow (ex: /Admin => True) to FwList routePrefixes
-        var routePrefixes = new FwList((settings["route_prefixes"] as FwDict ?? []).Keys);
+        var routePrefixes = new StrList((settings["route_prefixes"] as FwDict ?? []).Keys.Cast<string>());
 
         var escaped = from string p in routePrefixes orderby p.Length descending select Regex.Escape(p);
         rx = @"^(" + string.Join("|", escaped) + @")(/.*)?$";

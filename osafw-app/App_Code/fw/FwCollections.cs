@@ -29,15 +29,17 @@ public class FwDict : Hashtable
 
 }
 
-public class FwList : ArrayList
+public class FwList : List<FwDict>
 {
     public FwList() { }
     public FwList(int capacity) : base(capacity) { }
-    public FwList(ICollection c) : base(c) { }
+    public FwList(ICollection c) : base((IEnumerable<FwDict>)c) { }
     public FwList(IEnumerable collection)
     {
         if (collection != null)
             foreach (var item in collection)
-                Add(item);
+                if (item is IDictionary)
+                    Add((FwDict)item);
+
     }
 }

@@ -8,6 +8,7 @@ global using ObjDict = System.Collections.Generic.Dictionary<string, object?>;
 global using StrDict = System.Collections.Generic.Dictionary<string, string>;
 global using ObjList = System.Collections.Generic.List<object?>;
 global using StrList = System.Collections.Generic.List<string>;
+global using IntList = System.Collections.Generic.List<int>;
 
 // from fw/FwCollections.cs
 global using FwDict = osafw.FwDict;

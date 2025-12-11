@@ -14,7 +14,7 @@ namespace osafw;
 
 public class ConfigJsonConverter : System.Text.Json.Serialization.JsonConverter<FwDict>
 {
-    public readonly List<string> ordered_keys_entity = [
+    public readonly StrList ordered_keys_entity = [
         "iname",
         "table",
         "name",
@@ -65,7 +65,7 @@ public class ConfigJsonConverter : System.Text.Json.Serialization.JsonConverter<
     ];
 
     //keys used in controller - we need them to be written in the specific order convenient to read by human developer
-    public readonly List<string> ordered_keys_controller = [
+    public readonly StrList ordered_keys_controller = [
         "model",
         "required_fields",
         "save_fields",
@@ -115,18 +115,18 @@ public class ConfigJsonConverter : System.Text.Json.Serialization.JsonConverter<
         "conv"
     ];
 
-    private List<string> ordered_keys;
+    private StrList ordered_keys;
 
     public ConfigJsonConverter()
     {
         // set default ordered_keys as controller+entity
-        ordered_keys = new List<string>(ordered_keys_controller);
+        ordered_keys = new StrList(ordered_keys_controller);
         ordered_keys.AddRange(ordered_keys_entity);
     }
 
     public void setOrderedKeys(IEnumerable<string> keys)
     {
-        ordered_keys = new List<string>(keys);
+        ordered_keys = new StrList(keys);
     }
 
     //read is not needed, but methods need to implement
@@ -177,7 +177,7 @@ public class ConfigJsonConverter : System.Text.Json.Serialization.JsonConverter<
         }
 
         //then write rest of keys in alphabetical order
-        var remainingKeys = new List<string>();
+        var remainingKeys = new StrList();
         foreach (string key in value.Keys)
         {
             if (!hwritten.ContainsKey(key))

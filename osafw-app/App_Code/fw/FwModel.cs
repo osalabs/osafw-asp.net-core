@@ -171,7 +171,7 @@ public abstract class FwModel : IDisposable
         if (!is_normalize_names || row.Count == 0)
             return;
 
-        foreach (string key in new FwList(row.Keys)) // static copy of row keys to avoid loop issues
+        foreach (string key in new StrList(row.Keys.Cast<string>())) // static copy of row keys to avoid loop issues
             row[Utils.name2fw(key)] = row[key];
 
         if (!string.IsNullOrEmpty(field_id) && row[field_id] != null && !row.ContainsKey("id"))
@@ -192,7 +192,7 @@ public abstract class FwModel : IDisposable
         if (!is_normalize_names || row.Count == 0)
             return;
 
-        foreach (string key in new FwList(row.Keys)) // static copy of row keys to avoid loop issues
+        foreach (string key in new StrList(row.Keys)) // static copy of row keys to avoid loop issues
             row[Utils.name2fw(key)] = row[key];
 
         if (!string.IsNullOrEmpty(field_id) && row[field_id] != null && !row.ContainsKey("id"))

@@ -717,7 +717,7 @@ class DevCodeGen
         }
         hforeign_keys = Utils.array2hashtable(foreign_keys, "column"); // refresh in case new foreign keys added above
 
-        FwList saveFields = [];
+        StrList saveFields = [];
         FwList saveFieldsNullable = [];
         FwDict hFieldsMap = [];   // name => iname - map for the view_list_map
         FwDict hFieldsMapEdit = []; // for Vue editable list
@@ -1006,17 +1006,17 @@ class DevCodeGen
         {
             //we have foreign keys, so for the list screen we need to read FK entites names - build subquery
 
-            var fk_inames = new FwList();
-            var fk_joins = new FwList();
+            var fk_inames = new StrList();
+            var fk_joins = new StrList();
             for (int i = 0; i < foreign_keys.Count; i++)
             {
-                var fk = foreign_keys[i] as FwDict ?? new FwDict();
+                var fk = foreign_keys[i] as FwDict ?? [];
                 var alias = $"fk{i}";
                 var tcolumn = fk["column"].toStr();
                 var pk_table = fk["pk_table"].toStr();
                 var pk_column = fk["pk_column"].toStr();
 
-                var field = hfields[tcolumn] as FwDict ?? new FwDict();
+                var field = hfields[tcolumn] as FwDict ?? [];
                 string sql_join;
                 if (field["is_nullable"].toBool())
                 {
