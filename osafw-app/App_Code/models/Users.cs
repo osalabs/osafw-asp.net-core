@@ -11,6 +11,7 @@ using QRCoder;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using static BCrypt.Net.BCrypt;
 
@@ -257,9 +258,10 @@ public class Users : FwModel<Users.Row>
         FwDict chars = [];
         for (var i = 0; i <= pwd.Length - 1; i++)
         {
-            var count = chars.ContainsKey(pwd[i]) ? chars[pwd[i]].toInt() : 0;
+            var c = pwd[i].toStr();
+            var count = chars.ContainsKey(c) ? chars[c].toInt() : 0;
             count++;
-            chars[pwd[i]] = count;
+            chars[c] = count;
             result += (int)(5.0 / (double)count);
         }
 
@@ -272,9 +274,9 @@ public class Users : FwModel<Users.Row>
             {"other",Regex.IsMatch(pwd, @"\W")}
         };
         var ctr = 0;
-        foreach (bool value in vars.Values)
+        foreach (var value in vars.Values)
         {
-            if (value) ctr += 1;
+            if (value is bool b && b) ctr += 1;
         }
         result += (ctr - 1) * 10;
 

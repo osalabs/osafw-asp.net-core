@@ -742,7 +742,7 @@ class DevEntityBuilder
         controller_options["title"] = Utils.name2human(table_entity["model_name"].toStr());
 
         var fields = Utils.array2hashtable(tblfields, "name");
-        table_entity["is_fw"] = fields.Contains("id") && fields.Contains("status") && fields.Contains("add_time") && fields.Contains("add_users_id");
+        table_entity["is_fw"] = fields.ContainsKey("id") && fields.ContainsKey("status") && fields.ContainsKey("add_time") && fields.ContainsKey("add_users_id");
 
         return table_entity;
     }

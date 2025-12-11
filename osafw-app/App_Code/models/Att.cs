@@ -687,7 +687,7 @@ public class Att : FwModel<Att.Row>
     {
         //leave only specific keys
         var keys = Utils.qh("id icode att_categories_id iname is_image fsize ext url url_preview");
-        foreach (var key in new FwList(item.Keys))
+        foreach (var key in item.Keys)
         {
             if (!keys.ContainsKey(key))
                 item.Remove(key);

@@ -327,7 +327,7 @@ public class DB : IDisposable
         FwDict result = new(args.Length);
         for (var i = 0; i <= args.Length - 1; i += 2)
         {
-            var key = args[i] ?? string.Empty;
+            string key = args[i].toStr();
             result[key] = args[i + 1];
         }
 

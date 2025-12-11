@@ -919,7 +919,7 @@ class DevCodeGen
             addToFormColumns(fld, sf, sff, showFieldsTabs, showFormFieldsTabs, sys_fields, fields);
 
             var is_sys = false;
-            if (fld["is_identity"].toBool() || sys_fields.Contains(fld_name))
+            if (fld["is_identity"].toBool() || sys_fields.ContainsKey(fld_name))
                 is_sys = true;
             if (!is_sys || fld_name == "status")
                 // add to save fields only if not system (except status)
@@ -1158,7 +1158,7 @@ class DevCodeGen
         var ui = fld["ui"] as FwDict ?? new FwDict(); // ui options for the field
         var col = 0; //default to left
 
-        if (fld["is_identity"].toBool() || sys_fields.Contains(fld["name"] ?? ""))
+        if (fld["is_identity"].toBool() || sys_fields.ContainsKey(fld["name"].toStr()))
         {
             // add to system fields - to the right
             col = 2;
@@ -1213,7 +1213,7 @@ class DevCodeGen
                     return false;
 
                 var isLongText = fld["fw_type"].toStr() == "varchar" && fld["maxlen"].toInt() <= 0;
-                var isSystemNonStatus = sys_fields.Contains(fname) && fname != "status";
+                var isSystemNonStatus = sys_fields.ContainsKey(fname) && fname != "status";
 
                 return !fld["is_identity"].toBool() && !isLongText && !isSystemNonStatus;
             })

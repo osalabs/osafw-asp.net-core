@@ -702,7 +702,7 @@ public class FwDynamicController : FwController
 
             // save fields
             // order by value
-            var ordered = fld.Cast<DictionaryEntry>().OrderBy(entry => entry.Value.toInt()).ToList();
+            var ordered = fld.OrderBy(kvp => kvp.Value.toInt()).ToList();
             // and then get ordered keys
             List<string> anames = [];
             foreach (var el in ordered)
@@ -965,15 +965,15 @@ public class FwDynamicController : FwController
             // for just loaded forms for existing items - pre-load filter's values into "item"
             if (is_get_existing && def.ContainsKey("filter_for"))
             {
-                  var filter_for_field = def["filter_for"].toStr();
-                  var filter_field = def["filter_field"].toStr();
+                var filter_for_field = def["filter_for"].toStr();
+                var filter_field = def["filter_field"].toStr();
 
-                  if (!string.IsNullOrEmpty(filter_for_field) && hfields[filter_for_field] is FwDict def_for)
-                  {
-                      var defFieldName = def_for["field"].toStr();
-                      var filtered_item = fw.model(def_for["lookup_model"].toStr()).one(item[defFieldName]);
-                      item[field] = filtered_item?[filter_field];
-                  }
+                if (!string.IsNullOrEmpty(filter_for_field) && hfields[filter_for_field] is FwDict def_for)
+                {
+                    var defFieldName = def_for["field"].toStr();
+                    var filtered_item = fw.model(def_for["lookup_model"].toStr()).one(item[defFieldName]);
+                    item[field] = filtered_item?[filter_field];
+                }
             }
 
             if (def.ContainsKey("append") && def["append"] is ICollection coll1 && coll1.Count > 0
@@ -1119,7 +1119,7 @@ public class FwDynamicController : FwController
                     //select options as array - convert to arraylist of id => iname
                     var options = def["options"] as FwDict ?? [];
                     var select_options = new FwList();
-                    foreach (DictionaryEntry entry in options)
+                    foreach (var entry in options)
                         select_options.Add(new FwDict() {
                             { "id", entry.Key },
                             { "iname", entry.Value },
@@ -1327,8 +1327,8 @@ public class FwDynamicController : FwController
         var existing = att_model.listByEntityCategory(model0.table_name, id, att_category);
         foreach (FwDict row in existing)
         {
-            var rowId = row["id"];
-            if (rowId != null && !att_ids.ContainsKey(rowId))
+            var rowId = row["id"].toStr();
+            if (rowId.Length > 0 && !att_ids.ContainsKey(rowId))
                 att_model.delete(rowId.toInt(), true);
         }
     }

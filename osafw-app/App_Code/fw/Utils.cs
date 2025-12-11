@@ -756,7 +756,7 @@ public class Utils
         if (source == null) return null;
 
         FwDict clone = new(source.Count);
-        foreach (DictionaryEntry entry in source)
+        foreach (var entry in source)
             clone[entry.Key] = cloneObject(entry.Value);
 
         return clone;
@@ -1260,7 +1260,7 @@ public class Utils
         return str;
     }
 
-    // convert array of hashtables to hashtable of hashtables using key
+    // convert List of Dictionaries to Dictionary of Dictionary using key
     // example for key="id": [ {id:1, name:"one"}, {id:2, name:"two"} ] => { 1: {id:1, name:"one"}, 2: {id:2, name:"two"} }
     public static FwDict array2hashtable(IList arr, string key)
     {
@@ -1269,7 +1269,7 @@ public class Utils
         {
             if (!item.Contains(key) || item[key] == null)
                 continue;
-            result[item[key]!] = item;
+            result[item[key].toStr()] = item;
         }
         return result;
     }

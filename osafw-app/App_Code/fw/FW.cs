@@ -762,11 +762,9 @@ public class FW : IDisposable
         // after perpare_FORM - grouping for names like XXX[YYYY] -> FORM{XXX}=@{YYYY1, YYYY2, ...}
         FwDict SQ = [];
         FwDict f = [];
-        foreach (DictionaryEntry entry in input)
+        foreach (var entry in input)
         {
-            if (entry.Key is not string name)
-                continue;
-
+            var name = entry.Key;
             var value = entry.Value;
             var bracketPos = name.IndexOf('[');
             if (bracketPos > 0 && name.EndsWith(']'))
@@ -790,8 +788,8 @@ public class FW : IDisposable
             }
         }
 
-        foreach (DictionaryEntry entry in SQ)
-            f[entry.Key.toStr()] = entry.Value;
+        foreach (var entry in SQ)
+            f[entry.Key] = entry.Value;
 
         // also parse json in request body if any
         if (request.ContentType?[.."application/json".Length] == "application/json")

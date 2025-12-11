@@ -9,7 +9,7 @@ using System.Collections.Generic;
 
 namespace osafw;
 
-public class FwDict : Hashtable
+public class FwDict : Dictionary<string, object?>
 {
     public FwDict() : base(StringComparer.Ordinal) { }
     public FwDict(int capacity) : base(capacity, StringComparer.Ordinal) { }
@@ -17,11 +17,12 @@ public class FwDict : Hashtable
     {
         if (other != null)
             foreach (DictionaryEntry e in other)
-                this[e.Key] = e.Value;
+                if (e.Key is string key)
+                    this[key] = e.Value;
     }
 
     // Return null when key is missing without throwing exception
-    public object? this[string key]
+    public new object? this[string key]
     {
         get => ContainsKey(key) ? base[key] : null;
         set => base[key] = value;

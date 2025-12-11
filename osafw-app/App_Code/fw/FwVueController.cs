@@ -385,7 +385,7 @@ public class FwVueController : FwDynamicController
                     {
                         fw.model<Att>().filterForJson(att_item);
                         // add size for display
-                        attachments[att_id] = att_item;
+                        attachments[att_id.toStr()] = att_item;
                     }
                 }
             }
@@ -396,7 +396,7 @@ public class FwVueController : FwDynamicController
                 {
                     fw.model<Att>().filterForJson(att_item);
                     var attId = att_item["id"].toInt();
-                    attachments[attId] = att_item;
+                    attachments[attId.toStr()] = att_item;
                     att_links.Add(attId);
                 }
             }
@@ -409,7 +409,7 @@ public class FwVueController : FwDynamicController
                 {
                     fw.model<Att>().filterForJson(att_item);
                     var attId = att_item["id"].toInt();
-                    attachments[attId] = att_item;
+                    attachments[attId.toStr()] = att_item;
                     ids.Add(attId);
                 }
                 att_files[field_name] = ids;

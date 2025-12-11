@@ -47,9 +47,9 @@ public class AdminLookupsController : FwController
 
         // 2) Build an array of group-objects: [ 'igroup' => ..., 'list_rows' => [...] ]
         var allGroups = new FwList();
-        foreach (DictionaryEntry entry in grouped)
+        foreach (var entry in grouped)
         {
-            var gName = entry.Key.toStr();
+            var gName = entry.Key;
             var gRows = (FwList)entry.Value!;
             allGroups.Add(new FwDict
             {

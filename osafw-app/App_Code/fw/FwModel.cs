@@ -371,8 +371,8 @@ public abstract class FwModel : IDisposable
     public bool isExistsByFields(FwDict fields, int not_id)
     {
         FwDict where = [];
-        foreach (DictionaryEntry de in fields)
-            where[de.Key] = de.Value;
+        foreach(var kv in fields)
+            where[kv.Key] = kv.Value;
 
         if (!string.IsNullOrEmpty(field_id))
             where[field_id] = db.opNOT(not_id);
@@ -1022,7 +1022,7 @@ public abstract class FwModel : IDisposable
     // override to add set more additional fields
     public virtual void updateJunctionByMainIdAdditional(FwDict linked_keys, string link_id, FwDict fields)
     {
-        if (!string.IsNullOrEmpty(field_prio) && linked_keys.Contains(field_prio + "_" + link_id))
+        if (!string.IsNullOrEmpty(field_prio) && linked_keys.ContainsKey(field_prio + "_" + link_id))
             fields[field_prio] = linked_keys[field_prio + "_" + link_id].toInt();// get value from prio_ID
     }
 
