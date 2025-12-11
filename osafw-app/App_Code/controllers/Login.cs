@@ -28,13 +28,13 @@ public class LoginController : FwController
         //true - allow access to all, including visitors
     }
 
-    public Hashtable IndexAction()
+    public FwDict IndexAction()
     {
-        Hashtable ps = [];
+        FwDict ps = [];
         if (fw.isLogged)
             fw.redirect(fw.config("LOGGED_DEFAULT_URL").toStr());
 
-        Hashtable item = reqh("item");
+        FwDict item = reqh("item");
         if (isGet())
             // set defaults here
             item = [];
@@ -134,7 +134,7 @@ public class LoginController : FwController
         fw.redirect(fw.config("UNLOGGED_DEFAULT_URL").toStr());
     }
 
-    public Hashtable MFAAction()
+    public FwDict MFAAction()
     {
         var users_id = fw.Session("mfa_login_users_id").toInt();
         if (users_id == 0)
@@ -143,7 +143,7 @@ public class LoginController : FwController
         var remoteIp = Utils.getIP(fw.context);
         fw.logActivity(FwLogTypes.ICODE_USERS_LOGIN, FwEntities.ICODE_USERS, users_id, "MFA check, IP:" + remoteIp);
 
-        var ps = new Hashtable() {
+        var ps = new FwDict() {
             { "hide_sidebar" , true},
             { "users_id", users_id }
         };

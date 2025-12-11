@@ -12,7 +12,7 @@ public class DBReadValueTests
     [TestMethod]
     public void ReadValue_ConvertsDateTimeColumnToUtc()
     {
-        var conf = new Hashtable
+        var conf = new FwDict
         {
             { "type", DB.DBTYPE_SQLSRV },
             { "connection_string", "fake" },
@@ -34,7 +34,7 @@ public class DBReadValueTests
     [TestMethod]
     public void ReadValue_DoesNotConvertDateOnlyColumn()
     {
-        var conf = new Hashtable
+        var conf = new FwDict
         {
             { "type", DB.DBTYPE_SQLSRV },
             { "connection_string", "fake" },

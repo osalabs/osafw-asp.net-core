@@ -32,7 +32,7 @@ public class UserFilters : FwModel<UserFilters.Row>
     }
 
     // list for select by icode and only for logged user OR active system filters
-    public ArrayList listSelectByIcode(string icode)
+    public FwList listSelectByIcode(string icode)
     {
         return db.arrayp("select id, iname from " + db.qid(table_name) +
             @" where status=0 and icode=@icode

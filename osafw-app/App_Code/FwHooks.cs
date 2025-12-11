@@ -12,7 +12,7 @@ public sealed class FwHooks
     // called from FW.run before request dispatch
     public static void initRequest(FW fw)
     {
-        // var mainMenu = FwCache.get_value("main_menu") as ArrayList;
+        // var mainMenu = FwCache.get_value("main_menu") as FwList;
         //
         // if (mainMenu == null || mainMenu.Count == 0)
         // {
