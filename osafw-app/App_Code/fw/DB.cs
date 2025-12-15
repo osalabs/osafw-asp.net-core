@@ -1467,9 +1467,17 @@ public class DB : IDisposable
         if (parameters == null || parameters.Count == 0)
             return " IN (NULL)";
 
+        bool isIntList = parameters is IList<int>;
+
         string[] result = new string[parameters.Count];
         for (int i = 0; i < parameters.Count; i++)
-            result[i] = this.q(parameters[i]);
+        {
+            var value = parameters[i];
+            if (isIntList || value is int)
+                result[i] = value?.ToString() ?? "0";
+            else
+                result[i] = this.q(value);
+        }
 
         StringBuilder sb = new();
         sb.Append(" IN (");

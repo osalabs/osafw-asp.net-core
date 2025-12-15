@@ -488,11 +488,11 @@ namespace osafw.Tests
         public void sqlNOWTest()
         {
             // test NOW/GETDATE via update table record (assuming select and update will happen in the same second)
-            //var rnow = db.rowp($"SELECT {db.sqlNOW()} as [now]");
             var now_time = db.Now();
             db.insert(table_name, DB.h("id", 6, "iname", "test6", "idatetime", DB.NOW));
             var r = db.row(table_name, DB.h("id", 6));
-            Assert.AreEqual(now_time.ToString(), r["idatetime"], "");
+            var db_time = DateTime.Parse(r["idatetime"].toStr());
+            Assert.AreEqual(now_time.ToString("yyyy-MM-dd HH:mm:ss"), db_time.ToString("yyyy-MM-dd HH:mm:ss"));
         }
 
         [TestMethod()]
