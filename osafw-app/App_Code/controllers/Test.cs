@@ -11,8 +11,15 @@ public class TestController : FwController
     {
         var ps = new FwDict();
         ps["money"] = 1234.5612;
+        ps["memory_var"] = "memory";
+        ps["one"] = 1;
+        ps["two"] = 2;
+        ps["onestr"] = "1";
+        ps["booltrue"] = true;
+        ps["truestr"] = "true";
+        ps["falsestr"] = "false";
         ps["success"] = true;
-        return new FwDict { { "_json", ps } };
+        //return new FwDict { { "_json", ps } };
 
         //rw("<html><form method=\"POST\" action=\"/Test/(Upload)\"><input type=\"file\" name=\"file1\"/><input type=\"submit\"/></form></html>");
         ////FwList users = fw.modelOf(typeof(Users)).list();
@@ -21,7 +28,7 @@ public class TestController : FwController
         //var ps = new FwRow();
         //ps["user"] = fw.model<Users>().one(1);
 
-        //return ps;
+        return ps;
     }
 
     public FwDict UploadAction()

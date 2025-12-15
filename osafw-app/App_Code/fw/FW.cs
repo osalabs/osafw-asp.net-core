@@ -843,7 +843,7 @@ public class FW : IDisposable
 
         if (this.FormErrors.Count > 0)
         {
-            if (!ps.Contains("error"))
+            if (!ps.ContainsKey("error"))
                 ps["error"] = new FwDict();
 
             if (ps["error"] is FwDict errorTable && !errorTable.ContainsKey("details"))
@@ -854,7 +854,7 @@ public class FW : IDisposable
         string format = this.getResponseExpectedFormat();
         if (format == "json")
         {
-            if (ps.Contains("_json"))
+            if (ps.ContainsKey("_json"))
             {
                 if (ps["_json"] is bool b && b == true)
                 {
@@ -879,14 +879,14 @@ public class FW : IDisposable
             return; // no further processing for json
         }
 
-        if (ps .Contains("_route_redirect"))
+        if (ps.ContainsKey("_route_redirect"))
         {
             var rr = ps["_route_redirect"] as FwDict ?? [];
             this.routeRedirect(rr["method"].toStr(), rr["controller"].toStr(), rr["args"] as object[] ?? []);
             return; // no further processing
         }
 
-        if (ps.Contains("_redirect"))
+        if (ps.ContainsKey("_redirect"))
         {
             this.redirect(ps["_redirect"].toStr());
             return; // no further processing
@@ -899,11 +899,11 @@ public class FW : IDisposable
             layout = G["PAGE_LAYOUT"].toStr();
 
         //override layout from parse strings
-        if (ps.Contains("_layout"))
+        if (ps.ContainsKey("_layout"))
             layout = ps["_layout"].toStr();
 
         //override full basedir
-        if (ps.Contains("_basedir"))
+        if (ps.ContainsKey("_basedir"))
             basedir = ps["_basedir"].toStr();
 
         if (basedir == "")
@@ -919,7 +919,7 @@ public class FW : IDisposable
             basedir += "/" + controller;
 
             // override controller basedir only
-            if (ps.Contains("_basedir_controller"))
+            if (ps.ContainsKey("_basedir_controller"))
                 basedir = ps["_basedir_controller"].toStr();
 
             basedir += "/" + this.route.action; // add action dir to controller's directory
@@ -927,7 +927,7 @@ public class FW : IDisposable
         else
         {
             // if override controller basedir - also add route action
-            if (ps.Contains("_basedir_controller"))
+            if (ps.ContainsKey("_basedir_controller"))
                 basedir = ps["_basedir_controller"].toStr() + "/" + this.route.action;
         }
 

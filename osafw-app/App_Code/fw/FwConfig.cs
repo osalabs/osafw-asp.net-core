@@ -77,7 +77,7 @@ public static class FwConfig
     private static FwDict buildForHost(HttpContext? ctx, string host)
     {
         // clone deep - each host gets its own mutable copy
-        var hs = FwDict.From(_base.Value);
+        var hs = new FwDict(_base.Value);
 
         if (string.IsNullOrEmpty(host))
             overrideSettingsByName(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? string.Empty, hs, false); // use env name override if no host

@@ -232,12 +232,12 @@ public class ParsePage
     }
 
 
-    public string parse_page(string bdir, string tpl_name, FwDict hf)
+    public string parse_page(string bdir, string tpl_name, FwDict ps)
     {
         this.basedir = bdir;
-        var hf = FwDict.From(ps);
+        var hf = new FwDict(ps);
         this.data_top = hf;
-        FwDict parent_hf = [];
+        FwDict parent_ps = [];
         // Return _parse_page(tpl_name, hf, "", "", parent_hf)
 
         // var startTime = DateTime.Now;
@@ -273,7 +273,7 @@ public class ParsePage
 
         parent_attrs ??= [];
         //parse lang if caller attrs doesn't have "nolang" key and tpl_name is not .js file
-        if (!parent_attrs.Contains("nolang") && !tpl_name.EndsWith(".js"))
+        if (!parent_attrs.ContainsKey("nolang") && !tpl_name.EndsWith(".js"))
             parse_lang(ref page);
 
         string page_orig = page;
@@ -284,7 +284,7 @@ public class ParsePage
         // parse tags on page
 
         sort_tags(tags_full);
-        IntDict TAGSEEN = [];
+        Dictionary<string,int> TAGSEEN = [];
         string tag_full;
         string tag;
         FwDict attrs;
@@ -309,7 +309,7 @@ public class ParsePage
 
                 if (attrs.Count > 0)
                 {
-                    if (attrs.Contains("inline"))
+                    if (attrs.ContainsKey("inline"))
                         inline_tpl = get_inline_tpl(ref page_orig, ref tag, ref tag_full);
 
                     if (attrs.ContainsKey("session"))
@@ -326,64 +326,64 @@ public class ParsePage
                 if (tag_value.toStr().Length > 0)
                 {
                     string value;
-                    if (attrs.Contains("repeat"))
+                    if (attrs.ContainsKey("repeat"))
                         value = _attr_repeat(ref tag, ref tag_value, ref tpl_name, ref inline_tpl, hf);
-                    else if (attrs.Contains("select"))
+                    else if (attrs.ContainsKey("select"))
                     {
                         // this is special case for '<select>' HTML tag when options passed as FwList
                         value = _attr_select(tag, tpl_name, hf, attrs);
                     }
-                    else if (attrs.Contains("selvalue"))
+                    else if (attrs.ContainsKey("selvalue"))
                     {
                         // # this is special case for '<select>' HTML tag
                         value = _attr_select_name(tag, tpl_name, hf, attrs);
-                        if (!attrs.Contains("noescape"))
+                        if (!attrs.ContainsKey("noescape"))
                             value = Utils.htmlescape(value);
                     }
-                    else if (attrs.Contains("sub"))
+                    else if (attrs.ContainsKey("sub"))
                         value = _attr_sub(tag, tpl_name, hf, attrs, inline_tpl, parent_hf, tag_value);
                     else
                     {
-                        if (attrs.Contains("json"))
+                        if (attrs.ContainsKey("json"))
                             value = Utils.jsonEncode(tag_value);
                         else
                             value = tag_value.toStr();
-                        if (!string.IsNullOrEmpty(value) && !attrs.Contains("noescape"))
+                        if (!string.IsNullOrEmpty(value) && !attrs.ContainsKey("noescape"))
                             value = Utils.htmlescape(value);
                     }
                     tag_replace(ref page, ref tag_full, ref value, attrs);
                 }
-                else if (attrs.Contains("repeat"))
+                else if (attrs.ContainsKey("repeat"))
                 {
                     v = _attr_repeat(ref tag, ref tag_value, ref tpl_name, ref inline_tpl, hf);
                     tag_replace(ref page, ref tag_full, ref v, attrs);
                 }
-                else if (attrs.Contains("var"))
+                else if (attrs.ContainsKey("var"))
                 {
                     string tmp_value = "";
                     tag_replace(ref page, ref tag_full, ref tmp_value, attrs);
                 }
-                else if (attrs.Contains("select"))
+                else if (attrs.ContainsKey("select"))
                 {
                     // # this is special case for '<select>' HTML tag
                     v = _attr_select(tag, tpl_name, hf, attrs);
                     tag_replace(ref page, ref tag_full, ref v, attrs);
                 }
-                else if (attrs.Contains("selvalue"))
+                else if (attrs.ContainsKey("selvalue"))
                 {
                     // # this is special case for '<select>' HTML tag
                     v = _attr_select_name(tag, tpl_name, hf, attrs);
-                    if (!attrs.Contains("noescape"))
+                    if (!attrs.ContainsKey("noescape"))
                         v = Utils.htmlescape(v);
                     tag_replace(ref page, ref tag_full, ref v, attrs);
                 }
-                else if (attrs.Contains("radio"))
+                else if (attrs.ContainsKey("radio"))
                 {
                     // # this is special case for '<index type=radio>' HTML tag
                     v = _attr_radio(tag_tplpath(tag, tpl_name), hf, attrs);
                     tag_replace(ref page, ref tag_full, ref v, attrs);
                 }
-                else if (attrs.Contains("noparse"))
+                else if (attrs.ContainsKey("noparse"))
                 {
                     // # no need to parse file - just include as is
                     var path = tag_tplpath(tag, tpl_name);
@@ -396,7 +396,7 @@ public class ParsePage
                 else
                 {
                     // #also checking for sub
-                    if (attrs.Contains("sub"))
+                    if (attrs.ContainsKey("sub"))
                         v = _attr_sub(tag, tpl_name, hf, attrs, inline_tpl, parent_hf, tag_value);
                     else if (is_found_last_hfvalue)
                         // value found but empty
@@ -710,9 +710,9 @@ public class ParsePage
             tag_value = hfvalue(sub, hf, parent_hf);
 
         if (tag_value is IDictionary row)
-            sub_hf = FwDict.From(row);
+            sub_hf = new FwDict(row);
         else if (tag_value != null)
-            sub_hf = (FwDict)tag_value.toKeyValue();
+            sub_hf = tag_value.toKeyValue();
 
         if (sub_hf == null)
         {
@@ -732,7 +732,7 @@ public class ParsePage
         string oper = "";
         foreach (var item in IFOPERS)
         {
-            if (attrs.Contains(item))
+            if (attrs.ContainsKey(item))
             {
                 oper = item;
                 break;
@@ -755,9 +755,9 @@ public class ParsePage
 
         object ravalue;
         bool is_numeric_comparison = false;
-        if (attrs.Contains("value") || attrs.Contains("vvalue"))
+        if (attrs.ContainsKey("value") || attrs.ContainsKey("vvalue"))
         {
-            if (attrs.Contains("vvalue"))
+            if (attrs.ContainsKey("vvalue"))
             {
                 ravalue = hfvalue(attrs["vvalue"].toStr(), hf, parent_hf);
             }
@@ -885,7 +885,7 @@ public class ParsePage
             dict = element!.toKeyValue();
 
         if (dict != null)
-            uftagi1 = FwDict.From(dict);
+            uftagi1 = new FwDict(dict);
         else
             uftagi1 = [];
 
@@ -955,7 +955,7 @@ public class ParsePage
         int attr_count = hattrs.Count;
         if (attr_count > 0)
         {
-            if (value.Length < 1 && hattrs.Contains("default"))
+            if (value.Length < 1 && hattrs.ContainsKey("default"))
             {
                 var value_default = hattrs["default"].toStr();
                 if (!string.IsNullOrEmpty(value_default))
@@ -965,20 +965,20 @@ public class ParsePage
 
             if (value.Length > 0 && attr_count > 0)
             {
-                if (hattrs.Contains("htmlescape"))
+                if (hattrs.ContainsKey("htmlescape"))
                 {
                     value = Utils.htmlescape(value);
                     attr_count -= 1;
                 }
-                if (attr_count > 0 && hattrs.Contains("url"))
+                if (attr_count > 0 && hattrs.ContainsKey("url"))
                 {
                     value = Utils.str2url(value);
                     attr_count -= 1;
                 }
-                if (attr_count > 0 && hattrs.Contains("number_format"))
+                if (attr_count > 0 && hattrs.ContainsKey("number_format"))
                 {
                     var precision = (!string.IsNullOrEmpty(hattrs["number_format"].toStr()) ? hattrs["number_format"].toInt() : 2);
-                    bool groupdigits = !hattrs.Contains("nfthousands") || !string.IsNullOrEmpty(hattrs["nfthousands"].toStr()); // default - group digits, but if nfthousands empty - don't
+                    bool groupdigits = !hattrs.ContainsKey("nfthousands") || !string.IsNullOrEmpty(hattrs["nfthousands"].toStr()); // default - group digits, but if nfthousands empty - don't
 
                     value = value.toFloat().ToString("N" + precision, CultureInfo.InvariantCulture);
                     if (!groupdigits)
@@ -988,18 +988,18 @@ public class ParsePage
 
                     attr_count -= 1;
                 }
-                if (attr_count > 0 && hattrs.Contains("currency"))
+                if (attr_count > 0 && hattrs.ContainsKey("currency"))
                 {
                     value = value.toFloat().ToString("C2");
                     attr_count -= 1;
                 }
-                if (attr_count > 0 && hattrs.Contains("bytes"))
+                if (attr_count > 0 && hattrs.ContainsKey("bytes"))
                 {
                     // format numeric value (bytes) to human-readable string
                     value = Utils.bytes2str(value.toLong());
                     attr_count -= 1;
                 }
-                if (attr_count > 0 && hattrs.Contains("date"))
+                if (attr_count > 0 && hattrs.ContainsKey("date"))
                 {
                     var dformat = hattrs["date"].toStr();
                     switch (dformat)
@@ -1038,38 +1038,38 @@ public class ParsePage
 
                     attr_count -= 1;
                 }
-                if (attr_count > 0 && hattrs.Contains("trim"))
+                if (attr_count > 0 && hattrs.ContainsKey("trim"))
                 {
                     value = value.Trim();
                     attr_count -= 1;
                 }
-                if (attr_count > 0 && hattrs.Contains("nl2br"))
+                if (attr_count > 0 && hattrs.ContainsKey("nl2br"))
                 {
                     value = Regex.Replace(value, @"\r?\n", "<br>");
                     attr_count -= 1;
                 }
-                if (attr_count > 0 && hattrs.Contains("lower"))
+                if (attr_count > 0 && hattrs.ContainsKey("lower"))
                 {
                     value = value.ToLower();
                     attr_count -= 1;
                 }
-                if (attr_count > 0 && hattrs.Contains("upper"))
+                if (attr_count > 0 && hattrs.ContainsKey("upper"))
                 {
                     value = value.ToUpper();
                     attr_count -= 1;
                 }
-                if (attr_count > 0 && hattrs.Contains("capitalize"))
+                if (attr_count > 0 && hattrs.ContainsKey("capitalize"))
                 {
                     value = Utils.capitalize(value, hattrs["capitalize"].toStr());
                     attr_count -= 1;
                 }
-                if (attr_count > 0 && hattrs.Contains("truncate"))
+                if (attr_count > 0 && hattrs.ContainsKey("truncate"))
                 {
                     value = Utils.str2truncate(value, hattrs);
                     attr_count -= 1;
                 }
 
-                // If attr_count > 0 AndAlso hattrs.Contains("count") Then
+                // If attr_count > 0 AndAlso hattrs.ContainsKey("count") Then
                 // If TypeOf (value) Is ICollection Then
                 // value = CType(value, ICollection).Count
                 // Else
@@ -1077,12 +1077,12 @@ public class ParsePage
                 // End If
                 // attr_count -= 1
                 // End If
-                if (attr_count > 0 && hattrs.Contains("urlencode"))
+                if (attr_count > 0 && hattrs.ContainsKey("urlencode"))
                 {
                     value = HttpUtility.UrlEncode(value);
                     attr_count -= 1;
                 }
-                if (attr_count > 0 && hattrs.Contains("strip_tags"))
+                if (attr_count > 0 && hattrs.ContainsKey("strip_tags"))
                 {
                     value = Regex.Replace(value, "<[^>]*(>|$)", " ");
                     value = Regex.Replace(value, @"[\s\r\n]+", " ");
@@ -1090,7 +1090,7 @@ public class ParsePage
                     attr_count -= 1;
                 }
 
-                if (attr_count > 0 && hattrs.Contains("markdown"))
+                if (attr_count > 0 && hattrs.ContainsKey("markdown"))
                 {
                     // try to dynamically load Markdig, equivalent to:
                     // var pipeline = new MarkdownPipelineBuilder().UseAdvancedExtensions().Build();
@@ -1148,7 +1148,7 @@ public class ParsePage
                 }
             }
 
-            if (attr_count > 0 && hattrs.Contains("inline"))
+            if (attr_count > 0 && hattrs.ContainsKey("inline"))
             {
                 // get just tag without attrs
                 string tag = RX_NOTS.Match(tag_full).Groups[1].Value;
@@ -1178,7 +1178,7 @@ public class ParsePage
         //fw.logger($"_attr_select: tag={tag}, tpl_name={tpl_name}", attrs, hf[tag]);
 
         var multi_delim = ""; // by default no multiple select
-        if (attrs.Contains("multi"))
+        if (attrs.ContainsKey("multi"))
         {
             var attr_multi = attrs["multi"].toStr();
             if (!string.IsNullOrEmpty(attr_multi))
@@ -1273,7 +1273,7 @@ public class ParsePage
                 else
                     selected = "";
 
-                if (!attrs.Contains("noescape"))
+                if (!attrs.ContainsKey("noescape"))
                 {
                     value = Utils.htmlescape(value);
                     desc = Utils.htmlescape(desc);
@@ -1320,7 +1320,7 @@ public class ParsePage
             FwDict parent_hf = [];
             desc = _parse_page("", hf, desc, parent_hf, attrs);
 
-            if (!attrs.Contains("noescape"))
+            if (!attrs.ContainsKey("noescape"))
             {
                 value = Utils.htmlescape(value);
                 desc = Utils.htmlescape(desc);
