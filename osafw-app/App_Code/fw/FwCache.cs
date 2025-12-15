@@ -72,32 +72,7 @@ public class FwCache
             try
             {
                 // Attempt to deserialize the string back into an object.
-                var deserialized = Utils.deserialize(serialized_string);
-
-                if (deserialized is List<object> list)
-                {
-                    var strList = new StrList(list.Count);
-
-                    foreach (var item in list)
-                    {
-                        if (item is string strItem)
-                        {
-                            strList.Add(strItem);
-                        }
-                        else
-                        {
-                            strList = null;
-                            break;
-                        }
-                    }
-
-                    if (strList != null)
-                    {
-                        return strList;
-                    }
-                }
-
-                return deserialized;
+                return Utils.deserialize(serialized_string);
             }
             catch (Exception)
             {

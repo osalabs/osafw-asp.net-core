@@ -1,4 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Collections;
 
 namespace osafw.Tests
 {
@@ -118,10 +119,10 @@ namespace osafw.Tests
             // test serialization of IList (arrays)
             StrList a = ["1", "2"];
             cache.setRequestValue("testCacheKey4", a);
-            var r3 = (StrList?)cache.getRequestValue("testCacheKey4");
+            var r3 = cache.getRequestValue("testCacheKey4") as IList;
             Assert.IsNotNull(r3);
-            Assert.AreEqual("1", r3[0]);
-            Assert.AreEqual("2", r3[1]);
+            Assert.AreEqual("1", r3![0].ToString());
+            Assert.AreEqual("2", r3[1].ToString());
 
             // test object that cannot be serialized to json, so it's stored as is
             cache.setRequestValue("testCacheKey5", new System.IO.MemoryStream());
