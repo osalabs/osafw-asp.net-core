@@ -3,35 +3,50 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using Microsoft.Data.SqlClient;
 
 namespace osafw.Tests
 {
     [TestClass()]
+    [Ignore("Requires local SQL Server instance")] // TODO consider mocked DB layer for tests
     public class DBTests
     {
         private readonly string connstr = "Server=(local);Database=demo;Trusted_Connection=True;TrustServerCertificate=true;";
         private DB db = null!;
         private readonly string table_name = "for_unit_testing";
+        private bool isDbAvailable = false;
 
         [TestInitialize()]
         public void Startup()
         {
-            db = new DB(connstr, "SQL", "main");
-            db.connect();
-            // create tables for testing
-            db.exec($"DROP TABLE IF EXISTS {table_name}");
-            db.exec($@"CREATE TABLE {table_name} (
-                        id              INT,
-                        iname           NVARCHAR(64) NOT NULL default '',
-                        idatetime       DATETIME2,
-                        fdate           DATE
-                    )");
-            db.exec($"INSERT INTO {table_name} (id, iname) VALUES (1,'test1'),(2,'test2'),(3,'test3')");
+            try
+            {
+                db = new DB(connstr, "SQL", "main");
+                db.connect();
+                // create tables for testing
+                db.exec($"DROP TABLE IF EXISTS {table_name}");
+                db.exec($@"CREATE TABLE {table_name} (
+                            id              INT,
+                            iname           NVARCHAR(64) NOT NULL default '',
+                            idatetime       DATETIME2,
+                            fdate           DATE
+                        )");
+                db.exec($"INSERT INTO {table_name} (id, iname) VALUES (1,'test1'),(2,'test2'),(3,'test3')");
+                isDbAvailable = true;
+            }
+            catch (Exception ex)
+            {
+                isDbAvailable = false;
+                Assert.Inconclusive("SQL Server is not available for DBTests: " + ex.Message);
+            }
         }
 
         [TestCleanup()]
         public void Cleanup()
         {
+            if (!isDbAvailable)
+                return;
+
             db.exec($"DROP TABLE {table_name}");
             db.disconnect();
         }

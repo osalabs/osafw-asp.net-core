@@ -72,7 +72,14 @@ public class FwCache
             try
             {
                 // Attempt to deserialize the string back into an object.
-                return Utils.deserialize(serialized_string);
+                var deserialized = Utils.deserialize(serialized_string);
+
+                if (deserialized is List<object> list && list.All(v => v is string))
+                {
+                    return new StrList(list.Cast<string>());
+                }
+
+                return deserialized;
             }
             catch (Exception)
             {

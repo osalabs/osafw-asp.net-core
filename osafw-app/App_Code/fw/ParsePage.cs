@@ -103,7 +103,7 @@ Parses file templates and replaces <~tags> with values from dictionary
   strip_tags
   trim
   nl2br
-  TODO count         - for ICollection only
+  TODO count         - for ICollection only // TODO FIX count attribute not implemented
   lower
   upper
   capitalize        - capitalize first word, capitalize=all - capitalize all words

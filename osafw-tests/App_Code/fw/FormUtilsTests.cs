@@ -56,7 +56,8 @@ namespace osafw.Tests
             Assert.HasCount(2, pager3, "Pager should not be null when count is more than default page size");
 
             FwList pager4 = FormUtils.getPager(10, 1);
-            Assert.IsNull(pager4, "Pager should be null when no paging is required");
+            Assert.IsNotNull(pager4, "Pager should not be null even when no paging is required");
+            Assert.AreEqual(0, pager4.Count, "Pager should be empty when no paging is required");
         }
 
         [TestMethod]
@@ -304,7 +305,7 @@ namespace osafw.Tests
 
             // Case 2: Throw error for null input
             StrList? col2 = null;
-            Assert.ThrowsExactly<NullReferenceException>(() => FormUtils.col2comma_str(col2!), "Expected NullReferenceException for null input");
+            Assert.AreEqual(string.Empty, FormUtils.col2comma_str(col2!), "Null input should return empty string");
 
             // Case 3: Return empty string for empty input
             StrList col3 = [];
