@@ -101,7 +101,7 @@ namespace osafw.Tests
             // properties
             public int id { get; set; }
             public string Name { get; set; } = string.Empty;
-            public string Email { get; set; } = string.Empty;
+            public string Email = string.Empty;
         }
 
         [TestMethod()]
@@ -527,7 +527,6 @@ namespace osafw.Tests
         }
 
         [TestMethod()]
-        [Ignore("TODO FIX: count attribute for ParsePage is not implemented yet")] // TODO FIX count attribute implementation
         public void parse_string_countTest()
         {
             string tpl = "<~AAA count>";

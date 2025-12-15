@@ -103,7 +103,7 @@ Parses file templates and replaces <~tags> with values from dictionary
   strip_tags
   trim
   nl2br
-  TODO count         - for ICollection only // TODO FIX count attribute not implemented
+  count         - for ICollection only
   lower
   upper
   capitalize        - capitalize first word, capitalize=all - capitalize all words
@@ -288,7 +288,7 @@ public class ParsePage
         string tag_full;
         string tag;
         FwDict attrs;
-        object tag_value;
+        object? tag_value = null;
         string v;
 
         foreach (Match tag_match in tags_full)
@@ -351,23 +351,23 @@ public class ParsePage
                         if (!string.IsNullOrEmpty(value) && !attrs.ContainsKey("noescape"))
                             value = Utils.htmlescape(value);
                     }
-                    tag_replace(ref page, ref tag_full, ref value, attrs);
+                    tag_replace(ref page, ref tag_full, ref value, attrs, tag_value);
                 }
                 else if (attrs.ContainsKey("repeat"))
                 {
                     v = _attr_repeat(ref tag, ref tag_value, ref tpl_name, ref inline_tpl, hf);
-                    tag_replace(ref page, ref tag_full, ref v, attrs);
+                    tag_replace(ref page, ref tag_full, ref v, attrs, tag_value);
                 }
                 else if (attrs.ContainsKey("var"))
                 {
                     string tmp_value = "";
-                    tag_replace(ref page, ref tag_full, ref tmp_value, attrs);
+                    tag_replace(ref page, ref tag_full, ref tmp_value, attrs, tag_value);
                 }
                 else if (attrs.ContainsKey("select"))
                 {
                     // # this is special case for '<select>' HTML tag
                     v = _attr_select(tag, tpl_name, hf, attrs);
-                    tag_replace(ref page, ref tag_full, ref v, attrs);
+                    tag_replace(ref page, ref tag_full, ref v, attrs, tag_value);
                 }
                 else if (attrs.ContainsKey("selvalue"))
                 {
@@ -375,13 +375,13 @@ public class ParsePage
                     v = _attr_select_name(tag, tpl_name, hf, attrs);
                     if (!attrs.ContainsKey("noescape"))
                         v = Utils.htmlescape(v);
-                    tag_replace(ref page, ref tag_full, ref v, attrs);
+                    tag_replace(ref page, ref tag_full, ref v, attrs, tag_value);
                 }
                 else if (attrs.ContainsKey("radio"))
                 {
                     // # this is special case for '<index type=radio>' HTML tag
                     v = _attr_radio(tag_tplpath(tag, tpl_name), hf, attrs);
-                    tag_replace(ref page, ref tag_full, ref v, attrs);
+                    tag_replace(ref page, ref tag_full, ref v, attrs, tag_value);
                 }
                 else if (attrs.ContainsKey("noparse"))
                 {
@@ -404,13 +404,13 @@ public class ParsePage
                     else
                         // value not found - looks like subtemplate in file
                         v = _parse_page(tag_tplpath(tag, tpl_name), hf, inline_tpl, parent_hf, attrs);
-                    tag_replace(ref page, ref tag_full, ref v, attrs);
+                    tag_replace(ref page, ref tag_full, ref v, attrs, tag_value);
                 }
             }
             else
             {
                 string tmp_value = "";
-                tag_replace(ref page, ref tag_full, ref tmp_value, attrs);
+                tag_replace(ref page, ref tag_full, ref tmp_value, attrs, tag_value);
             }
         }
 
@@ -937,7 +937,7 @@ public class ParsePage
         return result;
     }
 
-    private void tag_replace(ref string hpage_ref, ref string tag_full_ref, ref string value_ref, FwDict hattrs)
+    private void tag_replace(ref string hpage_ref, ref string tag_full_ref, ref string value_ref, FwDict hattrs, object? originalValue = null)
     {
         if (string.IsNullOrEmpty(hpage_ref))
         {
@@ -1069,14 +1069,37 @@ public class ParsePage
                     attr_count -= 1;
                 }
 
-                // If attr_count > 0 AndAlso hattrs.ContainsKey("count") Then
-                // If TypeOf (value) Is ICollection Then
-                // value = CType(value, ICollection).Count
-                // Else
-                // logger("WARN", "ParsePage - 'count' attribute used on non-array value")
-                // End If
-                // attr_count -= 1
-                // End If
+                if (attr_count > 0 && hattrs.ContainsKey("count"))
+                {
+                    object? countSource = originalValue ?? value_ref;
+
+                    if (countSource is string)
+                    {
+                        countSource = null;
+                    }
+
+                    if (countSource is ICollection collection)
+                    {
+                        value = collection.Count.ToString();
+                    }
+                    else if (countSource is IEnumerable enumerable)
+                    {
+                        var collectionCount = 0;
+                        foreach (var _ in enumerable)
+                        {
+                            collectionCount++;
+                        }
+
+                        value = collectionCount.ToString();
+                    }
+                    else
+                    {
+                        logger(LogLevel.WARN, "ParsePage - 'count' attribute used on non-array value");
+                        value = "0";
+                    }
+
+                    attr_count -= 1;
+                }
                 if (attr_count > 0 && hattrs.ContainsKey("urlencode"))
                 {
                     value = HttpUtility.UrlEncode(value);

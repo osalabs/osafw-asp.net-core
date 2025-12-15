@@ -74,9 +74,27 @@ public class FwCache
                 // Attempt to deserialize the string back into an object.
                 var deserialized = Utils.deserialize(serialized_string);
 
-                if (deserialized is List<object> list && list.All(v => v is string))
+                if (deserialized is List<object> list)
                 {
-                    return new StrList(list.Cast<string>());
+                    var strList = new StrList(list.Count);
+
+                    foreach (var item in list)
+                    {
+                        if (item is string strItem)
+                        {
+                            strList.Add(strItem);
+                        }
+                        else
+                        {
+                            strList = null;
+                            break;
+                        }
+                    }
+
+                    if (strList != null)
+                    {
+                        return strList;
+                    }
                 }
 
                 return deserialized;
