@@ -731,7 +731,7 @@ class DevEntityBuilder
             ["fw_name"] = Utils.name2fw(table_name),
             ["iname"] = Utils.name2human(table_name),
             ["fields"] = tblfields,
-            ["foreign_keys"] = db.listForeignKeys(table_name).toArrayList(),
+            ["foreign_keys"] = db.listForeignKeys(table_name).toFwList(),
             ["controller_options"] = controller_options,
         };
 

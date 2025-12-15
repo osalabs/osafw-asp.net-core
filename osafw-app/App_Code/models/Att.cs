@@ -489,7 +489,7 @@ public class Att : FwModel<Att.Row>
     {
         var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
 
-        var row = one(id).toHashtable();
+        FwDict row = one(id);
         if (row["fwentities_id"].toInt() != fwentities_id)
             row.Clear();
         return row;

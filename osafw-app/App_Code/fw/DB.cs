@@ -82,6 +82,12 @@ public class DBRow : Dictionary<string, string>
     {
         return new DBRow(row ?? []);
     }
+    public FwDict toFwDict()
+    {
+        return this;
+    }
+
+    [Obsolete("Use toFwDict() instead")]
     public FwDict toHashtable()
     {
         return this;
@@ -104,6 +110,12 @@ public class DBList : List<DBRow>
         return result;
     }
 
+    public FwList toFwList()
+    {
+        return this;
+    }
+
+    [Obsolete("Use toFwList() instead")]
     public FwList toArrayList()
     {
         return this;
@@ -1833,7 +1845,7 @@ public class DB : IDisposable
             }
             else
             {
-                ObjList result = new(list.Count);
+                List<object?> result = new(list.Count);
                 foreach (var pvalue in list)
                     result.Add(field2typed(field_type, pvalue));
                 dbop.value = result;
@@ -1843,7 +1855,7 @@ public class DB : IDisposable
         {
             if (dbop.value is not IList list || list.Count < 2)
             {
-                dbop.value = new ObjList() { field2typed(field_type, DBNull.Value), field2typed(field_type, DBNull.Value) };
+                dbop.value = new List<object?>() { field2typed(field_type, DBNull.Value), field2typed(field_type, DBNull.Value) };
             }
             else
             {

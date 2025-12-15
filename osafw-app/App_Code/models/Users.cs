@@ -740,7 +740,7 @@ public class Users : FwModel<Users.Row>
             var rrps = fw.model<RolesResourcesPermissions>().listByRolesPermissions(roles_ids, new int[] { list_permission["id"].toInt() });
 
             // read all resources user has list permission
-            var resources_ids = new List<int>();
+            var resources_ids = new IntList();
             foreach (FwRow rrp in rrps)
             {
                 resources_ids.Add(rrp["resources_id"].toInt());

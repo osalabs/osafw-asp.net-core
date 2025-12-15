@@ -161,7 +161,7 @@ class DevCodeGen
         if (!entity.ContainsKey("foreign_keys"))
             return result;
 
-        foreach (FwDict fk in entity["foreign_keys"] as FwList ?? new FwList())
+        foreach (FwDict fk in entity["foreign_keys"] as FwList ?? [])
         {
             fw.logger("CHECK FK:", fk["column"].toStr(), "=", field["name"].toStr());
             if (fk["column"].toStr() == field["name"].toStr())
@@ -186,7 +186,7 @@ class DevCodeGen
 
         var indexes = entity["indexes"] as FwDict;
         var i = 1;
-        var fields = entity["fields"] as FwList ?? new FwList();
+        var fields = entity["fields"] as FwList ?? [];
         foreach (FwDict field in fields)
         {
             var fsql = "";
@@ -356,7 +356,7 @@ class DevCodeGen
             var field_main_id = "";
             var model_linked = "";
             var field_linked_id = "";
-            foreach (FwDict fk in (entity["foreign_keys"] as FwList ?? new FwList()))
+            foreach (FwDict fk in (entity["foreign_keys"] as FwList ?? []))
             {
                 if (field_main_id == "")
                 {
@@ -467,7 +467,7 @@ class DevCodeGen
     private void createLookup(FwDict entity)
     {
         string model_name = entity["model_name"].toStr();
-        var controller_options = entity["controller"] as FwDict ?? new FwDict();
+        var controller_options = entity["controller"] as FwDict ?? [];
         string controller_url = controller_options["url"].toStr();
         string controller_title = controller_options["title"].toStr();
 
@@ -520,7 +520,7 @@ class DevCodeGen
     public bool createController(FwDict entity, FwList entities)
     {
         string model_name = entity["model_name"].toStr();
-        var controller_options = entity["controller"] as FwDict ?? new FwDict();
+        var controller_options = entity["controller"] as FwDict ?? [];
         string controller_url = controller_options["url"].toStr();
         string controller_title = controller_options["title"].toStr();
         string controller_type = controller_options["type"].toStr(); // ""(dynamic), "vue", "lookup", "api"
@@ -651,7 +651,7 @@ class DevCodeGen
         var sys_fields = Utils.qh(SYS_FIELDS);
 
         FwDict tables = []; // hindex by table name to entities
-        FwList fields = entity["fields"] as FwList ?? new FwList();
+        FwList fields = entity["fields"] as FwList ?? [];
         if (fields == null)
         {
             // TODO deprecate reading from db, always use entity info
@@ -659,7 +659,7 @@ class DevCodeGen
             var dbConfig = entity["db_config"].toStr();
             db = dbConfig.Length > 0 ? fw.getDB(dbConfig) : fw.db;
             fields = db.loadTableSchemaFull(table_name);
-            entity["foreign_keys"] = db.listForeignKeys(table_name).toArrayList();
+            entity["foreign_keys"] = db.listForeignKeys(table_name).toFwList();
 
             if (!entity.ContainsKey("is_fw"))
                 entity["is_fw"] = true; // TODO actually detect if there any fields to be normalized
@@ -691,7 +691,7 @@ class DevCodeGen
                 hfields[fname] = fld;
         }
 
-        var foreign_keys = entity["foreign_keys"] as FwList ?? new FwList();
+        var foreign_keys = entity["foreign_keys"] as FwList ?? [];
         //add system user fields to fake foreign keys, so it can generate list query with user names
         var hforeign_keys = Utils.array2hashtable(foreign_keys, "column"); // column -> fk info
         if (hfields.ContainsKey("add_users_id") && !hforeign_keys.ContainsKey("add_users_id"))
@@ -737,7 +737,7 @@ class DevCodeGen
 
         foreach (FwDict fld in fields)
         {
-            var ui = fld["ui"] as FwDict ?? new FwDict(); // ui options for the field
+            var ui = fld["ui"] as FwDict ?? []; // ui options for the field
             if (ui.ContainsKey("skip"))
                 continue; //skip unnecessary fields
 
@@ -933,7 +933,7 @@ class DevCodeGen
             if (m.Success)
             {
                 //table could be a junction table name then
-                var tentity = tables[table] as FwDict ?? new FwDict();
+                var tentity = tables[table] as FwDict ?? [];
                 var is_junction = tentity["is_junction"].toBool();
                 var junction_model = tentity["model_name"].toStr();
                 string table_name_linked = m.Groups[1].Value;
@@ -1101,7 +1101,7 @@ class DevCodeGen
     //add tabs to config[key] and config[key_tab] based on showFieldsTabs and update config["form_tabs"]
     public static void configAddTabs(FwDict config, string key, Dictionary<string, List<List<FwDict>>> showFieldsTabs)
     {
-        var formTabs = config["form_tabs"] as List<FwDict> ?? new List<FwDict>();
+        var formTabs = config["form_tabs"] as List<FwDict> ?? [];
         config["form_tabs"] = formTabs;
 
         var tabs = new FwList();
@@ -1154,7 +1154,7 @@ class DevCodeGen
         Dictionary<string, List<List<FwDict>>> showFormFieldsTabs,
         FwDict sys_fields, FwList fields)
     {
-        var ui = fld["ui"] as FwDict ?? new FwDict(); // ui options for the field
+        var ui = fld["ui"] as FwDict ?? []; // ui options for the field
         var col = 0; //default to left
 
         if (fld["is_identity"].toBool() || sys_fields.ContainsKey(fld["name"].toStr()))
@@ -1340,7 +1340,7 @@ class DevCodeGen
 
     public static void overrideUIOptions(FwDict fld, FwDict sf, FwDict sff, string model_name)
     {
-        var ui = fld["ui"] as FwDict ?? new FwDict(); // ui options for the field
+        var ui = fld["ui"] as FwDict ?? []; // ui options for the field
 
         // override ui options
         if (ui.ContainsKey("required"))

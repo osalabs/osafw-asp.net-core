@@ -808,8 +808,8 @@ public class FwDynamicController : FwController
         tab ??= form_tab;
         var key = prefix + (tab.Length > 0 ? "_" + tab : "");
 
-        if (config[key] is FwList arr)
-            return arr;
+        if (config[key] is IList arr)
+            return new FwList(arr);
 
         return [];
     }

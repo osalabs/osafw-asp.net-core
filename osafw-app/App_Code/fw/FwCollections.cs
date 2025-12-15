@@ -44,6 +44,13 @@ public class FwList : List<FwDict>
     public FwList() { }
     public FwList(int capacity) : base(capacity) { }
     public FwList(ICollection c) : base((IEnumerable<FwDict>)c) { }
+    public FwList(IList list)
+    {
+        if (list != null)
+            foreach (var item in list)
+                if (item is IDictionary)
+                    Add((FwDict)item);
+    }
     public FwList(IEnumerable collection)
     {
         if (collection != null)

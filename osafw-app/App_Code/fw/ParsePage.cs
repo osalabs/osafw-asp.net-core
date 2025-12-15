@@ -709,7 +709,7 @@ public class ParsePage
             tag_value = hfvalue(sub, hf, parent_hf);
 
         if (tag_value is DBRow row)
-            sub_hf = row.toHashtable();
+            sub_hf = (FwDict)row;
         else if (tag_value is FwDict ht)
             sub_hf = ht;
         else if (tag_value != null)
