@@ -423,9 +423,19 @@ public class FormUtils
         return result;
     }
 
-    public static string col2comma_str(FwList col)
+    public static string col2comma_str(IList col)
     {
-        return string.Join(",", col.ToArray());
+        if (col == null || col.Count == 0)
+            return string.Empty;
+
+        if (col is List<string> stringList)
+            return string.Join(",", stringList);
+
+        string[] values = col.Cast<object>()
+            .Select(item => item.toStr())
+            .ToArray();
+
+        return string.Join(",", values);
     }
 
     /**

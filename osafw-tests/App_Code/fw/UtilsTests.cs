@@ -113,7 +113,7 @@ namespace osafw.Tests
         public void splitEmailsTest()
         {
             string s = "1@1.com 2@2.com\r\n3@3.com";
-            FwList r = Utils.splitEmails(s);
+            StrList r = Utils.splitEmails(s);
 
             Assert.AreEqual("1@1.com", r[0]);
             Assert.AreEqual("2@2.com", r[1]);
@@ -988,10 +988,11 @@ namespace osafw.Tests
             //bool
             Assert.IsTrue(Utils.isEmpty(false));
             Assert.IsFalse(Utils.isEmpty(true));
-            //arraylist
+            //list
             Assert.IsTrue(Utils.isEmpty(new FwList()));
-            Assert.IsFalse(Utils.isEmpty(new FwList() { 1 }));
-            //hashtable
+            Assert.IsFalse(Utils.isEmpty(new StrList() { "1" }));
+            Assert.IsFalse(Utils.isEmpty(new IntList() { 1 }));
+            //dictionary
             Assert.IsTrue(Utils.isEmpty(new FwDict()));
             Assert.IsFalse(Utils.isEmpty(new FwDict() { { "1", 1 } }));
         }

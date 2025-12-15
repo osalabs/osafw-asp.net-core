@@ -297,27 +297,27 @@ namespace osafw.Tests
         [TestMethod]
         public void Col2CommaStrTest()
         {
-            // Case 1: Convert FwList to comma-separated string
-            FwList col1 = ["value1", "value2", "value3"];
+            // Case 1: Convert StrList to comma-separated string
+            StrList col1 = ["value1", "value2", "value3"];
             string result1 = FormUtils.col2comma_str(col1);
             Assert.AreEqual("value1,value2,value3", result1, "Result should be comma-separated string of values");
 
             // Case 2: Throw error for null input
-            FwList? col2 = null;
+            StrList? col2 = null;
             Assert.ThrowsExactly<NullReferenceException>(() => FormUtils.col2comma_str(col2!), "Expected NullReferenceException for null input");
 
             // Case 3: Return empty string for empty input
-            FwList col3 = [];
+            StrList col3 = [];
             string result3 = FormUtils.col2comma_str(col3);
             Assert.AreEqual("", result3, "Result should be empty string for empty input");
 
             // Case 4: Convert FwList with single value to comma-separated string
-            FwList col4 = ["value1"];
+            StrList col4 = ["value1"];
             string result4 = FormUtils.col2comma_str(col4);
             Assert.AreEqual("value1", result4, "Result should be single value for single-value input");
 
             // Case 5: Convert FwList with numeric values to comma-separated string
-            FwList col5 = [1, 2, 3];
+            IntList col5 = [1, 2, 3];
             string result5 = FormUtils.col2comma_str(col5);
             Assert.AreEqual("1,2,3", result5, "Result should be comma-separated string of numeric values");
         }
@@ -330,27 +330,27 @@ namespace osafw.Tests
 
             // Case 1: Test with empty input
             string input1 = "";
-            FwList result1 = FormUtils.comma_str2col(input1);
+            StrList result1 = FormUtils.comma_str2col(input1);
             Assert.IsEmpty(result1, "Result should be empty for empty input");
 
             // Case 2: Test with input containing single item
             string input2 = "item";
-            FwList result2 = FormUtils.comma_str2col(input2);
-            CollectionAssert.AreEqual(new FwList { "item" }, result2, "Result should contain single item for input with single item");
+            StrList result2 = FormUtils.comma_str2col(input2);
+            CollectionAssert.AreEqual(new StrList { "item" }, result2, "Result should contain single item for input with single item");
 
             // Case 3: Test with input containing multiple items
             string input3 = "item1,item2,item3";
-            FwList result3 = FormUtils.comma_str2col(input3);
-            CollectionAssert.AreEqual(new FwList { "item1", "item2", "item3" }, result3, "Result should contain multiple items for input with multiple items");
+            StrList result3 = FormUtils.comma_str2col(input3);
+            CollectionAssert.AreEqual(new StrList { "item1", "item2", "item3" }, result3, "Result should contain multiple items for input with multiple items");
 
             // Case 4: Test with input containing spaces around commas
             string input4 = "item1,  item2 , item3";
-            FwList result4 = FormUtils.comma_str2col(input4);
-            CollectionAssert.AreEqual(new FwList { "item1", "item2", "item3" }, result4, "Result should contain items without leading or trailing spaces");
+            StrList result4 = FormUtils.comma_str2col(input4);
+            CollectionAssert.AreEqual(new StrList { "item1", "item2", "item3" }, result4, "Result should contain items without leading or trailing spaces");
 
             // Case 5: Test with input containing only spaces
             string input5 = "   ";
-            FwList result5 = FormUtils.comma_str2col(input5);
+            StrList result5 = FormUtils.comma_str2col(input5);
             Assert.IsEmpty(result5, "Result should be empty for input containing only spaces");
         }
 

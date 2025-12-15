@@ -117,11 +117,11 @@ namespace osafw.Tests
             Assert.AreEqual("2", r2["BBB"]);
 
             // test serialization of IList (arrays)
-            FwList a = ["1", "2"];
+            StrList a = ["1", "2"];
             cache.setRequestValue("testCacheKey4", a);
-            var r3 = (FwList?)cache.getRequestValue("testCacheKey4");
+            var r3 = (StrList?)cache.getRequestValue("testCacheKey4");
             Assert.IsNotNull(r3);
-            Assert.AreEqual("1", r3![0]);
+            Assert.AreEqual("1", r3[0]);
             Assert.AreEqual("2", r3[1]);
 
             // test object that cannot be serialized to json, so it's stored as is

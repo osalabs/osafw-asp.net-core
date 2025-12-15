@@ -114,7 +114,7 @@ namespace osafw.Tests
         [TestMethod()]
         public void execTest()
         {
-            FwList tables = db.tables();
+            var tables = db.tables();
             if (tables.Contains("exec_unit_testing"))
             {
                 db.exec("DROP TABLE exec_unit_testing");
@@ -246,15 +246,20 @@ namespace osafw.Tests
             string result3 = db.insql(strArray);
             Assert.AreEqual(" IN ('a', 'b', 'c')", result3);
 
-            // Test with FwList
-            FwList list = ["a", "b", "c"];
+            // Test with StrList
+            StrList list = ["a", "b", "c"];
             string result4 = db.insql(list);
             Assert.AreEqual(" IN ('a', 'b', 'c')", result4);
 
-            // Test with empty FwList
-            FwList emptyList = [];
+            // Test with empty StrList
+            StrList emptyList = [];
             string result5 = db.insql(emptyList);
             Assert.AreEqual(" IN (NULL)", result5);
+
+            // Test with IntList
+            IntList intList = [1, 2, 3];
+            string result6 = db.insql(intList);
+            Assert.AreEqual(" IN (1, 2, 3)", result6);
         }
 
         [TestMethod()]
@@ -276,15 +281,15 @@ namespace osafw.Tests
             string result4 = db.insqli(strArray);
             Assert.AreEqual(" IN (1, 2, 3)", result4);
 
-            // Test with FwList
-            FwList list = ["1", "2", "3"];
+            // Test with StrList
+            StrList list = ["1", "2", "3"];
             string result5 = db.insqli(list);
             Assert.AreEqual(" IN (1, 2, 3)", result5);
 
-            // Test with empty FwList
-            FwList emptyList = [];
-            string result6 = db.insqli(emptyList);
-            Assert.AreEqual(" IN (NULL)", result6);
+            // Test with IntList
+            IntList intList = [1, 2, 3];
+            string result6 = db.insqli(intList);
+            Assert.AreEqual(" IN (1, 2, 3)", result6);
         }
 
         [TestMethod()]
@@ -523,7 +528,7 @@ namespace osafw.Tests
         public void tablesTest()
         {
             string[] tablesToCheck = Utils.qw("users att settings menu_items att_categories fwsessions");
-            FwList tables = db.tables();
+            var tables = db.tables();
             foreach (var tableName in tablesToCheck)
             {
                 Assert.IsGreaterThanOrEqualTo(0, tables.IndexOf(tableName), tableName + " not found");
@@ -534,7 +539,7 @@ namespace osafw.Tests
         public void viewsTest()
         {
             db.exec("CREATE VIEW view_for_unit_tests AS SELECT * FROM users");
-            FwList views = db.views();
+            var views = db.views();
             db.exec("DROP VIEW view_for_unit_tests");
             Assert.IsGreaterThanOrEqualTo(0, views.IndexOf("view_for_unit_tests"));
         }
