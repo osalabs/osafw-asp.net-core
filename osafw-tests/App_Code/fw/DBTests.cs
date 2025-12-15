@@ -13,7 +13,7 @@ namespace osafw.Tests
     {
         private readonly string connstr = "Server=(local);Database=demo;Trusted_Connection=True;TrustServerCertificate=true;";
         private DB db = null!;
-        private string table_name = "for_unit_testing";
+        private readonly string table_name = "for_unit_testing";
 
         [TestInitialize()]
         public void Startup()
@@ -89,7 +89,7 @@ namespace osafw.Tests
         [TestMethod()]
         public void getConnectionTest()
         {
-            Assert.IsInstanceOfType(db.getConnection(), typeof(DbConnection));
+            Assert.IsInstanceOfType<DbConnection>(db.getConnection());
         }
 
         [TestMethod()]
@@ -559,7 +559,7 @@ namespace osafw.Tests
         [TestMethod()]
         public void clearchemaCacheTest()
         {
-            FwDict schema = db.loadTableSchema("users");
+            _ = db.loadTableSchema("users");
             Assert.IsFalse(db.isSchemaCacheEmpty());
             db.clearSchemaCache();
             Assert.IsTrue(db.isSchemaCacheEmpty());

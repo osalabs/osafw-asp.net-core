@@ -66,7 +66,7 @@ namespace osafw.Tests
             FwDict? item1 = null;
             FwDict result1 = FormUtils.filter(item1!, new string[] { "field1", "field2" });
             Assert.IsNotNull(result1, "Result should not be null when item is null");
-            CollectionAssert.AreEquivalent(new string[] { }, result1.Keys.Cast<string>().ToArray(), "Result should be empty when item is null");
+            CollectionAssert.AreEquivalent(Array.Empty<string>(), result1.Keys.Cast<string>().ToArray(), "Result should be empty when item is null");
 
             // Case 2: Filter existing fields from item
             FwDict item2 = new() { { "field1", "value1" }, { "field2", "value2" } };
@@ -132,7 +132,7 @@ namespace osafw.Tests
             // Case 6: Populate itemdb with default values when fields array is empty
             FwDict itemdb6 = [];
             FwDict item6 = new() { { "field1", "value1" } };
-            FormUtils.filterCheckboxes(itemdb6, item6, new string[] { });
+            FormUtils.filterCheckboxes(itemdb6, item6, Array.Empty<string>());
             Assert.IsEmpty(itemdb6, "Itemdb should be empty when fields array is empty");
 
             // Case 7: Populate itemdb with default values when item is null and fields array is null
@@ -180,7 +180,7 @@ namespace osafw.Tests
             // Case 6: Populate itemdb with default values when fields array is empty
             FwDict itemdb6 = [];
             FwDict item6 = new() { { "field1", "value1" } };
-            FormUtils.filterCheckboxes(itemdb6, item6, new string[] { });
+            FormUtils.filterCheckboxes(itemdb6, item6, Array.Empty<string>());
             Assert.IsEmpty(itemdb6, "Itemdb should be empty when fields array is empty");
 
             // Case 7: Populate itemdb with default values when item is null and fields array is null

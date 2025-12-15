@@ -67,7 +67,7 @@ public class FormUtils
         return result.ToString();
     }
 
-    // arr is FwList of Hashes with "id" and "iname" keys, for example rows returned from db.array('select id, iname from ...')
+    // arr is FwList of Dictionaries with "id" and "iname" keys, for example rows returned from db.array('select id, iname from ...')
     // "id" key is optional, if not present - iname will be used for values too
     // isel may contain multiple comma-separated values
     public static string selectOptions(FwList arr, string isel, bool is_multi = false)
@@ -94,14 +94,14 @@ public class FormUtils
         foreach (FwDict item in arr)
         {
             text = Utils.htmlescape(item["iname"].toStr());
-            if (item.ContainsKey("id"))
-                val = item["id"].toStr();
+            if (item.TryGetValue("id", out object? value))
+                val = value.toStr();
             else
                 val = item["iname"].toStr();
 
             result.Append("<option value=\"").Append(Utils.htmlescape(val)).Append('"');
-            if (item.ContainsKey("class"))
-                result.Append(" class=\"" + item["class"] + "\"");
+            if (item.TryGetValue("class", out object? classValue))
+                result.Append(" class=\"" + classValue + "\"");
             if (Array.IndexOf(asel, val.Trim()) != -1)
                 result.Append(" selected ");
             result.Append('>').Append(text).Append("</option>" + Environment.NewLine);
@@ -328,8 +328,8 @@ public class FormUtils
         {
             foreach (string fld in fields)
             {
-                if (item.ContainsKey(fld))
-                    itemdb[fld] = item[fld];
+                if (item.TryGetValue(fld, out object? value))
+                    itemdb[fld] = value;
                 else
                 {
                     if (!is_existing_fields_only)
@@ -358,8 +358,8 @@ public class FormUtils
             FwDict hfields = Utils.qh(fields, default_value);
             foreach (string fld in hfields.Keys)
             {
-                if (item.ContainsKey(fld))
-                    itemdb[fld] = item[fld];
+                if (item.TryGetValue(fld, out object? value))
+                    itemdb[fld] = value;
                 else
                 {
                     if (!is_existing_fields_only)
@@ -394,7 +394,7 @@ public class FormUtils
         if (names == null || names.Count == 0) return;
         foreach (string fld in names)
         {
-            if (itemdb.ContainsKey(fld) && itemdb[fld].toStr() == "")
+            if (itemdb.TryGetValue(fld, out object? value) && value.toStr() == "")
                 itemdb[fld] = null;
         }
     }
@@ -629,7 +629,7 @@ public class FormUtils
         foreach (var key in item.Keys)
         {
             object? vnew = item[key];
-            object? vold = itemold.ContainsKey(key) ? itemold[key] : null;
+            object? vold = itemold.TryGetValue(key, out object? value) ? value : null;
 
             // If both are dates, compare only the date part.
             var dtNew = vnew.toDate();
@@ -662,7 +662,7 @@ public class FormUtils
         var afields = Utils.qw(fields);
         foreach (var fld in afields)
         {
-            if (item1.ContainsKey(fld) && item2.ContainsKey(fld) && item1[fld].toStr() != item2[fld].toStr())
+            if (item1.TryGetValue(fld, out object? value) && item2.TryGetValue(fld, out object? value1) && value.toStr() != value1.toStr())
             {
                 result = true;
                 break;

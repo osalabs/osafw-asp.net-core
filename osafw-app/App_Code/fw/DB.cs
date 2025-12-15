@@ -771,7 +771,7 @@ public class DB : IDisposable
             foreach (string p in paramNames)
             {
                 // p name is without "@", but @params may or may not contain "@" prefix
-                var pvalue = @params.ContainsKey(p) ? @params[p] : @params["@" + p];
+                var pvalue = @params.TryGetValue(p, out object? value) ? value : @params["@" + p];
                 //logger(LogLevel.INFO, "DB:", db_name, " ", "param: ", p, " = ", pvalue);
                 oleDbCommand.Parameters.AddWithValue("?", convertParamValue(pvalue));
             }
@@ -957,7 +957,7 @@ public class DB : IDisposable
             foreach (string p in paramNames)
             {
                 // p name is without "@", but @params may or may not contain "@" prefix
-                var pvalue = @params.ContainsKey(p) ? @params[p] : @params["@" + p];
+                var pvalue = @params.TryGetValue(p, out object? value) ? value : @params["@" + p];
                 //logger(LogLevel.INFO, "DB:", db_name, " ", "param: ", p, " = ", pvalue);
                 dbcomm.Parameters.AddWithValue("?", convertParamValue(pvalue));
             }
@@ -1809,13 +1809,13 @@ public class DB : IDisposable
         connect();
         loadTableSchema(table);
         field_name = field_name.ToLower();
-        if (!schema.TryGetValue(table, out var schema_table_obj) || schema_table_obj is not FwDict schema_table || !schema_table.ContainsKey(field_name))
+        if (!schema.TryGetValue(table, out var schema_table_obj) || schema_table_obj is not FwDict schema_table || !schema_table.TryGetValue(field_name, out object? value))
         {
             //logger(LogLevel.DEBUG, "schema_table:", schema_table);
             throw new ApplicationException("field " + db_name + "." + table + "." + field_name + " does not defined in FW.config(\"schema\") ");
         }
 
-        string field_type = schema_table[field_name].toStr();
+        string field_type = value.toStr();
         //logger(LogLevel.DEBUG, "field2Op IN: ", table, ".", field_name, " ", field_type, " ", dbop.op, " ", dbop.value);
 
         // db operation
@@ -2374,9 +2374,9 @@ public class DB : IDisposable
         connect();
         loadTableSchema(table);
         field_name = field_name.ToLower();
-        if (!schema.TryGetValue(table, out var tableSchema) || !tableSchema.ContainsKey(field_name))
+        if (!schema.TryGetValue(table, out var tableSchema) || !tableSchema.TryGetValue(field_name, out object? value))
             return "";
-        string field_type = tableSchema[field_name].toStr();
+        string field_type = value.toStr();
         if (field_type.Length == 0)
             return "";
 

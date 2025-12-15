@@ -533,14 +533,13 @@ public class Utils
     {
         string headers_str = csv_export_headers;
         StringBuilder csv = new();
-        string[] fields = Array.Empty<string>();
+        string[] fields = [];
         if (csv_export_fields == "" || csv_export_fields == "*")
         {
             // just read field names from first row
             if (rows.Count > 0)
             {
-                var firstRow = rows[0] as FwDict;
-                if (firstRow != null)
+                if (rows[0] is FwDict firstRow)
                 {
                     fields = firstRow.Keys.Cast<string>().ToArray();
                     headers_str = string.Join(",", fields);
@@ -765,29 +764,17 @@ public class Utils
     // helpers
     private static object? cloneObject(object? value)
     {
-        switch (value)
+        return value switch
         {
-            case null:
-                return null;
-
-            case FwDict ht:
-                return cloneHashDeep(ht);
-
-            case FwList list:
-                return cloneArrayListDeep(list);
-
+            null => null,
+            FwDict ht => cloneHashDeep(ht),
+            FwList list => cloneArrayListDeep(list),
             // most BCL value types & strings are immutable – safe to copy ref
-            case string or ValueType:
-                return value;
-
+            string or ValueType => value,
             // let user-defined classes decide how to clone themselves
-            case ICloneable cloneable:
-                return cloneable.Clone();
-
-            default:
-                // fallback: shallow copy (reference) – adjust if need more
-                return value;
-        }
+            ICloneable cloneable => cloneable.Clone(),
+            _ => value,// fallback: shallow copy (reference) – adjust if need more
+        };
     }
 
     private static ObjList cloneArrayListDeep(FwList list)
@@ -1191,9 +1178,9 @@ public class Utils
             int trlen1 = hattrs["truncate"].toInt();
             if (trlen1 > 0) trlen = trlen1;
         }
-        if (hattrs.ContainsKey("trchar")) trchar = hattrs["trchar"].toStr();
-        if (hattrs.ContainsKey("trend")) trend = hattrs["trend"].toInt();
-        if (hattrs.ContainsKey("trword")) trword = hattrs["trword"].toInt();
+        if (hattrs.TryGetValue("trchar", out object? value)) trchar = value.toStr();
+        if (hattrs.TryGetValue("trend", out object? value1)) trend = value1.toInt();
+        if (hattrs.TryGetValue("trword", out object? value2)) trword = value2.toInt();
 
         int orig_len = str.Length;
         if (orig_len < trlen) return str; // no need truncate
@@ -1669,7 +1656,7 @@ public class Utils
                     {
                         {"row",row},
                         {"field_name",fieldname},
-                        {"data", row.ContainsKey(fieldname) ? row[fieldname] : null}
+                        {"data", row.TryGetValue(fieldname, out object? value) ? value : null}
                     });
                 }
                 row["cols"] = cols;
