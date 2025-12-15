@@ -781,7 +781,7 @@ class DevEntityBuilder
         return result;
     }
 
-    public static List<string> listModels()
+    public static StrList listModels()
     {
         var baseType = typeof(FwModel);
         var assembly = baseType.Assembly;
@@ -791,7 +791,7 @@ class DevEntityBuilder
                 select t.Name).ToList();
     }
 
-    public static List<string> listControllers()
+    public static StrList listControllers()
     {
         var baseType = typeof(FwController);
         var assembly = baseType.Assembly;

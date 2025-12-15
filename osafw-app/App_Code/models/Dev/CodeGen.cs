@@ -216,7 +216,7 @@ class DevCodeGen
         if (indexes != null)
         {
             //sort indexes keys this way: PK (always first), then by number in suffix - UX1, IX2, UX3, IX4, IX5, IX6, ...
-            var keys = new List<string>(indexes.Keys.Cast<string>());
+            var keys = new StrList(indexes.Keys.Cast<string>());
             keys.Sort((a, b) =>
             {
                 var a2 = a.Substring(2);

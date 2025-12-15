@@ -166,7 +166,7 @@ public class AdminDemosController : FwAdminController
 
     public FwDict AutocompleteAction()
     {
-        List<string> items = model_related.listAutocomplete(reqs("q"));
+        StrList items = model_related.listAutocomplete(reqs("q"));
 
         return new FwDict() { { "_json", items } };
     }

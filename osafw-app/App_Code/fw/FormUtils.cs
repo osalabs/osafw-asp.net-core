@@ -428,7 +428,7 @@ public class FormUtils
         if (col == null || col.Count == 0)
             return string.Empty;
 
-        if (col is List<string> stringList)
+        if (col is StrList stringList)
             return string.Join(",", stringList);
 
         string[] values = col.Cast<object>()

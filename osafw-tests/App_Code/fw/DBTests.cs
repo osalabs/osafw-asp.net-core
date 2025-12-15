@@ -178,7 +178,7 @@ namespace osafw.Tests
         [TestMethod()]
         public void colTest()
         {
-            List<string> col = db.colp("SELECT iname FROM " + table_name);
+            StrList col = db.colp("SELECT iname FROM " + table_name);
 
             Assert.AreEqual("test1", col[0]);
             Assert.AreEqual("test2", col[1]);

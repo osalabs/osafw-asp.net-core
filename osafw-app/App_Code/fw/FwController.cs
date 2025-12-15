@@ -767,7 +767,7 @@ public abstract class FwController
         return db.selectRaw(list_fields, qlist_view_name, list_where, list_where_params, list_orderby, offset, limit);
     }
 
-    public virtual List<string> getListIds(string list_view = "")
+    public virtual StrList getListIds(string list_view = "")
     {
         var sql = $"SELECT {model0.field_id} FROM {list_view} WHERE {list_where} ORDER BY {list_orderby}";
         return db.colp(sql, list_where_params);

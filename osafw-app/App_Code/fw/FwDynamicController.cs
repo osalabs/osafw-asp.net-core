@@ -642,7 +642,7 @@ public class FwDynamicController : FwController
         var acModel = ac_model;
 
         //FwList items;
-        List<string> items;
+        StrList items;
         if (id > 0)
         {
             //var item = ac_model.one(id);
@@ -703,7 +703,7 @@ public class FwDynamicController : FwController
             // order by value
             var ordered = fld.OrderBy(kvp => kvp.Value.toInt()).ToList();
             // and then get ordered keys
-            List<string> anames = [];
+            StrList anames = [];
             foreach (var el in ordered)
                 anames.Add(el.Key.toStr());
             var fields = string.Join(" ", anames);

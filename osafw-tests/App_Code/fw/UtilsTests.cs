@@ -23,8 +23,8 @@ namespace osafw.Tests
         [TestMethod()]
         public void qwRevertTest()
         {
-            IList<string> list = ["test1", "test2", "test3"];
-            string r = Utils.qwRevert(list.ToList());
+            StrList list = ["test1", "test2", "test3"];
+            string r = Utils.qwRevert(list);
 
             Assert.AreEqual("test1 test2 test3 ", r);
         }

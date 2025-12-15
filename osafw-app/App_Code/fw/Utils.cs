@@ -461,14 +461,14 @@ public class Utils
         do
         {
             string sheetName = reader.Name ?? "Sheet1";
-            List<string> headers = null;      // lazily initialised so no per‑row realloc
+            StrList headers = null;      // lazily initialised so no per‑row realloc
 
             while (reader.Read())
             {
                 // build headers once
                 if (isHeaderRow && headers == null)
                 {
-                    headers = new List<string>(reader.FieldCount);
+                    headers = new StrList(reader.FieldCount);
                     for (int i = 0; i < reader.FieldCount; i++)
                         headers.Add(reader.GetValue(i)?.ToString() ?? $"F{i}");
                     continue;                  // move to first data row

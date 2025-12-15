@@ -31,7 +31,7 @@ public class Resources : FwModel<Resources.Row>
     }
 
     //list all non-deleted resource icodes
-    public List<string> colIcodes(IList<int>? ids = null)
+    public StrList colIcodes(IList<int>? ids = null)
     {
         var where = new FwDict
         {

@@ -298,7 +298,7 @@ public class ConvUtils
         return html_data;
     }
 
-    private static Dictionary<string, int> xlsxGetMaxCharacterWidth(FwList rows, IList<string> headers)
+    private static Dictionary<string, int> xlsxGetMaxCharacterWidth(FwList rows, IEnumerable<string> headers)
     {
         var maxColWidth = new Dictionary<string, int>();
 
@@ -325,7 +325,7 @@ public class ConvUtils
         return maxColWidth;
     }
 
-    private static Columns xlxsAutoSizeCells(FwList rows, IList<string> headers)
+    private static Columns xlxsAutoSizeCells(FwList rows, IEnumerable<string> headers)
     {
         var maxColWidth = xlsxGetMaxCharacterWidth(rows, headers);
         var columns = new Columns();
@@ -410,7 +410,7 @@ public class ConvUtils
     /// <param name="out_filename">if empty or set to just filename (no path) - write to browser, if path - write to file</param>
     /// <returns></returns>
     /// <exception cref="UserException"></exception>
-    public static void exportNativeExcel(FW fw, IList<string> headers, IList<string> fields, FwList rows, string out_filename = "")
+    public static void exportNativeExcel(FW fw, IList<string> headers, IEnumerable<string> fields, FwList rows, string out_filename = "")
     {
         var is_browser = false;
         if (string.IsNullOrEmpty(out_filename) || !Regex.IsMatch(out_filename, @"[\/\\]"))
