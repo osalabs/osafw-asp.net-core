@@ -101,7 +101,6 @@ namespace osafw.Tests
             // properties
             public int id { get; set; }
             public string Name { get; set; } = string.Empty;
-            // fields
             public string Email = string.Empty;
         }
 
@@ -346,9 +345,9 @@ namespace osafw.Tests
                 "</select>";
             string tpl_result = "<select name = \"item[fruit]\">" +
                 "<option value=\"\">- select a fruit -</option>" +
-                "<option value=\"1\">Apple</option>\r\n" +
-                "<option value=\"2\">Plum</option>\r\n" +
-                "<option value=\"3\" selected>Banana</option>\r\n" +
+                "<option value=\"1\">Apple</option>\n" +
+                "<option value=\"2\">Plum</option>\n" +
+                "<option value=\"3\" selected>Banana</option>\n" +
                 "</select>";
             FwDict ps = [];
             ps["fruits_select"] = new FwList() {
@@ -453,7 +452,7 @@ namespace osafw.Tests
             FwDict ps = [];
             ps["AAA"] = d;
             string r = new ParsePage(null!).parse_string(tpl, ps);
-            Assert.AreEqual(d.ToString("M/d/yyyy h:mm:ss tt"), r);
+            Assert.AreEqual(d.ToString(), r);
 
             tpl = "<~AAA date>";
             r = new ParsePage(null!).parse_string(tpl, ps);

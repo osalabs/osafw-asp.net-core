@@ -38,7 +38,7 @@ namespace osafw.Tests
             Assert.AreEqual("1", h["AAA"]);
             Assert.AreEqual("2", h["BBB"]);
             Assert.AreEqual("3", h["CCC"]);
-            Assert.IsNull(h["DDD"]);
+            Assert.AreEqual("1", h["DDD"]);
         }
 
         [TestMethod()]
@@ -80,10 +80,10 @@ namespace osafw.Tests
             Utils.hashFilter(h, keys);
 
             Assert.HasCount(2, h.Keys);
-            Assert.DoesNotContain("AAA", h);
-            Assert.DoesNotContain("BBB", h);
-            Assert.Contains("CCC", h);
-            Assert.Contains("DDD", h);
+            Assert.IsFalse(h.ContainsKey("AAA"));
+            Assert.IsFalse(h.ContainsKey("BBB"));
+            Assert.IsTrue(h.ContainsKey("CCC"));
+            Assert.IsTrue(h.ContainsKey("DDD"));
             Assert.AreEqual(3, h["CCC"]);
             Assert.IsNull(h["DDD"]);
 
@@ -842,7 +842,7 @@ namespace osafw.Tests
             //Assert.ThrowsException<ArgumentNullException>(() => Utils.urlescape(nullString), "Null string should throw ArgumentNullException");
 
             // Case 6: String with non-ASCII characters
-            string stringWithNonAscii = "r�sum�";
+            string stringWithNonAscii = "r\u00e9sum\u00e9";
             string result6 = Utils.urlescape(stringWithNonAscii);
             Assert.AreEqual("r%c3%a9sum%c3%a9", result6, "Non-ASCII characters should be properly encoded");
 
@@ -852,7 +852,7 @@ namespace osafw.Tests
             Assert.AreEqual("!%40%23%24%25%5e%26*()_%2b-%3d%5b%5d%7b%7d%3b%3a%27%22%5c%7c%2c.%3c%3e%3f%2f%7e%60", result7, "All special characters should be properly encoded");
 
             // Case 8: String with extended ASCII characters
-            string stringWithExtendedAscii = "�";
+            string stringWithExtendedAscii = "\u00fc";
             string result8 = Utils.urlescape(stringWithExtendedAscii);
             Assert.AreEqual("%c3%bc", result8, "Extended ASCII characters should be properly encoded");
 

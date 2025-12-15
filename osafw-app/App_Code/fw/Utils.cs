@@ -1339,7 +1339,7 @@ public class Utils
     */
     public static string urlescape(string? str)
     {
-        return HttpUtility.UrlEncode(str) ?? "";
+        return HttpUtility.UrlEncode(str, Encoding.UTF8)?.ToLowerInvariant() ?? "";
     }
 
     /* <summary>

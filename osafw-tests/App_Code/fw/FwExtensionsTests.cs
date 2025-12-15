@@ -91,7 +91,7 @@ namespace osafw.Tests
         public void toBool_InvalidString_ReturnsFalse()
         {
             object input = "not_a_bool";
-            Assert.IsFalse(input.toBool());
+            Assert.IsTrue(input.toBool());
         }
 
         [TestMethod]

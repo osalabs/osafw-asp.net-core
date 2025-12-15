@@ -209,10 +209,10 @@ public static class FwExtensions
         if (dto is IDictionary dict)
             return new(dict, StringComparer.OrdinalIgnoreCase);
 
-        var props = getWritableProperties(dto.GetType());
-        FwDict kv = new(props.Count, StringComparer.OrdinalIgnoreCase);
-        foreach (var pair in props)
-            kv[pair.Key] = pair.Value.GetValue(dto);
+        var members = dto.getReadableMembers();
+        FwDict kv = new(members.Count, StringComparer.OrdinalIgnoreCase);
+        foreach (var pair in members)
+            kv[pair.Key] = pair.Value(dto);
 
         return kv;
     }
