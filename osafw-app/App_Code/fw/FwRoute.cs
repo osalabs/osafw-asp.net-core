@@ -3,8 +3,6 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2025 Oleg Savchuk www.osalabs.com
 
-using System.Collections;
-
 namespace osafw;
 
 public class FwRoute
@@ -18,5 +16,5 @@ public class FwRoute
     public string id = string.Empty;
     public string action_more = string.Empty; // new, edit, delete, etc
     public string format = string.Empty; // html, json, pjax
-    public ArrayList @params = new();
+    public StrList @params = new();
 }

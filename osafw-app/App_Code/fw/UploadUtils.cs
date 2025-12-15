@@ -4,7 +4,6 @@
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
 using Microsoft.AspNetCore.Http;
-using System.Collections;
 using System.IO;
 
 namespace osafw;
@@ -22,7 +21,7 @@ public class UploadParams
     public int max_h = 10000; // default max iamge height
 
     public string field_name = string.Empty;
-    public Hashtable allowed_ext = []; // if empty - all exts allowed, exts should be with dots
+    public FwDict allowed_ext = []; // if empty - all exts allowed, exts should be with dots
     public string save_path = string.Empty;
     public string save_filename = string.Empty; // without ext, ext will be same as upload file, if empty - use orig filename from upload field
     public ulong max_filesize = 0; // max allowed filesize, if 0 - allow all

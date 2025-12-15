@@ -43,52 +43,53 @@ namespace osafw.Tests
         [TestMethod]
         public void GetPagerTest()
         {
-            ArrayList pager1 = FormUtils.getPager(100, 1);
+            FwList pager1 = FormUtils.getPager(100, 1);
             Assert.IsNotNull(pager1, "Pager should not be null when paging is required");
             Assert.HasCount(4, pager1, "Pager should have correct number of pages when paging is required");
 
-            ArrayList pager2 = FormUtils.getPager(100, 1, 20);
+            FwList pager2 = FormUtils.getPager(100, 1, 20);
             Assert.IsNotNull(pager2, "Pager should not be null when paging is required with custom page size");
             Assert.HasCount(5, pager2, "Pager should have correct number of pages when paging is required with custom page size");
 
-            ArrayList pager3 = FormUtils.getPager(30, 1);
+            FwList pager3 = FormUtils.getPager(30, 1);
             Assert.IsNotNull(pager3, "Pager should not be null when count is more than default page size");
             Assert.HasCount(2, pager3, "Pager should not be null when count is more than default page size");
 
-            ArrayList pager4 = FormUtils.getPager(10, 1);
-            Assert.IsNull(pager4, "Pager should be null when no paging is required");
+            FwList pager4 = FormUtils.getPager(10, 1);
+            Assert.IsNotNull(pager4, "Pager should not be null even when no paging is required");
+            Assert.AreEqual(0, pager4.Count, "Pager should be empty when no paging is required");
         }
 
         [TestMethod]
         public void FilterTest()
         {
             // Case 1: Filter fields from null item
-            Hashtable? item1 = null;
-            Hashtable result1 = FormUtils.filter(item1!, new string[] { "field1", "field2" });
+            FwDict? item1 = null;
+            FwDict result1 = FormUtils.filter(item1!, new string[] { "field1", "field2" });
             Assert.IsNotNull(result1, "Result should not be null when item is null");
-            CollectionAssert.AreEquivalent(new string[] { }, result1.Keys.Cast<string>().ToArray(), "Result should be empty when item is null");
+            CollectionAssert.AreEquivalent(Array.Empty<string>(), result1.Keys.Cast<string>().ToArray(), "Result should be empty when item is null");
 
             // Case 2: Filter existing fields from item
-            Hashtable item2 = new() { { "field1", "value1" }, { "field2", "value2" } };
-            Hashtable result2 = FormUtils.filter(item2, new string[] { "field1", "field2" });
+            FwDict item2 = new() { { "field1", "value1" }, { "field2", "value2" } };
+            FwDict result2 = FormUtils.filter(item2, new string[] { "field1", "field2" });
             Assert.IsNotNull(result2, "Result should not be null when filtering existing fields");
             CollectionAssert.AreEquivalent(new string[] { "field1", "field2" }, result2.Keys.Cast<string>().ToArray(), "Result should contain all existing fields");
 
             // Case 3: Filter non-existing fields from item
-            Hashtable item3 = new() { { "field1", "value1" }, { "field2", "value2" } };
-            Hashtable result3 = FormUtils.filter(item3, new string[] { "field1", "field3" });
+            FwDict item3 = new() { { "field1", "value1" }, { "field2", "value2" } };
+            FwDict result3 = FormUtils.filter(item3, new string[] { "field1", "field3" });
             Assert.IsNotNull(result3, "Result should not be null when filtering non-existing fields");
             CollectionAssert.AreEquivalent(new string[] { "field1" }, result3.Keys.Cast<string>().ToArray(), "Result should contain only existing fields");
 
             // Case 4: Filter existing fields when is_exists is false
-            Hashtable item4 = new() { { "field1", "value1" }, { "field2", "value2" } };
-            Hashtable result4 = FormUtils.filter(item4, new string[] { "field1", "field2" }, false);
+            FwDict item4 = new() { { "field1", "value1" }, { "field2", "value2" } };
+            FwDict result4 = FormUtils.filter(item4, new string[] { "field1", "field2" }, false);
             Assert.IsNotNull(result4, "Result should not be null when filtering existing fields with is_exists false");
             CollectionAssert.AreEquivalent(new string[] { "field1", "field2" }, result4.Keys.Cast<string>().ToArray(), "Result should contain all fields when is_exists is false");
 
             // Case 5: Filter non-existing fields when is_exists is true
-            Hashtable item5 = new() { { "field1", "value1" }, { "field2", "value2" } };
-            Hashtable result5 = FormUtils.filter(item5, new string[] { "field1", "field3" }, true);
+            FwDict item5 = new() { { "field1", "value1" }, { "field2", "value2" } };
+            FwDict result5 = FormUtils.filter(item5, new string[] { "field1", "field3" }, true);
             Assert.IsNotNull(result5, "Result should not be null when filtering non-existing fields with is_exists true");
             CollectionAssert.AreEquivalent(new string[] { "field1" }, result5.Keys.Cast<string>().ToArray(), "Result should contain only existing fields when is_exists is true");
         }
@@ -97,46 +98,46 @@ namespace osafw.Tests
         public void FilterCheckboxesTest()
         {
             // Case 1: Populate itemdb with values from item when item is not null
-            Hashtable itemdb1 = [];
-            Hashtable item1 = new() { { "field1", "value1" }, { "field2", "value2" } };
+            FwDict itemdb1 = [];
+            FwDict item1 = new() { { "field1", "value1" }, { "field2", "value2" } };
             FormUtils.filterCheckboxes(itemdb1, item1, new string[] { "field1", "field2" });
             Assert.AreEqual("value1", itemdb1["field1"], "Itemdb should contain value from item for existing field");
             Assert.AreEqual("value2", itemdb1["field2"], "Itemdb should contain value from item for existing field");
 
             // Case 2: Populate itemdb with default values for non-existing fields when item is not null
-            Hashtable itemdb2 = [];
-            Hashtable item2 = new() { { "field1", "value1" } };
+            FwDict itemdb2 = [];
+            FwDict item2 = new() { { "field1", "value1" } };
             FormUtils.filterCheckboxes(itemdb2, item2, new string[] { "field1", "field2" });
             Assert.AreEqual("value1", itemdb2["field1"], "Itemdb should contain value from item for existing field");
             Assert.AreEqual("0", itemdb2["field2"], "Itemdb should contain default value for non-existing field");
 
             // Case 3: Populate itemdb with default values for all fields when item is null
-            Hashtable itemdb3 = new() { { "field1", "value1" } };
+            FwDict itemdb3 = new() { { "field1", "value1" } };
             FormUtils.filterCheckboxes(itemdb3, null!, new string[] { "field1", "field2" });
             Assert.AreEqual("value1", itemdb3["field1"], "Itemdb should be same when item is null");
             Assert.HasCount(1, itemdb3, "Itemdb should be same when item is null");
 
             // Case 4: Populate itemdb with custom default value for non-existing fields when item is not null
-            Hashtable itemdb4 = [];
-            Hashtable item4 = new() { { "field1", "value1" } };
+            FwDict itemdb4 = [];
+            FwDict item4 = new() { { "field1", "value1" } };
             FormUtils.filterCheckboxes(itemdb4, item4, new string[] { "field1", "field2" }, false, "custom_default");
             Assert.AreEqual("value1", itemdb4["field1"], "Itemdb should contain value from item for existing field");
             Assert.AreEqual("custom_default", itemdb4["field2"], "Itemdb should contain custom default value for non-existing field");
 
             // Case 5: Populate itemdb with default values when fields array is null
-            Hashtable itemdb5 = [];
-            Hashtable item5 = new() { { "field1", "value1" } };
+            FwDict itemdb5 = [];
+            FwDict item5 = new() { { "field1", "value1" } };
             FormUtils.filterCheckboxes(itemdb5, item5, (IList)null!);
             Assert.IsEmpty(itemdb5, "Itemdb should be empty when fields array is null");
 
             // Case 6: Populate itemdb with default values when fields array is empty
-            Hashtable itemdb6 = [];
-            Hashtable item6 = new() { { "field1", "value1" } };
-            FormUtils.filterCheckboxes(itemdb6, item6, new string[] { });
+            FwDict itemdb6 = [];
+            FwDict item6 = new() { { "field1", "value1" } };
+            FormUtils.filterCheckboxes(itemdb6, item6, Array.Empty<string>());
             Assert.IsEmpty(itemdb6, "Itemdb should be empty when fields array is empty");
 
             // Case 7: Populate itemdb with default values when item is null and fields array is null
-            Hashtable itemdb7 = [];
+            FwDict itemdb7 = [];
             FormUtils.filterCheckboxes(itemdb7, null!, (IList)null!);
             Assert.IsEmpty(itemdb7, "Itemdb should be empty when item is null and fields array is null");
         }
@@ -145,46 +146,46 @@ namespace osafw.Tests
         public void filterCheckboxesOverloadTest()
         {
             // Case 1: Populate itemdb with values from item when item is not null
-            Hashtable itemdb1 = [];
-            Hashtable item1 = new() { { "field1", "value1" }, { "field2", "value2" } };
+            FwDict itemdb1 = [];
+            FwDict item1 = new() { { "field1", "value1" }, { "field2", "value2" } };
             FormUtils.filterCheckboxes(itemdb1, item1, new string[] { "field1", "field2" });
             Assert.AreEqual("value1", itemdb1["field1"], "Itemdb should contain value from item for existing field");
             Assert.AreEqual("value2", itemdb1["field2"], "Itemdb should contain value from item for existing field");
 
             // Case 2: Populate itemdb with default values for non-existing fields when item is not null
-            Hashtable itemdb2 = [];
-            Hashtable item2 = new() { { "field1", "value1" } };
+            FwDict itemdb2 = [];
+            FwDict item2 = new() { { "field1", "value1" } };
             FormUtils.filterCheckboxes(itemdb2, item2, new string[] { "field1", "field2" });
             Assert.AreEqual("value1", itemdb2["field1"], "Itemdb should contain value from item for existing field");
             Assert.AreEqual("0", itemdb2["field2"], "Itemdb should contain default value for non-existing field");
 
             // Case 3: Populate itemdb with default values for all fields when item is null
-            Hashtable itemdb3 = new() { { "field1", "value1" } };
+            FwDict itemdb3 = new() { { "field1", "value1" } };
             FormUtils.filterCheckboxes(itemdb3, null!, new string[] { "field1", "field2" });
             Assert.AreEqual("value1", itemdb3["field1"], "Itemdb should be same when item is null");
             Assert.HasCount(1, itemdb3, "Itemdb should be same when item is null");
 
             // Case 4: Populate itemdb with custom default value for non-existing fields when item is not null
-            Hashtable itemdb4 = [];
-            Hashtable item4 = new() { { "field1", "value1" } };
+            FwDict itemdb4 = [];
+            FwDict item4 = new() { { "field1", "value1" } };
             FormUtils.filterCheckboxes(itemdb4, item4, new string[] { "field1", "field2" }, false, "custom_default");
             Assert.AreEqual("value1", itemdb4["field1"], "Itemdb should contain value from item for existing field");
             Assert.AreEqual("custom_default", itemdb4["field2"], "Itemdb should contain custom default value for non-existing field");
 
             // Case 5: Populate itemdb with default values when fields array is null
-            Hashtable itemdb5 = [];
-            Hashtable item5 = new() { { "field1", "value1" } };
+            FwDict itemdb5 = [];
+            FwDict item5 = new() { { "field1", "value1" } };
             FormUtils.filterCheckboxes(itemdb5, item5, (IList)null!);
             Assert.IsEmpty(itemdb5, "Itemdb should be empty when fields array is null");
 
             // Case 6: Populate itemdb with default values when fields array is empty
-            Hashtable itemdb6 = [];
-            Hashtable item6 = new() { { "field1", "value1" } };
-            FormUtils.filterCheckboxes(itemdb6, item6, new string[] { });
+            FwDict itemdb6 = [];
+            FwDict item6 = new() { { "field1", "value1" } };
+            FormUtils.filterCheckboxes(itemdb6, item6, Array.Empty<string>());
             Assert.IsEmpty(itemdb6, "Itemdb should be empty when fields array is empty");
 
             // Case 7: Populate itemdb with default values when item is null and fields array is null
-            Hashtable itemdb7 = [];
+            FwDict itemdb7 = [];
             FormUtils.filterCheckboxes(itemdb7, null!, (IList)null!);
             Assert.IsEmpty(itemdb7, "Itemdb should be empty when item is null and fields array is null");
         }
@@ -193,37 +194,37 @@ namespace osafw.Tests
         public void FilterNullableTest()
         {
             // Case 1: Check if value is empty '' and make it null for existing field
-            Hashtable itemdb1 = new() { { "field1", "" }, { "field2", "value2" } };
+            FwDict itemdb1 = new() { { "field1", "" }, { "field2", "value2" } };
             FormUtils.filterNullable(itemdb1, "field1");
             Assert.IsNull(itemdb1["field1"], "Value should be null for field with empty string");
 
             // Case 2: Do not change value for existing field with non-empty value
-            Hashtable itemdb2 = new() { { "field1", "value1" }, { "field2", "value2" } };
+            FwDict itemdb2 = new() { { "field1", "value1" }, { "field2", "value2" } };
             FormUtils.filterNullable(itemdb2, "field1");
             Assert.AreEqual("value1", itemdb2["field1"], "Value should remain unchanged for field with non-empty value");
 
             // Case 3: Do not change value for field not in itemdb
-            Hashtable itemdb3 = new() { { "field2", "value2" } };
+            FwDict itemdb3 = new() { { "field2", "value2" } };
             FormUtils.filterNullable(itemdb3, "field1");
             Assert.IsFalse(itemdb3.ContainsKey("field1"), "Field should not be added if not in itemdb");
 
             // Case 4: Do not change value for field with null value
-            Hashtable itemdb4 = new() { { "field1", null }, { "field2", "value2" } };
+            FwDict itemdb4 = new() { { "field1", null }, { "field2", "value2" } };
             FormUtils.filterNullable(itemdb4, "field1");
             Assert.IsNull(itemdb4["field1"], "Value should remain null for field with null value");
 
             // Case 5: Do not change value for field with non-string value
-            Hashtable itemdb5 = new() { { "field1", "123" }, { "field2", "value2" } };
+            FwDict itemdb5 = new() { { "field1", "123" }, { "field2", "value2" } };
             FormUtils.filterNullable(itemdb5, "field1");
             Assert.AreEqual("123", itemdb5["field1"], "Value should remain unchanged for field with non-string value");
 
             // Case 6: Do not change value for empty field names string
-            Hashtable itemdb6 = new() { { "field1", "" }, { "field2", "value2" } };
+            FwDict itemdb6 = new() { { "field1", "" }, { "field2", "value2" } };
             FormUtils.filterNullable(itemdb6, "");
             Assert.AreEqual("", itemdb6["field1"], "Value should remain unchanged for empty field names string");
 
             // Case 7: Do not change value for null field names string
-            Hashtable itemdb7 = new() { { "field1", "" }, { "field2", "value2" } };
+            FwDict itemdb7 = new() { { "field1", "" }, { "field2", "value2" } };
             FormUtils.filterNullable(itemdb7, (string)null!);
             Assert.AreEqual("", itemdb7["field1"], "Value should remain unchanged for null field names string");
         }
@@ -232,27 +233,27 @@ namespace osafw.Tests
         public void Multi2IdsTest()
         {
             // Case 1: Convert multiple values to comma-separated string
-            Hashtable items1 = new() { { "id1", "value1" }, { "id2", "value2" }, { "id3", "value3" } };
+            FwDict items1 = new() { { "id1", "value1" }, { "id2", "value2" }, { "id3", "value3" } };
             string result1 = FormUtils.multi2ids(items1);
             Assert.AreEqual("id1,id2,id3", result1, "Result should be comma-separated string of keys");
 
             // Case 2: Return empty string for null input
-            Hashtable? items2 = null;
+            FwDict? items2 = null;
             string result2 = FormUtils.multi2ids(items2 ?? []);
             Assert.AreEqual("", result2, "Result should be empty string for null input");
 
             // Case 3: Return empty string for empty input
-            Hashtable items3 = [];
+            FwDict items3 = [];
             string result3 = FormUtils.multi2ids(items3);
             Assert.AreEqual("", result3, "Result should be empty string for empty input");
 
             // Case 4: Return comma-separated string with single value
-            Hashtable items4 = new() { { "id1", "value1" } };
+            FwDict items4 = new() { { "id1", "value1" } };
             string result4 = FormUtils.multi2ids(items4);
             Assert.AreEqual("id1", result4, "Result should be single key for single value");
 
             // Case 5: Ensure consistent order in the result
-            Hashtable items5 = new() { { "id3", "value3" }, { "id1", "value1" }, { "id2", "value2" } };
+            FwDict items5 = new() { { "id3", "value3" }, { "id1", "value1" }, { "id2", "value2" } };
             string result5 = FormUtils.multi2ids(items5);
             Assert.AreEqual("id1,id2,id3", result5, "Result should be sorted to keep order consistent");
         }
@@ -262,7 +263,7 @@ namespace osafw.Tests
         {
             // Case 1: Convert comma-separated string to hashtable with keys
             string str1 = "id1,id2,id3";
-            Hashtable result1 = FormUtils.ids2multi(str1);
+            FwDict result1 = FormUtils.ids2multi(str1);
             Assert.HasCount(3, result1, "Result should contain three keys");
             Assert.IsTrue(result1.ContainsKey("id1"), "Result should contain key 'id1'");
             Assert.IsTrue(result1.ContainsKey("id2"), "Result should contain key 'id2'");
@@ -270,24 +271,24 @@ namespace osafw.Tests
 
             // Case 2: For null input - empty hashtable
             string? str2 = null;
-            Hashtable result2 = FormUtils.ids2multi(str2!);
+            FwDict result2 = FormUtils.ids2multi(str2!);
             Assert.IsEmpty(result2, "Result should not be null for null input");
 
             // Case 3: Return empty hashtable for empty input
             string str3 = "";
-            Hashtable result3 = FormUtils.ids2multi(str3);
+            FwDict result3 = FormUtils.ids2multi(str3);
             Assert.IsNotNull(result3, "Result should not be null for empty input");
             Assert.IsEmpty(result3, "Result should be empty hashtable for empty input");
 
             // Case 4: Convert single id string to hashtable with single key
             string str4 = "id1";
-            Hashtable result4 = FormUtils.ids2multi(str4);
+            FwDict result4 = FormUtils.ids2multi(str4);
             Assert.HasCount(1, result4, "Result should contain one key");
             Assert.IsTrue(result4.ContainsKey("id1"), "Result should contain key 'id1'");
 
             // Case 5: Convert comma-separated string with duplicate ids to hashtable with unique keys
             string str5 = "id1,id2,id1,id3,id2";
-            Hashtable result5 = FormUtils.ids2multi(str5);
+            FwDict result5 = FormUtils.ids2multi(str5);
             Assert.HasCount(3, result5, "Result should contain three unique keys");
             Assert.IsTrue(result5.ContainsKey("id1"), "Result should contain key 'id1'");
             Assert.IsTrue(result5.ContainsKey("id2"), "Result should contain key 'id2'");
@@ -297,27 +298,27 @@ namespace osafw.Tests
         [TestMethod]
         public void Col2CommaStrTest()
         {
-            // Case 1: Convert ArrayList to comma-separated string
-            ArrayList col1 = ["value1", "value2", "value3"];
+            // Case 1: Convert StrList to comma-separated string
+            StrList col1 = ["value1", "value2", "value3"];
             string result1 = FormUtils.col2comma_str(col1);
             Assert.AreEqual("value1,value2,value3", result1, "Result should be comma-separated string of values");
 
             // Case 2: Throw error for null input
-            ArrayList? col2 = null;
-            Assert.ThrowsExactly<NullReferenceException>(() => FormUtils.col2comma_str(col2!), "Expected NullReferenceException for null input");
+            StrList? col2 = null;
+            Assert.AreEqual(string.Empty, FormUtils.col2comma_str(col2!), "Null input should return empty string");
 
             // Case 3: Return empty string for empty input
-            ArrayList col3 = [];
+            StrList col3 = [];
             string result3 = FormUtils.col2comma_str(col3);
             Assert.AreEqual("", result3, "Result should be empty string for empty input");
 
-            // Case 4: Convert ArrayList with single value to comma-separated string
-            ArrayList col4 = ["value1"];
+            // Case 4: Convert FwList with single value to comma-separated string
+            StrList col4 = ["value1"];
             string result4 = FormUtils.col2comma_str(col4);
             Assert.AreEqual("value1", result4, "Result should be single value for single-value input");
 
-            // Case 5: Convert ArrayList with numeric values to comma-separated string
-            ArrayList col5 = [1, 2, 3];
+            // Case 5: Convert FwList with numeric values to comma-separated string
+            IntList col5 = [1, 2, 3];
             string result5 = FormUtils.col2comma_str(col5);
             Assert.AreEqual("1,2,3", result5, "Result should be comma-separated string of numeric values");
         }
@@ -330,27 +331,27 @@ namespace osafw.Tests
 
             // Case 1: Test with empty input
             string input1 = "";
-            ArrayList result1 = FormUtils.comma_str2col(input1);
+            StrList result1 = FormUtils.comma_str2col(input1);
             Assert.IsEmpty(result1, "Result should be empty for empty input");
 
             // Case 2: Test with input containing single item
             string input2 = "item";
-            ArrayList result2 = FormUtils.comma_str2col(input2);
-            CollectionAssert.AreEqual(new ArrayList { "item" }, result2, "Result should contain single item for input with single item");
+            StrList result2 = FormUtils.comma_str2col(input2);
+            CollectionAssert.AreEqual(new StrList { "item" }, result2, "Result should contain single item for input with single item");
 
             // Case 3: Test with input containing multiple items
             string input3 = "item1,item2,item3";
-            ArrayList result3 = FormUtils.comma_str2col(input3);
-            CollectionAssert.AreEqual(new ArrayList { "item1", "item2", "item3" }, result3, "Result should contain multiple items for input with multiple items");
+            StrList result3 = FormUtils.comma_str2col(input3);
+            CollectionAssert.AreEqual(new StrList { "item1", "item2", "item3" }, result3, "Result should contain multiple items for input with multiple items");
 
             // Case 4: Test with input containing spaces around commas
             string input4 = "item1,  item2 , item3";
-            ArrayList result4 = FormUtils.comma_str2col(input4);
-            CollectionAssert.AreEqual(new ArrayList { "item1", "item2", "item3" }, result4, "Result should contain items without leading or trailing spaces");
+            StrList result4 = FormUtils.comma_str2col(input4);
+            CollectionAssert.AreEqual(new StrList { "item1", "item2", "item3" }, result4, "Result should contain items without leading or trailing spaces");
 
             // Case 5: Test with input containing only spaces
             string input5 = "   ";
-            ArrayList result5 = FormUtils.comma_str2col(input5);
+            StrList result5 = FormUtils.comma_str2col(input5);
             Assert.IsEmpty(result5, "Result should be empty for input containing only spaces");
         }
 
@@ -358,7 +359,7 @@ namespace osafw.Tests
         public void dateForComboTest()
         {
             // Case 1: Test with valid date components
-            Hashtable item1 = new()
+            FwDict item1 = new()
             {
                 { "fdate_combo_day", "17" },
                 { "fdate_combo_mon", "1" },
@@ -368,7 +369,7 @@ namespace osafw.Tests
             Assert.AreEqual(new DateTime(2023, 1, 17).ToString("yyyy-MM-dd"), result1, "Result should be correct SQL date for valid date components");
 
             // Case 2: Test with missing day component
-            Hashtable item2 = new()
+            FwDict item2 = new()
             {
                 { "fdate_combo_day", "" },
                 { "fdate_combo_mon", "1" },
@@ -378,7 +379,7 @@ namespace osafw.Tests
             Assert.IsEmpty(result2, "Result should be empty string for missing day component");
 
             // Case 3: Test with missing month component
-            Hashtable item3 = new()
+            FwDict item3 = new()
             {
                 { "fdate_combo_day", "17" },
                 { "fdate_combo_mon", "" },
@@ -388,7 +389,7 @@ namespace osafw.Tests
             Assert.IsEmpty(result3, "Result should be empty string for missing month component");
 
             // Case 4: Test with missing year component
-            Hashtable item4 = new()
+            FwDict item4 = new()
             {
                 { "fdate_combo_day", "17" },
                 { "fdate_combo_mon", "1" },
@@ -398,7 +399,7 @@ namespace osafw.Tests
             Assert.IsEmpty(result4, "Result should be empty string for missing year component");
 
             // Case 5: Test with invalid date components
-            Hashtable item5 = new()
+            FwDict item5 = new()
             {
                 { "fdate_combo_day", "32" }, // Day component out of range
                 { "fdate_combo_mon", "13" }, // Month component out of range
@@ -408,7 +409,7 @@ namespace osafw.Tests
             Assert.IsEmpty(result5, "Result should be empty string for invalid date components");
 
             // Case 6: Test with incorrect parameter names
-            Hashtable item6 = new()
+            FwDict item6 = new()
             {
                 { "day", "17" },
                 { "month", "1" },
@@ -418,7 +419,7 @@ namespace osafw.Tests
             Assert.IsEmpty(result6, "Result should be empty string for incorrect parameter names");
 
             // Case 7: Test with null item
-            Hashtable? item7 = null;
+            FwDict? item7 = null;
             string result7 = FormUtils.dateForCombo(item7!, "fdate_combo");
             Assert.IsEmpty(result7, "Result should be empty string for null item");
 

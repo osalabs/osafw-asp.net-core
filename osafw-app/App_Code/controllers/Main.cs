@@ -3,8 +3,6 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
-using System.Collections;
-
 namespace osafw;
 
 public class MainController : FwController
@@ -27,13 +25,13 @@ public class MainController : FwController
         base.checkAccess();
     }
 
-    public Hashtable IndexAction()
+    public FwDict IndexAction()
     {
 
-        Hashtable ps = [];
+        FwDict ps = [];
 
-        Hashtable one;
-        Hashtable panes = [];
+        FwDict one;
+        FwDict panes = [];
         ps["panes"] = panes;
 
         const int DIFF_DAYS = -7;
@@ -103,9 +101,9 @@ public class MainController : FwController
         one["title"] = "Users by Type";
         one["id"] = "user_types";
         // one["url") ] "/Admin/Reports/sample"
-        ArrayList rows = db.arrayp("select access_level, count(*) as ivalue from users where status=0 group by access_level order by count(*) desc", DB.h());
+        FwList rows = db.arrayp("select access_level, count(*) as ivalue from users where status=0 group by access_level order by count(*) desc", DB.h());
         one["rows"] = rows;
-        foreach (Hashtable row in rows)
+        foreach (FwDict row in rows)
             row["ilabel"] = FormUtils.selectTplName("/common/sel/access_level.sel", row["access_level"].toStr());
         panes["piechart"] = one;
 
@@ -119,22 +117,22 @@ public class MainController : FwController
             "   and fe.id=al.fwentities_id" +
             " order by al.id desc", 10), DB.h());
         one["rows"] = rows;
-        var headers = new ArrayList();
+        var headers = new FwList();
         one["headers"] = headers;
-        if (rows.Count > 0 && rows[0] is Hashtable firstRow)
+        if (rows.Count > 0 && rows[0] is FwDict firstRow)
         {
             var keys = firstRow.Keys;
             var fields = new string[keys.Count];
             keys.CopyTo(fields, 0);
             foreach (var key in fields)
-                headers.Add(new Hashtable() { { "field_name", key } });
-            foreach (Hashtable row in rows)
+                headers.Add(new FwDict() { { "field_name", key } });
+            foreach (FwDict row in rows)
             {
                 row["On"] = fw.formatUserDateTime(row["On"]);
-                ArrayList cols = [];
+                FwList cols = [];
                 foreach (var fieldname in fields)
                 {
-                    cols.Add(new Hashtable()
+                    cols.Add(new FwDict()
                     {
                         {"row",row},
                         {"field_name",fieldname},
@@ -151,11 +149,11 @@ public class MainController : FwController
         //one["type"] = "html";
         //one["title"] = "Last Events Report";
         ////from yesterday
-        //var f = new Hashtable
+        //var f = new FwRow
         //{
         //    { "from_date", DateUtils.Date2Str(DateTime.Now) }
         //};
-        //var ps_rep = new Hashtable
+        //var ps_rep = new FwRow
         //{
         //    { "IS_SUPPRESS_TITLE", true }
         //};
@@ -205,7 +203,7 @@ public class MainController : FwController
     public void UIThemeAction(string form_id)
     {
         fw.Session("ui_theme", form_id);
-        var fields = new Hashtable() { { "ui_theme", form_id } };
+        var fields = new FwDict() { { "ui_theme", form_id } };
 
         fw.model<Users>().update(fw.userId, fields);
 
@@ -215,7 +213,7 @@ public class MainController : FwController
     public void UIModeAction(string form_id)
     {
         fw.Session("ui_mode", form_id);
-        fw.model<Users>().update(fw.userId, new Hashtable() { { "ui_mode", form_id } });
+        fw.model<Users>().update(fw.userId, new FwDict() { { "ui_mode", form_id } });
 
         fw.redirect(base_url);
     }

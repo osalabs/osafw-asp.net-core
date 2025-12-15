@@ -4,7 +4,6 @@
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
 using System;
-using System.Collections;
 using System.Text.RegularExpressions;
 
 namespace osafw;
@@ -43,7 +42,7 @@ public class AdminSpagesController : FwAdminController
             if (this.list_count > 0)
             {
                 // build pages tree
-                ArrayList pages_tree = model.tree(this.list_where, this.list_where_params, "parent_id, prio desc, iname");
+                FwList pages_tree = model.tree(this.list_where, this.list_where_params, "parent_id, prio desc, iname");
                 this.list_rows = model.getPagesTreeList(pages_tree, 0);
 
                 // apply LIMIT
@@ -51,7 +50,7 @@ public class AdminSpagesController : FwAdminController
                 var pagenum = this.list_filter["pagenum"].toInt();
                 if (this.list_count > pagesize)
                 {
-                    ArrayList subset = [];
+                    FwList subset = [];
                     int start_offset = pagenum * pagesize;
 
                     for (int i = start_offset; i <= Math.Min(start_offset + pagesize, this.list_rows.Count) - 1; i++)
@@ -72,14 +71,14 @@ public class AdminSpagesController : FwAdminController
             base.getListRows();
 
         // add/modify rows from db if necessary
-        foreach (Hashtable row in this.list_rows)
+        foreach (FwDict row in this.list_rows)
         {
             row["full_url"] = model.getFullUrl(row["id"].toInt());
         }
 
     }
 
-    public override Hashtable ShowFormAction(int id = 0)
+    public override FwDict ShowFormAction(int id = 0)
     {
         var parent_id = reqi("parent_id");
 
@@ -87,16 +86,16 @@ public class AdminSpagesController : FwAdminController
         if (parent_id > 0)
         {
             var parent = model.one(parent_id);
-            this.form_new_defaults = new Hashtable
+            this.form_new_defaults = new FwDict
             {
                 ["parent_id"] = parent_id
             };
         }
         var ps = base.ShowFormAction(id) ?? [];
 
-        var item = ps["i"] as Hashtable ?? [];
+        var item = ps["i"] as FwDict ?? [];
         string where = " status<>@status ";
-        ArrayList pages_tree = model.tree(where, DB.h("status", FwModel.STATUS_DELETED), "parent_id, prio desc, iname");
+        FwList pages_tree = model.tree(where, DB.h("status", FwModel.STATUS_DELETED), "parent_id, prio desc, iname");
         ps["select_options_parent_id"] = model.getPagesTreeSelectHtml(item["parent_id"].toStr(), pages_tree);
 
         ps["parent_url"] = model.getFullUrl(item["parent_id"].toInt());
@@ -115,14 +114,14 @@ public class AdminSpagesController : FwAdminController
         return ps;
     }
 
-    public override Hashtable? SaveAction(int id = 0)
+    public override FwDict? SaveAction(int id = 0)
     {
         route_onerror = FW.ACTION_SHOW_FORM;
 
         if (this.save_fields == null)
             throw new Exception("No fields to save defined, define in save_fields ");
 
-        Hashtable item = reqh("item");
+        FwDict item = reqh("item");
         var success = true;
         var is_new = (id == 0);
 
@@ -151,7 +150,7 @@ public class AdminSpagesController : FwAdminController
         Validate(id, item);
         // load old record if necessary
 
-        Hashtable itemdb = FormUtils.filter(item, save_fields2);
+        FwDict itemdb = FormUtils.filter(item, save_fields2);
         FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
         itemdb["prio"] = itemdb["prio"].toInt();
 
@@ -168,7 +167,7 @@ public class AdminSpagesController : FwAdminController
         return this.afterSave(success, id, is_new);
     }
 
-    public override void Validate(int id, Hashtable item)
+    public override void Validate(int id, FwDict item)
     {
         bool result = this.validateRequired(id, item, this.required_fields);
 
@@ -188,7 +187,7 @@ public class AdminSpagesController : FwAdminController
                 }
                 // Check if parent_id is a descendant of current page
                 var parentChain = model.listParents(parent_id);
-                foreach (Hashtable parentItem in parentChain)
+                foreach (FwDict parentItem in parentChain)
                 {
                     if (parentItem["id"].toInt() == id)
                     {

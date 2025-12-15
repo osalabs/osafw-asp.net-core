@@ -3,9 +3,6 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
-
-using System.Collections;
-
 namespace osafw;
 
 public class SignupController : FwController
@@ -33,10 +30,10 @@ public class SignupController : FwController
         fw.routeRedirect(FW.ACTION_SHOW_FORM);
     }
 
-    public Hashtable ShowFormAction()
+    public FwDict ShowFormAction()
     {
-        Hashtable ps = [];
-        Hashtable item = [];
+        FwDict ps = [];
+        FwDict item = [];
 
         if (isGet())
         {
@@ -74,7 +71,7 @@ public class SignupController : FwController
         fw.redirect(fw.config("LOGGED_DEFAULT_URL").toStr());
     }
 
-    public bool Validate(Hashtable item)
+    public bool Validate(FwDict item)
     {
         string msg = "";
         bool result = true;

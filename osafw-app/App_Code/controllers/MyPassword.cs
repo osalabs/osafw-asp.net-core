@@ -3,8 +3,6 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
-using System.Collections;
-
 namespace osafw;
 
 public class MyPasswordController : FwController
@@ -28,13 +26,13 @@ public class MyPasswordController : FwController
         fw.redirect(base_url + "/new");
     }
 
-    public Hashtable ShowFormAction()
+    public FwDict ShowFormAction()
     {
         if (reqs("result") == "record_updated")
             fw.G["green_msg"] = "Login/Password has been changed";
 
-        Hashtable ps = [];
-        Hashtable item = reqh("item");
+        FwDict ps = [];
+        FwDict item = reqh("item");
         int id = fw.userId;
 
         if (isGet())
@@ -48,7 +46,7 @@ public class MyPasswordController : FwController
         else
         {
             // read from db
-            Hashtable itemdb = model.one(id);
+            FwDict itemdb = model.one(id);
             // and merge new values from the form
             Utils.mergeHash(itemdb, item);
             item = itemdb;
@@ -83,7 +81,7 @@ public class MyPasswordController : FwController
         afterSave(true, id);
     }
 
-    public void Validate(int id, Hashtable item)
+    public void Validate(int id, FwDict item)
     {
         bool result = true;
         result &= validateRequired(id, item, Utils.qw("email old_pwd pwd pwd2"));

@@ -3,8 +3,6 @@ using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
 using Microsoft.Playwright;
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -58,7 +56,7 @@ public class ConvUtils
     // if out_filename cotains "\" or "/" - save pdf file to this path
     // options:
     // see html2pdf() method for options
-    public static string parsePagePdf(FW fw, string bdir, string tpl_name, Hashtable ps, string out_filename = "", Hashtable? options = null)
+    public static string parsePagePdf(FW fw, string bdir, string tpl_name, FwDict ps, string out_filename = "", FwDict? options = null)
     {
         ensurePlaywrightInstalled(fw);
 
@@ -107,7 +105,7 @@ public class ConvUtils
     // margin_right = "10mm"
     // margin_bottom = "5mm"
     // margin_left = "10mm"
-    public static async Task html2pdf(FW fw, string html_data, string filename, Hashtable? options = null)
+    public static async Task html2pdf(FW fw, string html_data, string filename, FwDict? options = null)
     {
         if (filename.Length < 1)
         {
@@ -164,7 +162,7 @@ public class ConvUtils
     // parse template and generate doc
     // if out_filename ="" or doesn't contain "\" or "/" - output pdf file to browser
     // if out_filename cotains "\" or "/" - save pdf file to this path
-    public static string parsePageDoc(FW fw, ref string bdir, ref string tpl_name, ref Hashtable ps, string out_filename = "")
+    public static string parsePageDoc(FW fw, ref string bdir, ref string tpl_name, ref FwDict ps, string out_filename = "")
     {
         string html_data = fw.parsePage(bdir, tpl_name, ps);
 
@@ -228,7 +226,7 @@ public class ConvUtils
     // Note: set IS_PRINT_MODE=True hf var which is become available in templates
     // if out_filename ="" or doesn't contain "\" or "/" - output pdf file to browser
     // if out_filename cotains "\" or "/" - save pdf file to this path
-    public static string parsePageExcel(FW fw, ref string bdir, ref string tpl_name, ref Hashtable ps, string out_filename = "")
+    public static string parsePageExcel(FW fw, ref string bdir, ref string tpl_name, ref FwDict ps, string out_filename = "")
     {
         ps["IS_PRINT_MODE"] = true;
         string html_data = fw.parsePage(bdir, tpl_name, ps);
@@ -265,7 +263,7 @@ public class ConvUtils
     }
 
     // simple version of parse_page_xls - i.e. it's usual html file, just output as xls (Excel opens it successfully, however displays a warning)
-    public static string parsePageExcelSimple(FW fw, string bdir, string tpl_name, Hashtable ps, string out_filename = "")
+    public static string parsePageExcelSimple(FW fw, string bdir, string tpl_name, FwDict ps, string out_filename = "")
     {
         ps["IS_PRINT_MODE"] = true;
         string html_data = fw.parsePage(bdir, tpl_name, ps);
@@ -300,7 +298,7 @@ public class ConvUtils
         return html_data;
     }
 
-    private static Dictionary<string, int> xlsxGetMaxCharacterWidth(ArrayList rows, IList<string> headers)
+    private static Dictionary<string, int> xlsxGetMaxCharacterWidth(FwList rows, IEnumerable<string> headers)
     {
         var maxColWidth = new Dictionary<string, int>();
 
@@ -309,7 +307,7 @@ public class ConvUtils
             maxColWidth.Add(header, header.Length < 10 ? 10 : header.Length);
         }
 
-        foreach (Hashtable cells in rows)
+        foreach (FwDict cells in rows)
         {
             foreach (string cell in cells.Keys)
             {
@@ -327,7 +325,7 @@ public class ConvUtils
         return maxColWidth;
     }
 
-    private static Columns xlxsAutoSizeCells(ArrayList rows, IList<string> headers)
+    private static Columns xlxsAutoSizeCells(FwList rows, IEnumerable<string> headers)
     {
         var maxColWidth = xlsxGetMaxCharacterWidth(rows, headers);
         var columns = new Columns();
@@ -412,7 +410,7 @@ public class ConvUtils
     /// <param name="out_filename">if empty or set to just filename (no path) - write to browser, if path - write to file</param>
     /// <returns></returns>
     /// <exception cref="UserException"></exception>
-    public static void exportNativeExcel(FW fw, IList<string> headers, IList<string> fields, ArrayList rows, string out_filename = "")
+    public static void exportNativeExcel(FW fw, IList<string> headers, IEnumerable<string> fields, FwList rows, string out_filename = "")
     {
         var is_browser = false;
         if (string.IsNullOrEmpty(out_filename) || !Regex.IsMatch(out_filename, @"[\/\\]"))
@@ -432,7 +430,7 @@ public class ConvUtils
             // create the worksheet to workbook relation
             Sheets sheets = workbookPart.Workbook.AppendChild(new Sheets());
 
-            var sheetsOrder = new ArrayList();
+            var sheetsOrder = new StrList();
             sheetsOrder.Add("Sheet1");
 
             UInt32Value sheetNumber = 0;
@@ -468,7 +466,7 @@ public class ConvUtils
                 _SheetData.AppendChild(headerRow);
 
                 // create data rows
-                foreach (Hashtable row in rows)
+                foreach (FwDict row in rows)
                 {
                     var newRow = new Row();
                     foreach (string col in fields)

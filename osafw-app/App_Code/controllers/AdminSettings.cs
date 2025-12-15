@@ -4,7 +4,6 @@
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
 using System;
-using System.Collections;
 
 namespace osafw;
 
@@ -41,14 +40,14 @@ public class AdminSettingsController : FwAdminController
         }
     }
 
-    public override Hashtable ShowFormAction(int id = 0)
+    public override FwDict ShowFormAction(int id = 0)
     {
         // set new form defaults here if any
-        // Me.form_new_defaults = New Hashtable
+        // Me.form_new_defaults = New FwRow
         // item("field")="default value"
         var ps = base.ShowFormAction(id) ?? [];
 
-        var item = ps["i"] as Hashtable ?? [];
+        var item = ps["i"] as FwDict ?? [];
         // TODO - multi values for select, checkboxes, radio
         // ps("select_options_parent_id") = FormUtils.select_options_db(db.array("select id, iname from " & model.table_name & " where parent_id=0 and status=0 order by iname"), item("parent_id"))
         // ps("multi_datarow") = fw.model(Of DemoDicts).get_multi_list(item("dict_link_multi"))
@@ -56,7 +55,7 @@ public class AdminSettingsController : FwAdminController
         return ps;
     }
 
-    public override Hashtable? SaveAction(int id = 0)
+    public override FwDict? SaveAction(int id = 0)
     {
         route_onerror = FW.ACTION_SHOW_FORM;
         route_return = FW.ACTION_INDEX;
@@ -64,7 +63,7 @@ public class AdminSettingsController : FwAdminController
         if (this.save_fields == null)
             throw new Exception("No fields to save defined, define in save_fields");
 
-        Hashtable item = reqh("item");
+        FwDict item = reqh("item");
         var success = true;
         var is_new = (id == 0);
 
@@ -72,7 +71,7 @@ public class AdminSettingsController : FwAdminController
         // load old record if necessary
         // var itemOld = model.one(id);
 
-        Hashtable itemdb = FormUtils.filter(item, this.save_fields);
+        FwDict itemdb = FormUtils.filter(item, this.save_fields);
         // TODO - checkboxes
         // FormUtils.form2dbhash_checkboxes(itemdb, item, save_fields_checkboxes)
         // itemdb("dict_link_multi") = FormUtils.multi2ids(reqh("dict_link_multi"))
@@ -88,7 +87,7 @@ public class AdminSettingsController : FwAdminController
         return this.afterSave(success, id);
     }
 
-    public override void Validate(int id, Hashtable item)
+    public override void Validate(int id, FwDict item)
     {
         bool result = this.validateRequired(id, item, this.required_fields);
 
@@ -98,7 +97,7 @@ public class AdminSettingsController : FwAdminController
         this.validateCheckResult();
     }
 
-    public override Hashtable DeleteAction(int id)
+    public override FwDict DeleteAction(int id)
     {
         throw new UserException("Site Settings cannot be deleted");
     }

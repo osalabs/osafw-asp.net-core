@@ -3,8 +3,6 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2025 Oleg Savchuk www.osalabs.com
 
-using System.Collections;
-
 namespace osafw;
 
 public class AdminDemosVueSimpleController : FwController
@@ -22,9 +20,9 @@ public class AdminDemosVueSimpleController : FwController
         model = fw.model<DemoDicts>();
     }
 
-    public Hashtable IndexAction()
+    public FwDict IndexAction()
     {
-        Hashtable ps = [];
+        FwDict ps = [];
         if (!fw.isJsonExpected())
             return ps; //just load Vue app html
 

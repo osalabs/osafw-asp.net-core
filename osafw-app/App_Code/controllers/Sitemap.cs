@@ -3,8 +3,6 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
-using System.Collections;
-
 namespace osafw;
 
 public class SitemapController : FwController
@@ -27,13 +25,13 @@ public class SitemapController : FwController
         //true - allow access to all, including visitors
     }
 
-    public Hashtable IndexAction()
+    public FwDict IndexAction()
     {
-        Hashtable ps = [];
+        FwDict ps = [];
 
-        Hashtable item = model.oneByFullUrl(base_url);
+        FwDict item = model.oneByFullUrl(base_url);
 
-        ArrayList pages_tree = model.tree(" status=0 ", [], "parent_id, prio desc, iname");
+        FwList pages_tree = model.tree(" status=0 ", [], "parent_id, prio desc, iname");
         _add_full_url(pages_tree);
 
         ps["page"] = item;
@@ -42,16 +40,16 @@ public class SitemapController : FwController
         return ps;
     }
 
-    private void _add_full_url(ArrayList? pages_tree, string parent_url = "")
+    private void _add_full_url(FwList? pages_tree, string parent_url = "")
     {
         if (pages_tree == null)
             return;
 
-        foreach (Hashtable row in pages_tree)
+        foreach (FwDict row in pages_tree)
         {
             var urlPart = row["url"].toStr();
             row["full_url"] = parent_url + "/" + urlPart;
-            _add_full_url((ArrayList?)row["children"], urlPart);
+            _add_full_url((FwList?)row["children"], urlPart);
         }
     }
 }

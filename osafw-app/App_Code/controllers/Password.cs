@@ -3,9 +3,6 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
-using System;
-using System.Collections;
-
 namespace osafw;
 
 public class PasswordController : FwController
@@ -26,11 +23,11 @@ public class PasswordController : FwController
         //true - allow access to all, including visitors
     }
 
-    public Hashtable IndexAction()
+    public FwDict IndexAction()
     {
-        Hashtable ps = [];
+        FwDict ps = [];
 
-        Hashtable item = reqh("item");
+        FwDict item = reqh("item");
         if (isGet())
             // set defaults here
             item = [];
@@ -61,9 +58,9 @@ public class PasswordController : FwController
         fw.redirect(base_url + "/(Sent)");
     }
 
-    public Hashtable SentAction()
+    public FwDict SentAction()
     {
-        Hashtable ps = [];
+        FwDict ps = [];
         ps["hide_sidebar"] = true;
         return ps;
     }

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 
 namespace osafw;
 
@@ -8,24 +7,31 @@ public class TestController : FwController
 
     public static new int access_level = Users.ACL_SITEADMIN;
 
-    public Hashtable IndexAction()
+    public FwDict IndexAction()
     {
-        var ps = new Hashtable();
+        var ps = new FwDict();
         ps["money"] = 1234.5612;
+        ps["memory_var"] = "memory";
+        ps["one"] = 1;
+        ps["two"] = 2;
+        ps["onestr"] = "1";
+        ps["booltrue"] = true;
+        ps["truestr"] = "true";
+        ps["falsestr"] = "false";
         ps["success"] = true;
-        return new Hashtable { { "_json", ps } };
+        //return new FwDict { { "_json", ps } };
 
         //rw("<html><form method=\"POST\" action=\"/Test/(Upload)\"><input type=\"file\" name=\"file1\"/><input type=\"submit\"/></form></html>");
-        ////ArrayList users = fw.modelOf(typeof(Users)).list();
+        ////FwList users = fw.modelOf(typeof(Users)).list();
 
         ////fw.logger(users);
-        //var ps = new Hashtable();
+        //var ps = new FwRow();
         //ps["user"] = fw.model<Users>().one(1);
 
-        //return ps;
+        return ps;
     }
 
-    public Hashtable UploadAction()
+    public FwDict UploadAction()
     {
 
         String uuid = Utils.uuid();
@@ -119,15 +125,15 @@ public class TestController : FwController
         }
     }
 
-    public Hashtable JsonAction()
+    public FwDict JsonAction()
     {
-        var ps = new Hashtable();
+        var ps = new FwDict();
         ps["success"] = true;
         ps["message"] = "This is Json!";
-        return new Hashtable { { "_json", ps } };
+        return new FwDict { { "_json", ps } };
     }
 
-    public Hashtable ExceptionAction()
+    public FwDict ExceptionAction()
     {
         throw new Exception("Test exception");
     }

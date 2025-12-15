@@ -4,7 +4,6 @@
 // (c) 2009-2024 Oleg Savchuk www.osalabs.com
 
 using System;
-using System.Collections;
 
 namespace osafw;
 
@@ -40,9 +39,9 @@ public class AttLinks : FwModel<AttLinks.Row>
         junction_field_linked_id = "item_id";
     }
 
-    public virtual Hashtable oneByUK(int att_id, int fwentities_id, int item_id)
+    public virtual FwDict oneByUK(int att_id, int fwentities_id, int item_id)
     {
-        var where = new Hashtable()
+        var where = new FwDict()
         {
             {junction_field_main_id, att_id},
             {junction_field_linked_id, item_id},
@@ -53,7 +52,7 @@ public class AttLinks : FwModel<AttLinks.Row>
 
     public virtual void deleteByAtt(int att_id)
     {
-        var where = new Hashtable()
+        var where = new FwDict()
         {
             {junction_field_main_id, att_id},
         };
@@ -68,7 +67,7 @@ public class AttLinks : FwModel<AttLinks.Row>
 
     public virtual void deleteUnderUpdate(int fwentities_id, int item_id)
     {
-        var where = new Hashtable()
+        var where = new FwDict()
         {
             {junction_field_linked_id, item_id},
             {field_status, STATUS_UNDER_UPDATE},
@@ -77,13 +76,13 @@ public class AttLinks : FwModel<AttLinks.Row>
         is_under_bulk_update = false;
     }
 
-    public virtual void updateJunction(string entity_icode, int item_id, Hashtable att_keys)
+    public virtual void updateJunction(string entity_icode, int item_id, FwDict att_keys)
     {
         if (att_keys == null)
             return;
 
-        Hashtable fields = [];
-        Hashtable where = [];
+        FwDict fields = [];
+        FwDict where = [];
 
         var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
 

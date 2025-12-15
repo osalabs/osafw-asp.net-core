@@ -4,7 +4,6 @@
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
 using System;
-using System.Collections;
 
 namespace osafw;
 
@@ -37,14 +36,14 @@ public class AttCategories : FwModel<AttCategories.Row>
     // just return first row by iname field (you may want to make it unique)
     public override DBRow oneByIcode(string icode)
     {
-        Hashtable where = [];
+        FwDict where = [];
         where["icode"] = icode;
         return db.row(table_name, where);
     }
 
-    public ArrayList listSelectOptionsLikeIcode(string icode_prefix)
+    public FwList listSelectOptionsLikeIcode(string icode_prefix)
     {
-        return db.array(table_name, new Hashtable()
+        return db.array(table_name, new FwDict()
         {
             {
                 field_status,

@@ -4,7 +4,6 @@
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
 using System;
-using System.Collections;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -55,7 +54,7 @@ public class Spages : FwModel<Spages.Row>
 
     public bool isExistsByUrl(string url, int parent_id, int not_id)
     {
-        Hashtable where = [];
+        FwDict where = [];
         where["parent_id"] = parent_id;
         where["url"] = url;
         where["id"] = db.opNOT(not_id);
@@ -68,9 +67,9 @@ public class Spages : FwModel<Spages.Row>
     }
 
     // retun one latest record by url (i.e. with most recent pub_time if there are more than one page with such url)
-    public Hashtable oneByUrl(string url, int parent_id)
+    public FwDict oneByUrl(string url, int parent_id)
     {
-        Hashtable where = new()
+        FwDict where = new()
         {
             ["parent_id"] = parent_id,
             ["url"] = url
@@ -79,15 +78,15 @@ public class Spages : FwModel<Spages.Row>
     }
 
     // return one latest record by full_url (i.e. relative url from root, without domain)
-    public Hashtable oneByFullUrl(string full_url)
+    public FwDict oneByFullUrl(string full_url)
     {
         string[] url_parts = full_url.Split("/");
         int parent_id = 0;
-        var breadcrumbs = new ArrayList();
+        var breadcrumbs = new FwList();
         var item_full_url = "";
 
 
-        Hashtable item = [];
+        FwDict item = [];
         for (int i = 1; i <= url_parts.GetUpperBound(0); i++)
         {
             item = oneByUrl(url_parts[i], parent_id);
@@ -96,7 +95,7 @@ public class Spages : FwModel<Spages.Row>
             parent_id = item["id"].toInt();
 
             item_full_url += "/" + item["url"];
-            breadcrumbs.Add(new Hashtable {
+            breadcrumbs.Add(new FwDict {
                 { "iname", item["iname"] },
                 { "url", item_full_url }
             });
@@ -131,9 +130,9 @@ public class Spages : FwModel<Spages.Row>
         return item;
     }
 
-    public ArrayList listChildren(int parent_id)
+    public FwList listChildren(int parent_id)
     {
-        var where = new Hashtable {
+        var where = new FwDict {
             { "status", db.opNOT(FwModel.STATUS_DELETED)},
             { "parent_id", parent_id}
         };
@@ -147,28 +146,28 @@ public class Spages : FwModel<Spages.Row>
     /// <param name="orderby">order by fields to apply in sql</param>
     /// <returns>parsepage AL with hierarcy (via "children" key)</returns>
     /// <remarks></remarks>
-    public ArrayList tree(string where, Hashtable list_where_params, string orderby)
+    public FwList tree(string where, FwDict list_where_params, string orderby)
     {
-        ArrayList rows = db.arrayp("select * from " + db.qid(table_name) +
+        FwList rows = db.arrayp("select * from " + db.qid(table_name) +
                                    " where " + where +
                                    " order by " + orderby, list_where_params);
-        ArrayList pages_tree = getPagesTree(rows, 0);
+        FwList pages_tree = getPagesTree(rows, 0);
         return pages_tree;
     }
 
     // return parsepage array list of rows with hierarcy (children rows added to parents as "children" key)
     // RECURSIVE!
-    public ArrayList getPagesTree(ArrayList rows, int parent_id, int level = 0, string parent_url = "")
+    public FwList getPagesTree(FwList rows, int parent_id, int level = 0, string parent_url = "")
     {
-        ArrayList result = [];
+        FwList result = [];
         if (level > 20) // prevent infinite loop (max 20 levels)
             return result;
 
-        foreach (Hashtable row in rows)
+        foreach (FwDict row in rows)
         {
             if (parent_id == row["parent_id"].toInt())
             {
-                Hashtable row2 = (Hashtable)row.Clone();
+                FwDict row2 = new(row);
                 row2["_level"] = level;
                 // row2["_level1"] level + 1 'to easier use in templates
                 row2["full_url"] = parent_url + "/" + row["url"];
@@ -187,25 +186,25 @@ public class Spages : FwModel<Spages.Row>
     /// <param name="level">optional, used in recursive calls</param>
     /// <returns>parsepage AL with "leveler" array added to each row with level>0</returns>
     /// <remarks>RECURSIVE</remarks>
-    public ArrayList getPagesTreeList(ArrayList? pages_tree, int level = 0)
+    public FwList getPagesTreeList(FwList? pages_tree, int level = 0)
     {
-        ArrayList result = [];
+        FwList result = [];
 
         if (pages_tree != null)
         {
-            foreach (Hashtable row in pages_tree)
+            foreach (FwDict row in pages_tree)
             {
                 result.Add(row);
                 // add leveler
                 if (level > 0)
                 {
-                    ArrayList leveler = [];
+                    FwList leveler = [];
                     for (int i = 1; i <= level; i++)
-                        leveler.Add(new Hashtable());
+                        leveler.Add(new FwDict());
                     row["leveler"] = leveler;
                 }
                 // subpages
-                result.AddRange(getPagesTreeList((ArrayList?)row["children"], level + 1));
+                result.AddRange(getPagesTreeList((FwList?)row["children"], level + 1));
             }
         }
 
@@ -220,16 +219,16 @@ public class Spages : FwModel<Spages.Row>
     /// <param name="level">optional, used in recursive calls</param>
     /// <returns>HTML with options</returns>
     /// <remarks>RECURSIVE</remarks>
-    public string getPagesTreeSelectHtml(string selected_id, ArrayList? pages_tree, int level = 0)
+    public string getPagesTreeSelectHtml(string selected_id, FwList? pages_tree, int level = 0)
     {
         StringBuilder result = new();
         if (pages_tree != null)
         {
-            foreach (Hashtable row in pages_tree)
+            foreach (FwDict row in pages_tree)
             {
                 result.AppendLine("<option value=\"" + row["id"] + "\"" + (row["id"].toStr() == selected_id ? " selected=\"selected\" " : "") + ">" + Utils.strRepeat("&#8212; ", level) + row["iname"] + "</option>");
                 // subpages
-                result.Append(getPagesTreeSelectHtml(selected_id, (ArrayList?)row["children"], level + 1));
+                result.Append(getPagesTreeSelectHtml(selected_id, (FwList?)row["children"], level + 1));
             }
         }
 
@@ -275,7 +274,7 @@ public class Spages : FwModel<Spages.Row>
         return result;
     }
 
-    public bool isPublished(Hashtable item)
+    public bool isPublished(FwDict item)
     {
         return item["status"].toInt() == FwModel.STATUS_ACTIVE && (item["pub_time"] == null || item["pub_time"].toDate() <= DateTime.Now);
     }
@@ -283,12 +282,12 @@ public class Spages : FwModel<Spages.Row>
     // render page by full url
     public void showPageByFullUrl(string full_url)
     {
-        Hashtable ps = [];
+        FwDict ps = [];
 
         // for navigation
         var pages_tree = tree("status=0", [], "parent_id, prio, iname"); // published only
         ps["pages"] = getPagesTreeList(pages_tree, 0);
-        Hashtable item = oneByFullUrl(full_url);
+        FwDict item = oneByFullUrl(full_url);
 
         bool is_pub;
         if (item.Count == 0 || !(is_pub = isPublished(item)) && !fw.model<Users>().isAccessLevel(Users.ACL_ADMIN))
@@ -305,9 +304,9 @@ public class Spages : FwModel<Spages.Row>
         var item_id = item["id"].toInt();
 
         // subpages navigation
-        ArrayList subpages = listChildrenPublished(item_id);
+        FwList subpages = listChildrenPublished(item_id);
         ps["subpages"] = subpages;
-        foreach (Hashtable subpage in subpages)
+        foreach (FwDict subpage in subpages)
         {
             subpage["full_url"] = item["full_url"] + "/" + subpage["url"];
         }
