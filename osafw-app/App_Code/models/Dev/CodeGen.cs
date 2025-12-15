@@ -652,7 +652,7 @@ class DevCodeGen
 
         FwDict tables = []; // hindex by table name to entities
         FwList fields = entity["fields"] as FwList ?? [];
-        if (fields == null)
+        if (fields.Count == 0)
         {
             // TODO deprecate reading from db, always use entity info
             DB db;

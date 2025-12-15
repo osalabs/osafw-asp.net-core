@@ -4,6 +4,7 @@
 // (c) 2009-2024 Oleg Savchuk www.osalabs.com
 
 using System;
+using System.Collections;
 
 namespace osafw;
 
@@ -48,8 +49,8 @@ public class FwVueController : FwDynamicController
     protected virtual void filterListForJson()
     {
         //extract autocomplete fields
-        var ac_fields = new FwList();
-        var fields = this.config["showform_fields"] as FwList ?? new FwList();
+        FwList ac_fields = [];
+        FwList fields = this.config["showform_fields"] is IList fields1 ? new FwList(fields1) : [];
         foreach (FwDict def in fields)
         {
             //var field_name = def["field"].toStr();
@@ -183,7 +184,7 @@ public class FwVueController : FwDynamicController
         if (list_headers.Count == 0)
             setViewList(false); // initialize list_headers and related (can already be initialized in setScopeInitial)
 
-        var showform_fields = this.config["showform_fields"] as FwList ?? [];
+        FwList showform_fields = this.config["showform_fields"] is IList fields1 ? new FwList(fields1) : [];
         //FwRow hfields = _fieldsToHash(showform_fields);
 
         // extract lookups from config and add to ps
@@ -320,7 +321,7 @@ public class FwVueController : FwDynamicController
         var att_links = new IntList(); //linked att ids
         var att_files = new FwDict(); // per-field: field => [ids]
 
-        var fields = this.config[mode == "edit" ? "showform_fields" : "show_fields"] as FwList ?? [];
+        var fields = this.config[mode == "edit" ? "showform_fields" : "show_fields"] is IList fields1 ? new FwList(fields1) : [];
         foreach (FwDict def in fields)
         {
             var field_name = def["field"].toStr();

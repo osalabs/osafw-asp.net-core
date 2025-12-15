@@ -182,8 +182,8 @@ public class FwDynamicController : FwController
         if (is_dynamic_show)
         {
             //add form_tabs only if we have more than one tab
-            if (config["form_tabs"] is FwList form_tabs && form_tabs.Count > 1)
-                ps["form_tabs"] = form_tabs;
+            if (config["form_tabs"] is IList form_tabs && form_tabs.Count > 1)
+                ps["form_tabs"] = new FwList(form_tabs);
 
             ps["fields"] = prepareShowFields(item, ps);
         }
@@ -256,8 +256,8 @@ public class FwDynamicController : FwController
         if (is_dynamic_showform)
         {
             //add form_tabs only if we have more than one tab
-            if (config["form_tabs"] is FwList form_tabs && form_tabs.Count > 1)
-                ps["form_tabs"] = form_tabs;
+            if (config["form_tabs"] is IList form_tabs && form_tabs.Count > 1)
+                ps["form_tabs"] = new FwList(form_tabs);
 
             ps["fields"] = prepareShowFormFields(item, ps);
         }
@@ -621,7 +621,7 @@ public class FwDynamicController : FwController
         else
         {
             //validation - only allow models from showform_fields type=autocomplete
-            var form_tabs = config["form_tabs"] as FwList ?? [];
+            FwList form_tabs = config["form_tabs"] is IList tabs ? new(tabs) : [];
             foreach (FwDict form_tab in form_tabs)
             {
                 var fields = getConfigShowFormFieldsByTab("showform_fields", form_tab["tab"].toStr());
