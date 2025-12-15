@@ -8,8 +8,9 @@ using System.Threading.Tasks;
 
 namespace osafw.Tests
 {
-    [TestClass()]
-    public class ConvUtilsTests
+[TestClass()]
+[Ignore("Not implemented")]
+public class ConvUtilsTests
     {
         [TestMethod()]
         public void parsePagePdfTest()

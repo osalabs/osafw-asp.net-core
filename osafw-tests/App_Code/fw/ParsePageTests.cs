@@ -9,6 +9,7 @@ namespace osafw.Tests
     public class ParsePageTests
     {
         [TestMethod()]
+        [Ignore("Not implemented")]
         public void ParsePageTest()
         {
             throw new NotImplementedException();
@@ -46,18 +47,21 @@ namespace osafw.Tests
         }
 
         [TestMethod()]
+        [Ignore("Not implemented")]
         public void tag_tplpathTest()
         {
             throw new NotImplementedException();
         }
 
         [TestMethod()]
+        [Ignore("Not implemented")]
         public void langMapTest()
         {
             throw new NotImplementedException();
         }
 
         [TestMethod()]
+        [Ignore("Not implemented")]
         public void parse_pageTest()
         {
             throw new NotImplementedException();
@@ -360,6 +364,7 @@ namespace osafw.Tests
 
 
         [TestMethod()]
+        [Ignore("Not implemented")]
         public void parse_string_radioTest()
         {
             /*string tpl = "<~fradio radio=\"fradio\" name=\"item[fradio]\" delim=\"&nbsp;\">";

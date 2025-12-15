@@ -74,22 +74,21 @@ public class Utils
     public static FwDict qh(string str, object? default_value = null)
     {
         FwDict result = [];
-        if (str != null && str != "")
+        if (!string.IsNullOrEmpty(str))
         {
+            string defaultStr = default_value.toStr("1");
             string[] arr = Regex.Split(str, @"\s+");
             foreach (string value in arr)
             {
                 string v = value.Replace("&nbsp;", " ");
                 string[] avoid = v.Split("|", 2);
-                string val = default_value.toStr();
+                string val = defaultStr;
                 if (avoid.Length > 1)
-                {
                     val = avoid[1];
-                }
                 result.Add(avoid[0], val);
             }
         }
-        return result; ;
+        return result;
     }
 
     public static string qhRevert(IDictionary sh)
@@ -1329,7 +1328,7 @@ public class Utils
     *  <param name="str"></param>
     *  <returns></returns>
     */
-    public static string urlescape(string str)
+    public static string urlescape(string? str)
     {
         return HttpUtility.UrlEncode(str) ?? "";
     }
@@ -1522,9 +1521,9 @@ public class Utils
 
     // convert some system name to human-friendly name'
     // "system_name_id" => "System Name ID"
-    public static string name2human(string? str)
+    public static string name2human(string str)
     {
-        string str_lc = (str ?? string.Empty).ToLower();
+        string str_lc = str.ToLowerInvariant();
         if (str_lc == "icode") return "Code";
         if (str_lc == "iname") return "Name";
         if (str_lc == "idesc") return "Description";

@@ -13,10 +13,10 @@ public class FwDict : Dictionary<string, object?>
 {
     public FwDict() : base(StringComparer.Ordinal) { }
     public FwDict(int capacity) : base(capacity, StringComparer.Ordinal) { }
-    public FwDict(IDictionary? other) : base(other?.Count ?? 0, StringComparer.Ordinal)
+    public FwDict(IDictionary? src) : base(src?.Count ?? 0, StringComparer.Ordinal)
     {
-        if (other != null)
-            foreach (DictionaryEntry e in other)
+        if (src != null)
+            foreach (DictionaryEntry e in src)
                 if (e.Key is string key)
                     this[key] = e.Value;
     }
@@ -24,10 +24,17 @@ public class FwDict : Dictionary<string, object?>
     // Return null when key is missing without throwing exception
     public new object? this[string key]
     {
-        get => ContainsKey(key) ? base[key] : null;
+        get => TryGetValue(key, out var v) ? v : null;
         set => base[key] = value;
     }
 
+    public static implicit operator Hashtable(FwDict d)
+    {
+        var h = new Hashtable(d.Count);
+        foreach (var kv in d) h[kv.Key] = kv.Value;
+        return h;
+    }
+    public static explicit operator FwDict(Hashtable h) => new(h);
 }
 
 public class FwList : List<FwDict>

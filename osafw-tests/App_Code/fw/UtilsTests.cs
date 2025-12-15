@@ -319,60 +319,70 @@ namespace osafw.Tests
         }
 
         [TestMethod()]
+        [Ignore("Not implemented")]
         public void importCSVTest()
         {
             throw new NotImplementedException();
         }
 
         [TestMethod()]
+        [Ignore("Not implemented")]
         public void importExcelTest()
         {
             throw new NotImplementedException();
         }
 
         [TestMethod()]
+        [Ignore("Not implemented")]
         public void toCSVRowTest()
         {
             throw new NotImplementedException();
         }
 
         [TestMethod()]
+        [Ignore("Not implemented")]
         public void getCSVExportTest()
         {
             throw new NotImplementedException();
         }
 
         [TestMethod()]
+        [Ignore("Not implemented")]
         public void writeCSVExportTest()
         {
             throw new NotImplementedException();
         }
 
         [TestMethod()]
+        [Ignore("Not implemented")]
         public void writeXLSExportTest()
         {
             throw new NotImplementedException();
         }
 
         [TestMethod()]
+        [Ignore("Not implemented")]
         public void rotateImageTest()
         {
             throw new NotImplementedException();
         }
 
         [TestMethod()]
+        [Ignore("Not implemented")]
         public void resizeImageTest()
         {
             throw new NotImplementedException();
         }
 
         [TestMethod()]
+        [Ignore("Not implemented")]
         public void fileSizeTest()
         {
             throw new NotImplementedException();
         }
 
         [TestMethod()]
+        [Ignore("Not implemented")]
         public void fileNameTest()
         {
             throw new NotImplementedException();
@@ -581,6 +591,7 @@ namespace osafw.Tests
         }
 
         [TestMethod()]
+        [Ignore("Not implemented")]
         public void cleanupTmpFilesTest()
         {
             throw new NotImplementedException();
@@ -727,6 +738,7 @@ namespace osafw.Tests
         }
 
         [TestMethod()]
+        [Ignore("Not implemented")]
         public void commastr2hashTest()
         {
             //TODO 
@@ -852,6 +864,7 @@ namespace osafw.Tests
         }
 
         [TestMethod()]
+        [Ignore("Not implemented")]
         public void UploadFilesToRemoteUrlTest()
         {
             throw new NotImplementedException();
