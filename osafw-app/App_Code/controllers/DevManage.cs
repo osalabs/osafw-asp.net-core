@@ -4,7 +4,6 @@
 // (c) 2009-2024  Oleg Savchuk www.osalabs.com
 
 using System;
-using System.Collections;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;

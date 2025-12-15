@@ -2,7 +2,6 @@
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
 using System;
-using System.Collections;
 using System.ComponentModel;
 using System.Text.Json;
 

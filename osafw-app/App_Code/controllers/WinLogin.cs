@@ -10,7 +10,6 @@
 // uncomment windows login button in template/index/form.html
 
 using System;
-using System.Collections;
 using System.Text.RegularExpressions;
 
 namespace osafw;

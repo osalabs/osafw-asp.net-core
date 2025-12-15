@@ -6,7 +6,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using System;
-using System.Collections;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;

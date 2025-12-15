@@ -4,7 +4,6 @@
 // (c) 2009-2025 Oleg Savchuk www.osalabs.com
 
 using osafw;
-using System.Collections;
 using System.IO;
 
 public class FwVirtualController : FwVueController

@@ -1,7 +1,5 @@
 using Microsoft.AspNetCore.DataProtection.Repositories;
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Xml.Linq;
 
 namespace osafw;
