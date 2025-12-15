@@ -621,10 +621,10 @@ public class FwDynamicController : FwController
         else
         {
             //validation - only allow models from showform_fields type=autocomplete
-            FwList form_tabs = config["form_tabs"] is IList tabs ? new(tabs) : [];
-            foreach (FwDict form_tab in form_tabs)
+            FwList ftabs = config["form_tabs"] is IList tabs ? new(tabs) : [];
+            foreach (FwDict ftab in ftabs)
             {
-                var fields = getConfigShowFormFieldsByTab("showform_fields", form_tab["tab"].toStr());
+                var fields = getConfigShowFormFieldsByTab("showform_fields", ftab["tab"].toStr());
                 foreach (FwDict def in fields)
                 {
                     if (def["type"].toStr() == "autocomplete" && def["lookup_model"].toStr() == model_name)

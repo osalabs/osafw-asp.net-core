@@ -92,8 +92,8 @@ public static class FwConfig
     /// init default settings
     /// </summary>
     /// <param name="context">can be null for offline execution</param>
-    /// <param name="hostname"></param>
-    private static void initDefaults(HttpContext? context, string hostname, ref FwDict st)
+    /// <param name="host"></param>
+    private static void initDefaults(HttpContext? context, string host, ref FwDict st)
     {
         st = new FwDict
         {
@@ -102,7 +102,7 @@ public static class FwConfig
             ["ROOT_DOMAIN"] = "",
         };
 
-        overrideContextSettings(context, hostname, st);
+        overrideContextSettings(context, host, st);
 
         string PhysicalApplicationPath;
         string basedir = AppDomain.CurrentDomain.BaseDirectory; //application root directory
@@ -136,18 +136,18 @@ public static class FwConfig
         st["timezone"] ??= DateUtils.TZ_UTC;
     }
 
-    public static void readSettingsSection(IConfigurationSection section, ref FwDict settings)
+    public static void readSettingsSection(IConfigurationSection section, ref FwDict st)
     {
         if (section.Value != null)
         {
-            settings[section.Key] = section.Value;
+            st[section.Key] = section.Value;
         }
         else if (section.Key != null)
         {
-            settings[section.Key] = new FwDict();
+            st[section.Key] = new FwDict();
             foreach (IConfigurationSection sub_section in section.GetChildren())
             {
-                FwDict s = (FwDict)settings[section.Key]!;
+                FwDict s = (FwDict)st[section.Key]!;
                 readSettingsSection(sub_section, ref s);
             }
         }
@@ -180,9 +180,9 @@ public static class FwConfig
         st["ROOT_DOMAIN"] = (isHttps ? "https://" : "http://") + serverName + portPart;
     }
 
-    public static void overrideSettingsByName(string override_name, FwDict settings, bool is_regex_match = false)
+    public static void overrideSettingsByName(string override_name, FwDict with_settings, bool is_regex_match = false)
     {
-        if (settings["override"] is FwDict overs)
+        if (with_settings["override"] is FwDict overs)
         {
             foreach (string over_name in overs.Keys)
             {
@@ -192,8 +192,8 @@ public static class FwConfig
                         || is_regex_match && Regex.IsMatch(override_name, over["hostname_match"].toStr())
                         )
                     {
-                        settings["config_override"] = over_name;
-                        Utils.mergeHashDeep(settings, over);
+                        with_settings["config_override"] = over_name;
+                        Utils.mergeHashDeep(with_settings, over);
                         break;
                     }
                 }
@@ -202,9 +202,9 @@ public static class FwConfig
 
         // convert strings to specific types
         LogLevel log_level = LogLevel.INFO; // default log level if none or Wrong level in config
-        if (settings.ContainsKey("log_level") && settings["log_level"] != null)
+        if (with_settings.ContainsKey("log_level") && with_settings["log_level"] != null)
         {
-            var logLevelValue = settings["log_level"];
+            var logLevelValue = with_settings["log_level"];
             if (logLevelValue is LogLevel level)
             {
                 log_level = level;
@@ -212,34 +212,34 @@ public static class FwConfig
             else
             {
                 Enum.TryParse<LogLevel>(logLevelValue.toStr(), true, out log_level);
-                settings["log_level"] = log_level;
+                with_settings["log_level"] = log_level;
             }
         }
         else
-            settings["log_level"] = log_level;
+            with_settings["log_level"] = log_level;
 
 
         // default settings that depend on other settings
-        if (!settings.ContainsKey("ASSETS_URL"))
-            settings["ASSETS_URL"] = settings["ROOT_URL"].toStr() + "/assets";
+        if (!with_settings.ContainsKey("ASSETS_URL"))
+            with_settings["ASSETS_URL"] = with_settings["ROOT_URL"].toStr() + "/assets";
     }
 
     /// <summary>
     /// Get settings for the current environment with proper overrides
     /// </summary>
     /// <returns></returns>
-    public static FwDict settingsForEnvironment(IConfiguration configuration)
+    public static FwDict settingsForEnvironment(IConfiguration cfg)
     {
         var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "";
         var appSettings = new FwDict();
-        readSettingsSection(configuration.GetSection("appSettings"), ref appSettings);
+        readSettingsSection(cfg.GetSection("appSettings"), ref appSettings);
 
         // The “appSettings” itself might be nested inside the hash
-        var settings1 = (FwDict?)appSettings["appSettings"] ?? [];
-        appSettings["appSettings"] = settings1;
+        var st = (FwDict?)appSettings["appSettings"] ?? [];
+        appSettings["appSettings"] = st;
         // Override by name if environment-based overrides are used
-        overrideSettingsByName(environment, settings1);
+        overrideSettingsByName(environment, st);
 
-        return settings1;
+        return st;
     }
 }

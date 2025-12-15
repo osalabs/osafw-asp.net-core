@@ -279,10 +279,10 @@ public class DevManageController : FwController
         var tpl_to = cInstance.base_url.ToLower();
         var tpl_path = fw.config("template") + tpl_to;
         var config_file = tpl_path + "/config.json";
-        var config = DevEntityBuilder.loadJson<FwDict>(config_file);
+        var conf = DevEntityBuilder.loadJson<FwDict>(config_file);
 
         // extract ShowAction
-        config["is_dynamic_show"] = false;
+        conf["is_dynamic_show"] = false;
         FwDict fitem = [];
         var fields = cInstance.prepareShowFields(fitem, []);
         DevCodeGen.makeValueTags(fields);
@@ -296,7 +296,7 @@ public class DevManageController : FwController
         Utils.setFileContent(tpl_path + "/show/form.html", ref content);
 
         // extract ShowAction
-        config["is_dynamic_showform"] = false;
+        conf["is_dynamic_showform"] = false;
         fields = cInstance.prepareShowFormFields(fitem, []);
         DevCodeGen.makeValueTags(fields);
         ps = new()
@@ -314,7 +314,7 @@ public class DevManageController : FwController
         // config.Remove("show_fields")
         // config.Remove("showform_fields")
 
-        DevEntityBuilder.saveJsonController(config, config_file);
+        DevEntityBuilder.saveJsonController(conf, config_file);
 
         fw.flash("success", "Controller " + controller_name + " extracted dynamic show/showfrom to static templates");
         fw.redirect(base_url);

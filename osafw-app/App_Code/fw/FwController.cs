@@ -751,9 +751,9 @@ public abstract class FwController
     }
 
     // get count of rows from db
-    public virtual void getListCount(string list_view = "")
+    public virtual void getListCount(string lv = "")
     {
-        string list_view_name = (!string.IsNullOrEmpty(list_view) ? list_view : this.list_view);
+        string list_view_name = (!string.IsNullOrEmpty(lv) ? lv : this.list_view);
         var qlist_view_name = list_view_name.StartsWith('(') ? list_view_name : db.qid(list_view_name); // don't quote if list_view is a subquery (starting with parentheses)
 
         this.list_count = db.valuep($"select count(*) from {qlist_view_name} where {list_where}", list_where_params).toLong();

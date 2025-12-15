@@ -388,14 +388,14 @@ public abstract class FwModel : IDisposable
     // including timezone conversion of datetime values to internal UTC
     public virtual void convertUserInput(FwDict item)
     {
-        var table_schema = getTableSchema();
+        var tschema = getTableSchema();
         var keys = item.Keys.Cast<string>().ToArray();
         foreach (string fieldname in keys)
         {
             var fieldname_lc = fieldname.ToLower();
-            if (!table_schema.ContainsKey(fieldname_lc)) continue;
+            if (!tschema.ContainsKey(fieldname_lc)) continue;
 
-            var field_schema = table_schema[fieldname_lc] as FwDict ?? [];
+            var field_schema = tschema[fieldname_lc] as FwDict ?? [];
             var fw_type = field_schema["fw_type"].toStr();
             //var fw_subtype = field_schema["fw_subtype"].toStr();
 
