@@ -23,14 +23,12 @@ using Microsoft.Data.SqlClient;
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Data.Odbc;
 using System.Data.OleDb;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
@@ -84,6 +82,12 @@ public class DBRow : Dictionary<string, string>
     {
         return new DBRow(row ?? []);
     }
+    public FwDict toFwDict()
+    {
+        return this;
+    }
+
+    [Obsolete("Use toFwDict() instead")]
     public FwDict toHashtable()
     {
         return this;
@@ -106,6 +110,12 @@ public class DBList : List<DBRow>
         return result;
     }
 
+    public FwList toFwList()
+    {
+        return this;
+    }
+
+    [Obsolete("Use toFwList() instead")]
     public FwList toArrayList()
     {
         return this;
@@ -327,7 +337,7 @@ public class DB : IDisposable
         FwDict result = new(args.Length);
         for (var i = 0; i <= args.Length - 1; i += 2)
         {
-            var key = args[i] ?? string.Empty;
+            string key = args[i].toStr();
             result[key] = args[i + 1];
         }
 
@@ -771,7 +781,7 @@ public class DB : IDisposable
             foreach (string p in paramNames)
             {
                 // p name is without "@", but @params may or may not contain "@" prefix
-                var pvalue = @params.ContainsKey(p) ? @params[p] : @params["@" + p];
+                var pvalue = @params.TryGetValue(p, out object? value) ? value : @params["@" + p];
                 //logger(LogLevel.INFO, "DB:", db_name, " ", "param: ", p, " = ", pvalue);
                 oleDbCommand.Parameters.AddWithValue("?", convertParamValue(pvalue));
             }
@@ -957,7 +967,7 @@ public class DB : IDisposable
             foreach (string p in paramNames)
             {
                 // p name is without "@", but @params may or may not contain "@" prefix
-                var pvalue = @params.ContainsKey(p) ? @params[p] : @params["@" + p];
+                var pvalue = @params.TryGetValue(p, out object? value) ? value : @params["@" + p];
                 //logger(LogLevel.INFO, "DB:", db_name, " ", "param: ", p, " = ", pvalue);
                 dbcomm.Parameters.AddWithValue("?", convertParamValue(pvalue));
             }
@@ -1467,9 +1477,17 @@ public class DB : IDisposable
         if (parameters == null || parameters.Count == 0)
             return " IN (NULL)";
 
+        bool isIntList = parameters is IList<int>;
+
         string[] result = new string[parameters.Count];
         for (int i = 0; i < parameters.Count; i++)
-            result[i] = this.q(parameters[i]);
+        {
+            var value = parameters[i];
+            if (isIntList || value is int)
+                result[i] = value?.ToString() ?? "0";
+            else
+                result[i] = this.q(value);
+        }
 
         StringBuilder sb = new();
         sb.Append(" IN (");
@@ -1809,13 +1827,13 @@ public class DB : IDisposable
         connect();
         loadTableSchema(table);
         field_name = field_name.ToLower();
-        if (!schema.TryGetValue(table, out var schema_table_obj) || schema_table_obj is not FwDict schema_table || !schema_table.ContainsKey(field_name))
+        if (!schema.TryGetValue(table, out var schema_table_obj) || schema_table_obj is not FwDict schema_table || !schema_table.TryGetValue(field_name, out object? value))
         {
             //logger(LogLevel.DEBUG, "schema_table:", schema_table);
             throw new ApplicationException("field " + db_name + "." + table + "." + field_name + " does not defined in FW.config(\"schema\") ");
         }
 
-        string field_type = schema_table[field_name].toStr();
+        string field_type = value.toStr();
         //logger(LogLevel.DEBUG, "field2Op IN: ", table, ".", field_name, " ", field_type, " ", dbop.op, " ", dbop.value);
 
         // db operation
@@ -1827,7 +1845,7 @@ public class DB : IDisposable
             }
             else
             {
-                ObjList result = new(list.Count);
+                List<object?> result = new(list.Count);
                 foreach (var pvalue in list)
                     result.Add(field2typed(field_type, pvalue));
                 dbop.value = result;
@@ -1837,7 +1855,7 @@ public class DB : IDisposable
         {
             if (dbop.value is not IList list || list.Count < 2)
             {
-                dbop.value = new ObjList() { field2typed(field_type, DBNull.Value), field2typed(field_type, DBNull.Value) };
+                dbop.value = new List<object?>() { field2typed(field_type, DBNull.Value), field2typed(field_type, DBNull.Value) };
             }
             else
             {
@@ -2374,9 +2392,9 @@ public class DB : IDisposable
         connect();
         loadTableSchema(table);
         field_name = field_name.ToLower();
-        if (!schema.TryGetValue(table, out var tableSchema) || !tableSchema.ContainsKey(field_name))
+        if (!schema.TryGetValue(table, out var tableSchema) || !tableSchema.TryGetValue(field_name, out object? value))
             return "";
-        string field_type = tableSchema[field_name].toStr();
+        string field_type = value.toStr();
         if (field_type.Length == 0)
             return "";
 

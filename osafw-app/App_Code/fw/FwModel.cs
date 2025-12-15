@@ -6,7 +6,6 @@
 using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -371,8 +370,8 @@ public abstract class FwModel : IDisposable
     public bool isExistsByFields(FwDict fields, int not_id)
     {
         FwDict where = [];
-        foreach (DictionaryEntry de in fields)
-            where[de.Key] = de.Value;
+        foreach(var kv in fields)
+            where[kv.Key] = kv.Value;
 
         if (!string.IsNullOrEmpty(field_id))
             where[field_id] = db.opNOT(not_id);
@@ -715,7 +714,7 @@ public abstract class FwModel : IDisposable
         return FormUtils.selectOptions(this.listSelectOptions(), sel_id);
     }
 
-    public virtual List<string> listAutocomplete(string q, int limit = 5)
+    public virtual StrList listAutocomplete(string q, int limit = 5)
     {
         FwDict where = [];
         where[field_iname] = db.opLIKE("%" + q + "%");
@@ -725,7 +724,7 @@ public abstract class FwModel : IDisposable
     }
 
     [ObsoleteAttribute("This method is deprecated. Use listAutocomplete instead.", true)]
-    public virtual List<string> getAutocompleteList(string q)
+    public virtual StrList getAutocompleteList(string q)
     {
         return listAutocomplete(q, 5);
     }
@@ -854,7 +853,7 @@ public abstract class FwModel : IDisposable
         return lookup_rows;
     }
 
-    protected FwList setMultiListChecked(FwList rows, List<string>? ids, FwDict? def = null)
+    protected FwList setMultiListChecked(FwList rows, IList<string>? ids, FwDict? def = null)
     {
         var result = rows;
 
@@ -896,7 +895,7 @@ public abstract class FwModel : IDisposable
     /// <param name="ids">selected ids from the list()</param>
     /// <param name="def">def - in dynamic controller - field definition (also contains "i" and "ps", "lookup_params", ...) or you could use it to pass additional params</param>
     /// <returns></returns>
-    public virtual FwList listWithChecked(List<string>? ids, FwDict? def = null)
+    public virtual FwList listWithChecked(StrList? ids, FwDict? def = null)
     {
         var rows = setMultiListChecked(this.list(), ids, def);
         return rows;
@@ -910,7 +909,7 @@ public abstract class FwModel : IDisposable
     /// <returns></returns>
     public virtual FwList listWithChecked(string sel_ids, FwDict? def = null)
     {
-        List<string> ids = Utils.isEmpty(sel_ids) ? [] : new(sel_ids.Split(","));
+        StrList ids = Utils.isEmpty(sel_ids) ? [] : new(sel_ids.Split(","));
         return this.listWithChecked(ids, def);
     }
 
@@ -919,7 +918,7 @@ public abstract class FwModel : IDisposable
     /// </summary>
     /// <param name="main_id">main id</param>
     /// <returns></returns>
-    public virtual List<string> colLinkedIdsByMainId(int main_id)
+    public virtual StrList colLinkedIdsByMainId(int main_id)
     {
         return db.col(table_name, DB.h(junction_field_main_id, main_id), db.qid(junction_field_linked_id));
     }
@@ -928,7 +927,7 @@ public abstract class FwModel : IDisposable
     /// </summary>
     /// <param name="linked_id">linked id</param>
     /// <returns></returns>
-    public virtual List<string> colMainIdsByLinkedId(int linked_id)
+    public virtual StrList colMainIdsByLinkedId(int linked_id)
     {
         return db.col(table_name, DB.h(junction_field_linked_id, linked_id), db.qid(junction_field_main_id));
     }
@@ -1022,7 +1021,7 @@ public abstract class FwModel : IDisposable
     // override to add set more additional fields
     public virtual void updateJunctionByMainIdAdditional(FwDict linked_keys, string link_id, FwDict fields)
     {
-        if (!string.IsNullOrEmpty(field_prio) && linked_keys.Contains(field_prio + "_" + link_id))
+        if (!string.IsNullOrEmpty(field_prio) && linked_keys.ContainsKey(field_prio + "_" + link_id))
             fields[field_prio] = linked_keys[field_prio + "_" + link_id].toInt();// get value from prio_ID
     }
 

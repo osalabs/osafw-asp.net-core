@@ -5,8 +5,6 @@
 
 using Microsoft.AspNetCore.Http;
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.IO;
 
 namespace osafw;
@@ -491,7 +489,7 @@ public class Att : FwModel<Att.Row>
     {
         var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
 
-        var row = one(id).toHashtable();
+        FwDict row = one(id);
         if (row["fwentities_id"].toInt() != fwentities_id)
             row.Clear();
         return row;
@@ -687,7 +685,7 @@ public class Att : FwModel<Att.Row>
     {
         //leave only specific keys
         var keys = Utils.qh("id icode att_categories_id iname is_image fsize ext url url_preview");
-        foreach (var key in new FwList(item.Keys))
+        foreach (var key in item.Keys)
         {
             if (!keys.ContainsKey(key))
                 item.Remove(key);

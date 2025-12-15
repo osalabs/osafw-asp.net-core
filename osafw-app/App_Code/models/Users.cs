@@ -10,7 +10,6 @@ using OtpNet;
 using QRCoder;
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using static BCrypt.Net.BCrypt;
 
@@ -257,9 +256,10 @@ public class Users : FwModel<Users.Row>
         FwDict chars = [];
         for (var i = 0; i <= pwd.Length - 1; i++)
         {
-            var count = chars.ContainsKey(pwd[i]) ? chars[pwd[i]].toInt() : 0;
+            var c = pwd[i].toStr();
+            var count = chars.ContainsKey(c) ? chars[c].toInt() : 0;
             count++;
-            chars[pwd[i]] = count;
+            chars[c] = count;
             result += (int)(5.0 / (double)count);
         }
 
@@ -272,9 +272,9 @@ public class Users : FwModel<Users.Row>
             {"other",Regex.IsMatch(pwd, @"\W")}
         };
         var ctr = 0;
-        foreach (bool value in vars.Values)
+        foreach (var value in vars.Values)
         {
-            if (value) ctr += 1;
+            if (value is bool b && b) ctr += 1;
         }
         result += (ctr - 1) * 10;
 
@@ -550,7 +550,7 @@ public class Users : FwModel<Users.Row>
         var resources_id = resource["id"].toInt();
 
         //list all permissions for the resource and all user roles
-        List<string> roles_ids;
+        StrList roles_ids;
         if (users_id == 0)
             //visitor
             roles_ids = [fw.model<Roles>().idVisitor().ToString()]; // visitor role for non-logged
@@ -559,7 +559,7 @@ public class Users : FwModel<Users.Row>
 
         // read all permissions for the resource and user's roles
         var rows = fw.model<RolesResourcesPermissions>().listByRolesResources(roles_ids, new int[] { resources_id });
-        var permissions_ids = new List<string>();
+        var permissions_ids = new StrList();
         foreach (FwRow row in rows)
         {
             permissions_ids.Add(row["permissions_id"].toStr());
@@ -675,7 +675,7 @@ public class Users : FwModel<Users.Row>
         var permissions_id = permission["id"].toInt();
 
         // read all roles for user
-        List<string> roles_ids;
+        StrList roles_ids;
         if (users_id == 0)
             roles_ids = [fw.model<Roles>().idVisitor().ToString()]; // visitor role for non-logged
         else
@@ -725,7 +725,7 @@ public class Users : FwModel<Users.Row>
         }
 
         //not in cache - read from db
-        List<string> res_icodes;
+        StrList res_icodes;
         if (isSiteAdmin())
         {
             //siteadmin doesn't have roles - has access to everything
@@ -734,13 +734,13 @@ public class Users : FwModel<Users.Row>
         else
         {
             // read all roles for user
-            List<string> roles_ids = fw.model<UsersRoles>().colLinkedIdsByMainId(fw.userId);
+            StrList roles_ids = fw.model<UsersRoles>().colLinkedIdsByMainId(fw.userId);
             // read all resources user has list permission
             var list_permission = fw.model<Permissions>().oneByIcode(Permissions.PERMISSION_LIST);
             var rrps = fw.model<RolesResourcesPermissions>().listByRolesPermissions(roles_ids, new int[] { list_permission["id"].toInt() });
 
             // read all resources user has list permission
-            var resources_ids = new List<int>();
+            var resources_ids = new IntList();
             foreach (FwRow rrp in rrps)
             {
                 resources_ids.Add(rrp["resources_id"].toInt());
@@ -780,9 +780,9 @@ public class Users : FwModel<Users.Row>
 
     // return list of icodes for resources user has access to with a "list" permission
     // i.e. if user has list permission to a resource - it should be accessible via menu
-    public List<string> icodesAccessibleResources(int users_id)
+    public StrList icodesAccessibleResources(int users_id)
     {
-        var result = new List<string>();
+        var result = new StrList();
 
 #if isRoles
         var p = new FwRow

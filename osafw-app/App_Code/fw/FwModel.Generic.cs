@@ -5,8 +5,6 @@
 
 using System;
 using System.Collections;
-using System.Collections.Generic;
-using osafw;
 
 namespace osafw;
 
@@ -193,7 +191,7 @@ public abstract class FwModel<TRow> : FwModel where TRow : class, new()
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        var fields = dto.toHashtable();
+        var fields = dto.toFwDict();
         prepareFields(fields, forInsert: false);
 
         var updated = base.update(id, fields);

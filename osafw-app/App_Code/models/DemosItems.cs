@@ -4,7 +4,6 @@
 // (c) 2009-2023 Oleg Savchuk www.osalabs.com
 
 using System;
-using System.Collections;
 
 namespace osafw;
 

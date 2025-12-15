@@ -4,8 +4,6 @@
 // (c) 2009-2023 Oleg Savchuk www.osalabs.com
 
 using System;
-using System.Collections;
-using System.Collections.Generic;
 
 namespace osafw;
 
@@ -44,7 +42,7 @@ public class AdminDemosController : FwAdminController
 
         // add/modify rows from db if necessary
         foreach (FwDict row in this.list_rows)
-            row["demo_dicts"] = model_related.one(row["demo_dicts_id"].toInt()).toHashtable();
+            row["demo_dicts"] = model_related.one(row["demo_dicts_id"].toInt()).toFwDict();
     }
 
     public override FwDict? ShowAction(int id)
@@ -91,7 +89,7 @@ public class AdminDemosController : FwAdminController
         ps["multi_datarow_link"] = fw.model<DemosDemoDicts>().listLinkedByMainId(id);
         FormUtils.comboForDate(item["fdate_combo"].toStr(), ps, "fdate_combo");
 
-        ps["att"] = fw.model<Att>().one(item["att_id"]).toHashtable();
+        ps["att"] = fw.model<Att>().one(item["att_id"]).toFwDict();
         ps["att_links"] = fw.model<Att>().listLinked(model.table_name, id);
 
         // Files upload sample like in DemosDynamic (att_files_edit)
@@ -168,7 +166,7 @@ public class AdminDemosController : FwAdminController
 
     public FwDict AutocompleteAction()
     {
-        List<string> items = model_related.listAutocomplete(reqs("q"));
+        StrList items = model_related.listAutocomplete(reqs("q"));
 
         return new FwDict() { { "_json", items } };
     }

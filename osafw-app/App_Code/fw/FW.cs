@@ -8,7 +8,6 @@ using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Mail;
@@ -762,11 +761,9 @@ public class FW : IDisposable
         // after perpare_FORM - grouping for names like XXX[YYYY] -> FORM{XXX}=@{YYYY1, YYYY2, ...}
         FwDict SQ = [];
         FwDict f = [];
-        foreach (DictionaryEntry entry in input)
+        foreach (var entry in input)
         {
-            if (entry.Key is not string name)
-                continue;
-
+            var name = entry.Key;
             var value = entry.Value;
             var bracketPos = name.IndexOf('[');
             if (bracketPos > 0 && name.EndsWith(']'))
@@ -790,8 +787,8 @@ public class FW : IDisposable
             }
         }
 
-        foreach (DictionaryEntry entry in SQ)
-            f[entry.Key.toStr()] = entry.Value;
+        foreach (var entry in SQ)
+            f[entry.Key] = entry.Value;
 
         // also parse json in request body if any
         if (request.ContentType?[.."application/json".Length] == "application/json")
@@ -1124,7 +1121,7 @@ public class FW : IDisposable
         {
             logger(LogLevel.INFO, "No method found for controller.action=[", route.controller, ".", route.action, "], displaying static page from related templates");
             // if no method - just call FW.parser(hf) - show template from /route.controller/route.action dir
-            parser([]);
+            parser(new FwDict());
         }
         else
             callController(co, actionMethod, args);

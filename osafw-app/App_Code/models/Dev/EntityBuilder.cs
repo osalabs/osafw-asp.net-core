@@ -4,8 +4,6 @@
 // (c) 2009-2024  Oleg Savchuk www.osalabs.com
 
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Text.Json;
@@ -733,7 +731,7 @@ class DevEntityBuilder
             ["fw_name"] = Utils.name2fw(table_name),
             ["iname"] = Utils.name2human(table_name),
             ["fields"] = tblfields,
-            ["foreign_keys"] = db.listForeignKeys(table_name).toArrayList(),
+            ["foreign_keys"] = db.listForeignKeys(table_name).toFwList(),
             ["controller_options"] = controller_options,
         };
 
@@ -742,7 +740,7 @@ class DevEntityBuilder
         controller_options["title"] = Utils.name2human(table_entity["model_name"].toStr());
 
         var fields = Utils.array2hashtable(tblfields, "name");
-        table_entity["is_fw"] = fields.Contains("id") && fields.Contains("status") && fields.Contains("add_time") && fields.Contains("add_users_id");
+        table_entity["is_fw"] = fields.ContainsKey("id") && fields.ContainsKey("status") && fields.ContainsKey("add_time") && fields.ContainsKey("add_users_id");
 
         return table_entity;
     }
@@ -783,7 +781,7 @@ class DevEntityBuilder
         return result;
     }
 
-    public static List<string> listModels()
+    public static StrList listModels()
     {
         var baseType = typeof(FwModel);
         var assembly = baseType.Assembly;
@@ -793,7 +791,7 @@ class DevEntityBuilder
                 select t.Name).ToList();
     }
 
-    public static List<string> listControllers()
+    public static StrList listControllers()
     {
         var baseType = typeof(FwController);
         var assembly = baseType.Assembly;

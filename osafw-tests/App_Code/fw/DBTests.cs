@@ -1,10 +1,8 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
-using osafw;
 
 namespace osafw.Tests
 {
@@ -13,7 +11,7 @@ namespace osafw.Tests
     {
         private readonly string connstr = "Server=(local);Database=demo;Trusted_Connection=True;TrustServerCertificate=true;";
         private DB db = null!;
-        private string table_name = "for_unit_testing";
+        private readonly string table_name = "for_unit_testing";
 
         [TestInitialize()]
         public void Startup()
@@ -89,7 +87,7 @@ namespace osafw.Tests
         [TestMethod()]
         public void getConnectionTest()
         {
-            Assert.IsInstanceOfType(db.getConnection(), typeof(DbConnection));
+            Assert.IsInstanceOfType<DbConnection>(db.getConnection());
         }
 
         [TestMethod()]
@@ -114,7 +112,7 @@ namespace osafw.Tests
         [TestMethod()]
         public void execTest()
         {
-            FwList tables = db.tables();
+            var tables = db.tables();
             if (tables.Contains("exec_unit_testing"))
             {
                 db.exec("DROP TABLE exec_unit_testing");
@@ -180,7 +178,7 @@ namespace osafw.Tests
         [TestMethod()]
         public void colTest()
         {
-            List<string> col = db.colp("SELECT iname FROM " + table_name);
+            StrList col = db.colp("SELECT iname FROM " + table_name);
 
             Assert.AreEqual("test1", col[0]);
             Assert.AreEqual("test2", col[1]);
@@ -246,15 +244,20 @@ namespace osafw.Tests
             string result3 = db.insql(strArray);
             Assert.AreEqual(" IN ('a', 'b', 'c')", result3);
 
-            // Test with FwList
-            FwList list = ["a", "b", "c"];
+            // Test with StrList
+            StrList list = ["a", "b", "c"];
             string result4 = db.insql(list);
             Assert.AreEqual(" IN ('a', 'b', 'c')", result4);
 
-            // Test with empty FwList
-            FwList emptyList = [];
+            // Test with empty StrList
+            StrList emptyList = [];
             string result5 = db.insql(emptyList);
             Assert.AreEqual(" IN (NULL)", result5);
+
+            // Test with IntList
+            IntList intList = [1, 2, 3];
+            string result6 = db.insql(intList);
+            Assert.AreEqual(" IN (1, 2, 3)", result6);
         }
 
         [TestMethod()]
@@ -276,15 +279,15 @@ namespace osafw.Tests
             string result4 = db.insqli(strArray);
             Assert.AreEqual(" IN (1, 2, 3)", result4);
 
-            // Test with FwList
-            FwList list = ["1", "2", "3"];
+            // Test with StrList
+            StrList list = ["1", "2", "3"];
             string result5 = db.insqli(list);
             Assert.AreEqual(" IN (1, 2, 3)", result5);
 
-            // Test with empty FwList
-            FwList emptyList = [];
-            string result6 = db.insqli(emptyList);
-            Assert.AreEqual(" IN (NULL)", result6);
+            // Test with IntList
+            IntList intList = [1, 2, 3];
+            string result6 = db.insqli(intList);
+            Assert.AreEqual(" IN (1, 2, 3)", result6);
         }
 
         [TestMethod()]
@@ -483,11 +486,11 @@ namespace osafw.Tests
         public void sqlNOWTest()
         {
             // test NOW/GETDATE via update table record (assuming select and update will happen in the same second)
-            //var rnow = db.rowp($"SELECT {db.sqlNOW()} as [now]");
             var now_time = db.Now();
             db.insert(table_name, DB.h("id", 6, "iname", "test6", "idatetime", DB.NOW));
             var r = db.row(table_name, DB.h("id", 6));
-            Assert.AreEqual(now_time.ToString(), r["idatetime"], "");
+            var db_time = DateTime.Parse(r["idatetime"].toStr());
+            Assert.AreEqual(now_time.ToString("yyyy-MM-dd HH:mm:ss"), db_time.ToString("yyyy-MM-dd HH:mm:ss"));
         }
 
         [TestMethod()]
@@ -523,7 +526,7 @@ namespace osafw.Tests
         public void tablesTest()
         {
             string[] tablesToCheck = Utils.qw("users att settings menu_items att_categories fwsessions");
-            FwList tables = db.tables();
+            var tables = db.tables();
             foreach (var tableName in tablesToCheck)
             {
                 Assert.IsGreaterThanOrEqualTo(0, tables.IndexOf(tableName), tableName + " not found");
@@ -534,7 +537,7 @@ namespace osafw.Tests
         public void viewsTest()
         {
             db.exec("CREATE VIEW view_for_unit_tests AS SELECT * FROM users");
-            FwList views = db.views();
+            var views = db.views();
             db.exec("DROP VIEW view_for_unit_tests");
             Assert.IsGreaterThanOrEqualTo(0, views.IndexOf("view_for_unit_tests"));
         }
@@ -554,7 +557,7 @@ namespace osafw.Tests
         [TestMethod()]
         public void clearchemaCacheTest()
         {
-            FwDict schema = db.loadTableSchema("users");
+            _ = db.loadTableSchema("users");
             Assert.IsFalse(db.isSchemaCacheEmpty());
             db.clearSchemaCache();
             Assert.IsTrue(db.isSchemaCacheEmpty());

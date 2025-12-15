@@ -6,7 +6,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using System;
-using System.Collections;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
@@ -78,7 +77,7 @@ public static class FwConfig
     private static FwDict buildForHost(HttpContext? ctx, string host)
     {
         // clone deep - each host gets its own mutable copy
-        var hs = Utils.cloneHashDeep(_base.Value) ?? [];
+        var hs = new FwDict(_base.Value);
 
         if (string.IsNullOrEmpty(host))
             overrideSettingsByName(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? string.Empty, hs, false); // use env name override if no host

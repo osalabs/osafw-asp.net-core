@@ -3,8 +3,6 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2025 Oleg Savchuk www.osalabs.com
 
-using System.Collections;
-
 namespace osafw;
 
 public class AdminLookupsController : FwController
@@ -47,9 +45,9 @@ public class AdminLookupsController : FwController
 
         // 2) Build an array of group-objects: [ 'igroup' => ..., 'list_rows' => [...] ]
         var allGroups = new FwList();
-        foreach (DictionaryEntry entry in grouped)
+        foreach (var entry in grouped)
         {
-            var gName = entry.Key.toStr();
+            var gName = entry.Key;
             var gRows = (FwList)entry.Value!;
             allGroups.Add(new FwDict
             {

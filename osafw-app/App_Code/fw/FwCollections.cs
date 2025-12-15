@@ -5,28 +5,38 @@
 
 using System;
 using System.Collections;
-using System.Collections.Generic;
 
 namespace osafw;
 
-public class FwDict : Hashtable
+public class FwDict : Dictionary<string, object?>
 {
-    public FwDict() : base(StringComparer.Ordinal) { }
-    public FwDict(int capacity) : base(capacity, StringComparer.Ordinal) { }
-    public FwDict(IDictionary? other) : base(other?.Count ?? 0, StringComparer.Ordinal)
+    public FwDict() : this((IEqualityComparer<string>?)null) { }
+    public FwDict(IEqualityComparer<string>? comparer) : base(comparer ?? StringComparer.Ordinal) { }
+    public FwDict(int capacity) : this(capacity, null) { }
+    public FwDict(int capacity, IEqualityComparer<string>? comparer) : base(capacity, comparer ?? StringComparer.Ordinal) { }
+    public FwDict(IDictionary? src) : this(src, null) { }
+    public FwDict(IDictionary? src, IEqualityComparer<string>? comparer) : base(src?.Count ?? 0, comparer ?? StringComparer.Ordinal)
     {
-        if (other != null)
-            foreach (DictionaryEntry e in other)
-                this[e.Key] = e.Value;
+        if (src != null)
+            foreach (DictionaryEntry e in src)
+                if (e.Key is string key)
+                    this[key] = e.Value;
     }
 
     // Return null when key is missing without throwing exception
-    public object? this[string key]
+    public new object? this[string key]
     {
-        get => ContainsKey(key) ? base[key] : null;
+        get => TryGetValue(key, out var v) ? v : null;
         set => base[key] = value;
     }
 
+    public static implicit operator Hashtable(FwDict d)
+    {
+        var h = new Hashtable(d.Count);
+        foreach (var kv in d) h[kv.Key] = kv.Value;
+        return h;
+    }
+    public static explicit operator FwDict(Hashtable h) => new(h);
 }
 
 public class FwList : List<FwDict>
@@ -34,6 +44,13 @@ public class FwList : List<FwDict>
     public FwList() { }
     public FwList(int capacity) : base(capacity) { }
     public FwList(ICollection c) : base((IEnumerable<FwDict>)c) { }
+    public FwList(IList list)
+    {
+        if (list != null)
+            foreach (var item in list)
+                if (item is IDictionary)
+                    Add((FwDict)item);
+    }
     public FwList(IEnumerable collection)
     {
         if (collection != null)

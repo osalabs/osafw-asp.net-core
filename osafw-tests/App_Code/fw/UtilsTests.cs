@@ -1,6 +1,5 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -24,8 +23,8 @@ namespace osafw.Tests
         [TestMethod()]
         public void qwRevertTest()
         {
-            IList<string> list = ["test1", "test2", "test3"];
-            string r = Utils.qwRevert(list.ToList());
+            StrList list = ["test1", "test2", "test3"];
+            string r = Utils.qwRevert(list);
 
             Assert.AreEqual("test1 test2 test3 ", r);
         }
@@ -113,7 +112,7 @@ namespace osafw.Tests
         public void splitEmailsTest()
         {
             string s = "1@1.com 2@2.com\r\n3@3.com";
-            FwList r = Utils.splitEmails(s);
+            StrList r = Utils.splitEmails(s);
 
             Assert.AreEqual("1@1.com", r[0]);
             Assert.AreEqual("2@2.com", r[1]);
@@ -319,60 +318,70 @@ namespace osafw.Tests
         }
 
         [TestMethod()]
+        [Ignore("Not implemented")]
         public void importCSVTest()
         {
             throw new NotImplementedException();
         }
 
         [TestMethod()]
+        [Ignore("Not implemented")]
         public void importExcelTest()
         {
             throw new NotImplementedException();
         }
 
         [TestMethod()]
+        [Ignore("Not implemented")]
         public void toCSVRowTest()
         {
             throw new NotImplementedException();
         }
 
         [TestMethod()]
+        [Ignore("Not implemented")]
         public void getCSVExportTest()
         {
             throw new NotImplementedException();
         }
 
         [TestMethod()]
+        [Ignore("Not implemented")]
         public void writeCSVExportTest()
         {
             throw new NotImplementedException();
         }
 
         [TestMethod()]
+        [Ignore("Not implemented")]
         public void writeXLSExportTest()
         {
             throw new NotImplementedException();
         }
 
         [TestMethod()]
+        [Ignore("Not implemented")]
         public void rotateImageTest()
         {
             throw new NotImplementedException();
         }
 
         [TestMethod()]
+        [Ignore("Not implemented")]
         public void resizeImageTest()
         {
             throw new NotImplementedException();
         }
 
         [TestMethod()]
+        [Ignore("Not implemented")]
         public void fileSizeTest()
         {
             throw new NotImplementedException();
         }
 
         [TestMethod()]
+        [Ignore("Not implemented")]
         public void fileNameTest()
         {
             throw new NotImplementedException();
@@ -581,6 +590,7 @@ namespace osafw.Tests
         }
 
         [TestMethod()]
+        [Ignore("Not implemented")]
         public void cleanupTmpFilesTest()
         {
             throw new NotImplementedException();
@@ -727,6 +737,7 @@ namespace osafw.Tests
         }
 
         [TestMethod()]
+        [Ignore("Not implemented")]
         public void commastr2hashTest()
         {
             //TODO 
@@ -852,6 +863,7 @@ namespace osafw.Tests
         }
 
         [TestMethod()]
+        [Ignore("Not implemented")]
         public void UploadFilesToRemoteUrlTest()
         {
             throw new NotImplementedException();
@@ -988,10 +1000,11 @@ namespace osafw.Tests
             //bool
             Assert.IsTrue(Utils.isEmpty(false));
             Assert.IsFalse(Utils.isEmpty(true));
-            //arraylist
+            //list
             Assert.IsTrue(Utils.isEmpty(new FwList()));
-            Assert.IsFalse(Utils.isEmpty(new FwList() { 1 }));
-            //hashtable
+            Assert.IsFalse(Utils.isEmpty(new StrList() { "1" }));
+            Assert.IsFalse(Utils.isEmpty(new IntList() { 1 }));
+            //dictionary
             Assert.IsTrue(Utils.isEmpty(new FwDict()));
             Assert.IsFalse(Utils.isEmpty(new FwDict() { { "1", 1 } }));
         }

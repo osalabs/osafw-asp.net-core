@@ -3,9 +3,6 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
-using System.Collections;
-using System.Collections.Generic;
-
 namespace osafw;
 
 public class MyMFAController : FwController
@@ -70,7 +67,7 @@ public class MyMFAController : FwController
 
         // code is valid, generate recovery codes and save
         // generate 5 recovery codes as random 8-digit numbers using Utils.getRandStr(8) and concatenate into comma-separated string
-        var hashed_codes = new List<string>(5);
+        var hashed_codes = new StrList(5);
         FwList recovery_codes = [];
         for (int i = 0; i < 5; i++)
         {

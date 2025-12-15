@@ -6,9 +6,7 @@
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using System.Reflection;
 using osafw;
 
@@ -189,7 +187,7 @@ public static class FwExtensions
 
         return result;
     }
-    
+
     /// <summary>
     /// Converts an object to a dictionary of key-value pairs, using property names as keys and property values as
     /// values.
@@ -201,31 +199,20 @@ public static class FwExtensions
     /// entries are copied; otherwise, public writable properties are used.</param>
     /// <returns>A dictionary containing the object's properties and their values, or the original dictionary's entries if the
     /// object is a dictionary. Keys are compared using case-insensitive ordinal comparison.</returns>
-    public static ObjDict toKeyValue(this object dto)
+    public static FwDict toKeyValue(this object dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        if (dto is ObjDict dictionary)
-            return new ObjDict(dictionary, StringComparer.OrdinalIgnoreCase);
+        if (dto is FwDict dictionary)
+            return new FwDict(dictionary, StringComparer.OrdinalIgnoreCase);
 
         if (dto is IDictionary dict)
-        {
-            ObjDict result = new(dict.Count, StringComparer.OrdinalIgnoreCase);
-            foreach (DictionaryEntry entry in dict)
-            {
-                var key = entry.Key?.ToString();
-                if (!string.IsNullOrEmpty(key))
-                    result[key] = entry.Value;
-            }
-            return result;
-        }
+            return new(dict, StringComparer.OrdinalIgnoreCase);
 
         var props = getWritableProperties(dto.GetType());
-        ObjDict kv = new(props.Count, StringComparer.OrdinalIgnoreCase);
+        FwDict kv = new(props.Count, StringComparer.OrdinalIgnoreCase);
         foreach (var pair in props)
-        {
             kv[pair.Key] = pair.Value.GetValue(dto);
-        }
 
         return kv;
     }
@@ -241,7 +228,7 @@ public static class FwExtensions
     /// <paramref name="dto"/> is <see langword="null"/>, an empty <see cref="FwDict"/> is returned.</param>
     /// <returns>A <see cref="FwDict"/> containing the key-value pairs from the input object. Returns an empty row if
     /// <paramref name="dto"/> is <see langword="null"/>.</returns>
-    public static FwDict toHashtable(this object? dto)
+    public static FwDict toFwDict(this object? dto)
     {
         if (dto is null)
             return [];
@@ -250,16 +237,12 @@ public static class FwExtensions
             return new FwDict(row);
 
         if (dto is IDictionary dict)
-        {
             return new FwDict(dict);
-        }
 
         var props = dto.GetType().getWritableProperties();
         FwDict htResult = new(props.Count);
         foreach (var kv in props)
-        {
             htResult[kv.Key] = kv.Value.GetValue(dto);
-        }
 
         return htResult;
     }

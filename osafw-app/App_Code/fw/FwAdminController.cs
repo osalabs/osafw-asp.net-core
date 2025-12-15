@@ -4,7 +4,6 @@
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
 using System;
-using System.Collections;
 
 namespace osafw;
 
@@ -171,7 +170,7 @@ public class FwAdminController : FwController
     public virtual void validate<TRow>(int id, TRow dto) where TRow : class, new()
     {
         ArgumentNullException.ThrowIfNull(dto);
-        Validate(id, dto.toHashtable());
+        Validate(id, dto.toFwDict());
     }
 
     public virtual void ShowDeleteAction(int id)

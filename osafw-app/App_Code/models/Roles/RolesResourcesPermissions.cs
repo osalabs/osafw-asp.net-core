@@ -137,7 +137,7 @@ public class RolesResourcesPermissions : FwModel<RolesResourcesPermissions.Row>
 
     public FwList resourcesMatrixByRole(int roles_id, DBList permissions)
     {
-        var resources = fw.model<Resources>().list().toArrayList();
+        FwList resources = fw.model<Resources>().list();
 
         // for each resource - get permissions for this role
         foreach (FwDict resource in resources)

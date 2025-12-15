@@ -3,7 +3,7 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2024 Oleg Savchuk www.osalabs.com
 /*
-Parses file templates and replaces <~tags> with values from hashtable
+Parses file templates and replaces <~tags> with values from dictionary
 
  Supports features:
  - SESSION, GLOBAL (from fw.G), SUBHASHES, SUBARRAYS, PARSEPAGE.TOP, PARSEPAGE.PARENT
@@ -58,8 +58,8 @@ Parses file templates and replaces <~tags> with values from hashtable
     repeat.iteration (1-based)
 
   sub - this tag tell parser to use subhash for parse subtemplate ($hf hash should contain reference to hash), examples:
-     <~tag sub inline>...</~tag>- use $hf[tag] as hashtable for inline template
-     <~tag sub="var"> - use $hf[var] as hashtable for template in "tag.html"
+     <~tag sub inline>...</~tag>- use $hf[tag] as Dictionary for inline template
+     <~tag sub="var"> - use $hf[var] as Dictionary for template in "tag.html"
   inline - this tag tell parser that subtemplate is not in file - it's between < ~tag > ...</ ~tag > , useful in combination with 'repeat' and 'if'
   global - this tag is a global var, not in $hf hash
    global[var] - also possible
@@ -67,7 +67,7 @@ Parses file templates and replaces <~tags> with values from hashtable
    session[var] - also possible
   TODO parent - this tag is a $parent_hf var, not in current $hf hash
   select="var" [multi[=","]] - this tag tell parser to either load file with tag name and use it as value|display for <select> tag
-                 or if variable with tag name exists - use it as arraylist of hashtables with id/iname keys
+                 or if variable with tag name exists - use it as List of Dictionaries with id/iname keys
                if "multi" attr defined - "var" value split by separator deinfed in multi attr (default is ",") and multiple options could be selected
        , example:
        <select name="item[fcombo]">
@@ -118,10 +118,8 @@ using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Reflection.Metadata.Ecma335;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
@@ -134,7 +132,7 @@ public class ParsePageOptions
     public bool IsCheckFileModifications { get; set; } = false;
     public string Lang { get; set; } = "en";
     public bool IsLangUpdate { get; set; } = true;
-    public Func<FwDict> GlobalsGetter { get; set; } = () => []; // by default - return empty hashtable
+    public Func<FwDict> GlobalsGetter { get; set; } = () => []; // by default - return empty Dictionary
     public ISession? Session { get; set; }
     public Action<LogLevel, string[]> Logger { get; set; } = (_, _) => { };
 
@@ -190,7 +188,7 @@ public class ParsePage
     private readonly bool is_check_file_modifications = false;
     private readonly string TMPL_PATH = "";
     private string basedir = "";
-    private FwDict data_top = []; // reference to the topmost hashtable
+    private FwDict data_top = []; // reference to the topmost Dictionary passed to parse_page
     private bool is_found_last_hfvalue = false;
     private readonly string lang = "en";
     private readonly bool lang_parse = true; // parse lang strings in `` or not - true - parse(default), false - no
@@ -206,7 +204,7 @@ public class ParsePage
             is_check_file_modifications = options.IsCheckFileModifications;
             lang = options.Lang ?? "en";
             lang_update = options.IsLangUpdate;
-            globalsGetter = options.GlobalsGetter ?? (() => []); // by default - return empty hashtable
+            globalsGetter = options.GlobalsGetter ?? (() => []); // by default - return empty Dictionary
             session = options.Session;
             loggerAction = options.Logger ?? ((level, messages) => { }); // by default - no logging
 
@@ -234,15 +232,16 @@ public class ParsePage
     }
 
 
-    public string parse_page(string bdir, string tpl_name, FwDict hf)
+    public string parse_page(string bdir, string tpl_name, FwDict ps)
     {
         this.basedir = bdir;
+        var hf = new FwDict(ps);
         this.data_top = hf;
-        FwDict parent_hf = [];
+        FwDict parent_ps = [];
         // Return _parse_page(tpl_name, hf, "", "", parent_hf)
 
         // var startTime = DateTime.Now;
-        var result = _parse_page(tpl_name, hf, "", parent_hf);
+        var result = _parse_page(tpl_name, hf, "", parent_ps);
         // var endTimespan = DateTime.Now - startTime;
         // logger($"ParsePage speed: {1 / endTimespan.TotalSeconds:0.000}/s");
         return result;
@@ -285,7 +284,7 @@ public class ParsePage
         // parse tags on page
 
         sort_tags(tags_full);
-        FwDict TAGSEEN = [];
+        Dictionary<string,int> TAGSEEN = [];
         string tag_full;
         string tag;
         FwDict attrs;
@@ -548,10 +547,10 @@ public class ParsePage
         }
     }
 
-    // hf can be: FwRow or HttpSessionState
+    // hf can be: Dictionary or HttpSessionState
     // returns:
-    // value (string, hashtable, etc..), empty string ""
-    // Or Nothing - tag not present in hf param (only if hf is FwRow), file lookup will be necessary
+    // value (string, dictionary, etc..), empty string ""
+    // Or Nothing - tag not present in hf param (only if hf is dictionary), file lookup will be necessary
     // set is_found to True if tag value found hf/parent_hf (so can be used to detect if there are no tag value at all so no fileseek required)
     private object hfvalue(string tag, object hf, FwDict? parent_hf = null)
     {
@@ -660,15 +659,15 @@ public class ParsePage
                 }
                 tag_value = ptr ?? "";
             }
-            else if (hf is FwDict hashtable)
+            else if (hf is IDictionary dict)
             {
                 // special name tags - ROOT_URL and ROOT_DOMAIN - hardcoded here because of too frequent usage in the site
                 if (tag == "ROOT_URL" || tag == "ROOT_DOMAIN")
                     tag_value = globalsGetter()[tag] ?? "";
-                else if (hashtable.ContainsKey(tag))
-                    tag_value = hashtable[tag] ?? "";
+                else if (dict.Contains(tag))
+                    tag_value = dict[tag] ?? "";
                 else
-                    // if no such tag in FwRow
+                    // if no such tag in Dictionary
                     is_found_last_hfvalue = false;
             }
             else if (hf is ISession session)
@@ -710,16 +709,14 @@ public class ParsePage
             // if sub attr contains name - use it to get value from hf (instead using tag_value)
             tag_value = hfvalue(sub, hf, parent_hf);
 
-        if (tag_value is DBRow row)
-            sub_hf = row.toHashtable();
-        else if (tag_value is FwDict ht)
-            sub_hf = ht;
+        if (tag_value is IDictionary row)
+            sub_hf = new FwDict(row);
         else if (tag_value != null)
-            sub_hf = tag_value.toHashtable();
+            sub_hf = tag_value.toKeyValue();
 
         if (sub_hf == null)
         {
-            logger(LogLevel.DEBUG, "ParsePage - not a collection passed for a SUB tag=", tag, ", sub=" + sub);
+            logger(LogLevel.DEBUG, "ParsePage - not a dictionary passed for a SUB tag=", tag, ", sub=" + sub);
             sub_hf = [];
         }
 
@@ -792,8 +789,8 @@ public class ParsePage
             }
             else if (eqvalue is ICollection collection)
             {
-                // if we comparing to FwRow or FwList - we actually compare to .Count
-                // so <~tag if="FwList"> will fail if FwList.Count=0 or success if FwList.Count>0
+                // if we comparing to Dictionary or List - we actually compare to .Count
+                // so <~tag if="List"> will fail if List.Count=0 or success if List.Count>0
                 eqvalue = collection.Count;
                 is_numeric_comparison = true;
             }
@@ -882,12 +879,15 @@ public class ParsePage
     private static FwDict proc_repeat_modifiers(IList uftag, int i)
     {
         FwDict uftagi1;
-        if (uftag[i] is DBRow row)
-            uftagi1 = row;
-        else if (uftag[i] is FwDict ht)
-            uftagi1 = ht;
+        object? element = uftag[i];
+        IDictionary? dict = element as IDictionary;
+        if (dict == null && element != null)
+            dict = element!.toKeyValue();
+
+        if (dict != null)
+            uftagi1 = new FwDict(dict);
         else
-            uftagi1 = uftag[i].toHashtable();
+            uftagi1 = [];
 
         FwDict uftagi = new(uftagi1); // make a shallow copy as we modify this level
         int cnt = uftag.Count;
@@ -1207,13 +1207,13 @@ public class ParsePage
         if (hfvalue(tag, hf) is ICollection seloptions)
         {
             string value;
-            // hf(tag) is FwList of Hashes with "id" and "iname" keys, for example rows returned from db.array('select id, iname from ...')
+            // hf(tag) is List of Dicts with "id" and "iname" keys, for example rows returned from db.array('select id, iname from ...')
             // "id" key is optional, if not present - iname will be used for values too
             string desc;
-            foreach (FwDict item in seloptions)
+            foreach (IDictionary item in seloptions)
             {
                 desc = Utils.htmlescape(item["iname"].toStr());
-                if (item.ContainsKey("id"))
+                if (item.Contains("id"))
                 {
                     value = item["id"].toStr().Trim();
                 }
@@ -1249,7 +1249,7 @@ public class ParsePage
             string[] lines = precache_file_lines(TMPL_PATH + "/" + tpl_path);
             if (lines.Length == 0)
             {
-                logger(LogLevel.TRACE, $"ParsePage - NOR an FwList of Hashtables NEITHER .sel template file passed for a select tag={tag}");
+                logger(LogLevel.TRACE, $"ParsePage - NOR an List of Dictionaries NEITHER .sel template file passed for a select tag={tag}");
                 return "";
             }
 
@@ -1299,7 +1299,7 @@ public class ParsePage
         string[] lines = precache_file_lines(TMPL_PATH + "/" + tpl_path);
         if (lines.Length == 0)
         {
-            logger(LogLevel.TRACE, $"ParsePage - NOR an FwList of Hashtables NEITHER .sel template file passed for a radio tag tpl path={tpl_path}");
+            logger(LogLevel.TRACE, $"ParsePage - NOR an List of Dictionaries NEITHER .sel template file passed for a radio tag tpl path={tpl_path}");
             return "";
         }
 
@@ -1359,13 +1359,13 @@ public class ParsePage
         if (hfvalue(tag, hf) is ICollection seloptions)
         {
             string value;
-            // hf(tag) is FwList of Hashes with "id" and "iname" keys, for example rows returned from db.array('select id, iname from ...')
+            // hf(tag) is List of Dictionaries with "id" and "iname" keys, for example rows returned from db.array('select id, iname from ...')
             // "id" key is optional, if not present - iname will be used for values too
 
             string desc;
-            foreach (FwDict item in seloptions)
+            foreach (IDictionary item in seloptions)
             {
-                if (item.ContainsKey("id"))
+                if (item.Contains("id"))
                 {
                     value = item["id"].toStr().Trim();
                 }
@@ -1392,7 +1392,7 @@ public class ParsePage
             string[] lines = precache_file_lines(TMPL_PATH + "/" + tpl_path);
             if (lines.Length == 0)
             {
-                logger(LogLevel.TRACE, $"ParsePage - NOR an FwList of Hashtables NEITHER .sel template file passed for a selvalue tag={tag}");
+                logger(LogLevel.TRACE, $"ParsePage - NOR an List of Dictionaries NEITHER .sel template file passed for a selvalue tag={tag}");
                 return "";
             }
 

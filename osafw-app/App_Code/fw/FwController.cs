@@ -5,7 +5,6 @@
 
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Text.RegularExpressions;
@@ -165,60 +164,60 @@ public abstract class FwController
         // logger("loaded config:")
         // logger(config)
 
-        var model_name = this.config["model"].toStr();
+        var model_name = config["model"].toStr();
         if (!string.IsNullOrEmpty(model_name))
             model0 = fw.model(model_name);
 
         // check/conv to str
-        required_fields = this.config["required_fields"].toStr();
-        is_userlists = this.config["is_userlists"].toBool();
+        required_fields = config["required_fields"].toStr();
+        is_userlists = config["is_userlists"].toBool();
 
         // save_fields could be defined as qw string - check and convert
-        var save_fields_raw = this.config["save_fields"];
+        var save_fields_raw = config["save_fields"];
         if (save_fields_raw is IList list)
             save_fields = Utils.qwRevert(list); // not optimal, but simplest for now
         else
             save_fields = save_fields_raw.toStr();
 
-        form_new_defaults = this.config["form_new_defaults"] as FwDict ?? [];
+        form_new_defaults = config["form_new_defaults"] as FwDict ?? [];
 
         // save_fields_checkboxes could be defined as qw string - check and convert
-        var save_fields_checkboxes_raw = this.config["save_fields_checkboxes"];
+        var save_fields_checkboxes_raw = config["save_fields_checkboxes"];
         if (save_fields_checkboxes_raw is IDictionary dictionary)
             save_fields_checkboxes = Utils.qhRevert(dictionary); // not optimal, but simplest for now
         else
             save_fields_checkboxes = save_fields_checkboxes_raw.toStr();
 
-        search_fields = this.config["search_fields"].toStr();
-        list_sortdef = this.config["list_sortdef"].toStr();
+        search_fields = config["search_fields"].toStr();
+        list_sortdef = config["list_sortdef"].toStr();
 
-        var list_sortmap_raw = this.config["list_sortmap"];
+        var list_sortmap_raw = config["list_sortmap"];
         if (list_sortmap_raw is IDictionary)
             list_sortmap = (FwDict)list_sortmap_raw;
         else
-            list_sortmap = Utils.qh(this.config["list_sortmap"].toStr());
+            list_sortmap = Utils.qh(config["list_sortmap"].toStr());
 
-        related_field_name = this.config["related_field_name"].toStr();
+        related_field_name = config["related_field_name"].toStr();
 
-        list_view = this.config["list_view"].toStr();
+        list_view = config["list_view"].toStr();
 
-        is_dynamic_index = this.config["is_dynamic_index"].toBool();
+        is_dynamic_index = config["is_dynamic_index"].toBool();
         if (is_dynamic_index)
         {
             // Whoah! list view is dynamic
-            view_list_defaults = this.config["view_list_defaults"].toStr();
+            view_list_defaults = config["view_list_defaults"].toStr();
 
             // since view_list_map could be defined as qw string or as hashtable - check and convert
-            var raw_view_list_map = this.config["view_list_map"];
+            var raw_view_list_map = config["view_list_map"];
             if (raw_view_list_map is IDictionary)
                 view_list_map = (FwDict)raw_view_list_map;
             else
                 view_list_map = Utils.qh(raw_view_list_map.toStr());
 
-            view_list_custom = this.config["view_list_custom"].toStr();
+            view_list_custom = config["view_list_custom"].toStr();
         }
 
-        is_dynamic_index_edit = this.config["is_dynamic_index_edit"].toBool();
+        is_dynamic_index_edit = config["is_dynamic_index_edit"].toBool();
         if (is_dynamic_index_edit)
         {
             //combine with request param
@@ -260,10 +259,10 @@ public abstract class FwController
                 search_fields = getViewListUserFields(); // just search in all visible fields if no specific fields defined
         }
 
-        is_dynamic_show = this.config["is_dynamic_show"].toBool();
-        is_dynamic_showform = this.config["is_dynamic_showform"].toBool();
+        is_dynamic_show = config["is_dynamic_show"].toBool();
+        is_dynamic_showform = config["is_dynamic_showform"].toBool();
 
-        route_return = this.config["route_return"].toStr();
+        route_return = config["route_return"].toStr();
     }
 
     /// <summary>
@@ -469,7 +468,7 @@ public abstract class FwController
     /// <param name="form_errors">optional - form errors to fill</param>
     /// <returns>true if all required field names non-empty</returns>
     /// <remarks>also set global fw.FormErrors[REQUIRED]=true in case of validation error if no form_errors defined</remarks>
-    public virtual bool validateRequired(int id, FwDict item, Array fields, FwDict? form_errors = null)
+    public virtual bool validateRequired(int id, FwDict item, IList fields, FwDict? form_errors = null)
     {
         bool result = true;
 
@@ -481,7 +480,7 @@ public abstract class FwController
             is_global_errors = true;
         }
 
-        if (fields.Length > 0)
+        if (fields.Count > 0)
         {
             item ??= []; // if item is null - make it empty hash
             var is_new = (id == 0);
@@ -768,7 +767,7 @@ public abstract class FwController
         return db.selectRaw(list_fields, qlist_view_name, list_where, list_where_params, list_orderby, offset, limit);
     }
 
-    public virtual List<string> getListIds(string list_view = "")
+    public virtual StrList getListIds(string list_view = "")
     {
         var sql = $"SELECT {model0.field_id} FROM {list_view} WHERE {list_where} ORDER BY {list_orderby}";
         return db.colp(sql, list_where_params);

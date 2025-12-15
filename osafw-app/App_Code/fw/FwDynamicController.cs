@@ -5,7 +5,6 @@
 
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 
@@ -183,8 +182,8 @@ public class FwDynamicController : FwController
         if (is_dynamic_show)
         {
             //add form_tabs only if we have more than one tab
-            if (config["form_tabs"] is FwList form_tabs && form_tabs.Count > 1)
-                ps["form_tabs"] = form_tabs;
+            if (config["form_tabs"] is IList form_tabs && form_tabs.Count > 1)
+                ps["form_tabs"] = new FwList(form_tabs);
 
             ps["fields"] = prepareShowFields(item, ps);
         }
@@ -257,8 +256,8 @@ public class FwDynamicController : FwController
         if (is_dynamic_showform)
         {
             //add form_tabs only if we have more than one tab
-            if (config["form_tabs"] is FwList form_tabs && form_tabs.Count > 1)
-                ps["form_tabs"] = form_tabs;
+            if (config["form_tabs"] is IList form_tabs && form_tabs.Count > 1)
+                ps["form_tabs"] = new FwList(form_tabs);
 
             ps["fields"] = prepareShowFormFields(item, ps);
         }
@@ -356,7 +355,7 @@ public class FwDynamicController : FwController
     public virtual void Validate<TRow>(int id, TRow dto) where TRow : class, new()
     {
         ArgumentNullException.ThrowIfNull(dto);
-        Validate(id, dto.toHashtable());
+        Validate(id, dto.toFwDict());
     }
 
     protected virtual bool validateRequiredDynamic(int id, FwDict item)
@@ -622,7 +621,7 @@ public class FwDynamicController : FwController
         else
         {
             //validation - only allow models from showform_fields type=autocomplete
-            var form_tabs = config["form_tabs"] as FwList ?? [];
+            FwList form_tabs = config["form_tabs"] is IList tabs ? new(tabs) : [];
             foreach (FwDict form_tab in form_tabs)
             {
                 var fields = getConfigShowFormFieldsByTab("showform_fields", form_tab["tab"].toStr());
@@ -643,7 +642,7 @@ public class FwDynamicController : FwController
         var acModel = ac_model;
 
         //FwList items;
-        List<string> items;
+        StrList items;
         if (id > 0)
         {
             //var item = ac_model.one(id);
@@ -702,9 +701,9 @@ public class FwDynamicController : FwController
 
             // save fields
             // order by value
-            var ordered = fld.Cast<DictionaryEntry>().OrderBy(entry => entry.Value.toInt()).ToList();
+            var ordered = fld.OrderBy(kvp => kvp.Value.toInt()).ToList();
             // and then get ordered keys
-            List<string> anames = [];
+            StrList anames = [];
             foreach (var el in ordered)
                 anames.Add(el.Key.toStr());
             var fields = string.Join(" ", anames);
@@ -809,8 +808,8 @@ public class FwDynamicController : FwController
         tab ??= form_tab;
         var key = prefix + (tab.Length > 0 ? "_" + tab : "");
 
-        if (config[key] is FwList arr)
-            return arr;
+        if (config[key] is IList arr)
+            return new FwList(arr);
 
         return [];
     }
@@ -965,15 +964,15 @@ public class FwDynamicController : FwController
             // for just loaded forms for existing items - pre-load filter's values into "item"
             if (is_get_existing && def.ContainsKey("filter_for"))
             {
-                  var filter_for_field = def["filter_for"].toStr();
-                  var filter_field = def["filter_field"].toStr();
+                var filter_for_field = def["filter_for"].toStr();
+                var filter_field = def["filter_field"].toStr();
 
-                  if (!string.IsNullOrEmpty(filter_for_field) && hfields[filter_for_field] is FwDict def_for)
-                  {
-                      var defFieldName = def_for["field"].toStr();
-                      var filtered_item = fw.model(def_for["lookup_model"].toStr()).one(item[defFieldName]);
-                      item[field] = filtered_item?[filter_field];
-                  }
+                if (!string.IsNullOrEmpty(filter_for_field) && hfields[filter_for_field] is FwDict def_for)
+                {
+                    var defFieldName = def_for["field"].toStr();
+                    var filtered_item = fw.model(def_for["lookup_model"].toStr()).one(item[defFieldName]);
+                    item[field] = filtered_item?[filter_field];
+                }
             }
 
             if (def.ContainsKey("append") && def["append"] is ICollection coll1 && coll1.Count > 0
@@ -1119,7 +1118,7 @@ public class FwDynamicController : FwController
                     //select options as array - convert to arraylist of id => iname
                     var options = def["options"] as FwDict ?? [];
                     var select_options = new FwList();
-                    foreach (DictionaryEntry entry in options)
+                    foreach (var entry in options)
                         select_options.Add(new FwDict() {
                             { "id", entry.Key },
                             { "iname", entry.Value },
@@ -1327,8 +1326,8 @@ public class FwDynamicController : FwController
         var existing = att_model.listByEntityCategory(model0.table_name, id, att_category);
         foreach (FwDict row in existing)
         {
-            var rowId = row["id"];
-            if (rowId != null && !att_ids.ContainsKey(rowId))
+            var rowId = row["id"].toStr();
+            if (rowId.Length > 0 && !att_ids.ContainsKey(rowId))
                 att_model.delete(rowId.toInt(), true);
         }
     }

@@ -7,7 +7,6 @@ using ExcelDataReader;
 using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -74,22 +73,21 @@ public class Utils
     public static FwDict qh(string str, object? default_value = null)
     {
         FwDict result = [];
-        if (str != null && str != "")
+        if (!string.IsNullOrEmpty(str))
         {
+            string defaultStr = default_value.toStr("1");
             string[] arr = Regex.Split(str, @"\s+");
             foreach (string value in arr)
             {
                 string v = value.Replace("&nbsp;", " ");
                 string[] avoid = v.Split("|", 2);
-                string val = default_value.toStr();
+                string val = defaultStr;
                 if (avoid.Length > 1)
-                {
                     val = avoid[1];
-                }
                 result.Add(avoid[0], val);
             }
         }
-        return result; ;
+        return result;
     }
 
     public static string qhRevert(IDictionary sh)
@@ -463,14 +461,14 @@ public class Utils
         do
         {
             string sheetName = reader.Name ?? "Sheet1";
-            List<string> headers = null;      // lazily initialised so no per‑row realloc
+            StrList headers = null;      // lazily initialised so no per‑row realloc
 
             while (reader.Read())
             {
                 // build headers once
                 if (isHeaderRow && headers == null)
                 {
-                    headers = new List<string>(reader.FieldCount);
+                    headers = new StrList(reader.FieldCount);
                     for (int i = 0; i < reader.FieldCount; i++)
                         headers.Add(reader.GetValue(i)?.ToString() ?? $"F{i}");
                     continue;                  // move to first data row
@@ -533,14 +531,13 @@ public class Utils
     {
         string headers_str = csv_export_headers;
         StringBuilder csv = new();
-        string[] fields = Array.Empty<string>();
+        string[] fields = [];
         if (csv_export_fields == "" || csv_export_fields == "*")
         {
             // just read field names from first row
             if (rows.Count > 0)
             {
-                var firstRow = rows[0] as FwDict;
-                if (firstRow != null)
+                if (rows[0] is FwDict firstRow)
                 {
                     fields = firstRow.Keys.Cast<string>().ToArray();
                     headers_str = string.Join(",", fields);
@@ -756,38 +753,36 @@ public class Utils
         if (source == null) return null;
 
         FwDict clone = new(source.Count);
-        foreach (DictionaryEntry entry in source)
+        foreach (var entry in source)
             clone[entry.Key] = cloneObject(entry.Value);
 
+        return clone;
+    }
+
+    //clone deep any dictionary-like object
+    public static IDictionary? cloneDictDeep(IDictionary? source)
+    {
+        if (source == null) return null;
+        IDictionary clone = (IDictionary)Activator.CreateInstance(source.GetType())!;
+        foreach (DictionaryEntry entry in source)
+            clone[entry.Key] = cloneObject(entry.Value);
         return clone;
     }
 
     // helpers
     private static object? cloneObject(object? value)
     {
-        switch (value)
+        return value switch
         {
-            case null:
-                return null;
-
-            case FwDict ht:
-                return cloneHashDeep(ht);
-
-            case FwList list:
-                return cloneArrayListDeep(list);
-
+            null => null,
+            FwDict ht => cloneHashDeep(ht),
+            FwList list => cloneArrayListDeep(list),
             // most BCL value types & strings are immutable – safe to copy ref
-            case string or ValueType:
-                return value;
-
+            string or ValueType => value,
             // let user-defined classes decide how to clone themselves
-            case ICloneable cloneable:
-                return cloneable.Clone();
-
-            default:
-                // fallback: shallow copy (reference) – adjust if need more
-                return value;
-        }
+            ICloneable cloneable => cloneable.Clone(),
+            _ => value,// fallback: shallow copy (reference) – adjust if need more
+        };
     }
 
     private static ObjList cloneArrayListDeep(FwList list)
@@ -1191,9 +1186,9 @@ public class Utils
             int trlen1 = hattrs["truncate"].toInt();
             if (trlen1 > 0) trlen = trlen1;
         }
-        if (hattrs.ContainsKey("trchar")) trchar = hattrs["trchar"].toStr();
-        if (hattrs.ContainsKey("trend")) trend = hattrs["trend"].toInt();
-        if (hattrs.ContainsKey("trword")) trword = hattrs["trword"].toInt();
+        if (hattrs.TryGetValue("trchar", out object? value)) trchar = value.toStr();
+        if (hattrs.TryGetValue("trend", out object? value1)) trend = value1.toInt();
+        if (hattrs.TryGetValue("trword", out object? value2)) trword = value2.toInt();
 
         int orig_len = str.Length;
         if (orig_len < trlen) return str; // no need truncate
@@ -1260,7 +1255,7 @@ public class Utils
         return str;
     }
 
-    // convert array of hashtables to hashtable of hashtables using key
+    // convert List of Dictionaries to Dictionary of Dictionary using key
     // example for key="id": [ {id:1, name:"one"}, {id:2, name:"two"} ] => { 1: {id:1, name:"one"}, 2: {id:2, name:"two"} }
     public static FwDict array2hashtable(IList arr, string key)
     {
@@ -1269,7 +1264,7 @@ public class Utils
         {
             if (!item.Contains(key) || item[key] == null)
                 continue;
-            result[item[key]!] = item;
+            result[item[key].toStr()] = item;
         }
         return result;
     }
@@ -1342,7 +1337,7 @@ public class Utils
     *  <param name="str"></param>
     *  <returns></returns>
     */
-    public static string urlescape(string str)
+    public static string urlescape(string? str)
     {
         return HttpUtility.UrlEncode(str) ?? "";
     }
@@ -1535,9 +1530,9 @@ public class Utils
 
     // convert some system name to human-friendly name'
     // "system_name_id" => "System Name ID"
-    public static string name2human(string? str)
+    public static string name2human(string str)
     {
-        string str_lc = (str ?? string.Empty).ToLower();
+        string str_lc = str.ToLowerInvariant();
         if (str_lc == "icode") return "Code";
         if (str_lc == "iname") return "Name";
         if (str_lc == "idesc") return "Description";
@@ -1669,7 +1664,7 @@ public class Utils
                     {
                         {"row",row},
                         {"field_name",fieldname},
-                        {"data", row.ContainsKey(fieldname) ? row[fieldname] : null}
+                        {"data", row.TryGetValue(fieldname, out object? value) ? value : null}
                     });
                 }
                 row["cols"] = cols;
