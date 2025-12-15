@@ -355,7 +355,7 @@ public class FwDynamicController : FwController
     public virtual void Validate<TRow>(int id, TRow dto) where TRow : class, new()
     {
         ArgumentNullException.ThrowIfNull(dto);
-        Validate(id, dto.toHashtable());
+        Validate(id, dto.toFwDict());
     }
 
     protected virtual bool validateRequiredDynamic(int id, FwDict item)

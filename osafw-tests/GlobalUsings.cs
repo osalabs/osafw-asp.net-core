@@ -3,7 +3,6 @@
 // Mirrors the aliases from osafw-app so shared helper types like StrList and IntList
 // are available when running the unit tests.
 
-global using ObjDict = System.Collections.Generic.Dictionary<string, object?>;
 global using StrDict = System.Collections.Generic.Dictionary<string, string>;
 global using ObjList = System.Collections.Generic.List<object?>;
 global using StrList = System.Collections.Generic.List<string>;

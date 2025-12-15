@@ -10,9 +10,12 @@ namespace osafw;
 
 public class FwDict : Dictionary<string, object?>
 {
-    public FwDict() : base(StringComparer.Ordinal) { }
-    public FwDict(int capacity) : base(capacity, StringComparer.Ordinal) { }
-    public FwDict(IDictionary? src) : base(src?.Count ?? 0, StringComparer.Ordinal)
+    public FwDict() : this((IEqualityComparer<string>?)null) { }
+    public FwDict(IEqualityComparer<string>? comparer) : base(comparer ?? StringComparer.Ordinal) { }
+    public FwDict(int capacity) : this(capacity, null) { }
+    public FwDict(int capacity, IEqualityComparer<string>? comparer) : base(capacity, comparer ?? StringComparer.Ordinal) { }
+    public FwDict(IDictionary? src) : this(src, null) { }
+    public FwDict(IDictionary? src, IEqualityComparer<string>? comparer) : base(src?.Count ?? 0, comparer ?? StringComparer.Ordinal)
     {
         if (src != null)
             foreach (DictionaryEntry e in src)

@@ -6,7 +6,6 @@
 global using System.Collections.Generic;
 
 // aliases for commonly used types
-global using ObjDict = System.Collections.Generic.Dictionary<string, object?>;
 global using StrDict = System.Collections.Generic.Dictionary<string, string>;
 global using ObjList = System.Collections.Generic.List<object?>;
 global using StrList = System.Collections.Generic.List<string>;

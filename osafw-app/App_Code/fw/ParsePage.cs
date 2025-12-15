@@ -713,7 +713,7 @@ public class ParsePage
         else if (tag_value is FwDict ht)
             sub_hf = ht;
         else if (tag_value != null)
-            sub_hf = tag_value.toHashtable();
+            sub_hf = tag_value.toFwDict();
 
         if (sub_hf == null)
         {
@@ -885,7 +885,7 @@ public class ParsePage
         else if (uftag[i] is FwDict ht)
             uftagi1 = ht;
         else
-            uftagi1 = uftag[i].toHashtable();
+            uftagi1 = uftag[i].toFwDict();
 
         FwDict uftagi = new(uftagi1); // make a shallow copy as we modify this level
         int cnt = uftag.Count;
