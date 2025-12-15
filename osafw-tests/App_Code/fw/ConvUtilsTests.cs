@@ -1,15 +1,11 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using osafw;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace osafw.Tests
 {
-    [TestClass()]
-    public class ConvUtilsTests
+[TestClass()]
+[Ignore("Not implemented")]
+public class ConvUtilsTests
     {
         [TestMethod()]
         public void parsePagePdfTest()

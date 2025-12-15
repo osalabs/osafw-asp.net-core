@@ -10,7 +10,6 @@
 // uncomment windows login button in template/index/form.html
 
 using System;
-using System.Collections;
 using System.Text.RegularExpressions;
 
 namespace osafw;
@@ -77,7 +76,7 @@ public class WinLoginController : FwController
                 try
                 {
                     // if user not found - add it with minimum level
-                    usersId = fw.model<Users>().add(new Hashtable {
+                    usersId = fw.model<Users>().add(new FwDict {
                         {"email",  username+"@company.tld"},
                         {"access_level", Users.ACL_MEMBER},
                         {"login", username},

@@ -4,8 +4,6 @@
 // (c) 2009-2023 Oleg Savchuk www.osalabs.com
 
 using System;
-using System.Collections;
-using System.Collections.Generic;
 
 namespace osafw;
 
@@ -33,9 +31,9 @@ public class Resources : FwModel<Resources.Row>
     }
 
     //list all non-deleted resource icodes
-    public List<string> colIcodes(IList<int>? ids = null)
+    public StrList colIcodes(IList<int>? ids = null)
     {
-        var where = new Hashtable
+        var where = new FwDict
         {
             [field_status] = db.opNOT(STATUS_DELETED)
         };

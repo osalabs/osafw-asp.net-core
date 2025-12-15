@@ -4,7 +4,6 @@
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
 using System;
-using System.Collections;
 
 namespace osafw;
 public class MyViewsController : FwAdminController
@@ -34,7 +33,7 @@ public class MyViewsController : FwAdminController
         is_readonly = false;//allow update my stuff
     }
 
-    public override Hashtable initFilter(string? session_key = null)
+    public override FwDict initFilter(string? session_key = null)
     {
         var result = base.initFilter(session_key);
         if (!this.list_filter.ContainsKey("icode"))
@@ -57,14 +56,14 @@ public class MyViewsController : FwAdminController
         }
     }
 
-    public override Hashtable setPS(Hashtable? ps = null)
+    public override FwDict setPS(FwDict? ps = null)
     {
         var result = base.setPS(ps);
         result["select_icodes"] = model.listSelectIcodes();
         return result;
     }
 
-    public override Hashtable ShowFormAction(int id = 0)
+    public override FwDict ShowFormAction(int id = 0)
     {
         form_new_defaults = new() { ["icode"] = related_id };
         var ps = base.ShowFormAction(id)!;
@@ -72,14 +71,14 @@ public class MyViewsController : FwAdminController
         return ps;
     }
 
-    public override Hashtable? SaveAction(int id = 0)
+    public override FwDict? SaveAction(int id = 0)
     {
         route_onerror = FW.ACTION_SHOW_FORM; //set route to go if error happens
 
         if (this.save_fields == null)
             throw new Exception("No fields to save defined, define in Controller.save_fields");
 
-        Hashtable item = reqh("item");
+        FwDict item = reqh("item");
         var success = true;
         var is_new = (id == 0);
 
@@ -87,7 +86,7 @@ public class MyViewsController : FwAdminController
         // load old record if necessary
         // var itemOld = model0.one(id);
 
-        Hashtable itemdb = FormUtils.filter(item, this.save_fields);
+        FwDict itemdb = FormUtils.filter(item, this.save_fields);
         FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
 
         if (is_new)

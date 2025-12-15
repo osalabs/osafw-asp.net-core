@@ -24,8 +24,8 @@ Parses file templates and replaces <~tags> with values from dictionary
    ifge="var" value="XXX" - tag/template will be parsed only if var>=XXX
    iflt="var" value="XXX" - tag/template will be parsed only if var<XXX
    ifle="var" value="XXX" - tag/template will be parsed only if var<=XXX
-   var can be ICollection (/Dictionary/List/Hashtable/ArrayList/...)
-   <~tag if="List"> will fail if List.Count=0 or success if List.Count>0
+   var can be ICollection (FwRow/FwList/...)
+   <~tag if="FwList"> will fail if FwList.Count=0 or success if FwList.Count>0
 
   vvalue - value as hf variable:
     <~tag ifeq="var" vvalue="YYY"> - actual value got via hfvalue('YYY', $hf);
@@ -118,10 +118,8 @@ using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Reflection.Metadata.Ecma335;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
@@ -234,13 +232,13 @@ public class ParsePage
     }
 
 
-    public string parse_page(string bdir, string tpl_name, IDictionary ps)
+    public string parse_page(string bdir, string tpl_name, FwDict hf)
     {
         this.basedir = bdir;
         var hf = FwDict.From(ps);
         this.data_top = hf;
-        FwDict parent_ps = [];
-        // Return _parse_page(tpl_name, hf, "", "", parent_hf);
+        FwDict parent_hf = [];
+        // Return _parse_page(tpl_name, hf, "", "", parent_hf)
 
         // var startTime = DateTime.Now;
         var result = _parse_page(tpl_name, hf, "", parent_ps);
@@ -249,12 +247,11 @@ public class ParsePage
         return result;
     }
 
-    public string parse_string(string tpl, IDictionary ps)
+    public string parse_string(string tpl, FwDict hf)
     {
         basedir = "/";
-        FwDict parent_ps = [];
-        var hf = FwDict.From(ps);
-        return _parse_page("", hf, tpl, parent_ps);
+        FwDict parent_hf = [];
+        return _parse_page("", hf, tpl, parent_hf);
     }
 
     private string _parse_page(string tpl_name, FwDict hf, string page, FwDict parent_hf, FwDict? parent_attrs = null)
@@ -315,9 +312,9 @@ public class ParsePage
                     if (attrs.Contains("inline"))
                         inline_tpl = get_inline_tpl(ref page_orig, ref tag, ref tag_full);
 
-                    if (attrs.Contains("session"))
+                    if (attrs.ContainsKey("session"))
                         tag_value = hfvalue(tag, session != null ? session : new FwDict());
-                    else if (attrs.Contains("global"))
+                    else if (attrs.ContainsKey("global"))
                         tag_value = hfvalue(tag, globalsGetter());
                     else
                         tag_value = hfvalue(tag, hf, parent_hf);
@@ -333,7 +330,7 @@ public class ParsePage
                         value = _attr_repeat(ref tag, ref tag_value, ref tpl_name, ref inline_tpl, hf);
                     else if (attrs.Contains("select"))
                     {
-                        // this is special case for '<select>' HTML tag when options passed as ArrayList
+                        // this is special case for '<select>' HTML tag when options passed as FwList
                         value = _attr_select(tag, tpl_name, hf, attrs);
                     }
                     else if (attrs.Contains("selvalue"))
@@ -555,7 +552,7 @@ public class ParsePage
     // value (string, dictionary, etc..), empty string ""
     // Or Nothing - tag not present in hf param (only if hf is dictionary), file lookup will be necessary
     // set is_found to True if tag value found hf/parent_hf (so can be used to detect if there are no tag value at all so no fileseek required)
-    private object hfvalue(string tag, object hf, IDictionary? parent_hf = null)
+    private object hfvalue(string tag, object hf, FwDict? parent_hf = null)
     {
         object tag_value = "";
         object? ptr;
@@ -610,6 +607,16 @@ public class ParsePage
                         else
                         {
                             ptr = ""; // out of Array bounds
+                            break;
+                        }
+                    }
+                    else if (ptr is FwDict hashtable)
+                    {
+                        if (hashtable.ContainsKey(k))
+                            ptr = hashtable[k];
+                        else
+                        {
+                            ptr = ""; // no such key in hash
                             break;
                         }
                     }
@@ -717,7 +724,7 @@ public class ParsePage
     }
 
     // Check for misc if attrs
-    private bool _attr_if(IDictionary attrs, IDictionary hf, IDictionary? parent_hf = null)
+    private bool _attr_if(FwDict attrs, FwDict hf, FwDict? parent_hf = null)
     {
         if (attrs.Count == 0)
             return true; // if there are no if operation - return true anyway and early
@@ -851,7 +858,7 @@ public class ParsePage
         if (tag_val_array is not IList)
         {
             if (tag_val_array != null && tag_val_array.toStr() != "")
-                logger(LogLevel.DEBUG, "ParsePage - Not an ArrayList passed to repeat tag=", tag);
+                logger(LogLevel.DEBUG, "ParsePage - Not an FwList passed to repeat tag=", tag);
             return "";
         }
 
@@ -882,7 +889,7 @@ public class ParsePage
         else
             uftagi1 = [];
 
-        FwDict uftagi = uftagi1.Clone(); // make a shallow copy as we modify this level
+        FwDict uftagi = new(uftagi1); // make a shallow copy as we modify this level
         int cnt = uftag.Count;
 
         if (i == 0)

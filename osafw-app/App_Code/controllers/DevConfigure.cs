@@ -6,7 +6,6 @@
 // (c) 2009-2021  Oleg Savchuk www.osalabs.com
 
 using System;
-using System.Collections;
 using System.IO;
 
 namespace osafw;
@@ -29,9 +28,9 @@ public class DevConfigureController : FwController
         //true - allow access to all, including visitors
     }
 
-    public Hashtable IndexAction()
+    public FwDict IndexAction()
     {
-        Hashtable ps = [];
+        FwDict ps = [];
 
         ps["hide_sidebar"] = true;
         var aspnet_env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
@@ -40,8 +39,8 @@ public class DevConfigureController : FwController
         ps["is_config_env"] = String.IsNullOrEmpty(aspnet_env) || aspnet_env == ps["config_file_name"].toStr();
 
         ps["is_db_config"] = false;
-        var configdb = (Hashtable?)fw.config("db");
-        if (configdb?["main"] is Hashtable mainDb && !Utils.isEmpty(mainDb?["connection_string"]))
+        var configdb = (FwDict?)fw.config("db");
+        if (configdb?["main"] is FwDict mainDb && !Utils.isEmpty(mainDb?["connection_string"]))
             ps["is_db_config"] = true;
 
         DB db;
@@ -110,12 +109,12 @@ public class DevConfigureController : FwController
         return result;
     }
 
-    public Hashtable InitDBAction()
+    public FwDict InitDBAction()
     {
         if (!fw.config("IS_DEV").toBool())
             throw new AuthException("Not in a DEV mode");
 
-        Hashtable ps = [];
+        FwDict ps = [];
         int sql_ctr = 0;
         string[] files = ["fwdatabase.sql", "database.sql", "lookups.sql", "views.sql"];
         foreach (string file in files)
@@ -141,7 +140,7 @@ public class DevConfigureController : FwController
         return ps;
     }
 
-    public Hashtable? ApplyUpdatesAction()
+    public FwDict? ApplyUpdatesAction()
     {
         //only allow apply updates if in DEV mode or if user is site admin
         if (!fw.config("IS_DEV").toBool() && !fw.model<Users>().isSiteAdmin())

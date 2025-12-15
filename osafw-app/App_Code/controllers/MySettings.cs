@@ -3,8 +3,6 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
-using System.Collections;
-
 namespace osafw;
 
 public class MySettingsController : FwController
@@ -30,10 +28,10 @@ public class MySettingsController : FwController
         fw.redirect(base_url + "/new");
     }
 
-    public Hashtable ShowFormAction()
+    public FwDict ShowFormAction()
     {
-        Hashtable ps = [];
-        Hashtable item = reqh("item");
+        FwDict ps = [];
+        FwDict item = reqh("item");
         var id = fw.userId;
 
         if (isGet())
@@ -41,7 +39,7 @@ public class MySettingsController : FwController
         else
         {
             // read from db
-            Hashtable itemdb = model.one(id);
+            FwDict itemdb = model.one(id);
             // and merge new values from the form
             Utils.mergeHash(itemdb, item);
             item = itemdb;
@@ -64,7 +62,7 @@ public class MySettingsController : FwController
         // load old record if necessary
         // var itemOld = model.one(id);
 
-        Hashtable itemdb = FormUtils.filter(item, save_fields);
+        FwDict itemdb = FormUtils.filter(item, save_fields);
 
         model.update(id, itemdb);
         fw.flash("record_updated", 1);
@@ -74,7 +72,7 @@ public class MySettingsController : FwController
         afterSave(true, id);
     }
 
-    public void Validate(int id, Hashtable item)
+    public void Validate(int id, FwDict item)
     {
         bool result = true;
         result &= validateRequired(id, item, Utils.qw(required_fields));

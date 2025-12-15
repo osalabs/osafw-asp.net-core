@@ -4,7 +4,6 @@
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
 using System;
-using System.Collections;
 
 namespace osafw;
 
@@ -33,7 +32,7 @@ public class MyFiltersController : FwAdminController
         related_id = reqs("related_id");
     }
 
-    public override Hashtable initFilter(string? session_key = null)
+    public override FwDict initFilter(string? session_key = null)
     {
         base.initFilter(session_key);
         if (!this.list_filter.ContainsKey("icode"))
@@ -56,7 +55,7 @@ public class MyFiltersController : FwAdminController
         }
     }
 
-    public override Hashtable ShowFormAction(int id = 0)
+    public override FwDict ShowFormAction(int id = 0)
     {
         form_new_defaults = new() { ["icode"] = related_id };
         var ps = base.ShowFormAction(id)!;
@@ -64,7 +63,7 @@ public class MyFiltersController : FwAdminController
         return ps;
     }
 
-    public override Hashtable? SaveAction(int id = 0)
+    public override FwDict? SaveAction(int id = 0)
     {
         route_onerror = FW.ACTION_SHOW_FORM; //set route to go if error happens
 
@@ -86,7 +85,7 @@ public class MyFiltersController : FwAdminController
         if (item_old.Count > 0 && item_old["is_system"].toInt() == 1)
             throw new UserException("Cannot overwrite system filter");
 
-        Hashtable itemdb = FormUtils.filter(item, this.save_fields);
+        FwDict itemdb = FormUtils.filter(item, this.save_fields);
         FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
 
         if (is_new || is_overwrite)

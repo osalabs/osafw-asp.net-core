@@ -3,8 +3,6 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
-using System.Collections;
-
 namespace osafw;
 
 public class AdminReportsController : FwController
@@ -18,9 +16,9 @@ public class AdminReportsController : FwController
         base_url = "/Admin/Reports"; // base url for the controller
     }
 
-    public Hashtable IndexAction()
+    public FwDict IndexAction()
     {
-        Hashtable ps = [];
+        FwDict ps = [];
 
         return ps;
     }
@@ -54,7 +52,7 @@ public class AdminReportsController : FwController
             report.getData();
 
         // show or output report according format
-        Hashtable ps = [];
+        FwDict ps = [];
         ps["return_url"] = return_url;
 
         report.render(ps);
@@ -88,7 +86,7 @@ public class AdminReportsController : FwController
         var to_emails = f["to_emails"].toStr();
 
         string mail_subject = "Report " + repcode;
-        Hashtable filenames = [];
+        FwDict filenames = [];
 
         var email_as = f["email_as"].toStr();
         string mail_body;
@@ -100,7 +98,7 @@ public class AdminReportsController : FwController
         }
         else
         {
-            var ps = new Hashtable {
+            var ps = new FwDict {
                 { "_layout", fw.config("PAGE_LAYOUT_EMAIL") }
             };
             var html = FwReports.createHtml(fw, repcode, f, ps);

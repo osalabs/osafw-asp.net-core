@@ -5,7 +5,6 @@
 
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Text.RegularExpressions;
@@ -23,7 +22,7 @@ public abstract class FwController
     public string base_url_suffix = string.Empty;        // additional base url suffix
     public string template_basedir = "";  // templates base dir for the controller, if not set - [/route_prefix]/route_controller used
 
-    public Hashtable form_new_defaults = [];   // optional, defaults for the fields in new form, overridden by item passed from request
+    public FwDict form_new_defaults = [];   // optional, defaults for the fields in new form, overridden by item passed from request
     public string required_fields = string.Empty;        // optional, default required fields, space-separated
     public string save_fields = string.Empty;            // required, fields to save from the form to db, space-separated
     public string save_fields_checkboxes = string.Empty; // optional, checkboxes fields to save from the form to db, qw string: "field|def_value field2|def_value2"
@@ -31,24 +30,24 @@ public abstract class FwController
     protected FW fw = null!;
     protected DB db = null!;
     protected FwModel model0 = null!;
-    protected Hashtable config = [];                  // controller config, loaded from template dir/config.json
-    protected Hashtable access_actions_to_permissions = []; // optional, controller-level custom actions to permissions mapping for role-based access checks, e.g. "UIMain" => Permissions.PERMISSION_VIEW . Can also be used to override default actions to permissions
+    protected FwDict config = [];                  // controller config, loaded from template dir/config.json
+    protected FwDict access_actions_to_permissions = []; // optional, controller-level custom actions to permissions mapping for role-based access checks, e.g. "UIMain" => Permissions.PERMISSION_VIEW . Can also be used to override default actions to permissions
 
     protected string list_view = string.Empty;                  // table/view to use in list sql, if empty model0.table_name used
     protected string list_fields = "*";          // comma-separated and quoted list of fields to select in list sql
     protected string list_orderby = string.Empty;               // orderby for the list screen
-    protected Hashtable list_filter = [];             // filter values for the list screen
-    protected Hashtable list_filter_search = [];      // filter for the search columns from reqh("search")
-    protected Hashtable list_where_params = [];       // any sql params for the list_where
+    protected FwDict list_filter = [];             // filter values for the list screen
+    protected FwDict list_filter_search = [];      // filter for the search columns from reqh("search")
+    protected FwDict list_where_params = [];       // any sql params for the list_where
     protected string list_where = " 1=1 ";       // where to use in list sql, default is non-deleted records (see setListSearch() )
     protected long list_count;                    // count of list rows returned from db
-    protected ArrayList list_rows = [];               // list rows returned from db (array of hashes)
-    protected ArrayList list_headers = [];            // list headers with misc meta info per column
-    protected ArrayList list_pager = [];              // pager for the list from FormUtils.getPager
+    protected FwList list_rows = [];               // list rows returned from db (array of hashes)
+    protected FwList list_headers = [];            // list headers with misc meta info per column
+    protected FwList list_pager = [];              // pager for the list from FormUtils.getPager
     protected int list_pagesize_export = 10000;  // max pagesize for export (to avoid memory issues on large exports), override in controller if needed
     protected string list_sortdef = string.Empty;               // required for Index, default list sorting: name asc|desc
-    protected Hashtable list_sortmap = [];            // required for Index, sortmap fields
-    protected Hashtable list_user_view = [];          // optional, user view settings for the list screen from UserViews model
+    protected FwDict list_sortmap = [];            // required for Index, sortmap fields
+    protected FwDict list_user_view = [];          // optional, user view settings for the list screen from UserViews model
     protected string search_fields = string.Empty;              // optional, search fields, space-separated
                                                  // fields to search via $s=list_filter["s"), ] - means exact match, not "like"
 
@@ -63,7 +62,7 @@ public abstract class FwController
     // map of fileld names to screen names
     protected bool is_dynamic_index = false;     // true if controller has dynamic IndexAction, then define below:
     protected string view_list_defaults = "";    // qw list of default columns
-    protected Hashtable view_list_map = [];           // list of all available columns fieldname|visiblename
+    protected FwDict view_list_map = [];           // list of all available columns fieldname|visiblename
     protected string view_list_custom = "";      // qw list of custom-formatted fields for the list_table
 
     protected bool is_dynamic_show = false;      // true if controller has dynamic ShowAction, requires "show_fields" to be defined in config.json
@@ -80,7 +79,7 @@ public abstract class FwController
     protected string related_id = string.Empty;          // related id, passed via request. Controller should limit view to items related to this id
     protected string related_field_name = string.Empty;  // if set (in Controller) and $related_id passed - list will be filtered on this field
 
-    protected Hashtable rbac = [];               // RBAC for the current user, read in init()
+    protected FwDict rbac = [];               // RBAC for the current user, read in init()
 
     private const string ControllerConfigCacheKeyPrefix = "fw:controller-config:";
 
@@ -109,26 +108,26 @@ public abstract class FwController
     }
 
     // load controller config (usually from config.json) with caching based on file last write time
-    public virtual Hashtable getControllerConfigCached(string full_path)
+    public virtual FwDict getControllerConfigCached(string full_path)
     {
         var lastWriteTimeUtc = System.IO.File.GetLastWriteTimeUtc(full_path);
 
         var cacheKey = ControllerConfigCacheKeyPrefix + full_path.ToLowerInvariant();
-        if (FwCache.getValue(cacheKey) is Hashtable cached &&
+        if (FwCache.getValue(cacheKey) is FwDict cached &&
             cached["lastWriteTimeUtc"] is DateTime cachedWriteTime &&
             cachedWriteTime == lastWriteTimeUtc)
         {
-            if (cached["template"] is Hashtable cachedTemplate)
+            if (cached["template"] is FwDict cachedTemplate)
                 return Utils.cloneHashDeep(cachedTemplate) ?? []; // CACHE HIT - return a clone of the cached template
         }
 
         // CACHE MISS - load from file
         var parsedObj = Utils.jsonDecode(Utils.getFileContent(full_path));
-        if (parsedObj is not Hashtable parsed)
+        if (parsedObj is not FwDict parsed)
             throw new ApplicationException("Controller Config is invalid, check json in templates: " + full_path);
 
         // store a pristine copy so subsequent loads can reuse the parsed structure without re-reading JSON
-        var cacheEntry = new Hashtable
+        var cacheEntry = new FwDict
         {
             ["lastWriteTimeUtc"] = lastWriteTimeUtc,
             ["template"] = parsed,
@@ -159,66 +158,66 @@ public abstract class FwController
         loadControllerConfig(config);
     }
 
-    public virtual void loadControllerConfig(Hashtable config)
+    public virtual void loadControllerConfig(FwDict config)
     {
         this.config = config;
         // logger("loaded config:")
         // logger(config)
 
-        var model_name = this.config["model"].toStr();
+        var model_name = config["model"].toStr();
         if (!string.IsNullOrEmpty(model_name))
             model0 = fw.model(model_name);
 
         // check/conv to str
-        required_fields = this.config["required_fields"].toStr();
-        is_userlists = this.config["is_userlists"].toBool();
+        required_fields = config["required_fields"].toStr();
+        is_userlists = config["is_userlists"].toBool();
 
         // save_fields could be defined as qw string - check and convert
-        var save_fields_raw = this.config["save_fields"];
+        var save_fields_raw = config["save_fields"];
         if (save_fields_raw is IList list)
             save_fields = Utils.qwRevert(list); // not optimal, but simplest for now
         else
             save_fields = save_fields_raw.toStr();
 
-        form_new_defaults = this.config["form_new_defaults"] as Hashtable ?? [];
+        form_new_defaults = config["form_new_defaults"] as FwDict ?? [];
 
         // save_fields_checkboxes could be defined as qw string - check and convert
-        var save_fields_checkboxes_raw = this.config["save_fields_checkboxes"];
+        var save_fields_checkboxes_raw = config["save_fields_checkboxes"];
         if (save_fields_checkboxes_raw is IDictionary dictionary)
             save_fields_checkboxes = Utils.qhRevert(dictionary); // not optimal, but simplest for now
         else
             save_fields_checkboxes = save_fields_checkboxes_raw.toStr();
 
-        search_fields = this.config["search_fields"].toStr();
-        list_sortdef = this.config["list_sortdef"].toStr();
+        search_fields = config["search_fields"].toStr();
+        list_sortdef = config["list_sortdef"].toStr();
 
-        var list_sortmap_raw = this.config["list_sortmap"];
+        var list_sortmap_raw = config["list_sortmap"];
         if (list_sortmap_raw is IDictionary)
-            list_sortmap = (Hashtable)list_sortmap_raw;
+            list_sortmap = (FwDict)list_sortmap_raw;
         else
-            list_sortmap = Utils.qh(this.config["list_sortmap"].toStr());
+            list_sortmap = Utils.qh(config["list_sortmap"].toStr());
 
-        related_field_name = this.config["related_field_name"].toStr();
+        related_field_name = config["related_field_name"].toStr();
 
-        list_view = this.config["list_view"].toStr();
+        list_view = config["list_view"].toStr();
 
-        is_dynamic_index = this.config["is_dynamic_index"].toBool();
+        is_dynamic_index = config["is_dynamic_index"].toBool();
         if (is_dynamic_index)
         {
             // Whoah! list view is dynamic
-            view_list_defaults = this.config["view_list_defaults"].toStr();
+            view_list_defaults = config["view_list_defaults"].toStr();
 
             // since view_list_map could be defined as qw string or as hashtable - check and convert
-            var raw_view_list_map = this.config["view_list_map"];
+            var raw_view_list_map = config["view_list_map"];
             if (raw_view_list_map is IDictionary)
-                view_list_map = (Hashtable)raw_view_list_map;
+                view_list_map = (FwDict)raw_view_list_map;
             else
                 view_list_map = Utils.qh(raw_view_list_map.toStr());
 
-            view_list_custom = this.config["view_list_custom"].toStr();
+            view_list_custom = config["view_list_custom"].toStr();
         }
 
-        is_dynamic_index_edit = this.config["is_dynamic_index_edit"].toBool();
+        is_dynamic_index_edit = config["is_dynamic_index_edit"].toBool();
         if (is_dynamic_index_edit)
         {
             //combine with request param
@@ -244,7 +243,7 @@ public abstract class FwController
                 {
                     var raw_edit_list_map = config["edit_list_map"];
                     if (raw_edit_list_map is IDictionary)
-                        view_list_map = (Hashtable)raw_edit_list_map;
+                        view_list_map = (FwDict)raw_edit_list_map;
                     else
                         view_list_map = Utils.qh(raw_edit_list_map.toStr());
                 }
@@ -260,10 +259,10 @@ public abstract class FwController
                 search_fields = getViewListUserFields(); // just search in all visible fields if no specific fields defined
         }
 
-        is_dynamic_show = this.config["is_dynamic_show"].toBool();
-        is_dynamic_showform = this.config["is_dynamic_showform"].toBool();
+        is_dynamic_show = config["is_dynamic_show"].toBool();
+        is_dynamic_showform = config["is_dynamic_showform"].toBool();
 
-        route_return = this.config["route_return"].toStr();
+        route_return = config["route_return"].toStr();
     }
 
     /// <summary>
@@ -298,13 +297,13 @@ public abstract class FwController
     }
 
     /// <summary>
-    /// return Hashtable value from request (fw.FORM)
+    /// return FwRow value from request (fw.FORM)
     /// </summary>
     /// <param name="iname"></param>
     /// <returns></returns>
-    public Hashtable reqh(string iname)
+    public FwDict reqh(string iname)
     {
-        if (fw.FORM[iname] is Hashtable hf)
+        if (fw.FORM[iname] is FwDict hf)
             return hf; 
         else
             return [];
@@ -379,13 +378,13 @@ public abstract class FwController
     // NOTE: automatically set to defaults - pagenum=0 and pagesize=MAX_PAGE_ITEMS
     // NOTE: if request param 'dofilter' passed - session filters cleaned
     // sample in IndexAction: me.get_filter()
-    public virtual Hashtable initFilter(string? session_key = null)
+    public virtual FwDict initFilter(string? session_key = null)
     {
-        Hashtable f = reqh("f");
+        FwDict f = reqh("f");
 
         session_key ??= "_filter_" + fw.G["controller.action"];
 
-        Hashtable sfilter = fw.SessionHashtable(session_key) ?? [];
+        FwDict sfilter = fw.SessionHashtable(session_key) ?? [];
 
         // if not forced filter - merge form filters to session filters
         bool is_dofilter = fw.FORM.ContainsKey("dofilter");
@@ -401,7 +400,7 @@ public abstract class FwController
             if (userfilters_id > 0)
             {
                 var uf = fw.model<UserFilters>().one(userfilters_id);
-                if (Utils.jsonDecode(uf["idesc"]) is Hashtable f1)
+                if (Utils.jsonDecode(uf["idesc"]) is FwDict f1)
                     f = f1;
                 if (!uf["is_system"].toBool())
                 {
@@ -454,7 +453,7 @@ public abstract class FwController
     /// <param name="session_key"></param>
     public virtual void clearFilter(string? session_key = null)
     {
-        Hashtable f = [];
+        FwDict f = [];
         session_key ??= "_filter_" + fw.G["controller.action"];
         fw.SessionHashtable(session_key, f);
         this.list_filter = f;
@@ -469,7 +468,7 @@ public abstract class FwController
     /// <param name="form_errors">optional - form errors to fill</param>
     /// <returns>true if all required field names non-empty</returns>
     /// <remarks>also set global fw.FormErrors[REQUIRED]=true in case of validation error if no form_errors defined</remarks>
-    public virtual bool validateRequired(int id, Hashtable item, Array fields, Hashtable? form_errors = null)
+    public virtual bool validateRequired(int id, FwDict item, IList fields, FwDict? form_errors = null)
     {
         bool result = true;
 
@@ -481,7 +480,7 @@ public abstract class FwController
             is_global_errors = true;
         }
 
-        if (fields.Length > 0)
+        if (fields.Count > 0)
         {
             item ??= []; // if item is null - make it empty hash
             var is_new = (id == 0);
@@ -507,7 +506,7 @@ public abstract class FwController
         return result;
     }
     // same as above but fields param passed as a qw string
-    public virtual bool validateRequired(int id, Hashtable item, string fields)
+    public virtual bool validateRequired(int id, FwDict item, string fields)
     {
         return validateRequired(id, item, Utils.qw(fields));
     }
@@ -669,7 +668,7 @@ public abstract class FwController
     public virtual void setListSearchAdvanced()
     {
         // advanced search
-        Hashtable hsearch = list_filter_search;
+        FwDict hsearch = list_filter_search;
         foreach (string fieldname in hsearch.Keys)
         {
             string value = hsearch[fieldname].toStr();
@@ -768,7 +767,7 @@ public abstract class FwController
         return db.selectRaw(list_fields, qlist_view_name, list_where, list_where_params, list_orderby, offset, limit);
     }
 
-    public virtual List<string> getListIds(string list_view = "")
+    public virtual StrList getListIds(string list_view = "")
     {
         var sql = $"SELECT {model0.field_id} FROM {list_view} WHERE {list_where} ORDER BY {list_orderby}";
         return db.colp(sql, list_where_params);
@@ -827,7 +826,7 @@ public abstract class FwController
         }
 
         if (related_id.Length > 0)
-            Utils.arrayInject(list_rows, new Hashtable() { { "related_id", related_id } });
+            Utils.arrayInject(list_rows, new FwDict() { { "related_id", related_id } });
     }
 
     public virtual void setFormError(Exception ex)
@@ -844,7 +843,7 @@ public abstract class FwController
     /// <param name="fields">hash of field/values</param>
     /// <returns>new autoincrement id (if added) or old id (if update)</returns>
     /// <remarks>Also set fw.FLASH</remarks>
-    public virtual int modelAddOrUpdate(int id, Hashtable fields)
+    public virtual int modelAddOrUpdate(int id, FwDict fields)
     {
         // make conversions
         // - for date/time fields - convert from user format to UTC/SQL format
@@ -899,7 +898,7 @@ public abstract class FwController
     /// <param name="id"></param>
     /// <returns></returns>
     /// <exception cref="NotFoundException"></exception>
-    public virtual Hashtable modelOneOrFail(int id)
+    public virtual FwDict modelOneOrFail(int id)
     {
         var item = modelOne(id);
         if (item.Count == 0)
@@ -919,7 +918,7 @@ public abstract class FwController
     }
 
     // for simpler overriding in child controllers
-    public virtual Hashtable modelOne(int id)
+    public virtual FwDict modelOne(int id)
     {
         return model0.one(id);
     }
@@ -1019,15 +1018,15 @@ public abstract class FwController
     /// <param name="location">redirect to this location if success</param>
     /// <param name="more_json">added to json response</param>
     /// <returns></returns>
-    public virtual Hashtable? afterSave(bool success, object? id = null, bool is_new = false, string action = "ShowForm", string location = "", Hashtable? more_json = null)
+    public virtual FwDict? afterSave(bool success, object? id = null, bool is_new = false, string action = "ShowForm", string location = "", FwDict? more_json = null)
     {
         if (string.IsNullOrEmpty(location))
             location = this.afterSaveLocation(id.toStr());
 
         if (fw.isJsonExpected())
         {
-            var ps = new Hashtable();
-            var _json = new Hashtable()
+            var ps = new FwDict();
+            var _json = new FwDict()
             {
                 {"id",id},
                 {"is_new",is_new},
@@ -1038,13 +1037,13 @@ public abstract class FwController
             {
                 // set error message if any
                 _json["err_msg"] = fw.G["err_msg"]; // legacy TODO DEPRECATE
-                _json["error"] = new Hashtable() { { "message", fw.G["err_msg"] } };
+                _json["error"] = new FwDict() { { "message", fw.G["err_msg"] } };
             }
 
             // add FormErrors field errors to response if any
             if (fw.FormErrors.Count > 0)
             {
-                var error = _json["error"] as Hashtable ?? [];
+                var error = _json["error"] as FwDict ?? [];
                 error["details"] = fw.FormErrors;
                 _json["error"] = error;
             }
@@ -1067,7 +1066,7 @@ public abstract class FwController
         return null;
     }
 
-    public virtual Hashtable? afterSave(bool success, Hashtable more_json)
+    public virtual FwDict? afterSave(bool success, FwDict more_json)
     {
         return afterSave(success, "", false, "no_action", "", more_json);
     }
@@ -1118,7 +1117,7 @@ public abstract class FwController
         return ps;
     }
 
-    public virtual Hashtable setPS(Hashtable? ps = null)
+    public virtual FwDict setPS(FwDict? ps = null)
     {
         ps ??= [];
 
@@ -1153,7 +1152,7 @@ public abstract class FwController
         return ps;
     }
 
-    public virtual bool setUserLists(Hashtable ps, int id = 0)
+    public virtual bool setUserLists(FwDict ps, int id = 0)
     {
         // userlists support
         if (id == 0)
@@ -1170,9 +1169,9 @@ public abstract class FwController
 
         var fields = getViewListUserFields();
         // header names
-        ArrayList headers = [];
+        StrList headers = [];
         foreach (var fld in Utils.qw(fields))
-            headers.Add(view_list_map[fld]);
+            headers.Add(view_list_map[fld].toStr());
 
         string csv_export_headers = string.Join(",", headers.ToArray());
 
@@ -1182,7 +1181,7 @@ public abstract class FwController
             Utils.writeCSVExport(fw.response, export_filename + ".csv", csv_export_headers, fields, list_rows);
     }
 
-    public virtual void setAddUpdUser(Hashtable ps, Hashtable item)
+    public virtual void setAddUpdUser(FwDict ps, FwDict item)
     {
         if (!string.IsNullOrEmpty(model0.field_add_users_id) && item.ContainsKey(model0.field_add_users_id))
         {
@@ -1198,17 +1197,17 @@ public abstract class FwController
     // as arraylist of hashtables {field_name=>, field_name_visible=> [, is_checked=>true]} in right order
     // if fields defined - show fields only
     // if is_all true - then show all fields (not only from fields param)
-    public virtual ArrayList getViewListArr(string fields = "", bool is_all = false)
+    public virtual FwList getViewListArr(string fields = "", bool is_all = false)
     {
-        ArrayList result = [];
+        FwList result = [];
 
         // if fields defined - first show these fields, then the rest
-        Hashtable fields_added = [];
+        FwDict fields_added = [];
         if (!string.IsNullOrEmpty(fields))
         {
             foreach (var fieldname in Utils.qw(fields))
             {
-                result.Add(new Hashtable()
+                result.Add(new FwDict()
                 {
                     {"field_name",fieldname},
                     {"field_name_visible",view_list_map[fieldname]},
@@ -1235,7 +1234,7 @@ public abstract class FwController
                 if (fields_added.ContainsKey(k))
                     continue;
 
-                result.Add(new Hashtable()
+                result.Add(new FwDict()
                 {
                     {"field_name",k},
                     {"field_name_visible",view_list_map[k]},
@@ -1246,9 +1245,9 @@ public abstract class FwController
         return result;
     }
 
-    public virtual Hashtable getViewListSortmap()
+    public virtual FwDict getViewListSortmap()
     {
-        Hashtable result = [];
+        FwDict result = [];
         foreach (var fieldname in view_list_map.Keys)
             result[fieldname] = fieldname;
         return result;
@@ -1268,10 +1267,10 @@ public abstract class FwController
     /// </summary>
     /// <param name="afields"></param>
     /// <returns></returns>
-    public virtual Hashtable getViewListConversions(string[] afields)
+    public virtual FwDict getViewListConversions(string[] afields)
     {
         // load schema info to perform specific conversions
-        var result = new Hashtable();
+        var result = new FwDict();
         //use table_name or list_view if it's not subquery
         var list_view_name = model0.table_name;
         if (!string.IsNullOrEmpty(list_view) && !list_view.StartsWith('('))
@@ -1283,7 +1282,7 @@ public abstract class FwController
             var fieldname_lc = fieldname.ToLower();
             if (!table_schema.ContainsKey(fieldname_lc)) continue;
 
-            var field_schema = (Hashtable)table_schema[fieldname_lc]!;
+            var field_schema = (FwDict)table_schema[fieldname_lc]!;
             var fw_type = field_schema["fw_type"].toStr();
 
             if (fw_type == "date")
@@ -1310,7 +1309,7 @@ public abstract class FwController
     /// <param name="row">data row from db</param>
     /// <param name="hconversions">standard conversion rules from getViewListConversions</param>
     /// <returns></returns>
-    public virtual string applyViewListConversions(string fieldname, Hashtable row, Hashtable hconversions)
+    public virtual string applyViewListConversions(string fieldname, FwDict row, FwDict hconversions)
     {
         var data = row[fieldname].toStr();
         var conversion = hconversions[fieldname].toStr();
@@ -1338,7 +1337,7 @@ public abstract class FwController
 
         list_headers = getViewListArr(fields);
         // add search from user's submit
-        foreach (Hashtable header in list_headers)
+        foreach (FwDict header in list_headers)
         {
             var fieldName = header["field_name"].toStr();
             header["search_value"] = list_filter_search?[fieldName];
@@ -1353,14 +1352,14 @@ public abstract class FwController
 
             var hconversions = getViewListConversions(afields);
 
-            foreach (Hashtable row in list_rows)
+            foreach (FwDict row in list_rows)
             {
-                ArrayList cols = [];
+                FwList cols = [];
                 foreach (var fieldname in afields)
                 {
                     var data = applyViewListConversions(fieldname, row, hconversions);
 
-                    cols.Add(new Hashtable()
+                    cols.Add(new FwDict()
                     {
                         {"row",row},
                         {"field_name",fieldname},
@@ -1413,10 +1412,10 @@ public abstract class FwController
     }
 
     // Default Actions
-    //public virtual Hashtable IndexAction()
+    //public virtual FwRow IndexAction()
     //{
     //    logger("in Base controller IndexAction");
-    //    return new Hashtable();
+    //    return new FwRow();
     //}
 
 }

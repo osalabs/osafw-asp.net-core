@@ -5,7 +5,6 @@
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
 using System;
-using System.Collections;
 
 namespace osafw;
 
@@ -32,7 +31,7 @@ public class MyFeedbackController : FwController
         throw new ApplicationException("Not Implemented");
     }
 
-    public Hashtable? SaveAction()
+    public FwDict? SaveAction()
     {
         var item = reqh("item");
         var id = fw.userId;
@@ -41,9 +40,9 @@ public class MyFeedbackController : FwController
         // load old record if necessary
         // var itemOld = model.one(id);
 
-        Hashtable itemdb = FormUtils.filter(item, save_fields);
+        FwDict itemdb = FormUtils.filter(item, save_fields);
         var user = fw.model<Users>().one(id);
-        Hashtable ps = new()
+        FwDict ps = new()
             {
                 { "user", user },
                 { "i", itemdb },
@@ -56,7 +55,7 @@ public class MyFeedbackController : FwController
         return afterSave(true);
     }
 
-    public virtual void Validate(int id, Hashtable item)
+    public virtual void Validate(int id, FwDict item)
     {
         bool result = this.validateRequired(id, item, this.required_fields);
 

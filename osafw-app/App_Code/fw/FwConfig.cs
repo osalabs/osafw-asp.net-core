@@ -6,7 +6,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using System;
-using System.Collections;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
@@ -35,8 +34,8 @@ public static class FwConfig
     {
         if (settings["_route_prefixes_rx"] is string rx && rx.Length > 0) return rx;
 
-        // convert settings["route_prefixes"] FwDict (ex: /Admin => True) to ArrayList routePrefixes
-        var routePrefixes = new ArrayList((settings["route_prefixes"] as FwDict ?? []).Keys);
+        // convert settings["route_prefixes"] FwRow (ex: /Admin => True) to FwList routePrefixes
+        var routePrefixes = new StrList((settings["route_prefixes"] as FwDict ?? []).Keys.Cast<string>());
 
         var escaped = from string p in routePrefixes orderby p.Length descending select Regex.Escape(p);
         rx = @"^(" + string.Join("|", escaped) + @")(/.*)?$";

@@ -23,14 +23,12 @@ using Microsoft.Data.SqlClient;
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Data.Odbc;
 using System.Data.OleDb;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
@@ -49,7 +47,7 @@ public class DBRow : Dictionary<string, string>
 
     public DBRow() { }
     public DBRow(int capacity) : base(capacity) { }
-    public DBRow(Hashtable h)
+    public DBRow(FwDict h)
     {
         if (h != null)
         {
@@ -71,20 +69,26 @@ public class DBRow : Dictionary<string, string>
             base[key] = value;
         }
     }
-    public static implicit operator Hashtable(DBRow row)
+    public static implicit operator FwDict(DBRow row)
     {
-        Hashtable result = new(row.Count);
+        FwDict result = new(row.Count);
         foreach (string k in row.Keys)
         {
             result[k] = row[k];
         }
         return result;
     }
-    public static explicit operator DBRow(Hashtable row)
+    public static explicit operator DBRow(FwDict row)
     {
         return new DBRow(row ?? []);
     }
-    public Hashtable toHashtable()
+    public FwDict toFwDict()
+    {
+        return this;
+    }
+
+    [Obsolete("Use toFwDict() instead")]
+    public FwDict toHashtable()
     {
         return this;
     }
@@ -96,17 +100,23 @@ public class DBList : List<DBRow>
     public DBList() : base() { }
     public DBList(int capacity) : base(capacity) { }
 
-    public static implicit operator ArrayList(DBList rows)
+    public static implicit operator FwList(DBList rows)
     {
-        ArrayList result = new(rows.Count);
+        FwList result = new(rows.Count);
         foreach (var r in rows)
         {
-            result.Add((Hashtable)r);
+            result.Add((FwDict)r);
         }
         return result;
     }
 
-    public ArrayList toArrayList()
+    public FwList toFwList()
+    {
+        return this;
+    }
+
+    [Obsolete("Use toFwList() instead")]
+    public FwList toArrayList()
     {
         return this;
     }
@@ -199,9 +209,9 @@ public class DBOperation
 
 public struct DBQueryAndParams
 {
-    public ArrayList fields; // list of parametrized fields in order
+    public StrList fields; // list of parametrized fields in order
     public string sql; // sql with parameter names, ex: field=@field
-    public Hashtable @params; // paremeter name => value, ex: field => 123
+    public FwDict @params; // paremeter name => value, ex: field => 123
 }
 
 public class DB : IDisposable
@@ -217,9 +227,9 @@ public class DB : IDisposable
     public static readonly object NOW = new();
 
     // caches - lifetime = app lifetime
-    protected static ConcurrentDictionary<string, ConcurrentDictionary<string, ArrayList>> schemafull_cache = new(); // full schema, connstr => table => [field => full schema]
-    protected static ConcurrentDictionary<string, ConcurrentDictionary<string, Hashtable>> schema_cache = new(); // schema, connstr => table => [field => type]
-    protected static ConcurrentDictionary<string, ConcurrentDictionary<string, Hashtable>> schema_fk_cache = new(); // foreign keys, connstr => table => [field => referenced table]
+    protected static ConcurrentDictionary<string, ConcurrentDictionary<string, FwList>> schemafull_cache = new(); // full schema, connstr => table => [field => full schema]
+    protected static ConcurrentDictionary<string, ConcurrentDictionary<string, FwDict>> schema_cache = new(); // schema, connstr => table => [field => type]
+    protected static ConcurrentDictionary<string, ConcurrentDictionary<string, FwDict>> schema_fk_cache = new(); // foreign keys, connstr => table => [field => referenced table]
     protected static ConcurrentDictionary<string, string> timezone_cache = new(); // resolved db timezones per connection string
 
     public static string last_sql = ""; // last executed sql
@@ -238,7 +248,7 @@ public class DB : IDisposable
     public string db_name = "";
     public string dbtype = DBTYPE_SQLSRV; // SQL=SQL Server, OLE=OleDB, MySQL=MySQL
     public int sql_command_timeout = 30; // default command timeout, override in model for long queries (in reports or export, for example)
-    protected readonly Hashtable conf = [];  // config contains: connection_string, type
+    protected readonly FwDict conf = [];  // config contains: connection_string, type
     protected readonly string connstr = "";
     private TimeZoneInfo? timezoneInfo;
     private bool isTimezoneInited;
@@ -249,13 +259,13 @@ public class DB : IDisposable
     private string sql_now = "GETDATE()"; // default query for current datetime
     private string limit_method = "TOP"; // for SQL Server 2005+, for MySQL - LIMIT, for OLE - depends on provider
     private string offset_method = "FETCH NEXT"; // for SQL Server 2012+, for MySQL - LIMIT, for OLE - depends on provider
-    protected Dictionary<string, Hashtable> schema = []; // schema for currently connected db
+    protected Dictionary<string, FwDict> schema = []; // schema for currently connected db
 
     private DbConnection? conn; // actual db connection - SqlConnection or OleDbConnection
     private DbTransaction? tran; // current transaction (if any)
 
     protected bool is_check_ole_types = false; // if true - checks for unsupported OLE types during readRow
-    protected readonly Hashtable UNSUPPORTED_OLE_TYPES = Utils.qh("DBTYPE_IDISPATCH DBTYPE_IUNKNOWN"); // also? DBTYPE_ARRAY DBTYPE_VECTOR DBTYPE_BYTES
+    protected readonly FwDict UNSUPPORTED_OLE_TYPES = Utils.qh("DBTYPE_IDISPATCH DBTYPE_IUNKNOWN"); // also? DBTYPE_ARRAY DBTYPE_VECTOR DBTYPE_BYTES
 
     // cache per-reader metadata to avoid repeated reflection and metadata calls while iterating rows
     private readonly ConditionalWeakTable<DbDataReader, ReaderMeta> readerMetaCache = [];
@@ -313,21 +323,21 @@ public class DB : IDisposable
     }
 
     /// <summary>
-    ///  "synax sugar" helper to build Hashtable from list of arguments instead more complex New Hashtable from {...}
+    ///  "synax sugar" helper to build FwRow from list of arguments instead more complex New FwRow from {...}
     ///  Example: db.row("table", h("id", 123)) => "select * from table where id=123"
     ///  </summary>
     ///  <param name="args">even number of args required</param>
     ///  <returns></returns>
-    public static Hashtable h(params object?[] args)
+    public static FwDict h(params object?[] args)
     {
         if (args.Length == 0) return [];
         if (args.Length % 2 != 0)
             throw new ArgumentException("h() accepts even number of arguments");
 
-        Hashtable result = new(args.Length);
+        FwDict result = new(args.Length);
         for (var i = 0; i <= args.Length - 1; i += 2)
         {
-            var key = args[i] ?? string.Empty;
+            string key = args[i].toStr();
             result[key] = args[i + 1];
         }
 
@@ -349,7 +359,7 @@ public class DB : IDisposable
     ///  </summary>
     ///  <param name="conf">config hashtable with "connection_string" and "type" keys</param>
     ///  <param name="db_name">database human name, only used for logger</param>
-    public DB(Hashtable conf, string db_name = "main")
+    public DB(FwDict conf, string db_name = "main")
     {
         this.conf = conf ?? throw new ArgumentNullException(nameof(conf));
 
@@ -495,7 +505,7 @@ public class DB : IDisposable
         // first, try to get connection from request cache (so we will use only one connection per db server - TBD make configurable?)
         if (conn == null && context != null)
         {
-            var db_cache = context.Items["DB"] as Hashtable ?? [];
+            var db_cache = context.Items["DB"] as FwDict ?? [];
             conn = db_cache[cache_key] as DbConnection;
         }
 
@@ -507,7 +517,7 @@ public class DB : IDisposable
             //if cache defined - store connection in request cache
             if (context != null)
             {
-                var db_cache = context.Items["DB"] as Hashtable ?? [];
+                var db_cache = context.Items["DB"] as FwDict ?? [];
                 if (conn != null)
                 {
                     db_cache[cache_key] = conn;
@@ -729,14 +739,14 @@ public class DB : IDisposable
     /// <param name="params">param => value, value can be IList (example: new int[] {1,2,3}) - then sql query has something like "id IN (@ids)"</param>
     /// <returns></returns>
     /// <exception cref="ApplicationException"></exception>
-    public DbDataReader query(string sql, Hashtable? in_params = null)
+    public DbDataReader query(string sql, FwDict? in_params = null)
     {
         connect();
 
         disposeLastQuery();
 
         //shallow copy to avoid modifying original
-        Hashtable @params = in_params != null ? (Hashtable)in_params.Clone() : [];
+        FwDict @params = new(in_params);
 
         expandParams(ref sql, ref @params);
         @params ??= [];
@@ -771,7 +781,7 @@ public class DB : IDisposable
             foreach (string p in paramNames)
             {
                 // p name is without "@", but @params may or may not contain "@" prefix
-                var pvalue = @params.ContainsKey(p) ? @params[p] : @params["@" + p];
+                var pvalue = @params.TryGetValue(p, out object? value) ? value : @params["@" + p];
                 //logger(LogLevel.INFO, "DB:", db_name, " ", "param: ", p, " = ", pvalue);
                 oleDbCommand.Parameters.AddWithValue("?", convertParamValue(pvalue));
             }
@@ -820,7 +830,7 @@ public class DB : IDisposable
     /// </summary>
     /// <param name="sql"></param>
     /// <param name="params">if input params null - make empty hashtable</param>
-    private static void expandParams(ref string sql, ref Hashtable @params)
+    private static void expandParams(ref string sql, ref FwDict @params)
     {
         foreach (string p in @params.Keys.Cast<string>().ToList())
         {
@@ -840,7 +850,7 @@ public class DB : IDisposable
         }
     }
 
-    private void logQueryAndParams(string sql, Hashtable @params)
+    private void logQueryAndParams(string sql, FwDict @params)
     {
         if (@params.Count > 0)
             if (@params.Count == 1) // one param - just include inline for easier log reading
@@ -911,7 +921,7 @@ public class DB : IDisposable
 
     // like query(), but exectute without results (so db reader will be closed), return number of rows affected.
     // if is_get_identity=true - return last inserted id
-    public int exec(string sql, Hashtable? @params = null, bool is_get_identity = false)
+    public int exec(string sql, FwDict? @params = null, bool is_get_identity = false)
     {
         connect();
 
@@ -957,7 +967,7 @@ public class DB : IDisposable
             foreach (string p in paramNames)
             {
                 // p name is without "@", but @params may or may not contain "@" prefix
-                var pvalue = @params.ContainsKey(p) ? @params[p] : @params["@" + p];
+                var pvalue = @params.TryGetValue(p, out object? value) ? value : @params["@" + p];
                 //logger(LogLevel.INFO, "DB:", db_name, " ", "param: ", p, " = ", pvalue);
                 dbcomm.Parameters.AddWithValue("?", convertParamValue(pvalue));
             }
@@ -1110,7 +1120,7 @@ public class DB : IDisposable
     /// <param name="where"></param>
     /// <param name="order_by"></param>
     /// <returns></returns>
-    public DBRow row(string table, Hashtable where, string order_by = "")
+    public DBRow row(string table, FwDict where, string order_by = "")
     {
         var qp = buildSelect(table, where, order_by, 1);
         return rowp(qp.sql, qp.@params);
@@ -1123,7 +1133,7 @@ public class DB : IDisposable
     /// <param name="where"></param>
     /// <param name="order_by"></param>
     /// <returns></returns>
-    public T row<T>(string table, Hashtable where, string order_by = "") where T : new()
+    public T row<T>(string table, FwDict where, string order_by = "") where T : new()
     {
         var qp = buildSelect(table, where, order_by, 1);
         return rowp<T>(qp.sql, qp.@params);
@@ -1135,7 +1145,7 @@ public class DB : IDisposable
     /// <param name="sql"></param>
     /// <param name="params"></param>
     /// <returns></returns>
-    public DBRow rowp(string sql, Hashtable? @params = null)
+    public DBRow rowp(string sql, FwDict? @params = null)
     {
         DbDataReader dbread = query(sql, @params);
         var hasRow = dbread.Read();
@@ -1150,7 +1160,7 @@ public class DB : IDisposable
     /// <param name="sql"></param>
     /// <param name="params"></param>
     /// <returns></returns>
-    public T rowp<T>(string sql, Hashtable? @params = null) where T : new()
+    public T rowp<T>(string sql, FwDict? @params = null) where T : new()
     {
         DbDataReader dbread = query(sql, @params);
         var hasRow = dbread.Read();
@@ -1187,7 +1197,7 @@ public class DB : IDisposable
     /// <param name="sql"></param>
     /// <param name="params"></param>
     /// <returns></returns>
-    public DBList arrayp(string sql, Hashtable? @params = null)
+    public DBList arrayp(string sql, FwDict? @params = null)
     {
         DbDataReader dbread = query(sql, @params);
         return readArray(dbread);
@@ -1199,7 +1209,7 @@ public class DB : IDisposable
     /// <param name="sql"></param>
     /// <param name="params"></param>
     /// <returns></returns>
-    public List<T> arrayp<T>(string sql, Hashtable? @params = null) where T : new()
+    public List<T> arrayp<T>(string sql, FwDict? @params = null) where T : new()
     {
         DbDataReader dbread = query(sql, @params);
         return readArray<T>(dbread);
@@ -1210,11 +1220,11 @@ public class DB : IDisposable
         string result = "*";
         if (aselect_fields != null)
         {
-            ArrayList quoted = new(aselect_fields.Count);
-            if (aselect_fields is ArrayList)
+            StrList quoted = new(aselect_fields.Count);
+            if (aselect_fields is FwList)
             {
                 // arraylist of hashtables with "field","alias" keys - usable for the case when we need same field to be selected more than once with different aliases
-                foreach (Hashtable asf in aselect_fields)
+                foreach (FwDict asf in aselect_fields)
                 {
                     var field = asf["field"].toStr();
                     var alias = asf["alias"].toStr();
@@ -1267,13 +1277,13 @@ public class DB : IDisposable
     /// <param name="order_by">optional order by, MUST BE QUOTED</param>
     /// <param name="aselect_fields">optional select fields array or hashtable("field"=>"alias") or arraylist of hashtable("field"=>1,"alias"=>1) for cases if there could be several same fields with diff aliases), if not set * returned</param>
     /// <returns></returns>
-    public DBList array(string table, Hashtable where, string order_by = "", ICollection? aselect_fields = null)
+    public DBList array(string table, FwDict where, string order_by = "", ICollection? aselect_fields = null)
     {
         var qp = buildSelect(table, where, order_by, select_fields: buildSelectFields(aselect_fields));
         return arrayp(qp.sql, qp.@params);
     }
 
-    public List<T> array<T>(string table, Hashtable where, string order_by = "", ICollection? aselect_fields = null) where T : new()
+    public List<T> array<T>(string table, FwDict where, string order_by = "", ICollection? aselect_fields = null) where T : new()
     {
         var qp = buildSelect(table, where, order_by, select_fields: buildSelectFields(aselect_fields));
         return arrayp<T>(qp.sql, qp.@params);
@@ -1292,7 +1302,7 @@ public class DB : IDisposable
     /// <param name="limit"></param>
     /// <returns></returns>
     /// <exception cref="ApplicationException"></exception>
-    public DBList selectRaw(string fields, string from, string where, Hashtable where_params, string orderby, int offset = 0, int limit = -1)
+    public DBList selectRaw(string fields, string from, string where, FwDict where_params, string orderby, int offset = 0, int limit = -1)
     {
         DBList result;
         //TODO rework with limit() method
@@ -1344,7 +1354,7 @@ public class DB : IDisposable
     /// <param name="sql"></param>
     /// <param name="params"></param>
     /// <returns></returns>
-    public List<string> colp(string sql, Hashtable? @params = null)
+    public List<string> colp(string sql, FwDict? @params = null)
     {
         DbDataReader dbread = query(sql, @params);
         return readCol(dbread);
@@ -1359,7 +1369,7 @@ public class DB : IDisposable
     /// <param name="order_by">optional order by (MUST be quoted)</param>
     /// <param name="limit">optional limit, if -1 - no limit applied</param>
     /// <returns></returns>
-    public List<string> col(string table, Hashtable where, string field_name, string order_by = "", int limit = -1)
+    public List<string> col(string table, FwDict where, string field_name, string order_by = "", int limit = -1)
     {
         field_name ??= "";
 
@@ -1402,7 +1412,7 @@ public class DB : IDisposable
     }
 
     // return just first value from column
-    public object? valuep(string sql, Hashtable? @params = null)
+    public object? valuep(string sql, FwDict? @params = null)
     {
         DbDataReader dbread = query(sql, @params);
         return readValue(dbread);
@@ -1421,7 +1431,7 @@ public class DB : IDisposable
     /// <param name="field_name">(if not set - first selected field used) field name, special cases: "1", "count(*)", "SUM(field)", AVG/MAX/MIN,...</param>
     /// <param name="order_by"></param>
     /// <returns></returns>
-    public object? value(string table, Hashtable where, string field_name = "", string order_by = "")
+    public object? value(string table, FwDict where, string field_name = "", string order_by = "")
     {
         field_name ??= "";
 
@@ -1457,7 +1467,7 @@ public class DB : IDisposable
     // examples:
     // where = " field "& db.insql("a,b,c,d")
     // where = " field "& db.insql(string())
-    // where = " field "& db.insql(ArrayList)
+    // where = " field "& db.insql(FwList)
     public string insql(string parameters)
     {
         return insql(parameters.Split(","));
@@ -1467,9 +1477,17 @@ public class DB : IDisposable
         if (parameters == null || parameters.Count == 0)
             return " IN (NULL)";
 
+        bool isIntList = parameters is IList<int>;
+
         string[] result = new string[parameters.Count];
         for (int i = 0; i < parameters.Count; i++)
-            result[i] = this.q(parameters[i]);
+        {
+            var value = parameters[i];
+            if (isIntList || value is int)
+                result[i] = value?.ToString() ?? "0";
+            else
+                result[i] = this.q(value);
+        }
 
         StringBuilder sb = new();
         sb.Append(" IN (");
@@ -1694,10 +1712,10 @@ public class DB : IDisposable
 
         var join_delimiter = is_for_where ? " AND " : ",";
 
-        ArrayList fields_list = new(fields.Keys.Count);
+        StrList fields_list = new(fields.Keys.Count);
         List<string> params_sqls = [];
 
-        Hashtable @params = new(fields.Keys.Count);
+        FwDict @params = new(fields.Keys.Count);
         var reW = new Regex(@"\W"); //pre-compile regex
 
         foreach (string fname in fields.Keys)
@@ -1779,7 +1797,7 @@ public class DB : IDisposable
         };
     }
 
-    public DBQueryAndParams prepareParams(string table, Hashtable fields, string join_type = "where", string suffix = "")
+    public DBQueryAndParams prepareParams(string table, FwDict fields, string join_type = "where", string suffix = "")
     {
         return prepareParams(table, (IDictionary)fields, join_type, suffix);
     }
@@ -1809,13 +1827,13 @@ public class DB : IDisposable
         connect();
         loadTableSchema(table);
         field_name = field_name.ToLower();
-        if (!schema.TryGetValue(table, out var schema_table_obj) || schema_table_obj is not Hashtable schema_table || !schema_table.ContainsKey(field_name))
+        if (!schema.TryGetValue(table, out var schema_table_obj) || schema_table_obj is not FwDict schema_table || !schema_table.TryGetValue(field_name, out object? value))
         {
             //logger(LogLevel.DEBUG, "schema_table:", schema_table);
             throw new ApplicationException("field " + db_name + "." + table + "." + field_name + " does not defined in FW.config(\"schema\") ");
         }
 
-        string field_type = schema_table[field_name].toStr();
+        string field_type = value.toStr();
         //logger(LogLevel.DEBUG, "field2Op IN: ", table, ".", field_name, " ", field_type, " ", dbop.op, " ", dbop.value);
 
         // db operation
@@ -1823,11 +1841,11 @@ public class DB : IDisposable
         {
             if (dbop.value is not IList list || list.Count == 0)
             {
-                dbop.value = new ArrayList();
+                dbop.value = new FwList();
             }
             else
             {
-                ArrayList result = new(list.Count);
+                List<object?> result = new(list.Count);
                 foreach (var pvalue in list)
                     result.Add(field2typed(field_type, pvalue));
                 dbop.value = result;
@@ -1837,7 +1855,7 @@ public class DB : IDisposable
         {
             if (dbop.value is not IList list || list.Count < 2)
             {
-                dbop.value = new ArrayList() { field2typed(field_type, DBNull.Value), field2typed(field_type, DBNull.Value) };
+                dbop.value = new List<object?>() { field2typed(field_type, DBNull.Value), field2typed(field_type, DBNull.Value) };
             }
             else
             {
@@ -1926,7 +1944,7 @@ public class DB : IDisposable
     /// <summary>
     /// EQUAL operation, basically the same as assigning value directly
     /// But for null/DBNull values - return ISNULL operation - equivalent to opISNULL()
-    /// Example: Dim rows = db.array("users", New Hashtable From {{"status", db.opEQ(0)}})
+    /// Example: Dim rows = db.array("users", New FwRow From {{"status", db.opEQ(0)}})
     /// <![CDATA[ select * from users where status=0 ]]>
     /// </summary>
     /// <param name="value"></param>
@@ -1941,7 +1959,7 @@ public class DB : IDisposable
 
     /// <summary>
     ///  NOT EQUAL operation
-    ///  Example: Dim rows = db.array("users", New Hashtable From {{"status", db.opNOT(127)}})
+    ///  Example: Dim rows = db.array("users", New FwRow From {{"status", db.opNOT(127)}})
     ///  <![CDATA[ select * from users where status<>127 ]]>
     ///  </summary>
     ///  <param name="value"></param>
@@ -1953,7 +1971,7 @@ public class DB : IDisposable
 
     /// <summary>
     ///  LESS or EQUAL than operation
-    ///  Example: Dim rows = db.array("users", New Hashtable From {{"access_level", db.opLE(50)}})
+    ///  Example: Dim rows = db.array("users", New FwRow From {{"access_level", db.opLE(50)}})
     ///  <![CDATA[ select * from users where access_level<=50 ]]>
     ///  </summary>
     ///  <param name="value"></param>
@@ -1965,7 +1983,7 @@ public class DB : IDisposable
 
     /// <summary>
     ///  LESS THAN operation
-    ///  Example: Dim rows = db.array("users", New Hashtable From {{"access_level", db.opLT(50)}})
+    ///  Example: Dim rows = db.array("users", New FwRow From {{"access_level", db.opLT(50)}})
     ///  <![CDATA[ select * from users where access_level<50 ]]>
     ///  </summary>
     ///  <param name="value"></param>
@@ -1977,7 +1995,7 @@ public class DB : IDisposable
 
     /// <summary>
     ///  GREATER or EQUAL than operation
-    ///  Example: Dim rows = db.array("users", New Hashtable From {{"access_level", db.opGE(50)}})
+    ///  Example: Dim rows = db.array("users", New FwRow From {{"access_level", db.opGE(50)}})
     ///  <![CDATA[ select * from users where access_level>=50 ]]>
     ///  </summary>
     ///  <param name="value"></param>
@@ -1989,7 +2007,7 @@ public class DB : IDisposable
 
     /// <summary>
     ///  GREATER THAN operation
-    ///  Example: Dim rows = db.array("users", New Hashtable From {{"access_level", db.opGT(50)}})
+    ///  Example: Dim rows = db.array("users", New FwRow From {{"access_level", db.opGT(50)}})
     ///  <![CDATA[ select * from users where access_level>50 ]]>
     ///  </summary>
     ///  <param name="value"></param>
@@ -2000,7 +2018,7 @@ public class DB : IDisposable
     }
 
     /// <summary>
-    ///  Example: Dim rows = db.array("users", New Hashtable From {{"field", db.opISNULL()}})
+    ///  Example: Dim rows = db.array("users", New FwRow From {{"field", db.opISNULL()}})
     ///  select * from users where field IS NULL
     ///  </summary>
     ///  <returns></returns>
@@ -2009,7 +2027,7 @@ public class DB : IDisposable
         return new DBOperation(DBOps.ISNULL);
     }
     /// <summary>
-    ///  Example: Dim rows = db.array("users", New Hashtable From {{"field", db.opISNOTNULL()}})
+    ///  Example: Dim rows = db.array("users", New FwRow From {{"field", db.opISNOTNULL()}})
     ///  select * from users where field IS NOT NULL
     ///  </summary>
     ///  <returns></returns>
@@ -2018,7 +2036,7 @@ public class DB : IDisposable
         return new DBOperation(DBOps.ISNOTNULL);
     }
     /// <summary>
-    ///  Example: Dim rows = DB.array("users", New Hashtable From {{"address1", db.opLIKE("%Orlean%")}})
+    ///  Example: Dim rows = DB.array("users", New FwRow From {{"address1", db.opLIKE("%Orlean%")}})
     ///  select * from users where address1 LIKE '%Orlean%'
     ///  </summary>
     ///  <param name="value"></param>
@@ -2028,7 +2046,7 @@ public class DB : IDisposable
         return new DBOperation(DBOps.LIKE, value);
     }
     /// <summary>
-    ///  Example: Dim rows = DB.array("users", New Hashtable From {{"address1", db.opNOTLIKE("%Orlean%")}})
+    ///  Example: Dim rows = DB.array("users", New FwRow From {{"address1", db.opNOTLIKE("%Orlean%")}})
     ///  select * from users where address1 NOT LIKE '%Orlean%'
     ///  </summary>
     ///  <param name="value"></param>
@@ -2043,7 +2061,7 @@ public class DB : IDisposable
     ///  opIN(1,2,4) - as multiple arguments
     ///  opIN(array) - as one array of values
     ///
-    ///  Example: Dim rows = db.array("users", New Hashtable From {{"id", db.opIN(1, 2)}})
+    ///  Example: Dim rows = db.array("users", New FwRow From {{"id", db.opIN(1, 2)}})
     ///  select * from users where id IN (1,2)
     ///  </summary>
     ///  <param name="args"></param>
@@ -2073,7 +2091,7 @@ public class DB : IDisposable
     ///  opIN(1,2,4) - as multiple arguments
     ///  opIN(array) - as one array of values
     ///
-    ///  Example: Dim rows = db.array("users", New Hashtable From {{"id", db.opNOTIN(1, 2)}})
+    ///  Example: Dim rows = db.array("users", New FwRow From {{"id", db.opNOTIN(1, 2)}})
     ///  select * from users where id NOT IN (1,2)
     ///  </summary>
     ///  <param name="args"></param>
@@ -2099,7 +2117,7 @@ public class DB : IDisposable
     }
 
     /// <summary>
-    ///  Example: Dim rows = db.array("users", New Hashtable From {{"field", db.opBETWEEN(10,20)}})
+    ///  Example: Dim rows = db.array("users", New FwRow From {{"field", db.opBETWEEN(10,20)}})
     ///  select * from users where field BETWEEN 10 AND 20
     ///  </summary>
     ///  <returns></returns>
@@ -2148,7 +2166,7 @@ public class DB : IDisposable
 
         return insertQueryAndParams(qp);
     }
-    public int insert(string table, Hashtable fields)
+    public int insert(string table, FwDict fields)
     {
         return insert(table, (IDictionary)fields);
     }
@@ -2182,7 +2200,7 @@ public class DB : IDisposable
         var qp = buildUpdate(table, fields, where);
         return exec(qp.sql, qp.@params);
     }
-    public int update(string table, Hashtable fields, Hashtable where)
+    public int update(string table, FwDict fields, FwDict where)
     {
         var qp = buildUpdate(table, fields, where);
         return exec(qp.sql, qp.@params);
@@ -2210,7 +2228,7 @@ public class DB : IDisposable
     /// <param name="sql"></param>
     /// <param name="params"></param>
     /// <returns></returns>
-    public int updatep(string sql, Hashtable? @params = null)
+    public int updatep(string sql, FwDict? @params = null)
     {
         return exec(sql, @params);
     }
@@ -2233,7 +2251,7 @@ public class DB : IDisposable
     /// <param name="table">table name</param>
     /// <param name="where">optional where, WARNING, if empty - DELETE ALL RECORDS in table</param>
     /// <returns>number of affected rows</returns>
-    public int del(string table, Hashtable? where = null)
+    public int del(string table, FwDict? where = null)
     {
         where ??= [];
         var qp = buildDelete(table, where);
@@ -2326,11 +2344,11 @@ public class DB : IDisposable
     }
 
     // return array of table names in current db
-    public ArrayList tables()
+    public StrList tables()
     {
         DbConnection conn = this.connect();
         DataTable dataTable = conn.GetSchema("Tables");
-        ArrayList result = new(dataTable.Rows.Count);
+        StrList result = new(dataTable.Rows.Count);
         foreach (DataRow row in dataTable.Rows)
         {
             //fw.logger("************ TABLE"+ row["TABLE_NAME"]);
@@ -2351,11 +2369,11 @@ public class DB : IDisposable
     }
 
     // return array of view names in current db
-    public ArrayList views()
+    public StrList views()
     {
         DbConnection conn = this.connect();
         DataTable dataTable = conn.GetSchema("Tables");
-        ArrayList result = new(dataTable.Rows.Count);
+        StrList result = new(dataTable.Rows.Count);
         foreach (DataRow row in dataTable.Rows)
         {
             // skip non-views
@@ -2374,9 +2392,9 @@ public class DB : IDisposable
         connect();
         loadTableSchema(table);
         field_name = field_name.ToLower();
-        if (!schema.TryGetValue(table, out var tableSchema) || !tableSchema.ContainsKey(field_name))
+        if (!schema.TryGetValue(table, out var tableSchema) || !tableSchema.TryGetValue(field_name, out object? value))
             return "";
-        string field_type = tableSchema[field_name].toStr();
+        string field_type = value.toStr();
         if (field_type.Length == 0)
             return "";
 
@@ -2407,15 +2425,15 @@ public class DB : IDisposable
     //   on_update=>"RESTRICT|CASCADE|SET NULL|NO ACTION",
     //   on_delete=>"RESTRICT|CASCADE|SET NULL|NO ACTION"
     // }
-    public Hashtable tableForeignKeys(string table)
+    public FwDict tableForeignKeys(string table)
     {
-        var cache = schema_fk_cache.GetOrAdd(connstr ?? string.Empty, _ => new ConcurrentDictionary<string, Hashtable>());
+        var cache = schema_fk_cache.GetOrAdd(connstr ?? string.Empty, _ => new ConcurrentDictionary<string, FwDict>());
 
         // Get or compute mapping for the table
         return cache.GetOrAdd(table, _ =>
         {
             var fields = listForeignKeys(table);
-            var result = new Hashtable(fields.Count);
+            var result = new FwDict(fields.Count);
             foreach (var row in fields)
             {
                 var col = row["column"];
@@ -2427,26 +2445,26 @@ public class DB : IDisposable
     }
 
     //return full table schema as hashtable fieldname => {name=>..., type=>,...}
-    public Hashtable tableSchemaFull(string table)
+    public FwDict tableSchemaFull(string table)
     {
-        var result = new Hashtable();
-        ArrayList fields = loadTableSchemaFull(table);
-        foreach (Hashtable row in fields)
+        var result = new FwDict();
+        FwList fields = loadTableSchemaFull(table);
+        foreach (FwDict row in fields)
             result[row["name"].toStr().ToLowerInvariant()] = row;
 
         return result;
     }
 
-    public ArrayList loadTableSchemaFull(string table)
+    public FwList loadTableSchemaFull(string table)
     {
         // check if full schema already there
-        var cache = schemafull_cache.GetOrAdd(connstr ?? string.Empty, _ => new ConcurrentDictionary<string, ArrayList>());
+        var cache = schemafull_cache.GetOrAdd(connstr ?? string.Empty, _ => new ConcurrentDictionary<string, FwList>());
 
-        if (cache.TryGetValue(table, out ArrayList? value) && value != null)
+        if (cache.TryGetValue(table, out FwList? value) && value != null)
             return value;
 
         // cache miss
-        ArrayList result = [];
+        FwList result = [];
         if (dbtype == DBTYPE_SQLSRV)
         {
             // fw.logger("cache MISS " & current_db & "." & table)
@@ -2470,7 +2488,7 @@ public class DB : IDisposable
                         AND t.table_name = @table_name
                       order by c.ORDINAL_POSITION";
             result = arrayp(sql, DB.h("@table_name", table));
-            foreach (Hashtable row in result)
+            foreach (FwDict row in result)
             {
                 var subtype = row["type"].toStr();
                 row["fw_type"] = mapTypeSQL2Fw(subtype); // meta type
@@ -2499,7 +2517,7 @@ public class DB : IDisposable
                         AND t.table_schema = @db_name
                       order by c.ORDINAL_POSITION";
             result = arrayp(sql, DB.h("@table_name", table, "@db_name", conn?.Database ?? string.Empty));
-            foreach (Hashtable row in result)
+            foreach (FwDict row in result)
             {
                 var subtype = row["type"].toStr();
                 row["fw_type"] = mapTypeSQL2Fw(subtype); // meta type
@@ -2519,7 +2537,7 @@ public class DB : IDisposable
             if (schemaTable == null)
                 return result;
 
-            List<Hashtable> fieldslist = new(schemaTable.Rows.Count);
+            List<FwDict> fieldslist = new(schemaTable.Rows.Count);
             foreach (DataRow row in schemaTable.Rows)
             {
                 // unused:
@@ -2528,7 +2546,7 @@ public class DB : IDisposable
                 // CHARACTER_OCTET_LENGTH
                 // DATETIME_PRECISION=0
                 // DESCRIPTION
-                var h = new Hashtable();
+                var h = new FwDict();
                 var dataType = row["DATA_TYPE"].toInt();
                 h["name"] = row["COLUMN_NAME"].toStr();
                 h["type"] = dataType;
@@ -2553,7 +2571,7 @@ public class DB : IDisposable
             result.AddRange(fieldslist);
 
             // now detect identity (because order is important)
-            foreach (Hashtable h in result)
+            foreach (FwDict h in result)
             {
                 // actually this also triggers for Long Integers, so for now - only first field that match conditions will be an identity
                 if (h["type"].toInt() == (int)OleDbType.Integer && h["column_flags"].toInt() == 90)
@@ -2576,7 +2594,7 @@ public class DB : IDisposable
         if (dbtype == DBTYPE_SQLSRV)
         {
             var where = "";
-            var where_params = new Hashtable();
+            var where_params = new FwDict();
             if (table != "")
             {
                 where = " WHERE col1.TABLE_NAME=@table_name";
@@ -2606,7 +2624,7 @@ public class DB : IDisposable
         else if (dbtype == DBTYPE_MYSQL)
         {
             var where = "";
-            var where_params = new Hashtable();
+            var where_params = new FwDict();
             if (table != "")
             {
                 where = " WHERE col1.TABLE_NAME=@table_name";
@@ -2665,21 +2683,21 @@ public class DB : IDisposable
     }
 
     // load table schema from db
-    public Hashtable loadTableSchema(string table)
+    public FwDict loadTableSchema(string table)
     {
         //logger(LogLevel.DEBUG, "loadTableSchema:" + table);
         // for unsupported schemas - use config schema
         if (dbtype != DBTYPE_SQLSRV && dbtype != DBTYPE_OLE && dbtype != DBTYPE_MYSQL)
         {
             if (schema.Count == 0)
-                schema = (Dictionary<string, Hashtable>?)conf["schema"] ?? [];
+                schema = (Dictionary<string, FwDict>?)conf["schema"] ?? [];
         }
 
         // check if schema already there
         if (schema.TryGetValue(table, out var cachedSchema))
             return cachedSchema;
 
-        var connSchemaCache = schema_cache.GetOrAdd(connstr ?? string.Empty, _ => new ConcurrentDictionary<string, Hashtable>());
+        var connSchemaCache = schema_cache.GetOrAdd(connstr ?? string.Empty, _ => new ConcurrentDictionary<string, FwDict>());
 
         if (connSchemaCache.TryGetValue(table, out var cachedTableSchema))
         {
@@ -2687,9 +2705,9 @@ public class DB : IDisposable
             return cachedTableSchema;
         }
 
-        ArrayList fields = loadTableSchemaFull(table);
-        Hashtable h = new(fields.Count);
-        foreach (Hashtable row in fields)
+        FwList fields = loadTableSchemaFull(table);
+        FwDict h = new(fields.Count);
+        foreach (FwDict row in fields)
         {
             var fieldName = row["name"].toStr();
             if (fieldName.Length == 0)

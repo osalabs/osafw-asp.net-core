@@ -3,8 +3,6 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
-using System.Collections;
-
 namespace osafw;
 
 public class AttController : FwController
@@ -26,7 +24,7 @@ public class AttController : FwController
     {
         string size = reqs("size");
 
-        Hashtable item = model.oneByIcode(icode);
+        FwDict item = model.oneByIcode(icode);
         if (item.Count == 0)
             throw new NotFoundException();
 
@@ -43,7 +41,7 @@ public class AttController : FwController
         string size = reqs("size");
         bool is_preview = reqs("preview") == "1";
 
-        Hashtable item = model.oneByIcode(icode);
+        FwDict item = model.oneByIcode(icode);
         if (item.Count == 0)
             throw new NotFoundException();
 

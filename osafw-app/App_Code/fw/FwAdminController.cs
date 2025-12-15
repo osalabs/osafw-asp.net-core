@@ -4,7 +4,6 @@
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
 using System;
-using System.Collections;
 
 namespace osafw;
 
@@ -18,7 +17,7 @@ public class FwAdminController : FwController
         base.init(fw);
     }
 
-    public virtual Hashtable? IndexAction()
+    public virtual FwDict? IndexAction()
     {
         // get filters from the search form
         this.initFilter();
@@ -34,7 +33,7 @@ public class FwAdminController : FwController
 
         this.getListRows();
         // add/modify rows from db if necessary
-        // For Each row As Hashtable In Me.list_rows
+        // For Each row As FwRow In Me.list_rows
         // row("field") = "value"
         // Next
 
@@ -48,9 +47,9 @@ public class FwAdminController : FwController
         return ps;
     }
 
-    public virtual Hashtable? ShowAction(int id)
+    public virtual FwDict? ShowAction(int id)
     {
-        Hashtable ps = [];
+        FwDict ps = [];
         var item = modelOneOrFail(id);
 
         setAddUpdUser(ps, item);
@@ -75,14 +74,14 @@ public class FwAdminController : FwController
     /// Shows editable Form for adding or editing one entity row
     /// </summary>
     /// <param name="id"></param>
-    /// <returns>in Hashtable:
+    /// <returns>in FwRow:
     /// id - id of the entity
     /// i - hashtable of entity fields
     /// </returns>
     /// <remarks></remarks>
-    public virtual Hashtable? ShowFormAction(int id = 0)
+    public virtual FwDict? ShowFormAction(int id = 0)
     {
-        Hashtable ps = [];
+        FwDict ps = [];
         var item = reqh("item"); // set defaults from request params
 
         if (isGet())
@@ -95,7 +94,7 @@ public class FwAdminController : FwController
             else
             {
                 // add new screen
-                Hashtable item_new = [];
+                FwDict item_new = [];
                 Utils.mergeHash(item_new, form_new_defaults); // use hardcoded defaults if any
                 Utils.mergeHash(item_new, item); // override with passed defaults
                 item = item_new;
@@ -104,7 +103,7 @@ public class FwAdminController : FwController
         else
         {
             // read from db
-            Hashtable itemdb = modelOne(id);
+            FwDict itemdb = modelOne(id);
             // and merge new values from the form
             Utils.mergeHash(itemdb, item);
             item = itemdb;
@@ -123,7 +122,7 @@ public class FwAdminController : FwController
         return ps;
     }
 
-    public virtual Hashtable? SaveAction(int id = 0)
+    public virtual FwDict? SaveAction(int id = 0)
     {
         route_onerror = FW.ACTION_SHOW_FORM;
         // checkXSS() 'no need to check in standard SaveAction, but add to your custom actions that modifies data
@@ -137,7 +136,7 @@ public class FwAdminController : FwController
             return null;
         }
 
-        Hashtable item = reqh("item");
+        FwDict item = reqh("item");
         var success = true;
         var is_new = (id == 0);
 
@@ -145,7 +144,7 @@ public class FwAdminController : FwController
         // load old record if necessary
         // var itemOld = model0.one(id);
 
-        Hashtable itemdb = FormUtils.filter(item, this.save_fields);
+        FwDict itemdb = FormUtils.filter(item, this.save_fields);
         FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
 
         id = this.modelAddOrUpdate(id, itemdb);
@@ -153,7 +152,7 @@ public class FwAdminController : FwController
         return this.afterSave(success, id, is_new);
     }
 
-    public virtual void Validate(int id, Hashtable item)
+    public virtual void Validate(int id, FwDict item)
     {
         bool result = this.validateRequired(id, item, this.required_fields);
 
@@ -171,14 +170,14 @@ public class FwAdminController : FwController
     public virtual void validate<TRow>(int id, TRow dto) where TRow : class, new()
     {
         ArgumentNullException.ThrowIfNull(dto);
-        Validate(id, dto.toHashtable());
+        Validate(id, dto.toFwDict());
     }
 
     public virtual void ShowDeleteAction(int id)
     {
         fw.model<Users>().checkReadOnly();
 
-        var ps = new Hashtable()
+        var ps = new FwDict()
         {
             {"i", modelOneOrFail(id)},
             {"related_id", this.related_id},
@@ -189,7 +188,7 @@ public class FwAdminController : FwController
         fw.parser("/common/form/showdelete", ps);
     }
 
-    public virtual Hashtable? DeleteAction(int id)
+    public virtual FwDict? DeleteAction(int id)
     {
         fw.model<Users>().checkReadOnly();
 
@@ -198,21 +197,21 @@ public class FwAdminController : FwController
         return this.afterSave(true);
     }
 
-    public virtual Hashtable? RestoreDeletedAction(int id)
+    public virtual FwDict? RestoreDeletedAction(int id)
     {
         fw.model<Users>().checkReadOnly();
 
-        model0.update(id, new Hashtable() { { model0.field_status, FwModel.STATUS_ACTIVE } });
+        model0.update(id, new FwDict() { { model0.field_status, FwModel.STATUS_ACTIVE } });
 
         fw.flash("record_updated", 1);
         return this.afterSave(true, id);
     }
 
-    public virtual Hashtable? SaveMultiAction()
+    public virtual FwDict? SaveMultiAction()
     {
         route_onerror = FW.ACTION_INDEX;
 
-        Hashtable cbses = reqh("cb");
+        FwDict cbses = reqh("cb");
         bool is_delete = fw.FORM.ContainsKey("delete");
         if (is_delete)
             fw.model<Users>().checkReadOnly();
@@ -231,7 +230,7 @@ public class FwAdminController : FwController
 
         saveMultiResult(ctr, is_delete, user_lists_id, remove_user_lists_id);
 
-        return this.afterSave(true, new Hashtable() { { "ctr", ctr } });
+        return this.afterSave(true, new FwDict() { { "ctr", ctr } });
     }
 
 }

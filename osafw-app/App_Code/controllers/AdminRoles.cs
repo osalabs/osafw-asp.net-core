@@ -3,8 +3,6 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2023 Oleg Savchuk www.osalabs.com
 
-using System.Collections;
-
 namespace osafw;
 
 public class AdminRolesController : FwDynamicController
@@ -32,11 +30,11 @@ public class AdminRolesController : FwDynamicController
         // list_sortmap["fdate_pop_str"] = "fdate_pop";
     }
 
-    public override Hashtable? ShowAction(int id = 0)
+    public override FwDict? ShowAction(int id = 0)
     {
         var ps = base.ShowAction(id)!;
-        var item = ps["i"] as Hashtable;
-        var fields = ps["fields"] as ArrayList ?? [];
+        var item = ps["i"] as FwDict;
+        var fields = ps["fields"] as FwList ?? [];
 
         // roles_resources_permissions matrix
         var defMatrix = defByFieldname("roles_resources_permissions", fields) ?? [];
@@ -49,11 +47,11 @@ public class AdminRolesController : FwDynamicController
         return ps;
     }
 
-    public override Hashtable ShowFormAction(int id = 0)
+    public override FwDict ShowFormAction(int id = 0)
     {
         var ps = base.ShowFormAction(id)!;
-        var item = (Hashtable)ps["i"]!;
-        var fields = ps["fields"] as ArrayList ?? [];
+        var item = (FwDict)ps["i"]!;
+        var fields = ps["fields"] as FwList ?? [];
 
         // roles_resources_permissions matrix
         var defMatrix = defByFieldname("roles_resources_permissions", fields) ?? [];
@@ -66,7 +64,7 @@ public class AdminRolesController : FwDynamicController
         return ps;
     }
 
-    public override int modelAddOrUpdate(int id, Hashtable fields)
+    public override int modelAddOrUpdate(int id, FwDict fields)
     {
         id = base.modelAddOrUpdate(id, fields);
 

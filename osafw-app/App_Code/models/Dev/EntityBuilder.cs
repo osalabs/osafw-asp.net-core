@@ -4,8 +4,6 @@
 // (c) 2009-2024  Oleg Savchuk www.osalabs.com
 
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Text.Json;
@@ -35,7 +33,7 @@ class DevEntityBuilder
         saveJsonEntity(entities, fw.config("template") + DevCodeGen.DB_JSON_PATH);
     }
 
-    private static ArrayList ParseEntities(string inputText, FW fw)
+    private static FwList ParseEntities(string inputText, FW fw)
     {
         var entities = new List<Dictionary<string, object?>>();
         //split inputText by \r\n but leave empty lines (as empty lines delimit entities)
@@ -216,7 +214,7 @@ class DevEntityBuilder
                 AddStandardFieldsAfter(fields);
         }// entities loop
 
-        return new ArrayList(entities);
+        return new FwList(entities);
     }
 
     // id, iname, idesc
@@ -679,7 +677,7 @@ class DevEntityBuilder
         return decoded is T typed ? typed : new T();
     }
 
-    // important - pass data as ArrayList or Hashtable to trigger custom converter
+    // important - pass data as FwList or FwRow to trigger custom converter
     public static void saveJsonEntity(object data, string filename)
     {
         string json_str;
@@ -697,7 +695,7 @@ class DevEntityBuilder
         Utils.setFileContent(filename, ref json_str);
     }
 
-    // important - pass data as ArrayList or Hashtable to trigger custom converter
+    // important - pass data as FwList or FwRow to trigger custom converter
     public static void saveJsonController(object data, string filename)
     {
         string json_str;
@@ -717,7 +715,7 @@ class DevEntityBuilder
 
     // ****************************** PRIVATE HELPERS (move to Dev model?)
 
-    public static Hashtable? table2entity(DB db, string table_name)
+    public static FwDict? table2entity(DB db, string table_name)
     {
         if (string.IsNullOrEmpty(table_name) || table_name.StartsWith("MSys", StringComparison.Ordinal))
             return null;
@@ -725,15 +723,15 @@ class DevEntityBuilder
         var tblschema = db.loadTableSchemaFull(table_name);
         var tblfields = tableschema2fields(tblschema);
 
-        Hashtable controller_options = [];
-        Hashtable table_entity = new()
+        FwDict controller_options = [];
+        FwDict table_entity = new()
         {
             ["db_config"] = db.db_name,
             ["table"] = table_name,
             ["fw_name"] = Utils.name2fw(table_name),
             ["iname"] = Utils.name2human(table_name),
             ["fields"] = tblfields,
-            ["foreign_keys"] = db.listForeignKeys(table_name).toArrayList(),
+            ["foreign_keys"] = db.listForeignKeys(table_name).toFwList(),
             ["controller_options"] = controller_options,
         };
 
@@ -742,14 +740,14 @@ class DevEntityBuilder
         controller_options["title"] = Utils.name2human(table_entity["model_name"].toStr());
 
         var fields = Utils.array2hashtable(tblfields, "name");
-        table_entity["is_fw"] = fields.Contains("id") && fields.Contains("status") && fields.Contains("add_time") && fields.Contains("add_users_id");
+        table_entity["is_fw"] = fields.ContainsKey("id") && fields.ContainsKey("status") && fields.ContainsKey("add_time") && fields.ContainsKey("add_users_id");
 
         return table_entity;
     }
 
-    public static ArrayList dbschema2entities(DB db)
+    public static FwList dbschema2entities(DB db)
     {
-        ArrayList result = [];
+        FwList result = [];
         var tables = db.tables();
         foreach (string tblname in tables)
         {
@@ -761,11 +759,11 @@ class DevEntityBuilder
         return result;
     }
 
-    public static ArrayList tableschema2fields(ArrayList schema)
+    public static FwList tableschema2fields(FwList schema)
     {
-        ArrayList result = new(schema);
+        FwList result = new(schema);
 
-        foreach (Hashtable fldschema in schema)
+        foreach (FwDict fldschema in schema)
         {
             fldschema["fw_name"] = Utils.name2fw(fldschema["name"].toStr());
             fldschema["iname"] = Utils.name2human(fldschema["name"].toStr());
@@ -783,7 +781,7 @@ class DevEntityBuilder
         return result;
     }
 
-    public static List<string> listModels()
+    public static StrList listModels()
     {
         var baseType = typeof(FwModel);
         var assembly = baseType.Assembly;
@@ -793,7 +791,7 @@ class DevEntityBuilder
                 select t.Name).ToList();
     }
 
-    public static List<string> listControllers()
+    public static StrList listControllers()
     {
         var baseType = typeof(FwController);
         var assembly = baseType.Assembly;
@@ -804,7 +802,7 @@ class DevEntityBuilder
     }
 
 
-    private static ArrayList addressFields(string field_name)
+    private static FwList addressFields(string field_name)
     {
         var m = Regex.Match(field_name, "(.*?)(Address)$", RegexOptions.IgnoreCase);
         string prefix = m.Groups[1].Value;
@@ -822,7 +820,7 @@ class DevEntityBuilder
 
         return
         [
-            new Hashtable()
+            new FwDict()
             {
                 {"name",field_name},
                 {"fw_name",Utils.name2fw(field_name)},
@@ -835,7 +833,7 @@ class DevEntityBuilder
                 {"fw_type","varchar"},
                 {"fw_subtype","nvarchar"}
             },
-            new Hashtable()
+            new FwDict()
             {
                 {"name",field_name + "2"},
                 {"fw_name",Utils.name2fw(field_name + "2")},
@@ -848,7 +846,7 @@ class DevEntityBuilder
                 {"fw_type","varchar"},
                 {"fw_subtype","nvarchar"}
             },
-            new Hashtable()
+            new FwDict()
             {
                 {"name",city_name},
                 {"fw_name",Utils.name2fw(city_name)},
@@ -861,7 +859,7 @@ class DevEntityBuilder
                 {"fw_type","varchar"},
                 {"fw_subtype","nvarchar"}
             },
-            new Hashtable()
+            new FwDict()
             {
                 {"name",state_name},
                 {"fw_name",Utils.name2fw(state_name)},
@@ -874,7 +872,7 @@ class DevEntityBuilder
                 {"fw_type","varchar"},
                 {"fw_subtype","nvarchar"}
             },
-            new Hashtable()
+            new FwDict()
             {
                 {"name",zip_name},
                 {"fw_name",Utils.name2fw(zip_name)},

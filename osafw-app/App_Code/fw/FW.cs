@@ -8,8 +8,8 @@ using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Mail;
 using System.Reflection;
 using System.Text;
@@ -43,17 +43,17 @@ public class FW : IDisposable
     public const string ACTION_MORE_DELETE = "delete";
 
     public const string FW_NAMESPACE_PREFIX = "osafw.";
-    public static Hashtable METHOD_ALLOWED = Utils.qh("GET POST PUT PATCH DELETE");
+    public static FwDict METHOD_ALLOWED = Utils.qh("GET POST PUT PATCH DELETE");
 
-    private readonly Hashtable models = []; // model's singletons cache
-    private readonly Hashtable controllers = []; // controller's singletons cache
+    private readonly FwDict models = []; // model's singletons cache
+    private readonly FwDict controllers = []; // controller's singletons cache
     private const string ControllerActionsCacheKeyPrefix = "fw:controller-actions:";
     private ParsePage? pp_instance; // for parsePage()
 
-    public Hashtable FORM = [];
-    public Hashtable postedJson = []; // parsed JSON from request body
+    public FwDict FORM = [];
+    public FwDict postedJson = []; // parsed JSON from request body
     public FwDict G = []; // for storing global vars - used in template engine, also stores "_flash"
-    public Hashtable FormErrors = []; // for storing form id's with error messages, put to ps['error']['details'] for parser
+    public FwDict FormErrors = []; // for storing form id's with error messages, put to ps['error']['details'] for parser
 
     public FwCache cache = new(); // cache instance
     public DB db;
@@ -145,8 +145,8 @@ public class FW : IDisposable
     // helper to initialize DB instance based on configuration name
     public DB getDB(string config_name = "main")
     {
-        var dbconfig = config("db") as Hashtable ?? [];
-        Hashtable conf = dbconfig[config_name] as Hashtable ?? [];
+        var dbconfig = config("db") as FwDict ?? [];
+        FwDict conf = dbconfig[config_name] as FwDict ?? [];
 
         var db = new DB(conf, config_name);
         // Wrap the logger to match DB.LoggerDelegate (object?[])
@@ -192,7 +192,7 @@ public class FW : IDisposable
         db = getDB();
         DB.SQL_QUERY_CTR = 0; // reset query counter
 
-        G = config().Clone(); // by default G contains conf
+        G = Utils.cloneHashDeep(config())!; // by default G contains conf
 
         // per request settings
         G["request_url"] = request?.GetDisplayUrl() ?? "";
@@ -212,7 +212,7 @@ public class FW : IDisposable
         parseForm();
 
         // save flash to current var and update session as flash is used only for nearest request
-        Hashtable? _flash = SessionHashtable("_flash");
+        FwDict? _flash = SessionHashtable("_flash");
         if (_flash != null) G["_flash"] = _flash;
         SessionHashtable("_flash", []);
     }
@@ -286,12 +286,12 @@ public class FW : IDisposable
         context?.Session.Set(name, BitConverter.GetBytes(value));
     }
 
-    public Hashtable? SessionHashtable(string name)
+    public FwDict? SessionHashtable(string name)
     {
         string? data = context?.Session.GetString(name);
-        return data == null ? null : (Hashtable)Utils.deserialize(data);
+        return data == null ? null : (FwDict)Utils.deserialize(data);
     }
-    public void SessionHashtable(string name, Hashtable value)
+    public void SessionHashtable(string name, FwDict value)
     {
         context?.Session.SetString(name, Utils.serialize(value));
     }
@@ -305,14 +305,14 @@ public class FW : IDisposable
         if (value == null)
         {
             // read mode - return current flash
-            return (this.G["_flash"] as Hashtable)?[name] ?? "";
+            return (this.G["_flash"] as FwDict)?[name] ?? "";
         }
         else
         {
             if (!isJsonExpected())
             {
                 // write for the next request
-                Hashtable _flash = SessionHashtable("_flash") ?? [];
+                FwDict _flash = SessionHashtable("_flash") ?? [];
                 _flash[name] = value;
                 SessionHashtable("_flash", _flash);
             }
@@ -417,7 +417,7 @@ public class FW : IDisposable
         string controller_prefix = ""; // prefix without "/", i.e. /Admin/Reports -> AdminReports
 
         // process config special routes (redirects, rewrites)
-        Hashtable routes = this.config("routes") as Hashtable ?? [];
+        FwDict routes = this.config("routes") as FwDict ?? [];
         bool is_routes_found = false;
         foreach (string route_key in routes.Keys)
         {
@@ -691,11 +691,11 @@ public class FW : IDisposable
         {
             // XSS validation failed
             // first, check if we are under xss-excluded prefix
-            Hashtable no_xss_prefixes = this.config("no_xss_prefixes_prefixes") as Hashtable ?? [];
+            FwDict no_xss_prefixes = this.config("no_xss_prefixes_prefixes") as FwDict ?? [];
             if (!no_xss_prefixes.ContainsKey(route.prefix))
             {
                 // second, check if we are under xss-excluded controller
-                Hashtable no_xss = this.config("no_xss") as Hashtable ?? [];
+                FwDict no_xss = this.config("no_xss") as FwDict ?? [];
                 if (!no_xss.ContainsKey(route.controller))
                 {
                     if (is_die)
@@ -711,7 +711,7 @@ public class FW : IDisposable
         // pre-check controller's access level by url
         int current_level = userAccessLevel;
 
-        Hashtable rules = (Hashtable?)config("access_levels") ?? [];
+        FwDict rules = (FwDict?)config("access_levels") ?? [];
         if (rules.ContainsKey(path))
         {
             if (current_level >= rules[path].toInt())
@@ -741,7 +741,7 @@ public class FW : IDisposable
             return;
         }
 
-        Hashtable input = [];
+        FwDict input = [];
 
         foreach (string s in request.Query.Keys)
         {
@@ -759,13 +759,11 @@ public class FW : IDisposable
         }
 
         // after perpare_FORM - grouping for names like XXX[YYYY] -> FORM{XXX}=@{YYYY1, YYYY2, ...}
-        Hashtable SQ = [];
-        Hashtable f = [];
-        foreach (DictionaryEntry entry in input)
+        FwDict SQ = [];
+        FwDict f = [];
+        foreach (var entry in input)
         {
-            if (entry.Key is not string name)
-                continue;
-
+            var name = entry.Key;
             var value = entry.Value;
             var bracketPos = name.IndexOf('[');
             if (bracketPos > 0 && name.EndsWith(']'))
@@ -779,9 +777,9 @@ public class FW : IDisposable
                 }
 
                 if (!SQ.ContainsKey(mainKey))
-                    SQ[mainKey] = new Hashtable();
+                    SQ[mainKey] = new FwDict();
 
-                ((Hashtable)SQ[mainKey]!)[subKey] = value;
+                ((FwDict)SQ[mainKey]!)[subKey] = value;
             }
             else
             {
@@ -789,15 +787,15 @@ public class FW : IDisposable
             }
         }
 
-        foreach (DictionaryEntry entry in SQ)
-            f[entry.Key.toStr()] = entry.Value;
+        foreach (var entry in SQ)
+            f[entry.Key] = entry.Value;
 
         // also parse json in request body if any
         if (request.ContentType?[.."application/json".Length] == "application/json")
         {
             postedJson = Utils.getPostedJson(this);
             // merge json into FORM, but all values should be stingified in FORM
-            Utils.mergeHash(f, (Hashtable)Utils.jsonStringifyValues(postedJson));
+            Utils.mergeHash(f, (FwDict)Utils.jsonStringifyValues(postedJson));
         }
 
         // logger(f)
@@ -825,30 +823,30 @@ public class FW : IDisposable
     }
 
     // show page from template  /route.controller/route.action = parser('/route.controller/route.action/', $ps)
-    public void parser(IDictionary ps)
+    public void parser(FwDict ps)
     {
         this.parser((route.controller_path + "/" + route.action).ToLower(), ps);
     }
 
     // same as parser(ps), but with base dir param
     // output format based on requested format: json, pjax or (default) full page html
-    // for automatic json response support - set hf("_json") = True OR set hf("_json")=ArrayList/Hashtable - if json requested, only _json content will be returned
+    // for automatic json response support - set hf("_json") = True OR set hf("_json")=FwList/FwRow - if json requested, only _json content will be returned
     // to override:
     //   - base directory - set ps("_basedir")="/another_controller/another_action" (relative to SITE_TEMPLATES dir)
     //   - only controller base directory - set ps("_basedir_controller")="/another_controller" (relative to SITE_TEMPLATES dir)
     //   - layout template - set ps("_layout")="/another_page_layout.html" (relative to SITE_TEMPLATES dir)
     //   - (not for json) to perform route_redirect - set hf("_route_redirect")("method"), hf("_route_redirect")("controller"), hf("_route_redirect")("args")
     //   - (not for json) to perform redirect - set hf("_redirect")="url"
-    public void parser(string basedir, IDictionary ps)
+    public void parser(string basedir, FwDict ps)
     {
         if (!this.response.HasStarted) this.response.Headers.CacheControl = cache_control;
 
         if (this.FormErrors.Count > 0)
         {
             if (!ps.Contains("error"))
-                ps["error"] = new Hashtable();
+                ps["error"] = new FwDict();
 
-            if (ps["error"] is Hashtable errorTable && !errorTable.Contains("details"))
+            if (ps["error"] is FwDict errorTable && !errorTable.ContainsKey("details"))
                 errorTable["details"] = this.FormErrors; // add form errors if any
             logger(LogLevel.DEBUG, "Form errors:", this.FormErrors);
         }
@@ -864,14 +862,14 @@ public class FW : IDisposable
                     this.parserJson(ps);
                 }
                     else
-                        this.parserJson(ps["_json"] ?? new Hashtable());// if _json exists - return only this element content
+                        this.parserJson(ps["_json"] ?? new FwDict());// if _json exists - return only this element content
             }
             else
             {
                 var msg = @"JSON response is not enabled for this Controller.Action (set ps[""_json""])=True or ps[""_json""])=data... to enable).";
                 logger(LogLevel.DEBUG, msg);
 
-                ps = new Hashtable()
+                ps = new FwDict()
                 {
                     {"success", false},
                     {"message", msg}
@@ -883,7 +881,7 @@ public class FW : IDisposable
 
         if (ps .Contains("_route_redirect"))
         {
-            var rr = ps["_route_redirect"] as Hashtable ?? [];
+            var rr = ps["_route_redirect"] as FwDict ?? [];
             this.routeRedirect(rr["method"].toStr(), rr["controller"].toStr(), rr["args"] as object[] ?? []);
             return; // no further processing
         }
@@ -943,7 +941,7 @@ public class FW : IDisposable
     }
 
     // - show page from template  /controller/action = parser('/controller/action/', $layout, $ps)
-    public void parser(string basedir, string layout, IDictionary ps)
+    public void parser(string basedir, string layout, FwDict ps)
     {
         ps["_layout"] = layout;
         parser(basedir, ps);
@@ -989,7 +987,7 @@ public class FW : IDisposable
         return pp_instance;
     }
 
-    public string parsePage(string basedir, string layout, IDictionary ps)
+    public string parsePage(string basedir, string layout, FwDict ps)
     {
         logger(LogLevel.DEBUG, "parsing page bdir=", basedir, ", tpl=", layout);
         ParsePage parser_obj = parsePageInstance();
@@ -1016,7 +1014,7 @@ public class FW : IDisposable
         if (args != null)
         {
             this.route.id = args[0].toStr(); //first argument goes to id
-            this.route.@params = new ArrayList(args); // all arguments go to params
+            this.route.@params = new StrList((IEnumerable<string>)args); // all arguments go to params
         }
 
         callRoute();
@@ -1321,10 +1319,10 @@ public class FW : IDisposable
     /// <param name="options">hashtable with options:
     ///   "read-receipt"
     ///   "smtp" - hashtable with smtp settings (host, port, is_ssl, username, password)
-    ///   "bcc" - bcc email addresses - ArrayList
+    ///   "bcc" - bcc email addresses - FwList
     /// </param>
     /// <returns>true if sent successfully, false if problem - see fw.last_error_send_email</returns>
-    public bool sendEmail(string mail_from, string mail_to, string mail_subject, string mail_body, IDictionary? filenames = null, IList? aCC = null, string reply_to = "", Hashtable? options = null)
+    public bool sendEmail(string mail_from, string mail_to, string mail_subject, string mail_body, IDictionary? filenames = null, IList? aCC = null, string reply_to = "", FwDict? options = null)
     {
         bool result = true;
         MailMessage? message = null;
@@ -1369,7 +1367,7 @@ public class FW : IDisposable
                     message.ReplyToList.Add(reply_to); // .net>=4
 
                 // mail_to may contain several emails delimited by ;
-                ArrayList amail_to = Utils.splitEmails(mail_to);
+                StrList amail_to = Utils.splitEmails(mail_to);
                 foreach (string email1 in amail_to)
                 {
                     string email = email1.Trim();
@@ -1406,7 +1404,7 @@ public class FW : IDisposable
                 }
 
                 // add BCC if any
-                if (options["bcc"] is ArrayList options_bcc && !is_test)
+                if (options["bcc"] is StrList options_bcc && !is_test)
                 {
                     foreach (string bcc1 in options_bcc)
                     {
@@ -1421,7 +1419,7 @@ public class FW : IDisposable
                 if (filenames != null)
                 {
                     // sort by human name
-                    ArrayList fkeys = new(filenames.Keys);
+                    StrList fkeys = new(filenames.Keys.Cast<string>());
                     fkeys.Sort();
                     foreach (string human_filename in fkeys)
                     {
@@ -1439,8 +1437,8 @@ public class FW : IDisposable
 
                     using (SmtpClient client = new())
                     {
-                        Hashtable mailSettings = this.config("mail") as Hashtable ?? [];
-                        if (options.ContainsKey("smtp") && options["smtp"] is Hashtable smtpOptions)
+                        FwDict mailSettings = this.config("mail") as FwDict ?? [];
+                        if (options.ContainsKey("smtp") && options["smtp"] is FwDict smtpOptions)
                         {
                             //override mailSettings from smtp options
                             Utils.mergeHash(mailSettings, smtpOptions);
@@ -1472,7 +1470,7 @@ public class FW : IDisposable
     }
 
     // shortcut for send_email from template from the /emails template dir
-    public bool sendEmailTpl(string mail_to, string tpl, Hashtable hf, Hashtable? filenames = null, ArrayList? aCC = null, string reply_to = "", Hashtable? options = null)
+    public bool sendEmailTpl(string mail_to, string tpl, FwDict hf, FwDict? filenames = null, FwList? aCC = null, string reply_to = "", FwDict? options = null)
     {
         Regex r = new(@"[\n\r]+");
         string subj_body = parsePage("/emails", tpl, hf);
@@ -1490,7 +1488,7 @@ public class FW : IDisposable
 
     public void errMsg(string msg, Exception? Ex = null)
     {
-        Hashtable ps = [];
+        FwDict ps = [];
         var tpl_dir = "/error";
 
         int code;
@@ -1521,14 +1519,14 @@ public class FW : IDisposable
 
         ps["_json"] = true;
         ps["title"] = msg;
-        ps["error"] = new Hashtable
+        ps["error"] = new FwDict
         {
             ["code"] = code,
             ["message"] = msg,
             ["time"] = DateTime.Now,
             //optional:
             //["category"] = Ex?.GetType().Name,
-            //["details"] = new ArrayList()
+            //["details"] = new FwList()
         };
 
         //legacy response: TODO DEPRECATE
@@ -1657,14 +1655,14 @@ public class FW : IDisposable
         return c;
     }
 
-    public void logActivity(string log_types_icode, string entity_icode, int item_id = 0, string iname = "", Hashtable? changed_fields = null)
+    public void logActivity(string log_types_icode, string entity_icode, int item_id = 0, string iname = "", FwDict? changed_fields = null)
     {
         if (!is_log_events)
             return;
 
-        Hashtable? payload = null;
+        FwDict? payload = null;
         if (changed_fields != null)
-            payload = new Hashtable()
+            payload = new FwDict()
             {
                 {"fields", changed_fields}
             };

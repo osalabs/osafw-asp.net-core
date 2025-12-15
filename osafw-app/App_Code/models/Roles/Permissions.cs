@@ -4,7 +4,6 @@
 // (c) 2009-2023 Oleg Savchuk www.osalabs.com
 
 using System;
-using System.Collections;
 
 namespace osafw;
 
@@ -32,7 +31,7 @@ public class Permissions : FwModel<Permissions.Row>
     public const string PERMISSION_DELETE = "del";
     public const string PERMISSION_DELETE_PERMANENT = "del_perm";
 
-    protected Hashtable MAP_ACTIONS_PERMISSIONS = new()
+    protected FwDict MAP_ACTIONS_PERMISSIONS = new()
     {
         { FW.ACTION_INDEX, PERMISSION_LIST },
         { FW.ACTION_SHOW, PERMISSION_VIEW },

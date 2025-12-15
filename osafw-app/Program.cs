@@ -16,7 +16,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Net.Http.Headers;
 using Microsoft.AspNetCore.Authentication;
 using System;
-using System.Collections;
 
 namespace osafw;
 
@@ -35,8 +34,8 @@ public static class Program
         var isDevelopmentEnv = settings["IS_DEV"].toBool();
 
         // Retrieve main DB connection info
-        var dbSection = settings["db"] as Hashtable ?? [];
-        var mainDB = dbSection["main"] as Hashtable ?? [];
+        var dbSection = settings["db"] as FwDict ?? [];
+        var mainDB = dbSection["main"] as FwDict ?? [];
         var connStr = mainDB["connection_string"].toStr();
         var dbType = mainDB["type"].toStr();
         if (string.IsNullOrEmpty(connStr) || string.IsNullOrEmpty(dbType))

@@ -4,7 +4,6 @@
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
 using System;
-using System.Collections;
 using System.Text;
 
 namespace osafw;
@@ -20,13 +19,13 @@ public class ContactController : FwController
         fw.G["PAGE_LAYOUT"] = fw.G["PAGE_LAYOUT_PUBLIC"];
     }
 
-    public Hashtable IndexAction()
+    public FwDict IndexAction()
     {
-        Hashtable ps = [];
+        FwDict ps = [];
 
         fw.Session("contact_view_time", DateTime.Now.ToString());
 
-        Hashtable page = fw.model<Spages>().oneByFullUrl(base_url);
+        FwDict page = fw.model<Spages>().oneByFullUrl(base_url);
         ps["page"] = page;
         ps["hide_sidebar"] = true;
         return ps;
@@ -47,7 +46,7 @@ public class ContactController : FwController
             // honeypot
             is_spam = true;
 
-        Hashtable sys_fields = Utils.qh("form_format redirect subject submit RAWURL XSS real_email");
+        FwDict sys_fields = Utils.qh("form_format redirect subject submit RAWURL XSS real_email");
 
         StringBuilder msg_body = new();
         foreach (string key in fw.FORM.Keys)
@@ -72,11 +71,11 @@ public class ContactController : FwController
         fw.redirect(base_url + "/(Sent)");
     }
 
-    public Hashtable SentAction(string url = "")
+    public FwDict SentAction(string url = "")
     {
-        Hashtable ps = [];
+        FwDict ps = [];
 
-        Hashtable page = fw.model<Spages>().oneByFullUrl(base_url + "/Sent");
+        FwDict page = fw.model<Spages>().oneByFullUrl(base_url + "/Sent");
         ps["page"] = page;
         ps["hide_sidebar"] = true;
         return ps;

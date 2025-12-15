@@ -1,5 +1,5 @@
 // Custom json converter for development - ensure keys sorted in expected way in the output
-// Important - pass ArrayList or Hashtable to trigger this converter
+// Important - pass FwList or FwRow to trigger this converter
 //
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2024  Oleg Savchuk www.osalabs.com
@@ -7,14 +7,13 @@
 
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Text.Json;
 
 namespace osafw;
 
-public class ConfigJsonConverter : System.Text.Json.Serialization.JsonConverter<Hashtable>
+public class ConfigJsonConverter : System.Text.Json.Serialization.JsonConverter<FwDict>
 {
-    public readonly List<string> ordered_keys_entity = [
+    public readonly StrList ordered_keys_entity = [
         "iname",
         "table",
         "name",
@@ -65,7 +64,7 @@ public class ConfigJsonConverter : System.Text.Json.Serialization.JsonConverter<
     ];
 
     //keys used in controller - we need them to be written in the specific order convenient to read by human developer
-    public readonly List<string> ordered_keys_controller = [
+    public readonly StrList ordered_keys_controller = [
         "model",
         "required_fields",
         "save_fields",
@@ -115,27 +114,27 @@ public class ConfigJsonConverter : System.Text.Json.Serialization.JsonConverter<
         "conv"
     ];
 
-    private List<string> ordered_keys;
+    private StrList ordered_keys;
 
     public ConfigJsonConverter()
     {
         // set default ordered_keys as controller+entity
-        ordered_keys = new List<string>(ordered_keys_controller);
+        ordered_keys = new StrList(ordered_keys_controller);
         ordered_keys.AddRange(ordered_keys_entity);
     }
 
     public void setOrderedKeys(IEnumerable<string> keys)
     {
-        ordered_keys = new List<string>(keys);
+        ordered_keys = new StrList(keys);
     }
 
     //read is not needed, but methods need to implement
-    public override Hashtable Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    public override FwDict Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         throw new NotImplementedException();
     }
 
-    public override void Write(Utf8JsonWriter writer, Hashtable value, JsonSerializerOptions options)
+    public override void Write(Utf8JsonWriter writer, FwDict value, JsonSerializerOptions options)
     {
         WriteDictionary(writer, value, options);
 
@@ -177,7 +176,7 @@ public class ConfigJsonConverter : System.Text.Json.Serialization.JsonConverter<
         }
 
         //then write rest of keys in alphabetical order
-        var remainingKeys = new List<string>();
+        var remainingKeys = new StrList();
         foreach (string key in value.Keys)
         {
             if (!hwritten.ContainsKey(key))

@@ -1,6 +1,4 @@
-﻿using System.Collections;
-
-namespace osafw;
+﻿namespace osafw;
 
 public class HomeController : FwController
 {
@@ -33,7 +31,7 @@ public class HomeController : FwController
 
         //fw.redirect("/Login"); // uncomment to always redirect to login page instead of Home
 
-        var ps = FwCache.getValue("home_page") as FwDict ?? [];
+        FwDict ps = FwCache.getValue("home_page") as FwDict ?? [];
         if (ps.Count == 0)
         {
             // CACHE MISS

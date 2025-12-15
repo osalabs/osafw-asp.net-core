@@ -1,11 +1,8 @@
-// Common Global usings for the project
+// Common global usings for the tests project
 //
-// Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
-// (c) 2009-2025 Oleg Savchuk www.osalabs.com
+// Mirrors the aliases from osafw-app so shared helper types like StrList and IntList
+// are available when running the unit tests.
 
-global using System.Collections.Generic;
-
-// aliases for commonly used types
 global using StrDict = System.Collections.Generic.Dictionary<string, string>;
 global using ObjList = System.Collections.Generic.List<object?>;
 global using StrList = System.Collections.Generic.List<string>;

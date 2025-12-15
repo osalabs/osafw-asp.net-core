@@ -4,7 +4,6 @@
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
 using System;
-using System.Collections;
 
 namespace osafw;
 
@@ -81,7 +80,7 @@ public class Settings : FwModel<Settings.Row>
     // just return first row by icode field
     public override DBRow oneByIcode(string icode)
     {
-        Hashtable where = [];
+        FwDict where = [];
         where["icode"] = icode;
         return db.row(table_name, where);
     }
@@ -94,7 +93,7 @@ public class Settings : FwModel<Settings.Row>
     public void setValue(string icode, string ivalue)
     {
         var item = this.oneByIcode(icode);
-        Hashtable fields = [];
+        FwDict fields = [];
         if (item.ContainsKey("id"))
         {
             // exists - update
