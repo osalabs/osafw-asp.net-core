@@ -1,6 +1,8 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 
 namespace osafw.Tests
@@ -423,6 +425,179 @@ namespace osafw.Tests
             // Case 8: Test with null field_prefix
             string result8 = FormUtils.dateForCombo(item1, null!);
             Assert.IsEmpty(result8, "Result should be empty string for null field_prefix");
+        }
+
+        [TestMethod]
+        public void LookupListsReturnExpectedValues()
+        {
+            CollectionAssert.AreEqual(new[] { "No|No", "Yes|Yes" }, FormUtils.getYesNo());
+            CollectionAssert.AreEqual(new[] { "N|No", "Y|Yes" }, FormUtils.getYN());
+            Assert.IsTrue(FormUtils.getStates().Length > 10);
+        }
+
+        [TestMethod]
+        public void RadioOptionsBuildsInputsWithSelection()
+        {
+            var html = FormUtils.radioOptions("color", Utils.qw("red|Red green|Green"), "green", "<br>");
+
+            StringAssert.Contains(html, "name=\"color\"");
+            StringAssert.Contains(html, "id=\"color1\"");
+            StringAssert.Contains(html, "checked");
+            StringAssert.Contains(html, "Green</label>");
+        }
+
+        [TestMethod]
+        public void SelectOptionsSupportsMultiSelectAndClass()
+        {
+            FwList options = [
+                new FwDict { { "id", "1" }, { "iname", "One" }, { "class", "primary" } },
+                new FwDict { { "id", "2" }, { "iname", "Two" } }
+            ];
+
+            var html = FormUtils.selectOptions(options, "1,2", true);
+
+            StringAssert.Contains(html, "value=\"1\"");
+            StringAssert.Contains(html, "class=\"primary\"");
+            StringAssert.Contains(html, "selected");
+        }
+
+        [TestMethod]
+        public void SelectTemplatesResolveNamesAndOptions()
+        {
+            var tmpDir = Path.Combine(Path.GetTempPath(), "formutils-tpl", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(tmpDir);
+            var tplPath = Path.Combine(tmpDir, "status.sel");
+            File.WriteAllText(tplPath, "a|Active\nb|`Inactive`");
+
+            var previousTemplate = FwConfig.settings.TryGetValue("template", out object? value) ? value : null;
+            FwConfig.settings["template"] = tmpDir;
+
+            try
+            {
+                var name = FormUtils.selectTplName("/status.sel", "b");
+                var options = FormUtils.selectTplOptions("/status.sel");
+
+                Assert.AreEqual("Inactive", name);
+                Assert.AreEqual(2, options.Count);
+                Assert.AreEqual("a", (options[0] as FwDict)?["id"]);
+            }
+            finally
+            {
+                if (previousTemplate != null)
+                    FwConfig.settings["template"] = previousTemplate;
+                else
+                    FwConfig.settings.Remove("template");
+
+                if (Directory.Exists(tmpDir))
+                    Directory.Delete(tmpDir, true);
+            }
+        }
+
+        [TestMethod]
+        public void CleanInput_RemovesUnsupportedCharacters()
+        {
+            var input = @"abc!@#$%^&*()+=[]{}|;':"",<>?";
+            var cleaned = FormUtils.cleanInput(input);
+
+            Assert.IsFalse(cleaned.Contains("!"));
+            StringAssert.Contains(cleaned, "abc");
+        }
+
+        [TestMethod]
+        public void ComboForDateSplitsAndRecombines()
+        {
+            FwDict item = [];
+            var success = FormUtils.comboForDate("2024-02-05", item, "dt");
+
+            Assert.IsTrue(success);
+            Assert.AreEqual(5, item["dt_day"]);
+            Assert.AreEqual(2, item["dt_mon"]);
+            Assert.AreEqual(2024, item["dt_year"]);
+        }
+
+        [TestMethod]
+        public void TimeConversionsRoundTrip()
+        {
+            Assert.AreEqual("01:05", FormUtils.intToTimeStr(3900));
+            Assert.AreEqual(3660, FormUtils.timeStrToInt("01:01"));
+
+            FwDict item = new() { { "occurred", new DateTime(2024, 1, 1, 3, 15, 10) } };
+            Assert.IsTrue(FormUtils.timeToForm(item, "occurred"));
+            Assert.AreEqual(3, item["occurred_hh"]);
+            Assert.AreEqual(15, item["occurred_mm"]);
+
+            item["occurred_hh"] = 6;
+            item["occurred_mm"] = 30;
+            item["occurred_ss"] = 0;
+            Assert.IsTrue(FormUtils.formToTime(item, "occurred"));
+            Assert.AreEqual(6, ((DateTime)item["occurred"]).Hour);
+            Assert.IsFalse(FormUtils.formToTime(new FwDict() { { "broken_hh", "99" }, { "broken_mm", "99" }, { "broken_ss", "99" } }, "broken"));
+        }
+
+        [TestMethod]
+        public void FormTimeAndDateHelpersNormalizeStrings()
+        {
+            Assert.AreEqual("", FormUtils.dateToFormTime(""));
+            Assert.AreEqual("13:45", FormUtils.dateToFormTime("2024-01-01 13:45:59"));
+
+            var combined = FormUtils.formTimeToDate("2024-01-01", "01:30");
+            Assert.AreEqual(new DateTime(2024, 1, 1, 1, 30, 0), combined);
+        }
+
+        [TestMethod]
+        public void AutocompleteParsingExtractsLeadingId()
+        {
+            Assert.AreEqual(123, FormUtils.getIdFromAutocomplete("123 - Test Value"));
+            Assert.AreEqual(0, FormUtils.getIdFromAutocomplete("invalid"));
+        }
+
+        [TestMethod]
+        public void ListOrderingHelpersRespectFlagsAndPrio()
+        {
+            FwList rows = [
+                new FwDict { { "is_checked", true }, { "prio", 2 }, { "iname", "B" } },
+                new FwDict { { "is_checked", false }, { "prio", 1 }, { "iname", "A" } }
+            ];
+
+            var checkedOnly = FormUtils.listCheckedOrderByPrioIname(rows);
+            Assert.AreEqual(1, checkedOnly.Count);
+            Assert.AreEqual("B", (checkedOnly[0] as FwDict)?["iname"]);
+
+            var ordered = FormUtils.listOrderByPrioIname(rows);
+            Assert.AreEqual("B", (ordered[0] as FwDict)?["iname"]);
+            Assert.AreEqual("A", (ordered[1] as FwDict)?["iname"]);
+        }
+
+        [TestMethod]
+        public void ChangeDetectionTracksDifferences()
+        {
+            var oldItem = new FwDict { { "name", "before" }, { "date", new DateTime(2024, 1, 1) } };
+            var newItem = new FwDict { { "name", "after" }, { "date", new DateTime(2024, 1, 2) }, { "new", "value" } };
+
+            var changes = FormUtils.changesOnly(newItem, oldItem);
+            Assert.AreEqual(2, changes.Count);
+            Assert.AreEqual("after", changes["name"]);
+            Assert.AreEqual(new DateTime(2024, 1, 2), changes["date"]);
+
+            Assert.IsTrue(FormUtils.isChanged(newItem, oldItem, "name"));
+            Assert.IsFalse(FormUtils.isChanged(newItem, oldItem, "missing"));
+
+            Assert.IsTrue(FormUtils.isChangedDate("2024-01-01", "2024-01-02"));
+            Assert.IsFalse(FormUtils.isChangedDate("2024-01-01", "2024-01-01"));
+        }
+
+        [TestMethod]
+        public void SqlOrderByQuotesAndInverts()
+        {
+            var db = new DB("conn", DB.DBTYPE_SQLSRV);
+            var sortmap = new FwDict { { "name", "nm" }, { "created", "created desc" } };
+
+            var asc = FormUtils.sqlOrderBy(db, "name", "asc", sortmap);
+            var desc = FormUtils.sqlOrderBy(db, "created", "desc", sortmap);
+
+            StringAssert.StartsWith(asc.Trim(), "[nm]");
+            StringAssert.EndsWith(desc.Trim(), "asc");
+            StringAssert.Contains(desc, "[created]");
         }
     }
 }

@@ -1477,16 +1477,14 @@ public class Utils
                 if (string.IsNullOrEmpty(filepath))
                     continue;
 
-                using (var fs = new FileStream(filepath, FileMode.Open))
-                {
-                    //TODO use some mime mapping class
-                    string mimeType = "application/octet-stream";
-                    if (Path.GetExtension(filepath) == ".xml") mimeType = "text/xml";
+                //TODO use some mime mapping class
+                string mimeType = "application/octet-stream";
+                if (Path.GetExtension(filepath) == ".xml") mimeType = "text/xml";
 
-                    var part = new StreamContent(fs);
-                    part.Headers.ContentType = MediaTypeHeaderValue.Parse(mimeType);
-                    form.Add(part, "file", Path.GetFileName(filepath));
-                }
+                var fs = new FileStream(filepath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                var part = new StreamContent(fs);
+                part.Headers.ContentType = MediaTypeHeaderValue.Parse(mimeType);
+                form.Add(part, "file", Path.GetFileName(filepath));
             }
 
             HttpResponseMessage response = client.PostAsync(url, form).Result;
