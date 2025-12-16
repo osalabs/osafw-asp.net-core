@@ -1255,8 +1255,8 @@ public abstract class FwController
 
     public virtual string getViewListUserFields()
     {
-        list_user_view ??= fw.model<UserViews>().oneByIcode(UserViews.icodeByUrl(base_url, is_list_edit)); // base_url is screen identifier
-        var fields = list_user_view["fields"].toStr();
+        var listUserView = getListUserView();
+        var fields = listUserView["fields"].toStr();
         return (fields.Length > 0 ? fields : view_list_defaults);
     }
 
@@ -1302,6 +1302,15 @@ public abstract class FwController
     }
 
     /// <summary>
+    /// Returns cached list user view for the current controller and mode (list/edit).
+    /// </summary>
+    protected virtual FwDict getListUserView()
+    {
+        list_user_view ??= fw.model<UserViews>().oneByIcode(UserViews.icodeByUrl(base_url, is_list_edit)); // base_url is screen identifier
+        return list_user_view;
+    }
+
+    /// <summary>
     /// Apply conversions to data for a single view list field
     /// Override to add custom conversions.
     /// </summary>
@@ -1331,7 +1340,7 @@ public abstract class FwController
     /// <param name="is_cols">if true - update list_rows with cols, use false for json responses</param>
     public virtual void setViewList(bool is_cols = true)
     {
-        list_user_view = fw.model<UserViews>().oneByIcode(UserViews.icodeByUrl(base_url, is_list_edit));
+        list_user_view = getListUserView();
 
         var fields = getViewListUserFields();
 

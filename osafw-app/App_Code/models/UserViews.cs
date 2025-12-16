@@ -4,6 +4,7 @@
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
 using System;
+using System.Collections.Generic;
 
 namespace osafw;
 
@@ -25,6 +26,9 @@ public class UserViews : FwModel<UserViews.Row>
         public int upd_users_id { get; set; }
     }
 
+    private const int CacheSeconds = 300;
+    private string CacheRegistryKey => $"fw:userviews:registry:{fw.userId}";
+
     public static string icodeByUrl(string url, bool is_list_edit = false)
     {
         return url + (is_list_edit ? "/edit" : "");
@@ -39,7 +43,28 @@ public class UserViews : FwModel<UserViews.Row>
     // return default screen record for logged user
     public override DBRow oneByIcode(string icode)
     {
-        return db.row(table_name, DB.h(field_add_users_id, fw.userId, field_icode, icode, field_iname, ""));
+        // prefer request cache first
+        var reqCacheKey = cache_prefix_byicode + icode;
+        if (fw.cache.getRequestValue(reqCacheKey) is DBRow requestCached)
+            return requestCached;
+
+        // then try shared cache to bypass reloading same view across requests
+        var appCacheKey = cacheKeyDefault(icode);
+        if (FwCache.getValue(appCacheKey) is DBRow cached)
+        {
+            var cloned = cloneRow(cached);
+            fw.cache.setRequestValue(reqCacheKey, cloned);
+            return cloned;
+        }
+
+        // fall back to default implementation (includes request cache + normalization)
+        var item = base.oneByIcode(icode);
+
+        var sharedCopy = cloneRow(item);
+        FwCache.setValue(appCacheKey, sharedCopy, CacheSeconds);
+        registerCachedIcode(icode);
+
+        return item;
     }
 
     // return screen record for logged user by id
@@ -71,7 +96,7 @@ public class UserViews : FwModel<UserViews.Row>
     // add view for logged user with icode, fields, iname
     public int addSimple(string icode, string fields, string iname, string density = "")
     {
-        return add(new FwDict()
+        var result = add(new FwDict()
         {
             { field_icode, icode },
             { field_iname, iname },
@@ -79,6 +104,7 @@ public class UserViews : FwModel<UserViews.Row>
             { "density", density },
             { field_add_users_id, fw.userId },
         });
+        return result;
     }
 
     // add or update view for logged user
@@ -123,6 +149,7 @@ public class UserViews : FwModel<UserViews.Row>
             itemdb_add[field_add_users_id] = fw.userId;
             result = add(itemdb_add);
         }
+
         return result;
     }
 
@@ -146,12 +173,20 @@ public class UserViews : FwModel<UserViews.Row>
     /// <returns></returns>
     public FwList listSelectByIcode(string icode)
     {
-        return db.arrayp("select id, iname from " + db.qid(table_name) +
+        var cacheKey = cacheKeySelect(icode);
+        if (FwCache.getValue(cacheKey) is FwList cached)
+            return cloneList(cached);
+
+        var rows = db.arrayp("select id, iname from " + db.qid(table_name) +
                         @" where status=0
                                  and iname>''
                                  and icode=@icode
                                  and (is_system=1 OR add_users_id=@users_id)
                             order by is_system desc, iname", DB.h("@icode", icode, "@users_id", fw.userId));
+        var toCache = cloneList(rows);
+        FwCache.setValue(cacheKey, toCache, CacheSeconds);
+        registerCachedIcode(icode);
+        return rows;
     }
 
     /// <summary>
@@ -178,5 +213,69 @@ public class UserViews : FwModel<UserViews.Row>
         if (item.Count == 0) return;
 
         updateByIcodeFields(icode, item["fields"]);
+    }
+
+    private string cacheKeyDefault(string icode)
+    {
+        return $"fw:userviews:default:{fw.userId}:{icode}";
+    }
+
+    private string cacheKeySelect(string icode)
+    {
+        return $"fw:userviews:select:{fw.userId}:{icode}";
+    }
+
+    public override void removeCache(int id)
+    {
+        var icode = id > 0 ? db.value(table_name, DB.h(field_id, id), field_icode).toStr() : string.Empty;
+        base.removeCache(id);
+        if (!string.IsNullOrEmpty(icode))
+            removeAppCache(icode);
+    }
+
+    public override void removeCacheAll()
+    {
+        base.removeCacheAll();
+        removeAppCacheAll();
+    }
+
+    private static DBRow cloneRow(DBRow row) => Utils.cloneDBRow(row);
+
+    private static FwList cloneList(FwList rows) => Utils.cloneFwList(rows);
+
+    private void registerCachedIcode(string icode)
+    {
+        if (string.IsNullOrEmpty(icode))
+            return;
+
+        var set = (HashSet<string>?)FwCache.getValue(CacheRegistryKey) ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        set.Add(icode);
+        FwCache.setValue(CacheRegistryKey, set, CacheSeconds);
+    }
+
+    private void removeAppCache(string icode)
+    {
+        if (string.IsNullOrEmpty(icode))
+            return;
+
+        FwCache.remove(cacheKeyDefault(icode));
+        FwCache.remove(cacheKeySelect(icode));
+
+        if (FwCache.getValue(CacheRegistryKey) is HashSet<string> set && set.Remove(icode))
+            FwCache.setValue(CacheRegistryKey, set, CacheSeconds);
+    }
+
+    private void removeAppCacheAll()
+    {
+        if (FwCache.getValue(CacheRegistryKey) is not HashSet<string> set || set.Count == 0)
+            return;
+
+        foreach (var icode in set)
+        {
+            FwCache.remove(cacheKeyDefault(icode));
+            FwCache.remove(cacheKeySelect(icode));
+        }
+
+        FwCache.remove(CacheRegistryKey);
     }
 }

@@ -14,6 +14,7 @@ using System.Net.Mail;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Collections.Concurrent;
 
 namespace osafw;
 
@@ -48,6 +49,8 @@ public class FW : IDisposable
     private readonly FwDict models = []; // model's singletons cache
     private readonly FwDict controllers = []; // controller's singletons cache
     private const string ControllerActionsCacheKeyPrefix = "fw:controller-actions:";
+    private static readonly ConcurrentDictionary<string, Type?> ControllerTypeCache = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly ConcurrentDictionary<string, FwDict> VirtualControllerCache = new(StringComparer.OrdinalIgnoreCase);
     private ParsePage? pp_instance; // for parsePage()
 
     public FwDict FORM = [];
@@ -1033,13 +1036,19 @@ public class FW : IDisposable
     /// <param name="action"></param>
     public void setController(string controller, string action = "")
     {
+        var isControllerChanged = route.controller != controller;
+        var isActionChanged = route.action != action;
+
         route.controller = controller;
         // route.controller_path = controller; // TODO this won't work if redirect to controller with different prefix
         route.action = action;
 
-        G["controller"] = route.controller;
-        G["action"] = route.action;
-        G["controller.action"] = route.controller + "." + route.action;
+        if (isControllerChanged || isActionChanged)
+        {
+            G["controller"] = route.controller;
+            G["action"] = route.action;
+            G["controller.action"] = route.controller + "." + route.action;
+        }
     }
 
     public void setRoute(FwRoute r)
@@ -1607,7 +1616,8 @@ public class FW : IDisposable
             return cachedController;
 
         FwController c;
-        Type? ct = Type.GetType(FW_NAMESPACE_PREFIX + controller_name + "Controller", false, true); // case ignored
+        var controllerTypeKey = controller_name + "Controller";
+        Type? ct = ControllerTypeCache.GetOrAdd(controllerTypeKey, key => Type.GetType(FW_NAMESPACE_PREFIX + key, false, true));
         if (ct == null)
         {
             //if no such controller class - try virtual controllers
@@ -1617,7 +1627,7 @@ public class FW : IDisposable
 
             var controller_icode = controller_name;
 
-            var fwcon = model<FwControllers>().oneByIcode(controller_icode);
+            var fwcon = VirtualControllerCache.GetOrAdd(controller_icode, _ => model<FwControllers>().oneByIcode(controller_icode));
             if (fwcon.Count == 0)
                 return null; // controller class not found even in virtual controllers TODO NoControllerException?
 
