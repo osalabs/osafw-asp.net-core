@@ -443,7 +443,7 @@ public class Users : FwModel<Users.Row>
     /// </summary>
     /// <param name="min_acl">minimum required access level</param>
     /// <returns></returns>
-    public bool isAccessLevel(int min_acl)
+    public virtual bool isAccessLevel(int min_acl)
     {
         return fw.userAccessLevel >= min_acl;
     }
@@ -465,7 +465,7 @@ public class Users : FwModel<Users.Row>
     /// </summary>
     /// <param name="id">optional, if not passed - currently logged user checked</param>
     /// <returns></returns>
-    public bool isReadOnly(int id = -1)
+    public virtual bool isReadOnly(int id = -1)
     {
         if (id == -1)
             id = fw.userId;
@@ -482,7 +482,7 @@ public class Users : FwModel<Users.Row>
     /// </summary>
     /// <param name="id">optional, if not passed - currently logged user checked</param>
     /// <exception cref="AuthException"></exception>
-    public void checkReadOnly(int id = -1)
+    public virtual void checkReadOnly(int id = -1)
     {
         if (isReadOnly(id))
             throw new AuthException();
@@ -514,7 +514,7 @@ public class Users : FwModel<Users.Row>
     ///     edit => true if user has edit permission
     ///     del => true if user has delete permission
     /// </returns>
-    public FwDict getRBAC(int? users_id = null, string? resource_icode = null)
+    public virtual FwDict getRBAC(int? users_id = null, string? resource_icode = null)
     {
 #if isRoles
         var result = new FwRow();
