@@ -1,42 +1,30 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Collections.Generic;
 using System.Reflection;
 using System.Text.RegularExpressions;
-using System.Threading;
 
 namespace osafw.Tests
 {
     [TestClass]
     public class FwConfigTests
     {
-        private AsyncLocal<FwDict>? _current;
-        private FwDict? _originalSettings;
-
-        [TestInitialize]
-        public void SetUp()
-        {
-            var currentField = typeof(FwConfig).GetField("_current", BindingFlags.NonPublic | BindingFlags.Static);
-            _current = (AsyncLocal<FwDict>?)currentField?.GetValue(null);
-            _originalSettings = _current?.Value != null ? new FwDict(_current.Value) : null;
-            if (_current != null)
-                _current.Value = _originalSettings != null ? new FwDict(_originalSettings) : [];
-        }
-
-        [TestCleanup]
-        public void TearDown()
-        {
-            if (_current != null)
-                _current.Value = _originalSettings ?? [];
-        }
-
         [TestMethod]
         public void GetRoutePrefixesRX_BuildsRegexFromSettings()
         {
-            var settings = FwConfig.settings;
-            settings["route_prefixes"] = new FwDict
-            {
-                ["/Admin"] = true,
-                ["/Api"] = true,
-            };
+            var host = "route-test";
+            var config = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["appSettings:route_prefixes:/Admin"] = "True",
+                    ["appSettings:route_prefixes:/Api"] = "True",
+                })
+                .Build();
+
+            FwConfig.init(null, config, host);
+
+            var settings = FwConfig.GetCurrentSettings();
+            Assert.AreEqual(host, settings["hostname"]);
 
             var rx = FwConfig.getRoutePrefixesRX();
             var compiled = new Regex(rx);
@@ -49,18 +37,38 @@ namespace osafw.Tests
         }
 
         [TestMethod]
+        public void GetRoutePrefixesRX_UsesCachedHostSettings()
+        {
+            var host = "route-test-cache";
+            var config = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["appSettings:route_prefixes:/Admin"] = "True",
+                })
+                .Build();
+
+            FwConfig.init(null, config, host);
+
+            var rx1 = FwConfig.getRoutePrefixesRX();
+            var compiled1 = new Regex(rx1);
+            Assert.IsTrue(compiled1.IsMatch("/Admin/test"));
+        }
+
+        [TestMethod]
         public void OverrideSettingsByName_AppliesExactOverride()
         {
-            var settings = FwConfig.settings;
-            settings["lang"] = "en";
-            settings["nested"] = new FwDict { ["value"] = "old" };
-            settings["override"] = new FwDict
+            var settings = new FwDict
             {
-                ["TenantA"] = new FwDict
+                ["lang"] = "en",
+                ["nested"] = new FwDict { ["value"] = "old" },
+                ["override"] = new FwDict
                 {
-                    ["hostname_match"] = "example.com",
-                    ["lang"] = "fr",
-                    ["nested"] = new FwDict { ["value"] = "new" },
+                    ["TenantA"] = new FwDict
+                    {
+                        ["hostname_match"] = "example.com",
+                        ["lang"] = "fr",
+                        ["nested"] = new FwDict { ["value"] = "new" },
+                    },
                 },
             };
 
@@ -74,14 +82,16 @@ namespace osafw.Tests
         [TestMethod]
         public void OverrideSettingsByName_RespectsRegexMatching()
         {
-            var settings = FwConfig.settings;
-            settings["timezone"] = "UTC";
-            settings["override"] = new FwDict
+            var settings = new FwDict
             {
-                ["Geo"] = new FwDict
+                ["timezone"] = "UTC",
+                ["override"] = new FwDict
                 {
-                    ["hostname_match"] = "example",
-                    ["timezone"] = "Local",
+                    ["Geo"] = new FwDict
+                    {
+                        ["hostname_match"] = "example",
+                        ["timezone"] = "Local",
+                    },
                 },
             };
 

@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Microsoft.Extensions.Configuration;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization;
@@ -13,6 +15,7 @@ namespace osafw.Tests
     {
         private string tempRoot = null!;
         private FW fw = null!;
+        private string host = null!;
 
         [TestInitialize]
         public void SetUp()
@@ -22,8 +25,21 @@ namespace osafw.Tests
 
             fw = CreateFwWithContext();
 
-            var settings = FwConfig.settings;
-            settings.Clear();
+//            var settings = FwConfig.settings;
+//            settings.Clear();
+            host = $"upload-{Guid.NewGuid()}";
+
+//            fw = (FW)FormatterServices.GetUninitializedObject(typeof(FW));
+
+            var config = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?>())
+                .Build();
+
+            FwConfig.init(null, config, host);
+
+            // isolate config for predictable paths per test host
+            var settings = FwConfig.GetCurrentSettings();
+
             settings["site_root"] = tempRoot;
             settings["UPLOAD_DIR"] = "/upload";
             settings["ROOT_URL"] = "https://example.test";
