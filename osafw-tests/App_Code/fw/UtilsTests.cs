@@ -669,8 +669,11 @@ namespace osafw.Tests
         [TestMethod()]
         public void percentChangeTest()
         {
-            //TODO
-            //how does it works
+            Assert.AreEqual("0%", Utils.percentChange(0, 0), "Zero against zero should stay neutral");
+            Assert.AreEqual("+100%", Utils.percentChange(5, 5), "Any non-zero over zero previous should be +100%");
+            Assert.AreEqual("+0%", Utils.percentChange(50, 100), "No change should be formatted with a leading plus");
+            Assert.AreEqual("+200%", Utils.percentChange(75, 100), "Growth should be positive with rounding");
+            Assert.AreEqual("-66.67%", Utils.percentChange(25, 100), "Decline should be negative with two decimals");
         }
 
 
@@ -715,8 +718,6 @@ namespace osafw.Tests
         [TestMethod()]
         public void orderbyApplySortdirTest()
         {
-            //TODO
-
             // Case 1: Test ascending orderby with sortdir "asc"
             string result1 = Utils.orderbyApplySortdir("id", "asc");
             Assert.AreEqual("id", result1, "Result should remain unchanged for ascending orderby with sortdir 'asc'");
@@ -745,8 +746,6 @@ namespace osafw.Tests
         [TestMethod()]
         public void html2textTest()
         {
-            //TODO bug?
-
             // Case 1: Test empty input
             string input1 = "";
             string result1 = Utils.html2text(input1);
@@ -860,8 +859,6 @@ namespace osafw.Tests
         [TestMethod()]
         public void urlescapeTest()
         {
-            //TODO
-
             // Case 1: Empty string
             string emptyString = "";
             string result1 = Utils.urlescape(emptyString);
@@ -1003,9 +1000,6 @@ namespace osafw.Tests
         [TestMethod()]
         public void nameCamelCaseTest()
         {
-            //TODO
-            //bug ?
-
             // Case 1: Test with empty input
             string input1 = "";
             string result1 = Utils.nameCamelCase(input1);
