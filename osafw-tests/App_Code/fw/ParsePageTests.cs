@@ -1,6 +1,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
+using System.IO;
 
 namespace osafw.Tests
 {
@@ -8,10 +9,21 @@ namespace osafw.Tests
     public class ParsePageTests
     {
         [TestMethod()]
-        [Ignore("Not implemented")]
         public void ParsePageTest()
         {
-            throw new NotImplementedException();
+            string tempDir = Path.Combine(Path.GetTempPath(), "parsepage-tests");
+            Directory.CreateDirectory(tempDir);
+
+            string templatePath = Path.Combine(tempDir, "sample.html");
+            File.WriteAllText(templatePath, "Hello, <~name>!");
+
+            var parser = new ParsePage(new ParsePageOptions { TemplatesRoot = tempDir });
+            var output = parser.parse_page("", "sample.html", new FwDict { { "name", "World" } });
+
+            Assert.AreEqual("Hello, World!", output);
+
+            File.Delete(templatePath);
+            Directory.Delete(tempDir, true);
         }
 
         [TestMethod()]
@@ -46,24 +58,40 @@ namespace osafw.Tests
         }
 
         [TestMethod()]
-        [Ignore("Not implemented")]
         public void tag_tplpathTest()
         {
-            throw new NotImplementedException();
+            var parser = new ParsePage(null!);
+
+            Assert.AreEqual("./base/fragment.html", parser.tag_tplpath("./fragment", "./base/template.html"));
+            Assert.AreEqual("partial.html", parser.tag_tplpath("partial", "templates/view.html"));
+            Assert.AreEqual("common/footer.html", parser.tag_tplpath("common/footer.html", "templates/view.html"));
         }
 
         [TestMethod()]
-        [Ignore("Not implemented")]
         public void langMapTest()
         {
-            throw new NotImplementedException();
+            var parser = new ParsePage(null!);
+
+            Assert.AreEqual("Hello", parser.langMap("Hello"));
+            Assert.AreEqual("Hello", parser.langMap("Hello", "context"));
         }
 
         [TestMethod()]
-        [Ignore("Not implemented")]
         public void parse_pageTest()
         {
-            throw new NotImplementedException();
+            string tempDir = Path.Combine(Path.GetTempPath(), "parsepage-include-tests");
+            Directory.CreateDirectory(tempDir);
+
+            File.WriteAllText(Path.Combine(tempDir, "main.html"), "<~./include>");
+            File.WriteAllText(Path.Combine(tempDir, "include.html"), "Included <~value>");
+
+            var parser = new ParsePage(new ParsePageOptions { TemplatesRoot = tempDir });
+            var ps = new FwDict { { "value", "content" } };
+
+            var output = parser.parse_page("", "main.html", ps);
+            Assert.AreEqual("Included content", output);
+
+            Directory.Delete(tempDir, true);
         }
 
         [TestMethod()]
@@ -362,21 +390,23 @@ namespace osafw.Tests
 
 
         [TestMethod()]
-        [Ignore("Not implemented")]
         public void parse_string_radioTest()
         {
-            /*string tpl = "<~fradio radio=\"fradio\" name=\"item[fradio]\" delim=\"&nbsp;\">";
-            string tpl_result = "<select name = \"item[fruit]\">" +
-                "<option value=\"\">- select a fruit -</option>" +
-                "<option value=\"1\">Apple</option>\r\n" +
-                "<option value=\"2\">Plum</option>\r\n" +
-                "<option value=\"3\" selected>Banana</option>\r\n" +
-                "</select>";
-            FwRow ps = new();
-            ps["fradio"] = new FwList() { "Apple", "Plum", "Banana" };
-            var r = new ParsePage(null!).parse_string(tpl, ps);
-            Assert.AreEqual("", r);*/
-            throw new NotImplementedException();
+            string tempDir = Path.Combine(Path.GetTempPath(), "parsepage-radio-tests");
+            Directory.CreateDirectory(tempDir);
+            File.WriteAllLines(Path.Combine(tempDir, "options.sel"), new[] { "1|One", "2|Two" });
+            File.WriteAllText(Path.Combine(tempDir, "main.html"), "<~options.sel radio=\"selected\" name=\"selected\" delim=\"inline\">");
+
+            var parser = new ParsePage(new ParsePageOptions { TemplatesRoot = tempDir });
+            var ps = new FwDict { { "selected", "2" } };
+
+            string result = parser.parse_page("", "main.html", ps);
+
+            StringAssert.Contains(result, "form-check inline");
+            StringAssert.Contains(result, "value=\"1\"");
+            StringAssert.Contains(result, "value=\"2\" checked='checked'");
+
+            Directory.Delete(tempDir, true);
         }
 
         [TestMethod()]
