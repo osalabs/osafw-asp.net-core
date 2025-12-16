@@ -14,6 +14,7 @@ using System.Net.Mail;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Collections.Concurrent;
 
 namespace osafw;
 
@@ -1033,13 +1034,19 @@ public class FW : IDisposable
     /// <param name="action"></param>
     public void setController(string controller, string action = "")
     {
+        var isControllerChanged = route.controller != controller;
+        var isActionChanged = route.action != action;
+
         route.controller = controller;
         // route.controller_path = controller; // TODO this won't work if redirect to controller with different prefix
         route.action = action;
 
-        G["controller"] = route.controller;
-        G["action"] = route.action;
-        G["controller.action"] = route.controller + "." + route.action;
+        if (isControllerChanged || isActionChanged)
+        {
+            G["controller"] = route.controller;
+            G["action"] = route.action;
+            G["controller.action"] = route.controller + "." + route.action;
+        }
     }
 
     public void setRoute(FwRoute r)
@@ -1606,7 +1613,7 @@ public class FW : IDisposable
             return cachedController;
 
         FwController c;
-        Type? ct = Type.GetType(FW_NAMESPACE_PREFIX + controller_name + "Controller", false, true); // case ignored
+        Type? ct = getControllerTypeCached(controller_name);
         if (ct == null)
         {
             //if no such controller class - try virtual controllers
@@ -1616,7 +1623,7 @@ public class FW : IDisposable
 
             var controller_icode = controller_name;
 
-            var fwcon = model<FwControllers>().oneByIcode(controller_icode);
+            var fwcon = getVirtualControllerCached(controller_icode);
             if (fwcon.Count == 0)
                 return null; // controller class not found even in virtual controllers TODO NoControllerException?
 
@@ -1653,6 +1660,20 @@ public class FW : IDisposable
         controllers[controller_name] = c;
 
         return c;
+    }
+
+    private static readonly ConcurrentDictionary<string, Type?> ControllerTypeCache = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly ConcurrentDictionary<string, FwDict> VirtualControllerCache = new(StringComparer.OrdinalIgnoreCase);
+
+    private Type? getControllerTypeCached(string controller_name)
+    {
+        var cacheKey = controller_name + "Controller";
+        return ControllerTypeCache.GetOrAdd(cacheKey, key => Type.GetType(FW_NAMESPACE_PREFIX + key, false, true));
+    }
+
+    private FwDict getVirtualControllerCached(string controller_icode)
+    {
+        return VirtualControllerCache.GetOrAdd(controller_icode, _ => model<FwControllers>().oneByIcode(controller_icode));
     }
 
     public void logActivity(string log_types_icode, string entity_icode, int item_id = 0, string iname = "", FwDict? changed_fields = null)

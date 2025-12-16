@@ -795,6 +795,25 @@ public class Utils
     }
     // ****** cloneHashDeep end
 
+    /// <summary>
+    /// Deep clone DBRow (FwDict) preserving value types and nested dictionaries/lists.
+    /// </summary>
+    public static DBRow cloneDBRow(DBRow row)
+    {
+        return (DBRow)(cloneHashDeep(row) ?? []);
+    }
+
+    /// <summary>
+    /// Deep clone FwList (ArrayList of FwDict) preserving nested contents.
+    /// </summary>
+    public static FwList cloneFwList(FwList rows)
+    {
+        FwList cloned = [];
+        foreach (FwDict row in rows)
+            cloned.Add(cloneHashDeep(row) ?? []);
+        return cloned;
+    }
+
     public static string bytes2str(long b)
     {
         string result = b.ToString();

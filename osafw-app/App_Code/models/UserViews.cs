@@ -239,18 +239,9 @@ public class UserViews : FwModel<UserViews.Row>
         removeAppCacheAll();
     }
 
-    private static DBRow cloneRow(DBRow row)
-    {
-        return (DBRow)(Utils.cloneHashDeep(row) ?? []);
-    }
+    private static DBRow cloneRow(DBRow row) => Utils.cloneDBRow(row);
 
-    private static FwList cloneList(FwList rows)
-    {
-        FwList cloned = [];
-        foreach (FwDict row in rows)
-            cloned.Add(Utils.cloneHashDeep(row) ?? []);
-        return cloned;
-    }
+    private static FwList cloneList(FwList rows) => Utils.cloneFwList(rows);
 
     private void registerCachedIcode(string icode)
     {
