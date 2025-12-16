@@ -669,8 +669,11 @@ namespace osafw.Tests
         [TestMethod()]
         public void percentChangeTest()
         {
-            //TODO
-            //how does it works
+            Assert.AreEqual("0%", Utils.percentChange(0, 0), "Zero against zero should stay neutral");
+            Assert.AreEqual("+100%", Utils.percentChange(5, 5), "Any non-zero over zero previous should be +100%");
+            Assert.AreEqual("+0%", Utils.percentChange(50, 100), "No change should be formatted with a leading plus");
+            Assert.AreEqual("+200%", Utils.percentChange(75, 100), "Growth should be positive with rounding");
+            Assert.AreEqual("-66.67%", Utils.percentChange(25, 100), "Decline should be negative with two decimals");
         }
 
 
