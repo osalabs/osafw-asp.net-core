@@ -49,7 +49,7 @@ public abstract class FwController
     protected FwDict list_sortmap = [];            // required for Index, sortmap fields
     protected FwDict list_user_view = [];          // optional, user view settings for the list screen from UserViews model
     protected string search_fields = string.Empty;              // optional, search fields, space-separated
-                                                 // fields to search via $s=list_filter["s"), ] - means exact match, not "like"
+                                                                // fields to search via $s=list_filter["s"), ] - means exact match, not "like"
 
     // editable list support
     protected bool is_dynamic_index_edit = false;
@@ -115,10 +115,11 @@ public abstract class FwController
         var cacheKey = ControllerConfigCacheKeyPrefix + full_path.ToLowerInvariant();
         if (FwCache.getValue(cacheKey) is FwDict cached &&
             cached["lastWriteTimeUtc"] is DateTime cachedWriteTime &&
-            cachedWriteTime == lastWriteTimeUtc)
+            cachedWriteTime == lastWriteTimeUtc &&
+            cached["template"] is FwDict cachedTemplate
+            )
         {
-            if (cached["template"] is FwDict cachedTemplate)
-                return Utils.cloneHashDeep(cachedTemplate) ?? []; // CACHE HIT - return a clone of the cached template
+            return Utils.cloneHashDeep(cachedTemplate) ?? []; // CACHE HIT - return a clone of the cached template
         }
 
         // CACHE MISS - load from file
@@ -304,7 +305,7 @@ public abstract class FwController
     public FwDict reqh(string iname)
     {
         if (fw.FORM[iname] is FwDict hf)
-            return hf; 
+            return hf;
         else
             return [];
     }

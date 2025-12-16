@@ -94,10 +94,7 @@ public class FormUtils
         foreach (FwDict item in arr)
         {
             text = Utils.htmlescape(item["iname"].toStr());
-            if (item.TryGetValue("id", out object? value))
-                val = value.toStr();
-            else
-                val = item["iname"].toStr();
+            val = (item.TryGetValue("id", out object? v)) ? v.toStr() : item["iname"].toStr();
 
             result.Append("<option value=\"").Append(Utils.htmlescape(val)).Append('"');
             if (item.TryGetValue("class", out object? classValue))

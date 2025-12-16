@@ -907,10 +907,7 @@ public class FwDynamicController : FwController
                 {
                     // select options
                     var itemValue = item[field].toStr();
-                    if (def["options"] is FwDict options && options.TryGetValue(itemValue, out object? o_value))
-                        def["value"] = o_value;
-                    else
-                        def["value"] = "";
+                    def["value"] = (def["options"] is FwDict options && options.TryGetValue(itemValue, out object? o_value)) ? o_value : "";
                 }
                 else
                     def["value"] = item[field];

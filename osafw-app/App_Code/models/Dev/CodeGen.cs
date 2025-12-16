@@ -717,7 +717,6 @@ class DevCodeGen
         hforeign_keys = Utils.array2hashtable(foreign_keys, "column"); // refresh in case new foreign keys added above
 
         StrList saveFields = [];
-        FwList saveFieldsNullable = [];
         FwDict hFieldsMap = [];   // name => iname - map for the view_list_map
         FwDict hFieldsMapEdit = []; // for Vue editable list
         FwDict hFieldsMapFW = []; // fw_name => name
@@ -1104,7 +1103,6 @@ class DevCodeGen
         var formTabs = config["form_tabs"] as List<FwDict> ?? [];
         config["form_tabs"] = formTabs;
 
-        var tabs = new FwList();
         foreach (var tab in showFieldsTabs.Keys)
         {
             var showFieldsCols = showFieldsTabs[tab];
