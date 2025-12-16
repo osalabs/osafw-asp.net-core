@@ -578,9 +578,10 @@ namespace osafw.Tests
             var newItem = new FwDict { { "name", "after" }, { "date", new DateTime(2024, 1, 2) }, { "new", "value" } };
 
             var changes = FormUtils.changesOnly(newItem, oldItem);
-            Assert.HasCount(2, changes);
+            Assert.HasCount(3, changes);
             Assert.AreEqual("after", changes["name"]);
             Assert.AreEqual(new DateTime(2024, 1, 2), changes["date"]);
+            Assert.AreEqual("value", changes["new"]);
 
             Assert.IsTrue(FormUtils.isChanged(newItem, oldItem, "name"));
             Assert.IsFalse(FormUtils.isChanged(newItem, oldItem, "missing"));
