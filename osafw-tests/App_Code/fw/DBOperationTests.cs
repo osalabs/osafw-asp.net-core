@@ -75,6 +75,7 @@ namespace osafw.Tests
 
             Assert.AreEqual("[dbo].[users]", sqlServerDb.qid("dbo.users"));
             Assert.AreEqual("`dbo`.`users`", mysqlDb.qid("dbo.users"));
+            Assert.AreEqual("plain", sqlServerDb.qid("plain", is_force: false));
         }
 
         [TestMethod]
@@ -85,6 +86,53 @@ namespace osafw.Tests
 
             Assert.AreEqual("SELECT TOP 5 * FROM table", sqlServerDb.limit("SELECT * FROM table", 5));
             Assert.AreEqual("SELECT * FROM table LIMIT 5", mysqlDb.limit("SELECT * FROM table", 5));
+        }
+
+        [TestMethod]
+        public void Q_QuotesAndTruncates()
+        {
+            var db = new DB("", DB.DBTYPE_SQLSRV);
+
+            Assert.AreEqual("'O''Malley'", db.q("O'Malley"));
+            Assert.AreEqual("'abc'", db.q("   abcdef", 3));
+        }
+
+        [TestMethod]
+        public void QQ_EscapesOnly()
+        {
+            var db = new DB("", DB.DBTYPE_SQLSRV);
+
+            Assert.AreEqual("O''M", db.qq("O'M"));
+        }
+
+        [TestMethod]
+        public void QiQfQdec_ConvertValues()
+        {
+            var db = new DB("", DB.DBTYPE_SQLSRV);
+
+            Assert.AreEqual(12, db.qi("12"));
+            Assert.AreEqual(1.5d, db.qf("1.5"));
+            Assert.AreEqual(2.5m, db.qdec("2.5"));
+        }
+
+        [TestMethod]
+        public void Qd_ParsesDatesOrReturnsNull()
+        {
+            var db = new DB("", DB.DBTYPE_SQLSRV);
+
+            var dt = db.qd("2024-01-02");
+            Assert.IsNotNull(dt);
+            Assert.AreEqual(2024, dt!.Value.Year);
+            Assert.IsNull(db.qd("not a date"));
+        }
+
+        [TestMethod]
+        public void Insqli_HandlesEmptyAndValues()
+        {
+            var db = new DB("", DB.DBTYPE_SQLSRV);
+
+            Assert.AreEqual(" IN (NULL)", db.insqli(new int[] { }));
+            Assert.AreEqual(" IN (1, 2, 3)", db.insqli(new[] { "1", "2", "3" }));
         }
     }
 }
