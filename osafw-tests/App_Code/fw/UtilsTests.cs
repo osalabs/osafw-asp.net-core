@@ -1,4 +1,5 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -318,73 +319,95 @@ namespace osafw.Tests
         }
 
         [TestMethod()]
-        [Ignore("Not implemented")]
-        public void importCSVTest()
+        public void ImportSpreadsheetNotSupportedWithoutPackage()
         {
-            throw new NotImplementedException();
+#if ExcelDataReader
+            Assert.Inconclusive("ExcelDataReader should not be available in this test environment");
+#else
+            var thrown = false;
+            try
+            {
+                Utils.ImportSpreadsheet("missing.csv", (_, _) => true);
+            }
+            catch (NotSupportedException)
+            {
+                thrown = true;
+            }
+
+            Assert.IsTrue(thrown);
+#endif
         }
 
         [TestMethod()]
-        [Ignore("Not implemented")]
-        public void importExcelTest()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod()]
-        [Ignore("Not implemented")]
         public void toCSVRowTest()
         {
-            throw new NotImplementedException();
+            var row = new FwDict
+            {
+                { "plain", "abc" },
+                { "comma", "a,b" },
+                { "quote", "a\"b" },
+                { "newline", "a\nb" }
+            };
+
+            string result = Utils.toCSVRow(row, new[] { "plain", "comma", "quote", "newline" });
+
+            Assert.AreEqual("abc,\"a,b\",\"a\"\"b\",\"a\nb\"", result);
         }
 
         [TestMethod()]
-        [Ignore("Not implemented")]
         public void getCSVExportTest()
         {
-            throw new NotImplementedException();
+            var rows = new FwList
+            {
+                new FwDict { { "id", 1 }, { "name", "Alpha" } },
+                new FwDict { { "id", 2 }, { "name", "Beta, Inc" } }
+            };
+
+            var csv = Utils.getCSVExport("Identifier,Title", "id name", rows).ToString();
+
+            StringAssert.StartsWith(csv, "Identifier,Title\r\n");
+            StringAssert.Contains(csv, "1,Alpha\r\n");
+            StringAssert.Contains(csv, "2,\"Beta, Inc\"\r\n");
         }
 
         [TestMethod()]
-        [Ignore("Not implemented")]
         public void writeCSVExportTest()
         {
-            throw new NotImplementedException();
+            var rows = new FwList
+            {
+                new FwDict { { "id", 1 }, { "name", "Alpha" } }
+            };
+
+            var context = new DefaultHttpContext();
+            context.Response.Body = new MemoryStream();
+
+            Utils.writeCSVExport(context.Response, "test", "id,name", "*", rows);
+
+            context.Response.Body.Seek(0, SeekOrigin.Begin);
+            using var reader = new StreamReader(context.Response.Body);
+            var body = reader.ReadToEnd();
+
+            StringAssert.Contains(context.Response.Headers.ContentType!, "text/csv");
+            StringAssert.StartsWith(body, "id,name\r\n1,Alpha\r\n");
         }
 
         [TestMethod()]
-        [Ignore("Not implemented")]
-        public void writeXLSExportTest()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod()]
-        [Ignore("Not implemented")]
-        public void rotateImageTest()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod()]
-        [Ignore("Not implemented")]
-        public void resizeImageTest()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod()]
-        [Ignore("Not implemented")]
         public void fileSizeTest()
         {
-            throw new NotImplementedException();
+            string tmpFile = Path.GetTempFileName();
+            File.WriteAllText(tmpFile, "12345");
+
+            Assert.AreEqual(5, Utils.fileSize(tmpFile));
+            Assert.AreEqual(0, Utils.fileSize(Path.Combine(tmpFile, "missing")));
+
+            File.Delete(tmpFile);
         }
 
         [TestMethod()]
-        [Ignore("Not implemented")]
         public void fileNameTest()
         {
-            throw new NotImplementedException();
+            Assert.AreEqual("file.txt", Utils.fileName("/tmp/path/file.txt"));
+            Assert.AreEqual("file.txt", Utils.fileName("file.txt"));
         }
 
         [TestMethod()]
@@ -590,10 +613,24 @@ namespace osafw.Tests
         }
 
         [TestMethod()]
-        [Ignore("Not implemented")]
         public void cleanupTmpFilesTest()
         {
-            throw new NotImplementedException();
+            string prefix = "unittest";
+            string tmpDir = Utils.getTmpDir(prefix);
+
+            string oldFile = Path.Combine(tmpDir, "old.tmp");
+            File.WriteAllText(oldFile, "old");
+            File.SetCreationTime(oldFile, DateTime.Now.AddHours(-2));
+
+            string newFile = Path.Combine(tmpDir, "new.tmp");
+            File.WriteAllText(newFile, "new");
+
+            Utils.cleanupTmpFiles(prefix);
+
+            Assert.IsFalse(File.Exists(oldFile));
+            Assert.IsTrue(File.Exists(newFile));
+
+            File.Delete(newFile);
         }
 
         [TestMethod()]
@@ -737,13 +774,23 @@ namespace osafw.Tests
         }
 
         [TestMethod()]
-        [Ignore("Not implemented")]
         public void commastr2hashTest()
         {
-            //TODO 
-            //how does it works
+            var resultDefault = Utils.commastr2hash("1,2, 3");
+            Assert.AreEqual("1", resultDefault["1"]);
+            Assert.AreEqual("2", resultDefault["2"]);
+            Assert.AreEqual("3", resultDefault["3"]);
 
-            throw new NotImplementedException();
+            var resultIndexed = Utils.commastr2hash("a,b", "123...");
+            Assert.AreEqual(0, resultIndexed["a"]);
+            Assert.AreEqual(1, resultIndexed["b"]);
+
+            var resultValue = Utils.commastr2hash("x,y", "val");
+            Assert.AreEqual("val", resultValue["x"]);
+            Assert.AreEqual("val", resultValue["y"]);
+
+            var resultEmpty = Utils.commastr2hash(",,");
+            Assert.IsTrue(resultEmpty.Count == 0);
         }
 
         [TestMethod()]
@@ -863,10 +910,20 @@ namespace osafw.Tests
         }
 
         [TestMethod()]
-        [Ignore("Not implemented")]
-        public void UploadFilesToRemoteUrlTest()
+        public void generateUniqueTmpDirPerPrefix()
         {
-            throw new NotImplementedException();
+            string prefixA = "prefixA";
+            string prefixB = "prefixB";
+
+            string dirA = Utils.getTmpDir(prefixA);
+            string dirB = Utils.getTmpDir(prefixB);
+
+            Assert.AreNotEqual(dirA, dirB);
+            Assert.IsTrue(Directory.Exists(dirA));
+            Assert.IsTrue(Directory.Exists(dirB));
+
+            Directory.Delete(dirA, true);
+            Directory.Delete(dirB, true);
         }
 
         [TestMethod()]
@@ -940,7 +997,7 @@ namespace osafw.Tests
             Assert.AreEqual("Children", Utils.name2human("children"));
 
             // Case 7: Null input
-            Assert.ThrowsExactly<System.NullReferenceException>(() => Utils.name2human(null));
+            Assert.ThrowsExactly<System.NullReferenceException>(() => Utils.name2human(null!));
         }
 
         [TestMethod()]
