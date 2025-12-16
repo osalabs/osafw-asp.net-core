@@ -147,8 +147,8 @@ public class Users : FwModel<Users.Row>
     {
         if (id == 0) return false;//no anonymous updates
 
-        if (item.ContainsKey("pwd"))
-            item["pwd"] = this.hashPwd(item["pwd"].toStr());
+        if (item.TryGetValue("pwd", out object? value))
+            item["pwd"] = this.hashPwd(value.toStr());
         return base.update(id, item);
     }
 
@@ -257,7 +257,7 @@ public class Users : FwModel<Users.Row>
         for (var i = 0; i <= pwd.Length - 1; i++)
         {
             var c = pwd[i].toStr();
-            var count = chars.ContainsKey(c) ? chars[c].toInt() : 0;
+            var count = chars.TryGetValue(c, out object? value) ? value.toInt() : 0;
             count++;
             chars[c] = count;
             result += (int)(5.0 / (double)count);

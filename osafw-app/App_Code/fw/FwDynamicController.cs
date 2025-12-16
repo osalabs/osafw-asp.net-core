@@ -836,8 +836,8 @@ public class FwDynamicController : FwController
                 def["is_structure"] = true;
             else if (dtype == "multi")
             {
-                if (def.ContainsKey("lookup_model"))
-                    def["multi_datarow"] = fw.model(def["lookup_model"].toStr()).listWithChecked(item[field].toStr(), def);
+                if (def.TryGetValue("lookup_model", out object? value))
+                    def["multi_datarow"] = fw.model(value.toStr()).listWithChecked(item[field].toStr(), def);
                 else
                 {
                     if (def["is_by_linked"].toBool())
@@ -872,7 +872,7 @@ public class FwDynamicController : FwController
             {
                 // single values
                 // lookups
-                if (def.ContainsKey("lookup_table"))
+                if (def.TryGetValue("lookup_table", out object? value))
                 {
                     string lookup_key = def["lookup_key"].toStr();
                     if (lookup_key == "")
@@ -882,13 +882,13 @@ public class FwDynamicController : FwController
                     if (lookup_field == "")
                         lookup_field = "iname";
 
-                    var lookup_row = db.row(def["lookup_table"].toStr(), DB.h(lookup_key, item[field]));
+                    var lookup_row = db.row(value.toStr(), DB.h(lookup_key, item[field]));
                     def["lookup_row"] = lookup_row;
                     def["value"] = lookup_row[lookup_field];
                 }
-                else if (def.ContainsKey("lookup_model"))
+                else if (def.TryGetValue("lookup_model", out object? lm_value))
                 {
-                    var lookup_model = fw.model(def["lookup_model"].toStr());
+                    var lookup_model = fw.model(value.toStr());
                     def["lookup_id"] = item[field].toInt();
                     var lookup_row = lookup_model.one(def["lookup_id"]);
                     def["lookup_row"] = lookup_row;
@@ -901,14 +901,14 @@ public class FwDynamicController : FwController
                     if (!def.ContainsKey("admin_url"))
                         def["admin_url"] = "/Admin/" + def["lookup_model"]; // default admin url from model name
                 }
-                else if (def.ContainsKey("lookup_tpl"))
-                    def["value"] = FormUtils.selectTplName(def["lookup_tpl"].toStr(), item[field].toStr(), fw.route.controller_path.ToLower());
+                else if (def.TryGetValue("lookup_tpl", out object? lt_value))
+                    def["value"] = FormUtils.selectTplName(lt_value.toStr(), item[field].toStr(), fw.route.controller_path.ToLower());
                 else if (def.ContainsKey("options"))
                 {
                     // select options
                     var itemValue = item[field].toStr();
-                    if (def["options"] is FwDict options && options.ContainsKey(itemValue))
-                        def["value"] = options[itemValue];
+                    if (def["options"] is FwDict options && options.TryGetValue(itemValue, out object? o_value))
+                        def["value"] = o_value;
                     else
                         def["value"] = "";
                 }
@@ -962,9 +962,9 @@ public class FwDynamicController : FwController
             string field = def["field"].toStr();
 
             // for just loaded forms for existing items - pre-load filter's values into "item"
-            if (is_get_existing && def.ContainsKey("filter_for"))
+            if (is_get_existing && def.TryGetValue("filter_for", out object? value))
             {
-                var filter_for_field = def["filter_for"].toStr();
+                var filter_for_field = value.toStr();
                 var filter_field = def["filter_field"].toStr();
 
                 if (!string.IsNullOrEmpty(filter_for_field) && hfields[filter_for_field] is FwDict def_for)
@@ -989,8 +989,8 @@ public class FwDynamicController : FwController
             else if (dtype == "multicb")
             {
                 FwList multi_datarow;
-                if (def.ContainsKey("lookup_model"))
-                    multi_datarow = fw.model(def["lookup_model"].toStr()).listWithChecked(item[field].toStr(), def);
+                if (def.TryGetValue("lookup_model", out object? lm_value))
+                    multi_datarow = fw.model(lm_value.toStr()).listWithChecked(item[field].toStr(), def);
                 else
                 {
                     if (def["is_by_linked"].toBool())
@@ -1041,7 +1041,7 @@ public class FwDynamicController : FwController
             {
                 // single values
                 // lookups
-                if (def.ContainsKey("lookup_table"))
+                if (def.TryGetValue("lookup_table", out object? lt_value))
                 {
                     string lookup_key = def["lookup_key"].toStr();
                     if (lookup_key == "")
@@ -1051,13 +1051,13 @@ public class FwDynamicController : FwController
                     if (lookup_field == "")
                         lookup_field = "iname";
 
-                    var lookup_row = db.row(def["lookup_table"].toStr(), DB.h(lookup_key, item[field]));
+                    var lookup_row = db.row(lt_value.toStr(), DB.h(lookup_key, item[field]));
                     def["lookup_row"] = lookup_row;
                     def["value"] = lookup_row[lookup_field];
                 }
-                else if (def.ContainsKey("lookup_model"))
+                else if (def.TryGetValue("lookup_model", out object? lm_value))
                 {
-                    var lookup_model = fw.model(def["lookup_model"].toStr());
+                    var lookup_model = fw.model(lm_value.toStr());
 
                     if (dtype == "select" || dtype == "radio")
                     {
@@ -1101,9 +1101,9 @@ public class FwDynamicController : FwController
                     if (!def.ContainsKey("admin_url"))
                         def["admin_url"] = "/Admin/" + def["lookup_model"]; // default admin url from model name
                 }
-                else if (def.ContainsKey("lookup_tpl"))
+                else if (def.TryGetValue("lookup_tpl", out object? lt_value2))
                 {
-                    var select_options = FormUtils.selectTplOptions(def["lookup_tpl"].toStr(), fw.route.controller_path.ToLower());
+                    var select_options = FormUtils.selectTplOptions(lt_value.toStr(), fw.route.controller_path.ToLower());
                     def["select_options"] = select_options;
                     def["value"] = item[field];
                     foreach (FwDict row in select_options) // contains id, iname
@@ -1113,10 +1113,10 @@ public class FwDynamicController : FwController
                         row["value"] = item[field];
                     }
                 }
-                else if (def.ContainsKey("options"))
+                else if (def.TryGetValue("options", out object? o_value))
                 {
                     //select options as array - convert to arraylist of id => iname
-                    var options = def["options"] as FwDict ?? [];
+                    var options = o_value as FwDict ?? [];
                     var select_options = new FwList();
                     foreach (var entry in options)
                         select_options.Add(new FwDict() {
@@ -1263,8 +1263,8 @@ public class FwDynamicController : FwController
             if (type == "att_links_edit")
             {
                 var att_post_prefix = "att";
-                if (def.ContainsKey("att_post_prefix"))
-                    att_post_prefix = def["att_post_prefix"].toStr();
+                if (def.TryGetValue("att_post_prefix", out object? value))
+                    att_post_prefix = value.toStr();
                 // if PATCH - only update is post param is present (otherwise it will delete all records)
                 if (isPatch() && req(att_post_prefix) == null)
                     continue;
@@ -1471,8 +1471,8 @@ public class FwDynamicController : FwController
         FwDict result = [];
         foreach (FwDict fldinfo in fields)
         {
-            if (fldinfo.ContainsKey("field") && !result.ContainsKey(fldinfo["field"].toStr()))
-                result[fldinfo["field"].toStr()] = fldinfo;
+            if (fldinfo.TryGetValue("field", out object? value) && !result.ContainsKey(value.toStr()))
+                result[value.toStr()] = fldinfo;
         }
         return result;
     }

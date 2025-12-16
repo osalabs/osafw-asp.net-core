@@ -350,7 +350,7 @@ public abstract class FwController
     /// <returns></returns>
     public bool reqb(string iname, bool def = false)
     {
-        return fw.FORM.ContainsKey(iname) ? fw.FORM[iname].toBool() : def;
+        return fw.FORM.TryGetValue(iname, out object? value) ? value.toBool() : def;
     }
 
     public void rw(string str)
@@ -1183,13 +1183,13 @@ public abstract class FwController
 
     public virtual void setAddUpdUser(FwDict ps, FwDict item)
     {
-        if (!string.IsNullOrEmpty(model0.field_add_users_id) && item.ContainsKey(model0.field_add_users_id))
+        if (!string.IsNullOrEmpty(model0.field_add_users_id) && item.TryGetValue(model0.field_add_users_id, out object? add_id))
         {
-            ps["add_users_id_name"] = fw.model<Users>().iname(item[model0.field_add_users_id].toInt());
+            ps["add_users_id_name"] = fw.model<Users>().iname(add_id.toInt());
         }
-        if (!string.IsNullOrEmpty(model0.field_upd_users_id) && item.ContainsKey(model0.field_upd_users_id))
+        if (!string.IsNullOrEmpty(model0.field_upd_users_id) && item.TryGetValue(model0.field_upd_users_id, out object? upd_id))
         {
-            ps["upd_users_id_name"] = fw.model<Users>().iname(item[model0.field_upd_users_id].toInt());
+            ps["upd_users_id_name"] = fw.model<Users>().iname(upd_id.toInt());
         }
     }
 

@@ -67,10 +67,10 @@ public class FwVueController : FwDynamicController
             model0.filterForJson(row);
 
             //added/updated username - it's readonly so we can replace _id fields with names
-            if (!string.IsNullOrEmpty(model0.field_add_users_id) && row.ContainsKey(model0.field_add_users_id))
-                row["add_users_id"] = fw.model<Users>().iname(row[model0.field_add_users_id].toInt());
-            if (!string.IsNullOrEmpty(model0.field_upd_users_id) && row.ContainsKey(model0.field_upd_users_id))
-                row["upd_users_id"] = fw.model<Users>().iname(row[model0.field_upd_users_id].toInt());
+            if (!string.IsNullOrEmpty(model0.field_add_users_id) && row.TryGetValue(model0.field_add_users_id, out object? add_id))
+                row["add_users_id"] = fw.model<Users>().iname(add_id.toInt());
+            if (!string.IsNullOrEmpty(model0.field_upd_users_id) && row.TryGetValue(model0.field_upd_users_id, out object? upd_id))
+                row["upd_users_id"] = fw.model<Users>().iname(upd_id.toInt());
 
             //autocomplete fields - add _iname fields
             foreach (FwDict def in ac_fields)

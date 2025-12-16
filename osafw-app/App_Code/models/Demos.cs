@@ -61,13 +61,13 @@ public class Demos : FwModel<Demos.Row>
         where["status"] = db.opNOT(STATUS_DELETED);
 
         // Support filter_by/filter_field from config
-        if (def != null && def.ContainsKey("filter_by") && def.ContainsKey("filter_field"))
+        if (def != null && def.TryGetValue("filter_by", out object? fby) && def.TryGetValue("filter_field", out object? ff))
         {
             var item = def["i"] as FwDict ?? [];
-            var filter_by = def["filter_by"].toStr();
-            var filter_field = def["filter_field"].toStr();
-            if (item.ContainsKey(filter_by))
-                where[filter_field] = item[filter_by];
+            var filter_by = fby.toStr();
+            var filter_field = ff.toStr();
+            if (item.TryGetValue(filter_by, out object? value))
+                where[filter_field] = value;
         }
 
         return db.array(table_name, where, "iname", Utils.qw("id iname"));

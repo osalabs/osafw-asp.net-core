@@ -612,8 +612,8 @@ public class ParsePage
                     }
                     else if (ptr is FwDict hashtable)
                     {
-                        if (hashtable.ContainsKey(k))
-                            ptr = hashtable[k];
+                        if (hashtable.TryGetValue(k, out object? value))
+                            ptr = value;
                         else
                         {
                             ptr = ""; // no such key in hash
@@ -757,9 +757,9 @@ public class ParsePage
         bool is_numeric_comparison = false;
         if (attrs.ContainsKey("value") || attrs.ContainsKey("vvalue"))
         {
-            if (attrs.ContainsKey("vvalue"))
+            if (attrs.TryGetValue("vvalue", out object? value))
             {
-                ravalue = hfvalue(attrs["vvalue"].toStr(), hf, parent_hf);
+                ravalue = hfvalue(value.toStr(), hf, parent_hf);
             }
             else
                 ravalue = attrs["value"] ?? "";
@@ -955,9 +955,9 @@ public class ParsePage
         int attr_count = hattrs.Count;
         if (attr_count > 0)
         {
-            if (value.Length < 1 && hattrs.ContainsKey("default"))
+            if (value.Length < 1 && hattrs.TryGetValue("default", out object? value1))
             {
-                var value_default = hattrs["default"].toStr();
+                var value_default = value1.toStr();
                 if (!string.IsNullOrEmpty(value_default))
                     value = value_default;
                 attr_count -= 1;
@@ -999,9 +999,9 @@ public class ParsePage
                     value = Utils.bytes2str(value.toLong());
                     attr_count -= 1;
                 }
-                if (attr_count > 0 && hattrs.ContainsKey("date"))
+                if (attr_count > 0 && hattrs.TryGetValue("date", out object? dv))
                 {
-                    var dformat = hattrs["date"].toStr();
+                    var dformat = dv.toStr();
                     switch (dformat)
                     {
                         case "":
@@ -1058,9 +1058,9 @@ public class ParsePage
                     value = value.ToUpper();
                     attr_count -= 1;
                 }
-                if (attr_count > 0 && hattrs.ContainsKey("capitalize"))
+                if (attr_count > 0 && hattrs.TryGetValue("capitalize", out object? cp))
                 {
-                    value = Utils.capitalize(value, hattrs["capitalize"].toStr());
+                    value = Utils.capitalize(value, cp.toStr());
                     attr_count -= 1;
                 }
                 if (attr_count > 0 && hattrs.ContainsKey("truncate"))
@@ -1201,9 +1201,9 @@ public class ParsePage
         //fw.logger($"_attr_select: tag={tag}, tpl_name={tpl_name}", attrs, hf[tag]);
 
         var multi_delim = ""; // by default no multiple select
-        if (attrs.ContainsKey("multi"))
+        if (attrs.TryGetValue("multi", out object? value))
         {
-            var attr_multi = attrs["multi"].toStr();
+            var attr_multi = value.toStr();
             if (!string.IsNullOrEmpty(attr_multi))
                 multi_delim = attr_multi;
             else
@@ -1229,7 +1229,7 @@ public class ParsePage
 
         if (hfvalue(tag, hf) is ICollection seloptions)
         {
-            string value;
+            string value1;
             // hf(tag) is List of Dicts with "id" and "iname" keys, for example rows returned from db.array('select id, iname from ...')
             // "id" key is optional, if not present - iname will be used for values too
             string desc;
@@ -1238,16 +1238,16 @@ public class ParsePage
                 desc = Utils.htmlescape(item["iname"].toStr());
                 if (item.Contains("id"))
                 {
-                    value = item["id"].toStr().Trim();
+                    value1 = item["id"].toStr().Trim();
                 }
                 else
                 {
-                    value = item["iname"].toStr().Trim();
+                    value1 = item["iname"].toStr().Trim();
                 }
 
                 // check for selected value before escaping
                 string selected;
-                if (Array.IndexOf(asel, value) != -1)
+                if (Array.IndexOf(asel, value1) != -1)
                 {
                     selected = " selected";
                 }
@@ -1256,10 +1256,10 @@ public class ParsePage
                     selected = "";
                 }
 
-                value = Utils.htmlescape(value);
+                value1 = Utils.htmlescape(value1);
                 _replace_commons(ref desc);
 
-                result.Append("<option value=\"").Append(value).Append('"').Append(selected).Append('>').Append(desc).Append("</option>" + System.Environment.NewLine);
+                result.Append("<option value=\"").Append(value1).Append('"').Append(selected).Append('>').Append(desc).Append("</option>" + System.Environment.NewLine);
             }
         }
         else
@@ -1282,7 +1282,7 @@ public class ParsePage
                     continue;
                 // line.chomp()
                 string[] arr = line.Split("|", 2);
-                string value = arr[0].Trim();
+                string value2 = arr[0].Trim();
                 string desc = arr[1];
 
                 if (desc.Length < 1)
@@ -1291,18 +1291,18 @@ public class ParsePage
 
                 // check for selected value before escaping
                 string selected;
-                if (Array.IndexOf(asel, value) != -1)
+                if (Array.IndexOf(asel, value2) != -1)
                     selected = " selected";
                 else
                     selected = "";
 
                 if (!attrs.ContainsKey("noescape"))
                 {
-                    value = Utils.htmlescape(value);
+                    value2 = Utils.htmlescape(value2);
                     desc = Utils.htmlescape(desc);
                 }
 
-                result.Append("<option value=\"").Append(value).Append('"').Append(selected).Append('>').Append(desc).Append("</option>");
+                result.Append("<option value=\"").Append(value2).Append('"').Append(selected).Append('>').Append(desc).Append("</option>");
             }
         }
 

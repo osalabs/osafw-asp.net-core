@@ -36,11 +36,12 @@ public class AdminLookupsController : FwController
         foreach (FwDict row in rows)
         {
             var igroup = row["igroup"].toStr();
-            if (!grouped.ContainsKey(igroup))
+            if (!grouped.TryGetValue(igroup, out object? value))
             {
-                grouped[igroup] = new FwList();
+                value = new FwList();
+                grouped[igroup] = value;
             }
-            ((FwList)grouped[igroup]!).Add(row);
+            ((FwList)value!).Add(row);
         }
 
         // 2) Build an array of group-objects: [ 'igroup' => ..., 'list_rows' => [...] ]

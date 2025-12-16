@@ -340,8 +340,8 @@ public class FwReports
                         ps["IS_PRINT_MODE"] = true;
 
                         var layout = fw.G["PAGE_LAYOUT_PRINT"] as string ?? string.Empty;
-                        if (ps.ContainsKey("_layout"))
-                            layout = ps["_layout"] as string ?? layout;
+                        if (ps.TryGetValue("_layout", out object? value))
+                            layout = value as string ?? layout;
 
                         result = fw.parsePage(base_dir, layout, ps);
 

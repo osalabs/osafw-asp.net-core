@@ -111,10 +111,10 @@ public class MyListsController : FwAdminController
 
         id = this.modelAddOrUpdate(id, itemdb);
 
-        if (is_new && item.ContainsKey("item_id"))
+        if (is_new && item.TryGetValue("item_id", out object? value))
         {
             // item_id could contain comma-separated ids
-            var hids = Utils.commastr2hash(item["item_id"].toStr());
+            var hids = Utils.commastr2hash(value.toStr());
             if (hids.Count > 0)
             {
                 // if item id passed - link item with the created list

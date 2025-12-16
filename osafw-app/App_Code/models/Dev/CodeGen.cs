@@ -158,10 +158,10 @@ class DevCodeGen
     {
         var result = "";
 
-        if (!entity.ContainsKey("foreign_keys"))
+        if (!entity.TryGetValue("foreign_keys", out object? value))
             return result;
 
-        foreach (FwDict fk in entity["foreign_keys"] as FwList ?? [])
+        foreach (FwDict fk in value as FwList ?? [])
         {
             fw.logger("CHECK FK:", fk["column"].toStr(), "=", field["name"].toStr());
             if (fk["column"].toStr() == field["name"].toStr())
@@ -206,8 +206,8 @@ class DevCodeGen
             fsql += entityFieldToSQLDefault(field);
             fsql += entityFieldToSQLForeignKey(field, entity);
             fsql += (i < fields.Count ? "," : "");
-            if (field.ContainsKey("comments"))
-                fsql = fsql.PadRight(64, ' ') + "-- " + field["comments"].toStr();
+            if (field.TryGetValue("comments", out object? value))
+                fsql = fsql.PadRight(64, ' ') + "-- " + value.toStr();
 
             result += fsql + Environment.NewLine;
             i += 1;
@@ -296,10 +296,10 @@ class DevCodeGen
             var sql = entity2SQL(entity);
             // only create App_Data/database.sql
             // add drop
-            if (entity.ContainsKey("comments"))
+            if (entity.TryGetValue("comments", out object? value))
             {
                 //comments can contain new lines - comment each line separately
-                var commentsRaw = entity["comments"].toStr();
+                var commentsRaw = value.toStr();
                 var comments = Regex.Split(commentsRaw, "[\r\n]+");
                 foreach (string comment in comments)
                     database_sql += "-- " + comment + Environment.NewLine;
@@ -394,9 +394,9 @@ class DevCodeGen
             // generate code for the model's constructor:
             // set field_*
             var codegen = "";
-            if (entity.ContainsKey("fields"))
+            if (entity.TryGetValue("fields", out object? value))
             {
-                var entity_fields = entity["fields"] as FwList ?? [];
+                var entity_fields = value as FwList ?? [];
                 var fields = Utils.array2hashtable(entity_fields, "name");
 
                 // detect id and iname fields
@@ -1061,13 +1061,13 @@ class DevCodeGen
         config["form_tabs"] = formTabs;
 
         //view form
-        var is_dynamic_show = controller_options.ContainsKey("is_dynamic_show") ? controller_options["is_dynamic_show"].toBool() : true;
+        var is_dynamic_show = controller_options.TryGetValue("is_dynamic_show", out object? isds) ? isds.toBool() : true;
         config["is_dynamic_show"] = is_dynamic_show;
         if (is_dynamic_show)
             configAddTabs(config, "show_fields", showFieldsTabs);
 
         //edit form
-        var is_dynamic_showform = controller_options.ContainsKey("is_dynamic_showform") ? controller_options["is_dynamic_showform"].toBool() : true;
+        var is_dynamic_showform = controller_options.TryGetValue("is_dynamic_showform", out object? isdsf) ? isdsf.toBool() : true;
         config["is_dynamic_showform"] = is_dynamic_showform;
         if (is_dynamic_showform)
             configAddTabs(config, "showform_fields", showFormFieldsTabs);
@@ -1225,8 +1225,8 @@ class DevCodeGen
 
             edit_list_defaults += (defaults_ctr == 0 ? "" : " ") + fname; //for edit list we need real field names only
 
-            if (hforeign_keys.ContainsKey(fname))
-                fname = (hforeign_keys[fname] as FwDict)?["column"].toStr() + "_iname";
+            if (hforeign_keys.TryGetValue(fname, out object? value))
+                fname = (value as FwDict)?["column"].toStr() + "_iname";
 
             if (!is_fw)
                 fname = field["fw_name"].toStr();
@@ -1343,8 +1343,8 @@ class DevCodeGen
         var ui = fld["ui"] as FwDict ?? []; // ui options for the field
 
         // override ui options
-        if (ui.ContainsKey("required"))
-            sff["required"] = ui["required"].toBool();
+        if (ui.TryGetValue("required", out object? req))
+            sff["required"] = req.toBool();
 
         //input types
         if (ui.ContainsKey("plaintext"))
@@ -1373,15 +1373,15 @@ class DevCodeGen
         //direct attributes for show form
         foreach (string attr in "validate maxlength rows placeholder step min max".Split())
         {
-            if (ui.ContainsKey(attr))
-                sff[attr] = ui[attr];
+            if (ui.TryGetValue(attr, out object? value))
+                sff[attr] = value;
         }
 
         //control attributes
         foreach (string attr in "pattern multiple".Split())
         {
-            if (ui.ContainsKey(attr))
-                sff["attrs_control"] = sff["attrs_control"] ?? "" + " " + attr + "=\"" + ui[attr] + "\"";
+            if (ui.TryGetValue(attr, out object? ac))
+                sff["attrs_control"] = sff["attrs_control"] ?? "" + " " + attr + "=\"" + ac + "\"";
         }
         //data-* attributes
         foreach (string ui_key in ui.Keys)
@@ -1406,9 +1406,9 @@ class DevCodeGen
         // options(value1|Display1 value2|Display2)
         // options(/common/sel/status.sel)
         // options(status.sel) -- relative to controller template folder
-        if (ui.ContainsKey("options"))
+        if (ui.TryGetValue("options", out object? ov))
         {
-            var options = ui["options"].toStr();
+            var options = ov.toStr();
             if (options.Contains('|'))
                 // if contains | - it's a list of options
                 sff["options"] = Utils.qh(options);
@@ -1418,9 +1418,9 @@ class DevCodeGen
         }
 
         // help text under control
-        if (ui.ContainsKey("help"))
+        if (ui.TryGetValue("help", out object? help_text))
         {
-            sff["help_text"] = ui["help"];
+            sff["help_text"] = help_text;
         }
 
         // autocomplete

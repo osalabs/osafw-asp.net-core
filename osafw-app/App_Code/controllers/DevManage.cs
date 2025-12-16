@@ -559,29 +559,34 @@ public class DevManageController : FwController
                     is_updated = true;
                     controller_options["title"] = item[key + "controller_title"];
                 }
-                if (!controller_options.ContainsKey("is_dynamic_show") || controller_options["is_dynamic_show"].toBool() != (item[key + "coview"].toStr().Length > 0))
+                if (!controller_options.TryGetValue("is_dynamic_show", out object? value) || value.toBool() != (item[key + "coview"].toStr().Length > 0))
                 {
                     is_updated = true;
-                    controller_options["is_dynamic_show"] = item[key + "coview"].toStr().Length > 0;
+                    value = item[key + "coview"].toStr().Length > 0;
+                    controller_options["is_dynamic_show"] = value;
                 }
-                if (!controller_options.ContainsKey("is_dynamic_showform") || controller_options["is_dynamic_showform"].toBool() != (item[key + "coedit"].toStr().Length > 0))
+                if (!controller_options.TryGetValue("is_dynamic_showform", out object? value1) || value1.toBool() != (item[key + "coedit"].toStr().Length > 0))
                 {
                     is_updated = true;
-                    controller_options["is_dynamic_showform"] = item[key + "coedit"].toStr().Length > 0;
+                    value1 = item[key + "coedit"].toStr().Length > 0;
+                    controller_options["is_dynamic_showform"] = value1;
                 }
-                if (!controller_options.ContainsKey("is_lookup") || controller_options["is_lookup"].toBool() != (item[key + "colookup"].toStr().Length > 0))
+                if (!controller_options.TryGetValue("is_lookup", out object? value2) || value2.toBool() != (item[key + "colookup"].toStr().Length > 0))
                 {
                     is_updated = true;
-                    controller_options["is_lookup"] = item[key + "colookup"].toStr().Length > 0;
+                    value2 = item[key + "colookup"].toStr().Length > 0;
+                    controller_options["is_lookup"] = value2;
                 }
-                if (!controller_options.ContainsKey("type") || controller_options["type"].toStr() != item[key + "cotype"].toStr())
+                if (!controller_options.TryGetValue("type", out object? value3) || value3.toStr() != item[key + "cotype"].toStr())
                 {
                     is_updated = true;
-                    controller_options["type"] = item[key + "cotype"].toStr();
+                    value3 = item[key + "cotype"].toStr();
+                    controller_options["type"] = value3;
                 }
-                if (!controller_options.ContainsKey("rwtpl") || controller_options["rwtpl"].toStr() != item[key + "corwtpl"].toStr())
+                if (!controller_options.TryGetValue("rwtpl", out object? value4) || value4.toStr() != item[key + "corwtpl"].toStr())
                 {
-                    controller_options["rwtpl"] = item[key + "corwtpl"].toStr().Length > 0;
+                    value4 = item[key + "corwtpl"].toStr().Length > 0;
+                    controller_options["rwtpl"] = value4;
                 }
 
                 entity["controller"] = controller_options;

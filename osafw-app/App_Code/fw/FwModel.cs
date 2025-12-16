@@ -242,9 +242,9 @@ public abstract class FwModel : IDisposable
             return 0;
         int result;
         FwDict item = this.oneByIname(iname);
-        if (item.ContainsKey(this.field_id))
+        if (item.TryGetValue(this.field_id, out object? value))
             // exists
-            result = item[this.field_id].toInt();
+            result = value.toInt();
         else
         {
             // not exists - add new
@@ -658,13 +658,13 @@ public abstract class FwModel : IDisposable
             where[field_status] = db.opNOT(STATUS_DELETED);
 
         // Support filter_by/filter_field from config
-        if (def != null && def.ContainsKey("filter_by") && def.ContainsKey("filter_field"))
+        if (def != null && def.TryGetValue("filter_by", out object? fby) && def.TryGetValue("filter_field", out object? ff))
         {
             var item = def["i"] as FwDict ?? [];
-            var filter_by = def["filter_by"].toStr();
-            var filter_field = def["filter_field"].toStr();
-            if (item.ContainsKey(filter_by))
-                where[filter_field] = item[filter_by];
+            var filter_by = fby.toStr();
+            var filter_field = ff.toStr();
+            if (item.TryGetValue(filter_by, out object? value))
+                where[filter_field] = value;
         }
 
         FwList select_fields =
@@ -1342,10 +1342,10 @@ public abstract class FwModel : IDisposable
             FwDict item = [];
             item[field_id] = row[field_id];
             item[field_iname] = row[field_iname];
-            if (row.ContainsKey("is_checked"))
-                item["is_checked"] = row["is_checked"];
-            if (row.ContainsKey(field_prio))
-                item[field_prio] = row[field_prio];
+            if (row.TryGetValue("is_checked", out object? ic))
+                item["is_checked"] = ic;
+            if (row.TryGetValue(field_prio, out object? fp))
+                item[field_prio] = fp;
             result.Add(item);
         }
         return result;

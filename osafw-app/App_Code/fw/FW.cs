@@ -405,9 +405,9 @@ public class FW : IDisposable
         if (!is_url_param)
         {
             // check if method override exits
-            if (FORM.ContainsKey("_method"))
+            if (FORM.TryGetValue("_method", out object? value))
             {
-                var form_method = FORM["_method"].toStr();
+                var form_method = value.toStr();
                 if (METHOD_ALLOWED.ContainsKey(form_method))
                     route.method = form_method;
             }
@@ -879,16 +879,16 @@ public class FW : IDisposable
             return; // no further processing for json
         }
 
-        if (ps.ContainsKey("_route_redirect"))
+        if (ps.TryGetValue("_route_redirect", out object? rr_value))
         {
-            var rr = ps["_route_redirect"] as FwDict ?? [];
+            var rr = rr_value as FwDict ?? [];
             this.routeRedirect(rr["method"].toStr(), rr["controller"].toStr(), rr["args"] as object[] ?? []);
             return; // no further processing
         }
 
-        if (ps.ContainsKey("_redirect"))
+        if (ps.TryGetValue("_redirect", out object? r_value))
         {
-            this.redirect(ps["_redirect"].toStr());
+            this.redirect(r_value.toStr());
             return; // no further processing
         }
 
@@ -899,12 +899,12 @@ public class FW : IDisposable
             layout = G["PAGE_LAYOUT"].toStr();
 
         //override layout from parse strings
-        if (ps.ContainsKey("_layout"))
-            layout = ps["_layout"].toStr();
+        if (ps.TryGetValue("_layout", out object? layout_value))
+            layout = layout_value.toStr();
 
         //override full basedir
-        if (ps.ContainsKey("_basedir"))
-            basedir = ps["_basedir"].toStr();
+        if (ps.TryGetValue("_basedir", out object? basedir_value))
+            basedir = basedir_value.toStr();
 
         if (basedir == "")
         {
@@ -919,16 +919,16 @@ public class FW : IDisposable
             basedir += "/" + controller;
 
             // override controller basedir only
-            if (ps.ContainsKey("_basedir_controller"))
-                basedir = ps["_basedir_controller"].toStr();
+            if (ps.TryGetValue("_basedir_controller", out object? bc_value))
+                basedir = bc_value.toStr();
 
             basedir += "/" + this.route.action; // add action dir to controller's directory
         }
         else
         {
             // if override controller basedir - also add route action
-            if (ps.ContainsKey("_basedir_controller"))
-                basedir = ps["_basedir_controller"].toStr() + "/" + this.route.action;
+            if (ps.TryGetValue("_basedir_controller", out object? bc_value))
+                basedir = bc_value.toStr() + "/" + this.route.action;
         }
 
 
@@ -1438,7 +1438,7 @@ public class FW : IDisposable
                     using (SmtpClient client = new())
                     {
                         FwDict mailSettings = this.config("mail") as FwDict ?? [];
-                        if (options.ContainsKey("smtp") && options["smtp"] is FwDict smtpOptions)
+                        if (options.TryGetValue("smtp", out object? value) && value is FwDict smtpOptions)
                         {
                             //override mailSettings from smtp options
                             Utils.mergeHash(mailSettings, smtpOptions);
@@ -1555,18 +1555,18 @@ public class FW : IDisposable
     public T model<T>() where T : new()
     {
         Type tt = typeof(T);
-        if (!models.ContainsKey(tt.Name))
+        if (!models.TryGetValue(tt.Name, out object? value))
         {
             T m = new();
 
             // initialize
             var initMethod = typeof(T).GetMethod("init");
             initMethod?.Invoke(m, [this]);
-
-            models[tt.Name] = m;
+            value = m;
+            models[tt.Name] = value;
         }
 
-        if (models[tt.Name] is T typedModel)
+        if (value is T typedModel)
             return typedModel;
 
         throw new InvalidOperationException($"Model cache entry for {tt.Name} is not of expected type {typeof(T).FullName}.");
@@ -1575,16 +1575,17 @@ public class FW : IDisposable
     // return model object by model class name
     public FwModel model(string model_name)
     {
-        if (!models.ContainsKey(model_name))
+        if (!models.TryGetValue(model_name, out object? value))
         {
             Type mt = Type.GetType(FW_NAMESPACE_PREFIX + model_name) ?? throw new ApplicationException("Error initializing model: [" + FW_NAMESPACE_PREFIX + model_name + "] class not found");
             var instance = Activator.CreateInstance(mt) ?? throw new InvalidOperationException($"Could not create model instance for {mt.FullName}");
             FwModel m = (FwModel)instance;
             // initialize
             m.init(this);
-            models[model_name] = m;
+            value = m;
+            models[model_name] = value;
         }
-        if (models[model_name] is FwModel result)
+        if (value is FwModel result)
             return result;
 
         throw new InvalidOperationException($"Model cache entry for {model_name} is not a FwModel.");
@@ -1602,7 +1603,7 @@ public class FW : IDisposable
         //if (!controller_name.EndsWith("Controller", StringComparison.OrdinalIgnoreCase))
         //    throw new ApplicationException($"Controller class name should end on 'Controller': {controller_name}");
 
-        if (controllers.ContainsKey(controller_name) && controllers[controller_name] is FwController cachedController)
+        if (controllers.TryGetValue(controller_name, out object? value) && value is FwController cachedController)
             return cachedController;
 
         FwController c;

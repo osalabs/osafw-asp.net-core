@@ -88,17 +88,17 @@ public class Settings : FwModel<Settings.Row>
     public string getValue(string icode)
     {
         var row = oneByIcode(icode);
-        return row.ContainsKey("ivalue") ? row["ivalue"].toStr() : string.Empty;
+        return row.TryGetValue("ivalue", out string? value) ? value.toStr() : string.Empty;
     }
     public void setValue(string icode, string ivalue)
     {
         var item = this.oneByIcode(icode);
         FwDict fields = [];
-        if (item.ContainsKey("id"))
+        if (item.TryGetValue("id", out string? value))
         {
             // exists - update
             fields["ivalue"] = ivalue;
-            update(item["id"].toInt(), fields);
+            update(value.toInt(), fields);
         }
         else
         {

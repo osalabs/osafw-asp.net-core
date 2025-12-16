@@ -202,9 +202,8 @@ public static class FwConfig
 
         // convert strings to specific types
         LogLevel log_level = LogLevel.INFO; // default log level if none or Wrong level in config
-        if (with_settings.ContainsKey("log_level") && with_settings["log_level"] != null)
+        if (with_settings.TryGetValue("log_level", out object? logLevelValue) && logLevelValue != null)
         {
-            var logLevelValue = with_settings["log_level"];
             if (logLevelValue is LogLevel level)
             {
                 log_level = level;

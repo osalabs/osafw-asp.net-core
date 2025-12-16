@@ -61,9 +61,10 @@ public class ConvUtils
         ensurePlaywrightInstalled(fw);
 
         options ??= [];
-        if (!options.ContainsKey("disposition"))
+        if (!options.TryGetValue("disposition", out object? value))
         {
-            options["disposition"] = "attachment";
+            value = "attachment";
+            options["disposition"] = value;
         }
 
         ps["IS_PRINT_MODE"] = true;
@@ -84,7 +85,7 @@ public class ConvUtils
             {
                 out_filename = "output";
             }
-            fw.fileResponse(pdf_file, out_filename + ".pdf", "application/pdf", options["disposition"].toStr());
+            fw.fileResponse(pdf_file, out_filename + ".pdf", "application/pdf", value.toStr());
             Utils.cleanupTmpFiles(); // this will cleanup temporary .pdf, can't delete immediately as file_response may not yet finish transferring file
         }
         else
@@ -135,13 +136,13 @@ public class ConvUtils
                 PrintBackground = true,
                 Margin = new Margin
                 {
-                    Top = options.ContainsKey("margin_top") ? options["margin_top"].toStr() : "5mm",
-                    Right = options.ContainsKey("margin_right") ? options["margin_right"].toStr() : "10mm",
-                    Bottom = options.ContainsKey("margin_bottom") ? options["margin_bottom"].toStr() : "5mm",
-                    Left = options.ContainsKey("margin_left") ? options["margin_left"].toStr() : "10mm"
+                    Top = options.TryGetValue("margin_top", out object? value) ? value.toStr() : "5mm",
+                    Right = options.TryGetValue("margin_right", out object? value1) ? value1.toStr() : "10mm",
+                    Bottom = options.TryGetValue("margin_bottom", out object? value2) ? value2.toStr() : "5mm",
+                    Left = options.TryGetValue("margin_left", out object? value3) ? value3.toStr() : "10mm"
                 },
                 Landscape = options["landscape"].toBool(),
-                Scale = options.ContainsKey("scale") ? options["scale"].toFloat() : 0.8f,
+                Scale = options.TryGetValue("scale", out object? value4) ? value4.toFloat() : 0.8f,
                 DisplayHeaderFooter = !String.IsNullOrEmpty(options["footer"].toStr()) || !String.IsNullOrEmpty(options["header"].toStr()),
                 HeaderTemplate = options["header"].toStr(),
                 FooterTemplate = options["footer"].toStr(),
@@ -478,9 +479,9 @@ public class ConvUtils
                             //    .StyleIndex = 2;
                             DataType = CellValues.String
                         };
-                        if (row.ContainsKey(col))
+                        if (row.TryGetValue(col, out object? value))
                         {
-                            cell.CellValue = new CellValue(row[col].toStr());
+                            cell.CellValue = new CellValue(value.toStr());
                         }
 
                         newRow.AppendChild(cell);
