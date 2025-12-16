@@ -89,7 +89,7 @@ public class FwAdminControllerTests
         Assert.AreEqual(1, model.Added);
         var json = ps["_json"] as FwDict ?? [];
         Assert.AreEqual(42, json["id"]);
-        Assert.IsTrue((bool)json["success"]);
+        Assert.IsTrue(json["success"].toBool());
     }
 
     [TestMethod]

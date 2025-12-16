@@ -69,7 +69,7 @@ public class FwActivityLogsTests
         Assert.IsNotNull(logs.LastAddFields);
         Assert.AreEqual(10, logs.LastAddFields!["item_id"]);
         Assert.AreEqual(3, logs.LastAddFields!["users_id"]);
-        var storedPayloadObj = Utils.jsonDecode(logs.LastAddFields!["payload"]);
+        var storedPayloadObj = Utils.jsonDecode(logs.LastAddFields!["payload"].toStr());
         var storedPayload = storedPayloadObj as FwDict ?? [];
         Assert.AreEqual("value", ((FwDict)storedPayload["fields"]!)["name"]);
     }
