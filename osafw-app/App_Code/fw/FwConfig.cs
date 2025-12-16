@@ -20,17 +20,10 @@ public static class FwConfig
     public static string hostname => (GetCurrentSetting("hostname") as string) ?? "";
 
     /// <summary>Get per-request, host-specific settings bucket.</summary>
-    public static FwDict GetCurrentSettings()
-    {
-        var cacheKey = _currentHostKey.Value ?? throw new InvalidOperationException("FwConfig.init must be called before accessing settings");
-        if (_hostCache.TryGetValue(cacheKey, out var hostSettings))
-            return hostSettings.Value;
-
-        throw new InvalidOperationException("FwConfig.init must be called before accessing settings");
-    }
+    public static FwDict GetCurrentSettings() => GetSettingsForHost();
 
     /// <summary>Get specific setting from the current bucket.</summary>
-    public static object? GetCurrentSetting(string name) => GetCurrentSettings()[name];
+    public static object? GetCurrentSetting(string name) => GetSettingsForHost()[name];
 
     // internals
     private static readonly AsyncLocal<string?> _currentHostKey = new();          // per-async-flow cache key
@@ -43,7 +36,7 @@ public static class FwConfig
 
     public static string getRoutePrefixesRX()
     {
-        return GetCurrentSettings()["_route_prefixes_rx"].toStr();
+        return GetSettingsForHost()["_route_prefixes_rx"].toStr();
     }
 
     /// <remarks>Called exactly once per _http request_ by FW.</remarks>
@@ -269,6 +262,17 @@ public static class FwConfig
             return host;
 
         return cacheKey == DefaultHostKey ? string.Empty : cacheKey;
+    }
+
+    private static FwDict GetSettingsForHost(string? host = null)
+    {
+        var cacheKey = host != null ? getHostCacheKey(host) : (_currentHostKey.Value ?? DefaultHostKey);
+
+        var hostSettings = _hostCache.GetOrAdd(cacheKey,
+            _ => new Lazy<FwDict>(() => buildForHost(null, host ?? string.Empty, cacheKey), LazyThreadSafetyMode.ExecutionAndPublication)
+        );
+
+        return hostSettings.Value;
     }
 
     private static string buildRoutePrefixesRx(FwDict currentSettings)
