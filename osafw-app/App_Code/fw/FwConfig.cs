@@ -45,12 +45,9 @@ public static class FwConfig
         configuration ??= cfg;                                          // record for offline tools
 
         host ??= ctx?.Request.Host.ToString() ?? string.Empty;
-        var cacheKey = getHostCacheKey(host);
+        var cacheKey = resolveHostKey(host);
 
-        var hostSettings = _hostCache.GetOrAdd(cacheKey,
-            _ => new Lazy<FwDict>(() => buildForHost(ctx, host, cacheKey), LazyThreadSafetyMode.ExecutionAndPublication)
-        ).Value;
-
+        GetSettingsForHost(host, ctx); // ensure host bucket built
         _currentHostKey.Value = cacheKey;
     }
 
@@ -77,16 +74,12 @@ public static class FwConfig
         return tmp;
     }, LazyThreadSafetyMode.ExecutionAndPublication);
 
-    private static FwDict buildForHost(HttpContext? ctx, string host, string cacheKey)
+    private static FwDict buildForHost(HttpContext? ctx, string overrideName, bool isHostProvided, string cacheKey)
     {
         // clone deep - each host gets its own mutable copy
         var hs = new FwDict(_base.Value);
 
-        var overrideName = getOverrideName(host, cacheKey);
-        if (string.IsNullOrEmpty(host))
-            overrideSettingsByName(overrideName, hs, false); // use env name override if no host
-        else
-            overrideSettingsByName(overrideName, hs, true);
+        overrideSettingsByName(overrideName, hs, isHostProvided); // hostname overrides use regex if host provided
 
         overrideContextSettings(ctx, overrideName, hs);
         hs["_route_prefixes_rx"] = buildRoutePrefixesRx(hs);
@@ -264,15 +257,22 @@ public static class FwConfig
         return cacheKey == DefaultHostKey ? string.Empty : cacheKey;
     }
 
-    private static FwDict GetSettingsForHost(string? host = null)
+    private static FwDict GetSettingsForHost(string? host = null, HttpContext? ctx = null)
     {
-        var cacheKey = host != null ? getHostCacheKey(host) : (_currentHostKey.Value ?? DefaultHostKey);
+        var cacheKey = host != null ? resolveHostKey(host) : (_currentHostKey.Value ?? resolveHostKey(null));
+        var overrideName = getOverrideName(host ?? string.Empty, cacheKey);
+        var isHostProvided = !string.IsNullOrEmpty(host);
 
         var hostSettings = _hostCache.GetOrAdd(cacheKey,
-            _ => new Lazy<FwDict>(() => buildForHost(null, host ?? string.Empty, cacheKey), LazyThreadSafetyMode.ExecutionAndPublication)
+            _ => new Lazy<FwDict>(() => buildForHost(ctx, overrideName, isHostProvided, cacheKey), LazyThreadSafetyMode.ExecutionAndPublication)
         );
 
         return hostSettings.Value;
+    }
+
+    private static string resolveHostKey(string? host)
+    {
+        return getHostCacheKey(host ?? string.Empty);
     }
 
     private static string buildRoutePrefixesRx(FwDict currentSettings)
