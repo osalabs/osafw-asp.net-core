@@ -17,30 +17,33 @@ namespace osafw;
 public static class FwConfig
 {
     // public API
-    public static string hostname => (settings?["hostname"] as string) ?? "";
+    public static string hostname => (GetCurrentSetting("hostname") as string) ?? "";
 
-    /// <summary>Per-request, host-specific settings bucket.</summary>
-    public static FwDict settings { get => _current.Value ??= []; private set => _current.Value = value; }
+    /// <summary>Get per-request, host-specific settings bucket.</summary>
+    public static FwDict GetCurrentSettings()
+    {
+        var cacheKey = _currentHostKey.Value ?? throw new InvalidOperationException("FwConfig.init must be called before accessing settings");
+        if (_hostCache.TryGetValue(cacheKey, out var hostSettings))
+            return hostSettings.Value;
+
+        throw new InvalidOperationException("FwConfig.init must be called before accessing settings");
+    }
+
+    /// <summary>Get specific setting from the current bucket.</summary>
+    public static object? GetCurrentSetting(string name) => GetCurrentSettings()[name];
 
     // internals
-    private static readonly AsyncLocal<FwDict> _current = new();                // per-async-flow bucket
-    private static readonly ConcurrentDictionary<string, FwDict> _hostCache = new();
+    private static readonly AsyncLocal<string?> _currentHostKey = new();          // per-async-flow cache key
+    private static readonly ConcurrentDictionary<string, Lazy<FwDict>> _hostCache = new();
     private static IConfiguration? configuration;                                   // appsettings.* provider
-    private static readonly object locker = new();
+
+    private const string DefaultHostKey = "__default__";
 
     public static readonly char path_separator = Path.DirectorySeparatorChar;
 
     public static string getRoutePrefixesRX()
     {
-        if (settings["_route_prefixes_rx"] is string rx && rx.Length > 0) return rx;
-
-        // convert settings["route_prefixes"] FwRow (ex: /Admin => True) to FwList routePrefixes
-        var routePrefixes = new StrList((settings["route_prefixes"] as FwDict ?? []).Keys.Cast<string>());
-
-        var escaped = from string p in routePrefixes orderby p.Length descending select Regex.Escape(p);
-        rx = @"^(" + string.Join("|", escaped) + @")(/.*)?$";
-        settings["_route_prefixes_rx"] = rx;                            // memoise
-        return rx;
+        return GetCurrentSettings()["_route_prefixes_rx"].toStr();
     }
 
     /// <remarks>Called exactly once per _http request_ by FW.</remarks>
@@ -48,16 +51,23 @@ public static class FwConfig
     {
         configuration ??= cfg;                                          // record for offline tools
 
-        host ??= ctx?.Request.Host.ToString() ?? "";
-        settings = _hostCache.GetOrAdd(host, _ => buildForHost(ctx, host));
-        // Some fields (ports, protocol) may vary per request even for same host - rebuild those cheap bits every time.
-        overrideContextSettings(ctx, host, settings);
+        host ??= ctx?.Request.Host.ToString() ?? string.Empty;
+        var cacheKey = getHostCacheKey(host);
+
+        var hostSettings = _hostCache.GetOrAdd(cacheKey,
+            _ => new Lazy<FwDict>(() => buildForHost(ctx, host, cacheKey), LazyThreadSafetyMode.ExecutionAndPublication)
+        ).Value;
+
+        _currentHostKey.Value = cacheKey;
     }
 
     // clears cache entry for request's host.
     public static void reload(FW fw)
     {
-        _hostCache.TryRemove(hostname, out _);     // force re-build on next request
+        var cacheKey = _currentHostKey.Value ?? getHostCacheKey(hostname);
+
+        _hostCache.TryRemove(cacheKey, out _);     // force re-build on next request
+
         if (configuration == null)
             throw new InvalidOperationException("FwConfig.init must be called before reload");
 
@@ -74,17 +84,19 @@ public static class FwConfig
         return tmp;
     }, LazyThreadSafetyMode.ExecutionAndPublication);
 
-    private static FwDict buildForHost(HttpContext? ctx, string host)
+    private static FwDict buildForHost(HttpContext? ctx, string host, string cacheKey)
     {
         // clone deep - each host gets its own mutable copy
         var hs = new FwDict(_base.Value);
 
+        var overrideName = getOverrideName(host, cacheKey);
         if (string.IsNullOrEmpty(host))
-            overrideSettingsByName(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? string.Empty, hs, false); // use env name override if no host
+            overrideSettingsByName(overrideName, hs, false); // use env name override if no host
         else
-            overrideSettingsByName(host, hs, true);
+            overrideSettingsByName(overrideName, hs, true);
 
-        overrideContextSettings(ctx, host, hs);
+        overrideContextSettings(ctx, overrideName, hs);
+        hs["_route_prefixes_rx"] = buildRoutePrefixesRx(hs);
         return hs;
     }
     // 
@@ -165,10 +177,10 @@ public static class FwConfig
 
     private static void overrideContextSettings(HttpContext? ctx, string host, FwDict st)
     {
+        st["hostname"] = host;
         if (ctx == null) return;
         var req = ctx.Request;
 
-        st["hostname"] = host;
         string appBase = req.PathBase;
         st["ROOT_URL"] = Regex.Replace(appBase, @"/$", "");
 
@@ -240,5 +252,31 @@ public static class FwConfig
         overrideSettingsByName(environment, st);
 
         return st;
+    }
+
+    private static string getHostCacheKey(string host)
+    {
+        var trimmed = host?.Trim() ?? string.Empty;
+        if (!string.IsNullOrEmpty(trimmed)) return trimmed;
+
+        var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? string.Empty;
+        return string.IsNullOrEmpty(environment) ? DefaultHostKey : environment;
+    }
+
+    private static string getOverrideName(string host, string cacheKey)
+    {
+        if (!string.IsNullOrEmpty(host))
+            return host;
+
+        return cacheKey == DefaultHostKey ? string.Empty : cacheKey;
+    }
+
+    private static string buildRoutePrefixesRx(FwDict currentSettings)
+    {
+        // convert settings["route_prefixes"] FwRow (ex: /Admin => True) to FwList routePrefixes
+        var routePrefixes = new StrList((currentSettings["route_prefixes"] as FwDict ?? []).Keys.Cast<string>());
+
+        var escaped = from string p in routePrefixes orderby p.Length descending select Regex.Escape(p);
+        return @"^(" + string.Join("|", escaped) + @")(/.*)?$";
     }
 }

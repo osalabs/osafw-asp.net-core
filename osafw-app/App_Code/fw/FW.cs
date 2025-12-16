@@ -326,12 +326,12 @@ public class FW : IDisposable
     // return all the settings
     public FwDict config()
     {
-        return FwConfig.settings;
+        return FwConfig.GetCurrentSettings();
     }
     // return just particular setting
     public object? config(string name)
     {
-        return FwConfig.settings[name];
+        return FwConfig.GetCurrentSetting(name);
     }
 
     //set G["err_msg"]

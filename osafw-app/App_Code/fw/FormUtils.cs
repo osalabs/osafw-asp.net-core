@@ -134,12 +134,12 @@ public class FormUtils
             tpl_path = base_path + "/" + tpl_path;
         }
 
-        var template = FwConfig.settings["template"].toStr();
+        var template = FwConfig.GetCurrentSetting("template").toStr();
 
         // translate to absolute path, without any ../
         var path = System.IO.Path.GetFullPath(template + tpl_path);
 
-        // path traversal validation - check if path is a subpath of FwConfig.settings["template"]
+        // path traversal validation - check if path is a subpath of FwConfig template root
         if (!path.StartsWith(template))
             return "";
 
@@ -185,12 +185,12 @@ public class FormUtils
             tpl_path = base_path + "/" + tpl_path;
         }
 
-        var template = FwConfig.settings["template"].toStr();
+        var template = FwConfig.GetCurrentSetting("template").toStr();
 
         // translate to absolute path, without any ../
         var path = System.IO.Path.GetFullPath(template + tpl_path);
 
-        // path traversal validation - check if path is a subpath of FwConfig.settings["template"]
+        // path traversal validation - check if path is a subpath of FwConfig template root
         if (!path.StartsWith(template))
             return result;
 
