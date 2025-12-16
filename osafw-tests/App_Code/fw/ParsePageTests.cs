@@ -62,7 +62,7 @@ namespace osafw.Tests
         {
             var parser = new ParsePage(null!);
 
-            Assert.AreEqual("./fragment.html", parser.tag_tplpath("./fragment", "./base/template.html"));
+            Assert.AreEqual("./base/fragment.html", parser.tag_tplpath("./fragment", "./base/template.html"));
             Assert.AreEqual("partial.html", parser.tag_tplpath("partial", "templates/view.html"));
             Assert.AreEqual("common/footer.html", parser.tag_tplpath("common/footer.html", "templates/view.html"));
         }
@@ -83,8 +83,7 @@ namespace osafw.Tests
             Directory.CreateDirectory(tempDir);
 
             File.WriteAllText(Path.Combine(tempDir, "main.html"), "<~./include>");
-            Directory.CreateDirectory(Path.Combine(tempDir, "main"));
-            File.WriteAllText(Path.Combine(tempDir, "main", "include.html"), "Included <~value>");
+            File.WriteAllText(Path.Combine(tempDir, "include.html"), "Included <~value>");
 
             var parser = new ParsePage(new ParsePageOptions { TemplatesRoot = tempDir });
             var ps = new FwDict { { "value", "content" } };
@@ -396,11 +395,12 @@ namespace osafw.Tests
             string tempDir = Path.Combine(Path.GetTempPath(), "parsepage-radio-tests");
             Directory.CreateDirectory(tempDir);
             File.WriteAllLines(Path.Combine(tempDir, "options.sel"), new[] { "1|One", "2|Two" });
+            File.WriteAllText(Path.Combine(tempDir, "main.html"), "<~options.sel radio=\"selected\" name=\"selected\" delim=\"inline\">");
 
             var parser = new ParsePage(new ParsePageOptions { TemplatesRoot = tempDir });
             var ps = new FwDict { { "selected", "2" } };
 
-            string result = parser.parse_page("", "options.sel", ps);
+            string result = parser.parse_page("", "main.html", ps);
 
             StringAssert.Contains(result, "form-check inline");
             StringAssert.Contains(result, "value=\"1\"");
