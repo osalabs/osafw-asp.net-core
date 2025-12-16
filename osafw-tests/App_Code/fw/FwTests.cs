@@ -48,6 +48,23 @@ namespace osafw.Tests
             Assert.AreEqual("3/2/2024 15:30", formatted);
         }
 
+        [TestMethod]
+        public void UserSessionPropertiesReflectSessionValues()
+        {
+            var context = new DefaultHttpContext
+            {
+                Session = new FakeSession(),
+            };
+            var configuration = new ConfigurationBuilder().Build();
+            var fw = new FW(context, configuration);
+
+            Assert.IsFalse(fw.isLogged);
+            context.Session.SetString("user_id", "9");
+
+            Assert.IsTrue(fw.isLogged);
+            Assert.AreEqual(9, fw.userId);
+        }
+
         // Minimal ISession for FW unit testing
         private class FakeSession : ISession
         {
