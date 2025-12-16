@@ -718,8 +718,6 @@ namespace osafw.Tests
         [TestMethod()]
         public void orderbyApplySortdirTest()
         {
-            //TODO
-
             // Case 1: Test ascending orderby with sortdir "asc"
             string result1 = Utils.orderbyApplySortdir("id", "asc");
             Assert.AreEqual("id", result1, "Result should remain unchanged for ascending orderby with sortdir 'asc'");
@@ -748,8 +746,6 @@ namespace osafw.Tests
         [TestMethod()]
         public void html2textTest()
         {
-            //TODO bug?
-
             // Case 1: Test empty input
             string input1 = "";
             string result1 = Utils.html2text(input1);
@@ -863,8 +859,6 @@ namespace osafw.Tests
         [TestMethod()]
         public void urlescapeTest()
         {
-            //TODO
-
             // Case 1: Empty string
             string emptyString = "";
             string result1 = Utils.urlescape(emptyString);
@@ -1006,9 +1000,6 @@ namespace osafw.Tests
         [TestMethod()]
         public void nameCamelCaseTest()
         {
-            //TODO
-            //bug ?
-
             // Case 1: Test with empty input
             string input1 = "";
             string result1 = Utils.nameCamelCase(input1);
