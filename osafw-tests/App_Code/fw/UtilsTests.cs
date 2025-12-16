@@ -1,10 +1,14 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Microsoft.AspNetCore.Http;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Sockets;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace osafw.Tests
 {
@@ -1058,6 +1062,283 @@ namespace osafw.Tests
             //dictionary
             Assert.IsTrue(Utils.isEmpty(new FwDict()));
             Assert.IsFalse(Utils.isEmpty(new FwDict() { { "1", 1 } }));
+        }
+
+        [TestMethod]
+        public void Base64EncodeDecode_RoundTrips()
+        {
+            var original = "plain text";
+            var encoded = Utils.base64encode(original);
+            var decoded = Utils.base64decode(encoded);
+
+            Assert.AreEqual(original, decoded);
+        }
+
+        [TestMethod]
+        public void Ext2Mime_MapsKnownTypes()
+        {
+            Assert.AreEqual("application/pdf", Utils.ext2mime(".pdf"));
+            Assert.AreEqual("application/octet-stream", Utils.ext2mime(".unknown"));
+        }
+
+        [TestMethod]
+        public void CloneHelpersDeepCopyCollections()
+        {
+            var source = new FwDict
+            {
+                { "num", 1 },
+                { "nested", new FwDict { { "child", "yes" } } },
+                { "list", new FwList { new FwDict { { "value", "x" } } } }
+            };
+
+            var clone = Utils.cloneHashDeep(source)!;
+            var clonedList = Utils.cloneFwList(new FwList { source });
+            var dbClone = Utils.cloneDBRow(new DBRow { { "k", "v" } });
+
+            var nested = clone["nested"] as FwDict;
+            var listClone = clone["list"] as IList;
+
+            Assert.IsNotNull(nested);
+            Assert.IsNotNull(listClone);
+            Assert.AreEqual("yes", nested!["child"]);
+            Assert.AreEqual("x", ((FwDict)listClone![0])["value"]);
+            Assert.AreEqual("v", dbClone["k"]);
+
+            ((FwDict)source["nested"])["child"] = "changed";
+            Assert.AreEqual("yes", nested!["child"]);
+            Assert.AreNotSame(source, clonedList[0]);
+        }
+
+        [TestMethod]
+        public void JsonStringifyValues_NormalizesTypes()
+        {
+            var json = new FwDict
+            {
+                { "flag", true },
+                { "number", 5 },
+                { "nested", new FwDict { { "inner", 10 } } },
+                { "list", new FwList { new FwDict { { "value", 2 } }, new FwDict { { "value", "two" } } } }
+            };
+
+            var result = Utils.jsonStringifyValues(json) as FwDict;
+
+            Assert.IsNotNull(result);
+            Assert.AreEqual("true", result!["flag"].toStr());
+            Assert.AreEqual("5", result["number"].toStr());
+            Assert.AreEqual("10", ((FwDict)result["nested"])["inner"].toStr());
+            Assert.AreEqual("two", ((FwDict)((FwList)result["list"])[1])["value"].toStr());
+        }
+
+        [TestMethod]
+        public void SerializeDeserialize_RoundTripDictionary()
+        {
+            var data = new FwDict { { "a", 1 }, { "b", "two" } };
+            var serialized = Utils.serialize(data);
+            var deserialized = Utils.deserialize(serialized) as FwDict;
+
+            Assert.IsNotNull(deserialized);
+            Assert.AreEqual("1", deserialized!["a"].toStr());
+            Assert.AreEqual("two", deserialized!["b"].toStr());
+        }
+
+        [TestMethod]
+        public void Nlstr2commastr_ConvertsLineBreaks()
+        {
+            Assert.AreEqual("one,two", Utils.nlstr2commastr("one\ntwo"));
+        }
+
+        [TestMethod]
+        public void UrlUnescape_RestoresEncodedStrings()
+        {
+            Assert.AreEqual("hello world", Utils.urlunescape("hello+world"));
+        }
+
+        [TestMethod]
+        public void Sha256_ProducesExpectedHash()
+        {
+            Assert.AreEqual("2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824", Utils.sha256("hello"));
+        }
+
+        [TestMethod]
+        public void Array2Hashtable_BuildsDictionary()
+        {
+            FwList arr = [new FwDict { { "id", 1 }, { "name", "Alpha" } }, new FwDict { { "id", 2 }, { "name", "Beta" } }];
+            var result = Utils.array2hashtable(arr, "id");
+
+            Assert.AreEqual(2, result.Count);
+            Assert.AreEqual("Alpha", (result["1"] as FwDict)?["name"]);
+        }
+
+        [TestMethod]
+        public void Right_ReturnsTrailingCharacters()
+        {
+            Assert.AreEqual("world", Utils.Right("hello world", 5));
+            Assert.AreEqual("", Utils.Right("", 3));
+        }
+
+        [TestMethod]
+        public void CopyDirectory_CopiesAllFilesRecursively()
+        {
+            var source = Path.Combine(Path.GetTempPath(), "copy-src-" + Guid.NewGuid());
+            var dest = Path.Combine(Path.GetTempPath(), "copy-dest-" + Guid.NewGuid());
+            Directory.CreateDirectory(source);
+            Directory.CreateDirectory(Path.Combine(source, "child"));
+            File.WriteAllText(Path.Combine(source, "file.txt"), "source");
+            File.WriteAllText(Path.Combine(source, "child", "nested.txt"), "child");
+            Directory.CreateDirectory(dest);
+            File.WriteAllText(Path.Combine(dest, "file.txt"), "existing");
+
+            Utils.CopyDirectory(source, dest, true);
+
+            Assert.AreEqual("existing", File.ReadAllText(Path.Combine(dest, "file.txt")));
+            Assert.AreEqual("child", File.ReadAllText(Path.Combine(dest, "child", "nested.txt")));
+
+            Directory.Delete(source, true);
+            Directory.Delete(dest, true);
+        }
+
+        [TestMethod]
+        public void CookieHelpers_CreateGetAndDelete()
+        {
+            var fw = TestHelpers.CreateFw();
+            Utils.createCookie(fw, "test", "value", 60);
+            Assert.IsTrue(fw.response.Headers.TryGetValue("Set-Cookie", out var setCookie));
+            StringAssert.Contains(setCookie.ToString(), "test=value");
+
+            fw.request.Headers.Append("Cookie", "test=value");
+            Assert.AreEqual("value", Utils.getCookie(fw, "test"));
+
+            Utils.deleteCookie(fw, "test");
+            Assert.IsTrue(fw.response.Headers.TryGetValue("Set-Cookie", out var deleted));
+            StringAssert.Contains(deleted.ToString(), "test=;"); // deleted cookie
+        }
+
+        [TestMethod]
+        public void PrepareRowsHeaders_AddsMissingHeadersAndCols()
+        {
+            var rows = new FwList { new FwDict { { "id", 1 }, { "name", "Alpha" } } };
+            var headers = new FwList();
+
+            Utils.prepareRowsHeaders(rows, headers);
+
+            var headerNames = headers.Cast<FwDict>().Select(h => h["field_name"].toStr()).ToList();
+            CollectionAssert.AreEquivalent(new List<string> { "id", "name" }, headerNames);
+            Assert.IsTrue(((FwDict)rows[0]).ContainsKey("cols"));
+            var cols = (FwList)((FwDict)rows[0])["cols"];
+            var nameCol = cols.Cast<FwDict>().First(c => c["field_name"].toStr() == "name");
+            Assert.AreEqual("Alpha", nameCol["data"]);
+        }
+
+        [TestMethod]
+        public void FileContentHelpers_ReadAndWriteFiles()
+        {
+            var path = Path.Combine(Path.GetTempPath(), "utils-file-" + Guid.NewGuid() + ".txt");
+            var content = "sample";
+            Utils.setFileContent(path, ref content);
+
+            Exception? error;
+            Assert.AreEqual(content, Utils.getFileContent(path, out error));
+            Assert.IsNull(error);
+
+            var lines = Utils.getFileLines(path);
+            Assert.AreEqual(1, lines.Length);
+
+            File.Delete(path);
+            Assert.AreEqual("", Utils.getFileContent(path));
+            CollectionAssert.AreEqual(Array.Empty<string>(), Utils.getFileLines(path, out error));
+            Assert.IsNotNull(error);
+        }
+
+        [TestMethod]
+        public void GetIP_ReturnsRemoteAddress()
+        {
+            var context = new DefaultHttpContext();
+            context.Connection.RemoteIpAddress = IPAddress.Parse("127.0.0.1");
+
+            Assert.AreEqual("127.0.0.1", Utils.getIP(context));
+        }
+
+        [TestMethod]
+        public async Task LoadUrl_PerformsGetAndPost()
+        {
+            var (getUrl, getHandler) = StartHttpListener(_ => "GET");
+            var getResponse = Utils.loadUrl(getUrl);
+            await getHandler;
+            Assert.AreEqual("GET", getResponse);
+
+            var (postUrl, postHandler) = StartHttpListener(ctx =>
+            {
+                using var reader = new StreamReader(ctx.Request.InputStream, ctx.Request.ContentEncoding);
+                return reader.ReadToEnd();
+            });
+
+            var postResponse = Utils.loadUrl(postUrl, new FwDict { { "a", 1 } });
+            await postHandler;
+            Assert.IsTrue(postResponse.Contains("a=1"));
+        }
+
+        [TestMethod]
+        public async Task SendFileToUrl_PostsMultipartContent()
+        {
+            var (url, handler) = StartHttpListener(ctx =>
+            {
+                using var reader = new StreamReader(ctx.Request.InputStream, ctx.Request.ContentEncoding);
+                var body = reader.ReadToEnd();
+                var hasFileName = body.Contains("filename=\"");
+                return $"{ctx.Request.ContentType}|{hasFileName}";
+            });
+
+            var tmpFile = Path.GetTempFileName();
+            File.WriteAllText(tmpFile, "data");
+            var response = Utils.sendFileToUrl(url, new FwDict { { "file1", tmpFile } });
+            await handler;
+
+            StringAssert.StartsWith(response, "multipart/form-data");
+            StringAssert.Contains(response, "True");
+            File.Delete(tmpFile);
+        }
+
+        [TestMethod]
+        public void GetPostedJson_ReadsRequestBody()
+        {
+            var fw = TestHelpers.CreateFw();
+            var payload = "{\"name\":\"alpha\"}";
+            fw.request.Body = new MemoryStream(Encoding.UTF8.GetBytes(payload));
+
+            var parsed = Utils.getPostedJson(fw);
+
+            Assert.AreEqual("alpha", parsed["name"]);
+        }
+
+        private static (string url, Task handlerTask) StartHttpListener(Func<HttpListenerContext, string> responder)
+        {
+            var port = GetFreeTcpPort();
+            var listener = new HttpListener();
+            var prefix = $"http://127.0.0.1:{port}/";
+            listener.Prefixes.Add(prefix);
+            listener.Start();
+
+            var handlerTask = Task.Run(async () =>
+            {
+                var ctx = await listener.GetContextAsync();
+                var responseText = responder(ctx);
+                var buffer = Encoding.UTF8.GetBytes(responseText);
+                ctx.Response.ContentLength64 = buffer.Length;
+                await ctx.Response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
+                ctx.Response.OutputStream.Close();
+                listener.Stop();
+            });
+
+            return (prefix, handlerTask);
+        }
+
+        private static int GetFreeTcpPort()
+        {
+            var listener = new TcpListener(IPAddress.Loopback, 0);
+            listener.Start();
+            var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+            listener.Stop();
+            return port;
         }
     }
 }

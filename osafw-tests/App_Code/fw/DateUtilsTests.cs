@@ -250,5 +250,43 @@ namespace osafw.Tests
 
             Assert.AreEqual(now, same);
         }
+
+        [TestMethod]
+        public void DateStringValidatorsRecognizePatterns()
+        {
+            Assert.IsTrue(DateUtils.isDateStr("12/31/2024"));
+            Assert.IsFalse(DateUtils.isDateStr("2024-12-31"));
+
+            Assert.IsTrue(DateUtils.isDateSQL("2024-12-31"));
+            Assert.IsTrue(DateUtils.isDateSQL("2024-12-31 23:59:59"));
+            Assert.IsFalse(DateUtils.isDateSQL("12/31/2024"));
+        }
+
+        [TestMethod]
+        public void Str2TimeOnlyHonorsFormatSettings()
+        {
+            var input = "1/17/2023 3:12 AM";
+            Assert.AreEqual("3:12 AM", DateUtils.Str2TimeOnly(input, DateUtils.DATE_FORMAT_MDY, DateUtils.TIME_FORMAT_12));
+            Assert.AreEqual("", DateUtils.Str2TimeOnly("not-a-date", DateUtils.DATE_FORMAT_MDY, DateUtils.TIME_FORMAT_12));
+        }
+
+        [TestMethod]
+        public void UnixTimestampMatchesSystemTime()
+        {
+            var before = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            var ts = DateUtils.UnixTimestamp();
+            var after = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+            Assert.IsTrue(ts >= before && ts <= after);
+        }
+
+        [TestMethod]
+        public void ConvertTimezone_ReturnsUtcWhenSameZones()
+        {
+            var utc = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            var converted = DateUtils.convertTimezone(utc, DateUtils.TZ_UTC, DateUtils.TZ_UTC);
+
+            Assert.AreEqual(utc, converted);
+        }
     }
 }

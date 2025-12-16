@@ -1,6 +1,10 @@
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization;
+using System.Text;
 
 namespace osafw.Tests
 {
@@ -16,9 +20,8 @@ namespace osafw.Tests
             tempRoot = Path.Combine(Path.GetTempPath(), "uploadutils-tests", Path.GetRandomFileName());
             Directory.CreateDirectory(tempRoot);
 
-            fw = (FW)FormatterServices.GetUninitializedObject(typeof(FW));
+            fw = CreateFwWithContext();
 
-            // isolate config for predictable paths
             var settings = FwConfig.settings;
             settings.Clear();
             settings["site_root"] = tempRoot;
@@ -31,6 +34,32 @@ namespace osafw.Tests
         {
             if (Directory.Exists(tempRoot))
                 Directory.Delete(tempRoot, true);
+        }
+
+        [TestMethod]
+        public void UploadSimple_SavesFileAndMetadata()
+        {
+            var fwWithContext = CreateFwWithContext();
+            var file = CreateFormFile("file1", "sample.txt", "payload");
+            fwWithContext.request.Form = new FormCollection(new Dictionary<string, StringValues>(), new FormFileCollection { file });
+            var up = new UploadParams(fwWithContext, "file1", Path.Combine(tempRoot, "simple"));
+
+            var saved = UploadUtils.uploadSimple(up);
+
+            Assert.IsTrue(saved);
+            Assert.IsTrue(File.Exists(up.full_path));
+            Assert.AreEqual(".txt", up.ext);
+            Assert.AreEqual("sample.txt", up.orig_filename);
+        }
+
+        [TestMethod]
+        public void UploadSimple_ThrowsIfRequiredMissing()
+        {
+            var fwWithContext = CreateFwWithContext();
+            fwWithContext.request.Form = new FormCollection(new Dictionary<string, StringValues>(), new FormFileCollection());
+            var up = new UploadParams(fwWithContext, "missing", tempRoot) { is_required = true };
+
+            Assert.ThrowsExactly<UserException>(() => UploadUtils.uploadSimple(up));
         }
 
         [TestMethod]
@@ -104,6 +133,65 @@ namespace osafw.Tests
         {
             Assert.AreEqual("image/png", UploadUtils.mimeMapping("logo.png"));
             Assert.AreEqual("application/octet-stream", UploadUtils.mimeMapping("unknown.ext"));
+        }
+
+        [TestMethod]
+        public void UploadFileSave_WritesUnderModuleFolder()
+        {
+            var fwWithContext = CreateFwWithContext();
+            var file = CreateFormFile("file", "photo.jpg", "binary");
+
+            var saved = UploadUtils.uploadFileSave(fwWithContext, "docs", 7, file);
+
+            Assert.IsTrue(File.Exists(saved));
+            StringAssert.Contains(saved.Replace('\\', '/'), "/upload/docs/7/7.jpg");
+        }
+
+        [TestMethod]
+        public void UploadFile_UsesFormFileOverload()
+        {
+            var fwWithContext = CreateFwWithContext();
+            var file = CreateFormFile("file1", "avatar.jpg", "binary");
+            fwWithContext.request.Form = new FormCollection(new Dictionary<string, StringValues>(), new FormFileCollection { file });
+
+            var saved = UploadUtils.uploadFile(fwWithContext, "avatars", 11, out var filepath, "file1", true);
+
+            Assert.IsTrue(saved);
+            Assert.IsTrue(File.Exists(filepath));
+        }
+
+        [TestMethod]
+        public void GetUploadImgUrl_ReturnsExistingVariant()
+        {
+            var fwWithContext = CreateFwWithContext();
+            FwConfig.settings["ROOT_URL"] = "https://example.test";
+            var dir = UploadUtils.getUploadDir(fwWithContext, "avatars", 15);
+            var medium = Path.Combine(dir, "15_m.jpg");
+            File.WriteAllText(medium, "img");
+
+            var url = UploadUtils.getUploadImgUrl(fwWithContext, "avatars", 15, "m");
+
+            Assert.AreEqual("https://example.test/upload/avatars/15/15_m.jpg", url);
+        }
+
+        private static IFormFile CreateFormFile(string name, string fileName, string content)
+        {
+            var stream = new MemoryStream(Encoding.UTF8.GetBytes(content));
+            return new FormFile(stream, 0, stream.Length, name, fileName)
+            {
+                Headers = new HeaderDictionary(),
+                ContentType = "application/octet-stream"
+            };
+        }
+
+        private FW CreateFwWithContext()
+        {
+            return TestHelpers.CreateFw(new Dictionary<string, string?>
+            {
+                { "site_root", tempRoot },
+                { "UPLOAD_DIR", "/upload" },
+                { "ROOT_URL", "https://example.test" }
+            });
         }
     }
 }
