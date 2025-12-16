@@ -888,7 +888,7 @@ public class FwDynamicController : FwController
                 }
                 else if (def.TryGetValue("lookup_model", out object? lm_value))
                 {
-                    var lookup_model = fw.model(value.toStr());
+                    var lookup_model = fw.model(lm_value.toStr());
                     def["lookup_id"] = item[field].toInt();
                     var lookup_row = lookup_model.one(def["lookup_id"]);
                     def["lookup_row"] = lookup_row;
@@ -1100,7 +1100,7 @@ public class FwDynamicController : FwController
                 }
                 else if (def.TryGetValue("lookup_tpl", out object? lt_value2))
                 {
-                    var select_options = FormUtils.selectTplOptions(lt_value.toStr(), fw.route.controller_path.ToLower());
+                    var select_options = FormUtils.selectTplOptions(lt_value2.toStr(), fw.route.controller_path.ToLower());
                     def["select_options"] = select_options;
                     def["value"] = item[field];
                     foreach (FwDict row in select_options) // contains id, iname

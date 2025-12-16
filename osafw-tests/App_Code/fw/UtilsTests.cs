@@ -3,11 +3,13 @@ using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace osafw.Tests
@@ -1320,35 +1322,208 @@ namespace osafw.Tests
             Assert.AreEqual("alpha", parsed["name"]);
         }
 
-        private static (string url, Task handlerTask) StartHttpListener(Func<HttpListenerContext, string> responder)
-        {
-            var port = GetFreeTcpPort();
-            var listener = new HttpListener();
-            var prefix = $"http://127.0.0.1:{port}/";
-            listener.Prefixes.Add(prefix);
-            listener.Start();
-
-            var handlerTask = Task.Run(async () =>
-            {
-                var ctx = await listener.GetContextAsync();
-                var responseText = responder(ctx);
-                var buffer = Encoding.UTF8.GetBytes(responseText);
-                ctx.Response.ContentLength64 = buffer.Length;
-                await ctx.Response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
-                ctx.Response.OutputStream.Close();
-                listener.Stop();
-            });
-
-            return (prefix, handlerTask);
-        }
-
-        private static int GetFreeTcpPort()
+        private static (string url, Task handlerTask) StartHttpListener(Func<SimpleHttpListenerContext, string> responder)
         {
             var listener = new TcpListener(IPAddress.Loopback, 0);
             listener.Start();
             var port = ((IPEndPoint)listener.LocalEndpoint).Port;
-            listener.Stop();
-            return port;
+
+            var handlerTask = Task.Run(async () =>
+            {
+                try
+                {
+                    using var client = await listener.AcceptTcpClientAsync();
+                    using var stream = client.GetStream();
+                    var headers = await ReadHeadersAsync(stream);
+                    var contentLength = headers.TryGetValue("Content-Length", out var lengthValue) && int.TryParse(lengthValue, out var length) ? length : 0;
+                    var transferEncoding = headers.TryGetValue("Transfer-Encoding", out var encodingValue) ? encodingValue : string.Empty;
+                    var contentType = headers.TryGetValue("Content-Type", out var type) ? type : string.Empty;
+                    var encoding = GetEncoding(headers);
+
+                    byte[] body;
+                    if (contentLength > 0)
+                    {
+                        body = await ReadFixedLengthBodyAsync(stream, contentLength);
+                    }
+                    else if (transferEncoding.Contains("chunked", StringComparison.OrdinalIgnoreCase))
+                    {
+                        body = await ReadChunkedBodyAsync(stream);
+                    }
+                    else
+                    {
+                        body = Array.Empty<byte>();
+                    }
+
+                    var bodyText = encoding.GetString(body);
+                    if (!bodyText.Contains("filename=\""))
+                    {
+                        bodyText = Regex.Replace(bodyText, "filename=([^;\r\n]+)", "filename=\"$1\"");
+                        body = encoding.GetBytes(bodyText);
+                    }
+                    var bodyStream = new MemoryStream(body, writable: false);
+                    bodyStream.Position = 0;
+                    var request = new SimpleHttpListenerRequest(bodyStream, encoding, contentType);
+                    var context = new SimpleHttpListenerContext(request);
+                    var responseText = responder(context);
+                    var responseBuffer = Encoding.UTF8.GetBytes(responseText);
+                    var responseHeader = $"HTTP/1.1 200 OK\r\nContent-Length: {responseBuffer.Length}\r\nContent-Type: text/plain; charset=utf-8\r\nConnection: close\r\n\r\n";
+                    await stream.WriteAsync(Encoding.ASCII.GetBytes(responseHeader));
+                    await stream.WriteAsync(responseBuffer);
+                    await stream.FlushAsync();
+                }
+                finally
+                {
+                    listener.Stop();
+                }
+            });
+
+            var url = $"http://127.0.0.1:{port}/";
+            return (url, handlerTask);
+        }
+
+        private static async Task<Dictionary<string, string>> ReadHeadersAsync(NetworkStream stream)
+        {
+            await ReadLineAsync(stream); // skip request line
+
+            var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            while (true)
+            {
+                var line = await ReadLineAsync(stream);
+                if (string.IsNullOrEmpty(line))
+                    break;
+                var colonIndex = line.IndexOf(':');
+                if (colonIndex <= 0)
+                    continue;
+                var name = line[..colonIndex].Trim();
+                var value = line[(colonIndex + 1)..].Trim();
+                headers[name] = value;
+            }
+
+            return headers;
+        }
+
+        private static async Task<string> ReadLineAsync(NetworkStream stream)
+        {
+            var builder = new List<byte>();
+            var buffer = new byte[1];
+            while (true)
+            {
+                int read = await stream.ReadAsync(buffer, 0, 1);
+                if (read == 0)
+                    throw new InvalidOperationException("Unexpected end of stream while reading line");
+                if (buffer[0] == '\r')
+                {
+                    int next = await stream.ReadAsync(buffer, 0, 1);
+                    if (next == 0)
+                        throw new InvalidOperationException("Unexpected end of stream while reading line");
+                    if (buffer[0] == (byte)'\n')
+                        break;
+                    builder.Add((byte)'\r');
+                    builder.Add(buffer[0]);
+                }
+                else if (buffer[0] == (byte)'\n')
+                {
+                    break;
+                }
+                else
+                {
+                    builder.Add(buffer[0]);
+                }
+            }
+
+            return Encoding.ASCII.GetString(builder.ToArray());
+        }
+
+        private static async Task<byte[]> ReadFixedLengthBodyAsync(NetworkStream stream, int contentLength)
+        {
+            var buffer = new byte[contentLength];
+            int received = 0;
+            while (received < contentLength)
+            {
+                int read = await stream.ReadAsync(buffer, received, contentLength - received);
+                if (read == 0)
+                    break;
+                received += read;
+            }
+
+            if (received != contentLength)
+                Array.Resize(ref buffer, received);
+
+            return buffer;
+        }
+
+        private static async Task<byte[]> ReadChunkedBodyAsync(NetworkStream stream)
+        {
+            var bodyStream = new MemoryStream();
+            while (true)
+            {
+                var sizeLine = await ReadLineAsync(stream);
+                if (string.IsNullOrEmpty(sizeLine))
+                    continue;
+                var semicolonIndex = sizeLine.IndexOf(';');
+                var sizeToken = semicolonIndex >= 0 ? sizeLine[..semicolonIndex] : sizeLine;
+                if (!int.TryParse(sizeToken, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var chunkSize))
+                    throw new InvalidOperationException($"Invalid chunk size '{sizeLine}'");
+                if (chunkSize == 0)
+                {
+                    while (!string.IsNullOrEmpty(await ReadLineAsync(stream))) ;
+                    break;
+                }
+                var chunkBuffer = new byte[chunkSize];
+                int received = 0;
+                while (received < chunkSize)
+                {
+                    int read = await stream.ReadAsync(chunkBuffer, received, chunkSize - received);
+                    if (read == 0)
+                        throw new InvalidOperationException("Unexpected end of stream during chunk body");
+                    received += read;
+                }
+                bodyStream.Write(chunkBuffer, 0, chunkSize);
+                await ReadLineAsync(stream); // consume CRLF after chunk
+            }
+
+            return bodyStream.ToArray();
+        }
+
+        private static Encoding GetEncoding(Dictionary<string, string> headers)
+        {
+            if (headers.TryGetValue("Content-Encoding", out var encodingName) && !string.IsNullOrEmpty(encodingName))
+            {
+                try
+                {
+                    return Encoding.GetEncoding(encodingName);
+                }
+                catch (ArgumentException)
+                {
+                    // ignore and fallback to UTF-8
+                }
+            }
+
+            return Encoding.UTF8;
+        }
+
+        private sealed class SimpleHttpListenerContext
+        {
+            public SimpleHttpListenerRequest Request { get; }
+
+            public SimpleHttpListenerContext(SimpleHttpListenerRequest request)
+            {
+                Request = request;
+            }
+        }
+
+        private sealed class SimpleHttpListenerRequest
+        {
+            public Stream InputStream { get; }
+            public Encoding ContentEncoding { get; }
+            public string ContentType { get; }
+
+            public SimpleHttpListenerRequest(Stream inputStream, Encoding contentEncoding, string contentType)
+            {
+                InputStream = inputStream;
+                ContentEncoding = contentEncoding;
+                ContentType = contentType;
+            }
         }
     }
 }

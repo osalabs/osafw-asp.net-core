@@ -9,12 +9,16 @@ namespace osafw.Tests;
 
 internal static class TestHelpers
 {
-    public static FW CreateFw(IDictionary<string, string?>? settings = null)
-    {
-        var context = new DefaultHttpContext
+        public static FW CreateFw(IDictionary<string, string?>? settings = null)
         {
-            Session = new FakeSession(),
-        };
+            var context = new DefaultHttpContext
+            {
+                Session = new FakeSession(),
+            };
+
+            var hostName = FwConfig.hostname;
+            if (!string.IsNullOrEmpty(hostName))
+                context.Request.Host = new HostString(hostName);
 
         var configurationBuilder = new ConfigurationBuilder().AddInMemoryCollection(settings ?? new Dictionary<string, string?>());
         var fw = new FW(context, configurationBuilder.Build());

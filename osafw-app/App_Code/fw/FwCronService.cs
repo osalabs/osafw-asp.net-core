@@ -24,6 +24,8 @@ public class FwCronService : BackgroundService
 
             await Task.Delay(PollingInterval, stoppingToken);
         }
+
+        stoppingToken.ThrowIfCancellationRequested();
     }
 
     protected virtual void ProcessJobs(CancellationToken ct)

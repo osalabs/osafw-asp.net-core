@@ -8,7 +8,7 @@ using Microsoft.Data.SqlClient;
 namespace osafw.Tests
 {
     [TestClass()]
-    [Ignore("Requires local SQL Server instance")] // TODO consider mocked DB layer for tests
+    //[Ignore("Requires local SQL Server instance")] // TODO consider mocked DB layer for tests
     public class DBTests
     {
         private readonly string connstr = "Server=(local);Database=demo;Trusted_Connection=True;TrustServerCertificate=true;";

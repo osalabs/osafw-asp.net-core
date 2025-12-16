@@ -371,11 +371,12 @@ namespace osafw.Tests
                 "<option value=\"\">- select a fruit -</option>" +
                 "<~fruits_select select=\"fruit\">" +
                 "</select>";
+            var newline = Environment.NewLine;
             string tpl_result = "<select name = \"item[fruit]\">" +
                 "<option value=\"\">- select a fruit -</option>" +
-                "<option value=\"1\">Apple</option>\n" +
-                "<option value=\"2\">Plum</option>\n" +
-                "<option value=\"3\" selected>Banana</option>\n" +
+                "<option value=\"1\">Apple</option>" + newline +
+                "<option value=\"2\">Plum</option>" + newline +
+                "<option value=\"3\" selected>Banana</option>" + newline +
                 "</select>";
             FwDict ps = [];
             ps["fruits_select"] = new FwList() {
