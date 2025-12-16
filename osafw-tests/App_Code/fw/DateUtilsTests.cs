@@ -217,6 +217,25 @@ namespace osafw.Tests
         }
 
         [TestMethod]
+        public void MapDateAndTimeFormat_ReturnsExpectedPatterns()
+        {
+            Assert.AreEqual("M/d/yyyy", DateUtils.mapDateFormat(DateUtils.DATE_FORMAT_MDY));
+            Assert.AreEqual("d/M/yyyy", DateUtils.mapDateFormat(DateUtils.DATE_FORMAT_DMY));
+            Assert.AreEqual("h:mm tt", DateUtils.mapTimeFormat(DateUtils.TIME_FORMAT_12));
+            Assert.AreEqual("H:mm", DateUtils.mapTimeFormat(DateUtils.TIME_FORMAT_24));
+        }
+
+        [TestMethod]
+        public void ToFormat_FormatsDateTimeWhenValid()
+        {
+            var dt = new DateTime(2024, 1, 2, 3, 4, 5);
+
+            var formatted = DateUtils.toFormat(dt, "yyyy-MM-dd");
+
+            Assert.AreEqual("2024-01-02", formatted);
+        }
+
+        [TestMethod]
         public void ToFormat_ReturnsEmptyStringOnNullInput()
         {
             Assert.AreEqual("", DateUtils.toFormat(null!, "yyyy"));
