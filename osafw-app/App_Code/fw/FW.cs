@@ -49,6 +49,8 @@ public class FW : IDisposable
     private readonly FwDict models = []; // model's singletons cache
     private readonly FwDict controllers = []; // controller's singletons cache
     private const string ControllerActionsCacheKeyPrefix = "fw:controller-actions:";
+    private static readonly ConcurrentDictionary<string, Type?> ControllerTypeCache = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly ConcurrentDictionary<string, FwDict> VirtualControllerCache = new(StringComparer.OrdinalIgnoreCase);
     private ParsePage? pp_instance; // for parsePage()
 
     public FwDict FORM = [];
@@ -1613,7 +1615,8 @@ public class FW : IDisposable
             return cachedController;
 
         FwController c;
-        Type? ct = getControllerTypeCached(controller_name);
+        var controllerTypeKey = controller_name + "Controller";
+        Type? ct = ControllerTypeCache.GetOrAdd(controllerTypeKey, key => Type.GetType(FW_NAMESPACE_PREFIX + key, false, true));
         if (ct == null)
         {
             //if no such controller class - try virtual controllers
@@ -1623,7 +1626,7 @@ public class FW : IDisposable
 
             var controller_icode = controller_name;
 
-            var fwcon = getVirtualControllerCached(controller_icode);
+            var fwcon = VirtualControllerCache.GetOrAdd(controller_icode, _ => model<FwControllers>().oneByIcode(controller_icode));
             if (fwcon.Count == 0)
                 return null; // controller class not found even in virtual controllers TODO NoControllerException?
 
@@ -1660,20 +1663,6 @@ public class FW : IDisposable
         controllers[controller_name] = c;
 
         return c;
-    }
-
-    private static readonly ConcurrentDictionary<string, Type?> ControllerTypeCache = new(StringComparer.OrdinalIgnoreCase);
-    private static readonly ConcurrentDictionary<string, FwDict> VirtualControllerCache = new(StringComparer.OrdinalIgnoreCase);
-
-    private Type? getControllerTypeCached(string controller_name)
-    {
-        var cacheKey = controller_name + "Controller";
-        return ControllerTypeCache.GetOrAdd(cacheKey, key => Type.GetType(FW_NAMESPACE_PREFIX + key, false, true));
-    }
-
-    private FwDict getVirtualControllerCached(string controller_icode)
-    {
-        return VirtualControllerCache.GetOrAdd(controller_icode, _ => model<FwControllers>().oneByIcode(controller_icode));
     }
 
     public void logActivity(string log_types_icode, string entity_icode, int item_id = 0, string iname = "", FwDict? changed_fields = null)
