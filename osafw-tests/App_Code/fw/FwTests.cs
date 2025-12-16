@@ -30,6 +30,41 @@ namespace osafw.Tests
             Assert.AreEqual("1/1/2024 12:00 PM", local);
         }
 
+        [TestMethod]
+        public void FormatUserDateTime_HonorsUserFormatsAndSqlInput()
+        {
+            var context = new DefaultHttpContext
+            {
+                Session = new FakeSession(),
+            };
+            var configuration = new ConfigurationBuilder().Build();
+
+            var fw = new FW(context, configuration);
+            fw.G["date_format"] = DateUtils.DATE_FORMAT_DMY;
+            fw.G["time_format"] = DateUtils.TIME_FORMAT_24;
+
+            var formatted = fw.formatUserDateTime("2024-02-03 15:30:00");
+
+            Assert.AreEqual("3/2/2024 15:30", formatted);
+        }
+
+        [TestMethod]
+        public void UserSessionPropertiesReflectSessionValues()
+        {
+            var context = new DefaultHttpContext
+            {
+                Session = new FakeSession(),
+            };
+            var configuration = new ConfigurationBuilder().Build();
+            var fw = new FW(context, configuration);
+
+            Assert.IsFalse(fw.isLogged);
+            context.Session.SetString("user_id", "9");
+
+            Assert.IsTrue(fw.isLogged);
+            Assert.AreEqual(9, fw.userId);
+        }
+
         // Minimal ISession for FW unit testing
         private class FakeSession : ISession
         {

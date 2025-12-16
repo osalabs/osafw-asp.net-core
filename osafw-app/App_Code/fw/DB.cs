@@ -921,7 +921,7 @@ public class DB : IDisposable
 
     // like query(), but exectute without results (so db reader will be closed), return number of rows affected.
     // if is_get_identity=true - return last inserted id
-    public int exec(string sql, FwDict? @params = null, bool is_get_identity = false)
+    public virtual int exec(string sql, FwDict? @params = null, bool is_get_identity = false)
     {
         connect();
 
@@ -1197,7 +1197,7 @@ public class DB : IDisposable
     /// <param name="sql"></param>
     /// <param name="params"></param>
     /// <returns></returns>
-    public DBList arrayp(string sql, FwDict? @params = null)
+    public virtual DBList arrayp(string sql, FwDict? @params = null)
     {
         DbDataReader dbread = query(sql, @params);
         return readArray(dbread);
@@ -1277,7 +1277,7 @@ public class DB : IDisposable
     /// <param name="order_by">optional order by, MUST BE QUOTED</param>
     /// <param name="aselect_fields">optional select fields array or hashtable("field"=>"alias") or arraylist of hashtable("field"=>1,"alias"=>1) for cases if there could be several same fields with diff aliases), if not set * returned</param>
     /// <returns></returns>
-    public DBList array(string table, FwDict where, string order_by = "", ICollection? aselect_fields = null)
+    public virtual DBList array(string table, FwDict where, string order_by = "", ICollection? aselect_fields = null)
     {
         var qp = buildSelect(table, where, order_by, select_fields: buildSelectFields(aselect_fields));
         return arrayp(qp.sql, qp.@params);
@@ -1354,7 +1354,7 @@ public class DB : IDisposable
     /// <param name="sql"></param>
     /// <param name="params"></param>
     /// <returns></returns>
-    public List<string> colp(string sql, FwDict? @params = null)
+    public virtual List<string> colp(string sql, FwDict? @params = null)
     {
         DbDataReader dbread = query(sql, @params);
         return readCol(dbread);
@@ -1369,7 +1369,7 @@ public class DB : IDisposable
     /// <param name="order_by">optional order by (MUST be quoted)</param>
     /// <param name="limit">optional limit, if -1 - no limit applied</param>
     /// <returns></returns>
-    public List<string> col(string table, FwDict where, string field_name, string order_by = "", int limit = -1)
+    public virtual List<string> col(string table, FwDict where, string field_name, string order_by = "", int limit = -1)
     {
         field_name ??= "";
 
@@ -1412,7 +1412,7 @@ public class DB : IDisposable
     }
 
     // return just first value from column
-    public object? valuep(string sql, FwDict? @params = null)
+    public virtual object? valuep(string sql, FwDict? @params = null)
     {
         DbDataReader dbread = query(sql, @params);
         return readValue(dbread);
@@ -1431,7 +1431,7 @@ public class DB : IDisposable
     /// <param name="field_name">(if not set - first selected field used) field name, special cases: "1", "count(*)", "SUM(field)", AVG/MAX/MIN,...</param>
     /// <param name="order_by"></param>
     /// <returns></returns>
-    public object? value(string table, FwDict where, string field_name = "", string order_by = "")
+    public virtual object? value(string table, FwDict where, string field_name = "", string order_by = "")
     {
         field_name ??= "";
 
@@ -2155,7 +2155,7 @@ public class DB : IDisposable
     /// <param name="table"></param>
     /// <param name="fields">last inserted id</param>
     /// <returns></returns>
-    public int insert(string table, IDictionary fields)
+    public virtual int insert(string table, IDictionary fields)
     {
         if (fields.Count < 1)
             return 0;
@@ -2163,7 +2163,7 @@ public class DB : IDisposable
 
         return insertQueryAndParams(qp);
     }
-    public int insert(string table, FwDict fields)
+    public virtual int insert(string table, FwDict fields)
     {
         return insert(table, (IDictionary)fields);
     }
@@ -2175,7 +2175,7 @@ public class DB : IDisposable
     /// <param name="table"></param>
     /// <param name="data">last inserted id</param>
     /// <returns></returns>
-    public int insert<T>(string table, T data)
+    public virtual int insert<T>(string table, T data)
     {
         if (data == null)
             return 0;
@@ -2192,12 +2192,12 @@ public class DB : IDisposable
     /// <param name="fields">key => value</param>
     /// <param name="where">key => value/opXX</param>
     /// <returns></returns>
-    public int update(string table, IDictionary fields, IDictionary where)
+    public virtual int update(string table, IDictionary fields, IDictionary where)
     {
         var qp = buildUpdate(table, fields, where);
         return exec(qp.sql, qp.@params);
     }
-    public int update(string table, FwDict fields, FwDict where)
+    public virtual int update(string table, FwDict fields, FwDict where)
     {
         var qp = buildUpdate(table, fields, where);
         return exec(qp.sql, qp.@params);
@@ -2845,4 +2845,3 @@ public class DB : IDisposable
         GC.SuppressFinalize(this);
     }
 }
-

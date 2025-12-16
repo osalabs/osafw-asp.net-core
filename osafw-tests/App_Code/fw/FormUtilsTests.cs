@@ -326,9 +326,6 @@ namespace osafw.Tests
         [TestMethod]
         public void Comma_str2colTest()
         {
-            //TODO
-            //bug ?
-
             // Case 1: Test with empty input
             string input1 = "";
             StrList result1 = FormUtils.comma_str2col(input1);
