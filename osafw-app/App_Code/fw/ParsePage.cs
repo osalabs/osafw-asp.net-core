@@ -878,18 +878,10 @@ public class ParsePage
 
     private static FwDict proc_repeat_modifiers(IList uftag, int i)
     {
-        FwDict uftagi1;
         object? element = uftag[i];
-        IDictionary? dict = element as IDictionary;
-        if (dict == null && element != null)
-            dict = element!.toKeyValue();
+        IDictionary? dict = element as IDictionary ?? element?.toKeyValue();
 
-        if (dict != null)
-            uftagi1 = new FwDict(dict);
-        else
-            uftagi1 = [];
-
-        FwDict uftagi = new(uftagi1); // make a shallow copy as we modify this level
+        FwDict uftagi = dict != null ? new FwDict(dict) : []; // make a shallow copy as we modify this level
         int cnt = uftag.Count;
 
         if (i == 0)

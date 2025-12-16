@@ -1483,10 +1483,7 @@ public class DB : IDisposable
         for (int i = 0; i < parameters.Count; i++)
         {
             var value = parameters[i];
-            if (isIntList || value is int)
-                result[i] = value?.ToString() ?? "0";
-            else
-                result[i] = this.q(value);
+            result[i] = (isIntList || value is int) ? value?.ToString() ?? "0" : q(value);
         }
 
         StringBuilder sb = new();
@@ -1638,7 +1635,7 @@ public class DB : IDisposable
                 result = dt;
             else
                 if (DateTime.TryParse(value.ToString(), out DateTime tmpdate))
-                result = tmpdate;
+                    result = tmpdate;
 
         return result;
     }
