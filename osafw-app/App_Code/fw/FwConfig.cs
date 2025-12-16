@@ -74,7 +74,7 @@ public static class FwConfig
         return tmp;
     }, LazyThreadSafetyMode.ExecutionAndPublication);
 
-    private static FwDict buildForHost(HttpContext? ctx, string overrideName, bool isHostProvided, string cacheKey)
+    private static FwDict buildForHost(HttpContext? ctx, string overrideName, bool isHostProvided)
     {
         // clone deep - each host gets its own mutable copy
         var hs = new FwDict(_base.Value);
@@ -264,7 +264,7 @@ public static class FwConfig
         var isHostProvided = !string.IsNullOrEmpty(host);
 
         var hostSettings = _hostCache.GetOrAdd(cacheKey,
-            _ => new Lazy<FwDict>(() => buildForHost(ctx, overrideName, isHostProvided, cacheKey), LazyThreadSafetyMode.ExecutionAndPublication)
+            _ => new Lazy<FwDict>(() => buildForHost(ctx, overrideName, isHostProvided), LazyThreadSafetyMode.ExecutionAndPublication)
         );
 
         return hostSettings.Value;

@@ -614,7 +614,7 @@ public class FormUtils
     /// ****** helpers to detect changes
 
     /// <summary>
-    /// leave in only those item keys, which are apsent/different from itemold
+    /// leave in only those item keys, which are absent/different from itemold
     /// </summary>
     /// <param name="item"></param>
     /// <param name="itemold"></param>
