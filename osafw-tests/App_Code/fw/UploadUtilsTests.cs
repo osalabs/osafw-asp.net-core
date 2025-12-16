@@ -66,6 +66,40 @@ namespace osafw.Tests
         }
 
         [TestMethod]
+        public void GetUploadImgPath_ResolvesExistingVariants()
+        {
+            var dir = UploadUtils.getUploadDir(fw, "avatars", 99);
+            var original = dir + @"\99.jpg";
+            var medium = dir + @"\99_m.jpg";
+            File.WriteAllText(original, "orig");
+            File.WriteAllText(medium, "med");
+
+            var pathOriginal = UploadUtils.getUploadImgPath(fw, "avatars", 99, "", ".jpg");
+            var pathMedium = UploadUtils.getUploadImgPath(fw, "avatars", 99, "m");
+
+            Assert.AreEqual(original.Replace('\\', '/'), pathOriginal.Replace('\\', '/'));
+            Assert.AreEqual(medium.Replace('\\', '/'), pathMedium.Replace('\\', '/'));
+        }
+
+        [TestMethod]
+        public void RemoveUploadImgByPath_CleansAllSizes()
+        {
+            var dir = UploadUtils.getUploadDir(fw, "avatars", 101);
+            var basePath = dir + @"\101";
+            foreach (var suffix in new[] { "", "_l", "_m", "_s" })
+            {
+                File.WriteAllText(basePath + suffix + ".jpg", "x");
+                File.WriteAllText(basePath + suffix + ".png", "x");
+                File.WriteAllText(basePath + suffix + ".gif", "x");
+            }
+
+            var removed = UploadUtils.removeUploadImg(fw, "avatars", 101);
+
+            Assert.IsTrue(removed);
+            Assert.AreEqual(0, Directory.GetFiles(dir).Length);
+        }
+
+        [TestMethod]
         public void MimeMapping_UsesKnownContentTypes()
         {
             Assert.AreEqual("image/png", UploadUtils.mimeMapping("logo.png"));
