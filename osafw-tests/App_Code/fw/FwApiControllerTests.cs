@@ -14,9 +14,10 @@ public class FwApiControllerTests
     private static FW BuildFw()
     {
         var fw = TestHelpers.CreateFw();
-        FwConfig.settings["hostname"] = "example.com";
-        FwConfig.settings["API_ALLOW_ORIGIN"] = "http://allowed.test";
-        FwConfig.settings["API_KEY"] = "secret";
+        var settings = FwConfig.GetCurrentSettings();
+        settings["hostname"] = "example.com";
+        settings["API_ALLOW_ORIGIN"] = "http://allowed.test";
+        settings["API_KEY"] = "secret";
         return fw;
     }
 

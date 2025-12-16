@@ -129,20 +129,20 @@ namespace osafw.Tests
         [TestMethod]
         public void RemoveUploadImgByPath_CleansAllSizes()
         {
-            var dir = UploadUtils.getUploadDir(fw, "avatars", 101);
-            var basePath = dir + @"\101";
-            foreach (var suffix in new[] { "", "_l", "_m", "_s" })
-            {
-                File.WriteAllText(basePath + suffix + ".jpg", "x");
+        var dir = UploadUtils.getUploadDir(fw, "avatars", 101);
+        var basePath = dir + @"\101";
+        foreach (var suffix in new[] { "", "_l", "_m", "_s" })
+        {
+            File.WriteAllText(basePath + suffix + ".jpg", "x");
                 File.WriteAllText(basePath + suffix + ".png", "x");
                 File.WriteAllText(basePath + suffix + ".gif", "x");
             }
 
-            var removed = UploadUtils.removeUploadImg(fw, "avatars", 101);
+        var removed = UploadUtils.removeUploadImg(fw, "avatars", 101);
 
-            Assert.IsTrue(removed);
-            Assert.AreEqual(0, Directory.GetFiles(dir).Length);
-        }
+        Assert.IsTrue(removed);
+        Assert.IsEmpty(Directory.GetFiles(dir));
+    }
 
         [TestMethod]
         public void MimeMapping_UsesKnownContentTypes()
@@ -180,7 +180,7 @@ namespace osafw.Tests
         public void GetUploadImgUrl_ReturnsExistingVariant()
         {
             var fwWithContext = CreateFwWithContext();
-            FwConfig.settings["ROOT_URL"] = "https://example.test";
+            FwConfig.GetCurrentSettings()["ROOT_URL"] = "https://example.test";
             var dir = UploadUtils.getUploadDir(fwWithContext, "avatars", 15);
             var medium = Path.Combine(dir, "15_m.jpg");
             File.WriteAllText(medium, "img");

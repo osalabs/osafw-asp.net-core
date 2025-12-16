@@ -102,7 +102,7 @@ namespace osafw.Tests
             cache.setRequestValue("testCacheKey2", h);
             var r = (FwDict?)cache.getRequestValue("testCacheKey2");
             Assert.IsNotNull(r);
-            Assert.AreEqual("1", r!["AAA"]);
+            Assert.AreEqual("1", r["AAA"]);
             Assert.AreEqual("2", r["BBB"]);
 
             // test serialization of DBRow
@@ -121,8 +121,9 @@ namespace osafw.Tests
             cache.setRequestValue("testCacheKey4", a);
             var r3 = cache.getRequestValue("testCacheKey4") as IList;
             Assert.IsNotNull(r3);
-            Assert.AreEqual("1", r3![0].ToString());
-            Assert.AreEqual("2", r3[1].ToString());
+            var r3List = r3 ?? throw new AssertFailedException("Expected list result");
+            Assert.AreEqual("1", r3List[0]?.ToString());
+            Assert.AreEqual("2", r3List[1]?.ToString());
 
             // test object that cannot be serialized to json, so it's stored as is
             cache.setRequestValue("testCacheKey5", new System.IO.MemoryStream());
@@ -146,7 +147,7 @@ namespace osafw.Tests
             cache.setRequestValue("testCacheKey2", h);
             var r = (FwDict?)cache.getRequestValue("testCacheKey2");
             Assert.IsNotNull(r);
-            Assert.AreEqual("3", r!["CCC"]);
+            Assert.AreEqual("3", r["CCC"]);
             Assert.AreEqual("4", r["DDD"]);
         }
 

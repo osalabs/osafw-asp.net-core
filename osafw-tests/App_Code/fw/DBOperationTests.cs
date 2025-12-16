@@ -52,7 +52,7 @@ namespace osafw.Tests
 
             var parts = DB.splitMultiSQL(sql);
 
-            Assert.AreEqual(2, parts.Length);
+            Assert.HasCount(2, parts);
             Assert.AreEqual("SELECT 1", parts[0].Trim());
             Assert.AreEqual("SELECT 2", parts[1].Trim().TrimEnd(';'));
         }

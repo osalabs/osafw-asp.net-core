@@ -107,10 +107,10 @@ public class FwActivityLogsTests
 
         var result = logs.listByEntityForUI("demo", 5);
 
-        Assert.AreEqual(1, result.Count);
+        Assert.HasCount(1, result);
         var row = result[0] as FwDict ?? [];
         var fields = row["fields"] as FwList ?? [];
-        Assert.AreEqual(3, fields.Count); // pwd masked + 2 fields
+        Assert.HasCount(3, fields); // pwd masked + 2 fields
         var pwdField = fields.First(f => ((FwDict)f)["key"].toStr() == "pwd") as FwDict;
         Assert.AreEqual("********", pwdField!["value"]);
     }

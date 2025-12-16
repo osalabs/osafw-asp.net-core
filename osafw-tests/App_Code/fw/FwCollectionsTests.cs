@@ -26,7 +26,7 @@ namespace osafw.Tests
 
             var back = (FwDict)table;
 
-            Assert.AreEqual(2, back.Count);
+            Assert.HasCount(2, back);
             Assert.AreEqual(1, back["AAA"]);
             Assert.AreEqual("two", back["BBB"]);
             Assert.IsNull(back["123"]);
@@ -43,7 +43,7 @@ namespace osafw.Tests
 
             var list = new FwList(items);
 
-            Assert.AreEqual(1, list.Count);
+            Assert.HasCount(1, list);
             Assert.AreEqual("value", list[0]["key"]);
 
             IEnumerable enumerable = new ArrayList
@@ -54,7 +54,7 @@ namespace osafw.Tests
 
             var listFromEnumerable = new FwList(enumerable);
 
-            Assert.AreEqual(1, listFromEnumerable.Count);
+            Assert.HasCount(1, listFromEnumerable);
             Assert.AreEqual("bar", listFromEnumerable[0]["foo"]);
         }
     }

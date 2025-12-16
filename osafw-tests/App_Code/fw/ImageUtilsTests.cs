@@ -5,6 +5,9 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Runtime.Serialization;
 
+#pragma warning disable CA1416 // System.Drawing supported on Windows only
+#pragma warning disable SYSLIB0050 // Formatter-based serialization is obsolete
+
 namespace osafw.Tests
 {
     [TestClass]
@@ -115,3 +118,5 @@ namespace osafw.Tests
         }
     }
 }
+#pragma warning restore SYSLIB0050
+#pragma warning restore CA1416

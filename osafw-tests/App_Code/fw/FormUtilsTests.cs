@@ -59,7 +59,7 @@ namespace osafw.Tests
 
             FwList pager4 = FormUtils.getPager(10, 1);
             Assert.IsNotNull(pager4, "Pager should not be null even when no paging is required");
-            Assert.AreEqual(0, pager4.Count, "Pager should be empty when no paging is required");
+            Assert.IsEmpty(pager4, "Pager should be empty when no paging is required");
         }
 
         [TestMethod]
@@ -432,7 +432,7 @@ namespace osafw.Tests
         {
             CollectionAssert.AreEqual(new[] { "No|No", "Yes|Yes" }, FormUtils.getYesNo());
             CollectionAssert.AreEqual(new[] { "N|No", "Y|Yes" }, FormUtils.getYN());
-            Assert.IsTrue(FormUtils.getStates().Length > 10);
+            Assert.IsGreaterThan(10, FormUtils.getStates().Length);
         }
 
         [TestMethod]
@@ -469,8 +469,9 @@ namespace osafw.Tests
             var tplPath = Path.Combine(tmpDir, "status.sel");
             File.WriteAllText(tplPath, "a|Active\nb|`Inactive`");
 
-            var previousTemplate = FwConfig.settings.TryGetValue("template", out object? value) ? value : null;
-            FwConfig.settings["template"] = tmpDir;
+            var settings = FwConfig.GetCurrentSettings();
+            var previousTemplate = settings.TryGetValue("template", out object? value) ? value : null;
+            settings["template"] = tmpDir;
 
             try
             {
@@ -478,15 +479,15 @@ namespace osafw.Tests
                 var options = FormUtils.selectTplOptions("/status.sel");
 
                 Assert.AreEqual("Inactive", name);
-                Assert.AreEqual(2, options.Count);
+                Assert.HasCount(2, options);
                 Assert.AreEqual("a", (options[0] as FwDict)?["id"]);
             }
             finally
             {
                 if (previousTemplate != null)
-                    FwConfig.settings["template"] = previousTemplate;
+                    settings["template"] = previousTemplate;
                 else
-                    FwConfig.settings.Remove("template");
+                    settings.Remove("template");
 
                 if (Directory.Exists(tmpDir))
                     Directory.Delete(tmpDir, true);
@@ -499,7 +500,7 @@ namespace osafw.Tests
             var input = @"abc!@#$%^&*()+=[]{}|;':"",<>?";
             var cleaned = FormUtils.cleanInput(input);
 
-            Assert.IsFalse(cleaned.Contains("!"));
+            Assert.DoesNotContain("!", cleaned);
             StringAssert.Contains(cleaned, "abc");
         }
 
@@ -530,7 +531,9 @@ namespace osafw.Tests
             item["occurred_mm"] = 30;
             item["occurred_ss"] = 0;
             Assert.IsTrue(FormUtils.formToTime(item, "occurred"));
-            Assert.AreEqual(6, ((DateTime)item["occurred"]).Hour);
+            var occurred = item["occurred"] as DateTime?;
+            Assert.IsNotNull(occurred);
+            Assert.AreEqual(6, occurred!.Value.Hour);
             Assert.IsFalse(FormUtils.formToTime(new FwDict() { { "broken_hh", "99" }, { "broken_mm", "99" }, { "broken_ss", "99" } }, "broken"));
         }
 
@@ -560,7 +563,7 @@ namespace osafw.Tests
             ];
 
             var checkedOnly = FormUtils.listCheckedOrderByPrioIname(rows);
-            Assert.AreEqual(1, checkedOnly.Count);
+            Assert.HasCount(1, checkedOnly);
             Assert.AreEqual("B", (checkedOnly[0] as FwDict)?["iname"]);
 
             var ordered = FormUtils.listOrderByPrioIname(rows);
@@ -575,7 +578,7 @@ namespace osafw.Tests
             var newItem = new FwDict { { "name", "after" }, { "date", new DateTime(2024, 1, 2) }, { "new", "value" } };
 
             var changes = FormUtils.changesOnly(newItem, oldItem);
-            Assert.AreEqual(2, changes.Count);
+            Assert.HasCount(2, changes);
             Assert.AreEqual("after", changes["name"]);
             Assert.AreEqual(new DateTime(2024, 1, 2), changes["date"]);
 

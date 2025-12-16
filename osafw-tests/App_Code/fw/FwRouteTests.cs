@@ -20,7 +20,7 @@ namespace osafw.Tests
             Assert.IsEmpty(route.action_more);
             Assert.IsEmpty(route.format);
             Assert.IsNotNull(route.@params);
-            Assert.AreEqual(0, route.@params.Count);
+            Assert.IsEmpty(route.@params);
         }
 
         [TestMethod]
