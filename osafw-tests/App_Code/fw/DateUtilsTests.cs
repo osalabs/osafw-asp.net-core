@@ -208,5 +208,28 @@ namespace osafw.Tests
             Assert.AreEqual(r, System.Convert.ToInt64(time.Ticks / (double)10000));
 
         }
+
+        [TestMethod]
+        public void MapTimeWithSecondsFormat_ReturnsExpectedPatterns()
+        {
+            Assert.AreEqual("h:mm:ss tt", DateUtils.mapTimeWithSecondsFormat(DateUtils.TIME_FORMAT_12));
+            Assert.AreEqual("H:mm:ss", DateUtils.mapTimeWithSecondsFormat(DateUtils.TIME_FORMAT_24));
+        }
+
+        [TestMethod]
+        public void ToFormat_ReturnsEmptyStringOnNullInput()
+        {
+            Assert.AreEqual("", DateUtils.toFormat(null!, "yyyy"));
+        }
+
+        [TestMethod]
+        public void ConvertTimezone_ReturnsInputOnInvalidZone()
+        {
+            var now = new DateTime(2024, 6, 1, 12, 0, 0, DateTimeKind.Unspecified);
+
+            var same = DateUtils.convertTimezone(now, "Invalid/From", "Invalid/To");
+
+            Assert.AreEqual(now, same);
+        }
     }
 }
