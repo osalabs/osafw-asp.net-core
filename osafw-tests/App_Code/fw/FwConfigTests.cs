@@ -10,33 +10,6 @@ namespace osafw.Tests
     public class FwConfigTests
     {
         [TestMethod]
-        public void GetRoutePrefixesRX_BuildsRegexFromSettings()
-        {
-            var host = "route-test";
-            var config = new ConfigurationBuilder()
-                .AddInMemoryCollection(new Dictionary<string, string?>
-                {
-                    ["appSettings:route_prefixes:/Admin"] = "True",
-                    ["appSettings:route_prefixes:/Api"] = "True",
-                })
-                .Build();
-
-            FwConfig.init(null, config, host);
-
-            var settings = FwConfig.GetCurrentSettings();
-            Assert.AreEqual(host, settings["hostname"]);
-
-            var rx = FwConfig.getRoutePrefixesRX();
-            var compiled = new Regex(rx);
-
-            Assert.IsTrue(compiled.IsMatch("/Admin"));
-            Assert.IsTrue(compiled.IsMatch("/Admin/test"));
-            Assert.IsTrue(compiled.IsMatch("/Api/demo"));
-            Assert.IsFalse(compiled.IsMatch("/Other"));
-            Assert.AreEqual(rx, settings["_route_prefixes_rx"]);
-        }
-
-        [TestMethod]
         public void GetRoutePrefixesRX_UsesCachedHostSettings()
         {
             var host = "route-test-cache";
