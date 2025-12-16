@@ -53,7 +53,7 @@ public class FwVirtualControllerTests
     private static FW BuildFw(string templateRoot)
     {
         var fw = TestHelpers.CreateFw();
-        FwConfig.settings["template"] = templateRoot;
+        FwConfig.GetCurrentSettings()["template"] = templateRoot;
         TestHelpers.RegisterModel(fw, (Users)new StubUsers());
         TestHelpers.RegisterModel(fw, new StubModel());
         return fw;

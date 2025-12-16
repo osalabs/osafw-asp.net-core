@@ -42,6 +42,6 @@ public class FwCronServiceTests
         {
         }
 
-        Assert.IsTrue(service.Calls > 0);
+        Assert.IsGreaterThan(0, service.Calls);
     }
 }

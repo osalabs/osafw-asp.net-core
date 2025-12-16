@@ -64,7 +64,7 @@ public class FwKeysTests
 
         var elements = repo.GetAllElements();
 
-        Assert.AreEqual(0, elements.Count);
+        Assert.IsEmpty(elements);
     }
 
     [TestMethod]
@@ -76,13 +76,13 @@ public class FwKeysTests
 
         repo.StoreElement(element, "friendly");
 
-        Assert.AreEqual(1, db.Rows.Count);
+        Assert.HasCount(1, db.Rows);
         Assert.AreEqual("abc", db.Rows[0]["iname"]);
 
         var updated = new XElement("key", new XAttribute("id", "abc"), new XElement("child", "v"));
         repo.StoreElement(updated, "friendly");
 
-        Assert.AreEqual(1, db.Rows.Count);
+        Assert.HasCount(1, db.Rows);
         StringAssert.Contains(db.Rows[0]["XmlValue"].toStr(), "child");
         Assert.IsTrue(db.ExecCalled);
     }

@@ -43,9 +43,11 @@ public class FwControllersModelTests
         var rows = model.listGrouped();
 
         Assert.AreEqual("igroup, iname", db.LastOrderBy);
-        Assert.IsNotNull(db.LastWhere);
-        Assert.AreEqual(DBOps.NOT, ((DBOperation)db.LastWhere!["status"]).op);
-        Assert.AreEqual(Users.ACL_MANAGER, ((DBOperation)db.LastWhere!["access_level"]).value);
-        Assert.AreEqual(1, rows.Count);
+        var lastWhere = db.LastWhere ?? throw new AssertFailedException("Expected where clause to be set");
+        var statusOperation = lastWhere["status"] as DBOperation ?? throw new AssertFailedException("Missing status operation");
+        var accessLevelOperation = lastWhere["access_level"] as DBOperation ?? throw new AssertFailedException("Missing access level operation");
+        Assert.AreEqual(DBOps.NOT, statusOperation.op);
+        Assert.AreEqual(Users.ACL_MANAGER, accessLevelOperation.value);
+        Assert.HasCount(1, rows);
     }
 }

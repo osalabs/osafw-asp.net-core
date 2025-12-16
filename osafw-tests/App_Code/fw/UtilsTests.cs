@@ -793,7 +793,7 @@ namespace osafw.Tests
             Assert.AreEqual("val", resultValue["y"]);
 
             var resultEmpty = Utils.commastr2hash(",,");
-            Assert.IsTrue(resultEmpty.Count == 0);
+            Assert.IsEmpty(resultEmpty);
         }
 
         [TestMethod()]
@@ -1100,12 +1100,16 @@ namespace osafw.Tests
 
             Assert.IsNotNull(nested);
             Assert.IsNotNull(listClone);
-            Assert.AreEqual("yes", nested!["child"]);
-            Assert.AreEqual("x", ((FwDict)listClone![0])["value"]);
+            var nestedDict = nested ?? throw new AssertFailedException("Expected nested dict");
+            var listCopy = listClone ?? throw new AssertFailedException("Expected list copy");
+            var firstCopyItem = listCopy[0] as FwDict ?? throw new AssertFailedException("Expected first list item");
+            Assert.AreEqual("yes", nestedDict["child"]);
+            Assert.AreEqual("x", firstCopyItem["value"]);
             Assert.AreEqual("v", dbClone["k"]);
 
-            ((FwDict)source["nested"])["child"] = "changed";
-            Assert.AreEqual("yes", nested!["child"]);
+            var sourceNested = source["nested"] as FwDict ?? throw new AssertFailedException("Expected source nested dict");
+            sourceNested["child"] = "changed";
+            Assert.AreEqual("yes", nestedDict["child"]);
             Assert.AreNotSame(source, clonedList[0]);
         }
 
@@ -1123,10 +1127,14 @@ namespace osafw.Tests
             var result = Utils.jsonStringifyValues(json) as FwDict;
 
             Assert.IsNotNull(result);
-            Assert.AreEqual("true", result!["flag"].toStr());
-            Assert.AreEqual("5", result["number"].toStr());
-            Assert.AreEqual("10", ((FwDict)result["nested"])["inner"].toStr());
-            Assert.AreEqual("two", ((FwDict)((FwList)result["list"])[1])["value"].toStr());
+            var jsonResult = result ?? throw new AssertFailedException("Expected json result");
+            var nestedResult = jsonResult["nested"] as FwDict ?? throw new AssertFailedException("Expected nested result");
+            var listResult = jsonResult["list"] as FwList ?? throw new AssertFailedException("Expected list result");
+            var secondListItem = listResult[1] as FwDict ?? throw new AssertFailedException("Expected second list item");
+            Assert.AreEqual("true", jsonResult["flag"].toStr());
+            Assert.AreEqual("5", jsonResult["number"].toStr());
+            Assert.AreEqual("10", nestedResult["inner"].toStr());
+            Assert.AreEqual("two", secondListItem["value"].toStr());
         }
 
         [TestMethod]
@@ -1137,8 +1145,9 @@ namespace osafw.Tests
             var deserialized = Utils.deserialize(serialized) as FwDict;
 
             Assert.IsNotNull(deserialized);
-            Assert.AreEqual("1", deserialized!["a"].toStr());
-            Assert.AreEqual("two", deserialized!["b"].toStr());
+            var dict = deserialized!;
+            Assert.AreEqual("1", dict["a"].toStr());
+            Assert.AreEqual("two", dict["b"].toStr());
         }
 
         [TestMethod]
@@ -1165,7 +1174,7 @@ namespace osafw.Tests
             FwList arr = [new FwDict { { "id", 1 }, { "name", "Alpha" } }, new FwDict { { "id", 2 }, { "name", "Beta" } }];
             var result = Utils.array2hashtable(arr, "id");
 
-            Assert.AreEqual(2, result.Count);
+            Assert.HasCount(2, result);
             Assert.AreEqual("Alpha", (result["1"] as FwDict)?["name"]);
         }
 
@@ -1223,8 +1232,9 @@ namespace osafw.Tests
 
             var headerNames = headers.Cast<FwDict>().Select(h => h["field_name"].toStr()).ToList();
             CollectionAssert.AreEquivalent(new List<string> { "id", "name" }, headerNames);
-            Assert.IsTrue(((FwDict)rows[0]).ContainsKey("cols"));
-            var cols = (FwList)((FwDict)rows[0])["cols"];
+            var firstRow = rows[0] as FwDict ?? throw new AssertFailedException("Expected row dictionary");
+            Assert.IsTrue(firstRow.ContainsKey("cols"));
+            var cols = firstRow["cols"] as FwList ?? throw new AssertFailedException("Expected cols list");
             var nameCol = cols.Cast<FwDict>().First(c => c["field_name"].toStr() == "name");
             Assert.AreEqual("Alpha", nameCol["data"]);
         }
@@ -1241,7 +1251,7 @@ namespace osafw.Tests
             Assert.IsNull(error);
 
             var lines = Utils.getFileLines(path);
-            Assert.AreEqual(1, lines.Length);
+            Assert.HasCount(1, lines);
 
             File.Delete(path);
             Assert.AreEqual("", Utils.getFileContent(path));
@@ -1274,7 +1284,7 @@ namespace osafw.Tests
 
             var postResponse = Utils.loadUrl(postUrl, new FwDict { { "a", 1 } });
             await postHandler;
-            Assert.IsTrue(postResponse.Contains("a=1"));
+            StringAssert.Contains(postResponse, "a=1");
         }
 
         [TestMethod]

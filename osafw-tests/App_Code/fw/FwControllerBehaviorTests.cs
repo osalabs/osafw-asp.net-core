@@ -130,7 +130,7 @@ public class FwControllerBehaviorTests
         Assert.AreEqual("/items/9", json["location"]);
         var error = json["error"] as FwDict ?? [];
         Assert.AreEqual("boom", error["message"]);
-        Assert.IsTrue(((FwDict)error["details"]!)["field"].toStr().Length > 0);
+        Assert.IsGreaterThan(0, ((FwDict)error["details"]!)["field"].toStr().Length);
     }
 
     [TestMethod]
