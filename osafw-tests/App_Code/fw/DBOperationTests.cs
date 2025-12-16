@@ -56,5 +56,15 @@ namespace osafw.Tests
             Assert.AreEqual("SELECT 1", parts[0].Trim());
             Assert.AreEqual("SELECT 2", parts[1].Trim().TrimEnd(';'));
         }
+
+        [TestMethod]
+        public void Left_TrimsAndLimitsLength()
+        {
+            var db = new DB("", DB.DBTYPE_SQLSRV);
+
+            Assert.AreEqual("", db.left("", 5));
+            Assert.AreEqual("abc", db.left("   abcdef", 3));
+            Assert.AreEqual("short", db.left("short", 10));
+        }
     }
 }
