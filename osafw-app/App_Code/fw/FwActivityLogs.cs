@@ -66,7 +66,7 @@ public class FwActivityLogs : FwModel
     /// <param name="id">entity item id</param>
     /// <param name="log_types_icodes">optional list of log types(by icode) to filter on</param>
     /// <returns></returns>
-    public DBList listByEntity(string entity_icode, int id, IList? log_types_icodes = null)
+    public virtual DBList listByEntity(string entity_icode, int id, IList? log_types_icodes = null)
     {
         var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
         var where = new FwDict

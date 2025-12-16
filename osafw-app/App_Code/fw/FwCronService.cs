@@ -8,8 +8,7 @@ namespace osafw;
 
 public class FwCronService : BackgroundService
 {
-    private static readonly TimeSpan PollingInterval = TimeSpan.FromMinutes(1);
-
+    protected virtual TimeSpan PollingInterval => TimeSpan.FromMinutes(1);
     private readonly IConfiguration _configuration;
 
     public FwCronService(IConfiguration configuration)
@@ -27,7 +26,7 @@ public class FwCronService : BackgroundService
         }
     }
 
-    private void ProcessJobs(CancellationToken ct)
+    protected virtual void ProcessJobs(CancellationToken ct)
     {
         try
         {
