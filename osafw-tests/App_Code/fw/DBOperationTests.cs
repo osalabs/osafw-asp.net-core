@@ -66,5 +66,25 @@ namespace osafw.Tests
             Assert.AreEqual("abc", db.left("   abcdef", 3));
             Assert.AreEqual("short", db.left("short", 10));
         }
+
+        [TestMethod]
+        public void Qid_QuotesPerDbTypeAndSchema()
+        {
+            var sqlServerDb = new DB("", DB.DBTYPE_SQLSRV);
+            var mysqlDb = new DB("", DB.DBTYPE_MYSQL);
+
+            Assert.AreEqual("[dbo].[users]", sqlServerDb.qid("dbo.users"));
+            Assert.AreEqual("`dbo`.`users`", mysqlDb.qid("dbo.users"));
+        }
+
+        [TestMethod]
+        public void Limit_UsesProviderSpecificSyntax()
+        {
+            var sqlServerDb = new DB("", DB.DBTYPE_SQLSRV);
+            var mysqlDb = new DB("", DB.DBTYPE_MYSQL);
+
+            Assert.AreEqual("SELECT TOP 5 * FROM table", sqlServerDb.limit("SELECT * FROM table", 5));
+            Assert.AreEqual("SELECT * FROM table LIMIT 5", mysqlDb.limit("SELECT * FROM table", 5));
+        }
     }
 }
