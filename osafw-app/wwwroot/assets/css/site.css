@@ -2,11 +2,17 @@
 [data-bs-theme=light]{
   /*--fw-body-bg: #f5f5f5;*/
   --fw-body-bg: #fff;
+  --fw-body-font-family: "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --fw-body-font-size: 0.95rem;
   --fw-pane-bg: var(--bs-tertiary-bg);
+  --fw-pane-radius: var(--bs-border-radius-lg);
+  --fw-surface-shadow: 0 14px 28px rgba(var(--bs-emphasis-color-rgb), 0.06);
   --fw-spacer: 1rem;
   --fw-spacer05: calc(var(--fw-spacer)*0.5);
   --fw-hiliter: #ffffcc;
-  --fw-table-row-font-size: 0.9rem;
+  --fw-table-row-font-size: 0.95rem;
+  --fw-table-cell-padding-y: 0.65rem;
+  --fw-table-cell-padding-x: 0.75rem;
   --fw-sidebar-width: 260px;
   --fw-btn-default-color: var(--bs-emphasis-color);
   --fw-btn-default-bg: var(--bs-light);
@@ -18,6 +24,8 @@
   --fw-body-bg: #1c1c1c;
   --fw-hiliter: #555522;
   /*--fw-pane-bg: var(--bs-tertiary-bg);*/
+  --fw-pane-radius: var(--bs-border-radius-lg);
+  --fw-surface-shadow: 0 22px 44px rgba(0, 0, 0, 0.45);
   --fw-btn-default-bg: var(--bs-light-bg-subtle);
   --fw-btn-default-border: var(--bs-light-border-subtle);
   /* for vue multiselect */
@@ -33,7 +41,10 @@
 }
 
 body {
- background-color: var(--fw-body-bg);
+  background-color: var(--fw-body-bg);
+  font-family: var(--fw-body-font-family);
+  font-size: var(--fw-body-font-size);
+  line-height: 1.6;
 }
 
 /*.nav-pills {
@@ -55,10 +66,15 @@ body {
 
 /****** fw elements */
 /*default button appearance*/
+.btn {
+  --bs-btn-border-radius: 0.375rem;
+}
+
 .btn-default {
   background-color: var(--fw-btn-default-bg);
   border-color: var(--fw-btn-default-border);
   --bs-btn-color: var(--fw-btn-default-color);
+  box-shadow: inset 0 0 0 1px var(--fw-btn-default-border);
 }
 
   .btn-default:hover,
@@ -68,6 +84,7 @@ body {
   .open .dropdown-toggle.btn-default {
     background-color: var(--fw-btn-default-border);
     border-color: var(--fw-btn-default-border);
+    box-shadow: inset 0 0 0 1px var(--fw-btn-default-border), 0 6px 18px rgba(var(--bs-emphasis-color-rgb), 0.08);
   }
 
   .btn-default:active,
@@ -76,8 +93,8 @@ body {
     background-image: none;
   }
 
-a[disabled]
-  cursor: default;{
+a[disabled] {
+  cursor: default;
   pointer-events: none;
   color: var(--bs-btn-disabled-color);
 }
@@ -128,23 +145,23 @@ h1 .badge {
  vertical-align: middle;
 }
 
+h1, h2, h3, .h1, .h2, .h3 {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
 .fw-card {
-/*  background-color: #fff;
-  border-radius: 0.25rem;
-  padding: 1rem 1rem 0.25rem 1rem;
-  box-shadow: 0 0 35px 0 rgb(154 161 171 / 15%);
-*/
+  background-color: var(--fw-pane-bg);
+  border: var(--bs-border-width) var(--bs-border-style) var(--bs-border-color);
+  border-radius: var(--fw-pane-radius);
+  padding: calc(var(--fw-spacer) * 1.05) var(--fw-spacer) var(--fw-spacer);
+  box-shadow: var(--fw-surface-shadow);
 }
   #FEdit.fw-card,
   #FView.fw-card,
   #FDel.fw-card,
   .fw-card[data-list-filter]
   {
-/*    background-color: var(--fw-pane-bg);*/
-    border: var(--bs-border-width) var(--bs-border-style) var(--bs-border-color);
-    border-radius: var(--bs-border-radius);
-    padding: var(--fw-spacer) var(--fw-spacer) 0 var(--fw-spacer);
-/*    padding: 1rem 1rem 0.25rem 1rem;*/
     margin-bottom: var(--fw-spacer);
   }
 
@@ -156,6 +173,7 @@ h1 .badge {
   color: #000;
   position: relative;
   overflow-y: auto;
+  transition: box-shadow .2s ease;
 }
 @media (min-width: 768px) {
   .sidebar {
@@ -206,6 +224,7 @@ h1 .badge {
     top: 56px;
     left: 0;
     z-index: 1030;
+    box-shadow: 0 1rem 3rem rgba(0,0,0,0.35);
   }
   #sidebar.collapsing {
     position: absolute;
@@ -283,12 +302,15 @@ main {
   }
 
 table.list {
+  border-collapse: separate;
+  border-spacing: 0;
 }
   table.list > thead {
-    background-color: var(--bs-secondary-bg);
+    background-color: var(--bs-tertiary-bg);
     position: sticky;
     top: 0;
     z-index: 10;
+    box-shadow: inset 0 -1px var(--bs-border-color);
   }
 /*
     table.list > thead > tr:first-child th:first-child {
@@ -305,21 +327,32 @@ table.list {
       background-color: var(--fw-hiliter) !important;
       white-space: nowrap;
     }
+    table.list > thead > tr > th {
+      font-weight: 600;
+      color: var(--bs-emphasis-color);
+      padding: 0.75rem var(--fw-table-cell-padding-x);
+    }
   table.list .search {
     display: none;
   }
+  table.list > :not(caption) > * > * {
+    padding: var(--fw-table-cell-padding-y) var(--fw-table-cell-padding-x);
+    vertical-align: middle;
+  }
   table.list tbody td {
     font-size: var(--fw-table-row-font-size);
+    line-height: 1.5;
   }
   table.list tbody a {
     text-decoration: none;
   }
   table.list > tbody > tr.selected > td {
     background-color: var(--fw-hiliter) !important;
+    color: var(--bs-body-color);
   }
   table.list.table-dense > :not(caption) > * > * {
-    padding: 0 1px !important;
-    font-size: 0.7rem !important;
+    padding: 0.35rem 0.45rem !important;
+    font-size: 0.82rem !important;
   }
 
   table.list.table-dense th.rotate {
@@ -476,20 +509,31 @@ table.list-edit tbody td {
 /*list multi buttons floating when some rows checked*/
 #list-btn-multi {
  padding: var(--fw-spacer05) var(--fw-spacer05) 0 0;
- display: inline-block;
+ display: inline-flex;
+ flex-wrap: wrap;
+ gap: var(--fw-spacer05);
  bottom: 0;
  left: var(--fw-spacer);
+ border-radius: var(--fw-pane-radius);
+ background-color: rgba(var(--bs-body-bg-rgb), 0.9);
+ box-shadow: var(--fw-surface-shadow);
 }
   #list-btn-multi.position-sticky {
-    background-color: rgba(var(--bs-tertiary-bg-rgb),0.5);
+    background-color: rgba(var(--bs-tertiary-bg-rgb),0.85);
     padding-bottom: var(--fw-spacer);
     z-index: 1055;
   }
-.pagination .active a {font-weight:bold}
-.pagination select {
-  border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
+.pagination {
+  align-items: center;
+  gap: 0.25rem;
 }
+  .pagination .active a {font-weight:bold}
+  .pagination select {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    margin-left: -1px;
+    min-height: calc(2.25rem + var(--bs-border-width));
+  }
 
 #modal-custom-cols .col-rows .cb-row:hover {
   background-color: var(--fw-hiliter);
@@ -499,6 +543,7 @@ table.list-edit tbody td {
 /****** form screens */
 .form-row {
   padding-bottom: var(--fw-spacer);
+  row-gap: var(--fw-spacer05);
 }
 
 .hr-header {
@@ -520,6 +565,10 @@ form .required:before {
   line-height: 1.2;
 }
 
+form .form-text {
+  margin-top: 0.25rem;
+}
+
 form [class^='err-'] {
   display: none;
 }
@@ -537,10 +586,13 @@ form .has-danger label {
 
 #FView.fw-card label {
   font-weight: bold;
+  margin-bottom: 0.35rem;
+  display: block;
 }
 
 .field-multi-value {
-  height: calc(var(--bs-body-font-size)*13);
+  min-height: calc(var(--bs-body-font-size)*8);
+  max-height: min(calc(var(--bs-body-font-size)*16), 50vh);
   overflow: auto;
   border: var(--bs-border-width) var(--bs-border-style) var(--bs-border-color);
   border-radius: var(--bs-border-radius);
@@ -563,6 +615,7 @@ form .has-danger label {
     border: var(--bs-border-width) var(--bs-border-style) var(--bs-border-color);
     border-radius: var(--bs-border-radius);
     position: relative;
+    box-shadow: var(--fw-surface-shadow);
 }
 .thumbnail a > img, .thumbnail > img {
     display: block;
@@ -591,6 +644,16 @@ a.thumbnail:hover {
     margin-right: var(--fw-spacer05);
 }
 
+.thumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--fw-spacer05);
+}
+  .thumbs .thumbnail {
+    margin-right: 0;
+    margin-bottom: 0;
+  }
+
 .user-list-avatar {
   width: 50px;
   height: 50px;
@@ -607,6 +670,10 @@ a.thumbnail:hover {
   .field-multi-value .custom-control{
     padding-top: 3px;
     padding-bottom: 3px;
+  }
+
+  .field-multi-value {
+    max-height: 45vh;
   }
 }
 
