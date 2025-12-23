@@ -1,0 +1,9 @@
+<div class="d-flex flex-wrap align-items-center gap-2">
+  <div class="btn-group">
+    <button type="button" class="btn btn-primary on-submit" data-target="#FEdit" <~/common/disabled if="is_readonly">>`Save`</button>
+    <button type="button" class="btn btn-secondary on-submit" data-target="#FEdit" name="route_return" value="New" <~/common/disabled if="is_readonly">>`Save and Add New`</button>
+    <button type="button" class="btn btn-outline-secondary on-cancel" data-target="#FEdit" data-href="<~/common/form/cancel_url>">`Cancel`</button>
+  </div>
+  <~/common/form/btn_userlists if="is_userlists">
+  <~btn_std_more>
+</div>

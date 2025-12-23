@@ -3,25 +3,33 @@
   <head>
     <~/layout/sys_head>
   </head>
-  <body class="<~body_class>">
-    <~/layout/header>
+  <body class="<~body_class> <~body_has_topbar if="topbar" inline>has-topbar</~body_has_topbar>">
+    <div class="fw-app">
+      <~/layout/header>
 
-  <div class="container-fluid">
-    <div class="row flex-nowrap">
-      <nav class="sidebar col-md-3 col-lg-2 collapse d-md-block" id="sidebar">
-        <div class="d-flex flex-column flex-shrink-0 p-3 w-100 d-print-none">
-          <~/layout/sidebar unless="hide_std_sidebar">
-          <~sidebar>
-          <~/layout/sidebar_my>
-          <~#/layout/footer>
+      <div class="fw-topbar-slot d-print-none" if="topbar">
+        <~topbar>
+      </div>
+
+      <div class="container-fluid fw-layout">
+        <div class="row flex-nowrap fw-layout-row">
+          <nav class="sidebar fw-sidebar col-md-3 col-lg-2 collapse d-md-block" id="sidebar">
+            <div class="d-flex flex-column flex-shrink-0 p-3 w-100 d-print-none">
+              <~/layout/sidebar unless="hide_std_sidebar">
+              <~sidebar>
+              <~/layout/sidebar_my>
+              <~#/layout/footer>
+            </div>
+          </nav>
+          <main class="col fw-main">
+            <div class="fw-content">
+              <~main>
+            </div>
+          </main>
         </div>
-      </nav>
-      <main class="col">
-        <~main>
-      </main>
-    </div>
-  </div>
+      </div>
 
-    <~/layout/sys_footer>
+      <~/layout/sys_footer>
+    </div>
   </body>
 </html>

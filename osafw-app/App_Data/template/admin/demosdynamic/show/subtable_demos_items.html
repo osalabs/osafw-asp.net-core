@@ -31,5 +31,10 @@
          </td>
       </tr>
    </~list_rows>
+   <~no_rows unless="list_rows" inline>
+      <tr class="table-empty">
+         <td colspan="5" class="text-body-secondary fst-italic">`No items`</td>
+      </tr>
+   </~no_rows>
    </tbody>
 </table>

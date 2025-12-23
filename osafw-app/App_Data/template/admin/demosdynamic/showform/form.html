@@ -1,6 +1,48 @@
-    <~fields repeat inline>
-      <~/common/form/showform/one_field unless="is_custom">
-      <~custom_fields inline if="is_custom">
-        <~../show/custom_field ifeq="field" value="some_custom_field">
-      </~custom_fields>
-    </~fields>
+<~has_sections if="form_sections" inline>
+  <div class="fw-form-layout">
+    <aside class="fw-onthispage" aria-label="`On this page`">
+      <div class="fw-onthispage-title text-muted text-uppercase small fw-semibold">`On this page`</div>
+      <ul class="fw-onthispage-list list-unstyled mb-0">
+        <~form_sections repeat inline>
+          <li class="fw-onthispage-item">
+            <a class="fw-onthispage-link" href="#section-<~id>"><~title default="Section"></a>
+          </li>
+        </~form_sections>
+      </ul>
+    </aside>
+
+    <div class="fw-form-sections flex-grow-1">
+      <~form_sections repeat inline>
+        <section class="fw-form-section" id="section-<~id>" data-section-title="<~title>">
+          <header class="fw-form-section-header d-flex align-items-center gap-2">
+            <h2 class="fw-form-section-title h6 mb-0"><~title></h2>
+            <~section_toggle if="is_collapsible" inline>
+              <button class="btn btn-sm btn-outline-secondary fw-form-section-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#section-body-<~id>" aria-expanded="<~is_expanded>" aria-controls="section-body-<~id>">
+                <span class="fw-section-toggle-label" data-label-show="`Show`" data-label-hide="`Hide`"><~toggle_label></span>
+              </button>
+            </~section_toggle>
+          </header>
+          <div class="fw-form-section-body collapse <~collapsed_class>" id="section-body-<~id>">
+            <div class="fw-form-section-fields">
+              <~fields repeat inline>
+                <~/common/form/showform/one_field unless="is_custom">
+                <~custom_fields inline if="is_custom">
+                  <~../show/custom_field ifeq="field" value="some_custom_field">
+                </~custom_fields>
+              </~fields>
+            </div>
+          </div>
+        </section>
+      </~form_sections>
+    </div>
+  </div>
+</~has_sections>
+
+<~no_sections unless="form_sections" inline>
+  <~fields repeat inline>
+    <~/common/form/showform/one_field unless="is_custom">
+    <~custom_fields inline if="is_custom">
+      <~../show/custom_field ifeq="field" value="some_custom_field">
+    </~custom_fields>
+  </~fields>
+</~no_sections>

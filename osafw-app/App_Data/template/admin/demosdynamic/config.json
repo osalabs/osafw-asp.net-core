@@ -151,7 +151,8 @@
         },
         {
             "type": "header",
-            "label": "Dates"
+            "label": "Dates",
+            "field": "header_dates"
         },
         {
             "field": "fdate_combo",
@@ -221,7 +222,7 @@
             "class_contents": "col-md-3"
         },
         {
-            "field": "",
+            "field": "_att_links",
             "label": "Multiple Attachments",
             "type": "att_links"
         },
@@ -260,14 +261,66 @@
         }
     ],
 
+    "sections": [
+        {
+            "id": "details",
+            "title": "Details",
+            "collapsible": false,
+            "collapsedByDefault": false,
+            "fields": [
+                "parent_demo_dicts_id",
+                "parent_id",
+                "demo_dicts_id",
+                "iname",
+                "idesc",
+                "idesc2",
+                "idesc3",
+                "email",
+                "fint",
+                "ffloat",
+                "fcombo",
+                "fradio",
+                "fyesno",
+                "is_checkbox",
+                "header_dates",
+                "fdate_combo",
+                "fdate_pop",
+                "fdatetime",
+                "ftime"
+            ]
+        },
+        {
+            "id": "relations",
+            "title": "Relations & Files",
+            "collapsible": true,
+            "collapsedByDefault": false,
+            "fields": [
+                "id",
+                "dict_link_auto_id",
+                "dict_link_multi",
+                "demo_dicts_link",
+                "demos_items",
+                "att_id",
+                "_att_links",
+                "_att_files",
+                "status",
+                "add_time",
+                "upd_time",
+                "some_custom_field"
+            ]
+        }
+    ],
+
     "is_dynamic_showform": true,
     "showform_fields": [
         {
-            "type": "row"
+            "type": "row",
+            "section": "details"
         },
         {
             "type": "col",
-            "class": "col-lg-6"
+            "class": "col-lg-7",
+            "section": "details"
         },
         {
             "field": "parent_demo_dicts_id",
@@ -352,7 +405,8 @@
         },
         {
             "type": "row",
-            "class": "form-row"
+            "class": "form-row",
+            "section": "details"
         },
         {
             "field": "fint",
@@ -370,7 +424,8 @@
             "class": false
         },
         {
-            "type": "row_end"
+            "type": "row_end",
+            "section": "details"
         },
 
         {
@@ -403,7 +458,9 @@
         },
         {
             "type": "header",
-            "label": "Dates"
+            "label": "Dates",
+            "field": "header_dates",
+            "section": "details"
         },
         {
             "field": "fdate_combo",
@@ -429,11 +486,22 @@
             "type": "time"
         },
         {
-            "type": "col_end"
+            "type": "col_end",
+            "section": "details"
+        },
+        {
+            "type": "row_end",
+            "section": "details"
+        },
+
+        {
+            "type": "row",
+            "section": "relations"
         },
         {
             "type": "col",
-            "class": "col-lg-6"
+            "class": "col-lg-7",
+            "section": "relations"
         },
         {
             "field": "id",
@@ -472,6 +540,15 @@
             "save_fields": "demo_dicts_id iname idesc",
             "save_fields_checkboxes": "is_checkbox|0",
             "required_fields": "demo_dicts_id iname"
+        },
+        {
+            "type": "col_end",
+            "section": "relations"
+        },
+        {
+            "type": "col",
+            "class": "col-lg-5",
+            "section": "relations"
         },
         {
             "field": "att_id",
@@ -514,10 +591,12 @@
             "field": "some_custom_field"
         },
         {
-            "type": "col_end"
+            "type": "col_end",
+            "section": "relations"
         },
         {
-            "type": "row_end"
+            "type": "row_end",
+            "section": "relations"
         }
     ],
 
