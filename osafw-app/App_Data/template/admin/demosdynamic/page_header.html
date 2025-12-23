@@ -1,0 +1,28 @@
+<header class="fw-page-header" data-page="crud">
+  <div class="fw-page-header-row fw-page-header-row-1">
+    <div class="fw-page-breadcrumbs">
+      <~/admin/demosdynamic/page_header_breadcrumbs_list ifeq="page_header_mode" value="list">
+      <~/admin/demosdynamic/page_header_breadcrumbs_record ifne="page_header_mode" value="list">
+    </div>
+    <div class="fw-record-nav ms-auto d-print-none">
+      <~/admin/demosdynamic/page_header_record_nav_view ifeq="page_header_mode" value="view">
+      <~/admin/demosdynamic/page_header_record_nav_edit ifeq="page_header_mode" value="edit" if="id">
+    </div>
+  </div>
+  <div class="fw-page-header-row fw-page-header-row-2">
+    <div class="fw-page-title-wrap d-flex align-items-center gap-3">
+      <h1 class="fw-page-title mb-0"><~page_header_title></h1>
+      <span class="badge badge-outline-secondary rounded-pill fw-badge-count" if="page_header_count"><~page_header_count></span>
+    </div>
+    <div class="fw-page-status ms-auto" if="id">
+      <div class="fw-autosave-status" role="status" aria-live="polite" ifeq="page_header_mode" value="edit"></div>
+    </div>
+  </div>
+  <div class="fw-page-header-row fw-page-header-row-3">
+    <div class="fw-page-actions d-print-none">
+      <~/admin/demosdynamic/page_header_actions_list ifeq="page_header_mode" value="list">
+      <~/admin/demosdynamic/page_header_actions_view ifeq="page_header_mode" value="view">
+      <~/admin/demosdynamic/page_header_actions_edit ifeq="page_header_mode" value="edit">
+    </div>
+  </div>
+</header>

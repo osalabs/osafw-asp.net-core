@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 
@@ -815,6 +816,25 @@ public class FwDynamicController : FwController
     }
 
     /// <summary>
+    /// return config for sections by tab
+    /// </summary>
+    /// <param name="prefix">sections or custom prefix</param>
+    /// <param name="tab">optional tab code, if ommited - form_tab used</param>
+    protected virtual FwList getConfigSectionsByTab(string prefix = "sections", string? tab = null)
+    {
+        tab ??= form_tab;
+        var key = prefix + (tab.Length > 0 ? "_" + tab : "");
+
+        if (config[key] is IList arr)
+            return new FwList(arr);
+
+        if (config[prefix] is IList baseArr)
+            return new FwList(baseArr);
+
+        return [];
+    }
+
+    /// <summary>
     /// prepare data for fields repeat in ShowAction based on config.json show_fields parameter
     /// </summary>
     /// <param name="item"></param>
@@ -1136,7 +1156,108 @@ public class FwDynamicController : FwController
             }
 
         }
+        ps["form_sections"] = prepareSectionsForFields(fields);
         return fields;
+    }
+
+    /// <summary>
+    /// Prepare sections structure for provided fields. If no config sections - returns single default section.
+    /// </summary>
+    /// <param name="fields">prepared fields list</param>
+    /// <param name="prefix">config prefix, defaults to "sections"</param>
+    /// <returns></returns>
+    protected virtual FwList prepareSectionsForFields(FwList fields, string prefix = "sections")
+    {
+        var sectionsConfig = getConfigSectionsByTab(prefix);
+        FwList sections = [];
+
+        if (sectionsConfig.Count == 0)
+        {
+            var defaultSectionId = "section-main";
+            foreach (FwDict def in fields)
+                def["section_id"] = defaultSectionId;
+
+            sections.Add(new FwDict {
+                {"id", defaultSectionId},
+                {"title", ""},
+                {"is_collapsible", false},
+                {"is_collapsed", false},
+                {"fields", fields}
+            });
+            return sections;
+        }
+
+        // build map of section id => section dict preserving config order
+        Dictionary<string, FwDict> sectionById = new();
+        foreach (FwDict sectionDef in sectionsConfig)
+        {
+            var id = sectionDef["id"].toStr();
+            if (string.IsNullOrEmpty(id))
+                id = "section-" + (sections.Count + 1);
+
+            var section = new FwDict(sectionDef)
+            {
+                ["id"] = id,
+                ["fields"] = new FwList(),
+                ["is_collapsible"] = sectionDef["collapsible"].toBool(),
+                ["is_collapsed"] = sectionDef["collapsedByDefault"].toBool()
+            };
+            var isCollapsed = section["is_collapsible"].toBool() && section["is_collapsed"].toBool();
+            section["collapsed_class"] = isCollapsed ? "" : "show";
+            section["is_expanded"] = !isCollapsed;
+            section["toggle_label"] = isCollapsed ? "Show" : "Hide";
+
+            sections.Add(section);
+            sectionById[id] = section;
+        }
+
+        var fallbackSectionId = (sections[0] as FwDict)?["id"].toStr() ?? "section-main";
+
+        // map specific fields to sections from config
+        Dictionary<string, string> sectionByField = new();
+        foreach (FwDict sectionDef in sectionsConfig)
+        {
+            var sid = sectionDef["id"].toStr();
+            if (string.IsNullOrEmpty(sid))
+                continue;
+
+            if (sectionDef["fields"] is IList sf)
+            {
+                foreach (var f in sf)
+                {
+                    var fname = f.toStr();
+                    if (!string.IsNullOrEmpty(fname))
+                        sectionByField[fname] = sid;
+                }
+            }
+        }
+
+        foreach (FwDict def in fields)
+        {
+            var sectionId = def["section"].toStr();
+            if (string.IsNullOrEmpty(sectionId))
+            {
+                var fname = def["field"].toStr();
+                if (!string.IsNullOrEmpty(fname) && sectionByField.TryGetValue(fname, out var mappedSection))
+                    sectionId = mappedSection;
+            }
+
+            if (string.IsNullOrEmpty(sectionId))
+                sectionId = fallbackSectionId;
+
+            def["section_id"] = sectionId;
+            if (sectionById.TryGetValue(sectionId, out var section))
+                ((FwList)section["fields"]!).Add(def);
+        }
+
+        FwList sectionsWithFields = [];
+        foreach (FwDict section in sections)
+        {
+            if (((FwList)section["fields"]!).Count > 0)
+                sectionsWithFields.Add(section);
+        }
+
+        return sectionsWithFields.Count > 0 ? sectionsWithFields : sections;
     }
 
     /// <summary>

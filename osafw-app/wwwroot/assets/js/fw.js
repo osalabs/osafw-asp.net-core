@@ -7,7 +7,7 @@
 window.fw={
   HTML_LOADING: '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Loading...',
   HTML_SPINNER_CT: '<span class="fw-spinner-container"> <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span></span',
-  HTML_SPINNER_SM: '<span class="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span>',
+  HTML_SPINNER_SM: '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>',
   ICON_SORT_ASC: '<svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-arrow-down" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M8 1a.5.5 0 0 1 .5.5v11.793l3.146-3.147a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 .708-.708L7.5 13.293V1.5A.5.5 0 0 1 8 1z"/></svg>',
   ICON_SORT_DESC: '<svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-arrow-up" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M8 15a.5.5 0 0 0 .5-.5V2.707l3.146 3.147a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 1 0 .708.708L7.5 2.707V14.5a.5.5 0 0 0 .5.5z"/></svg>',
   PWD_PROGRESS_BAR: '<div class="progress mt-1"><div class="progress-bar" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div></div>',
@@ -17,6 +17,51 @@ window.fw={
   MSG_AUTOSAVE_ERROR: 'Auto-save error. Server error occurred. Try again later.',
   MSG_UPLOAD_FAILED: 'Upload failed',
   MSG_DELETE_CONFIRM: '<strong>ARE YOU SURE</strong> to delete this item?',
+  autosave: {
+    statusElSelector: '.fw-autosave-status',
+    lastSaved: null,
+    setStatus: function (state, options) {
+      var $els = $(this.statusElSelector);
+      if (!$els.length) return;
+
+      options = options || {};
+
+      var label = '';
+      var prefix = '';
+      switch (state) {
+        case 'enabled':
+          label = 'Autosave enabled';
+          break;
+        case 'saving':
+          label = 'Saving...';
+          prefix = fw.HTML_SPINNER_SM;
+          break;
+        case 'saved':
+          var ts = options.timestamp instanceof Date ? options.timestamp : new Date();
+          this.lastSaved = ts;
+          var timeStr = options.showTime === false ? '' : this.formatTime(ts);
+          label = timeStr ? 'Saved ' + timeStr : 'Saved';
+          break;
+        case 'error':
+          label = options.message || 'Autosave failed';
+          break;
+        case 'changed':
+          label = 'Unsaved changes';
+          break;
+        default:
+          label = state;
+      }
+
+      $els.html((prefix ? prefix + ' ' : '') + label);
+    },
+    formatTime: function (date) {
+      try {
+        return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      } catch (e) {
+        return '';
+      }
+    }
+  },
 
   // Unified helper: updates saved/unsaved status and optional progress spinner
   // is_changed: true/false updates internal changed flag, pass undefined to keep previous value
@@ -43,6 +88,17 @@ window.fw={
 
     $f.find('.form-saved-status').html(html);
     $('.form-saved-status-global').html(html);
+
+    var statusState = null;
+    if (isProgress)
+      statusState = 'saving';
+    else if (is_changed === true || changed)
+      statusState = 'changed';
+    else if (is_changed === false || !changed)
+      statusState = 'saved';
+
+    if (statusState)
+      fw.autosave.setStatus(statusState, { timestamp: new Date() });
   },
 
   // requires https://github.com/osalabs/bootstrap-toaster
@@ -535,6 +591,8 @@ window.fw={
     var $asforms=$('form[data-autosave]');
     if (!$asforms.length) return; //skip if no autosave forms found
 
+    fw.autosave.setStatus('enabled');
+
     //prevent submit if form is in ajax save
     $asforms.on('submit', function (e) {
       var $f = $(this);
@@ -605,6 +663,7 @@ window.fw={
             fw.process_form_errors($f, data.error?.details);
         }
         fw.error(data.error?.message || fw.MSG_AUTOSAVE_ERROR, hint_options);
+        fw.autosave.setStatus('error', { message: data.error?.message || fw.MSG_AUTOSAVE_ERROR });
     }
 
     function form_autosave($f) {

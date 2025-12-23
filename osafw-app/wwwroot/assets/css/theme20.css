@@ -22,6 +22,14 @@
     --theme-sidebar-bg: #313a46;
     --theme-shadow: 0px 0px 35px 0px rgba(154, 161, 171, 0.15);
     --theme-btn-shadow: 0 2px 6px rgba(135, 147, 255, 0.4);
+    --fw-shadow-card: var(--theme-shadow);
+    --fw-dashboard-card-shadow: var(--theme-shadow);
+    --fw-radius-card: .25rem;
+    --fw-page-header-border: transparent;
+    --fw-sidebar-bg: var(--theme-sidebar-bg);
+    --fw-sidebar-link-color: #aeb8c5;
+    --fw-sidebar-section-title-color: #aeb8c5;
+    --fw-brand-logo-height: 30px;
 }
 
 [data-bs-theme=dark]{
@@ -35,6 +43,10 @@
   --bs-nav-pills-link-active-bg: var(--theme-color);
   --bs-nav-pills-link-active-color: #fff;
   --theme-font-family: "Nunito",sans-serif;
+  --fw-sidebar-bg: #28303c;
+  --fw-sidebar-link-color: #d6dae0;
+  --fw-sidebar-section-title-color: #d6dae0;
+  --fw-page-header-border: transparent;
 }
 
 body {
@@ -101,18 +113,17 @@ h3, .h3 {
       background-color: transparent;
     }
 
+  .fw-nav-section-title,
   .sidebar .nav-header {
     text-transform: uppercase;
     background-color: transparent !important;
+    font-size: .70rem;
+    font-weight: 700;
+    color: var(--fw-sidebar-section-title-color);
+    letter-spacing: 0.04rem;
+    padding-left: 1rem;
+    margin: .35rem 0;
   }
-
-    .sidebar .nav-header .nav-link {
-      font-size: .70rem;
-      font-weight: 700;
-      color: var(--theme-nav-link-color);
-      letter-spacing: 0.04rem;
-      padding-left: 1rem;
-    }
 
   .sidebar .bi {
     color: inherit;
