@@ -30,7 +30,8 @@ http://demo.engineeredit.com/ - this is how it looks in action right after insta
 
 ## Documentation
 
-- [CRUD workflows with `FwModel`](osafw-app/docs/crud.md) â€“ compare Hashtable and typed DTO approaches for standard operations.
+- [CRUD workflows with `FwModel`](osafw-app/docs/crud.md) - compare Hashtable and typed DTO approaches for standard operations.
+- [Feature modules](osafw-app/docs/feature-modules.md) – generate or scaffold modules from database tables.
 
 ### Development
 1. clone this git repository
