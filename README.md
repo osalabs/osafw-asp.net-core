@@ -12,7 +12,7 @@ Created as simplified and lightweight alternative to other ASP.NET frameworks li
 - uses [ParsePage template engine](https://github.com/osalabs/parsepage) ([detailed docs](osafw-app/docs/parsepage.md))
   - data stored by default in SQL Server database [using db.net](https://github.com/osalabs/db.net) ([detailed docs](osafw-app/docs/db.md))
 - RESTful with some practical enhancements
-- flexible CRUD flows with Hashtables or typed DTOs ([guide](osafw-app/docs/crud.md))
+- flexible CRUD flows with `FwDict`/`FwList` or typed DTOs ([guide](osafw-app/docs/crud.md))
 - integrated auth - simple flat access levels auth
 - UI based on [Bootstrap 5](http://getbootstrap.com) with minimal custom CSS and themes support - it's easy to customize or apply your own theme (see [README_THEMES](osafw-app/App_Data/README_THEMES))
 - use of well-known 3rd party libraries: [jQuery](http://jquery.com), [jQuery Form](https://github.com/malsup/form), jGrowl, markdown libs, etc...
@@ -30,8 +30,8 @@ http://demo.engineeredit.com/ - this is how it looks in action right after insta
 
 ## Documentation
 
-- [CRUD workflows with `FwModel`](osafw-app/docs/crud.md) - compare Hashtable and typed DTO approaches for standard operations.
-- [Feature modules](osafw-app/docs/feature-modules.md) � generate or scaffold modules from database tables.
+- [CRUD workflows with `FwModel`](osafw-app/docs/crud.md) - compare `FwDict`/`FwList` and typed DTO approaches for standard operations.
+- [Feature modules](osafw-app/docs/feature-modules.md) – generate or scaffold modules from database tables.
 
 ### Development
 1. clone this git repository
@@ -168,25 +168,25 @@ You could either override these particular methods or whole `IndexAction()` in y
 
 The following controller fields used above can be defined in controller's `init()` or in `config.json`:
 - `Me.list_sortdef` - default list sorting in format: "sort_name[ asc|desc]"
-- `Me.list_sortmap` - mapping for sort names (from `list_filter["sortby"]`) to actual db fields, Hashtable `sort_name => db_field_name`
+- `Me.list_sortmap` - mapping for sort names (from `list_filter["sortby"]`) to actual db fields, `FwDict` `sort_name => db_field_name`
 - `Me.search_fields` - search fields, space-separated
 - `Me.list_view` - table/view to use in `getListRows()`, if empty model's `table_name` used
 
 ### Additional Framework Components
 
-- **FwCache** – simple wrapper around `IMemoryCache` for application and request caching. Accessible in controllers and models via `fw.cache`
-- **FwUpdates** – applies SQL scripts from `/App_Data/sql/updates` automatically in development
-- **FwSelfTest** – runs configuration and controller tests to verify environment
-- **FwActivityLogs** – unified activity and change logging model. Can be used directly or via `fw.logActivity` helper
-- **FwApiController** – base class for building authenticated REST APIs
-- **Entity Builder** – text based definition to generate SQL and CRUD scaffolding
+- **FwCache** â€“ simple wrapper around `IMemoryCache` for application and request caching. Accessible in controllers and models via `fw.cache`
+- **FwUpdates** â€“ applies SQL scripts from `/App_Data/sql/updates` automatically in development
+- **FwSelfTest** â€“ runs configuration and controller tests to verify environment
+- **FwActivityLogs** â€“ unified activity and change logging model. Can be used directly or via `fw.logActivity` helper
+- **FwApiController** â€“ base class for building authenticated REST APIs
+- **Entity Builder** â€“ text based definition to generate SQL and CRUD scaffolding
 
 ### Per-user Date/Time and Timezones
 
 The framework supports per-user formatting and timezone conversion:
 - Defaults come from `appsettings.json` (`appSettings.date_format`, `time_format`, `timezone`) 
 - For each user can be overridden - see `users` table fields `date_format`, `time_format`, `timezone` (e.g. on login/profile save).
-- Rendering in templates uses these values automatically via ParsePage. Inputs are interpreted using the user’s format; output can be converted from database timezone to the user’s timezone.
+- Rendering in templates uses these values automatically via ParsePage. Inputs are interpreted using the userâ€™s format; output can be converted from database timezone to the userâ€™s timezone.
 
 See the detailed guide with examples and constants in [datetime.md](osafw-app/docs/datetime.md).
 

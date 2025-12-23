@@ -739,7 +739,7 @@ public class Utils
 
     /// <summary>
     /// Recursively deep-clones a <see cref="FwDict"/>, including any child
-    /// Hashtables and ArrayLists it contains.
+    /// FwDict and FwList instances it contains.
     /// Primitive CLR types, strings and immutable value types are copied by
     /// reference because they are already thread-safe and stateless.
     /// </summary>
@@ -776,7 +776,8 @@ public class Utils
         {
             null => null,
             FwDict ht => cloneHashDeep(ht),
-            FwList list => cloneArrayListDeep(list),
+            FwList list => cloneListDeep(list),
+            IList list => cloneListDeep(list),
             // most BCL value types & strings are immutable – safe to copy ref
             string or ValueType => value,
             // let user-defined classes decide how to clone themselves
@@ -785,7 +786,10 @@ public class Utils
         };
     }
 
-    private static ObjList cloneArrayListDeep(FwList list)
+    /// <summary>
+    /// Deep clone list-like collections by cloning each element.
+    /// </summary>
+    public static ObjList cloneListDeep(IList list)
     {
         ObjList clone = new(list.Count);
         foreach (var item in list)
@@ -804,7 +808,7 @@ public class Utils
     }
 
     /// <summary>
-    /// Deep clone FwList (ArrayList of FwDict) preserving nested contents.
+    /// Deep clone <see cref="FwList"/> preserving nested contents.
     /// </summary>
     public static FwList cloneFwList(FwList rows)
     {

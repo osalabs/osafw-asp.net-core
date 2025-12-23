@@ -1,5 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections;
+using System.Collections.Generic;
 
 namespace osafw.Tests
 {
@@ -35,7 +36,7 @@ namespace osafw.Tests
         [TestMethod]
         public void FwList_ConstructorsFilterDictionaries()
         {
-            IList items = new ArrayList
+            IList items = new List<object?>
             {
                 new FwDict { { "key", "value" } },
                 "skip-me",
@@ -46,7 +47,7 @@ namespace osafw.Tests
             Assert.HasCount(1, list);
             Assert.AreEqual("value", list[0]["key"]);
 
-            IEnumerable enumerable = new ArrayList
+            IEnumerable enumerable = new List<object?>
             {
                 new FwDict { { "foo", "bar" } },
                 42,

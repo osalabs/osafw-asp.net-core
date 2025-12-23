@@ -385,7 +385,7 @@ public abstract class FwController
 
         session_key ??= "_filter_" + fw.G["controller.action"];
 
-        FwDict sfilter = fw.SessionHashtable(session_key) ?? [];
+        FwDict sfilter = fw.SessionDict(session_key) ?? [];
 
         // if not forced filter - merge form filters to session filters
         bool is_dofilter = fw.FORM.ContainsKey("dofilter");
@@ -427,7 +427,7 @@ public abstract class FwController
         f["pagesize"] = f["pagesize"].toInt(FormUtils.MAX_PAGE_ITEMS);
 
         // save in session for later use
-        fw.SessionHashtable(session_key, f);
+        fw.SessionDict(session_key, f);
 
         this.list_filter = f;
 
@@ -437,12 +437,12 @@ public abstract class FwController
         if (list_filter_search.Count == 0 && !is_dofilter)
         {
             //read from session
-            list_filter_search = fw.SessionHashtable(session_key_search) ?? [];
+            list_filter_search = fw.SessionDict(session_key_search) ?? [];
         }
         else
         {
             //remember in session
-            fw.SessionHashtable(session_key_search, list_filter_search);
+            fw.SessionDict(session_key_search, list_filter_search);
         }
 
         return f;
@@ -456,7 +456,7 @@ public abstract class FwController
     {
         FwDict f = [];
         session_key ??= "_filter_" + fw.G["controller.action"];
-        fw.SessionHashtable(session_key, f);
+        fw.SessionDict(session_key, f);
         this.list_filter = f;
     }
 

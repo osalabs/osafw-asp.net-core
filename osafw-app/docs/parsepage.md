@@ -190,7 +190,7 @@ public class User {
 
 var u1 = new User { id = 1, Name = "John", Email = "john@email.com" };
 var u2 = new User { id = 2, Name = "Amy", Email = "amy@email.com" };
-var ps = new Hashtable {
+var ps = new FwDict {
     { "user", u1 },
     { "all_users", new List<User> { u1, u2 } }
 };

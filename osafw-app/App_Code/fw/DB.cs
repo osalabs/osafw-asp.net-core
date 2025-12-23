@@ -92,6 +92,7 @@ public class DBRow : Dictionary<string, string>
     {
         return this;
     }
+ 
 }
 public class DBList : List<DBRow>
 {
@@ -120,6 +121,7 @@ public class DBList : List<DBRow>
     {
         return this;
     }
+
 }
 
 public enum DBOps : int
