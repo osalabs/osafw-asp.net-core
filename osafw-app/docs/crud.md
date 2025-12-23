@@ -1,13 +1,13 @@
 # CRUD workflows with `FwModel`
 
-The framework offers two complementary ways to work with database rows. 
-You can keep using lightweight `Hashtable`/`ArrayList` collections for maximum flexibility, or describe your rows as strongly typed DTOs by inheriting from `FwModel<TRow>`. 
+The framework offers two complementary ways to work with database rows.
+You can keep using lightweight `FwDict`/`FwList` collections for maximum flexibility, or describe your rows as strongly typed DTOs by inheriting from `FwModel<TRow>`.
 Both flows share the same routing, permissions, and caching behaviour, so you can pick whichever fits each controller.
 
-## Hashtable workflow
+## FwDict workflow
 
-### Why use Hashtables?
-Hashtable-based models were selected for the initial release because they are quick to scaffold and easy to extend. 
+### Why use FwDict?
+FwDict-based models are quick to scaffold and easy to extend.
 A row is simply a set of key/value pairs, making it trivial to add optional fields, merge dynamic metadata, or echo submitted data back to templates without defining dedicated classes.
 
 ### Model setup
@@ -29,11 +29,11 @@ public class Users : FwModel
 var users = fw.model<Users>();
 
 DBRow row = users.one(5);                     // load a single record
-DBList active = users.list(new ArrayList      // filter by status list
+DBList active = users.list(new FwList      // filter by status list
 {
     FwModel.STATUS_ACTIVE,
 });
-DBList filtered = users.listByWhere(new Hashtable // custom where expression
+DBList filtered = users.listByWhere(new FwDict // custom where expression
 {
     ["status"] = 0,
     ["access_level"] = DB.opGT(0),
@@ -45,14 +45,14 @@ DBRow required = users.oneOrFail(5);          // throws if not found
 ```csharp
 var users = fw.model<Users>();
 
-var fresh = new Hashtable
+var fresh = new FwDict
 {
     ["iname"] = "Alice",
     ["status"] = FwModel.STATUS_ACTIVE,
 };
 int id = users.add(fresh);                    // insert
 
-var changes = new Hashtable
+var changes = new FwDict
 {
     ["iname"] = "Alice Johnson",
 };
@@ -62,7 +62,7 @@ users.delete(id);                             // soft delete (uses field_status)
 users.delete(id, true);                       // pass true to delete permanently
 ```
 
-> `DB.h()` remains a handy helper when you only need one or two keys, but `new Hashtable { ... }` keeps examples explicit.
+> `DB.h()` remains a handy helper when you only need one or two keys, but `new FwDict { ... }` keeps examples explicit.
 
 ### Controllers
 ```csharp
@@ -70,7 +70,7 @@ public override int SaveAction(int id = 0)
 {
     var item = reqh(); // get submitted form key/values
 
-    Validate(id, item);              // hashtable validation
+    Validate(id, item);              // dictionary validation
     return modelAddOrUpdate(id, item); // insert or update
 }
 ```
@@ -136,12 +136,12 @@ users.update(id, existing);                       // update DTO
 users.delete(id);                                 // soft delete (status=127)
 
 // When only a couple of fields need to change, either load the row first as above
-// or fall back to the Hashtable overload: users.update(id, new Hashtable { ["status"] = FwModel.STATUS_INACTIVE });
+// or fall back to the FwDict overload: users.update(id, new FwDict { ["status"] = FwModel.STATUS_INACTIVE });
 ```
 
 `FwModel.add(TRow dto)` writes any generated identity or audit columns back onto the DTO, so the `id` property stays in sync without extra queries. 
 For partial updates stick with the loaded DTO instance (ensuring unchanged fields remain intact) 
-or call the Hashtable overload to patch a narrow set of columns without constructing temporary classes.
+or call the FwDict overload to patch a narrow set of columns without constructing temporary classes.
 
 ### Controllers
 ```csharp
@@ -160,12 +160,12 @@ The extension helpers in `FwExtensions` let you bridge the styles whenever neede
 
 ```csharp
 var users = fw.model<Users>();
-Hashtable item = reqh();                 // data from request
-Users.Row dto = item.to<Users.Row>();     // Hashtable -> DTO
+FwDict item = reqh();                 // data from request
+Users.Row dto = item.to<Users.Row>(); // FwDict -> DTO
 
-Hashtable payload = dto.toHashtable();   // DTO -> Hashtable
+FwDict payload = dto.toFwDict();      // DTO -> FwDict
 DBList rows = users.list();              // untyped query
 List<Users.Row> typed = rows.toList<Users.Row>();
 ```
 
-Use whichever approach suits each feature. Many teams keep Hashtables for quick admin tools while adopting typed rows for core business entities.
+Use whichever approach suits each feature. Many teams keep FwDict for quick admin tools while adopting typed rows for core business entities.

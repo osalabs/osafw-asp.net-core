@@ -501,8 +501,8 @@ public class DevManageController : FwController
         var sortby = f["sort"].toStr();
         if (sortby == "table" || sortby == "model_name")
         {
-            //sort entities FwList of Hashtables with linq
-            entities = new FwList(entities.Cast<FwDict>().OrderBy(x => x[sortby]).ToList());
+            // sort entities list by requested column
+            entities = new FwList(entities.OrderBy(x => x[sortby]).ToList());
         }
 
         ps["entities"] = entities;

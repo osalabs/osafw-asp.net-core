@@ -58,7 +58,7 @@ Whenever AGENTS.md updated - make copy of it to top level /.github/copilot-instr
 ## Coding Style
 - C# 12, .NET 8, namespace `osafw`.
 - Controllers: classes end with `Controller`, public action methods end with `Action`. Standard actions (constants in `FW`): `Index`, `Show`, `ShowForm`, `Save`, `SaveMulti`, `ShowDelete`, `Delete`. Overloads supported with `string` or `int` id; router resolves best match.
-- Controllers return `Hashtable` `ps` parsed by `FW.parser`. For JSON set `ps["_json"]=true` or assign data to `ps["_json"]`.
+- Controllers return `FwDict` `ps` parsed by `FW.parser`. For JSON set `ps["_json"]=true` or assign data to `ps["_json"]`.
 - Models: inherit `FwModel`. Obtain via `fw.model<T>()` or `fw.model("Name")`. Keep SQL in models, not controllers.
 - Routing: `FW.getRoute()` implements RESTful mapping by HTTP method and URL. Prefixes (e.g., `/Admin`) are supported.
 - Access control: static `access_level` on controller + `FwConfig.access_levels` rules. XSS token validated on mutating requests.

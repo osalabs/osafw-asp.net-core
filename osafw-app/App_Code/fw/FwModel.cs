@@ -1332,7 +1332,7 @@ public abstract class FwModel : IDisposable
     /// filter list of items for json output for list options, leave only keys:
     ///   id, iname, is_checked (if exists), prio (if exists)
     /// </summary>
-    /// <param name="rows">list of Hashtables</param>
+    /// <param name="rows">list of <see cref="FwDict"/> entries</param>
     /// <returns></returns>
     public virtual FwList filterListOptionsForJson(IList rows)
     {

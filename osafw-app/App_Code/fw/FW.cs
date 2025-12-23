@@ -215,9 +215,9 @@ public class FW : IDisposable
         parseForm();
 
         // save flash to current var and update session as flash is used only for nearest request
-        FwDict? _flash = SessionHashtable("_flash");
+        FwDict? _flash = SessionDict("_flash");
         if (_flash != null) G["_flash"] = _flash;
-        SessionHashtable("_flash", []);
+        SessionDict("_flash", []);
     }
 
     public void initRequest()
@@ -289,12 +289,12 @@ public class FW : IDisposable
         context?.Session.Set(name, BitConverter.GetBytes(value));
     }
 
-    public FwDict? SessionHashtable(string name)
+    public FwDict? SessionDict(string name)
     {
         string? data = context?.Session.GetString(name);
         return data == null ? null : (FwDict)Utils.deserialize(data);
     }
-    public void SessionHashtable(string name, FwDict value)
+    public void SessionDict(string name, FwDict value)
     {
         context?.Session.SetString(name, Utils.serialize(value));
     }
@@ -315,9 +315,9 @@ public class FW : IDisposable
             if (!isJsonExpected())
             {
                 // write for the next request
-                FwDict _flash = SessionHashtable("_flash") ?? [];
+                FwDict _flash = SessionDict("_flash") ?? [];
                 _flash[name] = value;
-                SessionHashtable("_flash", _flash);
+                SessionDict("_flash", _flash);
             }
             return this; // for chaining
         }

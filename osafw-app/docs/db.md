@@ -102,7 +102,7 @@ db.update<User>("users", user, DB.h("id", id));
 You can convert a dictionary to a typed object using extension helpers:
 
 ```csharp
-Hashtable ht = DB.h("id", 3, "iname", "Alice");
+FwDict ht = DB.h("id", 3, "iname", "Alice");
 User typed = ht.to<User>();
 ```
 
@@ -208,10 +208,10 @@ DBList nulls = db.array("users", DB.h("deleted", db.opISNULL()));
 
 ### Inspecting schema
 ```csharp
-ArrayList tables = db.tables();
-ArrayList views = db.views();
-Hashtable schema = db.tableSchemaFull("users");
-ArrayList fkeys = db.listForeignKeys("orders");
+StrList tables = db.tables();
+StrList views = db.views();
+FwDict schema = db.tableSchemaFull("users");
+DBList fkeys = db.listForeignKeys("orders");
 ```
 
-Refer to the `DB.cs` source for detailed behaviour of each method. For full CRUD examples using both Hashtable-based and typed models see [`docs/crud.md`](./crud.md).
+Refer to the `DB.cs` source for detailed behaviour of each method. For full CRUD examples using both FwDict-based and typed models see [`docs/crud.md`](./crud.md).

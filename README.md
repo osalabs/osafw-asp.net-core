@@ -12,7 +12,7 @@ Created as simplified and lightweight alternative to other ASP.NET frameworks li
 - uses [ParsePage template engine](https://github.com/osalabs/parsepage) ([detailed docs](osafw-app/docs/parsepage.md))
   - data stored by default in SQL Server database [using db.net](https://github.com/osalabs/db.net) ([detailed docs](osafw-app/docs/db.md))
 - RESTful with some practical enhancements
-- flexible CRUD flows with Hashtables or typed DTOs ([guide](osafw-app/docs/crud.md))
+- flexible CRUD flows with `FwDict`/`FwList` or typed DTOs ([guide](osafw-app/docs/crud.md))
 - integrated auth - simple flat access levels auth
 - UI based on [Bootstrap 5](http://getbootstrap.com) with minimal custom CSS and themes support - it's easy to customize or apply your own theme (see [README_THEMES](osafw-app/App_Data/README_THEMES))
 - use of well-known 3rd party libraries: [jQuery](http://jquery.com), [jQuery Form](https://github.com/malsup/form), jGrowl, markdown libs, etc...
@@ -30,7 +30,7 @@ http://demo.engineeredit.com/ - this is how it looks in action right after insta
 
 ## Documentation
 
-- [CRUD workflows with `FwModel`](osafw-app/docs/crud.md) – compare Hashtable and typed DTO approaches for standard operations.
+- [CRUD workflows with `FwModel`](osafw-app/docs/crud.md) – compare `FwDict`/`FwList` and typed DTO approaches for standard operations.
 
 ### Development
 1. clone this git repository
@@ -167,7 +167,7 @@ You could either override these particular methods or whole `IndexAction()` in y
 
 The following controller fields used above can be defined in controller's `init()` or in `config.json`:
 - `Me.list_sortdef` - default list sorting in format: "sort_name[ asc|desc]"
-- `Me.list_sortmap` - mapping for sort names (from `list_filter["sortby"]`) to actual db fields, Hashtable `sort_name => db_field_name`
+- `Me.list_sortmap` - mapping for sort names (from `list_filter["sortby"]`) to actual db fields, `FwDict` `sort_name => db_field_name`
 - `Me.search_fields` - search fields, space-separated
 - `Me.list_view` - table/view to use in `getListRows()`, if empty model's `table_name` used
 

@@ -8,7 +8,7 @@ Updated: 2025-10-08
 - Dynamic Controller: Controller driven by config.json to render list/form screens with templates.
 - Vue Controller: Dynamic controller variant leveraging Vue.js for inline list editing.
 - Model: Class derived from `FwModel`, encapsulates DB reads/writes for a table or aggregate.
-- ps (Parse Strings): Hashtable returned by controllers for ParsePage; contains data and hints like `"_json"`.
+- ps (Parse Strings): `FwDict` returned by controllers for ParsePage; contains data and hints like `"_json"`.
 - XSS token: Anti-CSRF token validated on mutating requests stored in session as `XSS`.
 - Entity: Business table represented in `fwentities` and models; used for uploads/links.
 - Attachment: File in `att`, optionally linked via `att_links`; can be S3-hosted.
