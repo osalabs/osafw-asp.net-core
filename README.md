@@ -30,7 +30,8 @@ http://demo.engineeredit.com/ - this is how it looks in action right after insta
 
 ## Documentation
 
-- [CRUD workflows with `FwModel`](osafw-app/docs/crud.md) – compare `FwDict`/`FwList` and typed DTO approaches for standard operations.
+- [CRUD workflows with `FwModel`](osafw-app/docs/crud.md) - compare `FwDict`/`FwList` and typed DTO approaches for standard operations.
+- [Feature modules](osafw-app/docs/feature-modules.md) – generate or scaffold modules from database tables.
 
 ### Development
 1. clone this git repository
@@ -173,19 +174,19 @@ The following controller fields used above can be defined in controller's `init(
 
 ### Additional Framework Components
 
-- **FwCache** – simple wrapper around `IMemoryCache` for application and request caching. Accessible in controllers and models via `fw.cache`
-- **FwUpdates** – applies SQL scripts from `/App_Data/sql/updates` automatically in development
-- **FwSelfTest** – runs configuration and controller tests to verify environment
-- **FwActivityLogs** – unified activity and change logging model. Can be used directly or via `fw.logActivity` helper
-- **FwApiController** – base class for building authenticated REST APIs
-- **Entity Builder** – text based definition to generate SQL and CRUD scaffolding
+- **FwCache** â€“ simple wrapper around `IMemoryCache` for application and request caching. Accessible in controllers and models via `fw.cache`
+- **FwUpdates** â€“ applies SQL scripts from `/App_Data/sql/updates` automatically in development
+- **FwSelfTest** â€“ runs configuration and controller tests to verify environment
+- **FwActivityLogs** â€“ unified activity and change logging model. Can be used directly or via `fw.logActivity` helper
+- **FwApiController** â€“ base class for building authenticated REST APIs
+- **Entity Builder** â€“ text based definition to generate SQL and CRUD scaffolding
 
 ### Per-user Date/Time and Timezones
 
 The framework supports per-user formatting and timezone conversion:
 - Defaults come from `appsettings.json` (`appSettings.date_format`, `time_format`, `timezone`) 
 - For each user can be overridden - see `users` table fields `date_format`, `time_format`, `timezone` (e.g. on login/profile save).
-- Rendering in templates uses these values automatically via ParsePage. Inputs are interpreted using the user’s format; output can be converted from database timezone to the user’s timezone.
+- Rendering in templates uses these values automatically via ParsePage. Inputs are interpreted using the userâ€™s format; output can be converted from database timezone to the userâ€™s timezone.
 
 See the detailed guide with examples and constants in [datetime.md](osafw-app/docs/datetime.md).
 
