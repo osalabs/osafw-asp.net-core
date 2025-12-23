@@ -76,8 +76,8 @@ body {
     background-image: none;
   }
 
-a[disabled]
-  cursor: default;{
+a[disabled] {
+  cursor: default;
   pointer-events: none;
   color: var(--bs-btn-disabled-color);
 }
