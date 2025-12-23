@@ -90,50 +90,108 @@ pick a `type`, set the required keys, and copy an example you can paste into `co
 ### Type details
 
 #### type: row
-- Starts a Bootstrap `div.row` wrapper; pairs with `row_end`.
-- Combine with `col`/`col_end` to create multi-column layouts.
+- Template: `/common/form/showform/row.html` (also used on Show).
+- Options: `class` (extra classes on `.row`), `attrs` (custom attributes).
+- Common sample:
 ```json
 {
   "type": "row"
 }
 ```
+- Full sample with custom gutter and data attribute:
+```json
+{
+  "type": "row",
+  "class": "g-3 align-items-center",
+  "attrs": "data-block=\"main\""
+}
+```
 
 #### type: col
-- Starts a column inside a row; default class `col`. Use `class_contents` to change width.
+- Template: `/common/form/showform/col.html` (also used on Show).
+- Options: `class` (size overrides such as `col-md-6`), `attrs`.
+- Common sample:
 ```json
 {
   "type": "col",
-  "class_contents": "col-md-6"
+  "class": "col-md-6"
+}
+```
+- Full sample that nests additional attributes:
+```json
+{
+  "type": "col",
+  "class": "col-lg-4 mb-3",
+  "attrs": "data-role=\"meta\""
 }
 ```
 
 #### type: col_end
-- Ends the current column wrapper.
+- Template: `/common/form/showform/col_end.html` (also used on Show).
+- Options: none (use to close the previous `col`).
+- Common sample:
 ```json
 {
   "type": "col_end"
 }
 ```
+- Full sample in a two-column layout:
+```json
+[
+  { "type": "col", "class": "col-md-6" },
+  { "type": "header", "label": "Left" },
+  { "type": "col_end" },
+  { "type": "col", "class": "col-md-6" },
+  { "type": "header", "label": "Right" },
+  { "type": "col_end" }
+]
+```
 
 #### type: row_end
-- Ends the current row wrapper.
+- Template: `/common/form/showform/row_end.html` (also used on Show).
+- Options: none (use to close the previous `row`).
+- Common sample:
 ```json
 {
   "type": "row_end"
 }
 ```
+- Full sample wrapping two columns:
+```json
+[
+  { "type": "row" },
+  { "type": "col", "class": "col-md-6" },
+  { "type": "col_end" },
+  { "type": "col", "class": "col-md-6" },
+  { "type": "col_end" },
+  { "type": "row_end" }
+]
+```
 
 #### type: header
-- Section header rendered as `<h5>` with horizontal rule.
+- Template: `/common/form/showform/header.html`.
+- Options: `label` (required), plus wrapper `class`/`attrs` if using surrounding `row`/`col`.
+- Common sample:
 ```json
 {
   "type": "header",
   "label": "General"
 }
 ```
+- Full sample with extra spacing:
+```json
+{
+  "type": "header",
+  "label": "Metadata",
+  "class": "mt-4",
+  "attrs": "data-section=\"meta\""
+}
+```
 
 #### type: plaintext
-- Read-only text value; standard `label`, `class_*` keys apply.
+- Template: `/common/form/show/plaintext.html`.
+- Options: inherits common layout keys plus single-value lookups (`lookup_model`/`lookup_field`, `lookup_table`/`lookup_key`, `lookup_tpl`, or inline `options`). `conv: "time_from_seconds"` converts stored seconds to `HH:mm:ss`.
+- Common sample:
 ```json
 {
   "type": "plaintext",
@@ -141,21 +199,50 @@ pick a `type`, set the required keys, and copy an example you can paste into `co
   "label": "Title"
 }
 ```
+- Full sample with lookup and custom layout:
+```json
+{
+  "type": "plaintext",
+  "field": "category_id",
+  "label": "Category",
+  "lookup_model": "DemoDicts",
+  "lookup_field": "iname",
+  "class_label": "col-md-2",
+  "class_contents": "col-md-10",
+  "help_text": "Resolved via DemoDicts lookup"
+}
+```
 
 #### type: plaintext_link
-- Displays text with a link to `admin_url`/`lookup_id`; accepts `lookup_table`/`lookup_field` or `lookup_model`.
+- Template: `/common/form/show/plaintext_link.html`.
+- Options: single-value lookups plus `admin_url` (destination path for the link) and optional `lookup_id` override.
+- Common sample:
 ```json
 {
   "type": "plaintext_link",
   "field": "user_id",
   "label": "Owner",
-  "admin_url": "/Admin/Users",
   "lookup_model": "Users"
+}
+```
+- Full sample with explicit lookup table and admin URL:
+```json
+{
+  "type": "plaintext_link",
+  "field": "manager_id",
+  "label": "Manager",
+  "lookup_table": "users",
+  "lookup_key": "id",
+  "lookup_field": "email",
+  "admin_url": "/Admin/Users",
+  "help_text": "Links to the user record"
 }
 ```
 
 #### type: plaintext_autocomplete
-- Shows the lookup name (via `lookup_model` or `lookup_table`/`lookup_field`) for the stored id.
+- Template: `/common/form/show/plaintext_autocomplete.html`.
+- Options: same lookup keys as `plaintext`; intended for ids saved by an autocomplete control.
+- Common sample:
 ```json
 {
   "type": "plaintext_autocomplete",
@@ -164,9 +251,23 @@ pick a `type`, set the required keys, and copy an example you can paste into `co
   "lookup_model": "DemoDicts"
 }
 ```
+- Full sample resolving from a lookup table with custom label sizing:
+```json
+{
+  "type": "plaintext_autocomplete",
+  "field": "parent_id",
+  "label": "Parent Demo",
+  "lookup_table": "demos",
+  "lookup_field": "iname",
+  "class_label": "col-sm-2",
+  "class_contents": "col-sm-10"
+}
+```
 
 #### type: plaintext_yesno
-- Renders `Yes`/`No` from a boolean/flag value.
+- Template: `/common/form/show/plaintext_yesno.html`.
+- Options: uses the truthiness of `value`; combine with `conv: "time_from_seconds"` only for time fields.
+- Common sample:
 ```json
 {
   "type": "plaintext_yesno",
@@ -174,20 +275,44 @@ pick a `type`, set the required keys, and copy an example you can paste into `co
   "label": "Active"
 }
 ```
+- Full sample with helper text:
+```json
+{
+  "type": "plaintext_yesno",
+  "field": "is_verified",
+  "label": "Email Verified",
+  "help_text": "Derived from verification timestamp"
+}
+```
 
 #### type: plaintext_currency
-- Read-only currency; optional `currency_symbol` (default `$`) and `conv` for formatting.
+- Template: `/common/form/show/plaintext_currency.html`.
+- Options: `currency_symbol` (defaults to `$`) plus common layout keys.
+- Common sample:
 ```json
 {
   "type": "plaintext_currency",
   "field": "price",
-  "label": "Price",
-  "currency_symbol": "EUR"
+  "label": "Price"
+}
+```
+- Full sample with alternate currency symbol and help text:
+```json
+{
+  "type": "plaintext_currency",
+  "field": "budget",
+  "label": "Budget",
+  "currency_symbol": "€",
+  "class_label": "col-md-2",
+  "class_contents": "col-md-4",
+  "help_text": "Formatted with two decimals"
 }
 ```
 
 #### type: markdown
-- Server-side rendered markdown block; accepts `noescape` style content.
+- Template: `/common/form/show/markdown.html`.
+- Options: markdown comes from `value`; respect common layout keys.
+- Common sample:
 ```json
 {
   "type": "markdown",
@@ -195,9 +320,21 @@ pick a `type`, set the required keys, and copy an example you can paste into `co
   "label": "Description"
 }
 ```
+- Full sample highlighting read-only rendering:
+```json
+{
+  "type": "markdown",
+  "field": "notes_md",
+  "label": "Notes (Markdown)",
+  "class_contents": "col-12",
+  "help_text": "Rendered server-side with links and formatting"
+}
+```
 
 #### type: noescape
-- Outputs the raw value without HTML escaping.
+- Template: `/common/form/show/noescape.html`.
+- Options: renders raw HTML; combine with layout keys carefully.
+- Common sample:
 ```json
 {
   "type": "noescape",
@@ -205,9 +342,21 @@ pick a `type`, set the required keys, and copy an example you can paste into `co
   "label": "Raw HTML"
 }
 ```
+- Full sample for trusted snippets:
+```json
+{
+  "type": "noescape",
+  "field": "widget_embed",
+  "label": "Embed",
+  "class_contents": "col-12",
+  "help_text": "Content is not escaped; ensure it is sanitized upstream"
+}
+```
 
 #### type: float
-- Shows a numeric value with two decimal places.
+- Template: `/common/form/show/float.html`.
+- Options: displays `value` with two decimals; common layout keys apply.
+- Common sample:
 ```json
 {
   "type": "float",
@@ -215,9 +364,20 @@ pick a `type`, set the required keys, and copy an example you can paste into `co
   "label": "Amount"
 }
 ```
+- Full sample with helper text:
+```json
+{
+  "type": "float",
+  "field": "tax_rate",
+  "label": "Tax Rate",
+  "help_text": "Stored as decimal, rendered with 2 digits"
+}
+```
 
 #### type: checkbox
-- Read-only checkbox; mark as checked when the value equals the true flag (defaults to `1`).
+- Template: `/common/form/show/checkbox.html`.
+- Options: uses truthy `value`; combine with layout keys.
+- Common sample:
 ```json
 {
   "type": "checkbox",
@@ -225,9 +385,20 @@ pick a `type`, set the required keys, and copy an example you can paste into `co
   "label": "Completed"
 }
 ```
+- Full sample with muted hint:
+```json
+{
+  "type": "checkbox",
+  "field": "is_featured",
+  "label": "Featured?",
+  "help_text": "Checked when the stored value is truthy"
+}
+```
 
 #### type: date
-- Formats a date value as `M/d/yyyy`.
+- Template: `/common/form/show/date.html`.
+- Options: displays `value` using `M/d/yyyy`; use `conv: "time_from_seconds"` only when the field stores seconds.
+- Common sample:
 ```json
 {
   "type": "date",
@@ -235,9 +406,22 @@ pick a `type`, set the required keys, and copy an example you can paste into `co
   "label": "Due"
 }
 ```
+- Full sample with label sizing:
+```json
+{
+  "type": "date",
+  "field": "ship_on",
+  "label": "Ship On",
+  "class_label": "col-md-2",
+  "class_contents": "col-md-4",
+  "help_text": "Uses user date formatting"
+}
+```
 
 #### type: date_long
-- Formats date/time as `M/d/yyyy hh:mm:ss`.
+- Template: `/common/form/show/date_long.html`.
+- Options: renders `value` in `M/d/yyyy hh:mm:ss`; combine with common layout keys.
+- Common sample:
 ```json
 {
   "type": "date_long",
@@ -245,67 +429,138 @@ pick a `type`, set the required keys, and copy an example you can paste into `co
   "label": "Updated"
 }
 ```
+- Full sample with helper text:
+```json
+{
+  "type": "date_long",
+  "field": "processed_at",
+  "label": "Processed",
+  "help_text": "Includes time in the user timezone"
+}
+```
 
 #### type: multi
-- Read-only list of related records with checkboxes; set `lookup_model`/`lookup_field`. Supports `is_by_linked` for alt ids.
+- Template: `/common/form/show/multi.html`.
+- Options: `lookup_model` (+ `lookup_field`, `lookup_params`) to render values without a junction model; `model` to use a junction table; `is_by_linked` to switch between `updateJunctionByMainId` and `updateJunctionByLinkedId`; `lookup_checked_only` to show only checked rows.
+- Common sample (comma-separated ids in the same table field):
 ```json
 {
   "type": "multi",
-  "field": "tags",
+  "field": "tag_ids",
   "label": "Tags",
   "lookup_model": "DemoDicts",
   "lookup_field": "iname"
 }
 ```
+- Full sample using a junction model and showing only checked records:
+```json
+{
+  "type": "multi",
+  "field": "demo_dicts_link",
+  "label": "DemoDicts via Junction",
+  "model": "DemosDemoDicts",
+  "is_by_linked": false,
+  "lookup_checked_only": true,
+  "help_text": "Rendered from the junction table for this record"
+}
+```
 
 #### type: multi_prio
-- Read-only multi-select with priorities; usually paired with a junction model.
+- Template: no dedicated Show partial is registered; add a custom template or reuse the `multi` template to display `multi_datarow` (which includes `_link[prio]`).
+- Options: `model` (required, junction model providing `_link[prio]`), `is_by_linked` to flip main/linked behaviour, plus layout keys.
+- Common sample:
 ```json
 {
   "type": "multi_prio",
   "field": "roles",
   "label": "Roles",
-  "lookup_model": "Roles",
-  "lookup_field": "iname"
+  "model": "UsersRoles"
+}
+```
+- Full sample with custom ordering note:
+```json
+{
+  "type": "multi_prio",
+  "field": "permissions",
+  "label": "Permissions (prio)",
+  "model": "RolesPermissions",
+  "is_by_linked": true,
+  "help_text": "Template shows checkboxes; extend the template to display priorities from _link[prio]"
 }
 ```
 
 #### type: att
-- Displays a single attachment (first match) for the current record.
+- Template: `/common/form/show/att.html`.
+- Options: relies on `field` holding an attachment id; layout keys apply (category is determined by the stored attachment).
+- Common sample:
 ```json
 {
   "type": "att",
   "field": "photo",
-  "label": "Photo",
-  "att_category": "photos"
+  "label": "Photo"
+}
+```
+- Full sample with custom column width:
+```json
+{
+  "type": "att",
+  "field": "avatar_id",
+  "label": "Avatar",
+  "class_contents": "col-md-4",
+  "help_text": "Shows the linked attachment preview and download"
 }
 ```
 
 #### type: att_links
-- Shows multiple attachment links.
+- Template: `/common/form/show/att_links.html`.
+- Options: lists attachments linked to the current entity; `field` may be empty because lookup uses the entity table/id.
+- Common sample:
 ```json
 {
   "type": "att_links",
-  "field": "docs",
-  "label": "Documents",
-  "att_category": "general"
+  "field": "_att_links",
+  "label": "Documents"
+}
+```
+- Full sample scoped by label styling:
+```json
+{
+  "type": "att_links",
+  "field": "_att_links",
+  "label": "Supporting Files",
+  "class_label": "col-12",
+  "help_text": "Displays all attachments linked to this record"
 }
 ```
 
 #### type: att_files
-- List of uploaded files with optional filtering by `att_category` and custom upload prefix.
+- Template: `/common/form/show/att_files.html`.
+- Options: `att_category` (filter by category), `att_post_prefix` (reserved for parity with edit configuration), plus layout keys.
+- Common sample:
 ```json
 {
   "type": "att_files",
-  "field": "attachments",
+  "field": "_att_files",
   "label": "Files",
-  "att_category": "photos",
-  "att_post_prefix": "docs"
+  "att_category": "general"
+}
+```
+- Full sample filtered to a category with helper text:
+```json
+{
+  "type": "att_files",
+  "field": "_att_files_docs",
+  "label": "Documents",
+  "att_category": "docs",
+  "class_contents": "col-12",
+  "help_text": "Lists files in the docs attachment category"
 }
 ```
 
 #### type: subtable
-- Read-only table of related records; supply `model` plus `save_fields`/`lookup_*` on the model side as needed.
+- Template: `/common/form/show/subtable.html`.
+- Options: `model` (required), plus any model-specific settings such as `related_field_name`, `lookup_params`, or a custom subtable template used by the model’s `prepareSubtable`.
+- Common sample:
 ```json
 {
   "type": "subtable",
@@ -314,44 +569,101 @@ pick a `type`, set the required keys, and copy an example you can paste into `co
   "model": "DemosItems"
 }
 ```
+- Full sample with custom label styling and params passed to the model:
+```json
+{
+  "type": "subtable",
+  "field": "line_items",
+  "label": "Line Items",
+  "model": "OrdersItems",
+  "class_label": "col-12 hr-header fs-5",
+  "lookup_params": "with_products",
+  "help_text": "Rendered via OrdersItems.prepareSubtable"
+}
+```
 
 #### type: added
-- Standard added-on/by block (uses framework metadata).
+- Template: `/common/form/show/added.html`.
+- Options: layout keys only (field value is taken from the model metadata).
+- Common sample:
 ```json
 {
   "type": "added",
   "label": "Added"
 }
 ```
+- Full sample with explicit field name:
+```json
+{
+  "type": "added",
+  "field": "add_time",
+  "label": "Created",
+  "class_contents": "col-md-4"
+}
+```
 
 #### type: updated
-- Standard updated-on/by block.
+- Template: `/common/form/show/updated.html`.
+- Options: layout keys only (field value is taken from the model metadata).
+- Common sample:
 ```json
 {
   "type": "updated",
   "label": "Updated"
 }
 ```
+- Full sample targeting a specific field:
+```json
+{
+  "type": "updated",
+  "field": "upd_time",
+  "label": "Last Updated",
+  "class_contents": "col-md-4"
+}
+```
 
 #### type: group_id
-- Hidden id field with Submit/Cancel buttons. Accepts `class`/`attrs` for layout tweaks.
+- Template: `/common/form/showform/group_id.html`.
+- Options: layout keys only; renders the item id with Save/Cancel buttons.
+- Common sample:
 ```json
 {
   "type": "group_id"
 }
 ```
+- Full sample with custom wrapper class:
+```json
+{
+  "type": "group_id",
+  "class": "mt-2"
+}
+```
 
 #### type: group_id_addnew
-- Same as `group_id` plus "Submit and Add New" button.
+- Template: `/common/form/showform/group_id_addnew.html`.
+- Options: layout keys only; adds “Save and Add New”.
+- Common sample:
 ```json
 {
   "type": "group_id_addnew"
 }
 ```
+- Full sample with helper text:
+```json
+{
+  "type": "group_id_addnew",
+  "help_text": "Adds Save and Save & Add New buttons"
+}
+```
 
 #### type: select
-- Dropdown fed by `lookup_model` or `lookup_tpl`; supports dependent selects with `filter_for`/`filter_by`/`filter_field` and
-  blank options via `is_option0` or `is_option_empty`.
+- Template: `/common/form/showform/select.html`.
+- Options:
+  - Data sources: `lookup_model` (+ `lookup_params`), `lookup_tpl`, or inline `options` dictionary.
+  - Blank options: `is_option0` (value `0`), `is_option_empty` (empty value), `option0_title`.
+  - Filtering chains: `filter_for`/`filter_field` on the parent select; `filter_by`/`filter_field` on the child select.
+  - Behaviour: `multiple`, `class_control`, `attrs_control`, `err_exists_msg`, `prepend`/`append` input-group buttons.
+- Common sample:
 ```json
 {
   "type": "select",
@@ -359,42 +671,40 @@ pick a `type`, set the required keys, and copy an example you can paste into `co
   "label": "DemoDicts",
   "lookup_model": "DemoDicts",
   "is_option0": true,
-  "class_contents": "col-md-3",
   "class_control": "on-refresh"
 }
 ```
-
-Filtered select pair example:
+- Full sample with filtering and live search:
 ```json
 {
-  "field": "parent_demo_dicts_id",
   "type": "select",
-  "label": "Parent DemoDicts Filter",
-  "lookup_model": "DemoDicts",
-  "filter_for": "parent_id",
-  "filter_field": "demo_dicts_id",
-  "class_control": "selectpicker on-refresh",
-  "is_option_empty": true,
-  "option0_title": "- select to show only Parents with this DemoDicts -",
-  "attrs_control": "data-live-search=\"true\""
-},
-{
   "field": "parent_id",
   "label": "Parent",
   "lookup_model": "Demos",
   "lookup_params": "parent",
   "filter_by": "parent_demo_dicts_id",
   "filter_field": "demo_dicts_id",
-  "type": "select",
-  "is_option0": true,
+  "is_option_empty": true,
   "option0_title": "- none -",
+  "multiple": false,
   "class_contents": "col-md-3",
-  "attrs_control": "data-noautosave=\"true\""
+  "class_control": "selectpicker on-refresh",
+  "attrs_control": "data-live-search=\"true\" data-noautosave=\"true\"",
+  "prepend": [
+    {
+      "label": "Add",
+      "class": "btn-secondary",
+      "icon": "bi bi-plus",
+      "url": "/Admin/Demos/new"
+    }
+  ]
 }
 ```
 
 #### type: input
-- Single-line text input; supports `maxlength`, `placeholder`, `validate`, `prepend`/`append` button addons.
+- Template: `/common/form/showform/input.html`.
+- Options: `maxlength`, `placeholder`, `required`, `validate` (`exists`, `isemail`, `isphone`, `isdate`, `isfloat`), `class_control`, `attrs_control`, `prepend`/`append` input-group buttons.
+- Common sample:
 ```json
 {
   "type": "input",
@@ -403,9 +713,32 @@ Filtered select pair example:
   "maxlength": 255
 }
 ```
+- Full sample with validation and addon button:
+```json
+{
+  "type": "input",
+  "field": "slug",
+  "label": "Slug",
+  "required": true,
+  "maxlength": 128,
+  "validate": "exists",
+  "placeholder": "auto-generated or custom",
+  "class_control": "text-lowercase",
+  "append": [
+    {
+      "label": "Generate",
+      "class": "btn-outline-secondary",
+      "icon": "bi bi-magic",
+      "url": "/Admin/DemosDynamic/(GenerateSlug)"
+    }
+  ]
+}
+```
 
 #### type: textarea
-- Multiline text; configure `rows`, `maxlength`, `placeholder`.
+- Template: `/common/form/showform/textarea.html`.
+- Options: `rows`, `maxlength`, `placeholder`, `class_control` (e.g., `markdown`, `fw-html-editor`), `attrs_control`.
+- Common sample:
 ```json
 {
   "type": "textarea",
@@ -414,9 +747,23 @@ Filtered select pair example:
   "rows": 5
 }
 ```
+- Full sample with HTML editor class:
+```json
+{
+  "type": "textarea",
+  "field": "idesc2",
+  "label": "Rich Text",
+  "rows": 10,
+  "maxlength": 2000,
+  "class_control": "fw-html-editor",
+  "help_text": "Requires /common/html_editor script"
+}
+```
 
 #### type: email
-- Email input with browser validation.
+- Template: `/common/form/showform/email.html`.
+- Options: `required`, `maxlength`, `placeholder`, `validate` (typically `exists isemail`), `class_control`, `attrs_control`.
+- Common sample:
 ```json
 {
   "type": "email",
@@ -425,9 +772,23 @@ Filtered select pair example:
   "required": true
 }
 ```
+- Full sample with validation hints:
+```json
+{
+  "type": "email",
+  "field": "contact_email",
+  "label": "Contact Email",
+  "maxlength": 128,
+  "validate": "exists isemail",
+  "class_control": "on-refresh",
+  "help_text": "Unique per record; validated server-side"
+}
+```
 
 #### type: number
-- Numeric input with `min`, `max`, `step` and optional `conv`.
+- Template: `/common/form/showform/number.html`.
+- Options: `min`, `max`, `step`, `maxlength`, `placeholder`, `required`, `validate` (`isfloat`), `class_control`, `attrs_control`.
+- Common sample:
 ```json
 {
   "type": "number",
@@ -437,9 +798,25 @@ Filtered select pair example:
   "step": 1
 }
 ```
+- Full sample with validation:
+```json
+{
+  "type": "number",
+  "field": "rating",
+  "label": "Rating",
+  "min": 0,
+  "max": 10,
+  "step": 0.5,
+  "validate": "isfloat",
+  "placeholder": "0 - 10",
+  "class_control": "w-25"
+}
+```
 
 #### type: password
-- Password input; often used without `label` when embedded.
+- Template: `/common/form/showform/password.html`.
+- Options: `maxlength`, `placeholder`, `required`, `class_control`, `attrs_control`.
+- Common sample:
 ```json
 {
   "type": "password",
@@ -447,57 +824,132 @@ Filtered select pair example:
   "label": "Password"
 }
 ```
+- Full sample with custom autocomplete handling:
+```json
+{
+  "type": "password",
+  "field": "new_pass",
+  "label": "New Password",
+  "maxlength": 128,
+  "placeholder": "leave blank to keep current",
+  "attrs_control": "autocomplete=\"new-password\""
+}
+```
 
 #### type: currency
-- Input-group with currency symbol (default `$`); accepts `currency_symbol` and `conv`.
+- Template: `/common/form/showform/currency.html`.
+- Options: `currency_symbol`, `maxlength`, `placeholder`, `required`, `class_control`, `attrs_control`.
+- Common sample:
 ```json
 {
   "type": "currency",
   "field": "price",
   "label": "Price",
-  "currency_symbol": "EUR"
+  "currency_symbol": "$"
+}
+```
+- Full sample with helper text:
+```json
+{
+  "type": "currency",
+  "field": "budget",
+  "label": "Budget",
+  "currency_symbol": "€",
+  "maxlength": 12,
+  "placeholder": "0.00",
+  "class_control": "text-end",
+  "help_text": "Displayed and posted as plain number with currency symbol"
 }
 ```
 
 #### type: autocomplete
-- Text input with AJAX suggestions at `autocomplete_url?q=...`; `lookup_by_value` stores typed value instead of id.
+- Template: `/common/form/showform/autocomplete.html`.
+- Options: `autocomplete_url` (required), `lookup_model`/`lookup_field`, `lookup_by_value` (store text instead of id), `admin_url`, `required`, `maxlength`, `placeholder`, `class_control`, `attrs_control`, `prepend`/`append`.
+- Common sample:
 ```json
 {
   "type": "autocomplete",
-  "field": "demo_dicts_id",
-  "label": "Category",
-  "autocomplete_url": "/Admin/DemoDicts/(Autocomplete)",
+  "field": "dict_link_auto_id",
+  "label": "DemoDicts Autocomplete",
+  "autocomplete_url": "/Admin/DemoDicts/(Autocomplete)?q=",
   "lookup_model": "DemoDicts",
-  "lookup_by_value": false
+  "lookup_field": "iname"
+}
+```
+- Full sample storing typed value and adding a helper button:
+```json
+{
+  "type": "autocomplete",
+  "field": "city",
+  "label": "City",
+  "autocomplete_url": "/Admin/Cities/(Autocomplete)?q=",
+  "lookup_model": "Cities",
+  "lookup_field": "iname",
+  "lookup_by_value": true,
+  "placeholder": "Type to search or enter custom city",
+  "append": [
+    {
+      "label": "Manage",
+      "class": "btn-outline-secondary",
+      "icon": "bi bi-box-arrow-up-right",
+      "url": "/Admin/Cities"
+    }
+  ]
 }
 ```
 
 #### type: multicb
-- Multi-select with checkboxes; uses `model` for junction table and `save_fields`/`lookup_*` to render choices.
+- Template: `/common/form/showform/multi.html`.
+- Options: EITHER `lookup_model` (stores comma-separated ids in the same table field) OR `model` (uses a junction model). Add `is_by_linked` for junctions where the main id is stored on the linked side; `lookup_params` can tune lookup queries.
+- Common sample storing ids in the same table field:
 ```json
 {
   "type": "multicb",
-  "field": "demo_dicts_id",
-  "label": "Categories",
-  "lookup_model": "DemoDicts",
-  "model": "DemosDemoDicts"
+  "field": "dict_link_multi",
+  "label": "DemoDicts Multi",
+  "lookup_model": "DemoDicts"
+}
+```
+- Full sample using a junction model:
+```json
+{
+  "type": "multicb",
+  "field": "demo_dicts_link",
+  "label": "DemoDicts via Junction Table",
+  "model": "DemosDemoDicts",
+  "is_by_linked": false,
+  "help_text": "Uses DemosDemoDicts.updateJunction... methods to save"
 }
 ```
 
 #### type: multicb_prio
-- Multi-select with priorities; stores order in the junction model.
+- Template: `/common/form/showform/multi_prio.html`.
+- Options: `model` (required junction model with `_link[prio]`), `is_by_linked` to flip main/linked behaviour.
+- Common sample:
 ```json
 {
   "type": "multicb_prio",
-  "field": "demo_dicts_id",
-  "label": "Categories (prioritized)",
-  "lookup_model": "DemoDicts",
+  "field": "demo_dicts_prio",
+  "label": "Prioritized Categories",
   "model": "DemosDemoDicts"
+}
+```
+- Full sample with linked-id mode:
+```json
+{
+  "type": "multicb_prio",
+  "field": "user_roles",
+  "label": "User Roles (ordered)",
+  "model": "UsersRoles",
+  "is_by_linked": true,
+  "help_text": "Order is saved in _link[prio] from the junction model"
 }
 ```
 
 #### type: radio
-- Radio buttons from lookup values; `is_inline` lays them out horizontally.
+- Template: `/common/form/showform/radio.html`.
+- Options: data via `lookup_model`, `lookup_tpl`, or `options`; `is_inline` for horizontal layout; `class_control` and `attrs_control` pass through to inputs.
+- Common sample:
 ```json
 {
   "type": "radio",
@@ -507,9 +959,23 @@ Filtered select pair example:
   "is_inline": true
 }
 ```
+- Full sample using lookup_model:
+```json
+{
+  "type": "radio",
+  "field": "access_level",
+  "label": "Access Level",
+  "lookup_model": "AccessLevels",
+  "lookup_field": "iname",
+  "class_contents": "col-md-6",
+  "help_text": "Inline radios sourced from AccessLevels model"
+}
+```
 
 #### type: yesno
-- Convenience radio group for Yes/No (1/2); supports `is_inline`.
+- Template: `/common/form/showform/yesno.html`.
+- Options: `is_inline`, plus layout keys.
+- Common sample:
 ```json
 {
   "type": "yesno",
@@ -518,9 +984,21 @@ Filtered select pair example:
   "is_inline": true
 }
 ```
+- Full sample with hint:
+```json
+{
+  "type": "yesno",
+  "field": "is_archived",
+  "label": "Archived?",
+  "is_inline": false,
+  "help_text": "Stored as 0/1"
+}
+```
 
 #### type: cb
-- Single checkbox input.
+- Template: `/common/form/showform/cb.html`.
+- Options: layout keys plus `attrs_control` (for `data-*`), default checked when `value` is truthy.
+- Common sample:
 ```json
 {
   "type": "cb",
@@ -528,9 +1006,21 @@ Filtered select pair example:
   "label": "Active"
 }
 ```
+- Full sample with helper text:
+```json
+{
+  "type": "cb",
+  "field": "is_checkbox",
+  "label": "Email Opt-in",
+  "attrs_control": "data-noautosave=\"true\"",
+  "help_text": "Posted as 1 when checked"
+}
+```
 
 #### type: date_popup
-- Date picker with calendar popup.
+- Template: `/common/form/showform/date_popup.html`.
+- Options: `required`, `class_control`, `attrs_control` (pass-through to input), plus layout keys.
+- Common sample:
 ```json
 {
   "type": "date_popup",
@@ -538,9 +1028,22 @@ Filtered select pair example:
   "label": "Due Date"
 }
 ```
+- Full sample with custom class and hint:
+```json
+{
+  "type": "date_popup",
+  "field": "expires_on",
+  "label": "Expires On",
+  "class_control": "on-refresh",
+  "attrs_control": "data-noautosave=\"true\"",
+  "help_text": "Uses bootstrap-datepicker"
+}
+```
 
 #### type: date_combo
-- Separate day/month/year combos; useful for locales without date pickers.
+- Template: `/common/form/showform/date_combo.html`.
+- Options: `class_control` (applies to all three selects), plus layout keys.
+- Common sample:
 ```json
 {
   "type": "date_combo",
@@ -548,9 +1051,21 @@ Filtered select pair example:
   "label": "Birth Date"
 }
 ```
+- Full sample with helper text:
+```json
+{
+  "type": "date_combo",
+  "field": "start_on",
+  "label": "Start On",
+  "class_control": "form-select-sm",
+  "help_text": "Converts to a single date on save"
+}
+```
 
 #### type: datetime_popup
-- Date and time picker; supports `default_time` and `conv`.
+- Template: `/common/form/showform/datetime_popup.html`.
+- Options: `default_time` (preselects time part), `class_control`, `attrs_control`, plus layout keys.
+- Common sample:
 ```json
 {
   "type": "datetime_popup",
@@ -559,65 +1074,144 @@ Filtered select pair example:
   "default_time": "09:00"
 }
 ```
+- Full sample with placeholder control:
+```json
+{
+  "type": "datetime_popup",
+  "field": "scheduled_at",
+  "label": "Scheduled At",
+  "default_time": "now",
+  "class_control": "on-refresh",
+  "attrs_control": "data-noautosave=\"true\"",
+  "help_text": "Stores combined date and time"
+}
+```
 
 #### type: time
-- HH:MM time input; combine with `conv` for storage as seconds if needed.
+- Template: `/common/form/showform/time.html`.
+- Options: `min`, `max`, `step`, `required`, `class_control`, `attrs_control`. On save, values are converted to seconds; set `conv: "time_from_seconds"` in the Show configuration to display seconds as `HH:mm:ss`.
+- Common sample:
 ```json
 {
   "type": "time",
   "field": "start_at",
-  "label": "Start Time",
-  "conv": "time_from_seconds"
+  "label": "Start Time"
+}
+```
+- Full sample for second-based storage:
+```json
+{
+  "type": "time",
+  "field": "duration",
+  "label": "Duration",
+  "min": "00:00",
+  "max": "12:00",
+  "step": "00:05",
+  "help_text": "Saved as seconds; pair with conv:\"time_from_seconds\" on Show"
 }
 ```
 
 #### type: att_edit
-- Single attachment picker/uploader; use `att_category` to bucket files and `att_post_prefix` to support multiple upload slots.
+- Template: `/common/form/showform/att.html`.
+- Options: `att_category` (modal filter, defaults to `general`), `att_post_prefix` (hidden input prefix, defaults to field name), `attrs_control`, plus layout keys.
+- Common sample:
 ```json
 {
   "type": "att_edit",
   "field": "photo",
   "label": "Photo",
+  "att_category": "general"
+}
+```
+- Full sample with custom prefix:
+```json
+{
+  "type": "att_edit",
+  "field": "avatar_id",
+  "label": "Avatar",
   "att_category": "photos",
-  "att_post_prefix": "att"
+  "att_post_prefix": "att_photo",
+  "help_text": "Uses Att modal to select/upload"
 }
 ```
 
 #### type: att_links_edit
-- Attach multiple existing files or upload via Att modal.
+- Template: `/common/form/showform/att_links.html`.
+- Options: `att_category` (defaults to `general`), `att_post_prefix` (defaults to `att`), plus layout keys.
+- Common sample:
 ```json
 {
   "type": "att_links_edit",
-  "field": "docs",
-  "label": "Documents",
-  "att_category": "general"
+  "field": "_att_links",
+  "label": "Documents"
+}
+```
+- Full sample with prefixed inputs:
+```json
+{
+  "type": "att_links_edit",
+  "field": "_att_links_images",
+  "label": "Images",
+  "att_category": "images",
+  "att_post_prefix": "att_images",
+  "help_text": "Selected ids are posted under att_images[...]"
 }
 ```
 
 #### type: att_files_edit
-- Direct file upload with progress; supports multiple components via `att_post_prefix` and category filtering.
+- Template: `/common/form/showform/att_files.html`.
+- Options: `att_category` (filter uploads/listing), `att_post_prefix` (defaults to field name), `att_upload_url` (defaults to `/Controller/(SaveAttFiles)/{id}`), `multiple`, `fwentity` (entity code to auto-create in Att), plus layout keys.
+- Common sample:
 ```json
 {
   "type": "att_files_edit",
-  "field": "attachments",
+  "field": "_att_files",
   "label": "Files",
-  "att_category": "photos",
-  "att_post_prefix": "docs",
+  "att_category": "general",
   "multiple": true
+}
+```
+- Full sample with custom endpoint and prefix:
+```json
+{
+  "type": "att_files_edit",
+  "field": "_att_files_docs",
+  "label": "Documents",
+  "att_category": "docs",
+  "att_post_prefix": "att_docs",
+  "att_upload_url": "/Admin/Demos/(SaveAttFiles)/{id}",
+  "fwentity": "demos",
+  "multiple": true,
+  "help_text": "Skips PATCH updates when the post prefix is absent"
 }
 ```
 
 #### type: subtable_edit
-- Editable subtable rows; configure `model`, `save_fields`, `save_fields_checkboxes`, and `required_fields` for validation.
+- Template: `/common/form/showform/subtable.html`.
+- Options: `model` (required), `save_fields` (space-separated fields persisted per row), `save_fields_checkboxes` (checkbox defaults such as `is_active|0`), `required_fields` (per-row validation), plus any model-specific keys like `related_field_name` or `lookup_params`.
+- Common sample:
 ```json
 {
   "type": "subtable_edit",
-  "field": "items",
-  "label": "Items",
+  "field": "demos_items",
+  "label": "Subtable",
   "model": "DemosItems",
   "save_fields": "iname qty",
-  "save_fields_checkboxes": "is_active|0",
-  "required_fields": "iname qty"
+  "save_fields_checkboxes": "is_checkbox|0"
+}
+```
+- Full sample with validation and main-id override:
+```json
+{
+  "type": "subtable_edit",
+  "field": "line_items",
+  "label": "Line Items",
+  "model": "OrdersItems",
+  "related_field_name": "orders_id",
+  "save_fields": "product_id qty price",
+  "save_fields_checkboxes": "is_taxable|0 is_gift|0",
+  "required_fields": "product_id qty price",
+  "help_text": "Rows are validated and saved via OrdersItems model"
 }
 ```
 
