@@ -227,6 +227,13 @@ h1 .badge {
   .sidebar .nav-pills .nav-link.active {
     color: var(--bs-nav-pills-link-active-color) !important; /*fix active nav text color for light mode*/
   }
+  .fw-site-badge {
+    position: absolute;
+    font-size: var(--fw-site-badge-font-size, 0.75rem);
+    opacity: var(--fw-site-badge-opacity, 0.8);
+    top: var(--fw-site-badge-offset-top, 1.6rem);
+    right: var(--fw-site-badge-offset-right, 2rem);
+  }
   .sidebar .nav-header {
     margin-left: -1rem;
     margin-right: -1rem;
