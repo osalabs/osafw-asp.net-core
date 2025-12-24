@@ -22,6 +22,14 @@
     --theme-sidebar-bg: #313a46;
     --theme-shadow: 0px 0px 35px 0px rgba(154, 161, 171, 0.15);
     --theme-btn-shadow: 0 2px 6px rgba(135, 147, 255, 0.4);
+    --fw-card-bg: var(--fw-pane-bg);
+    --fw-card-border: 0;
+    --fw-card-radius: .25rem;
+    --fw-card-shadow: var(--theme-shadow);
+    --fw-card-padding: 1.5rem 1.5rem 0.5rem 1.5rem;
+    --fw-dashboard-card-radius: .25rem;
+    --fw-dashboard-card-shadow: var(--theme-shadow);
+    --fw-dashboard-card-padding: 1.5rem;
 }
 
 [data-bs-theme=dark] {
@@ -35,6 +43,14 @@
     --bs-nav-pills-link-active-bg: var(--theme-color);
     --bs-nav-pills-link-active-color: #fff;
     --theme-font-family: "Nunito",sans-serif;
+    --fw-card-bg: var(--fw-pane-bg);
+    --fw-card-border: 0;
+    --fw-card-radius: .25rem;
+    --fw-card-shadow: var(--theme-shadow);
+    --fw-card-padding: 1.5rem 1.5rem 0.5rem 1.5rem;
+    --fw-dashboard-card-radius: .25rem;
+    --fw-dashboard-card-shadow: var(--theme-shadow);
+    --fw-dashboard-card-padding: 1.5rem;
 }
 
 body {
@@ -60,14 +76,6 @@ h1 {
 
 h3, .h3 {
     color: var(--bs-emphasis-color);
-}
-
-.fw-card {
-    background-color: var(--fw-pane-bg);
-    border: 0px !important;
-    border-radius: .25rem !important;
-    padding: 1.5rem 1.5rem 0.5rem 1.5rem !important;
-    box-shadow: var(--theme-shadow);
 }
 
 .card {

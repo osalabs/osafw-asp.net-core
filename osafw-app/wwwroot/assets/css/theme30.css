@@ -16,6 +16,16 @@
     --bs-body-font-family: var(--theme-font-family);
     --bs-body-color: var(--theme-body-color);
     --bs-link-color: var(--theme-color);
+    --fw-card-bg: var(--fw-pane-bg);
+    --fw-card-border: none;
+    --fw-card-radius: .375rem;
+    --fw-card-shadow: 0 7px 14px 0 rgba(65, 69, 88, 0.1), 0 3px 6px 0 rgba(0, 0, 0, 0.07);
+    --fw-card-padding: 1rem 1rem 0.25rem 1rem;
+    --fw-dashboard-card-radius: .375rem;
+    --fw-dashboard-card-shadow: 0 7px 14px 0 rgba(65, 69, 88, 0.1), 0 3px 6px 0 rgba(0, 0, 0, 0.07);
+    --fw-dashboard-card-padding: 1rem;
+    --fw-page-padding-y: 0.5rem;
+    --fw-page-padding-x: 0;
 }
 
 [data-bs-theme=dark] {
@@ -30,6 +40,16 @@
     --bs-body-font-family: var(--theme-font-family);
     --bs-body-color: var(--theme-body-color);
     --bs-link-color: var(--theme-color);
+    --fw-card-bg: var(--fw-pane-bg);
+    --fw-card-border: none;
+    --fw-card-radius: .375rem;
+    --fw-card-shadow: 0 7px 14px 0 rgba(65, 69, 88, 0.1), 0 3px 6px 0 rgba(0, 0, 0, 0.07);
+    --fw-card-padding: 1rem 1rem 0.25rem 1rem;
+    --fw-dashboard-card-radius: .375rem;
+    --fw-dashboard-card-shadow: 0 7px 14px 0 rgba(65, 69, 88, 0.1), 0 3px 6px 0 rgba(0, 0, 0, 0.07);
+    --fw-dashboard-card-padding: 1rem;
+    --fw-page-padding-y: 0.5rem;
+    --fw-page-padding-x: 0;
 }
 
 input, button, select, optgroup, textarea, label, .alert, .badgeX, .blockquote-footer, .btn, [data-list] .page, .tox .tox-menu__footer .tox-button:last-child, .tox .tox-dialog__footer .tox-button:last-child, .tox .tox-menu__footer .tox-button--secondary, .tox .tox-dialog__footer .tox-button--secondary, .navbar, .sidebar, .pagination, .valid-feedback, .invalid-feedback {
@@ -60,11 +80,6 @@ input, button, select, optgroup, textarea, label, .alert, .badgeX, .blockquote-f
     font-size: 0.875rem;
 }
 
-main {
-    padding-top: 0.5rem;
-    padding-bottom: 0.5rem;
-}
-
 h1, h3, .h3 {
     font-size: 1.8rem;
     font-weight: 500;
@@ -82,19 +97,6 @@ h3, .h3 {
 
 body {
     color: var(--theme-body-color);
-}
-
-.fw-card {
-    background-color: var(--fw-pane-bg);
-    border-radius: .375rem;
-    padding: 1rem 1rem 0.25rem 1rem;
-    box-shadow: 0 7px 14px 0 rgba(65, 69, 88, 0.1), 0 3px 6px 0 rgba(0, 0, 0, 0.07);
-}
-
-#FEdit.fw-card,
-#FView.fw-card,
-#FDel.fw-card {
-    border: none;
 }
 
 .sidebar > div {
