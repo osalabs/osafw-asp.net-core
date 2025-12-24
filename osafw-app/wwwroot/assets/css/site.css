@@ -25,6 +25,7 @@
     --fw-dashboard-card-radius: var(--bs-card-border-radius, var(--bs-border-radius));
     --fw-dashboard-card-shadow: var(--bs-box-shadow, none);
     --fw-dashboard-card-padding: var(--bs-card-spacer-y, var(--fw-spacer)) var(--bs-card-spacer-x, var(--fw-spacer));
+    --fw-dashboard-card-margin: calc(var(--fw-spacer)*1.5);
     --fw-page-padding-y: 0;
     --fw-page-padding-x: 0;
     --fw-radius-lg: 20px;
@@ -182,11 +183,39 @@ h1 .badge {
 .dashboard-card {
     border-radius: var(--fw-dashboard-card-radius);
     box-shadow: var(--fw-dashboard-card-shadow);
+    margin-bottom: var(--fw-dashboard-card-margin);
+    position: relative;
+    overflow: hidden;
 }
 
     .dashboard-card .card-body {
         padding: var(--fw-dashboard-card-padding, var(--bs-card-spacer-y) var(--bs-card-spacer-x));
+        z-index: 1;
     }
+
+    .dashboard-card .svg-container {
+        position: absolute;
+        top: -24%;
+        right: -40%;
+        width: 240px;
+        height: 120%;
+        z-index: 0;
+        opacity: 0.3;
+        font-size: 137px;
+    }
+
+    .dashboard-card .card-content {
+        flex-grow: 1;
+    }
+
+    .dashboard-card .chart-container {
+        position: relative;
+        width: 100%;
+    }
+
+        .dashboard-card .chart-container canvas {
+            height: 250px;
+        }
 
 /****** layout */
 .navbar-brand {
