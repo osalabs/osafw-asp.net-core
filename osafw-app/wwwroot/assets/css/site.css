@@ -20,7 +20,7 @@
     --fw-card-margin-bottom: var(--fw-spacer);
     --fw-page-header-gap: var(--fw-spacer05);
     --fw-page-header-mb: var(--fw-spacer);
-    --fw-page-header-border: var(--bs-border-width) var(--bs-border-style) var(--bs-border-color);
+    --fw-page-header-border: none;
     --fw-page-header-title-color: inherit;
     --fw-dashboard-card-radius: var(--bs-card-border-radius, var(--bs-border-radius));
     --fw-dashboard-card-shadow: none;
