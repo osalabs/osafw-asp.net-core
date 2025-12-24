@@ -10,6 +10,7 @@
     "id": "ID",
     "email": "Email",
     "access_level": "Access Level",
+    "iname": "Full Name",
     "fname": "First Name",
     "lname": "Last Name",
     "title": "Title",

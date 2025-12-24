@@ -31,7 +31,7 @@
                @click.prevent="onAddNew"
                :disabled="fwStore.is_readonly"><i class="bi bi-plus-lg"></i> `Add New`</a>
             <a v-if="current_id"
-               class="btn btn-default"
+               class="btn btn-primary"
                href="#"
                @click.prevent="onEdit"
                :disabled="fwStore.is_readonly"><i class="bi bi-pencil-fill"></i> `Edit`</a>
@@ -40,7 +40,7 @@
         <!--TODO /common/form/btn_userlists if="is_userlists"-->
 
         <a v-if="item.status!=127"
-           class="btn btn-default float-end ms-1"
+           class="btn btn-danger float-end ms-1"
            href="#"
            @click.prevent="onDelete"><span class="text-danger"><i class="bi bi-x-circle-fill"></i></span> `Delete`</a>
         <template v-if="item.status==127">
