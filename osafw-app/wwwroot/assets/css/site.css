@@ -149,13 +149,16 @@ h1 .badge {
   }
 
 /****** layout */
+.navbar-brand {
+    position: relative;
+}
 .sidebar {
-  width: var(--fw-sidebar-width);
-  padding: 0;
-  background-color: rgba(var(--bs-tertiary-bg-rgb),var(--bs-bg-opacity));
-  color: #000;
-  position: relative;
-  overflow-y: auto;
+    width: var(--fw-sidebar-width);
+    padding: 0;
+    background-color: rgba(var(--bs-tertiary-bg-rgb),var(--bs-bg-opacity));
+    color: #000;
+    position: relative;
+    overflow-y: auto;
 }
 @media (min-width: 768px) {
   .sidebar {
