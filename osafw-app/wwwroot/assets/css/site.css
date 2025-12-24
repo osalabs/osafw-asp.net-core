@@ -24,7 +24,7 @@
     --fw-page-header-title-color: inherit;
     --fw-dashboard-card-radius: var(--bs-card-border-radius, var(--bs-border-radius));
     --fw-dashboard-card-shadow: var(--bs-box-shadow, none);
-    --fw-dashboard-card-padding: var(--bs-card-spacer-y) var(--bs-card-spacer-x);
+    --fw-dashboard-card-padding: var(--bs-card-spacer-y, var(--fw-spacer)) var(--bs-card-spacer-x, var(--fw-spacer));
     --fw-page-padding-y: 0;
     --fw-page-padding-x: 0;
     --fw-radius-lg: 20px;
@@ -185,7 +185,7 @@ h1 .badge {
 }
 
     .dashboard-card .card-body {
-        padding: var(--fw-dashboard-card-padding);
+        padding: var(--fw-dashboard-card-padding, var(--bs-card-spacer-y) var(--bs-card-spacer-x));
     }
 
 /****** layout */
