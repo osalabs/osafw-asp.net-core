@@ -342,12 +342,12 @@ main {
     gap: var(--fw-spacer05);
 }
 
-.page-header-title-row .page-title {
+.page-header-row-title .page-title {
     margin: 0;
     color: var(--fw-page-header-title-color);
 }
 
-.page-header-nav-row .page-header-record-nav {
+.page-header-row-nav .page-header-record-nav {
     margin-left: auto;
 }
 
@@ -355,30 +355,32 @@ main {
     margin-left: auto;
 }
 
-.page-header-actions-row .page-header-actions {
+.page-header-row-actions .page-header-actions {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: var(--fw-spacer05);
 }
 
-.page-header-actions-row .page-header-actions-end {
+.page-header-row-actions .page-header-actions-extra {
     margin-left: auto;
 }
 
-.page-header-actions-row .btn-std {
+.page-header-row-title .badge {
+    vertical-align: middle;
+}
+
+/* TODO MIGRATE: compatibility while legacy button blocks remain inside headers. Remove after all screens are updated. */
+.page-header-row-actions .btn-std {
     margin-bottom: 0;
 }
 
-.page-header-actions-row .float-end {
+.page-header-row-actions .float-end,
+.page-header-row-nav .float-end {
     float: none !important;
 }
 
-.page-header-nav-row .float-end {
-    float: none !important;
-}
-
-.page-header-actions-row .form-saved-status-global {
+.page-header-row-actions .form-saved-status-global {
     display: none;
 }
 
