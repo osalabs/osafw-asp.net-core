@@ -28,10 +28,9 @@
     --fw-page-padding-y: 0;
     --fw-page-padding-x: 0;
     --fw-radius-lg: 20px;
-    --fw-color-secondary: #6c757d;
+    --fw-color-secondary: var(--bs-secondary-color, #6c757d);
     --fw-field-multi-max-height: calc(var(--bs-body-font-size)*13);
     --fw-file-drop-border: 2px dashed #ccc;
-    --fw-file-drop-padding: 20px;
 }
 
 [data-bs-theme=dark] {
@@ -122,7 +121,7 @@ a[disabled] {
     border: var(--fw-file-drop-border);
     border-radius: var(--fw-radius-lg);
     position: relative;
-    padding: var(--fw-file-drop-padding);
+    padding: calc(var(--fw-spacer)*1.25);
     text-align: center;
 }
 
