@@ -19,7 +19,7 @@
     --fw-card-padding: var(--fw-spacer) var(--fw-spacer) 0 var(--fw-spacer);
     --fw-card-margin-bottom: var(--fw-spacer);
     --fw-page-header-gap: var(--fw-spacer05);
-    --fw-page-header-mb: var(--fw-spacer);
+    --fw-page-header-mb: var(--fw-spacer05);
     --fw-page-header-border: none;
     --fw-page-header-title-color: inherit;
     --fw-dashboard-card-radius: var(--bs-card-border-radius, var(--bs-border-radius));
@@ -349,6 +349,11 @@ main {
 
 .page-header-row-nav .page-header-record-nav {
     margin-left: auto;
+}
+
+.page-header-row-nav .btn-link {
+    padding-top: 0;
+    padding-bottom: 0;
 }
 
 .page-header-meta {
