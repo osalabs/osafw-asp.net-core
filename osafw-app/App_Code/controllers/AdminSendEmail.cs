@@ -46,7 +46,6 @@ public class AdminSendEmailController : FwAdminController
     {
         var ps = base.ShowFormAction(id)!;
         ps["test_email"] = fw.Session("login"); // in test mode send to current user
-        ps["is_hide_page_header_actions_std"] = true;
         return ps;
     }
 

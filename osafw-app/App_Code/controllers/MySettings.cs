@@ -47,7 +47,6 @@ public class MySettingsController : FwController
 
         ps["id"] = id;
         ps["i"] = item;
-        ps["is_hide_page_header_actions_std"] = true;
 
         return ps;
     }

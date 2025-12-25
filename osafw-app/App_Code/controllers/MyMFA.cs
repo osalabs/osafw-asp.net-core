@@ -49,7 +49,6 @@ public class MyMFAController : FwController
 
         FwDict ps = [];
         ps["qr_code"] = model.generateMFAQRCode(secret, user["email"], fw.config("SITE_NAME").toStr());
-        ps["is_hide_page_header_actions_std"] = true;
         return ps;
     }
 

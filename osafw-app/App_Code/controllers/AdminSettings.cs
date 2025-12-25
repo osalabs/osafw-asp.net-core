@@ -40,13 +40,6 @@ public class AdminSettingsController : FwAdminController
         }
     }
 
-    public override FwDict IndexAction()
-    {
-        var ps = base.IndexAction() ?? [];
-        ps["is_hide_page_header_actions_std"] = true;
-        return ps;
-    }
-
     public override FwDict ShowFormAction(int id = 0)
     {
         // set new form defaults here if any
@@ -59,7 +52,6 @@ public class AdminSettingsController : FwAdminController
         // ps("select_options_parent_id") = FormUtils.select_options_db(db.array("select id, iname from " & model.table_name & " where parent_id=0 and status=0 order by iname"), item("parent_id"))
         // ps("multi_datarow") = fw.model(Of DemoDicts).get_multi_list(item("dict_link_multi"))
 
-        ps["is_hide_page_header_actions_std"] = true;
         return ps;
     }
 

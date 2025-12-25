@@ -55,13 +55,6 @@ public class MyFiltersController : FwAdminController
         }
     }
 
-    public override FwDict setPS(FwDict? ps = null)
-    {
-        var result = base.setPS(ps);
-        result["is_hide_page_header_actions_std"] = true;
-        return result;
-    }
-
     public override FwDict ShowFormAction(int id = 0)
     {
         form_new_defaults = new() { ["icode"] = related_id };

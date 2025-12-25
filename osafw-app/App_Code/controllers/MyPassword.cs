@@ -54,7 +54,6 @@ public class MyPasswordController : FwController
 
         ps["id"] = id;
         ps["i"] = item;
-        ps["is_hide_page_header_actions_std"] = true;
         return ps;
     }
 

@@ -60,7 +60,6 @@ public class MyViewsController : FwAdminController
     {
         var result = base.setPS(ps);
         result["select_icodes"] = model.listSelectIcodes();
-        result["is_hide_page_header_actions_std"] = true;
         return result;
     }
 
