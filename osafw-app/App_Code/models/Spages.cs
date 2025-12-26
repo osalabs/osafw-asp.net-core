@@ -277,7 +277,6 @@ public class Spages : FwModel<Spages.Row>
 
     public bool isPublished(FwDict item)
     {
-        logger("PUB TIME:", item["pub_time"].toDate());
         return item["status"].toInt() == FwModel.STATUS_ACTIVE && (item["pub_time"] == null || item["pub_time"].toDate() <= DateTime.UtcNow);
     }
 
