@@ -1,6 +1,7 @@
+<!-- page header with all Custom slots -->
 <div class="page-header">
   <div class="page-header-row page-header-row-nav d-flex flex-wrap align-items-center gap-2">
-    <div class="page-header-breadcrumbs">
+    <div class="page-header-breadcrumbs">      
       <~page_header_breadcrumbs>
     </div>
     <div class="page-header-record-nav ms-auto">
@@ -10,17 +11,16 @@
 
   <div class="page-header-row page-header-row-title d-flex flex-wrap align-items-center gap-2">
     <div class="page-header-title flex-grow-1">
-      <h1 class="page-title mb-0">
-        <~title> <span class="badge badge-outline-secondary rounded-pill"><~count></span>
-      </h1>
+      <h1 class="page-title mb-0"><~title></h1>
     </div>
     <div class="page-header-meta d-flex flex-wrap align-items-center gap-2">
       <~page_header_meta>
+      <span class="form-saved-status-global"></span>
     </div>
   </div>
 
   <div class="page-header-row page-header-row-actions d-flex flex-wrap align-items-center gap-2">
-    <div class="page-header-actions d-flex flex-wrap align-items-center gap-2">      
+    <div class="page-header-actions d-flex flex-wrap align-items-center gap-2">
       <~page_header_actions>
     </div>
     <div class="page-header-actions page-header-actions-extra d-flex flex-wrap align-items-center gap-2 ms-auto">

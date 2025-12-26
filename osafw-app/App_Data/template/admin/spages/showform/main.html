@@ -1,30 +1,3 @@
-<~page_header_breadcrumbs inline>
-  <nav class="d-print-none">
-    <a href="<~../url>"><~../index/title></a> <span class="text-muted">/</span>
-    <~parents repeat inline>
-      <a href="<~../url>/<~id>/edit"><~iname default="noname"></a> <span class="text-muted">/</span>
-    </~parents>
-    <span class="text-muted"><~i[iname]></span>
-  </nav>
-</~page_header_breadcrumbs>
-
-<~page_header_actions inline>
-  <div class="btn-group">
-    <a class="btn btn-default <~/common/disabledcl unless="i[parent_id]">" href="<~../url>/<~i[parent_id]>/edit"><i class="bi bi-journal-arrow-up"></i> `Up`</a>
-    <~add_sub if="id" inline>
-      <~add_sub2 unless="i[is_home]" inline>
-        <a class="btn btn-default" href="<~../url>/new?parent_id=<~id>" <~/common/disabled if="is_readonly">><i class="bi bi-file-earmark-plus"></i><span class="d-none d-lg-inline"> `Add Sub-Page`</span><span class="d-inline d-lg-none"> `Sub`</span></a>
-      </~add_sub2>
-    </~add_sub>
-  </div>
-</~page_header_actions>
-
-<~page_header_actions_right inline>
-  <~btn_preview if="id" inline>
-    <a href="<~full_url>" target="_blank" class="btn btn-outline-secondary" title="View"><i class="bi bi-box-arrow-up-right"></i><span class="d-none d-lg-inline"> `Preview`</span></a>
-  </~btn_preview>
-</~page_header_actions_right>
-
-<~/common/form/page_header_edit>
+<~/common/form/page_header_custom>
 
 <~form>
