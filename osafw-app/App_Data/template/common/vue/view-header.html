@@ -40,7 +40,7 @@
         <!--TODO /common/form/btn_userlists if="is_userlists"-->
 
         <a v-if="item.status!=127"
-           class="btn btn-danger float-end ms-1"
+           class="btn btn-default float-end ms-1"
            href="#"
            @click.prevent="onDelete"><span class="text-danger"><i class="bi bi-x-circle-fill"></i></span> `Delete`</a>
         <template v-if="item.status==127">
