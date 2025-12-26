@@ -40,12 +40,12 @@
                        class="btn btn-default"
                        href="#"
                        @click.prevent="onAddNew"
-                       role="button"><i class="bi bi-plus-lg"></i> `Add New`</a>
+                       :disabled="fwStore.is_readonly"><i class="bi bi-plus-lg"></i> `Add New`</a>
                     <a v-if="current_id"
                        class="btn btn-primary"
                        href="#"
                        @click.prevent="onEdit"
-                       role="button"><i class="bi bi-pencil-fill"></i> `Edit`</a>
+                       :disabled="fwStore.is_readonly"><i class="bi bi-pencil-fill"></i> `Edit`</a>
                     <slot name="group"></slot>
                 </div>
                 <!--TODO /common/form/btn_userlists if="is_userlists"-->
