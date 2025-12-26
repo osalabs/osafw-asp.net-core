@@ -32,25 +32,6 @@
     --fw-color-secondary: var(--bs-secondary-color, #6c757d);
     --fw-field-multi-max-height: calc(var(--bs-body-font-size)*13);
     --fw-file-drop-border: 2px dashed #ccc;
-    --fw-autosave-padding: 0.25rem 0.55rem;
-    --fw-autosave-gap: 0.35rem;
-    --fw-autosave-radius: var(--bs-border-radius-pill);
-    --fw-autosave-font-size: 0.875rem;
-    --fw-autosave-enabled-bg: transparent;
-    --fw-autosave-enabled-color: var(--fw-color-secondary);
-    --fw-autosave-enabled-border: var(--bs-border-color);
-    --fw-autosave-dirty-bg: var(--bs-warning-bg-subtle);
-    --fw-autosave-dirty-color: var(--bs-warning-text-emphasis);
-    --fw-autosave-dirty-border: var(--bs-warning-border-subtle, var(--bs-border-color));
-    --fw-autosave-saving-bg: var(--bs-info-bg-subtle);
-    --fw-autosave-saving-color: var(--bs-info-text, var(--bs-info-text-emphasis, var(--bs-primary)));
-    --fw-autosave-saving-border: var(--bs-info-border-subtle, var(--bs-border-color));
-    --fw-autosave-saved-bg: var(--bs-success-bg-subtle);
-    --fw-autosave-saved-color: var(--bs-success-text-emphasis);
-    --fw-autosave-saved-border: var(--bs-success-border-subtle, var(--bs-border-color));
-    --fw-autosave-error-bg: var(--bs-danger-bg-subtle);
-    --fw-autosave-error-color: var(--bs-danger-text-emphasis);
-    --fw-autosave-error-border: var(--bs-danger-border-subtle, var(--bs-border-color));
 }
 
 [data-bs-theme=dark] {
@@ -167,42 +148,10 @@ a[disabled] {
     align-items: center;
 }
 
-.fw-autosave-badge {
+.fw-autosave-status .fw-autosave-badge {
     display: inline-flex;
     align-items: center;
-    gap: var(--fw-autosave-gap);
-    padding: var(--fw-autosave-padding);
-    border-radius: var(--fw-autosave-radius);
-    border: 1px solid var(--fw-autosave-enabled-border);
-    background-color: var(--fw-autosave-enabled-bg);
-    color: var(--fw-autosave-enabled-color);
-    font-size: var(--fw-autosave-font-size);
-    line-height: 1.2;
-    white-space: nowrap;
-}
-
-.fw-autosave-badge-dirty {
-    background-color: var(--fw-autosave-dirty-bg);
-    color: var(--fw-autosave-dirty-color);
-    border-color: var(--fw-autosave-dirty-border);
-}
-
-.fw-autosave-badge-saving {
-    background-color: var(--fw-autosave-saving-bg);
-    color: var(--fw-autosave-saving-color);
-    border-color: var(--fw-autosave-saving-border);
-}
-
-.fw-autosave-badge-saved {
-    background-color: var(--fw-autosave-saved-bg);
-    color: var(--fw-autosave-saved-color);
-    border-color: var(--fw-autosave-saved-border);
-}
-
-.fw-autosave-badge-error {
-    background-color: var(--fw-autosave-error-bg);
-    color: var(--fw-autosave-error-color);
-    border-color: var(--fw-autosave-error-border);
+    gap: 0.35rem;
 }
 
 .fw-autosave-status-global {

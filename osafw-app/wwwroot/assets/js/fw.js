@@ -19,11 +19,11 @@ window.fw={
   MSG_DELETE_CONFIRM: '<strong>ARE YOU SURE</strong> to delete this item?',
 
   AUTOSAVE_STATUS_STATES: {
-    enabled: { text: 'autosave enabled', badgeClass: 'fw-autosave-badge-enabled' },
-    dirty: { text: 'unsaved changes', badgeClass: 'fw-autosave-badge-dirty' },
-    saving: { text: 'saving\u2026', badgeClass: 'fw-autosave-badge-saving', spinner: true },
-    saved: { text: 'saved', badgeClass: 'fw-autosave-badge-saved' },
-    error: { text: 'autosave error', badgeClass: 'fw-autosave-badge-error' },
+    enabled: { text: 'autosave enabled', badgeClass: 'fw-autosave-badge badge rounded-pill text-bg-secondary' },
+    dirty: { text: 'unsaved changes', badgeClass: 'fw-autosave-badge badge rounded-pill text-bg-warning' },
+    saving: { text: 'saving\u2026', badgeClass: 'fw-autosave-badge badge rounded-pill text-bg-info', spinner: true },
+    saved: { text: 'saved', badgeClass: 'fw-autosave-badge badge rounded-pill text-bg-success' },
+    error: { text: 'autosave error', badgeClass: 'fw-autosave-badge badge rounded-pill text-bg-danger' },
   },
   AUTOSAVE_STATUS_MIN_UPDATE_MS: 300,
 

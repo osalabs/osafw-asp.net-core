@@ -1,7 +1,7 @@
 ## What changed
 - Added a reusable autosave status partial and applied it to all form headers/actions (including Vue panes) using the unified fw-autosave-status classes.
 - Simplified fw.js autosave status rendering to use the shared spinner markup, badge titles for timestamps, and throttled updates.
-- Styled the autosave badge via themeable CSS variables while removing unused legacy status styling.
+- Simplified autosave badge styling to lean on Bootstrap badges with minimal custom CSS.
 
 ## Commands that worked (build/test/run)
 - Not run (not requested)
