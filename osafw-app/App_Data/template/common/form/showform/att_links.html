@@ -14,9 +14,11 @@
       </div>
     </div>
   </~att_links>
-  <div class="col" <~/common/display_none if="att_links">>
-    <div class="fw-empty-state text-muted small text-center">`No attachments yet`</div>
-  </div>
+  <~empty unless="att_links" inline>
+    <div class="col">
+      <div class="fw-empty-state">`No attachments yet`</div>
+    </div>
+  </~empty>
   <div class="col tpl d-none">
     <div class="card att-info">
       <input type="hidden" name="<~att_post_prefix default="att">" value="1">

@@ -15,7 +15,9 @@
         <button type="button" class="btn btn-default on-remove-att" title="`Remove`"><i class="bi bi-x-circle"></i></button>
       </div>
     </div>
-    <div class="fw-empty-state text-muted small text-center mt-2" <~/common/display_none if="att">>`No attachment selected`</div>
+    <~empty unless="att" inline>
+      <div class="fw-empty-state mt-2">`No attachment selected`</div>
+    </~empty>
   </div>
 </div>
 
@@ -38,9 +40,11 @@
           </div>
         </div>
       </~att_links>
-      <div class="col" <~/common/display_none if="att_links">>
-        <div class="fw-empty-state text-muted small text-center">`No attachments yet`</div>
-      </div>
+      <~empty unless="att_links" inline>
+        <div class="col">
+          <div class="fw-empty-state">`No attachments yet`</div>
+        </div>
+      </~empty>
       <div class="col tpl d-none">
         <div class="card att-info">
           <input type="hidden" name="" value="1">

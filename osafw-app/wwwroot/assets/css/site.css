@@ -142,6 +142,7 @@ a[disabled] {
     border: var(--bs-border-width) dashed var(--bs-border-color);
     border-radius: var(--bs-border-radius);
     font-size: 0.95rem;
+    text-align: center;
 }
 
 .badge-outline-secondary {

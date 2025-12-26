@@ -4,5 +4,7 @@
       <span class="flex-grow-1 text-truncate"><a href="<~/att/url>/<~icode>" target="_blank"><~iname></a> (<~fsize bytes>)</span>
     </div>
   </~att_files>
-  <div class="fw-empty-state text-muted small" <~/common/display_none if="att_files">>`No attachments`</div>
+  <~empty unless="att_files" inline>
+    <div class="fw-empty-state">`No attachments`</div>
+  </~empty>
 </div>

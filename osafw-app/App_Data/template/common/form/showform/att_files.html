@@ -22,7 +22,9 @@
       <input type="hidden" name="<~PARSEPAGE.PARENT[att_post_prefix]>[<~id>]" value="1">
     </div>
   </~att_files>
-  <div class="fw-empty-state text-muted small" <~/common/display_none if="att_files">>`No attachments yet`</div>
+  <~empty unless="att_files" inline>
+    <div class="fw-empty-state">`No attachments yet`</div>
+  </~empty>
   <div class="att-item d-flex align-items-center tpl d-none">
     <~/common/dot><span class="text-truncate"><a href="#" target="_blank" class="att-iname"><~iname></a> <span class="att-size text-muted ms-2"></span></span>
     <div class="progress flex-grow-1 mx-2"><div class="progress-bar progress-bar-striped progress-bar-animated" style="width:0%"></div></div>

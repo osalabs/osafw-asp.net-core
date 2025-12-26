@@ -11,7 +11,9 @@
       </div>
     </div>
   </~att_links>
-  <div class="col" <~/common/display_none if="att_links">>
-    <div class="fw-empty-state text-muted small text-center">`No attachments`</div>
-  </div>
+  <~empty unless="att_links" inline>
+    <div class="col">
+      <div class="fw-empty-state">`No attachments`</div>
+    </div>
+  </~empty>
 </div>
