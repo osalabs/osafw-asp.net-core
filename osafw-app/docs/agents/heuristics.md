@@ -1,12 +1,12 @@
 # Heuristics for osafw-asp.net-core
 
-Updated: 2025-10-08
+Updated: 2025-12-26
 
-- Prefer adding features via controllers/models over modifying core `fw` unless it’s a cross-cutting concern.
+- Prefer adding features via controllers/models over modifying core `fw` unless itâ€™s a cross-cutting concern.
 - For CRUD screens, first try `FwDynamicController` or `FwVueController` with `config.json` before writing bespoke UI.
 - Keep controller actions thin: parse input, call model, prepare `ps`, set `ps["_json"]` when returning JSON.
 - Use `FormUtils.filter` and `filterCheckboxes` for whitelisting fields and handling checkboxes; avoid manual parsing.
-- Use `Fw.model<T>()` singletons; don’t new models directly except through `fw.model("Name")`.
+- Use `Fw.model<T>()` singletons; donâ€™t new models directly except through `fw.model("Name")`.
 - When returning files, use `fw.fileResponse` to set headers correctly.
 - Use `fw.routeRedirect` to chain actions to avoid duplicate logic and keep responses consistent.
 - For templates, place overrides under `/App_Data/template/<controller>/<action>`; keep common bits in `/common`.
@@ -17,3 +17,4 @@ Updated: 2025-10-08
 - When adding routes or prefixes, update `FwConfig.route_prefixes` and test `FW.getRoute()`.
 - For migrations, add SQL scripts under `App_Data/sql/updates` and register via `fwupdates` flow.
 - Log at appropriate level; avoid verbose logs on production (`log_level` INFO).
+- In Vue templates, bind disabled states to buttons (not anchors) to avoid `disabled="false"` being rendered and to honor read-only flags.

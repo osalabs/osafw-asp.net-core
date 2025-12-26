@@ -28,37 +28,41 @@
             <div class="page-header-actions d-flex flex-wrap align-items-center gap-2">
                 <slot name="beforeButtons"></slot>
 
-                <a v-if="fwStore.return_url"
-                   class="btn btn-default"
-                   :href="fwStore.return_url"><i class="bi bi-arrow-left-circle"></i> `Return Back`</a>
-                <a v-else
-                   class="btn btn-default"
-                   href="#"
-                   @click.prevent="onCancelForm"><i class="bi bi-arrow-left-circle"></i> `Back to List`</a>
+                <div class="btn-group">
+                    <a v-if="fwStore.return_url"
+                       class="btn btn-default"
+                       :href="fwStore.return_url"><i class="bi bi-arrow-left-circle"></i> `Return Back`</a>
+                    <a v-else
+                       class="btn btn-default"
+                       href="#"
+                       @click.prevent="onCancelForm"><i class="bi bi-arrow-left-circle"></i> `Back to List`</a>
 
-                <div class="btn-group" v-if="uioptions.btnAddNew || $slots.group">
-                    <a v-if="uioptions.btnAddNew"
-                       class="btn btn-default"
-                       href="#"
-                       @click.prevent="onAddNew"
-                       :disabled="fwStore.is_readonly"><i class="bi bi-plus-lg"></i> `Add New`</a>
-                    <a v-if="current_id"
-                       class="btn btn-default"
-                       href="#"
-                       @click.prevent="onView"><i class="bi bi-eye"></i> `View`</a>
-                    <slot name="group"></slot>
+                    <button v-if="uioptions.btnAddNew"
+                            type="button"
+                            class="btn btn-default"
+                            @click="onAddNew"
+                            :disabled="fwStore.is_readonly"><i class="bi bi-plus-lg"></i> `Add New`</button>
                 </div>
 
-                <template v-if="!current_id">
-                    <button type="button" class="btn btn-primary" :disabled="fwStore.is_readonly" @click="saveChanges">`Save`</button>
-                    <button type="button" class="btn btn-secondary" :disabled="fwStore.is_readonly" @click="saveChanges('New')">`Save and Add New`</button>
-                    <button type="button" class="btn btn-default" @click="onCancelForm">`Cancel`</button>
-                </template>
+                <button v-if="current_id"
+                        type="button"
+                        class="btn btn-default"
+                        @click="onView"><i class="bi bi-eye"></i> `View`</button>
+
+                <div class="btn-group" v-if="$slots.group">
+                    <slot name="group"></slot>
+                </div>
 
                 <slot></slot>
             </div>
 
             <div class="page-header-actions page-header-actions-extra d-flex flex-wrap align-items-center gap-2 ms-auto">
+                <span class="form-saved-status-global"></span>
+                <template v-if="!current_id">
+                    <button type="button" class="btn btn-primary" :disabled="fwStore.is_readonly" @click="saveChanges">`Save`</button>
+                    <button type="button" class="btn btn-secondary" :disabled="fwStore.is_readonly" @click="saveChanges('New')">`Save and Add New`</button>
+                    <button type="button" class="btn btn-default" @click="onCancelForm">`Cancel`</button>
+                </template>
                 <slot name="actions-right"></slot>
             </div>
         </div>

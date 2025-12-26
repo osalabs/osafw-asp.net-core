@@ -1,9 +1,9 @@
 <~status_normal ifne="i[status]" value="127" inline>
- <a class="btn btn-default float-end ms-1" href="<~../url>/<~id>/delete?return_url=<~GLOBAL[request_url] urlencode><~/common/list/relid>"><span class="text-danger"><i class="bi bi-x-circle-fill"></i></span> `Delete`</a>
+ <a class="btn btn-default" href="<~../url>/<~id>/delete?return_url=<~GLOBAL[request_url] urlencode><~/common/list/relid>"><span class="text-danger"><i class="bi bi-x-circle-fill"></i></span> `Delete`</a>
 </~status_normal>
 <~status_deleted ifeq="i[status]" value="127" inline>
  <~perm_delete ifge="SESSION[access_level]" value="100" inline>
-   <a class="btn btn-danger float-end ms-1" href="<~../url>/<~id>/delete?return_url=<~GLOBAL[request_url] urlencode><~/common/list/relid>"><i class="bi bi-x-square-fill"></i> `Permanent Delete`</a>
+   <a class="btn btn-danger" href="<~../url>/<~id>/delete?return_url=<~GLOBAL[request_url] urlencode><~/common/list/relid>"><i class="bi bi-x-square-fill"></i> `Permanent Delete`</a>
  </~perm_delete>
- <a class="btn btn-default float-end ms-1" href="<~../url>/(RestoreDeleted)/<~id>?XSS=<~SESSION[XSS]><~/common/list/relid>"><span class="text-success"><i class="bi bi-check-circle-fill"></i></span> `Restore Deleted`</a>
+ <a class="btn btn-default" href="<~../url>/(RestoreDeleted)/<~id>?XSS=<~SESSION[XSS]><~/common/list/relid>"><span class="text-success"><i class="bi bi-check-circle-fill"></i></span> `Restore Deleted`</a>
 </~status_deleted>
