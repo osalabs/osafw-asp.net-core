@@ -1,0 +1,35 @@
+<div class="page-header">
+  <div class="page-header-row page-header-row-nav d-flex flex-wrap align-items-center gap-2 d-print-none">
+    <div class="page-header-breadcrumbs">
+      <~/common/form/breadcrumbs>
+      <~page_header_breadcrumbs>
+    </div>
+    <div class="page-header-record-nav ms-auto d-flex align-items-center gap-2">
+      <~/common/form/prev_next_edit if="id">
+    </div>
+  </div>
+
+  <div class="page-header-row page-header-row-title d-flex flex-wrap align-items-center gap-2">
+    <div class="page-header-title flex-grow-1">
+      <h1 class="page-title mb-0"><~title></h1>
+    </div>
+    <div class="page-header-meta d-flex flex-wrap align-items-center gap-2">
+      <~page_header_meta>
+      <span class="form-saved-status-global"></span>
+    </div>
+  </div>
+
+  <div class="page-header-row page-header-row-actions d-flex flex-wrap align-items-center gap-2">
+    <div class="page-header-actions d-flex flex-wrap align-items-center gap-2">
+      <~/common/form/btn_std>
+      <~/common/form/btn_view if="id">
+      <~page_header_actions>
+    </div>
+    <div class="page-header-actions page-header-actions-extra d-flex flex-wrap align-items-center gap-2 ms-auto">
+      <~page_header_actions_right>
+      <~/common/form/btn_top_save_addnew>
+    </div>
+  </div>
+</div>
+
+<~/common/form/msg>

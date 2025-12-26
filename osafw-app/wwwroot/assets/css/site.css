@@ -18,8 +18,8 @@
     --fw-card-shadow: none;
     --fw-card-padding: var(--fw-spacer) var(--fw-spacer) 0 var(--fw-spacer);
     --fw-card-margin-bottom: var(--fw-spacer);
-    --fw-page-header-gap: 0;
-    --fw-page-header-mb: 0;
+    --fw-page-header-gap: var(--fw-spacer05);
+    --fw-page-header-mb: var(--fw-spacer05);
     --fw-page-header-border: none;
     --fw-page-header-title-color: inherit;
     --fw-dashboard-card-radius: var(--bs-card-border-radius, var(--bs-border-radius));
@@ -167,17 +167,6 @@ h1 .badge {
         /*    padding: 1rem 1rem 0.25rem 1rem;*/
         margin-bottom: var(--fw-card-margin-bottom);
         box-shadow: var(--fw-card-shadow);
-    }
-
-.page-header {
-    gap: var(--fw-page-header-gap);
-    margin-bottom: var(--fw-page-header-mb);
-    border-bottom: var(--fw-page-header-border);
-}
-
-    .page-header h1,
-    .page-header .page-title {
-        color: var(--fw-page-header-title-color);
     }
 
 .dashboard-card {
@@ -335,6 +324,59 @@ main {
 }
 
 .site-footer {
+}
+
+.page-header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--fw-page-header-gap);
+    margin-bottom: var(--fw-page-header-mb);
+    border-bottom: var(--fw-page-header-border);
+    padding-bottom: var(--fw-page-header-gap);
+}
+
+.page-header-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--fw-spacer05);
+}
+
+.page-header-row-title .page-title {
+    margin: 0;
+    color: var(--fw-page-header-title-color);
+}
+
+.page-header-row-nav .page-header-record-nav {
+    margin-left: auto;
+}
+
+.page-header-row-nav .btn-link {
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.page-header-meta {
+    margin-left: auto;
+}
+
+.page-header-row-actions .page-header-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--fw-spacer05);
+}
+
+.page-header-row-actions .page-header-actions-extra {
+    margin-left: auto;
+}
+
+.page-header-row-title .badge {
+    vertical-align: middle;
+}
+
+.page-header-row-actions .form-saved-status-global {
+    display: none;
 }
 
 .no-sidebar #sidebar:not(.show,.collapsing) {
