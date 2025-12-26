@@ -1,30 +1,41 @@
 <script type="text/x-template" id="view-header-template">
-    <div class="float-end pt-1 d-print-none">
+    <div class="page-header">
+        <div class="page-header-row page-header-row-nav d-flex flex-wrap align-items-center gap-2">
+            <nav class="page-header-breadcrumbs d-print-none">
+                <a href="#" @click.prevent="onBack">{{fwStore.list_title}}</a> <span class="text-muted">/</span>
+            </nav>
+            <div class="page-header-record-nav ms-auto d-flex align-items-center gap-2 d-print-none">
         <a @click.prevent="onNext(true)" href="#" class="btn btn-link"><i class="bi bi-arrow-left-circle"></i> `Prev`</a>
         <a @click.prevent="onNext()" href="#" class="btn btn-link">`Next` <i class="bi bi-arrow-right-circle"></i></a>
     </div>
+        </div>
 
-    <nav class="d-print-none">
-        <a href="#" @click.prevent="fwStore.openListScreen">{{fwStore.list_title}}</a> <span class="text-muted">/</span>
-    </nav>
-
-    <h1>
+        <div class="page-header-row page-header-row-title d-flex flex-wrap align-items-center gap-2">
+            <div class="page-header-title flex-grow-1">
+                <h1 class="page-title mb-0">
         <span v-if="fwStore.is_loading_item"
               class="spinner-border" role="status" aria-hidden="true"></span>
         {{fwStore.view_title}}
     </h1>
+            </div>
+            <div class="page-header-meta d-flex flex-wrap align-items-center gap-2">
+                <slot name="meta"></slot>
+            </div>
+        </div>
 
+        <div class="page-header-row page-header-row-actions d-flex flex-wrap align-items-center gap-2">
+            <div class="page-header-actions d-flex flex-wrap align-items-center gap-2">
     <slot name="beforeButtons"></slot>
 
-    <div class="btn-std d-print-none">
         <a v-if="fwStore.return_url"
-           class="btn btn-default me-1"
+                   class="btn btn-default"
            :href="fwStore.return_url"><i class="bi bi-arrow-left-circle"></i> `Return Back`</a>
         <a v-else
-           class="btn btn-default me-1"
+                   class="btn btn-default"
            href="#"
            @click.prevent="onBack"><i class="bi bi-arrow-left-circle"></i> `Back to List`</a>
-        <div class="btn-group" v-if="uioptions.btnAddNew || $slots.group || fwStore.return_url">
+
+                <div class="btn-group" v-if="uioptions.btnAddNew || $slots.group">
             <a v-if="uioptions.btnAddNew"
                class="btn btn-default"
                href="#"
@@ -39,25 +50,29 @@
         </div>
         <!--TODO /common/form/btn_userlists if="is_userlists"-->
 
+                <slot></slot>
+            </div>
+
+            <div class="page-header-actions page-header-actions-extra d-flex flex-wrap align-items-center gap-2 ms-auto">
         <a v-if="item.status!=127"
            class="btn btn-default float-end ms-1"
            href="#"
            @click.prevent="onDelete"><span class="text-danger"><i class="bi bi-x-circle-fill"></i></span> `Delete`</a>
         <template v-if="item.status==127">
             <a v-if="fwStore.access_level==100"
-               class="btn btn-danger float-end ms-1"
+                       class="btn btn-danger"
                href="#"
                @click.prevent="onDelete"><i class="bi bi-x-square-fill"></i> `Permanent Delete`</a>
-            <a class="btn btn-default float-end ms-1"
+                    <a class="btn btn-default"
                href="#"
                @click.prevent="onRestore"><span class="text-success"><i class="bi bi-check-circle-fill"></i></span> `Restore Deleted`</a>
         </template>
-
-        <slot></slot>
+                <slot name="actions-right"></slot>
     </div>
+        </div>
 
     <slot name="afterButtons"></slot>
-
+    </div>
 </script>
 
 <script type="module">
@@ -80,11 +95,11 @@
             }
         },
         methods: {
-            onAddNew(e) {
-                this.fwStore.openEditScreen(0);
+            async onAddNew(e) {
+                await this.fwStore.openEditScreen(0);
             },
-            onEdit(e) {
-                this.fwStore.openEditScreen(this.current_id);
+            async onEdit(e) {
+                await this.fwStore.openEditScreen(this.current_id);
             },
             onBack() {
                 this.fwStore.openListScreen();

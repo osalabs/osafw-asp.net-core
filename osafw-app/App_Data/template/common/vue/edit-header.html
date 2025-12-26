@@ -1,48 +1,67 @@
 <script type="text/x-template" id="edit-header-template">
-    <div class="float-end pt-1 d-print-none">
-        <a @click.prevent="onNext(true)" href="#" class="btn btn-link"><i class="bi bi-arrow-left-circle"></i> `Prev`</a>
-        <a @click.prevent="onNext()" href="#" class="btn btn-link">`Next` <i class="bi bi-arrow-right-circle"></i></a>
-    </div>
-
-    <nav class="d-print-none">
-        <a href="#" @click.prevent="fwStore.openListScreen">{{fwStore.list_title}}</a> <span class="text-muted">/</span>
-    </nav>
-    <h1 v-if="!current_id">{{fwStore.add_new_title}}</h1>
-    <h1 v-if="current_id">{{fwStore.edit_title}}</h1>
-
-    <div class="float-end">
-        <span v-if="fwStore.savedStatus!==null" class="form-saved-status-global mt-1 me-2">
-            <span v-if="fwStore.savedStatus" class="badge bg-success">saved</span>
-            <span v-if="!fwStore.savedStatus" class="badge bg-danger">not saved</span>
-        </span>
-        <template v-if="!current_id" inline>
-            <button type="button" class="btn btn-primary me-1" :disabled="fwStore.is_readonly" @click="saveChanges">`Save`</button>
-            <button type="button" class="btn btn-secondary me-1" :disabled="fwStore.is_readonly" @click="saveChanges('New')">`Save and Add New`</button>
-            <button type="button" class="btn btn-default" @click="onCancelForm">`Cancel`</button>
-        </template>
-    </div>
-
-    <div class="btn-std d-print-none">
-        <a v-if="fwStore.return_url"
-           class="btn btn-default me-1"
-           :href="fwStore.return_url"><i class="bi bi-arrow-left-circle"></i> `Return Back`</a>
-        <a v-else
-           class="btn btn-default me-1"
-           href="#"
-           @click.prevent="onCancelForm"><i class="bi bi-arrow-left-circle"></i> `Back to List`</a>
-        <div class="btn-group" v-if="uioptions.btnAddNew || $slots.group">
-            <a v-if="uioptions.btnAddNew"
-               class="btn btn-default"
-               href="#"
-               @click.prevent="onAddNew"
-               :disabled="fwStore.is_readonly"><i class="bi bi-plus-lg"></i> `Add New`</a>
-            <a v-if="current_id"
-               class="btn btn-default"
-               href="#"
-               @click.prevent="onView"><i class="bi bi-eye"></i> `View`</a>
-            <slot name="group"></slot>
+    <div class="page-header">
+        <div class="page-header-row page-header-row-nav d-flex flex-wrap align-items-center gap-2">
+            <nav class="page-header-breadcrumbs d-print-none">
+                <a href="#" @click.prevent="fwStore.openListScreen">{{fwStore.list_title}}</a> <span class="text-muted">/</span>
+            </nav>
+            <div class="page-header-record-nav ms-auto d-flex align-items-center gap-2 d-print-none">
+                <a @click.prevent="onNext(true)" href="#" class="btn btn-link"><i class="bi bi-arrow-left-circle"></i> `Prev`</a>
+                <a @click.prevent="onNext()" href="#" class="btn btn-link">`Next` <i class="bi bi-arrow-right-circle"></i></a>
+            </div>
         </div>
-        <slot></slot>
+
+        <div class="page-header-row page-header-row-title d-flex flex-wrap align-items-center gap-2">
+            <div class="page-header-title flex-grow-1">
+                <h1 class="page-title mb-0" v-if="!current_id">{{fwStore.add_new_title}}</h1>
+                <h1 class="page-title mb-0" v-if="current_id">{{fwStore.edit_title}}</h1>
+            </div>
+            <div class="page-header-meta d-flex flex-wrap align-items-center gap-2">
+                <span v-if="fwStore.savedStatus!==null" class="form-saved-status-global">
+                    <span v-if="fwStore.savedStatus" class="badge bg-success">saved</span>
+                    <span v-if="!fwStore.savedStatus" class="badge bg-danger">not saved</span>
+                </span>
+                <slot name="meta"></slot>
+            </div>
+        </div>
+
+        <div class="page-header-row page-header-row-actions d-flex flex-wrap align-items-center gap-2">
+            <div class="page-header-actions d-flex flex-wrap align-items-center gap-2">
+                <slot name="beforeButtons"></slot>
+
+                <a v-if="fwStore.return_url"
+                   class="btn btn-default"
+                   :href="fwStore.return_url"><i class="bi bi-arrow-left-circle"></i> `Return Back`</a>
+                <a v-else
+                   class="btn btn-default"
+                   href="#"
+                   @click.prevent="onCancelForm"><i class="bi bi-arrow-left-circle"></i> `Back to List`</a>
+
+                <div class="btn-group" v-if="uioptions.btnAddNew || $slots.group">
+                    <a v-if="uioptions.btnAddNew"
+                       class="btn btn-default"
+                       href="#"
+                       @click.prevent="onAddNew"
+                       :disabled="fwStore.is_readonly"><i class="bi bi-plus-lg"></i> `Add New`</a>
+                    <a v-if="current_id"
+                       class="btn btn-default"
+                       href="#"
+                       @click.prevent="onView"><i class="bi bi-eye"></i> `View`</a>
+                    <slot name="group"></slot>
+                </div>
+
+                <template v-if="!current_id">
+                    <button type="button" class="btn btn-primary" :disabled="fwStore.is_readonly" @click="saveChanges">`Save`</button>
+                    <button type="button" class="btn btn-secondary" :disabled="fwStore.is_readonly" @click="saveChanges('New')">`Save and Add New`</button>
+                    <button type="button" class="btn btn-default" @click="onCancelForm">`Cancel`</button>
+                </template>
+
+                <slot></slot>
+            </div>
+
+            <div class="page-header-actions page-header-actions-extra d-flex flex-wrap align-items-center gap-2 ms-auto">
+                <slot name="actions-right"></slot>
+            </div>
+        </div>
     </div>
 </script>
 
@@ -66,8 +85,8 @@
             }
         },
         methods: {
-            onAddNew(e) {
-                this.fwStore.openEditScreen(0);
+            async onAddNew(e) {
+                await this.fwStore.openEditScreen(0);
             },
             onView(e) {
                 this.fwStore.openViewScreen(this.id);
