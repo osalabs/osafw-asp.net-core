@@ -1,13 +1,12 @@
 <script type="text/x-template" id="view-header-template">
     <div class="page-header">
         <div class="page-header-row page-header-row-nav d-flex flex-wrap align-items-center gap-2">
-            <div class="page-header-breadcrumbs d-flex flex-wrap align-items-center gap-2">
-                <a href="#" class="btn btn-link px-0 text-decoration-none" @click.prevent="onBack">{{fwStore.list_title}}</a>
-                <span class="text-muted">/</span>
-            </div>
+            <nav class="page-header-breadcrumbs d-print-none">
+                <a href="#" @click.prevent="onBack">{{fwStore.list_title}}</a> <span class="text-muted">/</span>
+            </nav>
             <div class="page-header-record-nav ms-auto d-flex align-items-center gap-2 d-print-none">
-                <a @click.prevent="onNext(true)" href="#" class="btn btn-link px-0"><i class="bi bi-arrow-left-circle"></i> `Prev`</a>
-                <a @click.prevent="onNext()" href="#" class="btn btn-link px-0">`Next` <i class="bi bi-arrow-right-circle"></i></a>
+                <a @click.prevent="onNext(true)" href="#" class="btn btn-link"><i class="bi bi-arrow-left-circle"></i> `Prev`</a>
+                <a @click.prevent="onNext()" href="#" class="btn btn-link">`Next` <i class="bi bi-arrow-right-circle"></i></a>
             </div>
         </div>
 
@@ -41,12 +40,12 @@
                        class="btn btn-default"
                        href="#"
                        @click.prevent="onAddNew"
-                       :disabled="fwStore.is_readonly"><i class="bi bi-plus-lg"></i> `Add New`</a>
+                       role="button"><i class="bi bi-plus-lg"></i> `Add New`</a>
                     <a v-if="current_id"
                        class="btn btn-primary"
                        href="#"
                        @click.prevent="onEdit"
-                       :disabled="fwStore.is_readonly"><i class="bi bi-pencil-fill"></i> `Edit`</a>
+                       role="button"><i class="bi bi-pencil-fill"></i> `Edit`</a>
                     <slot name="group"></slot>
                 </div>
                 <!--TODO /common/form/btn_userlists if="is_userlists"-->
@@ -96,11 +95,11 @@
             }
         },
         methods: {
-            onAddNew(e) {
-                this.fwStore.openEditScreen(0);
+            async onAddNew(e) {
+                await this.fwStore.openEditScreen(0);
             },
-            onEdit(e) {
-                this.fwStore.openEditScreen(this.current_id);
+            async onEdit(e) {
+                await this.fwStore.openEditScreen(this.current_id);
             },
             onBack() {
                 this.fwStore.openListScreen();

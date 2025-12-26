@@ -1,13 +1,12 @@
 <script type="text/x-template" id="edit-header-template">
     <div class="page-header">
         <div class="page-header-row page-header-row-nav d-flex flex-wrap align-items-center gap-2">
-            <div class="page-header-breadcrumbs d-flex flex-wrap align-items-center gap-2">
-                <a href="#" class="btn btn-link px-0 text-decoration-none" @click.prevent="fwStore.openListScreen">{{fwStore.list_title}}</a>
-                <span class="text-muted">/</span>
-            </div>
+            <nav class="page-header-breadcrumbs d-print-none">
+                <a href="#" @click.prevent="fwStore.openListScreen">{{fwStore.list_title}}</a> <span class="text-muted">/</span>
+            </nav>
             <div class="page-header-record-nav ms-auto d-flex align-items-center gap-2 d-print-none">
-                <a @click.prevent="onNext(true)" href="#" class="btn btn-link px-0"><i class="bi bi-arrow-left-circle"></i> `Prev`</a>
-                <a @click.prevent="onNext()" href="#" class="btn btn-link px-0">`Next` <i class="bi bi-arrow-right-circle"></i></a>
+                <a @click.prevent="onNext(true)" href="#" class="btn btn-link"><i class="bi bi-arrow-left-circle"></i> `Prev`</a>
+                <a @click.prevent="onNext()" href="#" class="btn btn-link">`Next` <i class="bi bi-arrow-right-circle"></i></a>
             </div>
         </div>
 
@@ -86,8 +85,8 @@
             }
         },
         methods: {
-            onAddNew(e) {
-                this.fwStore.openEditScreen(0);
+            async onAddNew(e) {
+                await this.fwStore.openEditScreen(0);
             },
             onView(e) {
                 this.fwStore.openViewScreen(this.id);
