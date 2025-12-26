@@ -39,5 +39,10 @@
          </td>
       </tr>
    </~list_rows>
+   <~no_rows_block unless="list_rows" inline>
+      <tr>
+         <td colspan="6" class="fw-empty-state text-muted small text-center">`No items yet`</td>
+      </tr>
+   </~no_rows_block>
    </tbody>
 </table>

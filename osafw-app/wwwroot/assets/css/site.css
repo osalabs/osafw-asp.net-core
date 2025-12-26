@@ -135,6 +135,15 @@ a[disabled] {
         cursor: pointer;
     }
 
+.fw-empty-state {
+    padding: calc(var(--fw-spacer05)*1.5) var(--fw-spacer);
+    color: var(--fw-color-secondary);
+    background-color: var(--bs-body-bg);
+    border: var(--bs-border-width) dashed var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+    font-size: 0.95rem;
+}
+
 .badge-outline-secondary {
     color: var(--fw-color-secondary);
     background-color: transparent;

@@ -12,17 +12,22 @@
                 </tr>
             </thead>
             <tbody>
-                <tr v-for="row in list_rows" :key="row.id">
-                    <td>{{row.id}}</td>
-                    <td>{{lookupIname('DemoDicts', row.demo_dicts_id)}}</td>
-                    <td>{{row.iname}}</td>
-                    <td style="white-space: pre;">{{row.idesc}}</td>
-                    <td>
-                        <div class="form-check">
-                            <input type="checkbox" class="form-check-input" :checked="row.is_checkbox==1" disabled>
-                            <label class="form-check-label"></label>
-                        </div>
-                    </td>
+                <template v-if="list_rows.length">
+                    <tr v-for="row in list_rows" :key="row.id">
+                        <td>{{row.id}}</td>
+                        <td>{{lookupIname('DemoDicts', row.demo_dicts_id)}}</td>
+                        <td>{{row.iname}}</td>
+                        <td style="white-space: pre;">{{row.idesc}}</td>
+                        <td>
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" :checked="row.is_checkbox==1" disabled>
+                                <label class="form-check-label"></label>
+                            </div>
+                        </td>
+                    </tr>
+                </template>
+                <tr v-else>
+                    <td colspan="5" class="fw-empty-state text-muted small text-center">No items</td>
                 </tr>
             </tbody>
         </table>
@@ -40,58 +45,63 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="row in list_rows" :key="row.id">
-                        <td>
-                            <template v-if="!row.is_new">
-                                {{row.id}}
-                            </template>
-                            <template v-if="row.is_new">
-                                (new)
-                            </template>
-                        </td>
-                        <td>
-                            <select v-model="row.demo_dicts_id"
-                                    :class="'form-select'+(error(row, 'demo_dicts_id')?' is-invalid':'')">
-                                <option value="">- select -</option>
-                                <option v-for="lookup in fwStore.lookups.DemoDicts" :value="lookup.id">{{lookup.iname}}</option>
-                            </select>
-                            <div v-if="error(row, 'demo_dicts_id')" class="invalid-tooltip">{{error_text(row, 'demo_dicts_id')}}</div>
-                        </td>
-                        <td style="min-width:150px">
-                            <!--simple input sample-->
-                            <!--input v-model="row.iname"
-                                   type="input"
-                                   :class="'form-control'+(error(row, 'iname')?' is-invalid':'')"-->
+                    <template v-if="list_rows.length">
+                        <tr v-for="row in list_rows" :key="row.id">
+                            <td>
+                                <template v-if="!row.is_new">
+                                    {{row.id}}
+                                </template>
+                                <template v-if="row.is_new">
+                                    (new)
+                                </template>
+                            </td>
+                            <td>
+                                <select v-model="row.demo_dicts_id"
+                                        :class="'form-select'+(error(row, 'demo_dicts_id')?' is-invalid':'')">
+                                    <option value="">- select -</option>
+                                    <option v-for="lookup in fwStore.lookups.DemoDicts" :value="lookup.id">{{lookup.iname}}</option>
+                                </select>
+                                <div v-if="error(row, 'demo_dicts_id')" class="invalid-tooltip">{{error_text(row, 'demo_dicts_id')}}</div>
+                            </td>
+                            <td style="min-width:150px">
+                                <!--simple input sample-->
+                                <!--input v-model="row.iname"
+                                       type="input"
+                                       :class="'form-control'+(error(row, 'iname')?' is-invalid':'')"-->
 
-                            <!-- autocomplete -->
-                            <autocomplete
-                              v-model="row.iname"
-                              placeholder="Start typing..."
-                              :url="autocomplete_url"
-                              :class="(error(row, 'iname')?' is-invalid':'')"
-                            />
-                            <div v-if="error(row, 'iname')" class="invalid-tooltip">{{error_text(row, 'iname')}}</div>
-                        </td>
-                        <td>
-                            <textarea v-model="row.idesc"
-                                      :class="'form-control'+(error(row, 'idesc')?' is-invalid':'')"
-                                      rows="1"></textarea>
-                            <div v-if="error(row, 'idesc')" class="invalid-tooltip">{{error_text(row, 'idesc')}}</div>
-                        </td>
-                        <td>
-                            <div class="form-check form-check-inline">
-                            <input :checked="row.is_checkbox===true || row.is_checkbox===1 || row.is_checkbox==='1'"
-                                       @change="$e => row.is_checkbox = $e.target.checked ? 1 : 0"
-                                       class="form-check-input"
-                                       type="checkbox"
-                                       value="1"
-                                       :id="'is_checkbox-'+row.model+'#'+row.id">
-                                <label class="form-check-label" :for="'is_checkbox-'+row.model+'#'+row.id">Yes</label>
-                            </div>
-                        </td>
-                        <td class="text-end">
-                            <button type="button" class="btn btn-link text-danger" title="Delete" @click="onDeleteRow(row.id)"><i class="bi bi-x"></i></button>
-                        </td>
+                                <!-- autocomplete -->
+                                <autocomplete
+                                  v-model="row.iname"
+                                  placeholder="Start typing..."
+                                  :url="autocomplete_url"
+                                  :class="(error(row, 'iname')?' is-invalid':'')"
+                                />
+                                <div v-if="error(row, 'iname')" class="invalid-tooltip">{{error_text(row, 'iname')}}</div>
+                            </td>
+                            <td>
+                                <textarea v-model="row.idesc"
+                                          :class="'form-control'+(error(row, 'idesc')?' is-invalid':'')"
+                                          rows="1"></textarea>
+                                <div v-if="error(row, 'idesc')" class="invalid-tooltip">{{error_text(row, 'idesc')}}</div>
+                            </td>
+                            <td>
+                                <div class="form-check form-check-inline">
+                                <input :checked="row.is_checkbox===true || row.is_checkbox===1 || row.is_checkbox==='1'"
+                                           @change="$e => row.is_checkbox = $e.target.checked ? 1 : 0"
+                                           class="form-check-input"
+                                           type="checkbox"
+                                           value="1"
+                                           :id="'is_checkbox-'+row.model+'#'+row.id">
+                                    <label class="form-check-label" :for="'is_checkbox-'+row.model+'#'+row.id">Yes</label>
+                                </div>
+                            </td>
+                            <td class="text-end">
+                                <button type="button" class="btn btn-link text-danger" title="Delete" @click="onDeleteRow(row.id)"><i class="bi bi-x"></i></button>
+                            </td>
+                        </tr>
+                    </template>
+                    <tr v-else>
+                        <td colspan="6" class="fw-empty-state text-muted small text-center">No items yet</td>
                     </tr>
                 </tbody>
             </table>
