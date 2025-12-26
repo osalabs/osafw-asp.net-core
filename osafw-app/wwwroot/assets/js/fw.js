@@ -18,10 +18,66 @@ window.fw={
   MSG_UPLOAD_FAILED: 'Upload failed',
   MSG_DELETE_CONFIRM: '<strong>ARE YOU SURE</strong> to delete this item?',
 
+  AUTOSAVE_STATUS_STATES: {
+    enabled: { text: 'autosave enabled', badgeClass: 'fw-autosave-badge-enabled' },
+    dirty: { text: 'unsaved changes', badgeClass: 'fw-autosave-badge-dirty' },
+    saving: { text: 'saving\u2026', badgeClass: 'fw-autosave-badge-saving', spinner: true },
+    saved: { text: 'saved', badgeClass: 'fw-autosave-badge-saved' },
+    error: { text: 'autosave error', badgeClass: 'fw-autosave-badge-error' },
+  },
+  AUTOSAVE_STATUS_MIN_UPDATE_MS: 300,
+
+  get_autosave_status_targets: function ($form) {
+    var $targets = $('.fw-autosave-status-global');
+    var $f = $($form);
+    if ($f.length) {
+      $targets = $targets.add($f.find('.fw-autosave-status'));
+    }
+    return $targets;
+  },
+
+  set_autosave_status: function ($form, status, options) {
+    var $f = $($form);
+    if (!$f.length) return;
+
+    var now = Date.now();
+    var cfg = fw.AUTOSAVE_STATUS_STATES[status] || {};
+    var text = (options && options.message) || cfg.text || '';
+    var savedAt = options && options.savedAt;
+    var badgeTitle = '';
+    if (status === 'saved') {
+      var savedDate = savedAt instanceof Date ? savedAt : (savedAt ? new Date(savedAt) : new Date());
+      if (savedDate && !isNaN(savedDate.getTime())) {
+        badgeTitle = savedDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      }
+    }
+    var isSpinner = options && options.spinner;
+    if (typeof isSpinner !== 'boolean') isSpinner = !!cfg.spinner;
+    var badgeClass = 'fw-autosave-badge ' + (cfg.badgeClass || '');
+    var titleAttr = badgeTitle ? ' title="' + badgeTitle + '"' : '';
+    var html = '<span class="' + badgeClass + '"' + titleAttr + '>' +
+      (isSpinner ? fw.HTML_SPINNER_SM : '') +
+      text +
+      '</span>';
+
+    var lastState = $f.data('autosave-status-state');
+    var lastHtml = $f.data('autosave-status-html');
+    var lastUpdated = $f.data('autosave-status-updated') || 0;
+    if (status === lastState && html === lastHtml) return;
+    if (status === lastState && (now - lastUpdated) < fw.AUTOSAVE_STATUS_MIN_UPDATE_MS) return;
+
+    $f.data('autosave-status-state', status);
+    $f.data('autosave-status-html', html);
+    $f.data('autosave-status-updated', now);
+
+    var $targets = fw.get_autosave_status_targets($f);
+    if ($targets.length) $targets.html(html);
+  },
+
   // Unified helper: updates saved/unsaved status and optional progress spinner
   // is_changed: true/false updates internal changed flag, pass undefined to keep previous value
   // is_progress: true - show spinner, false - hide spinner, undefined - keep previous spinner state
-  set_form_saved_status: function ($form, is_changed, is_progress) {
+  set_form_saved_status: function ($form, is_changed, is_progress, options) {
     var $f = $($form);
     if (!$f.length) return;
 
@@ -37,12 +93,15 @@ window.fw={
     }
     var isProgress = $f.data('is-progress') === true;
 
-    var cls = changed ? 'bg-danger' : 'bg-success';
-    var txt = changed ? 'not saved' : 'saved';
-    var html = (isProgress ? fw.HTML_SPINNER_SM : '') + ' <span class="badge ' + cls + '">' + txt + '</span>';
+    var status = 'enabled';
+    if (isProgress) status = 'saving';
+    else if (changed) status = 'dirty';
+    else status = 'saved';
 
-    $f.find('.form-saved-status').html(html);
-    $('.form-saved-status-global').html(html);
+    var statusOptions = options || {};
+    if (status === 'saved' && !statusOptions.savedAt) statusOptions.savedAt = new Date();
+    statusOptions.spinner = statusOptions.spinner ?? (status === 'saving');
+    fw.set_autosave_status($f, status, statusOptions);
   },
 
   // requires https://github.com/osalabs/bootstrap-toaster
@@ -529,11 +588,17 @@ window.fw={
   },
 
   //tries to auto save form via ajax on changes
-  // '.form-saved-status' element updated with save status
   // <form data-autosave>
   setup_autosave_form_handlers: function () {
     var $asforms=$('form[data-autosave]');
     if (!$asforms.length) return; //skip if no autosave forms found
+
+    $asforms.each(function(){
+      var $f=$(this);
+      if ($f.data('is-changed')!==true) $f.data('is-changed', false);
+      $f.data('is-progress', false);
+      fw.set_autosave_status($f, 'enabled');
+    });
 
     //prevent submit if form is in ajax save
     $asforms.on('submit', function (e) {
@@ -600,11 +665,22 @@ window.fw={
     }
 
     function form_handle_errors($f, data, hint_options){
-        if (data.error?.details) {
+        fw.set_autosave_status($f, 'error');
+        $f.data('autosave-last-error', $f.data('autosave-last-error') || undefined);
+        $f.data('autosave-last-error-at', $f.data('autosave-last-error-at') || 0);
+        if (data?.error?.details) {
             //auto-save error - highlight errors
             fw.process_form_errors($f, data.error?.details);
         }
-        fw.error(data.error?.message || fw.MSG_AUTOSAVE_ERROR, hint_options);
+        var msg = data?.error?.message || fw.MSG_AUTOSAVE_ERROR;
+        var lastMsg = $f.data('autosave-last-error');
+        var lastAt = $f.data('autosave-last-error-at') || 0;
+        var now = Date.now();
+        if (msg !== lastMsg || (now - lastAt) > 10000){
+          fw.error(msg, hint_options);
+          $f.data('autosave-last-error', msg);
+          $f.data('autosave-last-error-at', now);
+        }
     }
 
     function form_autosave($f) {
@@ -631,7 +707,7 @@ window.fw={
               $('#fw-form-msg').hide();
               fw.clean_form_errors($f);
               if (!data.error) {
-                  fw.set_form_saved_status($f, false); // saved
+                  fw.set_form_saved_status($f, false, undefined, {savedAt: new Date()}); // saved
                   if (data.is_new && data.location) {
                       window.location = data.location; //reload screen for new items
                   }

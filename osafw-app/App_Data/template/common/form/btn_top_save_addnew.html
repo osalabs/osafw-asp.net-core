@@ -1,5 +1,5 @@
 <div class="d-flex flex-wrap align-items-center gap-2">
-    <span class="form-saved-status-global"></span>
+    <span class="fw-autosave-status-global"><~/common/form/autosave_status></span>
     <~nonautosave_buttons unless="id" inline>
       <button type="button" class="btn btn-primary on-submit" data-target="#FEdit" <~/common/disabled if="is_readonly">>`Save`</button>
       <button type="button" class="btn btn-secondary on-submit" data-target="#FEdit" name="route_return" value="New" <~/common/disabled if="is_readonly">>`Save and Add New`</button>
