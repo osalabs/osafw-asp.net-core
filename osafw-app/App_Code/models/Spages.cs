@@ -170,8 +170,9 @@ public class Spages : FwModel<Spages.Row>
                 FwDict row2 = new(row);
                 row2["_level"] = level;
                 // row2["_level1"] level + 1 'to easier use in templates
-                row2["full_url"] = parent_url + "/" + row["url"];
-                row2["children"] = getPagesTree(rows, row["id"].toInt(), level + 1, row["url"].toStr());
+                var full_url = parent_url + "/" + row["url"];
+                row2["full_url"] = full_url;
+                row2["children"] = getPagesTree(rows, row["id"].toInt(), level + 1, full_url);
                 result.Add(row2);
             }
         }
@@ -276,7 +277,7 @@ public class Spages : FwModel<Spages.Row>
 
     public bool isPublished(FwDict item)
     {
-        return item["status"].toInt() == FwModel.STATUS_ACTIVE && (item["pub_time"] == null || item["pub_time"].toDate() <= DateTime.Now);
+        return item["status"].toInt() == FwModel.STATUS_ACTIVE && (item["pub_time"] == null || item["pub_time"].toDate() <= DateTime.UtcNow);
     }
 
     // render page by full url

@@ -1,48 +1,16 @@
-<form method="post" data-check-changes <~/common/form/data_autosave if="id"> action="<~../url><~uu1 if="id" inline>/<~id></~uu1>" data-errors="<~error[details] json>">
+<form id="FEdit" class="fw-card" method="post" data-check-changes <~/common/form/data_autosave if="id"> action="<~../url><~uu1 if="id" inline>/<~id></~uu1>" data-errors="<~error[details] json>">
  <input type="hidden" name="XSS" value="<~session[XSS]>">
  <input type="hidden" name="return_url" value="<~return_url>">
 
-    <div class="row">
-      <div class="col btn-std">
-        <div class="btn-group">
-          <a class="btn btn-default" href="<~../url><~/common/list/relidq>"><i class="bi bi-arrow-left-circle"></i><span class="d-none d-lg-inline"> `Back to list`</span></a>
-          <a class="btn btn-default" href="<~../url>/new<~/common/list/relidq>" <~/common/disabled if="is_readonly">><i class="bi bi-plus-lg"></i><span class="d-none d-lg-inline"> `Add New`</span></a>
-        </div>
-        <div class="btn-group">
-          <a class="btn btn-default <~/common/disabledcl unless="i[parent_id]">" href="<~../url>/<~i[parent_id]>/edit" ><i class="bi bi-journal-arrow-up"></i> `Up`</a>
-          <~add_sub if="id" inline>
-            <~add_sub2 unless="i[is_home]" inline>
-              <a class="btn btn-default" href="<~../url>/new?parent_id=<~id>" <~/common/disabled if="is_readonly">><i class="bi bi-file-earmark-plus"></i><span class="d-none d-lg-inline"> `Add Sub-Page`</span><span class="d-inline d-lg-none"> `Sub`</span></a>
-            </~add_sub2>
-          </~add_sub>
-        </div>
-        <~btn_preview if="id" inline>
-          <a href="<~full_url>" target="_blank" class="btn btn-outline-secondary" title="View"><i class="bi bi-box-arrow-up-right"></i></i><span class="d-none d-lg-inline"> `Preview`</span></a>
-        </~btn_preview>
-      </div>
-      <div class="col">
-        <div class="float-end text-end ps-3 pb-3" style="min-width:240px;">
-            <span class="form-saved-status"></span>
-            <~nonautosave_buttons unless="id" inline>
-              <button type="submit" class="btn btn-primary" <~/common/disabled if="is_readonly">>`Save`</button>
-              <button type="button" class="btn btn-default on-cancel" data-href="<~/common/form/cancel_url>">`Cancel`</button>
-            </~nonautosave_buttons>
-        </div>
-      </div>
-    </div>
-
-
-  <div id="FEdit" class="fw-card">
+  <fieldset <~/common/disabled if="is_readonly">>
     <div class="row">
       <div class="col-lg-9">
-        <~/common/form/msg>
-
         <~page_content>
       </div>
       <div class="col-lg-3">
         <~page_settings>
       </div>
     </div>
-  </div>
+  </fieldset>
 
 </form>
