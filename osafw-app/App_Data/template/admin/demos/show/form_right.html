@@ -15,6 +15,9 @@
           <a href="<~/att/url>/<~att[icode]>" target="_blank" class="btn btn-default"><i class="bi bi-cloud-download-fill"></i> `Download`</a>
       </div>
     </div>
+    <~empty unless="att" inline>
+      <div class="fw-empty-state">`No attachments`</div>
+    </~empty>
   </div>
 </div>
 
@@ -35,6 +38,11 @@
           </div>
         </div>
       </~att_links>
+      <~empty unless="att_links" inline>
+        <div class="col">
+          <div class="fw-empty-state">`No attachments`</div>
+        </div>
+      </~empty>
     </div>
 
   </div>
