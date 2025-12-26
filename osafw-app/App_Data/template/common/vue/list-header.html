@@ -1,35 +1,63 @@
 <script type="text/x-template" id="list-header-template">
-    <div>
-        <h1>
-            {{fwStore.list_title}}
-            <span v-if="uioptions.count" class="badge badge-outline-secondary rounded-pill">{{fwStore.count}}</span>
-        </h1>
-        <slot name="beforeButtons"></slot>
-        <div class="btn-std d-print-none">
-            <div class="btn-group" v-if="uioptions.btnAddNew || $slots.group || $slots.groupPrepend || fwStore.return_url">
+    <div class="page-header">
+        <div class="page-header-row page-header-row-nav d-flex flex-wrap align-items-center gap-2">
+            <div class="page-header-breadcrumbs">
+                <slot name="breadcrumbs"></slot>
+            </div>
+            <div class="page-header-record-nav ms-auto d-flex align-items-center gap-2 d-print-none">
+                <slot name="record-nav"></slot>
+            </div>
+        </div>
+
+        <div class="page-header-row page-header-row-title d-flex flex-wrap align-items-center gap-2">
+            <div class="page-header-title flex-grow-1">
+                <h1 class="page-title mb-0">
+                    {{fwStore.list_title}}
+                    <span v-if="uioptions.count" class="badge badge-outline-secondary rounded-pill">{{fwStore.count}}</span>
+                </h1>
+            </div>
+            <div class="page-header-meta d-flex flex-wrap align-items-center gap-2">
+                <slot name="meta"></slot>
+            </div>
+        </div>
+
+        <div class="page-header-row page-header-row-actions d-flex flex-wrap align-items-center gap-2">
+            <div class="page-header-actions d-flex flex-wrap align-items-center gap-2">
+                <slot name="beforeButtons"></slot>
+
                 <a v-if="fwStore.return_url"
                    class="btn btn-default"
-                   :href="fwStore.return_url"><i class="bi bi-arrow-left-circle"></i> `Return Back`</a>
-                <slot name="group-prepend"></slot>
+                   :href="fwStore.return_url"><i class="bi bi-arrow-left-circle"></i> `Return Back`
+                </a>
 
-                <a v-if="uioptions.btnAddNew"
-                   class="btn btn-primary"
-                   href="#"
-                   @click.prevent="onAddNew"
-                   :disabled="fwStore.is_readonly"><i class="bi bi-plus-lg"></i> `Add New`</a>
-                <slot name="group"></slot>
+                <div class="btn-group" v-if="uioptions.btnAddNew || $slots.group || $slots['group-prepend']">
+                    <slot name="group-prepend"></slot>
+
+                    <a v-if="uioptions.btnAddNew"
+                       class="btn btn-primary"
+                       href="#"
+                       @click.prevent="onAddNew"
+                       :disabled="fwStore.is_readonly"><i class="bi bi-plus-lg"></i> `Add New`</a>
+                    <slot name="group"></slot>
+                </div>
+
+                <template v-for="btn in uioptions.buttons">
+                    <form v-if="btn.post" :action="btn.url" method="post" class="d-inline">
+                        <input type="hidden" name="XSS" :value="fwStore.XSS" />
+                        <button type="submit" :class="btn.class??'btn btn-default'" :title="btn.title"><i :class="btn.icon" v-if="btn.icon"></i> {{btn.label}}</button>
+                    </form>
+                    <a v-else :href="btn.url" :class="btn.class??'btn btn-default'" :title="btn.title"><i :class="btn.icon" v-if="btn.icon"></i> {{btn.label}}</a>
+                </template>
+
+                <slot></slot>
             </div>
-            <template v-for="btn in uioptions.buttons">
-                <form v-if="btn.post" :action="btn.url" method="post" class="d-inline">
-                    <input type="hidden" name="XSS" :value="fwStore.XSS" />
-                    <button type="submit" :class="btn.class??'btn btn-default me-2'" :title="btn.title"><i :class="btn.icon" v-if="btn.icon"></i> {{btn.label}}</button>
-                </form>
-                <a v-else :href="btn.url" :class="btn.class??'btn btn-default me-2'" :title="btn.title"><i :class="btn.icon" v-if="btn.icon"></i> {{btn.label}}</a>
-            </template>
-            <slot></slot>
-        </div>
-        <slot name="afterButtons"></slot>
 
+            <div class="page-header-actions page-header-actions-extra d-flex flex-wrap align-items-center gap-2 ms-auto">
+                <slot name="actions-right"></slot>
+            </div>
+        </div>
+
+        <slot name="afterButtons"></slot>
     </div>
 </script>
 
