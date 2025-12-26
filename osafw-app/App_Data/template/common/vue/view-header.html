@@ -25,48 +25,52 @@
 
         <div class="page-header-row page-header-row-actions d-flex flex-wrap align-items-center gap-2">
             <div class="page-header-actions d-flex flex-wrap align-items-center gap-2">
-    <slot name="beforeButtons"></slot>
+                <slot name="beforeButtons"></slot>
 
-        <a v-if="fwStore.return_url"
-                   class="btn btn-default"
-           :href="fwStore.return_url"><i class="bi bi-arrow-left-circle"></i> `Return Back`</a>
-        <a v-else
-                   class="btn btn-default"
-           href="#"
-           @click.prevent="onBack"><i class="bi bi-arrow-left-circle"></i> `Back to List`</a>
+                <div class="btn-group">
+                    <a v-if="fwStore.return_url"
+                       class="btn btn-default"
+                       :href="fwStore.return_url"><i class="bi bi-arrow-left-circle"></i> `Return Back`</a>
+                    <a v-else
+                       class="btn btn-default"
+                       href="#"
+                       @click.prevent="onBack"><i class="bi bi-arrow-left-circle"></i> `Back to List`</a>
 
-                <div class="btn-group" v-if="uioptions.btnAddNew || $slots.group">
-            <a v-if="uioptions.btnAddNew"
-               class="btn btn-default"
-               href="#"
-               @click.prevent="onAddNew"
-               :disabled="fwStore.is_readonly"><i class="bi bi-plus-lg"></i> `Add New`</a>
-            <a v-if="current_id"
-               class="btn btn-primary"
-               href="#"
-               @click.prevent="onEdit"
-               :disabled="fwStore.is_readonly"><i class="bi bi-pencil-fill"></i> `Edit`</a>
-            <slot name="group"></slot>
-        </div>
-        <!--TODO /common/form/btn_userlists if="is_userlists"-->
+                    <button v-if="uioptions.btnAddNew"
+                            type="button"
+                            class="btn btn-default"
+                            @click="onAddNew"
+                            :disabled="fwStore.is_readonly"><i class="bi bi-plus-lg"></i> `Add New`</button>
+                </div>
+
+                <button v-if="current_id"
+                        type="button"
+                        class="btn btn-primary"
+                        @click="onEdit"
+                        :disabled="fwStore.is_readonly"><i class="bi bi-pencil-fill"></i> `Edit`</button>
+
+                <div class="btn-group" v-if="$slots.group">
+                    <slot name="group"></slot>
+                </div>
+                <!--TODO /common/form/btn_userlists if="is_userlists"-->
 
                 <slot></slot>
             </div>
 
             <div class="page-header-actions page-header-actions-extra d-flex flex-wrap align-items-center gap-2 ms-auto">
-        <a v-if="item.status!=127"
-           class="btn btn-default float-end ms-1"
-           href="#"
-           @click.prevent="onDelete"><span class="text-danger"><i class="bi bi-x-circle-fill"></i></span> `Delete`</a>
-        <template v-if="item.status==127">
-            <a v-if="fwStore.access_level==100"
+                <a v-if="item.status!=127"
+                   class="btn btn-default"
+                   href="#"
+                   @click.prevent="onDelete"><span class="text-danger"><i class="bi bi-x-circle-fill"></i></span> `Delete`</a>
+                <template v-if="item.status==127">
+                    <a v-if="fwStore.access_level==100"
                        class="btn btn-danger"
-               href="#"
-               @click.prevent="onDelete"><i class="bi bi-x-square-fill"></i> `Permanent Delete`</a>
+                       href="#"
+                       @click.prevent="onDelete"><i class="bi bi-x-square-fill"></i> `Permanent Delete`</a>
                     <a class="btn btn-default"
-               href="#"
-               @click.prevent="onRestore"><span class="text-success"><i class="bi bi-check-circle-fill"></i></span> `Restore Deleted`</a>
-        </template>
+                       href="#"
+                       @click.prevent="onRestore"><span class="text-success"><i class="bi bi-check-circle-fill"></i></span> `Restore Deleted`</a>
+                </template>
                 <slot name="actions-right"></slot>
     </div>
         </div>

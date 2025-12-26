@@ -375,16 +375,6 @@ main {
     vertical-align: middle;
 }
 
-/* TODO MIGRATE: compatibility while legacy button blocks remain inside headers. Remove after all screens are updated. */
-.page-header-row-actions .btn-std {
-    margin-bottom: 0;
-}
-
-.page-header-row-actions .float-end,
-.page-header-row-nav .float-end {
-    float: none !important;
-}
-
 .page-header-row-actions .form-saved-status-global {
     display: none;
 }
