@@ -1,0 +1,16 @@
+  <div class="col text-end d-print-none">
+    <div class="btn-toolbar justify-content-end" role="toolbar">
+      <div class="btn-group me-2">
+        <button type="submit" name="export" value="csv" class="btn btn-outline-secondary"><i class="bi bi-cloud-download"></i> `Export`</button>
+        <button type="button" class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          <span class="visually-hidden">`Toggle Dropdown`</span>
+        </button>
+        <div class="dropdown-menu dropdown-menu-right">
+          <button type="submit" name="export" value="xls" class="dropdown-item" title="Export to Excel">
+            <i class="bi bi-cloud-download-fill"></i> `Export as .xls`
+          </button>
+        </div>
+      </div>
+      <~/common/list/filter_table_buttons>
+    </div>
+  </div>
