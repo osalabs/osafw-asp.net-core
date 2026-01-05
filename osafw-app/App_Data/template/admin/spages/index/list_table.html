@@ -21,7 +21,7 @@
             </td>
             <td><~leveler repeat inline if="leveler">&#8212; </~leveler><~iname><~home_page if="is_home" inline> <strong class="text-muted"> - home page</strong></~home_page></td>
             <td><~pub_time unless="status"><~/admin/spages/status.sel selvalue="status" if="status"></td>
-            <td class="text-nowrap text-end">
+            <td class="text-nowrap d-print-none text-end">
                 <a href="<~full_url>" target="_blank">`View`</a>
                 <~/common/dot><a href="<~row_click_url>">`Edit`</a>
                 <~/common/list/row_btn_del unless="is_home">
