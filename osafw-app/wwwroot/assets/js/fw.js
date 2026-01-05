@@ -155,9 +155,6 @@ window.fw={
       const $this=$(this);
       let $tbl = $this.closest('table.list');
       if (!$tbl.length){
-        $tbl = $this.closest('.table-list-wrapper').find('table.list').first();
-      }
-      if (!$tbl.length){
         $tbl = $('table.list').first();
       }
       if (!$tbl.length) return;
