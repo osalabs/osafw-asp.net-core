@@ -815,6 +815,10 @@ a.thumbnail:hover {
             padding-right: 0 !important;
         }
 
+    [data-list-filter] {
+        display: none !important;
+    }
+
     /*this is for PDF generation, layout_print.html*/
     body.fwlayout-print .main-container {
         padding-left: 0 !important;

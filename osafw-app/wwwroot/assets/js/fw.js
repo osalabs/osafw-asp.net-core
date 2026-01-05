@@ -153,7 +153,11 @@ window.fw={
     //list table density switch
     var on_toggle_density = function (e) {
       const $this=$(this);
-      const $tbl = $this.closest('table.list');
+      let $tbl = $this.closest('table.list');
+      if (!$tbl.length){
+        $tbl = $('table.list').first();
+      }
+      if (!$tbl.length) return;
       const $wrapper = $tbl.closest('.table-list-wrapper');
       const classes = ['table-sm', 'table-dense', 'table-normal'];
 
@@ -167,13 +171,14 @@ window.fw={
 
       //ajax post to save user preference to current url/(SaveUserViews) or custom url
       const url = $this.data('url') || (window.location.pathname.replace(/\/$/, "") + "/(SaveUserViews)");
+      const xssToken = $tbl.closest('form').find("input[name=XSS]").val();
       $.ajax({
           url: url,
           type: 'POST',
           dataType: 'json',
           data: {
               density: density_class,
-              XSS: $this.closest('form').find("input[name=XSS]").val()
+              XSS: xssToken
           },
           success: function (data) {
             //console.log(data);
@@ -184,6 +189,11 @@ window.fw={
       });
     };
     $(document).on('click', '.on-toggle-density', on_toggle_density);
+
+    $(document).on('click', '.on-print', function(e){
+      e.preventDefault();
+      window.print();
+    });
 
     $('table.list').on('keypress','.search :input', function(e) {
       if (e.which == 13) {// on Enter press
