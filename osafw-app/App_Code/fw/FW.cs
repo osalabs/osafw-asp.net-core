@@ -1016,8 +1016,11 @@ public class FW : IDisposable
 
         if (args != null)
         {
-            this.route.id = args[0].toStr(); //first argument goes to id
-            this.route.@params = new StrList((IEnumerable<string>)args); // all arguments go to params
+            var argsList = args.Select(a => a.toStr()).ToList(); // convert all to strings to avoid casting issues
+            if (argsList.Count > 0)
+                this.route.id = argsList[0]; //first argument goes to id
+
+            this.route.@params = new StrList(argsList); // all arguments go to params
         }
 
         callRoute();
