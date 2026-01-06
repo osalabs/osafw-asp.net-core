@@ -413,15 +413,6 @@ main {
     --fw-card-margin-bottom: calc(var(--fw-spacer)*0.75);
 }
 
-    .list-filter-compact .btn-std {
-        margin-bottom: 0;
-    }
-
-    .list-filter-compact .btn-std .btn {
-        padding: .35rem .75rem;
-        font-size: .9375rem;
-    }
-
     .list-filter-compact .list-filter-compact-add {
         flex: 0 0 auto;
     }
@@ -438,15 +429,6 @@ main {
     .list-filter-compact .form-select,
     .list-filter-compact .form-control {
         white-space: nowrap;
-    }
-
-    .list-filter-compact .form-control,
-    .list-filter-compact .form-select {
-        min-height: calc(1.5em + .5rem + calc(var(--bs-border-width) * 2));
-    }
-
-    .list-filter-compact .list-filter-compact-search > * + * {
-        margin-top: var(--fw-spacer05);
     }
 
     .list-filter-compact .list-filter-compact-search .form-control {
