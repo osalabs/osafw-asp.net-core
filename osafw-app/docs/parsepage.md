@@ -530,6 +530,9 @@ When creating templates for dynamic controllers (such as admin CRUD screens), th
 ### /index
 Used for the list (index) view. Typical files:
 - **main.html**: Main entry point for the list page. Includes title, filter, table, and buttons.
+  - to switch list screen to an optional compact header:
+    1. index/main.html changes: `page_header -> page_header_compact`, `filter_std -> filter_compact`
+    2. index/list_filter_more.html changes: remove/cleanup or update custom filters
 - **title.html**: Page title for the list view.
 - **list_table.html**: Table markup for displaying the list of records. Usually includes or overrides common list templates.
 - **list_row_btn.html**: Custom buttons for each row in the list.
