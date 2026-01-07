@@ -21,6 +21,26 @@
                     </div>
                 </div>
                 <slot name="search"></slot>
+                <div v-if="uioptions.export || uioptions.print" class="col-auto ms-auto d-print-none">
+                    <div class="btn-toolbar justify-content-end" role="toolbar">
+                        <div class="btn-group me-2" role="group" v-if="uioptions.export">
+                            <a class="btn btn-outline-secondary" :href="urlExport('csv')"><i class="bi bi-cloud-download"></i> `Export`</a>
+                            <button type="button" class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <span class="visually-hidden">`Toggle Dropdown`</span>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-end">
+                                <a class="dropdown-item" title="Export to Excel" :href="urlExport('xls')">
+                                    <i class="bi bi-cloud-download-fill"></i> `Export as .xls`
+                                </a>
+                            </div>
+                        </div>
+                        <div class="btn-group" role="group" v-if="uioptions.print">
+                            <button type="button" class="btn btn-outline-secondary" @click="print">
+                                <i class="bi bi-printer"></i> `Print`
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <slot></slot>
@@ -52,26 +72,10 @@
 
                 <slot name="status"></slot>
 
-                <div class="col text-end d-print-none">
-                    <div class="btn-group me-2" v-if="uioptions.export">
-                        <a class="btn btn-outline-secondary" :href="urlExport('csv')"><i class="bi bi-cloud-download"></i> `Export`</a>
-                        <button type="button" class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                            <span class="visually-hidden">`Toggle Dropdown`</span>
-                        </button>
-                        <div class="dropdown-menu dropdown-menu-right">
-                            <a class="dropdown-item" title="Export to Excel" :href="urlExport('xls')">
-                                <i class="bi bi-cloud-download-fill"></i> `Export as .xls`
-                            </a>
-                        </div>
+                <div v-if="uioptions.tableButtons" class="col-auto ms-auto d-print-none">
+                    <div class="btn-toolbar justify-content-end" role="toolbar">
+                        <list-filters-table-btn @on-show-customize-columns="is_show_customize_columns=true"></list-filters-table-btn>
                     </div>
-                    <button v-if="uioptions.print"
-                            type="button"
-                            class="btn btn-outline-secondary me-2"
-                            @click="print">
-                        <i class="bi bi-printer"></i> `Print`
-                    </button>
-                    <list-filters-table-btn v-if="uioptions.tableButtons"
-                                            @on-show-customize-columns="is_show_customize_columns=true"></list-filters-table-btn>
                 </div>
 
             </div>
