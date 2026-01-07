@@ -47,7 +47,7 @@ public abstract class FwController
     protected int list_pagesize_export = 10000;  // max pagesize for export (to avoid memory issues on large exports), override in controller if needed
     protected string list_sortdef = string.Empty;               // required for Index, default list sorting: name asc|desc
     protected FwDict list_sortmap = [];            // required for Index, sortmap fields
-    protected FwDict list_user_view = [];          // optional, user view settings for the list screen from UserViews model
+    protected FwDict? list_user_view;          // optional, user view settings for the list screen from UserViews model
     protected string search_fields = string.Empty;              // optional, search fields, space-separated
                                                                 // fields to search via $s=list_filter["s"), ] - means exact match, not "like"
 
@@ -1308,7 +1308,7 @@ public abstract class FwController
     protected virtual FwDict getListUserView()
     {
         list_user_view ??= fw.model<UserViews>().oneByIcode(UserViews.icodeByUrl(base_url, is_list_edit)); // base_url is screen identifier
-        return list_user_view;
+        return list_user_view!;
     }
 
     /// <summary>
