@@ -124,8 +124,12 @@ window.fw={
       if (!$scope.length) $scope = $empty.parent();
 
       var hasSingle = $scope.find('.att-info:visible').not('.tpl').length > 0;
-      var hasListCards = $scope.find('.att-list .att-info').not('.tpl').length > 0;
-      var hasListItems = $scope.find('.att-list .att-item').not('.tpl').length > 0;
+      var hasListCards = $scope.find('.att-list .att-info').filter(function () {
+        return $(this).closest('.tpl').length === 0;
+      }).length > 0;
+      var hasListItems = $scope.find('.att-list .att-item').filter(function () {
+        return $(this).closest('.tpl').length === 0;
+      }).length > 0;
       var hasAtt = hasSingle || hasListCards || hasListItems;
 
       $empty.toggle(!hasAtt);
