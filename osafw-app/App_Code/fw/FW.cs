@@ -595,7 +595,7 @@ public class FW : IDisposable
     {
         try
         {
-            route = getRoute();
+            setRoute(getRoute());
             logger(LogLevel.INFO, "REQUEST START [", route.method, " ", request_url, "] => ", route.controller, ".", route.action);
 
             callRoute();
@@ -864,8 +864,8 @@ public class FW : IDisposable
                     ps.Remove("_json"); // remove internal flag
                     this.parserJson(ps);
                 }
-                    else
-                        this.parserJson(ps["_json"] ?? new FwDict());// if _json exists - return only this element content
+                else
+                    this.parserJson(ps["_json"] ?? new FwDict());// if _json exists - return only this element content
             }
             else
             {
@@ -969,11 +969,11 @@ public class FW : IDisposable
             var DateFormatShort = DateFormat + " " + DateUtils.mapTimeFormat(userTimeFormat);
             var DateFormatLong = DateFormat + " " + DateUtils.mapTimeWithSecondsFormat(userTimeFormat);
 
-                var logLevel = (LogLevel)config("log_level").toInt();
-                pp_instance = new ParsePage(new ParsePageOptions
-                {
-                    TemplatesRoot = config("template").toStr(),
-                    IsCheckFileModifications = logLevel >= LogLevel.DEBUG,
+            var logLevel = (LogLevel)config("log_level").toInt();
+            pp_instance = new ParsePage(new ParsePageOptions
+            {
+                TemplatesRoot = config("template").toStr(),
+                IsCheckFileModifications = logLevel >= LogLevel.DEBUG,
                 Lang = G["lang"].toStr(),
                 IsLangUpdate = config("is_lang_update").toBool(),
                 GlobalsGetter = () => G,
@@ -1036,19 +1036,14 @@ public class FW : IDisposable
     /// <param name="action"></param>
     public void setController(string controller, string action = "")
     {
-        var isControllerChanged = route.controller != controller;
-        var isActionChanged = route.action != action;
-
         route.controller = controller;
         // route.controller_path = controller; // TODO this won't work if redirect to controller with different prefix
         route.action = action;
 
-        if (isControllerChanged || isActionChanged)
-        {
-            G["controller"] = route.controller;
-            G["action"] = route.action;
-            G["controller.action"] = route.controller + "." + route.action;
-        }
+        //update globals for templates
+        G["controller"] = route.controller;
+        G["action"] = route.action;
+        G["controller.action"] = route.controller + "." + route.action;
     }
 
     public void setRoute(FwRoute r)
@@ -1444,14 +1439,14 @@ public class FW : IDisposable
                     }
                 }
 
-                    using (SmtpClient client = new())
+                using (SmtpClient client = new())
+                {
+                    FwDict mailSettings = this.config("mail") as FwDict ?? [];
+                    if (options.TryGetValue("smtp", out object? value) && value is FwDict smtpOptions)
                     {
-                        FwDict mailSettings = this.config("mail") as FwDict ?? [];
-                        if (options.TryGetValue("smtp", out object? value) && value is FwDict smtpOptions)
-                        {
-                            //override mailSettings from smtp options
-                            Utils.mergeHash(mailSettings, smtpOptions);
-                        }
+                        //override mailSettings from smtp options
+                        Utils.mergeHash(mailSettings, smtpOptions);
+                    }
                     if (mailSettings.Count > 0)
                     {
                         client.Host = mailSettings["host"].toStr();
