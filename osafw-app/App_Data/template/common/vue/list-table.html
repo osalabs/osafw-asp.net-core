@@ -34,14 +34,20 @@
                 </table>
             </div>
 
-            <div class="text-center py-4" v-if="!fwStore.list_rows.length">
+            <div class="fw-empty-state text-center mx-auto py-4" v-if="!fwStore.list_rows.length">
                 <template v-if="fwStore.is_loading_index">
                     <span class="spinner-border" role="status" aria-hidden="true"></span>
                 </template>
                 <template v-else>
-                    <h3><i class="bi bi-0-square"></i> `No results`</h3>
-                    Try to
-                    <a :href="'?dofilter=1'+(fwStore.related_id ? '&related_id='+fwStore.related_id : '')">reset</a> all filters.
+                    <div class="d-flex justify-content-center align-items-center gap-2 mb-1">
+                        <i class="bi bi-0-square text-muted"></i>
+                        <span class="fw-semibold">`No results`</span>
+                    </div>
+                    <div class="text-muted small">
+                        `Try to`
+                        <a :href="'?dofilter=1'+(fwStore.related_id ? '&related_id='+fwStore.related_id : '')">`reset`</a>
+                        `all filters`.
+                    </div>
                 </template>
             </div>
 
