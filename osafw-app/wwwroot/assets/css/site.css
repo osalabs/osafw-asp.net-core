@@ -153,6 +153,26 @@ a[disabled] {
     border: 1px solid;
 }
 
+.fw-autosave-status {
+    display: inline-flex;
+    align-items: center;
+}
+
+.fw-autosave-status .fw-autosave-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.fw-autosave-status-global {
+    display: inline-flex;
+}
+
+.page-header-meta .fw-autosave-status-global,
+.page-header-row-actions .fw-autosave-status-global {
+    margin-left: var(--fw-spacer05);
+}
+
 h1 .badge {
     font-size: 1.25rem;
     vertical-align: middle;
@@ -383,10 +403,6 @@ main {
 
 .page-header-row-title .badge {
     vertical-align: middle;
-}
-
-.page-header-row-actions .form-saved-status-global {
-    display: none;
 }
 
 .no-sidebar #sidebar:not(.show,.collapsing) {
