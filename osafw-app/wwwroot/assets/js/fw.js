@@ -114,6 +114,24 @@ window.fw={
     };
   },
 
+  update_att_empty_state: function (context) {
+    var $context = $(context);
+    if (!$context.length) return;
+
+    $context.find('.fw-empty-state').each(function () {
+      var $empty = $(this);
+      var $scope = $empty.closest('.fw-att-block');
+      if (!$scope.length) $scope = $empty.parent();
+
+      var hasSingle = $scope.find('.att-info:visible').not('.tpl').length > 0;
+      var hasListCards = $scope.find('.att-list .att-info').not('.tpl').length > 0;
+      var hasListItems = $scope.find('.att-list .att-item').not('.tpl').length > 0;
+      var hasAtt = hasSingle || hasListCards || hasListItems;
+
+      $empty.toggle(!hasAtt);
+    });
+  },
+
   //called on document ready
   setup_handlers: function (){
     //list screen init
@@ -765,13 +783,16 @@ window.fw={
           return;
       }
 
-      var $list = $drop.next('.att-list');
+      var $attBlock = $drop.closest('.fw-att-block');
+      var $list = $attBlock.find('.att-list').first();
+      if (!$list.length) $list = $drop.next('.att-list');
       files.forEach(function(file){
         var $item = $list.find('.tpl').clone().removeClass('tpl d-none');
         $item.find('.att-iname').text(file.name);
         $item.find('.att-size').text('('+fw.bytes2str(file.size)+')');
         var $progress = $item.find('.progress-bar');
         $list.append($item);
+        fw.update_att_empty_state($attBlock.length ? $attBlock : $form);
 
         var fd = new FormData();
         fd.append('file1', file);
@@ -812,11 +833,13 @@ window.fw={
               $item.remove();
               fw.error(data.error?.message || fw.MSG_UPLOAD_FAILED);
             }
+            fw.update_att_empty_state($attBlock.length ? $attBlock : $form);
             $input.val('');
           },
           error: function(){
             $item.remove();
             fw.error(fw.MSG_UPLOAD_FAILED);
+            fw.update_att_empty_state($attBlock.length ? $attBlock : $form);
             $input.val('');
           }
         });
@@ -828,6 +851,7 @@ window.fw={
       var $item=$(this).closest('.att-item');
       var $form=$(this).closest('form');
       $item.remove();
+      fw.update_att_empty_state($item.closest('.fw-att-block'));
       $form.trigger('autosave');
     });
   },

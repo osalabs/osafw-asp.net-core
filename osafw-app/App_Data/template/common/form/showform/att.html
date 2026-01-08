@@ -1,8 +1,9 @@
-<div class="row">
+<div class="row fw-att-block">
     <div class="col-3 col-lg-5">
         <p><button id="<~field>" type="button" class="btn btn-default on-select-att" data-att-category="<~att_category default="general">"><i class="bi bi-file-earmark-image"></i> `Select/Upload`</button></p>
     </div>
     <div class="col-6 col-lg">
+        <div class="fw-empty-state text-center mx-auto" <~/common/display_none if="att">>`No attachment selected`</div>
         <div class="card text-center att-info" <~/common/display_none unless="att">>
           <input name="item[<~field>]" value="<~value>" type="hidden" <~attrs_control noescape>>
           <img class="card-img-top" src="<~/att/url>/<~att[icode]>?preview=1&size=s" alt="">

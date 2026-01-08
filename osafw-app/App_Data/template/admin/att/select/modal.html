@@ -39,6 +39,7 @@ function modal_att_open($att_category, on_select_callback){
             $attinfo.find('img').show().prop('src', url+'?preview=1&size='+att_preview_size);
             $attinfo.find('a').prop('href', '/Att/'+id);
             $attinfo.find('.att-iname').text(iname);
+            fw.update_att_empty_state($fg);
             $form.trigger('autosave');
         });
     });
@@ -51,6 +52,8 @@ function modal_att_open($att_category, on_select_callback){
         }else{
             $attinfo.hide().find(':input:hidden').val('');
         }
+        var $attBlock = $this.closest('.fw-att-block');
+        fw.update_att_empty_state($attBlock.length ? $attBlock : $this.closest('.row .form-row'));
         $form.trigger('autosave');
     });
 
