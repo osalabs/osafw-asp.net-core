@@ -693,18 +693,26 @@ public abstract class FwModel : IDisposable
     // like listSelectOptions, but for autocomplete by search string q
     public virtual FwList listSelectOptionsAutocomplete(string q, FwDict? def = null)
     {
-        FwDict where = [];
-        where[field_iname] = db.opLIKE("%" + q + "%");
+        var table = db.qid(table_name);
+        var qfield_id = db.qid(field_id);
+        var qfield_iname = db.qid(field_iname);
+        var where = $"{qfield_iname} LIKE @iname OR {qfield_id} = @id";
+
+        var id = q.toInt();
+        FwDict where_params = new()
+        {
+            { "iname", q + "%" },
+            { "id", id },
+        };
 
         if (!string.IsNullOrEmpty(field_status))
-            where[field_status] = db.opNOT(STATUS_DELETED);
+        {
+            where = $"({where}) AND {db.qid(field_status)} <> @status_deleted";
+            where_params["status_deleted"] = STATUS_DELETED;
+        }
 
-        FwList select_fields =
-        [
-            new FwDict() { { "field", field_id }, { "alias", "id" } },
-            new FwDict() { { "field", field_iname }, { "alias", "iname" } }
-        ];
-        return db.array(table_name, where, getOrderBy(), select_fields);
+        var sql = $"SELECT {qfield_id} AS id, {qfield_iname} AS iname FROM {table} WHERE {where} ORDER BY {getOrderBy()}";
+        return db.arrayp(sql, where_params);
     }
 
 

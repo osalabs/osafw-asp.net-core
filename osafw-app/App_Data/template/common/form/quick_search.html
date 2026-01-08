@@ -1,0 +1,25 @@
+<form class="fw-quick-search d-flex align-items-center flex-shrink-0" method="get" action="<~../url>/(Go)">
+  <input type="text" name="s" class="form-control form-control-sm on-fw-quick-search" style="width: 220px;" autocomplete="off" placeholder="`Search by ID or name...`" data-autocomplete="<~../url>/(QuickSearch)?q=">
+  <~/common/form/relid>
+  <~return_url if="return_url" inline><input type="hidden" name="return_url" value="<~return_url>"></~return_url>
+  <~is_showform if="is_showform" inline><input type="hidden" name="is_edit" value="1"></~is_showform>
+</form>
+
+<~/common/autocomplete>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.on-fw-quick-search').forEach(function (input) {
+      if (input.dataset.autocompleteInitialized || typeof BootstrapSimpleAutocomplete === 'undefined') {
+        return;
+      }
+      input.dataset.autocompleteInitialized = '1';
+      var form = input.closest('form');
+      new BootstrapSimpleAutocomplete(input);
+      input.addEventListener('autocomplete.select', function () {
+        if (form) {
+          form.submit();
+        }
+      });
+    });
+  });
+</script>

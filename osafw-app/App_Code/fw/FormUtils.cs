@@ -527,9 +527,16 @@ public class FormUtils
         if (string.IsNullOrEmpty(s))
             return 0;
 
-        var idPart = s.Split([" - "], StringSplitOptions.None).FirstOrDefault();
+        var idPart = s.Split([AutocompleteSeparator], StringSplitOptions.None).FirstOrDefault();
 
         return int.TryParse(idPart, out int result) ? result : 0;
+    }
+
+    public const string AutocompleteSeparator = " - ";
+
+    public static string formatAutocompleteValue(int id, string iname)
+    {
+        return $"{id}{AutocompleteSeparator}{iname}";
     }
 
     // convert time from field to 2 form fields with HH and MM suffixes
