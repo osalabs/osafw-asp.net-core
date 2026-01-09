@@ -804,10 +804,21 @@ form .has-danger .invalid-feedback {
     padding: var(--fw-spacer05);
 }
 
+.att-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--fw-spacer05);
+    align-items: stretch;
+}
+
+.att-list .att-item {
+    flex: 0 0 auto;
+}
+
 .att-info {
     width: calc(var(--fw-spacer)*10);
     text-align: center;
-    margin-bottom: var(--fw-spacer05);
+    margin-bottom: 0;
 }
 
 /*att select modal thumbnails*/

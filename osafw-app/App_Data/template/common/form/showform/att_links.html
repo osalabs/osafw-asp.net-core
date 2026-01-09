@@ -1,21 +1,20 @@
-<p><button id="att_links" type="button" class="btn btn-default on-select-att" data-att-category="<~att_category default="general">"><i class="bi bi-file-earmark-image"></i> `Select/Upload`</button></p>
+<div class="fw-att-block">
+  <p><button id="att_links" type="button" class="btn btn-default on-select-att" data-att-category="<~att_category default="general">"><i class="bi bi-file-earmark-image"></i> `Select/Upload`</button></p>
+  <div class="fw-empty-state text-center mx-auto" <~/common/display_none if="att_links">>`No attachments selected`</div>
 
-<div class="row att-list mt-5">
+  <div class="att-list">
   <~att_links repeat inline>
-    <div class="col">
-      <div class="card att-info">
-        <input type="hidden" name="<~att_post_prefix default="att">[<~id>]" value="1">
-        <img class="card-img-top" src="<~/att/url>/<~icode>?preview=1&size=s" alt="">
-        <div class="card-body text-truncate">
-          <p class="card-text att-iname"><~iname></p>
-          <a href="<~/att/url>/<~icode>" target="_blank" class="btn btn-default" title="`Download`"><i class="bi bi-cloud-download-fill"></i></a>
-          <button type="button" class="btn btn-default on-remove-att" title="`Remove`"><i class="bi bi-x-circle-fill"></i></button>
-        </div>
+    <div class="card att-info att-item">
+      <input type="hidden" name="<~att_post_prefix default="att">[<~id>]" value="1">
+      <img class="card-img-top" src="<~/att/url>/<~icode>?preview=1&size=s" alt="">
+      <div class="card-body text-truncate">
+        <p class="card-text att-iname"><~iname></p>
+        <a href="<~/att/url>/<~icode>" target="_blank" class="btn btn-default" title="`Download`"><i class="bi bi-cloud-download-fill"></i></a>
+        <button type="button" class="btn btn-default on-remove-att" title="`Remove`"><i class="bi bi-x-circle-fill"></i></button>
       </div>
     </div>
   </~att_links>
-  <div class="col tpl d-none">
-    <div class="card att-info">
+    <div class="card att-info att-item tpl d-none">
       <input type="hidden" name="<~att_post_prefix default="att">" value="1">
       <img class="card-img-top" src="" alt="">
       <div class="card-body text-truncate">

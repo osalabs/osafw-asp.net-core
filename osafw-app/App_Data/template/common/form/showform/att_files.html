@@ -1,31 +1,35 @@
-<div class="fw-file-drop-area"
-  data-upload-url="<~att_upload_url>"
-  data-fwentity="<~fwentity>"
-  data-att-category="<~att_category>"
-  data-att-post-prefix="<~att_post_prefix>"
-  data-item-id="<~i[id]>"
->
-  <~nobtn_block unless="i[id]" inline>
-   <span class="text-muted">To add files - Save the record first</span>
-  </~nobtn_block>
-  <~btn_block if="i[id]" inline>
-   <span class="fake-btn"><i class="bi bi-cloud-upload"></i> Choose files or drag and drop your files here</span>
-   <input class="d-none" data-noautosave type="file" name="file" <~/common/multiple if="multiple">>
-  </~btn_block>
-</div>
+<div class="fw-att-block">
+  <div class="fw-file-drop-area"
+    data-upload-url="<~att_upload_url>"
+    data-fwentity="<~fwentity>"
+    data-att-category="<~att_category>"
+    data-att-post-prefix="<~att_post_prefix>"
+    data-item-id="<~i[id]>"
+  >
+    <~nobtn_block unless="i[id]" inline>
+     <span class="text-muted">To add files - Save the record first</span>
+    </~nobtn_block>
+    <~btn_block if="i[id]" inline>
+     <span class="fake-btn"><i class="bi bi-cloud-upload"></i> Choose files or drag and drop your files here</span>
+     <input class="d-none" data-noautosave type="file" name="file" <~/common/multiple if="multiple">>
+    </~btn_block>
+  </div>
 
-<div class="att-list mt-3">
-  <~att_files repeat inline>
-    <div class="att-item d-flex align-items-center">
-      <~/common/dot><span class="text-truncate"><a href="<~/att/url>/<~icode>" target="_blank"><~iname></a> <span class="text-muted ms-2">(<~fsize bytes>)</span></span>
+  <div class="fw-empty-state text-center mx-auto mt-2" <~/common/display_none if="att_files">>`No files uploaded`</div>
+
+  <div class="att-list flex-column mt-3">
+    <~att_files repeat inline>
+      <div class="att-item d-flex align-items-center">
+        <~/common/dot><span class="text-truncate"><a href="<~/att/url>/<~icode>" target="_blank"><~iname></a> <span class="text-muted ms-2">(<~fsize bytes>)</span></span>
+        <button type="button" class="btn btn-sm btn-link text-danger on-remove-att"><i class="bi bi-x-circle-fill"></i></button>
+        <input type="hidden" name="<~PARSEPAGE.PARENT[att_post_prefix]>[<~id>]" value="1">
+      </div>
+    </~att_files>
+    <div class="att-item d-flex align-items-center tpl d-none">
+      <~/common/dot><span class="text-truncate"><a href="#" target="_blank" class="att-iname"><~iname></a> <span class="att-size text-muted ms-2"></span></span>
+      <div class="progress flex-grow-1 mx-2"><div class="progress-bar progress-bar-striped progress-bar-animated" style="width:0%"></div></div>
       <button type="button" class="btn btn-sm btn-link text-danger on-remove-att"><i class="bi bi-x-circle-fill"></i></button>
-      <input type="hidden" name="<~PARSEPAGE.PARENT[att_post_prefix]>[<~id>]" value="1">
+      <input type="hidden" name="<~att_post_prefix>[0]" value="1" class="att-post-prefix">
     </div>
-  </~att_files>
-  <div class="att-item d-flex align-items-center tpl d-none">
-    <~/common/dot><span class="text-truncate"><a href="#" target="_blank" class="att-iname"><~iname></a> <span class="att-size text-muted ms-2"></span></span>
-    <div class="progress flex-grow-1 mx-2"><div class="progress-bar progress-bar-striped progress-bar-animated" style="width:0%"></div></div>
-    <button type="button" class="btn btn-sm btn-link text-danger on-remove-att"><i class="bi bi-x-circle-fill"></i></button>
-    <input type="hidden" name="<~att_post_prefix>[0]" value="1" class="att-post-prefix">
   </div>
 </div>

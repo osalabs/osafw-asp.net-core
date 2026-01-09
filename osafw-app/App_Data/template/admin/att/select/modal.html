@@ -22,7 +22,8 @@ function modal_att_open($att_category, on_select_callback){
     $(document).on('click', '.on-select-att', function (e) {
         var $this = $(this);
         var $form = $(this.form);
-        var $fg = $this.closest('.row .form-row');
+        var $fg = $this.closest('.fw-att-block');
+        if (!$fg.length) $fg = $this.closest('.form-row, .form-group');
         var $att_list = $fg.find('.att-list');
         var att_preview_size = $this.data('att-preview-size') || 's';
 
@@ -39,19 +40,9 @@ function modal_att_open($att_category, on_select_callback){
             $attinfo.find('img').show().prop('src', url+'?preview=1&size='+att_preview_size);
             $attinfo.find('a').prop('href', '/Att/'+id);
             $attinfo.find('.att-iname').text(iname);
+            fw.update_att_empty_state($fg);
             $form.trigger('autosave');
         });
-    });
-    $(document).on('click', '.on-remove-att', function (e) {
-        var $this = $(this);
-        var $form = $(this.form);
-        var $attinfo = $this.closest('.att-info');
-        if ($this.closest('.att-list').length){
-            $attinfo.remove(); //multi att - just remove
-        }else{
-            $attinfo.hide().find(':input:hidden').val('');
-        }
-        $form.trigger('autosave');
     });
 
  });

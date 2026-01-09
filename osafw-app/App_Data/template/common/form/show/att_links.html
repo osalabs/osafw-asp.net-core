@@ -1,13 +1,12 @@
-<div class="row att-list">
+<div class="fw-empty-state text-center mx-auto" <~/common/display_none if="att_links">>`No attachments selected`</div>
+<div class="att-list">
   <~att_links repeat inline>
-    <div class="col">
-      <div class="card att-info">
-        <input type="hidden" name="att[<~id>]" value="1">
-        <img class="card-img-top" src="<~/att/url>/<~icode>?preview=1&size=s" alt="">
-        <div class="card-body text-truncate">
-          <p class="card-text att-iname"><~iname></p>
-          <a href="<~/att/url>/<~icode>" target="_blank" class="btn btn-default"><i class="bi bi-cloud-download-fill"></i> `Download`</a>
-        </div>
+    <div class="card att-info att-item">
+      <input type="hidden" name="att[<~id>]" value="1">
+      <img class="card-img-top" src="<~/att/url>/<~icode>?preview=1&size=s" alt="">
+      <div class="card-body text-truncate">
+        <p class="card-text att-iname"><~iname></p>
+        <a href="<~/att/url>/<~icode>" target="_blank" class="btn btn-default"><i class="bi bi-cloud-download-fill"></i> `Download`</a>
       </div>
     </div>
   </~att_links>
