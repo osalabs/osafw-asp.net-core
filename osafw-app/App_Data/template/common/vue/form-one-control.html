@@ -126,7 +126,7 @@
                 &nbsp;&#183;&nbsp;<span class="text-truncate"><a :href="attachments[att_id]?.url??'#'" target="_blank">{{attachments[att_id]?.iname??att_id}}</a> <span class="text-muted ms-2">({{bytes2str(attachments[att_id]?.fsize??0)}})</span></span>
             </div>
         </div>
-        <div v-if="!att_files.length" class="fw-empty-state text-center mx-auto py-2">`No files attached`</div>
+        <div v-if="!att_files.length" class="fw-empty-state text-center mx-auto py-2">`No files uploaded`</div>
     </template>
 
     <template v-else-if="def.type=='att_files_edit'">
@@ -154,7 +154,7 @@
                 <button type="button" class="btn btn-sm btn-link text-danger on-remove-att" @click.prevent="onAttFileDelete(att_id)"><i class="bi bi-x-circle-fill"></i></button>
             </div>
         </div>
-        <div v-if="!att_files.length && !uploading_files.length" class="fw-empty-state text-center mx-auto py-2">`No files attached`</div>
+        <div v-if="!att_files.length && !uploading_files.length" class="fw-empty-state text-center mx-auto py-2">`No files uploaded`</div>
     </template>
 
     <template v-if="def.type=='currency'">

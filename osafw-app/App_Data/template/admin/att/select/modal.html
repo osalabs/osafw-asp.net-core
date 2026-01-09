@@ -43,19 +43,6 @@ function modal_att_open($att_category, on_select_callback){
             $form.trigger('autosave');
         });
     });
-    $(document).on('click', '.on-remove-att', function (e) {
-        var $this = $(this);
-        var $form = $(this.form);
-        var $attinfo = $this.closest('.att-info');
-        if ($this.closest('.att-list').length){
-            $attinfo.remove(); //multi att - just remove
-        }else{
-            $attinfo.hide().find(':input:hidden').val('');
-        }
-        var $attBlock = $this.closest('.fw-att-block');
-        fw.update_att_empty_state($attBlock.length ? $attBlock : $this.closest('.row .form-row'));
-        $form.trigger('autosave');
-    });
 
  });
 

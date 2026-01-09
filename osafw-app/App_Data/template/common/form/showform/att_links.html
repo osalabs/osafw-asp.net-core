@@ -5,7 +5,7 @@
   <div class="row att-list mt-5">
   <~att_links repeat inline>
     <div class="col">
-      <div class="card att-info">
+      <div class="card att-info att-item">
         <input type="hidden" name="<~att_post_prefix default="att">[<~id>]" value="1">
         <img class="card-img-top" src="<~/att/url>/<~icode>?preview=1&size=s" alt="">
         <div class="card-body text-truncate">
@@ -17,7 +17,7 @@
     </div>
   </~att_links>
     <div class="col tpl d-none">
-      <div class="card att-info">
+      <div class="card att-info att-item">
         <input type="hidden" name="<~att_post_prefix default="att">" value="1">
         <img class="card-img-top" src="" alt="">
         <div class="card-body text-truncate">

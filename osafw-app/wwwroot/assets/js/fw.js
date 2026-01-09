@@ -114,23 +114,22 @@ window.fw={
     };
   },
 
-  update_att_empty_state: function (context) {
+    update_att_empty_state: function (context) {
+    console.log("updating att empty state in context", context);
     var $context = $(context);
     if (!$context.length) return;
-
+    
     $context.find('.fw-empty-state').each(function () {
       var $empty = $(this);
       var $scope = $empty.closest('.fw-att-block');
       if (!$scope.length) $scope = $empty.parent();
+      console.log("scope:", $scope);
 
       var hasSingle = $scope.find('.att-info:visible').not('.tpl').length > 0;
-      var hasListCards = $scope.find('.att-list .att-info').filter(function () {
-        return $(this).closest('.tpl').length === 0;
-      }).length > 0;
-      var hasListItems = $scope.find('.att-list .att-item').filter(function () {
-        return $(this).closest('.tpl').length === 0;
-      }).length > 0;
-      var hasAtt = hasSingle || hasListCards || hasListItems;
+      //var hasListCards = $scope.find('.att-list .att-item').not('.tpl').length > 0;
+      var hasListItems = $scope.find('.att-list .att-item').not('.tpl').length > 0;
+      var hasAtt = hasSingle || hasListItems;
+      console.log("hasAtt:", hasAtt, " (single:", hasSingle, " list items:", hasListItems, ")");
 
       $empty.toggle(!hasAtt);
     });
@@ -852,10 +851,18 @@ window.fw={
     });
 
     $(document).on('click', '.on-remove-att', function(){
-      var $item=$(this).closest('.att-item');
-      var $form=$(this).closest('form');
-      $item.remove();
-      fw.update_att_empty_state($item.closest('.fw-att-block'));
+      var $this = $(this);
+      console.log("fw.js on-remove-att click", $this);
+      var $item=$this.closest('.att-item');
+      var $form = $this.closest('form');
+      var $attBlock = $this.closest('.fw-att-block');
+      if ($this.closest('.att-list').length){
+        $item.remove(); //multi att - just remove
+      }else{
+        $item.hide().find(':input:hidden').val('');
+      }
+      
+      fw.update_att_empty_state($attBlock.length ? $attBlock : $this.closest('.row .form-row'));
       $form.trigger('autosave');
     });
   },

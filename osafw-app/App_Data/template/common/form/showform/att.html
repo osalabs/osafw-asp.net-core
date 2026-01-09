@@ -4,7 +4,7 @@
     </div>
     <div class="col-6 col-lg">
         <div class="fw-empty-state text-center mx-auto" <~/common/display_none if="att">>`No attachment selected`</div>
-        <div class="card text-center att-info" <~/common/display_none unless="att">>
+        <div class="card text-center att-info att-item" <~/common/display_none unless="att">>
           <input name="item[<~field>]" value="<~value>" type="hidden" <~attrs_control noescape>>
           <img class="card-img-top" src="<~/att/url>/<~att[icode]>?preview=1&size=s" alt="">
           <div class="card-body text-truncate">
