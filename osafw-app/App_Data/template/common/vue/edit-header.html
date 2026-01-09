@@ -5,6 +5,12 @@
                 <a href="#" @click.prevent="fwStore.openListScreen">{{fwStore.list_title}}</a> <span class="text-muted">/</span>
             </nav>
             <div class="page-header-record-nav ms-auto d-flex align-items-center gap-2 d-print-none">
+                <autocomplete v-model="quickSearch"
+                              class="form-control-sm"
+                              style="width: 220px;"
+                              :url="quickSearchUrl"
+                              placeholder="`Search by ID or name...`"
+                              @select="onQuickSelect"></autocomplete>
                 <a @click.prevent="onNext(true)" href="#" class="btn btn-link"><i class="bi bi-arrow-left-circle"></i> `Prev`</a>
                 <a @click.prevent="onNext()" href="#" class="btn btn-link">`Next` <i class="bi bi-arrow-right-circle"></i></a>
             </div>
@@ -75,6 +81,7 @@
     fwApp.component('edit-header', {
         template: '#edit-header-template',
         data: () => ({
+            quickSearch: '',
         }),
         computed: {
             ...mapStores(fwStore), //accessible via this.fwStore
@@ -86,9 +93,19 @@
             },
             id() {
                 return this.fwStore.edit_data?.id ?? 0;
+            },
+            quickSearchUrl() {
+                return this.fwStore.base_url + '/(QuickSearch)?q=';
             }
         },
         methods: {
+            goQuickSearch(value, isEdit) {
+                if (!value) {
+                    return;
+                }
+                const url = this.fwStore.base_url + '/(Go)?s=' + encodeURIComponent(value) + (isEdit ? '&is_edit=1' : '');
+                window.location.href = url;
+            },
             async onAddNew(e) {
                 await this.fwStore.openEditScreen(0);
             },
@@ -103,6 +120,9 @@
             },
             onCancelForm() {
                 this.fwStore.openListScreen();
+            },
+            onQuickSelect(value) {
+                this.goQuickSearch(value, true);
             },
             async onNext(is_prev) {
                 const id = await this.fwStore.getNextID(this.current_id, is_prev);

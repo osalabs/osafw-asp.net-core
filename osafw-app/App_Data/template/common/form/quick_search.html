@@ -13,7 +13,7 @@
     }
     var form = input.closest('form');
     new BootstrapSimpleAutocomplete(input);
-    input.addEventListener('autocomplete.select', function () {
+    input.addEventListener('autocomplete', function () {
       if (form) {
         form.submit();
       }
