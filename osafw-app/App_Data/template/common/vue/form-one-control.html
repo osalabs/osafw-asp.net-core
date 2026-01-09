@@ -112,7 +112,7 @@
                     <div class="card-body text-truncate">
                         <p class="card-text att-iname">{{attachments[att_id]?.iname??''}}</p>
                         <a :href="attachments[att_id]?.url??''" target="_blank" class="btn btn-default"><i class="bi bi-cloud-download-fill"></i></a>
-                        <button type="button" class="btn btn-default ms-1" @click.prevent.stop="onAttLinkDelete(att_id)" title="`Remove`"><i class="bi bi-x-circle-fill"></i></button>
+                        <button type="button" class="btn btn-default ms-1" @click="onAttLinkDelete(att_id)" title="`Remove`"><i class="bi bi-x-circle-fill"></i></button>
                     </div>
                 </div>
             </div>
@@ -484,13 +484,14 @@
                     this.attachments[att.id] = att;
                 }
                 //add value to att_links if not present
+                if (!this.form.att_links) this.form.att_links = [];
                 if (!this.att_links.includes(att.id)) {
                     this.att_links.push(att.id);
                     this.fwStore.saveEditDataDebounced();
                 }
             },
             onAttLinkDelete(att_id) {
-                //remove from this.form.att_links, this.att_links as it's computed
+                //remove from this.form.att_links, not this.att_links as it's computed
                 if (!this.form.att_links) return;
                 this.form.att_links = this.form.att_links.filter(id => id != att_id);
                 this.fwStore.saveEditDataDebounced();
