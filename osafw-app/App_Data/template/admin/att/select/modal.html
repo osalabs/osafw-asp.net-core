@@ -22,7 +22,8 @@ function modal_att_open($att_category, on_select_callback){
     $(document).on('click', '.on-select-att', function (e) {
         var $this = $(this);
         var $form = $(this.form);
-        var $fg = $this.closest('.row .form-row');
+        var $fg = $this.closest('.fw-att-block');
+        if (!$fg.length) $fg = $this.closest('.form-row, .form-group');
         var $att_list = $fg.find('.att-list');
         var att_preview_size = $this.data('att-preview-size') || 's';
 
