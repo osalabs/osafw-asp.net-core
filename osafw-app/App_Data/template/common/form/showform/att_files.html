@@ -17,7 +17,7 @@
 
   <div class="fw-empty-state text-center mx-auto mt-2" <~/common/display_none if="att_files">>`No files uploaded`</div>
 
-  <div class="att-list mt-3">
+  <div class="att-list flex-column mt-3">
     <~att_files repeat inline>
       <div class="att-item d-flex align-items-center">
         <~/common/dot><span class="text-truncate"><a href="<~/att/url>/<~icode>" target="_blank"><~iname></a> <span class="text-muted ms-2">(<~fsize bytes>)</span></span>
