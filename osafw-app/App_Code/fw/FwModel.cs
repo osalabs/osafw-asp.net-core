@@ -691,7 +691,7 @@ public abstract class FwModel : IDisposable
     }
 
     // like listSelectOptions, but for autocomplete by search string q
-    public virtual FwList listSelectOptionsAutocomplete(string q, FwDict? def = null)
+    public virtual FwList listSelectOptionsAutocomplete(string q, FwDict? def = null, int limit = 5)
     {
         var table = db.qid(table_name);
         var qfield_id = db.qid(field_id);
@@ -712,6 +712,8 @@ public abstract class FwModel : IDisposable
         }
 
         var sql = $"SELECT {qfield_id} AS id, {qfield_iname} AS iname FROM {table} WHERE {where} ORDER BY {getOrderBy()}";
+        if (limit > 0)
+            sql = db.limit(sql, limit);
         return db.arrayp(sql, where_params);
     }
 
