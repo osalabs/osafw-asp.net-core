@@ -2,7 +2,7 @@
     <div class="border rounded p-3">
         <!-- view subtable -->
         <template v-if="def.type=='subtable'">
-            <div v-if="!list_rows.length" class="fw-empty-state text-center mx-auto py-2">No items</div>
+            <div v-if="!list_rows.length" class="fw-empty-state text-center mx-auto py-2 mb-2">No items</div>
             <table v-else class="table table-sm">
                 <thead>
                     <tr>
@@ -31,7 +31,7 @@
         </template>
 
         <template v-else-if="def.type=='subtable_edit'">
-            <div v-if="!list_rows.length" class="fw-empty-state text-center mx-auto py-2">No items</div>
+            <div v-if="!list_rows.length" class="fw-empty-state text-center mx-auto py-2 mb-2">No items</div>
             <table v-if="list_rows.length" class="mb-3 w-100">
                 <thead>
                     <tr>
