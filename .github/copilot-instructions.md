@@ -64,6 +64,7 @@ Whenever AGENTS.md updated - make copy of it to top level /.github/copilot-instr
 - Access control: static `access_level` on controller + `FwConfig.access_levels` rules. XSS token validated on mutating requests.
 - Templates: prefer view composition in `App_Data/template`; override controller base dir with `controller.template_basedir` or `ps["_basedir_controller"]`.
 - Utilities: use `FormUtils` for filtering/validation, `DateUtils` for user TZ formatting, `FwLogger` for logs, `FwCache` for memoization.
+- For new or updated C# methods, add XML docs explaining why the method exists and include detailed param/return info for non-primitive types; add inline comments for complex logic blocks.
 
 ## Helpful Docs
 - `docs/parsepage.md` - template engine.

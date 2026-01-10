@@ -234,6 +234,10 @@ public class FwAdminController : FwController
         return this.afterSave(true, new FwDict() { { "ctr", ctr } });
     }
 
+    /// <summary>
+    /// Returns autocomplete quick-search items for admin lists.
+    /// </summary>
+    /// <returns><see cref="FwDict"/> with a JSON payload containing autocomplete strings.</returns>
     public virtual FwDict QuickSearchAction()
     {
         var q = reqs("q").Trim();
@@ -243,11 +247,15 @@ public class FwAdminController : FwController
 
         var rows = model0.listSelectOptionsAutocomplete(q);
         foreach (FwDict row in rows)
-            items.Add(FormUtils.formatAutocompleteValue(row["id"].toInt(), row["iname"].toStr()));
+            items.Add(FormUtils.formatAutocomplete(row["iname"].toStr(), row["id"].toStr()));
 
         return new FwDict { { "_json", items } };
     }
 
+    /// <summary>
+    /// Navigates to a record by id or falls back to list filtering when quick-search input is not an id.
+    /// </summary>
+    /// <returns><see cref="FwDict"/> with redirect instructions for the UI.</returns>
     public virtual FwDict GoAction()
     {
         var s = reqs("s").Trim();
@@ -255,7 +263,7 @@ public class FwAdminController : FwController
             return new FwDict { { "_redirect", base_url } };
 
         var is_edit = reqb("is_edit");
-        var id = FormUtils.getIdFromAutocomplete(s);
+        var id = FormUtils.idFromAutocomplete(s);
         if (id > 0)
         {
             var item = modelOne(id);

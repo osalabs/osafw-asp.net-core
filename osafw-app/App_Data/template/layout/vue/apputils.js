@@ -1,4 +1,5 @@
 const AppUtils = {
+    autocompleteSeparator: ' ::: ',
     failStd(jqXHR, textStatus, error) {
         //standard fail processing
         var err = textStatus + ", " + error;
@@ -35,6 +36,18 @@ const AppUtils = {
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#39;');
+    },
+
+    idFromAutocomplete(value) {
+        if (typeof value !== 'string') return 0;
+        const trimmedValue = value.trim();
+        if (!trimmedValue) return 0;
+        const separator = this.autocompleteSeparator.trim();
+        const separatorIndex = trimmedValue.indexOf(separator);
+        if (separatorIndex === -1) return 0;
+        const idPart = trimmedValue.slice(separatorIndex + separator.length).trim();
+        const id = parseInt(idPart, 10);
+        return Number.isFinite(id) ? id : 0;
     },
 
     bytes2str: function (bytes) {

@@ -15,7 +15,7 @@ namespace osafw;
 public class FormUtils
 {
     public const int MAX_PAGE_ITEMS = 25; //default max number of items on list screen
-    public const string AUTOCOMPLETE_SEPARATOR = " - ";
+    public const string AUTOCOMPLETE_SEPARATOR = " ::: ";
 
     public static Array getYesNo()
     {
@@ -523,19 +523,54 @@ public class FormUtils
         return result;
     }
 
-    public static int getIdFromAutocomplete(string s)
+    /// <summary>
+    /// Extracts an integer id from an autocomplete value to support server-side quick-search navigation.
+    /// </summary>
+    /// <param name="s">Autocomplete string containing the separator and id.</param>
+    /// <returns>Integer id parsed from the autocomplete value, or 0 when absent/invalid.</returns>
+    public static int idFromAutocomplete(string s)
     {
-        if (string.IsNullOrEmpty(s))
-            return 0;
-
-        var idPart = s.Split([AUTOCOMPLETE_SEPARATOR], StringSplitOptions.None).FirstOrDefault();
-
-        return int.TryParse(idPart, out int result) ? result : 0;
+        var (_, id) = parseAutocomplete(s);
+        return int.TryParse(id, out int result) ? result : 0;
     }
 
-    public static string formatAutocompleteValue(int id, string iname)
+    /// <summary>
+    /// Formats autocomplete values consistently for UI components and quick-search.
+    /// </summary>
+    /// <param name="label">Display label to show in autocomplete lists.</param>
+    /// <param name="id">Optional id to append for lookups.</param>
+    /// <returns>Formatted autocomplete string or empty string when both values are empty.</returns>
+    public static string formatAutocomplete(string label, string id = "")
     {
-        return $"{id}{AUTOCOMPLETE_SEPARATOR}{iname}";
+        var labelTrimmed = label.Trim();
+        var idTrimmed = id.Trim();
+        if (string.IsNullOrEmpty(labelTrimmed) && (string.IsNullOrEmpty(idTrimmed) || idTrimmed == "0"))
+            return "";
+
+        if (string.IsNullOrEmpty(idTrimmed))
+            return labelTrimmed;
+
+        return $"{labelTrimmed}{AUTOCOMPLETE_SEPARATOR}{idTrimmed}";
+    }
+
+    /// <summary>
+    /// Parses an autocomplete string into label and id parts, tolerating missing spaces around the separator.
+    /// </summary>
+    /// <param name="value">Autocomplete string to parse.</param>
+    /// <returns>(string label, string id) tuple with trimmed label and id.</returns>
+    public static (string label, string id) parseAutocomplete(string? value)
+    {
+        var trimmedValue = value?.Trim() ?? "";
+        if (string.IsNullOrEmpty(trimmedValue))
+            return ("", "");
+
+        string label = "";
+        string id = "";
+        var separator = AUTOCOMPLETE_SEPARATOR.Trim();
+        // Use trimmed separator to be resilient if UI input removed spaces around it.
+        Utils.split2(separator, trimmedValue, ref label, ref id);
+
+        return (label.Trim(), id.Trim());
     }
 
     // convert time from field to 2 form fields with HH and MM suffixes
