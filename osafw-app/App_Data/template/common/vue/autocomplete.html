@@ -7,7 +7,8 @@
            :readonly="readonly"
            :pattern="pattern"
            :class="'form-control' + ($attrs.class ? ' ' + $attrs.class : '')"
-           v-model="value" />
+           v-model="value"
+           @keydown.enter.prevent="onEnter" />
 </script>
 
 <script type="module">
@@ -41,10 +42,11 @@
                 default: '',
             },
         },
-        emits: ['update:modelValue', 'select'],
+        emits: ['update:modelValue', 'select', 'enter'],
         data() {
             return {
                 autocompleteInstance: null,
+                pendingEnter: false,
             };
         },
         computed: {
@@ -83,9 +85,20 @@
         },
         methods: {
             onSelect(event) {
+                this.pendingEnter = false;
                 const selectedValue = event?.detail?.value ?? this.value;
                 this.value = selectedValue;
                 this.$emit('select', selectedValue);
+            },
+            onEnter() {
+                this.pendingEnter = true;
+                setTimeout(() => {
+                    if (!this.pendingEnter) {
+                        return;
+                    }
+                    this.pendingEnter = false;
+                    this.$emit('enter', this.value);
+                }, 0);
             },
             // customize if needed
             //    fetchData(query) {
