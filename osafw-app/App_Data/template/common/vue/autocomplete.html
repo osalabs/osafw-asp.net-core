@@ -70,12 +70,14 @@
                 });
                 input.dataset.autocompleteInitialized = '1';
             }
-            // Listen for the autocomplete.select event
+            // Listen for autocomplete events
             input.addEventListener('autocomplete.select', this.onSelect);
+            input.addEventListener('autocomplete', this.onSelect);
         },
         beforeUnmount() {
             const input = this.$refs.input;
             input.removeEventListener('autocomplete.select', this.onSelect);
+            input.removeEventListener('autocomplete', this.onSelect);
             if (this.autocompleteInstance) {
                 this.autocompleteInstance.destroy();
                 this.autocompleteInstance = null;
@@ -84,7 +86,7 @@
         },
         methods: {
             onSelect(event) {
-                const selectedValue = event.detail.value;
+                const selectedValue = event?.detail?.value ?? this.value;
                 this.value = selectedValue;
                 this.$emit('select', selectedValue);
             },
