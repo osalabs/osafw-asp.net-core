@@ -8,35 +8,14 @@
 <div class="row form-row">
   <label class="col-form-label fw-bold col-md-3">`Attachment`</label>
   <div class="col-md-6">
-    <div class="card text-center att-info" <~/common/display_none unless="att">>
-      <img src="<~/att/url>/<~att[icode]>?preview=1&size=s">
-      <div class="card-body">
-        <p class="card-text att-iname"><~att[iname]></p>
-          <a href="<~/att/url>/<~att[icode]>" target="_blank" class="btn btn-default"><i class="bi bi-cloud-download-fill"></i> `Download`</a>
-      </div>
-    </div>
+    <~/common/form/show/att>
   </div>
 </div>
 
 <div class="row form-row">
   <label class="col-form-label fw-bold col-md-3">`Multiple Attachments`</label>
   <div class="col">
-
-    <div class="row att-list">
-      <~att_links repeat inline>
-        <div class="col">
-          <div class="card att-info">
-            <input type="hidden" name="att[<~icode>]" value="1">
-            <img class="card-img-top" src="<~/att/url>/<~icode>?preview=1&size=s" alt="">
-            <div class="card-body text-truncate">
-              <p class="card-text att-iname"><~iname></p>
-              <a href="<~/att/url>/<~icode>" target="_blank" class="btn btn-default" title="`Download`"><i class="bi bi-cloud-download-fill"></i></a>
-            </div>
-          </div>
-        </div>
-      </~att_links>
-    </div>
-
+    <~/common/form/show/att_links>
   </div>
 </div>
 

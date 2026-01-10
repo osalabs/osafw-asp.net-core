@@ -60,6 +60,7 @@
                 <a :href="attachments[value]?.url??''" target="_blank" class="btn btn-default"><i class="bi bi-cloud-download-fill"></i> `Download`</a>
             </div>
         </div>
+        <div v-else class="fw-empty-state text-center mx-auto py-2">`No attachment selected`</div>
     </template>
     <template v-else-if="def.type=='att_edit'">
         <div class="row">
@@ -79,6 +80,7 @@
                         <button type="button" class="btn btn-default ms-1" @click="this.value=''" title="`Remove`"><i class="bi bi-x-circle-fill"></i></button>
                     </div>
                 </div>
+                <div v-else class="fw-empty-state text-center mx-auto py-2">`No attachment selected`</div>
             </div>
         </div>
     </template>
@@ -94,6 +96,7 @@
                 </div>
             </div>
         </div>
+        <div v-if="!att_links.length" class="fw-empty-state text-center mx-auto py-2">`No attachments selected`</div>
     </template>
     <template v-else-if="def.type=='att_links_edit'">
         <p><button type="button" class="btn btn-default" @click="is_att_select_modal=true"><i class="bi bi-file-earmark-image"></i> `Select/Upload`</button></p>
@@ -114,6 +117,7 @@
                 </div>
             </div>
         </div>
+        <div v-if="!att_links.length" class="fw-empty-state text-center mx-auto py-2">`No attachments selected`</div>
     </template>
 
     <template v-else-if="def.type=='att_files'">
@@ -122,6 +126,7 @@
                 &nbsp;&#183;&nbsp;<span class="text-truncate"><a :href="attachments[att_id]?.url??'#'" target="_blank">{{attachments[att_id]?.iname??att_id}}</a> <span class="text-muted ms-2">({{bytes2str(attachments[att_id]?.fsize??0)}})</span></span>
             </div>
         </div>
+        <div v-if="!att_files.length" class="fw-empty-state text-center mx-auto py-2">`No files uploaded`</div>
     </template>
 
     <template v-else-if="def.type=='att_files_edit'">
@@ -149,6 +154,7 @@
                 <button type="button" class="btn btn-sm btn-link text-danger on-remove-att" @click.prevent="onAttFileDelete(att_id)"><i class="bi bi-x-circle-fill"></i></button>
             </div>
         </div>
+        <div v-if="!att_files.length && !uploading_files.length" class="fw-empty-state text-center mx-auto py-2">`No files uploaded`</div>
     </template>
 
     <template v-if="def.type=='currency'">
@@ -478,13 +484,14 @@
                     this.attachments[att.id] = att;
                 }
                 //add value to att_links if not present
+                if (!this.form.att_links) this.form.att_links = [];
                 if (!this.att_links.includes(att.id)) {
                     this.att_links.push(att.id);
                     this.fwStore.saveEditDataDebounced();
                 }
             },
             onAttLinkDelete(att_id) {
-                //remove from this.form.att_links, this.att_links as it's computed
+                //remove from this.form.att_links, not this.att_links as it's computed
                 if (!this.form.att_links) return;
                 this.form.att_links = this.form.att_links.filter(id => id != att_id);
                 this.fwStore.saveEditDataDebounced();

@@ -114,6 +114,22 @@ window.fw={
     };
   },
 
+    update_att_empty_state: function (context) {
+    var $context = $(context);
+    if (!$context.length) return;
+    
+    $context.find('.fw-empty-state').each(function () {
+      var $empty = $(this);
+      var $scope = $empty.closest('.fw-att-block');
+      if (!$scope.length) $scope = $empty.closest('.att-list').parent();
+      if (!$scope.length) $scope = $empty.parent();
+
+      var hasAtt = $scope.find('.att-list .att-item, .att-info').filter(':visible').not('.tpl').length > 0;
+
+      $empty.toggle(!hasAtt);
+    });
+  },
+
   //called on document ready
   setup_handlers: function (){
     //list screen init
@@ -765,13 +781,16 @@ window.fw={
           return;
       }
 
-      var $list = $drop.next('.att-list');
+      var $attBlock = $drop.closest('.fw-att-block');
+      var $list = $attBlock.find('.att-list').first();
+      if (!$list.length) $list = $drop.next('.att-list');
       files.forEach(function(file){
         var $item = $list.find('.tpl').clone().removeClass('tpl d-none');
         $item.find('.att-iname').text(file.name);
         $item.find('.att-size').text('('+fw.bytes2str(file.size)+')');
         var $progress = $item.find('.progress-bar');
         $list.append($item);
+        fw.update_att_empty_state($attBlock.length ? $attBlock : $form);
 
         var fd = new FormData();
         fd.append('file1', file);
@@ -810,13 +829,15 @@ window.fw={
               }
             }else{
               $item.remove();
-              fw.error(data.error?.message || fw.MSG_UPLOAD_FAILED);
+              fw.error(res.error?.message || fw.MSG_UPLOAD_FAILED);
             }
+            fw.update_att_empty_state($attBlock.length ? $attBlock : $form);
             $input.val('');
           },
           error: function(){
             $item.remove();
             fw.error(fw.MSG_UPLOAD_FAILED);
+            fw.update_att_empty_state($attBlock.length ? $attBlock : $form);
             $input.val('');
           }
         });
@@ -825,9 +846,18 @@ window.fw={
     });
 
     $(document).on('click', '.on-remove-att', function(){
-      var $item=$(this).closest('.att-item');
-      var $form=$(this).closest('form');
-      $item.remove();
+      var $this = $(this);
+      var $item=$this.closest('.att-item');
+      var $form = $this.closest('form');
+      var $attBlock = $this.closest('.fw-att-block');
+      var $context = $attBlock.length ? $attBlock : $this.closest('.form-row, .form-group, form');
+      if ($this.closest('.att-list').length){
+        $item.remove(); //multi att - just remove
+      }else{
+        $item.hide().find(':input:hidden').val('');
+      }      
+      
+      fw.update_att_empty_state($context.length ? $context : document);
       $form.trigger('autosave');
     });
   },
