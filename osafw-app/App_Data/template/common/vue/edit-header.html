@@ -23,9 +23,9 @@
                 <h1 class="page-title mb-0" v-if="current_id">{{fwStore.edit_title}}</h1>
             </div>
             <div class="page-header-meta d-flex flex-wrap align-items-center gap-2">
-                <span v-if="fwStore.savedStatus!==null" class="form-saved-status-global">
-                    <span v-if="fwStore.savedStatus" class="badge bg-success">saved</span>
-                    <span v-if="!fwStore.savedStatus" class="badge bg-danger">not saved</span>
+                <span v-if="fwStore.savedStatus!==null" class="fw-autosave-status fw-autosave-status-global" aria-live="polite">
+                    <span v-if="fwStore.savedStatus" class="fw-autosave-badge fw-autosave-badge-saved">saved</span>
+                    <span v-if="!fwStore.savedStatus" class="fw-autosave-badge fw-autosave-badge-dirty">not saved</span>
                 </span>
                 <slot name="meta"></slot>
             </div>
@@ -64,7 +64,7 @@
             </div>
 
             <div class="page-header-actions page-header-actions-extra d-flex flex-wrap align-items-center gap-2 ms-auto">
-                <span class="form-saved-status-global"></span>
+                <span class="fw-autosave-status fw-autosave-status-global" aria-live="polite"></span>
                 <template v-if="!current_id">
                     <button type="button" class="btn btn-primary" :disabled="fwStore.is_readonly" @click="saveChanges">`Save`</button>
                     <button type="button" class="btn btn-secondary" :disabled="fwStore.is_readonly" @click="saveChanges('New')">`Save and Add New`</button>
