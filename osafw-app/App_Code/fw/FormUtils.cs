@@ -523,12 +523,23 @@ public class FormUtils
         return result;
     }
 
+    /// <summary>
+    /// Extracts an integer id from an autocomplete value to support server-side quick-search navigation.
+    /// </summary>
+    /// <param name="s">Autocomplete string containing the separator and id.</param>
+    /// <returns>Integer id parsed from the autocomplete value, or 0 when absent/invalid.</returns>
     public static int idFromAutocomplete(string s)
     {
         var (_, id) = parseAutocomplete(s);
         return int.TryParse(id, out int result) ? result : 0;
     }
 
+    /// <summary>
+    /// Formats autocomplete values consistently for UI components and quick-search.
+    /// </summary>
+    /// <param name="label">Display label to show in autocomplete lists.</param>
+    /// <param name="id">Optional id to append for lookups.</param>
+    /// <returns>Formatted autocomplete string or empty string when both values are empty.</returns>
     public static string formatAutocomplete(string label, string id = "")
     {
         var labelTrimmed = label.Trim();
@@ -542,6 +553,11 @@ public class FormUtils
         return $"{labelTrimmed}{AUTOCOMPLETE_SEPARATOR}{idTrimmed}";
     }
 
+    /// <summary>
+    /// Parses an autocomplete string into label and id parts, tolerating missing spaces around the separator.
+    /// </summary>
+    /// <param name="value">Autocomplete string to parse.</param>
+    /// <returns>(string label, string id) tuple with trimmed label and id.</returns>
     public static (string label, string id) parseAutocomplete(string? value)
     {
         var trimmedValue = value?.Trim() ?? "";
@@ -551,6 +567,7 @@ public class FormUtils
         string label = "";
         string id = "";
         var separator = AUTOCOMPLETE_SEPARATOR.Trim();
+        // Use trimmed separator to be resilient if UI input removed spaces around it.
         Utils.split2(separator, trimmedValue, ref label, ref id);
 
         return (label.Trim(), id.Trim());

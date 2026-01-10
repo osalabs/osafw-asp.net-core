@@ -658,6 +658,10 @@ public class FwDynamicController : FwController
         return new FwDict() { { "_json", items } };
     }
 
+    /// <summary>
+    /// Returns autocomplete quick-search items for dynamic lists.
+    /// </summary>
+    /// <returns><see cref="FwDict"/> with a JSON payload containing autocomplete strings.</returns>
     public virtual FwDict QuickSearchAction()
     {
         var q = reqs("q").Trim();
@@ -672,6 +676,10 @@ public class FwDynamicController : FwController
         return new FwDict { { "_json", items } };
     }
 
+    /// <summary>
+    /// Navigates to a record by id or falls back to list filtering when quick-search input is not an id.
+    /// </summary>
+    /// <returns><see cref="FwDict"/> with redirect instructions for the UI.</returns>
     public virtual FwDict GoAction()
     {
         var s = reqs("s").Trim();
@@ -1254,6 +1262,11 @@ public class FwDynamicController : FwController
     }
 
     // auto-process fields BEFORE record saved to db
+    /// <summary>
+    /// Applies pre-save transformations to showform field values before persisting.
+    /// </summary>
+    /// <param name="id">Record id being saved.</param>
+    /// <param name="fields"><see cref="FwDict"/> of field names to values for persistence.</param>
     protected virtual void processSaveShowFormFields(int id, FwDict fields)
     {
         FwDict item = reqh("item");
@@ -1275,14 +1288,17 @@ public class FwDynamicController : FwController
                 var (label, idValue) = FormUtils.parseAutocomplete(field_value);
                 if (def["lookup_by_value"].toBool())
                 {
+                    // lookup_by_value uses the label directly instead of resolving ids.
                     fields[field] = label; // just by value, not by id
                 }
                 else if (idValue.toInt() > 0)
                 {
+                    // When an id was selected from autocomplete, use it directly.
                     fields[field] = idValue.toInt();
                 }
                 else
                 {
+                    // Otherwise, create or resolve the label via lookup.
                     fields[field] = lookup_model.findOrAddByIname(label, out _);
                 }
             }

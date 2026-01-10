@@ -234,6 +234,10 @@ public class FwAdminController : FwController
         return this.afterSave(true, new FwDict() { { "ctr", ctr } });
     }
 
+    /// <summary>
+    /// Returns autocomplete quick-search items for admin lists.
+    /// </summary>
+    /// <returns><see cref="FwDict"/> with a JSON payload containing autocomplete strings.</returns>
     public virtual FwDict QuickSearchAction()
     {
         var q = reqs("q").Trim();
@@ -248,6 +252,10 @@ public class FwAdminController : FwController
         return new FwDict { { "_json", items } };
     }
 
+    /// <summary>
+    /// Navigates to a record by id or falls back to list filtering when quick-search input is not an id.
+    /// </summary>
+    /// <returns><see cref="FwDict"/> with redirect instructions for the UI.</returns>
     public virtual FwDict GoAction()
     {
         var s = reqs("s").Trim();
