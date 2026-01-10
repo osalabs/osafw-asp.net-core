@@ -8,11 +8,10 @@
 <script>
   document.addEventListener('DOMContentLoaded', function () {
     var input = document.querySelector('.on-fw-quick-search');
-    if (!input || typeof BootstrapSimpleAutocomplete === 'undefined') {
+    if (!input) {
       return;
     }
     var form = input.closest('form');
-    new BootstrapSimpleAutocomplete(input);
     input.addEventListener('autocomplete', function () {
       if (form) {
         form.submit();

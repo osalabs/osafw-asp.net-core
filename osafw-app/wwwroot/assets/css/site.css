@@ -915,6 +915,6 @@ a.thumbnail:hover {
     border-top-width: 0;
 }
 
-.fw-quick-search-input + .dropdown-menu {
+.fw-quick-search-input ~ .dropdown-menu {
     max-width: 24rem;
 }
