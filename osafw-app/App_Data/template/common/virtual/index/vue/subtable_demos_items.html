@@ -1,34 +1,38 @@
 <script type="text/x-template" id="subtable_demos_items-template">
     <div class="border rounded p-3">
         <!-- view subtable -->
-        <table v-if="def.type=='subtable'" class="table table-sm">
-            <thead>
-                <tr>
-                    <th class="col">ID</th>
-                    <th class="col">Demo Dict</th>
-                    <th class="col">Title</th>
-                    <th class="col">Notes</th>
-                    <th class="col">Y/N</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="row in list_rows" :key="row.id">
-                    <td>{{row.id}}</td>
-                    <td>{{lookupIname('DemoDicts', row.demo_dicts_id)}}</td>
-                    <td>{{row.iname}}</td>
-                    <td style="white-space: pre;">{{row.idesc}}</td>
-                    <td>
-                        <div class="form-check">
-                            <input type="checkbox" class="form-check-input" :checked="row.is_checkbox==1" disabled>
-                            <label class="form-check-label"></label>
-                        </div>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+        <template v-if="def.type=='subtable'">
+            <div v-if="!list_rows.length" class="fw-empty-state text-center mx-auto py-2">No items</div>
+            <table v-else class="table table-sm">
+                <thead>
+                    <tr>
+                        <th class="col">ID</th>
+                        <th class="col">Demo Dict</th>
+                        <th class="col">Title</th>
+                        <th class="col">Notes</th>
+                        <th class="col">Y/N</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="row in list_rows" :key="row.id">
+                        <td>{{row.id}}</td>
+                        <td>{{lookupIname('DemoDicts', row.demo_dicts_id)}}</td>
+                        <td>{{row.iname}}</td>
+                        <td style="white-space: pre;">{{row.idesc}}</td>
+                        <td>
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" :checked="row.is_checkbox==1" disabled>
+                                <label class="form-check-label"></label>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </template>
 
         <template v-else-if="def.type=='subtable_edit'">
-            <table class="mb-3 w-100">
+            <div v-if="!list_rows.length" class="fw-empty-state text-center mx-auto py-2">No items</div>
+            <table v-if="list_rows.length" class="mb-3 w-100">
                 <thead>
                     <tr>
                         <th class="col">ID</th>
