@@ -829,7 +829,7 @@ window.fw={
               }
             }else{
               $item.remove();
-              fw.error(data.error?.message || fw.MSG_UPLOAD_FAILED);
+              fw.error(res.error?.message || fw.MSG_UPLOAD_FAILED);
             }
             fw.update_att_empty_state($attBlock.length ? $attBlock : $form);
             $input.val('');
