@@ -10,8 +10,7 @@
                               style="width: 220px;"
                               :url="fwStore.base_url + '/(QuickSearch)?q='"
                               placeholder="`Search by ID or name...`"
-                              @select="goQuickSearch"
-                              @enter="onQuickSearchEnter"></autocomplete>
+                              @select="goQuickSearch"></autocomplete>
                 <a @click.prevent="onNext(true)" href="#" class="btn btn-link"><i class="bi bi-arrow-left-circle"></i> `Prev`</a>
                 <a @click.prevent="onNext()" href="#" class="btn btn-link">`Next` <i class="bi bi-arrow-right-circle"></i></a>
             </div>
@@ -124,9 +123,6 @@
                 }
                 this.fwStore.setFilters({ s: value });
                 await this.fwStore.openListScreen();
-            },
-            onQuickSearchEnter() {
-                this.goQuickSearch(this.quickSearch);
             },
             async onAddNew(e) {
                 await this.fwStore.openEditScreen(0);
