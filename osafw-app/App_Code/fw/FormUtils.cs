@@ -15,7 +15,7 @@ namespace osafw;
 public class FormUtils
 {
     public const int MAX_PAGE_ITEMS = 25; //default max number of items on list screen
-    public const string AUTOCOMPLETE_SEPARATOR = " - ";
+    public const string AUTOCOMPLETE_SEPARATOR = " ::: ";
 
     public static Array getYesNo()
     {
@@ -523,19 +523,37 @@ public class FormUtils
         return result;
     }
 
-    public static int getIdFromAutocomplete(string s)
+    public static int idFromAutocomplete(string s)
     {
-        if (string.IsNullOrEmpty(s))
-            return 0;
-
-        var idPart = s.Split([AUTOCOMPLETE_SEPARATOR], StringSplitOptions.None).FirstOrDefault();
-
-        return int.TryParse(idPart, out int result) ? result : 0;
+        var (_, id) = parseAutocomplete(s);
+        return int.TryParse(id, out int result) ? result : 0;
     }
 
-    public static string formatAutocompleteValue(int id, string iname)
+    public static string formatAutocomplete(string label, string id = "")
     {
-        return $"{id}{AUTOCOMPLETE_SEPARATOR}{iname}";
+        var labelTrimmed = label.Trim();
+        var idTrimmed = id.Trim();
+        if (string.IsNullOrEmpty(labelTrimmed) && (string.IsNullOrEmpty(idTrimmed) || idTrimmed == "0"))
+            return "";
+
+        if (string.IsNullOrEmpty(idTrimmed))
+            return labelTrimmed;
+
+        return $"{labelTrimmed}{AUTOCOMPLETE_SEPARATOR}{idTrimmed}";
+    }
+
+    public static (string label, string id) parseAutocomplete(string? value)
+    {
+        var trimmedValue = value?.Trim() ?? "";
+        if (string.IsNullOrEmpty(trimmedValue))
+            return ("", "");
+
+        string label = "";
+        string id = "";
+        var separator = AUTOCOMPLETE_SEPARATOR.Trim();
+        Utils.split2(separator, trimmedValue, ref label, ref id);
+
+        return (label.Trim(), id.Trim());
     }
 
     // convert time from field to 2 form fields with HH and MM suffixes

@@ -243,7 +243,7 @@ public class FwAdminController : FwController
 
         var rows = model0.listSelectOptionsAutocomplete(q);
         foreach (FwDict row in rows)
-            items.Add(FormUtils.formatAutocompleteValue(row["id"].toInt(), row["iname"].toStr()));
+            items.Add(FormUtils.formatAutocomplete(row["iname"].toStr(), row["id"].toStr()));
 
         return new FwDict { { "_json", items } };
     }
@@ -255,7 +255,7 @@ public class FwAdminController : FwController
             return new FwDict { { "_redirect", base_url } };
 
         var is_edit = reqb("is_edit");
-        var id = FormUtils.getIdFromAutocomplete(s);
+        var id = FormUtils.idFromAutocomplete(s);
         if (id > 0)
         {
             var item = modelOne(id);

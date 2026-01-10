@@ -107,16 +107,11 @@
             }
         },
         methods: {
-            getQuickSearchId(value) {
-                const idPart = value.split(' - ')[0];
-                const id = parseInt(idPart, 10);
-                return Number.isFinite(id) ? id : 0;
-            },
             async goQuickSearch(value) {
                 if (!value) {
                     return;
                 }
-                const id = this.getQuickSearchId(value);
+                const id = AppUtils.idFromAutocomplete(value);
                 this.quickSearch = '';
                 if (id > 0) {
                     await this.fwStore.openViewScreen(id);

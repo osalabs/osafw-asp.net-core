@@ -667,7 +667,7 @@ public class FwDynamicController : FwController
 
         var rows = model0.listSelectOptionsAutocomplete(q);
         foreach (FwDict row in rows)
-            items.Add(FormUtils.formatAutocompleteValue(row["id"].toInt(), row["iname"].toStr()));
+            items.Add(FormUtils.formatAutocomplete(row["iname"].toStr(), row["id"].toStr()));
 
         return new FwDict { { "_json", items } };
     }
@@ -679,7 +679,7 @@ public class FwDynamicController : FwController
             return new FwDict { { "_redirect", base_url } };
 
         var is_edit = reqb("is_edit");
-        var id = FormUtils.getIdFromAutocomplete(s);
+        var id = FormUtils.idFromAutocomplete(s);
         if (id > 0)
         {
             var item = modelOne(id);
@@ -1272,10 +1272,19 @@ public class FwDynamicController : FwController
             {
                 var lookup_model = fw.model(def["lookup_model"].toStr());
                 var field_value = item[field + "_iname"].toStr(); // autocomplete value is in "${field}_iname"
+                var (label, idValue) = FormUtils.parseAutocomplete(field_value);
                 if (def["lookup_by_value"].toBool())
-                    fields[field] = field_value; // just by value, not by id
+                {
+                    fields[field] = label; // just by value, not by id
+                }
+                else if (idValue.toInt() > 0)
+                {
+                    fields[field] = idValue.toInt();
+                }
                 else
-                    fields[field] = lookup_model.findOrAddByIname(field_value, out _);
+                {
+                    fields[field] = lookup_model.findOrAddByIname(label, out _);
+                }
             }
             else if (type == "time")
                 fields[field] = FormUtils.timeStrToInt(fields[field].toStr()); // ftime - convert from HH:MM to int (0-24h in seconds)
