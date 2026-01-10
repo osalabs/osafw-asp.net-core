@@ -47,6 +47,12 @@ public class FwAdminController : FwController
         return ps;
     }
 
+    //Prev/Next navigation
+    public virtual FwDict NextAction(string form_id)
+    {
+        return buildPrevNextRedirect(form_id);
+    }
+
     public virtual FwDict? ShowAction(int id)
     {
         FwDict ps = [];

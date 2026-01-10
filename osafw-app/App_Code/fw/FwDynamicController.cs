@@ -98,76 +98,15 @@ public class FwDynamicController : FwController
     //Prev/Next navigation
     public virtual FwDict NextAction(string form_id)
     {
-        var id = form_id.toInt();
-        if (id == 0)
-            return new FwDict { { "_redirect", base_url } };
+        return buildPrevNextRedirect(form_id);
+    }
 
-        var is_prev = (reqi("prev") == 1);
-        var is_edit = (reqi("edit") == 1);
-
-        this.initFilter("_filter_" + fw.G["controller"] + ".Index"); //read list filter for the IndexAction
-
+    protected override void initListForPrevNext()
+    {
         if (list_sortmap.Count == 0)
             list_sortmap = getViewListSortmap();
-        this.setListSorting();
 
-        this.setListSearch();
-        this.setListSearchStatus();
-
-        // get all ids
-        var ids = getListIds(list_view);
-        if (ids.Count == 0)
-            return new FwDict { { "_redirect", base_url } };
-
-        int go_id;
-        if (is_prev)
-        {
-            var index_prev = -1;
-            for (var index = ids.Count - 1; index >= 0; index += -1)
-            {
-                if (ids[index] == id.ToString())
-                {
-                    index_prev = index - 1;
-                    break;
-                }
-            }
-            if (index_prev > -1 && index_prev <= ids.Count - 1)
-                go_id = ids[index_prev].toInt();
-            else if (ids.Count > 0)
-                go_id = ids[ids.Count - 1].toInt();
-            else
-                return new FwDict { { "_redirect", base_url } };
-        }
-        else
-        {
-            var index_next = -1;
-            for (var index = 0; index <= ids.Count - 1; index++)
-            {
-                if (ids[index] == id.ToString())
-                {
-                    index_next = index + 1;
-                    break;
-                }
-            }
-            if (index_next > -1 && index_next <= ids.Count - 1)
-                go_id = ids[index_next].toInt();
-            else if (ids.Count > 0)
-                go_id = ids[0].toInt();
-            else
-                return new FwDict { { "_redirect", base_url } };
-        }
-
-        var url = base_url + "/" + go_id;
-        if (is_edit)
-            url += "/edit";
-        if (related_id.Length > 0 || return_url.Length > 0)
-            url += "/?";
-        if (related_id.Length > 0)
-            url += "related_id=" + Utils.urlescape(related_id);
-        if (return_url.Length > 0)
-            url += "&return_url=" + Utils.urlescape(return_url);
-
-        return new FwDict { { "_redirect", url }, { "id", go_id } };
+        base.initListForPrevNext();
     }
 
     public virtual FwDict? ShowAction(int id = 0)
