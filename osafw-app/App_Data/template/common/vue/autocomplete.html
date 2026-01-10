@@ -12,6 +12,8 @@
 </script>
 
 <script type="module">
+    import { BootstrapSimpleAutocomplete } from 'bootstrap-simple-autocomplete';
+
     fwApp.component('autocomplete', {
         template: '#autocomplete-template',
         props: {
@@ -41,6 +43,11 @@
             },
         },
         emits: ['update:modelValue', 'select', 'enter'],
+        data() {
+            return {
+                autocompleteInstance: null,
+            };
+        },
         computed: {
             value: {
                 get() {
@@ -52,11 +59,28 @@
             }
         },
         mounted() {
+            const input = this.$refs.input;
+            if (!input.dataset.autocompleteInitialized) {
+                this.autocompleteInstance = new BootstrapSimpleAutocomplete(input, {
+                    // Optional: customize as needed
+                    //    debounceDelay: 300,
+                    //    minQueryLength: 1,
+                    //    fetchFunction: this.fetchData,
+                    //    renderItem: this.renderItem,
+                });
+                input.dataset.autocompleteInitialized = '1';
+            }
             // Listen for the autocomplete.select event
-            this.$refs.input.addEventListener('autocomplete.select', this.onSelect);
+            input.addEventListener('autocomplete.select', this.onSelect);
         },
         beforeUnmount() {
-            this.$refs.input.removeEventListener('autocomplete.select', this.onSelect);
+            const input = this.$refs.input;
+            input.removeEventListener('autocomplete.select', this.onSelect);
+            if (this.autocompleteInstance) {
+                this.autocompleteInstance.destroy();
+                this.autocompleteInstance = null;
+                delete input.dataset.autocompleteInitialized;
+            }
         },
         methods: {
             onSelect(event) {
