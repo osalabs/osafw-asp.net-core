@@ -91,6 +91,10 @@
                 this.$emit('select', selectedValue);
             },
             onEnter() {
+                const selectedValue = this.autocompleteInstance?.selectedValue ?? this.value;
+                if (selectedValue) {
+                    this.value = selectedValue;
+                }
                 this.$emit('enter', this.value);
             },
             // customize if needed
