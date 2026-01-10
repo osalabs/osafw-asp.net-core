@@ -1,0 +1,21 @@
+<form class="fw-quick-search d-flex align-items-center flex-shrink-0" method="get" action="<~../url>/(Go)">
+  <input type="text" name="s" class="form-control form-control-sm fw-quick-search-input on-fw-quick-search" style="width: 220px;" autocomplete="off" placeholder="`Search by ID or name...`" data-autocomplete="<~../url>/(QuickSearch)?q=">
+  <~/common/form/relid>
+  <~return_url if="return_url" inline><input type="hidden" name="return_url" value="<~return_url>"></~return_url>
+  <~edit_block if="is_showform" inline><input type="hidden" name="is_edit" value="1"></~edit_block>
+</form>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var input = document.querySelector('.on-fw-quick-search');
+    if (!input) {
+      return;
+    }
+    var form = input.closest('form');
+    input.addEventListener('autocomplete', function () {
+      if (form) {
+        form.submit();
+      }
+    });
+  });
+</script>

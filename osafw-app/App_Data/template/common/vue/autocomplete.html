@@ -7,7 +7,8 @@
            :readonly="readonly"
            :pattern="pattern"
            :class="'form-control' + ($attrs.class ? ' ' + $attrs.class : '')"
-           v-model="value" />
+           v-model="value"
+           @keydown.enter.prevent="onEnter" />
 </script>
 
 <script type="module">
@@ -41,10 +42,11 @@
                 default: '',
             },
         },
-        emits: ['update:modelValue', 'select'],
+        emits: ['update:modelValue', 'select', 'enter'],
         data() {
             return {
                 autocompleteInstance: null,
+                pendingEnter: false,
             };
         },
         computed: {
@@ -58,30 +60,45 @@
             }
         },
         mounted() {
-            // Initialize the autocomplete instance
-            this.autocompleteInstance = new BootstrapSimpleAutocomplete(this.$refs.input, {
-                // Optional: customize as needed
-                //    debounceDelay: 300,
-                //    minQueryLength: 1,
-                //    fetchFunction: this.fetchData,
-                //    renderItem: this.renderItem,
-            });
-
-            // Listen for the autocomplete.select event
-            this.$refs.input.addEventListener('autocomplete.select', this.onSelect);
+            const input = this.$refs.input;
+            if (!input.dataset.autocompleteInitialized) {
+                this.autocompleteInstance = new BootstrapSimpleAutocomplete(input, {
+                    // Optional: customize as needed
+                    //    debounceDelay: 300,
+                    //    minQueryLength: 1,
+                    //    fetchFunction: this.fetchData,
+                    //    renderItem: this.renderItem,
+                });
+                input.dataset.autocompleteInitialized = '1';
+            }
+            // Listen for autocomplete events
+            input.addEventListener('autocomplete', this.onSelect);
         },
         beforeUnmount() {
-            // Destroy the autocomplete instance to clean up event listeners
+            const input = this.$refs.input;
+            input.removeEventListener('autocomplete', this.onSelect);
             if (this.autocompleteInstance) {
                 this.autocompleteInstance.destroy();
                 this.autocompleteInstance = null;
+                delete input.dataset.autocompleteInitialized;
             }
         },
         methods: {
             onSelect(event) {
-                const selectedValue = event.detail.value;
+                this.pendingEnter = false;
+                const selectedValue = event?.detail?.value ?? this.value;
                 this.value = selectedValue;
                 this.$emit('select', selectedValue);
+            },
+            onEnter() {
+                this.pendingEnter = true;
+                setTimeout(() => {
+                    if (!this.pendingEnter) {
+                        return;
+                    }
+                    this.pendingEnter = false;
+                    this.$emit('enter', this.value);
+                }, 0);
             },
             // customize if needed
             //    fetchData(query) {

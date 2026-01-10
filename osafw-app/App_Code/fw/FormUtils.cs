@@ -15,6 +15,7 @@ namespace osafw;
 public class FormUtils
 {
     public const int MAX_PAGE_ITEMS = 25; //default max number of items on list screen
+    public const string AUTOCOMPLETE_SEPARATOR = " - ";
 
     public static Array getYesNo()
     {
@@ -527,9 +528,14 @@ public class FormUtils
         if (string.IsNullOrEmpty(s))
             return 0;
 
-        var idPart = s.Split([" - "], StringSplitOptions.None).FirstOrDefault();
+        var idPart = s.Split([AUTOCOMPLETE_SEPARATOR], StringSplitOptions.None).FirstOrDefault();
 
         return int.TryParse(idPart, out int result) ? result : 0;
+    }
+
+    public static string formatAutocompleteValue(int id, string iname)
+    {
+        return $"{id}{AUTOCOMPLETE_SEPARATOR}{iname}";
     }
 
     // convert time from field to 2 form fields with HH and MM suffixes
