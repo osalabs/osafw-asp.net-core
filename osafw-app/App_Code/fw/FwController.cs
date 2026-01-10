@@ -774,6 +774,55 @@ public abstract class FwController
         return db.colp(sql, list_where_params);
     }
 
+    protected virtual void initListForPrevNext()
+    {
+        initFilter("_filter_" + fw.G["controller"] + ".Index");
+
+        setListSorting();
+        setListSearch();
+        setListSearchStatus();
+    }
+
+    protected virtual string buildPrevNextUrl(int id, bool is_edit)
+    {
+        var url = base_url + "/" + id;
+        if (is_edit)
+            url += "/edit";
+        if (related_id.Length > 0 || return_url.Length > 0)
+            url += "/?";
+        if (related_id.Length > 0)
+            url += "related_id=" + Utils.urlescape(related_id);
+        if (return_url.Length > 0)
+            url += "&return_url=" + Utils.urlescape(return_url);
+
+        return url;
+    }
+
+    protected virtual FwDict buildPrevNextRedirect(string form_id)
+    {
+        var id = form_id.toInt();
+        if (id == 0)
+            return new FwDict { { "_redirect", base_url } };
+
+        var is_prev = (reqi("prev") == 1);
+        var is_edit = (reqi("edit") == 1);
+
+        initListForPrevNext();
+
+        var list_view_name = string.IsNullOrEmpty(list_view) ? model0.table_name : list_view;
+        var ids = getListIds(list_view_name);
+        if (ids.Count == 0)
+            return new FwDict { { "_redirect", base_url } };
+
+        var go_id = model0.getAdjacentId(ids, id, is_prev);
+        if (go_id == 0)
+            return new FwDict { { "_redirect", base_url } };
+
+        var url = buildPrevNextUrl(go_id, is_edit);
+
+        return new FwDict { { "_redirect", url }, { "id", go_id } };
+    }
+
     /// <summary>
     /// set list fields for db select, based on user-selected headers from config
     /// so we fetch from db only fields that are visible in the list + id field

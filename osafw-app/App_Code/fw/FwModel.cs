@@ -164,6 +164,55 @@ public abstract class FwModel : IDisposable
         return db.array(table_name, new FwDict() { { "id", db.opIN(arr) } });
     }
 
+    // Return the previous or next ID from the ordered ID list, wrapping to the end/start if needed.
+    public virtual int getAdjacentId(StrList ids, int current_id, bool is_prev)
+    {
+        if (ids.Count == 0)
+            return 0;
+
+        var current_id_str = current_id.ToString();
+        int go_id;
+
+        if (is_prev)
+        {
+            // Scan backwards to find the current id and return the previous item in the list.
+            var index_prev = -1;
+            for (var index = ids.Count - 1; index >= 0; index += -1)
+            {
+                if (ids[index] == current_id_str)
+                {
+                    index_prev = index - 1;
+                    break;
+                }
+            }
+
+            if (index_prev > -1 && index_prev <= ids.Count - 1)
+                go_id = ids[index_prev].toInt();
+            else
+                go_id = ids[ids.Count - 1].toInt();
+        }
+        else
+        {
+            // Scan forwards to find the current id and return the next item in the list.
+            var index_next = -1;
+            for (var index = 0; index <= ids.Count - 1; index++)
+            {
+                if (ids[index] == current_id_str)
+                {
+                    index_next = index + 1;
+                    break;
+                }
+            }
+
+            if (index_next > -1 && index_next <= ids.Count - 1)
+                go_id = ids[index_next].toInt();
+            else
+                go_id = ids[0].toInt();
+        }
+
+        return go_id;
+    }
+
     // add renamed fields For template engine - spaces and special chars replaced With "_" and other normalizations
     public void normalizeNames(FwDict row)
     {
