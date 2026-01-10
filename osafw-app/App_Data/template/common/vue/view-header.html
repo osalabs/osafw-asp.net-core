@@ -6,11 +6,12 @@
             </nav>
             <div class="page-header-record-nav ms-auto d-flex align-items-center gap-2 d-print-none">
                 <autocomplete v-model="quickSearch"
-                              class="form-control-sm"
+                              class="form-control-sm fw-quick-search-input"
                               style="width: 220px;"
                               :url="fwStore.base_url + '/(QuickSearch)?q='"
                               placeholder="`Search by ID or name...`"
-                              @select="goQuickSearch"></autocomplete>
+                              @select="goQuickSearch"
+                              @enter="goQuickSearch"></autocomplete>
                 <a @click.prevent="onNext(true)" href="#" class="btn btn-link"><i class="bi bi-arrow-left-circle"></i> `Prev`</a>
                 <a @click.prevent="onNext()" href="#" class="btn btn-link">`Next` <i class="bi bi-arrow-right-circle"></i></a>
             </div>
@@ -106,12 +107,22 @@
             }
         },
         methods: {
-            goQuickSearch(value) {
+            getQuickSearchId(value) {
+                const idPart = value.split(' - ')[0];
+                const id = parseInt(idPart, 10);
+                return Number.isFinite(id) ? id : 0;
+            },
+            async goQuickSearch(value) {
                 if (!value) {
                     return;
                 }
-                const url = this.fwStore.base_url + '/(Go)?s=' + encodeURIComponent(value);
-                window.location.href = url;
+                const id = this.getQuickSearchId(value);
+                if (id > 0) {
+                    await this.fwStore.openViewScreen(id);
+                    return;
+                }
+                this.fwStore.setFilters({ s: value });
+                await this.fwStore.openListScreen();
             },
             async onAddNew(e) {
                 await this.fwStore.openEditScreen(0);
