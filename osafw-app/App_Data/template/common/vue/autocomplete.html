@@ -7,12 +7,11 @@
            :readonly="readonly"
            :pattern="pattern"
            :class="'form-control' + ($attrs.class ? ' ' + $attrs.class : '')"
-           v-model="value" />
+           v-model="value"
+           @keydown.enter.prevent="onEnter" />
 </script>
 
 <script type="module">
-    import { BootstrapSimpleAutocomplete } from 'bootstrap-simple-autocomplete';
-
     fwApp.component('autocomplete', {
         template: '#autocomplete-template',
         props: {
@@ -41,12 +40,7 @@
                 default: '',
             },
         },
-        emits: ['update:modelValue', 'select'],
-        data() {
-            return {
-                autocompleteInstance: null,
-            };
-        },
+        emits: ['update:modelValue', 'select', 'enter'],
         computed: {
             value: {
                 get() {
@@ -58,30 +52,20 @@
             }
         },
         mounted() {
-            // Initialize the autocomplete instance
-            this.autocompleteInstance = new BootstrapSimpleAutocomplete(this.$refs.input, {
-                // Optional: customize as needed
-                //    debounceDelay: 300,
-                //    minQueryLength: 1,
-                //    fetchFunction: this.fetchData,
-                //    renderItem: this.renderItem,
-            });
-
             // Listen for the autocomplete.select event
             this.$refs.input.addEventListener('autocomplete.select', this.onSelect);
         },
         beforeUnmount() {
-            // Destroy the autocomplete instance to clean up event listeners
-            if (this.autocompleteInstance) {
-                this.autocompleteInstance.destroy();
-                this.autocompleteInstance = null;
-            }
+            this.$refs.input.removeEventListener('autocomplete.select', this.onSelect);
         },
         methods: {
             onSelect(event) {
                 const selectedValue = event.detail.value;
                 this.value = selectedValue;
                 this.$emit('select', selectedValue);
+            },
+            onEnter() {
+                this.$emit('enter', this.value);
             },
             // customize if needed
             //    fetchData(query) {

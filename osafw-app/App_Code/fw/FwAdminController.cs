@@ -116,6 +116,7 @@ public class FwAdminController : FwController
         ps["return_url"] = return_url;
         ps["related_id"] = related_id;
         ps["is_readonly"] = is_readonly;
+        ps["is_showform"] = true; // flag for template that we are in show form
         if (fw.FormErrors.Count > 0)
             logger(fw.FormErrors);
 
@@ -231,6 +232,50 @@ public class FwAdminController : FwController
         saveMultiResult(ctr, is_delete, user_lists_id, remove_user_lists_id);
 
         return this.afterSave(true, new FwDict() { { "ctr", ctr } });
+    }
+
+    public virtual FwDict QuickSearchAction()
+    {
+        var q = reqs("q").Trim();
+        StrList items = [];
+        if (string.IsNullOrEmpty(q))
+            return new FwDict { { "_json", items } };
+
+        var rows = model0.listSelectOptionsAutocomplete(q);
+        foreach (FwDict row in rows)
+            items.Add(FormUtils.formatAutocompleteValue(row["id"].toInt(), row["iname"].toStr()));
+
+        return new FwDict { { "_json", items } };
+    }
+
+    public virtual FwDict GoAction()
+    {
+        var s = reqs("s").Trim();
+        if (string.IsNullOrEmpty(s))
+            return new FwDict { { "_redirect", base_url } };
+
+        var is_edit = reqb("is_edit");
+        var id = FormUtils.getIdFromAutocomplete(s);
+        if (id > 0)
+        {
+            var item = modelOne(id);
+            if (item.Count > 0)
+            {
+                var url = base_url + "/" + id + (is_edit ? "/edit" : "");
+                if (related_id.Length > 0 || return_url.Length > 0)
+                    url += "/?";
+                if (related_id.Length > 0)
+                    url += "related_id=" + Utils.urlescape(related_id);
+                if (return_url.Length > 0)
+                    url += "&return_url=" + Utils.urlescape(return_url);
+                return new FwDict { { "_redirect", url }, { "id", id } };
+            }
+        }
+
+        var list_url = base_url + "/?dofilter=1&f[s]=" + Utils.urlescape(s);
+        if (related_id.Length > 0)
+            list_url += "&related_id=" + Utils.urlescape(related_id);
+        return new FwDict { { "_redirect", list_url } };
     }
 
 }
