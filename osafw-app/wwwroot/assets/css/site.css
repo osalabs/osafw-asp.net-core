@@ -87,6 +87,10 @@
   /* multi-value field */
   --fw-field-multi-max-height: calc(var(--bs-body-font-size) * 13);
 
+  /* view-only fields */
+  --fw-view-value-bg: rgba(var(--bs-emphasis-color-rgb), 0.035);
+  --fw-view-value-border: var(--fw-border-color-subtle);
+
   /* file drop */
   --fw-file-drop-border: 2px dashed #ccc;
   --fw-file-drop-radius: var(--fw-radius-lg);
@@ -191,6 +195,10 @@
   /* page background in dark mode (framework default) */
   --fw-body-bg: #1c1c1c;
   --fw-hiliter: #555522;
+
+  /* view-only fields */
+  --fw-view-value-bg: rgba(var(--bs-emphasis-color-rgb), 0.08);
+  --fw-view-value-border: rgba(var(--bs-emphasis-color-rgb), 0.25);
 
   /* neutral button variant in dark mode */
   --fw-btn-default-bg: var(--bs-light-bg-subtle);
@@ -1118,7 +1126,21 @@ form .has-danger .invalid-feedback {
 }
 
 #FView.fw-card label {
-  font-weight: bold;
+  font-weight: 600;
+}
+
+#FView .form-control-plaintext,
+#FView .fw-view-value {
+  background-color: var(--fw-view-value-bg);
+  border: var(--bs-border-width) var(--bs-border-style) var(--fw-view-value-border);
+  border-radius: var(--fw-control-radius);
+  color: var(--fw-text);
+  padding: var(--fw-control-padding-y) var(--fw-control-padding-x);
+}
+
+#FView .form-control-plaintext {
+  min-height: calc((var(--fw-control-padding-y) * 2) + 1.5em);
+  margin-bottom: 0;
 }
 
 .field-multi-value {
@@ -1127,6 +1149,14 @@ form .has-danger .invalid-feedback {
   border: var(--bs-border-width) var(--bs-border-style) var(--bs-border-color);
   border-radius: var(--bs-border-radius);
   padding: var(--fw-spacer05);
+}
+
+#FView .field-multi-value {
+  background-color: var(--fw-view-value-bg);
+  border: var(--bs-border-width) var(--bs-border-style) var(--fw-view-value-border);
+  border-radius: var(--fw-control-radius);
+  color: var(--fw-text);
+  padding: var(--fw-control-padding-y) var(--fw-control-padding-x);
 }
 
 .att-list {

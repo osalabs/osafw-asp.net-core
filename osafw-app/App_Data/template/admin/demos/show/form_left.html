@@ -1,72 +1,72 @@
 <div class="row form-row">
-  <label class="col-form-label fw-bold col-md-3">`Parent`</label>
+  <label class="col-form-label col-md-3">`Parent`</label>
   <div class="col-md-3">
     <p class="form-control-plaintext"><~parent[iname]></p>
   </div>
 </div>
 <div class="row form-row">
-  <label class="col-form-label fw-bold col-md-3">`DemoDicts`</label>
+  <label class="col-form-label col-md-3">`DemoDicts`</label>
   <div class="col-md-3">
     <p class="form-control-plaintext"><~demo_dicts[iname]></p>
   </div>
 </div>
 
 <div class="row form-row">
-  <label class="col-form-label fw-bold col-md-3">`Title`</label>
+  <label class="col-form-label col-md-3">`Title`</label>
   <div class="col">
     <p class="form-control-plaintext"><~i[iname]></p>
   </div>
 </div>
 <div class="row form-row">
-  <label class="col-form-label fw-bold col-md-3">`Description`</label>
+  <label class="col-form-label col-md-3">`Description`</label>
   <div class="col">
     <p class="form-control-plaintext"><~i[idesc] markdown></p>
   </div>
 </div>
 
 <div class="row form-row">
-  <label class="col-form-label fw-bold col-md-3">`Wysiwyg editor`</label>
+  <label class="col-form-label col-md-3">`Wysiwyg editor`</label>
   <div class="col">
     <p class="form-control-plaintext"><~i[idesc2] noescape></p>
   </div>
 </div>
 
 <div class="row form-row">
-  <label class="col-form-label fw-bold col-md-3">`Wysiwyg editor short`</label>
+  <label class="col-form-label col-md-3">`Wysiwyg editor short`</label>
   <div class="col">
     <p class="form-control-plaintext"><~i[idesc3] noescape></p>
   </div>
 </div>
 
 <div class="row form-row">
-  <label class="col-form-label fw-bold col-md-3">`Email` (unique field)</label>
+  <label class="col-form-label col-md-3">`Email` (unique field)</label>
   <div class="col">
     <p class="form-control-plaintext"><~i[email]></p>
   </div>
 </div>
 
 <div class="row form-row">
-  <label class="col-form-label fw-bold col-md-3">`fint`</label>
+  <label class="col-form-label col-md-3">`fint`</label>
   <div class="col-md-2">
     <p class="form-control-plaintext"><~i[fint]></p>
   </div>
 </div>
 <div class="row form-row">
-  <label class="col-form-label fw-bold col-md-3">`ffloat`</label>
+  <label class="col-form-label col-md-3">`ffloat`</label>
   <div class="col-md-3">
     <p class="form-control-plaintext"><~i[ffloat] number_format="2"></p>
   </div>
 </div>
 
 <div class="row form-row">
-  <label class="col-form-label fw-bold col-md-3">DemoDicts Autocomplete</label>
+  <label class="col-form-label col-md-3">DemoDicts Autocomplete</label>
   <div class="col">
       <p class="form-control-plaintext"><~dict_link_auto[iname]></p>
   </div>
 </div>
 
 <div class="row form-row">
-  <label class="col-form-label fw-bold col-md-3">DemoDicts Multi</label>
+  <label class="col-form-label col-md-3">DemoDicts Multi</label>
   <div class="col">
     <div class="field-multi-value">
       <~multi_datarow repeat inline>
@@ -80,7 +80,7 @@
 </div>
 
 <div class="row form-row">
-  <label class="col-form-label fw-bold col-md-3">DemoDicts via Link Table</label>
+  <label class="col-form-label col-md-3">DemoDicts via Link Table</label>
   <div class="col">
     <div class="field-multi-value">
       <~multi_datarow_link repeat inline>
@@ -94,26 +94,26 @@
 </div>
 
 <div class="row form-row">
-  <label class="col-form-label fw-bold col-md-3">Combo</label>
+  <label class="col-form-label col-md-3">Combo</label>
   <div class="col-md-3">
     <p class="form-control-plaintext"><~/common/sel/fcombo.sel selvalue="i[fcombo]"></p>
   </div>
 </div>
 <div class="row form-row">
-  <label class="col-form-label fw-bold col-md-3">Radio</label>
+  <label class="col-form-label col-md-3">Radio</label>
   <div class="col">
     <p class="form-control-plaintext"><~/common/sel/fcombo.sel selvalue="i[fradio]"></p>
   </div>
 </div>
 <div class="row form-row">
-  <label class="col-form-label fw-bold col-md-3">Yes or No</label>
+  <label class="col-form-label col-md-3">Yes or No</label>
   <div class="col">
     <p class="form-control-plaintext"><~/common/sel/yn_bool.sel selvalue="i[fyesno]"></p>
   </div>
 </div>
 
 <div class="row form-row">
-  <label class="col-form-label fw-bold col-md-3">Checkbox</label>
+  <label class="col-form-label col-md-3">Checkbox</label>
   <div class="col d-flex align-items-center">
     <div class="form-check form-check-inline">
       <input type="checkbox" class="form-check-input" <~/common/checked if="i[is_checkbox]"> <~/common/disabled>>
@@ -123,7 +123,7 @@
 </div>
 
 <div class="row form-row">
-  <label class="col-form-label fw-bold col-md-3">Date combo</label>
+  <label class="col-form-label col-md-3">Date combo</label>
   <div class="col-md-9 fdate-combo">
     <p class="form-control-plaintext">
       <~/common/sel/date_day.sel selvalue="fdate_combo_day">
@@ -134,20 +134,20 @@
 </div>
 
 <div class="row form-row">
-  <label class="col-form-label fw-bold col-md-3">Date popup</label>
+  <label class="col-form-label col-md-3">Date popup</label>
   <div class="col-md-3">
     <p class="form-control-plaintext"><~i[fdate_pop] date></p>
   </div>
 </div>
 
 <div class="row form-row">
-  <label class="col-form-label fw-bold col-md-3">Date and Time</label>
+  <label class="col-form-label col-md-3">Date and Time</label>
   <div class="col-md-4">
     <p class="form-control-plaintext"><~i[fdatetime] date="short"></p>
   </div>
 </div>
 <div class="row form-row">
-  <label class="col-form-label fw-bold col-md-3">Time</label>
+  <label class="col-form-label col-md-3">Time</label>
   <div class="col-md-2">
     <p class="form-control-plaintext"><~i[ftime_str]></p>
   </div>
