@@ -895,6 +895,26 @@ table.list.table-dense > :not(caption) > * > * {
   font-size: 0.7rem !important;
 }
 
+table.list.table-dense :is(.form-control, .form-select) {
+  min-height: auto;
+  padding: 0 0.4rem !important;
+  font-size: 0.7rem !important;
+}
+
+table.list.table-dense :is(.form-select) {
+  padding-right: 0.5rem !important;
+}
+
+table.list.table-dense .btn {
+  padding: 0 0.35rem !important;
+  font-size: 0.7rem !important;
+  line-height: 1.2;
+}
+
+table.list.table-dense .form-check-input {
+  margin: 0.2rem 0.35rem;
+}
+
 table.list.table-dense th.rotate {
   height: 140px; /* height to fit longest name */
   white-space: nowrap;
@@ -972,23 +992,6 @@ table.list-edit.table-dense tbody td.list-row-cb,
 table.list-edit.table-dense tbody td.list-row-controls,
 table.list-edit.table-dense tbody td > div.ro {
   padding: 0 0.1rem;
-}
-
-table.list-edit.table-dense tbody td > div > .form-control {
-  min-height: auto;
-  padding: 0 0.5rem;
-  font-size: 0.7rem;
-}
-
-table.list-edit.table-dense tbody td > div > .form-select {
-  padding-top: 0;
-  padding-bottom: 0;
-  padding-left: 0.5rem;
-  font-size: 0.7rem;
-}
-
-table.list-edit.table-dense tbody td > div > .form-check-input {
-  margin: 0.17rem 0.4rem;
 }
 
 .cell-success-fade,
