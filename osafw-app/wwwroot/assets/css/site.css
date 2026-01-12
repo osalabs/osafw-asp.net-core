@@ -280,7 +280,18 @@ label {
   border-radius: var(--fw-select-radius);
 }
 
-.btn:not(.btn-lg):not(.btn-sm):not(.btn-md) {
+/* Standard-sized buttons */
+.btn-default,
+.btn-primary,
+.btn-secondary,
+.btn-outline-primary,
+.btn-outline-secondary,
+.btn-outline-success,
+.btn-outline-danger,
+.btn-outline-warning,
+.btn-outline-info,
+.btn-outline-dark,
+.btn-outline-light {
   padding: var(--fw-btn-padding-y) var(--fw-btn-padding-x);
   font-size: var(--fw-btn-font-size);
 }
