@@ -142,6 +142,16 @@
 
 /* -------- Theme-specific rules (minimal) -------- */
 
+.fw-list-card {
+  --bs-body-bg: var(--fw-pane-bg);
+  background-color: var(--fw-card-bg);
+  border: var(--fw-card-border);
+  border-radius: var(--fw-card-radius);
+  padding: var(--fw-card-padding);
+  margin-bottom: var(--fw-card-margin-bottom);
+  box-shadow: var(--fw-card-shadow);
+}
+
 /* Headings */
 h1 {
   font-size: 1.2rem;
