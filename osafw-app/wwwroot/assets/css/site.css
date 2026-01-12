@@ -88,8 +88,8 @@
   --fw-field-multi-max-height: calc(var(--bs-body-font-size) * 13);
 
   /* view-only fields */
-  --fw-view-value-bg: rgba(var(--bs-emphasis-color-rgb), 0.035);
-  --fw-view-value-border: var(--fw-border-color-subtle);
+  --fw-view-value-bg: var(--bs-tertiary-bg);
+  --fw-view-value-border: transparent;
 
   /* file drop */
   --fw-file-drop-border: 2px dashed #ccc;
@@ -197,8 +197,8 @@
   --fw-hiliter: #555522;
 
   /* view-only fields */
-  --fw-view-value-bg: rgba(var(--bs-emphasis-color-rgb), 0.08);
-  --fw-view-value-border: rgba(var(--bs-emphasis-color-rgb), 0.25);
+  --fw-view-value-bg: var(--bs-tertiary-bg);
+  --fw-view-value-border: var(--bs-dark-border-subtle);
 
   /* neutral button variant in dark mode */
   --fw-btn-default-bg: var(--bs-light-bg-subtle);
@@ -1133,6 +1133,7 @@ form .has-danger .invalid-feedback {
 #FView .fw-view-value {
   background-color: var(--fw-view-value-bg);
   border: var(--bs-border-width) var(--bs-border-style) var(--fw-view-value-border);
+  border-bottom-color: var(--bs-border-color);
   border-radius: var(--fw-control-radius);
   color: var(--fw-text);
   padding: var(--fw-control-padding-y) var(--fw-control-padding-x);
@@ -1154,6 +1155,7 @@ form .has-danger .invalid-feedback {
 #FView .field-multi-value {
   background-color: var(--fw-view-value-bg);
   border: var(--bs-border-width) var(--bs-border-style) var(--fw-view-value-border);
+  border-bottom-color: var(--bs-border-color);
   border-radius: var(--fw-control-radius);
   color: var(--fw-text);
   padding: var(--fw-control-padding-y) var(--fw-control-padding-x);
