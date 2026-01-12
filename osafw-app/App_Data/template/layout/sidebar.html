@@ -1,6 +1,6 @@
 <div class="d-none d-md-block position-relative ps-3">
    <div class="float-end">
-      <button class="btn btn-link text-dark-emphasis on-sidebar-toggler"><i class="bi bi-arrow-bar-left sidebar-toggler-hide"></i><i class="bi bi-pin-angle sidebar-toggler-pin"></i></button>
+      <button class="btn btn-link text-reset on-sidebar-toggler"><i class="bi bi-arrow-bar-left sidebar-toggler-hide"></i><i class="bi bi-pin-angle sidebar-toggler-pin"></i></button>
    </div>
    <h3>
       <a href="<~ROOT_URL>/" class="site-title text-decoration-none">
@@ -27,7 +27,7 @@
     </~GLOBAL[menu_items]>
 
     <~admin80_menu ifge="SESSION[access_level]" value="80" inline>
-      <li class="nav-item nav-header bg-secondary-subtle"><a href="#" class="nav-link disabled">`Manager Menu`</a></li>
+      <li class="nav-item nav-header"><a href="#" class="nav-link disabled">`Manager Menu`</a></li>
       <li class="nav-item">
         <a href="<~/admin/reports/url>" class="nav-link <~/common/active ifeq="GLOBAL[controller]" value="AdminReports">">
           <i class="bi bi-file-ruled"></i> `Reports`
@@ -76,7 +76,7 @@
     </~admin80_menu>
 
     <~admin90_menu ifge="SESSION[access_level]" value="90" inline>
-      <li class="nav-item nav-header bg-secondary-subtle"><a href="#" class="nav-link disabled">`Admin Menu`</a></li>
+      <li class="nav-item nav-header"><a href="#" class="nav-link disabled">`Admin Menu`</a></li>
       <li class="nav-item">
         <a href="<~/admin/users/url>" class="nav-link <~/common/active ifeq="GLOBAL[controller]" value="AdminUsers">">
           <i class="bi bi-person-lines-fill"></i> `Users`

@@ -1,193 +1,170 @@
-/* Shadows theme */
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600&display=swap');
+/*!
+ * OSAFW Theme 20 (Shadows) - theme20.css
+ * Intended to load after site.css.
+ *
+ * This file primarily overrides framework tokens (--fw-*) and selected
+ * Bootstrap variables (--bs-*) for cohesive theming.
+ */
+
+@import url('https://fonts.googleapis.com/css?family=Nunito:400,600,700');
 
 :root,
-[data-bs-theme=light] {
-    --bs-primary: #8793FF;
-    --theme-color: #8793FF;
-    --theme-body-color: #6c757d;
-    --theme-hover-bg: #eef0f4;
-    --theme-table-striped-bg: #f5f6f9;
-    --fw-body-bg: #f5f6f8;
-    --fw-pane-bg: #ffffff;
-    --fw-btn-default-color: #8793FF;
-    --fw-btn-default-border: transparent;
-    --fw-btn-default-bg: #f0f0fa;
-    --bs-nav-pills-link-active-bg: var(--theme-color);
-    --bs-nav-pills-link-active-color: #fff;
-    --bs-success-rgb: 40, 167, 69;
-    --theme-nav-link-color: #8391a2 !important;
-    --theme-font-family: "Nunito",sans-serif;
-    --theme-font-size: 0.9rem;
-    --theme-sidebar-bg: #313a46;
-    --theme-shadow: 0px 0px 35px 0px rgba(154, 161, 171, 0.15);
-    --theme-btn-shadow: 0 2px 6px rgba(135, 147, 255, 0.4);
-    --fw-card-bg: var(--fw-pane-bg);
-    --fw-card-border: 0;
-    --fw-card-radius: .25rem;
-    --fw-card-shadow: var(--theme-shadow);
-    --fw-card-padding: 1.5rem 1.5rem 0.5rem 1.5rem;
-    --fw-dashboard-card-radius: .25rem;
-    --fw-dashboard-card-shadow: var(--theme-shadow);
-    --fw-dashboard-card-padding: 1.5rem;
+[data-bs-theme="light"] {
+  /* -------- Bootstrap core variables -------- */
+  --bs-primary: #8793ff;
+  --bs-primary-rgb: 135, 147, 255;
+
+  --bs-body-font-family: "Nunito", sans-serif;
+  --bs-body-font-size: 0.9rem;
+  --bs-body-color: #6c757d;
+  --bs-link-color: var(--bs-primary);
+
+  --bs-nav-pills-link-active-bg: var(--bs-primary);
+  --bs-nav-pills-link-active-color: #fff;
+
+  /* -------- Framework semantics -------- */
+  --fw-body-bg: #f5f6f8;
+  --fw-pane-bg: #ffffff;
+
+  --fw-hiliter: #ffffcc; /* keep default */
+
+  /* tables */
+  --fw-table-striped-bg: #f5f6f9;
+  --fw-table-hover-bg: #eef0f4;
+  --fw-table-color: var(--bs-body-color);
+
+  /* cards / panes */
+  --fw-card-bg: var(--fw-pane-bg);
+  --fw-card-border: 0;
+  --fw-card-radius: 0.25rem;
+  --fw-card-shadow: 0px 0px 35px 0px rgba(154, 161, 171, 0.15);
+  --fw-card-padding: 1.5rem 1.5rem 0.5rem 1.5rem;
+
+  --fw-dashboard-card-radius: 0.25rem;
+  --fw-dashboard-card-shadow: 0px 0px 35px 0px rgba(154, 161, 171, 0.15);
+  --fw-dashboard-card-padding: 1.5rem;
+
+  /* bootstrap .card hooks */
+  --fw-bs-card-shadow: 0px 0px 35px 0px rgba(154, 161, 171, 0.15);
+  --fw-bs-card-border: 0;
+  --fw-bs-card-radius: 0.25rem;
+  --fw-bs-card-spacer-x: 1.5rem;
+  --fw-bs-card-spacer-y: 1.5rem;
+
+  /* sidebar */
+  --fw-sidebar-bg: #313a46;
+  --fw-sidebar-color: #aeb8c5;
+  --fw-sidebar-shadow: 0px 0px 35px 0px rgba(154, 161, 171, 0.15);
+
+  --fw-sidebar-link-color: #aeb8c5;
+  --fw-sidebar-link-hover-bg: transparent;
+  --fw-sidebar-link-hover-color: #ffffff;
+  --fw-sidebar-link-active-bg: rgba(255, 255, 255, 0.12);
+  --fw-sidebar-link-active-color: #ffffff;
+  --fw-sidebar-link-active-font-weight: 500;
+
+  --fw-sidebar-link-font-size: 0.94rem;
+  --fw-sidebar-link-font-weight: 400;
+  --fw-sidebar-link-padding-y: 10px;
+  --fw-sidebar-link-padding-x: 1rem;
+
+  --fw-sidebar-icon-gap: 1rem;
+  --fw-sidebar-icon-weight: 700;
+
+  --fw-sidebar-header-bg: transparent;
+  --fw-sidebar-header-color: #8391a2;
+  --fw-sidebar-header-text-transform: uppercase;
+  --fw-sidebar-header-font-size: 0.7rem;
+  --fw-sidebar-header-font-weight: 700;
+  --fw-sidebar-header-letter-spacing: 0.04rem;
+
+  --fw-sidebar-dropdown-bg: #313a46;
+  --fw-sidebar-dropdown-color: #aeb8c5;
+
+  /* buttons */
+  --fw-btn-default-color: #8793ff;
+  --fw-btn-default-bg: #f0f0fa;
+  --fw-btn-default-border: transparent;
+  --fw-btn-default-shadow: 0 2px 6px rgba(135, 147, 255, 0.4);
+  --fw-btn-default-hover-bg: var(--bs-primary);
+  --fw-btn-default-hover-border: var(--bs-primary);
+  --fw-btn-default-hover-color: #fff;
 }
 
-[data-bs-theme=dark] {
-    --bs-primary: #8793FF;
-    --theme-color: #8793FF;
-    --theme-body-color: #aeb8c5;
-    --theme-hover-bg: #384953;
-    --theme-table-striped-bg: #37444e;
-    --fw-body-bg: #313a46;
-    --fw-pane-bg: #3b4654;
-    --bs-nav-pills-link-active-bg: var(--theme-color);
-    --bs-nav-pills-link-active-color: #fff;
-    --theme-font-family: "Nunito",sans-serif;
-    --fw-card-bg: var(--fw-pane-bg);
-    --fw-card-border: 0;
-    --fw-card-radius: .25rem;
-    --fw-card-shadow: var(--theme-shadow);
-    --fw-card-padding: 1.5rem 1.5rem 0.5rem 1.5rem;
-    --fw-dashboard-card-radius: .25rem;
-    --fw-dashboard-card-shadow: var(--theme-shadow);
-    --fw-dashboard-card-padding: 1.5rem;
+[data-bs-theme="dark"] {
+  /* Dark mode palette */
+  --bs-body-color: #aeb8c5;
+  --bs-link-color: var(--bs-primary);
+
+  --fw-body-bg: #313a46;
+  --fw-pane-bg: #3b4654;
+
+  /* tables */
+  --fw-table-hover-bg: #384953;
+  --fw-table-striped-bg: #37444e;
+  --fw-table-color: var(--bs-body-color);
+
+  /* cards */
+  --fw-card-bg: var(--fw-pane-bg);
+  --fw-bs-card-bg: var(--fw-pane-bg);
+
+  /* sidebar stays same in dark (already dark) */
+  --fw-sidebar-bg: #313a46;
+  --fw-sidebar-dropdown-bg: #313a46;
+  --fw-sidebar-dropdown-color: #aeb8c5;
 }
 
-body {
-    font-family: var(--theme-font-family);
-    font-size: var(--theme-font-size);
-    color: var(--theme-body-color);
-    background-color: var(--fw-body-bg);
+/* -------- small theme-specific stylistic rules -------- */
+
+.fw-list-card {
+  --bs-body-bg: var(--fw-pane-bg);
+  background-color: var(--fw-card-bg);
+  border: var(--fw-card-border);
+  border-radius: var(--fw-card-radius);
+  padding: var(--fw-card-padding);
+  margin-bottom: var(--fw-card-margin-bottom);
+  box-shadow: var(--fw-card-shadow);
 }
 
 a {
-    color: var(--bs-primary);
-    text-decoration: none;
+  text-decoration: none;
 }
 
-h1, h3, .h3 {
-    font-weight: 600;
+.page-title {
+  line-height: 4.68rem;
 }
 
-h1 {
-    font-size: 1.125rem;
-    line-height: 4.68rem;
+
+h3,
+.h3 {
+  font-weight: 600;
+  font-size: 1.5rem;
 }
 
-h3, .h3 {
-    color: var(--bs-emphasis-color);
-}
-
-.card {
-    box-shadow: var(--theme-shadow);
-    border: 0px;
-    border-radius: .25rem;
-    --bs-card-spacer-x: 1.5rem !important;
-    --bs-card-spacer-y: 1.5rem !important;
-}
-
-.sidebar {
-    background-color: var(--theme-sidebar-bg);
-    box-shadow: var(--theme-shadow);
-    color: #aeb8c5;
-}
-
-    .sidebar .nav-link {
-        font-weight: 400;
-        font-size: .94rem;
-        border-radius: 0;
-        background-color: transparent;
-        padding: 10px 1rem;
-    }
-
-        .sidebar .nav-link:hover {
-            color: #fff !important;
-            background-color: transparent;
-        }
-
-        .sidebar .nav-link.active {
-            color: #fff !important;
-            font-weight: 500;
-            background-color: transparent;
-        }
-
-    .sidebar .nav-header {
-        text-transform: uppercase;
-        background-color: transparent !important;
-    }
-
-        .sidebar .nav-header .nav-link {
-            font-size: .70rem;
-            font-weight: 700;
-            color: var(--theme-nav-link-color);
-            letter-spacing: 0.04rem;
-            padding-left: 1rem;
-        }
-
-    .sidebar .bi {
-        color: inherit;
-    }
-
-    .sidebar .nav-link .bi::before {
-        font-weight: 700 !important;
-        padding-right: 1rem;
-    }
-
-    .sidebar .nav-link.active .bi {
-        color: #fff;
-    }
-
-.sidebar-toggler-show .bi:before {
-    font-weight: 700 !important;
-}
-
-.sidebar-user-menu .dropdown-menu {
-    background-color: var(--theme-sidebar-bg);
-}
-
-    .sidebar-user-menu .dropdown-menu .dropdown-item {
-        color: #aeb8c5;
-    }
-
-
-.table {
-    color: var(--theme-body-color);
-    --bs-table-striped-bg: var(--theme-table-striped-bg);
-    --bs-table-hover-bg: var(--theme-hover-bg);
-}
-
-    .table > :not(caption) > * > * {
-        color: var(--theme-body-color);
-    }
-
+/* Button radius */
 .btn {
-    --bs-btn-border-radius: 0.15rem;
+  --bs-btn-border-radius: 0.15rem;
 }
 
-.btn-default {
-    box-shadow: var(--theme-btn-shadow);
+/* Dashboard typography */
+.dashboard-card {
+  font-family: "Nunito", sans-serif;
 }
 
-    .btn-default:hover,
-    .btn-default:focus,
-    .btn-default:active,
-    .btn-default.active,
-    .open .dropdown-toggle.btn-default {
-        background-color: var(--theme-color);
-        color: #fff;
-    }
-
-.dashboard-card .pane-title,
-.dashboard-card .card-subtitle {
-    font-size: .75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    color: var(--bs-secondary-color);
-    letter-spacing: .05em;
+.dashboard-card .pane-title {
+  font-size: 1.0rem;
+  font-weight: 600;
+  color: var(--bs-gray-800);
 }
 
-.dashboard-card .display-5 {
-    font-size: 2rem;
-    font-weight: 600;
-    color: var(--bs-emphasis-color);
+.dashboard-card .pane-num {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--bs-gray-900);
+}
+
+.dashboard-card .pane-desc {
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: var(--bs-gray-600);
 }

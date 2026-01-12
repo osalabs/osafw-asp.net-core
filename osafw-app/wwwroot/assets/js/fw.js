@@ -904,6 +904,9 @@ window.fw={
 
     var sort_img= (sortdir=='desc') ? fw.ICON_SORT_DESC : fw.ICON_SORT_ASC;
     var $th = $sh.find('th[data-sort="'+sortby+'"]').addClass('active-sort');
+    var ariaSort = (sortdir == 'desc') ? 'descending' : 'ascending';
+    $sh.find('th[data-sort]').removeAttr('aria-sort');
+    $th.attr('aria-sort', ariaSort);
     var $thcont = !$tbl.is('.table-dense') && $th.find('div').length>0 ? $th.find('div') : $th;
     $thcont.append('<span class="ms-1">'+sort_img+'</span>');
 
@@ -919,6 +922,9 @@ window.fw={
         //new collumn - set sortdir to default
         sortdir='asc';
       }
+
+      $sh.find('th[data-sort]').removeAttr('aria-sort');
+      $td.attr('aria-sort', (sortdir == 'desc') ? 'descending' : 'ascending');
 
       if (!$f) return; //skip if no filter form
       $('input[name="f[sortdir]"]', $f).val(sortdir);

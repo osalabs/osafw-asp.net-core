@@ -1,19 +1,19 @@
 <div class="row form-row">
-  <label class="col-form-label fw-bold col-md-3" for="status">`ID`</label>
+  <label class="col-form-label col-md-3" for="status">`ID`</label>
   <div class="col-md-3">
     <p class="form-control-plaintext"><~i[id]></p>
   </div>
 </div>
 
 <div class="row form-row">
-  <label class="col-form-label fw-bold col-md-3">`Attachment`</label>
+  <label class="col-form-label col-md-3">`Attachment`</label>
   <div class="col-md-6">
     <~/common/form/show/att>
   </div>
 </div>
 
 <div class="row form-row">
-  <label class="col-form-label fw-bold col-md-3">`Multiple Attachments`</label>
+  <label class="col-form-label col-md-3">`Multiple Attachments`</label>
   <div class="col">
     <~/common/form/show/att_links>
   </div>
@@ -28,14 +28,14 @@
 
 
 <div class="row form-row">
-  <label class="col-form-label fw-bold col-md-3" for="status">`Status`</label>
+  <label class="col-form-label col-md-3" for="status">`Status`</label>
   <div class="col-md-3">
     <p class="form-control-plaintext"><~/common/sel/status.sel selvalue="i[status]"></p>
   </div>
 </div>
 
 <div class="row form-row">
-  <label class="col-form-label fw-bold col-md-3">`Added on`</label>
+  <label class="col-form-label col-md-3">`Added on`</label>
   <div class="col">
     <p class="form-control-plaintext"><~i[add_time] date="long"> `by` <~add_users_id_name></p>
   </div>
@@ -43,7 +43,7 @@
 
 <~upd_block if="i[upd_users_id]" inline>
 <div class="row form-row">
-  <label class="col-form-label fw-bold col-md-3">`Updated on`</label>
+  <label class="col-form-label col-md-3">`Updated on`</label>
   <div class="col">
     <p class="form-control-plaintext"><~i[upd_time] date="long"> by <~upd_users_id_name></p>
   </div>
