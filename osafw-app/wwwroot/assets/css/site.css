@@ -114,7 +114,7 @@
   --fw-sidebar-link-color: rgba(var(--bs-emphasis-color-rgb), var(--bs-link-opacity, 1));
   --fw-sidebar-link-hover-bg: rgba(var(--fw-accent-rgb), 0.08);
   --fw-sidebar-link-hover-color: var(--fw-sidebar-link-color);
-  --fw-sidebar-link-active-bg: var(--bs-nav-pills-link-active-bg);
+  --fw-sidebar-link-active-bg: rgba(var(--fw-accent-rgb), 0.16);
   --fw-sidebar-link-active-color: var(--bs-nav-pills-link-active-color);
 
   --fw-sidebar-link-padding-y: 0.5rem;
