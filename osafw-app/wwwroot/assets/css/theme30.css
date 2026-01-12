@@ -92,7 +92,7 @@
   /* neutral buttons */
   --fw-btn-default-color: var(--bs-body-color);
   --fw-btn-default-bg: var(--fw-pane-bg);
-  --fw-btn-default-border: transparent;
+  --fw-btn-default-border: #d8e2ef;
   --fw-btn-default-shadow: 0 7px 14px 0 rgba(65, 69, 88, 0.1), 0 3px 6px 0 rgba(0, 0, 0, 0.07);
 
   /* sidebar */
@@ -118,6 +118,8 @@
 
   --fw-sidebar-icon-gap: 0.125rem;
   --fw-sidebar-icon-weight: inherit;
+
+  --fw-sidebar-header-bg: var(--fw-body-bg);
 }
 
 [data-bs-theme="dark"] {
@@ -138,6 +140,7 @@
   --fw-sidebar-bg: var(--fw-body-bg);
   --fw-sidebar-nav-bg: var(--fw-pane-bg);
   --fw-sidebar-link-color: var(--bs-body-color);
+  --fw-sidebar-header-bg: var(--fw-body-bg);
 
   --fw-dropdown-link-color: var(--bs-body-color);
   --fw-dropdown-link-hover-color: var(--bs-body-color);
@@ -163,6 +166,10 @@ h1 {
   font-size: 1.2rem;
   font-weight: 700;
   color: var(--bs-link-color);
+}
+
+h1 .badge.badge-outline-secondary.rounded-pill {
+  font-size: 1rem;
 }
 
 h3,
@@ -210,28 +217,37 @@ table.list thead th {
 table.list thead th[data-sort] {
   color: var(--bs-link-color);
   white-space: nowrap;
+  position: relative;
+  padding-right: 2rem;
 }
 
 table.list thead th[data-sort]:not(.active-sort)::after {
   display: inline-block;
   content: "";
-  width: 1.5rem;
-  height: 1.5rem;
-  vertical-align: text-bottom;
+  width: 1.25rem;
+  height: 1.25rem;
+  position: absolute;
+  top: 50%;
+  right: 0.5rem;
+  transform: translateY(-50%);
   opacity: 0.5;
 
-  mask-size: 1.5rem 1.5rem;
+  mask-size: 1.25rem 1.25rem;
   mask-repeat: no-repeat;
   mask-position: center;
-  -webkit-mask-size: 1.5rem 1.5rem;
+  -webkit-mask-size: 1.25rem 1.25rem;
   -webkit-mask-repeat: no-repeat;
   -webkit-mask-position: center;
 
   /* Matches original theme asset */
-  mask-image: url("/assets/img/chevron-expand.svg");
-  -webkit-mask-image: url("/assets/img/chevron-expand.svg");
+  mask-image: url("/assets/img/sort-vertical.svg");
+  -webkit-mask-image: url("/assets/img/sort-vertical.svg");
 
   background-color: currentColor;
+}
+
+.btn:not(.btn-link):not([class*="btn-outline-"]) {
+  box-shadow: 0 6px 12px rgba(65, 69, 88, 0.12);
 }
 
 /* Pagination sizing */
