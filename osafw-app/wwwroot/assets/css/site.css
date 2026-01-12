@@ -114,7 +114,7 @@
   --fw-sidebar-link-color: rgba(var(--bs-emphasis-color-rgb), var(--bs-link-opacity, 1));
   --fw-sidebar-link-hover-bg: rgba(var(--fw-accent-rgb), 0.08);
   --fw-sidebar-link-hover-color: var(--fw-sidebar-link-color);
-  --fw-sidebar-link-active-bg: var(--bs-nav-pills-link-active-bg);
+  --fw-sidebar-link-active-bg: rgba(var(--fw-accent-rgb), 0.16);
   --fw-sidebar-link-active-color: var(--bs-nav-pills-link-active-color);
 
   --fw-sidebar-link-padding-y: 0.5rem;
@@ -280,7 +280,18 @@ label {
   border-radius: var(--fw-select-radius);
 }
 
-.btn:not(.btn-lg):not(.btn-sm):not(.btn-md) {
+/* Standard-sized buttons */
+.btn-default,
+.btn-primary,
+.btn-secondary,
+.btn-outline-primary,
+.btn-outline-secondary,
+.btn-outline-success,
+.btn-outline-danger,
+.btn-outline-warning,
+.btn-outline-info,
+.btn-outline-dark,
+.btn-outline-light {
   padding: var(--fw-btn-padding-y) var(--fw-btn-padding-x);
   font-size: var(--fw-btn-font-size);
 }
