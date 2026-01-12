@@ -439,6 +439,15 @@ h1 .badge {
   box-shadow: var(--fw-card-shadow);
 }
 
+.fw-list-card {
+  background-color: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  margin-bottom: var(--fw-card-margin-bottom);
+  box-shadow: none;
+}
+
 /* ----- Dashboard card ----- */
 
 .dashboard-card {
