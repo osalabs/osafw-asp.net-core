@@ -59,7 +59,7 @@
   --fw-sidebar-link-color: #aeb8c5;
   --fw-sidebar-link-hover-bg: transparent;
   --fw-sidebar-link-hover-color: #ffffff;
-  --fw-sidebar-link-active-bg: transparent;
+  --fw-sidebar-link-active-bg: rgba(255, 255, 255, 0.12);
   --fw-sidebar-link-active-color: #ffffff;
   --fw-sidebar-link-active-font-weight: 500;
 
