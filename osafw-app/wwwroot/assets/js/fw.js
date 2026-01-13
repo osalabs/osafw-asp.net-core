@@ -334,6 +334,18 @@ window.fw={
       }
     });
 
+    $(document).on('click', '.fw-fieldset > legend', function (e) {
+      var $legend = $(this);
+      var $fieldset = $legend.closest('.fw-fieldset');
+      if (!$fieldset.length) return;
+
+      var collapsible = $fieldset.data('collapsible');
+      if (collapsible === 0 || collapsible === '0' || collapsible === false || collapsible === 'false') {
+        return;
+      }
+
+      $fieldset.toggleClass('is-collapsed');
+    });
 
     //form screen init
     fw.setup_cancel_form_handlers();

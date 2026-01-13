@@ -16,7 +16,7 @@ public class FwDynamicController : FwController
 
     protected FwModel? model_related;
 
-    protected static readonly string[] DEF_TYPES_STRUCTURE = ["row", "row_end", "col", "col_end", "header"];
+    protected static readonly string[] DEF_TYPES_STRUCTURE = ["row", "row_end", "col", "col_end", "header", "fieldset", "fieldset_end"];
 
     public override void init(FW fw)
     {

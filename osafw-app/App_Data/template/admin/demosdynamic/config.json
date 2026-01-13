@@ -402,7 +402,7 @@
             "class_contents": "col d-flex align-items-center"
         },
         {
-            "type": "header",
+            "type": "fieldset",
             "label": "Dates"
         },
         {
@@ -427,6 +427,9 @@
             "field": "ftime",
             "label": "Time",
             "type": "time"
+        },
+        {
+            "type": "fieldset_end"
         },
         {
             "type": "col_end"

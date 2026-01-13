@@ -294,6 +294,24 @@ label {
   border-radius: var(--fw-select-radius);
 }
 
+/* Collapsible fieldsets */
+.fw-fieldset {
+  margin: 0 0 1rem;
+  padding: 1rem;
+  border: 1px solid var(--bs-border-color);
+  border-radius: var(--bs-border-radius);
+}
+
+.fw-fieldset-legend {
+  padding: 0 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.fw-fieldset.is-collapsed > .fw-fieldset-body {
+  display: none;
+}
+
 /* Standard-sized buttons (includes .btn-link; size modifiers override below) */
 .btn:not(.btn-sm):not(.btn-lg) {
     --bs-btn-padding-y: var(--fw-btn-padding-y);
