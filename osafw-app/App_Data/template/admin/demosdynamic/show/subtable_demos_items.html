@@ -1,5 +1,5 @@
-<div class="fw-empty-state text-center mx-auto py-2" <~/common/display_none if="list_rows">>`No items`</div>
-<table class="table table-sm" <~/common/display_none unless="list_rows">>
+<div class="fw-empty-state text-center mx-auto py-2" <~/common/attr/display_none if="list_rows">>`No items`</div>
+<table class="table table-sm" <~/common/attr/display_none unless="list_rows">>
    <thead>
       <tr>
          <th class="col">`ID`</th>
@@ -26,7 +26,7 @@
          </td>
          <td>
             <div class="form-check">
-              <input type="checkbox" class="form-check-input" <~/common/checked if="is_checkbox"> <~/common/disabled>>
+              <input type="checkbox" class="form-check-input" <~/common/attr/checked if="is_checkbox"> <~/common/attr/disabled>>
               <label class="form-check-label"></label>
             </div>
          </td>

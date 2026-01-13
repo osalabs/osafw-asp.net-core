@@ -483,9 +483,9 @@ The `/common` directory contains reusable sub-templates and utility files that c
 These help keep your templates DRY and consistent. Below are the most important templates and their usage:
 
 #### Utility and HTML Attribute Templates
-- **active.html**: Outputs `active` (for menu highlighting). Usage: `<~/common/active>`
-- **checked.html**: Outputs `checked="checked"` (for form checkboxes). Usage: `<~/common/checked>`
-- **disabled.html**: Outputs `disabled="disabled"` (for form elements). Usage: `<~/common/disabled>`
+- **cl/active.html**: Outputs `active` (for menu highlighting). Usage: `<~/common/cl/active>`
+- **attr/checked.html**: Outputs `checked="checked"` (for form checkboxes). Usage: `<~/common/attr/checked>`
+- **attr/disabled.html**: Outputs `disabled="disabled"` (for form elements). Usage: `<~/common/attr/disabled>`
 - **clactive.html**: Outputs `class="active"` (for menu or tab highlighting). Usage: `<~/common/clactive>`
 - **comma.html**: Outputs a comma, used in lists. Usage: `<~/common/comma>` (with `unless="repeat.last"` to avoid trailing comma).
 - **dot.html**: Outputs a dot wrapped in nbsp, used as visaul delimiter. Usage: `<~/common/dot>`

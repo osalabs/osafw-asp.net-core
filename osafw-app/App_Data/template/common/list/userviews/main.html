@@ -14,7 +14,7 @@
   <div class="col-rows">
     <~rows repeat inline>
     <div class="form-check cb-row">
-      <input type="checkbox" class="form-check-input" id="custom-cols-fld-$<~field_name>" name="fld[<~field_name>]" value="<~repeat.iteration>" <~/common/checked if="is_checked">>
+      <input type="checkbox" class="form-check-input" id="custom-cols-fld-$<~field_name>" name="fld[<~field_name>]" value="<~repeat.iteration>" <~/common/attr/checked if="is_checked">>
       <label class="form-check-label" for="custom-cols-fld-$<~field_name>"><~field_name_visible></label>
     </div>
     </~rows>

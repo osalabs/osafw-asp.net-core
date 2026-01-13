@@ -47,7 +47,7 @@
   </div>
   <div class="col d-flex align-items-center">
     <div class="form-check form-check-inline">
-      <input class="form-check-input" type="checkbox" id="is_readonly" name="item[is_readonly]" value="1" <~/common/checked if="i[is_readonly]">>
+      <input class="form-check-input" type="checkbox" id="is_readonly" name="item[is_readonly]" value="1" <~/common/attr/checked if="i[is_readonly]">>
       <label class="form-check-label" for="is_readonly">`Read Only?`</label>
     </div>
   </div>
@@ -115,7 +115,7 @@
     <p><button id="att_id" type="button" class="btn btn-default on-select-att" data-att-category="users"><i class="bi bi-person-badge"></i> `Select/Upload`</button></p>
   </div>
   <div class="col-6 col-sm-4 col-md-3 col-lg-4 col-xl-3">
-    <div class="card text-center att-info" <~/common/display_none unless="att">>
+    <div class="card text-center att-info" <~/common/attr/display_none unless="att">>
       <input name="item[att_id]" value="<~i[att_id]>" type="hidden">
       <img class="card-img-top" src="<~/att/url>/<~att[icode]>?preview=1&size=s" alt="">
       <div class="card-body text-truncate">

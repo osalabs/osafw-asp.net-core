@@ -1,4 +1,4 @@
-<fieldset <~/common/disabled if="is_readonly">>
+<fieldset <~/common/attr/disabled if="is_readonly">>
   <legend>Publish</legend>
 
   <~publish_not_a_home unless="i[is_home]" inline>
@@ -29,7 +29,7 @@
 
 </fieldset>
 
-<fieldset <~/common/disabled if="is_readonly">>
+<fieldset <~/common/attr/disabled if="is_readonly">>
   <legend>Page Attributes</legend>
 
   <div class="row form-row">
@@ -42,7 +42,7 @@
   <div class="row form-row">
     <label class="col-form-label col-md-3" for="url">`Url`</label>
     <div class="col-md-9">
-      <input id="url" name="item[url]" maxlength="255" value="<~i[url]>" type="text" class="form-control" <~/common/disabled if="i[is_home]">>
+      <input id="url" name="item[url]" maxlength="255" value="<~i[url]>" type="text" class="form-control" <~/common/attr/disabled if="i[is_home]">>
       <p class="err-EXISTS">`This URL already exists in our database`</p>
     </div>
   </div>
@@ -96,7 +96,7 @@
 
 <~sub_block if="id" inline>
  <~sub_block2 unless="i[is_home]" inline>
- <fieldset <~/common/disabled if="is_readonly">>
+ <fieldset <~/common/attr/disabled if="is_readonly">>
   <legend>`Sub-Pages`
     <a class="btn btn-default btn-sm" href="<~../url>/new?parent_id=<~id>"><i class="bi bi-file-earmark-plus"></i> `Add Sub-Page`</a>
   </legend>

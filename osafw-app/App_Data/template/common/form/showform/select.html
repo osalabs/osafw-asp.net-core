@@ -1,5 +1,5 @@
 <~/common/form/showform/input_group_start if="is_input_group">
-  <select id="<~field>" name="item[<~field>]" class="form-select <~class_control>" <~/common/multiple if="multiple"> <~/common/required if="required"> <~attrs_control noescape>>
+  <select id="<~field>" name="item[<~field>]" class="form-select <~class_control>" <~/common/attr/multiple if="multiple"> <~/common/attr/required if="required"> <~attrs_control noescape>>
     <~option0 if="is_option0" inline><option value="0"><~option0_title default="- select -"></option></~option0>
     <~option_empty if="is_option_empty" inline><option value=""><~option0_title default="- select -"></option></~option_empty>
       <~select_options select="value" multi if="multiple">

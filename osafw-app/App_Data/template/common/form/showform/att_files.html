@@ -11,11 +11,11 @@
     </~nobtn_block>
     <~btn_block if="i[id]" inline>
      <span class="fake-btn"><i class="bi bi-cloud-upload"></i> Choose files or drag and drop your files here</span>
-     <input class="d-none" data-noautosave type="file" name="file" <~/common/multiple if="multiple">>
+     <input class="d-none" data-noautosave type="file" name="file" <~/common/attr/multiple if="multiple">>
     </~btn_block>
   </div>
 
-  <div class="fw-empty-state text-center mx-auto mt-2" <~/common/display_none if="att_files">>`No files uploaded`</div>
+  <div class="fw-empty-state text-center mx-auto mt-2" <~/common/attr/display_none if="att_files">>`No files uploaded`</div>
 
   <div class="att-list flex-column mt-3">
     <~att_files repeat inline>

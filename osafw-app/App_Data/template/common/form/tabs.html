@@ -1,7 +1,7 @@
 <ul class="nav nav-underline justify-content-start">
     <~form_tabs repeat inline>
         <li class="nav-item">
-            <a class="nav-link <~/common/disabledcl unless="PARSEPAGE.TOP[id]"> <~/common/active ifeq="PARSEPAGE.TOP[tab]" vvalue="tab">"
+            <a class="nav-link <~/common/cl/disabled unless="PARSEPAGE.TOP[id]"> <~/common/cl/active ifeq="PARSEPAGE.TOP[tab]" vvalue="tab">"
                 href="<~../url>/<~PARSEPAGE.TOP[id]><~/common/form/url_edit if="PARSEPAGE.TOP[is_showform]">?tab=<~tab>">
                 <~label>
             </a>

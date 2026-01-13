@@ -1,5 +1,5 @@
 <~/common/form/showform/input_group_start if="is_input_group">
-  <input id="<~field>" name="item[<~field>]" <~/common/form/showform/maxlength if="maxlength"> value="<~value>" type="text" class="form-control <~class_control>" <~/common/required if="required"> <~/common/form/showform/placeholder if="placeholder"> <~attrs_control noescape>>
+  <input id="<~field>" name="item[<~field>]" <~/common/form/showform/maxlength if="maxlength"> value="<~value>" type="text" class="form-control <~class_control>" <~/common/attr/required if="required"> <~/common/form/showform/placeholder if="placeholder"> <~attrs_control noescape>>
 <~/common/form/showform/input_group_end if="is_input_group">
 <p class="err-EXISTS">`This name already exists in our database`</p>
 <~./validation_errors if="errors">

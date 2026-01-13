@@ -13,14 +13,14 @@
 <ul class="nav nav-pills flex-column mt-3">
   <~logged_menu if="SESSION[user_id]" inline>
     <li class="nav-item">
-      <a href="<~/main/url>" class="nav-link <~/common/active ifeq="GLOBAL[controller]" value="Main">">
+      <a href="<~/main/url>" class="nav-link <~/common/cl/active ifeq="GLOBAL[controller]" value="Main">">
         <i class="bi bi-grid-fill"></i> <~/main/index/title>
       </a>
     </li>
 
     <~GLOBAL[menu_items] repeat inline>
       <li class="nav-item">
-        <a href="<~ROOT_URL><~url>" class="nav-link <~/common/active ifeq="GLOBAL[controller]" vvalue="controller">">
+        <a href="<~ROOT_URL><~url>" class="nav-link <~/common/cl/active ifeq="GLOBAL[controller]" vvalue="controller">">
           <i class="bi bi-list-ul"></i> <~iname>
         </a>
       </li>
@@ -29,47 +29,47 @@
     <~admin80_menu ifge="SESSION[access_level]" value="80" inline>
       <li class="nav-item nav-header"><a href="#" class="nav-link disabled">`Manager Menu`</a></li>
       <li class="nav-item">
-        <a href="<~/admin/reports/url>" class="nav-link <~/common/active ifeq="GLOBAL[controller]" value="AdminReports">">
+        <a href="<~/admin/reports/url>" class="nav-link <~/common/cl/active ifeq="GLOBAL[controller]" value="AdminReports">">
           <i class="bi bi-file-ruled"></i> `Reports`
         </a>
       </li>
       <li class="nav-item">
-        <a href="<~/admin/demos/url>" class="nav-link <~/common/active ifeq="GLOBAL[controller]" value="AdminDemos">">
+        <a href="<~/admin/demos/url>" class="nav-link <~/common/cl/active ifeq="GLOBAL[controller]" value="AdminDemos">">
           <i class="bi bi-list-ul"></i> `Demo`
         </a>
       </li>
       <li class="nav-item">
-        <a href="<~/admin/demosdynamic/url>" class="nav-link <~/common/active ifeq="GLOBAL[controller]" value="AdminDemosDynamic">">
+        <a href="<~/admin/demosdynamic/url>" class="nav-link <~/common/cl/active ifeq="GLOBAL[controller]" value="AdminDemosDynamic">">
           <i class="bi bi-list-ul"></i> `Demo Dynamic`
         </a>
       </li>
       <li class="nav-item">
-        <a href="<~/admin/demosvue/url>" class="nav-link <~/common/active ifeq="GLOBAL[controller]" value="AdminDemosVue">">
+        <a href="<~/admin/demosvue/url>" class="nav-link <~/common/cl/active ifeq="GLOBAL[controller]" value="AdminDemosVue">">
           <i class="bi bi-list-ul"></i> `Demo Vue`
         </a>
       </li>
       <li class="nav-item">
-        <a href="<~/admin/demosvuesimple/url>" class="nav-link <~/common/active ifeq="GLOBAL[controller]" value="AdminDemosVueSimple">">
+        <a href="<~/admin/demosvuesimple/url>" class="nav-link <~/common/cl/active ifeq="GLOBAL[controller]" value="AdminDemosVueSimple">">
           <i class="bi bi-list-ul"></i> `Demo Vue Simple`
         </a>
       </li>
       <li class="nav-item">
-        <a href="<~/admin/demodicts/url>" class="nav-link <~/common/active ifeq="GLOBAL[controller]" value="AdminDemoDicts">">
+        <a href="<~/admin/demodicts/url>" class="nav-link <~/common/cl/active ifeq="GLOBAL[controller]" value="AdminDemoDicts">">
           <i class="bi bi-list-ul"></i> `Demo Dict`
         </a>
       </li>
       <li class="nav-item">
-        <a href="<~/admin/spages/url>" class="nav-link <~/common/active ifeq="GLOBAL[controller]" value="AdminSpages">">
+        <a href="<~/admin/spages/url>" class="nav-link <~/common/cl/active ifeq="GLOBAL[controller]" value="AdminSpages">">
           <i class="bi bi-files"></i> `Pages`
         </a>
       </li>
       <li class="nav-item">
-        <a href="<~/admin/att/url>" class="nav-link <~/common/active ifeq="GLOBAL[controller]" value="AdminAtt">">
+        <a href="<~/admin/att/url>" class="nav-link <~/common/cl/active ifeq="GLOBAL[controller]" value="AdminAtt">">
           <i class="bi bi-cloud-upload"></i> `Manage Uploads`
         </a>
       </li>
       <li class="nav-item">
-        <a href="<~/admin/lookups/url>" class="nav-link <~/common/active ifeq="GLOBAL[controller]" value="AdminLookups">">
+        <a href="<~/admin/lookups/url>" class="nav-link <~/common/cl/active ifeq="GLOBAL[controller]" value="AdminLookups">">
           <i class="bi bi-search"></i> `Lookup Manager`
         </a>
       </li>
@@ -78,12 +78,12 @@
     <~admin90_menu ifge="SESSION[access_level]" value="90" inline>
       <li class="nav-item nav-header"><a href="#" class="nav-link disabled">`Admin Menu`</a></li>
       <li class="nav-item">
-        <a href="<~/admin/users/url>" class="nav-link <~/common/active ifeq="GLOBAL[controller]" value="AdminUsers">">
+        <a href="<~/admin/users/url>" class="nav-link <~/common/cl/active ifeq="GLOBAL[controller]" value="AdminUsers">">
           <i class="bi bi-person-lines-fill"></i> `Users`
         </a>
       </li>
       <li class="nav-item" >
-        <a href="<~/admin/settings/url>" class="nav-link <~/common/active ifeq="GLOBAL[controller]" value="AdminSettings">">
+        <a href="<~/admin/settings/url>" class="nav-link <~/common/cl/active ifeq="GLOBAL[controller]" value="AdminSettings">">
           <i class="bi bi-sliders"></i> `Site Settings`
         </a>
       </li>
@@ -91,18 +91,18 @@
 
     <~admin100_menu ifeq="SESSION[access_level]" value="100" inline>
       <li class="nav-item" >
-        <a href="<~/admin/db/url>" class="nav-link <~/common/active ifeq="GLOBAL[controller]" value="AdminDB">" target="_blank">
+        <a href="<~/admin/db/url>" class="nav-link <~/common/cl/active ifeq="GLOBAL[controller]" value="AdminDB">" target="_blank">
           <i class="bi bi-tools"></i> `Direct DB Access`
         </a>
       </li>
       <li class="nav-item" >
-        <a href="<~ROOT_URL>/Admin/FwUpdates" class="nav-link <~/common/active ifeq="GLOBAL[controller]" value="AdminFwUpdates">">
+        <a href="<~ROOT_URL>/Admin/FwUpdates" class="nav-link <~/common/cl/active ifeq="GLOBAL[controller]" value="AdminFwUpdates">">
           <i class="bi bi-tools"></i> `DB Updates` <~dbupdates_badge if="SESSION[FW_UPDATES_CTR]" inline><span class="badge text-bg-secondary"><~SESSION[FW_UPDATES_CTR]></span></~dbupdates_badge>
         </a>
       </li>
       <~dev_menu if="GLOBAL[IS_DEV]" inline>
       <li class="nav-item" >
-        <a href="<~/dev/url>/Manage" class="nav-link <~/common/active ifeq="GLOBAL[controller]" value="DevManage">">
+        <a href="<~/dev/url>/Manage" class="nav-link <~/common/cl/active ifeq="GLOBAL[controller]" value="DevManage">">
           <i class="bi bi-tools"></i> `Developer Tools`
         </a>
       </li>
