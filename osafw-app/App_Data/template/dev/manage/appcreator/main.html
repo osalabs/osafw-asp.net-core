@@ -64,7 +64,7 @@
           <div class="input-group">
             <div class="input-group-prepend">
               <div class="form-check">
-                <input type="checkbox" class="form-check-input cb-model" id="<~fw_name>#cbmodel" name="item[<~fw_name>#is_model]" <~/common/checked unless="is_model_exists">>
+                <input type="checkbox" class="form-check-input cb-model" id="<~fw_name>#cbmodel" name="item[<~fw_name>#is_model]" <~/common/attr/checked unless="is_model_exists">>
                 <label class="form-check-label" for="<~fw_name>#cbmodel">&nbsp;</label>
               </div>
             </div>
@@ -75,7 +75,7 @@
           <div class="input-group">
             <div class="input-group-prepend">
               <div class="form-check">
-                <input type="checkbox" class="form-check-input cb-controller" id="<~fw_name>#cbcontroller" name="item[<~fw_name>#is_controller]" <~/common/checked if="is_controller_create">>
+                <input type="checkbox" class="form-check-input cb-controller" id="<~fw_name>#cbcontroller" name="item[<~fw_name>#is_controller]" <~/common/attr/checked if="is_controller_create">>
                 <label class="form-check-label" for="<~fw_name>#cbcontroller">&nbsp;</label>
               </div>
             </div>
@@ -87,23 +87,23 @@
         </div>
         <div class="col">
           <div class="form-check form-check-inline">
-            <input type="checkbox" class="form-check-input cb-coview" id="<~fw_name>#cbcoview" name="item[<~fw_name>#coview]" <~/common/checked unless="controller[is_lookup]">>
+            <input type="checkbox" class="form-check-input cb-coview" id="<~fw_name>#cbcoview" name="item[<~fw_name>#coview]" <~/common/attr/checked unless="controller[is_lookup]">>
             <label class="form-check-label" for="<~fw_name>#cbcoview">View</label>
           </div>
           <div class="form-check form-check-inline">
-            <input type="checkbox" class="form-check-input cb-coedit" id="<~fw_name>#cbcoedit" name="item[<~fw_name>#coedit]" <~/common/checked unless="controller[is_lookup]">>
+            <input type="checkbox" class="form-check-input cb-coedit" id="<~fw_name>#cbcoedit" name="item[<~fw_name>#coedit]" <~/common/attr/checked unless="controller[is_lookup]">>
             <label class="form-check-label" for="<~fw_name>#cbcoedit">Edit</label>
           </div>
           <div class="form-check form-check-inline">
-            <input type="checkbox" class="form-check-input cb-colookup" id="<~fw_name>#cbcolookup" name="item[<~fw_name>#colookup]" <~/common/checked if="controller[is_lookup]">>
+            <input type="checkbox" class="form-check-input cb-colookup" id="<~fw_name>#cbcolookup" name="item[<~fw_name>#colookup]" <~/common/attr/checked if="controller[is_lookup]">>
             <label class="form-check-label" for="<~fw_name>#cbcolookup">Lookup</label>
           </div>
           <div class="form-check form-check-inline">
-            <input type="checkbox" class="form-check-input cb-cotype" id="<~fw_name>#cbcotype" name="item[<~fw_name>#cotype]" value="vue" <~/common/checked ifeq="controller[type]" value="vue">>
+            <input type="checkbox" class="form-check-input cb-cotype" id="<~fw_name>#cbcotype" name="item[<~fw_name>#cotype]" value="vue" <~/common/attr/checked ifeq="controller[type]" value="vue">>
             <label class="form-check-label" for="<~fw_name>#cbcotype">Vue</label>
           </div>
           <div class="form-check form-check-inline">
-            <input type="checkbox" class="form-check-input cb-corwtpl" id="<~fw_name>#cbcorwtpl" name="item[<~fw_name>#corwtpl]" <~/common/checked ifeq="controller[rewrite_tpl]">>
+            <input type="checkbox" class="form-check-input cb-corwtpl" id="<~fw_name>#cbcorwtpl" name="item[<~fw_name>#corwtpl]" <~/common/attr/checked ifeq="controller[rewrite_tpl]">>
             <label class="form-check-label" for="<~fw_name>#cbcorwtpl">Rewrite Templates</label>
           </div>
         </div>

@@ -1,5 +1,5 @@
 <~/common/form/showform/input_group_start if="is_input_group">
- <input type="time" id="<~field>" name="item[<~field>]" <~./min if="min"><~./max if="max"><~./step if="step"> value="<~value>" class="form-control <~class_control>" <~/common/required if="required"> <~attrs_control noescape>>
+ <input type="time" id="<~field>" name="item[<~field>]" <~./min if="min"><~./max if="max"><~./step if="step"> value="<~value>" class="form-control <~class_control>" <~/common/attr/required if="required"> <~attrs_control noescape>>
 <~/common/form/showform/input_group_end if="is_input_group">
 <~./validation_errors if="errors">
 <~./help_block if="help_text">

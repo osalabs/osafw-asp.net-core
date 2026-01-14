@@ -87,7 +87,7 @@
       <input type="input" class="form-control form-control-sm on-multi-search mb-1" value="" placeholder="`type to filter...`" data-noautosave>
       <~multi_datarow repeat inline>
         <div class="form-check" data-s="<~id upper> - <~iname upper>">
-          <input type="checkbox" class="form-check-input" id="dict_link_multi$<~id>" name="dict_link_multi[<~id>]" value="1" <~/common/checked if="is_checked">>
+          <input type="checkbox" class="form-check-input" id="dict_link_multi$<~id>" name="dict_link_multi[<~id>]" value="1" <~/common/attr/checked if="is_checked">>
           <label class="form-check-label" for="dict_link_multi$<~id>"><~iname></label>
         </div>
       </~multi_datarow>
@@ -102,7 +102,7 @@
       <input type="input" class="form-control form-control-sm on-multi-search mb-1" value="" placeholder="`type to filter...`" data-noautosave>
       <~multi_datarow_link repeat inline>
         <div class="form-check" data-s="<~id upper> - <~iname upper>">
-          <input type="checkbox" class="form-check-input" id="demo_dicts_link$<~id>" name="demo_dicts_link[<~id>]" value="1" <~/common/checked if="is_checked">>
+          <input type="checkbox" class="form-check-input" id="demo_dicts_link$<~id>" name="demo_dicts_link[<~id>]" value="1" <~/common/attr/checked if="is_checked">>
           <label class="form-check-label" for="demo_dicts_link$<~id>"><~iname></label>
         </div>
       </~multi_datarow_link>
@@ -136,7 +136,7 @@
   <label class="col-form-label col-md-3" for="is_checkbox">Checkbox</label>
   <div class="col d-flex align-items-center">
     <div class="form-check form-check-inline">
-      <input class="form-check-input" type="checkbox" id="is_checkbox" name="item[is_checkbox]" value="1" <~/common/checked if="i[is_checkbox]">>
+      <input class="form-check-input" type="checkbox" id="is_checkbox" name="item[is_checkbox]" value="1" <~/common/attr/checked if="i[is_checkbox]">>
       <label class="form-check-label" for="is_checkbox">Yes</label>
     </div>
   </div>

@@ -71,7 +71,7 @@
     <div class="field-multi-value">
       <~multi_datarow repeat inline>
         <div class="form-check">
-          <input type="checkbox" class="form-check-input" <~/common/checked if="is_checked"> <~/common/disabled>>
+          <input type="checkbox" class="form-check-input" <~/common/attr/checked if="is_checked"> <~/common/attr/disabled>>
           <label class="form-check-label"><~iname></label>
         </div>
       </~multi_datarow>
@@ -85,7 +85,7 @@
     <div class="field-multi-value">
       <~multi_datarow_link repeat inline>
         <div class="form-check">
-          <input type="checkbox" class="form-check-input" <~/common/checked if="is_checked"> <~/common/disabled>>
+          <input type="checkbox" class="form-check-input" <~/common/attr/checked if="is_checked"> <~/common/attr/disabled>>
           <label class="form-check-label"><~iname></label>
         </div>
       </~multi_datarow_link>
@@ -116,7 +116,7 @@
   <label class="col-form-label col-md-3">Checkbox</label>
   <div class="col d-flex align-items-center">
     <div class="form-check form-check-inline">
-      <input type="checkbox" class="form-check-input" <~/common/checked if="i[is_checkbox]"> <~/common/disabled>>
+      <input type="checkbox" class="form-check-input" <~/common/attr/checked if="i[is_checkbox]"> <~/common/attr/disabled>>
       <label class="form-check-label">Yes</label>
     </div>
   </div>

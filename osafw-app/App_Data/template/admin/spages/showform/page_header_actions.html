@@ -1,9 +1,9 @@
 <~/common/form/btn_std>
 <div class="btn-group">
-  <a class="btn btn-default <~/common/disabledcl unless="i[parent_id]">" href="<~../url>/<~i[parent_id]>/edit"><i class="bi bi-journal-arrow-up"></i> `Up`</a>
+  <a class="btn btn-default <~/common/cl/disabled unless="i[parent_id]">" href="<~../url>/<~i[parent_id]>/edit"><i class="bi bi-journal-arrow-up"></i> `Up`</a>
   <~add_sub if="id" inline>
     <~add_sub2 unless="i[is_home]" inline>
-      <a class="btn btn-default" href="<~../url>/new?parent_id=<~id>" <~/common/disabled if="is_readonly">><i class="bi bi-file-earmark-plus"></i><span class="d-none d-lg-inline"> `Add Sub-Page`</span><span class="d-inline d-lg-none"> `Sub`</span></a>
+      <a class="btn btn-default" href="<~../url>/new?parent_id=<~id>" <~/common/attr/disabled if="is_readonly">><i class="bi bi-file-earmark-plus"></i><span class="d-none d-lg-inline"> `Add Sub-Page`</span><span class="d-inline d-lg-none"> `Sub`</span></a>
     </~add_sub2>
   </~add_sub>
 </div>

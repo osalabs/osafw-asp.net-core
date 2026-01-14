@@ -13,11 +13,11 @@
         <~logged_links if="SESSION[user_id]" inline>
           <li class="nav-item"><a class="nav-link" href="<~/main/url>"><~/main/index/title></a></li>
         </~logged_links>
-        <li class="nav-item"><a class="nav-link <~/common/active ifeq="GLOBAL[controller.action]" value="Home.Index">" href="<~ROOT_URL>/">Home</a></li>
-        <li class="nav-item"><a class="nav-link <~/common/active ifeq="page_name" value="about">" href="<~/home/url>/About">About</a></li>
-        <li class="nav-item"><a class="nav-link <~/common/active ifeq="GLOBAL[controller]" value="Contact">" href="<~/contact/url>">Contact</a></li>
+        <li class="nav-item"><a class="nav-link <~/common/cl/active ifeq="GLOBAL[controller.action]" value="Home.Index">" href="<~ROOT_URL>/">Home</a></li>
+        <li class="nav-item"><a class="nav-link <~/common/cl/active ifeq="page_name" value="about">" href="<~/home/url>/About">About</a></li>
+        <li class="nav-item"><a class="nav-link <~/common/cl/active ifeq="GLOBAL[controller]" value="Contact">" href="<~/contact/url>">Contact</a></li>
         <~logged_login unless="SESSION[user_id]" inline>
-          <li class="nav-item"><a class="nav-link <~/common/active ifeq="GLOBAL[controller]" value="Login">" href="<~/login/url>">Login</a></li>
+          <li class="nav-item"><a class="nav-link <~/common/cl/active ifeq="GLOBAL[controller]" value="Login">" href="<~/login/url>">Login</a></li>
         </~logged_login>
       </ul>
       <form class="d-flex" action="<~/search/url>">

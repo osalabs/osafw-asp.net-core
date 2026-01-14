@@ -7,7 +7,7 @@
       <~pager_prev if="is_show_prev" inline>
         <li class="page-item"><a class="page-link text-center" href="?f[pagenum]=<~pagenum_prev><~pager_url>" data-pagenum="<~pagenum_prev>" style="width:80px;">&laquo;</a></li>
       </~pager_prev>
-      <li class="page-item <~/common/active ifeq="is_cur_page" value="1">">
+      <li class="page-item <~/common/cl/active ifeq="is_cur_page" value="1">">
         <a class="page-link" href="?f[pagenum]=<~pagenum><~pager_url>" data-pagenum="<~pagenum>"><~pagenum_show></a>
       </li>
       <~pager_next if="is_show_next" inline>
