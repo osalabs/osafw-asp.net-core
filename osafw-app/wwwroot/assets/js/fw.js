@@ -211,6 +211,18 @@ window.fw={
       window.print();
     });
 
+    $(document).on('click', '.fw-fieldset > legend', function () {
+      const $fieldset = $(this).closest('.fw-fieldset');
+      if (!$fieldset.length) return;
+      $fieldset.toggleClass('is-collapsed');
+    });
+
+    $(document).on('keydown', '.fw-fieldset > legend', function (e) {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      $(this).trigger('click');
+    });
+
     $('table.list').on('keypress','.search :input', function(e) {
       if (e.which == 13) {// on Enter press
           e.preventDefault();

@@ -1101,6 +1101,35 @@ table.list-edit.table-dense tbody td > div.ro {
   align-self: center;
 }
 
+.fw-fieldset {
+  border: 1px solid var(--bs-border-color);
+  border-radius: var(--fw-control-radius);
+  margin: 0 0 var(--fw-spacer) 0;
+  padding: var(--fw-spacer);
+}
+
+.fw-fieldset > legend {
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 1rem;
+  font-weight: 600;
+  gap: 0.35rem;
+  padding: 0 0.5rem;
+}
+
+.fw-fieldset > legend::after {
+  content: "▾";
+  font-size: 0.9em;
+}
+
+.fw-fieldset.is-collapsed > legend::after {
+  content: "▸";
+}
+
+.fw-fieldset.is-collapsed > :not(legend) {
+  display: none;
+}
+
 form .required:before {
   content: "*";
   color: var(--bs-danger);

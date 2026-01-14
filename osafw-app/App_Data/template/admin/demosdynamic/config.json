@@ -402,8 +402,9 @@
             "class_contents": "col d-flex align-items-center"
         },
         {
-            "type": "header",
-            "label": "Dates"
+            "type": "fieldset",
+            "label": "Dates",
+            "class": "mb-3"
         },
         {
             "field": "fdate_combo",
@@ -427,6 +428,9 @@
             "field": "ftime",
             "label": "Time",
             "type": "time"
+        },
+        {
+            "type": "fieldset_end"
         },
         {
             "type": "col_end"
