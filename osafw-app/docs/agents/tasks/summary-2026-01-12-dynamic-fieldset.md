@@ -1,7 +1,8 @@
 ## What changed
 - added fieldset structural support for dynamic show/showform configs with templates, JS toggle behavior, and styling
-- updated DemosDynamic edit config to demonstrate fieldset usage
+- updated DemosDynamic view/edit configs to demonstrate fieldset usage
 - refactored fieldset rendering to avoid nested fieldset markup inside existing form fieldsets
+- added fieldset legend class support and animated icon rotation
 
 ## Commands that worked (build/test/run)
 - 

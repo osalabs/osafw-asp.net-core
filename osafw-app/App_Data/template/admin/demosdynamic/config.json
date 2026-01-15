@@ -150,8 +150,9 @@
             "type": "checkbox"
         },
         {
-            "type": "header",
-            "label": "Dates"
+            "type": "fieldset",
+            "label": "Dates",
+            "class": "mb-3"
         },
         {
             "field": "fdate_combo",
@@ -173,6 +174,9 @@
             "label": "Time",
             "type": "plaintext",
             "conv": "time_from_seconds"
+        },
+        {
+            "type": "fieldset_end"
         },
 
         {
