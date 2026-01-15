@@ -1105,16 +1105,20 @@ table.list-edit.table-dense tbody td > div.ro {
   border: 1px solid var(--bs-border-color);
   border-radius: var(--fw-control-radius);
   margin: 0 0 var(--fw-spacer) 0;
-  padding: var(--fw-spacer);
+  padding: calc(var(--fw-spacer) * 0.75) var(--fw-spacer) var(--fw-spacer);
 }
 
 .fw-fieldset-legend {
+  align-items: center;
+  background: var(--bs-body-bg);
   cursor: pointer;
   display: inline-flex;
   font-size: 1rem;
   font-weight: 600;
   gap: 0.35rem;
   padding: 0 0.5rem;
+  position: relative;
+  top: calc(var(--fw-spacer) * -0.85);
 }
 
 .fw-fieldset-legend::after {
