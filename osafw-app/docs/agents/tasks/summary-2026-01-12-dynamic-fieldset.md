@@ -3,6 +3,7 @@
 - updated DemosDynamic view/edit configs to demonstrate fieldset usage
 - refactored fieldset rendering to avoid nested fieldset markup inside existing form fieldsets
 - added fieldset legend class support, animated icon rotation, and legend overlap styling
+- adjusted fieldset padding and legend offset for spacing tweaks
 
 ## Commands that worked (build/test/run)
 - 
