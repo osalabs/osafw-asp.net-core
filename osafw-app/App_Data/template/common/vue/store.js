@@ -213,7 +213,7 @@ let getters = {
         let stack = [root]; // Stack to manage hierarchy, starting with the root
 
         arr.forEach(item => {
-            if (item.type === 'row' || item.type === 'col') {
+            if (item.type === 'row' || item.type === 'col' || item.type === 'fieldset') {
                 // If the item is a row or column, it's a new parent, so create a children array in it
                 item.children = [];
 
@@ -223,7 +223,7 @@ let getters = {
 
                 // Push this item onto the stack so it becomes the new current parent
                 stack.push(item.children);
-            } else if (item.type === 'row_end' || item.type === 'col_end') {
+            } else if (item.type === 'row_end' || item.type === 'col_end' || item.type === 'fieldset_end') {
                 // If it's an end marker, just pop the last parent from the stack
                 stack.pop();
             } else {
