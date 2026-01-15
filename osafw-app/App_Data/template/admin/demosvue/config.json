@@ -210,6 +210,11 @@
                     "type": "checkbox"
                 },
                 {
+                    "type": "fieldset",
+                    "label": "Dates",
+                    "class": "mb-3"
+                },
+                {
                     "field": "fdate_combo",
                     "label": "Date combo",
                     "type": "date"
@@ -229,6 +234,9 @@
                     "label": "Time",
                     "type": "plaintext",
                     "conv": "time_from_seconds"
+                },
+                {
+                    "type": "fieldset_end"
                 },
 
             {
@@ -456,6 +464,11 @@
                     "class_contents": "col d-flex align-items-center"
                 },
                 {
+                    "type": "fieldset",
+                    "label": "Dates",
+                    "class": "mb-3"
+                },
+                {
                     "field": "fdate_combo",
                     "label": "Date combo (TODO)",
                     "type": "date"
@@ -478,6 +491,9 @@
                     "label": "Time (TODO)",
                     "type": "plaintext",
                     "conv": "time_from_seconds"
+                },
+                {
+                    "type": "fieldset_end"
                 },
             {
                 "type": "col_end"
