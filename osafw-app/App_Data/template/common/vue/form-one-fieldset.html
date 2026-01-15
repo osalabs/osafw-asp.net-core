@@ -1,6 +1,11 @@
 <script type="text/x-template" id="form-one-fieldset-template">
-    <div :class="['fw-fieldset', def.class ? def.class : '']">
-        <div v-if="def.label" :class="['fw-fieldset-legend', def.class_label ? def.class_label : '']" role="button" tabindex="0">
+    <div :class="['fw-fieldset', def.class ? def.class : '', { 'is-collapsed': isCollapsed }]">
+        <div v-if="def.label"
+             :class="['fw-fieldset-legend', def.class_label ? def.class_label : '']"
+             role="button"
+             tabindex="0"
+             @click="toggleCollapsed"
+             @keydown="onLegendKeydown">
             {{ def.label }}
         </div>
         <form-one-def v-for="(child_def, index) in def.children"
@@ -31,5 +36,19 @@
             }
         },
         emits: ['update-form-field', 'cancel-form']
+        ,
+        data: () => ({
+            isCollapsed: false
+        }),
+        methods: {
+            toggleCollapsed() {
+                this.isCollapsed = !this.isCollapsed;
+            },
+            onLegendKeydown(event) {
+                if (event.key !== 'Enter' && event.key !== ' ') return;
+                event.preventDefault();
+                this.toggleCollapsed();
+            }
+        }
     });
 </script>

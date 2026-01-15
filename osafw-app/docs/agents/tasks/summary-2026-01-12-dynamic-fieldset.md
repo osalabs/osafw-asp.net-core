@@ -6,6 +6,7 @@
 - adjusted fieldset padding and legend offset for spacing tweaks
 - wrapped Demos view/edit date sections in fieldset styling and added Vue fieldset support
 - added fieldset usage in DemosVue config for date groups
+- added Vue fieldset toggle handlers for click/keyboard collapse
 
 ## Commands that worked (build/test/run)
 - 
