@@ -211,13 +211,13 @@ window.fw={
       window.print();
     });
 
-    $(document).on('click', '.fw-fieldset > legend', function () {
+    $(document).on('click', '.fw-fieldset-legend', function () {
       const $fieldset = $(this).closest('.fw-fieldset');
       if (!$fieldset.length) return;
       $fieldset.toggleClass('is-collapsed');
     });
 
-    $(document).on('keydown', '.fw-fieldset > legend', function (e) {
+    $(document).on('keydown', '.fw-fieldset-legend', function (e) {
       if (e.key !== 'Enter' && e.key !== ' ') return;
       e.preventDefault();
       $(this).trigger('click');

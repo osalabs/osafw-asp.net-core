@@ -1108,7 +1108,7 @@ table.list-edit.table-dense tbody td > div.ro {
   padding: var(--fw-spacer);
 }
 
-.fw-fieldset > legend {
+.fw-fieldset-legend {
   cursor: pointer;
   display: inline-flex;
   font-size: 1rem;
@@ -1117,16 +1117,16 @@ table.list-edit.table-dense tbody td > div.ro {
   padding: 0 0.5rem;
 }
 
-.fw-fieldset > legend::after {
+.fw-fieldset-legend::after {
   content: "▾";
   font-size: 0.9em;
 }
 
-.fw-fieldset.is-collapsed > legend::after {
+.fw-fieldset.is-collapsed > .fw-fieldset-legend::after {
   content: "▸";
 }
 
-.fw-fieldset.is-collapsed > :not(legend) {
+.fw-fieldset.is-collapsed > :not(.fw-fieldset-legend) {
   display: none;
 }
 
