@@ -129,7 +129,7 @@
                 if (candidate.getFullYear() !== y || candidate.getMonth() + 1 !== m || candidate.getDate() !== d) {
                     return '';
                 }
-                return `${String(y).padStart(4, '0')}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                return String(y).padStart(4, '0') + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0');
             }
         }
     });
