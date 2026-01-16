@@ -7,6 +7,7 @@
 - wrapped Demos view/edit date sections in fieldset styling and added Vue fieldset support
 - added fieldset usage in DemosVue config for date groups
 - added Vue fieldset toggle handlers for click/keyboard collapse
+- introduced themeable fieldset legend background token with theme overrides
 
 ## Commands that worked (build/test/run)
 - 

@@ -39,6 +39,7 @@
   --fw-card-radius: 0.25rem;
   --fw-card-shadow: 0px 0px 35px 0px rgba(154, 161, 171, 0.15);
   --fw-card-padding: 1.5rem 1.5rem 0.5rem 1.5rem;
+  --fw-fieldset-legend-bg: var(--fw-card-bg);
 
   --fw-dashboard-card-radius: 0.25rem;
   --fw-dashboard-card-shadow: 0px 0px 35px 0px rgba(154, 161, 171, 0.15);
@@ -107,6 +108,7 @@
   /* cards */
   --fw-card-bg: var(--fw-pane-bg);
   --fw-bs-card-bg: var(--fw-pane-bg);
+  --fw-fieldset-legend-bg: var(--fw-card-bg);
 
   /* sidebar stays same in dark (already dark) */
   --fw-sidebar-bg: #313a46;

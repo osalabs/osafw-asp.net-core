@@ -30,6 +30,7 @@
   /* ---------- semantics ---------- */
   --fw-body-bg: #fff;                 /* page background */
   --fw-pane-bg: var(--bs-body-bg);    /* content surface (cards, panes) */
+  --fw-fieldset-legend-bg: var(--fw-body-bg);
 
   --fw-hiliter: #ffffcc;              /* selection / emphasis background */
 
@@ -195,6 +196,7 @@
   /* page background in dark mode (framework default) */
   --fw-body-bg: #1c1c1c;
   --fw-hiliter: #555522;
+  --fw-fieldset-legend-bg: var(--fw-body-bg);
 
   /* view-only fields */
   --fw-view-value-bg: var(--bs-tertiary-bg);
@@ -1110,7 +1112,7 @@ table.list-edit.table-dense tbody td > div.ro {
 
 .fw-fieldset-legend {
   align-items: center;
-  background: var(--bs-body-bg);
+  background: var(--fw-fieldset-legend-bg);
   cursor: pointer;
   display: inline-flex;
   font-size: 1rem;
