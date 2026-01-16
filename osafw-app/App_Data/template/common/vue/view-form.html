@@ -5,8 +5,13 @@
     <form v-if="fwStore.edit_data !== null"
           id="FView"
           class="fw-card"
+          :class="{ 'fw-form-loading': fwStore.is_loading_item }"
           @submit.prevent="saveChanges"
           @change.prevent="onChange">
+        <div v-if="fwStore.is_loading_item"
+             class="fw-loading-line"
+             :style="{ width: fwStore.loading_progress + '%' }"
+             aria-hidden="true"></div>
         <fieldset>
             <form-one-def v-for="(def,index) in fwStore.treeShowFields"
                           :key="index"
@@ -17,9 +22,7 @@
                           :lookups="fwStore.lookups" />
         </fieldset>
     </form>
-    <template v-else>
-        <div v-if="fwStore.is_loading_item" class="text-center"><span class="spinner-border" role="status" aria-hidden="true"></span></div>
-    </template>
+    <template v-else></template>
 </script>
 
 <script type="module">

@@ -146,6 +146,9 @@ let state = {
     is_initial_load: true, //reset after initial load
     is_loading_index: false, //true while loading index data
     is_loading_item: false, //true while loading item data
+    loading_progress: 0,
+    loading_progress_timer: null,
+    loading_progress_timeout: null,
     cells_saving: {}, // cells saving status {row[id_field] => true}
     cells_errors: {}, // cells saving status {row[id_field] => true}
 };
@@ -261,6 +264,33 @@ let actions = {
     initApi() {
         this.api = mande(this.base_url);
     },
+    startItemLoading() {
+        if (this.loading_progress_timer) {
+            clearInterval(this.loading_progress_timer);
+        }
+        if (this.loading_progress_timeout) {
+            clearTimeout(this.loading_progress_timeout);
+        }
+        this.is_loading_item = true;
+        this.loading_progress = 10;
+        const start = Date.now();
+        this.loading_progress_timer = setInterval(() => {
+            const elapsed = Date.now() - start;
+            const next_progress = Math.min(85, 10 + (elapsed / 1200) * 30);
+            this.loading_progress = Math.max(this.loading_progress, next_progress);
+        }, 120);
+    },
+    finishItemLoading() {
+        if (this.loading_progress_timer) {
+            clearInterval(this.loading_progress_timer);
+            this.loading_progress_timer = null;
+        }
+        this.loading_progress = 100;
+        this.loading_progress_timeout = setTimeout(() => {
+            this.is_loading_item = false;
+            this.loading_progress = 0;
+        }, 180);
+    },
     handleError(error, caller, is_silent) {
         let err_msg = error.body?.error?.message ?? 'server error';
         console.error('handleError for', caller, ":", err_msg);
@@ -272,20 +302,28 @@ let actions = {
     // screen navigation
     async setCurrentScreen(screen, id) {
         // console.log("setCurrentScreen:", screen, id);
+        const previous_screen = this.current_screen;
+        const is_same_mode = (previous_screen === screen) && (screen === 'view' || screen === 'edit');
         this.current_screen = screen;
         this.current_id = id;
         let suffix = '';
         if (screen == 'view') {
             suffix = '/' + id;
-            this.edit_data = null;
+            if (!is_same_mode) {
+                this.edit_data = null;
+            }
         } else if (screen == 'edit') {
             suffix = '/' + (id ? id + '/edit' : 'new');
-            this.edit_data = null;
-            if (!id) this.edit_data = { i: {} };
+            if (!id) {
+                this.edit_data = { i: {} };
+            } else if (!is_same_mode) {
+                this.edit_data = null;
+            }
         }
         window.history.pushState({ screen: screen, id: id }, '', this.base_url + suffix);
         this.is_list_edit_pane = false;
         if (id && (screen == 'view' || screen == 'edit')) {
+            this.startItemLoading();
             await this.loadItem(id, screen);
         }
     },
@@ -486,7 +524,9 @@ let actions = {
     //load single item for view/edit
     async loadItem(id, mode) {
         try {
-            this.is_loading_item = true;
+            if (!this.is_loading_item) {
+                this.startItemLoading();
+            }
             let q = {};
             if (mode == 'edit') {
                 q = { query: { mode: mode } };
@@ -499,7 +539,7 @@ let actions = {
         } catch (error) {
             this.handleError(error, 'loadItem');
         } finally {
-            this.is_loading_item = false;
+            this.finishItemLoading();
         }
     },
     // load next/prev id related to id from current list

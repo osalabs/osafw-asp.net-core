@@ -460,6 +460,24 @@ h1 .badge {
   box-shadow: var(--fw-card-shadow);
 }
 
+.fw-form-loading {
+  position: relative;
+  filter: grayscale(0.35);
+  opacity: 0.75;
+  transition: opacity 0.2s ease, filter 0.2s ease;
+}
+
+.fw-loading-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 2px;
+  background-color: var(--bs-success);
+  box-shadow: 0 0 8px rgba(var(--bs-success-rgb), 0.35);
+  z-index: 2;
+  transition: width 0.25s ease;
+}
+
 .fw-list-card {
   background-color: transparent;
   border: 0;
