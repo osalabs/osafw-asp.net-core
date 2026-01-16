@@ -1,2 +1,0 @@
-//blue theme
-window.dashboardChartOverrides = {};

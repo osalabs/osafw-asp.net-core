@@ -31,8 +31,11 @@ window.dashboardChartConfig = {
     lineSmooth: 0.35,
     areaOpacity: 0.28,
     pieHole: ['58%', '78%'],
+    pieCornerRadius: 8,
     pieBorderColor: is_dark_mode ? '#222' : '#fff',
-    pieBorderWidth: 2
+    pieBorderWidth: 2,
+    pieShowLegend: false,
+    pieShowLabels: true
 };
 
 window.applyDashboardChartOverrides = function (overrides) {
@@ -85,8 +88,6 @@ window.initDashboardChart = function (elementId, options) {
     return chart;
 };
 
-<~theme1.js ifeq="GLOBAL[ui_theme]" value="1">
-<~theme2.js ifeq="GLOBAL[ui_theme]" value="2">
 <~theme20.js ifeq="GLOBAL[ui_theme]" value="20">
 <~theme30.js ifeq="GLOBAL[ui_theme]" value="30">
 

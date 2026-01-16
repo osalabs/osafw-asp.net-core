@@ -23,5 +23,8 @@ window.dashboardChartOverrides = {
     barMaxWidth: 16,
     lineSmooth: 0.2,
     pieBorderColor: is_dark_mode ? '#444' : '#fff',
-    pieBorderWidth: 4
+    pieBorderWidth: 4,
+    pieCornerRadius: 0,
+    pieShowLegend: true,
+    pieShowLabels: false
 };

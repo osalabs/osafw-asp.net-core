@@ -18,6 +18,7 @@
                 trigger: 'item'
             },
             legend: {
+                show: cfg.pieShowLegend === true,
                 bottom: 0
             },
             series: [{
@@ -25,11 +26,16 @@
                 radius: cfg.pieHole || ['58%', '78%'],
                 avoidLabelOverlap: false,
                 label: {
+                    show: cfg.pieShowLabels !== false,
                     color: cfg.bodyColor
+                },
+                labelLine: {
+                    show: cfg.pieShowLabels !== false
                 },
                 itemStyle: {
                     borderColor: cfg.pieBorderColor,
-                    borderWidth: cfg.pieBorderWidth || 2
+                    borderWidth: cfg.pieBorderWidth || 2,
+                    borderRadius: cfg.pieCornerRadius || 0
                 },
                 data: data
             }]
