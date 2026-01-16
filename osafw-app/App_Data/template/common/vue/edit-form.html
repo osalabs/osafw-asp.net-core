@@ -5,6 +5,7 @@
     <form v-if="fwStore.edit_data !== null"
           id="FEdit"
           class="fw-card"
+          :class="{ 'fw-form-loading': fwStore.is_loading_item }"
           @submit.prevent="saveChanges"
           @change.prevent="onChange">
         <fieldset>
@@ -32,9 +33,7 @@
             </div>
         </div>
     </form>
-    <template v-else>
-        <div v-if="fwStore.is_loading_item" class="text-center"><span class="spinner-border" role="status" aria-hidden="true"></span></div>
-    </template>
+    <template v-else></template>
 </script>
 
 <script type="module">
