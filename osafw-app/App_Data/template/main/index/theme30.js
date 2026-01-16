@@ -16,121 +16,21 @@ themePalette = [
     '#d2d7de'
 ];
 
-Chart.defaults.set({
-    color: bodyColor,
-    font: {
-        color: bodyColor,
-        size: 13,
-        family: fontFamily,
-    },
-    datasets: {
-        bar: {
-            backgroundColor: themeColor,
-            borderColor: themeColor,
-            borderRadius: 5,
-        },
-        line: {
-            borderColor: themeColor,
-            backgroundColor: themeColor,
-            borderWidth: 5,
-            tension: 0.4,
-            fill: true,
-            borderCapStyle: "rounded",
-        },
-    },
-    // in v3/v4, dataset-level defaults has priority over elements-level
-    elements: {
-        point: {
-            radius: 0,
-            backgroundColor: paneBg
-        },
-        rectangle: {
-            backgroundColor: themeColor
-        },
-        arc: {
-            backgroundColor: paneBg,
-            borderColor: (is_dark_mode ? '#222' : '#fff'),
-            borderWidth: 4
-        }
-    },
-    doughnut: {
-        backgroundColor: themePalette
-    },
-});
-
-Chart.overrides.bar = {
-    ...Chart.overrides.bar,
-    maxBarThickness: 14,
-    scales: {
-        x: {
-            grid: {
-                drawBorder: false,
-                drawOnChartArea: false,
-                drawTicks: false
-            },
-            ticks: {
-                padding: 10
-            }
-        },
-        y: {
-            grid: {
-                borderDash: [3],
-                borderDashOffset: [2],
-                color: borderColor,
-                drawBorder: false,
-                drawTicks: false,
-                lineWidth: 0,
-                zeroLineWidth: 0,
-                zeroLineColor: borderColor,
-                zeroLineBorderDash: [3],
-                zeroLineBorderDashOffset: [2]
-            },
-            beginAtZero: true,
-            ticks: {
-                padding: 5,
-                callback: function(a) {
-                    if ((a % 10)===0)
-                        return a;
-                }
-            }
-        }
-    }
-};
-Chart.overrides.line = {
-    ...Chart.overrides.line,
-    maxBarThickness: 10,
-    scales: {
-        x: {
-            grid: {
-                drawBorder: false,
-                drawOnChartArea: false,
-                drawTicks: false
-            },
-            ticks: {
-                padding: 10
-            },
-        },
-        y: {
-            grid: {
-                borderDash: [3],
-                borderDashOffset: [2],
-                color: borderColor,
-                drawBorder: false,
-                drawTicks: false,
-                lineWidth: 0,
-                zeroLineWidth: 0,
-                zeroLineColor: borderColor,
-                zeroLineBorderDash: [3],
-                zeroLineBorderDashOffset: [2]
-            },
-            beginAtZero: true,
-            ticks: {
-                padding: 5,
-                callback: function(a) {
-                    if ((a % 10)===0)
-                        return a;
-                }
-            }
-        }
-    }
+window.dashboardChartOverrides = {
+    themeColor: themeColor,
+    palette: themePalette,
+    bodyColor: bodyColor,
+    paneBg: paneBg,
+    borderColor: borderColor,
+    fontFamily: fontFamily,
+    barRadius: 6,
+    barMaxWidth: 16,
+    lineWidth: 4,
+    lineSmooth: 0.4,
+    areaOpacity: 0.35,
+    pieBorderColor: is_dark_mode ? '#222' : '#fff',
+    pieBorderWidth: 4,
+    pieCornerRadius: 12,
+    pieShowLegend: false,
+    pieShowLabels: true
 };

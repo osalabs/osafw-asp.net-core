@@ -16,138 +16,79 @@ let themePalette = [
     '#E5F1FF',
     '#F2F8FF'
 ];
-Chart.defaults.plugins.colors = { enabled: false }; //disable built-in colors plugin as we use custom colors
 
-Chart.defaults.set({
-    responsive: true,
-    maintainAspectRatio: false,
-    color: bodyColor,
-    font: {
-        size: 15,
-        family: fontFamily,
-    },
-    layout: {
-        padding: 0
-    },
-    plugins:{
+window.dashboardChartConfig = {
+    themeColor: themeColor,
+    palette: themePalette,
+    bodyColor: bodyColor,
+    borderColor: borderColor,
+    paneBg: paneBg,
+    fontFamily: fontFamily,
+    fontSize: 13,
+    barRadius: 10,
+    barMaxWidth: 14,
+    lineWidth: 3,
+    lineSmooth: 0.35,
+    areaOpacity: 0.28,
+    pieHole: ['58%', '78%'],
+    pieCornerRadius: 8,
+    pieBorderColor: is_dark_mode ? '#222' : '#fff',
+    pieBorderWidth: 2,
+    pieShowLegend: false,
+    pieShowLabels: true
+};
+
+window.applyDashboardChartOverrides = function (overrides) {
+    if (!overrides) {
+        return;
+    }
+    if (overrides.palette) {
+        window.dashboardChartConfig.palette = overrides.palette;
+    }
+    Object.assign(window.dashboardChartConfig, overrides);
+};
+
+window.getDashboardChartBaseOptions = function () {
+    const cfg = window.dashboardChartConfig;
+    return {
+        textStyle: {
+            color: cfg.bodyColor,
+            fontFamily: cfg.fontFamily,
+            fontSize: cfg.fontSize
+        },
+        tooltip: {
+            backgroundColor: is_dark_mode ? '#1b1f23' : '#ffffff',
+            borderColor: cfg.borderColor,
+            textStyle: {
+                color: cfg.bodyColor
+            }
+        },
         legend: {
-            display: false,
-            position: "bottom",
-            labels: {
-                usePointStyle: true,
-                padding: 16
-            }
-        },
-    },
-    datasets: {
-        bar: {
-            backgroundColor: themeColor,
-            borderColor: themeColor,
-            borderRadius: 20,
-        },
-        line: {
-            borderColor: themeColor,
-            backgroundColor: themeColor,
-            borderWidth: 3,
-            tension: 0.4,
-            fill: false,
-            borderCapStyle: "rounded",
-        },
-    },
-    // in v3/v4, dataset-level defaults has priority over elements-level
-    elements: {
-        point: {
-            radius: 0,
-            backgroundColor: paneBg
-        },
-        rectangle: {
-            backgroundColor: themeColor
-        },
-        arc: {
-            backgroundColor: paneBg,
-            borderColor: (is_dark_mode ? '#222' : '#fff'),
-            borderWidth: 2
-        }
-    },
-
-    doughnut: {
-        backgroundColor: themePalette
-    },
-});
-
-Chart.overrides.bar = {
-    ...Chart.overrides.bar,
-    maxBarThickness: 10,
-    scales: {
-        x: {
-            grid: {
-                drawBorder: false,
-                drawOnChartArea: false,
-                drawTicks: false
-            },
-            ticks: {
-                padding: 10
-            }
-        },
-        y: {
-            grid: {
-                borderDash: [3],
-                borderDashOffset: 2,
-                color: borderColor,
-                drawBorder: false,
-                drawTicks: false,
-                lineWidth: 1,
-            },
-            beginAtZero: true,
-            ticks: {
-                padding: 5,
-                callback: function(a) {
-                    if ((a % 10)===0)
-                        return a;
-                }
+            textStyle: {
+                color: cfg.bodyColor
             }
         }
-    }
+    };
 };
 
-Chart.overrides.line = {
-    ...Chart.overrides.line,
-    scales: {
-        x: {
-            grid: {
-                drawBorder: false,
-                drawOnChartArea: false,
-                drawTicks: false
-            },
-            ticks: {
-                padding: 10
-            }
-        },
-        y: {
-            grid: {
-                borderDash: [3],
-                borderDashOffset: 2,
-                color: borderColor,
-                drawBorder: false,
-                drawTicks: false,
-                lineWidth: 1,
-            },
-            beginAtZero: true,
-            ticks: {
-                padding: 5,
-                callback: function(a) {
-                    if ((a % 10)===0)
-                        return a;
-                }
-            }
-        }
+window.initDashboardChart = function (elementId, options) {
+    if (!window.echarts) {
+        return null;
     }
+    const element = document.getElementById(elementId);
+    if (!element) {
+        return null;
+    }
+    const chart = echarts.init(element);
+    chart.setOption(window.getDashboardChartBaseOptions());
+    chart.setOption(options);
+    window.addEventListener('resize', function () {
+        chart.resize();
+    });
+    return chart;
 };
 
-<~theme1.js ifeq="GLOBAL[ui_theme]" value="1">
-<~theme2.js ifeq="GLOBAL[ui_theme]" value="2">
 <~theme20.js ifeq="GLOBAL[ui_theme]" value="20">
 <~theme30.js ifeq="GLOBAL[ui_theme]" value="30">
 
-//console.log(Chart.defaults);
-
+window.applyDashboardChartOverrides(window.dashboardChartOverrides);

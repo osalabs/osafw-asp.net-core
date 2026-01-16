@@ -1,27 +1,44 @@
 <~pane_title if="title">
 <div class="chart-container">
-    <canvas id="chart_<~id>"></canvas>
+    <div id="chart_<~id>" class="dashboard-chart"></div>
 </div>
 
 <script>
     document.addEventListener("DOMContentLoaded", function(){
-        var myChart = new Chart("chart_<~id>", {
-            type: 'doughnut',
-            data: {
-                labels: [<~rows repeat inline>"<~ilabel>",</~rows>], //zzz
-                datasets: [{
-                    data: [<~rows repeat inline ivalues><~ivalue>,</~rows>], //zzz
-                    backgroundColor: window.Chart.defaults.doughnut.backgroundColor
-                }]
+        const labels = [<~rows repeat inline>"<~ilabel>",</~rows>];
+        const values = [<~rows repeat inline ivalues><~ivalue>,</~rows>];
+        const cfg = window.dashboardChartConfig || {};
+        const data = labels.map((label, index) => ({
+            value: values[index] || 0,
+            name: label
+        }));
+        window.initDashboardChart("chart_<~id>", {
+            color: cfg.palette,
+            tooltip: {
+                trigger: 'item'
             },
-            options: {
-                cutout: '80%',
-                plugins:{
-                    legend: {
-                        display: true
-                    }
-                }
-            }
+            legend: {
+                show: cfg.pieShowLegend === true,
+                bottom: 0
+            },
+            series: [{
+                type: 'pie',
+                radius: cfg.pieHole || ['58%', '78%'],
+                avoidLabelOverlap: false,
+                label: {
+                    show: cfg.pieShowLabels !== false,
+                    color: cfg.bodyColor
+                },
+                labelLine: {
+                    show: cfg.pieShowLabels !== false
+                },
+                itemStyle: {
+                    borderColor: cfg.pieBorderColor,
+                    borderWidth: cfg.pieBorderWidth || 2,
+                    borderRadius: cfg.pieCornerRadius || 0
+                },
+                data: data
+            }]
         });
     });
 </script>

@@ -504,8 +504,9 @@ h1 .badge {
   width: 100%;
 }
 
-.dashboard-card .chart-container canvas {
+.dashboard-card .chart-container .dashboard-chart {
   height: 250px;
+  width: 100%;
 }
 
 /* =========================================================
