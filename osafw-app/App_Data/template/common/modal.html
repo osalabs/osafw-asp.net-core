@@ -1,4 +1,15 @@
-<~/common/ajaxform>
+<!--
+  fw_modal component usage:
+
+  1) Add this include to a load_script.html:
+     <~/common/modal>
+  2) Trigger with:
+     <button class="on-fw-modal" data-url="/my/controller/showform">Open Modal</button>
+     - Optional: data-modal-dialog-class / data-modal-content-class to tweak Bootstrap classes.
+  3) Forms inside modal are submitted via ajaxForm and HTML response replaces modal content.
+  4) In modal JS, get the trigger element:
+     var trigger = fw.getModalTrigger(fw.scopeFromScript());
+-->
 <script>
   fw.initComponent('fw_modal', {
     init: function () {
