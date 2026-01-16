@@ -34,7 +34,7 @@ window.fw={
     return $scope.length ? $scope[0] : document;
   },
 
-  getModalTrigger: function (scope) {
+  modalTriggerEl: function (scope) {
     var $scope = $(scope || document);
     var $modal = $scope.closest('.modal');
     if (!$modal.length) return null;
