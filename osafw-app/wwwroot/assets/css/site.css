@@ -471,21 +471,11 @@ h1 .badge {
   position: absolute;
   top: 0;
   left: 0;
-  right: 0;
   height: 2px;
-  background: linear-gradient(90deg, transparent 0%, var(--bs-primary) 50%, transparent 100%);
-  background-size: 200% 100%;
-  animation: fw-loading-line 1s ease-in-out infinite;
+  background-color: var(--bs-success);
+  box-shadow: 0 0 8px rgba(var(--bs-success-rgb), 0.35);
   z-index: 2;
-}
-
-@keyframes fw-loading-line {
-  0% {
-    background-position: 200% 0;
-  }
-  100% {
-    background-position: -200% 0;
-  }
+  transition: width 0.25s ease;
 }
 
 .fw-list-card {
