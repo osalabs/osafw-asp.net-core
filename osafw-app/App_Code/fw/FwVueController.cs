@@ -510,6 +510,71 @@ public class FwVueController : FwDynamicController
         }
     }
 
+    /// <summary>
+    /// Handles post-save processing for Vue showform fields, with date combo updates gated on combo inputs.
+    /// </summary>
+    /// <remarks>
+    /// Vue date combo fields submit a single SQL date string without day/month/year parts. The base
+    /// implementation rebuilds the date from combo parts and would overwrite the value with null.
+    /// This override updates date combo fields only when combo parts are present in the request.
+    /// </remarks>
+    /// <param name="id">The saved record identifier.</param>
+    /// <param name="fields">Posted and saved fields.</param>
+    protected override void processSaveShowFormFieldsAfter(int id, FwDict fields)
+    {
+        var fields_update = new FwDict();
+        var item = reqh("item");
+
+        foreach (FwDict def in getConfigShowFormFieldsByTab("showform_fields"))
+        {
+            string field = def["field"].toStr();
+            string type = def["type"].toStr();
+
+            if (type == "att_links_edit")
+            {
+                var att_post_prefix = "att";
+                if (def.TryGetValue("att_post_prefix", out object? value))
+                    att_post_prefix = value.toStr();
+                // if PATCH - only update is post param is present (otherwise it will delete all records)
+                if (isPatch() && req(att_post_prefix) == null)
+                    continue;
+
+                fw.model<AttLinks>().updateJunction(model0.table_name, id, reqh(att_post_prefix));
+            }
+            else if (type == "att_files_edit")
+            {
+                processSaveAttFiles(id, fields, def);
+            }
+            else if (type == "multicb")
+            {
+                processSaveMultiCb(id, fields, def, ref fields_update);
+            }
+            else if (type == "multicb_prio")
+            {
+                processSaveMultiCb(id, fields, def, ref fields_update);
+            }
+            else if (type == "subtable_edit")
+            {
+                processSaveSubtable(id, fields, def);
+            }
+            else if (type == "date_combo")
+            {
+                var has_combo_parts = item.ContainsKey(field + "_day")
+                    || item.ContainsKey(field + "_mon")
+                    || item.ContainsKey(field + "_year");
+                if (!has_combo_parts)
+                    continue;
+
+                fields_update[field] = FormUtils.dateForCombo(item, field);
+            }
+        }
+
+        if (fields_update.Count > 0)
+        {
+            model0.update(id, fields_update);
+        }
+    }
+
     public override FwDict NextAction(string form_id)
     {
         var ps = base.NextAction(form_id);

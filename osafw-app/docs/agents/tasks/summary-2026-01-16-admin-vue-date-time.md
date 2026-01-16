@@ -3,6 +3,7 @@
 - Updated DemosVue config and vue component includes to enable date_combo/time inputs.
 - Replaced template literals with string concatenation per instructions.
 - Forced date combo selects to stay on a single line and normalized date combo values on save.
+- Prevented Vue date combo saves from being overwritten by post-save combo processing.
 
 ## Commands that worked (build/test/run)
 - Not run (not requested).
@@ -14,6 +15,7 @@
 - Converted time inputs to seconds in Vue to match backend storage while displaying HH:MM in the UI.
 - Generated date combo values client-side as YYYY-MM-DD to keep Vue SaveAction compatible with existing date conversion.
 - Normalized date combo values server-side to avoid date parsing issues.
+- Skipped post-save date combo recomputation when combo parts are not submitted.
 
 ## Heuristics (keep terse)
 - None.
