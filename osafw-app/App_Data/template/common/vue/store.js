@@ -115,7 +115,7 @@ let state = {
     pager: [], // array of { pagenum:N, pagenum_show:N, is_cur_page:0|1, is_show_first:0|1, is_show_prev:0|1, is_show_next:0|1, pagenum_next:N}
 
     // edit form fields configuration
-    list_editable_def_types: ['input', 'email', 'number', 'textarea', 'date_popup', 'datetime_popup', 'autocomplete', 'select', 'cb', 'radio', 'yesno'],
+    list_editable_def_types: ['input', 'email', 'number', 'textarea', 'date_combo', 'date_popup', 'datetime_popup', 'time', 'autocomplete', 'select', 'cb', 'radio', 'yesno'],
     show_fields: [],
     showform_fields: [],
     is_list_edit_pane: false, // true if edit pane is open
@@ -424,6 +424,31 @@ let actions = {
         };
         if (withSeconds) opts.second = '2-digit';
         return new Intl.DateTimeFormat(this._userLocale(), opts).format(d);
+    },
+    formatTime(value) {
+        if (value === null || value === undefined || value === '') return '';
+        const normalized = typeof value === 'number' ? value : Number.parseInt(value, 10);
+        if (!Number.isFinite(normalized)) {
+            const str = String(value).trim();
+            return str.includes(':') ? str : '';
+        }
+        const safeSeconds = Math.max(0, normalized);
+        const hours = Math.floor(safeSeconds / 3600);
+        const minutes = Math.floor((safeSeconds - hours * 3600) / 60);
+        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    },
+    timeToSeconds(value) {
+        if (value === null || value === undefined || value === '') return 0;
+        if (typeof value === 'number') return value;
+        const str = String(value).trim();
+        if (!str) return 0;
+        if (/^\d+$/.test(str)) return Number.parseInt(str, 10);
+        const parts = str.split(':');
+        if (parts.length < 2) return 0;
+        const hours = Number.parseInt(parts[0], 10);
+        const minutes = Number.parseInt(parts[1], 10);
+        if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return 0;
+        return Math.max(0, hours * 3600 + minutes * 60);
     },
 
     //save to store each key from data if such key exists in store

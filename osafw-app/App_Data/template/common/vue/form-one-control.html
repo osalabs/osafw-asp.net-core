@@ -7,7 +7,7 @@
     </p>
 
     <p v-else-if="def.type=='plaintext'" class="form-control-plaintext" style="white-space: pre-line">
-        {{def.lookup_model ? lookupValue : value}}
+        {{plaintextValue}}
     </p>
     <p v-else-if="def.type=='plaintext_link'" class="form-control-plaintext">
         <a :href="(def.admin_url ? def.admin_url : '/Admin/'+def.lookup_model)+'/'+value">
@@ -208,6 +208,53 @@
         <form-control-help-block :text="def.help_text" />
     </template>
 
+    <template v-else-if="def.type=='date_combo'">
+        <div class="fdate-combo d-inline-flex flex-wrap gap-1">
+            <select class="form-select"
+                    :class="class_control"
+                    v-model="date_combo_day"
+                    :required="def.required"
+                    @change="onDateComboChange">
+                <option value="">`- day -`</option>
+                <option v-for="day in dateComboDays" :key="'day-'+day" :value="day">{{day}}</option>
+            </select>
+            <select class="form-select"
+                    :class="class_control"
+                    v-model="date_combo_mon"
+                    :required="def.required"
+                    @change="onDateComboChange">
+                <option value="">`- month -`</option>
+                <option v-for="mon in dateComboMonths" :key="'mon-'+mon.id" :value="mon.id">{{mon.iname}}</option>
+            </select>
+            <select class="form-select"
+                    :class="class_control"
+                    v-model="date_combo_year"
+                    :required="def.required"
+                    @change="onDateComboChange">
+                <option value="">`- year -`</option>
+                <option v-for="year in dateComboYears" :key="'year-'+year" :value="year">{{year}}</option>
+            </select>
+        </div>
+        <form-control-help-block :text="def.help_text" />
+    </template>
+
+    <template v-else-if="def.type=='time'">
+        <input class="form-control"
+               type="time"
+               v-model="timeValue"
+               :class="class_control+(is_invalid?' is-invalid':'')"
+               :maxlength="def.maxlength"
+               :required="def.required"
+               :placeholder="inputPlaceholder"
+               :min="def.min"
+               :max="def.max"
+               :step="def.step"
+               :pattern="def.pattern">
+        <p class="err-EXISTS">{{def.err_exists_msg ? def.err_exists_msg : 'This name already exists in our database'}}</p>
+        <p class="err-WRONG">`Invalid`</p>
+        <form-control-help-block :text="def.help_text" />
+    </template>
+
     <template v-else-if="['input','email','number','date_popup'].includes(def.type)">
         <input class="form-control"
                :type="inputType"
@@ -337,7 +384,10 @@
             // drag&drop highlight state for att_files_edit
             is_dragover: false,
             // uploading items state for att_files_edit
-            uploading_files: []
+            uploading_files: [],
+            date_combo_day: '',
+            date_combo_mon: '',
+            date_combo_year: ''
         }),
         computed: {
             ...mapStores(fwStore), //accessible via this.fwStore
@@ -367,6 +417,14 @@
                     } else {
                         this.$emit('update-form-field', { field: this.def.field + '_iname', value: new_value });
                     }
+                }
+            },
+            timeValue: {
+                get() {
+                    return this.fwStore.formatTime(this.value);
+                },
+                set(new_value) {
+                    this.$emit('update-form-field', { field: this.def.field, value: this.fwStore.timeToSeconds(new_value) });
                 }
             },
             multi_rows() {
@@ -430,6 +488,9 @@
                     const time = this.fwStore._is24h() ? 'HH:mm:ss' : 'h:mm:ss AM/PM';
                     return date + ' ' + time;
                 }
+                if (this.def.type === 'time') {
+                    return this.fwStore._is24h() ? 'HH:mm' : 'h:mm AM/PM';
+                }
                 return this.def.placeholder ?? '';
             },
             lookupOptions: function () {
@@ -452,13 +513,46 @@
                 }
                 return '';
             },
+            plaintextValue() {
+                if (this.def.lookup_model) return this.lookupValue;
+                if (this.def.conv === 'time_from_seconds') return this.fwStore.formatTime(this.value);
+                return this.value;
+            },
             currencySymbol() {
                 // Use def.currency_symbol if provided, else default to "$"
                 return this.def.currency_symbol || '$';
+            },
+            dateComboDays() {
+                return Array.from({ length: 31 }, (_, i) => String(i + 1));
+            },
+            dateComboMonths() {
+                const formatter = new Intl.DateTimeFormat(this.fwStore._userLocale(), { month: 'short' });
+                return Array.from({ length: 12 }, (_, i) => {
+                    const monthIndex = i + 1;
+                    return { id: String(monthIndex), iname: formatter.format(new Date(2000, i, 1)) };
+                });
+            },
+            dateComboYears() {
+                const start = Number(this.def.year_start ?? 2010);
+                const end = Number(this.def.year_end ?? 2030);
+                if (!Number.isFinite(start) || !Number.isFinite(end) || start > end) return [];
+                return Array.from({ length: end - start + 1 }, (_, i) => String(start + i));
             }
         },
         mounted() {
             //console.log("form-one-control mounted", this.def);
+        },
+        watch: {
+            value: {
+                immediate: true,
+                handler(new_value) {
+                    if (this.def.type !== 'date_combo') return;
+                    const parts = this.parseDateComboValue(new_value);
+                    this.date_combo_day = parts.day;
+                    this.date_combo_mon = parts.mon;
+                    this.date_combo_year = parts.year;
+                }
+            }
         },
         methods: {
             async autocompleteOptions(query, select$) {
@@ -468,6 +562,40 @@
                     return [this.item[this.def.field + '_iname'] ?? ''];
                 }
                 return await this.fwStore.autocompleteOptions(query, this.def.autocomplete_url, this.def.lookup_model, id);
+            },
+            onDateComboChange() {
+                const nextValue = this.buildDateComboValue(this.date_combo_year, this.date_combo_mon, this.date_combo_day);
+                this.$emit('update-form-field', { field: this.def.field, value: nextValue });
+            },
+            parseDateComboValue(value) {
+                if (!value) return { year: '', mon: '', day: '' };
+                const str = String(value).trim();
+                const match = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                if (match) {
+                    return {
+                        year: String(Number(match[1])),
+                        mon: String(Number(match[2])),
+                        day: String(Number(match[3]))
+                    };
+                }
+                const parsed = new Date(str);
+                if (Number.isNaN(parsed.getTime())) return { year: '', mon: '', day: '' };
+                return {
+                    year: String(parsed.getFullYear()),
+                    mon: String(parsed.getMonth() + 1),
+                    day: String(parsed.getDate())
+                };
+            },
+            buildDateComboValue(year, mon, day) {
+                const y = Number(year);
+                const m = Number(mon);
+                const d = Number(day);
+                if (!y || !m || !d) return '';
+                const candidate = new Date(y, m - 1, d);
+                if (candidate.getFullYear() !== y || candidate.getMonth() + 1 !== m || candidate.getDate() !== d) {
+                    return '';
+                }
+                return `${String(y).padStart(4, '0')}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
             },
             onAttSelected(att) {
                 //add to this.attachments[att.id] if not present

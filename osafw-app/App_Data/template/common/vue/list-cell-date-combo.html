@@ -1,0 +1,136 @@
+<script type="text/x-template" id="list-cell-date-combo-template">
+    <div class="fdate-combo d-inline-flex flex-wrap gap-1">
+        <select class="form-select"
+                :class="(error ? ' is-invalid' : '')"
+                v-model="combo_day"
+                :required="col.required"
+                :disabled="col.disabled"
+                :readonly="col.readonly"
+                @change="onChange">
+            <option value="">`- day -`</option>
+            <option v-for="day in dateComboDays" :key="'cell-day-'+day" :value="day">{{day}}</option>
+        </select>
+        <select class="form-select"
+                :class="(error ? ' is-invalid' : '')"
+                v-model="combo_mon"
+                :required="col.required"
+                :disabled="col.disabled"
+                :readonly="col.readonly"
+                @change="onChange">
+            <option value="">`- month -`</option>
+            <option v-for="mon in dateComboMonths" :key="'cell-mon-'+mon.id" :value="mon.id">{{mon.iname}}</option>
+        </select>
+        <select class="form-select"
+                :class="(error ? ' is-invalid' : '')"
+                v-model="combo_year"
+                :required="col.required"
+                :disabled="col.disabled"
+                :readonly="col.readonly"
+                @change="onChange">
+            <option value="">`- year -`</option>
+            <option v-for="year in dateComboYears" :key="'cell-year-'+year" :value="year">{{year}}</option>
+        </select>
+        <div v-if="error" class="invalid-tooltip">{{error}}</div>
+    </div>
+</script>
+
+<script type="module">
+    import { mapStores } from 'pinia';
+
+    fwApp.component('list-cell-date-combo', {
+        template: '#list-cell-date-combo-template',
+        props: {
+            rowId: {
+                type: String,
+                required: true
+            },
+            row: {
+                type: Object,
+                required: true
+            },
+            col: {
+                type: Object,
+                required: true
+            },
+            error: {
+                type: String
+            }
+        },
+        emits: ['change'],
+        data: () => ({
+            combo_day: '',
+            combo_mon: '',
+            combo_year: ''
+        }),
+        computed: {
+            ...mapStores(fwStore),
+            rowValue() {
+                return this.row[this.col.field_name];
+            },
+            dateComboDays() {
+                return Array.from({ length: 31 }, (_, i) => String(i + 1));
+            },
+            dateComboMonths() {
+                const formatter = new Intl.DateTimeFormat(this.fwStore._userLocale(), { month: 'short' });
+                return Array.from({ length: 12 }, (_, i) => {
+                    const monthIndex = i + 1;
+                    return { id: String(monthIndex), iname: formatter.format(new Date(2000, i, 1)) };
+                });
+            },
+            dateComboYears() {
+                const start = Number(this.col.year_start ?? 2010);
+                const end = Number(this.col.year_end ?? 2030);
+                if (!Number.isFinite(start) || !Number.isFinite(end) || start > end) return [];
+                return Array.from({ length: end - start + 1 }, (_, i) => String(start + i));
+            }
+        },
+        watch: {
+            rowValue: {
+                immediate: true,
+                handler(newValue) {
+                    const parts = this.parseDateComboValue(newValue);
+                    this.combo_day = parts.day;
+                    this.combo_mon = parts.mon;
+                    this.combo_year = parts.year;
+                }
+            }
+        },
+        methods: {
+            onChange(e) {
+                const nextValue = this.buildDateComboValue(this.combo_year, this.combo_mon, this.combo_day);
+                this.row[this.col.field_name] = nextValue;
+                this.$emit('change', e);
+            },
+            parseDateComboValue(value) {
+                if (!value) return { year: '', mon: '', day: '' };
+                const str = String(value).trim();
+                const match = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                if (match) {
+                    return {
+                        year: String(Number(match[1])),
+                        mon: String(Number(match[2])),
+                        day: String(Number(match[3]))
+                    };
+                }
+                const parsed = new Date(str);
+                if (Number.isNaN(parsed.getTime())) return { year: '', mon: '', day: '' };
+                return {
+                    year: String(parsed.getFullYear()),
+                    mon: String(parsed.getMonth() + 1),
+                    day: String(parsed.getDate())
+                };
+            },
+            buildDateComboValue(year, mon, day) {
+                const y = Number(year);
+                const m = Number(mon);
+                const d = Number(day);
+                if (!y || !m || !d) return '';
+                const candidate = new Date(y, m - 1, d);
+                if (candidate.getFullYear() !== y || candidate.getMonth() + 1 !== m || candidate.getDate() !== d) {
+                    return '';
+                }
+                return `${String(y).padStart(4, '0')}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+            }
+        }
+    });
+</script>

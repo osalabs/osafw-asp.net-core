@@ -470,8 +470,8 @@
                 },
                 {
                     "field": "fdate_combo",
-                    "label": "Date combo (TODO)",
-                    "type": "date"
+                    "label": "Date combo",
+                    "type": "date_combo"
                 },
                 {
                     "field": "fdate_pop",
@@ -488,9 +488,8 @@
                 },
                 {
                     "field": "ftime",
-                    "label": "Time (TODO)",
-                    "type": "plaintext",
-                    "conv": "time_from_seconds"
+                    "label": "Time",
+                    "type": "time"
                 },
                 {
                     "type": "fieldset_end"

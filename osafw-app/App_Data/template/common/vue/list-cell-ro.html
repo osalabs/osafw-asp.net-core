@@ -39,8 +39,14 @@
                 if (type === 'date' || type === 'date_popup') {
                     return this.fwStore.formatDate(v);
                 }
+                if (type === 'date_combo') {
+                    return this.fwStore.formatDate(v);
+                }
                 if (type === 'datetime' || type === 'datetime_popup' || type === 'added' || type === 'updated') {
                     return this.fwStore.formatDateTime(v);
+                }
+                if (type === 'time') {
+                    return this.fwStore.formatTime(v);
                 }
 
                 // Fallback: detect SQL date/time strings automatically
