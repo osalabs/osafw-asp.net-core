@@ -64,11 +64,10 @@
       ]
     },
     {
-      "provider": "jsdelivr",
-      "library": "chart.js@4.5.0",
-      "destination": "wwwroot/assets/lib/chartjs",
+      "library": "echarts@6.0.0",
+      "destination": "wwwroot/assets/lib/echarts",
       "files": [
-        "dist/chart.umd.min.js"
+        "dist/echarts.min.js"
       ]
     },
 

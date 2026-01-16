@@ -1,20 +1,68 @@
 <~pane_title if="title">
 <div class="chart-container">
-    <canvas id="chart_<~id>"></canvas>
+    <div id="chart_<~id>" class="dashboard-chart"></div>
 </div>
 
 <script>
     document.addEventListener("DOMContentLoaded", function(){
-        var myChart = new Chart("chart_<~id>", {
-            type: 'bar',
-            data: {
-                labels: [<~rows repeat inline>"<~ilabel>",</~rows>], //zzz
-                datasets: [{
-                    data: [<~rows repeat inline ivalues><~ivalue>,</~rows>] //zzz
-                }]
+        const labels = [<~rows repeat inline>"<~ilabel>",</~rows>];
+        const values = [<~rows repeat inline ivalues><~ivalue>,</~rows>];
+        const cfg = window.dashboardChartConfig || {};
+        window.initDashboardChart("chart_<~id>", {
+            grid: {
+                left: 8,
+                right: 8,
+                top: 12,
+                bottom: 8,
+                containLabel: true
             },
-            options: {
-            }
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: {
+                    type: 'shadow'
+                }
+            },
+            xAxis: {
+                type: 'category',
+                data: labels,
+                axisLine: {
+                    lineStyle: {
+                        color: cfg.borderColor
+                    }
+                },
+                axisTick: {
+                    show: false
+                },
+                axisLabel: {
+                    color: cfg.bodyColor
+                }
+            },
+            yAxis: {
+                type: 'value',
+                axisLine: {
+                    lineStyle: {
+                        color: cfg.borderColor
+                    }
+                },
+                axisLabel: {
+                    color: cfg.bodyColor
+                },
+                splitLine: {
+                    lineStyle: {
+                        color: cfg.borderColor,
+                        type: 'dashed'
+                    }
+                }
+            },
+            series: [{
+                type: 'bar',
+                data: values,
+                barMaxWidth: cfg.barMaxWidth || 14,
+                itemStyle: {
+                    color: cfg.themeColor,
+                    borderRadius: [cfg.barRadius || 0, cfg.barRadius || 0, 0, 0]
+                }
+            }]
         });
     });
 </script>

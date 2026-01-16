@@ -7,9 +7,9 @@ The main dashboard renders a collection of *panes*. Each pane is described by a 
 The framework ships with several panel types:
 
 - `bignum` – large number with optional badge and icon
-- `barchart` – bar chart using Chart.js
-- `piechart` – doughnut chart using Chart.js
-- `linechart` – line chart using Chart.js
+- `barchart` – bar chart using Apache ECharts
+- `piechart` – doughnut chart using Apache ECharts
+- `linechart` – line chart using Apache ECharts
 - `areachart` – area chart (line with filled region)
 - `table` – simple data table
 - `html` – raw HTML block

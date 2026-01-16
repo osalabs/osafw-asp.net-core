@@ -1,22 +1,71 @@
 <~pane_title if="title">
 <div class="chart-container">
-    <canvas id="chart_<~id>"></canvas>
+    <div id="chart_<~id>" class="dashboard-chart"></div>
 </div>
 
 <script>
     document.addEventListener("DOMContentLoaded", function(){
-        var myChart = new Chart("chart_<~id>", {
-            type: 'line',
-            data: {
-                labels: [<~rows repeat inline>"<~ilabel>",</~rows>],
-                datasets: [{
-                    fill: true,
-                    data: [<~rows repeat inline ivalues><~ivalue>,</~rows>]
-                }]
+        const labels = [<~rows repeat inline>"<~ilabel>",</~rows>];
+        const values = [<~rows repeat inline ivalues><~ivalue>,</~rows>];
+        const cfg = window.dashboardChartConfig || {};
+        window.initDashboardChart("chart_<~id>", {
+            grid: {
+                left: 8,
+                right: 8,
+                top: 12,
+                bottom: 8,
+                containLabel: true
             },
-            options: {
-            }
+            tooltip: {
+                trigger: 'axis'
+            },
+            xAxis: {
+                type: 'category',
+                data: labels,
+                boundaryGap: false,
+                axisLine: {
+                    lineStyle: {
+                        color: cfg.borderColor
+                    }
+                },
+                axisTick: {
+                    show: false
+                },
+                axisLabel: {
+                    color: cfg.bodyColor
+                }
+            },
+            yAxis: {
+                type: 'value',
+                axisLine: {
+                    lineStyle: {
+                        color: cfg.borderColor
+                    }
+                },
+                axisLabel: {
+                    color: cfg.bodyColor
+                },
+                splitLine: {
+                    lineStyle: {
+                        color: cfg.borderColor,
+                        type: 'dashed'
+                    }
+                }
+            },
+            series: [{
+                type: 'line',
+                data: values,
+                smooth: cfg.lineSmooth || 0.35,
+                showSymbol: false,
+                lineStyle: {
+                    width: cfg.lineWidth || 3,
+                    color: cfg.themeColor
+                },
+                areaStyle: {
+                    color: cfg.themeColor,
+                    opacity: cfg.areaOpacity || 0.28
+                }
+            }]
         });
     });
 </script>
-
