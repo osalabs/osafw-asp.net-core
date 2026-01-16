@@ -1,6 +1,6 @@
 <script type="text/x-template" id="list-cell-date-combo-template">
-    <div class="fdate-combo d-inline-flex flex-wrap gap-1">
-        <select class="form-select"
+    <div class="fdate-combo d-inline-flex flex-nowrap align-items-center gap-1">
+        <select class="form-select w-auto"
                 :class="(error ? ' is-invalid' : '')"
                 v-model="combo_day"
                 :required="col.required"
@@ -10,7 +10,7 @@
             <option value="">`- day -`</option>
             <option v-for="day in dateComboDays" :key="'cell-day-'+day" :value="day">{{day}}</option>
         </select>
-        <select class="form-select"
+        <select class="form-select w-auto"
                 :class="(error ? ' is-invalid' : '')"
                 v-model="combo_mon"
                 :required="col.required"
@@ -20,7 +20,7 @@
             <option value="">`- month -`</option>
             <option v-for="mon in dateComboMonths" :key="'cell-mon-'+mon.id" :value="mon.id">{{mon.iname}}</option>
         </select>
-        <select class="form-select"
+        <select class="form-select w-auto"
                 :class="(error ? ' is-invalid' : '')"
                 v-model="combo_year"
                 :required="col.required"

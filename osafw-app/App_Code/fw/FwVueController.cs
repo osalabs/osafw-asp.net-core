@@ -457,10 +457,57 @@ public class FwVueController : FwDynamicController
 
         FwDict itemdb = FormUtils.filter(item, this.save_fields);
         FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
+        normalizeDateComboFields(item, itemdb);
 
         id = this.modelAddOrUpdate(id, itemdb);
 
         return this.afterSave(success, id, is_new);
+    }
+
+    /// <summary>
+    /// Normalizes date combo inputs into SQL date strings before persistence.
+    /// </summary>
+    /// <remarks>
+    /// Vue date combo inputs can submit either a SQL date string (yyyy-MM-dd) or day/month/year
+    /// parts. This method ensures the value in <paramref name="itemdb"/> is in SQL format, so
+    /// the model conversion logic can persist it reliably.
+    /// </remarks>
+    /// <param name="item">Raw request item data.</param>
+    /// <param name="itemdb">Filtered item data to be saved.</param>
+    protected virtual void normalizeDateComboFields(FwDict item, FwDict itemdb)
+    {
+        if (config == null || !config.ContainsKey("showform_fields"))
+            return;
+
+        if (config["showform_fields"] is not IList fields)
+            return;
+
+        foreach (FwDict def in fields)
+        {
+            if (def == null)
+                continue;
+
+            if (def["type"].toStr() != "date_combo")
+                continue;
+
+            var field = def["field"].toStr();
+            if (string.IsNullOrEmpty(field))
+                continue;
+
+            var hasValue = itemdb.ContainsKey(field);
+            var rawValue = hasValue ? itemdb[field].toStr() : "";
+            if (!hasValue || string.IsNullOrEmpty(rawValue))
+            {
+                var comboValue = FormUtils.dateForCombo(item, field);
+                if (!string.IsNullOrEmpty(comboValue))
+                    itemdb[field] = comboValue;
+                continue;
+            }
+
+            var normalized = DateUtils.Str2SQL(rawValue, fw.userDateFormat);
+            if (!string.IsNullOrEmpty(normalized))
+                itemdb[field] = normalized;
+        }
     }
 
     public override FwDict NextAction(string form_id)

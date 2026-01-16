@@ -209,8 +209,8 @@
     </template>
 
     <template v-else-if="def.type=='date_combo'">
-        <div class="fdate-combo d-inline-flex flex-wrap gap-1">
-            <select class="form-select"
+        <div class="fdate-combo d-inline-flex flex-nowrap align-items-center gap-1">
+            <select class="form-select w-auto"
                     :class="class_control"
                     v-model="date_combo_day"
                     :required="def.required"
@@ -218,7 +218,7 @@
                 <option value="">`- day -`</option>
                 <option v-for="day in dateComboDays" :key="'day-'+day" :value="day">{{day}}</option>
             </select>
-            <select class="form-select"
+            <select class="form-select w-auto"
                     :class="class_control"
                     v-model="date_combo_mon"
                     :required="def.required"
@@ -226,7 +226,7 @@
                 <option value="">`- month -`</option>
                 <option v-for="mon in dateComboMonths" :key="'mon-'+mon.id" :value="mon.id">{{mon.iname}}</option>
             </select>
-            <select class="form-select"
+            <select class="form-select w-auto"
                     :class="class_control"
                     v-model="date_combo_year"
                     :required="def.required"
