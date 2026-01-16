@@ -272,16 +272,23 @@ let actions = {
     // screen navigation
     async setCurrentScreen(screen, id) {
         // console.log("setCurrentScreen:", screen, id);
+        const previous_screen = this.current_screen;
+        const is_same_mode = (previous_screen === screen) && (screen === 'view' || screen === 'edit');
         this.current_screen = screen;
         this.current_id = id;
         let suffix = '';
         if (screen == 'view') {
             suffix = '/' + id;
-            this.edit_data = null;
+            if (!is_same_mode) {
+                this.edit_data = null;
+            }
         } else if (screen == 'edit') {
             suffix = '/' + (id ? id + '/edit' : 'new');
-            this.edit_data = null;
-            if (!id) this.edit_data = { i: {} };
+            if (!id) {
+                this.edit_data = { i: {} };
+            } else if (!is_same_mode) {
+                this.edit_data = null;
+            }
         }
         window.history.pushState({ screen: screen, id: id }, '', this.base_url + suffix);
         this.is_list_edit_pane = false;

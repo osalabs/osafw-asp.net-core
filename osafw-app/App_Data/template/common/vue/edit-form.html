@@ -8,6 +8,7 @@
           :class="{ 'fw-form-loading': fwStore.is_loading_item }"
           @submit.prevent="saveChanges"
           @change.prevent="onChange">
+        <div v-if="fwStore.is_loading_item" class="fw-loading-line" aria-hidden="true"></div>
         <fieldset>
             <form-one-def v-for="(def,index) in preparedDefs"
                           :key="index"
