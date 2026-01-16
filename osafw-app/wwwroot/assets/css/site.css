@@ -30,6 +30,7 @@
   /* ---------- semantics ---------- */
   --fw-body-bg: #fff;                 /* page background */
   --fw-pane-bg: var(--bs-body-bg);    /* content surface (cards, panes) */
+  --fw-fieldset-legend-bg: var(--fw-body-bg);
 
   --fw-hiliter: #ffffcc;              /* selection / emphasis background */
 
@@ -195,6 +196,7 @@
   /* page background in dark mode (framework default) */
   --fw-body-bg: #1c1c1c;
   --fw-hiliter: #555522;
+  --fw-fieldset-legend-bg: var(--fw-body-bg);
 
   /* view-only fields */
   --fw-view-value-bg: var(--bs-tertiary-bg);
@@ -1099,6 +1101,40 @@ table.list-edit.table-dense tbody td > div.ro {
   content: "";
   border-top: 0.1rem double var(--bs-border-color);
   align-self: center;
+}
+
+.fw-fieldset {
+  border: 1px solid var(--bs-border-color);
+  border-radius: var(--fw-control-radius);
+  margin: 0 0 var(--fw-spacer) 0;
+  padding: 0 var(--fw-spacer);
+}
+
+.fw-fieldset-legend {
+  align-items: center;
+  background: var(--fw-fieldset-legend-bg);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 1rem;
+  font-weight: 600;
+  gap: 0.35rem;
+  padding: 0 0.5rem;
+  position: relative;
+  top: calc(var(--fw-spacer) * -0.75);
+}
+
+.fw-fieldset-legend::after {
+  content: "▾";
+  font-size: 0.9em;
+  transition: transform 0.2s ease;
+}
+
+.fw-fieldset.is-collapsed > .fw-fieldset-legend::after {
+  transform: rotate(-90deg);
+}
+
+.fw-fieldset.is-collapsed > :not(.fw-fieldset-legend) {
+  display: none;
 }
 
 form .required:before {

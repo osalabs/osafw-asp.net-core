@@ -37,6 +37,7 @@
   --fw-card-radius: 0.375rem;
   --fw-card-shadow: 0 7px 14px 0 rgba(65, 69, 88, 0.1), 0 3px 6px 0 rgba(0, 0, 0, 0.07);
   --fw-card-padding: 1rem 1rem 0.25rem 1rem;
+  --fw-fieldset-legend-bg: var(--fw-card-bg);
 
   --fw-dashboard-card-radius: 0.375rem;
   --fw-dashboard-card-shadow: 0 7px 14px 0 rgba(65, 69, 88, 0.1), 0 3px 6px 0 rgba(0, 0, 0, 0.07);
@@ -131,6 +132,7 @@
 
   --fw-body-bg: #0b1727;
   --fw-pane-bg: #1c2838;
+  --fw-fieldset-legend-bg: var(--fw-card-bg);
 
   --fw-table-hover-bg: #1e2635;
   --fw-table-striped-bg: #1a2232;

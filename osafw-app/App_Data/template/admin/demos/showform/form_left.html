@@ -142,50 +142,53 @@
   </div>
 </div>
 
-<div class="row form-row">
-  <label class="col-form-label col-md-3" for="fdate_combo">Date combo</label>
-  <div class="col-md-9 fdate-combo d-inline-flex">
-    <select id="fdate_combo" name="item[fdate_combo_day]" class="form-select">
-      <option value="">- day -</option>
-      <~/common/sel/date_day.sel select="fdate_combo_day">
-    </select>
-    <select name="item[fdate_combo_mon]" class="form-select">
-      <option value="">- month -</option>
-      <~/common/sel/date_mon.sel select="fdate_combo_mon">
-    </select>
-    <select name="item[fdate_combo_year]" class="form-select">
-      <option value="">- year -</option>
-      <~/common/sel/date_year.sel select="fdate_combo_year">
-    </select>
-  </div>
-</div>
-
-<div class="row form-row">
-  <label class="col-form-label col-md-3" for="fdate_pop">Date popup</label>
-  <div class="col-md-3">
-    <div class="input-group date">
-      <input id="fdate_pop" name="item[fdate_pop]" maxlength="10" value="<~i[fdate_pop] date>" type="text" class="form-control">
-      <button class="btn btn-outline-secondary" type="button"><i class="bi bi-calendar3"></i></button>
+<div class="fw-fieldset mb-3">
+  <div class="fw-fieldset-legend">Dates</div>
+  <div class="row form-row">
+    <label class="col-form-label col-md-3" for="fdate_combo">Date combo</label>
+    <div class="col-md-9 fdate-combo d-inline-flex">
+      <select id="fdate_combo" name="item[fdate_combo_day]" class="form-select">
+        <option value="">- day -</option>
+        <~/common/sel/date_day.sel select="fdate_combo_day">
+      </select>
+      <select name="item[fdate_combo_mon]" class="form-select">
+        <option value="">- month -</option>
+        <~/common/sel/date_mon.sel select="fdate_combo_mon">
+      </select>
+      <select name="item[fdate_combo_year]" class="form-select">
+        <option value="">- year -</option>
+        <~/common/sel/date_year.sel select="fdate_combo_year">
+      </select>
     </div>
   </div>
-</div>
 
-<div class="row form-row">
-  <label class="col-form-label col-md-3" for="fdatetime">Date and Time</label>
-  <div class="col-md-5">
-    <div class="input-group date datetime" data-default-time="now">
-      <input id="<~field>" name="item[fdatetime]" maxlength="25" value="<~i[fdatetime] date="short">" type="text" class="form-control" placeholder="M/D/YYYY HH:MM [AM|PM]">
-      <button class="btn btn-outline-secondary border border-left-0" type="button"><i class="bi bi-calendar3"></i></button>
+  <div class="row form-row">
+    <label class="col-form-label col-md-3" for="fdate_pop">Date popup</label>
+    <div class="col-md-3">
+      <div class="input-group date">
+        <input id="fdate_pop" name="item[fdate_pop]" maxlength="10" value="<~i[fdate_pop] date>" type="text" class="form-control">
+        <button class="btn btn-outline-secondary" type="button"><i class="bi bi-calendar3"></i></button>
+      </div>
     </div>
   </div>
-</div>
 
-<div class="row form-row">
-  <label class="col-form-label col-md-3" for="ftime">Time</label>
-  <div class="col-md-2">
-    <input id="ftime" name="item[ftime_str]" maxlength="5" value="<~i[ftime_str]>" type="text" placeholder="HH:MM" class="form-control">
+  <div class="row form-row">
+    <label class="col-form-label col-md-3" for="fdatetime">Date and Time</label>
+    <div class="col-md-5">
+      <div class="input-group date datetime" data-default-time="now">
+        <input id="<~field>" name="item[fdatetime]" maxlength="25" value="<~i[fdatetime] date="short">" type="text" class="form-control" placeholder="M/D/YYYY HH:MM [AM|PM]">
+        <button class="btn btn-outline-secondary border border-left-0" type="button"><i class="bi bi-calendar3"></i></button>
+      </div>
+    </div>
   </div>
-  <div class="col-md-2">
-    <p class="form-control-plaintext"><small class="form-text">HH:MM</small></p>
+
+  <div class="row form-row">
+    <label class="col-form-label col-md-3" for="ftime">Time</label>
+    <div class="col-md-2">
+      <input id="ftime" name="item[ftime_str]" maxlength="5" value="<~i[ftime_str]>" type="text" placeholder="HH:MM" class="form-control">
+    </div>
+    <div class="col-md-2">
+      <p class="form-control-plaintext"><small class="form-text">HH:MM</small></p>
+    </div>
   </div>
 </div>
