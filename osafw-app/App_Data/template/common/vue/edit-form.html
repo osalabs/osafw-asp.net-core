@@ -17,8 +17,11 @@
                 <li class="nav-item" v-for="tab in fwStore.form_tabs" :key="tab.tab">
                     <a class="nav-link"
                        href="#"
-                       :class="{ active: fwStore.activeFormTab === tab.tab }"
-                       @click.prevent="fwStore.setFormTab(tab.tab)">
+                       :class="{
+                           active: fwStore.activeFormTab === tab.tab,
+                           disabled: !current_id && tab.tab !== ''
+                       }"
+                       @click.prevent="(!current_id && tab.tab !== '') ? null : fwStore.setFormTab(tab.tab)">
                         {{ tab.label }}
                     </a>
                 </li>
