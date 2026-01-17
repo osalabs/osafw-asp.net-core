@@ -171,7 +171,7 @@
                 try {
                     const form = new URLSearchParams();
                     form.append('XSS', this.fwStore.XSS);
-                    form.append('return_url', `${this.fwStore.base_url}/${this.currentId}#activity`);
+                    form.append('return_url', this.fwStore.base_url + '/' + this.currentId + '#activity');
                     form.append('item[log_type]', 'comment');
                     form.append('item[entity]', this.activityEntity);
                     form.append('item[item_id]', this.currentId);
