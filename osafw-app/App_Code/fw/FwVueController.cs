@@ -138,6 +138,7 @@ public class FwVueController : FwDynamicController
         ps["related_id"] = this.related_id;
         ps["base_url"] = this.base_url;
         ps["is_userlists"] = this.is_userlists;
+        ps["is_activity_logs"] = this.is_activity_logs;
         ps["is_readonly"] = is_readonly;
         ps["is_list_edit"] = is_list_edit;
     }

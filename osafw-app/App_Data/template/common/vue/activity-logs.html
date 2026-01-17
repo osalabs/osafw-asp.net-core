@@ -14,7 +14,8 @@
         <div v-if="isCommentFormOpen" class="fw-card mb-4">
             <div class="row">
                 <div class="col-12 col-lg">
-                    <textarea v-model="commentText"
+                    <textarea ref="commentInput"
+                              v-model="commentText"
                               class="form-control mb-2"
                               rows="5"
                               placeholder="`Type your markdown comment or notes ...`"
@@ -64,6 +65,7 @@
                 <div class="flex-grow-1 ms-3">
                     <h6 class="mb-1">
                         <b>{{ row.user?.iname }}</b>
+                        <span v-if="row.tab !== 'comments'"> - </span>
                         <span v-if="row.tab !== 'comments'" class="badge bg-secondary">
                             {{ row.log_type?.iname }}
                         </span>
@@ -135,6 +137,13 @@
                     this.isCommentFormOpen = forceState;
                 } else {
                     this.isCommentFormOpen = !this.isCommentFormOpen;
+                }
+                if (this.isCommentFormOpen) {
+                    this.$nextTick(() => {
+                        if (this.$refs.commentInput) {
+                            this.$refs.commentInput.focus();
+                        }
+                    });
                 }
             },
             initials(user) {
