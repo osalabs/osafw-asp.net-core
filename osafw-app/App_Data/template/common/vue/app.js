@@ -16,8 +16,8 @@ let mainApp = {
         this.fwStore.saveToStore(this.$el.parentElement.dataset);
         this.fwStore.initApi();
 
+        await this.fwStore.loadInitial();
         if (this.fwStore.current_screen) {
-            await this.fwStore.loadInitial();
             await this.fwStore.setCurrentScreen(this.fwStore.current_screen, this.fwStore.current_id);
         } else {
             this.fwStore.current_screen = 'list';
