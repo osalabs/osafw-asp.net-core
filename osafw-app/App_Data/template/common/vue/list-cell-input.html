@@ -26,7 +26,7 @@
                :type="inputType"
                :class="'form-control'+(error?' is-invalid':'')"
                :id="'cell-'+rowId+'-'+col.field_name"
-               v-model="row[col.field_name]"
+               v-model="modelValue"
                :maxlength="col.maxlength"
                :min="col.min"
                :max="col.max"
@@ -58,6 +58,8 @@
 </script>
 
 <script type="module">
+    import { mapStores } from 'pinia';
+
     fwApp.component('list-cell-input', {
         template: '#list-cell-input-template',
         props: {
@@ -85,6 +87,7 @@
             initial_value: '', //value before change
         }),
         computed: {
+            ...mapStores(fwStore),
             inputType: function () {
                 const TYPE_MAP = {
                     text: 'text',
@@ -94,11 +97,28 @@
                     date_popup: 'date',
                     password: 'password',
                     textarea: 'text',
+                    time: 'time',
                     autocomplete: 'autocomplete'
                 };
                 let type = this.type ?? this.col.input_type ?? 'text';
                 return TYPE_MAP[type] ?? 'text';
             },
+            modelValue: {
+                get() {
+                    const value = this.row[this.col.field_name];
+                    if (this.inputType === 'time') {
+                        return this.fwStore.formatTime(value);
+                    }
+                    return value;
+                },
+                set(newValue) {
+                    if (this.inputType === 'time') {
+                        this.row[this.col.field_name] = this.fwStore.timeToSeconds(newValue);
+                    } else {
+                        this.row[this.col.field_name] = newValue;
+                    }
+                }
+            }
         },
         methods: {
             onFocus(e) {

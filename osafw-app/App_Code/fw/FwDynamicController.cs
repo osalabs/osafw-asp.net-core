@@ -1242,7 +1242,30 @@ public class FwDynamicController : FwController
                 }
             }
             else if (type == "time")
-                fields[field] = FormUtils.timeStrToInt(fields[field].toStr()); // ftime - convert from HH:MM to int (0-24h in seconds)
+            {
+                // Vue can already submit seconds for time fields; only parse when value is HH:MM.
+                var rawValue = fields[field]?.toStr() ?? "";
+                if (rawValue.Contains(":"))
+                    fields[field] = FormUtils.timeStrToInt(rawValue); // ftime - convert from HH:MM to int (0-24h in seconds)
+            }
+            else if (type == "date_combo")
+            {
+                // Vue can submit SQL date directly; normalize or fallback to combo parts.
+                var hasValue = fields.ContainsKey(field);
+                var rawValue = hasValue ? fields[field].toStr() : "";
+                if (!hasValue || string.IsNullOrEmpty(rawValue))
+                {
+                    var comboValue = FormUtils.dateForCombo(item, field);
+                    if (!string.IsNullOrEmpty(comboValue))
+                        fields[field] = comboValue;
+                }
+                else
+                {
+                    var normalized = DateUtils.Str2SQL(rawValue, fw.userDateFormat);
+                    if (!string.IsNullOrEmpty(normalized))
+                        fields[field] = normalized;
+                }
+            }
             else if (type == "number")
             {
                 // no need to do this as DB knows if field nullable and convert empty string to NULL
@@ -1294,7 +1317,13 @@ public class FwDynamicController : FwController
             }
             else if (type == "date_combo")
             {
-                fields_update[field] = FormUtils.dateForCombo(reqh("item"), field);
+                var reqItem = reqh("item");
+                // Vue submits date_combo as single SQL string; only recompute when combo parts are present.
+                var has_combo_parts = reqItem.ContainsKey(field + "_day")
+                    || reqItem.ContainsKey(field + "_mon")
+                    || reqItem.ContainsKey(field + "_year");
+                if (has_combo_parts)
+                    fields_update[field] = FormUtils.dateForCombo(reqItem, field);
             }
         }
 
