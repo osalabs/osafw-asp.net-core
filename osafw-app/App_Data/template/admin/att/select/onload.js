@@ -1,20 +1,36 @@
 var $scope = $(fw.scopeFromScript());
 var $modal = $scope.closest('.modal');
+if (!$modal.length) $modal = $('.fw-modal.show').first();
+if (!$modal.length) $modal = $('.fw-modal').last();
+
 var trigger = fw.modalTriggerEl($scope);
 var $trigger = $(trigger);
 
+function getTrigger() {
+    if ($trigger && $trigger.length) return $trigger;
+    if ($modal.length) {
+        var triggerId = $modal.data('fw-modal-trigger-id');
+        if (triggerId) {
+            $trigger = $('[data-fw-modal-trigger-id="' + triggerId + '"]');
+        }
+    }
+    return $trigger;
+}
+
 function getFieldGroup() {
-    var $fg = $trigger.closest('.fw-att-block');
-    if (!$fg.length) $fg = $trigger.closest('.form-row, .form-group');
+    var $activeTrigger = getTrigger();
+    var $fg = $activeTrigger.closest('.fw-att-block');
+    if (!$fg.length) $fg = $activeTrigger.closest('.form-row, .form-group');
     return $fg;
 }
 
 function applySelection(id, iname, url, is_image) {
     var $fg = getFieldGroup();
     if (!$fg.length) return;
-    var $form = $trigger.closest('form');
+    var $activeTrigger = getTrigger();
+    var $form = $activeTrigger.closest('form');
     var $att_list = $fg.find('.att-list');
-    var att_preview_size = $trigger.data('att-preview-size') || 's';
+    var att_preview_size = $activeTrigger.data('att-preview-size') || 's';
     var $attinfo;
 
     if ($att_list.length){//multi att
@@ -66,9 +82,10 @@ $modal.off('click', '.thumbs a').on('click', '.thumbs a', function (e) {
 
 //refresh if category changed
 $modal.find('select[name="item[att_categories_id]"]').on('change', function(e){
-    var baseUrl = $trigger.data('base-url');
+    var $activeTrigger = getTrigger();
+    var baseUrl = $activeTrigger.data('base-url');
     if (!baseUrl) {
-        var currentUrl = $trigger.data('url') || $trigger.attr('href');
+        var currentUrl = $modal.data('fw-modal-url') || $activeTrigger.data('url') || $activeTrigger.attr('href');
         if (currentUrl) baseUrl = currentUrl.split('?')[0];
     }
     if (!baseUrl) return;
