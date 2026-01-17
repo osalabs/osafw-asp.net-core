@@ -2,8 +2,6 @@
   Documentation is here:
   https://www.jqueryscript.net/text/Easy-WYSIWYG-Markdown-Rditor-For-Bootstrap-Bootstrap-Markdown.html
 -->
-
-<link href="<~GLOBAL[ASSETS_URL]>/lib/bootstrap-markdown/css/bootstrap-markdown.min.css" rel="stylesheet">
 <style>
 /* emulate glyphicons classes from bootstrap icons */
 .glyphicon::before, [class*=" glyphicon-"]::before, [class^="glyphicon-"]::before {
@@ -89,217 +87,232 @@
   display: none;
 }
 </style>
-
-<script src="<~GLOBAL[ASSETS_URL]>/lib/markdown-it/dist/markdown-it.min.js"></script>
-<script src="<~GLOBAL[ASSETS_URL]>/lib/markdown-it-sub/dist/markdown-it-sub.min.js"></script>
-<script src="<~GLOBAL[ASSETS_URL]>/lib/markdown-it-sup/dist/markdown-it-sup.min.js"></script>
-<script src="<~GLOBAL[ASSETS_URL]>/lib/markdown-it-abbr/dist/markdown-it-abbr.min.js"></script>
-<script src="<~GLOBAL[ASSETS_URL]>/lib/markdown-it-ins/dist/markdown-it-ins.min.js"></script>
-<script src="<~GLOBAL[ASSETS_URL]>/lib/markdown-it-mark/dist/markdown-it-mark.min.js"></script>
-<script src="<~GLOBAL[ASSETS_URL]>/lib/markdown-it-container/dist/markdown-it-container.min.js"></script>
-<script src="<~GLOBAL[ASSETS_URL]>/lib/markdown-it-attrs/markdown-it-attrs.browser.js"></script>
-
-<script src="<~GLOBAL[ASSETS_URL]>/lib/turndown/dist/turndown.js"></script>
-<script src="<~GLOBAL[ASSETS_URL]>/lib/bootstrap-markdown/js/bootstrap-markdown.js"></script>
-<script src="<~GLOBAL[ASSETS_URL]>/lib/jquery-hotkeys/jquery-hotkeys.js"></script>
 <script>
-  $(document).ready(function() {
+  fw.initComponent('markdown_editor', {
+    scope: fw.scopeFromScript(),
+    assetsUrls: [
+      '<~GLOBAL[ASSETS_URL]>/lib/bootstrap-markdown/css/bootstrap-markdown.min.css',
+      '<~GLOBAL[ASSETS_URL]>/lib/markdown-it/dist/markdown-it.min.js',
+      '<~GLOBAL[ASSETS_URL]>/lib/markdown-it-sub/dist/markdown-it-sub.min.js',
+      '<~GLOBAL[ASSETS_URL]>/lib/markdown-it-sup/dist/markdown-it-sup.min.js',
+      '<~GLOBAL[ASSETS_URL]>/lib/markdown-it-abbr/dist/markdown-it-abbr.min.js',
+      '<~GLOBAL[ASSETS_URL]>/lib/markdown-it-ins/dist/markdown-it-ins.min.js',
+      '<~GLOBAL[ASSETS_URL]>/lib/markdown-it-mark/dist/markdown-it-mark.min.js',
+      '<~GLOBAL[ASSETS_URL]>/lib/markdown-it-container/dist/markdown-it-container.min.js',
+      '<~GLOBAL[ASSETS_URL]>/lib/markdown-it-attrs/markdown-it-attrs.browser.js',
+      '<~GLOBAL[ASSETS_URL]>/lib/turndown/dist/turndown.js',
+      '<~GLOBAL[ASSETS_URL]>/lib/bootstrap-markdown/js/bootstrap-markdown.js',
+      '<~GLOBAL[ASSETS_URL]>/lib/jquery-hotkeys/jquery-hotkeys.js'
+    ],
+    init: function (scope, params) {
+      if (typeof window.markdownit !== 'function' || typeof window.TurndownService !== 'function' || typeof $.fn.markdown !== 'function') return;
 
-    var turndownService = new TurndownService({
-      headingStyle: 'atx',
-      hr: '---',
-      bulletListMarker: '-',
-      codeBlockStyle: 'fenced',
-      blankReplacement : function (content, node) {
-        return node.isBlock ? '\n\n' : content;
-      }
-    });
-    // turndownService.addRule('fromWord', {
-    //   filter: ['u','span','sup'], //filter out excessive Word tags
-    //   replacement: function (content, node) {
-    //     return content;
-    //   }
-    // });
+      var $scope = $(scope || document);
+      var $fields = $scope.find('textarea.markdown').filter(function () {
+        return !$(this).data('fw-md-inited');
+      });
+      if (!$fields.length) return;
 
-    var mdOptions={
-      html:       true,
-      breaks:     true,
-      linkify:    true
-    };
-    var md = window.markdownit(mdOptions)
-      .use(window.markdownitSub)
-      .use(window.markdownitSup)
-      .use(window.markdownitAbbr)
-      .use(window.markdownitIns)
-      .use(window.markdownitMark)
-      .use(window.markdownitContainer, 'foobar', {
-        validate: name => name.trim().length, // allow any container names
-        //add container token as a class + other class attrs
-        render: (tokens, idx) => {
-          if (tokens[idx].nesting === 1) {
+      var turndownService = new TurndownService({
+        headingStyle: 'atx',
+        hr: '---',
+        bulletListMarker: '-',
+        codeBlockStyle: 'fenced',
+        blankReplacement: function (content, node) {
+          return node.isBlock ? '\n\n' : content;
+        }
+      });
+      // turndownService.addRule('fromWord', {
+      //   filter: ['u','span','sup'], //filter out excessive Word tags
+      //   replacement: function (content, node) {
+      //     return content;
+      //   }
+      // });
+
+      var mdOptions = {
+        html: true,
+        breaks: true,
+        linkify: true
+      };
+      var md = window.markdownit(mdOptions)
+        .use(window.markdownitSub)
+        .use(window.markdownitSup)
+        .use(window.markdownitAbbr)
+        .use(window.markdownitIns)
+        .use(window.markdownitMark)
+        .use(window.markdownitContainer, 'foobar', {
+          validate: name => name.trim().length, // allow any container names
+          //add container token as a class + other class attrs
+          render: (tokens, idx) => {
+            if (tokens[idx].nesting === 1) {
               // from tokens[idx].attrs array, get only elements where [0]=="class"
               var class_name = tokens[idx].info.trim();
               if (tokens[idx].attrs) {
-                  var aclasses = tokens[idx].attrs.filter(function (el) {
-                      return el[0] == 'class';
-                  });
-                  class_name += ' ' + aclasses.map(function (el) {
-                      return el[1];
-                  }).join(' ');
+                var aclasses = tokens[idx].attrs.filter(function (el) {
+                  return el[0] == 'class';
+                });
+                class_name += ' ' + aclasses.map(function (el) {
+                  return el[1];
+                }).join(' ');
               }
-              return '<div class="'+class_name+'">\n';
-          } else  {
-            return '</div>\n';
+              return '<div class="' + class_name + '">\n';
+            } else {
+              return '</div>\n';
+            }
           }
-        }
-      })
-      .use(window.markdownItAttrs)
-      ;
+        })
+        .use(window.markdownItAttrs);
 
-    //add bootstrap table class for tables
-    md.renderer.rules.table_open = function(tokens, idx) {
-      return '<table class="table">';
-    };
+      //add bootstrap table class for tables
+      md.renderer.rules.table_open = function (tokens, idx) {
+        return '<table class="table">';
+      };
 
-    $("textarea.markdown")
-    .on('paste', function (e){
-      var cd = e.originalEvent.clipboardData;
-      if (!cd) return; //IE doesn't support paste as html, so just pass it as is
+      $fields.each(function () {
+        var $field = $(this);
+        $field
+          .off('paste.fwMarkdown')
+          .on('paste.fwMarkdown', function (e) {
+            var cd = e.originalEvent.clipboardData;
+            if (!cd) return; //IE doesn't support paste as html, so just pass it as is
 
-      if (cd.types.contains && cd.types.contains('text/html') || cd.types.indexOf && cd.types.indexOf('text/html')>-1 ){
-        var data = cd.getData('text/html');
-        var bodyHtml = /<body.*?>([\s\S]*)<\/body>/.exec(data)[1];
+            if (cd.types.contains && cd.types.contains('text/html') || cd.types.indexOf && cd.types.indexOf('text/html') > -1) {
+              var data = cd.getData('text/html');
+              var bodyHtml = /<body.*?>([\s\S]*)<\/body>/.exec(data)[1];
 
-        //console.log('data before:', bodyHtml)
-        data = turndownService.turndown(bodyHtml);
-        //console.log('data after:', data)
+              //console.log('data before:', bodyHtml)
+              data = turndownService.turndown(bodyHtml);
+              //console.log('data after:', data)
 
-        //data = toMarkdown(data, { gfm: true });
-        //data = toMarkdown(data, { converters: aconverters });
+              //data = toMarkdown(data, { gfm: true });
+              //data = toMarkdown(data, { converters: aconverters });
 
-        fw.field_insert_at_cursor(this, data);
-        e.preventDefault();
-      }
-    })
-    .markdown({
-      //hide&disable default add image btn
-      hiddenButtons: 'cmdUrl cmdImage',
-      disabledButtons: 'cmdUrl cmdImage',
-      resize: 'vertical', //by default manual textarea resize is disabled
-      //iconlibrary: 'glyph',
-      parser: function (v) {
-        return md.render(v);
-      },
-      additionalButtons: [
-        [{
-          name: "groupCustom",
-          data: [{
-            name: "cmdAddUrl",
-            toggle: false,
-            title: "Add Link",
-            hotkey: 'Ctrl+L',
-            icon: {
-              glyph: 'glyphicon glyphicon-link'
+              fw.field_insert_at_cursor(this, data);
+              e.preventDefault();
+            }
+          })
+          .markdown({
+            //hide&disable default add image btn
+            hiddenButtons: 'cmdUrl cmdImage',
+            disabledButtons: 'cmdUrl cmdImage',
+            resize: 'vertical', //by default manual textarea resize is disabled
+            //iconlibrary: 'glyph',
+            parser: function (v) {
+              return md.render(v);
             },
-            callback: async function(e){
-              // Give [] surround the selection and prepend the link
-              var chunk, cursor, selected = e.getSelection(), content = e.getContent(), link;
+            additionalButtons: [
+              [{
+                name: "groupCustom",
+                data: [{
+                  name: "cmdAddUrl",
+                  toggle: false,
+                  title: "Add Link",
+                  hotkey: 'Ctrl+L',
+                  icon: {
+                    glyph: 'glyphicon glyphicon-link'
+                  },
+                  callback: async function (e) {
+                    // Give [] surround the selection and prepend the link
+                    var chunk, cursor, selected = e.getSelection(), content = e.getContent(), link;
 
-              if (selected.length === 0) {
-                // Give extra word
-                chunk = e.__localize('enter link description here');
-              } else {
-                chunk = selected.text;
-              }
+                    if (selected.length === 0) {
+                      // Give extra word
+                      chunk = e.__localize('enter link description here');
+                    } else {
+                      chunk = selected.text;
+                    }
 
-              link = await prompt(e.__localize('Insert Hyperlink'),'http://');
+                    link = await prompt(e.__localize('Insert Hyperlink'), 'http://');
 
-              var urlRegex = new RegExp('^((http|https)://|(mailto:)|(//)|(/))[a-z0-9]', 'i');
-              if (link !== null && link !== '' && link !== 'http://' && urlRegex.test(link)) {
-                var sanitizedLink = $('<div>'+link+'</div>').text();
+                    var urlRegex = new RegExp('^((http|https)://|(mailto:)|(//)|(/))[a-z0-9]', 'i');
+                    if (link !== null && link !== '' && link !== 'http://' && urlRegex.test(link)) {
+                      var sanitizedLink = $('<div>' + link + '</div>').text();
 
-                // transform selection and set the cursor into chunked text
-                e.replaceSelection('['+chunk+']('+sanitizedLink+')');
-                cursor = selected.start+1;
+                      // transform selection and set the cursor into chunked text
+                      e.replaceSelection('[' + chunk + '](' + sanitizedLink + ')');
+                      cursor = selected.start + 1;
 
-                // Set the cursor
-                e.setSelection(cursor,cursor+chunk.length);
-              }
-            }//end callback
-          },{
-            name: "cmdAddImage",
-            toggle: false,
-            title: "Add Image",
-            hotkey: 'Ctrl+G',
-            icon: {
-              glyph: 'glyphicon glyphicon-picture',
-              fa: 'fa fa-picture-o',
-              'fa-3': 'icon-picture',
-              octicons: 'octicon octicon-file-media'
-            },
-            callback: function(e){
-              // Replace selection with some drinks
-              var chunk, cursor, selected = e.getSelection(), content = e.getContent();
+                      // Set the cursor
+                      e.setSelection(cursor, cursor + chunk.length);
+                    }
+                  }//end callback
+                }, {
+                  name: "cmdAddImage",
+                  toggle: false,
+                  title: "Add Image",
+                  hotkey: 'Ctrl+G',
+                  icon: {
+                    glyph: 'glyphicon glyphicon-picture',
+                    fa: 'fa fa-picture-o',
+                    'fa-3': 'icon-picture',
+                    octicons: 'octicon octicon-file-media'
+                  },
+                  callback: function (e) {
+                    // Replace selection with some drinks
+                    var chunk, cursor, selected = e.getSelection(), content = e.getContent();
 
-              var att_category = e.$textarea.data('att-category') ?? 'general';
-              modal_att_open(att_category, function (e2, id, iname, url, is_image) {
-                chunk=(is_image?"!":"")+"["+iname+"]("+url+")";
+                    var att_category = e.$textarea.data('att-category') ?? 'general';
+                    modal_att_open(att_category, function (e2, id, iname, url, is_image) {
+                      chunk = (is_image ? "!" : "") + "[" + iname + "](" + url + ")";
 
-                // transform selection and set the cursor into chunked text
-                e.replaceSelection(chunk);
-                cursor = selected.start;
+                      // transform selection and set the cursor into chunked text
+                      e.replaceSelection(chunk);
+                      cursor = selected.start;
 
-                // Set the cursor
-                // vlad: we need a small timeout because "blur" is triggered when att is selected and it can revert the "focus". Textarea needs focus for setSelection to work.
-                setTimeout(function(){
-                  e.$element.focus();
-                  e.setSelection(cursor,cursor+chunk.length);
-                }, 100)
+                      // Set the cursor
+                      // vlad: we need a small timeout because "blur" is triggered when att is selected and it can revert the "focus". Textarea needs focus for setSelection to work.
+                      setTimeout(function () {
+                        e.$element.focus();
+                        e.setSelection(cursor, cursor + chunk.length);
+                      }, 100);
 
-                //handle autosave
-                if (!e.$element.is('[data-noautosave]')) e.$element.closest('form[data-autosave]').trigger('change');
-              });
-            }//end callback
-          },{
-            name: 'cmdPreviewCustom',
-            toggle: true,
-            hotkey: 'Ctrl+P',
-            title: 'Preview',
-            btnText: 'Preview',
-            btnClass: 'btn btn-secondary btn-sm',
-            icon: {
-              glyph: 'glyphicon glyphicon-search',
-              fa: 'fa fa-search',
-              'fa-3': 'icon-search',
-              'fa-5': 'fas fa-search',
-              octicons: 'octicon octicon-search'
-            },
-            callback: function(e) {
-              // Check the preview mode and toggle based on this flag
-              if (e.$isPreview === false) {
-                // Give flag that tells the editor to enter preview mode
-                e.showPreview();
-              } else {
-                e.hidePreview();
+                      //handle autosave
+                      if (!e.$element.is('[data-noautosave]')) e.$element.closest('form[data-autosave]').trigger('change');
+                    });
+                  }//end callback
+                }, {
+                  name: 'cmdPreviewCustom',
+                  toggle: true,
+                  hotkey: 'Ctrl+P',
+                  title: 'Preview',
+                  btnText: 'Preview',
+                  btnClass: 'btn btn-secondary btn-sm',
+                  icon: {
+                    glyph: 'glyphicon glyphicon-search',
+                    fa: 'fa fa-search',
+                    'fa-3': 'icon-search',
+                    'fa-5': 'fas fa-search',
+                    octicons: 'octicon octicon-search'
+                  },
+                  callback: function (e) {
+                    // Check the preview mode and toggle based on this flag
+                    if (e.$isPreview === false) {
+                      // Give flag that tells the editor to enter preview mode
+                      e.showPreview();
+                    } else {
+                      e.hidePreview();
+                    }
+                  }
+                }]
+              }]
+            ],
+            onChange: function (e) {
+              // handle autosave forms on content change
+              if (!e.$element.is('[data-noautosave]')) {
+                if (e.$element.data('md-save-content') === undefined) e.$element.data('md-save-content', e.$oldContent);
+
+                if (e.$element.data('md-save-content') !== e.getContent()) {
+                  e.$element.data('md-save-content', e.getContent());
+                  e.$element.closest('form[data-autosave]').trigger('change');
+                }
               }
             }
-          }]
-        }]
-      ],
-      onChange: function(e){
-        // handle autosave forms on content change
-        if (!e.$element.is('[data-noautosave]')) {
-          if (e.$element.data('md-save-content') === undefined) e.$element.data('md-save-content', e.$oldContent);
+            // ,onPreview: function(e) {
+            // }
+          });
 
-          if (e.$element.data('md-save-content') !== e.getContent()) {
-            e.$element.data('md-save-content', e.getContent());
-            e.$element.closest('form[data-autosave]').trigger('change');
-          }
-        }
-      }
-      // ,onPreview: function(e) {
-      // }
-    });
-
+        $field.data('fw-md-inited', true);
+      });
+    }
   });
 </script>

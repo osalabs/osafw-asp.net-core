@@ -18,6 +18,121 @@ window.fw={
   MSG_UPLOAD_FAILED: 'Upload failed',
   MSG_DELETE_CONFIRM: '<strong>ARE YOU SURE</strong> to delete this item?',
 
+  _componentRegistry: {},
+  _scriptPromises: {},
+  _stylePromises: {},
+
+  scopeFromScript: function (scriptEl) {
+    var $script = $(scriptEl || document.currentScript);
+    if (!$script.length) return document;
+
+    var $scope = $script.closest('[data-fw-component-scope]');
+    if (!$scope.length) {
+      $scope = $script.closest('.modal, .offcanvas, .dropdown-menu, .fw-component-scope');
+    }
+
+    return $scope.length ? $scope[0] : document;
+  },
+
+  loadScript: function (id, url) {
+    if (!url) return Promise.resolve();
+    var key = id || url;
+    if (fw._scriptPromises[key]) return fw._scriptPromises[key];
+
+    var existing = document.querySelector('script[data-fw-id="' + key + '"], script[src="' + url + '"]');
+    if (existing) {
+      fw._scriptPromises[key] = Promise.resolve();
+      return fw._scriptPromises[key];
+    }
+
+    fw._scriptPromises[key] = new Promise(function (resolve, reject) {
+      var script = document.createElement('script');
+      script.src = url;
+      script.async = false;
+      script.dataset.fwId = key;
+      script.onload = function () { resolve(); };
+      script.onerror = function () { reject(new Error('Failed to load script: ' + url)); };
+      document.head.appendChild(script);
+    });
+
+    return fw._scriptPromises[key];
+  },
+
+  loadStyle: function (id, url) {
+    if (!url) return Promise.resolve();
+    var key = id || url;
+    if (fw._stylePromises[key]) return fw._stylePromises[key];
+
+    var existing = document.querySelector('link[data-fw-id="' + key + '"], link[rel="stylesheet"][href="' + url + '"]');
+    if (existing) {
+      fw._stylePromises[key] = Promise.resolve();
+      return fw._stylePromises[key];
+    }
+
+    fw._stylePromises[key] = new Promise(function (resolve, reject) {
+      var link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = url;
+      link.dataset.fwId = key;
+      link.onload = function () { resolve(); };
+      link.onerror = function () { reject(new Error('Failed to load stylesheet: ' + url)); };
+      document.head.appendChild(link);
+    });
+
+    return fw._stylePromises[key];
+  },
+
+  registerComponent: function (name, config) {
+    fw._componentRegistry[name] = config;
+  },
+
+  initComponent: function (name, options) {
+    var opts = options || {};
+    var component = opts.component || fw._componentRegistry[name] || {};
+
+    var scope = opts.scope || document;
+    var params = opts.params || {};
+    var init = opts.init || component.init;
+    var assetsUrls = opts.assetsUrls || component.assetsUrls || [];
+    var scripts = typeof component.scripts === 'function' ? component.scripts(params) : (component.scripts || []);
+    var styles = typeof component.styles === 'function' ? component.styles(params) : (component.styles || []);
+
+    var scriptChain = Promise.resolve();
+    var stylePromises = [];
+
+    assetsUrls.forEach(function (url, index) {
+      if (!url) return;
+      var cleanUrl = url.split('?')[0].split('#')[0];
+      if (cleanUrl.endsWith('.css')) {
+        stylePromises.push(fw.loadStyle(name + ':asset-style:' + index, url));
+      } else {
+        scriptChain = scriptChain.then(function () {
+          return fw.loadScript(name + ':asset-script:' + index, url);
+        });
+      }
+    });
+
+    scripts.forEach(function (src, index) {
+      scriptChain = scriptChain.then(function () {
+        return fw.loadScript(name + ':script:' + index, src);
+      });
+    });
+
+    styles.forEach(function (href, index) {
+      stylePromises.push(fw.loadStyle(name + ':style:' + index, href));
+    });
+
+    return Promise.all([scriptChain, Promise.all(stylePromises)])
+      .then(function () {
+        if (init) {
+          init(scope, params);
+        }
+      })
+      .catch(function (err) {
+        console.error(err);
+      });
+  },
+
   // Unified helper: updates saved/unsaved status and optional progress spinner
   // is_changed: true/false updates internal changed flag, pass undefined to keep previous value
   // is_progress: true - show spinner, false - hide spinner, undefined - keep previous spinner state
