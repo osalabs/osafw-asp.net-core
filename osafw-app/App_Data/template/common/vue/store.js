@@ -266,6 +266,17 @@ let getters = {
         const activeTab = state.form_tabs.some(tab => tab.tab === state.current_form_tab) ? state.current_form_tab : defaultTab;
         return state.showform_fields_tabs?.[activeTab] ?? state.showform_fields;
     },
+    allShowFormFields: (state) => {
+        if (!state.form_tabs?.length) return state.showform_fields;
+        const tabbed = state.showform_fields_tabs ?? {};
+        const merged = [];
+        Object.keys(tabbed).forEach(key => {
+            const defs = tabbed[key] ?? [];
+            defs.forEach(def => merged.push(def));
+        });
+        if (!merged.length) return state.showform_fields;
+        return merged;
+    },
     treeTabbedShowFields: (state) => {
         if (!state.form_tabs?.length) return state.fieldsToTree(state.show_fields);
         const defaultTab = state.form_tabs[0]?.tab ?? '';
@@ -411,11 +422,12 @@ let actions = {
     },
     // update list_headers from showform_fields after loadIndex
     enrichEditableListHeaders() {
-        if (!this.showform_fields) return;
+        const allShowFormFields = this.allShowFormFields ?? this.showform_fields;
+        if (!allShowFormFields) return;
 
         // convert showform_fields array to lookup hashtable with keys as field
         let hfields = {};
-        this.showform_fields.forEach(def => {
+        allShowFormFields.forEach(def => {
             if (def.field && !hfields[def.field]) {
                 hfields[def.field] = def;
             }
