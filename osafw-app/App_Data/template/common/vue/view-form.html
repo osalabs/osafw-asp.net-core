@@ -12,8 +12,21 @@
              class="fw-loading-line"
              :style="{ width: fwStore.loading_progress + '%' }"
              aria-hidden="true"></div>
+        <div v-if="fwStore.form_tabs?.length" class="mb-3">
+            <ul class="nav nav-underline justify-content-start">
+                <li class="nav-item" v-for="tab in fwStore.form_tabs" :key="tab.tab">
+                    <a class="nav-link"
+                       href="#"
+                       :class="{ active: fwStore.activeFormTab === tab.tab }"
+                       @click.prevent="fwStore.setFormTab(tab.tab)">
+                        {{ tab.label }}
+                    </a>
+                </li>
+            </ul>
+            <hr>
+        </div>
         <fieldset>
-            <form-one-def v-for="(def,index) in fwStore.treeShowFields"
+            <form-one-def v-for="(def,index) in fwStore.treeTabbedShowFields"
                           :key="index"
                           :form="fwStore.edit_data"
                           @update-form-field="onUpdateFormField"

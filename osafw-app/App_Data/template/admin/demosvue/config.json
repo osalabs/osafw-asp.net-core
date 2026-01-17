@@ -102,6 +102,24 @@
     },
 
     "is_dynamic_show": true,
+    "form_tabs": [
+        {
+            "tab": "",
+            "label": "Main"
+        },
+        {
+            "tab": "details",
+            "label": "Details"
+        },
+        {
+            "tab": "relations",
+            "label": "Relations"
+        },
+        {
+            "tab": "meta",
+            "label": "Attachments"
+        }
+    ],
     "show_fields": [
         {
             "type": "row",
@@ -151,6 +169,50 @@
                     "label": "Email",
                     "type": "plaintext"
                 },
+            {
+                "type": "col_end"
+            },
+            {
+                "type": "col",
+                "class": "col-lg-6"
+            },
+                {
+                    "field": "id",
+                    "label": "ID",
+                    "type": "plaintext"
+                },
+                {
+                    "field": "status",
+                    "label": "Status",
+                    "type": "plaintext",
+                    "lookup_tpl": "/common/sel/status.sel"
+                },
+                {
+                    "field": "add_time",
+                    "label": "Added on",
+                    "type": "added"
+                },
+                {
+                    "field": "upd_time",
+                    "label": "Updated on",
+                    "type": "updated"
+                },
+            {
+                "type": "col_end"
+            },
+        {
+            "type": "row_end"
+        }
+    ],
+    "show_fields_details": [
+        {
+            "type": "row",
+            "class": ""
+        },
+            {
+                "type": "col",
+                "class": "col-lg-6"
+            },
                 {
                     "type": "row",
                     "class": ""
@@ -238,19 +300,22 @@
                 {
                     "type": "fieldset_end"
                 },
-
             {
                 "type": "col_end"
             },
+        {
+            "type": "row_end"
+        }
+    ],
+    "show_fields_relations": [
+        {
+            "type": "row",
+            "class": ""
+        },
             {
                 "type": "col",
                 "class": "col-lg-6"
             },
-                {
-                    "field": "id",
-                    "label": "ID",
-                    "type": "plaintext"
-                },
                 {
                     "field": "dict_link_auto_id",
                     "label": "DemoDicts Autocomplete",
@@ -271,6 +336,13 @@
                     "type": "multi",
                     "model": "DemosDemoDicts"
                 },
+            {
+                "type": "col_end"
+            },
+            {
+                "type": "col",
+                "class": "col-lg-6"
+            },
                 {
                     "field": "demos_items",
                     "label": "Subtable",
@@ -278,6 +350,22 @@
                     "type": "subtable",
                     "model": "DemosItems"
                 },
+            {
+                "type": "col_end"
+            },
+        {
+            "type": "row_end"
+        }
+    ],
+    "show_fields_meta": [
+        {
+            "type": "row",
+            "class": ""
+        },
+            {
+                "type": "col",
+                "class": "col-lg-6"
+            },
                 {
                     "field": "att_id",
                     "label": "Attachment",
@@ -296,26 +384,9 @@
                     "att_category": "general"
                 },
                 {
-                    "field": "status",
-                    "label": "Status",
-                    "type": "plaintext",
-                    "lookup_tpl": "/common/sel/status.sel"
-                },
-                {
-                    "field": "add_time",
-                    "label": "Added on",
-                    "type": "added"
-                },
-                {
-                    "field": "upd_time",
-                    "label": "Updated on",
-                    "type": "updated"
-                },
-                {
                     "is_custom": true,
                     "field": "some_custom_field"
                 },
-
             {
                 "type": "col_end"
             },
@@ -323,7 +394,6 @@
             "type": "row_end"
         }
     ],
-
     "is_dynamic_showform": true,
     "showform_fields": [
         {
@@ -399,6 +469,50 @@
                     "validate": "exists isemail",
                     "maxlength": 128
                 },
+            {
+                "type": "col_end"
+            },
+            {
+                "type": "col",
+                "class": "col-lg-6"
+            },
+                {
+                    "field": "id",
+                    "label": "ID",
+                    "type": "id"
+                },
+                {
+                    "field": "status",
+                    "label": "Status",
+                    "type": "select",
+                    "lookup_tpl": "/common/sel/status.sel",
+                    "class_contents": "col-md-6"
+                },
+                {
+                    "field": "add_time",
+                    "label": "Added on",
+                    "type": "added"
+                },
+                {
+                    "field": "upd_time",
+                    "label": "Updated on",
+                    "type": "updated"
+                },
+            {
+                "type": "col_end"
+            },
+        {
+            "type": "row_end"
+        }
+    ],
+    "showform_fields_details": [
+        {
+            "type": "row"
+        },
+            {
+                "type": "col",
+                "class": "col-lg-6"
+            },
                 {
                     "type": "row",
                     "class": "row form-row"
@@ -434,7 +548,6 @@
                 {
                     "type": "row_end"
                 },
-
                 {
                     "field": "fcombo",
                     "label": "Combo",
@@ -497,15 +610,18 @@
             {
                 "type": "col_end"
             },
+        {
+            "type": "row_end"
+        }
+    ],
+    "showform_fields_relations": [
+        {
+            "type": "row"
+        },
             {
                 "type": "col",
                 "class": "col-lg-6"
             },
-                {
-                    "field": "id",
-                    "label": "ID",
-                    "type": "id"
-                },
                 {
                     "field": "dict_link_auto_id",
                     "label": "DemoDicts Autocomplete",
@@ -528,6 +644,13 @@
                     "type": "multicb",
                     "model": "DemosDemoDicts"
                 },
+            {
+                "type": "col_end"
+            },
+            {
+                "type": "col",
+                "class": "col-lg-6"
+            },
                 {
                     "field": "demos_items",
                     "label": "Subtable",
@@ -539,6 +662,21 @@
                     "save_fields_checkboxes": "is_checkbox|0",
                     "required_fields": "demo_dicts_id iname"
                 },
+            {
+                "type": "col_end"
+            },
+        {
+            "type": "row_end"
+        }
+    ],
+    "showform_fields_meta": [
+        {
+            "type": "row"
+        },
+            {
+                "type": "col",
+                "class": "col-lg-6"
+            },
                 {
                     "field": "att_id",
                     "label": "Attachment",
@@ -560,23 +698,6 @@
                     "att_post_prefix": "att_files1"
                 },
                 {
-                    "field": "status",
-                    "label": "Status",
-                    "type": "select",
-                    "lookup_tpl": "/common/sel/status.sel",
-                    "class_contents": "col-md-6"
-                },
-                {
-                    "field": "add_time",
-                    "label": "Added on",
-                    "type": "added"
-                },
-                {
-                    "field": "upd_time",
-                    "label": "Updated on",
-                    "type": "updated"
-                },
-                {
                     "is_custom": true,
                     "field": "some_custom_field"
                 },
@@ -587,6 +708,5 @@
             "type": "row_end"
         }
     ],
-
     "1":"1"
 }
