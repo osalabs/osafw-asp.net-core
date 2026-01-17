@@ -172,6 +172,34 @@
             {
                 "type": "col_end"
             },
+            {
+                "type": "col",
+                "class": "col-lg-6"
+            },
+                {
+                    "field": "id",
+                    "label": "ID",
+                    "type": "plaintext"
+                },
+                {
+                    "field": "status",
+                    "label": "Status",
+                    "type": "plaintext",
+                    "lookup_tpl": "/common/sel/status.sel"
+                },
+                {
+                    "field": "add_time",
+                    "label": "Added on",
+                    "type": "added"
+                },
+                {
+                    "field": "upd_time",
+                    "label": "Updated on",
+                    "type": "updated"
+                },
+            {
+                "type": "col_end"
+            },
         {
             "type": "row_end"
         }
@@ -289,11 +317,6 @@
                 "class": "col-lg-6"
             },
                 {
-                    "field": "id",
-                    "label": "ID",
-                    "type": "plaintext"
-                },
-                {
                     "field": "dict_link_auto_id",
                     "label": "DemoDicts Autocomplete",
                     "type": "plaintext_autocomplete",
@@ -313,6 +336,13 @@
                     "type": "multi",
                     "model": "DemosDemoDicts"
                 },
+            {
+                "type": "col_end"
+            },
+            {
+                "type": "col",
+                "class": "col-lg-6"
+            },
                 {
                     "field": "demos_items",
                     "label": "Subtable",
@@ -352,22 +382,6 @@
                     "label": "Files Upload",
                     "type": "att_files",
                     "att_category": "general"
-                },
-                {
-                    "field": "status",
-                    "label": "Status",
-                    "type": "plaintext",
-                    "lookup_tpl": "/common/sel/status.sel"
-                },
-                {
-                    "field": "add_time",
-                    "label": "Added on",
-                    "type": "added"
-                },
-                {
-                    "field": "upd_time",
-                    "label": "Updated on",
-                    "type": "updated"
                 },
                 {
                     "is_custom": true,
@@ -680,6 +694,35 @@
             {
                 "type": "col_end"
             },
+            {
+                "type": "col",
+                "class": "col-lg-6"
+            },
+                {
+                    "field": "id",
+                    "label": "ID",
+                    "type": "id"
+                },
+                {
+                    "field": "status",
+                    "label": "Status",
+                    "type": "select",
+                    "lookup_tpl": "/common/sel/status.sel",
+                    "class_contents": "col-md-6"
+                },
+                {
+                    "field": "add_time",
+                    "label": "Added on",
+                    "type": "added"
+                },
+                {
+                    "field": "upd_time",
+                    "label": "Updated on",
+                    "type": "updated"
+                },
+            {
+                "type": "col_end"
+            },
         {
             "type": "row_end"
         }
@@ -802,11 +845,6 @@
                 "class": "col-lg-6"
             },
                 {
-                    "field": "id",
-                    "label": "ID",
-                    "type": "id"
-                },
-                {
                     "field": "dict_link_auto_id",
                     "label": "DemoDicts Autocomplete",
                     "type": "autocomplete",
@@ -828,6 +866,13 @@
                     "type": "multicb",
                     "model": "DemosDemoDicts"
                 },
+            {
+                "type": "col_end"
+            },
+            {
+                "type": "col",
+                "class": "col-lg-6"
+            },
                 {
                     "field": "demos_items",
                     "label": "Subtable",
@@ -873,23 +918,6 @@
                     "multiple": true,
                     "att_category": "general",
                     "att_post_prefix": "att_files1"
-                },
-                {
-                    "field": "status",
-                    "label": "Status",
-                    "type": "select",
-                    "lookup_tpl": "/common/sel/status.sel",
-                    "class_contents": "col-md-6"
-                },
-                {
-                    "field": "add_time",
-                    "label": "Added on",
-                    "type": "added"
-                },
-                {
-                    "field": "upd_time",
-                    "label": "Updated on",
-                    "type": "updated"
                 },
                 {
                     "is_custom": true,
