@@ -18,3 +18,4 @@ Updated: 2025-12-26
 - For migrations, add SQL scripts under `App_Data/sql/updates` and register via `fwupdates` flow.
 - Log at appropriate level; avoid verbose logs on production (`log_level` INFO).
 - In Vue templates, bind disabled states to buttons (not anchors) to avoid `disabled="false"` being rendered and to honor read-only flags.
+- 2026-01-17: Prefer `fw.modalTriggerEl` + `fw.scopeFromScript` when wiring modal-specific JS to standard modal instances.
