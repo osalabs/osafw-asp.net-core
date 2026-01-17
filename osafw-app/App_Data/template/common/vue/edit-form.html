@@ -12,6 +12,19 @@
              class="fw-loading-line"
              :style="{ width: fwStore.loading_progress + '%' }"
              aria-hidden="true"></div>
+        <div v-if="fwStore.form_tabs?.length" class="mb-3">
+            <ul class="nav nav-underline justify-content-start">
+                <li class="nav-item" v-for="tab in fwStore.form_tabs" :key="tab.tab">
+                    <a class="nav-link"
+                       href="#"
+                       :class="{ active: fwStore.activeFormTab === tab.tab }"
+                       @click.prevent="fwStore.setFormTab(tab.tab)">
+                        {{ tab.label }}
+                    </a>
+                </li>
+            </ul>
+            <hr>
+        </div>
         <fieldset>
             <form-one-def v-for="(def,index) in preparedDefs"
                           :key="index"
@@ -66,10 +79,10 @@
             },
             preparedDefs() {
                 if (this.current_id) {
-                    return this.fwStore.treeShowFormFields;
+                    return this.fwStore.treeTabbedShowFormFields;
                 }
                 // some adjustments for add new
-                const fields = this.fwStore.showform_fields;
+                const fields = this.fwStore.tabbedShowFormFields;
                 fields.forEach(def => {
                     if (def.type == 'added' || def.type == 'updated') def.class = 'd-none';
                 });

@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections;
+using System.Collections.Generic;
 
 namespace osafw;
 
@@ -125,6 +126,15 @@ public class FwVueController : FwDynamicController
 
         ps["field_id"] = model0.field_id;
         ps["view_list_custom"] = Utils.qh(this.view_list_custom, "1");
+
+        // add form tabs with tab-specific field definitions if configured
+        if (config["form_tabs"] is IList form_tabs && form_tabs.Count > 1)
+        {
+            var formTabs = new FwList(form_tabs);
+            ps["form_tabs"] = formTabs;
+            ps["show_fields_tabs"] = buildFormTabFields("show_fields", formTabs);
+            ps["showform_fields_tabs"] = buildFormTabFields("showform_fields", formTabs);
+        }
 
         //return view form definitions
         ps["show_fields"] = this.config["show_fields"];
@@ -328,12 +338,17 @@ public class FwVueController : FwDynamicController
         var att_links = new IntList(); //linked att ids
         var att_files = new FwDict(); // per-field: field => [ids]
 
-        var fields = this.config[mode == "edit" ? "showform_fields" : "show_fields"] is IList fields1 ? new FwList(fields1) : [];
+        var fields = collectFormFields(mode == "edit" ? "showform_fields" : "show_fields");
+        var processed_fields = new HashSet<string>();
         foreach (FwDict def in fields)
         {
             var field_name = def["field"].toStr();
             var model_name = def["lookup_model"].toStr();
             var dtype = def["type"].toStr();
+            var processed_key = $"{dtype}:{field_name}";
+            if (processed_fields.Contains(processed_key))
+                continue;
+            processed_fields.Add(processed_key);
             if (dtype == "autocomplete" || dtype == "plaintext_autocomplete")
             {
                 if (def["lookup_by_value"].toBool())
@@ -457,6 +472,53 @@ public class FwVueController : FwDynamicController
         ps["i"] = item;
         ps["_json"] = true;
         return ps;
+    }
+
+    /// <summary>
+    /// Build a mapping of form tab codes to their configured fields to support Vue tab rendering.
+    /// </summary>
+    /// <param name="prefix">The config prefix (show_fields or showform_fields).</param>
+    /// <param name="formTabs">Tab definitions from config.</param>
+    /// <returns>A dictionary keyed by tab code with field definitions for each tab.</returns>
+    private FwDict buildFormTabFields(string prefix, FwList formTabs)
+    {
+        var tabFields = new FwDict();
+        foreach (FwDict tab in formTabs)
+        {
+            var tabCode = tab["tab"].toStr();
+            var fields = getConfigShowFormFieldsByTab(prefix, tabCode);
+            if (fields.Count > 0)
+                tabFields[tabCode] = fields;
+        }
+
+        return tabFields;
+    }
+
+    /// <summary>
+    /// Collect fields from the base config and any tab-specific overrides for Vue payloads.
+    /// </summary>
+    /// <param name="prefix">The config prefix (show_fields or showform_fields).</param>
+    /// <returns>Combined list of field definitions across all tabs.</returns>
+    private FwList collectFormFields(string prefix)
+    {
+        var allFields = new FwList();
+        if (config[prefix] is IList fields)
+            allFields.AddRange(new FwList(fields));
+
+        if (config["form_tabs"] is IList form_tabs)
+        {
+            foreach (FwDict tab in form_tabs)
+            {
+                var tabCode = tab["tab"].toStr();
+                if (tabCode.Length == 0)
+                    continue;
+                var tabFields = getConfigShowFormFieldsByTab(prefix, tabCode);
+                if (tabFields.Count > 0)
+                    allFields.AddRange(tabFields);
+            }
+        }
+
+        return allFields;
     }
 
     public override FwDict? SaveAction(int id = 0)
