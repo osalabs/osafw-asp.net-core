@@ -213,6 +213,16 @@ let getters = {
         if (lookup_tpl) {
             return state.lookups[lookup_tpl] ?? [];
         }
+        if (state.form_tabs?.length) {
+            const tabbed = state.showform_fields_tabs ?? {};
+            for (const key of Object.keys(tabbed)) {
+                const defs = tabbed[key] ?? [];
+                const match = defs.find(item => item.field === def.field_name);
+                if (!match) continue;
+                if (match.lookup_model) return state.lookups[match.lookup_model] ?? [];
+                if (match.lookup_tpl) return state.lookups[match.lookup_tpl] ?? [];
+            }
+        }
     },
     fieldsToTree: () => (arr) => {
         //return hierarchial array of plain array of fields:
@@ -448,7 +458,9 @@ let actions = {
 
             //add all other def attributes to header (if not exists in header yet)
             Object.keys(def).forEach(attr => {
-                if (header[attr] === undefined) header[attr] = def[attr];
+                if (header[attr] === undefined || header[attr] === null || header[attr] === '') {
+                    header[attr] = def[attr];
+                }
             });
 
             return header;
