@@ -102,6 +102,284 @@
     },
 
     "is_dynamic_show": true,
+    "form_tabs": [
+        {
+            "tab": "main",
+            "label": "Main"
+        },
+        {
+            "tab": "details",
+            "label": "Details"
+        },
+        {
+            "tab": "relations",
+            "label": "Relations"
+        },
+        {
+            "tab": "meta",
+            "label": "Files & Status"
+        }
+    ],
+    "show_fields_main": [
+        {
+            "type": "row",
+            "class": ""
+        },
+            {
+                "type": "col",
+                "class": "col-lg-6"
+            },
+                {
+                    "field": "parent_id",
+                    "label": "Parent",
+                    "lookup_model": "Demos",
+                    "lookup_field": "iname",
+                    "type": "plaintext_link",
+                    "admin_url": "/Admin/DemosVue"
+                },
+                {
+                    "field": "demo_dicts_id",
+                    "label": "DemoDicts",
+                    "lookup_table": "demo_dicts",
+                    "lookup_field": "iname",
+                    "type": "plaintext"
+                },
+                {
+                    "field": "iname",
+                    "label": "Title",
+                    "type": "plaintext"
+                },
+                {
+                    "field": "idesc",
+                    "label": "Description",
+                    "type": "markdown"
+                },
+                {
+                    "field": "idesc2",
+                    "label": "Wysiwyg editor",
+                    "type": "noescape"
+                },
+                {
+                    "field": "idesc3",
+                    "label": "Wysiwyg editor short",
+                    "type": "noescape"
+                },
+                {
+                    "field": "email",
+                    "label": "Email",
+                    "type": "plaintext"
+                },
+            {
+                "type": "col_end"
+            },
+        {
+            "type": "row_end"
+        }
+    ],
+    "show_fields_details": [
+        {
+            "type": "row",
+            "class": ""
+        },
+            {
+                "type": "col",
+                "class": "col-lg-6"
+            },
+                {
+                    "type": "row",
+                    "class": ""
+                },
+                    {
+                        "type": "col",
+                        "class": "col-lg-6"
+                    },
+                        {
+                            "field": "fint",
+                            "label": "Integer",
+                            "type": "plaintext",
+                            "class_label": "col-md-3 col-lg-6",
+                            "class_contents": "col-3"
+                        },
+                    {
+                        "type": "col_end"
+                    },
+                    {
+                        "type": "col",
+                        "class": "col-lg-6"
+                    },
+                        {
+                            "field": "ffloat",
+                            "label": "Real",
+                            "type": "float",
+                            "class_label": "col-md-3 col-lg-6",
+                            "class_contents": "col-3"
+                        },
+                    {
+                        "type": "col_end"
+                    },
+                {
+                    "type": "row_end"
+                },
+                {
+                    "field": "fcombo",
+                    "label": "Combo",
+                    "type": "plaintext",
+                    "lookup_tpl": "/common/sel/fcombo.sel"
+                },
+                {
+                    "field": "fradio",
+                    "label": "Radio",
+                    "type": "plaintext",
+                    "lookup_tpl": "/common/sel/fcombo.sel"
+                },
+                {
+                    "field": "fyesno",
+                    "label": "Yes or No",
+                    "type": "plaintext",
+                    "lookup_tpl": "/common/sel/yn_bool.sel"
+                },
+                {
+                    "field": "is_checkbox",
+                    "label": "Checkbox",
+                    "type": "checkbox"
+                },
+                {
+                    "type": "fieldset",
+                    "label": "Dates",
+                    "class": "mb-3"
+                },
+                {
+                    "field": "fdate_combo",
+                    "label": "Date combo",
+                    "type": "date"
+                },
+                {
+                    "field": "fdate_pop",
+                    "label": "Date popup",
+                    "type": "date"
+                },
+                {
+                    "field": "fdatetime",
+                    "label": "Date and Time",
+                    "type": "date_long"
+                },
+                {
+                    "field": "ftime",
+                    "label": "Time",
+                    "type": "plaintext",
+                    "conv": "time_from_seconds"
+                },
+                {
+                    "type": "fieldset_end"
+                },
+            {
+                "type": "col_end"
+            },
+        {
+            "type": "row_end"
+        }
+    ],
+    "show_fields_relations": [
+        {
+            "type": "row",
+            "class": ""
+        },
+            {
+                "type": "col",
+                "class": "col-lg-6"
+            },
+                {
+                    "field": "id",
+                    "label": "ID",
+                    "type": "plaintext"
+                },
+                {
+                    "field": "dict_link_auto_id",
+                    "label": "DemoDicts Autocomplete",
+                    "type": "plaintext_autocomplete",
+                    "lookup_model": "DemoDicts",
+                    "lookup_field": "iname"
+                },
+                {
+                    "field": "dict_link_multi",
+                    "label": "DemoDicts Multi",
+                    "type": "multi",
+                    "lookup_model": "DemoDicts",
+                    "lookup_params": "some optional params"
+                },
+                {
+                    "field": "demo_dicts_link",
+                    "label": "DemoDicts via Link Table",
+                    "type": "multi",
+                    "model": "DemosDemoDicts"
+                },
+                {
+                    "field": "demos_items",
+                    "label": "Subtable",
+                    "class_label": "col-12 text-start",
+                    "type": "subtable",
+                    "model": "DemosItems"
+                },
+            {
+                "type": "col_end"
+            },
+        {
+            "type": "row_end"
+        }
+    ],
+    "show_fields_meta": [
+        {
+            "type": "row",
+            "class": ""
+        },
+            {
+                "type": "col",
+                "class": "col-lg-6"
+            },
+                {
+                    "field": "att_id",
+                    "label": "Attachment",
+                    "type": "att",
+                    "class_contents": "col-md-3"
+                },
+                {
+                    "field": "",
+                    "label": "Multiple Attachments",
+                    "type": "att_links"
+                },
+                {
+                    "field": "_att_files",
+                    "label": "Files Upload",
+                    "type": "att_files",
+                    "att_category": "general"
+                },
+                {
+                    "field": "status",
+                    "label": "Status",
+                    "type": "plaintext",
+                    "lookup_tpl": "/common/sel/status.sel"
+                },
+                {
+                    "field": "add_time",
+                    "label": "Added on",
+                    "type": "added"
+                },
+                {
+                    "field": "upd_time",
+                    "label": "Updated on",
+                    "type": "updated"
+                },
+                {
+                    "is_custom": true,
+                    "field": "some_custom_field"
+                },
+            {
+                "type": "col_end"
+            },
+        {
+            "type": "row_end"
+        }
+    ],
     "show_fields": [
         {
             "type": "row",
@@ -325,6 +603,305 @@
     ],
 
     "is_dynamic_showform": true,
+    "showform_fields_main": [
+        {
+            "type": "row"
+        },
+            {
+                "type": "col",
+                "class": "col-lg-6"
+            },
+                {
+                    "field": "parent_id",
+                    "label": "Parent (TODO)",
+                    "lookup_model": "Demos",
+                    "type": "select",
+                    "is_option0": true,
+                    "option0_title": "- none -",
+                    "class_contents": "col-md-6",
+                    "attrs_control": "data-noautosave=\"true\""
+                },
+                {
+                    "field": "demo_dicts_id",
+                    "label": "DemoDicts",
+                    "lookup_model": "DemoDicts",
+                    "type": "select",
+                    "is_option_empty": true,
+                    "class_contents": "col-md-6",
+                    "class_control": "on-refresh",
+                    "append": [
+                      {
+                        "event": "add",
+                        "class": "",
+                        "icon": "bi bi-plus",
+                        "label": "",
+                        "hint": "Add New"
+                      }
+                    ]
+                },
+                {
+                    "field": "iname",
+                    "label": "Title",
+                    "type": "input",
+                    "required": true,
+                    "maxlength": 64
+                },
+                {
+                    "field": "idesc",
+                    "label": "Description",
+                    "type": "textarea",
+                    "rows": "5",
+                    "class_control": "markdown autoresize"
+                },
+                {
+                    "field": "idesc2",
+                    "label": "Wysiwyg editor",
+                    "type": "textarea",
+                    "rows": "10",
+                    "class_control": "fw-html-editor",
+                    "help_text": "uncomment /common/html_editor in load_script.html"
+                },
+                {
+                    "field": "idesc3",
+                    "label": "Wysiwyg editor short",
+                    "type": "textarea",
+                    "rows": "10",
+                    "class_control": "fw-html-editor-short",
+                    "help_text": "uncomment /common/html_editor in load_script.html"
+                },
+                {
+                    "field": "email",
+                    "label": "Email (unique)",
+                    "type": "email",
+                    "required": true,
+                    "validate": "exists isemail",
+                    "maxlength": 128
+                },
+            {
+                "type": "col_end"
+            },
+        {
+            "type": "row_end"
+        }
+    ],
+    "showform_fields_details": [
+        {
+            "type": "row"
+        },
+            {
+                "type": "col",
+                "class": "col-lg-6"
+            },
+                {
+                    "type": "row",
+                    "class": "row form-row"
+                },
+                    {
+                        "field": "fint",
+                        "label": "Integer",
+                        "type": "number",
+                        "min": 0,
+                        "max": 999999,
+                        "class_label": "col-3",
+                        "class_contents": "col-md-3",
+                        "class": false,
+                        "prepend": [
+                          {
+                            "event": "check",
+                            "class": "",
+                            "icon": "bi bi-check",
+                            "label": "",
+                            "hint": "Check"
+                          }
+                        ]
+                    },
+                    {
+                        "field": "ffloat",
+                        "label": "Real",
+                        "type": "number",
+                        "step": 0.1,
+                        "class_label": "col-3",
+                        "class_contents": "col",
+                        "class": false
+                    },
+                {
+                    "type": "row_end"
+                },
+                {
+                    "field": "fcombo",
+                    "label": "Combo",
+                    "type": "select",
+                    "lookup_tpl": "/common/sel/fcombo.sel",
+                    "class_contents": "col-md-6"
+                },
+                {
+                    "field": "fradio",
+                    "label": "Radio",
+                    "type": "radio",
+                    "lookup_tpl": "/common/sel/fcombo.sel",
+                    "is_inline": true,
+                    "class_contents": "col d-flex align-items-center"
+                },
+                {
+                    "field": "fyesno",
+                    "label": "Yes or No",
+                    "type": "yesno",
+                    "is_inline": true,
+                    "class_contents": "col d-flex align-items-center"
+                },
+                {
+                    "field": "is_checkbox",
+                    "label": "Checkbox",
+                    "type": "cb",
+                    "class_contents": "col d-flex align-items-center"
+                },
+                {
+                    "type": "fieldset",
+                    "label": "Dates",
+                    "class": "mb-3"
+                },
+                {
+                    "field": "fdate_combo",
+                    "label": "Date combo",
+                    "type": "date_combo"
+                },
+                {
+                    "field": "fdate_pop",
+                    "label": "Date popup",
+                    "type": "date_popup",
+                    "class_contents": "col-md-4"
+                },
+                {
+                    "field": "fdatetime",
+                    "label": "Date and Time",
+                    "type": "datetime_popup",
+                    "default_time": "now",
+                    "class_contents": "col-md-5"
+                },
+                {
+                    "field": "ftime",
+                    "label": "Time",
+                    "type": "time"
+                },
+                {
+                    "type": "fieldset_end"
+                },
+            {
+                "type": "col_end"
+            },
+        {
+            "type": "row_end"
+        }
+    ],
+    "showform_fields_relations": [
+        {
+            "type": "row"
+        },
+            {
+                "type": "col",
+                "class": "col-lg-6"
+            },
+                {
+                    "field": "id",
+                    "label": "ID",
+                    "type": "id"
+                },
+                {
+                    "field": "dict_link_auto_id",
+                    "label": "DemoDicts Autocomplete",
+                    "type": "autocomplete",
+                    "autocomplete_url": "/Admin/DemosVue/(Autocomplete)?q=",
+                    "lookup_model": "DemoDicts",
+                    "lookup_field": "iname",
+                    "help_text": "will add new items to DemoDicts"
+                },
+                {
+                    "field": "dict_link_multi",
+                    "label": "DemoDicts Multi",
+                    "type": "multicb",
+                    "lookup_model": "DemoDicts",
+                    "lookup_params": "some optional params"
+                },
+                {
+                    "field": "demo_dicts_link",
+                    "label": "DemoDicts via Link Table",
+                    "type": "multicb",
+                    "model": "DemosDemoDicts"
+                },
+                {
+                    "field": "demos_items",
+                    "label": "Subtable",
+                    "class_label": "col-12 text-start",
+                    "type": "subtable_edit",
+                    "model": "DemosItems",
+                    "related_field_name": "demos_id",
+                    "save_fields": "demo_dicts_id iname idesc",
+                    "save_fields_checkboxes": "is_checkbox|0",
+                    "required_fields": "demo_dicts_id iname"
+                },
+            {
+                "type": "col_end"
+            },
+        {
+            "type": "row_end"
+        }
+    ],
+    "showform_fields_meta": [
+        {
+            "type": "row"
+        },
+            {
+                "type": "col",
+                "class": "col-lg-6"
+            },
+                {
+                    "field": "att_id",
+                    "label": "Attachment",
+                    "type": "att_edit",
+                    "att_category": "general"
+                },
+                {
+                    "field": "_att_links",
+                    "label": "Multiple Attachments",
+                    "type": "att_links_edit",
+                    "att_post_prefix": "att"
+                },
+                {
+                    "field": "_att_files",
+                    "label": "Files Upload",
+                    "type": "att_files_edit",
+                    "multiple": true,
+                    "att_category": "general",
+                    "att_post_prefix": "att_files1"
+                },
+                {
+                    "field": "status",
+                    "label": "Status",
+                    "type": "select",
+                    "lookup_tpl": "/common/sel/status.sel",
+                    "class_contents": "col-md-6"
+                },
+                {
+                    "field": "add_time",
+                    "label": "Added on",
+                    "type": "added"
+                },
+                {
+                    "field": "upd_time",
+                    "label": "Updated on",
+                    "type": "updated"
+                },
+                {
+                    "is_custom": true,
+                    "field": "some_custom_field"
+                },
+            {
+                "type": "col_end"
+            },
+        {
+            "type": "row_end"
+        }
+    ],
     "showform_fields": [
         {
             "type": "row"
