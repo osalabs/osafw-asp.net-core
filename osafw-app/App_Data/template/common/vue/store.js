@@ -547,17 +547,21 @@ let actions = {
     },
     onLoadIndexSuccess() { }, // hook for custom actions after loadIndex
     //load single item for view/edit
-    async loadItem(id, mode) {
+    async loadItem(id, mode, extraQuery = null) {
         try {
             if (!this.is_loading_item) {
                 this.startItemLoading();
             }
-            let q = {};
+            let query = {};
             if (mode == 'edit') {
-                q = { query: { mode: mode } };
+                query.mode = mode;
             }
+            if (extraQuery) {
+                query = { ...query, ...extraQuery };
+            }
+            const options = Object.keys(query).length ? { query: query } : undefined;
 
-            const data = await this.api.get(id, q);
+            const data = await this.api.get(id, options);
             //console.log('loadItem data', data);
             this.edit_data = data;
 

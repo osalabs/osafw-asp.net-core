@@ -300,6 +300,12 @@ public class FwVueController : FwDynamicController
         return ps;
     }
 
+    /// <summary>
+    /// Return view/edit payload for Vue screens, including dynamic activity log and user list
+    /// data so the Vue UI can render the same blocks as dynamic templates.
+    /// </summary>
+    /// <param name="id">Primary key for the item to load.</param>
+    /// <returns>FwDict payload for Vue view/edit screen or null if redirect performed.</returns>
     public override FwDict? ShowAction(int id = 0)
     {
         if (!fw.isJsonExpected())
@@ -429,6 +435,20 @@ public class FwVueController : FwDynamicController
 
         // fill added/updated too
         setAddUpdUser(ps, item);
+
+        // userlists support if necessary
+        if (this.is_userlists)
+            this.setUserLists(ps, id);
+
+        if (is_activity_logs)
+        {
+            initFilter();
+
+            list_filter["tab_activity"] = list_filter["tab_activity"].toStr(FwActivityLogs.TAB_COMMENTS);
+            ps["list_filter"] = list_filter;
+            ps["activity_entity"] = model0.table_name;
+            ps["activity_rows"] = fw.model<FwActivityLogs>().listByEntityForUI(model0.table_name, id, list_filter["tab_activity"].toStr());
+        }
 
         model0.filterForJson(item);
 
