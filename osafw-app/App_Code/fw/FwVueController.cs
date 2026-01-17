@@ -51,7 +51,7 @@ public class FwVueController : FwDynamicController
     {
         //extract autocomplete fields
         FwList ac_fields = [];
-        FwList fields = this.config["showform_fields"] is IList fields1 ? new FwList(fields1) : [];
+        FwList fields = collectFormFields("showform_fields");
         foreach (FwDict def in fields)
         {
             //var field_name = def["field"].toStr();
@@ -195,7 +195,7 @@ public class FwVueController : FwDynamicController
         if (list_headers.Count == 0)
             setViewList(false); // initialize list_headers and related (can already be initialized in setScopeInitial)
 
-        FwList showform_fields = this.config["showform_fields"] is IList fields1 ? new FwList(fields1) : [];
+        FwList showform_fields = collectFormFields("showform_fields");
         //FwRow hfields = _fieldsToHash(showform_fields);
 
         // extract lookups from config and add to ps
