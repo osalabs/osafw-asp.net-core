@@ -71,6 +71,14 @@
         "dist/chart.umd.min.js"
       ]
     },
+    {
+      "provider": "jsdelivr",
+      "library": "echarts@5.5.0",
+      "destination": "wwwroot/assets/lib/echarts",
+      "files": [
+        "dist/echarts.min.js"
+      ]
+    },
 
     {
       "library": "bootstrap-markdown@2.10.0",

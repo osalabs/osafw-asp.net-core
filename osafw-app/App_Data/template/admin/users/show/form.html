@@ -1,3 +1,142 @@
-    <~fields repeat inline>
-      <~/common/form/show/one_field unless="is_custom">
-    </~fields>
+<div class="row">
+  <div class="col-lg-6">
+    <div class="row form-row">
+      <label class="col-form-label required col-md-3">Em<span style="display:none">hack: disable autofill for Chrome</span>ail</label>
+      <div class="col">
+        <p class="form-control-plaintext"><~i[email]></p>
+      </div>
+    </div>
+    <div class="row form-row">
+      <label class="col-form-label col-md-3">`Password`</label>
+      <div class="col-6 col-md-5">
+        <p class="form-control-plaintext">********</p>
+      </div>
+    </div>
+
+    <div class="row form-row">
+      <label class="col-form-label col-md-3">`MFA`</label>
+      <div class="col">
+        <p class="form-control-plaintext">
+        <~mfa_no unless="i[mfa_secret]" inline>
+          <span class="badge text-bg-warning">`Multi-Factor Authentication Is Not Enabled`</span>
+        </~mfa_no>
+        <~mfa_yes if="i[mfa_secret]" inline>
+          <span class="badge text-bg-success">`Multi-Factor Authentication Enabled`</span>
+        </~mfa_yes>
+        </p>
+      </div>
+    </div>
+
+    <div class="row form-row">
+      <label class="col-form-label required col-md-3">`Access Level`</label>
+      <div class="col-md-6 col-xl-4">
+        <p class="form-control-plaintext"><~/common/sel/access_level.sel selvalue="i[access_level]"></p>
+      </div>
+      <div class="col d-flex align-items-center">
+        <p class="form-control-plaintext mb-0"><~is_readonly if="i[is_readonly]" inline>`Read Only?`</~is_readonly><~is_readonly_no unless="i[is_readonly]" inline>`Read/Write`</~is_readonly_no></p>
+      </div>
+    </div>
+
+    <div class="row form-row">
+      <label class="col-form-label col-md-3">`First Name`</label>
+      <div class="col col-xl-6">
+        <p class="form-control-plaintext"><~i[fname]></p>
+      </div>
+    </div>
+    <div class="row form-row">
+      <label class="col-form-label col-md-3">`Last Name`</label>
+      <div class="col col-xl-6">
+        <p class="form-control-plaintext"><~i[lname]></p>
+      </div>
+    </div>
+    <div class="row form-row">
+      <label class="col-form-label col-md-3">`Title`</label>
+      <div class="col">
+        <p class="form-control-plaintext"><~i[title]></p>
+      </div>
+    </div>
+
+    <div class="row form-row">
+      <label class="col-form-label col-md-3">`Address 1`</label>
+      <div class="col">
+        <p class="form-control-plaintext"><~i[address1]></p>
+      </div>
+    </div>
+    <div class="row form-row">
+      <label class="col-form-label col-md-3">`Address 2`</label>
+      <div class="col">
+        <p class="form-control-plaintext"><~i[address2]></p>
+      </div>
+    </div>
+    <div class="row form-row">
+      <label class="col-form-label col-md-3">`City`</label>
+      <div class="col-md-3">
+        <p class="form-control-plaintext"><~i[city]></p>
+      </div>
+      <label class="col-form-label col-md-1">`State`</label>
+      <div class="col-md-2">
+        <p class="form-control-plaintext"><~/common/sel/state.sel selvalue="i[state]"></p>
+      </div>
+      <label class="col-form-label col-md-1">`Zip`</label>
+      <div class="col-md-2">
+        <p class="form-control-plaintext"><~i[zip]></p>
+      </div>
+    </div>
+
+    <div class="row form-row">
+      <label class="col-form-label col-md-3">`Phone`</label>
+      <div class="col-md-3">
+        <p class="form-control-plaintext"><~i[phone]></p>
+      </div>
+    </div>
+
+    <div class="row form-row">
+      <label class="col-form-label col-md-3">`Picture`</label>
+      <div class="col">
+        <~att_block if="att" inline>
+          <div class="card text-center att-info">
+            <img class="card-img-top" src="<~/att/url>/<~att[icode]>?preview=1&size=s" alt="">
+            <div class="card-body text-truncate">
+              <p class="card-text att-iname"><~att[iname]></p>
+              <a href="<~/att/url>/<~att[icode]>" target="_blank" class="btn btn-default btn-sm" title="`Download`"><i class="bi bi-cloud-download-fill"></i></a>
+            </div>
+          </div>
+        </~att_block>
+        <~att_block_empty unless="att" inline>
+          <p class="form-control-plaintext text-muted">`No picture`</p>
+        </~att_block_empty>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <~/common/form/id>
+    <div class="row form-row">
+      <label class="col-form-label col-md-3">`Status`</label>
+      <div class="col-md-3">
+        <p class="form-control-plaintext"><~/admin/users/status.sel selvalue="i[status]"></p>
+      </div>
+    </div>
+    <~/common/form/added if="id">
+    <~/common/form/updated if="i[upd_users_id]">
+
+    <div class="row form-row">
+      <label class="col-form-label col-md-3">`Last Login Time`</label>
+      <div class="col-md-3">
+        <p class="form-control-plaintext"><~i[login_time] date="long"></p>
+      </div>
+    </div>
+
+    <~roles_block if="is_roles">
+      <div class="row form-row">
+        <label class="col-form-label col-md-3">`Roles`</label>
+        <div class="col">
+          <~roles_link repeat inline>
+            <~role_checked if="is_checked" inline>
+              <span class="badge text-bg-secondary me-1"><~iname></span>
+            </~role_checked>
+          </~roles_link>
+        </div>
+      </div>
+    </~roles_block>
+  </div>
+</div>

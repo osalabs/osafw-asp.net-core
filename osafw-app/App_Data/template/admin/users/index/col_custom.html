@@ -1,4 +1,7 @@
 <~/common/sel/access_level.sel selvalue="data" ifeq="field_name" value="access_level">
 <~/common/sel/yn.sel selvalue="data" ifeq="field_name" value="is_readonly">
 <~col_status>
+<~last_logins ifeq="field_name" value="last_logins" inline>
+  <div class="last-logins-chart" style="height:32px; width:120px;" data-logins='<~data>'></div>
+</~last_logins>
 <~col_is_mfa ifeq="field_name" value="is_mfa">

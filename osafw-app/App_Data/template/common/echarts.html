@@ -1,0 +1,53 @@
+<script src="<~GLOBAL[ASSETS_URL]>/lib/echarts/echarts.min.js"></script>
+<script>
+  window.fwEcharts = window.fwEcharts || {};
+
+  window.fwEcharts.ensureChart = function (el, options) {
+    if (!el || !window.echarts) {
+      return null;
+    }
+    var chart = window.echarts.init(el);
+    chart.setOption(options);
+    window.addEventListener("resize", function () {
+      chart.resize();
+    });
+    return chart;
+  };
+
+  window.fwEcharts.renderMiniBar = function (el, labels, values) {
+    if (!el) {
+      return null;
+    }
+    var option = {
+      grid: { left: 2, right: 2, top: 2, bottom: 2 },
+      xAxis: {
+        type: "category",
+        data: labels,
+        axisLine: { show: false },
+        axisTick: { show: false },
+        axisLabel: { show: false }
+      },
+      yAxis: {
+        type: "value",
+        axisLine: { show: false },
+        axisTick: { show: false },
+        axisLabel: { show: false },
+        splitLine: { show: false }
+      },
+      tooltip: {
+        trigger: "axis",
+        axisPointer: { type: "shadow" }
+      },
+      series: [
+        {
+          type: "bar",
+          data: values,
+          barWidth: "60%",
+          itemStyle: { color: "#0d6efd" }
+        }
+      ]
+    };
+
+    return window.fwEcharts.ensureChart(el, option);
+  };
+</script>

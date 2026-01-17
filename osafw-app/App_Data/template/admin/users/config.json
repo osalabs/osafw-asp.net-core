@@ -1,11 +1,11 @@
 {
   "1": "1",
   "list_view": "users",
-  "view_list_defaults": "id email fname lname access_level status is_mfa",
+  "view_list_defaults": "id email fname lname access_level status last_logins is_mfa",
   "list_sortdef": "id",
   "related_field_name": "",
   "search_fields": "!id email fname lname",
-  "view_list_custom": "access_level is_readonly status is_mfa",
+  "view_list_custom": "access_level is_readonly status last_logins is_mfa",
   "view_list_map": {
     "id": "ID",
     "email": "Email",
@@ -22,6 +22,7 @@
     "phone": "Phone",
     "idesc": "Notes",
     "status": "Status",
+    "last_logins": "Last Logins",
     "login_time": "Last Login Time",
     "is_readonly": "Read Only?",
     "is_mfa": "MFA?",

@@ -1,20 +1,31 @@
-<~pane_title if="title">
 <div class="chart-container">
-    <canvas id="chart_<~id>"></canvas>
+    <div id="chart_<~id>" style="height:220px;"></div>
 </div>
-
 <script>
-    document.addEventListener("DOMContentLoaded", function(){
-        var myChart = new Chart("chart_<~id>", {
-            type: 'bar',
-            data: {
-                labels: [<~rows repeat inline>"<~ilabel>",</~rows>], //zzz
-                datasets: [{
-                    data: [<~rows repeat inline ivalues><~ivalue>,</~rows>] //zzz
-                }]
-            },
-            options: {
-            }
-        });
+  (function () {
+    var el = document.getElementById("chart_<~id>");
+    if (!el || !window.fwEcharts) {
+      return;
+    }
+    var rows = <~rows json> || [];
+    var labels = rows.map(function (row) { return row.ilabel; });
+    var values = rows.map(function (row) { return Number(row.ivalue || 0); });
+    window.fwEcharts.ensureChart(el, {
+      tooltip: { trigger: "axis" },
+      grid: { left: 32, right: 16, top: 16, bottom: 24 },
+      xAxis: {
+        type: "category",
+        data: labels,
+        axisLabel: { fontSize: 10 }
+      },
+      yAxis: { type: "value" },
+      series: [
+        {
+          type: "bar",
+          data: values,
+          itemStyle: { color: "#0d6efd" }
+        }
+      ]
     });
+  })();
 </script>
