@@ -17,6 +17,11 @@
                                     <input ref="file1" type="file" @change.stop="onSave">
                                 </span>
                             </div>
+                            <div class="col">
+                                <button type="button" class="btn btn-outline-primary" @click="onClipboard">
+                                    <i class="bi bi-clipboard-plus"></i><span class="ms-1">From Clipboard</span>
+                                </button>
+                            </div>
                             <label class="col col-form-label me-3">`or choose from existing uploads, category`:</label>
                             <div class="col">
                                 <select v-model="att_categories_id" class="form-select" @change.stop="onChangeCategory">
@@ -39,6 +44,61 @@
                     </div>
                 </div>
 
+            </div>
+        </div>
+
+        <div id="modal-att-preview" class="modal fade text-start" tabindex="-1" role="dialog" ref="modal_att_preview">
+            <div class="modal-dialog modal-dialog-centered" role="document" :style="preview_dialog_style">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Preview and Annotate Image</h5>
+                        <button type="button" class="btn-close" @click="onPreviewCancel" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                    Draw shape: {{shapeLabel}}
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><button class="dropdown-item" type="button" @click="onShapeSelect('ellipse')">Ellipse</button></li>
+                                    <li><button class="dropdown-item" type="button" @click="onShapeSelect('square')">Square</button></li>
+                                    <li><button class="dropdown-item" type="button" @click="onShapeSelect('circle')">Circle</button></li>
+                                    <li><button class="dropdown-item" type="button" @click="onShapeSelect('arrow')">Pointed arrow</button></li>
+                                </ul>
+                            </div>
+                            <button type="button" class="btn btn-outline-secondary" :class="{ active: draw_mode === 'pen' }" @click="setDrawMode('pen')">Pen</button>
+                            <button type="button" class="btn btn-outline-secondary" :class="{ active: draw_mode === 'text' }" @click="setDrawMode('text')">Text</button>
+                            <label class="btn btn-outline-secondary d-flex align-items-center gap-2">
+                                <input class="form-control form-control-color" type="color" v-model="draw_color" aria-label="Select color">
+                                <span>Color</span>
+                            </label>
+                            <button type="button" class="btn btn-outline-secondary" @click="onUndo" :disabled="actions.length === 0">Undo</button>
+                            <button type="button" class="btn btn-primary" @click="onPreviewSave" :disabled="!preview_ready">Save</button>
+                            <button type="button" class="btn btn-outline-secondary" @click="onPreviewCancel">Cancel</button>
+                        </div>
+                        <div class="att-preview-area position-relative" ref="preview_area" :style="preview_area_style">
+                            <canvas ref="preview_canvas"
+                                    class="border rounded"
+                                    :width="preview_canvas_width"
+                                    :height="preview_canvas_height"
+                                    @pointerdown="onCanvasPointerDown"
+                                    @pointermove="onCanvasPointerMove"
+                                    @pointerup="onCanvasPointerUp"
+                                    @pointerleave="onCanvasPointerUp"></canvas>
+                            <textarea v-if="text_input.active"
+                                      ref="text_input"
+                                      v-model="text_input.text"
+                                      class="position-absolute form-control att-preview-text-input"
+                                      :style="text_input.style"
+                                      rows="1"
+                                      @keydown.enter.prevent="commitTextInput"
+                                      @keydown.esc.prevent="cancelTextInput"
+                                      @input="renderPreviewCanvas"
+                                      @blur="commitTextInput"></textarea>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </Teleport>
@@ -65,17 +125,60 @@
             att_categories_id: 0,
             att_categories: [],
             att_rows: [],
-            modal: null
+            modal: null,
+            preview_modal: null,
+            preview_ready: false,
+            preview_dialog_style: {},
+            preview_area_style: {},
+            preview_canvas_width: 0,
+            preview_canvas_height: 0,
+            preview_image: null,
+            preview_image_url: '',
+            preview_filename: 'clipboard.png',
+            preview_scale: 1,
+            draw_mode: 'shape',
+            draw_shape: 'ellipse',
+            draw_color: '#ff0000',
+            line_width: 3,
+            actions: [],
+            current_action: null,
+            is_drawing: false,
+            text_input: {
+                active: false,
+                x: 0,
+                y: 0,
+                text: '',
+                style: {}
+            },
+            resize_handler: null
         }),
         computed: {
+            shapeLabel() {
+                const labels = {
+                    ellipse: 'Ellipse',
+                    square: 'Square',
+                    circle: 'Circle',
+                    arrow: 'Pointed arrow'
+                };
+                return labels[this.draw_shape] ?? 'Ellipse';
+            }
         },
         mounted() {
             //console.log('att select mounted');
             this.att_category = this.category;
             this.showModal();
+            this.resize_handler = () => {
+                if (this.preview_ready) {
+                    this.updatePreviewLayout();
+                }
+            };
+            window.addEventListener('resize', this.resize_handler);
         },
         unmounted() {
             //console.log('att select unmounted');
+            if (this.resize_handler) {
+                window.removeEventListener('resize', this.resize_handler);
+            }
         },
         methods: {
             showModal(e) {
@@ -88,6 +191,19 @@
                 }, { once: true });
 
                 this.loadData();
+            },
+
+            showPreviewModal() {
+                if (!this.preview_modal) {
+                    this.preview_modal = new bootstrap.Modal(this.$refs.modal_att_preview, {
+                        backdrop: 'static',
+                        keyboard: false
+                    });
+                }
+                this.preview_modal.show();
+                this.$refs.modal_att_preview.addEventListener('shown.bs.modal', () => {
+                    this.renderPreviewCanvas();
+                }, { once: true });
             },
 
             async loadData() {
@@ -137,6 +253,378 @@
                 }
             },
 
+            async onClipboard() {
+                if (!navigator.clipboard?.read) {
+                    Toast('Clipboard image access is not available in this browser.', { theme: 'text-bg-danger' });
+                    return;
+                }
+                try {
+                    const clipboardItems = await navigator.clipboard.read();
+                    let imageBlob = null;
+                    for (const item of clipboardItems) {
+                        const imageType = item.types.find(type => type.startsWith('image/'));
+                        if (imageType) {
+                            imageBlob = await item.getType(imageType);
+                            this.preview_filename = 'clipboard.' + (imageType.split('/')[1] ?? 'png');
+                            break;
+                        }
+                    }
+                    if (!imageBlob) {
+                        Toast('Clipboard does not contain an image.', { theme: 'text-bg-danger' });
+                        return;
+                    }
+                    this.loadPreviewImage(imageBlob);
+                } catch (error) {
+                    console.error(error);
+                    Toast('Unable to read clipboard image.', { theme: 'text-bg-danger' });
+                }
+            },
+
+            loadPreviewImage(blob) {
+                if (this.preview_image_url) {
+                    URL.revokeObjectURL(this.preview_image_url);
+                }
+                this.preview_image_url = URL.createObjectURL(blob);
+                const img = new Image();
+                img.onload = () => {
+                    this.preview_image = img;
+                    this.preview_ready = true;
+                    this.actions = [];
+                    this.current_action = null;
+                    this.text_input = { active: false, x: 0, y: 0, text: '', style: {} };
+                    this.updatePreviewLayout();
+                    this.showPreviewModal();
+                    this.renderPreviewCanvas();
+                };
+                img.onerror = () => {
+                    Toast('Clipboard image could not be loaded.', { theme: 'text-bg-danger' });
+                };
+                img.src = this.preview_image_url;
+            },
+
+            updatePreviewLayout() {
+                if (!this.preview_image) {
+                    return;
+                }
+                const maxWidth = Math.max(320, window.innerWidth * 0.9);
+                const maxHeight = Math.max(240, window.innerHeight * 0.6);
+                const widthScale = maxWidth / this.preview_image.naturalWidth;
+                const heightScale = maxHeight / this.preview_image.naturalHeight;
+                const scale = Math.min(1, widthScale, heightScale);
+                this.preview_scale = scale;
+                this.preview_canvas_width = Math.round(this.preview_image.naturalWidth * scale);
+                this.preview_canvas_height = Math.round(this.preview_image.naturalHeight * scale);
+                const dialogWidth = Math.min(this.preview_canvas_width + 120, window.innerWidth * 0.95);
+                this.preview_dialog_style = {
+                    maxWidth: dialogWidth + 'px',
+                    width: dialogWidth + 'px'
+                };
+                this.preview_area_style = {
+                    maxHeight: maxHeight + 'px'
+                };
+                this.$nextTick(() => {
+                    this.renderPreviewCanvas();
+                });
+            },
+
+            setDrawMode(mode) {
+                this.draw_mode = mode;
+            },
+
+            onShapeSelect(shape) {
+                this.draw_shape = shape;
+                this.draw_mode = 'shape';
+            },
+
+            onCanvasPointerDown(event) {
+                if (!this.preview_ready) {
+                    return;
+                }
+                const point = this.getCanvasPoint(event);
+                if (this.draw_mode === 'text') {
+                    this.startTextInput(point);
+                    return;
+                }
+                this.is_drawing = true;
+                if (this.draw_mode === 'pen') {
+                    this.current_action = {
+                        type: 'pen',
+                        color: this.draw_color,
+                        lineWidth: this.line_width,
+                        points: [point]
+                    };
+                } else {
+                    this.current_action = {
+                        type: 'shape',
+                        shape: this.draw_shape,
+                        color: this.draw_color,
+                        lineWidth: this.line_width,
+                        start: point,
+                        end: point
+                    };
+                }
+            },
+
+            onCanvasPointerMove(event) {
+                if (!this.is_drawing || !this.current_action) {
+                    return;
+                }
+                const point = this.getCanvasPoint(event);
+                if (this.current_action.type === 'pen') {
+                    this.current_action.points.push(point);
+                } else {
+                    this.current_action.end = point;
+                }
+                this.renderPreviewCanvas();
+            },
+
+            onCanvasPointerUp() {
+                if (!this.is_drawing || !this.current_action) {
+                    return;
+                }
+                this.is_drawing = false;
+                this.actions.push(this.current_action);
+                this.current_action = null;
+                this.renderPreviewCanvas();
+            },
+
+            getCanvasPoint(event) {
+                const canvas = this.$refs.preview_canvas;
+                const rect = canvas.getBoundingClientRect();
+                return {
+                    x: event.clientX - rect.left,
+                    y: event.clientY - rect.top
+                };
+            },
+
+            startTextInput(point) {
+                this.text_input.active = true;
+                this.text_input.x = point.x;
+                this.text_input.y = point.y;
+                this.text_input.text = '';
+                this.text_input.style = {
+                    left: point.x + 'px',
+                    top: point.y + 'px',
+                    color: this.draw_color,
+                    minWidth: '120px'
+                };
+                this.$nextTick(() => {
+                    this.$refs.text_input?.focus();
+                });
+            },
+
+            commitTextInput() {
+                if (!this.text_input.active) {
+                    return;
+                }
+                const value = this.text_input.text.trim();
+                if (value) {
+                    this.actions.push({
+                        type: 'text',
+                        text: value,
+                        color: this.draw_color,
+                        fontSize: 18,
+                        x: this.text_input.x,
+                        y: this.text_input.y
+                    });
+                }
+                this.text_input.active = false;
+                this.text_input.text = '';
+                this.renderPreviewCanvas();
+            },
+
+            cancelTextInput() {
+                if (!this.text_input.active) {
+                    return;
+                }
+                this.text_input.active = false;
+                this.text_input.text = '';
+                this.renderPreviewCanvas();
+            },
+
+            onUndo() {
+                if (this.actions.length === 0) {
+                    return;
+                }
+                this.actions.pop();
+                this.renderPreviewCanvas();
+            },
+
+            renderPreviewCanvas() {
+                if (!this.preview_ready || !this.preview_image) {
+                    return;
+                }
+                const canvas = this.$refs.preview_canvas;
+                if (!canvas) {
+                    return;
+                }
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(this.preview_image, 0, 0, canvas.width, canvas.height);
+                for (const action of this.actions) {
+                    this.drawAction(ctx, action);
+                }
+                if (this.current_action) {
+                    this.drawAction(ctx, this.current_action);
+                }
+                if (this.text_input.active && this.text_input.text) {
+                    this.drawAction(ctx, {
+                        type: 'text',
+                        text: this.text_input.text,
+                        color: this.draw_color,
+                        fontSize: 18,
+                        x: this.text_input.x,
+                        y: this.text_input.y
+                    });
+                }
+            },
+
+            drawAction(ctx, action) {
+                ctx.save();
+                ctx.strokeStyle = action.color;
+                ctx.fillStyle = action.color;
+                ctx.lineWidth = action.lineWidth ?? this.line_width;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                if (action.type === 'pen') {
+                    ctx.beginPath();
+                    const [first, ...rest] = action.points;
+                    if (!first) {
+                        ctx.restore();
+                        return;
+                    }
+                    ctx.moveTo(first.x, first.y);
+                    rest.forEach(point => ctx.lineTo(point.x, point.y));
+                    ctx.stroke();
+                } else if (action.type === 'shape') {
+                    this.drawShape(ctx, action);
+                } else if (action.type === 'text') {
+                    ctx.font = (action.fontSize ?? 18) + 'px sans-serif';
+                    ctx.textBaseline = 'top';
+                    ctx.fillText(action.text, action.x, action.y);
+                }
+                ctx.restore();
+            },
+
+            drawShape(ctx, action) {
+                const start = action.start;
+                const end = action.end;
+                if (!start || !end) {
+                    return;
+                }
+                const width = end.x - start.x;
+                const height = end.y - start.y;
+                if (action.shape === 'ellipse') {
+                    ctx.beginPath();
+                    ctx.ellipse(start.x + width / 2, start.y + height / 2, Math.abs(width / 2), Math.abs(height / 2), 0, 0, Math.PI * 2);
+                    ctx.stroke();
+                } else if (action.shape === 'square') {
+                    const size = Math.max(Math.abs(width), Math.abs(height));
+                    const x = width < 0 ? start.x - size : start.x;
+                    const y = height < 0 ? start.y - size : start.y;
+                    ctx.strokeRect(x, y, size, size);
+                } else if (action.shape === 'circle') {
+                    const size = Math.max(Math.abs(width), Math.abs(height));
+                    const x = width < 0 ? start.x - size : start.x;
+                    const y = height < 0 ? start.y - size : start.y;
+                    ctx.beginPath();
+                    ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
+                    ctx.stroke();
+                } else if (action.shape === 'arrow') {
+                    this.drawArrow(ctx, start, end);
+                }
+            },
+
+            drawArrow(ctx, start, end) {
+                const headLength = 12;
+                const angle = Math.atan2(end.y - start.y, end.x - start.x);
+                ctx.beginPath();
+                ctx.moveTo(start.x, start.y);
+                ctx.lineTo(end.x, end.y);
+                ctx.lineTo(end.x - headLength * Math.cos(angle - Math.PI / 6), end.y - headLength * Math.sin(angle - Math.PI / 6));
+                ctx.moveTo(end.x, end.y);
+                ctx.lineTo(end.x - headLength * Math.cos(angle + Math.PI / 6), end.y - headLength * Math.sin(angle + Math.PI / 6));
+                ctx.stroke();
+            },
+
+            async onPreviewSave() {
+                if (!this.preview_ready || !this.preview_image) {
+                    return;
+                }
+                if (this.text_input.active) {
+                    this.commitTextInput();
+                }
+                const exportCanvas = document.createElement('canvas');
+                exportCanvas.width = this.preview_image.naturalWidth;
+                exportCanvas.height = this.preview_image.naturalHeight;
+                const ctx = exportCanvas.getContext('2d');
+                ctx.drawImage(this.preview_image, 0, 0, exportCanvas.width, exportCanvas.height);
+                const scale = this.preview_scale || 1;
+                for (const action of this.actions) {
+                    this.drawScaledAction(ctx, action, scale);
+                }
+                if (this.current_action) {
+                    this.drawScaledAction(ctx, this.current_action, scale);
+                }
+                exportCanvas.toBlob(async blob => {
+                    if (!blob) {
+                        Toast('Unable to prepare image for upload.', { theme: 'text-bg-danger' });
+                        return;
+                    }
+                    try {
+                        const apiBase = mande(this.att_upload_url);
+                        const formData = new FormData();
+                        formData.append('XSS', this.XSS);
+                        formData.append('file1', blob, this.preview_filename);
+                        formData.append('item[att_categories_id]', this.att_categories_id);
+                        const data = await apiBase.post(formData);
+                        if (data.error) {
+                            throw data.error.message;
+                        }
+                        this.onSelect(data);
+                        this.onPreviewCancel();
+                    } catch (error) {
+                        console.error(error);
+                        const err_msg = typeof error === "string" ? error : (error.body?.error?.message ?? 'server error');
+                        Toast(err_msg, { theme: 'text-bg-danger' });
+                    }
+                }, 'image/png');
+            },
+
+            drawScaledAction(ctx, action, scale) {
+                const scalePoint = point => ({ x: point.x / scale, y: point.y / scale });
+                const scaledAction = { ...action };
+                if (action.type === 'pen') {
+                    scaledAction.points = action.points.map(scalePoint);
+                }
+                if (action.type === 'shape') {
+                    scaledAction.start = scalePoint(action.start);
+                    scaledAction.end = scalePoint(action.end);
+                }
+                if (action.type === 'text') {
+                    scaledAction.x = action.x / scale;
+                    scaledAction.y = action.y / scale;
+                    scaledAction.fontSize = (action.fontSize ?? 18) / scale;
+                }
+                scaledAction.lineWidth = (action.lineWidth ?? this.line_width) / scale;
+                this.drawAction(ctx, scaledAction);
+            },
+
+            onPreviewCancel() {
+                if (this.preview_modal) {
+                    this.preview_modal.hide();
+                }
+                this.preview_ready = false;
+                this.preview_image = null;
+                if (this.preview_image_url) {
+                    URL.revokeObjectURL(this.preview_image_url);
+                    this.preview_image_url = '';
+                }
+                this.actions = [];
+                this.current_action = null;
+                this.text_input = { active: false, x: 0, y: 0, text: '', style: {} };
+            },
+
             onSelect(att) {
                 this.$emit('selected', att);
                 this.modal.hide();
@@ -145,3 +633,20 @@
         }
     });
 </script>
+
+<style>
+    .att-preview-area {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        overflow: auto;
+    }
+
+    .att-preview-text-input {
+        background: rgba(255, 255, 255, 0.8);
+        border: 1px dashed #999;
+        padding: 2px 4px;
+        min-height: 24px;
+        z-index: 2;
+    }
+</style>
