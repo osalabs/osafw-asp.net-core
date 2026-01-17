@@ -1,12 +1,92 @@
 <script type="text/x-template" id="activity-logs-template">
-    <div>
-        <h1>This is sample Vue component, use it as a template to create your own components</h1>
-        <p>
-            Value: {{sample_value}}
-        </p>
-        <div>
-            <button type="button" @click="sampleMethod">Button</button>
+    <div class="mt-4">
+        <a name="activity"></a>
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+            <h3 class="mb-0">`Activity`</h3>
+            <button type="button"
+                    class="btn btn-default btn-sm"
+                    @click="toggleCommentForm"
+                    :disabled="fwStore.is_readonly">
+                <i class="bi bi-plus"></i> `Add Comment`
+            </button>
         </div>
+
+        <div v-if="isCommentFormOpen" class="fw-card mb-4">
+            <div class="row">
+                <div class="col-12 col-lg">
+                    <textarea ref="commentInput"
+                              v-model="commentText"
+                              class="form-control mb-2"
+                              rows="5"
+                              placeholder="`Type your markdown comment or notes ...`"
+                              :disabled="isSaving"></textarea>
+                </div>
+                <div class="col-12 col-lg">
+                    <button type="button"
+                            class="btn btn-primary"
+                            @click="submitComment"
+                            :disabled="isSaving || !canSubmitComment">`Save`</button>
+                    <button type="button"
+                            class="btn btn-default"
+                            @click="toggleCommentForm(false)"
+                            :disabled="isSaving">`Cancel`</button>
+                </div>
+            </div>
+        </div>
+
+        <ul class="nav nav-tabs mb-2">
+            <li class="nav-item" v-for="tab in tabs" :key="tab.id">
+                <a class="nav-link"
+                   :class="{ active: currentTab === tab.id }"
+                   href="#"
+                   @click.prevent="setTab(tab.id)">
+                    {{ tab.label }}
+                </a>
+            </li>
+        </ul>
+
+        <div v-if="!activityRows.length" class="py-4">
+            <span><i class="bi bi-0-circle"></i> `No Activity Records`</span>
+        </div>
+
+        <div v-else>
+            <div v-for="(row, index) in activityRows"
+                 :key="index"
+                 class="d-flex align-items-start pt-2 pb-2 border-bottom">
+                <div class="flex-shrink-0">
+                    <div class="user-list-avatar">
+                        <img v-if="row.avatar_link"
+                             :src="row.avatar_link"
+                             :alt="row.user?.iname || 'User'"
+                             class="img-fluid">
+                        <span v-else>{{ initials(row.user) }}</span>
+                    </div>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <h6 class="mb-1">
+                        <b>{{ row.user?.iname }}</b>
+                        <span v-if="row.tab !== 'comments'"> - </span>
+                        <span v-if="row.tab !== 'comments'" class="badge bg-secondary">
+                            {{ row.log_type?.iname }}
+                        </span>
+                    </h6>
+                    <p class="text-muted mb-1">
+                        <small>
+                            {{ formatDate(row.idate) }}
+                            <span v-if="row.upd_time">- `edited on` {{ formatDate(row.upd_time) }} `by` {{ row.upd_user?.iname }}</span>
+                        </small>
+                    </p>
+                    <div v-if="row.idesc" v-html="renderMarkdown(row.idesc)"></div>
+                    <div v-if="row.fields?.length">
+                        <div v-for="(field, idx) in row.fields" :key="idx">
+                            <i>{{ field.key }}</i>: {{ field.value }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-5"></div>
     </div>
 </script>
 
@@ -15,32 +95,116 @@
 
     fwApp.component('activity-logs', {
         template: '#activity-logs-template',
-        props: {
-            sampleProp: {
-                type: String,
-                required: false,
-                default: ''
-            }
-        },
-        emits: ['on-sample-event'],
         data: () => ({
-            sample_value: 0,
+            isCommentFormOpen: false,
+            commentText: '',
+            isSaving: false,
+            mdInstance: null,
+            tabs: [
+                { id: 'all', label: '`All`' },
+                { id: 'comments', label: '`Comments`/`Notes`' },
+                { id: 'history', label: '`History`' }
+            ]
         }),
         computed: {
-            ...mapStores(fwStore) //accessible via this.fwStore
+            ...mapStores(fwStore), //accessible via this.fwStore
+            activityRows() {
+                return this.fwStore.edit_data?.activity_rows ?? [];
+            },
+            activityEntity() {
+                return this.fwStore.edit_data?.activity_entity ?? '';
+            },
+            currentTab() {
+                return this.fwStore.edit_data?.list_filter?.tab_activity ?? 'comments';
+            },
+            currentId() {
+                return this.fwStore.current_id ?? this.fwStore.edit_data?.id ?? 0;
+            },
+            canSubmitComment() {
+                return !this.fwStore.is_readonly && this.commentText.trim().length > 0 && this.activityEntity;
+            },
+            activityLogsUrl() {
+                const root = this.fwStore.global?.ROOT_URL ?? '';
+                return root + '/Admin/ActivityLogs';
+            }
         },
         mounted() {
-            console.log('activity-logs mounted');
-        },
-        unmounted() {
-            console.log('activity-logs unmounted');
-        },
-        updated() {
-            console.log('activity-logs updated');
+            this.isCommentFormOpen = false;
         },
         methods: {
-            sampleMethod(e) {
-                this.$emit('on-activity-logs-event', e);
+            toggleCommentForm(forceState) {
+                if (typeof forceState === 'boolean') {
+                    this.isCommentFormOpen = forceState;
+                } else {
+                    this.isCommentFormOpen = !this.isCommentFormOpen;
+                }
+                if (this.isCommentFormOpen) {
+                    this.$nextTick(() => {
+                        if (this.$refs.commentInput) {
+                            this.$refs.commentInput.focus();
+                        }
+                    });
+                }
+            },
+            initials(user) {
+                if (!user) return '';
+                const first = user.fname?.trim()?.[0] ?? '';
+                const last = user.lname?.trim()?.[0] ?? '';
+                return (first + last).toUpperCase();
+            },
+            formatDate(value) {
+                return this.fwStore.formatDateTime(value, false);
+            },
+            renderMarkdown(text) {
+                if (!window.markdownit) {
+                    return text ?? '';
+                }
+                const mdOptions = { html: true, breaks: true, linkify: true };
+                if (!this.mdInstance) {
+                    this.mdInstance = window.markdownit(mdOptions);
+                }
+                return this.mdInstance.render(text ?? '');
+            },
+            async setTab(tab) {
+                if (this.currentTab === tab) return;
+                await this.refreshActivity(tab);
+            },
+            async refreshActivity(tab = null) {
+                if (!this.currentId) return;
+                const nextTab = tab ?? this.currentTab;
+                await this.fwStore.loadItem(this.currentId, 'view', { 'f[tab_activity]': nextTab });
+            },
+            async submitComment() {
+                if (!this.canSubmitComment || this.isSaving) return;
+                this.isSaving = true;
+                try {
+                    const form = new URLSearchParams();
+                    form.append('XSS', this.fwStore.XSS);
+                    form.append('return_url', this.fwStore.base_url + '/' + this.currentId + '#activity');
+                    form.append('item[log_type]', 'comment');
+                    form.append('item[entity]', this.activityEntity);
+                    form.append('item[item_id]', this.currentId);
+                    form.append('item[idesc]', this.commentText);
+
+                    const response = await fetch(this.activityLogsUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+                        body: form.toString()
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to save comment');
+                    }
+
+                    this.commentText = '';
+                    this.toggleCommentForm(false);
+                    await this.refreshActivity(this.currentTab);
+                } catch (error) {
+                    console.error(error);
+                    Toast('Failed to save comment', { theme: 'text-bg-danger' });
+                } finally {
+                    this.isSaving = false;
+                }
             }
         }
     });
