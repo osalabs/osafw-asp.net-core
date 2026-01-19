@@ -10,86 +10,72 @@
 
 :root,
 [data-bs-theme="light"] {
-  /* -------- Bootstrap core variables -------- */
-  --bs-primary: #8793ff;
-  --bs-primary-rgb: 135, 147, 255;
-
-  --bs-body-font-family: "Nunito", sans-serif;
-  --bs-body-font-size: 0.9rem;
-  --bs-body-color: #6c757d;
-  --bs-link-color: var(--bs-primary);
-
-  --bs-nav-pills-link-active-bg: var(--bs-primary);
-  --bs-nav-pills-link-active-color: #fff;
-
-  /* -------- Framework semantics -------- */
-  --fw-body-bg: #f5f6f8;
-  --fw-pane-bg: #ffffff;
-
-  --fw-hiliter: #ffffcc; /* keep default */
-
-  /* tables */
-  --fw-table-striped-bg: #f5f6f9;
-  --fw-table-hover-bg: #eef0f4;
-  --fw-table-color: var(--bs-body-color);
-
-  /* cards / panes */
-  --fw-card-bg: var(--fw-pane-bg);
-  --fw-card-border: 0;
-  --fw-card-radius: 0.25rem;
-  --fw-card-shadow: 0px 0px 35px 0px rgba(154, 161, 171, 0.15);
-  --fw-card-padding: 1.5rem 1.5rem 0.5rem 1.5rem;
-  --fw-fieldset-legend-bg: var(--fw-card-bg);
-
-  --fw-dashboard-card-radius: 0.25rem;
-  --fw-dashboard-card-shadow: 0px 0px 35px 0px rgba(154, 161, 171, 0.15);
-  --fw-dashboard-card-padding: 1.5rem;
-
-  /* bootstrap .card hooks */
-  --fw-bs-card-shadow: 0px 0px 35px 0px rgba(154, 161, 171, 0.15);
-  --fw-bs-card-border: 0;
-  --fw-bs-card-radius: 0.25rem;
-  --fw-bs-card-spacer-x: 1.5rem;
-  --fw-bs-card-spacer-y: 1.5rem;
-
-  /* sidebar */
-  --fw-sidebar-bg: #313a46;
-  --fw-sidebar-color: #aeb8c5;
-  --fw-sidebar-shadow: 0px 0px 35px 0px rgba(154, 161, 171, 0.15);
-
-  --fw-sidebar-link-color: #aeb8c5;
-  --fw-sidebar-link-hover-bg: transparent;
-  --fw-sidebar-link-hover-color: #ffffff;
-  --fw-sidebar-link-active-bg: rgba(255, 255, 255, 0.12);
-  --fw-sidebar-link-active-color: #ffffff;
-  --fw-sidebar-link-active-font-weight: 500;
-
-  --fw-sidebar-link-font-size: 0.94rem;
-  --fw-sidebar-link-font-weight: 400;
-  --fw-sidebar-link-padding-y: 10px;
-  --fw-sidebar-link-padding-x: 1rem;
-
-  --fw-sidebar-icon-gap: 1rem;
-  --fw-sidebar-icon-weight: 700;
-
-  --fw-sidebar-header-bg: transparent;
-  --fw-sidebar-header-color: #8391a2;
-  --fw-sidebar-header-text-transform: uppercase;
-  --fw-sidebar-header-font-size: 0.7rem;
-  --fw-sidebar-header-font-weight: 700;
-  --fw-sidebar-header-letter-spacing: 0.04rem;
-
-  --fw-sidebar-dropdown-bg: #313a46;
-  --fw-sidebar-dropdown-color: #aeb8c5;
-
-  /* buttons */
-  --fw-btn-default-color: #8793ff;
-  --fw-btn-default-bg: #f0f0fa;
-  --fw-btn-default-border: transparent;
-  --fw-btn-default-shadow: 0 2px 6px rgba(135, 147, 255, 0.4);
-  --fw-btn-default-hover-bg: var(--bs-primary);
-  --fw-btn-default-hover-border: var(--bs-primary);
-  --fw-btn-default-hover-color: #fff;
+    /* -------- Bootstrap core variables -------- */
+    --bs-primary: #8793ff;
+    --bs-primary-rgb: 135, 147, 255;
+    --bs-body-font-family: "Nunito", sans-serif;
+    --bs-body-font-size: 0.9rem;
+    --bs-body-color: #6c757d;
+    --bs-link-color: var(--bs-primary);
+    --bs-nav-pills-link-active-bg: var(--bs-primary);
+    --bs-nav-pills-link-active-color: #fff;
+    --bs-link-color-rgb: 135, 147, 255;
+    /* -------- Framework semantics -------- */
+    --fw-body-bg: #f5f6f8;
+    --fw-pane-bg: #ffffff;
+    --fw-hiliter: #ffffcc; /* keep default */
+    /* tables */
+    --fw-table-striped-bg: #f5f6f9;
+    --fw-table-hover-bg: #eef0f4;
+    --fw-table-color: var(--bs-body-color);
+    /* cards / panes */
+    --fw-card-bg: var(--fw-pane-bg);
+    --fw-card-border: 0;
+    --fw-card-radius: 0.25rem;
+    --fw-card-shadow: 0px 0px 35px 0px rgba(154, 161, 171, 0.15);
+    --fw-card-padding: 1.5rem 1.5rem 0.5rem 1.5rem;
+    --fw-fieldset-legend-bg: var(--fw-card-bg);
+    --fw-dashboard-card-radius: 0.25rem;
+    --fw-dashboard-card-shadow: 0px 0px 35px 0px rgba(154, 161, 171, 0.15);
+    --fw-dashboard-card-padding: 1.5rem;
+    /* bootstrap .card hooks */
+    --fw-bs-card-shadow: 0px 0px 35px 0px rgba(154, 161, 171, 0.15);
+    --fw-bs-card-border: 0;
+    --fw-bs-card-radius: 0.25rem;
+    --fw-bs-card-spacer-x: 1.5rem;
+    --fw-bs-card-spacer-y: 1.5rem;
+    /* sidebar */
+    --fw-sidebar-bg: #313a46;
+    --fw-sidebar-color: #aeb8c5;
+    --fw-sidebar-shadow: 0px 0px 35px 0px rgba(154, 161, 171, 0.15);
+    --fw-sidebar-link-color: #aeb8c5;
+    --fw-sidebar-link-hover-bg: transparent;
+    --fw-sidebar-link-hover-color: #ffffff;
+    --fw-sidebar-link-active-bg: rgba(255, 255, 255, 0.12);
+    --fw-sidebar-link-active-color: #ffffff;
+    --fw-sidebar-link-active-font-weight: 500;
+    --fw-sidebar-link-font-size: 0.94rem;
+    --fw-sidebar-link-font-weight: 400;
+    --fw-sidebar-link-padding-y: 10px;
+    --fw-sidebar-link-padding-x: 1rem;
+    --fw-sidebar-icon-gap: 1rem;
+    --fw-sidebar-icon-weight: 700;
+    --fw-sidebar-header-bg: transparent;
+    --fw-sidebar-header-color: #8391a2;
+    --fw-sidebar-header-text-transform: uppercase;
+    --fw-sidebar-header-font-size: 0.7rem;
+    --fw-sidebar-header-font-weight: 700;
+    --fw-sidebar-header-letter-spacing: 0.04rem;
+    --fw-sidebar-dropdown-bg: #313a46;
+    --fw-sidebar-dropdown-color: #aeb8c5;
+    /* buttons */
+    --fw-btn-default-color: #333944;
+    --fw-btn-default-bg: #f0f0fa;
+    --fw-btn-default-border: transparent;
+    --fw-btn-default-shadow: 0 2px 4px rgba(195, 207, 255, 0.4);
+    --fw-btn-default-hover-bg: var(--bs-primary);
+    --fw-btn-default-hover-border: var(--bs-primary);
+    --fw-btn-default-hover-color: #fff;
 }
 
 [data-bs-theme="dark"] {
@@ -133,9 +119,17 @@ a {
 }
 
 .page-title {
-  line-height: 4.68rem;
+  line-height: 1.1;
+  font-size: 1.125rem;
+}
+h1 .badge {
+  font-size: 0.875rem;
 }
 
+.h1, .h2, .h3, .h4, .h5, .h6, h1, h2, h3, h4, h5, h6 {
+  font-weight: 700;
+  line-height: 1.1;
+}
 
 h3,
 .h3 {
@@ -144,11 +138,25 @@ h3,
 }
 
 /* Button radius */
-.btn {
+.btn:not(.btn-link) {
   --bs-btn-border-radius: 0.15rem;
+  box-shadow: var(--fw-btn-default-shadow);
+}
+
+.form-check-input:checked {
+  background-color: var(--bs-primary);
+  border-color: var(--bs-primary);
+}
+.pagination {
+  --bs-pagination-active-bg: var(--bs-primary);
+  --bs-pagination-active-border-color: var(--bs-primary);
 }
 
 /* Dashboard typography */
+.fw-dashboard h1 {
+  font-size: 2.25rem;
+}
+
 .dashboard-card {
   font-family: "Nunito", sans-serif;
 }

@@ -41,6 +41,8 @@
   --bs-nav-pills-link-active-bg: var(--bs-primary);
   --bs-nav-pills-link-active-color: #fff;
 
+  --bs-link-color-rgb: 231, 91, 152;
+  
   /* -------- Framework semantics -------- */
   --fw-body-bg: #f9f1f6;
   --fw-pane-bg: #ffffff;
@@ -179,6 +181,16 @@ h3,
 
 .btn {
   --bs-btn-border-radius: 0.5rem;
+}
+
+.form-check-input:checked {
+  background-color: var(--bs-primary);
+  border-color: var(--bs-primary);
+}
+
+.pagination {
+  --bs-pagination-active-bg: var(--bs-primary);
+  --bs-pagination-active-border-color: var(--bs-primary);
 }
 
 .dashboard-card {
