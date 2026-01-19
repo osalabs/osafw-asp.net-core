@@ -1,0 +1,210 @@
+/*!
+ * OSAFW Theme 10 (Modern Pink) - theme10.css
+ * Intended to load after site.css.
+ *
+ * Soft pastel palette with a modern, high-contrast sidebar and dashboard accents.
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+:root,
+[data-bs-theme="light"] {
+  /* -------- Bootstrap core variables -------- */
+  --bs-primary: #e75b98;
+  --bs-primary-rgb: 231, 91, 152;
+
+  --bs-secondary: #7a6b78;
+  --bs-secondary-rgb: 179, 154, 223;
+
+  --bs-success: #4fbf9b;
+  --bs-success-rgb: 79, 191, 155;
+
+  --bs-info: #6f9df9;
+  --bs-info-rgb: 111, 157, 249;
+
+  --bs-warning: #f4b267;
+  --bs-warning-rgb: 244, 178, 103;
+
+  --bs-danger: #e65f6c;
+  --bs-danger-rgb: 230, 95, 108;
+
+  --bs-light: #fdf7fa;
+  --bs-dark: #3a2632;
+
+  --bs-body-font-family: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --bs-body-color: #5b4a55;
+  --bs-link-color: var(--bs-primary);
+  --bs-emphasis-color-rgb: 91, 74, 85;
+  --bs-border-color: #edd7e3;
+  --bs-border-color-translucent: rgba(231, 91, 152, 0.18);
+
+  --bs-nav-pills-link-active-bg: var(--bs-primary);
+  --bs-nav-pills-link-active-color: #fff;
+
+  /* -------- Framework semantics -------- */
+  --fw-body-bg: #f9f1f6;
+  --fw-pane-bg: #ffffff;
+
+  --fw-hiliter: #ffe7f2;
+
+  /* tables */
+  --fw-table-striped-bg: #fff2f8;
+  --fw-table-hover-bg: #fbe4ef;
+  --fw-table-header-bg: var(--fw-pane-bg);
+  --fw-table-color: var(--bs-body-color);
+
+  /* cards / panes */
+  --fw-card-bg: var(--fw-pane-bg);
+  --fw-card-border: 0;
+  --fw-card-radius: 0.75rem;
+  --fw-card-shadow: 0 8px 40px rgba(231, 91, 152, 0.12);
+  --fw-card-padding: 1.5rem 1.5rem 0.5rem 1.5rem;
+
+  --fw-dashboard-card-radius: 0.9rem;
+  --fw-dashboard-card-shadow: 0 20px 45px rgba(231, 91, 152, 0.18);
+  --fw-dashboard-card-padding: 1.5rem;
+
+  /* bootstrap .card hooks */
+  --fw-bs-card-shadow: var(--fw-card-shadow);
+  --fw-bs-card-border: 0;
+  --fw-bs-card-radius: 0.75rem;
+  --fw-bs-card-spacer-x: 1.5rem;
+  --fw-bs-card-spacer-y: 1.5rem;
+
+  /* dropdowns */
+  --fw-dropdown-link-hover-bg: #fbe4ef;
+  --fw-dropdown-link-active-bg: var(--bs-primary);
+  --fw-dropdown-link-active-color: #fff;
+
+  /* buttons */
+  --fw-btn-default-color: var(--bs-primary);
+  --fw-btn-default-bg: #fdeaf3;
+  --fw-btn-default-border: transparent;
+  --fw-btn-default-shadow: 0 4px 8px rgba(231, 91, 152, 0.18);
+  --fw-btn-default-hover-bg: var(--bs-primary);
+  --fw-btn-default-hover-border: var(--bs-primary);
+  --fw-btn-default-hover-color: #fff;
+
+  /* sidebar */
+  --fw-sidebar-bg: #2b1a25;
+  --fw-sidebar-color: #f6e9ef;
+  --fw-sidebar-shadow: 0 18px 35px rgba(43, 26, 37, 0.45);
+
+  --fw-sidebar-nav-bg: rgba(255, 255, 255, 0.05);
+  --fw-sidebar-nav-radius: 0.75rem;
+  --fw-sidebar-nav-padding-y: 0.25rem;
+  --fw-sidebar-nav-padding-x: 0.25rem;
+  --fw-sidebar-nav-margin-x: 0.75rem;
+
+  --fw-sidebar-link-color: #f6e9ef;
+  --fw-sidebar-link-hover-bg: rgba(231, 91, 152, 0.18);
+  --fw-sidebar-link-hover-color: #ffffff;
+  --fw-sidebar-link-active-bg: rgba(231, 91, 152, 0.32);
+  --fw-sidebar-link-active-color: #ffffff;
+  --fw-sidebar-link-active-font-weight: 600;
+
+  --fw-sidebar-link-font-size: 0.95rem;
+  --fw-sidebar-link-font-weight: 500;
+  --fw-sidebar-link-padding-y: 0.6rem;
+  --fw-sidebar-link-padding-x: 1rem;
+
+  --fw-sidebar-icon-gap: 0.75rem;
+  --fw-sidebar-icon-weight: 600;
+
+  --fw-sidebar-header-bg: transparent;
+  --fw-sidebar-header-color: #d8b9c9;
+  --fw-sidebar-header-text-transform: uppercase;
+  --fw-sidebar-header-font-size: 0.7rem;
+  --fw-sidebar-header-font-weight: 600;
+  --fw-sidebar-header-letter-spacing: 0.08rem;
+
+  --fw-sidebar-dropdown-bg: #2b1a25;
+  --fw-sidebar-dropdown-color: #f6e9ef;
+
+  /* theme helpers for charts */
+  --theme-color: var(--bs-primary);
+  --theme-body-color: var(--bs-body-color);
+}
+
+[data-bs-theme="dark"] {
+  /* Dark mode palette */
+  --bs-body-color: #e8d9e2;
+  --bs-link-color: #f2a9c9;
+  --bs-emphasis-color-rgb: 232, 217, 226;
+  --bs-border-color: #3a2732;
+  --bs-border-color-translucent: rgba(231, 91, 152, 0.2);
+
+  --bs-secondary-rgb: 189, 166, 233;
+
+  --fw-body-bg: #1b1117;
+  --fw-pane-bg: #2a1a23;
+
+  --fw-table-hover-bg: #2f1d28;
+  --fw-table-striped-bg: #291921;
+  --fw-table-header-bg: var(--fw-pane-bg);
+  --fw-table-color: var(--bs-body-color);
+
+  --fw-card-bg: var(--fw-pane-bg);
+  --fw-bs-card-bg: var(--fw-pane-bg);
+
+  --fw-sidebar-bg: #140c11;
+  --fw-sidebar-nav-bg: rgba(255, 255, 255, 0.04);
+  --fw-sidebar-color: #f2e5ec;
+  --fw-sidebar-link-color: #f2e5ec;
+  --fw-sidebar-header-color: #c8a4b9;
+  --fw-sidebar-dropdown-bg: #140c11;
+  --fw-sidebar-dropdown-color: #f2e5ec;
+
+  --fw-btn-default-bg: #2b1a23;
+  --fw-btn-default-border: transparent;
+}
+
+/* -------- theme-specific styling -------- */
+
+.fw-list-card {
+  --bs-body-bg: var(--fw-pane-bg);
+  background-color: var(--fw-card-bg);
+  border: var(--fw-card-border);
+  border-radius: var(--fw-card-radius);
+  padding: var(--fw-card-padding);
+  margin-bottom: var(--fw-card-margin-bottom);
+  box-shadow: var(--fw-card-shadow);
+}
+
+h3,
+.h3 {
+  font-weight: 600;
+  font-size: 1.45rem;
+}
+
+.btn {
+  --bs-btn-border-radius: 0.5rem;
+}
+
+.dashboard-card {
+  font-family: var(--bs-body-font-family);
+}
+
+.dashboard-card .pane-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--bs-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05rem;
+}
+
+.dashboard-card .pane-num {
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: var(--bs-primary);
+}
+
+.dashboard-card .pane-desc {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: rgba(var(--bs-secondary-rgb), 0.9);
+}
+
+.sidebar .site-footer {
+  color: rgba(246, 233, 239, 0.75);
+}

@@ -88,6 +88,7 @@ window.initDashboardChart = function (elementId, options) {
     return chart;
 };
 
+<~theme10.js ifeq="GLOBAL[ui_theme]" value="10">
 <~theme20.js ifeq="GLOBAL[ui_theme]" value="20">
 <~theme30.js ifeq="GLOBAL[ui_theme]" value="30">
 
