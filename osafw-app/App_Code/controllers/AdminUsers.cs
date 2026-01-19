@@ -4,6 +4,8 @@
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace osafw;
 
@@ -26,6 +28,9 @@ public class AdminUsersController : FwDynamicController
         db = model.getDB(); // model-based controller works with model's db
 
         model_related = fw.model<Users>();
+
+        list_sortmap["last_logins"] = model0.field_id;
+        list_sortmap["is_mfa"] = model0.field_id;
     }
 
     public override void setListSearch()
@@ -44,6 +49,118 @@ public class AdminUsersController : FwDynamicController
         ps = base.setPS(ps);
         ps["is_roles"] = model.isRoles();
         return ps;
+    }
+
+    /// <summary>
+    /// Load list rows and enrich them with last login activity for mini charts.
+    /// </summary>
+    /// <remarks>Used by the admin users list to render the "Last Logins" column without per-row queries.</remarks>
+    public override void getListRows()
+    {
+        base.getListRows();
+
+        if (list_rows.Count == 0)
+            return;
+
+        addLastLoginSeries(list_rows);
+    }
+
+    /// <summary>
+    /// Adds a 7-day login series to each list row for chart rendering.
+    /// </summary>
+    /// <param name="rows">The list rows to augment with <c>last_logins</c> series data.</param>
+    private void addLastLoginSeries(FwList rows)
+    {
+        var userIds = rows.Select(row => row["id"].toInt()).Where(id => id > 0).Distinct().ToList();
+        if (userIds.Count == 0)
+            return;
+
+        var dateRange = buildLastLoginDates();
+        var countsByUser = getLoginCountsByUser(userIds, dateRange[0]);
+
+        foreach (FwDict row in rows)
+        {
+            var userId = row["id"].toInt();
+            var dailyCounts = new int[dateRange.Count];
+
+            if (countsByUser.TryGetValue(userId, out var userCounts))
+            {
+                for (int i = 0; i < dateRange.Count; i++)
+                {
+                    if (userCounts.TryGetValue(dateRange[i], out var count))
+                        dailyCounts[i] = count;
+                }
+            }
+
+            row["last_logins"] = string.Join(",", dailyCounts);
+        }
+    }
+
+    /// <summary>
+    /// Builds the last 7 dates (inclusive) used for login activity charts.
+    /// </summary>
+    /// <returns>Chronological list of dates from 6 days ago through today.</returns>
+    private static List<DateTime> buildLastLoginDates()
+    {
+        var startDate = DateTime.Today.AddDays(-6);
+        var dates = new List<DateTime>(7);
+        for (int i = 0; i < 7; i++)
+            dates.Add(startDate.AddDays(i).Date);
+        return dates;
+    }
+
+    /// <summary>
+    /// Fetches login counts per user per day starting from the provided date.
+    /// </summary>
+    /// <param name="userIds">User IDs to include in the aggregation.</param>
+    /// <param name="fromDate">The earliest date to include in the results.</param>
+    /// <returns>Mapping of user ID to per-day login counts.</returns>
+    private Dictionary<int, Dictionary<DateTime, int>> getLoginCountsByUser(List<int> userIds, DateTime fromDate)
+    {
+        var sqlParams = new FwDict
+        {
+            ["@from_date"] = fromDate,
+            ["@login_icode"] = FwLogTypes.ICODE_USERS_LOGIN
+        };
+
+        var inParams = new List<string>(userIds.Count);
+        for (int i = 0; i < userIds.Count; i++)
+        {
+            var paramName = "@user_id_" + i;
+            sqlParams[paramName] = userIds[i];
+            inParams.Add(paramName);
+        }
+
+        // Build an IN clause with parameters to avoid per-row queries.
+        var activityLogsTable = fw.model<FwActivityLogs>().table_name;
+        var logTypesTable = fw.model<FwLogTypes>().table_name;
+        var sql = "select al.item_id as users_id, CAST(al.idate as date) as login_date, count(*) as login_count "
+            + "from " + activityLogsTable + " al "
+            + "inner join " + logTypesTable + " lt on lt.id=al.log_types_id "
+            + "where lt.icode=@login_icode "
+            + "and al.item_id in (" + string.Join(",", inParams) + ") "
+            + "and al.idate >= @from_date "
+            + "group by al.item_id, CAST(al.idate as date)";
+
+        var rows = db.arrayp(sql, sqlParams);
+        var result = new Dictionary<int, Dictionary<DateTime, int>>();
+
+        foreach (FwDict row in rows)
+        {
+            var userId = row["users_id"].toInt();
+            var loginDate = row["login_date"].toDate().Date;
+            var count = row["login_count"].toInt();
+
+            if (!result.TryGetValue(userId, out var userCounts))
+            {
+                userCounts = new Dictionary<DateTime, int>();
+                result[userId] = userCounts;
+            }
+
+            userCounts[loginDate] = count;
+        }
+
+        return result;
     }
 
     public override FwDict ShowFormAction(int id = 0)
