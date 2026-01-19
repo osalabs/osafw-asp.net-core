@@ -67,14 +67,11 @@
           isFormAutosave = true;
         }
 
-        var options = {
+        $select2.select2({
           width: '100%',
           dropdownAutoWidth: true,
           placeholder: $select2.data('placeholder') || undefined
-        };
-        options = $.extend(options, $select2.data('select2-options'));
-
-        $select2.select2(options);
+        });
 
         $select2.on('select2:close', function () {
           if (isFilterAutosubmit && !_isSelvalEqual(initVal, $select2.val()))
