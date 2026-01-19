@@ -431,7 +431,8 @@
         {
             "field": "ftime",
             "label": "Time",
-            "type": "time"
+            "type": "time",
+            "conv": "time_from_seconds"
         },
         {
             "type": "fieldset_end"
