@@ -31,97 +31,113 @@
   "model": "Users",
   "show_fields": [
     {
-      "type": "plaintext",
-      "field": "id",
-      "label": "ID"
+      "type": "row",
+      "class": ""
     },
     {
-      "type": "plaintext",
-      "field": "email",
-      "label": "Email"
+      "type": "col",
+      "class": "col-lg-6"
+    },
+        {
+          "type": "plaintext",
+          "field": "email",
+          "label": "Email"
+        },
+        {
+          "type": "plaintext",
+          "lookup_tpl": "/common/sel/access_level.sel",
+          "field": "access_level",
+          "label": "Access Level"
+        },
+        {
+          "type": "plaintext",
+          "field": "login",
+          "label": "Active Directory Login"
+        },
+        {
+          "type": "plaintext",
+          "field": "fname",
+          "label": "First Name"
+        },
+        {
+          "type": "plaintext",
+          "field": "lname",
+          "label": "Last Name"
+        },
+        {
+          "type": "plaintext",
+          "field": "title",
+          "label": "Title"
+        },
+        {
+          "type": "plaintext",
+          "field": "address1",
+          "label": "Address1"
+        },
+        {
+          "type": "plaintext",
+          "field": "address2",
+          "label": "Address2"
+        },
+        {
+          "type": "plaintext",
+          "field": "city",
+          "label": "City"
+        },
+        {
+          "type": "plaintext",
+          "lookup_tpl": "/common/sel/state.sel",
+          "field": "state",
+          "label": "State"
+        },
+        {
+          "type": "plaintext",
+          "field": "zip",
+          "label": "Zip"
+        },
+        {
+          "type": "plaintext",
+          "field": "phone",
+          "label": "Phone"
+        },
+    {
+      "type": "col_end"
     },
     {
-      "type": "plaintext",
-      "field": "login",
-      "label": "Active Directory Login"
+      "type": "col",
+      "class": "col-lg-6"
+    },
+        {
+          "type": "plaintext",
+          "field": "id",
+          "label": "ID"
+        },
+        {
+          "type": "plaintext",
+          "lookup_tpl": "/admin/users/status.sel",
+          "field": "status",
+          "label": "Status"
+        },
+        {
+          "type": "added",
+          "field": "add_time",
+          "label": "Added on"
+        },
+        {
+          "type": "updated",
+          "field": "upd_time",
+          "label": "Updated on"
+        },
+        {
+          "type": "date_long",
+          "field": "login_time",
+          "label": "Last Login Time"
+        },
+    {
+      "type": "col_end"
     },
     {
-      "type": "plaintext",
-      "lookup_tpl": "/common/sel/access_level.sel",
-      "field": "access_level",
-      "label": "Access Level"
-    },
-    {
-      "type": "plaintext",
-      "field": "fname",
-      "label": "First Name"
-    },
-    {
-      "type": "plaintext",
-      "field": "lname",
-      "label": "Last Name"
-    },
-    {
-      "type": "plaintext",
-      "field": "title",
-      "label": "Title"
-    },
-    {
-      "type": "plaintext",
-      "field": "address1",
-      "label": "Address1"
-    },
-    {
-      "type": "plaintext",
-      "field": "address2",
-      "label": "Address2"
-    },
-    {
-      "type": "plaintext",
-      "field": "city",
-      "label": "City"
-    },
-    {
-      "type": "plaintext",
-      "lookup_tpl": "/common/sel/state.sel",
-      "field": "state",
-      "label": "State"
-    },
-    {
-      "type": "plaintext",
-      "field": "zip",
-      "label": "Zip"
-    },
-    {
-      "type": "plaintext",
-      "field": "phone",
-      "label": "Phone"
-    },
-    {
-      "type": "plaintext",
-      "field": "idesc",
-      "label": "Notes"
-    },
-    {
-      "type": "date_long",
-      "field": "login_time",
-      "label": "Last Login Time"
-    },
-    {
-      "type": "plaintext",
-      "lookup_tpl": "/admin/users/status.sel",
-      "field": "status",
-      "label": "Status"
-    },
-    {
-      "type": "added",
-      "field": "add_time",
-      "label": "Added on"
-    },
-    {
-      "type": "updated",
-      "field": "upd_time",
-      "label": "Updated on"
+      "type": "row_end"
     }
   ],
   "is_dynamic_show": true,
