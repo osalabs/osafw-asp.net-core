@@ -48,6 +48,13 @@
         $('body').append($modal);
 
         $modal.on('hidden.bs.modal', function () {
+          var modalEl = this;
+          if (typeof bootstrap !== 'undefined' && bootstrap.Modal && typeof bootstrap.Modal.getInstance === 'function') {
+            var modalInstance = bootstrap.Modal.getInstance(modalEl);
+            if (modalInstance && typeof modalInstance.dispose === 'function') {
+              modalInstance.dispose();
+            }
+          }
           $modal.remove();
         });
 
