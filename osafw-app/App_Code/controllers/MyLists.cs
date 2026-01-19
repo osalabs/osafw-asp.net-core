@@ -62,16 +62,8 @@ public class MyListsController : FwAdminController
                     statusValues.Add(FwModel.STATUS_ACTIVE);
             }
 
-            if (statusValues.Count == 1)
-            {
-                this.list_where += " and status=@status";
-                this.list_where_params["status"] = statusValues[0];
-            }
-            else
-            {
-                this.list_where += " and status IN (@status_list)";
-                this.list_where_params["status_list"] = statusValues;
-            }
+            this.list_where += " and status IN (@status_list)";
+            this.list_where_params["status_list"] = statusValues;
         }
         else
         {

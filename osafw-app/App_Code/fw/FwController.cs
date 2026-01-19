@@ -746,16 +746,8 @@ public abstract class FwController
                         statusValues.Add(FwModel.STATUS_ACTIVE);
                 }
 
-                if (statusValues.Count == 1)
-                {
-                    this.list_where += " and " + db.qid(model0.field_status) + "=@status";
-                    this.list_where_params["status"] = statusValues[0];
-                }
-                else
-                {
-                    this.list_where += " and " + db.qid(model0.field_status) + " IN (@status_list)";
-                    this.list_where_params["status_list"] = statusValues;
-                }
+                this.list_where += " and " + db.qid(model0.field_status) + " IN (@status_list)";
+                this.list_where_params["status_list"] = statusValues;
             }
             else
             {
@@ -776,24 +768,6 @@ public abstract class FwController
         List<int> statusValues = [];
         if (!list_filter.TryGetValue("status", out object? rawStatus) || rawStatus == null)
             return statusValues;
-
-        if (rawStatus is IList rawList)
-        {
-            foreach (var item in rawList)
-            {
-                var token = item?.toStr().Trim() ?? "";
-                if (string.IsNullOrEmpty(token))
-                {
-                    // Empty selection means "all", so reset filter to default behavior.
-                    return [];
-                }
-
-                if (int.TryParse(token, out int statusValue) && !statusValues.Contains(statusValue))
-                    statusValues.Add(statusValue);
-            }
-
-            return statusValues;
-        }
 
         var statusStr = rawStatus.toStr().Trim();
         if (string.IsNullOrEmpty(statusStr))
