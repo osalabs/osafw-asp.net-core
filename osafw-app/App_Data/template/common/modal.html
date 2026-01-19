@@ -1,0 +1,155 @@
+<!--
+  fw_modal component usage:
+
+  1) Add this include to a load_script.html:
+     <~/common/modal>
+  2) Trigger with:
+     <button class="on-fw-modal" data-url="/admin/controller/(action)">Open Modal</button>
+     - Optional: data-modal-dialog-class / data-modal-content-class to tweak Bootstrap classes.
+  3) Forms inside modal are submitted via ajaxForm and HTML response replaces modal content.
+  4) In modal JS, get the trigger element:
+     var trigger = fw.modalTriggerEl(fw.scopeFromScript());
+-->
+<script>
+  fw.initComponent('fw_modal', {
+    init: function () {
+      var $doc = $(document);
+      if ($doc.data('fw-modal-inited')) return;
+      $doc.data('fw-modal-inited', true);
+
+      fw._modalCounter = fw._modalCounter || 0;
+      fw._modalTriggerCounter = fw._modalTriggerCounter || 0;
+
+      function ensureTriggerId($trigger) {
+        var triggerId = $trigger.data('fw-modal-trigger-id');
+        if (!triggerId) {
+          fw._modalTriggerCounter += 1;
+          triggerId = 'fw-modal-trigger-' + Date.now() + '-' + fw._modalTriggerCounter;
+          $trigger.attr('data-fw-modal-trigger-id', triggerId);
+        }
+        return triggerId;
+      }
+
+      function buildModal($trigger) {
+        fw._modalCounter += 1;
+        var modalId = 'fw-modal-' + Date.now() + '-' + fw._modalCounter;
+        var triggerId = ensureTriggerId($trigger);
+        var dialogClass = $trigger.data('modal-dialog-class') || 'modal-dialog modal-lg modal-dialog-scrollable';
+        var contentClass = $trigger.data('modal-content-class') || 'modal-content bg-body';
+
+        var $modal = $('<div class="modal fade fw-modal" tabindex="-1" role="dialog" aria-hidden="true"></div>');
+        var $dialog = $('<div></div>').addClass(dialogClass);
+        var $content = $('<div></div>').addClass(contentClass);
+
+        $modal.attr('id', modalId);
+        $modal.attr('data-fw-modal-trigger-id', triggerId);
+        $modal.append($dialog.append($content));
+
+        $('body').append($modal);
+
+        $modal.on('hidden.bs.modal', function () {
+          var modalEl = this;
+          if (typeof bootstrap !== 'undefined' && bootstrap.Modal && typeof bootstrap.Modal.getInstance === 'function') {
+            var modalInstance = bootstrap.Modal.getInstance(modalEl);
+            if (modalInstance && typeof modalInstance.dispose === 'function') {
+              modalInstance.dispose();
+            }
+          }
+          $modal.remove();
+        });
+
+        return $modal;
+      }
+
+      function executeModalScripts($container) {
+        $container.find('script').each(function () {
+          var oldScript = this;
+          var newScript = document.createElement('script');
+
+          Array.from(oldScript.attributes).forEach(function (attr) {
+            newScript.setAttribute(attr.name, attr.value);
+          });
+
+          if (oldScript.src) {
+            newScript.src = oldScript.src;
+            newScript.async = false;
+          } else {
+            newScript.text = oldScript.text;
+          }
+
+          oldScript.parentNode.replaceChild(newScript, oldScript);
+        });
+      }
+
+      function setModalContent($modal, html) {
+        var $content = $modal.find('.modal-content');
+        $content.html(html);
+        executeModalScripts($content);
+        bindModalForms($modal);
+      }
+
+      function escapeHtml(message) {
+        return $('<div>').text(message == null ? '' : String(message)).html();
+      }
+
+      function showLoadError($modal, message) {
+        var safeMessage = escapeHtml(message || '');
+        var html = '<div class="modal-body"><div class="alert alert-danger mb-0">' + safeMessage + '</div></div>';
+        setModalContent($modal, html);
+      }
+
+      function loadModalContent($modal, url) {
+        $modal.data('fw-modal-url', url);
+        var $content = $modal.find('.modal-content');
+        $content.html(fw.HTML_LOADING);
+
+        $.ajax({
+          url: url,
+          method: 'GET',
+          dataType: 'html'
+        })
+          .done(function (html) {
+            setModalContent($modal, html);
+          })
+          .fail(function (xhr) {
+            var message = xhr.responseText || 'Failed to load modal content.';
+            showLoadError($modal, message);
+          });
+      }
+
+      function bindModalForms($modal) {
+        if (!$.fn.ajaxForm) return;
+
+        $modal.find('form').each(function () {
+          var $form = $(this);
+          if ($form.data('fw-modal-ajaxform')) return;
+
+          $form.data('fw-modal-ajaxform', true);
+          $form.ajaxForm({
+            dataType: 'html',
+            success: function (html) {
+              setModalContent($modal, html);
+            },
+            error: function (xhr) {
+              var message = xhr.responseText || 'Failed to submit form.';
+              showLoadError($modal, message);
+            }
+          });
+        });
+      }
+
+      $doc.on('click', '.on-fw-modal', function (e) {
+        var $trigger = $(this);
+        var url = $trigger.data('url') || $trigger.attr('href');
+        if (!url) return;
+
+        e.preventDefault();
+        var $modal = buildModal($trigger);
+        loadModalContent($modal, url);
+
+        var instance = new bootstrap.Modal($modal[0]);
+        instance.show();
+      });
+    }
+  });
+</script>
