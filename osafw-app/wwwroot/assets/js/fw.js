@@ -34,6 +34,8 @@ window.fw={
     return $scope.length ? $scope[0] : document;
   },
 
+  // Find the element that triggered a modal by tracking data-fw-modal-trigger-id
+  // scope: element inside modal or document; returns the trigger element or null if not found
   modalTriggerEl: function (scope) {
     var $scope = $(scope || document);
     var $modal = $scope.closest('.modal');
