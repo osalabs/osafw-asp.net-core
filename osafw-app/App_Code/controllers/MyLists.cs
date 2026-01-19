@@ -4,6 +4,7 @@
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
 using System;
+using System.Linq;
 
 namespace osafw;
 
@@ -50,16 +51,33 @@ public class MyListsController : FwAdminController
 
     public override void setListSearchStatus()
     {
-        if (!Utils.isEmpty(list_filter["status"]))
+        var statusValues = getStatusFilterValues();
+        if (statusValues.Count > 0)
         {
-            this.list_where += " and status=@status";
-            this.list_where_params["@status"] = db.qi(list_filter["status"]);
+            if (!fw.model<Users>().isAccessLevel(Users.ACL_SITEADMIN) && statusValues.Contains(FwModel.STATUS_DELETED))
+            {
+                // Non-admins cannot filter to deleted; fallback to active if no other status remains.
+                statusValues = statusValues.Where(status => status != FwModel.STATUS_DELETED).ToList();
+                if (statusValues.Count == 0)
+                    statusValues.Add(FwModel.STATUS_ACTIVE);
+            }
+
+            if (statusValues.Count == 1)
+            {
+                this.list_where += " and status=@status";
+                this.list_where_params["status"] = statusValues[0];
+            }
+            else
+            {
+                this.list_where += " and status IN (@status_list)";
+                this.list_where_params["status_list"] = statusValues;
+            }
         }
         else
         {
             // if no status passed - by default show all non-deleted
             this.list_where += " and status<>@status";
-            this.list_where_params["@status"] = FwModel.STATUS_DELETED;
+            this.list_where_params["status"] = FwModel.STATUS_DELETED;
         }
     }
 

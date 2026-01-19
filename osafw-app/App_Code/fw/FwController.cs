@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Text.RegularExpressions;
@@ -734,14 +735,27 @@ public abstract class FwController
     {
         if (!string.IsNullOrEmpty(model0.field_status))
         {
-            if (!Utils.isEmpty(this.list_filter["status"]))
+            var statusValues = getStatusFilterValues();
+            if (statusValues.Count > 0)
             {
-                var status = this.list_filter["status"].toInt();
-                // if want to see trashed and not admin - just show active
-                if (status == FwModel.STATUS_DELETED & !fw.model<Users>().isAccessLevel(Users.ACL_SITEADMIN))
-                    status = 0;
-                this.list_where += " and " + db.qid(model0.field_status) + "=@status";
-                this.list_where_params["status"] = status;
+                if (!fw.model<Users>().isAccessLevel(Users.ACL_SITEADMIN) && statusValues.Contains(FwModel.STATUS_DELETED))
+                {
+                    // Non-admins cannot filter to deleted; fallback to active if no other status remains.
+                    statusValues = statusValues.Where(status => status != FwModel.STATUS_DELETED).ToList();
+                    if (statusValues.Count == 0)
+                        statusValues.Add(FwModel.STATUS_ACTIVE);
+                }
+
+                if (statusValues.Count == 1)
+                {
+                    this.list_where += " and " + db.qid(model0.field_status) + "=@status";
+                    this.list_where_params["status"] = statusValues[0];
+                }
+                else
+                {
+                    this.list_where += " and " + db.qid(model0.field_status) + " IN (@status_list)";
+                    this.list_where_params["status_list"] = statusValues;
+                }
             }
             else
             {
@@ -749,6 +763,59 @@ public abstract class FwController
                 this.list_where_params["status"] = FwModel.STATUS_DELETED;// by default - show all non-deleted
             }
         }
+    }
+
+    /// <summary>
+    /// Build a list of status values from list_filter["status"] so list screens can support multi-select filters.
+    /// </summary>
+    /// <returns>
+    /// List of status integers parsed from the list filter; empty list means "all statuses".
+    /// </returns>
+    protected virtual List<int> getStatusFilterValues()
+    {
+        List<int> statusValues = [];
+        if (!list_filter.TryGetValue("status", out object? rawStatus) || rawStatus == null)
+            return statusValues;
+
+        if (rawStatus is IList rawList)
+        {
+            foreach (var item in rawList)
+            {
+                var token = item?.toStr().Trim() ?? "";
+                if (string.IsNullOrEmpty(token))
+                {
+                    // Empty selection means "all", so reset filter to default behavior.
+                    return [];
+                }
+
+                if (int.TryParse(token, out int statusValue) && !statusValues.Contains(statusValue))
+                    statusValues.Add(statusValue);
+            }
+
+            return statusValues;
+        }
+
+        var statusStr = rawStatus.toStr().Trim();
+        if (string.IsNullOrEmpty(statusStr))
+            return statusValues;
+
+        if (statusStr.StartsWith(',') || statusStr.EndsWith(',') || statusStr.Contains(",,"))
+        {
+            // Selecting "- all -" yields an empty token in the joined string; treat that as no filter.
+            return [];
+        }
+
+        foreach (var token in statusStr.Split(',', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var trimmed = token.Trim();
+            if (trimmed.Length == 0)
+                continue;
+
+            if (int.TryParse(trimmed, out int statusValue) && !statusValues.Contains(statusValue))
+                statusValues.Add(statusValue);
+        }
+
+        return statusValues;
     }
 
     // get count of rows from db

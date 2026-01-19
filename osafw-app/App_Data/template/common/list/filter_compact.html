@@ -25,10 +25,10 @@
     <div class="list-filter-compact-selects d-flex flex-wrap align-items-center gap-2">
       <div class="list-filter-compact-select list-filter-compact-select-status">
         <label class="visually-hidden" for="fstatus">`Status`</label>
-        <select id="fstatus" name="f[status]" class="form-select" title="`Status`">
+        <select id="fstatus" name="f[status]" class="form-select select2" multiple data-placeholder="`- Status -`" title="`Status`">
           <option value="">`- Status -`</option>
-          <~/common/sel/statusf.sel select="f[status]" iflt="SESSION[access_level]" value="100">
-          <~/common/sel/statusf_admin.sel select="f[status]" ifeq="SESSION[access_level]" value="100">
+          <~/common/sel/statusf.sel select="f[status]" multi="," iflt="SESSION[access_level]" value="100">
+          <~/common/sel/statusf_admin.sel select="f[status]" multi="," ifeq="SESSION[access_level]" value="100">
         </select>
       </div>
 
