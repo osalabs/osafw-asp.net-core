@@ -51,30 +51,59 @@
       $selects.removeClass('form-select');
 
       $selects.each(function () {
-        var $select = $(this);
-        if ($select.data('select2')) return;
+        var $select2 = $(this);
+        if ($select2.data('select2')) return;
 
-        $select.select2({
+        var $form = $(this.form);
+        var initVal = $select2.val();
+        var isFilterAutosubmit = false;
+        var isFormAutosave = false;
+
+        if ($form.is('[data-list-filter][data-autosubmit]')) {
+          $select2.attr('data-nosubmit', 'true');
+          isFilterAutosubmit = true;
+        } else if ($form.is('[data-autosave]')) {
+          $select2.attr('data-noautosave', 'true');
+          isFormAutosave = true;
+        }
+
+        var options = {
           width: '100%',
           dropdownAutoWidth: true,
-          placeholder: $select.data('placeholder') || undefined
+          placeholder: $select2.data('placeholder') || undefined
+        };
+        options = $.extend(options, $select2.data('select2-options'));
+
+        $select2.select2(options);
+
+        $select2.on('select2:close', function () {
+          if (isFilterAutosubmit && !_isSelvalEqual(initVal, $select2.val()))
+            $form.trigger('submit');
+          else if (isFormAutosave && !_isSelvalEqual(initVal, $select2.val()))
+            $form.trigger('autosave');
+        });
+
+        $select2.on('change.fwSelect2', function () {
+          $select2.closest('form[data-check-changes]').trigger('change');
         });
       });
 
-      if ($(document).data('fw-select2-handlers')) return;
-      $(document).data('fw-select2-handlers', true);
+      function _isSelvalEqual(a, b) {
+        var isArrayA = Array.isArray(a);
+        var isArrayB = Array.isArray(b);
 
-      $(document).on('change.fwSelect2', '.select2', function () {
-        var $select = $(this);
+        if (isArrayA !== isArrayB) return false;
 
-        if ($select.is(':not([data-nosubmit])'))
-          $select.closest('form[data-list-filter][data-autosubmit]').trigger('submit');
+        if (!isArrayA) return (a === b);
 
-        $select.closest('form[data-check-changes]').trigger('change');
+        if (a.length !== b.length) return false;
 
-        if ($select.is(':not([data-noautosave])'))
-          $select.closest('form[data-autosave]').trigger('autosave');
-      });
+        for (var i = 0; i < a.length; ++i) {
+          if (a[i] !== b[i]) return false;
+        }
+
+        return true;
+      }
     }
   });
 </script>
