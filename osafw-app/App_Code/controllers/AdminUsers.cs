@@ -30,6 +30,7 @@ public class AdminUsersController : FwDynamicController
         model_related = fw.model<Users>();
 
         list_sortmap["last_logins"] = model0.field_id;
+        list_sortmap["is_mfa"] = model0.field_id;
     }
 
     public override void setListSearch()
