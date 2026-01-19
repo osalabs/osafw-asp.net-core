@@ -1,59 +1,88 @@
-<link href="<~GLOBAL[ASSETS_URL]>/css/datepicker.css" rel="stylesheet">
-<script src="<~GLOBAL[ASSETS_URL]>/js/bootstrap-datepicker.js"></script>
 <script>
-    $(document).ready(function () {
-        var autoClose = true;
-        var dateFormat = '<~/common/sel/date_format_js.sel selvalue="GLOBAL[date_format]">';
-        var timeFormat = '<~/common/sel/time_format_js.sel selvalue="GLOBAL[time_format]">';
+  fw.initComponent('calendar', {
+    scope: fw.scopeFromScript(),
+    assetsUrls: [
+      '<~GLOBAL[ASSETS_URL]>/css/datepicker.css',
+      '<~GLOBAL[ASSETS_URL]>/js/bootstrap-datepicker.js'
+    ],
+    params: {
+      dateFormat: '<~/common/sel/date_format_js.sel selvalue="GLOBAL[date_format]">',
+      timeFormat: '<~/common/sel/time_format_js.sel selvalue="GLOBAL[time_format]">'
+    },
+    init: function (scope, params) {
+      if (!$.fn.datepicker) return;
 
-        $('.date').datepicker({ format: dateFormat, autoclose: autoClose })
-            .on('changeDate', function (e) {
-                if (e.viewMode == 'years' || e.viewMode == 'months') return; //do not trigger change yet, while user selecting year/month
-                $(this).find('input').trigger('change');
-            })
-            //focus/blur for proper focus if multiple datepickers present on the page
-            .on('show', function (e) {
-                $(this).find('input').focus();
-            })
-            .on('hide', function (e) {
-                $(this).find('input').blur();
-            })
-            //update calendar on manual change
-            .find('input').on('change', function (e) {
-                if (e.originalEvent === undefined) return; //changed from the calendar, no need to update
-                $(this).closest('.date').datepicker('update');
-            });
+      var $scope = $(scope || document);
+      var autoClose = params.autoClose !== undefined ? params.autoClose : true;
+      var dateFormat = params.dateFormat;
+      var timeFormat = params.timeFormat;
 
-        //allow to support time - just add "datetime" class
-        function formatTime(date) {
-            var hours = date.getHours();
-            var minutes = date.getMinutes();
-            if (timeFormat == 'HH:mm') {
-                return (hours < 10 ? '0' : '') + hours + ':' + (minutes < 10 ? '0' : '') + minutes;
-            } else {
-                var ampm = hours >= 12 ? 'PM' : 'AM';
-                hours = hours % 12;
-                hours = hours ? hours : 12; // the hour '0' should be '12'
-                minutes = minutes < 10 ? '0' + minutes : minutes;
-                return hours + ':' + minutes + ' ' + ampm;
-            }
+      $scope.find('.date').each(function () {
+        var $date = $(this);
+        if ($date.data('fw-calendar-inited')) return;
+        $date.data('fw-calendar-inited', true);
+
+        $date
+          .datepicker({ format: dateFormat, autoclose: autoClose })
+          .on('changeDate.fwCalendar', function (e) {
+            if (e.viewMode == 'years' || e.viewMode == 'months') return; //do not trigger change yet, while user selecting year/month
+            $(this).find('input').trigger('change');
+          })
+          //focus/blur for proper focus if multiple datepickers present on the page
+          .on('show.fwCalendar', function (e) {
+            $(this).find('input').focus();
+          })
+          .on('hide.fwCalendar', function (e) {
+            $(this).find('input').blur();
+          })
+          //update calendar on manual change
+          .find('input')
+          .off('change.fwCalendar')
+          .on('change.fwCalendar', function (e) {
+            if (e.originalEvent === undefined) return; //changed from the calendar, no need to update
+            $(this).closest('.date').datepicker('update');
+          });
+      });
+
+      $scope.find('.datetime').each(function () {
+        var $this = $(this);
+        if (!$this.data('fw-time-format') && timeFormat) {
+          $this.data('fw-time-format', timeFormat);
         }
+      });
 
-        $(document).on('change changeDate', '.datetime', function (e) {
-            //console.log('datetime change');
-            var $this = $(this);
-            var deftime = $this.data('default-time');
-            if (deftime == 'now') deftime = formatTime(new Date());
-            if (!deftime) deftime = (timeFormat == 'HH:mm') ? '09:00' : '9:00 AM';
+      if ($(document).data('fw-calendar-handlers')) return;
+      $(document).data('fw-calendar-handlers', true);
 
-            var $input = $this.find('input');
-            var val = $input.val();
-            //console.log(val);
-            if (val > '' && !val.includes(' ')) {
-                val += ' ' + deftime;
-                $input.val(val);
-                //console.log('set:', val);
-            }
-        });
-    });
+      //allow to support time - just add "datetime" class
+      function formatTime(date, fmt) {
+        var hours = date.getHours();
+        var minutes = date.getMinutes();
+        if (fmt == 'HH:mm') {
+          return (hours < 10 ? '0' : '') + hours + ':' + (minutes < 10 ? '0' : '') + minutes;
+        } else {
+          var ampm = hours >= 12 ? 'PM' : 'AM';
+          hours = hours % 12;
+          hours = hours ? hours : 12; // the hour '0' should be '12'
+          minutes = minutes < 10 ? '0' + minutes : minutes;
+          return hours + ':' + minutes + ' ' + ampm;
+        }
+      }
+
+      $(document).on('change.fwCalendar changeDate.fwCalendar', '.datetime', function (e) {
+        var $this = $(this);
+        var fmt = $this.data('fw-time-format') || timeFormat;
+        var deftime = $this.data('default-time');
+        if (deftime == 'now') deftime = formatTime(new Date(), fmt);
+        if (!deftime) deftime = (fmt == 'HH:mm') ? '09:00' : '9:00 AM';
+
+        var $input = $this.find('input');
+        var val = $input.val();
+        if (val > '' && !val.includes(' ')) {
+          val += ' ' + deftime;
+          $input.val(val);
+        }
+      });
+    }
+  });
 </script>
