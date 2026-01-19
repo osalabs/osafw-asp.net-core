@@ -29,7 +29,7 @@ public class AdminUsersController : FwDynamicController
 
         model_related = fw.model<Users>();
 
-        list_sortmap.Remove("last_logins");
+        list_sortmap["last_logins"] = model0.field_id;
     }
 
     public override void setListSearch()
