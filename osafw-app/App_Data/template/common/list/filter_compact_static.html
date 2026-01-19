@@ -1,0 +1,76 @@
+<form class="fw-card list-filter-compact d-print-none" method="GET" id="FFilter" name="FFilter" data-autosubmit data-list-filter>
+  <~/common/list/filter_form_fields>
+
+  <div class="list-filter-compact-row d-flex flex-wrap align-items-center gap-2">
+    <div class="list-filter-compact-add d-flex align-items-center gap-2">
+      <~page_header_actions>
+    </div>
+
+    <div class="list-filter-compact-search flex-grow-1">
+      <label class="visually-hidden" for="fs">`Search`</label>
+      <div class="input-group">
+        <input type="text" id="fs" name="f[s]" value="<~f[s]>" maxlength="255" class="form-control" placeholder="<~list_filter_search_placeholder>">
+        <button class="btn btn-outline-secondary" title="`Search`">
+          <i class="bi bi-search"></i>
+          <span class="btn-label d-none d-xl-inline ms-1">`Search`</span>
+        </button>
+        <a href="<~/common/list/reset_filter_relid>" class="btn btn-outline-secondary on-filter-reset" title="`Reset`">
+          <i class="bi bi-x-lg"></i>
+          <span class="btn-label d-none d-xl-inline ms-1">`Reset`</span>
+        </a>
+      </div>
+      <~list_filter_search_more>
+    </div>
+
+    <div class="list-filter-compact-selects d-flex flex-wrap align-items-center gap-2">
+      <div class="list-filter-compact-select list-filter-compact-select-status">
+        <label class="visually-hidden" for="fstatus">`Status`</label>
+        <select id="fstatus" name="f[status]" class="form-select" title="`Status`">
+          <option value="">`- Status -`</option>
+          <~/common/sel/statusf.sel select="f[status]" iflt="SESSION[access_level]" value="100">
+          <~/common/sel/statusf_admin.sel select="f[status]" ifeq="SESSION[access_level]" value="100">
+        </select>
+      </div>
+
+      <~userlists_block if="is_userlists" inline>
+      <div class="list-filter-compact-select list-filter-compact-select-userlist">
+        <label class="visually-hidden" for="fuserlist">`My List`</label>
+        <select id="fuserlist" name="f[userlist]" class="form-select" title="`My List`">
+          <option value="">`- My List -`</option>
+          <~select_userlists select="f[userlist]">
+        </select>
+      </div>
+      </~userlists_block>
+    </div>
+
+    <div class="list-filter-compact-actions d-flex flex-wrap align-items-center gap-2 ms-auto">
+      <div class="btn-group">
+        <button type="submit" name="export" value="csv" class="btn btn-outline-secondary" title="`Export`">
+          <i class="bi bi-cloud-download"></i>
+          <span class="btn-label d-none d-xl-inline ms-1">`Export`</span>
+        </button>
+        <button type="button" class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" title="`More export options`">
+          <span class="visually-hidden">`Toggle Dropdown`</span>
+        </button>
+        <div class="dropdown-menu dropdown-menu-end">
+          <button type="submit" name="export" value="xls" class="dropdown-item" title="Export to Excel">
+            <i class="bi bi-cloud-download-fill"></i> `Export as .xls`
+          </button>
+        </div>
+      </div>
+
+      <div class="btn-group">
+        <button type="button" class="btn btn-outline-secondary on-print" title="`Print`">
+          <i class="bi bi-printer"></i>
+          <span class="btn-label d-none d-xl-inline ms-1">`Print`</span>
+        </button>
+      </div>
+
+      <div class="btn-group">
+        <button type="button" class="btn btn-outline-secondary on-toggle-density" title="`Density`"><i class="bi bi-grid-3x2-gap"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <~list_filter_more>
+</form>
