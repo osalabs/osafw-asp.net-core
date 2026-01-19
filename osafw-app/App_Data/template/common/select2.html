@@ -1,0 +1,67 @@
+<style type="text/css">
+  .select2-container--default .select2-selection--single {
+    height: calc(2.25rem + 2px);
+    padding: 0.375rem 2.25rem 0.375rem 0.75rem;
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+  }
+
+  .select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 1.5;
+    color: #212529;
+  }
+
+  .select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 100%;
+    right: 0.5rem;
+  }
+
+  .select2-container--default.select2-container--open .select2-selection--single {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgb(13 110 253 / 25%);
+  }
+</style>
+
+<script>
+  fw.initComponent('select2', {
+    scope: fw.scopeFromScript(),
+    assetsUrls: [
+      '<~GLOBAL[ASSETS_URL]>/lib/select2/dist/css/select2.min.css?v<~GLOBAL[SITE_VERSION]>',
+      '<~GLOBAL[ASSETS_URL]>/lib/select2/dist/js/select2.min.js?v<~GLOBAL[SITE_VERSION]>'
+    ],
+    init: function (scope, params) {
+      if (!$.fn.select2) return;
+
+      var $scope = $(scope || document);
+      var $selects = $scope.find('.select2');
+
+      $selects.removeClass('form-select');
+
+      $selects.each(function () {
+        var $select = $(this);
+        if ($select.data('select2')) return;
+
+        $select.select2({
+          width: '100%',
+          dropdownAutoWidth: true,
+          placeholder: $select.data('placeholder') || undefined
+        });
+      });
+
+      if ($(document).data('fw-select2-handlers')) return;
+      $(document).data('fw-select2-handlers', true);
+
+      $(document).on('change.fwSelect2', '.select2', function () {
+        var $select = $(this);
+
+        if ($select.is(':not([data-nosubmit])'))
+          $select.closest('form[data-list-filter][data-autosubmit]').trigger('submit');
+
+        $select.closest('form[data-check-changes]').trigger('change');
+
+        if ($select.is(':not([data-noautosave])'))
+          $select.closest('form[data-autosave]').trigger('autosave');
+      });
+    }
+  });
+</script>

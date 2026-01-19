@@ -688,7 +688,7 @@ pick a `type`, set the required keys, and copy an example you can paste into `co
   "option0_title": "- none -",
   "multiple": false,
   "class_contents": "col-md-3",
-  "class_control": "selectpicker on-refresh",
+  "class_control": "select2 on-refresh",
   "attrs_control": "data-live-search=\"true\" data-noautosave=\"true\"",
   "prepend": [
     {

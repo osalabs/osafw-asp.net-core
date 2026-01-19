@@ -23,17 +23,6 @@
       ]
     },
     {
-      "library": "bootstrap-select@1.14.0-beta3",
-      "destination": "wwwroot/assets/lib/bootstrap-select",
-      "files": [
-        "dist/css/bootstrap-select.min.css",
-        "dist/css/bootstrap-select.css.map",
-        "dist/js/bootstrap-select.min.js",
-        "dist/js/bootstrap-select.min.js.map"
-      ]
-    },
-
-    {
       "library": "jquery@3.7.1",
       "destination": "wwwroot/assets/lib/jquery",
       "files": [
@@ -229,6 +218,14 @@
       "files": [
         "bootstrap-simple-autocomplete.js",
         "bootstrap-simple-autocomplete.mjs"
+      ]
+    },
+    {
+      "library": "select2@4.1.0-rc.0",
+      "destination": "wwwroot/assets/lib/select2",
+      "files": [
+        "dist/css/select2.min.css",
+        "dist/js/select2.min.js"
       ]
     }
   ]

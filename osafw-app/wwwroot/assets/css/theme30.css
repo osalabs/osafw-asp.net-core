@@ -283,17 +283,6 @@ li.page-item:not(:nth-last-child(2)) a.page-link {
   background: transparent;
 }
 
-/* bootstrap-select compatibility */
-.bootstrap-select .dropdown-item {
-  font-weight: 400;
-  color: var(--bs-body-color);
-  font-family: var(--bs-body-font-family) !important;
-}
-
-.bootstrap-select .dropdown-item.active {
-  color: #fff;
-}
-
 /* markdown editor tweaks */
 .md-editor textarea:focus {
   border-color: var(--bs-primary) !important;

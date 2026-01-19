@@ -495,7 +495,7 @@ These help keep your templates DRY and consistent. Below are the most important 
 - **ajaxform.html**: Includes jQuery Form plugin. Usage: `<~/common/ajaxform>`
 - **att.html**: Includes attachment selection modal. Usage: `<~/common/att>`
 - **autocomplete.html**: Includes Bootstrap Simple Autocomplete JS. Usage: `<~/common/autocomplete>`
-- **bootstrap_select.html**: Includes Bootstrap Select JS/CSS and related helpers for styled selects. Initializes on all `.selectpicker` elements. Usage: `<~/common/bootstrap_select>`
+- **select2.html**: Includes Select2 JS/CSS and related helpers for styled selects. Initializes on all `.select2` elements. Usage: `<~/common/select2>`
 - **calendar.html**: Includes Bootstrap Datepicker JS/CSS and datepicker initialization on all `.date` elements. Usage: `<~/common/calendar>`
 - **html_editor.html**: Includes HTML editor (TinyMCE) JS/CSS and initialize it on all `.fw-html-editor` elements. Usage: `<~/common/html_editor>`
 - **markdown_editor.html**: Includes Markdown editor JS/CSS and initializes it on all `textarea.markdown` elements. Usage: `<~/common/markdown_editor>`
