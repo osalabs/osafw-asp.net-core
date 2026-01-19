@@ -131,9 +131,11 @@ public class AdminUsersController : FwDynamicController
         }
 
         // Build an IN clause with parameters to avoid per-row queries.
+        var activityLogsTable = fw.model<FwActivityLogs>().table_name;
+        var logTypesTable = fw.model<FwLogTypes>().table_name;
         var sql = "select al.item_id as users_id, CAST(al.idate as date) as login_date, count(*) as login_count "
-            + "from activity_logs al "
-            + "inner join log_types lt on lt.id=al.log_types_id "
+            + "from " + activityLogsTable + " al "
+            + "inner join " + logTypesTable + " lt on lt.id=al.log_types_id "
             + "where lt.icode=@login_icode "
             + "and al.item_id in (" + string.Join(",", inParams) + ") "
             + "and al.idate >= @from_date "
