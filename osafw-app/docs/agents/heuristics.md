@@ -1,6 +1,6 @@
 # Heuristics for osafw-asp.net-core
 
-Updated: 2025-12-26
+Updated: 2026-01-07
 
 - Prefer adding features via controllers/models over modifying core `fw` unless it’s a cross-cutting concern.
 - For CRUD screens, first try `FwDynamicController` or `FwVueController` with `config.json` before writing bespoke UI.
@@ -18,3 +18,4 @@ Updated: 2025-12-26
 - For migrations, add SQL scripts under `App_Data/sql/updates` and register via `fwupdates` flow.
 - Log at appropriate level; avoid verbose logs on production (`log_level` INFO).
 - In Vue templates, bind disabled states to buttons (not anchors) to avoid `disabled="false"` being rendered and to honor read-only flags.
+- For quick image annotation in Vue templates, use a canvas-based overlay and export at full resolution to keep stroke widths consistent.
