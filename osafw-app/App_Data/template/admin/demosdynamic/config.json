@@ -280,7 +280,7 @@
             "lookup_model": "DemoDicts",
             "filter_for": "parent_id",
             "filter_field": "demo_dicts_id",
-            "class_control": "selectpicker on-refresh",
+            "class_control": "select2 on-refresh",
             "is_option_empty": true,
             "option0_title": "- select to show only Parents with this DemoDicts -",
             "attrs_control": "data-live-search=\"true\""
