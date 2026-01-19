@@ -81,8 +81,13 @@
         bindModalForms($modal);
       }
 
+      function escapeHtml(message) {
+        return $('<div>').text(message == null ? '' : String(message)).html();
+      }
+
       function showLoadError($modal, message) {
-        var html = '<div class="modal-body"><div class="alert alert-danger mb-0">' + message + '</div></div>';
+        var safeMessage = escapeHtml(message || '');
+        var html = '<div class="modal-body"><div class="alert alert-danger mb-0">' + safeMessage + '</div></div>';
         setModalContent($modal, html);
       }
 
