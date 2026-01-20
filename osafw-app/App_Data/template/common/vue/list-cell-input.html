@@ -107,13 +107,13 @@
                 get() {
                     const value = this.row[this.col.field_name];
                     if (this.inputType === 'time') {
-                        return this.fwStore.formatTime(value);
+                        return AppUtils.formatTime(value);
                     }
                     return value;
                 },
                 set(newValue) {
                     if (this.inputType === 'time') {
-                        this.row[this.col.field_name] = this.fwStore.timeToSeconds(newValue);
+                        this.row[this.col.field_name] = AppUtils.timeToSeconds(newValue);
                     } else {
                         this.row[this.col.field_name] = newValue;
                     }

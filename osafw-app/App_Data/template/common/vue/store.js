@@ -462,19 +462,6 @@ let actions = {
         });
     },
 
-    formatDate(value) {
-        return AppUtils.formatDate(value, this.global);
-    },
-    formatDateTime(value, withSeconds = true) {
-        return AppUtils.formatDateTime(value, this.global, withSeconds);
-    },
-    formatTime(value) {
-        return AppUtils.formatTime(value);
-    },
-    timeToSeconds(value) {
-        return AppUtils.timeToSeconds(value);
-    },
-
     //save to store each key from data if such key exists in store
     saveToStore: createStoreSaveToStoreAction({ allowStoreMerge: true }),
 

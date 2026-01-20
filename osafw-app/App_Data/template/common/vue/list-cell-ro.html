@@ -37,16 +37,16 @@
 
                 // Explicit types from headers
                 if (type === 'date' || type === 'date_popup') {
-                    return this.fwStore.formatDate(v);
+                    return AppUtils.formatDate(v, this.fwStore.global);
                 }
                 if (type === 'date_combo') {
-                    return this.fwStore.formatDate(v);
+                    return AppUtils.formatDate(v, this.fwStore.global);
                 }
                 if (type === 'datetime' || type === 'datetime_popup' || type === 'added' || type === 'updated') {
-                    return this.fwStore.formatDateTime(v);
+                    return AppUtils.formatDateTime(v, this.fwStore.global);
                 }
                 if (type === 'time') {
-                    return this.fwStore.formatTime(v);
+                    return AppUtils.formatTime(v);
                 }
 
                 // Fallback: detect SQL date/time strings automatically
