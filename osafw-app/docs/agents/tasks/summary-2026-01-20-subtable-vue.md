@@ -1,16 +1,18 @@
 ## What changed
 - Added subtable row id tracking and Vue save payload for subtable refresh/id reconciliation.
 - Updated Vue store subtable submission to skip non-primitive fields and apply server subtable updates after save.
+- Guarded subtable reconciliation on the client to avoid overwriting in-progress rows when save responses include validation errors.
 
 ## Commands that worked (build/test/run)
 - None.
 
 ## Pitfalls - fixes
-- None.
+- Autosave responses with validation errors could wipe client subtable rows; now reconciliation is skipped on error.
 
 ## Decisions - why
 - Return subtable row id mappings and refreshed rows to let the client reconcile new ids without full reloads.
 - Update subtables in-place on the client to preserve user focus during autosave.
+- Skip applying server subtable payloads when the response reports validation errors.
 
 ## Heuristics (keep terse)
 - None.

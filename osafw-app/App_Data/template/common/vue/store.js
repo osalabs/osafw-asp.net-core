@@ -925,7 +925,9 @@ let actions = {
             const response = await this.api.post(this.edit_data.id, req);
             //console.log('saveEditData response', response);
             this.edit_data.save_result = response;
-            this.applySubtableSaveResult(response);
+            if (!response?.error) {
+                this.applySubtableSaveResult(response);
+            }
 
             if (this.current_screen == 'list') {
                 //reload list to show changes
