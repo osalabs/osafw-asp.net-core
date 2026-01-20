@@ -1,20 +1,20 @@
 {
   "version": "1.0",
-  "defaultProvider": "unpkg",
+  "defaultProvider": "cdnjs",
   "defaultDestination": "wwwroot/assets/lib",
   "libraries": [
     {
       "library": "bootstrap@5.3.6",
       "destination": "wwwroot/assets/lib/bootstrap",
       "files": [
-        "dist/css/bootstrap.min.css",
-        "dist/css/bootstrap.min.css.map",
-        "dist/js/bootstrap.bundle.min.js",
-        "dist/js/bootstrap.bundle.min.js.map"
+        "css/bootstrap.min.css",
+        "css/bootstrap.min.css.map",
+        "js/bootstrap.bundle.min.js",
+        "js/bootstrap.bundle.min.js.map"
       ]
     },
     {
-      "library": "bootstrap-icons@1.11.3",
+      "library": "bootstrap-icons@1.13.1",
       "destination": "wwwroot/assets/lib/bootstrap-icons",
       "files": [
         "font/fonts/bootstrap-icons.woff2",
@@ -26,12 +26,13 @@
       "library": "jquery@3.7.1",
       "destination": "wwwroot/assets/lib/jquery",
       "files": [
-        "dist/jquery.min.js",
-        "dist/jquery.min.map"
+        "jquery.min.js",
+        "jquery.min.map"
       ]
     },
     {
       "library": "jquery-form@4.3.0",
+      "provider": "unpkg",
       "destination": "wwwroot/assets/lib/jquery-form",
       "files": [
         "dist/jquery.form.min.js",
@@ -40,6 +41,7 @@
     },
     {
       "library": "jquery-ui@1.14.1",
+      "provider": "unpkg",
       "destination": "wwwroot/assets/lib/jquery-ui",
       "files": [
         "dist/jquery-ui.min.js"
@@ -47,6 +49,7 @@
     },
     {
       "library": "jquery-hotkeys@0.2.2",
+      "provider": "unpkg",
       "destination": "wwwroot/assets/lib/jquery-hotkeys",
       "files": [
         "jquery-hotkeys.js"
@@ -56,7 +59,7 @@
       "library": "echarts@6.0.0",
       "destination": "wwwroot/assets/lib/echarts",
       "files": [
-        "dist/echarts.min.js"
+        "echarts.min.js"
       ]
     },
 
@@ -72,11 +75,12 @@
       "library": "turndown@7.2.0",
       "destination": "wwwroot/assets/lib/turndown",
       "files": [
-        "dist/turndown.js"
+        "turndown.js"
       ]
     },
     {
       "library": "markdown-it@14.1.0",
+      "provider": "unpkg",
       "destination": "wwwroot/assets/lib/markdown-it",
       "files": [
         "dist/markdown-it.min.js"
@@ -84,6 +88,7 @@
     },
     {
       "library": "markdown-it-sub@2.0.0",
+      "provider": "unpkg",
       "destination": "wwwroot/assets/lib/markdown-it-sub",
       "files": [
         "dist/markdown-it-sub.min.js"
@@ -91,6 +96,7 @@
     },
     {
       "library": "markdown-it-sup@2.0.0",
+      "provider": "unpkg",
       "destination": "wwwroot/assets/lib/markdown-it-sup",
       "files": [
         "dist/markdown-it-sup.min.js"
@@ -98,6 +104,7 @@
     },
     {
       "library": "markdown-it-abbr@2.0.0",
+      "provider": "unpkg",
       "destination": "wwwroot/assets/lib/markdown-it-abbr",
       "files": [
         "dist/markdown-it-abbr.min.js"
@@ -105,6 +112,7 @@
     },
     {
       "library": "markdown-it-ins@4.0.0",
+      "provider": "unpkg",
       "destination": "wwwroot/assets/lib/markdown-it-ins",
       "files": [
         "dist/markdown-it-ins.min.js"
@@ -112,6 +120,7 @@
     },
     {
       "library": "markdown-it-mark@4.0.0",
+      "provider": "unpkg",
       "destination": "wwwroot/assets/lib/markdown-it-mark",
       "files": [
         "dist/markdown-it-mark.min.js"
@@ -119,6 +128,7 @@
     },
     {
       "library": "markdown-it-container@4.0.0",
+      "provider": "unpkg",
       "destination": "wwwroot/assets/lib/markdown-it-container",
       "files": [
         "dist/markdown-it-container.min.js"
@@ -126,6 +136,7 @@
     },
     {
       "library": "markdown-it-attrs@4.2.0",
+      "provider": "unpkg",
       "destination": "wwwroot/assets/lib/markdown-it-attrs",
       "files": [
         "markdown-it-attrs.browser.js"
@@ -136,26 +147,39 @@
       "library": "vue@3.5.13",
       "destination": "wwwroot/assets/lib/vue",
       "files": [
-        "dist/vue.global.js",
-        "dist/vue.global.prod.js",
-        "dist/vue.esm-browser.js",
-        "dist/vue.esm-browser.prod.js"
+        "vue.global.js",
+        "vue.global.prod.js",
+        "vue.esm-browser.js",
+        "vue.esm-browser.prod.js"
       ]
     },
     {
       "library": "@vue/devtools-api@7.6.8",
-      "destination": "wwwroot/assets/lib/vue-devtools-api"
+      "provider": "unpkg",
+      "destination": "wwwroot/assets/lib/vue-devtools-api",
+      "files": [
+        "dist/index.js"
+      ]
     },
     {
       "library": "@vue/devtools-kit@7.6.8",
-      "destination": "wwwroot/assets/lib/vue-devtools-kit"
+      "provider": "unpkg",
+      "destination": "wwwroot/assets/lib/vue-devtools-kit",
+      "files": [
+        "dist/index.js"
+      ]
     },
     {
       "library": "@vue/devtools-shared@7.6.8",
-      "destination": "wwwroot/assets/lib/vue-devtools-shared"
+      "provider": "unpkg",
+      "destination": "wwwroot/assets/lib/vue-devtools-shared",
+      "files": [
+        "dist/index.js"
+      ]
     },
     {
       "library": "perfect-debounce@1.0.0",
+      "provider": "unpkg",
       "destination": "wwwroot/assets/lib/perfect-debounce",
       "files": [
         "dist/index.mjs"
@@ -163,6 +187,7 @@
     },
     {
       "library": "hookable@5.5.3",
+      "provider": "unpkg",
       "destination": "wwwroot/assets/lib/hookable",
       "files": [
         "dist/index.mjs"
@@ -170,6 +195,7 @@
     },
     {
       "library": "birpc@0.2.19",
+      "provider": "unpkg",
       "destination": "wwwroot/assets/lib/birpc",
       "files": [
         "dist/index.mjs"
@@ -177,6 +203,7 @@
     },
     {
       "library": "vue-demi@0.14.10",
+      "provider": "unpkg",
       "destination": "wwwroot/assets/lib/vue-demi",
       "files": [
         "lib/index.mjs"
@@ -186,11 +213,12 @@
       "library": "pinia@2.3.0",
       "destination": "wwwroot/assets/lib/pinia",
       "files": [
-        "dist/pinia.esm-browser.js"
+        "pinia.esm-browser.js"
       ]
     },
     {
       "library": "mande@2.0.9",
+      "provider": "unpkg",
       "destination": "wwwroot/assets/lib/mande",
       "files": [
         "dist/mande.mjs",
@@ -199,6 +227,7 @@
     },
     {
       "library": "@vueform/multiselect@2.6.11",
+      "provider": "unpkg",
       "destination": "wwwroot/assets/lib/vueform-multiselect",
       "files": [
         "dist/multiselect.js",
@@ -207,6 +236,7 @@
     },
     {
       "library": "vue-draggable-next@2.2.1",
+      "provider": "unpkg",
       "destination": "wwwroot/assets/lib/vue-draggable-next",
       "files": [
         "dist/vue-draggable-next.esm-browser.js"
@@ -214,6 +244,7 @@
     },
     {
       "library": "bootstrap-simple-autocomplete@2.0.0",
+      "provider": "unpkg",
       "destination": "wwwroot/assets/lib/bootstrap-simple-autocomplete",
       "files": [
         "bootstrap-simple-autocomplete.js",
@@ -222,6 +253,7 @@
     },
     {
       "library": "select2@4.1.0-rc.0",
+      "provider": "unpkg",
       "destination": "wwwroot/assets/lib/select2",
       "files": [
         "dist/css/select2.min.css",

@@ -536,7 +536,7 @@ namespace osafw.Tests
             Assert.AreEqual(6, occurred!.Value.Hour);
             Assert.IsFalse(FormUtils.formToTime(new FwDict() { { "broken_hh", "99" }, { "broken_mm", "99" }, { "broken_ss", "99" } }, "broken"));
         }
-
+         
         [TestMethod]
         public void FormTimeAndDateHelpersNormalizeStrings()
         {
@@ -550,8 +550,8 @@ namespace osafw.Tests
         [TestMethod]
         public void AutocompleteParsingExtractsLeadingId()
         {
-            Assert.AreEqual(123, FormUtils.getIdFromAutocomplete("123 - Test Value"));
-            Assert.AreEqual(0, FormUtils.getIdFromAutocomplete("invalid"));
+            Assert.AreEqual(123, FormUtils.idFromAutocomplete("123 - Test Value"));
+            Assert.AreEqual(0, FormUtils.idFromAutocomplete("invalid"));
         }
 
         [TestMethod]
