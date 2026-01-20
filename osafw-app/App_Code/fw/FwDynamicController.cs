@@ -15,6 +15,7 @@ public class FwDynamicController : FwController
     public static new int access_level = Users.ACL_SITEADMIN;
 
     protected FwModel? model_related;
+    protected FwDict subtable_save_row_ids = [];
 
     protected static readonly string[] DEF_TYPES_STRUCTURE = ["row", "row_end", "col", "col_end", "header", "fieldset", "fieldset_end"];
 
@@ -1440,11 +1441,29 @@ public class FwDynamicController : FwController
 
             itemdb[junction_field_status] = FwModel.STATUS_ACTIVE; // mark new and updated existing rows as active
 
-            modelAddOrUpdateSubtableDynamic(id, row_id, itemdb, def, sub_model);
+            var saved_id = modelAddOrUpdateSubtableDynamic(id, row_id, itemdb, def, sub_model);
+            trackSubtableRowId(field, row_id, saved_id);
         }
 
         //remove any not updated rows (i.e. those deleted by user)
         sub_model.deleteUnderUpdateByMainId(id);
+    }
+
+    /// <summary>
+    /// Track temporary subtable row ids (for Vue requests) to resolve them to persisted ids after save.
+    /// </summary>
+    /// <param name="field">Subtable field name from config.json.</param>
+    /// <param name="row_id">Submitted row id, possibly prefixed with "new-" for new rows.</param>
+    /// <param name="saved_id">Database id returned after insert/update.</param>
+    protected virtual void trackSubtableRowId(string field, string row_id, int saved_id)
+    {
+        if (!row_id.StartsWith("new-") || saved_id <= 0)
+            return;
+
+        if (!subtable_save_row_ids.ContainsKey(field))
+            subtable_save_row_ids[field] = new FwDict();
+
+        ((FwDict)subtable_save_row_ids[field]!)[row_id] = saved_id;
     }
 
 

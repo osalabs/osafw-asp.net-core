@@ -886,8 +886,11 @@ let actions = {
                 rows.forEach(row => {
                     req['item-' + field + '#' + row.id] = {};
                     Object.keys(row).forEach(col => {
-                        if (col == 'id') return; // skip id field, skip arrays?  || Array.isArray(row[col])
-                        req['item-' + field + '#' + row.id][col] = row[col];
+                        if (col == 'id' || col == 'is_new') return;
+                        const value = row[col];
+                        if (Array.isArray(value)) return;
+                        if (value && typeof value === 'object') return;
+                        req['item-' + field + '#' + row.id][col] = value;
                     });
                     req['item-' + field][row.id] = 1;
                 });
@@ -922,6 +925,7 @@ let actions = {
             const response = await this.api.post(this.edit_data.id, req);
             //console.log('saveEditData response', response);
             this.edit_data.save_result = response;
+            this.applySubtableSaveResult(response);
 
             if (this.current_screen == 'list') {
                 //reload list to show changes
@@ -952,6 +956,54 @@ let actions = {
             }
             //400 errors are user validation
         }
+    },
+    applySubtableSaveResult(response) {
+        if (!this.edit_data || !response) return;
+
+        const subtableRowIds = response.subtable_row_ids ?? {};
+        const subtableRows = response.subtables ?? {};
+
+        Object.keys(subtableRowIds).forEach(field => {
+            const rows = this.edit_data.subtables?.[field];
+            const rowMap = subtableRowIds[field] ?? {};
+            if (!rows || !Array.isArray(rows)) return;
+
+            rows.forEach(row => {
+                const newId = rowMap[row.id] ?? rowMap[String(row.id)];
+                if (!newId) return;
+                row.id = newId;
+                row.is_new = false;
+            });
+        });
+
+        Object.keys(subtableRows).forEach(field => {
+            const serverRows = subtableRows[field] ?? [];
+            if (!this.edit_data.subtables) this.edit_data.subtables = {};
+
+            const existingRows = this.edit_data.subtables[field] ?? [];
+            const existingById = {};
+            existingRows.forEach(row => {
+                existingById[row.id] = row;
+            });
+
+            const updatedRows = [];
+            serverRows.forEach(row => {
+                const localRow = existingById[row.id];
+                if (localRow) {
+                    Object.assign(localRow, row);
+                    updatedRows.push(localRow);
+                } else {
+                    updatedRows.push(row);
+                }
+            });
+
+            if (Array.isArray(existingRows)) {
+                existingRows.splice(0, existingRows.length, ...updatedRows);
+                this.edit_data.subtables[field] = existingRows;
+            } else {
+                this.edit_data.subtables[field] = updatedRows;
+            }
+        });
     },
 
     // *** userlists support ***
