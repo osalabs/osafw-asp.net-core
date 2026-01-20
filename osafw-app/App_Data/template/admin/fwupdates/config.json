@@ -15,54 +15,54 @@
         {
           "id": 0,
           "iname": "Active",
-          "bgcolor": "bg-primary"
+          "bgcolor": "text-bg-success"
         },
         {
           "id": 10,
           "iname": "Inactive",
-          "bgcolor": "bg-secondary"
+          "bgcolor": "text-bg-secondary"
         },
         {
           "id": 20,
           "iname": "Failed",
-          "bgcolor": "bg-danger"
+          "bgcolor": "text-bg-danger"
         },
         {
           "id": 30,
           "iname": "Applied",
-          "bgcolor": "bg-success"
+          "bgcolor": "text-bg-success"
         },
         {
           "id": 127,
           "iname": "[Deleted]",
-          "bgcolor": "bg-dark"
+          "bgcolor": "text-bg-dark"
         }
       ],
       "statusf_admin": [
         {
           "id": 0,
           "iname": "Active",
-          "bgcolor": "bg-primary"
+          "bgcolor": "text-bg-success"
         },
         {
           "id": 10,
           "iname": "Inactive",
-          "bgcolor": "bg-secondary"
+          "bgcolor": "text-bg-secondary"
         },
         {
           "id": 20,
           "iname": "Failed",
-          "bgcolor": "bg-danger"
+          "bgcolor": "text-bg-danger"
         },
         {
           "id": 30,
           "iname": "Applied",
-          "bgcolor": "bg-success"
+          "bgcolor": "text-bg-success"
         },
         {
           "id": 127,
           "iname": "[Deleted]",
-          "bgcolor": "bg-dark"
+          "bgcolor": "text-bg-dark"
         }
       ]
     },

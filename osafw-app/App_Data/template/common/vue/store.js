@@ -129,8 +129,8 @@ let state = {
     //standard lookups
     lookups_std: {
         statusf: [
-            { id: 0, iname: 'Active', bgcolor: 'bg-primary' },
-            { id: 10, iname: 'Inactive', bgcolor: 'bg-secondary' }
+            { id: 0, iname: 'Active', bgcolor: 'text-bg-success' },
+            { id: 10, iname: 'Inactive', bgcolor: 'text-bg-secondary' }
         ],
         statusf_admin: [
             { id: 0, iname: 'Active' },
@@ -627,7 +627,7 @@ let actions = {
         if (header.field_name == "status") {
             // default - format status as badge
             const value = row[header.field_name];
-            const status = this.lookups_std.statusf.find(s => s.id == value) || { iname: value, id: 0, bgcolor: 'bg-secondary' };
+            const status = this.lookups_std.statusf.find(s => s.id == value) || { iname: value, id: 0, bgcolor: 'text-bg-secondary' };
             return '<span class="badge ' + status.bgcolor + '" >'+AppUtils.htmlescape(status.iname)+'</span>';
         }
         return row[header.field_name] ?? '';

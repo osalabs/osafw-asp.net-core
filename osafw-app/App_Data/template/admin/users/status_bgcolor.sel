@@ -1,4 +1,4 @@
-0|bg-primary
-10|bg-secondary
-20|bg-warning
-127|bg-danger
+0|text-bg-success
+10|text-bg-secondary
+20|text-bg-warning
+127|text-bg-danger
