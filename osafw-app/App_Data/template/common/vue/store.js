@@ -462,85 +462,17 @@ let actions = {
         });
     },
 
-    // Date/Time formatting helpers (per-user formats, timezone already applied on backend)
-    _userLocale() {
-        // pick locale by user formats: MDY->en-US, DMY->en-GB
-        const isDMY = (this.global.date_format ?? 0) == 10;
-        return isDMY ? 'en-GB' : 'en-US';
-    },
-    _is24h() {
-        return (this.global.time_format ?? 0) == 10;
-    },
-    _dateFromServer(value) {
-        if (!value) return null;
-        if (value instanceof Date) return value;
-
-        const t = String(value).trim();
-
-        // date only
-        const mDate = t.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-        if (mDate) {
-            const [, y, m, d] = mDate;
-            return new Date(Number(y), Number(m) - 1, Number(d));
-        }
-
-        // datetime (ignore timezone offsets as backend already sends user timezone)
-        const mDateTime = t.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,7})?)?(?:Z|[+-]\d{2}:?\d{2})?$/i);
-        if (mDateTime) {
-            const [, y, m, d, hh, mm, ss = '0'] = mDateTime;
-            return new Date(Number(y), Number(m) - 1, Number(d), Number(hh), Number(mm), Number(ss));
-        }
-
-        const d = new Date(t);
-        if (Number.isNaN(d.getTime())) return null;
-
-        return d;
-    },
     formatDate(value) {
-        const d = this._dateFromServer(value);
-        if (!d) return value ?? '';
-        return new Intl.DateTimeFormat(this._userLocale(), {
-            year: 'numeric',
-            month: 'numeric',
-            day: 'numeric',
-        }).format(d);
+        return AppUtils.formatDate(value, this.global);
     },
     formatDateTime(value, withSeconds = true) {
-        const d = this._dateFromServer(value);
-        if (!d) return value ?? '';
-        // build options per 12/24h, use value as-is without timezone conversion
-        const opts = {
-            year: 'numeric', month: 'numeric', day: 'numeric',
-            hour: '2-digit', minute: '2-digit',
-            hour12: !this._is24h(),
-        };
-        if (withSeconds) opts.second = '2-digit';
-        return new Intl.DateTimeFormat(this._userLocale(), opts).format(d);
+        return AppUtils.formatDateTime(value, this.global, withSeconds);
     },
     formatTime(value) {
-        if (value === null || value === undefined || value === '') return '';
-        const normalized = typeof value === 'number' ? value : Number.parseInt(value, 10);
-        if (!Number.isFinite(normalized)) {
-            const str = String(value).trim();
-            return str.includes(':') ? str : '';
-        }
-        const safeSeconds = Math.max(0, normalized);
-        const hours = Math.floor(safeSeconds / 3600);
-        const minutes = Math.floor((safeSeconds - hours * 3600) / 60);
-        return String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0');
+        return AppUtils.formatTime(value);
     },
     timeToSeconds(value) {
-        if (value === null || value === undefined || value === '') return 0;
-        if (typeof value === 'number') return value;
-        const str = String(value).trim();
-        if (!str) return 0;
-        if (/^\d+$/.test(str)) return Number.parseInt(str, 10);
-        const parts = str.split(':');
-        if (parts.length < 2) return 0;
-        const hours = Number.parseInt(parts[0], 10);
-        const minutes = Number.parseInt(parts[1], 10);
-        if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return 0;
-        return Math.max(0, hours * 3600 + minutes * 60);
+        return AppUtils.timeToSeconds(value);
     },
 
     //save to store each key from data if such key exists in store
