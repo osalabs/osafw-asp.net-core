@@ -308,11 +308,38 @@
             "class_control": "on-refresh",
             "append": [
                 {
+                    "is_dropdown": true,
                     "class": "btn-secondary",
-                    "icon": "bi bi-plus",
-                    "label": "Add New",
-                    "hint": "Add New Record",
-                    "url": "/Admin/DemoDicts/new?"
+                    "icon": "bi bi-three-dots-vertical",
+                    "label": "Actions",
+                    "hint": "DemoDicts actions",
+                    "items": [
+                        {
+                            "class": "on-fw-modal",
+                            "icon": "bi bi-plus",
+                            "label": "Add",
+                            "hint": "Add DemoDicts",
+                            "url": "/Admin/DemoDicts/new?",
+                            "attrs": "data-fw-lookup=\"add\""
+                        },
+                        {
+                            "class": "on-fw-modal",
+                            "icon": "bi bi-pencil",
+                            "label": "Edit",
+                            "hint": "Edit selected DemoDicts",
+                            "url": "/Admin/DemoDicts/{id}/edit?",
+                            "attrs": "data-fw-lookup=\"edit\""
+                        },
+                        {
+                            "is_divider": true
+                        },
+                        {
+                            "icon": "bi bi-gear",
+                            "label": "Manage",
+                            "hint": "Manage DemoDicts",
+                            "url": "/Admin/DemoDicts?"
+                        }
+                    ]
                 }
             ]
         },

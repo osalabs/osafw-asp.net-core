@@ -266,9 +266,35 @@ public class FwDynamicController : FwController
 
         id = this.modelAddOrUpdate(id, itemdb);
 
-        return this.afterSave(success, id, is_new);
+        var lookupMode = reqs("lookup");
+        FwDict? lookupJson = null;
+        if (fw.isJsonExpected() && !string.IsNullOrEmpty(lookupMode))
+            lookupJson = buildLookupJson(id);
+
+        return this.afterSave(success, id, is_new, more_json: lookupJson);
     }
     #endregion
+
+    /// <summary>
+    /// Builds extra JSON payload for lookup modal saves so the client can update related select controls.
+    /// </summary>
+    /// <param name="id">Saved record id.</param>
+    /// <returns>
+    /// FwDict with lookup metadata for the client, or null when no lookup field is provided.
+    /// </returns>
+    protected virtual FwDict? buildLookupJson(int id)
+    {
+        var item = modelOne(id);
+        var payload = new FwDict
+        {
+            { "lookup_field", "iname" }
+        };
+
+        if (item.ContainsKey("iname"))
+            payload["lookup_label"] = item["iname"];
+
+        return payload;
+    }
 
     #region Validation
     /// <summary>

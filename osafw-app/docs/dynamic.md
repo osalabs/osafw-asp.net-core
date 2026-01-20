@@ -663,6 +663,12 @@ pick a `type`, set the required keys, and copy an example you can paste into `co
   - Blank options: `is_option0` (value `0`), `is_option_empty` (empty value), `option0_title`.
   - Filtering chains: `filter_for`/`filter_field` on the parent select; `filter_by`/`filter_field` on the child select.
   - Behaviour: `multiple`, `class_control`, `attrs_control`, `err_exists_msg`, `prepend`/`append` input-group buttons.
+  - Dropdown buttons: `prepend`/`append` can include dropdown definitions with:
+    - `is_dropdown` (true to render Bootstrap 5 dropdown)
+    - `is_split` (optional, default false)
+    - `class`, `icon`, `label`, `hint`, `url`, `attrs`
+    - `items` array with `is_divider`, `class`, `icon`, `label`, `url`, `attrs`
+    - `url` supports `{id}` placeholder for edit actions that need current select value.
 - Common sample:
 ```json
 {
@@ -696,6 +702,48 @@ pick a `type`, set the required keys, and copy an example you can paste into `co
       "class": "btn-secondary",
       "icon": "bi bi-plus",
       "url": "/Admin/Demos/new"
+    }
+  ]
+}
+```
+
+- Dropdown example with lookup add/edit modal:
+```json
+{
+  "type": "select",
+  "field": "demo_dicts_id",
+  "label": "DemoDicts",
+  "lookup_model": "DemoDicts",
+  "is_option_empty": true,
+  "append": [
+    {
+      "is_dropdown": true,
+      "class": "btn-secondary",
+      "icon": "bi bi-three-dots-vertical",
+      "label": "Actions",
+      "items": [
+        {
+          "class": "on-fw-modal",
+          "icon": "bi bi-plus",
+          "label": "Add",
+          "url": "/Admin/DemoDicts/new?",
+          "attrs": "data-fw-lookup=\"add\""
+        },
+        {
+          "class": "on-fw-modal",
+          "icon": "bi bi-pencil",
+          "label": "Edit",
+          "url": "/Admin/DemoDicts/{id}/edit?",
+          "attrs": "data-fw-lookup=\"edit\""
+        },
+        {
+          "is_divider": true
+        },
+        {
+          "label": "Manage",
+          "url": "/Admin/DemoDicts?"
+        }
+      ]
     }
   ]
 }
