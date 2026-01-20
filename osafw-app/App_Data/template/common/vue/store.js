@@ -116,8 +116,12 @@ let state = {
 
     // edit form fields configuration
     list_editable_def_types: ['input', 'email', 'number', 'textarea', 'date_combo', 'date_popup', 'datetime_popup', 'time', 'autocomplete', 'select', 'cb', 'radio', 'yesno'],
+    form_tabs: [],
     show_fields: [],
+    show_fields_tabs: {},
     showform_fields: [],
+    showform_fields_tabs: {},
+    current_form_tab: '',
     is_list_edit_pane: false, // true if edit pane is open
     edit_data: null, // object for single item edit form {id:X, i:{}, multi_rows:{}, subtables:{}, attachments:{}, att_links:[att_ids], add_users_id_name:'', upd_users_id_name:'', save_result:{}}}
 
@@ -209,6 +213,16 @@ let getters = {
         if (lookup_tpl) {
             return state.lookups[lookup_tpl] ?? [];
         }
+        if (state.form_tabs?.length) {
+            const tabbed = state.showform_fields_tabs ?? {};
+            for (const key of Object.keys(tabbed)) {
+                const defs = tabbed[key] ?? [];
+                const match = defs.find(item => item.field === def.field_name);
+                if (!match) continue;
+                if (match.lookup_model) return state.lookups[match.lookup_model] ?? [];
+                if (match.lookup_tpl) return state.lookups[match.lookup_tpl] ?? [];
+            }
+        }
     },
     fieldsToTree: () => (arr) => {
         //return hierarchial array of plain array of fields:
@@ -244,6 +258,46 @@ let getters = {
     },
     treeShowFormFields: (state) => {
         return state.fieldsToTree(state.showform_fields);
+    },
+    activeFormTab: (state) => {
+        if (!state.form_tabs?.length) return '';
+        const defaultTab = state.form_tabs[0]?.tab ?? '';
+        return state.form_tabs.some(tab => tab.tab === state.current_form_tab) ? state.current_form_tab : defaultTab;
+    },
+    tabbedShowFields: (state) => {
+        if (!state.form_tabs?.length) return state.show_fields;
+        const defaultTab = state.form_tabs[0]?.tab ?? '';
+        const activeTab = state.form_tabs.some(tab => tab.tab === state.current_form_tab) ? state.current_form_tab : defaultTab;
+        return state.show_fields_tabs?.[activeTab] ?? state.show_fields;
+    },
+    tabbedShowFormFields: (state) => {
+        if (!state.form_tabs?.length) return state.showform_fields;
+        const defaultTab = state.form_tabs[0]?.tab ?? '';
+        const activeTab = state.form_tabs.some(tab => tab.tab === state.current_form_tab) ? state.current_form_tab : defaultTab;
+        return state.showform_fields_tabs?.[activeTab] ?? state.showform_fields;
+    },
+    allShowFormFields: (state) => {
+        if (!state.form_tabs?.length) return state.showform_fields;
+        const tabbed = state.showform_fields_tabs ?? {};
+        const merged = [];
+        Object.keys(tabbed).forEach(key => {
+            const defs = tabbed[key] ?? [];
+            defs.forEach(def => merged.push(def));
+        });
+        if (!merged.length) return state.showform_fields;
+        return merged;
+    },
+    treeTabbedShowFields: (state) => {
+        if (!state.form_tabs?.length) return state.fieldsToTree(state.show_fields);
+        const defaultTab = state.form_tabs[0]?.tab ?? '';
+        const activeTab = state.form_tabs.some(tab => tab.tab === state.current_form_tab) ? state.current_form_tab : defaultTab;
+        return state.fieldsToTree(state.show_fields_tabs?.[activeTab] ?? state.show_fields);
+    },
+    treeTabbedShowFormFields: (state) => {
+        if (!state.form_tabs?.length) return state.fieldsToTree(state.showform_fields);
+        const defaultTab = state.form_tabs[0]?.tab ?? '';
+        const activeTab = state.form_tabs.some(tab => tab.tab === state.current_form_tab) ? state.current_form_tab : defaultTab;
+        return state.fieldsToTree(state.showform_fields_tabs?.[activeTab] ?? state.showform_fields);
     },
     savedStatus: (state) => {
         let sr = state.edit_data?.save_result ?? null;
@@ -299,6 +353,44 @@ let actions = {
             Toast(err_msg, { theme: 'text-bg-danger' });
         }
     },
+    initFormTabFromLocation() {
+        const params = new URLSearchParams(window.location.search);
+        const tab = params.get('tab');
+        if (tab !== null) {
+            this.current_form_tab = tab;
+        }
+    },
+    syncFormTab() {
+        if (!this.form_tabs?.length) {
+            this.current_form_tab = '';
+            return;
+        }
+        const tabs = this.form_tabs.map(tab => tab.tab ?? '');
+        const nextTab = tabs.includes(this.current_form_tab) ? this.current_form_tab : (tabs[0] ?? '');
+        this.current_form_tab = nextTab;
+    },
+    buildScreenUrl(screen, id, tab = null) {
+        let suffix = '';
+        if (screen == 'view') {
+            suffix = '/' + id;
+        } else if (screen == 'edit') {
+            suffix = '/' + (id ? id + '/edit' : 'new');
+        }
+        if (tab && (screen === 'view' || screen === 'edit')) {
+            suffix += '?tab=' + encodeURIComponent(tab);
+        }
+        return this.base_url + suffix;
+    },
+    updateTabUrl(tab) {
+        if (!this.current_screen || this.current_screen === 'list') return;
+        const nextUrl = this.buildScreenUrl(this.current_screen, this.current_id, tab);
+        window.history.replaceState({ screen: this.current_screen, id: this.current_id }, '', nextUrl);
+    },
+    setFormTab(tab) {
+        if (this.current_form_tab === tab) return;
+        this.current_form_tab = tab;
+        this.updateTabUrl(tab);
+    },
     // screen navigation
     async setCurrentScreen(screen, id) {
         // console.log("setCurrentScreen:", screen, id);
@@ -320,7 +412,9 @@ let actions = {
                 this.edit_data = null;
             }
         }
-        window.history.pushState({ screen: screen, id: id }, '', this.base_url + suffix);
+        const nextTab = this.form_tabs?.length ? (this.current_form_tab || this.form_tabs[0]?.tab) : '';
+        const nextUrl = this.buildScreenUrl(screen, id, nextTab);
+        window.history.pushState({ screen: screen, id: id }, '', nextUrl);
         this.is_list_edit_pane = false;
         if (id && (screen == 'view' || screen == 'edit')) {
             this.startItemLoading();
@@ -338,11 +432,12 @@ let actions = {
     },
     // update list_headers from showform_fields after loadIndex
     enrichEditableListHeaders() {
-        if (!this.showform_fields) return;
+        const allShowFormFields = this.allShowFormFields ?? this.showform_fields;
+        if (!allShowFormFields) return;
 
         // convert showform_fields array to lookup hashtable with keys as field
         let hfields = {};
-        this.showform_fields.forEach(def => {
+        allShowFormFields.forEach(def => {
             if (def.field && !hfields[def.field]) {
                 hfields[def.field] = def;
             }
@@ -363,7 +458,9 @@ let actions = {
 
             //add all other def attributes to header (if not exists in header yet)
             Object.keys(def).forEach(attr => {
-                if (header[attr] === undefined) header[attr] = def[attr];
+                if (header[attr] === undefined || header[attr] === null || header[attr] === '') {
+                    header[attr] = def[attr];
+                }
             });
 
             return header;
@@ -470,6 +567,7 @@ let actions = {
     applyDefaultsAfterLoad(data) {
         this.uioptions.list.table.isButtonsLeft = this.uioptions.list.table.isButtonsLeft ?? this.global.is_list_btn_left;
         this.list_user_view.density = this.list_user_view.density ?? 'table-sm';
+        this.syncFormTab();
         this.is_initial_load = false; // reset initial load flag
         if (data.showform_fields) {
             this.enrichEditableListHeaders();
@@ -483,6 +581,7 @@ let actions = {
             Toast(this.flash.success, { theme: 'text-bg-success' });
         if (this.flash.error)
             Toast(this.flash.error, { theme: 'text-bg-danger' });
+        this.initFormTabFromLocation();
     },
 
     // load init and lookup scopes only

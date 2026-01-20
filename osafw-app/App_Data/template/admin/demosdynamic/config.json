@@ -57,6 +57,24 @@
     "view_list_custom": "iname status demo_dicts_iname",
 
     "is_dynamic_show": true,
+    "form_tabs": [
+        {
+            "tab": "",
+            "label": "Main"
+        },
+        {
+            "tab": "details",
+            "label": "Details"
+        },
+        {
+            "tab": "relations",
+            "label": "Relations"
+        },
+        {
+            "tab": "meta",
+            "label": "Attachments"
+        }
+    ],
     "show_fields": [
         {
             "type": "row",
@@ -105,6 +123,50 @@
             "field": "email",
             "label": "Email",
             "type": "plaintext"
+        },
+        {
+            "type": "col_end"
+        },
+        {
+            "type": "col",
+            "class": "col-lg-6"
+        },
+        {
+            "field": "id",
+            "label": "ID",
+            "type": "plaintext"
+        },
+        {
+            "field": "status",
+            "label": "Status",
+            "type": "plaintext",
+            "lookup_tpl": "/common/sel/status.sel"
+        },
+        {
+            "field": "add_time",
+            "label": "Added on",
+            "type": "added"
+        },
+        {
+            "field": "upd_time",
+            "label": "Updated on",
+            "type": "updated"
+        },
+        {
+            "type": "col_end"
+        },
+        {
+            "type": "row_end"
+        }
+    ],
+    "show_fields_details": [
+        {
+            "type": "row",
+            "class": ""
+        },
+        {
+            "type": "col",
+            "class": "col-lg-6"
         },
         {
             "type": "row",
@@ -178,18 +240,21 @@
         {
             "type": "fieldset_end"
         },
-
         {
             "type": "col_end"
         },
         {
-            "type": "col",
-            "class": "col-lg-6"
+            "type": "row_end"
+        }
+    ],
+    "show_fields_relations": [
+        {
+            "type": "row",
+            "class": ""
         },
         {
-            "field": "id",
-            "label": "ID",
-            "type": "plaintext"
+            "type": "col",
+            "class": "col-lg-6"
         },
         {
             "field": "dict_link_auto_id",
@@ -212,11 +277,34 @@
             "model": "DemosDemoDicts"
         },
         {
+            "type": "col_end"
+        },
+        {
+            "type": "col",
+            "class": "col-lg-6"
+        },
+        {
             "field": "demos_items",
             "label": "Subtable",
             "class_label": "col-12 hr-header fs-5",
             "type": "subtable",
             "model": "DemosItems"
+        },
+        {
+            "type": "col_end"
+        },
+        {
+            "type": "row_end"
+        }
+    ],
+    "show_fields_meta": [
+        {
+            "type": "row",
+            "class": ""
+        },
+        {
+            "type": "col",
+            "class": "col-lg-6"
         },
         {
             "field": "att_id",
@@ -236,26 +324,9 @@
             "att_category": "general"
         },
         {
-            "field": "status",
-            "label": "Status",
-            "type": "plaintext",
-            "lookup_tpl": "/common/sel/status.sel"
-        },
-        {
-            "field": "add_time",
-            "label": "Added on",
-            "type": "added"
-        },
-        {
-            "field": "upd_time",
-            "label": "Updated on",
-            "type": "updated"
-        },
-        {
             "is_custom": true,
             "field": "some_custom_field"
         },
-
         {
             "type": "col_end"
         },
@@ -263,7 +334,6 @@
             "type": "row_end"
         }
     ],
-
     "is_dynamic_showform": true,
     "showform_fields": [
         {
@@ -355,6 +425,50 @@
             "maxlength": 128
         },
         {
+            "type": "col_end"
+        },
+        {
+            "type": "col",
+            "class": "col-lg-6"
+        },
+        {
+            "field": "id",
+            "label": "ID",
+            "type": "id"
+        },
+        {
+            "field": "status",
+            "label": "Status",
+            "type": "select",
+            "lookup_tpl": "/common/sel/status.sel",
+            "class_contents": "col-md-3"
+        },
+        {
+            "field": "add_time",
+            "label": "Added on",
+            "type": "added"
+        },
+        {
+            "field": "upd_time",
+            "label": "Updated on",
+            "type": "updated"
+        },
+        {
+            "type": "col_end"
+        },
+        {
+            "type": "row_end"
+        }
+    ],
+    "showform_fields_details": [
+        {
+            "type": "row"
+        },
+        {
+            "type": "col",
+            "class": "col-lg-6"
+        },
+        {
             "type": "row",
             "class": "form-row"
         },
@@ -376,7 +490,6 @@
         {
             "type": "row_end"
         },
-
         {
             "field": "fcombo",
             "label": "Combo",
@@ -441,13 +554,16 @@
             "type": "col_end"
         },
         {
-            "type": "col",
-            "class": "col-lg-6"
+            "type": "row_end"
+        }
+    ],
+    "showform_fields_relations": [
+        {
+            "type": "row"
         },
         {
-            "field": "id",
-            "label": "ID",
-            "type": "id"
+            "type": "col",
+            "class": "col-lg-6"
         },
         {
             "field": "dict_link_auto_id",
@@ -472,6 +588,13 @@
             "model": "DemosDemoDicts"
         },
         {
+            "type": "col_end"
+        },
+        {
+            "type": "col",
+            "class": "col-lg-6"
+        },
+        {
             "field": "demos_items",
             "label": "Subtable",
             "class_label": "col-12 text-center hr-header fs-5",
@@ -481,6 +604,21 @@
             "save_fields": "demo_dicts_id iname idesc",
             "save_fields_checkboxes": "is_checkbox|0",
             "required_fields": "demo_dicts_id iname"
+        },
+        {
+            "type": "col_end"
+        },
+        {
+            "type": "row_end"
+        }
+    ],
+    "showform_fields_meta": [
+        {
+            "type": "row"
+        },
+        {
+            "type": "col",
+            "class": "col-lg-6"
         },
         {
             "field": "att_id",
@@ -502,23 +640,6 @@
             "att_post_prefix": "att_files1"
         },
         {
-            "field": "status",
-            "label": "Status",
-            "type": "select",
-            "lookup_tpl": "/common/sel/status.sel",
-            "class_contents": "col-md-3"
-        },
-        {
-            "field": "add_time",
-            "label": "Added on",
-            "type": "added"
-        },
-        {
-            "field": "upd_time",
-            "label": "Updated on",
-            "type": "updated"
-        },
-        {
             "is_custom": true,
             "field": "some_custom_field"
         },
@@ -529,6 +650,5 @@
             "type": "row_end"
         }
     ],
-
     "1": "1"
 }
