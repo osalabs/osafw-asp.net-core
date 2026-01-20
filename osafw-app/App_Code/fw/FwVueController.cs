@@ -499,7 +499,7 @@ public class FwVueController : FwDynamicController
     /// </summary>
     /// <param name="prefix">The config prefix (show_fields or showform_fields).</param>
     /// <returns>Combined list of field definitions across all tabs.</returns>
-    private FwList collectFormFields(string prefix)
+    protected FwList collectFormFields(string prefix)
     {
         var allFields = new FwList();
         if (config[prefix] is IList fields)
@@ -543,7 +543,48 @@ public class FwVueController : FwDynamicController
 
         id = this.modelAddOrUpdate(id, itemdb);
 
-        return this.afterSave(success, id, is_new);
+        var moreJson = buildSubtableSavePayload(id);
+
+        return this.afterSave(success, id, is_new, FW.ACTION_SHOW_FORM, "", moreJson.Count > 0 ? moreJson : null);
+    }
+
+    /// <summary>
+    /// Build subtable save metadata for Vue clients so they can reconcile new row ids
+    /// and refresh subtable data without losing focus during autosave.
+    /// </summary>
+    /// <param name="id">Main record id that subtable rows are linked to.</param>
+    /// <returns>Payload with subtable row id mapping and refreshed rows for updated subtables.</returns>
+    protected virtual FwDict buildSubtableSavePayload(int id)
+    {
+        var payload = new FwDict();
+        if (!fw.isJsonExpected())
+            return payload;
+
+        if (subtable_save_row_ids.Count > 0)
+            payload["subtable_row_ids"] = subtable_save_row_ids;
+
+        var subtables = new FwDict();
+        var fields = collectFormFields("showform_fields");
+        foreach (FwDict def in fields)
+        {
+            var field = def["field"].toStr();
+            var dtype = def["type"].toStr();
+            if (dtype != "subtable_edit")
+                continue;
+
+            if (req("item-" + field) == null && !subtable_save_row_ids.ContainsKey(field))
+                continue;
+
+            var sub_model = fw.model(def["model"].toStr());
+            var list_rows = sub_model.listByMainId(id, def); //list related rows from db
+            sub_model.prepareSubtable(list_rows, id, def);
+            subtables[field] = list_rows;
+        }
+
+        if (subtables.Count > 0)
+            payload["subtables"] = subtables;
+
+        return payload;
     }
 
     public override FwDict NextAction(string form_id)
