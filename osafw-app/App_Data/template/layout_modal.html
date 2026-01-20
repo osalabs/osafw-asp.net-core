@@ -1,0 +1,20 @@
+<div class="modal-header">
+  <h5 class="modal-title"><~title></h5>
+  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+<div class="modal-body">
+  <~main>
+</div>
+<div class="modal-footer">
+  <~modal_footer if="modal_footer">
+  <~default_footer unless="modal_footer" inline>
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">`Close`</button>
+  </~default_footer>
+</div>
+<script>
+  <~head.js>
+
+  $(document).ready(function(){
+    <~onload.js>
+  });
+</script>

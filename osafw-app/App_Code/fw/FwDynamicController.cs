@@ -285,13 +285,14 @@ public class FwDynamicController : FwController
     protected virtual FwDict? buildLookupJson(int id)
     {
         var item = modelOne(id);
+        var inameField = model0.field_iname;
         var payload = new FwDict
         {
-            { "lookup_field", "iname" }
+            { "lookup_field", inameField }
         };
 
-        if (item.ContainsKey("iname"))
-            payload["lookup_label"] = item["iname"];
+        if (item.ContainsKey(inameField))
+            payload["lookup_label"] = item[inameField];
 
         return payload;
     }

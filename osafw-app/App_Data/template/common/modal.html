@@ -10,8 +10,9 @@
      - data-fw-lookup-target="#selector" to specify which control to update (defaults to first input/select in input-group).
      - URLs can include {id} placeholder for edit actions (current select value).
      - On save, controller returns JSON with lookup_label; select option is added/updated.
-  4) Forms inside modal are submitted via ajaxForm and HTML response replaces modal content.
-  5) In modal JS, get the trigger element:
+  4) Modal component appends `_layout=modal` to loaded URLs and form submits.
+  5) Forms inside modal are submitted via ajaxForm and HTML response replaces modal content.
+  6) In modal JS, get the trigger element:
      var trigger = fw.modalTriggerEl(fw.scopeFromScript());
 -->
 <script>
@@ -76,6 +77,14 @@
         }
 
         return url;
+      }
+
+      // Ensure modal layout flag is passed for HTML responses
+      function ensureModalLayout(url) {
+        if (!url) return url;
+        if (url.indexOf('_layout=modal') !== -1) return url;
+        var joiner = url.indexOf('?') === -1 ? '?' : '&';
+        return url + joiner + '_layout=modal';
       }
 
       function buildModal($trigger) {
@@ -147,12 +156,13 @@
       }
 
       function loadModalContent($modal, url) {
-        $modal.data('fw-modal-url', url);
+        var modalUrl = ensureModalLayout(url);
+        $modal.data('fw-modal-url', modalUrl);
         var $content = $modal.find('.modal-content');
         $content.html(fw.HTML_LOADING);
 
         $.ajax({
-          url: url,
+          url: modalUrl,
           method: 'GET',
           dataType: 'html'
         })
@@ -172,6 +182,10 @@
         $modal.find('form').each(function () {
           var $form = $(this);
           if ($form.data('fw-modal-ajaxform')) return;
+
+          if (!$form.find('input[name="_layout"]').length) {
+            $('<input type="hidden" name="_layout" value="modal">').appendTo($form);
+          }
 
           $form.data('fw-modal-ajaxform', true);
           if (lookup) {
