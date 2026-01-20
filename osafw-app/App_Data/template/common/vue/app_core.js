@@ -7,6 +7,7 @@ function createFwApp(appDefinition) {
 
     const app = createApp(mainApp);
     app.use(createPinia());
+    app.config.globalProperties.AppUtils = AppUtils;
 
     window.fwApp = app; //make app available for components below in html
     return app;
