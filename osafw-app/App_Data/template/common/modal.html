@@ -5,8 +5,14 @@
   2) Trigger with:
      <button class="on-fw-modal" data-url="/admin/controller/(action)">Open Modal</button>
      - Optional: data-modal-dialog-class / data-modal-content-class to tweak Bootstrap classes.
-  3) Forms inside modal are submitted via ajaxForm and HTML response replaces modal content.
-  4) In modal JS, get the trigger element:
+  3) Lookup modal helpers:
+     - data-fw-lookup="add" or "edit" to enable lookup mode.
+     - data-fw-lookup-target="#selector" to specify which control to update (defaults to first input/select in input-group).
+     - URLs can include {id} placeholder for edit actions (current select value).
+     - On save, controller returns JSON with lookup_label; select option is added/updated.
+  4) Modal component appends `_layout=modal` to loaded URLs and form submits.
+  5) Forms inside modal are submitted via ajaxForm and HTML response replaces modal content.
+  6) In modal JS, get the trigger element:
      var trigger = fw.modalTriggerEl(fw.scopeFromScript());
 -->
 <script>
@@ -27,6 +33,58 @@
           $trigger.attr('data-fw-modal-trigger-id', triggerId);
         }
         return triggerId;
+      }
+
+      // Resolve target control for lookup updates
+      function resolveLookupTarget($trigger) {
+        var targetSelector = $trigger.data('fw-lookup-target');
+        if (targetSelector) {
+          var $target = $(targetSelector);
+          if ($target.length) return $target;
+        }
+
+        var $group = $trigger.closest('.input-group');
+        if (!$group.length) return $();
+
+        return $group.find('select, input, textarea').first();
+      }
+
+      // Build lookup context from trigger data attributes
+      function buildLookupContext($trigger) {
+        var lookupMode = $trigger.data('fw-lookup');
+        if (!lookupMode) return null;
+
+        var $target = resolveLookupTarget($trigger);
+        return {
+          mode: lookupMode,
+          $target: $target
+        };
+      }
+
+      // Build modal URL, resolving lookup placeholders
+      function buildLookupUrl($trigger, lookup) {
+        var url = $trigger.data('url') || $trigger.attr('href');
+        if (!url) return url;
+
+        if (url.indexOf('{id}') !== -1 || url.indexOf('{value}') !== -1) {
+          var value = lookup && lookup.$target && lookup.$target.length ? lookup.$target.val() : '';
+          if (!value) {
+            fw.alert('Select a value first');
+            return null;
+          }
+          url = url.replace(/\{id\}/g, encodeURIComponent(value));
+          url = url.replace(/\{value\}/g, encodeURIComponent(value));
+        }
+
+        return url;
+      }
+
+      // Ensure modal layout flag is passed for HTML responses
+      function ensureModalLayout(url) {
+        if (!url) return url;
+        if (url.indexOf('_layout=modal') !== -1) return url;
+        var joiner = url.indexOf('?') === -1 ? '?' : '&';
+        return url + joiner + '_layout=modal';
       }
 
       function buildModal($trigger) {
@@ -98,12 +156,13 @@
       }
 
       function loadModalContent($modal, url) {
-        $modal.data('fw-modal-url', url);
+        var modalUrl = ensureModalLayout(url);
+        $modal.data('fw-modal-url', modalUrl);
         var $content = $modal.find('.modal-content');
         $content.html(fw.HTML_LOADING);
 
         $.ajax({
-          url: url,
+          url: modalUrl,
           method: 'GET',
           dataType: 'html'
         })
@@ -118,12 +177,72 @@
 
       function bindModalForms($modal) {
         if (!$.fn.ajaxForm) return;
+        var lookup = $modal.data('fw-lookup') || null;
 
         $modal.find('form').each(function () {
           var $form = $(this);
           if ($form.data('fw-modal-ajaxform')) return;
 
+          if (!$form.find('input[name="_layout"]').length) {
+            $('<input type="hidden" name="_layout" value="modal">').appendTo($form);
+          }
+
           $form.data('fw-modal-ajaxform', true);
+          if (lookup) {
+            $form.ajaxForm({
+              dataType: 'json',
+              headers: { Accept: 'application/json' },
+              beforeSubmit: function () {
+                var $field = $form.find('input[name="lookup"]');
+                if (!$field.length) {
+                  $field = $('<input type="hidden" name="lookup">').appendTo($form);
+                }
+                $field.val(lookup.mode || '1');
+              },
+              success: function (data) {
+                if (data && data.error) {
+                  fw.clean_form_errors($form);
+                  if (data.error.details) {
+                    fw.process_form_errors($form, data.error.details);
+                  }
+                  fw.error(data.error.message || fw.MSG_AUTOSAVE_ERROR);
+                  return;
+                }
+
+                var id = data && data.id ? data.id : null;
+                var label = data && data.lookup_label ? data.lookup_label : null;
+                if (!label) {
+                  label = $form.find('[name="item[iname]"]').val();
+                }
+
+                if (lookup.$target && lookup.$target.length && id) {
+                  var idValue = String(id);
+                  var $option = lookup.$target.find('option').filter(function () {
+                    return $(this).val() === idValue;
+                  });
+                  if (!$option.length) {
+                    $option = $('<option></option>').val(idValue).appendTo(lookup.$target);
+                  }
+                  if (label) {
+                    $option.text(label);
+                  }
+                  lookup.$target.val(idValue);
+                  lookup.$target.trigger('change');
+                }
+
+                var instance = bootstrap.Modal.getInstance($modal[0]);
+                if (instance) {
+                  instance.hide();
+                }
+              },
+              error: function (xhr) {
+                var message = xhr.responseJSON?.error?.message || xhr.responseText || 'Failed to submit form.';
+                fw.error(message);
+              }
+            });
+            return;
+          }
+
           $form.ajaxForm({
             dataType: 'html',
             success: function (html) {
@@ -139,11 +258,15 @@
 
       $doc.on('click', '.on-fw-modal', function (e) {
         var $trigger = $(this);
-        var url = $trigger.data('url') || $trigger.attr('href');
+        var lookup = buildLookupContext($trigger);
+        var url = buildLookupUrl($trigger, lookup);
         if (!url) return;
 
         e.preventDefault();
         var $modal = buildModal($trigger);
+        if (lookup) {
+          $modal.data('fw-lookup', lookup);
+        }
         loadModalContent($modal, url);
 
         var instance = new bootstrap.Modal($modal[0]);

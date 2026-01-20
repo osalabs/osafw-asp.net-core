@@ -895,6 +895,14 @@ public class FW : IDisposable
             return; // no further processing
         }
 
+        var layoutParam = request.Query["_layout"].toStr();
+        if (string.IsNullOrEmpty(layoutParam) && request.HasFormContentType)
+            layoutParam = request.Form["_layout"].toStr();
+        if (!string.IsNullOrEmpty(layoutParam))
+            ps["_layout"] = layoutParam;
+        else if (format == "pjax")
+            ps["_layout"] = "pjax";
+
         string layout;
         if (format == "pjax")
             layout = G["PAGE_LAYOUT_PJAX"].toStr();
@@ -903,7 +911,15 @@ public class FW : IDisposable
 
         //override layout from parse strings
         if (ps.TryGetValue("_layout", out object? layout_value))
-            layout = layout_value.toStr();
+        {
+            var layoutFlag = layout_value.toStr();
+            if (layoutFlag == "modal")
+                layout = G["PAGE_LAYOUT_MODAL"].toStr();
+            else if (layoutFlag == "pjax")
+                layout = G["PAGE_LAYOUT_PJAX"].toStr();
+            else
+                layout = layoutFlag;
+        }
 
         //override full basedir
         if (ps.TryGetValue("_basedir", out object? basedir_value))

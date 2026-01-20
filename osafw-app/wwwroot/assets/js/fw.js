@@ -592,12 +592,13 @@ window.fw={
   // <form data-check-changes>
   setup_cancel_form_handlers: function() {
     //on submit buttons handler
-    // <button type="button" data-target="#form" class="on-submit" [data-delay="300"] [data-refresh] [name="route_return" value="New"]>Submit</button>
+    // <button type="button" data-target="#form|modal" class="on-submit" [data-delay="300"] [data-refresh] [name="route_return" value="New"]>Submit</button>
     $(document).on('click', '.on-submit', function (e) {
       e.preventDefault();
       var $this=$(this);
       var target = $this.data('target');
-      var $form = (target) ? $(target) : $(this.form);
+      if (target == 'modal') target = $this.closest('.modal').find('form').first();
+      var $form = target ? $(target) : $(this.form);
 
       //if has data-refresh - set refresh
       if ($this.data().hasOwnProperty('refresh')){
