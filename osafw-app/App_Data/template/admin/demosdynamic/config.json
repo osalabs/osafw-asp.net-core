@@ -311,7 +311,7 @@
                     "is_dropdown": true,
                     "class": "btn-secondary",
                     "icon": "bi bi-three-dots-vertical",
-                    "label": "Actions",
+                    "label": "more",
                     "hint": "DemoDicts actions",
                     "items": [
                         {

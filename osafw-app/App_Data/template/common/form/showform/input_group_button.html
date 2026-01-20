@@ -1,11 +1,10 @@
 <~dropdown if="is_dropdown" inline>
-  <div class="btn-group">
     <~split if="is_split" inline>
       <~main_link if="url" inline>
-        <a href="<~url>&return_url=<~GLOBAL[request_url] urlencode noescape>" class="btn <~class default="btn-default">" title="<~hint>" <~attrs noescape>><~icon_block if="icon" inline><i class="<~icon default="bi bi-dot">"></i> </~icon_block><~label></a>
+        <a href="<~url>&return_url=<~GLOBAL[request_url] urlencode noescape>" class="btn <~class default="btn-default">" title="<~hint>" <~attrs noescape>><~/common/icon><~label></a>
       </~main_link>
       <~main_button unless="url" inline>
-        <button type="button" class="btn <~class default="btn-default">" title="<~hint>" <~attrs noescape>><~icon_block if="icon" inline><i class="<~icon default="bi bi-dot">"></i> </~icon_block><~label></button>
+        <button type="button" class="btn <~class default="btn-default">" title="<~hint>" <~attrs noescape>><~/common/icon><~label></button>
       </~main_button>
       <button type="button" class="btn <~class default="btn-default"> dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false" title="<~hint>">
         <span class="visually-hidden">Toggle Dropdown</span>
@@ -13,20 +12,19 @@
     </~split>
     <~split unless="is_split" inline>
       <button type="button" class="btn <~class default="btn-default"> dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="<~hint>" <~attrs noescape>>
-        <~icon_block if="icon" inline><i class="<~icon default="bi bi-dot">"></i> </~icon_block><~label>
+        <~/common/icon><~label>
       </button>
     </~split>
-    <ul class="dropdown-menu">
+    <ul class="dropdown-menu dropdown-menu-end">
       <~items repeat inline>
-        <~divider if="is_divider" inline><li><hr class="dropdown-divider"></li></~divider>
+        <~divider if="is_divider" inline><li><hr class="dropdown-divider <~class>"></li></~divider>
         <~item unless="is_divider" inline>
-          <~item_link if="url" inline><li><a href="<~url>&return_url=<~GLOBAL[request_url] urlencode noescape>" class="dropdown-item <~class>" title="<~hint>" <~attrs noescape>><~icon_block if="icon" inline><i class="<~icon default="bi bi-dot">"></i> </~icon_block><~label></a></li></~item_link>
-          <~item_button unless="url" inline><li><button type="button" class="dropdown-item <~class>" title="<~hint>" <~attrs noescape>><~icon_block if="icon" inline><i class="<~icon default="bi bi-dot">"></i> </~icon_block><~label></button></li></~item_button>
+          <~item_link if="url" inline><li><a href="<~url>&return_url=<~GLOBAL[request_url] urlencode noescape>" class="dropdown-item <~class>" title="<~hint>" <~attrs noescape>><~/common/icon><~label></a></li></~item_link>
+          <~item_button unless="url" inline><li><button type="button" class="dropdown-item <~class>" title="<~hint>" <~attrs noescape>><~/common/icon><~label></button></li></~item_button>
         </~item>
       </~items>
     </ul>
-  </div>
 </~dropdown>
 <~dropdown unless="is_dropdown" inline>
-  <a href="<~url>&return_url=<~GLOBAL[request_url] urlencode noescape>" class="btn <~class default="btn-default">" title="<~hint>" <~attrs noescape>><~icon_block if="icon" inline><i class="<~icon default="bi bi-dot">"></i> </~icon_block><~label></a>
+  <a href="<~url>&return_url=<~GLOBAL[request_url] urlencode noescape>" class="btn <~class default="btn-default">" title="<~hint>" <~attrs noescape>><~/common/icon><~label></a>
 </~dropdown>
