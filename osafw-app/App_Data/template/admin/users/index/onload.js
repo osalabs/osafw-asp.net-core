@@ -40,7 +40,7 @@
       },
       tooltip: {
         trigger: 'axis',
-        axisPointer: { type: 'shadow' },
+        axisPointer: { type: 'line' },
         formatter: function (params) {
           if (!params || !params.length) {
             return '';
@@ -61,12 +61,16 @@
       },
       series: [
         {
-          type: 'bar',
+          type: 'line',
           data: values,
-          barWidth: 10,
-          itemStyle: {
+          smooth: true,
+          symbol: 'none',
+          lineStyle: {
             color: '#0d6efd',
-            borderRadius: [2, 2, 0, 0]
+            width: 2
+          },
+          areaStyle: {
+            color: 'rgba(13, 110, 253, 0.15)'
           }
         }
       ]
