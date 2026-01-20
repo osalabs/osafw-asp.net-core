@@ -7,6 +7,7 @@ window.fwConst = {
         EMAIL: 'Invalid Email',
     },
 };
+<~/common/vue/store_core.js>
 
 let state = {
     global: {}, //global config
@@ -158,9 +159,7 @@ let state = {
 };
 
 // merge in fwStoreState if defined
-if (typeof fwStoreState !== 'undefined') {
-    state = AppUtils.deepMerge(state, fwStoreState);
-}
+state = mergeStoreDefaults(state, fwStoreState);
 
 let getters = {
     doubleCount: (state) => state.count * 2, //sample getter
@@ -310,14 +309,10 @@ let getters = {
 };
 
 //merge in fwStoreGetters if defined
-if (typeof fwStoreGetters !== 'undefined') {
-    getters = AppUtils.deepMerge(getters, fwStoreGetters);
-}
+getters = mergeStoreDefaults(getters, fwStoreGetters);
 
 let actions = {
-    initApi() {
-        this.api = mande(this.base_url);
-    },
+    initApi: createStoreInitApiAction(),
     startItemLoading() {
         if (this.loading_progress_timer) {
             clearInterval(this.loading_progress_timer);
@@ -549,19 +544,7 @@ let actions = {
     },
 
     //save to store each key from data if such key exists in store
-    saveToStore(data) {
-        Object.keys(data).forEach(key => {
-            if (key == "store") { // special store-level json - merge into $state itself
-                try {
-                    this.$state = AppUtils.deepMerge(this.$state, JSON.parse(data.store));
-                } catch (e) {
-                    console.error('Error parsing JSON for key:', key, e);
-                }
-            } else if (this.$state[key] !== undefined) {
-                this.$state[key] = data[key];
-            }
-        });
-    },
+    saveToStore: createStoreSaveToStoreAction({ allowStoreMerge: true }),
 
     // set defaults
     applyDefaultsAfterLoad(data) {
@@ -1131,13 +1114,7 @@ let actions = {
 };
 
 //merge in fwStoreActions if defined
-if (typeof fwStoreActions !== 'undefined') {
-    actions = AppUtils.deepMerge(actions, fwStoreActions);
-}
+actions = mergeStoreDefaults(actions, fwStoreActions);
 
-const useFwStore = defineStore('fw', {
-    state: () => (state),
-    getters: getters,
-    actions: actions,
-});
+const useFwStore = buildFwStore({ state, getters, actions });
 window.fwStore = useFwStore; //make store available for components in html below

@@ -1,4 +1,5 @@
 //load store.js first with const useFwStore
+<~/common/vue/app_core.js>
 
 let mainApp = {
     //data: () => ({
@@ -43,15 +44,7 @@ let mainApp = {
     }
 };
 
-//merge in fwApp if defined
-if (typeof fwApp !== 'undefined') {
-    mainApp = AppUtils.deepMerge(mainApp, fwApp);
-}
-
-const app = createApp(mainApp);
-app.use(createPinia());
-
-window.fwApp = app; //make app available for components below in html
+const app = createFwApp(mainApp);
 
 //components - add load to vue_components
 
