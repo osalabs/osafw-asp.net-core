@@ -863,6 +863,10 @@ let actions = {
     async saveEditData() {
         try {
             const req = { item: this.edit_data.i, XSS: this.XSS };
+            const activeTab = this.activeFormTab;
+            if (activeTab) {
+                req.tab = activeTab;
+            }
             // also submit checked multi_rows, if form has any
             Object.keys(this.edit_data.multi_rows ?? {}).forEach(field => {
                 let rows = this.edit_data.multi_rows[field] ?? [];
