@@ -2,7 +2,7 @@
 - Added dropdown-capable append/prepend buttons for dynamic showform input groups, including modal-driven lookup add/edit flow and demo config updates.
 - Extended modal handling to support lookup saves and auto-refresh related select options, simplified lookup attrs to use data-fw-lookup only.
 - Documented dropdown button configuration and lookup modal usage in dynamic controller docs.
-- Added modal layout support with header/footer and wired modal requests to use it; ensured dynamic page headers are suppressed in modal layout.
+- Added modal layout support with header/footer and wired modal requests to use it; suppressed headers for DemoDicts showform modal layout.
 
 ## Commands that worked (build/test/run)
 - Not run (not requested).
