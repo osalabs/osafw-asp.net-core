@@ -2,8 +2,8 @@
     <div ref="pane" class="container-fluid list-edit-pane" :class="{ 'is-visible': fwStore.is_list_edit_pane }">
         <button type="button" class="btn-close float-end mt-2" aria-label="Close" @click="closePane"></button>
         <span v-if="fwStore.savedStatus!==null" class="form-saved-status float-end mt-1 me-2">
-            <span v-if="fwStore.savedStatus" class="badge bg-success">saved</span>
-            <span v-if="!fwStore.savedStatus" class="badge bg-danger">not saved</span>
+            <span v-if="fwStore.savedStatus" class="badge text-bg-success">saved</span>
+            <span v-if="!fwStore.savedStatus" class="badge text-bg-danger">not saved</span>
         </span>
         <h2>Edit Record</h2>
         <div v-if="fwStore.savedStatus===false && fwStore.savedErrorMessage>''" class="alert alert-danger">

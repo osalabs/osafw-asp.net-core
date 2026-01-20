@@ -26,8 +26,8 @@
             </div>
             <div class="page-header-meta d-flex flex-wrap align-items-center gap-2">
                 <span v-if="fwStore.savedStatus!==null" class="form-saved-status-global">
-                    <span v-if="fwStore.savedStatus" class="badge bg-success">saved</span>
-                    <span v-if="!fwStore.savedStatus" class="badge bg-danger">not saved</span>
+                    <span v-if="fwStore.savedStatus" class="badge text-bg-success">saved</span>
+                    <span v-if="!fwStore.savedStatus" class="badge text-bg-danger">not saved</span>
                 </span>
                 <slot name="meta"></slot>
             </div>

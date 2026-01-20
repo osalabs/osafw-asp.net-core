@@ -2,7 +2,7 @@
     <div id="list-btn-multi"
          class="mb-3 d-print-none"
          :class="(fwStore.countCheckedRows ? 'position-sticky' : '')">
-        with <span class="badge bg-secondary rows-num" v-if="fwStore.countCheckedRows">{{fwStore.countCheckedRows}}</span> checked rows:<br>
+        with <span class="badge text-bg-secondary rows-num" v-if="fwStore.countCheckedRows">{{fwStore.countCheckedRows}}</span> checked rows:<br>
         <button v-if="uioptions.isDelete"
                 type="button"
                 class="btn btn-danger me-2"
