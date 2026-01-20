@@ -35,12 +35,12 @@
         <input type="checkbox" class="form-check-input" :checked="value" disabled="disabled">
         <label class="form-check-label">`Yes`</label>
     </div>
-    <p v-else-if="def.type=='date'" class="form-control-plaintext">{{fwStore.formatDate(value)}}</p>
-    <p v-else-if="def.type=='date_long'" class="form-control-plaintext">{{fwStore.formatDateTime(value)}}</p>
-    <p v-else-if="def.type=='added'" class="form-control-plaintext">{{fwStore.formatDateTime(item.add_time)}} by {{form.add_users_id_name}}</p>
+    <p v-else-if="def.type=='date'" class="form-control-plaintext">{{AppUtils.formatDate(value, fwStore.global)}}</p>
+    <p v-else-if="def.type=='date_long'" class="form-control-plaintext">{{AppUtils.formatDateTime(value, fwStore.global)}}</p>
+    <p v-else-if="def.type=='added'" class="form-control-plaintext">{{AppUtils.formatDateTime(item.add_time, fwStore.global)}} by {{form.add_users_id_name}}</p>
     <p v-else-if="def.type=='updated'" class="form-control-plaintext">
         <template v-if="form.upd_users_id_name">
-            {{fwStore.formatDateTime(item.upd_time)}} by {{form.upd_users_id_name}}
+            {{AppUtils.formatDateTime(item.upd_time, fwStore.global)}} by {{form.upd_users_id_name}}
         </template>
     </p>
     <template v-else-if="def.type=='multi'">
@@ -421,10 +421,10 @@
             },
             timeValue: {
                 get() {
-                    return this.fwStore.formatTime(this.value);
+                    return AppUtils.formatTime(this.value);
                 },
                 set(new_value) {
-                    this.$emit('update-form-field', { field: this.def.field, value: this.fwStore.timeToSeconds(new_value) });
+                    this.$emit('update-form-field', { field: this.def.field, value: AppUtils.timeToSeconds(new_value) });
                 }
             },
             multi_rows() {
@@ -481,15 +481,15 @@
                 if (this.def.placeholder) return this.def.placeholder;
                 if (this.def.type === 'date_popup') {
                     // MDY -> mm/dd/yyyy, DMY -> dd/mm/yyyy
-                    return this.fwStore._userLocale() === 'en-GB' ? 'dd/mm/yyyy' : 'mm/dd/yyyy';
+                    return AppUtils.userLocale(this.fwStore.global) === 'en-GB' ? 'dd/mm/yyyy' : 'mm/dd/yyyy';
                 }
                 if (this.def.type === 'datetime_popup') {
-                    const date = this.fwStore._userLocale() === 'en-GB' ? 'dd/mm/yyyy' : 'mm/dd/yyyy';
-                    const time = this.fwStore._is24h() ? 'HH:mm:ss' : 'h:mm:ss AM/PM';
+                    const date = AppUtils.userLocale(this.fwStore.global) === 'en-GB' ? 'dd/mm/yyyy' : 'mm/dd/yyyy';
+                    const time = AppUtils.is24h(this.fwStore.global) ? 'HH:mm:ss' : 'h:mm:ss AM/PM';
                     return date + ' ' + time;
                 }
                 if (this.def.type === 'time') {
-                    return this.fwStore._is24h() ? 'HH:mm' : 'h:mm AM/PM';
+                    return AppUtils.is24h(this.fwStore.global) ? 'HH:mm' : 'h:mm AM/PM';
                 }
                 return this.def.placeholder ?? '';
             },
@@ -515,7 +515,7 @@
             },
             plaintextValue() {
                 if (this.def.lookup_model) return this.lookupValue;
-                if (this.def.conv === 'time_from_seconds') return this.fwStore.formatTime(this.value);
+                if (this.def.conv === 'time_from_seconds') return AppUtils.formatTime(this.value);
                 return this.value;
             },
             currencySymbol() {
@@ -526,7 +526,7 @@
                 return Array.from({ length: 31 }, (_, i) => String(i + 1));
             },
             dateComboMonths() {
-                const formatter = new Intl.DateTimeFormat(this.fwStore._userLocale(), { month: 'short' });
+                const formatter = new Intl.DateTimeFormat(AppUtils.userLocale(this.fwStore.global), { month: 'short' });
                 return Array.from({ length: 12 }, (_, i) => {
                     const monthIndex = i + 1;
                     return { id: String(monthIndex), iname: formatter.format(new Date(2000, i, 1)) };

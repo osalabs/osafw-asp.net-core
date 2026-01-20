@@ -1,5 +1,6 @@
 // minimal app for simple Vue screens
 // imports are done in /layout/vue/sys_footer.html
+<~/common/vue/app_core.js>
 
 let mainApp = {
     setup() {
@@ -13,15 +14,7 @@ let mainApp = {
     }
 };
 
-//merge in fwApp if defined
-if (typeof fwApp !== 'undefined') {
-    mainApp = AppUtils.deepMerge(mainApp, fwApp);
-}
-
-const app = createApp(mainApp);
-app.use(createPinia());
-
-window.fwApp = app; //make global
+const app = createFwApp(mainApp);
 
 //components - add load to vue_components
 

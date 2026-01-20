@@ -1,5 +1,6 @@
 // minimal store for simple Vue screens
 // imports are done in /layout/vue/sys_footer.html
+<~/common/vue/store_core.js>
 
 let state = {
     base_url: '',
@@ -12,29 +13,19 @@ let state = {
 };
 
 // merge in fwStoreState if defined
-if (typeof fwStoreState !== 'undefined') {
-    state = AppUtils.deepMerge(state, fwStoreState);
-}
+state = mergeStoreDefaults(state, fwStoreState);
 
 let getters = {
     doubleCount: (state) => state.count * 2, //sample getter
 };
 
 //merge in fwStoreGetters if defined
-if (typeof fwStoreGetters !== 'undefined') {
-    getters = AppUtils.deepMerge(getters, fwStoreGetters);
-}
+getters = mergeStoreDefaults(getters, fwStoreGetters);
 
 let actions = {
-    initApi() {
-        this.api = mande(this.base_url);
-    },
+    initApi: createStoreInitApiAction(),
     //save to store each key from data if such key exists in store
-    saveToStore(data) {
-        Object.keys(data).forEach(key => {
-            if (this.$state[key] !== undefined) this.$state[key] = data[key];
-        });
-    },
+    saveToStore: createStoreSaveToStoreAction(),
     async loadData() {
         this.is_loading = true;
         try {
@@ -51,13 +42,7 @@ let actions = {
 };
 
 //merge in fwStoreActions if defined
-if (typeof fwStoreActions !== 'undefined') {
-    actions = AppUtils.deepMerge(actions, fwStoreActions);
-}
+actions = mergeStoreDefaults(actions, fwStoreActions);
 
-const useFwStore = defineStore('fw', {
-    state: () => (state),
-    getters: getters,
-    actions: actions,
-});
+const useFwStore = buildFwStore({ state, getters, actions });
 window.fwStore = useFwStore;  //make store available for components in html below
