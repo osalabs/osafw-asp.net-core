@@ -899,7 +899,7 @@ public class FW : IDisposable
         if (string.IsNullOrEmpty(layoutParam) && request.HasFormContentType)
             layoutParam = request.Form["_layout"].toStr();
         if (!string.IsNullOrEmpty(layoutParam))
-            ps["_layout"] = layoutParam;
+            ps["_layout"] = Utils.routeFixChars(layoutParam); // cleanup param from request
         else if (format == "pjax")
             ps["_layout"] = "pjax";
 

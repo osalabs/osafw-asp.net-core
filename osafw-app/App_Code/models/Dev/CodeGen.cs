@@ -634,11 +634,24 @@ class DevCodeGen
     public void updateControllerConfig(FwDict entity, FwDict config, FwList? entities = null)
     {
         string model_name = entity["model_name"].toStr();
-        var model = fw.model(model_name);
-
         string table_name = entity["table"].toStr();
         if (string.IsNullOrEmpty(table_name))
-            table_name = model.table_name;
+            table_name = Utils.name2fw(model_name);
+
+        // During app creation the model .cs may have just been generated and not yet available
+        // to the running AppDomain. Prefer entity/schema data and only fall back to fw.model()
+        // when absolutely required.
+        FwModel? model = null;
+        try
+        {
+            model = fw.model(model_name);
+            if (!string.IsNullOrEmpty(model.table_name))
+                table_name = model.table_name;
+        }
+        catch
+        {
+            // ignore - generation should continue using entity/table/schema info
+        }
 
         var controller_options = entity["controller"] as FwDict ?? [];
         string controller_title = controller_options["title"].toStr();
@@ -1583,7 +1596,7 @@ class DevCodeGen
             if (initializer.Length > 0)
                 sb.AppendLine($"        public {csType} {propertyName} {{ get; set; }} = {initializer};");
             else
-                sb.AppendLine($"        public {csType} {propertyName} {{ get; set; }};");
+                sb.AppendLine($"        public {csType} {propertyName} {{ get; set; }}");
         }
 
         sb.AppendLine("    }");

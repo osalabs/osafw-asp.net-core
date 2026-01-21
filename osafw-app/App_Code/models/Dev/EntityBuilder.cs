@@ -674,7 +674,48 @@ class DevEntityBuilder
     public static T loadJson<T>(string filename) where T : new()
     {
         var decoded = Utils.jsonDecode(Utils.getFileContent(filename));
-        return decoded is T typed ? typed : new T();
+
+        // Normalize hierarchical JSON structures to expected FW container types
+        // (Utils.jsonDecode returns ObjList for arrays, while most dev tools expect FwList)
+        decoded = normalizeDecodedJson(decoded);
+
+        if (decoded is T typed)
+            return typed;
+
+        return new T();
+    }
+
+    private static object? normalizeDecodedJson(object? decoded)
+    {
+        if (decoded is null)
+            return null;
+
+        if (decoded is FwDict dict)
+        {
+            var res = new FwDict();
+            foreach (var key in dict.Keys.Cast<string>())
+                res[key] = normalizeDecodedJson(dict[key]);
+            return res;
+        }
+
+        if (decoded is ObjList list)
+        {
+            var res = new FwList();
+            foreach (var item in list)
+            {
+                var normalized = normalizeDecodedJson(item);
+                if (normalized is FwDict d)
+                    res.Add(d);
+            }
+            return res;
+        }
+
+        // already normalized
+        if (decoded is FwList)
+            return decoded;
+
+        // primitive
+        return decoded;
     }
 
     // important - pass data as FwList or FwRow to trigger custom converter

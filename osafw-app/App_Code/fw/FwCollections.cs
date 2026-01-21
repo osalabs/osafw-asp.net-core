@@ -48,15 +48,19 @@ public class FwList : List<FwDict>
     {
         if (list != null)
             foreach (var item in list)
-                if (item is IDictionary)
-                    Add((FwDict)item);
+                if (item is FwDict fd)
+                    Add(fd);
+                else if (item is IDictionary d)
+                    Add(new FwDict(d));
     }
     public FwList(IEnumerable collection)
     {
         if (collection != null)
             foreach (var item in collection)
-                if (item is IDictionary)
-                    Add((FwDict)item);
+                if (item is FwDict fd)
+                    Add(fd);
+                else if (item is IDictionary d)
+                    Add(new FwDict(d));
 
     }
 }

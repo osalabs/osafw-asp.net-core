@@ -443,9 +443,16 @@ public class DevManageController : FwController
         FwDict ps = [];
 
         var config_file = fw.config("template") + DevCodeGen.DB_JSON_PATH;
-        var entities = DevEntityBuilder.loadJson<FwList>(config_file);
-
-        ps["tables"] = entities;
+        try
+        {
+            var entities = DevEntityBuilder.loadJson<FwList>(config_file);
+            ps["tables"] = entities;
+        }
+        catch (Exception ex)
+        {
+            fw.flash("error", $"Failed to load db.json from '{config_file}': {ex.Message}");
+            ps["tables"] = new FwList();
+        }
 
         return ps;
     }
