@@ -20,6 +20,7 @@ using MySqlConnector;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
+using Microsoft.Data.Sqlite;
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
@@ -222,6 +223,7 @@ public class DB : IDisposable
     public const string DBTYPE_OLE = "OLE";
     public const string DBTYPE_ODBC = "ODBC";
     public const string DBTYPE_MYSQL = "MySQL";
+    public const string DBTYPE_SQLITE = "SQLite";
 
     //special value for current db time in queries (GETDATE() or NOW()) can be used as a value like this:
     // db.insert("table", DB.h("idatetime", DB.NOW)); - insert a row with current datetime
@@ -401,6 +403,12 @@ public class DB : IDisposable
             limit_method = "LIMIT";
             sql_now = "NOW()";
         }
+        else if (dbtype == DBTYPE_SQLITE)
+        {
+            quotes = "\"";
+            limit_method = "LIMIT";
+            sql_now = "CURRENT_TIMESTAMP";
+        }
         else if (dbtype == DBTYPE_OLE)
         {
             if (connstr.Contains("Provider=DB2OLEDB"))
@@ -559,6 +567,12 @@ public class DB : IDisposable
         return conn!;
     }
 
+    /// <summary>
+    /// Create and open a database connection matching the configured provider type.
+    /// </summary>
+    /// <param name="connstr">Provider-specific connection string.</param>
+    /// <param name="dbtype">Database type token (SQL, MySQL, OLE, ODBC, SQLite).</param>
+    /// <returns>Open database connection instance.</returns>
     public DbConnection createConnection(string connstr, string dbtype = "SQL")
     {
         DbConnection result;
@@ -566,6 +580,10 @@ public class DB : IDisposable
         if (dbtype == DBTYPE_SQLSRV)
         {
             result = new SqlConnection(connstr);
+        }
+        else if (dbtype == DBTYPE_SQLITE)
+        {
+            result = new SqliteConnection(connstr);
         }
 #if isMySQL
         else if (dbtype == DBTYPE_MYSQL)
@@ -592,10 +610,17 @@ public class DB : IDisposable
         return result;
     }
 
+    /// <summary>
+    /// Resolve the database server timezone for timestamp conversions, falling back to UTC.
+    /// </summary>
+    /// <returns>Time zone ID compatible with TimeZoneInfo.</returns>
     private string detectTimezoneFromDb()
     {
         try
         {
+            if (dbtype == DBTYPE_SQLITE)
+                return DateUtils.TZ_UTC;
+
             // get server offset in hours and minutes
             var offset_sql = dbtype switch
             {
@@ -775,6 +800,20 @@ public class DB : IDisposable
 
             dbcomm = sqlCommand;
         }
+        else if (dbtype == DBTYPE_SQLITE)
+        {
+            var sqliteCommand = new SqliteCommand(sql, (SqliteConnection)conn!)
+            {
+                CommandTimeout = sql_command_timeout
+            };
+            foreach (string p in @params.Keys)
+                sqliteCommand.Parameters.AddWithValue(p, convertParamValue(@params[p]));
+
+            if (tran != null)
+                sqliteCommand.Transaction = (SqliteTransaction)tran;
+
+            dbcomm = sqliteCommand;
+        }
         else if (dbtype == DBTYPE_OLE && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             var sql1 = convertNamedToPositional(sql, out List<string> paramNames);
@@ -952,6 +991,27 @@ public class DB : IDisposable
 
             if (tran != null)
                 dbcomm.Transaction = (SqlTransaction)tran;
+
+            if (is_get_identity)
+                result = dbcomm.ExecuteScalar().toInt();
+            else
+                result = dbcomm.ExecuteNonQuery();
+        }
+        else if (dbtype == DBTYPE_SQLITE)
+        {
+            if (is_get_identity)
+            {
+                sql += ";SELECT last_insert_rowid()";
+            }
+            using var dbcomm = new SqliteCommand(sql, (SqliteConnection)conn!)
+            {
+                CommandTimeout = sql_command_timeout
+            };
+            foreach (string p in @params.Keys)
+                dbcomm.Parameters.AddWithValue(p, convertParamValue(@params[p]));
+
+            if (tran != null)
+                dbcomm.Transaction = (SqliteTransaction)tran;
 
             if (is_get_identity)
                 result = dbcomm.ExecuteScalar().toInt();
@@ -2141,6 +2201,10 @@ public class DB : IDisposable
         {
             insert_id = exec(qp.sql, qp.@params, true);
         }
+        else if (dbtype == DBTYPE_SQLITE)
+        {
+            insert_id = exec(qp.sql, qp.@params, true);
+        }
         else
             throw new ApplicationException("Get last insert ID for DB type [" + dbtype + "] not implemented");
 
@@ -2454,6 +2518,11 @@ public class DB : IDisposable
         return result;
     }
 
+    /// <summary>
+    /// Load full schema metadata for a table, including provider-specific column details.
+    /// </summary>
+    /// <param name="table">Table name to inspect.</param>
+    /// <returns>List of column metadata rows keyed by column name and attributes.</returns>
     public FwList loadTableSchemaFull(string table)
     {
         // check if full schema already there
@@ -2492,6 +2561,21 @@ public class DB : IDisposable
                 var subtype = row["type"].toStr();
                 row["fw_type"] = mapTypeSQL2Fw(subtype); // meta type
                 row["fw_subtype"] = subtype.ToLowerInvariant();
+            }
+        }
+        else if (dbtype == DBTYPE_SQLITE)
+        {
+            string sql = $"PRAGMA table_info({q(table)})";
+            result = arrayp(sql);
+            foreach (FwDict row in result)
+            {
+                var subtype = row["type"].toStr();
+                row["fw_type"] = mapTypeSQLite2Fw(subtype);
+                row["fw_subtype"] = subtype.ToLowerInvariant();
+                row["is_nullable"] = row["notnull"].toInt() == 1 ? 0 : 1;
+                row["default"] = row["dflt_value"];
+                row["pos"] = row["cid"].toInt() + 1;
+                row["is_identity"] = row["pk"].toInt() == 1 && subtype.Contains("int", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
             }
         }
         else if (dbtype == DBTYPE_MYSQL)
@@ -2587,6 +2671,11 @@ public class DB : IDisposable
     }
 
     // return database foreign keys, optionally filtered by table (that contains foreign keys)
+    /// <summary>
+    /// List foreign key metadata, optionally scoped to a single table.
+    /// </summary>
+    /// <param name="table">Optional table name to scope the foreign keys.</param>
+    /// <returns>List of foreign key descriptors with source/target columns.</returns>
     public DBList listForeignKeys(string table = "")
     {
         DBList result = [];
@@ -2650,6 +2739,26 @@ public class DB : IDisposable
                             AND col2.ORDINAL_POSITION = col1.ORDINAL_POSITION)" +
                 where, where_params);
         }
+        else if (dbtype == DBTYPE_SQLITE)
+        {
+            if (string.IsNullOrEmpty(table))
+                return result;
+
+            var fkRows = arrayp($"PRAGMA foreign_key_list({q(table)})");
+            foreach (FwDict row in fkRows)
+            {
+                result.Add(new DBRow()
+                {
+                    { "table", table },
+                    { "column", row["from"] },
+                    { "name", row["id"] },
+                    { "pk_table", row["table"] },
+                    { "pk_column", row["to"] },
+                    { "on_update", row["on_update"] },
+                    { "on_delete", row["on_delete"] }
+                });
+            }
+        }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             // OLE DB (Access or other providers)
@@ -2686,7 +2795,7 @@ public class DB : IDisposable
     {
         //logger(LogLevel.DEBUG, "loadTableSchema:" + table);
         // for unsupported schemas - use config schema
-        if (dbtype != DBTYPE_SQLSRV && dbtype != DBTYPE_OLE && dbtype != DBTYPE_MYSQL)
+        if (dbtype != DBTYPE_SQLSRV && dbtype != DBTYPE_OLE && dbtype != DBTYPE_MYSQL && dbtype != DBTYPE_SQLITE)
         {
             if (schema.Count == 0)
                 schema = (Dictionary<string, FwDict>?)conf["schema"] ?? [];
@@ -2787,6 +2896,27 @@ public class DB : IDisposable
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Map SQLite type affinities into framework field types for schema metadata and parameter casting.
+    /// </summary>
+    /// <param name="sqliteType">Raw SQLite column type string from PRAGMA table_info.</param>
+    /// <returns>Framework field type token used for parameter conversions.</returns>
+    protected static string mapTypeSQLite2Fw(string sqliteType)
+    {
+        var type = sqliteType.ToLowerInvariant();
+        if (type.Contains("int"))
+            return "int";
+        if (type.Contains("date") && !type.Contains("datetime"))
+            return "date";
+        if (type.Contains("datetime") || type.Contains("timestamp"))
+            return "datetime";
+        if (type.Contains("real") || type.Contains("floa") || type.Contains("doub"))
+            return "float";
+        if (type.Contains("dec") || type.Contains("num"))
+            return "decimal";
+        return "varchar";
     }
 
     [SupportedOSPlatform("windows")]
