@@ -30,7 +30,7 @@ public class UsersSqliteTests
                 "fname", "Sql",
                 "lname", "Lite"));
 
-            Assert.IsTrue(userId > 0, "Expected a new user id from insert.");
+            Assert.IsGreaterThan(userId, 0, "Expected a new user id from insert.");
 
             var inserted = users.one(userId);
             Assert.AreEqual("sqlite@example.com", inserted["email"]);

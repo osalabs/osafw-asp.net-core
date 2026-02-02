@@ -2750,12 +2750,12 @@ public class DB : IDisposable
                 result.Add(new DBRow()
                 {
                     { "table", table },
-                    { "column", row["from"] },
-                    { "name", row["id"] },
-                    { "pk_table", row["table"] },
-                    { "pk_column", row["to"] },
-                    { "on_update", row["on_update"] },
-                    { "on_delete", row["on_delete"] }
+                    { "column", row["from"].toStr() },
+                    { "name", row["id"].toStr() },
+                    { "pk_table", row["table"].toStr() },
+                    { "pk_column", row["to"].toStr() },
+                    { "on_update", row["on_update"].toStr() },
+                    { "on_delete", row["on_delete"].toStr() }
                 });
             }
         }
