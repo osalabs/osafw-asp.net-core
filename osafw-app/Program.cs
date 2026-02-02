@@ -77,28 +77,36 @@ public static class Program
                 options.XmlRepository = repository; // i.e. "PersistKeysToCustomXmlRepository"
             });
 
+        if (dbType == DB.DBTYPE_SQLITE)
+        {
+            // SQLite does not have a built-in distributed cache provider, use in-memory sessions instead.
+            builder.Services.AddDistributedMemoryCache();
+        }
+        else
+        {
 #if isMySQL
-        // If using MySQL for distributed cache (and sessions)
-        builder.Services.AddDistributedMySqlCache(options =>
-        {
-            var csb = new MySqlConnector.MySqlConnectionStringBuilder(connStr);
-            if (string.IsNullOrEmpty(csb.Database))
-                throw new ApplicationException("No database name defined in connection_string");
+            // If using MySQL for distributed cache (and sessions)
+            builder.Services.AddDistributedMySqlCache(options =>
+            {
+                var csb = new MySqlConnector.MySqlConnectionStringBuilder(connStr);
+                if (string.IsNullOrEmpty(csb.Database))
+                    throw new ApplicationException("No database name defined in connection_string");
 
-            // Setup session store
-            options.ConnectionString = csb.ConnectionString;
-            options.SchemaName = csb.Database; // database name
-            options.TableName = "fwsessions";
-        });
+                // Setup session store
+                options.ConnectionString = csb.ConnectionString;
+                options.SchemaName = csb.Database; // database name
+                options.TableName = "fwsessions";
+            });
 #else
-        // If using SQL Server for distributed cache (and sessions)
-        builder.Services.AddDistributedSqlServerCache(options =>
-        {
-            options.ConnectionString = connStr;
-            options.SchemaName = "dbo";
-            options.TableName = "fwsessions";
-        });
+            // If using SQL Server for distributed cache (and sessions)
+            builder.Services.AddDistributedSqlServerCache(options =>
+            {
+                options.ConnectionString = connStr;
+                options.SchemaName = "dbo";
+                options.TableName = "fwsessions";
+            });
 #endif
+        }
 
         // Form upload/limits
         builder.Services.Configure<FormOptions>(options =>
