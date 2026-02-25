@@ -136,8 +136,7 @@ INSERT INTO resources (icode,iname) VALUES ('AdminDemoDicts', 'Demo Dict');
 --- optional demo end
 INSERT INTO resources (icode,iname) VALUES ('AdminSpages', 'Pages');
 INSERT INTO resources (icode,iname) VALUES ('AdminAtt', 'Manage Uploads');
-INSERT INTO resources (icode,iname) VALUES ('AdminLookupManager', 'Lookup Manager');
-INSERT INTO resources (icode,iname) VALUES ('AdminLookupManagerTables', 'Lookup Manager Table Definitions');
+INSERT INTO resources (icode,iname) VALUES ('AdminLookups', 'Lookup Manager');
 INSERT INTO resources (icode,iname) VALUES ('AdminRoles', 'Manage Roles');
 INSERT INTO resources (icode,iname) VALUES ('AdminUsers', 'Manage Members');
 INSERT INTO resources (icode,iname) VALUES ('AdminSettings', 'Site Settings');

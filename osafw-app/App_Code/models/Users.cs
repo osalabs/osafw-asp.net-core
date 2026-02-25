@@ -4,7 +4,7 @@
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
 //if you use Roles - uncomment define isRoles here
-//#define isRoles
+#define isRoles
 
 using OtpNet;
 using QRCoder;
@@ -517,7 +517,7 @@ public class Users : FwModel<Users.Row>
     public virtual FwDict getRBAC(int? users_id = null, string? resource_icode = null)
     {
 #if isRoles
-        var result = new FwRow();
+        var result = new FwDict();
 
         int user_access_level;
 
@@ -560,14 +560,14 @@ public class Users : FwModel<Users.Row>
         // read all permissions for the resource and user's roles
         var rows = fw.model<RolesResourcesPermissions>().listByRolesResources(roles_ids, new int[] { resources_id });
         var permissions_ids = new StrList();
-        foreach (FwRow row in rows)
+        foreach (var row in rows)
         {
-            permissions_ids.Add(row["permissions_id"].toStr());
+            permissions_ids.Add(row["permissions_id"]);
         }
 
         // now read all permissions by ids and set icodes to result
         var permissions_rows = fw.model<Permissions>().multi(permissions_ids);
-        foreach (FwRow row in permissions_rows)
+        foreach (var row in permissions_rows)
         {
             result[row["icode"]] = true;
         }
@@ -588,7 +588,7 @@ public class Users : FwModel<Users.Row>
         var result = new FwDict();
 #if isRoles
         var permissions = fw.model<Permissions>().list();
-        foreach (FwRow permission in permissions)
+        foreach (var permission in permissions)
         {
             result[permission["icode"]] = true;
         }
@@ -639,7 +639,7 @@ public class Users : FwModel<Users.Row>
 
         var result = isAccessByRolesResourcePermission(users_id, resource_icode, permission_icode);
         if (!result)
-            logger(LogLevel.DEBUG, "Access by Roles denied", new FwRow {
+            logger(LogLevel.DEBUG, "Access by Roles denied", new FwDict {
                 {"resource_icode", resource_icode },
                 {"resource_action", resource_action },
                 {"resource_action_more", resource_action_more },
@@ -741,7 +741,7 @@ public class Users : FwModel<Users.Row>
 
             // read all resources user has list permission
             var resources_ids = new IntList();
-            foreach (FwRow rrp in rrps)
+            foreach (var rrp in rrps)
             {
                 resources_ids.Add(rrp["resources_id"].toInt());
             }
@@ -785,7 +785,7 @@ public class Users : FwModel<Users.Row>
         var result = new StrList();
 
 #if isRoles
-        var p = new FwRow
+        var p = new FwDict
         {
             { "icode", Permissions.PERMISSION_LIST },
             { "users_id", users_id }
