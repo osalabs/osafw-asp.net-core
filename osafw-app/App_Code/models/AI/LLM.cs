@@ -1,6 +1,7 @@
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using OpenAI;
+using OpenAI.Embeddings;
 using OpenAI.Responses;
 using System;
 using System.Text.Json;
@@ -20,6 +21,7 @@ public class LLM : FwModel
     public const string MODEL_GPT4O_MINI = "gpt-4o-mini";
     public const string MODEL_GPT41 = "gpt-4.1";
     public const string MODEL_GPT41_MINI = "gpt-4.1-mini";
+    public const string MODEL_TEXT_EMBEDDING_3_SMALL = "text-embedding-3-small";
 
     /// <summary>
     /// Initializes non-DB model state.
@@ -74,6 +76,33 @@ public class LLM : FwModel
     }
 
     /// <summary>
+    /// Generates an embedding vector for semantic search and similarity operations over arbitrary text.
+    /// </summary>
+    /// <param name="text">Input text that should be embedded; must contain non-whitespace characters.</param>
+    /// <returns>
+    /// Dense embedding vector returned by <see cref="MODEL_TEXT_EMBEDDING_3_SMALL"/> as a <see cref="float"/> array
+    /// suitable for storage and similarity scoring.
+    /// </returns>
+    public float[] embeddingForText(string text)
+    {
+        text = text?.Trim() ?? string.Empty;
+        if (text.Length == 0)
+            throw new ApplicationException("Text is required for embedding generation.");
+
+        var embeddingClient = getOpenAiClient().GetEmbeddingClient(MODEL_TEXT_EMBEDDING_3_SMALL);
+
+        try
+        {
+            var result = embeddingClient.GenerateEmbedding(text);
+            return result.Value.ToFloats().ToArray();
+        }
+        catch (Exception ex)
+        {
+            throw new ApplicationException("Failed to generate embedding from OpenAI.", ex);
+        }
+    }
+
+    /// <summary>
     /// Builds a new OpenAI responses-backed agent for one request using configured API credentials.
     /// </summary>
     /// <param name="model">Canonical model identifier for client creation. Empty values default to <see cref="MODEL_GPT5_MINI"/>.</param>
@@ -81,17 +110,26 @@ public class LLM : FwModel
     /// <returns>Configured <see cref="ChatClientAgent"/> instance ready for immediate invocation.</returns>
     private ChatClientAgent createAgent(string model, string system_prompt)
     {
+        var modelId = string.IsNullOrWhiteSpace(model) ? MODEL_GPT5_MINI : model.Trim();
+#pragma warning disable OPENAI001
+        var responsesClient = getOpenAiClient().GetResponsesClient(modelId);
+#pragma warning restore OPENAI001
+        return responsesClient.AsAIAgent(instructions: system_prompt, name: "LLM");
+    }
+
+    /// <summary>
+    /// Builds an OpenAI client from framework configuration with backward-compatible key names.
+    /// </summary>
+    /// <returns>Configured <see cref="OpenAIClient"/> instance authenticated with the configured API key.</returns>
+    private OpenAIClient getOpenAiClient()
+    {
         var apiKey = fw.config("OPENAI_KEY").toStr();
         if (string.IsNullOrWhiteSpace(apiKey))
             apiKey = fw.config("OPENAI_API_KEY").toStr();
         if (string.IsNullOrWhiteSpace(apiKey))
             throw new ApplicationException("OpenAI API key is not configured. Set appSettings.OPENAI_KEY.");
 
-        var modelId = string.IsNullOrWhiteSpace(model) ? MODEL_GPT5_MINI : model.Trim();
-#pragma warning disable OPENAI001
-        var responsesClient = new OpenAIClient(apiKey).GetResponsesClient(modelId);
-#pragma warning restore OPENAI001
-        return responsesClient.AsAIAgent(instructions: system_prompt, name: "LLM");
+        return new OpenAIClient(apiKey);
     }
 
     /// <summary>
