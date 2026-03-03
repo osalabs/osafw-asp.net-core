@@ -22,7 +22,7 @@ public class ConvUtils
             if (playwrightInstalled) return;
             // Read PLAYWRIGHT_BROWSERS_PATH from config
             string browsersPath = fw.config("PLAYWRIGHT_BROWSERS_PATH").toStr();
-            if (string.IsNullOrEmpty(browsersPath))
+            if (!string.IsNullOrEmpty(browsersPath))
             {
                 Environment.SetEnvironmentVariable("PLAYWRIGHT_BROWSERS_PATH", browsersPath);
             }
