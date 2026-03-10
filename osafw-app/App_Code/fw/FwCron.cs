@@ -56,12 +56,21 @@ public class FwCron : FwModel
     /// </summary>
     public void runJob(TFwCron job)
     {
-        // If start_date is not set, treat this as the first execution and run immediately.
-        // Also, record the current UTC time as the start_date for future CRON evaluations.
+        // If start_date is not set, initialize the schedule and wait for the first matching CRON occurrence.
         if (!job.start_date.HasValue)
         {
             job.start_date = DateTime.UtcNow;
             update(job.id, DB.h("start_date", job.start_date));
+
+            job.next_run = calculateNextRun(job.cron, job.start_date.Value, job.end_date);
+            update(job.id, DB.h("next_run", job.next_run));
+
+            if (!job.next_run.HasValue)
+            {
+                update(job.id, DB.h("status", STATUS_COMPLETED));
+            }
+
+            return;
         }
 
         // Execute logic based on job's ICode

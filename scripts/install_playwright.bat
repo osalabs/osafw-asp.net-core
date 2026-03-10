@@ -4,6 +4,9 @@ set "PW=C:\Program Files\pw-browsers"
 mkdir "%PW%"
 icacls "%PW%" /grant "IIS_IUSRS:(OI)(CI)M" /T
 setx PLAYWRIGHT_BROWSERS_PATH "%PW%" /M
+
+;powershell ..\osafw-app\bin\Release\net10.0\playwright.ps1 install chromium
+
 echo Re-start IIS (or reboot) so worker processes pick up the new variable.
 
 pause

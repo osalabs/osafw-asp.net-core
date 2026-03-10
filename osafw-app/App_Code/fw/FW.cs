@@ -65,6 +65,8 @@ public class FW : IDisposable
     public HttpContext context = null!;
     public HttpRequest request = null!;
     public HttpResponse response = null!;
+    private readonly ISession? session;
+    private readonly bool isOffline;
 
     public string request_url = ""; // current request url (relative to application url)
     public FwRoute route = new();
@@ -154,7 +156,7 @@ public class FW : IDisposable
         var db = new DB(conf, config_name);
         // Wrap the logger to match DB.LoggerDelegate (object?[])
         db.setLogger((level, args) => this.logger(level, args!));
-        if (context != null)
+        if (!isOffline)
             db.setContext(context);
 
         return db;
@@ -179,10 +181,12 @@ public class FW : IDisposable
     public FW(HttpContext? context, IConfiguration configuration)
     {
         // DefaultHttpContext keeps offline runs usable without null checks while still matching the runtime request surface
+        isOffline = context == null;
         var currentContext = context ?? new DefaultHttpContext();
         this.context = currentContext;
         this.request = currentContext.Request;
         this.response = currentContext.Response;
+        session = isOffline ? null : currentContext.Session;
 
         // pass host explicitly so FwConfig can cache per-host settings
         FwConfig.init(context, configuration, context?.Request.Host.ToString());
@@ -248,7 +252,7 @@ public class FW : IDisposable
 
         TimeSpan end_timespan = DateTime.Now - start_time;
         string msg;
-        if (this.context != null)
+        if (!isOffline)
             msg = "REQUEST END   [" + route.method + " " + request_url + "] in "; // web context
         else
             msg = "OFFLINE END   in "; // offline context
@@ -259,25 +263,25 @@ public class FW : IDisposable
     //by default Session is for strings
     public string Session(string name)
     {
-        return context?.Session.GetString(name) ?? "";
+        return session?.GetString(name) ?? "";
     }
     public void Session(string name, string value)
     {
-        context?.Session.SetString(name, value);
+        session?.SetString(name, value);
     }
 
     public int? SessionInt(string name)
     {
-        return context?.Session.GetInt32(name);
+        return session?.GetInt32(name);
     }
     public void SessionInt(string name, int value)
     {
-        context?.Session.SetInt32(name, value);
+        session?.SetInt32(name, value);
     }
 
     public bool SessionBool(string name)
     {
-        var data = context?.Session.Get(name);
+        var data = session?.Get(name);
         if (data == null)
         {
             return false;
@@ -286,17 +290,17 @@ public class FW : IDisposable
     }
     public void SessionBool(string name, bool value)
     {
-        context?.Session.Set(name, BitConverter.GetBytes(value));
+        session?.Set(name, BitConverter.GetBytes(value));
     }
 
     public FwDict? SessionDict(string name)
     {
-        string? data = context?.Session.GetString(name);
+        string? data = session?.GetString(name);
         return data == null ? null : (FwDict)Utils.deserialize(data);
     }
     public void SessionDict(string name, FwDict value)
     {
-        context?.Session.SetString(name, Utils.serialize(value));
+        session?.SetString(name, Utils.serialize(value));
     }
 
 
@@ -738,7 +742,7 @@ public class FW : IDisposable
     // parse query string, form and json in request body into fw.FORM
     private void parseForm()
     {
-        if (request == null)
+        if (isOffline)
         {
             // offline mode FORM = [];
             return;
@@ -993,7 +997,7 @@ public class FW : IDisposable
                 Lang = G["lang"].toStr(),
                 IsLangUpdate = config("is_lang_update").toBool(),
                 GlobalsGetter = () => G,
-                Session = context?.Session,
+                Session = session,
                 Logger = (level, args) => logger(level, args),
 
                 DateFormat = DateFormat,
@@ -1490,7 +1494,7 @@ public class FW : IDisposable
     }
 
     // shortcut for send_email from template from the /emails template dir
-    public bool sendEmailTpl(string mail_to, string tpl, FwDict hf, FwDict? filenames = null, FwList? aCC = null, string reply_to = "", FwDict? options = null)
+    public bool sendEmailTpl(string mail_to, string tpl, FwDict hf, FwDict? filenames = null, IList? aCC = null, string reply_to = "", FwDict? options = null)
     {
         Regex r = new(@"[\n\r]+");
         string subj_body = parsePage("/emails", tpl, hf);
@@ -1564,7 +1568,7 @@ public class FW : IDisposable
 
             ps["DUMP_SQL"] = DB.last_sql;
             ps["DUMP_FORM"] = FwLogger.dumper(FORM ?? []);
-            ps["DUMP_SESSION"] = context?.Session != null ? FwLogger.dumper(context.Session) : "null";
+            ps["DUMP_SESSION"] = session != null ? FwLogger.dumper(session) : "null";
         }
 
         parser(tpl_dir, ps);
