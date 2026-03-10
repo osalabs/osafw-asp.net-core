@@ -7,7 +7,6 @@ namespace osafw;
 
 using Cronos;
 using System;
-using System.Linq;
 using System.Threading;
 
 public class TFwCron
@@ -62,28 +61,29 @@ public class FwCron : FwModel
             job.start_date = DateTime.UtcNow;
             update(job.id, DB.h("start_date", job.start_date));
 
-            job.next_run = calculateNextRun(job.cron, job.start_date.Value, job.end_date);
-            update(job.id, DB.h("next_run", job.next_run));
-
-            if (!job.next_run.HasValue)
-            {
-                update(job.id, DB.h("status", STATUS_COMPLETED));
-            }
+            updateNextRun(job, job.start_date.Value);
 
             return;
         }
 
+        var run_started_utc = DateTime.UtcNow;
+
         // Execute logic based on job's ICode
         runJobAction(job);
 
-        // Calculate the next run time using the CRON expression and start_date
-        job.next_run = calculateNextRun(job.cron, job.start_date.Value, job.end_date);
+        // Advance the schedule from when this run started so long-running jobs do not skip the next slot.
+        updateNextRun(job, run_started_utc);
+    }
+
+    private void updateNextRun(TFwCron job, DateTime from_date)
+    {
+        job.next_run = calculateNextRun(job.cron, from_date, job.end_date);
         update(job.id, DB.h("next_run", job.next_run));
 
-        // If no next occurrence is available, the schedule is considered complete
         if (!job.next_run.HasValue)
         {
-            update(job.id, DB.h("status", STATUS_COMPLETED));
+            job.status = STATUS_COMPLETED;
+            update(job.id, DB.h("status", job.status));
         }
     }
 
@@ -116,16 +116,16 @@ public class FwCron : FwModel
     }
 
     /// <summary>
-    /// Calculates the next run time for a job based on the given CRON expression and a start point.
-    /// Determines the most recent valid run within the time window, then calculates the next occurrence.
+    /// Calculates the next run time for a job based on the given CRON expression and a reference point.
+    /// Calculates the next occurrence after the supplied UTC reference time, respecting the schedule end bound.
     /// If an end_date is provided, ensures the schedule does not exceed it.
     /// Returns null if the CRON is invalid, the schedule is expired, or no future runs exist.
     /// </summary>
     /// <param name="cron">The CRON expression defining the job schedule.</param>
-    /// <param name="start_date">The base date from which to start evaluating the CRON schedule.</param>
+    /// <param name="from_date">The reference date after which the next occurrence is calculated.</param>
     /// <param name="end_date">Optional end date beyond which no runs should occur.</param>
     /// <returns>The next scheduled DateTime in UTC, or null if none exists.</returns>
-    private static DateTime? calculateNextRun(string cron, DateTime start_date, DateTime? end_date)
+    private static DateTime? calculateNextRun(string cron, DateTime from_date, DateTime? end_date)
     {
         // Try parsing the CRON expression
         if (!CronExpression.TryParse(cron, out var cron_expression))
@@ -134,32 +134,23 @@ public class FwCron : FwModel
         }
 
         // Ensure all dates are treated as UTC
-        var from_date_utc = DateTime.SpecifyKind(start_date, DateTimeKind.Utc);
-        var to_date_utc = end_date.HasValue
+        var from_date_utc = DateTime.SpecifyKind(from_date, DateTimeKind.Utc);
+        DateTime? end_date_utc = end_date.HasValue
             ? DateTime.SpecifyKind(end_date.Value, DateTimeKind.Utc)
-            : DateTime.UtcNow;
+            : null;
 
-        // Get all CRON occurrences between start and now (or end_date if set)
-        var occurrences = cron_expression.GetOccurrences(
-            fromUtc: from_date_utc,
-            toUtc: to_date_utc,
-            zone: TimeZoneInfo.Utc,
-            fromInclusive: true,
-            toInclusive: false);
+        if (end_date_utc.HasValue && end_date_utc.Value <= from_date_utc)
+        {
+            return null;
+        }
 
-        // Get the last valid occurrence (if any) within that window
-        DateTime? last = null;
-        var lastOcc = occurrences.LastOrDefault();
-        if (lastOcc != default)
-            last = DateTime.SpecifyKind(lastOcc, DateTimeKind.Utc);
-
-        // Get the next scheduled time after the last known run
+        // Get the next scheduled time after the current reference point
         var next_run = cron_expression.GetNextOccurrence(
-            fromUtc: last ?? from_date_utc, //fallback to job's start point
+            fromUtc: from_date_utc,
             zone: TimeZoneInfo.Utc);
 
         // Enforce the end_date constraint
-        if (end_date.HasValue && next_run.HasValue && next_run > end_date)
+        if (end_date_utc.HasValue && next_run.HasValue && next_run > end_date_utc.Value)
         {
             return null;
         }
