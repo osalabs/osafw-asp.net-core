@@ -507,6 +507,27 @@ namespace osafw.Tests
             Assert.AreEqual(d.ToString("d M Y H:i"), r);
         }
 
+        [TestMethod()]
+        public void parse_string_date_preserves_date_only_values_across_timezones()
+        {
+            var parser = new ParsePage(new ParsePageOptions { OutputTimezone = "Central Standard Time" });
+
+            var ps = new FwDict
+            {
+                ["AAA"] = "4/13/2026",
+            };
+            var r = parser.parse_string("<~AAA date>", ps);
+            Assert.AreEqual("4/13/2026", r);
+
+            ps["AAA"] = new DateTime(2026, 4, 13);
+            r = parser.parse_string("<~AAA date>", ps);
+            Assert.AreEqual("4/13/2026", r);
+
+            ps["AAA"] = new DateTime(2026, 4, 13, 2, 30, 0, DateTimeKind.Utc);
+            r = parser.parse_string("<~AAA date>", ps);
+            Assert.AreEqual("4/12/2026", r);
+        }
+
 
         [TestMethod()]
         public void parse_string_truncateTest()

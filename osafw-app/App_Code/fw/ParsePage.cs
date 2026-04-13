@@ -1022,9 +1022,7 @@ public class ParsePage
                     }
                     if (DateTime.TryParse(value, out DateTime dt))
                     {
-                        // convert to specified timezone
-                        dt = convertTimezone(dt, InputTimezone, OutputTimezone);
-
+                        dt = convertTimezone(dt, InputTimezone, OutputTimezone, originalValue, value);
                         value = dt.ToString(dformat, DateTimeFormatInfo.InvariantInfo);
                     }
 
@@ -1528,8 +1526,36 @@ public class ParsePage
         loggerAction?.Invoke(level, args);
     }
 
-    private DateTime convertTimezone(DateTime dt, string from_tz, string to_tz)
+    /// <summary>
+    /// Converts a template date/time value between time zones while leaving date-only values on the same calendar day.
+    /// </summary>
+    /// <param name="dt">Parsed date/time value.</param>
+    /// <param name="from_tz">Source timezone identifier.</param>
+    /// <param name="to_tz">Destination timezone identifier.</param>
+    /// <param name="originalValue">Original object resolved for the template tag before string conversion.</param>
+    /// <param name="rawValue">String representation used by the formatter.</param>
+    /// <returns>The converted datetime, or the original datetime when conversion should not apply.</returns>
+    private DateTime convertTimezone(DateTime dt, string from_tz, string to_tz, object? originalValue = null, string rawValue = "")
     {
+        if (originalValue is DateTime originalDateTime
+            && originalDateTime.Kind == DateTimeKind.Unspecified
+            && originalDateTime.TimeOfDay == TimeSpan.Zero)
+        {
+            return dt;
+        }
+
+        if (!string.IsNullOrWhiteSpace(rawValue))
+        {
+            if (Regex.IsMatch(rawValue, @"^\d{4}-\d{2}-\d{2}$"))
+                return dt;
+
+            if (DateTime.TryParseExact(rawValue, DateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime userDate)
+                && userDate.TimeOfDay == TimeSpan.Zero)
+            {
+                return dt;
+            }
+        }
+
         if (from_tz == to_tz)
             return dt;
         try

@@ -1,6 +1,6 @@
 # Heuristics for osafw-asp.net-core
 
-Updated: 2026-02-25
+Updated: 2026-04-13
 
 - Prefer adding features via controllers/models over modifying core `fw` unless it’s a cross-cutting concern.
 - For CRUD screens, first try `FwDynamicController` or `FwVueController` with `config.json` before writing bespoke UI.
@@ -21,3 +21,4 @@ Updated: 2026-02-25
 - 2026-01-17: For Vue form tabs, sync the active tab with the URL query string to keep deep links stable.
 - 2026-02-25: Keep OpenAI model constants in canonical provider format (for example `gpt-5-mini`) and avoid alias normalization layers in runtime code.
 - 2026-02-25: OpenAI .NET embeddings API (`GenerateEmbedding`) returns `ClientResult<OpenAIEmbedding>`; read `.Value` before converting vector data.
+- 2026-04-13: In ParsePage, do not timezone-convert date-only values; only shift real datetimes.
