@@ -1098,8 +1098,8 @@ table.list-edit.table-dense tbody td > div.ro {
 }
 
 .pagination .page-item:has(+ .page-item-pagesize) .page-link {
-      border-top-right-radius: var(--bs-pagination-border-radius);
-    border-bottom-right-radius: var(--bs-pagination-border-radius);
+  border-top-right-radius: var(--bs-pagination-border-radius);
+  border-bottom-right-radius: var(--bs-pagination-border-radius);
 }
 
 #modal-custom-cols .col-rows .cb-row:hover {
