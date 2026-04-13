@@ -235,6 +235,26 @@ public class FormUtils
         return Regex.IsMatch(phone, re);
     }
 
+    // return forward only paging
+    public static FwDict getPagerForward(int count, int pagenum, int pagesize)
+    {
+        var pagenum_next = count > 0 ? pagenum + 1 : pagenum;
+
+        var pager = new FwDict()
+            {
+                { "pagesize", pagesize },
+                { "pagenum_prev", pagenum > 0 ? pagenum - 1 : 0 },
+                { "pagenum", pagenum },
+                { "pagenum_show", pagenum + 1 },
+                { "pagenum_next", pagenum_next },
+                { "is_show_first", pagenum > 0 },
+                { "is_show_prev", pagenum > 0 },
+                { "is_show_next", pagenum != pagenum_next },
+            };
+
+        return pager;
+    }
+
     // return pager or Nothing if no paging required
     public static FwList getPager(long count, int pagenum, object? pagesize1 = null)
     {

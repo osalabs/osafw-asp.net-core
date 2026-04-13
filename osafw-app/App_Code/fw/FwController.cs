@@ -1384,8 +1384,8 @@ public abstract class FwController
     }
 
     /// <summary>
-    /// set list_headers (and add search_value from list_filter_search) 
-    /// and 
+    /// set list_headers (and add search_value from list_filter_search)
+    /// and
     /// </summary>
     /// <param name="is_cols">if true - update list_rows with cols, use false for json responses</param>
     public virtual void setViewList(bool is_cols = true)

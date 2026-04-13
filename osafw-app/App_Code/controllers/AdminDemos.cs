@@ -66,10 +66,23 @@ public class AdminDemosController : FwAdminController
         {
             initFilter();
 
-            list_filter["tab_activity"] = list_filter["tab_activity"].toStr(FwActivityLogs.TAB_COMMENTS);
+            var tab_activity = list_filter["tab_activity"].toStr(FwActivityLogs.TAB_COMMENTS);
+            var pagenum = list_filter["pagenum"].toInt();
+            var pagesize = list_filter["pagesize"].toInt();
+            int offset = pagenum * pagesize;
+            int limit = pagesize;
+
+            var activity_logs = fw.model<FwActivityLogs>().listByEntityForUI(model0.table_name, id, tab_activity, offset, limit);
+            //do not show the pager if zero records on the first page
+            var activity_pager = activity_logs.Count == 0 && pagenum == 0
+                ? null
+                : FormUtils.getPagerForward(activity_logs.Count, pagenum, pagesize);
+
+            list_filter["tab_activity"] = tab_activity;
             ps["list_filter"] = list_filter;
             ps["activity_entity"] = model0.table_name;
-            ps["activity_rows"] = fw.model<FwActivityLogs>().listByEntityForUI(model.table_name, id, list_filter["tab_activity"].toStr());
+            ps["activity_rows"] = activity_logs;
+            ps["activity_pager"] = activity_pager;
         }
 
         return ps;

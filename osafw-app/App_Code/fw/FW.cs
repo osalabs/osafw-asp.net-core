@@ -370,7 +370,7 @@ public class FW : IDisposable
     /// <summary>
     /// parse request URL and return prefix, controller, action, id, format, method
     /// if url is empty - use current request url and also set request_url property
-    /// 
+    ///
     /// </summary>
     /// <param name="url"></param>
     /// <returns></returns>
@@ -1681,10 +1681,10 @@ public class FW : IDisposable
         return c;
     }
 
-    public void logActivity(string log_types_icode, string entity_icode, int item_id = 0, string iname = "", FwDict? changed_fields = null)
+    public int logActivity(string log_types_icode, string entity_icode, int item_id = 0, string iname = "", FwDict? changed_fields = null)
     {
         if (!is_log_events)
-            return;
+            return 0;
 
         FwDict? payload = null;
         if (changed_fields != null)
@@ -1692,7 +1692,7 @@ public class FW : IDisposable
             {
                 {"fields", changed_fields}
             };
-        this.model<FwActivityLogs>().addSimple(log_types_icode, entity_icode, item_id, iname, payload);
+        return this.model<FwActivityLogs>().addSimple(log_types_icode, entity_icode, item_id, iname, payload);
     }
 
     public void rw(string str)

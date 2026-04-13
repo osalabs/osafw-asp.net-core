@@ -1,0 +1,25 @@
+<ul class="pagination mb-0">
+  <~pager_prev if="is_show_prev" inline>
+    <li class="page-item">
+      <a class="page-link px-4" href="?f[pagenum]=<~pagenum_prev>" data-pagenum="<~pagenum_prev>" title="Prev">&laquo;</a>
+    </li>
+  </~pager_prev>
+  <~pager_first if="is_show_first" inline>
+    <li class="page-item">
+      <a class="page-link px-3" href="?f[pagenum]=0" data-pagenum="0">1</a>
+    </li>
+  </~pager_first>
+  <li class="page-item active">
+    <a class="page-link px-3" href="?f[pagenum]=<~pagenum>" data-pagenum="<~pagenum>"><~pagenum_show></a>
+  </li>
+  <~pager_next if="is_show_next" inline>
+  <li class="page-item">
+    <a class="page-link px-4" href="?f[pagenum]=<~pagenum_next>" data-pagenum="<~pagenum_next>" title="Next">&raquo;</a>
+  </li>
+  </~pager_next>
+  <li class="page-item-pagesize ps-2">
+    <select name="f[pagesize]" class="form-select on-pagesize-change">
+      <~/common/sel/pagesize.sel select="pagesize">
+    </select>
+  </li>
+</ul>

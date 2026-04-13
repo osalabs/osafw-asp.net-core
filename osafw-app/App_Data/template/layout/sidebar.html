@@ -82,6 +82,11 @@
           <i class="bi bi-sliders"></i> `Site Settings`
         </a>
       </li>
+      <li class="nav-item" >
+        <a href="<~/admin/cron/url>" class="nav-link <~/common/cl/active ifeq="GLOBAL[controller]" value="AdminCron">">
+          <i class="bi bi-clock"></i> `Cron Jobs`
+        </a>
+      </li>
     </~admin90_menu>
 
     <~admin100_menu ifeq="SESSION[access_level]" value="100" inline>

@@ -1,0 +1,312 @@
+{
+    "model": "FwCron",
+    "is_dynamic_index": true,
+    "list_view": "(SELECT t.*, fk0.iname as [add_users_id_iname], fk1.iname as [upd_users_id_iname] FROM [fwcron] t LEFT OUTER JOIN [users] fk0 ON (fk0.id=t.add_users_id) LEFT OUTER JOIN [users] fk1 ON (fk1.id=t.upd_users_id)) tt",
+    "list_sortdef": "iname asc",
+    "search_fields": "id iname",
+    "related_field_name": "",
+    "view_list_defaults": "iname cron cron_human last_run next_run start_date end_date is_running status",
+    "view_list_map": {
+        "iname": "Job Name",
+        "icode": "Sys Code",
+        "start_date": "Start Date",
+        "end_date": "End Date",
+        "add_users_id_iname": "Add User",
+        "status": "Status",
+        "upd_users_id_iname": "Upd User",
+        "upd_time": "Upd Time",
+        "idesc": "Description",
+        "add_time": "Add Time",
+        "id": "ID",
+        "cron": "Cron Expression",
+        "cron_human": "Cron Expression Human Readable",
+        "last_run": "Last Run",
+        "next_run": "Next Run",
+        "is_running": "Is Running?"
+    },
+    "view_list_custom": "status is_running",
+    "is_dynamic_show": true,
+    "show_fields": [
+        {
+            "type": "row"
+        },
+        {
+            "type": "col",
+            "class": "col-lg-6"
+        },
+        {
+            "field": "iname",
+            "type": "plaintext",
+            "label": "Job Name"
+        },
+        {
+            "field": "icode",
+            "type": "plaintext",
+            "label": "Sys Code",
+            "class_value": "text-muted"
+        },
+        {
+            "type": "row"
+        },
+        {
+            "type": "col",
+            "class": "col-lg-6"
+        },
+            {
+                "field": "cron",
+                "type": "plaintext",
+                "label": "Cron Expression",
+                "help_label": "UTC time zone",
+                "help_label_class": "mt-0",
+                "class": "pb-0",
+                "class_label": "col-md-6"
+            },
+        {
+            "type": "col_end"
+        },
+        {
+            "type": "col",
+            "class": "col-lg-6"
+        },
+            {
+                "field": "cron_human",
+                "type": "plaintext",
+                "label": "Cron Expression Human",
+                "class_label": "d-none"
+            },
+        {
+            "type": "col_end"
+        },
+        {
+            "type": "row_end"
+        },
+        {
+            "field": "start_date",
+            "type": "plaintext",
+            "label": "Start Date"
+        },
+        {
+            "field": "end_date",
+            "type": "plaintext",
+            "label": "End Date"
+        },
+        {
+            "field": "next_run",
+            "type": "date_long",
+            "label": "Next Run"
+        },
+        {
+            "field": "last_run",
+            "type": "date_long",
+            "label": "Last Run"
+        },
+        {
+            "type": "col_end"
+        },
+        {
+            "type": "col",
+            "class": "col-lg-6"
+        },
+        {
+            "field": "id",
+            "type": "plaintext",
+            "label": "ID"
+        },
+        {
+            "field": "idesc",
+            "type": "markdown",
+            "label": "Description"
+        },
+        {
+            "field": "is_running",
+            "label": "Is Running?",
+            "type" : "plaintext_yesno"
+        },
+        {
+            "field": "status",
+            "label": "Status",
+            "type": "plaintext",
+            "lookup_tpl": "/admin/cron/status.sel"
+        },
+        {
+            "field": "add_time",
+            "type": "added",
+            "label": "Added on"
+        },
+        {
+            "field": "upd_time",
+            "type": "updated",
+            "label": "Updated on"
+        },
+        {
+            "type": "col_end"
+        },
+        {
+            "type": "row_end"
+        }
+    ],
+    "is_dynamic_showform": true,
+    "showform_fields": [
+    {
+        "type": "row"
+    },
+    {
+        "type": "col",
+        "class": "col-lg-6"
+    },
+    {
+        "field": "iname",
+        "type": "input",
+        "label": "Job Name",
+        "validate": "exists",
+        "maxlength": 255
+    },
+    {
+        "field": "icode",
+        "type": "input",
+        "label": "Sys Code",
+        "maxlength": 128,
+        "disabled_existed": true
+    },
+    {
+        "type": "row"
+    },
+    {
+        "type": "col",
+        "class": "col-lg-6"
+    },
+        {
+            "field": "cron",
+            "type": "input",
+            "label": "Cron Expression",
+            "maxlength": 255,
+            "help_label": "UTC time zone",
+            "class": "pb-0",
+            "class_label": "col-md-6",
+            "help_label_class": "mt-0",
+            "required": true,
+            "class_control": "on-refresh"
+        },
+    {
+        "type": "col_end"
+    },
+    {
+        "type": "col",
+        "class": "col-lg-6"
+    },
+        {
+            "field": "cron_human",
+            "type": "plaintext",
+            "label": "Cron Expression Human",
+            "class_label": "d-none"
+        },
+    {
+        "type": "col_end"
+    },
+    {
+        "type": "row_end"
+    },
+    {
+        "field": "start_date",
+        "type": "datetime_popup",
+        "label": "Start Date",
+        "class_contents": "col-md-5",
+        "attrs_control": "autocomplete=\"off\"",
+        "validate": "isdate"
+    },
+    {
+        "field": "end_date",
+        "type": "datetime_popup",
+        "label": "End Date",
+        "class_contents": "col-md-5",
+        "attrs_control": "autocomplete=\"off\"",
+        "validate": "isdate"
+    },
+
+    {
+        "field": "next_run",
+        "type": "plaintext",
+        "label": "Next Run",
+        "class_contents" : "col-md-5",
+        "id_label": "lbl_next_run"
+    },
+
+    {
+        "field": "last_run",
+        "type": "plaintext",
+        "label": "Last Run"
+    },
+
+    {
+        "type": "col_end"
+    },
+    {
+        "type": "col",
+        "class": "col-lg-6"
+    },
+    {
+        "field": "id",
+        "type": "group_id",
+        "label": "ID"
+    },
+    {
+        "field": "idesc",
+        "type": "textarea",
+        "label": "Description",
+        "class_control": "markdown autoresize",
+        "rows": 5
+    },
+    {
+        "field": "is_running",
+        "label": "Is Running?",
+        "type" : "plaintext_yesno"
+    },
+    {
+        "field": "status",
+        "label": "Status",
+        "type": "select",
+        "lookup_tpl": "/admin/cron/status.sel",
+        "class_contents": "col-md-3"
+    },
+    {
+        "field": "add_time",
+        "type": "added",
+        "label": "Added on"
+    },
+    {
+        "field": "upd_time",
+        "type": "updated",
+        "label": "Updated on"
+    },
+    {
+        "type": "col_end"
+    },
+    {
+        "type": "row_end"
+    }
+    ],
+    "form_new_defaults": {
+        "iname": ""
+    },
+    "save_fields": [
+        "icode",
+        "iname",
+        "idesc",
+        "cron",
+        "next_run",
+        "start_date",
+        "end_date",
+        "status"
+    ],
+    "save_fields_checkboxes": "",
+    "save_fields_nullable": [
+        "idesc",
+        "next_run",
+        "start_date",
+        "end_date",
+        "add_users_id",
+        "upd_time",
+        "upd_users_id"
+    ],
+    "1": "1"
+}

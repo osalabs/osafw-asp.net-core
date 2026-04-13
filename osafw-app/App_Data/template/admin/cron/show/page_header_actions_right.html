@@ -1,0 +1,11 @@
+<~if_is_running if="i[is_running]" inline>
+<a class="btn btn-default on-fw-submit" data-url="<~../url>/(ResetIsRunning)/<~id>?XSS=<~SESSION[XSS]>&return_url=<~GLOBAL[request_url] urlencode>"><i class="bi bi-circle-fill text-info"></i> Reset Is Running</a>
+</~if_is_running>
+
+<~if_active ifeq="i[status]" value="0" inline>
+<a class="btn btn-default on-fw-submit" data-url="<~../url>/(SetStatus)/<~id>?XSS=<~SESSION[XSS]>&status=10&return_url=<~GLOBAL[request_url] urlencode>"><i class="bi bi-circle-fill text-warning"></i> Set Inactive</a>
+</~if_active>
+
+<~un_active ifne="i[status]" value="0" inline>
+<a class="btn btn-default on-fw-submit" data-url="<~../url>/(SetStatus)/<~id>?XSS=<~SESSION[XSS]>&status=0&return_url=<~GLOBAL[request_url] urlencode>"><i class="bi bi-circle-fill text-success"></i> Set Active</a>
+</~un_active>
