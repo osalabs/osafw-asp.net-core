@@ -10,6 +10,25 @@ namespace osafw.Tests
     [TestClass]
     public class FwTests
     {
+        private class StubUsers : Users
+        {
+            public override DBRow one(int id) => new DBRow(new FwDict
+            {
+                ["id"] = id.toStr(),
+                ["email"] = "user@example.com",
+                ["access_level"] = Users.ACL_MEMBER.toStr(),
+                ["lang"] = "en",
+                ["ui_theme"] = "",
+                ["ui_mode"] = "",
+                ["date_format"] = DateUtils.DATE_FORMAT_DMY.toStr(),
+                ["time_format"] = DateUtils.TIME_FORMAT_24.toStr(),
+                ["timezone"] = "Central Standard Time",
+                ["fname"] = "Test",
+                ["lname"] = "User",
+                ["att_id"] = "0",
+            });
+        }
+
         [TestMethod]
         public void FormatUserDateTime_FormatsIsoAndLocal()
         {
@@ -63,6 +82,33 @@ namespace osafw.Tests
 
             Assert.IsTrue(fw.isLogged);
             Assert.AreEqual(9, fw.userId);
+        }
+
+        [TestMethod]
+        public void ReloadSession_ClearsWholeSessionWhenRequested()
+        {
+            var context = new DefaultHttpContext
+            {
+                Session = new FakeSession(),
+            };
+            var configuration = new ConfigurationBuilder().Build();
+            var fw = new FW(context, configuration);
+            var users = new StubUsers();
+            users.init(fw);
+
+            fw.SessionDict("_filter_AdminReports.Show.Sample", new FwDict { ["from_date"] = "11/3/2026" });
+            fw.Session("custom_key", "custom");
+            fw.Session("XSS", "old-token");
+
+            users.reloadSession(9, is_clear: true);
+
+            Assert.IsNull(fw.SessionDict("_filter_AdminReports.Show.Sample"));
+            Assert.AreEqual("", fw.Session("custom_key"));
+            Assert.AreEqual("9", fw.Session("user_id"));
+            Assert.AreEqual("user@example.com", fw.Session("login"));
+            Assert.AreEqual("Central Standard Time", fw.Session("timezone"));
+            Assert.AreNotEqual("", fw.Session("XSS"));
+            Assert.AreNotEqual("old-token", fw.Session("XSS"));
         }
 
         // Minimal ISession for FW unit testing

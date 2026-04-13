@@ -22,3 +22,4 @@ Updated: 2026-04-13
 - 2026-02-25: Keep OpenAI model constants in canonical provider format (for example `gpt-5-mini`) and avoid alias normalization layers in runtime code.
 - 2026-02-25: OpenAI .NET embeddings API (`GenerateEmbedding`) returns `ClientResult<OpenAIEmbedding>`; read `.Value` before converting vector data.
 - 2026-04-13: In ParsePage, do not timezone-convert date-only values; only shift real datetimes.
+- 2026-04-13: Avoid culture-dependent `DateTime.TryParse` for user-facing dates; use SQL or explicit user format parsing, and rebuild the session when date/time/timezone preferences change.

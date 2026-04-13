@@ -47,15 +47,19 @@ public class SampleReport : FwReports
         // apply filters from Me.f
         string where = " ";
         FwDict where_params = [];
-        if (!Utils.isEmpty(f["from_date"]))
+        var fromDateSql = DateUtils.Str2SQL(f["from_date"].toStr(), fw.userDateFormat);
+        if (DateUtils.SQL2Date(fromDateSql) is DateTime fromDate)
         {
             where += " and al.add_time>=@from_date";
-            where_params["@from_date"] = f["from_date"];
+            where_params["@from_date"] = fromDate;
+            f["from_date"] = DateUtils.Date2Str(fromDate, fw.userDateFormat);
         }
-        if (System.DateTime.TryParse(f["to_date"].toStr(), out DateTime to_date))
+        var toDateSql = DateUtils.Str2SQL(f["to_date"].toStr(), fw.userDateFormat);
+        if (DateUtils.SQL2Date(toDateSql) is DateTime toDate)
         {
             where += " and al.add_time<@to_date";
-            where_params["@to_date"] = to_date.AddDays(1);
+            where_params["@to_date"] = toDate.AddDays(1);
+            f["to_date"] = DateUtils.Date2Str(toDate, fw.userDateFormat);
         }
 
         if (!Utils.isEmpty(f["events_id"]))

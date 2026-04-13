@@ -57,6 +57,10 @@ public class MySettingsController : FwController
 
         var item = reqh("item");
         var id = fw.userId;
+        var isDateTimePrefsChanged =
+            item["date_format"].toInt(fw.userDateFormat) != fw.userDateFormat
+            || item["time_format"].toInt(fw.userTimeFormat) != fw.userTimeFormat
+            || item["timezone"].toStr(fw.userTimezone) != fw.userTimezone;
 
         Validate(id, item);
         // load old record if necessary
@@ -65,9 +69,9 @@ public class MySettingsController : FwController
         FwDict itemdb = FormUtils.filter(item, save_fields);
 
         model.update(id, itemdb);
-        fw.flash("record_updated", 1);
 
-        model.reloadSession();
+        model.reloadSession(is_clear: isDateTimePrefsChanged);
+        fw.flash("record_updated", 1);
 
         afterSave(true, id);
     }

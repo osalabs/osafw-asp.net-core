@@ -528,6 +528,25 @@ namespace osafw.Tests
             Assert.AreEqual("4/12/2026", r);
         }
 
+        [TestMethod()]
+        public void parse_string_date_uses_explicit_user_formats_only()
+        {
+            var parser = new ParsePage(new ParsePageOptions
+            {
+                DateFormat = "d/M/yyyy",
+                DateFormatShort = "d/M/yyyy H:mm",
+                DateFormatLong = "d/M/yyyy H:mm:ss",
+            });
+
+            var ps = new FwDict
+            {
+                ["AAA"] = "11/3/2026",
+            };
+
+            var r = parser.parse_string("<~AAA date>", ps);
+            Assert.AreEqual("11/3/2026", r);
+        }
+
 
         [TestMethod()]
         public void parse_string_truncateTest()

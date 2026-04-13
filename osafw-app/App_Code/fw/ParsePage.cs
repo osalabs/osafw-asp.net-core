@@ -1020,9 +1020,17 @@ public class ParsePage
                                 break;
                             }
                     }
-                    if (DateTime.TryParse(value, out DateTime dt))
+                    DateTime? parsedDate = originalValue as DateTime?;
+                    parsedDate ??= DateUtils.SQL2Date(value);
+                    if (parsedDate == null
+                        && DateTime.TryParseExact(value, [DateFormat, DateFormatShort, DateFormatLong], CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime exactDate))
                     {
-                        dt = convertTimezone(dt, InputTimezone, OutputTimezone, originalValue, value);
+                        parsedDate = exactDate;
+                    }
+
+                    if (parsedDate != null)
+                    {
+                        var dt = convertTimezone(parsedDate.Value, InputTimezone, OutputTimezone, originalValue, value);
                         value = dt.ToString(dformat, DateTimeFormatInfo.InvariantInfo);
                     }
 

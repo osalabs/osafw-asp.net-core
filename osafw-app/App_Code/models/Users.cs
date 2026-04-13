@@ -370,11 +370,7 @@ public class Users : FwModel<Users.Row>
     /// <param name="timezone"></param>
     public void doLogin(int id, string timezone = "")
     {
-        var context = fw.context;
-        context?.Session.Clear();
-        fw.Session("XSS", Utils.getRandStr(16));
-
-        reloadSession(id);
+        reloadSession(id, is_clear: true);
 
         var ip = Utils.getIP(fw.context);
         fw.logActivity(FwLogTypes.ICODE_USERS_LOGIN, FwEntities.ICODE_USERS, id, "IP:" + ip);
@@ -404,11 +400,17 @@ public class Users : FwModel<Users.Row>
 
     }
 
-    public bool reloadSession(int id = 0)
+    public bool reloadSession(int id = 0, bool is_clear = false)
     {
         if (id == 0)
             id = fw.userId;
         var user = one(id);
+
+        if (is_clear)
+        {
+            fw.context?.Session.Clear();
+            fw.Session("XSS", Utils.getRandStr(16));
+        }
 
         fw.Session("user_id", id.toStr());
         fw.Session("login", user["email"]);
