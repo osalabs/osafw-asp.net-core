@@ -169,7 +169,7 @@ public class FwCron : FwModel
     /// If the from_date is not passed, set it to the start_date if it's greater than the current UTC, or set it to the current UTC otherwise.
     /// Calculates and updates the next run time based on the CRON expression.
     /// If no future run is scheduled, the job is marked as completed.
-    /// <summary>
+    /// </summary>
     public void updateNextRun(TFwCron job, DateTime? from_date = null)
     {
         if (from_date == null)
