@@ -74,9 +74,6 @@ public class FwCronService : BackgroundService
 
                     if (FwCron.IS_TRACK_JOB_RUN_IN_ACTIVITY_LOGS)
                         fw.logActivity(FwLogTypes.ICODE_CRON_JOB_RUN_ERROR, FwEntities.ICODE_CRON, job.id, ex.Message);
-
-                    // Reset the "is_running" flag in case of error
-                    model.resetIsRunning(job.id);
                 }
             }
 

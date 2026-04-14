@@ -378,8 +378,6 @@ CREATE TABLE activity_logs (
 
   INDEX IX_activity_logs_reply_id (reply_id),
   INDEX IX_activity_logs_log_types_id (log_types_id),
-  INDEX IX_activity_logs_fwentities_id (fwentities_id),
-  INDEX IX_activity_logs_item_id (item_id),
   INDEX IX_activity_logs_idate (idate),
   INDEX IX_activity_logs_users_id (users_id),
   INDEX IX_activity_logs_fwentities_id_item_id (fwentities_id, item_id, idate DESC, id DESC)

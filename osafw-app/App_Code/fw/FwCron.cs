@@ -97,9 +97,25 @@ public class FwCron : FwModel
         return db.value(table_name, DB.h(field_id, id), "is_running").toBool();
     }
 
-    public void setIsRunning(int id)
+    /// <summary>
+    /// Acquire job run lock, or throw an Exception
+    /// </summary>
+    /// <param name="id">Job id</param>
+    /// <exception cref="Exception">Thrown when the job is already running</exception>
+    public void setIsRunningOrFail(int id)
     {
-        update(id, DB.h("is_running", 1));
+        // concurrent safety check (manual run + background service, simultaneous manual runs, multiple app instances)
+        // update and check rows affected
+        var rows_affected = db.update(table_name,
+            DB.h("is_running", 1),
+            DB.h("id", id, "is_running", 0)
+        );
+
+        if (rows_affected == 0)
+            throw new Exception($"The job is already running [id:{id}].");
+
+        // cleanup cache after update
+        removeCache(id);
     }
 
     public void resetIsRunning(int id)
@@ -131,7 +147,7 @@ public class FwCron : FwModel
     /// </summary>
     public void runJob(TFwCron job, bool is_manual_run = false)
     {
-        // If manual run, run immidiately and return early
+        // If manual run, run immediately and return early
         if (is_manual_run)
         {
             runJobAction(job, is_manual_run);
@@ -259,54 +275,59 @@ public class FwCron : FwModel
     /// <exception cref="Exception">Thrown if the ICode is unknown.</exception>
     private void runJobAction(TFwCron job, bool is_manual_run)
     {
-        // Already running check
-        if (isRunning(job.id))
-            throw new Exception($"The job is already running [id:{job.id}].");
+        var run_started_utc = DateTime.UtcNow;
 
         var log_type_start = is_manual_run ? FwLogTypes.ICODE_CRON_JOB_MANUAL_RUN_START : FwLogTypes.ICODE_CRON_JOB_RUN_START;
         var log_type_end = is_manual_run ? FwLogTypes.ICODE_CRON_JOB_MANUAL_RUN_END : FwLogTypes.ICODE_CRON_JOB_RUN_END;
 
-        // JOB START
-        setIsRunning(job.id);
+        setIsRunningOrFail(job.id);
 
-        // Track start
-        var activity_logs_id = 0;
-        if (IS_TRACK_JOB_RUN_IN_ACTIVITY_LOGS)
-            activity_logs_id = fw.logActivity(log_type_start, FwEntities.ICODE_CRON, job.id);
-
-        var run_started_utc = DateTime.UtcNow;
-
-        switch (job.icode)
+        var success = true;
+        // Wrap in try/finally to make sure the "is_running" flag is always reset
+        try
         {
-            case ICODE_EXAMPLE:
-                // Simulate work
-                Thread.Sleep(2000);
+            // Track start
+            var activity_logs_id = 0;
+            if (IS_TRACK_JOB_RUN_IN_ACTIVITY_LOGS)
+                activity_logs_id = fw.logActivity(log_type_start, FwEntities.ICODE_CRON, job.id);
 
-                break;
+            switch (job.icode)
+            {
+                case ICODE_EXAMPLE:
+                    // Simulate work
+                    Thread.Sleep(2000);
 
-            default:
-                // throw new Exception($"Unknown job code: {job.icode}");
-                if (IS_TRACK_JOB_RUN_IN_ACTIVITY_LOGS) {
-                    var activity_log_idesc = "No logic defined for the Job. Do nothing.";
-                    fw.model<FwActivityLogs>().appendIdesc(activity_logs_id, activity_log_idesc);
-                }
+                    break;
 
-                break;
+                default:
+                    // Set job status to Inactive if no logic defined
+                    update(job.id, DB.h("status", STATUS_INACTIVE));
+                    throw new Exception($"Unknown job code: \"{job.icode}\". No logic defined for the Job. Set status to \"Inactive\".");
+            }
         }
+        catch (Exception ex)
+        {
+            success = false;
+            // Manual run needs explicit error logging here
+            if (is_manual_run && FwCron.IS_TRACK_JOB_RUN_IN_ACTIVITY_LOGS)
+                fw.logActivity(FwLogTypes.ICODE_CRON_JOB_RUN_ERROR, FwEntities.ICODE_CRON, job.id, ex.Message);
 
-        // Track end
-        if (IS_TRACK_JOB_RUN_IN_ACTIVITY_LOGS)
-            fw.logActivity(log_type_end, FwEntities.ICODE_CRON, job.id);
+            throw;
+        }
+        finally
+        {
+            // Track end only if no exceptions
+            if (success && IS_TRACK_JOB_RUN_IN_ACTIVITY_LOGS)
+                fw.logActivity(log_type_end, FwEntities.ICODE_CRON, job.id);
 
-        // JOB END
+            // Advance the schedule from when this run started so long-running jobs do not skip the next slot
+            updateNextRun(job, run_started_utc);
 
-        // Advance the schedule from when this run started so long-running jobs do not skip the next slot.
-        updateNextRun(job, run_started_utc);
+            // Update the last run
+            update(job.id, DB.h("last_run", run_started_utc));
 
-        // Update the last run
-        update(job.id, DB.h("last_run", run_started_utc));
-
-        // Release the job for the next run (reset the "is_running" flag)
-        resetIsRunning(job.id);
+            // Release the job for the next run (reset the "is_running" flag)
+            resetIsRunning(job.id);
+        }
     }
 }

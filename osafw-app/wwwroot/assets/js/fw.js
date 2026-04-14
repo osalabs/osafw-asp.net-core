@@ -387,13 +387,12 @@ window.fw={
     $(document).on('click', '.pagination .page-link[data-pagenum]', function (e){
       var $this = $(this);
       var pagenum = $this.data('pagenum');
-      var $f = $this.data('filter')
-        ? $($this.data('filter'))
-        : $this.closest('.pagination-container').data('filter')
-          ? $($this.closest('.pagination-container').data('filter'))
-          : $('form[data-list-filter]:first');
 
-      if ($f){
+      var f_selector_container = $this.closest('.pagination-container').data('filter');
+      var f_selector = $this.data('filter') || f_selector_container || 'form[data-list-filter]:first';
+      var $f = $(f_selector);
+
+      if ($f.length){
         e.preventDefault();
         $('<input type="hidden" name="f[pagenum]">').val(pagenum).appendTo($f);
         $f.submit();
@@ -404,13 +403,12 @@ window.fw={
     $(document).on('change', '.on-pagesize-change', function (e){
       e.preventDefault();
       var $this = $(this);
-      var $f = $this.data('filter')
-        ? $($this.data('filter'))
-        : $this.closest('.pagination-container').data('filter')
-          ? $($this.closest('.pagination-container').data('filter'))
-          : $('form[data-list-filter]:first');
 
-      if ($f){
+      var f_selector_container = $this.closest('.pagination-container').data('filter');
+      var f_selector = $this.data('filter') || f_selector_container || 'form[data-list-filter]:first';
+      var $f = $(f_selector);
+
+      if ($f.length){
         $f.find('input[name="f[pagesize]"]').val($this.val());
         $f.submit();
       }

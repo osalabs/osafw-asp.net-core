@@ -59,8 +59,6 @@ public class AdminCronController : FwDynamicController
 
         var job = model.oneJob(id);
 
-        var action_results = new List<string>();
-
         try
         {
             if (job == null)
@@ -105,7 +103,7 @@ public class AdminCronController : FwDynamicController
 
     public override int modelAddOrUpdate(int id, FwDict fields)
     {
-        // Re/Calculate next run immidiately
+        // Re/Calculate next run immediately
         // 1. make sure the record is under update status, so the Cron Service will not pick it up during the update
         var status_save = fields["status"].toInt();
         fields["status"] = FwCron.STATUS_UNDER_UPDATE;
@@ -117,7 +115,7 @@ public class AdminCronController : FwDynamicController
         // 2. re-read the updated job record
         var job = model.oneJob(id);
 
-        // 3. revert the status if recalucation didn't set it to Completed
+        // 3. revert the status if recalcutaion didn't set it to Completed
         if (job?.status != FwCron.STATUS_COMPLETED)
             model.update(id, DB.h("status", status_save));
 

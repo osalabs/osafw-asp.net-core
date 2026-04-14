@@ -70,13 +70,19 @@ public class AdminDemosController : FwAdminController
             var pagenum = list_filter["pagenum"].toInt();
             var pagesize = list_filter["pagesize"].toInt();
             int offset = pagenum * pagesize;
-            int limit = pagesize;
+            int limit = pagesize + 1; //+1 record trick to look ahead if the next page is available
 
             var activity_logs = fw.model<FwActivityLogs>().listByEntityForUI(model0.table_name, id, tab_activity, offset, limit);
-            //do not show the pager if zero records on the first page
-            var activity_pager = activity_logs.Count == 0 && pagenum == 0
+            var activity_logs_cnt = activity_logs.Count;
+
+            //remove additional record for the next page if it exists
+            if (activity_logs_cnt > pagesize)
+                activity_logs.RemoveAt(activity_logs_cnt - 1);
+
+            //do not show the pager if we are on the first page and the next page is not available
+            var activity_pager = pagenum == 0 && activity_logs_cnt <= pagesize
                 ? null
-                : FormUtils.getPagerForward(activity_logs.Count, pagenum, pagesize);
+                : FormUtils.getPagerForward(activity_logs_cnt, pagenum, pagesize);
 
             list_filter["tab_activity"] = tab_activity;
             ps["list_filter"] = list_filter;

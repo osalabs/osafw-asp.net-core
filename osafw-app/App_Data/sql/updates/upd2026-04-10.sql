@@ -14,5 +14,7 @@ INSERT INTO log_types (itype, icode, iname) VALUES (0, 'cron_job_manual_run_end'
 INSERT INTO log_types (itype, icode, iname) VALUES (0, 'cron_job_run_error', 'Cron Job Run Error');
 GO
 
+DROP INDEX IX_activity_logs_item_id ON activity_logs;
+DROP INDEX IX_activity_logs_fwentities_id ON activity_logs;
 CREATE INDEX IX_activity_logs_fwentities_id_item_id ON activity_logs (fwentities_id, item_id, idate DESC, id DESC);
 GO

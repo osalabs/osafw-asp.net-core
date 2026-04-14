@@ -225,15 +225,13 @@
 
     {
         "field": "next_run",
-        "type": "plaintext",
-        "label": "Next Run",
-        "class_contents" : "col-md-5",
-        "id_label": "lbl_next_run"
+        "type": "date_long",
+        "label": "Next Run"
     },
 
     {
         "field": "last_run",
-        "type": "plaintext",
+        "type": "date_long",
         "label": "Last Run"
     },
 
