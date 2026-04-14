@@ -1129,7 +1129,7 @@ public class DB : IDisposable
     }
 
     /// <summary>
-    /// read signle first row using table/where/orderby with generic type
+    /// read single first row using table/where/orderby with generic type
     /// </summary>
     /// <param name="table"></param>
     /// <param name="where"></param>
