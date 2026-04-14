@@ -397,7 +397,8 @@ pick a `type`, set the required keys, and copy an example you can paste into `co
 
 #### type: date
 - Template: `/common/form/show/date.html`.
-- Options: displays `value` using `M/d/yyyy`; use `conv: "time_from_seconds"` only when the field stores seconds.
+- Options: displays `value` using the current user's date format; use `conv: "time_from_seconds"` only when the field stores seconds.
+- Rendering rule: intended for calendar dates. Date-only values are not shifted by `fw.userTimezone`.
 - Common sample:
 ```json
 {
@@ -420,7 +421,8 @@ pick a `type`, set the required keys, and copy an example you can paste into `co
 
 #### type: date_long
 - Template: `/common/form/show/date_long.html`.
-- Options: renders `value` in `M/d/yyyy hh:mm:ss`; combine with common layout keys.
+- Options: renders `value` in the current user's date/time format with seconds; combine with common layout keys.
+- Rendering rule: intended for true datetimes, so output is timezone-adjusted for the current user.
 - Common sample:
 ```json
 {
@@ -1068,6 +1070,7 @@ pick a `type`, set the required keys, and copy an example you can paste into `co
 #### type: date_popup
 - Template: `/common/form/showform/date_popup.html`.
 - Options: `required`, `class_control`, `attrs_control` (pass-through to input), plus layout keys.
+- Save behavior: normalizes the submitted value to SQL `YYYY-MM-DD`. Use this for date-only fields even when the DB column is `datetime`.
 - Common sample:
 ```json
 {
@@ -1091,6 +1094,7 @@ pick a `type`, set the required keys, and copy an example you can paste into `co
 #### type: date_combo
 - Template: `/common/form/showform/date_combo.html`.
 - Options: `class_control` (applies to all three selects), plus layout keys.
+- Save behavior: normalizes the combined value to SQL `YYYY-MM-DD`.
 - Common sample:
 ```json
 {
@@ -1113,6 +1117,7 @@ pick a `type`, set the required keys, and copy an example you can paste into `co
 #### type: datetime_popup
 - Template: `/common/form/showform/datetime_popup.html`.
 - Options: `default_time` (preselects time part), `class_control`, `attrs_control`, plus layout keys.
+- Save behavior: keeps datetime semantics and converts between `fw.userTimezone` and UTC.
 - Common sample:
 ```json
 {

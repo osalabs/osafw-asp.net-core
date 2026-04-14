@@ -1025,6 +1025,7 @@ public class ParsePage
                     if (parsedDate == null
                         && DateTime.TryParseExact(value, [DateFormat, DateFormatShort, DateFormatLong], CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime exactDate))
                     {
+                        // Parse user-formatted dates explicitly so date-only inputs keep their original semantics.
                         parsedDate = exactDate;
                     }
 
@@ -1545,24 +1546,10 @@ public class ParsePage
     /// <returns>The converted datetime, or the original datetime when conversion should not apply.</returns>
     private DateTime convertTimezone(DateTime dt, string from_tz, string to_tz, object? originalValue = null, string rawValue = "")
     {
-        if (originalValue is DateTime originalDateTime
-            && originalDateTime.Kind == DateTimeKind.Unspecified
-            && originalDateTime.TimeOfDay == TimeSpan.Zero)
-        {
+        var originalDateTime = originalValue as DateTime?;
+        // Date-only values should render as the same day for every user, so skip timezone math for those cases.
+        if (DateUtils.isDateOnlyDisplayValue(originalDateTime ?? dt, rawValue, DateFormat))
             return dt;
-        }
-
-        if (!string.IsNullOrWhiteSpace(rawValue))
-        {
-            if (Regex.IsMatch(rawValue, @"^\d{4}-\d{2}-\d{2}$"))
-                return dt;
-
-            if (DateTime.TryParseExact(rawValue, DateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime userDate)
-                && userDate.TimeOfDay == TimeSpan.Zero)
-            {
-                return dt;
-            }
-        }
 
         if (from_tz == to_tz)
             return dt;

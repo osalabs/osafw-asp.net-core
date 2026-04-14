@@ -557,7 +557,7 @@ public class Users : FwModel<Users.Row>
             //visitor
             roles_ids = [fw.model<Roles>().idVisitor().ToString()]; // visitor role for non-logged
         else
-            roles_ids = fw.model<UsersRoles>().colLinkedIdsByMainId((int)users_id);
+            roles_ids = fw.model<UsersRoles>().colLinkedIdsByMainId(users_id.toInt());
 
         // read all permissions for the resource and user's roles
         var rows = fw.model<RolesResourcesPermissions>().listByRolesResources(roles_ids, new int[] { resources_id });
@@ -713,7 +713,7 @@ public class Users : FwModel<Users.Row>
         //check cache
         var cache_key = "rbac_menu#" + fw.userId;
         var cache_key_time = "rbac_menu_time#" + fw.userId;
-        var rbac_menu = (DBRow)FwCache.getValue(cache_key);
+        var rbac_menu = FwCache.getValue(cache_key) as DBRow;
         if (rbac_menu != null)
         {
             //check if time is earlier than roles_resources_permissions_updated

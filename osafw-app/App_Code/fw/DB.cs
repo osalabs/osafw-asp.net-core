@@ -448,6 +448,15 @@ public class DB : IDisposable
         }
     }
 
+    /// <summary>
+    /// Returns the resolved database timezone identifier used for datetime read/write normalization.
+    /// </summary>
+    /// <returns>Windows timezone id for the current connection, or <c>UTC</c> when unresolved.</returns>
+    public string getTimezoneId()
+    {
+        return DbTimezoneInfo.Id;
+    }
+
     private bool isDbTimezoneUTC => DbTimezoneInfo.Id == TimeZoneInfo.Utc.Id;
 
     private void initTimezoneInfo(bool isAllowQuery = true)
