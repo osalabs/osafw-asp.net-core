@@ -380,7 +380,13 @@ CREATE TABLE activity_logs (
   INDEX IX_activity_logs_log_types_id (log_types_id),
   INDEX IX_activity_logs_idate (idate),
   INDEX IX_activity_logs_users_id (users_id),
-  INDEX IX_activity_logs_fwentities_id_item_id (fwentities_id, item_id, idate DESC, id DESC)
+  -- quick results with paging, with and without log type
+  -- include status to have a relatively cheap filter option within the index seek instead of adding the status to the index itself
+  -- Notice: CTE or subquery might be used for "SELECT *" to 100% ensure SQL Server uses the index for both filtering and sorting, i.e.:
+  -- WITH cte_pagination AS (SELECT id FROM activity_logs WHERE ... OFFSET ... ORDER BY idate DESC, id DESC)
+  -- SELECT al.* FROM activity_logs al INNER JOIN cte_pagination cp ON cpal.id = al.id ORDER BY idate DESC, id DESC
+  INDEX IX_activity_logs_fwentities_id_item_id (fwentities_id, item_id, idate DESC, id DESC) INCLUDE (status),
+  INDEX IX_activity_logs_fwentities_id_item_id_log_types_id ON activity_logs (fwentities_id, item_id, log_types_id, idate DESC, id DESC) INCLUDE (status)
 );
 
 /*user custom views*/

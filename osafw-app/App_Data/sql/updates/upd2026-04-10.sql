@@ -16,5 +16,6 @@ GO
 
 DROP INDEX IX_activity_logs_item_id ON activity_logs;
 DROP INDEX IX_activity_logs_fwentities_id ON activity_logs;
-CREATE INDEX IX_activity_logs_fwentities_id_item_id ON activity_logs (fwentities_id, item_id, idate DESC, id DESC);
+CREATE INDEX IX_activity_logs_fwentities_id_item_id ON activity_logs (fwentities_id, item_id, idate DESC, id DESC) INCLUDE (status);
+CREATE INDEX IX_activity_logs_fwentities_id_item_id_log_types_id ON activity_logs (fwentities_id, item_id, log_types_id, idate DESC, id DESC) INCLUDE (status);
 GO
