@@ -86,6 +86,14 @@ Whenever AGENTS.md updated - make copy of it to top level /.github/copilot-instr
 - Windows auth: enable Negotiate and use `/winlogin` path.
 - Sessions/Data Protection: ensure `fwsessions` and `fwkeys` tables exist.
 
+## MCP Tooling
+- Prefer Visual Studio MCP for solution-aware work. Validate it with `solution_info` or `project_list`, then use `document_*`, `build_*`, `build_status`, `errors_list`, and debugger tools as needed.
+- Prefer Playwright MCP for browser repros and UI verification. Re-run `browser_snapshot` after navigation or meaningful DOM changes; use `browser_evaluate`, console, or network tools when snapshots omit needed details.
+- Check each MCP independently. Do not infer Visual Studio MCP health from generic MCP resource discovery or from Playwright health, and vice versa.
+- If Playwright reports `EPERM` around `C:\\Windows\\System32\\.playwright-mcp` but still returns a valid snapshot, URL, or title, treat it as usable and verify real page state before abandoning it.
+- If a required MCP is missing, cannot connect, or returns a blocking runtime error, do one quick validation and at most one lightweight retry. If still blocked, stop and ask the user whether to use a non-MCP workaround or restart/fix that MCP first.
+- Do not spend multiple turns looping on MCP recovery unless the user explicitly asks for fallback attempts. If the user explicitly asked to use MCP, prefer waiting for a working MCP path over silently switching to CLI.
+
 ## Command Palette
 - dotnet restore; dotnet build; dotnet run -p osafw-app; dotnet watch run -p osafw-app; dotnet test.
 
