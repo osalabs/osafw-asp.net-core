@@ -157,7 +157,7 @@ public class ParsePage
     private static readonly Regex RX_EXT = new(@"\.[^\/]+$", RegexOptions.Compiled);
 
     private static readonly ConcurrentDictionary<string, FwDict> FILE_CACHE = new();
-    private static readonly ConcurrentDictionary<string, FwDict> LANG_CACHE = new();
+    private static readonly ConcurrentDictionary<string, ConcurrentDictionary<string, string?>> LANG_CACHE = new();
 
     private static readonly string[] IFOPERS = ["if", "unless", "ifne", "ifeq", "ifgt", "iflt", "ifge", "ifle"];
 
@@ -224,6 +224,15 @@ public class ParsePage
                 load_lang();
         }
         lang_evaluator = new MatchEvaluator(this.lang_replacer);
+    }
+
+    /// <summary>
+    /// Returns the shared translation cache for the current language using a thread-safe dictionary so concurrent parsing cannot corrupt shared state.
+    /// </summary>
+    /// <returns>The per-language translation dictionary keyed by source string and optional context.</returns>
+    private ConcurrentDictionary<string, string?> get_lang_cache()
+    {
+        return LANG_CACHE.GetOrAdd(lang, static _ => new ConcurrentDictionary<string, string?>(StringComparer.Ordinal));
     }
 
     public string parse_json(object hf)
@@ -1472,19 +1481,19 @@ public class ParsePage
         var input = str;
         if (!string.IsNullOrEmpty(context))
             input += "|" + context;
-        var cache = LANG_CACHE.GetOrAdd(lang, _ => []);
-        var result = cache[input].toStr();
+        var cache = get_lang_cache();
+        cache.TryGetValue(input, out var result);
         if (string.IsNullOrEmpty(result))
         {
             // no translation found
             if (!string.IsNullOrEmpty(context))
             {
                 // if no value with context - try without context
-                result = cache[str].toStr();
+                cache.TryGetValue(str, out result);
                 if (string.IsNullOrEmpty(result))
                 {
                     // if no such string in cache and we allowed to update lang file - add_lang
-                    if (result == null && lang_update)
+                    if (result == null && lang_update && !string.IsNullOrEmpty(TMPL_PATH))
                         add_lang(str);
                     // if still no translation - return original string
                     result = str;
@@ -1503,7 +1512,7 @@ public class ParsePage
         // logger("load lang: " & TMPL_PATH & "\" & lang & ".txt")
         var lines = Utils.getFileLines(TMPL_PATH + @"\lang\" + lang + ".txt");
 
-        LANG_CACHE.GetOrAdd(lang, _ => []);
+        var cache = get_lang_cache();
 
         foreach (string line1 in lines)
         {
@@ -1514,7 +1523,7 @@ public class ParsePage
             }
             string[] pair = line.Split("===", 2);
             // logger("added to cache:", Trim(pair(0)))
-            LANG_CACHE[lang][pair[0].Trim()] = pair[1].TrimStart();
+            cache[pair[0].Trim()] = pair[1].TrimStart();
         }
     }
 
@@ -1526,8 +1535,7 @@ public class ParsePage
         Utils.setFileContent(TMPL_PATH + @"\lang\" + lang + ".txt", ref filedata, true);
 
         // also add to lang cache
-        LANG_CACHE.GetOrAdd(lang, _ => []);
-        LANG_CACHE[lang][str.Trim()] = "";
+        get_lang_cache()[str.Trim()] = "";
     }
 
     private void logger(LogLevel level, params string[] args)

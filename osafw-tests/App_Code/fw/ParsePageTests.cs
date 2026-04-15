@@ -2,6 +2,8 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace osafw.Tests
 {
@@ -74,6 +76,44 @@ namespace osafw.Tests
 
             Assert.AreEqual("Hello", parser.langMap("Hello"));
             Assert.AreEqual("Hello", parser.langMap("Hello", "context"));
+        }
+
+        [TestMethod()]
+        public void parse_string_concurrent_lang_cache_does_not_throw_or_corrupt_state()
+        {
+            string tempDir = Path.Combine(Path.GetTempPath(), $"parsepage-lang-concurrency-{Guid.NewGuid():N}");
+            string langDir = Path.Combine(tempDir, "lang");
+            Directory.CreateDirectory(langDir);
+
+            try
+            {
+                File.WriteAllText(Path.Combine(langDir, "es.txt"), "Hello === Hola" + Environment.NewLine + "Save === Guardar");
+
+                var parser = new ParsePage(new ParsePageOptions
+                {
+                    TemplatesRoot = tempDir,
+                    Lang = "es",
+                    IsLangUpdate = false,
+                });
+
+                var tasks = Enumerable.Range(0, 32)
+                    .Select(_ => Task.Run(() =>
+                    {
+                        for (int i = 0; i < 200; i++)
+                        {
+                            var output = parser.parse_string("`Hello` `Save`", []);
+                            Assert.AreEqual("Hola Guardar", output);
+                        }
+                    }))
+                    .ToArray();
+
+                Task.WaitAll(tasks);
+            }
+            finally
+            {
+                if (Directory.Exists(tempDir))
+                    Directory.Delete(tempDir, true);
+            }
         }
 
         [TestMethod()]
