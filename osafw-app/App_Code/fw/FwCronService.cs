@@ -37,6 +37,7 @@ public class FwCronService : BackgroundService
             var model = fw.model<FwCron>();
 
             // Check for the abnormally terminated jobs during the first app run and reset the "is_running" flag
+            // WARNING: This only works in a single worker application configuration.
             // TODO options:
             // 1. Implement jobs logic to resume operation if terminated abnormally.
             // 2. Do not reset the "is_running" flag, instead notify admin and show dashboard or notification message to review
@@ -46,8 +47,8 @@ public class FwCronService : BackgroundService
 
                 foreach (var job in jobs_running)
                 {
-                    var err_msg = "Terminated abnormally. Resetting the \"Is Running\" flag.";
-                    fw.logger(LogLevel.ERROR, "Cron Jobs first run. Abnormally terminated job detected:", job.id, ", error:", err_msg);
+                    var err_msg = "Cron Service first run. Abnormally terminated job detected. Resetting the \"Is Running\" flag.";
+                    fw.logger(LogLevel.ERROR, $"{err_msg} Job ID: ", job.id);
 
                     if (FwCron.IS_TRACK_JOB_RUN_IN_ACTIVITY_LOGS)
                         fw.logActivity(FwLogTypes.ICODE_CRON_JOB_RUN_ERROR, FwEntities.ICODE_CRON, job.id, err_msg);

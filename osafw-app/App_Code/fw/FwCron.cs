@@ -98,24 +98,26 @@ public class FwCron : FwModel
     }
 
     /// <summary>
-    /// Acquire job run lock, or throw an Exception
+    /// Acquire job run lock
     /// </summary>
     /// <param name="id">Job id</param>
-    /// <exception cref="Exception">Thrown when the job is already running</exception>
-    public void setIsRunningOrFail(int id)
+    /// <returns>True if there the lock is successfull</returns>
+    public bool setIsRunning(int id)
     {
-        // concurrent safety check (manual run + background service, simultaneous manual runs, multiple app instances)
-        // update and check rows affected
+        // DB atomic operation for concurrent safety check: update and check rows affected
+        // (multi-instance application, manual run + background service, simultaneous manual runs)
         var rows_affected = db.update(table_name,
             DB.h("is_running", 1),
             DB.h("id", id, "is_running", 0)
         );
 
-        if (rows_affected == 0)
-            throw new Exception($"The job is already running [id:{id}].");
+        var success = rows_affected > 0;
 
-        // cleanup cache after update
-        removeCache(id);
+        // cleanup cache if updated
+        if (success)
+            removeCache(id);
+
+        return success;
     }
 
     public void resetIsRunning(int id)
@@ -199,9 +201,10 @@ public class FwCron : FwModel
     /// Returns all cron jobs that are due to run now.
     /// Criteria:
     /// - status = 0 (Active)
+    /// - is_running = 0 (not running)
     /// - next_run is NULL (never scheduled) or next_run <= current UTC time
-    /// - next_run is NULL (start immediately) or start_date <= current UTC time
-    /// - end_date is NULL or greater than current UTC time
+    /// - start_date is NULL or less than or equal to the current UTC time
+    /// - end_date is NULL or greater than the current UTC time
     /// </summary>
     public List<TFwCron> listDueJobs()
     {
@@ -275,12 +278,21 @@ public class FwCron : FwModel
     /// <exception cref="Exception">Thrown if the ICode is unknown.</exception>
     private void runJobAction(TFwCron job, bool is_manual_run)
     {
+        // Check for simultaneous runs (multi-instance application or background + manual run)
+        var is_already_running = setIsRunning(job.id) == false;
+
+        // Exception on manual run
+        if (is_already_running && is_manual_run)
+            throw new Exception($"The job is already running.");
+        // Silent return otherwise (in multi-instance application environment, for example)
+        else if (is_already_running)
+            return;
+
+        // JOB START
         var run_started_utc = DateTime.UtcNow;
 
         var log_type_start = is_manual_run ? FwLogTypes.ICODE_CRON_JOB_MANUAL_RUN_START : FwLogTypes.ICODE_CRON_JOB_RUN_START;
         var log_type_end = is_manual_run ? FwLogTypes.ICODE_CRON_JOB_MANUAL_RUN_END : FwLogTypes.ICODE_CRON_JOB_RUN_END;
-
-        setIsRunningOrFail(job.id);
 
         var success = true;
         // Wrap in try/finally to make sure the "is_running" flag is always reset
@@ -316,6 +328,8 @@ public class FwCron : FwModel
         }
         finally
         {
+            // JOB END
+
             // Track end only if no exceptions
             if (success && IS_TRACK_JOB_RUN_IN_ACTIVITY_LOGS)
                 fw.logActivity(log_type_end, FwEntities.ICODE_CRON, job.id);
