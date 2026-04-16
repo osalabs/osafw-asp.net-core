@@ -66,7 +66,7 @@ public class AdminDemosController : FwAdminController
         {
             initFilter();
 
-            var tab_activity = list_filter["tab_activity"].toStr(FwActivityLogs.TAB_COMMENTS);
+            var tab_activity = list_filter["tab_activity"].toStr(activity_logs_default_tab);
             var pagenum = list_filter["pagenum"].toInt();
             var pagesize = list_filter["pagesize"].toInt();
             int offset = pagenum * pagesize;

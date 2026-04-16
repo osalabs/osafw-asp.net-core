@@ -9,6 +9,16 @@
       <a class="page-link px-3" href="?f[pagenum]=0" data-pagenum="0">1</a>
     </li>
   </~pager_first>
+  <~pager_show_dots_after_first if="is_show_dots_after_first" inline>
+    <li class="page-item">
+      <a class="page-link px-3 disabled" disabled>&hellip;</a>
+    </li>
+  </~pager_show_dots_after_first>
+  <~pad_pages repeat inline>
+    <li class="page-item">
+      <a class="page-link px-3" href="?f[pagenum]=<~pagenum>" data-pagenum="<~pagenum>"><~pagenum_show></a>
+    </li>
+  </~pad_pages>
   <li class="page-item active">
     <a class="page-link px-3" href="?f[pagenum]=<~pagenum>" data-pagenum="<~pagenum>"><~pagenum_show></a>
   </li>

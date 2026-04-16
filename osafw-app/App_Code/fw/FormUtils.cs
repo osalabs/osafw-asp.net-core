@@ -238,6 +238,11 @@ public class FormUtils
     // return forward only paging
     public static FwDict getPagerForward(int count, int pagenum, int pagesize)
     {
+        // the number of pad page items between the first and the current page
+        // add +2 to understand the total maximum number of page items displayed, i.e., "1..7" for 5, and after page 7 we have "1 ... 3..8"
+        // set 8 to get 1..10, and after page 10 we have "1 ... 3..11"
+        const int PAD_PAGES = 5;
+
         var pager = new FwDict()
             {
                 { "pagesize", pagesize },
@@ -249,6 +254,31 @@ public class FormUtils
                 { "is_show_prev", pagenum > 0 },
                 { "is_show_next", count > pagesize },
             };
+
+        if (pagenum > 1)
+        {
+            var pad_pages = new FwList();
+
+            var from_page = pagenum - PAD_PAGES;
+            var to_page = pagenum;
+
+            if (from_page <= 0)
+                from_page = 1;
+
+            if (from_page > 1)
+                pager["is_show_dots_after_first"] = true;
+
+            for (int i = from_page; i < to_page; i++)
+            {
+                pad_pages.Add(new FwDict()
+                {
+                    { "pagenum", i },
+                    { "pagenum_show", i + 1 }
+                });
+            }
+
+            pager["pad_pages"] = pad_pages;
+        }
 
         return pager;
     }
