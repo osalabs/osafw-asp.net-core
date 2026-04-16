@@ -172,7 +172,7 @@ public class FwUpdates : FwModel
 
     public void checkApplyIfDev()
     {
-        if (!fw.config("IS_DEV").toBool())
+        if (!fw.config("IS_DEV").toBool() || !fw.config("IS_DEV_AUTO_DB_UPDATES").toBool())
             return; // only auto-apply in dev
         try
         {
