@@ -105,9 +105,14 @@ public class FwActivityLogs : FwModel
     /// <summary>
     /// return activity for given entity for UI
     /// </summary>
+    /// <remarks>
+    /// system fields are not merged when the pagination is used
+    /// </remarks>
     /// <param name="entity_icode"></param>
     /// <param name="id"></param>
     /// <param name="tab">"all", "comments" or "history"</param>
+    /// <param name="offset">offset for pagination</param>
+    /// <param name="limit">limit for pagination (no pagination by default)</param>
     /// <returns></returns>
     public FwList listByEntityForUI(string entity_icode, int id, string tab = "", int offset = 0, int limit = -1)
     {
@@ -145,7 +150,8 @@ public class FwActivityLogs : FwModel
             var is_merged = false;
             if (log_type["itype"].toInt() == FwLogTypes.ITYPE_SYSTEM)
             {
-                if (last_fields != null
+                if (limit == -1 // merge doesn't work simply with paging
+                    && last_fields != null
                     && last_log_types_id == log_types_id
                     && last_users_id == users_id
                     && last_add_time.Subtract(add_time).TotalMinutes < 10
