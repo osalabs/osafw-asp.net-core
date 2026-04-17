@@ -136,10 +136,29 @@ public class FwDynamicController : FwController
         {
             initFilter();
 
-            list_filter["tab_activity"] = list_filter["tab_activity"].toStr(FwActivityLogs.TAB_COMMENTS);
+            var tab_activity = list_filter["tab_activity"].toStr(activity_logs_default_tab);
+            var pagenum = list_filter["pagenum"].toInt();
+            var pagesize = list_filter["pagesize"].toInt();
+            int offset = pagenum * pagesize;
+            int limit = pagesize + 1; //+1 record trick to look ahead if the next page is available
+
+            var activity_rows = fw.model<FwActivityLogs>().listByEntityForUI(model0.table_name, id, tab_activity, offset, limit);
+            var activity_rows_cnt = activity_rows.Count;
+
+            //remove additional record for the next page if it exists
+            if (activity_rows_cnt > pagesize)
+                activity_rows.RemoveAt(activity_rows_cnt - 1);
+
+            //do not show the pager if we are on the first page and the next page is not available
+            var activity_pager = pagenum == 0 && activity_rows_cnt <= pagesize
+                ? null
+                : FormUtils.getPagerForward(activity_rows_cnt, pagenum, pagesize);
+
+            list_filter["tab_activity"] = tab_activity;
             ps["list_filter"] = list_filter;
             ps["activity_entity"] = model0.table_name;
-            ps["activity_rows"] = fw.model<FwActivityLogs>().listByEntityForUI(model0.table_name, id, list_filter["tab_activity"].toStr());
+            ps["activity_rows"] = activity_rows;
+            ps["activity_pager"] = activity_pager;
         }
 
         ps["id"] = id;
@@ -1411,7 +1430,7 @@ public class FwDynamicController : FwController
 
         if (Utils.isEmpty(def["model"]))
         {
-            // multiple checkboxes -> non-junction model single comma-delimited field                    
+            // multiple checkboxes -> non-junction model single comma-delimited field
             fields_update[field] = FormUtils.multi2ids(reqh(field + "_multi"));
         }
         else
