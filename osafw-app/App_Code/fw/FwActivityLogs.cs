@@ -150,7 +150,7 @@ public class FwActivityLogs : FwModel
             var is_merged = false;
             if (log_type["itype"].toInt() == FwLogTypes.ITYPE_SYSTEM)
             {
-                if (limit == -1 // merge doesn't work simply with paging
+                if (limit == -1 // merge only if no pagination
                     && last_fields != null
                     && last_log_types_id == log_types_id
                     && last_users_id == users_id
