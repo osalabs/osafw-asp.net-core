@@ -10,7 +10,7 @@ public class FwCronService : BackgroundService
 {
     protected virtual TimeSpan PollingInterval => TimeSpan.FromMinutes(1);
     private readonly IConfiguration _configuration;
-    private static bool is_first_run = false;
+    private static bool is_started_up = false;
 
     public FwCronService(IConfiguration configuration)
     {
@@ -37,11 +37,11 @@ public class FwCronService : BackgroundService
             var model = fw.model<FwCron>();
 
             // Check for the abnormally terminated jobs during the first app run and reset the "is_running" flag
-            // WARNING: This only works in a single worker application configuration.
+            // WARNING: This only works for a single worker application configuration.
             // TODO options:
             // 1. Implement jobs logic to resume operation if terminated abnormally.
             // 2. Do not reset the "is_running" flag, instead notify admin and show dashboard or notification message to review
-            if (!is_first_run)
+            if (!is_started_up)
             {
                 var jobs_running = model.listRunningJobs();
 
@@ -56,7 +56,7 @@ public class FwCronService : BackgroundService
                     model.resetIsRunning(job.id);
                 }
 
-                is_first_run = true;
+                is_started_up = true;
             }
 
             var jobsToRun = model.listDueJobs();
