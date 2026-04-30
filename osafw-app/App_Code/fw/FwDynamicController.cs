@@ -1039,7 +1039,7 @@ public class FwDynamicController : FwController
             else if (dtype == "att_links_edit")
                 def["att_links"] = fw.model<Att>().listLinked(model0.table_name, id);
 
-            else if (dtype == "att_files_edit")
+            else if (dtype == "att_files_edit" || dtype == "att_files")
             {
                 if (!def.ContainsKey("att_upload_url"))
                     def["att_upload_url"] = this.base_url + "/(SaveAttFiles)/" + id;
