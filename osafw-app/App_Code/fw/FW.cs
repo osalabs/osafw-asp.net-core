@@ -124,20 +124,38 @@ public class FW : IDisposable
         if (dt == null)
             return "";
 
-        var utc = ((DateTime)dt).Kind == DateTimeKind.Utc
-            ? (DateTime)dt
-            : DateTime.SpecifyKind((DateTime)dt, DateTimeKind.Utc);
+        var userDatePattern = DateUtils.mapDateFormat(userDateFormat);
+        var userTimePattern = DateUtils.mapTimeFormat(userTimeFormat);
+        var rawValue = value.toStr();
+        var resolved = (DateTime)dt;
+        // Keep true date-only values on the same calendar day instead of shifting midnight across time zones.
+        var isDateOnlyDisplay = DateUtils.isDateOnlyDisplayValue(resolved, rawValue, userDatePattern);
 
-        var local = DateUtils.convertTimezone(utc, DateUtils.TZ_UTC, userTimezone);
+        if (!isDateOnlyDisplay)
+        {
+            var utc = resolved.Kind == DateTimeKind.Utc
+                ? resolved
+                : DateTime.SpecifyKind(resolved, DateTimeKind.Utc);
+            resolved = DateUtils.convertTimezone(utc, DateUtils.TZ_UTC, userTimezone);
+        }
 
-        var format = "";
         if (isISO)
-            //return in ISO format with timezone offset - for json
-            format = "yyyy-MM-ddTHH:mm:sszzz";
-        else
-            format = DateUtils.mapDateFormat(userDateFormat) + " " + DateUtils.mapTimeFormat(userTimeFormat);
+        {
+            try
+            {
+                // JSON callers expect the user's visible offset, not a bare UTC-tagged local wall time.
+                var userTimezoneInfo = TimeZoneInfo.FindSystemTimeZoneById(userTimezone);
+                var offset = userTimezoneInfo.GetUtcOffset(resolved);
+                return new DateTimeOffset(DateTime.SpecifyKind(resolved, DateTimeKind.Unspecified), offset)
+                    .ToString("yyyy-MM-ddTHH:mm:sszzz");
+            }
+            catch
+            {
+                return resolved.ToString("yyyy-MM-ddTHH:mm:sszzz");
+            }
+        }
 
-        return local.ToString(format);
+        return resolved.ToString(userDatePattern + " " + userTimePattern);
     }
 
     // shortcut to obtain if we working under logged in user

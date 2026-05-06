@@ -157,7 +157,7 @@ public class ParsePage
     private static readonly Regex RX_EXT = new(@"\.[^\/]+$", RegexOptions.Compiled);
 
     private static readonly ConcurrentDictionary<string, FwDict> FILE_CACHE = new();
-    private static readonly ConcurrentDictionary<string, FwDict> LANG_CACHE = new();
+    private static readonly ConcurrentDictionary<string, ConcurrentDictionary<string, string?>> LANG_CACHE = new();
 
     private static readonly string[] IFOPERS = ["if", "unless", "ifne", "ifeq", "ifgt", "iflt", "ifge", "ifle"];
 
@@ -224,6 +224,15 @@ public class ParsePage
                 load_lang();
         }
         lang_evaluator = new MatchEvaluator(this.lang_replacer);
+    }
+
+    /// <summary>
+    /// Returns the shared translation cache for the current language using a thread-safe dictionary so concurrent parsing cannot corrupt shared state.
+    /// </summary>
+    /// <returns>The per-language translation dictionary keyed by source string and optional context.</returns>
+    private ConcurrentDictionary<string, string?> get_lang_cache()
+    {
+        return LANG_CACHE.GetOrAdd(lang, static _ => new ConcurrentDictionary<string, string?>(StringComparer.Ordinal));
     }
 
     public string parse_json(object hf)
@@ -1020,11 +1029,18 @@ public class ParsePage
                                 break;
                             }
                     }
-                    if (DateTime.TryParse(value, out DateTime dt))
+                    DateTime? parsedDate = originalValue as DateTime?;
+                    parsedDate ??= DateUtils.SQL2Date(value);
+                    if (parsedDate == null
+                        && DateTime.TryParseExact(value, [DateFormat, DateFormatShort, DateFormatLong], CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime exactDate))
                     {
-                        // convert to specified timezone
-                        dt = convertTimezone(dt, InputTimezone, OutputTimezone);
+                        // Parse user-formatted dates explicitly so date-only inputs keep their original semantics.
+                        parsedDate = exactDate;
+                    }
 
+                    if (parsedDate != null)
+                    {
+                        var dt = convertTimezone(parsedDate.Value, InputTimezone, OutputTimezone, originalValue, value);
                         value = dt.ToString(dformat, DateTimeFormatInfo.InvariantInfo);
                     }
 
@@ -1465,19 +1481,19 @@ public class ParsePage
         var input = str;
         if (!string.IsNullOrEmpty(context))
             input += "|" + context;
-        var cache = LANG_CACHE.GetOrAdd(lang, _ => []);
-        var result = cache[input].toStr();
+        var cache = get_lang_cache();
+        cache.TryGetValue(input, out var result);
         if (string.IsNullOrEmpty(result))
         {
             // no translation found
             if (!string.IsNullOrEmpty(context))
             {
                 // if no value with context - try without context
-                result = cache[str].toStr();
+                cache.TryGetValue(str, out result);
                 if (string.IsNullOrEmpty(result))
                 {
                     // if no such string in cache and we allowed to update lang file - add_lang
-                    if (result == null && lang_update)
+                    if (result == null && lang_update && !string.IsNullOrEmpty(TMPL_PATH))
                         add_lang(str);
                     // if still no translation - return original string
                     result = str;
@@ -1496,7 +1512,7 @@ public class ParsePage
         // logger("load lang: " & TMPL_PATH & "\" & lang & ".txt")
         var lines = Utils.getFileLines(TMPL_PATH + @"\lang\" + lang + ".txt");
 
-        LANG_CACHE.GetOrAdd(lang, _ => []);
+        var cache = get_lang_cache();
 
         foreach (string line1 in lines)
         {
@@ -1507,7 +1523,7 @@ public class ParsePage
             }
             string[] pair = line.Split("===", 2);
             // logger("added to cache:", Trim(pair(0)))
-            LANG_CACHE[lang][pair[0].Trim()] = pair[1].TrimStart();
+            cache[pair[0].Trim()] = pair[1].TrimStart();
         }
     }
 
@@ -1519,8 +1535,7 @@ public class ParsePage
         Utils.setFileContent(TMPL_PATH + @"\lang\" + lang + ".txt", ref filedata, true);
 
         // also add to lang cache
-        LANG_CACHE.GetOrAdd(lang, _ => []);
-        LANG_CACHE[lang][str.Trim()] = "";
+        get_lang_cache()[str.Trim()] = "";
     }
 
     private void logger(LogLevel level, params string[] args)
@@ -1528,8 +1543,22 @@ public class ParsePage
         loggerAction?.Invoke(level, args);
     }
 
-    private DateTime convertTimezone(DateTime dt, string from_tz, string to_tz)
+    /// <summary>
+    /// Converts a template date/time value between time zones while leaving date-only values on the same calendar day.
+    /// </summary>
+    /// <param name="dt">Parsed date/time value.</param>
+    /// <param name="from_tz">Source timezone identifier.</param>
+    /// <param name="to_tz">Destination timezone identifier.</param>
+    /// <param name="originalValue">Original object resolved for the template tag before string conversion.</param>
+    /// <param name="rawValue">String representation used by the formatter.</param>
+    /// <returns>The converted datetime, or the original datetime when conversion should not apply.</returns>
+    private DateTime convertTimezone(DateTime dt, string from_tz, string to_tz, object? originalValue = null, string rawValue = "")
     {
+        var originalDateTime = originalValue as DateTime?;
+        // Date-only values should render as the same day for every user, so skip timezone math for those cases.
+        if (DateUtils.isDateOnlyDisplayValue(originalDateTime ?? dt, rawValue, DateFormat))
+            return dt;
+
         if (from_tz == to_tz)
             return dt;
         try

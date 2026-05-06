@@ -1313,6 +1313,13 @@ public class FwDynamicController : FwController
                         fields[field] = normalized;
                 }
             }
+            else if (type == "date" || type == "date_popup")
+            {
+                // Keep date-only controls as SQL dates even when the backing DB column is datetime.
+                var normalized = DateUtils.Str2SQL(fields[field].toStr(), fw.userDateFormat);
+                if (!string.IsNullOrEmpty(normalized))
+                    fields[field] = normalized;
+            }
             else if (type == "number")
             {
                 // no need to do this as DB knows if field nullable and convert empty string to NULL

@@ -2,6 +2,8 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace osafw.Tests
 {
@@ -74,6 +76,44 @@ namespace osafw.Tests
 
             Assert.AreEqual("Hello", parser.langMap("Hello"));
             Assert.AreEqual("Hello", parser.langMap("Hello", "context"));
+        }
+
+        [TestMethod()]
+        public void parse_string_concurrent_lang_cache_does_not_throw_or_corrupt_state()
+        {
+            string tempDir = Path.Combine(Path.GetTempPath(), $"parsepage-lang-concurrency-{Guid.NewGuid():N}");
+            string langDir = Path.Combine(tempDir, "lang");
+            Directory.CreateDirectory(langDir);
+
+            try
+            {
+                File.WriteAllText(Path.Combine(langDir, "es.txt"), "Hello === Hola" + Environment.NewLine + "Save === Guardar");
+
+                var parser = new ParsePage(new ParsePageOptions
+                {
+                    TemplatesRoot = tempDir,
+                    Lang = "es",
+                    IsLangUpdate = false,
+                });
+
+                var tasks = Enumerable.Range(0, 32)
+                    .Select(_ => Task.Run(() =>
+                    {
+                        for (int i = 0; i < 200; i++)
+                        {
+                            var output = parser.parse_string("`Hello` `Save`", []);
+                            Assert.AreEqual("Hola Guardar", output);
+                        }
+                    }))
+                    .ToArray();
+
+                Task.WaitAll(tasks);
+            }
+            finally
+            {
+                if (Directory.Exists(tempDir))
+                    Directory.Delete(tempDir, true);
+            }
         }
 
         [TestMethod()]
@@ -505,6 +545,46 @@ namespace osafw.Tests
             tpl = "<~AAA date=\"d M Y H:i\">";
             r = new ParsePage(null!).parse_string(tpl, ps);
             Assert.AreEqual(d.ToString("d M Y H:i"), r);
+        }
+
+        [TestMethod()]
+        public void parse_string_date_preserves_date_only_values_across_timezones()
+        {
+            var parser = new ParsePage(new ParsePageOptions { OutputTimezone = "Central Standard Time" });
+
+            var ps = new FwDict
+            {
+                ["AAA"] = "4/13/2026",
+            };
+            var r = parser.parse_string("<~AAA date>", ps);
+            Assert.AreEqual("4/13/2026", r);
+
+            ps["AAA"] = new DateTime(2026, 4, 13);
+            r = parser.parse_string("<~AAA date>", ps);
+            Assert.AreEqual("4/13/2026", r);
+
+            ps["AAA"] = new DateTime(2026, 4, 13, 2, 30, 0, DateTimeKind.Utc);
+            r = parser.parse_string("<~AAA date>", ps);
+            Assert.AreEqual("4/12/2026", r);
+        }
+
+        [TestMethod()]
+        public void parse_string_date_uses_explicit_user_formats_only()
+        {
+            var parser = new ParsePage(new ParsePageOptions
+            {
+                DateFormat = "d/M/yyyy",
+                DateFormatShort = "d/M/yyyy H:mm",
+                DateFormatLong = "d/M/yyyy H:mm:ss",
+            });
+
+            var ps = new FwDict
+            {
+                ["AAA"] = "11/3/2026",
+            };
+
+            var r = parser.parse_string("<~AAA date>", ps);
+            Assert.AreEqual("11/3/2026", r);
         }
 
 

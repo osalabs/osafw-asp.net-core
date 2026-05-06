@@ -372,11 +372,7 @@ public class Users : FwModel<Users.Row>
     /// <param name="timezone"></param>
     public void doLogin(int id, string timezone = "")
     {
-        var context = fw.context;
-        context?.Session.Clear();
-        fw.Session("XSS", Utils.getRandStr(16));
-
-        reloadSession(id);
+        reloadSession(id, is_clear: true);
 
         var ip = Utils.getIP(fw.context);
         fw.logActivity(FwLogTypes.ICODE_USERS_LOGIN, FwEntities.ICODE_USERS, id, "IP:" + ip);
@@ -406,11 +402,17 @@ public class Users : FwModel<Users.Row>
 
     }
 
-    public bool reloadSession(int id = 0)
+    public bool reloadSession(int id = 0, bool is_clear = false)
     {
         if (id == 0)
             id = fw.userId;
         var user = one(id);
+
+        if (is_clear)
+        {
+            fw.context?.Session.Clear();
+            fw.Session("XSS", Utils.getRandStr(16));
+        }
 
         fw.Session("user_id", id.toStr());
         fw.Session("login", user["email"]);
@@ -557,7 +559,7 @@ public class Users : FwModel<Users.Row>
             //visitor
             roles_ids = [fw.model<Roles>().idVisitor().ToString()]; // visitor role for non-logged
         else
-            roles_ids = fw.model<UsersRoles>().colLinkedIdsByMainId((int)users_id);
+            roles_ids = fw.model<UsersRoles>().colLinkedIdsByMainId(users_id.toInt());
 
         // read all permissions for the resource and user's roles
         var rows = fw.model<RolesResourcesPermissions>().listByRolesResources(roles_ids, new int[] { resources_id });
@@ -713,7 +715,7 @@ public class Users : FwModel<Users.Row>
         //check cache
         var cache_key = "rbac_menu#" + fw.userId;
         var cache_key_time = "rbac_menu_time#" + fw.userId;
-        var rbac_menu = (DBRow)FwCache.getValue(cache_key);
+        var rbac_menu = FwCache.getValue(cache_key) as DBRow;
         if (rbac_menu != null)
         {
             //check if time is earlier than roles_resources_permissions_updated

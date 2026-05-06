@@ -4,6 +4,7 @@
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
 using System;
+using System.Globalization;
 using System.Text.RegularExpressions;
 
 namespace osafw;
@@ -54,8 +55,10 @@ public class DateUtils
     /// <param name="format">A standard or custom date and time format string. See <see cref="DateTime.ToString(string)"/> for valid formats.</param>
     /// <returns>A string representation of the date in the specified format, or an empty string if the object cannot be
     /// converted to a valid date.</returns>
-    public static string toFormat(object d, string format)
+    public static string toFormat(object? d, string format)
     {
+        if (d == null)
+            return "";
         var dt = d.toDateOrNull();
         if (dt == null)
             return "";
@@ -143,6 +146,38 @@ public class DateUtils
                 result = tmpdate;
         }
         return result;
+    }
+
+    /// <summary>
+    /// Determines whether a value should stay calendar-stable during display rather than being shifted across timezones.
+    /// </summary>
+    /// <remarks>
+    /// The framework uses this for true SQL date values and other date-only display paths so midnight values do not
+    /// move to the previous/next day when rendered for a user in another timezone.
+    /// </remarks>
+    /// <param name="dt">Parsed date value under consideration.</param>
+    /// <param name="rawValue">Original raw string when available.</param>
+    /// <param name="exactDateFormat">Optional user date format for exact date-only parsing.</param>
+    /// <returns><see langword="true"/> when timezone conversion should be skipped for display.</returns>
+    public static bool isDateOnlyDisplayValue(DateTime dt, string rawValue = "", string exactDateFormat = "")
+    {
+        if (dt.Kind == DateTimeKind.Unspecified && dt.TimeOfDay == TimeSpan.Zero)
+            return true;
+
+        if (string.IsNullOrWhiteSpace(rawValue))
+            return false;
+
+        if (Regex.IsMatch(rawValue, @"^\d{4}-\d{2}-\d{2}$"))
+            return true;
+
+        if (!string.IsNullOrWhiteSpace(exactDateFormat)
+            && DateTime.TryParseExact(rawValue, exactDateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime exactDate)
+            && exactDate.TimeOfDay == TimeSpan.Zero)
+        {
+            return true;
+        }
+
+        return false;
     }
 
     /// <summary>
