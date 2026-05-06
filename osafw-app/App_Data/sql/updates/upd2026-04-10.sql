@@ -1,8 +1,14 @@
 -- Cron updates
 
+DROP INDEX IX_fwcron_next_run ON fwcron;
+GO
+
 EXEC sp_rename 'fwcron.next_run', 'next_run_utc', 'COLUMN';
 EXEC sp_rename 'fwcron.start_date', 'start_date_utc', 'COLUMN';
 EXEC sp_rename 'fwcron.end_date', 'end_date_utc', 'COLUMN';
+GO
+
+CREATE INDEX IX_fwcron_next_run_utc ON fwcron (next_run_utc);
 GO
 
 ALTER TABLE fwcron ADD last_run_utc          DATETIME2 NULL;

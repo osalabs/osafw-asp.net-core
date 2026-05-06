@@ -37,7 +37,6 @@ INSERT INTO log_types (itype, icode, iname) VALUES (0, 'cron_job_manual_run_star
 INSERT INTO log_types (itype, icode, iname) VALUES (0, 'cron_job_manual_run_end', 'Cron Job Manual Run End');
 INSERT INTO log_types (itype, icode, iname) VALUES (0, 'cron_job_run_error', 'Cron Job Run Error');
 INSERT INTO log_types (itype, icode, iname) VALUES (0, 'cron_job_run_result', 'Cron Job Run Result');
-GO
 
 update log_types set prio=id; -- set default priority
 

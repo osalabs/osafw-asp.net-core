@@ -75,7 +75,7 @@ CREATE TABLE fwcron
   upd_users_id          INT DEFAULT 0                           -- User ID who last updated the job (0 = system)
 );
 CREATE UNIQUE INDEX UX_fwcron_icode ON fwcron (icode);
-CREATE INDEX IX_fwcron_next_run ON fwcron (next_run);
+CREATE INDEX IX_fwcron_next_run_utc ON fwcron (next_run_utc);
 
 -- virtual controllers
 DROP TABLE IF EXISTS fwcontrollers;

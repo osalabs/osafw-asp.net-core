@@ -439,14 +439,14 @@ public class Utils
     /// </summary>
     /// <param name="fw">FW instance (logger, etc.)</param>
     /// <param name="rowCallback">
-    ///     Your delegate that receives <c>(sheetName, rowFields)</c>.  
+    ///     Your delegate that receives <c>(sheetName, rowFields)</c>.
     ///     Return <c>false</c> to stop the import prematurely.
     /// </param>
     /// <param name="filePath">Path to .xlsx, .xls, or .csv file.</param>
     /// <param name="isHeaderRow">
     ///     If <c>true</c> the first row becomes the column list;
     ///     otherwise the columns are called F0, F1, …
-    /// </param>  
+    /// </param>
     public static void ImportSpreadsheet(string filePath, Func<string, FwDict, bool> rowCallback, bool isHeaderRow = true)
     {
 #if ExcelDataReader
