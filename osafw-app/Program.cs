@@ -133,8 +133,8 @@ public static class Program
         // Memory cache
         builder.Services.AddMemoryCache();
 
-        // Uncomment to enable scheduled tasks
-        // builder.Services.AddHostedService<FwCronService>();
+        if (settings["is_cron_enabled"].toBool())
+            builder.Services.AddHostedService<FwCronService>();
 
         // Build the WebApplication
         var app = builder.Build();

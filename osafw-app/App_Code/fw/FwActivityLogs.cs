@@ -74,6 +74,8 @@ public class FwActivityLogs : FwModel
     /// <param name="entity_icode">entity table name</param>
     /// <param name="id">entity item id</param>
     /// <param name="log_types_icodes">optional list of log types(by icode) to filter on</param>
+    /// <param name="offset">page number</param>
+    /// <param name="limit">pagesize</param>
     /// <returns></returns>
     public virtual DBList listByEntity(string entity_icode, int id, IList? log_types_icodes = null, int offset = 0, int limit = -1)
     {

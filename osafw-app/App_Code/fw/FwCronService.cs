@@ -50,7 +50,7 @@ public class FwCronService : BackgroundService
                     var err_msg = "Cron Service first run. Abnormally terminated job detected. Resetting the \"Is Running\" flag.";
                     fw.logger(LogLevel.ERROR, $"{err_msg} Job ID: ", job.id);
 
-                    if (FwCron.IS_TRACK_JOB_RUN_IN_ACTIVITY_LOGS)
+                    if (job.is_log_run)
                         fw.logActivity(FwLogTypes.ICODE_CRON_JOB_RUN_ERROR, FwEntities.ICODE_CRON, job.id, err_msg);
 
                     model.resetIsRunning(job.id);
@@ -73,7 +73,7 @@ public class FwCronService : BackgroundService
                     fw.logger(LogLevel.ERROR, "Failed to execute job:", job.id, ", error:", ex.Message);
                     fw.logger(LogLevel.ERROR, ex.StackTrace);
 
-                    if (FwCron.IS_TRACK_JOB_RUN_IN_ACTIVITY_LOGS)
+                    if (job.is_log_run)
                         fw.logActivity(FwLogTypes.ICODE_CRON_JOB_RUN_ERROR, FwEntities.ICODE_CRON, job.id, ex.Message);
                 }
             }

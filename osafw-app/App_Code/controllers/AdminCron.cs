@@ -25,7 +25,7 @@ public class AdminCronController : FwDynamicController
         model = model0 as FwCron ?? throw new FwConfigUndefinedModelException();
         db = model.getDB(); // model-based controller works with model's db
 
-        is_activity_logs = FwCron.IS_TRACK_JOB_RUN_IN_ACTIVITY_LOGS;
+        is_activity_logs = true;
         activity_logs_default_tab = FwActivityLogs.TAB_ALL;
     }
 

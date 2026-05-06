@@ -1070,7 +1070,13 @@ public class DB : IDisposable
                 }
                 else
                 {
-                    dt = convertDbDateTimeToUtc(dt);
+                    // "_utc" field name suffix convention, don't convert if the field already stores UTC date
+                    // Used in Cron Service which operates dates in UTC only
+                    if (!dbread.GetName(i).EndsWith("_utc"))
+                    {
+                        dt = convertDbDateTimeToUtc(dt);
+                    }
+
                     value = dt.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.DateTimeFormatInfo.InvariantInfo);
                 }
             }

@@ -28,9 +28,13 @@ public class TFwCron
     public string idesc { get; set; } = string.Empty;
 
     public string cron { get; set; } = string.Empty;
-    public DateTime? next_run { get; set; }
-    public DateTime? start_date { get; set; }
-    public DateTime? end_date { get; set; }
+    public DateTime? last_run_utc { get; set; }
+    public DateTime? next_run_utc { get; set; }
+    public DateTime? start_date_utc { get; set; }
+    public DateTime? end_date_utc { get; set; }
+
+    public bool is_log_run { get; set; }
+    public bool is_log_run_result { get; set; }
 
     public bool is_running { get; set; }
     public int status { get; set; }
@@ -49,10 +53,6 @@ public class FwCron : FwModel
     public const string ICODE_EXAMPLE = "example_sleep";
 
     public const int STATUS_COMPLETED = 20;
-
-    // track job start, end and error events in FwActivityLogs
-    // "activity_logs_id" can be passed to the job logic to add job specific details to the log, like summary, for example: "100 records processed. 5 users notified."
-    public const bool IS_TRACK_JOB_RUN_IN_ACTIVITY_LOGS = false;
 
     public FwCron() : base()
     {
@@ -145,7 +145,7 @@ public class FwCron : FwModel
 
     /// <summary>
     /// Executes the logic associated with the specified job based on its ICode.
-    /// If this is the first run (next_run is null), then calculate the next_run and return early for the next Cron Service execution
+    /// If this is the first run (next_run_utc is null), then calculate the next_run_utc and return early for the next Cron Service execution
     /// </summary>
     public void runJob(TFwCron job, bool is_manual_run = false)
     {
@@ -156,8 +156,8 @@ public class FwCron : FwModel
             return;
         }
 
-        // If next_run is not set, it's the first run; calculate the next_run and return early
-        if (!job.next_run.HasValue)
+        // If next_run_utc is not set, it's the first run; calculate the next_run_utc and return early
+        if (!job.next_run_utc.HasValue)
         {
             updateNextRun(job);
             return;
@@ -168,21 +168,21 @@ public class FwCron : FwModel
     }
 
     /// <summary>
-    /// If the from_date is not passed, set it to the start_date if it's greater than the current UTC, or set it to the current UTC otherwise.
+    /// If the from_date is not passed, set it to the start_date_utc if it's greater than the current UTC, or set it to the current UTC otherwise.
     /// Calculates and updates the next run time based on the CRON expression.
     /// If no future run is scheduled, the job is marked as completed.
     /// </summary>
     public void updateNextRun(TFwCron job, DateTime? from_date = null)
     {
         if (from_date == null)
-            from_date = job.start_date.HasValue && job.start_date.Value > DateTime.UtcNow
-                        ? job.start_date.Value
+            from_date = job.start_date_utc.HasValue && job.start_date_utc.Value > DateTime.UtcNow
+                        ? job.start_date_utc.Value
                         : DateTime.UtcNow;
 
-        job.next_run = calculateNextRun(job.cron, from_date.Value, job.end_date);
-        update(job.id, DB.h("next_run", job.next_run));
+        job.next_run_utc = calculateNextRun(job.cron, from_date.Value, job.end_date_utc);
+        update(job.id, DB.h("next_run_utc", job.next_run_utc));
 
-        if (!job.next_run.HasValue)
+        if (!job.next_run_utc.HasValue)
         {
             job.status = STATUS_COMPLETED;
             update(job.id, DB.h("status", job.status));
@@ -202,9 +202,9 @@ public class FwCron : FwModel
     /// Criteria:
     /// - status = 0 (Active)
     /// - is_running = 0 (not running)
-    /// - next_run is NULL (never scheduled) or next_run <= current UTC time
-    /// - start_date is NULL or less than or equal to the current UTC time
-    /// - end_date is NULL or greater than the current UTC time
+    /// - next_run_utc is NULL (never scheduled) or next_run_utc <= current UTC time
+    /// - start_date_utc is NULL or less than or equal to the current UTC time
+    /// - end_date_utc is NULL or greater than the current UTC time
     /// </summary>
     public List<TFwCron> listDueJobs()
     {
@@ -214,10 +214,10 @@ public class FwCron : FwModel
             WHERE
                 status = @status
                 AND is_running = 0
-                AND (next_run IS NULL OR next_run <= @now)
-                AND (start_date IS NULL OR start_date <= @now)
-                AND (end_date IS NULL OR end_date > @now)
-            ORDER BY next_run";
+                AND (next_run_utc IS NULL OR next_run_utc <= @now)
+                AND (start_date_utc IS NULL OR start_date_utc <= @now)
+                AND (end_date_utc IS NULL OR end_date > @now)
+            ORDER BY next_run_utc";
 
         return db.arrayp<TFwCron>(sql,
             @params: new()
@@ -230,14 +230,14 @@ public class FwCron : FwModel
     /// <summary>
     /// Calculates the next run time for a job based on the given CRON expression and a reference point.
     /// Calculates the next occurrence after the supplied UTC reference time, respecting the schedule end bound.
-    /// If an end_date is provided, ensures the schedule does not exceed it.
+    /// If the end date is provided, ensures the schedule does not exceed it.
     /// Returns null if the CRON is invalid, the schedule is expired, or no future runs exist.
     /// </summary>
     /// <param name="cron">The CRON expression defining the job schedule.</param>
     /// <param name="from_date">The reference date after which the next occurrence is calculated.</param>
-    /// <param name="end_date">Optional end date beyond which no runs should occur.</param>
+    /// <param name="to_date">Optional end date beyond which no runs should occur.</param>
     /// <returns>The next scheduled DateTime in UTC, or null if none exists.</returns>
-    private static DateTime? calculateNextRun(string cron, DateTime from_date, DateTime? end_date)
+    private static DateTime? calculateNextRun(string cron, DateTime from_date, DateTime? to_date)
     {
         // Try parsing the CRON expression
         if (!CronExpression.TryParse(cron, out var cron_expression))
@@ -247,27 +247,27 @@ public class FwCron : FwModel
 
         // Ensure all dates are treated as UTC
         var from_date_utc = DateTime.SpecifyKind(from_date, DateTimeKind.Utc);
-        DateTime? end_date_utc = end_date.HasValue
-            ? DateTime.SpecifyKind(end_date.Value, DateTimeKind.Utc)
+        DateTime? to_date_utc = to_date.HasValue
+            ? DateTime.SpecifyKind(to_date.Value, DateTimeKind.Utc)
             : null;
 
-        if (end_date_utc.HasValue && end_date_utc.Value <= from_date_utc)
+        if (to_date_utc.HasValue && to_date_utc.Value <= from_date_utc)
         {
             return null;
         }
 
         // Get the next scheduled time after the current reference point
-        var next_run = cron_expression.GetNextOccurrence(
+        var next_run_utc = cron_expression.GetNextOccurrence(
             fromUtc: from_date_utc,
             zone: TimeZoneInfo.Utc);
 
-        // Enforce the end_date constraint
-        if (end_date_utc.HasValue && next_run.HasValue && next_run > end_date_utc.Value)
+        // Enforce the end date constraint
+        if (to_date_utc.HasValue && next_run_utc.HasValue && next_run_utc > to_date_utc.Value)
         {
             return null;
         }
 
-        return next_run;
+        return next_run_utc;
     }
 
     /// <summary>
@@ -299,9 +299,8 @@ public class FwCron : FwModel
         try
         {
             // Track start
-            var activity_logs_id = 0;
-            if (IS_TRACK_JOB_RUN_IN_ACTIVITY_LOGS)
-                activity_logs_id = fw.logActivity(log_type_start, FwEntities.ICODE_CRON, job.id);
+            if (job.is_log_run)
+                fw.logActivity(log_type_start, FwEntities.ICODE_CRON, job.id);
 
             switch (job.icode)
             {
@@ -321,7 +320,7 @@ public class FwCron : FwModel
         {
             success = false;
             // Manual run needs explicit error logging here
-            if (is_manual_run && FwCron.IS_TRACK_JOB_RUN_IN_ACTIVITY_LOGS)
+            if (is_manual_run && job.is_log_run)
                 fw.logActivity(FwLogTypes.ICODE_CRON_JOB_RUN_ERROR, FwEntities.ICODE_CRON, job.id, ex.Message);
 
             throw;
@@ -331,14 +330,14 @@ public class FwCron : FwModel
             // JOB END
 
             // Track end only if no exceptions
-            if (success && IS_TRACK_JOB_RUN_IN_ACTIVITY_LOGS)
+            if (success && job.is_log_run)
                 fw.logActivity(log_type_end, FwEntities.ICODE_CRON, job.id);
 
             // Advance the schedule from when this run started so long-running jobs do not skip the next slot
             updateNextRun(job, run_started_utc);
 
             // Update the last run
-            update(job.id, DB.h("last_run", run_started_utc));
+            update(job.id, DB.h("last_run_utc", run_started_utc));
 
             // Release the job for the next run (reset the "is_running" flag)
             resetIsRunning(job.id);

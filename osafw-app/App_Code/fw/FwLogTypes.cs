@@ -32,6 +32,7 @@ public class FwLogTypes : FwModel
     public const string ICODE_CRON_JOB_MANUAL_RUN_START = "cron_job_manual_run_start";
     public const string ICODE_CRON_JOB_MANUAL_RUN_END = "cron_job_manual_run_end";
     public const string ICODE_CRON_JOB_RUN_ERROR = "cron_job_run_error";
+    public const string ICODE_CRON_JOB_RUN_RESULT = "cron_job_run_result";
 
     public FwLogTypes() : base()
     {

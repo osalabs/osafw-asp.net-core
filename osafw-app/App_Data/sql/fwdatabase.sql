@@ -55,11 +55,14 @@ CREATE TABLE fwcron
   idesc                 NVARCHAR(MAX),                          -- Optional full description of the job
 
   cron                  NVARCHAR(255) NOT NULL,                 -- Cron expression string
-  last_run              DATETIME2 NULL,                         -- Job last run (UTC)
-  next_run              DATETIME2 NULL,                         -- When the job should run next (UTC)
+  last_run_utc          DATETIME2 NULL,                         -- Job last run (UTC)
+  next_run_utc          DATETIME2 NULL,                         -- When the job should run next (UTC)
 
-  start_date            DATETIME2 NULL,                         -- When job becomes active (inclusive)
-  end_date              DATETIME2 NULL,                         -- Optional: when job expires (exclusive)
+  start_date_utc        DATETIME2 NULL,                         -- When job becomes active (inclusive) (UTC)
+  end_date_utc          DATETIME2 NULL,                         -- Optional: when job expires (exclusive) (UTC)
+
+  is_log_run            BIT NOT NULL DEFAULT 0,                 -- Log start/end to activity logs; we don't want to log for every minute mailer job, for example
+  is_log_run_result     BIT NOT NULL DEFAULT 0,                 -- Log job resuls to activity logs if needed
 
   is_running            BIT NOT NULL DEFAULT 0,                 -- Job "currently running" flag. Avoid simultaneous runs.
 

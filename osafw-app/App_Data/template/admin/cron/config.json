@@ -5,12 +5,12 @@
     "list_sortdef": "iname asc",
     "search_fields": "id iname",
     "related_field_name": "",
-    "view_list_defaults": "iname cron cron_human last_run next_run start_date end_date is_running status",
+    "view_list_defaults": "iname cron cron_human last_run_utc next_run_utc start_date_utc end_date_utc is_log_run is_log_run_result is_running status",
     "view_list_map": {
         "iname": "Job Name",
         "icode": "Sys Code",
-        "start_date": "Start Date",
-        "end_date": "End Date",
+        "start_date_utc": "Start Date",
+        "end_date_utc": "End Date",
         "add_users_id_iname": "Add User",
         "status": "Status",
         "upd_users_id_iname": "Upd User",
@@ -20,8 +20,10 @@
         "id": "ID",
         "cron": "Cron Expression",
         "cron_human": "Cron Expression Human Readable",
-        "last_run": "Last Run",
-        "next_run": "Next Run",
+        "last_run_utc": "Last Run",
+        "next_run_utc": "Next Run",
+        "is_log_run": "Log Run?",
+        "is_log_run_result": "Log Run Result?",
         "is_running": "Is Running?"
     },
     "view_list_custom": "status is_running",
@@ -81,22 +83,22 @@
             "type": "row_end"
         },
         {
-            "field": "start_date",
+            "field": "start_date_utc",
             "type": "plaintext",
             "label": "Start Date"
         },
         {
-            "field": "end_date",
+            "field": "end_date_utc",
             "type": "plaintext",
             "label": "End Date"
         },
         {
-            "field": "next_run",
+            "field": "next_run_utc",
             "type": "date_long",
             "label": "Next Run"
         },
         {
-            "field": "last_run",
+            "field": "last_run_utc",
             "type": "date_long",
             "label": "Last Run"
         },
@@ -116,6 +118,16 @@
             "field": "idesc",
             "type": "markdown",
             "label": "Description"
+        },
+        {
+            "field": "is_log_run",
+            "label": "Log Run?",
+            "type" : "plaintext_yesno"
+        },
+        {
+            "field": "is_log_run_result",
+            "label": "Log Run Result?",
+            "type" : "plaintext_yesno"
         },
         {
             "field": "is_running",
@@ -207,7 +219,7 @@
         "type": "row_end"
     },
     {
-        "field": "start_date",
+        "field": "start_date_utc",
         "type": "datetime_popup",
         "label": "Start Date",
         "class_contents": "col-md-5",
@@ -215,7 +227,7 @@
         "validate": "isdate"
     },
     {
-        "field": "end_date",
+        "field": "end_date_utc",
         "type": "datetime_popup",
         "label": "End Date",
         "class_contents": "col-md-5",
@@ -224,13 +236,13 @@
     },
 
     {
-        "field": "next_run",
+        "field": "next_run_utc",
         "type": "date_long",
         "label": "Next Run"
     },
 
     {
-        "field": "last_run",
+        "field": "last_run_utc",
         "type": "date_long",
         "label": "Last Run"
     },
@@ -253,6 +265,20 @@
         "label": "Description",
         "class_control": "markdown autoresize",
         "rows": 5
+    },
+    {
+        "field": "is_log_run",
+        "label": "Log Run?",
+        "type" : "yesno",
+        "is_inline": true,
+        "class_contents": "col d-flex align-items-center"
+    },
+    {
+        "field": "is_log_run_result",
+        "label": "Log Run Result?",
+        "type" : "yesno",
+        "is_inline": true,
+        "class_contents": "col d-flex align-items-center"
     },
     {
         "field": "is_running",
@@ -291,17 +317,19 @@
         "iname",
         "idesc",
         "cron",
-        "next_run",
-        "start_date",
-        "end_date",
+        "next_run_utc",
+        "start_date_utc",
+        "end_date_utc",
+        "is_log_run",
+        "is_log_run_result",
         "status"
     ],
     "save_fields_checkboxes": "",
     "save_fields_nullable": [
         "idesc",
-        "next_run",
-        "start_date",
-        "end_date",
+        "next_run_utc",
+        "start_date_utc",
+        "end_date_utc",
         "add_users_id",
         "upd_time",
         "upd_users_id"
