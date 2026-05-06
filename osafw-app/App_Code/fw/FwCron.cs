@@ -216,7 +216,7 @@ public class FwCron : FwModel
                 AND is_running = 0
                 AND (next_run_utc IS NULL OR next_run_utc <= @now)
                 AND (start_date_utc IS NULL OR start_date_utc <= @now)
-                AND (end_date_utc IS NULL OR end_date > @now)
+                AND (end_date_utc IS NULL OR end_date_utc > @now)
             ORDER BY next_run_utc";
 
         return db.arrayp<TFwCron>(sql,
