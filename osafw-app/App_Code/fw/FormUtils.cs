@@ -15,6 +15,7 @@ namespace osafw;
 public class FormUtils
 {
     public const int MAX_PAGE_ITEMS = 25; //default max number of items on list screen
+    public const int PAGER_PAD_PAGES = 5; //default number of the pager left/right pad button
     public const string AUTOCOMPLETE_SEPARATOR = " ::: ";
 
     public static Array getYesNo()
@@ -235,71 +236,23 @@ public class FormUtils
         return Regex.IsMatch(phone, re);
     }
 
-    // return forward only paging
-    public static FwDict getPagerForward(int count, int pagenum, int pagesize)
-    {
-        // the number of pad page items between the first and the current page
-        // add +2 to understand the total maximum number of page items displayed, i.e., "1..7" for 5, and after page 7 we have "1 ... 3..8"
-        // set 8 to get 1..10, and after page 10 we have "1 ... 3..11"
-        const int PAD_PAGES = 5;
-
-        var pager = new FwDict()
-            {
-                { "pagesize", pagesize },
-                { "pagenum_prev", pagenum > 0 ? pagenum - 1 : 0 },
-                { "pagenum", pagenum },
-                { "pagenum_show", pagenum + 1 },
-                { "pagenum_next", count > 0 ? pagenum + 1 : pagenum },
-                { "is_show_first", pagenum > 0 },
-                { "is_show_prev", pagenum > 0 },
-                { "is_show_next", count > pagesize },
-            };
-
-        if (pagenum > 1)
-        {
-            var pad_pages = new FwList();
-
-            var from_page = pagenum - PAD_PAGES;
-            var to_page = pagenum;
-
-            if (from_page <= 0)
-                from_page = 1;
-
-            if (from_page > 1)
-                pager["is_show_dots_after_first"] = true;
-
-            for (int i = from_page; i < to_page; i++)
-            {
-                pad_pages.Add(new FwDict()
-                {
-                    { "pagenum", i },
-                    { "pagenum_show", i + 1 }
-                });
-            }
-
-            pager["pad_pages"] = pad_pages;
-        }
-
-        return pager;
-    }
-
     // return pager or Nothing if no paging required
-    public static FwList getPager(long count, int pagenum, object? pagesize1 = null)
+    public static FwList getPager(long count, int pagenum, int? pagesize1 = null, int? pad_pages1 = null)
     {
         int pagesize = pagesize1.toInt(MAX_PAGE_ITEMS);
+        int pad_pages = pad_pages1.toInt(PAGER_PAD_PAGES);
 
         FwList pager = [];
-        const int PAD_PAGES = 5;
 
         if (count > pagesize)
         {
             int page_count = (int)Math.Ceiling(count / (double)pagesize);
 
-            var from_page = pagenum - PAD_PAGES;
+            var from_page = pagenum - pad_pages;
             if (from_page < 0)
                 from_page = 0;
 
-            var to_page = pagenum + PAD_PAGES;
+            var to_page = pagenum + pad_pages;
             if (to_page > page_count - 1)
                 to_page = page_count - 1;
 
@@ -312,7 +265,7 @@ public class FormUtils
                 pager_item["pagenum_show"] = i + 1;
                 if (i == from_page)
                 {
-                    if (pagenum > PAD_PAGES)
+                    if (pagenum > pad_pages)
                         pager_item["is_show_first"] = true;
                     if (pagenum > 0)
                     {

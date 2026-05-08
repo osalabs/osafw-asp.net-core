@@ -1083,7 +1083,8 @@ public class DB : IDisposable
                     // Used in Cron Service which operates dates in UTC only
                     if (!dbread.GetName(i).EndsWith("_utc"))
                     {
-                        dt = convertDbDateTimeToUtc(dt);
+                        // keep DateTime value type to avoid boxing to string
+                        dt= convertDbDateTimeToUtc(dbread.GetDateTime(i), meta.IsDateOnly[i]);
                     }
 
                     value = dt.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.DateTimeFormatInfo.InvariantInfo);

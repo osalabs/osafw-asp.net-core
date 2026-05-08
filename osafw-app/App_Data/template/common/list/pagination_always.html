@@ -7,16 +7,16 @@
     <~pager_prev if="is_show_prev" inline>
       <li><a class="page-link px-4" href="?f[pagenum]=<~pagenum_prev><~pager_url>" data-pagenum="<~pagenum_prev>">&laquo;</a></li>
     </~pager_prev>
-  <li class="page-item <~/common/cl/active ifeq="is_cur_page" value="1">">
-    <a class="page-link" href="?f[pagenum]=<~pagenum><~pager_url>" data-pagenum="<~pagenum>"><~pagenum_show></a>
-  </li>
+    <li class="page-item <~/common/cl/active ifeq="is_cur_page" value="1">">
+      <a class="page-link" href="?f[pagenum]=<~pagenum><~pager_url>" data-pagenum="<~pagenum>"><~pagenum_show></a>
+    </li>
     <~pager_next if="is_show_next" inline>
       <li><a class="page-link px-4" href="?f[pagenum]=<~pagenum_next><~pager_url>" data-pagenum="<~pagenum_next>">&raquo;</a></li>
     </~pager_next>
   </~pager>
   <li class="page-item-pagesize ps-2">
     <select name="f[pagesize]" class="form-select on-pagesize-change">
-    <~/common/sel/pagesize.sel select="f[pagesize]">
+      <~/common/sel/pagesize.sel select="f[pagesize]">
     </select>
   </li>
 </ul>

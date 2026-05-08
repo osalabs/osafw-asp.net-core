@@ -70,25 +70,32 @@ public class AdminDemosController : FwAdminController
             var pagenum = list_filter["pagenum"].toInt();
             var pagesize = list_filter["pagesize"].toInt();
             int offset = pagenum * pagesize;
-            int limit = pagesize + 1; //+1 record trick to look ahead if the next page is available
+            // the simplest and the most efficient for the current pager implementation to detect if the next pages are available
+            // - no COUNT(*), which will be expensive on big data sets, as it does the whole scan of matching entries in the index
+            // - as indexes cover fields with DESC sorting, first pages will work fast
+            // - on big offsets like "OFFSET 500000" and more, we need to implement Keyset Pagination - instead of OFFSET, use WHERE id < [last_id_from_previous_page]
+            int limit = pagesize + pagesize * FormUtils.PAGER_PAD_PAGES; // look ahead for the next pages, i.e., 10 items for the current display + look ahead 50 for the next
 
             var activity_rows = fw.model<FwActivityLogs>().listByEntityForUI(model0.table_name, id, tab_activity, offset, limit);
             var activity_rows_cnt = activity_rows.Count;
 
-            //remove additional record for the next page if it exists
+            // remove next pages' rows if they present
             if (activity_rows_cnt > pagesize)
-                activity_rows.RemoveAt(activity_rows_cnt - 1);
+                activity_rows.RemoveRange(pagesize, activity_rows_cnt - pagesize);
 
             //do not show the pager if we are on the first page and the next page is not available
             var activity_pager = pagenum == 0 && activity_rows_cnt <= pagesize
                 ? null
-                : FormUtils.getPagerForward(activity_rows_cnt, pagenum, pagesize);
+                : FormUtils.getPager(activity_rows_cnt + pagenum * pagesize, pagenum, pagesize);
 
             list_filter["tab_activity"] = tab_activity;
             ps["list_filter"] = list_filter;
             ps["activity_entity"] = model0.table_name;
             ps["activity_rows"] = activity_rows;
-            ps["activity_pager"] = activity_pager;
+            ps["activity_pager"] = new FwDict() {
+                { "f", list_filter },
+                { "pager", activity_pager }
+            };
         }
 
         return ps;
