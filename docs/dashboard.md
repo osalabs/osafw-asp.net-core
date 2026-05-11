@@ -1,6 +1,6 @@
 # Dashboard Panels
 
-The main dashboard renders a collection of *panes*. Each pane is described by a hashtable in the controller and rendered via templates under `App_Data/template/main/index`.
+The main dashboard renders a collection of *panes*. Each pane is described by a hashtable in the controller and rendered via templates under `osafw-app/App_Data/template/main/index`.
 
 ## Built-in Panel Templates
 
@@ -17,7 +17,7 @@ The framework ships with several panel types:
 
 ## Creating a Custom Panel Type
 
-1. **Create a template** named `type_NAME.html` in `App_Data/template/main/index`.
+1. **Create a template** named `type_NAME.html` in `osafw-app/App_Data/template/main/index`.
 2. **Register the template** in `std_pane.html` by adding a line:
    ```html
    <~type_NAME ifeq="type" value="NAME">

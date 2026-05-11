@@ -11,7 +11,7 @@
 The project started as a lightweight alternative to full ASP.NET MVC frameworks. We wanted minimal dependencies and an MVC-like structure that is easy to maintain and extend.
 
 ## Decision
-We build a custom dispatcher in `FW.cs` that maps routes to controllers under `App_Code/controllers`. Controllers derive from `FwController` and models from `FwModel`. The folder layout mirrors the original OSA framework.
+We build a custom dispatcher in `FW.cs` that maps routes to controllers under `osafw-app/App_Code/controllers`. Controllers derive from `FwController` and models from `FwModel`. The folder layout mirrors the original OSA framework.
 
 ## Consequences
 The framework runs on ASP.NET Core but keeps a small footprint. Developers must follow the custom conventions rather than the built-in MVC pipeline. The decision simplifies onboarding for existing OSA developers but differs from standard ASP.NET practices.

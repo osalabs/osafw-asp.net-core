@@ -9,13 +9,13 @@ Updated: 2026-04-13
 - Use `Fw.model<T>()` singletons; don’t new models directly except through `fw.model("Name")`.
 - When returning files, use `fw.fileResponse` to set headers correctly.
 - Use `fw.routeRedirect` to chain actions to avoid duplicate logic and keep responses consistent.
-- For templates, place overrides under `/App_Data/template/<controller>/<action>`; keep common bits in `/common`.
+- For templates, place overrides under `/osafw-app/App_Data/template/<controller>/<action>`; keep common bits in `/common`.
 - Respect access control: set controller `access_level` and add route rules in `FwConfig.access_levels` when needed.
 - For DB code, always parameterize via `DB` helper; avoid string concatenation.
 - Use `FwCache` for expensive lookups; cache keys should be namespaced and include input parameters.
 - Prefer `DateUtils` helpers for formatting and parsing with user timezone (`fw.userTimezone`).
 - When adding routes or prefixes, update `FwConfig.route_prefixes` and test `FW.getRoute()`.
-- For migrations, add SQL scripts under `App_Data/sql/updates` and register via `fwupdates` flow.
+- For migrations, add SQL scripts under `osafw-app/App_Data/sql/updates` and register via `fwupdates` flow.
 - Log at appropriate level; avoid verbose logs on production (`log_level` INFO).
 - In Vue templates, bind disabled states to buttons (not anchors) to avoid `disabled="false"` being rendered and to honor read-only flags.
 - 2026-01-17: For Vue form tabs, sync the active tab with the URL query string to keep deep links stable.

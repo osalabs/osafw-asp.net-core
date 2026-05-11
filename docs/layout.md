@@ -9,30 +9,30 @@ The framework organizes pages using a small set of reusable layout primitives. T
 - **App shell**
   - Global container that wraps the main navigation, page header, and content area.
   - Used by all primary screens to ensure navigation and theming are consistent.
-  - Page-level content is typically produced by ParsePage templates under `App_Data/template/<area>/<controller>/` or shared includes under `App_Data/template/common/`.
+  - Page-level content is typically produced by ParsePage templates under `osafw-app/App_Data/template/<area>/<controller>/` or shared includes under `osafw-app/App_Data/template/common/`.
 - **Page header**
   - Standardized area for the title, context actions, and breadcrumbs.
   - CRUD headers are built from the shared partials in:
-    - `App_Data/template/common/form/page_header.html`
-    - `App_Data/template/common/form/page_header_edit.html`
-    - `App_Data/template/common/form/page_header_custom.html`
-    - `App_Data/template/common/list/page_header.html`
-    - `App_Data/template/common/list/page_header_compact.html`
+    - `osafw-app/App_Data/template/common/form/page_header.html`
+    - `osafw-app/App_Data/template/common/form/page_header_edit.html`
+    - `osafw-app/App_Data/template/common/form/page_header_custom.html`
+    - `osafw-app/App_Data/template/common/list/page_header.html`
+    - `osafw-app/App_Data/template/common/list/page_header_compact.html`
   - The breadcrumb slot is rendered via `<~/common/form/breadcrumbs>` and `page_header_breadcrumbs` includes.
-  - Vue screens mirror this via `App_Data/template/common/vue/*-header.html`.
+  - Vue screens mirror this via `osafw-app/App_Data/template/common/vue/*-header.html`.
 - **Content region**
   - Main scrollable area for each screen.
-  - Dashboard screens typically divide this region into panels/cards (example: dashboard cards in `App_Data/template/main/index/std_pane.html`).
-  - List screens emphasize data tables and filters (example: list tables wrap in `.fw-list-card` via `App_Data/template/common/list/form_list.html`).
-  - View/edit screens emphasize details, form fields, and secondary panels (example: `.fw-card` forms in `App_Data/template/**/showform/form.html`).
+  - Dashboard screens typically divide this region into panels/cards (example: dashboard cards in `osafw-app/App_Data/template/main/index/std_pane.html`).
+  - List screens emphasize data tables and filters (example: list tables wrap in `.fw-list-card` via `osafw-app/App_Data/template/common/list/form_list.html`).
+  - View/edit screens emphasize details, form fields, and secondary panels (example: `.fw-card` forms in `osafw-app/App_Data/template/**/showform/form.html`).
 - **Panels / cards**
   - Optional blocks that group related data or controls.
   - Use `.fw-card` for form and detail panels; list tables use `.fw-list-card`.
-  - Dashboard cards frequently use Bootstrap `.card` styling (see `App_Data/template/main/index/std_pane.html`).
+  - Dashboard cards frequently use Bootstrap `.card` styling (see `osafw-app/App_Data/template/main/index/std_pane.html`).
 - **Utility rails**
   - Optional sidebars for filters, inline help, or related actions.
   - Keep secondary tasks available without breaking primary reading flow.
-  - List filters are typically rendered via `App_Data/template/common/list/filter_std.html` or `filter_compact.html` and use `.fw-card`.
+  - List filters are typically rendered via `osafw-app/App_Data/template/common/list/filter_std.html` or `filter_compact.html` and use `.fw-card`.
 
 **Major screen layout guidance**
 
@@ -51,7 +51,7 @@ The framework organizes pages using a small set of reusable layout primitives. T
 
 ## CRUD page header
 
-CRUD screens share a standard header structure to make actions and navigation consistent. The shared header templates live under `App_Data/template/common/form/` and `App_Data/template/common/list/`, with Vue equivalents under `App_Data/template/common/vue/`.
+CRUD screens share a standard header structure to make actions and navigation consistent. The shared header templates live under `osafw-app/App_Data/template/common/form/` and `osafw-app/App_Data/template/common/list/`, with Vue equivalents under `osafw-app/App_Data/template/common/vue/`.
 
 **Recommended structure**
 
@@ -81,7 +81,7 @@ Theming uses CSS tokens to keep layout and color consistent across screens. Use 
 
 **Where tokens live**
 
-- Global styles and tokens are defined in `App_Data/template/common/head.css` and theme-specific CSS under `App_Data/template/common/theme*/`.
+- Global styles and tokens are defined in `osafw-app/App_Data/template/common/head.css` and theme-specific CSS under `osafw-app/App_Data/template/common/theme*/`.
 - UI primitives such as `.fw-card`, `.fw-list-card`, and `.page-header-breadcrumbs` are styled in these shared stylesheets and reused across templates.
 
 **Common token categories**
@@ -106,7 +106,7 @@ Use these extension points to adapt the layout to new modules or custom features
   - Use the shared slot templates (`common/form/page_header_custom.html`) so the base header remains consistent.
 - **Dashboard widgets**
   - Insert new panels/cards into the dashboard content region.
-  - Follow the `.card` markup in `App_Data/template/main/index/std_pane.html` for consistent visuals.
+  - Follow the `.card` markup in `osafw-app/App_Data/template/main/index/std_pane.html` for consistent visuals.
 - **List/table enhancements**
   - Add filters, bulk actions, or column toggles in the list screen utility rail.
   - Use `common/list/filter_std.html`, `common/list/filter_compact.html`, and `common/list/form_list.html` as the starting point.

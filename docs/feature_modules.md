@@ -3,7 +3,7 @@
 Feature modules bundle a database table, its model, controller, and templates. You can scaffold them automatically from **Developer Tools** or build them manually by copying demo assets.
 
 ## Quick path: Developer Tools at `/Dev/Manage`
-1. **Add the table** to your schema: mirror the demo tables in `App_Data/sql/demo.sql`, then append the `CREATE TABLE` to `App_Data/sql/database.sql` and create a dated script under `App_Data/sql/updates/` for deployments.
+1. **Add the table** to your schema: mirror the demo tables in `osafw-app/App_Data/sql/demo.sql`, then append the `CREATE TABLE` to `osafw-app/App_Data/sql/database.sql` and create a dated script under `osafw-app/App_Data/sql/updates/` for deployments.
 2. **Open Developer Tools** at `/Dev/Manage` and use the *Create Model* form. Pick your table and optional model name; the action reads the schema and generates the model file for you.
 3. **Create the controller** from the same screen. Select the model, provide a target URL/title, and choose controller type (dynamic, Vue, lookup, or API). The generator copies demo templates, rewrites URLs/titles, configures `config.json`, writes the controller class, and adds a menu item.
 4. **Restart the project or apply hot reload**, then navigate to the new controller URL.
@@ -18,11 +18,11 @@ Feature modules bundle a database table, its model, controller, and templates. Y
 If you need full control, replicate what the generators do:
 
 1. **Database table**
-   - Define the table in `App_Data/sql/database.sql` and add a migration under `App_Data/sql/updates/` for environments that need incremental updates.
+   - Define the table in `osafw-app/App_Data/sql/database.sql` and add a migration under `osafw-app/App_Data/sql/updates/` for environments that need incremental updates.
    - Keep naming consistent: snake_case plural table names (e.g., `orders`), include system columns (`status`, `add_time`, `add_users_id`, `upd_time`, `upd_users_id`) for built-in behaviors.
 
 2. **Model class**
-   - Copy `App_Code/models/DemoDicts.cs` (or `DemosDemoDicts.cs` for junction tables) to a new file named after your model.
+   - Copy `osafw-app/App_Code/models/DemoDicts.cs` (or `DemosDemoDicts.cs` for junction tables) to a new file named after your model.
    - Update `table_name`, optional field mappings (`field_id`, `field_iname`, `field_status`, etc.), and row properties to match your columns.
    - Add helper methods (select options, validations, derived calculations) similar to `Demos` and related demo models.
 
@@ -32,7 +32,7 @@ If you need full control, replicate what the generators do:
    - Expose extra actions (autocomplete, file uploads, junction updates) as needed by your feature.
 
 4. **Templates and config**
-   - Duplicate the matching folder under `App_Data/template/admin/` (for example, `demos` or `demosdynamic`) to a folder named after your controller URL.
+   - Duplicate the matching folder under `osafw-app/App_Data/template/admin/` (for example, `demos` or `demosdynamic`) to a folder named after your controller URL.
    - Replace hardcoded titles/URLs inside `url.html`, `title.html`, and other snippets. Update `config.json` so `save_fields`, list columns, and lookup dropdowns mirror your schema and foreign keys (see [dynamic controller config](dynamic.md)).
    - Prune unused partials or fields in `index/`, `show/`, and `showform/` templates and keep layout hooks (return URLs, list filters, buttons) aligned with your controller logic.
 

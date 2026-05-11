@@ -95,7 +95,7 @@ If an invalid timezone is supplied, `DateUtils.convertTimezone` logs the issue a
 - Set session values to emulate a user preference and verify formatting on pages and API responses.
 
 ## Related source
-- FW accessors and initialization: `App_Code/fw/FW.cs`
-- Input conversion: `App_Code/fw/FwModel.cs` - `convertUserInput`
-- Dynamic save normalization: `App_Code/fw/FwDynamicController.cs`
-- Date helpers and constants: `App_Code/fw/DateUtils.cs`
+- FW accessors and initialization: `osafw-app/App_Code/fw/FW.cs`
+- Input conversion: `osafw-app/App_Code/fw/FwModel.cs` - `convertUserInput`
+- Dynamic save normalization: `osafw-app/App_Code/fw/FwDynamicController.cs`
+- Date helpers and constants: `osafw-app/App_Code/fw/DateUtils.cs`

@@ -31,7 +31,7 @@ Whenever AGENTS.md updated - make copy of it to top level /.github/copilot-instr
 - osafw-asp.net-core is an opinionated ASP.NET Core (.NET 8) web framework/template for building data-heavy admin and CRUD apps.
 - Core concepts:
   - `FW` request pipeline with custom router and RESTful mapping.
-  - `ParsePage` template engine for views (no Razor). Templates live in `App_Data/template`.
+  - `ParsePage` template engine for views (no Razor). Templates live in `osafw-app/App_Data/template`.
   - MVC-ish structure: controllers, models, templates; models use thin `DB` helper.
   - Dynamic and Vue controllers driven by JSON config to scaffold CRUD quickly.
   - Built-in features: logging, caching, file uploads, settings, activity logs, self-test, virtual controllers, scheduled tasks.
@@ -39,7 +39,7 @@ Whenever AGENTS.md updated - make copy of it to top level /.github/copilot-instr
   - `Program.cs` uses minimal hosting, config via `FwConfig`, sessions via distributed SQL cache (`fwsessions`), data protection keys in `fwkeys`.
   - Optional MySQL support via `#define isMySQL` and matching SQL scripts.
 - Database:
-  - SQL Server by default; schema scripts under `App_Data/sql`. Key tables: `users`, `settings`, `spages`, `att*`, `activity_logs`, `fw*` (framework).
+  - SQL Server by default; schema scripts under `osafw-app/App_Data/sql`. Key tables: `users`, `settings`, `spages`, `att*`, `activity_logs`, `fw*` (framework).
 
 ## Folder Structure
 - `osafw-app/Program.cs` - app entrypoint and middleware registration.
@@ -52,7 +52,7 @@ Whenever AGENTS.md updated - make copy of it to top level /.github/copilot-instr
 - `osafw-app/App_Code/models/` - models per table and domain (Att*, Demos*, Roles*, Reports*, Dev*).
 - `osafw-app/App_Data/template/` - templates, common includes, per-controller subfolders, dynamic configs.
 - `osafw-app/App_Data/sql/` - SQL scripts: `fwdatabase.sql`, `lookups.sql`, optional `roles.sql`, `demo.sql`, and `updates/*`. MySQL variants under `mysql/`.
-- `osafw-app/docs/` - framework docs and ADRs.
+- `docs/` - framework docs and ADRs.
 - `osafw-tests/` - tests project.
 
 ## Coding Style
@@ -62,7 +62,7 @@ Whenever AGENTS.md updated - make copy of it to top level /.github/copilot-instr
 - Models: inherit `FwModel`. Obtain via `fw.model<T>()` or `fw.model("Name")`. Keep SQL in models, not controllers.
 - Routing: `FW.getRoute()` implements RESTful mapping by HTTP method and URL. Prefixes (e.g., `/Admin`) are supported.
 - Access control: static `access_level` on controller + `FwConfig.access_levels` rules. XSS token validated on mutating requests.
-- Templates: prefer view composition in `App_Data/template`; override controller base dir with `controller.template_basedir` or `ps["_basedir_controller"]`.
+- Templates: prefer view composition in `osafw-app/App_Data/template`; override controller base dir with `controller.template_basedir` or `ps["_basedir_controller"]`.
 - Utilities: use `FormUtils` for filtering/validation, `DateUtils` for user TZ formatting, `FwLogger` for logs, `FwCache` for memoization.
 - For new or updated C# methods, add XML docs explaining why the method exists and include detailed param/return info for non-primitive types; add inline comments for complex logic blocks.
 
@@ -72,16 +72,16 @@ Whenever AGENTS.md updated - make copy of it to top level /.github/copilot-instr
 - `docs/db.md` - DB helper overview and patterns.
 - `docs/datetime.md` - per-user date/time and timezones.
 - `docs/adr/*` - architecture decisions (cache, db helper, parsepage, datetime).
-- `App_Data/template/dev/manage/docs/*` - in-app developer docs.
-- SQL: `App_Data/sql/*.sql` (+ `mysql/*`).
+- `osafw-app/App_Data/template/dev/manage/docs/*` - in-app developer docs.
+- SQL: `osafw-app/App_Data/sql/*.sql` (+ `mysql/*`).
 
 ## Common Tasks
 - Build: `dotnet build`.
 - Run: `dotnet run -p osafw-app` (or `dotnet watch run -p osafw-app`).
 - Test: `dotnet test`.
-- Database setup (SQL Server): run `App_Data/sql/fwdatabase.sql`, then `lookups.sql`. Run `roles.sql` if roles required. Optionally `demo.sql` for sample data. Rebuild indexes as needed.
+- Database setup (SQL Server): run `osafw-app/App_Data/sql/fwdatabase.sql`, then `lookups.sql`. Run `roles.sql` if roles required. Optionally `demo.sql` for sample data. Rebuild indexes as needed.
 - Configure connection: `appsettings*.json` under `appSettings.db.main` (`type`, `connection_string`).
-- Switch to MySQL: define `isMySQL` in `Program.cs`, set `db.main.type` to MySQL, use scripts from `App_Data/sql/mysql/`.
+- Switch to MySQL: define `isMySQL` in `Program.cs`, set `db.main.type` to MySQL, use scripts from `osafw-app/App_Data/sql/mysql/`.
 - Scheduled tasks: uncomment `builder.Services.AddHostedService<FwCronService>();` in `Program.cs`.
 - Windows auth: enable Negotiate and use `/winlogin` path.
 - Sessions/Data Protection: ensure `fwsessions` and `fwkeys` tables exist.
