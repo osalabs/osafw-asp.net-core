@@ -42,6 +42,12 @@ public class AdminSettingsController : FwAdminController
 
     public override FwDict ShowFormAction(int id = 0)
     {
+        if (id == 0)
+        {
+            fw.redirect(base_url);
+            return null!;
+        }
+
         // set new form defaults here if any
         // Me.form_new_defaults = New FwRow
         // item("field")="default value"
