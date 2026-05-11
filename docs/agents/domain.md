@@ -1,6 +1,6 @@
 # Domain / Bounded Context
 
-Updated: 2025-10-08
+Updated: 2026-05-11
 
 Purpose
 - Provide a reusable admin/back-office web framework for CRUD-heavy business apps on ASP.NET Core.
@@ -26,5 +26,7 @@ Core Subdomains
 
 Boundaries
 - DB access encapsulated by `DB` helper and models.
+- Dictionary DB single-row reads return empty `DBRow`/`FwDict` for "not found"; typed single-row reads return `null`, with `*OrFail` variants for required records.
 - UI rendered by `ParsePage` templates; no Razor.
+- ParsePage recursive file-template includes log `WARN` and render that include as empty.
 - Multi-tenancy per-host via `FwConfig` overrides and caching.

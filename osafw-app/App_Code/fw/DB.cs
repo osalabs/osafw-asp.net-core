@@ -1093,12 +1093,18 @@ public class DB : IDisposable
         return result;
     }
 
-    //read database row values into generic type
+    /// <summary>
+    /// Materializes the current data-reader row into a typed DTO.
+    /// </summary>
+    /// <remarks>
+    /// Single-row query helpers decide whether a record exists before calling this method, so this materializer
+    /// only represents an actual row and does not encode the not-found state.
+    /// </remarks>
+    /// <typeparam name="T">DTO type with writable properties matching returned column names or <see cref="DBNameAttribute"/> aliases.</typeparam>
+    /// <param name="dbread">Open data reader positioned on the row to materialize.</param>
+    /// <returns>A populated DTO instance for the current data-reader row.</returns>
     protected T readRow<T>(DbDataReader dbread) where T : new()
     {
-        if (!dbread.HasRows)
-            return new T(); //if no rows - return empty row
-
         T result = new();
         var meta = getReaderMeta(dbread);
         var props = FwExtensions.getWritableProperties<T>();
@@ -1119,7 +1125,7 @@ public class DB : IDisposable
             else
                 value = dbread.GetValue(i);
 
-            result.setPropertyValue(props, meta.Names[i], value!);
+            result.setPropertyValue(props, meta.Names[i], value);
         }
         return result;
     }
@@ -1138,13 +1144,14 @@ public class DB : IDisposable
     }
 
     /// <summary>
-    /// read signle irst row using table/where/orderby with generic type
+    /// Reads the first matching row from a table query into a typed DTO.
     /// </summary>
-    /// <param name="table"></param>
-    /// <param name="where"></param>
-    /// <param name="order_by"></param>
-    /// <returns></returns>
-    public T row<T>(string table, FwDict where, string order_by = "") where T : new()
+    /// <typeparam name="T">DTO type with writable properties matching selected column names or <see cref="DBNameAttribute"/> aliases.</typeparam>
+    /// <param name="table">Database table name to query.</param>
+    /// <param name="where">Column filters used to build the query.</param>
+    /// <param name="order_by">Optional SQL order clause used before the first row is selected.</param>
+    /// <returns>A populated DTO when a record exists; otherwise, <see langword="null"/>.</returns>
+    public T? row<T>(string table, FwDict where, string order_by = "") where T : class, new()
     {
         var qp = buildSelect(table, where, order_by, 1);
         return rowp<T>(qp.sql, qp.@params);
@@ -1166,16 +1173,17 @@ public class DB : IDisposable
     }
 
     /// <summary>
-    /// read single first row using parametrized sql query with generic type
+    /// Reads the first row from a parameterized SQL query into a typed DTO.
     /// </summary>
-    /// <param name="sql"></param>
-    /// <param name="params"></param>
-    /// <returns></returns>
-    public T rowp<T>(string sql, FwDict? @params = null) where T : new()
+    /// <typeparam name="T">DTO type with writable properties matching selected column names or <see cref="DBNameAttribute"/> aliases.</typeparam>
+    /// <param name="sql">SQL query expected to return zero or more rows.</param>
+    /// <param name="params">Optional query parameters keyed by parameter name.</param>
+    /// <returns>A populated DTO when the query returns a record; otherwise, <see langword="null"/>.</returns>
+    public T? rowp<T>(string sql, FwDict? @params = null) where T : class, new()
     {
         DbDataReader dbread = query(sql, @params);
         var hasRow = dbread.Read();
-        var result = hasRow ? readRow<T>(dbread) : new T();
+        var result = hasRow ? readRow<T>(dbread) : null;
         closeQuery(dbread);
         return result;
     }

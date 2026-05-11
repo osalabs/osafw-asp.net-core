@@ -85,10 +85,15 @@ public class Demos : FwModel<Demos.Row>
         return base.listSelectOptions(def);
     }
 
-    // demo for DB generics
+    /// <summary>
+    /// Demonstrates typed DB row materialization by calculating a total from numeric demo fields.
+    /// </summary>
+    /// <param name="id">Primary key of the demo record whose numeric fields should be multiplied.</param>
+    /// <returns>The demo row's floating-point value multiplied by its integer value.</returns>
+    /// <exception cref="NotFoundException">Thrown when the requested demo record does not exist.</exception>
     public decimal calcTotal(int id)
     {
-        var item = db.row<Row>(table_name, DB.h("id", id));
+        var item = db.row<Row>(table_name, DB.h("id", id)) ?? throw new NotFoundException();
         return (decimal)item.ffloat * item.fint;
     }
 }

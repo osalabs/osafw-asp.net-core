@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections;
+using System.Diagnostics.CodeAnalysis;
 
 namespace osafw;
 
@@ -19,7 +20,12 @@ public abstract class FwModel<TRow> : FwModel where TRow : class, new()
         typedCacheByIcodePrefix = cache_prefix_byicode + "typed.";
     }
 
-    protected virtual bool isRowEmpty(TRow? row)
+    /// <summary>
+    /// Determines whether a typed row value represents a missing record.
+    /// </summary>
+    /// <param name="row">Typed row returned by the DB layer or a typed model cache.</param>
+    /// <returns><see langword="true"/> when the row should be treated as absent; otherwise, <see langword="false"/>.</returns>
+    protected virtual bool isRowEmpty([NotNullWhen(false)] TRow? row)
     {
         return row == null;
     }
@@ -37,6 +43,11 @@ public abstract class FwModel<TRow> : FwModel where TRow : class, new()
         return where;
     }
 
+    /// <summary>
+    /// Loads one typed row by primary key.
+    /// </summary>
+    /// <param name="id">Primary key value for the requested record.</param>
+    /// <returns>The typed DTO from the request cache or database; otherwise, <see langword="null"/> when the id is invalid or no record exists.</returns>
     public virtual TRow? oneT(int id)
     {
         if (id <= 0)
@@ -81,6 +92,11 @@ public abstract class FwModel<TRow> : FwModel where TRow : class, new()
         return db.row<TRow>(table_name, where);
     }
 
+    /// <summary>
+    /// Loads one typed row by the model's configured code field.
+    /// </summary>
+    /// <param name="icode">Code value stored in <see cref="FwModel.field_icode"/>.</param>
+    /// <returns>The typed DTO from the request cache or database; otherwise, <see langword="null"/> when the code field is disabled or no record exists.</returns>
     public virtual TRow? oneTByIcode(string icode)
     {
         if (string.IsNullOrEmpty(field_icode))

@@ -153,9 +153,23 @@ namespace osafw.Tests
         [TestMethod()]
         public void rowTypedTest()
         {
-            var row = db.row<Demos.Row>(table_name, DB.h("id", 1));
+            var row = db.row<Demos.Row>(table_name, DB.h("id", 1)) ?? throw new AssertFailedException("Expected typed row.");
             Assert.AreEqual(1, row.id);
             Assert.AreEqual("test1", row.iname);
+        }
+
+        [TestMethod()]
+        public void rowTypedMissingTest()
+        {
+            var row = db.row<Demos.Row>(table_name, DB.h("id", 999));
+            Assert.IsNull(row);
+
+            var rowp = db.rowp<Demos.Row>("SELECT * FROM " + table_name + " WHERE id=999;");
+            Assert.IsNull(rowp);
+
+            var dictRow = db.row(table_name, DB.h("id", 999));
+            Assert.IsNotNull(dictRow);
+            Assert.AreEqual(0, dictRow.Count);
         }
 
         [TestMethod()]

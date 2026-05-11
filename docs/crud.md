@@ -110,11 +110,13 @@ public class Users : FwModel<Users.Row>
 ```csharp
 var users = fw.model<Users>();
 
-Users.Row row = users.oneT(5);                    // load by id
-Users.Row byCode = users.oneTByIcode("demo");    // use icode lookup
+Users.Row? row = users.oneT(5);                   // null if missing
+Users.Row? byCode = users.oneTByIcode("demo");   // null if missing
 List<Users.Row> active = users.listT();           // list with typed rows
 Users.Row required = users.oneTOrFail(5);         // throws if missing
 ```
+
+Typed single-row methods use `null` for "not found" because a default DTO can look like a real record with `0` and empty-string values. Use `oneTOrFail` when the route or workflow requires the record to exist.
 
 ### Writing data
 ```csharp
@@ -129,7 +131,7 @@ var dto = new Users.Row
 int id = users.add(dto);                          // insert DTO
 int generatedId = dto.id;                         // add() populates the identity
 
-var existing = users.oneT(id);                    // load current values
+var existing = users.oneTOrFail(id);              // load current values
 existing.title = "Alice Johnson";
 users.update(id, existing);                       // update DTO
 
