@@ -1,11 +1,50 @@
-<!-- AGENTS.md - Universal, Auto-Bootstrapping (v7) -->
+<!-- AGENTS.md - Universal, Auto-Bootstrapping (v7.1) -->
 
-# Applies to any changes
-1. Always use Windows-style line endings.
+# Non-Negotiables
 
-# Process/Workflow for each user request
-1. Create task summary file `docs/agents/tasks/summary-<YYYY-MM-DD>-<TASK-ID>.md` per template in
-<task-summary-template>
+- Use Windows-style line endings for every created or edited file.
+- Read `docs/agents/local_instructions.md` before implementation when it exists. Treat it as machine-local guidance and do not commit its contents.
+- Use `docs/README.md` as the fast entry point for the broader documentation set.
+- When `AGENTS.md` changes, copy it byte-for-byte to `.github/copilot-instructions.md` before closing the task.
+
+# Task Workflow
+
+1. Scope and record the task.
+   - Create or update `docs/agents/tasks/summary-<YYYY-MM-DD>-<TASK-ID>.md` unless the user explicitly asked for no file changes or a read-only review. Use one short kebab-case task id per task session, and keep updating the same summary for iterative feedback in that session.
+   - If no task summary is created because the request is read-only, include the useful summary in the final response instead.
+   - For non-trivial tasks, identify the critical path, safe parallel side work, and tightly coupled work that should stay local.
+
+2. Implement the requested change first.
+   - Do not start test-only refactors or broad QA edits before the implementation pass is complete.
+   - Keep edits scoped to the requested behavior and nearby contracts.
+
+3. Verify proportionally.
+   - Prefer the smallest automated or manual check that can falsify the change quickly.
+   - Keep the main agent responsible for final integration and verification, even when delegating bounded checks.
+
+4. Run a review-fix loop when risk justifies it.
+   - For runtime-affecting source code, schema, templates, scripts, tests, configuration, or risky developer/agent workflow changes, review the final diff using `docs/agents/code_reviewer.md`.
+   - Prefer a code reviewer sub-agent. If sub-agents are unavailable, perform the same review yourself and record that fallback in the task summary.
+   - Fix findings in the main workspace and repeat until there are no issues or no improvement points worth another loop.
+   - Documentation-only changes do not need this loop unless they alter runnable configuration or risky developer/agent workflow.
+
+5. Keep the task summary current.
+   - Append useful notes as the task evolves, except `Testing instructions`, which should always reflect the final state.
+   - For code changes, list exact automated/manual checks run, affected flows, highest-risk follow-up checks not run, and setup caveats.
+   - For docs-only or internal instruction changes, set `Testing instructions` to `N/A - docs/instructions only` or an equivalent concise statement.
+
+6. Close out knowledge capture.
+   - Review the task summary and make it complete.
+   - Record whether stable facts, heuristics, or ADRs were added or intentionally not added.
+   - Add stable framework facts to `docs/agents/domain.md` or `docs/agents/glossary.md`.
+   - Add reusable working heuristics to `docs/agents/heuristics.md`; timestamp new heuristics and expire or revise touched heuristics older than 90 days.
+   - Add substantial business or architecture decisions under `docs/adr/`.
+   - Update `AGENTS.md` only when a recurring pattern would reduce future effort or drift.
+   - Do not store secrets, DB backups, large logs, or machine-local notes in shared docs.
+
+## Task Summary Template
+
+```md
 ## What changed
 ## Scope reviewed
 ## Commands used / verification
@@ -15,160 +54,116 @@
 ## Heuristics (keep terse)
 ## Testing instructions
 ## Reflection
-</task-summary-template>
-   - For iterative user feedback within the same task session, keep updating the same summary file instead of creating a new one.
-
-2. If `docs/agents/local_instructions.md` exists, read it before implementation. Treat it as machine-local guidance and do not commit its contents.
-
-3. Implement the requested change first. Do not start test-only refactors or broad QA edits before the implementation pass is complete.
-
-4. After the implementation pass, do verification work proportional to the change. You may delegate bounded test execution or targeted test updates to a separate agent, but keep the main agent responsible for final integration and verification.
-
-5. If runtime-affecting code, schema, template, script, or configuration changed, run a review-fix loop before closing the task:
-   - Spawn a code reviewer sub-agent and instruct it to follow `docs/agents/code_reviewer.md`.
-   - Fix findings in the main agent workspace.
-   - Repeat until the reviewer reports no issues or no improvement points worth another loop.
-   - Documentation-only changes do not need this loop unless they alter runnable configuration or developer workflow in a risky way.
-
-6. Keep `Testing instructions` in the task summary final-state and concise.
-   - For code changes, list exact automated/manual checks run, the main affected flows, highest-risk follow-up checks not run, and any setup caveats.
-   - For docs-only or internal instruction changes, explicitly say `N/A - docs/instructions only` or equivalent.
-
-7. Continue updating the task summary file as needed. Prefer append-don't-overwrite updates so earlier notes stay available, except `Testing instructions`, which should always reflect the final state.
-
-8. Post-process - after user's query is completely resolved, perform self-reflection, self-improvement, and optimization of the entire process/workflow, see steps in <post-process>
-<post-process>
-Goal: accumulate reusable project knowledge while staying concise.
-- Review task summary file, make sure it's complete.
-- Classify discoveries:
-  - STABLE FACT - add to domain.md or glossary.md or relevant sections below in AGENTS.md.
-  - HEURISTIC - add to heuristics.md, timestamp new heuristics and expire or revise anything older than 90 days.
-  - ONE-OFF - keep in task summary file only.
-- If a substantial business decision changed, add an ADR under `docs/agents/adr/`.
-- AGENTS.md upkeep:
-  - If patterns recur, add a new section here only if it reduces future token/step cost.
-  - Do not change more than 20% of AGENTS.md content in one go unless the explicit task is to refresh agentic instructions.
-- Keep all knowledge concise and informative.
-- Replace "YYYY-MM-DD" with today's date.
-- Don't store secrets or large logs.
-</post-process>
-
-Whenever AGENTS.md updated - make copy of it to `.github/copilot-instructions.md`.
-
-Use this file as the default operating guide for work in this repo. Use `docs/README.md` as the fast entry point for the broader documentation set.
+```
 
 ## Project Overview
-- osafw-asp.net-core is an opinionated ASP.NET Core (.NET 10) web framework/template for building data-heavy admin and CRUD apps.
+
+- `osafw-asp.net-core` is an opinionated ASP.NET Core (.NET 10) web framework/template for data-heavy admin and CRUD apps.
 - Core concepts:
   - `FW` request pipeline with custom router and RESTful mapping.
-  - `ParsePage` template engine for views (no Razor). Templates live in `osafw-app/App_Data/template`.
-  - MVC-ish structure: controllers, models, templates; models use thin `DB` helper.
+  - `ParsePage` template engine for views; templates live in `osafw-app/App_Data/template`.
+  - MVC-style controllers, models, and templates; models use the thin `DB` helper.
   - Dynamic and Vue controllers driven by JSON config to scaffold CRUD quickly.
-  - Built-in features: logging, caching, file uploads, settings, activity logs, self-test, virtual controllers, reports, scheduled tasks.
+  - Built-in logging, caching, file uploads, settings, activity logs, self-test, virtual controllers, reports, and scheduled tasks.
 - Runtime:
-  - `Program.cs` uses minimal hosting, config via `FwConfig`, sessions via distributed SQL cache (`fwsessions`), data protection keys in `fwkeys`.
-  - Optional MySQL support via `#define isMySQL` and matching SQL scripts.
+  - `Program.cs` uses minimal hosting, config via `FwConfig`, sessions via distributed SQL cache (`fwsessions`), and data protection keys in `fwkeys`.
+  - Optional MySQL support uses `#define isMySQL` and matching SQL scripts.
 - Database:
-  - SQL Server by default; schema scripts under `osafw-app/App_Data/sql`. Key tables: `users`, `settings`, `spages`, `att*`, `activity_logs`, `fw*` (framework).
+  - SQL Server by default. Schema scripts live under `osafw-app/App_Data/sql`.
+  - Key tables include `users`, `settings`, `spages`, `att*`, `activity_logs`, and framework `fw*` tables.
 
-## Folder Structure
+## Key Paths
+
 - `osafw-app/Program.cs` - app entrypoint and middleware registration.
-- `osafw-app/App_Code/fw/` - core framework:
-  - `FW`, `FwController`, `FwAdminController`, `FwVueController`, `FwDynamicController`, `FwVirtualController`
-  - `DB`, `FwConfig`, `FwCache`, `FwLogger`, `FwExceptions`, `FwReports`, `FwCron(Service)`, `FwUpdates`
-  - helpers: `Utils`, `FormUtils`, `DateUtils`, `ImageUtils`, `UploadUtils`, `SiteUtils`, `ConvUtils`
-  - templating: `ParsePage` (+ options in `FW.parsePageInstance`)
-- `osafw-app/App_Code/controllers/` - site/example controllers (Admin, Dev, My, auth, public).
-- `osafw-app/App_Code/models/` - models per table and domain (Att*, Demos*, Roles*, Reports*, Dev*).
-- `osafw-app/App_Data/template/` - templates, common includes, per-controller subfolders, dynamic configs.
-- `osafw-app/App_Data/sql/` - SQL scripts: `fwdatabase.sql`, `lookups.sql`, optional `roles.sql`, `demo.sql`, `views.sql`, and `updates/*`. MySQL variants under `mysql/`.
-- `docs/` - framework docs and ADRs.
-- `osafw-tests/` - tests project.
+- `osafw-app/App_Code/fw/` - core framework: `FW`, controller bases, `DB`, config/cache/logging, reports, cron, updates, utilities, and `ParsePage`.
+- `osafw-app/App_Code/controllers/` - site/example controllers.
+- `osafw-app/App_Code/models/` - table and domain models.
+- `osafw-app/App_Data/template/` - templates, common includes, controller folders, and dynamic configs.
+- `osafw-app/App_Data/sql/` - SQL Server scripts plus optional MySQL variants under `mysql/`.
+- `docs/` - framework docs, ADRs, and agent docs.
+- `osafw-tests/` - test project.
 
 ## Coding Style
-- C# on .NET 10, nullable enabled, namespace `osafw`.
-- Use spaces for indentation. JavaScript uses 4-space indents; XML uses 2-space indents.
-- Controllers: classes end with `Controller`, public action methods end with `Action`. Standard actions (constants in `FW`): `Index`, `Show`, `ShowForm`, `Save`, `SaveMulti`, `ShowDelete`, `Delete`. Overloads supported with `string` or `int` id; router resolves best match.
-- Controllers return `FwDict` `ps` parsed by `FW.parser`. For JSON set `ps["_json"]=true` or assign data to `ps["_json"]`.
-- Models: inherit `FwModel`. Obtain via `fw.model<T>()` or `fw.model("Name")`. Keep SQL in models, not controllers.
-- Framework convention: `list*()` methods return an empty `FwList`/`DBList`, and `one*()` methods return an empty `FwDict`/`DBRow`; do not add nullable fallbacks unless the specific source can truly be null.
-- Routing: `FW.getRoute()` implements RESTful mapping by HTTP method and URL. Prefixes (e.g., `/Admin`) are supported.
-- Access control: static `access_level` on controller + `FwConfig.access_levels` rules. XSS token validated on mutating requests.
-- Templates: prefer view composition in `osafw-app/App_Data/template`; override controller base dir with `controller.template_basedir` or `ps["_basedir_controller"]`.
+
+- C# uses .NET 10, nullable enabled, namespace `osafw`, and spaces for indentation.
+- JavaScript uses 4-space indents. XML uses 2-space indents.
+- Controllers end with `Controller`; public action methods end with `Action`.
+- Standard action names are constants in `FW`: `Index`, `Show`, `ShowForm`, `Save`, `SaveMulti`, `ShowDelete`, `Delete`.
+- Controllers return `FwDict` `ps` parsed by `FW.parser`. For JSON, set `ps["_json"]=true` or assign data to `ps["_json"]`.
+- Models inherit `FwModel`. Obtain them with `fw.model<T>()` or `fw.model("Name")`. Keep SQL in models, not controllers.
+- `list*()` methods return empty `FwList`/`DBList`; dictionary-backed `one*()` methods return empty `FwDict`/`DBRow`; typed single-row methods (`DB.row<T>`, `DB.rowp<T>`, `oneT*`) return `null` when no record is found unless using `*OrFail`.
+- `FW.getRoute()` implements RESTful routing by HTTP method and URL. Prefixes such as `/Admin` are supported.
+- Access control uses static `access_level` on controllers plus `FwConfig.access_levels` rules. XSS tokens are validated on mutating requests.
+- Prefer view composition in `osafw-app/App_Data/template`; override a controller base directory with `controller.template_basedir` or `ps["_basedir_controller"]`.
 - Keep ParsePage route literal templates such as `App_Data/template/**/url.html` on one line with no trailing newline byte.
-- Utilities: use `FormUtils` for filtering/validation, `DateUtils` for user TZ formatting, `FwLogger` for logs, `FwCache` for memoization.
-- For SQL queries or SQL fragments in code, prefer a single `$@"..."` string block over concatenated pieces so whitespace, quoting, and review are reliable.
-- For new or updated C# methods, add XML docs explaining why the method exists and include detailed param/return info for non-primitive types; add inline comments for complex logic blocks.
+- Use `FormUtils` for filtering/validation, `DateUtils` for user timezone formatting, `FwLogger` for logs, and `FwCache` for memoization.
+- For SQL queries or SQL fragments in code, prefer one `$@"..."` string block over concatenated pieces.
+- For new or updated C# methods, add XML docs explaining why the method exists and include detailed param/return info for non-primitive types. Add inline comments only for complex logic blocks.
 
 ## Sub-Agent Delegation
-- The main agent owns task outcome, user communication, integration, and final verification. Use sub-agents to preserve focus when a bounded part of the work can run independently.
-- At the start of non-trivial tasks, identify: critical-path work that must stay local, side work that can run in parallel, and high-risk or tightly coupled work that should not be delegated.
-- Good delegation targets include targeted codebase research, independent docs/spec review, focused implementation in a disjoint area, post-implementation test execution, and code review via `docs/agents/code_reviewer.md`.
-- Do not delegate vague ownership, broad "look around" tasks, or urgent blockers where the main agent cannot make progress until the answer returns.
-- Give every sub-agent a narrow prompt with expected output, owned files/modules, and clear constraints. For code-editing workers, state that they are not alone in the codebase, must not revert others' changes, and must list changed paths in their final response.
-- Prefer a small number of parallel sub-agents over many shallow ones. Inspect their evidence and changes before relying on them, then record material commands, findings, and decisions in the task summary.
+
+- The main agent owns the task outcome, user communication, integration, and final verification.
+- Delegate only bounded work with clear expected output, owned files/modules, and constraints.
+- Good delegation targets include targeted codebase research, independent docs/spec review, focused implementation in disjoint files, post-implementation test execution, and code review.
+- Do not delegate vague repo sweeps, broad ownership, or blockers where the main agent cannot progress until the answer returns.
+- For code-editing workers, state that they are not alone in the codebase, must not revert others' changes, and must list changed paths in their final response.
+- Prefer a small number of useful parallel sub-agents over many shallow ones. Inspect their evidence and changes before relying on them, then record material findings and commands in the task summary.
 
 ## Agent Workspace
-- Put disposable agent-created probes, temp scripts, and scratch outputs under `docs/agents/artifacts/`.
+
+- Put disposable probes, temp scripts, and scratch outputs under `docs/agents/artifacts/`.
 - Keep `docs/agents/artifacts/` gitignored; do not leave `tmp_*` scratch files at repo root or under `osafw-app/`.
-- Use repo-root `/artifacts/` for build outputs and larger generated verification assets that do not belong under docs.
-- Keep machine-specific agent guidance in `docs/agents/local_instructions.md`; check it before implementation when present, and keep that file out of Git.
+- Use repo-root `artifacts/` for build outputs and larger generated verification assets that do not belong under docs.
+- Keep machine-specific guidance in `docs/agents/local_instructions.md`; check it before implementation and keep it out of Git.
 - Put reusable agent/debug helpers under `docs/agents/tools/`.
 - Do not store secrets, DB backups, or large logs in any agent workspace folder.
 
-## Helpful Docs
-- `docs/README.md` - documentation map and recommended reading order.
-- `docs/templates.md` - templates and ParsePage guide.
-- `docs/dynamic.md` - Dynamic/Vue controllers config.
-- `docs/crud.md` - CRUD workflows.
-- `docs/db.md` - DB helper overview and patterns.
-- `docs/datetime.md` - per-user date/time and timezones.
-- `docs/layout.md` - layout and page structure.
-- `docs/dashboard.md` - dashboard panels.
-- `docs/feature_modules.md` - module scaffolding.
-- `docs/agents/code_reviewer.md` - review-fix loop instructions for code reviewer agents.
-- `docs/agents/heuristics.md` - concise reusable working heuristics.
-- `docs/agents/domain.md` - stable framework domain facts.
-- `docs/agents/glossary.md` - framework vocabulary.
-- `docs/adr/*` - architecture decisions (cache, db helper, ParsePage, datetime).
-- `osafw-app/App_Data/template/dev/manage/docs/*` - in-app developer docs.
-- SQL: `osafw-app/App_Data/sql/*.sql` (+ `mysql/*`).
+## Documentation Entry Points
+
+- Use `docs/README.md` for the full documentation map and recommended reading order.
+- High-frequency implementation docs:
+  - `docs/templates.md` - ParsePage templates and parser rules.
+  - `docs/dynamic.md` - Dynamic/Vue controller config.
+  - `docs/crud.md` and `docs/db.md` - CRUD and data-access patterns.
+  - `docs/datetime.md` - per-user date/time and timezone behavior.
+  - `docs/layout.md`, `docs/dashboard.md`, and `docs/feature_modules.md` - shared UI and module scaffolding.
+- Agent docs:
+  - `docs/agents/code_reviewer.md` - review loop instructions.
+  - `docs/agents/mcp.md` - MCP usage and troubleshooting notes.
+  - `docs/agents/heuristics.md`, `docs/agents/domain.md`, and `docs/agents/glossary.md` - reusable project knowledge.
 
 ## Documentation Sync
-- `docs/templates.md` is the canonical templates and ParsePage doc for this repo.
-- When changing shared ParsePage behavior, shared layout fragments, standard dynamic-controller screen structure, schema/update process, or agent workflow, review the related docs in the same task and note when no doc update was needed.
-- When code changes alter agent workflow, review `AGENTS.md`, `docs/agents/code_reviewer.md`, and task-summary expectations together so they do not drift.
+
+- Agent instruction sync set: `AGENTS.md`, `.github/copilot-instructions.md`, `docs/agents/code_reviewer.md`, `docs/README.md`, and task-summary expectations.
+- `docs/templates.md` is the canonical templates and ParsePage doc.
+- When changing shared ParsePage behavior, shared layout fragments, standard dynamic-controller screen structure, schema/update process, public framework behavior, or agent workflow, review the related docs in the same task and note when no doc update was needed.
+- When schema changes are present, consider both the additive update path under `osafw-app/App_Data/sql/updates/` and the from-scratch schema reference in `osafw-app/App_Data/sql/fwdatabase.sql`.
 
 ## Testing Guidance
-- Prefer the smallest relevant verification that can falsify the change quickly: targeted build, focused test, then manual smoke for the affected flow.
-- If no automated coverage exists or is practical, record concise manual verification steps and prerequisites in the task summary instead of inventing broad QA plans.
-- For schema changes, verify both the additive update path (`App_Data/sql/updates`) and the from-scratch schema reference (`App_Data/sql/fwdatabase.sql`) were considered.
 
-## Common Tasks
-- Build solution: `dotnet build osafw-asp.net-core.sln`.
+- Prefer targeted build/test/manual checks before broad suites.
+- If no automated coverage exists or is practical, record concise manual verification steps and prerequisites in the task summary.
 - Build app: `dotnet build osafw-app/osafw-app.csproj`.
 - Build app to isolated output when normal `bin/Debug` is locked: `dotnet build osafw-app/osafw-app.csproj -p:OutDir=artifacts/assistant_build/`.
+- Build solution: `dotnet build osafw-asp.net-core.sln`.
+- Test: `dotnet test`.
+
+## Common Commands
+
+- Restore: `dotnet restore`.
 - Run app: `dotnet run --project osafw-app`.
 - Watch app: `dotnet watch run --project osafw-app`.
-- Test: `dotnet test`.
-- Database setup (SQL Server): run `osafw-app/App_Data/sql/fwdatabase.sql`, then `lookups.sql`. Run `roles.sql` if roles required. Optionally `demo.sql` for sample data. Rebuild indexes as needed.
-- Configure connection: `appsettings*.json` under `appSettings.db.main` (`type`, `connection_string`).
-- Switch to MySQL: define `isMySQL` in `Program.cs`, set `db.main.type` to MySQL, use scripts from `osafw-app/App_Data/sql/mysql/`.
+- Database setup for SQL Server: run `osafw-app/App_Data/sql/fwdatabase.sql`, then `lookups.sql`; add `roles.sql` and `demo.sql` when needed.
+- Configure connection strings in `appsettings*.json` under `appSettings.db.main` (`type`, `connection_string`).
+- Switch to MySQL: define `isMySQL` in `Program.cs`, set `db.main.type` to MySQL, and use scripts from `osafw-app/App_Data/sql/mysql/`.
 - Scheduled tasks: uncomment `builder.Services.AddHostedService<FwCronService>();` in `Program.cs`.
-- Windows auth: enable Negotiate and use `/winlogin` path.
+- Windows auth: enable Negotiate and use `/winlogin`.
 - Sessions/Data Protection: ensure `fwsessions` and `fwkeys` tables exist.
 
 ## MCP Tooling
-- Prefer Visual Studio MCP for solution-aware work. Validate it with `solution_info` or `project_list`, then use `document_*`, `build_*`, `build_status`, `errors_list`, and debugger tools as needed.
-- Prefer Playwright MCP for browser repros and UI verification. Re-run `browser_snapshot` after navigation or meaningful DOM changes; use `browser_evaluate`, console, or network tools when snapshots omit needed details.
-- Check each MCP independently. Do not infer Visual Studio MCP health from generic MCP resource discovery or from Playwright health, and vice versa.
-- If Playwright reports `EPERM` around `C:\Windows\System32\.playwright-mcp` but still returns a valid snapshot, URL, or title, treat it as usable and verify real page state before abandoning it.
-- If a required MCP is missing, cannot connect, or returns a blocking runtime error, do one quick validation and at most one lightweight retry. If still blocked, stop and ask the user whether to use a non-MCP workaround or restart/fix that MCP first.
-- Do not spend multiple turns looping on MCP recovery unless the user explicitly asks for fallback attempts. If the user explicitly asked to use MCP, prefer waiting for a working MCP path over silently switching to CLI.
-- Machine-specific local app URLs, credentials, and browser notes belong in `docs/agents/local_instructions.md`.
 
-## Command Palette
-- `dotnet restore`; `dotnet build`; `dotnet run --project osafw-app`; `dotnet watch run --project osafw-app`; `dotnet test`.
-
-## Heuristics
-- See `docs/agents/heuristics.md`.
+- Prefer Visual Studio MCP for solution-aware .NET work when available; validate it independently before relying on it.
+- Prefer Playwright MCP for browser repros and UI verification; rerun snapshots after navigation or meaningful DOM changes.
+- If a required MCP is missing or blocked, do one quick validation and at most one lightweight retry. Then ask the user whether to fix MCP or use a non-MCP fallback.
+- Keep machine-specific URLs, credentials, and browser notes in `docs/agents/local_instructions.md`.
+- See `docs/agents/mcp.md` for detailed MCP troubleshooting guidance.

@@ -26,9 +26,10 @@ Use this file to find the right document quickly instead of searching the whole 
 - [agents/heuristics.md](agents/heuristics.md): terse working heuristics discovered during tasks.
 - [agents/glossary.md](agents/glossary.md): project terms and framework vocabulary.
 - [agents/code_reviewer.md](agents/code_reviewer.md): review loop instructions for code reviewer agents.
+- [agents/mcp.md](agents/mcp.md): MCP usage and troubleshooting notes.
 
 ## Which Doc to Use
 
 - If the task changes templates or screen composition: start with `templates.md`, then `layout.md`, then `dynamic.md` if a dynamic controller is involved.
 - If the task changes models, queries, or save flows: start with `crud.md`, then `db.md`, then `datetime.md` if date fields are involved.
-- If the task affects repo workflow or agent instructions: read `AGENTS.md`, then `agents/code_reviewer.md`, then the active task summary in `docs/agents/tasks/`.
+- If the task affects repo workflow or agent instructions: read `AGENTS.md`, `agents/code_reviewer.md`, `.github/copilot-instructions.md`, and the active task summary in `docs/agents/tasks/`.
