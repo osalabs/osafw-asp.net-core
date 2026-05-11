@@ -161,7 +161,8 @@ Prefer `load_script.html` over large inline `<script>` blocks in `main.html`.
 - Be careful with string flags: non-empty strings are truthy for `if`.
 - Missing template files often render empty output rather than failing loudly.
 - Avoid copying large legacy template chunks when a shared common fragment plus a small override will do.
-- Do not put bare `<~title>` inside a local `title.html`; a local partial can shadow page-state keys and recursively expand itself.
+- Recursive templates are allowed for tree-like structures such as sitemaps, but ParsePage stops rendering deeper file includes after its recursion-depth limit and logs a `WARN`.
+- Avoid bare `<~title>` inside a local `title.html`; it can still expand recursively until the depth limit. The intended fix is usually `<~title var>` or passing `title` explicitly.
 
 ## Related Docs
 

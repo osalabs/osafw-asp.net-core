@@ -28,5 +28,5 @@ Boundaries
 - DB access encapsulated by `DB` helper and models.
 - Dictionary DB single-row reads return empty `DBRow`/`FwDict` for "not found"; typed single-row reads return `null`, with `*OrFail` variants for required records.
 - UI rendered by `ParsePage` templates; no Razor.
-- ParsePage recursive file-template includes log `WARN` and render that include as empty.
+- ParsePage allows recursive file-template includes for tree rendering, but stops deeper includes at a fixed crash-protection recursion-depth limit and logs `WARN`.
 - Multi-tenancy per-host via `FwConfig` overrides and caching.

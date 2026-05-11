@@ -167,6 +167,7 @@ public class ParsePage
     private const string DATE_FORMAT_LONG = "M/d/yyyy HH:mm:ss";
     private const string DATE_FORMAT_SQL = "yyyy-MM-dd HH:mm:ss";
     private const string DATE_TIMEZONE_DEF = "UTC";
+    public const int MAX_TEMPLATE_RECURSION_DEPTH = 100; // high enough for real trees, low enough to avoid process-killing runaway recursion
     // "d M yyyy HH:mm"
 
     // current date formats - may be changed in constructor based on user settings
@@ -263,7 +264,17 @@ public class ParsePage
         return _parse_page("", hf, tpl, parent_hf);
     }
 
-    private string _parse_page(string tpl_name, FwDict hf, string page, FwDict parent_hf, FwDict? parent_attrs = null)
+    /// <summary>
+    /// Parses a file or inline template while tracking file-template depth to stop runaway recursive includes.
+    /// </summary>
+    /// <param name="tpl_name">Template path used for file lookup and relative include resolution. Empty when parsing a raw inline string.</param>
+    /// <param name="hf">Current template data dictionary used to resolve normal tags.</param>
+    /// <param name="page">Optional inline template content. When empty and <paramref name="tpl_name"/> is set, the template is loaded from disk.</param>
+    /// <param name="parent_hf">Parent template data dictionary used by `PARSEPAGE.PARENT` and related nested parsing.</param>
+    /// <param name="parent_attrs">Attributes from the parent tag that requested this parse, used for parser options such as `nolang`.</param>
+    /// <param name="recursionDepth">Current file-template nesting depth for this parse call chain.</param>
+    /// <returns>Parsed template output, or an empty string when the template is missing or the recursion depth limit is exceeded.</returns>
+    private string _parse_page(string tpl_name, FwDict hf, string page, FwDict parent_hf, FwDict? parent_attrs = null, int recursionDepth = 0)
     {
         if (tpl_name == null)
         {
@@ -275,6 +286,17 @@ public class ParsePage
             tpl_name = basedir + "/" + tpl_name;
 
         logger(LogLevel.TRACE, $"ParsePage - Parsing template = {tpl_name}, pagelen={page.Length}");
+        var isFileTemplate = !string.IsNullOrEmpty(tpl_name) && page.Length < 1;
+        if (isFileTemplate)
+        {
+            recursionDepth += 1;
+            if (recursionDepth > MAX_TEMPLATE_RECURSION_DEPTH)
+            {
+                logger(LogLevel.WARN, "ParsePage - template recursion depth limit exceeded, template=", tpl_name, ", depth=", recursionDepth.ToString(), ", max=", MAX_TEMPLATE_RECURSION_DEPTH.ToString());
+                return "";
+            }
+        }
+
         if (page.Length < 1)
             page = precache_file(TMPL_PATH + tpl_name);
         if (page.Length == 0)
@@ -336,7 +358,7 @@ public class ParsePage
                 {
                     string value;
                     if (attrs.ContainsKey("repeat"))
-                        value = _attr_repeat(ref tag, ref tag_value, ref tpl_name, ref inline_tpl, hf);
+                        value = _attr_repeat(ref tag, ref tag_value, ref tpl_name, ref inline_tpl, hf, recursionDepth);
                     else if (attrs.ContainsKey("select"))
                     {
                         // this is special case for '<select>' HTML tag when options passed as FwList
@@ -350,7 +372,7 @@ public class ParsePage
                             value = Utils.htmlescape(value);
                     }
                     else if (attrs.ContainsKey("sub"))
-                        value = _attr_sub(tag, tpl_name, hf, attrs, inline_tpl, parent_hf, tag_value);
+                        value = _attr_sub(tag, tpl_name, hf, attrs, inline_tpl, parent_hf, tag_value, recursionDepth);
                     else
                     {
                         if (attrs.ContainsKey("json"))
@@ -364,7 +386,7 @@ public class ParsePage
                 }
                 else if (attrs.ContainsKey("repeat"))
                 {
-                    v = _attr_repeat(ref tag, ref tag_value, ref tpl_name, ref inline_tpl, hf);
+                    v = _attr_repeat(ref tag, ref tag_value, ref tpl_name, ref inline_tpl, hf, recursionDepth);
                     tag_replace(ref page, ref tag_full, ref v, attrs, tag_value);
                 }
                 else if (attrs.ContainsKey("var"))
@@ -389,7 +411,7 @@ public class ParsePage
                 else if (attrs.ContainsKey("radio"))
                 {
                     // # this is special case for '<index type=radio>' HTML tag
-                    v = _attr_radio(tag_tplpath(tag, tpl_name), hf, attrs);
+                    v = _attr_radio(tag_tplpath(tag, tpl_name), hf, attrs, recursionDepth);
                     tag_replace(ref page, ref tag_full, ref v, attrs, tag_value);
                 }
                 else if (attrs.ContainsKey("noparse"))
@@ -406,13 +428,13 @@ public class ParsePage
                 {
                     // #also checking for sub
                     if (attrs.ContainsKey("sub"))
-                        v = _attr_sub(tag, tpl_name, hf, attrs, inline_tpl, parent_hf, tag_value);
+                        v = _attr_sub(tag, tpl_name, hf, attrs, inline_tpl, parent_hf, tag_value, recursionDepth);
                     else if (is_found_last_hfvalue)
                         // value found but empty
                         v = "";
                     else
                         // value not found - looks like subtemplate in file
-                        v = _parse_page(tag_tplpath(tag, tpl_name), hf, inline_tpl, parent_hf, attrs);
+                        v = _parse_page(tag_tplpath(tag, tpl_name), hf, inline_tpl, parent_hf, attrs, recursionDepth);
                     tag_replace(ref page, ref tag_full, ref v, attrs, tag_value);
                 }
             }
@@ -710,7 +732,19 @@ public class ParsePage
         return tag_value;
     }
 
-    private string _attr_sub(string tag, string tpl_name, FwDict hf, FwDict attrs, string inline_tpl, FwDict parent_hf, object tag_value)
+    /// <summary>
+    /// Parses a tag with the `sub` attribute against a child dictionary while preserving the active depth counter.
+    /// </summary>
+    /// <param name="tag">Resolved tag name for the sub-template file.</param>
+    /// <param name="tpl_name">Current template path used to resolve relative sub-template paths.</param>
+    /// <param name="hf">Current template data dictionary.</param>
+    /// <param name="attrs">Parsed tag attributes, including optional `sub` value.</param>
+    /// <param name="inline_tpl">Inline template body, if the tag used `inline`; otherwise empty.</param>
+    /// <param name="parent_hf">Parent data dictionary available to nested parsing.</param>
+    /// <param name="tag_value">Resolved tag value used as the child dictionary when `sub` does not name another value.</param>
+    /// <param name="recursionDepth">Current file-template nesting depth shared by the parse call chain.</param>
+    /// <returns>Parsed child template output.</returns>
+    private string _attr_sub(string tag, string tpl_name, FwDict hf, FwDict attrs, string inline_tpl, FwDict parent_hf, object tag_value, int recursionDepth)
     {
         FwDict? sub_hf = null;
         var sub = attrs["sub"].toStr();
@@ -729,7 +763,7 @@ public class ParsePage
             sub_hf = [];
         }
 
-        return _parse_page(tag_tplpath(tag, tpl_name), sub_hf, inline_tpl, parent_hf, attrs);
+        return _parse_page(tag_tplpath(tag, tpl_name), sub_hf, inline_tpl, parent_hf, attrs, recursionDepth);
     }
 
     // Check for misc if attrs
@@ -860,8 +894,17 @@ public class ParsePage
         return inline_tpl;
     }
 
-    // return ready HTML
-    private string _attr_repeat(ref string tag, ref object tag_val_array, ref string tpl_name, ref string inline_tpl, FwDict parent_hf)
+    /// <summary>
+    /// Parses a repeat tag for each row while reusing the current depth counter to limit runaway recursive row templates.
+    /// </summary>
+    /// <param name="tag">Repeat tag name; may resolve to an external row template when no inline body is present.</param>
+    /// <param name="tag_val_array">Resolved repeat value expected to be an <see cref="IList"/> of row objects.</param>
+    /// <param name="tpl_name">Current template path used to resolve the repeat row template.</param>
+    /// <param name="inline_tpl">Inline repeat template body, if present.</param>
+    /// <param name="parent_hf">Parent data dictionary passed through to each repeated row parse.</param>
+    /// <param name="recursionDepth">Current file-template nesting depth shared by the parse call chain.</param>
+    /// <returns>Concatenated parsed output for all repeat rows, or an empty string for non-list values.</returns>
+    private string _attr_repeat(ref string tag, ref object tag_val_array, ref string tpl_name, ref string inline_tpl, FwDict parent_hf, int recursionDepth)
     {
         // Validate: if input doesn't contain array - return "" - nothing to repeat
         if (tag_val_array is not IList)
@@ -880,7 +923,7 @@ public class ParsePage
         for (int i = 0; i <= list.Count - 1; i++)
         {
             var row = proc_repeat_modifiers(list, i);
-            value.Append(_parse_page(ttpath, row, inline_tpl, parent_hf));
+            value.Append(_parse_page(ttpath, row, inline_tpl, parent_hf, recursionDepth: recursionDepth));
         }
         return value.ToString();
     }
@@ -1317,7 +1360,15 @@ public class ParsePage
         return result.ToString();
     }
 
-    private string _attr_radio(string tpl_path, FwDict hf, FwDict attrs)
+    /// <summary>
+    /// Renders radio inputs from a `.sel` file and parses option labels with the current depth counter.
+    /// </summary>
+    /// <param name="tpl_path">Path to the `.sel` file containing value and label pairs.</param>
+    /// <param name="hf">Current template data dictionary used to resolve selected value and label tags.</param>
+    /// <param name="attrs">Parsed radio tag attributes such as `radio`, `name`, and `delim`.</param>
+    /// <param name="recursionDepth">Current file-template nesting depth shared by the parse call chain.</param>
+    /// <returns>Rendered Bootstrap radio input HTML, or an empty string when no options file exists.</returns>
+    private string _attr_radio(string tpl_path, FwDict hf, FwDict attrs, int recursionDepth)
     {
         StringBuilder result = new();
         string sel_value = hfvalue(attrs["radio"].toStr(), hf).toStr();
@@ -1349,7 +1400,7 @@ public class ParsePage
                 continue;
 
             FwDict parent_hf = [];
-            desc = _parse_page("", hf, desc, parent_hf, attrs);
+            desc = _parse_page("", hf, desc, parent_hf, attrs, recursionDepth);
 
             if (!attrs.ContainsKey("noescape"))
             {

@@ -27,4 +27,4 @@ Updated: 2026-05-11
 - 2026-05-11: If normal build output is locked, build into repo-root `artifacts/` with `-p:OutDir=artifacts/assistant_build/`.
 - 2026-05-11: When agent workflow changes, keep `AGENTS.md`, `.github/copilot-instructions.md`, `docs/agents/code_reviewer.md`, and task-summary expectations aligned.
 - 2026-05-11: Keep dictionary single-row reads empty-row based, but use `null` for typed single-row reads so missing records cannot masquerade as default DTOs.
-- 2026-05-11: For ParsePage recursion guards, compare canonical template file paths, not logical tag strings.
+- 2026-05-11: For ParsePage recursion protection, prefer a file-include depth limit over cycle detection so legitimate recursive tree templates can render.

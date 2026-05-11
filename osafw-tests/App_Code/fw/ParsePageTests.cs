@@ -135,6 +135,93 @@ namespace osafw.Tests
         }
 
         [TestMethod()]
+        public void parse_page_recursive_template_renders_until_depth_limit_and_logs_warning()
+        {
+            string tempDir = Path.Combine(Path.GetTempPath(), $"parsepage-recursion-tests-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDir);
+
+            try
+            {
+                File.WriteAllText(Path.Combine(tempDir, "main.html"), "Before<~title>After");
+                File.WriteAllText(Path.Combine(tempDir, "title.html"), "T<~title>");
+
+                List<string> warnings = [];
+                var parser = new ParsePage(new ParsePageOptions
+                {
+                    TemplatesRoot = tempDir,
+                    Logger = (level, messages) =>
+                    {
+                        if (level == LogLevel.WARN)
+                            warnings.Add(string.Concat(messages));
+                    },
+                });
+
+                var output = parser.parse_page("", "main.html", []);
+                var expectedTitleRecursions = new string('T', ParsePage.MAX_TEMPLATE_RECURSION_DEPTH - 1);
+
+                Assert.AreEqual("Before" + expectedTitleRecursions + "After", output);
+                Assert.AreEqual(1, warnings.Count);
+                StringAssert.Contains(warnings[0], "template recursion depth limit exceeded");
+                StringAssert.Contains(warnings[0], "title.html");
+            }
+            finally
+            {
+                if (Directory.Exists(tempDir))
+                    Directory.Delete(tempDir, true);
+            }
+        }
+
+        [TestMethod()]
+        public void parse_page_sitemap_style_recursive_templates_render_tree_without_warning()
+        {
+            string tempDir = Path.Combine(Path.GetTempPath(), $"parsepage-tree-recursion-tests-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDir);
+
+            try
+            {
+                File.WriteAllText(Path.Combine(tempDir, "main.html"), "<ul><~pages_tree repeat></ul>");
+                File.WriteAllText(Path.Combine(tempDir, "pages_tree.html"), "<li><~iname><~pages_children></li>");
+                File.WriteAllText(Path.Combine(tempDir, "pages_children.html"), "<ul><~children repeat></ul>");
+                File.WriteAllText(Path.Combine(tempDir, "children.html"), "<~pages_tree>");
+
+                var child = new FwDict
+                {
+                    { "iname", "Child" },
+                    { "children", new FwList() },
+                };
+                var root = new FwDict
+                {
+                    { "iname", "Root" },
+                    { "children", new FwList { child } },
+                };
+
+                List<string> warnings = [];
+                var parser = new ParsePage(new ParsePageOptions
+                {
+                    TemplatesRoot = tempDir,
+                    Logger = (level, messages) =>
+                    {
+                        if (level == LogLevel.WARN)
+                            warnings.Add(string.Concat(messages));
+                    },
+                });
+
+                var output = parser.parse_page("", "main.html", new FwDict
+                {
+                    { "pages_tree", new FwList { root } },
+                });
+
+                Assert.AreEqual("<ul><li>Root<ul><li>Child<ul></ul></li></ul></li></ul>", output);
+                Assert.AreEqual(0, warnings.Count);
+            }
+            finally
+            {
+                if (Directory.Exists(tempDir))
+                    Directory.Delete(tempDir, true);
+            }
+        }
+
+        [TestMethod()]
         public void parse_stringTest()
         {
             string tpl = "<~AAA><br/><~BBB><br/><~CCC><br/><~DDD><br/>";
