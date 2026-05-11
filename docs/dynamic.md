@@ -4,9 +4,15 @@
 
 Below is a description of the configuration format that controls behaviour of both controllers.
 
+## Start Here
+
+- Use this doc when a controller inherits `FwDynamicController` or `FwVueController`, or when a task changes `config.json`.
+- Read the top sections first for shared keys and common patterns.
+- Use the type reference later as a lookup table when you need the exact options for a single field type.
+
 ### config.json for Dynamic/Vue controllers
 
-In `FwDynamicController` controller behaviour defined by `/template/CONTROLLER/config.json`. Sample file can be fount at `/template/admin/demosdynamic/config.json`
+In `FwDynamicController`, controller behaviour is defined by `/template/CONTROLLER/config.json`. A sample file can be found at `/template/admin/demosdynamic/config.json`.
 
 Common config keys include:
 - `model` – main model name

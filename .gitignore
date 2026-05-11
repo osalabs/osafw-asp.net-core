@@ -11,3 +11,7 @@
 
 /osafw-app/Properties/launchSettings.json
 /docs/drafts
+/artifacts/
+/docs/agents/local_instructions.md
+/docs/agents/artifacts/*
+!/docs/agents/artifacts/.gitignore

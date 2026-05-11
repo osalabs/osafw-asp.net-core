@@ -1,4 +1,176 @@
-# ParsePage
+# Templates and ParsePage
+
+This project renders HTML through ParsePage templates under `osafw-app/App_Data/template/`. The template layer is intentionally lightweight: it is good at composition, repetition, small conditionals, and output formatting. It is not where business rules should live.
+
+## Start Here
+
+- Use this doc when changing templates, shared UI fragments, layout includes, or ParsePage parser behavior.
+- Start from the controller action and matching template folder before editing shared fragments.
+- Prefer common templates and small overrides before copying large blocks of markup.
+- Check `osafw-app/App_Code/fw/ParsePage.cs` when a parser feature is ambiguous or when older docs and current behavior differ.
+
+## Mental Model
+
+- Controllers decide what data the screen needs.
+- Models prepare shared state and business-specific data.
+- ParsePage merges that data into HTML fragments.
+- A layout wraps the screen output into the final page shell.
+
+When building or fixing a screen, identify:
+
+1. Which controller action owns the route?
+2. Which template folder matches that action?
+3. Which shared partials or layout fragments does the screen reuse?
+
+## Template Folder Structure
+
+A standard admin screen usually looks like this:
+
+```text
+osafw-app/App_Data/template/admin/<screen>/
+  config.json
+  index/
+    main.html
+    title.html
+    list_table.html
+    list_filter_more.html
+    load_script.html
+  show/
+    main.html
+    title.html
+    form.html
+    btn_std_more.html
+    load_script.html
+  showform/
+    main.html
+    title.html
+    form.html
+    btn_std_more.html
+    load_script.html
+```
+
+Shared building blocks live under:
+
+- `osafw-app/App_Data/template/common/list/`
+- `osafw-app/App_Data/template/common/form/`
+- `osafw-app/App_Data/template/common/vue/`
+- `osafw-app/App_Data/template/layout/`
+
+If a file is missing, ParsePage usually renders empty output for that slot. Override only the files you actually need.
+
+## The Most Important Rule
+
+ParsePage conditions and repeat attributes work on ParsePage tags, not plain HTML tags.
+
+Wrong:
+
+```html
+<div class="row" if="attachments">...</div>
+```
+
+Right:
+
+```html
+<~attachments_block if="attachments" inline>
+  <div class="row">...</div>
+</~attachments_block>
+```
+
+Use ParsePage attributes such as `if`, `unless`, and `repeat` on `<~...>` tags.
+
+## Common Patterns
+
+### Include another template file
+
+```html
+<~/common/list/pagination>
+<~/layout/sidebar>
+```
+
+### Inline conditional block
+
+```html
+<~warning if="has_warning" inline>
+  <div class="alert alert-warning"><~message></div>
+</~warning>
+```
+
+### Repeat rows
+
+```html
+<~rows repeat inline>
+  <tr>
+    <td><~repeat.iteration></td>
+    <td><~iname></td>
+  </tr>
+</~rows>
+```
+
+### Toggle a small HTML attribute
+
+```html
+<input
+  type="checkbox"
+  name="item[is_active]"
+  value="1"
+  <~/common/attr/checked if="i[is_active]">
+>
+```
+
+### Render a controller-selected partial
+
+```html
+<~std_pane sub="panes[plate1]">
+```
+
+That pattern is useful when the controller chooses which shared fragment to render.
+
+## Dynamic Controller Conventions
+
+For `FwDynamicController` and `FwVueController` screens, behavior is usually split across:
+
+- controller overrides in `osafw-app/App_Code/controllers/`
+- model helpers in `osafw-app/App_Code/models/`
+- `config.json`
+- shared `common/form`, `common/list`, or `common/vue` fragments
+- screen-specific overrides under `osafw-app/App_Data/template/admin/...`
+
+Common file roles:
+
+- `index/main.html`: page shell for list view
+- `index/list_filter_more.html`: custom filters or extra list controls
+- `index/list_table.html`: list/table override when common markup is not enough
+- `show/form.html`: read-only record rendering
+- `showform/form.html`: add/edit form rendering
+- `load_script.html`: screen-specific assets or JS includes
+
+Prefer `load_script.html` over large inline `<script>` blocks in `main.html`.
+
+## Practical Rules
+
+- Keep business rules in controllers/models, not in templates.
+- Reuse shared common fragments before cloning large sections of list or form markup.
+- Keep route literal templates such as `url.html` on a single line with no trailing newline byte; otherwise the newline can leak into generated URLs.
+- When a screen-specific block needs JavaScript, prefer `load_script.html`.
+- When a value should be raw HTML, use `noescape` deliberately and trace where it is produced.
+- When exact matching matters, use comparison attributes (`ifeq`, `ifne`, etc.) instead of relying on truthiness.
+
+## Pitfalls
+
+- Do not put `if`, `unless`, `repeat`, or similar attributes on plain HTML tags.
+- Be careful with string flags: non-empty strings are truthy for `if`.
+- Missing template files often render empty output rather than failing loudly.
+- Avoid copying large legacy template chunks when a shared common fragment plus a small override will do.
+- Do not put bare `<~title>` inside a local `title.html`; a local partial can shadow page-state keys and recursively expand itself.
+
+## Related Docs
+
+- [layout.md](layout.md) for page-shell composition.
+- [dashboard.md](dashboard.md) for dashboard/admin screen structure.
+- [dynamic.md](dynamic.md) for `config.json`-driven screens.
+
+## Parser Reference
+
 ParsePage is a template parser engine, good for web development.
 
 ## Overview
@@ -332,7 +504,6 @@ rows.html template file:
        <div>already sold</div>
      </~somelabel>
 ```
-  
 
 - `parent` - this tag needs to be read from parent's PS var, not from current PS hashtable (usually used inside `repeat` sub-templates), example:
 ```
@@ -482,7 +653,7 @@ And if user's language will be Spanish, parser will output `Hola John`.
 
 ### Common Templates (`/common`)
 
-The `/common` directory contains reusable sub-templates and utility files that can be included from any page or layout. 
+The `/common` directory contains reusable sub-templates and utility files that can be included from any page or layout.
 These help keep your templates DRY and consistent. Below are the most important templates and their usage:
 
 #### Utility and HTML Attribute Templates

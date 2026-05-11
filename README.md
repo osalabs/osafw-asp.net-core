@@ -9,7 +9,7 @@ Created as simplified and lightweight alternative to other ASP.NET frameworks li
 - MVC-like
   - code, data, templates are split
   - code consists of: controllers, models, framework core and optional 3rd party libs
-- uses [ParsePage template engine](https://github.com/osalabs/parsepage) ([detailed docs](docs/parsepage.md))
+- uses [ParsePage template engine](https://github.com/osalabs/parsepage) ([detailed docs](docs/templates.md))
   - data stored by default in SQL Server database [using db.net](https://github.com/osalabs/db.net) ([detailed docs](docs/db.md))
 - RESTful with some practical enhancements
 - flexible CRUD flows with `FwDict`/`FwList` or typed DTOs ([guide](docs/crud.md))
