@@ -42,6 +42,20 @@
             </td>
         </tr>
         <tr>
+            <td>DB Time Zone</td>
+            <td><~ok if="is_db_tz"><~fail unless="is_db_tz"></td>
+            <td>
+                DB Time Zone: <b><~db_tzId></b> <~db_tzInfo><br>
+                DB Class Instance Time Zone: <b><~db_class_tzId></b><br>
+                <~failmsg_db_tz unless="is_db_tz" inline>
+                    <br>
+                    <pre class="text-danger"><~db_tz_err></pre>
+                    1. Automatic DB Time Zone detection failed.<br>
+                    2. Set DB time zone manually in "appsettings.json" under "db.main.timezone" section.<br>
+                </~failmsg_db_tz>
+            </td>
+        </tr>
+        <tr>
             <td>DB tables exists</td>
             <td><~ok if="is_db_tables"><~fail unless="is_db_tables"></td>
             <td>

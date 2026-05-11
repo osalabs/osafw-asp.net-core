@@ -45,6 +45,7 @@ public class DevConfigureController : FwController
 
         DB db;
         ps["is_db_conn"] = false;
+        ps["is_db_tz"] = false;
         ps["is_db_tables"] = false;
         if (ps["is_db_config"].toBool())
         {
@@ -53,6 +54,44 @@ public class DevConfigureController : FwController
                 db = fw.getDB();
                 db.connect();
                 ps["is_db_conn"] = true;
+
+                var sql_tzId = "";
+                var sql_tzInfo = "";
+
+                try {
+                    if (db.dbtype == DB.DBTYPE_SQLSRV)
+                    {
+                        sql_tzId = "SELECT CURRENT_TIMEZONE_ID()";
+                        sql_tzInfo = "SELECT CURRENT_TIMEZONE()";
+                    }
+                    else if (db.dbtype == DB.DBTYPE_MYSQL)
+                    {
+                        sql_tzId = "SELECT @@system_time_zone";
+                        sql_tzInfo = "SELECT TIME_FORMAT(TIMEDIFF(NOW(), UTC_TIMESTAMP), '%H:%i')";
+                    }
+                    else
+                    {
+                        throw new Exception($"DB Time Zone check for the db type {db.dbtype} is not supported.");
+                    }
+
+                    var tzId = db.valuep(sql_tzId, DB.h()).toStr();
+                    ps["db_tzId"] = tzId;
+
+                    var tz = db.valuep(sql_tzInfo, DB.h()).toStr();
+                    ps["db_tzInfo"] = tz;
+
+                    var db_class_tzId = db.getTimezoneId();
+                    ps["db_class_tzId"] = db_class_tzId;
+
+                    if (tzId == db_class_tzId)
+                        ps["is_db_tz"] = true;
+                    else
+                        throw new Exception("DB Time Zone and DB Class Instance Time Zone is not equal.");
+                }
+                catch (Exception ex)
+                {
+                    ps["db_tz_err"] = ex.Message;
+                }
 
                 try
                 {
