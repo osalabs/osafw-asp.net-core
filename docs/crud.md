@@ -4,6 +4,8 @@ The framework offers two complementary ways to work with database rows.
 You can keep using lightweight `FwDict`/`FwList` collections for maximum flexibility, or describe your rows as strongly typed DTOs by inheriting from `FwModel<TRow>`.
 Both flows share the same routing, permissions, and caching behaviour, so you can pick whichever fits each controller.
 
+For model helper names, follow the framework naming guide in [naming.md](naming.md).
+
 ## FwDict workflow
 
 ### Why use FwDict?

@@ -5,6 +5,7 @@ Updated: 2026-05-11
 - Prefer adding features via controllers/models over modifying core `fw` unless it’s a cross-cutting concern.
 - For CRUD screens, first try `FwDynamicController` or `FwVueController` with `config.json` before writing bespoke UI.
 - Keep controller actions thin: parse input, call model, prepare `ps`, set `ps["_json"]` when returning JSON.
+- For framework method names, follow `docs/naming.md`: prefer result-shape or side-effect prefixes like `list*`, `one*`, `count*`, `add*`, `update*`, and `save*`.
 - Use `FormUtils.filter` and `filterCheckboxes` for whitelisting fields and handling checkboxes; avoid manual parsing.
 - Use `Fw.model<T>()` singletons; don’t new models directly except through `fw.model("Name")`.
 - When returning files, use `fw.fileResponse` to set headers correctly.

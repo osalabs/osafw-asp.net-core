@@ -91,6 +91,7 @@
 - Standard action names are constants in `FW`: `Index`, `Show`, `ShowForm`, `Save`, `SaveMulti`, `ShowDelete`, `Delete`.
 - Controllers return `FwDict` `ps` parsed by `FW.parser`. For JSON, set `ps["_json"]=true` or assign data to `ps["_json"]`.
 - Models inherit `FwModel`. Obtain them with `fw.model<T>()` or `fw.model("Name")`. Keep SQL in models, not controllers.
+- Use `docs/naming.md` for framework naming conventions. Prefer result-shape and side-effect prefixes such as `list*`, `one*`, `count*`, `add*`, `update*`, and `save*` over generic `Get*`/`Set*` names.
 - `list*()` methods return empty `FwList`/`DBList`; dictionary-backed `one*()` methods return empty `FwDict`/`DBRow`; typed single-row methods (`DB.row<T>`, `DB.rowp<T>`, `oneT*`) return `null` when no record is found unless using `*OrFail`.
 - `FW.getRoute()` implements RESTful routing by HTTP method and URL. Prefixes such as `/Admin` are supported.
 - Access control uses static `access_level` on controllers plus `FwConfig.access_levels` rules. XSS tokens are validated on mutating requests.

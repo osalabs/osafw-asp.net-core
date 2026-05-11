@@ -29,6 +29,7 @@ Check in this order:
 ## Project-Specific Checks
 
 - Prefer app/example controllers, models, templates, or docs for app-specific behavior; edit `osafw-app/App_Code/fw` only for reusable framework behavior or framework contract bugs.
+- Review framework method names against `docs/naming.md`: prefer result-shape or side-effect prefixes, avoid generic `Get*`/`Set*` names when a clearer name exists, and do not request broad churn outside the touched scope.
 - `list*()` methods should return empty `FwList`/`DBList`; dictionary-backed `one*()` methods should return empty `FwDict`/`DBRow`; typed single-row methods (`DB.row<T>`, `DB.rowp<T>`, `oneT*`) should return `null` for missing records unless using `*OrFail`.
 - Schema changes should consider both `osafw-app/App_Data/sql/fwdatabase.sql` and an additive script under `osafw-app/App_Data/sql/updates/`.
 - SQL queries or `list_where` fragments should prefer single `$@"..."` blocks over concatenated string assembly when that improves whitespace, quoting, or reviewability.

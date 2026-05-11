@@ -24,7 +24,7 @@ If you need full control, replicate what the generators do:
 2. **Model class**
    - Copy `osafw-app/App_Code/models/DemoDicts.cs` (or `DemosDemoDicts.cs` for junction tables) to a new file named after your model.
    - Update `table_name`, optional field mappings (`field_id`, `field_iname`, `field_status`, etc.), and row properties to match your columns.
-   - Add helper methods (select options, validations, derived calculations) similar to `Demos` and related demo models.
+   - Add helper methods (select options, validations, derived calculations) similar to `Demos` and related demo models. Follow [framework naming conventions](naming.md) for helper names.
 
 3. **Controller**
    - Copy the closest demo controller (static: `AdminDemosController`; dynamic: `AdminDemosDynamic` or `AdminDemosVue`) and rename the class/file.
