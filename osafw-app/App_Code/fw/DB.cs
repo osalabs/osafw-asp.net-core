@@ -92,7 +92,7 @@ public class DBRow : Dictionary<string, string>
     {
         return this;
     }
- 
+
 }
 public class DBList : List<DBRow>
 {
@@ -261,6 +261,8 @@ public class DB : IDisposable
     private string sql_now = "GETDATE()"; // default query for current datetime
     private string limit_method = "TOP"; // for SQL Server 2005+, for MySQL - LIMIT, for OLE - depends on provider
     private string offset_method = "FETCH NEXT"; // for SQL Server 2012+, for MySQL - LIMIT, for OLE - depends on provider
+    private string utc_field_suffix = "_utc"; // skip dates auto conversion if the datetime field name has this suffix, like "next_run_utc", used in Cron Service that works with UTC only
+    private string set_param_suffix = "_SET"; // suffix added to the SQL param name on update
     protected Dictionary<string, FwDict> schema = []; // schema for currently connected db
 
     private DbConnection? conn; // actual db connection - SqlConnection or OleDbConnection
@@ -605,36 +607,41 @@ public class DB : IDisposable
     {
         try
         {
-            // get server offset in hours and minutes
+            // MS SQL Server 2022+
+            if (dbtype == DBTYPE_SQLSRV)
+            {
+                // Direct match - No ambiguity
+                var tzId = valuep("SELECT CURRENT_TIMEZONE_ID()").toStr();
+                if (!string.IsNullOrEmpty(tzId)) return tzId;
+            }
+
+            // Fallback for MySQL or older SQL Server versions
+            // Notice that this method can introduce ambiguity, i.e., getting "South Africa Standard Time" instead of "E. Europe Standard Time" because they share an offset, but SAST doesn't have daylight saving.
+            // It's acceptable for displaying dates to users, but not for future dates calculations, so consider setting the DB Server timezone explicitly in the "db.main.timezone" in appsettings.config.
+            //
+            // Work with minutes offset as it's safer and simpler than parsing hours and minutes string with possible + sign, like "+03:00", which is not parsable by TimeSpan.TryParse().
             var offset_sql = dbtype switch
             {
-                DBTYPE_SQLSRV => "SELECT DATENAME(TZOFFSET, SYSDATETIMEOFFSET())",
-#if isMySQL
-                DBTYPE_MYSQL => "SELECT TIME_FORMAT(TIMEDIFF(NOW(), UTC_TIMESTAMP), '%H:%i')", 
-#endif
-                _ => "",
+                DBTYPE_SQLSRV => "SELECT DATEPART(TZOFFSET, SYSDATETIMEOFFSET())",
+                DBTYPE_MYSQL => "SELECT TIMESTAMPDIFF(MINUTE, UTC_TIMESTAMP(), NOW())",
+                _ => ""
             };
 
-            if (!string.IsNullOrEmpty(offset_sql))
+            var offset_mins = valuep(offset_sql).toStr();
+            if (int.TryParse(offset_mins, out int minutes))
             {
-                var hm_offset = valuep(offset_sql).toStr();
-                if (!string.IsNullOrEmpty(hm_offset))
-                {
-                    if (TimeSpan.TryParse(hm_offset, out var offset))
-                    {
-                        // match by current offset (includes DST) instead of BaseUtcOffset to avoid off-by-one-hour errors
-                        var nowUtc = DateTime.UtcNow;
-                        var candidates = TimeZoneInfo.GetSystemTimeZones()
-                            .Where(tzinfo => tzinfo.GetUtcOffset(nowUtc) == offset)
-                            .ToList();
+                var offset = TimeSpan.FromMinutes(minutes);
+                var now_utc = DateTime.UtcNow;
 
-                        if (candidates.Count > 0)
-                        {
-                            var preferred = candidates.FirstOrDefault(tzinfo => tzinfo.Id.EndsWith("Standard Time", StringComparison.OrdinalIgnoreCase));
-                            var found = preferred ?? candidates[0];
-                            return found.Id;
-                        }
-                    }
+                var candidates = TimeZoneInfo.GetSystemTimeZones()
+                    .Where(tz => tz.GetUtcOffset(now_utc) == offset)
+                    .ToList();
+
+                if (candidates.Count > 0)
+                {
+                    // Logic to pick the most likely "Standard" zone
+                    return candidates.FirstOrDefault(tz => tz.Id.Contains("Standard Time", StringComparison.OrdinalIgnoreCase))?.Id
+                           ?? candidates[0].Id;
                 }
             }
         }
@@ -675,12 +682,14 @@ public class DB : IDisposable
     /// <summary>
     /// Normalize parameter values before sending to DB, converting UTC DateTime to DB timezone and preserving date-only values.
     /// </summary>
-    private object? convertParamValue(object? value)
+    private object? convertParamValue(string name, object? value)
     {
         if (value == NOW)
             return value;
 
-        if (value is DateTime dt)
+        if (value is DateTime dt
+            && !(name.EndsWith(utc_field_suffix) || name.EndsWith(utc_field_suffix + set_param_suffix)) // TODO we actually need to check agains the field name
+        )
         {
             if (dt.Kind == DateTimeKind.Unspecified)
                 return dt; // treat as date-only/no timezone
@@ -777,7 +786,7 @@ public class DB : IDisposable
                 CommandTimeout = sql_command_timeout
             };
             foreach (string p in @params.Keys)
-                sqlCommand.Parameters.AddWithValue(p, convertParamValue(@params[p]));
+                sqlCommand.Parameters.AddWithValue(p, convertParamValue(p, @params[p]));
 
             if (tran != null)
                 sqlCommand.Transaction = (SqlTransaction)tran;
@@ -794,7 +803,7 @@ public class DB : IDisposable
                 // p name is without "@", but @params may or may not contain "@" prefix
                 var pvalue = @params.TryGetValue(p, out object? value) ? value : @params["@" + p];
                 //logger(LogLevel.INFO, "DB:", db_name, " ", "param: ", p, " = ", pvalue);
-                oleDbCommand.Parameters.AddWithValue("?", convertParamValue(pvalue));
+                oleDbCommand.Parameters.AddWithValue("?", convertParamValue(p, pvalue));
             }
 
             if (tran != null)
@@ -957,7 +966,7 @@ public class DB : IDisposable
                 CommandTimeout = sql_command_timeout
             };
             foreach (string p in @params.Keys)
-                dbcomm.Parameters.AddWithValue(p, convertParamValue(@params[p]));
+                dbcomm.Parameters.AddWithValue(p, convertParamValue(p, @params[p]));
 
             if (tran != null)
                 dbcomm.Transaction = (SqlTransaction)tran;
@@ -980,7 +989,7 @@ public class DB : IDisposable
                 // p name is without "@", but @params may or may not contain "@" prefix
                 var pvalue = @params.TryGetValue(p, out object? value) ? value : @params["@" + p];
                 //logger(LogLevel.INFO, "DB:", db_name, " ", "param: ", p, " = ", pvalue);
-                dbcomm.Parameters.AddWithValue("?", convertParamValue(pvalue));
+                dbcomm.Parameters.AddWithValue("?", convertParamValue(p, pvalue));
             }
 
             if (tran != null)
@@ -1079,7 +1088,12 @@ public class DB : IDisposable
                 }
                 else
                 {
-                    dt = convertDbDateTimeToUtc(dt);
+                    // "_utc" field name suffix convention, don't convert if the field already stores UTC date
+                    if (dbread.GetName(i).EndsWith(utc_field_suffix))
+                        dt = DateTime.SpecifyKind(dt, DateTimeKind.Utc);
+                    else
+                        dt = convertDbDateTimeToUtc(dt);
+
                     value = dt.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.DateTimeFormatInfo.InvariantInfo);
                 }
             }
@@ -1111,8 +1125,16 @@ public class DB : IDisposable
                 value = null;
             else if (meta.IsDateTime[i])
             {
+                var dt = dbread.GetDateTime(i);
+
+                // "_utc" field name suffix convention, don't convert if the field already stores UTC date
+                if (dbread.GetName(i).EndsWith(utc_field_suffix))
+                    dt = DateTime.SpecifyKind(dt, DateTimeKind.Utc);
+                else
+                    dt = convertDbDateTimeToUtc(dt, meta.IsDateOnly[i]);
+
                 // keep DateTime value type to avoid boxing to string
-                value = convertDbDateTimeToUtc(dbread.GetDateTime(i), meta.IsDateOnly[i]);
+                value = dt;
             }
             else if (meta.IsString[i])
                 value = dbread.GetString(i);
@@ -1415,7 +1437,13 @@ public class DB : IDisposable
                 // ignore metadata errors and fall back to datetime conversion
             }
 
-            result = convertDbDateTimeToUtc(dt, isDateOnly);
+            // "_utc" field name suffix convention, don't convert if the field already stores UTC date
+            if (dbread.GetName(0).EndsWith(utc_field_suffix))
+                dt = DateTime.SpecifyKind(dt, DateTimeKind.Utc);
+            else
+                dt = convertDbDateTimeToUtc(dt, isDateOnly);
+
+            result = dt;
         }
 
         closeQuery(dbread);
@@ -1581,7 +1609,7 @@ public class DB : IDisposable
             parts[i] = $"{startQuote}{part}{endQuote}";
         }
 
-        // Join the parts back together with '.' 
+        // Join the parts back together with '.'
         return string.Join(".", parts);
     }
 
@@ -2307,7 +2335,7 @@ public class DB : IDisposable
 
         //logger(LogLevel.DEBUG, "buildUpdate:", table, fields);
 
-        var set_params = prepareParams(table, fields, "update", "_SET");
+        var set_params = prepareParams(table, fields, "update", set_param_suffix);
         result.sql += set_params.sql;
         result.@params = set_params.@params;
 
@@ -2609,7 +2637,7 @@ public class DB : IDisposable
                 where_params["@table_name"] = table;
             }
 
-            result = this.arrayp(@"SELECT 
+            result = this.arrayp(@"SELECT
                       col1.CONSTRAINT_NAME as [name]
                      , col1.TABLE_NAME As [table]
                      , col1.COLUMN_NAME as [column]
@@ -2617,15 +2645,15 @@ public class DB : IDisposable
                      , col2.COLUMN_NAME as [pk_column]
                      , rc.UPDATE_RULE as [on_update]
                      , rc.DELETE_RULE as [on_delete]
-                      FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS rc 
-                      INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE col1 
-                        ON (col1.CONSTRAINT_CATALOG = rc.CONSTRAINT_CATALOG  
-                            AND col1.CONSTRAINT_SCHEMA = rc.CONSTRAINT_SCHEMA 
+                      FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS rc
+                      INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE col1
+                        ON (col1.CONSTRAINT_CATALOG = rc.CONSTRAINT_CATALOG
+                            AND col1.CONSTRAINT_SCHEMA = rc.CONSTRAINT_SCHEMA
                             AND col1.CONSTRAINT_NAME = rc.CONSTRAINT_NAME)
-                      INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE col2 
-                        ON (col2.CONSTRAINT_CATALOG = rc.UNIQUE_CONSTRAINT_CATALOG  
-                            AND col2.CONSTRAINT_SCHEMA = rc.UNIQUE_CONSTRAINT_SCHEMA 
-                            AND col2.CONSTRAINT_NAME = rc.UNIQUE_CONSTRAINT_NAME 
+                      INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE col2
+                        ON (col2.CONSTRAINT_CATALOG = rc.UNIQUE_CONSTRAINT_CATALOG
+                            AND col2.CONSTRAINT_SCHEMA = rc.UNIQUE_CONSTRAINT_SCHEMA
+                            AND col2.CONSTRAINT_NAME = rc.UNIQUE_CONSTRAINT_NAME
                             AND col2.ORDINAL_POSITION = col1.ORDINAL_POSITION)" +
                 where, where_params);
         }
@@ -2639,7 +2667,7 @@ public class DB : IDisposable
                 where_params["@table_name"] = table;
             }
 
-            result = this.arrayp(@"SELECT 
+            result = this.arrayp(@"SELECT
                       col1.CONSTRAINT_NAME as `name`
                      , col1.TABLE_NAME As `table`
                      , col1.COLUMN_NAME as `column`
@@ -2647,15 +2675,15 @@ public class DB : IDisposable
                      , col2.COLUMN_NAME as `pk_column`
                      , rc.UPDATE_RULE as `on_update`
                      , rc.DELETE_RULE as `on_delete`
-                      FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS rc 
-                      INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE col1 
-                        ON (col1.CONSTRAINT_CATALOG = rc.CONSTRAINT_CATALOG  
-                            AND col1.CONSTRAINT_SCHEMA = rc.CONSTRAINT_SCHEMA 
+                      FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS rc
+                      INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE col1
+                        ON (col1.CONSTRAINT_CATALOG = rc.CONSTRAINT_CATALOG
+                            AND col1.CONSTRAINT_SCHEMA = rc.CONSTRAINT_SCHEMA
                             AND col1.CONSTRAINT_NAME = rc.CONSTRAINT_NAME)
-                      INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE col2 
-                        ON (col2.CONSTRAINT_CATALOG = rc.UNIQUE_CONSTRAINT_CATALOG  
-                            AND col2.CONSTRAINT_SCHEMA = rc.UNIQUE_CONSTRAINT_SCHEMA 
-                            AND col2.CONSTRAINT_NAME = rc.UNIQUE_CONSTRAINT_NAME 
+                      INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE col2
+                        ON (col2.CONSTRAINT_CATALOG = rc.UNIQUE_CONSTRAINT_CATALOG
+                            AND col2.CONSTRAINT_SCHEMA = rc.UNIQUE_CONSTRAINT_SCHEMA
+                            AND col2.CONSTRAINT_NAME = rc.UNIQUE_CONSTRAINT_NAME
                             AND col2.ORDINAL_POSITION = col1.ORDINAL_POSITION)" +
                 where, where_params);
         }

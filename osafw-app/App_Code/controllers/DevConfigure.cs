@@ -45,6 +45,7 @@ public class DevConfigureController : FwController
 
         DB db;
         ps["is_db_conn"] = false;
+        ps["is_db_tz"] = false;
         ps["is_db_tables"] = false;
         if (ps["is_db_config"].toBool())
         {
@@ -53,6 +54,26 @@ public class DevConfigureController : FwController
                 db = fw.getDB();
                 db.connect();
                 ps["is_db_conn"] = true;
+
+                try {
+                    var tzId = db.valuep("SELECT CURRENT_TIMEZONE_ID()", DB.h()).toStr();
+                    ps["db_tzId"] = tzId;
+
+                    var tz = db.valuep("SELECT CURRENT_TIMEZONE()", DB.h()).toStr();
+                    ps["db_tz_info"] = tz;
+
+                    var db_class_tzId = db.getTimezoneId();
+                    ps["db_class_tzId"] = db_class_tzId;
+
+                    if (tzId == db_class_tzId)
+                        ps["is_db_tz"] = true;
+                    else
+                        throw new Exception("DB Time Zone and DB Class Instance Time Zone is not equal.");
+                }
+                catch (Exception ex)
+                {
+                    ps["db_tz_err"] = ex.Message;
+                }
 
                 try
                 {
