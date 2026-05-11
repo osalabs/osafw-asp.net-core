@@ -245,7 +245,7 @@ window.fw={
     update_att_empty_state: function (context) {
     var $context = $(context);
     if (!$context.length) return;
-    
+
     $context.find('.fw-empty-state').each(function () {
       var $empty = $(this);
       var $scope = $empty.closest('.fw-att-block');
@@ -387,8 +387,12 @@ window.fw={
     $(document).on('click', '.pagination .page-link[data-pagenum]', function (e){
       var $this = $(this);
       var pagenum = $this.data('pagenum');
-      var $f = $this.data('filter') ? $($this.data('filter')) : $('form[data-list-filter]:first');
-      if ($f){
+
+      var f_selector_container = $this.closest('.pagination-container').data('filter');
+      var f_selector = $this.data('filter') || f_selector_container || 'form[data-list-filter]:first';
+      var $f = $(f_selector);
+
+      if ($f.length){
         e.preventDefault();
         $('<input type="hidden" name="f[pagenum]">').val(pagenum).appendTo($f);
         $f.submit();
@@ -399,8 +403,12 @@ window.fw={
     $(document).on('change', '.on-pagesize-change', function (e){
       e.preventDefault();
       var $this = $(this);
-      var $f = $this.data('filter') ? $($this.data('filter')) : $('form[data-list-filter]:first');
-      if ($f){
+
+      var f_selector_container = $this.closest('.pagination-container').data('filter');
+      var f_selector = $this.data('filter') || f_selector_container || 'form[data-list-filter]:first';
+      var $f = $(f_selector);
+
+      if ($f.length){
         $f.find('input[name="f[pagesize]"]').val($this.val());
         $f.submit();
       }
@@ -914,9 +922,9 @@ window.fw={
       var item_id = $drop.data('item-id');
       var upload_url = $drop.data('upload-url');
       var att_category = $drop.data('att-category') || ''; // optional
-      var att_post_prefix = $drop.data('att-post-prefix') || ''; // should be set to related field name from config.json      
+      var att_post_prefix = $drop.data('att-post-prefix') || ''; // should be set to related field name from config.json
       var fwentity = $drop.data('fwentity') || '';
-      if (!item_id) { 
+      if (!item_id) {
           fw.alert('Save record first');
           $input.val('');
           return;
@@ -996,8 +1004,8 @@ window.fw={
         $item.remove(); //multi att - just remove
       }else{
         $item.hide().find(':input:hidden').val('');
-      }      
-      
+      }
+
       fw.update_att_empty_state($context.length ? $context : document);
       $form.trigger('autosave');
     });
@@ -1022,7 +1030,7 @@ window.fw={
 
     var $f = $tbl.data('filter') ? $($tbl.data('filter')) : $('form[data-list-filter]:first');
     var is_selectable = !$tbl.is('[data-row-selectable="false"]');
-    
+
     $tbl.on('dblclick', 'tbody tr', function(e){
       var $target = $(e.target);
       // Do not process on text selection, but only if clicked on the element with a selected text (double click on th/td padding selects all text inside the cell)

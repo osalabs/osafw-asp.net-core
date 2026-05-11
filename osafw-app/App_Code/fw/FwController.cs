@@ -71,6 +71,7 @@ public abstract class FwController
 
     protected bool is_userlists = false;         // true if controller should support UserLists
     protected bool is_activity_logs = false;     // true if controller should support ActivityLogs
+    protected string activity_logs_default_tab = FwActivityLogs.TAB_COMMENTS;  // default tab for ActivityLogs
 
     protected bool is_readonly = false;          // true if user is readonly, no actions modifying data allowed
 
@@ -1384,8 +1385,8 @@ public abstract class FwController
     }
 
     /// <summary>
-    /// set list_headers (and add search_value from list_filter_search) 
-    /// and 
+    /// set list_headers (and add search_value from list_filter_search)
+    /// and
     /// </summary>
     /// <param name="is_cols">if true - update list_rows with cols, use false for json responses</param>
     public virtual void setViewList(bool is_cols = true)

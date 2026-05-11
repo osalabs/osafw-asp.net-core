@@ -15,6 +15,7 @@ namespace osafw;
 public class FormUtils
 {
     public const int MAX_PAGE_ITEMS = 25; //default max number of items on list screen
+    public const int PAGER_PAD_PAGES = 5; //default number of the pager left/right pad button
     public const string AUTOCOMPLETE_SEPARATOR = " ::: ";
 
     public static Array getYesNo()
@@ -236,22 +237,22 @@ public class FormUtils
     }
 
     // return pager or Nothing if no paging required
-    public static FwList getPager(long count, int pagenum, object? pagesize1 = null)
+    public static FwList getPager(long count, int pagenum, int? pagesize1 = null, int? pad_pages1 = null)
     {
         int pagesize = pagesize1.toInt(MAX_PAGE_ITEMS);
+        int pad_pages = pad_pages1.toInt(PAGER_PAD_PAGES);
 
         FwList pager = [];
-        const int PAD_PAGES = 5;
 
         if (count > pagesize)
         {
             int page_count = (int)Math.Ceiling(count / (double)pagesize);
 
-            var from_page = pagenum - PAD_PAGES;
+            var from_page = pagenum - pad_pages;
             if (from_page < 0)
                 from_page = 0;
 
-            var to_page = pagenum + PAD_PAGES;
+            var to_page = pagenum + pad_pages;
             if (to_page > page_count - 1)
                 to_page = page_count - 1;
 
@@ -264,7 +265,7 @@ public class FormUtils
                 pager_item["pagenum_show"] = i + 1;
                 if (i == from_page)
                 {
-                    if (pagenum > PAD_PAGES)
+                    if (pagenum > pad_pages)
                         pager_item["is_show_first"] = true;
                     if (pagenum > 0)
                     {

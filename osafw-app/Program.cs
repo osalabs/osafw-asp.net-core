@@ -107,7 +107,7 @@ public static class Program
             // options.MultipartBodyLengthLimit = 1073741824; // 1GB
         });
 
-        // IIS 
+        // IIS
         builder.Services.Configure<IISServerOptions>(options =>
         {
             options.AllowSynchronousIO = false;
@@ -130,11 +130,11 @@ public static class Program
         // Windows Active Directory authentication support (optional)
         // builder.Services.AddAuthentication(NegotiateDefaults.AuthenticationScheme).AddNegotiate();
 
-        // Memory cache 
+        // Memory cache
         builder.Services.AddMemoryCache();
 
-        // Uncomment to enable scheduled tasks
-        // builder.Services.AddHostedService<FwCronService>();
+        if (settings["is_cron_enabled"].toBool())
+            builder.Services.AddHostedService<FwCronService>();
 
         // Build the WebApplication
         var app = builder.Build();

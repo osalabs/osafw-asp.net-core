@@ -64,6 +64,8 @@ public class Users : FwModel<Users.Row>
     public const int ACL_ADMIN = 90;
     public const int ACL_SITEADMIN = 100;
 
+    public const string SYS_USER_NAME = "System"; // for "users_id = 0" records
+
     public const string PERM_COOKIE_NAME = "osafw_perm";
     public const int PERM_COOKIE_DAYS = 356;
 
