@@ -1,4 +1,4 @@
-﻿// Send Email Admin controller
+// Send Email Admin controller
 //
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2023 Oleg Savchuk www.osalabs.com

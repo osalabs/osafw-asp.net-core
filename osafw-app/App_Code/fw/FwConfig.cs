@@ -1,4 +1,4 @@
-﻿// App Configuration class
+// App Configuration class
 //
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2025 Oleg Savchuk www.osalabs.com
@@ -278,7 +278,7 @@ public static class FwConfig
     private static string buildRoutePrefixesRx(FwDict currentSettings)
     {
         // convert settings["route_prefixes"] FwRow (ex: /Admin => True) to FwList routePrefixes
-        var routePrefixes = new StrList((currentSettings["route_prefixes"] as FwDict ?? []).Keys.Cast<string>());
+        var routePrefixes = new StrList((currentSettings["route_prefixes"] as FwDict ?? []).Keys);
 
         var escaped = from string p in routePrefixes orderby p.Length descending select Regex.Escape(p);
         return @"^(" + string.Join("|", escaped) + @")(/.*)?$";

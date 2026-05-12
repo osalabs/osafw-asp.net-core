@@ -43,7 +43,12 @@ public class FwList : List<FwDict>
 {
     public FwList() { }
     public FwList(int capacity) : base(capacity) { }
-    public FwList(ICollection c) : base((IEnumerable<FwDict>)c) { }
+    /// <summary>
+    /// Builds a framework row list from a legacy collection without requiring it to already implement
+    /// <see cref="IEnumerable{T}"/> for <see cref="FwDict"/> rows.
+    /// </summary>
+    /// <param name="c">Legacy collection whose dictionary-shaped items are copied into this list.</param>
+    public FwList(ICollection c) : this((IEnumerable)c) { }
     public FwList(IList list)
     {
         if (list != null)

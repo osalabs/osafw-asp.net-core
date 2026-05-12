@@ -1,4 +1,4 @@
-﻿// Reports Base class
+// Reports Base class
 //
 // (c) 2009-2024 Oleg Savchuk www.osalabs.com
 
@@ -310,7 +310,7 @@ public class FwReports
                 {
                     var out_filename = Utils.isEmpty(render_options["xls_filename"]) ? report_code : (render_options["xls_filename"] as string ?? string.Empty);
                     // TODO make headers as array of readable values, not the same as fields names
-                    var headers = list_rows.Count > 0 ? (list_rows[0] as FwDict)?.Keys.Cast<string>().ToArray() ?? Array.Empty<string>() : Array.Empty<string>();
+                    var headers = list_rows.Count > 0 ? list_rows[0].Keys.ToArray() : Array.Empty<string>();
                     var fields = headers;
 
                     ConvUtils.exportNativeExcel(fw, headers, fields, list_rows, out_filename);

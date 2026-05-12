@@ -1,4 +1,4 @@
-﻿//uncomment to enable ExcelDataReader - install ExcelDataReader NuGet package and ExcelDataReader.DataSet (for CSV)
+//uncomment to enable ExcelDataReader - install ExcelDataReader NuGet package and ExcelDataReader.DataSet (for CSV)
 //#define ExcelDataReader
 #if ExcelDataReader
 using ExcelDataReader;
@@ -539,7 +539,7 @@ public class Utils
             {
                 if (rows[0] is FwDict firstRow)
                 {
-                    fields = firstRow.Keys.Cast<string>().ToArray();
+                    fields = firstRow.Keys.ToArray();
                     headers_str = string.Join(",", fields);
                 }
             }
@@ -720,7 +720,7 @@ public class Utils
     {
         if (hash2 != null)
         {
-            StrList keys = new(hash2.Keys.Cast<string>());
+            StrList keys = new(hash2.Keys);
             foreach (string key in keys)
             {
                 if (hash2[key] is FwDict ht)
@@ -1017,7 +1017,7 @@ public class Utils
     // return FwRow keys as an array
     public static string[] hashKeys(FwDict h)
     {
-        return h.Keys.Cast<string>().ToArray();
+        return h.Keys.ToArray();
     }
 
     // capitalize first word in string
@@ -1667,18 +1667,17 @@ public class Utils
         {
             if (headers.Count == 0 && rows[0] is FwDict firstRow)
             {
-                var keys = firstRow.Keys.Cast<object?>()
-                    .Select(k => k.toStr())
+                var keys = firstRow.Keys
                     .Where(k => k.Length > 0)
                     .ToArray();
                 foreach (var key in keys)
                     headers.Add(new FwDict() { { "field_name", key } });
             }
 
-            foreach (FwDict row in rows.Cast<object?>().OfType<FwDict>())
+            foreach (FwDict row in rows)
             {
                 FwList cols = [];
-                foreach (FwDict hf in headers.Cast<object?>().OfType<FwDict>())
+                foreach (FwDict hf in headers)
                 {
                     var fieldname = hf["field_name"].toStr();
                     cols.Add(new FwDict()

@@ -219,7 +219,7 @@ public abstract class FwModel : IDisposable
         if (!is_normalize_names || row.Count == 0)
             return;
 
-        foreach (string key in new StrList(row.Keys.Cast<string>())) // static copy of row keys to avoid loop issues
+        foreach (string key in new StrList(row.Keys)) // static copy of row keys to avoid loop issues
             row[Utils.name2fw(key)] = row[key];
 
         if (!string.IsNullOrEmpty(field_id) && row[field_id] != null && !row.ContainsKey("id"))
@@ -438,7 +438,7 @@ public abstract class FwModel : IDisposable
     public virtual void convertUserInput(FwDict item)
     {
         var tschema = getTableSchema();
-        var keys = item.Keys.Cast<string>().ToArray();
+        var keys = item.Keys.ToArray();
         foreach (string fieldname in keys)
         {
             var fieldname_lc = fieldname.ToLower();
@@ -1338,7 +1338,7 @@ public abstract class FwModel : IDisposable
         //then perform necessary transformations
         var table_schema = getTableSchema();
         //iterate over item.Keys, but make it static array to avoid "collection was modified" error
-        var keys = item.Keys.Cast<string>().ToArray();
+        var keys = item.Keys.ToArray();
         foreach (string fieldname in keys)
         {
             var fieldname_lc = fieldname.ToLower();

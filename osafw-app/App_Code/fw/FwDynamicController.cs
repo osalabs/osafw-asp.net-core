@@ -1,4 +1,4 @@
-﻿// Fw Dynamic controller
+// Fw Dynamic controller
 //
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2018 Oleg Savchuk www.osalabs.com
@@ -435,7 +435,7 @@ public class FwDynamicController : FwController
         // input name format: item-<~field>#<~id>[field_name]
         var hids = reqh("item-" + field);
         // sort hids.Keys, so numerical keys - first and keys staring with "new-" will be last
-        var sorted_keys = hids.Keys.Cast<string>().OrderBy(x => x.StartsWith("new-") ? 1 : 0).ThenBy(x => x).ToList();
+        var sorted_keys = hids.Keys.OrderBy(x => x.StartsWith("new-") ? 1 : 0).ThenBy(x => x).ToList();
         foreach (string row_id in sorted_keys)
         {
             if (row_id == del_id) continue; //skip deleted row
@@ -1196,7 +1196,7 @@ public class FwDynamicController : FwController
             // input name format: item-<~field>#<~id>[field_name]
             var hids = reqh("item-" + field);
             // sort hids.Keys, so numerical keys - first and keys staring with "new-" will be last
-            var sorted_keys = hids.Keys.Cast<string>().OrderBy(x => x.StartsWith("new-") ? 1 : 0).ThenBy(x => x).ToList();
+            var sorted_keys = hids.Keys.OrderBy(x => x.StartsWith("new-") ? 1 : 0).ThenBy(x => x).ToList();
             foreach (string row_id in sorted_keys)
             {
                 if (row_id == del_id) continue; //skip deleted row
@@ -1240,8 +1240,8 @@ public class FwDynamicController : FwController
 
         var showform_fields = _fieldsToHash(getConfigShowFormFieldsByTab("showform_fields"));
 
-        // special auto-processing for fields of particular types - use .Cast<string>().ToArray() to make a copy of keys as we modify fields
-        foreach (string field in fields.Keys.Cast<string>().ToArray())
+        // special auto-processing for fields of particular types - use ToArray() to make a copy of keys as we modify fields
+        foreach (string field in fields.Keys.ToArray())
         {
             if (!showform_fields.ContainsKey(field))
                 continue;
@@ -1463,7 +1463,7 @@ public class FwDynamicController : FwController
         // input name format: item-<~field>#<~id>[field_name]
         var hids = reqh("item-" + field);
         // sort hids.Keys, so numerical keys - first and keys staring with "new-" will be last
-        var sorted_keys = hids.Keys.Cast<string>().OrderBy(x => x.StartsWith("new-") ? 1 : 0).ThenBy(x => x).ToList();
+        var sorted_keys = hids.Keys.OrderBy(x => x.StartsWith("new-") ? 1 : 0).ThenBy(x => x).ToList();
         var junction_field_status = sub_model.getJunctionFieldStatus();
         foreach (string row_id in sorted_keys)
         {

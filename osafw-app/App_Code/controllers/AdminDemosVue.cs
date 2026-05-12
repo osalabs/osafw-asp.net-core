@@ -1,4 +1,4 @@
-﻿// Demo Vue Admin controller
+// Demo Vue Admin controller
 //
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2024 Oleg Savchuk www.osalabs.com

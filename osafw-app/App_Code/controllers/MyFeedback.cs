@@ -1,4 +1,4 @@
-﻿// My Feedback controller
+// My Feedback controller
 // when user post feedback - send it to the support_email
 //
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net

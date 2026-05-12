@@ -1,4 +1,4 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -69,31 +69,31 @@ namespace osafw.Tests
             FwDict? item1 = null;
             FwDict result1 = FormUtils.filter(item1!, new string[] { "field1", "field2" });
             Assert.IsNotNull(result1, "Result should not be null when item is null");
-            CollectionAssert.AreEquivalent(Array.Empty<string>(), result1.Keys.Cast<string>().ToArray(), "Result should be empty when item is null");
+            CollectionAssert.AreEquivalent(Array.Empty<string>(), result1.Keys.ToArray(), "Result should be empty when item is null");
 
             // Case 2: Filter existing fields from item
             FwDict item2 = new() { { "field1", "value1" }, { "field2", "value2" } };
             FwDict result2 = FormUtils.filter(item2, new string[] { "field1", "field2" });
             Assert.IsNotNull(result2, "Result should not be null when filtering existing fields");
-            CollectionAssert.AreEquivalent(new string[] { "field1", "field2" }, result2.Keys.Cast<string>().ToArray(), "Result should contain all existing fields");
+            CollectionAssert.AreEquivalent(new string[] { "field1", "field2" }, result2.Keys.ToArray(), "Result should contain all existing fields");
 
             // Case 3: Filter non-existing fields from item
             FwDict item3 = new() { { "field1", "value1" }, { "field2", "value2" } };
             FwDict result3 = FormUtils.filter(item3, new string[] { "field1", "field3" });
             Assert.IsNotNull(result3, "Result should not be null when filtering non-existing fields");
-            CollectionAssert.AreEquivalent(new string[] { "field1" }, result3.Keys.Cast<string>().ToArray(), "Result should contain only existing fields");
+            CollectionAssert.AreEquivalent(new string[] { "field1" }, result3.Keys.ToArray(), "Result should contain only existing fields");
 
             // Case 4: Filter existing fields when is_exists is false
             FwDict item4 = new() { { "field1", "value1" }, { "field2", "value2" } };
             FwDict result4 = FormUtils.filter(item4, new string[] { "field1", "field2" }, false);
             Assert.IsNotNull(result4, "Result should not be null when filtering existing fields with is_exists false");
-            CollectionAssert.AreEquivalent(new string[] { "field1", "field2" }, result4.Keys.Cast<string>().ToArray(), "Result should contain all fields when is_exists is false");
+            CollectionAssert.AreEquivalent(new string[] { "field1", "field2" }, result4.Keys.ToArray(), "Result should contain all fields when is_exists is false");
 
             // Case 5: Filter non-existing fields when is_exists is true
             FwDict item5 = new() { { "field1", "value1" }, { "field2", "value2" } };
             FwDict result5 = FormUtils.filter(item5, new string[] { "field1", "field3" }, true);
             Assert.IsNotNull(result5, "Result should not be null when filtering non-existing fields with is_exists true");
-            CollectionAssert.AreEquivalent(new string[] { "field1" }, result5.Keys.Cast<string>().ToArray(), "Result should contain only existing fields when is_exists is true");
+            CollectionAssert.AreEquivalent(new string[] { "field1" }, result5.Keys.ToArray(), "Result should contain only existing fields when is_exists is true");
         }
 
         [TestMethod]

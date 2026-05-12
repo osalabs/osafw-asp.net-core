@@ -1,4 +1,4 @@
-﻿// Fw Hooks class
+// Fw Hooks class
 // global framework hooks can be set here
 //
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net-core

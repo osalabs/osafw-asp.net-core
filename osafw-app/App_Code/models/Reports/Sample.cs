@@ -1,4 +1,4 @@
-﻿// Sample report - shows Event Log
+// Sample report - shows Event Log
 //
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 

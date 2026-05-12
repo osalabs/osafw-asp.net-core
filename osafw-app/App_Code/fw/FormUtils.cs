@@ -1,4 +1,4 @@
-﻿// Form processing framework utils
+// Form processing framework utils
 //
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
@@ -407,7 +407,7 @@ public class FormUtils
         if (items == null || items.Count == 0)
             return "";
 
-        return string.Join(",", [.. items.Keys.Cast<string>().OrderBy(key => key)]);
+        return string.Join(",", [.. items.Keys.OrderBy(key => key)]);
     }
 
     // input: comma separated string

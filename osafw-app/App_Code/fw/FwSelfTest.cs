@@ -97,7 +97,7 @@ public class FwSelfTest
             var parser = new ParsePage(new ParsePageOptions
             {
                 TemplatesRoot = templatePath,
-                Logger = (level, messages) => fw.logger(level, messages.Cast<object?>().ToArray()),
+                Logger = (level, messages) => fw.logger(level, messages),
             });
             var parsedTemplate = parser.parse_string("Hello <~name>", Utils.qh("name", "World"));
             is_true("template parser", parsedTemplate.Contains("Hello World"), parsedTemplate);

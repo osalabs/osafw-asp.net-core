@@ -1,4 +1,4 @@
-﻿#pragma warning disable CA1416 // some methods are Windows only
+#pragma warning disable CA1416 // some methods are Windows only
 
 using System;
 using System.Drawing;

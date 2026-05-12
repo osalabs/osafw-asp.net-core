@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Caching.Memory;
 using System;
 using System.Linq;
 
@@ -113,7 +113,7 @@ public class FwCache
     public void requestRemoveWithPrefix(string prefix)
     {
         var plen = prefix.Length;
-        var keys = new StrList(request_cache.Keys.Cast<string>());
+        var keys = new StrList(request_cache.Keys);
         foreach (string key in keys)
         {
             if (key.Length > plen && key[..plen] == prefix)

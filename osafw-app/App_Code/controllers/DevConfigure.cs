@@ -1,4 +1,4 @@
-﻿// Configuration check controller for Developers
+// Configuration check controller for Developers
 //  - perform basic testing of configuration
 //  WARNING: better to remove this file on production
 //

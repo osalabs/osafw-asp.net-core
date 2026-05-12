@@ -1,4 +1,4 @@
-﻿// Att public downloads controller
+// Att public downloads controller
 //
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com

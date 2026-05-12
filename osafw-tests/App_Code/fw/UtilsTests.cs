@@ -1232,12 +1232,12 @@ namespace osafw.Tests
 
             Utils.prepareRowsHeaders(rows, headers);
 
-            var headerNames = headers.Cast<FwDict>().Select(h => h["field_name"].toStr()).ToList();
+            var headerNames = headers.Select(h => h["field_name"].toStr()).ToList();
             CollectionAssert.AreEquivalent(new List<string> { "id", "name" }, headerNames);
             var firstRow = rows[0] as FwDict ?? throw new AssertFailedException("Expected row dictionary");
             Assert.IsTrue(firstRow.ContainsKey("cols"));
             var cols = firstRow["cols"] as FwList ?? throw new AssertFailedException("Expected cols list");
-            var nameCol = cols.Cast<FwDict>().First(c => c["field_name"].toStr() == "name");
+            var nameCol = cols.First(c => c["field_name"].toStr() == "name");
             Assert.AreEqual("Alpha", nameCol["data"]);
         }
 

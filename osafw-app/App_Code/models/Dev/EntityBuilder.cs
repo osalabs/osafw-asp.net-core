@@ -696,7 +696,7 @@ class DevEntityBuilder
         if (decoded is FwDict dict)
         {
             var res = new FwDict();
-            foreach (var key in dict.Keys.Cast<string>())
+            foreach (var key in dict.Keys)
                 res[key] = normalizeDecodedJson(dict[key]);
             return res;
         }

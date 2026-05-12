@@ -1,4 +1,4 @@
-﻿// DB for ASP.NET - framework convenient database wrapper
+// DB for ASP.NET - framework convenient database wrapper
 //
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2023 Oleg Savchuk www.osalabs.com
@@ -100,6 +100,11 @@ public class DBList : List<DBRow>
 
     public DBList() : base() { }
     public DBList(int capacity) : base(capacity) { }
+    /// <summary>
+    /// Creates a database row list from existing typed rows while preserving the <see cref="DBList"/> return contract.
+    /// </summary>
+    /// <param name="collection">Typed database rows to copy into this list.</param>
+    public DBList(IEnumerable<DBRow> collection) : base(collection) { }
 
     public static implicit operator FwList(DBList rows)
     {
@@ -843,7 +848,7 @@ public class DB : IDisposable
     /// <param name="params">if input params null - make empty hashtable</param>
     private static void expandParams(ref string sql, ref FwDict @params)
     {
-        foreach (string p in @params.Keys.Cast<string>().ToList())
+        foreach (string p in @params.Keys.ToList())
         {
             if (@params[p] is IList arr)
             {
@@ -866,7 +871,7 @@ public class DB : IDisposable
         if (@params.Count > 0)
             if (@params.Count == 1) // one param - just include inline for easier log reading
             {
-                var pname = @params.Keys.Cast<string>().First();
+                var pname = @params.Keys.First();
                 logger(LogLevel.INFO, "DB:", db_name, " ", sql, " { ", pname, "=", @params[pname], " }");
             }
             else
@@ -1344,7 +1349,7 @@ public class DB : IDisposable
                 // offset too far
                 result = [];
             else
-                result = (DBList)rows.GetRange(offset, Math.Min(limit, rows.Count - offset));
+                result = new DBList(rows.GetRange(offset, Math.Min(limit, rows.Count - offset)));
         }
         else
             throw new ApplicationException("Unsupported db type");

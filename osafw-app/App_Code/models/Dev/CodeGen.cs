@@ -216,7 +216,7 @@ class DevCodeGen
         if (indexes != null)
         {
             //sort indexes keys this way: PK (always first), then by number in suffix - UX1, IX2, UX3, IX4, IX5, IX6, ...
-            var keys = new StrList(indexes.Keys.Cast<string>());
+            var keys = new StrList(indexes.Keys);
             keys.Sort((a, b) =>
             {
                 var a2 = a.Substring(2);
@@ -1060,8 +1060,8 @@ END" + Environment.NewLine;
                 fk_joins.Add(sql_join);
                 fk_inames.Add($"{alias}.iname as " + db.qid(tcolumn + "_iname", false)); //TODO detect non-iname for non-fw tables?
             }
-            var inames = string.Join(", ", fk_inames.Cast<string>().ToArray());
-            var joins = string.Join(" ", fk_joins.Cast<string>().ToArray());
+            var inames = string.Join(", ", fk_inames);
+            var joins = string.Join(" ", fk_joins);
             config["list_view"] = $"(SELECT t.*, {inames} FROM {db.qid(table_name, false)} t {joins}) tt";
         }
         else
@@ -1111,7 +1111,7 @@ END" + Environment.NewLine;
         config["add_new_title"] = $"Add New {controller_title} Record";
 
         // remove all commented items - name start with "#"
-        foreach (var key in config.Keys.Cast<string>().ToArray())
+        foreach (var key in config.Keys.ToArray())
         {
             if (key.StartsWith('#'))
                 config.Remove(key);
@@ -1136,7 +1136,7 @@ END" + Environment.NewLine;
     /// <param name="config">Controller config loaded from the copied demo template; stale tab-specific field keys are removed in place.</param>
     private static void removeCopiedTabFieldConfig(FwDict config)
     {
-        foreach (var key in config.Keys.Cast<string>().ToArray())
+        foreach (var key in config.Keys.ToArray())
         {
             if (key.StartsWith("show_fields_", StringComparison.Ordinal)
                 || key.StartsWith("showform_fields_", StringComparison.Ordinal))
@@ -1249,7 +1249,7 @@ END" + Environment.NewLine;
         string edit_list_defaults = "";
 
         int defaults_ctr = 0;
-        var rfields = fields.Cast<FwDict>()
+        var rfields = fields
             .Where(fld =>
             {
                 var fname = fld["name"].toStr();

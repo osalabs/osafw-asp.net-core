@@ -1,4 +1,4 @@
-﻿// Fw Controller base class
+// Fw Controller base class
 
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
@@ -1285,8 +1285,8 @@ public abstract class FwController
         {
             // rest/all fields
             // sorted by values (visible field name)
-            var keys = view_list_map.Keys.Cast<string>().ToArray();
-            var values = view_list_map.Values.Cast<string>().ToArray();
+            var keys = view_list_map.Keys.ToArray();
+            var values = view_list_map.Values.Select(value => value.toStr()).ToArray();
             Array.Sort(values, keys);
 
             foreach (string k in keys)

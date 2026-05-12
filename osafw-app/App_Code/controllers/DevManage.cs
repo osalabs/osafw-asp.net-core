@@ -168,7 +168,7 @@ public class DevManageController : FwController
     public FwDict? ApplyFwUpdatesAction()
     {
         checkXSS();
-        var ids = reqh("cb").Keys.Cast<string>().Select(x => x.toInt()).ToList();
+        var ids = reqh("cb").Keys.Select(x => x.toInt()).ToList();
         fw.model<FwUpdates>().applyList(ids);
 
         if (fw.isJsonExpected())
