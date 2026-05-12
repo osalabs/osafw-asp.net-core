@@ -2,7 +2,7 @@
 <div class="att-list">
   <~att_links repeat inline>
     <div class="card att-info att-item">
-      <input type="hidden" name="att[<~id>]" value="1">
+      <~post_input unless="PARSEPAGE.TOP[is_showform]" inline><input type="hidden" name="att[<~id>]" value="1"></~post_input>
       <img class="card-img-top" src="<~/att/url>/<~icode>?preview=1&size=s" alt="">
       <div class="card-body text-truncate">
         <p class="card-text att-iname"><~iname></p>

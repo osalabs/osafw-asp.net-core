@@ -954,6 +954,13 @@ public class FwDynamicController : FwController
         return fields;
     }
 
+    /// <summary>
+    /// Prepares dynamic form field definitions for rendering in ShowForm, including readonly display
+    /// fields that are allowed in edit screens.
+    /// </summary>
+    /// <param name="item">Current record values used to seed controls and related display data.</param>
+    /// <param name="ps">Page state dictionary shared with templates during ShowForm rendering.</param>
+    /// <returns>Prepared field definitions with per-field template data attached.</returns>
     public virtual FwList prepareShowFormFields(FwDict item, FwDict ps)
     {
         var id = item[model0.field_id].toInt();
@@ -1031,20 +1038,23 @@ public class FwDynamicController : FwController
 
                 def["multi_datarow"] = multi_datarow;
             }
-            else if (dtype == "att_edit")
+            else if (dtype == "att" || dtype == "att_edit")
             {
                 def["att"] = fw.model<Att>().one(item[field]);
                 def["value"] = item[field];
             }
-            else if (dtype == "att_links_edit")
+            else if (dtype == "att_links" || dtype == "att_links_edit")
                 def["att_links"] = fw.model<Att>().listLinked(model0.table_name, id);
 
-            else if (dtype == "att_files_edit")
+            else if (dtype == "att_files" || dtype == "att_files_edit")
             {
-                if (!def.ContainsKey("att_upload_url"))
-                    def["att_upload_url"] = this.base_url + "/(SaveAttFiles)/" + id;
-                if (!def.ContainsKey("att_post_prefix"))
-                    def["att_post_prefix"] = field;
+                if (dtype == "att_files_edit")
+                {
+                    if (!def.ContainsKey("att_upload_url"))
+                        def["att_upload_url"] = this.base_url + "/(SaveAttFiles)/" + id;
+                    if (!def.ContainsKey("att_post_prefix"))
+                        def["att_post_prefix"] = field;
+                }
 
                 def["att_files"] = fw.model<Att>().listByEntityCategory(model0.table_name, id, def["att_category"].toStr());
             }
