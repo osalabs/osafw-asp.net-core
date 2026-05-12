@@ -136,7 +136,7 @@ public class FwAdminController : FwController
         if (this.save_fields == null)
             throw new Exception("No fields to save defined, define in Controller.save_fields");
 
-        fw.model<Users>().checkReadOnly();
+        checkReadOnly();
         if (reqb("refresh"))
         {
             fw.routeRedirect(FW.ACTION_SHOW_FORM, [id]);
@@ -182,7 +182,7 @@ public class FwAdminController : FwController
 
     public virtual void ShowDeleteAction(int id)
     {
-        fw.model<Users>().checkReadOnly();
+        checkReadOnly();
 
         var ps = new FwDict()
         {
@@ -197,7 +197,7 @@ public class FwAdminController : FwController
 
     public virtual FwDict? DeleteAction(int id)
     {
-        fw.model<Users>().checkReadOnly();
+        checkReadOnly();
 
         model0.deleteWithPermanentCheck(id);
         fw.flash("onedelete", 1);
@@ -206,7 +206,7 @@ public class FwAdminController : FwController
 
     public virtual FwDict? RestoreDeletedAction(int id)
     {
-        fw.model<Users>().checkReadOnly();
+        checkReadOnly();
 
         model0.update(id, new FwDict() { { model0.field_status, FwModel.STATUS_ACTIVE } });
 
@@ -221,7 +221,7 @@ public class FwAdminController : FwController
         FwDict cbses = reqh("cb");
         bool is_delete = fw.FORM.ContainsKey("delete");
         if (is_delete)
-            fw.model<Users>().checkReadOnly();
+            checkReadOnly();
 
         int user_lists_id = reqi("addtolist");
         var remove_user_lists_id = reqi("removefromlist");

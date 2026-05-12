@@ -528,7 +528,7 @@ public class FwVueController : FwDynamicController
         if (reqb("refresh"))
             throw new Exception("Wrong use refresh=1 on Vue Controller");
 
-        fw.model<Users>().checkReadOnly();
+        checkReadOnly();
 
         FwDict item = reqh("item");
         var success = true;

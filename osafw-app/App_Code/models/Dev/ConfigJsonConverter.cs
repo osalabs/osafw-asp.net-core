@@ -88,6 +88,7 @@ public class ConfigJsonConverter : System.Text.Json.Serialization.JsonConverter<
         "show_fields",
         "is_dynamic_showform",
         "showform_fields",
+        "is_readonly",
         //within show_fields/showform_fields single field
         "is_custom",
         "field",

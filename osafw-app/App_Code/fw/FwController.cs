@@ -165,6 +165,9 @@ public abstract class FwController
         // logger("loaded config:")
         // logger(config)
 
+        if (config["is_readonly"].toBool())
+            is_readonly = true;
+
         var model_name = config["model"].toStr();
         if (!string.IsNullOrEmpty(model_name))
             model0 = fw.model(model_name);
@@ -264,6 +267,16 @@ public abstract class FwController
         is_dynamic_showform = config["is_dynamic_showform"].toBool();
 
         route_return = config["route_return"].toStr();
+    }
+
+    /// <summary>
+    /// Block mutating controller actions when the current controller instance is read-only.
+    /// </summary>
+    /// <exception cref="AuthException">Thrown when the user or controller config marks the controller read-only.</exception>
+    public virtual void checkReadOnly()
+    {
+        if (is_readonly)
+            throw new AuthException();
     }
 
     /// <summary>

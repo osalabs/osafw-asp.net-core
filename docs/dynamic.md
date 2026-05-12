@@ -30,6 +30,7 @@ Common config keys include:
 - `form_tabs` – optional tab definitions
 - `route_return` – action to redirect after save
 - `is_userlists` – enable UserLists support
+- `is_readonly` – when `true`, render the controller read-only and block standard mutating actions
 
 **"show_fields" and "showform_fields"**
 

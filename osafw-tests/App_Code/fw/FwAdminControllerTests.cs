@@ -102,4 +102,26 @@ public class FwAdminControllerTests
 
         Assert.AreEqual(1, model.Updated);
     }
+
+    [TestMethod]
+    public void SaveAction_BlocksWhenConfigReadonly()
+    {
+        var (fw, model, controller) = BuildController(expectJson: true);
+        controller.loadControllerConfig(new FwDict
+        {
+            ["is_readonly"] = true,
+            ["save_fields"] = "iname"
+        });
+        fw.FORM["item"] = new FwDict { ["iname"] = "new-item" };
+
+        try
+        {
+            controller.SaveAction(0);
+            Assert.Fail("Expected AuthException");
+        }
+        catch (AuthException)
+        {
+        }
+        Assert.AreEqual(0, model.Added);
+    }
 }
