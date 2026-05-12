@@ -41,9 +41,13 @@ public class AdminReportsController : FwController
         initFilter(filter_session_key);
 
         // get format directly form request as we don't need to remember format
-        list_filter["format"] = reqh("f")["format"];
-        if (Utils.isEmpty(list_filter["format"]))
-            list_filter["format"] = "html";
+        var requested_format = reqh("f")["format"].toStr().ToLowerInvariant();
+        if (Utils.isEmpty(requested_format))
+            requested_format = "html";
+        list_filter["format"] = requested_format;
+
+        if (requested_format == "json" && !is_send_email)
+            is_run = true;
 
         var report = FwReports.createInstance(fw, repcode, list_filter);
         report.setFilters(); // set filters data like select/lookups

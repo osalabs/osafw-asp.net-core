@@ -15,7 +15,7 @@
 // // get html string of the report (based on report_html template only)
 // var html = FwReports.createHtml(fw, repcode);
 
-// // supported formats: html(default), csv, pdf, xls
+// // supported formats: html(default), csv, pdf, xls, xlsx, json
 // // get report data, render to pdf file (temporary file created), output to browser, cleanup
 // var filepath = FwReports.createFile(fw, repcode, "pdf");
 // fw.fileResponse(filepath, "report.pdf");
@@ -39,7 +39,7 @@ public class FwReports
     public const string TO_STRING = "string";
 
     public string report_code = string.Empty;
-    public string format = string.Empty; // report format, if empty - html, other options: html, csv, pdf, xls
+    public string format = string.Empty; // report format, if empty - html, other options: html, csv, pdf, xls, xlsx, json
     public string render_to = ""; // output to: empty(browser), "string"(render returns string, for html only), "/file/path"(render saves to file)
     public FwDict f = []; // report filters/options
                         // render options for html to pdf/xls/etc... convertor
@@ -162,11 +162,12 @@ public class FwReports
 
     public static string format2ext(string format)
     {
-        string ext = format switch
+        string ext = (format ?? string.Empty).ToLowerInvariant() switch
         {
             "pdf" => ".pdf",
             "xls" => ".xls",
             "csv" => ".csv",
+            "json" => ".json",
             _ => ".html",
         };
         return ext;
@@ -183,7 +184,7 @@ public class FwReports
         this.db = fw.db;
         this.report_code = report_code ?? string.Empty;
         this.f = f ?? [];
-        this.format = this.f["format"].toStr();
+        this.format = this.f["format"].toStr().ToLowerInvariant();
     }
 
     // called from createInstance to check if logged user has access to the report
@@ -329,6 +330,17 @@ public class FwReports
                         var response = fw.response ?? throw new InvalidOperationException("Response is not available");
                         Utils.writeCSVExport(response, report_code + ".csv", "", "", list_rows);
                     }
+                    break;
+                }
+            case "json":
+                {
+                    var content = Utils.jsonEncode(ps);
+                    if (isFileRender())
+                        Utils.setFileContent(render_to, ref content);
+                    else if (render_to == TO_STRING)
+                        result = content;
+                    else
+                        fw.parserJson(ps);
                     break;
                 }
 
