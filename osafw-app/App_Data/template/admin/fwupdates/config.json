@@ -8,6 +8,7 @@
     "iname": "File",
     "idesc": "SQL"
   },
+  "is_dynamic_index_edit": false,
 
   "store": {
     "lookups_std": {
@@ -81,14 +82,14 @@
             {
               "label": "Mark All Pending as Applied",
               "icon": "bi bi-check2-circle",
-              "class": "btn btn-secondary me-2",
+              "class": "btn btn-default me-2",
               "url": "/Dev/Manage/(MarkFwUpdatesApplied)",
               "post": true
             },
             {
               "label": "Refresh Views only",
               "icon": "bi bi-arrow-clockwise",
-              "class": "btn btn-info me-2",
+              "class": "btn btn-default me-2",
               "url": "/Dev/Manage/(RefreshViews)",
               "post": true
             },
@@ -96,7 +97,7 @@
               "label": "Reload from Files",
               "title": "New update files only",
               "icon": "bi bi-arrow-repeat",
-              "class": "btn btn-warning me-2",
+              "class": "btn btn-default me-2",
               "url": "/Dev/Manage/(ReloadFwUpdates)",
               "post": true
             }

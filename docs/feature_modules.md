@@ -10,6 +10,8 @@ Feature modules bundle a database table, its model, controller, and templates. Y
 5. **Review and tweak `config.json`** in the generated template folder (see [dynamic controller config](dynamic.md)).
 6. **Prune unused partials/includes** in the generated template folder so only the needed pages and widgets remain.
 
+In local development, Home can automatically redirect into the FwUpdates apply flow when pending update scripts exist. Set `appSettings.is_fwupdates_auto_apply` to `false` when you want to review and apply `/Admin/FwUpdates` manually.
+
 ## How `/Dev/Manage` scaffolding works
 - `CreateModelAction` converts the selected table into an entity description (`DevEntityBuilder.table2entity`) and passes it to `DevCodeGen.createModel`, which clones demo model templates and adjusts names/fields based on schema metadata.
 - `CreateControllerAction` builds a temporary entity with the chosen model and controller options, loads `dev/db.json`, and calls `DevCodeGen.createController`. The generator copies the demo controller/templates (dynamic or Vue), rewrites URLs/titles, regenerates `config.json`, writes the controller class, and appends/updates `menu_items`.

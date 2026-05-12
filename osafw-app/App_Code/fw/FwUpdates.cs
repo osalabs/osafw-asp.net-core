@@ -33,7 +33,7 @@ public class FwUpdates : FwModel
     /// <summary>
     /// Load new updates from the updates directory and add them to the database.
     /// </summary>
-    public void loadUpdates()
+    public virtual void loadUpdates()
     {
         string updates_root = fw.config("site_root") + @"\App_Data\sql\updates";
         logger("checking " + updates_root);
@@ -132,7 +132,11 @@ public class FwUpdates : FwModel
         db.clearSchemaCache();
     }
 
-    public long getCountPending()
+    /// <summary>
+    /// Counts framework update records that are still pending.
+    /// </summary>
+    /// <returns>Number of active update rows waiting to be applied.</returns>
+    public virtual long getCountPending()
     {
         return getCount(new int[] { STATUS_ACTIVE });
     }
@@ -170,13 +174,34 @@ public class FwUpdates : FwModel
         db.clearSchemaCache();
     }
 
+    /// <summary>
+    /// Determines whether a developer Home page request should trigger the automatic FwUpdates redirect.
+    /// </summary>
+    /// <returns>
+    /// <c>true</c> when the app is running with <c>IS_DEV</c> and <c>is_fwupdates_auto_apply</c> enabled; otherwise <c>false</c>.
+    /// </returns>
+    public bool isAutoApplyEnabledForDev()
+    {
+        return fw.config("IS_DEV").toBool() && fw.config("is_fwupdates_auto_apply").toBool();
+    }
+
+    /// <summary>
+    /// Checks for pending framework SQL updates during developer Home page visits and redirects to the update runner.
+    /// </summary>
+    /// <remarks>
+    /// The <c>is_fwupdates_auto_apply</c> setting lets local developers keep pending updates visible in `/Admin/FwUpdates`
+    /// without automatically entering the apply flow when they visit Home.
+    /// </remarks>
     public void checkApplyIfDev()
     {
         if (!fw.config("IS_DEV").toBool())
-            return; // only auto-apply in dev
+            return; // only check update files in dev
         try
         {
             loadUpdates();
+
+            if (!isAutoApplyEnabledForDev())
+                return; // keep pending updates visible without entering the apply flow
 
             if (getCountPending() > 0)
                 fw.redirect("/Dev/Configure/(ApplyUpdates)");

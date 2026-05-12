@@ -128,6 +128,7 @@ public static class FwConfig
 
         st["lang"] ??= "en"; // default language
         st["is_lang_update"] ??= false; // default language update flag
+        st["is_fwupdates_auto_apply"] ??= true; // keep the existing dev Home update redirect unless explicitly disabled
 
         st["date_format"] ??= DateUtils.DATE_FORMAT_MDY;
         st["time_format"] ??= DateUtils.TIME_FORMAT_12;

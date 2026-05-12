@@ -17,6 +17,11 @@ class DevCodeGen
     public const string DB_JSON_PATH = "/dev/db.json";
     public const string ENTITIES_PATH = "/dev/entities.txt";
     public const string SYS_FIELDS = "id status add_time add_users_id upd_time upd_users_id"; // system fields
+    private const int FORM_COL_PRIMARY = 0;
+    private const int FORM_COL_SECONDARY = 1;
+    private const int FORM_COL_META = FORM_COL_SECONDARY;
+    private const int FORM_COL_COUNT = 2;
+    private const int FORM_BALANCE_FIELD_COUNT = 8;
 
     private readonly FW fw;
     private readonly DB db;
@@ -1118,16 +1123,24 @@ END" + Environment.NewLine;
         }
     }
 
+    /// <summary>
+    /// Adds a generated field definition to one of the standard form layout buckets for a tab.
+    /// </summary>
+    /// <param name="showFieldsTabs">Tab-to-column map that receives the generated field definition.</param>
+    /// <param name="tab">Tab code; an empty string represents the default tab.</param>
+    /// <param name="col">Zero-based generated column index; values beyond primary are treated as secondary/right-side.</param>
+    /// <param name="sf">Field definition to append to the selected column.</param>
     public static void addToTabColumn(Dictionary<string, List<List<FwDict>>> showFieldsTabs, string tab, int col, FwDict sf)
     {
         if (!showFieldsTabs.ContainsKey(tab))
-            showFieldsTabs[tab] = [
-                [], //left col
-                [], //mid col
-                []  //right col
-            ];
+        {
+            showFieldsTabs[tab] = [];
+            for (var i = 0; i < FORM_COL_COUNT; i++)
+                showFieldsTabs[tab].Add([]);
+        }
         var showFieldsCols = showFieldsTabs[tab];
-        showFieldsCols[col].Add(sf);
+        var targetCol = col == FORM_COL_PRIMARY ? FORM_COL_PRIMARY : FORM_COL_SECONDARY;
+        showFieldsCols[targetCol].Add(sf);
     }
 
     /// <summary>
@@ -1173,63 +1186,293 @@ END" + Environment.NewLine;
         }
     }
 
+    /// <summary>
+    /// Converts generated field buckets into dynamic-controller row/column structure.
+    /// </summary>
+    /// <param name="fieldsCols">Generated field buckets in primary and secondary order; legacy extra buckets are merged into secondary.</param>
+    /// <returns>Field definitions wrapped with row/column structure for `config.json`.</returns>
     public static FwList makeLayoutForFields(List<List<FwDict>> fieldsCols)
     {
-        //remove/filter empty columns from showFieldsCols
-        var fieldsColsFinal = fieldsCols.Where(x => x.Count > 0).ToList();
-        //here we have 2 or 3 collumns
-        var class_col = "col-lg-" + (fieldsColsFinal.Count == 2 ? 6 : 4);
+        var normalizedCols = new List<List<FwDict>>();
+        for (var i = 0; i < FORM_COL_COUNT; i++)
+            normalizedCols.Add([]);
+
+        for (var i = 0; i < fieldsCols.Count; i++)
+        {
+            var targetCol = i == FORM_COL_PRIMARY ? FORM_COL_PRIMARY : FORM_COL_SECONDARY;
+            normalizedCols[targetCol].AddRange(fieldsCols[i]);
+        }
+
+        var fieldsColsFinal = normalizedCols
+            .Select((fields, index) => new FwDict
+            {
+                ["index"] = index,
+                ["fields"] = fields
+            })
+            .Where(x => (x["fields"] as List<FwDict>)?.Count > 0)
+            .ToList();
 
         var configFields = new FwList
         {
             Utils.qh("type|row"),
         };
-        for (var i = 0; i < fieldsColsFinal.Count; i++)
+        foreach (var col in fieldsColsFinal)
         {
-            configFields.Add(Utils.qh($"type|col class|{class_col}"));
-            configFields.AddRange(fieldsColsFinal[i]);
+            var colIndex = col["index"].toInt();
+            var colFields = orderGeneratedColumnFields(colIndex, col["fields"] as List<FwDict> ?? []);
+            configFields.Add(new FwDict
+            {
+                ["type"] = "col",
+                ["class"] = getGeneratedColumnClass(fieldsColsFinal, colIndex),
+            });
+            configFields.AddRange(colFields);
             configFields.Add(Utils.qh("type|col_end"));
         }
         configFields.Add(Utils.qh("type|row_end"));
         return configFields;
     }
 
+    /// <summary>
+    /// Chooses Bootstrap column classes for generated layouts while keeping primary content wider than metadata.
+    /// </summary>
+    /// <param name="fieldsColsFinal">Non-empty generated columns with original column indexes and field lists.</param>
+    /// <param name="colIndex">Original generated column index being rendered.</param>
+    /// <returns>Bootstrap column class string for the rendered generated column.</returns>
+    private static string getGeneratedColumnClass(List<FwDict> fieldsColsFinal, int colIndex)
+    {
+        var colCount = fieldsColsFinal.Count;
+        if (colCount <= 1)
+            return "col-12";
+
+        var primaryFields = fieldsColsFinal
+            .Where(x => x["index"].toInt() == FORM_COL_PRIMARY)
+            .SelectMany(x => x["fields"] as List<FwDict> ?? [])
+            .ToList();
+        var secondaryFields = fieldsColsFinal
+            .Where(x => x["index"].toInt() == FORM_COL_SECONDARY)
+            .SelectMany(x => x["fields"] as List<FwDict> ?? [])
+            .ToList();
+
+        if (primaryFields.Any(isGeneratedWideDefinition) || secondaryFields.Any(isGeneratedSideDefinition))
+            return colIndex == FORM_COL_PRIMARY ? "col-12 col-lg-8" : "col-12 col-lg-4";
+
+        return "col-12 col-lg-6";
+    }
+
+    /// <summary>
+    /// Orders generated fields inside a column so right-side support fields do not sink below metadata.
+    /// </summary>
+    /// <param name="colIndex">Generated column index being rendered.</param>
+    /// <param name="fields">Generated field definitions in discovery order.</param>
+    /// <returns>Generated field definitions in render order for the selected column.</returns>
+    private static List<FwDict> orderGeneratedColumnFields(int colIndex, List<FwDict> fields)
+    {
+        if (colIndex != FORM_COL_SECONDARY)
+            return fields;
+
+        var idFields = fields.Where(isGeneratedIdDefinition).ToList();
+        var bottomFields = fields
+            .Where(x => !isGeneratedIdDefinition(x) && isGeneratedBottomSideDefinition(x))
+            .ToList();
+        var supportFields = fields
+            .Where(x => !isGeneratedIdDefinition(x) && !isGeneratedBottomSideDefinition(x))
+            .ToList();
+
+        return idFields
+            .Concat(supportFields)
+            .Concat(bottomFields)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Returns whether a generated field definition needs primary-column space because it usually contains long content.
+    /// </summary>
+    /// <param name="def">Generated field definition from `show_fields` or `showform_fields`.</param>
+    /// <returns><c>true</c> for large text, raw HTML, markdown, and subtable-like controls; otherwise <c>false</c>.</returns>
+    private static bool isGeneratedWideDefinition(FwDict def)
+    {
+        var type = def["type"].toStr();
+        return type == "textarea"
+            || type == "markdown"
+            || type == "noescape"
+            || type == "subtable"
+            || type == "subtable_edit";
+    }
+
+    /// <summary>
+    /// Returns whether a generated field definition is the record identifier display.
+    /// </summary>
+    /// <param name="def">Generated field definition from `show_fields` or `showform_fields`.</param>
+    /// <returns><c>true</c> for the standard ID field; otherwise <c>false</c>.</returns>
+    private static bool isGeneratedIdDefinition(FwDict def)
+    {
+        return def["field"].toStr() == "id"
+            || def["type"].toStr() == "id";
+    }
+
+    /// <summary>
+    /// Returns whether a generated field definition is the primary identifying field for lookup-style rows.
+    /// </summary>
+    /// <param name="def">Generated field definition from `show_fields` or `showform_fields`.</param>
+    /// <returns><c>true</c> for standard name/code fields that should remain in the primary content column; otherwise <c>false</c>.</returns>
+    private static bool isGeneratedMajorDefinition(FwDict def)
+    {
+        var field = def["field"].toStr();
+        return field == "iname"
+            || field == "icode";
+    }
+
+    /// <summary>
+    /// Returns whether a generated right-side field should stay at the bottom of its column.
+    /// </summary>
+    /// <param name="def">Generated field definition from `show_fields` or `showform_fields`.</param>
+    /// <returns><c>true</c> for status, priority, and lifecycle metadata; otherwise <c>false</c>.</returns>
+    private static bool isGeneratedBottomSideDefinition(FwDict def)
+    {
+        var field = def["field"].toStr();
+        var type = def["type"].toStr();
+        return field == "status"
+            || field == "prio"
+            || field == "add_time"
+            || field == "upd_time"
+            || field == "applied_time"
+            || type == "added"
+            || type == "updated";
+    }
+
+    /// <summary>
+    /// Returns whether a generated field definition belongs in the right-side metadata/support column.
+    /// </summary>
+    /// <param name="def">Generated field definition from `show_fields` or `showform_fields`.</param>
+    /// <returns><c>true</c> for framework metadata, ordering, and attachment-heavy controls; otherwise <c>false</c>.</returns>
+    private static bool isGeneratedSideDefinition(FwDict def)
+    {
+        var field = def["field"].toStr();
+        var type = def["type"].toStr();
+        return isGeneratedIdDefinition(def)
+            || isGeneratedBottomSideDefinition(def)
+            || type == "att"
+            || type == "att_edit"
+            || type == "att_links"
+            || type == "att_links_edit"
+            || type == "att_files"
+            || type == "att_files_edit";
+    }
+
+    /// <summary>
+    /// Estimates how much vertical space a generated field uses so compact fields can be balanced across content columns.
+    /// </summary>
+    /// <param name="def">Generated field definition from `showform_fields`.</param>
+    /// <returns>Relative weight used only for generated layout balancing.</returns>
+    private static int getGeneratedFieldWeight(FwDict def)
+    {
+        var type = def["type"].toStr();
+        if (isGeneratedWideDefinition(def))
+            return 4;
+        if (type == "att" || type == "att_edit" || type == "att_links" || type == "att_links_edit" || type == "att_files" || type == "att_files_edit")
+            return 3;
+        if (type == "id" || type == "added" || type == "updated" || type == "checkbox" || type == "cb" || type == "yesno")
+            return 1;
+        return 2;
+    }
+
+    /// <summary>
+    /// Totals generated field weights for a tab column before adding the next field.
+    /// </summary>
+    /// <param name="showFormFieldsTabs">Generated showform fields grouped by tab and column.</param>
+    /// <param name="tab">Tab code whose column weight is being calculated.</param>
+    /// <param name="col">Generated column index to inspect.</param>
+    /// <returns>Relative total field weight for the selected tab column.</returns>
+    private static int getGeneratedColumnWeight(Dictionary<string, List<List<FwDict>>> showFormFieldsTabs, string tab, int col)
+    {
+        if (!showFormFieldsTabs.TryGetValue(tab, out var cols) || cols.Count <= col)
+            return 0;
+
+        return cols[col].Sum(getGeneratedFieldWeight);
+    }
+
+    /// <summary>
+    /// Chooses a content column for compact generated fields while keeping the right column visually lighter.
+    /// </summary>
+    /// <param name="showFormFieldsTabs">Generated showform fields grouped by tab and column.</param>
+    /// <param name="tab">Tab code being generated.</param>
+    /// <param name="candidate">Generated field definition being placed.</param>
+    /// <returns>Primary or secondary generated content column index.</returns>
+    private static int chooseGeneratedContentColumn(Dictionary<string, List<List<FwDict>>> showFormFieldsTabs, string tab, FwDict candidate)
+    {
+        var primaryWeight = getGeneratedColumnWeight(showFormFieldsTabs, tab, FORM_COL_PRIMARY);
+        var secondaryWeight = getGeneratedColumnWeight(showFormFieldsTabs, tab, FORM_COL_SECONDARY);
+        var candidateWeight = getGeneratedFieldWeight(candidate);
+        return secondaryWeight + candidateWeight < primaryWeight ? FORM_COL_SECONDARY : FORM_COL_PRIMARY;
+    }
+
+    /// <summary>
+    /// Places generated show/showform field definitions into primary or secondary/right-side columns.
+    /// </summary>
+    /// <param name="fld">Database/entity field metadata used to classify generated layout.</param>
+    /// <param name="sf">Read-only view field definition generated for `show_fields`.</param>
+    /// <param name="sff">Edit/view form field definition generated for `showform_fields`.</param>
+    /// <param name="showFieldsTabs">Generated view field columns grouped by tab.</param>
+    /// <param name="showFormFieldsTabs">Generated edit field columns grouped by tab.</param>
+    /// <param name="sys_fields">Lookup of framework system field names that belong in the metadata column.</param>
+    /// <param name="fields">All entity fields for the controller being generated.</param>
+    /// <returns>The generated column index selected for the field.</returns>
     public static int addToFormColumns(FwDict fld, FwDict sf, FwDict sff,
         Dictionary<string, List<List<FwDict>>> showFieldsTabs,
         Dictionary<string, List<List<FwDict>>> showFormFieldsTabs,
         FwDict sys_fields, FwList fields)
     {
         var ui = fld["ui"] as FwDict ?? []; // ui options for the field
-        var col = 0; //default to left
+        var formtab = ui["formtab"].toStr();
+        var col = FORM_COL_PRIMARY;
 
         if (fld["is_identity"].toBool() || sys_fields.ContainsKey(fld["name"].toStr()))
         {
             // add to system fields - to the right
-            col = 2;
+            col = FORM_COL_META;
         }
         else
         {
             //non-system fields
             if (sf["type"].toStr() == "att"
                 || sf["type"].toStr() == "att_links"
-                || sff["type"].toStr() == "textarea" && fields.Count >= 10)
+                || sf["type"].toStr() == "att_files"
+                || sff["type"].toStr() == "att_edit"
+                || sff["type"].toStr() == "att_links_edit"
+                || sff["type"].toStr() == "att_files_edit")
             {
-                //add to the right: attachments, textareas (only if many fields)
-                col = 2;
+                // add attachment-heavy controls to the metadata/side column
+                col = FORM_COL_META;
+            }
+            else if (isGeneratedSideDefinition(sff) || isGeneratedSideDefinition(sf))
+            {
+                // lifecycle/status/priority fields read better in the right-side metadata column
+                col = FORM_COL_META;
+            }
+            else if (isGeneratedMajorDefinition(sff) || isGeneratedMajorDefinition(sf))
+            {
+                // standard lookup name/code fields anchor the primary content column
+                col = FORM_COL_PRIMARY;
+            }
+            else if (isGeneratedWideDefinition(sff) || isGeneratedWideDefinition(sf))
+            {
+                // large content needs the primary column, not the narrow metadata column
+                col = FORM_COL_PRIMARY;
+            }
+            else if (fields.Count >= FORM_BALANCE_FIELD_COUNT)
+            {
+                col = chooseGeneratedContentColumn(showFormFieldsTabs, formtab, sff);
             }
         }
 
         //check if specific column required
         var formcol = ui["formcol"].toStr();
         if (formcol == "left")
-            col = 0;
+            col = FORM_COL_PRIMARY;
         else if (formcol == "mid")
-            col = 1;
+            col = FORM_COL_SECONDARY;
         else if (formcol == "right")
-            col = 2;
-
-        //select/add proper tab
-        var formtab = ui["formtab"].toStr();
+            col = FORM_COL_META;
 
         addToTabColumn(showFieldsTabs, formtab, col, sf);
         addToTabColumn(showFormFieldsTabs, formtab, col, sff);

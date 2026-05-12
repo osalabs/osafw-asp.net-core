@@ -66,6 +66,19 @@ pick a `type`, set the required keys, and copy an example you can paste into `co
 - **lookup_by_value**: for `autocomplete` fields, store the typed value instead of id.
 - **lookup_id / admin_url**: build links for `plaintext_link`.
 
+### Generated layout heuristics
+
+Developer-generated and virtual controllers build a two-column `show_fields` / `showform_fields` layout from schema metadata when a controller-specific config does not define those arrays.
+
+- Wide content fields such as markdown, textareas, raw HTML, and subtables are kept in the primary content column.
+- Major lookup identity fields such as `iname` and `icode` stay in the primary content column.
+- Compact non-system fields on larger generated forms are balanced into the right-side column only when the right column stays visually lighter after the field is added.
+- Framework and lifecycle metadata such as `id`, `status`, `add_time`, `upd_time`, and `applied_time` stays in the right-side metadata area.
+- Minor ordering fields such as `prio` stay in the right-side metadata area.
+- Right-side support fields render after `id` and before bottom metadata such as `prio`, `status`, `add_time`, and `upd_time`.
+- Attachment-heavy controls stay in the right-side support area by default.
+- Explicit `UI: formcol=left|mid|right` overrides the generated placement; `mid` and `right` both target the right-side column. `class` and `class_contents` tune wrapper/control sizing after placement.
+
 ### Attachments and subtables
 
 - **att_category / att_post_prefix**: configure upload bucket and input prefix for `att*` fields.
