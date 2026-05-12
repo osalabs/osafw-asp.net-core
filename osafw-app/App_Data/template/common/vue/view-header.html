@@ -20,12 +20,16 @@
         <div class="page-header-row page-header-row-title d-flex flex-wrap align-items-center gap-2">
             <div class="page-header-title flex-grow-1">
                 <h1 class="page-title mb-0">
-        {{fwStore.view_title}}
-    </h1>
+                    {{fwStore.view_title}}
+                </h1>
             </div>
             <div class="page-header-meta d-flex flex-wrap align-items-center gap-2">
                 <slot name="meta"></slot>
             </div>
+        </div>
+
+        <div v-if="$slots.tabs" class="page-header-row page-header-row-tabs">
+            <slot name="tabs"></slot>
         </div>
 
         <div class="page-header-row page-header-row-actions d-flex flex-wrap align-items-center gap-2">
@@ -80,7 +84,7 @@
     </div>
         </div>
 
-    <slot name="afterButtons"></slot>
+        <slot name="afterButtons"></slot>
     </div>
 </script>
 

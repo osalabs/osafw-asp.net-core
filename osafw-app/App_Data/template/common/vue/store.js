@@ -410,6 +410,7 @@ let actions = {
         const nextTab = this.form_tabs?.length ? (this.current_form_tab || this.form_tabs[0]?.tab) : '';
         const nextUrl = this.buildScreenUrl(screen, id, nextTab);
         window.history.pushState({ screen: screen, id: id }, '', nextUrl);
+        window.setTimeout(() => document.dispatchEvent(new CustomEvent('fw-page-change')), 0);
         this.is_list_edit_pane = false;
         if (id && (screen == 'view' || screen == 'edit')) {
             this.startItemLoading();
@@ -565,6 +566,7 @@ let actions = {
             const data = await this.api.get(id, options);
             //console.log('loadItem data', data);
             this.edit_data = data;
+            window.setTimeout(() => document.dispatchEvent(new CustomEvent('fw-page-change')), 0);
 
         } catch (error) {
             this.handleError(error, 'loadItem');
