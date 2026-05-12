@@ -1934,6 +1934,8 @@ public class DB : IDisposable
                     else
                         result = field_value.toLong();
                 }
+                else if (field_value is bool)
+                    result = field_value.toBool() ? 1 : 0;
                 else
                     result = field_value.toLong();
             }
