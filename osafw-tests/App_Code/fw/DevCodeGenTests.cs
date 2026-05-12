@@ -9,6 +9,9 @@ namespace osafw.Tests;
 [TestClass]
 public class DevCodeGenTests
 {
+    private static readonly Type CodeGenType = typeof(FW).Assembly.GetType("osafw.DevCodeGen")
+        ?? throw new InvalidOperationException("DevCodeGen type was not found.");
+
     [TestMethod]
     public void UpdateControllerConfig_RemovesCopiedDemoTabFields()
     {
@@ -62,21 +65,55 @@ public class DevCodeGenTests
         Assert.IsFalse(config.ContainsKey("showform_fields_meta"));
     }
 
+    [TestMethod]
+    public void BuildLookupInsertSql_ChecksForExistingIcode()
+    {
+        var fw = TestHelpers.CreateFw();
+        var item = new FwDict
+        {
+            ["igroup"] = "User",
+            ["icode"] = "AdminGeneratedLookups",
+            ["url"] = "/Admin/GeneratedLookups",
+            ["iname"] = "Generated Lookups",
+            ["model"] = "GeneratedLookups",
+            ["access_level"] = Users.ACL_MANAGER
+        };
+
+        var sql = InvokeBuildLookupInsertSql(fw, item);
+
+        StringAssert.Contains(sql, "IF NOT EXISTS");
+        StringAssert.Contains(sql, "SELECT 1 FROM fwcontrollers WHERE icode='AdminGeneratedLookups'");
+        StringAssert.Contains(sql, "INSERT INTO fwcontrollers");
+        StringAssert.Contains(sql, "'/Admin/GeneratedLookups'");
+    }
+
     private static void InvokeUpdateControllerConfig(FW fw, FwDict entity, FwDict config)
     {
-        var codeGenType = typeof(FW).Assembly.GetType("osafw.DevCodeGen")
-            ?? throw new InvalidOperationException("DevCodeGen type was not found.");
-        var ctor = codeGenType.GetConstructor(
+        var codeGen = CreateCodeGen(fw);
+        var method = CodeGenType.GetMethod("updateControllerConfig", BindingFlags.Instance | BindingFlags.Public)
+            ?? throw new InvalidOperationException("DevCodeGen.updateControllerConfig was not found.");
+
+        method.Invoke(codeGen, new object?[] { entity, config, new FwList() });
+    }
+
+    private static string InvokeBuildLookupInsertSql(FW fw, FwDict item)
+    {
+        var codeGen = CreateCodeGen(fw);
+        var method = CodeGenType.GetMethod("buildLookupInsertSql", BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("DevCodeGen.buildLookupInsertSql was not found.");
+
+        return method.Invoke(codeGen, new object?[] { item })?.toStr() ?? "";
+    }
+
+    private static object CreateCodeGen(FW fw)
+    {
+        var ctor = CodeGenType.GetConstructor(
             BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
             binder: null,
             types: new[] { typeof(FW), typeof(DB) },
             modifiers: null)
             ?? throw new InvalidOperationException("DevCodeGen constructor was not found.");
-        var codeGen = ctor.Invoke(new object?[] { fw, fw.db });
-        var method = codeGenType.GetMethod("updateControllerConfig", BindingFlags.Instance | BindingFlags.Public)
-            ?? throw new InvalidOperationException("DevCodeGen.updateControllerConfig was not found.");
-
-        method.Invoke(codeGen, new object?[] { entity, config, new FwList() });
+        return ctor.Invoke(new object?[] { fw, fw.db });
     }
 
     private static FwDict Field(

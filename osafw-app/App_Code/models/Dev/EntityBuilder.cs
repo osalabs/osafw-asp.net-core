@@ -409,7 +409,8 @@ class DevEntityBuilder
 
         // Scan all tokens for FK(TableName.FieldName) syntax (not just at index)
         string fkToken = tokens.FirstOrDefault(t => t.StartsWith("FK(", StringComparison.OrdinalIgnoreCase) && t.EndsWith(")")) ?? string.Empty;
-        if (!string.IsNullOrEmpty(fkToken))
+        var hasForeignKey = !string.IsNullOrEmpty(fkToken);
+        if (hasForeignKey)
         {
             var fkParts = fkToken[3..^1].Split('.');
             if (fkParts.Length == 2)
@@ -453,6 +454,8 @@ class DevEntityBuilder
         string fieldType = (tokens.Length > index) ? tokens[index++] : "";
         if (IsDataType(fieldType))
             ParseDataType(fieldType, field, is_notnull);
+        else if (hasForeignKey)
+            ParseDataType("int", field, is_notnull);
         else
             //default type is varchar
             ParseDataType("varchar", field, is_notnull);

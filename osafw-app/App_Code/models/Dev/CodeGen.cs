@@ -504,17 +504,30 @@ class DevCodeGen
         else
         {
             fw.model<FwControllers>().add(item);
-            upd_sql = Environment.NewLine + $@"INSERT INTO fwcontrollers (igroup, icode, url, iname, model, access_level, is_lookup) VALUES (
-                            {db.q(item["igroup"])},
-                            {db.q(item["icode"])},
-                            {db.q(item["url"])},
-                            {db.q(item["iname"])},
-                            {db.q(item["model"])},
-                            {db.qi(item["access_level"])},
-                            1
-                        )" + Environment.NewLine;
+            upd_sql = buildLookupInsertSql(item);
         }
         Utils.setFileContent(upd_file, ref upd_sql, true);
+    }
+
+    /// <summary>
+    /// Build an idempotent lookup-controller insert for update scripts so repeat application does not fail on duplicate rows.
+    /// </summary>
+    /// <param name="item">Lookup controller values keyed by `fwcontrollers` column name.</param>
+    /// <returns>SQL Server script block that inserts the lookup row only when its `icode` is absent.</returns>
+    private string buildLookupInsertSql(FwDict item)
+    {
+        return Environment.NewLine + $@"IF NOT EXISTS (SELECT 1 FROM fwcontrollers WHERE icode={db.q(item["icode"])})
+BEGIN
+    INSERT INTO fwcontrollers (igroup, icode, url, iname, model, access_level, is_lookup) VALUES (
+        {db.q(item["igroup"])},
+        {db.q(item["icode"])},
+        {db.q(item["url"])},
+        {db.q(item["iname"])},
+        {db.q(item["model"])},
+        {db.qi(item["access_level"])},
+        1
+    )
+END" + Environment.NewLine;
     }
 
     public bool createController(FwDict entity, FwList entities)
