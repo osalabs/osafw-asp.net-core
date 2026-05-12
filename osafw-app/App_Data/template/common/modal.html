@@ -11,267 +11,595 @@
      - URLs can include {id} placeholder for edit actions (current select value).
      - On save, controller returns JSON with lookup_label; select option is added/updated.
   4) Modal component appends `_layout=modal` to loaded URLs and form submits.
-  5) Forms inside modal are submitted via ajaxForm and HTML response replaces modal content.
-  6) In modal JS, get the trigger element:
+  5) Forms inside modal are submitted via ajax/fetch and HTML response replaces modal content.
+  6) Links inside loaded modal content with class `on-fw-modal-link` are fetched into the same modal.
+  7) In modal JS, get the trigger element:
      var trigger = fw.modalTriggerEl(fw.scopeFromScript());
 -->
 <script>
-  fw.initComponent('fw_modal', {
-    init: function () {
-      var $doc = $(document);
-      if ($doc.data('fw-modal-inited')) return;
-      $doc.data('fw-modal-inited', true);
+  (function () {
+    if (document.documentElement.hasAttribute('data-fw-modal-inited')) return;
+    document.documentElement.setAttribute('data-fw-modal-inited', '1');
 
-      fw._modalCounter = fw._modalCounter || 0;
-      fw._modalTriggerCounter = fw._modalTriggerCounter || 0;
+    var modalCounter = 0;
+    var triggerCounter = 0;
+    var HTML_LOADING = '<div class="modal-body d-flex flex-column justify-content-center align-items-center text-center py-5 px-4" style="min-height: 14rem;">'
+      + '<div class="spinner-border text-primary mb-3" role="status" aria-hidden="true"></div>'
+      + '<div class="fw-semibold">Loading...</div>'
+      + '</div>';
 
-      function ensureTriggerId($trigger) {
-        var triggerId = $trigger.data('fw-modal-trigger-id');
-        if (!triggerId) {
-          fw._modalTriggerCounter += 1;
-          triggerId = 'fw-modal-trigger-' + Date.now() + '-' + fw._modalTriggerCounter;
-          $trigger.attr('data-fw-modal-trigger-id', triggerId);
-        }
-        return triggerId;
+    function getFw() {
+      return window.fw || null;
+    }
+
+    function getLoadingHtml() {
+      var fw = getFw();
+      return fw && fw.HTML_LOADING ? fw.HTML_LOADING : HTML_LOADING;
+    }
+
+    function showAlert(message) {
+      var fw = getFw();
+      if (fw && typeof fw.alert === 'function') {
+        fw.alert(message);
+        return;
+      }
+      window.alert(message);
+    }
+
+    function showToastError(message) {
+      var fw = getFw();
+      if (fw && typeof fw.error === 'function') {
+        fw.error(message);
+      }
+    }
+
+    function renderInlineError(container, message) {
+      if (!container) return;
+
+      var root = container.querySelector('.modal-body') || container;
+      var alert = root.querySelector('.fw-modal-inline-error');
+      if (!alert) {
+        alert = document.createElement('div');
+        alert.className = 'alert alert-danger fw-modal-inline-error';
+        root.prepend(alert);
+      }
+      alert.textContent = message || 'An unexpected error occurred.';
+    }
+
+    function cleanFormErrors(form) {
+      var fw = getFw();
+      if (fw && typeof fw.clean_form_errors === 'function') {
+        fw.clean_form_errors(form);
+      }
+    }
+
+    function processFormErrors(form, details) {
+      var fw = getFw();
+      if (fw && typeof fw.process_form_errors === 'function') {
+        fw.process_form_errors(form, details);
+      }
+    }
+
+    function ensureTriggerId(trigger) {
+      var triggerId = trigger.getAttribute('data-fw-modal-trigger-id');
+      if (!triggerId) {
+        triggerCounter += 1;
+        triggerId = 'fw-modal-trigger-' + Date.now() + '-' + triggerCounter;
+        trigger.setAttribute('data-fw-modal-trigger-id', triggerId);
+      }
+      return triggerId;
+    }
+
+    function resolveLookupTarget(trigger) {
+      var targetSelector = trigger.getAttribute('data-fw-lookup-target');
+      if (targetSelector) {
+        var explicitTarget = document.querySelector(targetSelector);
+        if (explicitTarget) return explicitTarget;
       }
 
-      // Resolve target control for lookup updates
-      function resolveLookupTarget($trigger) {
-        var targetSelector = $trigger.data('fw-lookup-target');
-        if (targetSelector) {
-          var $target = $(targetSelector);
-          if ($target.length) return $target;
+      var group = trigger.closest('.input-group');
+      if (!group) return null;
+      return group.querySelector('select, input, textarea');
+    }
+
+    function buildLookupContext(trigger) {
+      var lookupMode = trigger.getAttribute('data-fw-lookup');
+      if (!lookupMode) return null;
+
+      return {
+        mode: lookupMode,
+        target: resolveLookupTarget(trigger)
+      };
+    }
+
+    function buildLookupUrl(trigger, lookup) {
+      var url = trigger.getAttribute('data-url') || trigger.getAttribute('href');
+      if (!url) return url;
+
+      if (url.indexOf('{id}') !== -1 || url.indexOf('{value}') !== -1) {
+        var value = lookup && lookup.target ? lookup.target.value : '';
+        if (!value) {
+          showAlert('Select a value first');
+          return null;
         }
-
-        var $group = $trigger.closest('.input-group');
-        if (!$group.length) return $();
-
-        return $group.find('select, input, textarea').first();
+        var encodedValue = encodeURIComponent(value);
+        url = url.replace(/\{id\}/g, encodedValue);
+        url = url.replace(/\{value\}/g, encodedValue);
       }
 
-      // Build lookup context from trigger data attributes
-      function buildLookupContext($trigger) {
-        var lookupMode = $trigger.data('fw-lookup');
-        if (!lookupMode) return null;
+      return url;
+    }
 
-        var $target = resolveLookupTarget($trigger);
+    function ensureModalLayout(url) {
+      if (!url) return url;
+      var parsedUrl = new URL(url, window.location.href);
+      if (!parsedUrl.searchParams.has('_layout')) {
+        parsedUrl.searchParams.set('_layout', 'modal');
+      }
+      return parsedUrl.toString();
+    }
+
+    function buildModal(trigger) {
+      modalCounter += 1;
+
+      var modalId = 'fw-modal-' + Date.now() + '-' + modalCounter;
+      var triggerId = ensureTriggerId(trigger);
+      var dialogClass = trigger.getAttribute('data-modal-dialog-class') || 'modal-dialog modal-lg modal-dialog-scrollable';
+      var contentClass = trigger.getAttribute('data-modal-content-class') || 'modal-content bg-body';
+
+      var modal = document.createElement('div');
+      modal.className = 'modal fade fw-modal';
+      modal.tabIndex = -1;
+      modal.setAttribute('role', 'dialog');
+      modal.setAttribute('aria-hidden', 'true');
+      modal.id = modalId;
+      modal.setAttribute('data-fw-modal-trigger-id', triggerId);
+
+      var dialog = document.createElement('div');
+      dialog.className = dialogClass;
+
+      var content = document.createElement('div');
+      content.className = contentClass;
+
+      dialog.appendChild(content);
+      modal.appendChild(dialog);
+      document.body.appendChild(modal);
+
+      modal.addEventListener('hidden.bs.modal', function () {
+        var instance = typeof bootstrap !== 'undefined' && bootstrap.Modal
+          ? bootstrap.Modal.getInstance(modal)
+          : null;
+        if (instance && typeof instance.dispose === 'function') {
+          instance.dispose();
+        }
+        modal.remove();
+      });
+
+      return modal;
+    }
+
+    function executeModalScripts(container) {
+      Array.from(container.querySelectorAll('script')).forEach(function (oldScript) {
+        var newScript = document.createElement('script');
+
+        Array.from(oldScript.attributes).forEach(function (attr) {
+          newScript.setAttribute(attr.name, attr.value);
+        });
+
+        if (oldScript.src) {
+          newScript.src = oldScript.src;
+          newScript.async = false;
+        } else {
+          newScript.textContent = oldScript.textContent;
+        }
+
+        oldScript.parentNode.replaceChild(newScript, oldScript);
+      });
+    }
+
+    function setModalContent(modal, html) {
+      var content = modal.querySelector('.modal-content');
+      if (!content) return;
+      content.innerHTML = html;
+      executeModalScripts(content);
+    }
+
+    function escapeHtml(message) {
+      var div = document.createElement('div');
+      div.textContent = message == null ? '' : String(message);
+      return div.innerHTML;
+    }
+
+    function showLoadError(modal, message) {
+      var safeMessage = escapeHtml(message || '');
+      var html = '<div class="modal-body"><div class="alert alert-danger mb-0">' + safeMessage + '</div></div>';
+      setModalContent(modal, html);
+      showToastError(message || 'Failed to load modal content.');
+    }
+
+    async function fetchText(url, init) {
+      var response = await fetch(url, init);
+      var text = await response.text();
+      return { response: response, text: text };
+    }
+
+    async function fetchJson(url, init) {
+      var response = await fetch(url, init);
+      var text = await response.text();
+      var data = null;
+
+      if (text) {
+        try {
+          data = JSON.parse(text);
+        } catch (err) {
+          data = null;
+        }
+      }
+
+      return { response: response, text: text, data: data };
+    }
+
+    async function loadModalContent(modal, url) {
+      var modalUrl = ensureModalLayout(url);
+      var content = modal.querySelector('.modal-content');
+      modal.dataset.fwModalUrl = modalUrl;
+      if (content) {
+        content.innerHTML = getLoadingHtml();
+      }
+
+      try {
+        var result = await fetchText(modalUrl, {
+          method: 'GET',
+          credentials: 'same-origin',
+          headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+
+        if (!result.response.ok) {
+          renderHtmlResultOrError(modal, result, 'Failed to load modal content.');
+          return;
+        }
+
+        setModalContent(modal, result.text);
+      } catch (err) {
+        showLoadError(modal, err && err.message ? err.message : 'Failed to load modal content.');
+      }
+    }
+
+    function appendSubmitterValue(collection, submitter) {
+      if (!submitter || !submitter.name) return;
+      collection.append(submitter.name, submitter.value || '');
+    }
+
+    function ensureCollectionValue(collection, key, value) {
+      if (!collection.has(key)) {
+        collection.append(key, value);
+      } else {
+        collection.set(key, value);
+      }
+    }
+
+    function getSubmitterOverride(submitter, attrName) {
+      if (!submitter || typeof submitter.getAttribute !== 'function') return '';
+      return submitter.getAttribute(attrName) || '';
+    }
+
+    function isHtmlResponse(result) {
+      if (!result || !result.response) return false;
+
+      var contentType = result.response.headers.get('content-type') || '';
+      if (contentType.toLowerCase().indexOf('text/html') >= 0) return true;
+
+      var text = (result.text || '').trim().toLowerCase();
+      if (!text) return false;
+
+      return text.indexOf('<!doctype html') === 0
+        || text.indexOf('<html') === 0
+        || text.indexOf('<div') === 0
+        || text.indexOf('<section') === 0;
+    }
+
+    function renderHtmlResultOrError(modal, result, fallbackMessage) {
+      if (isHtmlResponse(result) && result.text) {
+        setModalContent(modal, result.text);
+        return true;
+      }
+
+      showLoadError(modal, result && result.text ? result.text : fallbackMessage);
+      return false;
+    }
+
+    function startSubmitterSpinner(submitter) {
+      if (!(submitter instanceof HTMLElement)) return null;
+      if (!submitter.hasAttribute('data-spinner')) return null;
+      if (submitter._fwModalSpinnerState) return submitter._fwModalSpinnerState;
+
+      var state = {
+        disabled: !!submitter.disabled,
+        hiddenIcons: [],
+        spinner: null
+      };
+
+      submitter.disabled = true;
+
+      var iconNodes = Array.from(submitter.querySelectorAll('i, .bi, .icon'));
+      iconNodes.forEach(function (node) {
+        if (!(node instanceof HTMLElement)) return;
+        if (node.classList.contains('spinner-border')) return;
+        if (node.classList.contains('spinner-grow')) return;
+        state.hiddenIcons.push({
+          node: node,
+          className: node.className
+        });
+        node.classList.add('d-none');
+      });
+
+      var spinner = document.createElement('span');
+      spinner.className = 'spinner-border spinner-border-sm';
+      spinner.setAttribute('aria-hidden', 'true');
+
+      var textContent = (submitter.textContent || '').trim();
+      if (textContent) {
+        spinner.classList.add('me-2');
+      }
+
+      submitter.prepend(spinner);
+      state.spinner = spinner;
+      submitter._fwModalSpinnerState = state;
+      return state;
+    }
+
+    function stopSubmitterSpinner(submitter) {
+      if (!(submitter instanceof HTMLElement)) return;
+
+      var state = submitter._fwModalSpinnerState;
+      if (!state) return;
+
+      if (state.spinner && state.spinner.parentNode) {
+        state.spinner.remove();
+      }
+
+      state.hiddenIcons.forEach(function (item) {
+        if (!item.node || !item.node.classList) return;
+        item.node.className = item.className;
+      });
+
+      submitter.disabled = state.disabled;
+      delete submitter._fwModalSpinnerState;
+    }
+
+    function buildFormRequest(form, submitter) {
+      var submitterMethod = getSubmitterOverride(submitter, 'formmethod');
+      var submitterAction = getSubmitterOverride(submitter, 'formaction');
+      var method = (submitterMethod || form.getAttribute('method') || form.method || 'GET').toUpperCase();
+      var action = submitterAction || form.getAttribute('action') || form.action || window.location.href;
+      var url = new URL(action, window.location.href);
+      var headers = { 'X-Requested-With': 'XMLHttpRequest' };
+
+      if (method === 'GET') {
+        var params = new URLSearchParams(new FormData(form));
+        appendSubmitterValue(params, submitter);
+        ensureCollectionValue(params, '_layout', 'modal');
+        params.forEach(function (value, key) {
+          url.searchParams.set(key, value);
+        });
+
         return {
-          mode: lookupMode,
-          $target: $target
+          url: ensureModalLayout(url.toString()),
+          init: {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: headers
+          }
         };
       }
 
-      // Build modal URL, resolving lookup placeholders
-      function buildLookupUrl($trigger, lookup) {
-        var url = $trigger.data('url') || $trigger.attr('href');
-        if (!url) return url;
+      var formData = new FormData(form);
+      appendSubmitterValue(formData, submitter);
+      ensureCollectionValue(formData, '_layout', 'modal');
 
-        if (url.indexOf('{id}') !== -1 || url.indexOf('{value}') !== -1) {
-          var value = lookup && lookup.$target && lookup.$target.length ? lookup.$target.val() : '';
-          if (!value) {
-            fw.alert('Select a value first');
-            return null;
-          }
-          url = url.replace(/\{id\}/g, encodeURIComponent(value));
-          url = url.replace(/\{value\}/g, encodeURIComponent(value));
-        }
-
-        return url;
-      }
-
-      // Ensure modal layout flag is passed for HTML responses
-      function ensureModalLayout(url) {
-        if (!url) return url;
-        if (url.indexOf('_layout=modal') !== -1) return url;
-        var joiner = url.indexOf('?') === -1 ? '?' : '&';
-        return url + joiner + '_layout=modal';
-      }
-
-      function buildModal($trigger) {
-        fw._modalCounter += 1;
-        var modalId = 'fw-modal-' + Date.now() + '-' + fw._modalCounter;
-        var triggerId = ensureTriggerId($trigger);
-        var dialogClass = $trigger.data('modal-dialog-class') || 'modal-dialog modal-lg modal-dialog-scrollable';
-        var contentClass = $trigger.data('modal-content-class') || 'modal-content bg-body';
-
-        var $modal = $('<div class="modal fade fw-modal" tabindex="-1" role="dialog" aria-hidden="true"></div>');
-        var $dialog = $('<div></div>').addClass(dialogClass);
-        var $content = $('<div></div>').addClass(contentClass);
-
-        $modal.attr('id', modalId);
-        $modal.attr('data-fw-modal-trigger-id', triggerId);
-        $modal.append($dialog.append($content));
-
-        $('body').append($modal);
-
-        $modal.on('hidden.bs.modal', function () {
-          var modalEl = this;
-          if (typeof bootstrap !== 'undefined' && bootstrap.Modal && typeof bootstrap.Modal.getInstance === 'function') {
-            var modalInstance = bootstrap.Modal.getInstance(modalEl);
-            if (modalInstance && typeof modalInstance.dispose === 'function') {
-              modalInstance.dispose();
-            }
-          }
-          $modal.remove();
-        });
-
-        return $modal;
-      }
-
-      function executeModalScripts($container) {
-        $container.find('script').each(function () {
-          var oldScript = this;
-          var newScript = document.createElement('script');
-
-          Array.from(oldScript.attributes).forEach(function (attr) {
-            newScript.setAttribute(attr.name, attr.value);
-          });
-
-          if (oldScript.src) {
-            newScript.src = oldScript.src;
-            newScript.async = false;
-          } else {
-            newScript.text = oldScript.text;
-          }
-
-          oldScript.parentNode.replaceChild(newScript, oldScript);
-        });
-      }
-
-      function setModalContent($modal, html) {
-        var $content = $modal.find('.modal-content');
-        $content.html(html);
-        executeModalScripts($content);
-        bindModalForms($modal);
-      }
-
-      function escapeHtml(message) {
-        return $('<div>').text(message == null ? '' : String(message)).html();
-      }
-
-      function showLoadError($modal, message) {
-        var safeMessage = escapeHtml(message || '');
-        var html = '<div class="modal-body"><div class="alert alert-danger mb-0">' + safeMessage + '</div></div>';
-        setModalContent($modal, html);
-      }
-
-      function loadModalContent($modal, url) {
-        var modalUrl = ensureModalLayout(url);
-        $modal.data('fw-modal-url', modalUrl);
-        var $content = $modal.find('.modal-content');
-        $content.html(fw.HTML_LOADING);
-
-        $.ajax({
-          url: modalUrl,
-          method: 'GET',
-          dataType: 'html'
-        })
-          .done(function (html) {
-            setModalContent($modal, html);
-          })
-          .fail(function (xhr) {
-            var message = xhr.responseText || 'Failed to load modal content.';
-            showLoadError($modal, message);
-          });
-      }
-
-      function bindModalForms($modal) {
-        if (!$.fn.ajaxForm) return;
-        var lookup = $modal.data('fw-lookup') || null;
-
-        $modal.find('form').each(function () {
-          var $form = $(this);
-          if ($form.data('fw-modal-ajaxform')) return;
-
-          if (!$form.find('input[name="_layout"]').length) {
-            $('<input type="hidden" name="_layout" value="modal">').appendTo($form);
-          }
-
-          $form.data('fw-modal-ajaxform', true);
-          if (lookup) {
-            $form.ajaxForm({
-              dataType: 'json',
-              headers: { Accept: 'application/json' },
-              beforeSubmit: function () {
-                var $field = $form.find('input[name="lookup"]');
-                if (!$field.length) {
-                  $field = $('<input type="hidden" name="lookup">').appendTo($form);
-                }
-                $field.val(lookup.mode || '1');
-              },
-              success: function (data) {
-                if (data && data.error) {
-                  fw.clean_form_errors($form);
-                  if (data.error.details) {
-                    fw.process_form_errors($form, data.error.details);
-                  }
-                  fw.error(data.error.message || fw.MSG_AUTOSAVE_ERROR);
-                  return;
-                }
-
-                var id = data && data.id ? data.id : null;
-                var label = data && data.lookup_label ? data.lookup_label : null;
-                if (!label) {
-                  label = $form.find('[name="item[iname]"]').val();
-                }
-
-                if (lookup.$target && lookup.$target.length && id) {
-                  var idValue = String(id);
-                  var $option = lookup.$target.find('option').filter(function () {
-                    return $(this).val() === idValue;
-                  });
-                  if (!$option.length) {
-                    $option = $('<option></option>').val(idValue).appendTo(lookup.$target);
-                  }
-                  if (label) {
-                    $option.text(label);
-                  }
-                  lookup.$target.val(idValue);
-                  lookup.$target.trigger('change');
-                }
-
-                var instance = bootstrap.Modal.getInstance($modal[0]);
-                if (instance) {
-                  instance.hide();
-                }
-              },
-              error: function (xhr) {
-                var message = xhr.responseJSON?.error?.message || xhr.responseText || 'Failed to submit form.';
-                fw.error(message);
-              }
-            });
-            return;
-          }
-
-          $form.ajaxForm({
-            dataType: 'html',
-            success: function (html) {
-              setModalContent($modal, html);
-            },
-            error: function (xhr) {
-              var message = xhr.responseText || 'Failed to submit form.';
-              showLoadError($modal, message);
-            }
-          });
-        });
-      }
-
-      $doc.on('click', '.on-fw-modal', function (e) {
-        var $trigger = $(this);
-        var lookup = buildLookupContext($trigger);
-        var url = buildLookupUrl($trigger, lookup);
-        if (!url) return;
-
-        e.preventDefault();
-        var $modal = buildModal($trigger);
-        if (lookup) {
-          $modal.data('fw-lookup', lookup);
-        }
-        loadModalContent($modal, url);
-
-        var instance = new bootstrap.Modal($modal[0]);
-        instance.show();
-      });
+      return {
+        url: ensureModalLayout(url.toString()),
+        init: {
+          method: method,
+          body: formData,
+          credentials: 'same-origin',
+          headers: headers
+        },
+        formData: formData
+      };
     }
-  });
+
+    function updateLookupTarget(lookup, data, form) {
+      if (!lookup || !lookup.target || !data || !data.id) return;
+
+      var idValue = String(data.id);
+      var label = data.lookup_label || '';
+      if (!label) {
+        var inameField = form.querySelector('[name="item[iname]"]');
+        label = inameField ? inameField.value : '';
+      }
+
+      var option = null;
+      if (lookup.target.tagName === 'SELECT') {
+        option = Array.from(lookup.target.options).find(function (oneOption) {
+          return oneOption.value === idValue;
+        });
+
+        if (!option) {
+          option = document.createElement('option');
+          option.value = idValue;
+          lookup.target.appendChild(option);
+        }
+
+        if (label) {
+          option.textContent = label;
+        }
+
+        lookup.target.value = idValue;
+      } else {
+        lookup.target.value = idValue;
+      }
+
+      lookup.target.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    function hideModal(modal) {
+      if (typeof bootstrap === 'undefined' || !bootstrap.Modal) return;
+      var instance = bootstrap.Modal.getInstance(modal);
+      if (instance) {
+        instance.hide();
+      }
+    }
+
+    async function submitLookupForm(modal, form, submitter, lookup) {
+      startSubmitterSpinner(submitter);
+      cleanFormErrors(form);
+      Array.from(form.querySelectorAll('.fw-modal-inline-error')).forEach(function (el) {
+        el.remove();
+      });
+      var request = buildFormRequest(form, submitter);
+
+      if (request.formData) {
+        ensureCollectionValue(request.formData, 'lookup', lookup.mode || '1');
+      } else {
+        var requestUrl = new URL(request.url, window.location.href);
+        requestUrl.searchParams.set('lookup', lookup.mode || '1');
+        request.url = requestUrl.toString();
+      }
+
+      request.init.headers = Object.assign({}, request.init.headers, { Accept: 'application/json' });
+
+      try {
+        var result = await fetchJson(request.url, request.init);
+        var data = result.data || {};
+        var error = data && data.error ? data.error : null;
+
+        if (!result.response.ok && isHtmlResponse(result)) {
+          renderHtmlResultOrError(modal, result, 'Failed to submit form.');
+          return;
+        }
+
+        if (!result.response.ok || error) {
+          cleanFormErrors(form);
+          if (error && error.details) {
+            processFormErrors(form, error.details);
+          }
+          var message = error && error.message
+            ? error.message
+            : (result.text || 'Failed to submit form.');
+          renderInlineError(form, message);
+          showToastError(message);
+          return;
+        }
+
+        updateLookupTarget(lookup, data, form);
+        hideModal(modal);
+      } catch (err) {
+        var fallbackMessage = err && err.message ? err.message : 'Failed to submit form.';
+        renderInlineError(form, fallbackMessage);
+        showToastError(fallbackMessage);
+      } finally {
+        stopSubmitterSpinner(submitter);
+      }
+    }
+
+    async function submitHtmlForm(modal, form, submitter) {
+      startSubmitterSpinner(submitter);
+      Array.from(form.querySelectorAll('.fw-modal-inline-error')).forEach(function (el) {
+        el.remove();
+      });
+      var request = buildFormRequest(form, submitter);
+
+      try {
+        var result = await fetchText(request.url, request.init);
+        if (!result.response.ok) {
+          renderHtmlResultOrError(modal, result, 'Failed to submit form.');
+          return;
+        }
+        setModalContent(modal, result.text);
+      } catch (err) {
+        showLoadError(modal, err && err.message ? err.message : 'Failed to submit form.');
+      } finally {
+        stopSubmitterSpinner(submitter);
+      }
+    }
+
+    function shouldLoadLinkInModal(e, trigger, url) {
+      if (!url || e.defaultPrevented) return false;
+      if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return false;
+      if (trigger.hasAttribute('download')) return false;
+
+      var target = trigger.getAttribute('target');
+      if (target && target.toLowerCase() !== '_self') return false;
+      if (url.charAt(0) === '#') return false;
+
+      try {
+        var parsedUrl = new URL(url, window.location.href);
+        if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') return false;
+        return parsedUrl.origin === window.location.origin;
+      } catch (err) {
+        return false;
+      }
+    }
+
+    document.addEventListener('click', function (e) {
+      var trigger = e.target.closest('.on-fw-modal-link');
+      if (!trigger) return;
+
+      var modal = trigger.closest('.fw-modal');
+      if (!modal) return;
+
+      var url = trigger.getAttribute('data-url') || trigger.getAttribute('href');
+      if (!shouldLoadLinkInModal(e, trigger, url)) return;
+
+      e.preventDefault();
+      loadModalContent(modal, url);
+    });
+
+    document.addEventListener('click', function (e) {
+      var trigger = e.target.closest('.on-fw-modal');
+      if (!trigger) return;
+
+      var urlAttr = trigger.getAttribute('data-url') || trigger.getAttribute('href');
+      if (!urlAttr) return;
+
+      e.preventDefault();
+
+      var lookup = buildLookupContext(trigger);
+      var url = buildLookupUrl(trigger, lookup);
+      if (!url) return;
+
+      var modal = buildModal(trigger);
+      if (lookup) {
+        modal._fwLookup = lookup;
+      }
+
+      loadModalContent(modal, url);
+
+      if (typeof bootstrap === 'undefined' || !bootstrap.Modal) {
+        throw new Error('Bootstrap Modal is required for .on-fw-modal triggers.');
+      }
+
+      var instance = new bootstrap.Modal(modal);
+      instance.show();
+    });
+
+    document.addEventListener('submit', function (e) {
+      var form = e.target;
+      if (!(form instanceof HTMLFormElement)) return;
+
+      var modal = form.closest('.fw-modal');
+      if (!modal) return;
+
+      e.preventDefault();
+
+      var lookup = modal._fwLookup || null;
+      if (lookup) {
+        submitLookupForm(modal, form, e.submitter || null, lookup);
+        return;
+      }
+
+      submitHtmlForm(modal, form, e.submitter || null);
+    });
+  })();
 </script>
