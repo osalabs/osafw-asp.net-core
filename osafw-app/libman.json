@@ -23,6 +23,16 @@
       ]
     },
     {
+      "library": "bootstrap-select@1.14.0-beta3",
+      "destination": "wwwroot/assets/lib/bootstrap-select",
+      "files": [
+        "css/bootstrap-select.min.css",
+        "css/bootstrap-select.css.map",
+        "js/bootstrap-select.min.js",
+        "js/bootstrap-select.min.js.map"
+      ]
+    },
+    {
       "library": "jquery@3.7.1",
       "destination": "wwwroot/assets/lib/jquery",
       "files": [
