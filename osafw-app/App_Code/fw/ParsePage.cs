@@ -1024,7 +1024,7 @@ public class ParsePage
                     var precision = (!string.IsNullOrEmpty(hattrs["number_format"].toStr()) ? hattrs["number_format"].toInt() : 2);
                     bool groupdigits = !hattrs.ContainsKey("nfthousands") || !string.IsNullOrEmpty(hattrs["nfthousands"].toStr()); // default - group digits, but if nfthousands empty - don't
 
-                    value = value.toFloat().ToString("N" + precision, CultureInfo.InvariantCulture);
+                    value = value.toDouble().ToString("N" + precision, CultureInfo.InvariantCulture);
                     if (!groupdigits)
                     {
                         value = value.Replace(NumberFormatInfo.InvariantInfo.NumberGroupSeparator, "");
@@ -1034,7 +1034,7 @@ public class ParsePage
                 }
                 if (attr_count > 0 && hattrs.ContainsKey("currency"))
                 {
-                    value = value.toFloat().ToString("C2");
+                    value = value.toDouble().ToString("C2");
                     attr_count -= 1;
                 }
                 if (attr_count > 0 && hattrs.ContainsKey("bytes"))
