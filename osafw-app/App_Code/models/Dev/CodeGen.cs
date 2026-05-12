@@ -631,6 +631,12 @@ class DevCodeGen
         DevEntityBuilder.saveJsonController(config, config_file);
     }
 
+    /// <summary>
+    /// Rebuild controller config from entity metadata after a demo controller template is copied.
+    /// </summary>
+    /// <param name="entity">Entity definition with model, table, controller options, fields, and foreign key metadata.</param>
+    /// <param name="config">Mutable controller config loaded from the copied template and rewritten for the target controller.</param>
+    /// <param name="entities">Optional full entity list used to detect related junction tables when generating form controls.</param>
     public void updateControllerConfig(FwDict entity, FwDict config, FwList? entities = null)
     {
         string model_name = entity["model_name"].toStr();
@@ -1070,6 +1076,7 @@ class DevCodeGen
             config["edit_list_map"] = hFieldsMapEdit;
         }
 
+        removeCopiedTabFieldConfig(config);
         config["form_tabs"] = formTabs;
 
         //view form
@@ -1108,6 +1115,20 @@ class DevCodeGen
             ];
         var showFieldsCols = showFieldsTabs[tab];
         showFieldsCols[col].Add(sf);
+    }
+
+    /// <summary>
+    /// Remove tab-specific field layouts copied from demo config before generated layouts are written.
+    /// </summary>
+    /// <param name="config">Controller config loaded from the copied demo template; stale tab-specific field keys are removed in place.</param>
+    private static void removeCopiedTabFieldConfig(FwDict config)
+    {
+        foreach (var key in config.Keys.Cast<string>().ToArray())
+        {
+            if (key.StartsWith("show_fields_", StringComparison.Ordinal)
+                || key.StartsWith("showform_fields_", StringComparison.Ordinal))
+                config.Remove(key);
+        }
     }
 
     //add tabs to config[key] and config[key_tab] based on showFieldsTabs and update config["form_tabs"]
