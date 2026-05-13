@@ -337,11 +337,14 @@ public class FwVueController : FwDynamicController
         var attachments = new FwDict(); //att_id => att item
         var att_links = new IntList(); //linked att ids
         var att_files = new FwDict(); // per-field: field => [ids]
+        var lookups_by_field = new FwDict();
 
         var fields = collectFormFields(mode == "edit" ? "showform_fields" : "show_fields");
         var processed_fields = new HashSet<string>();
         foreach (FwDict def in fields)
         {
+            def["i"] = item;
+            def["record_id"] = id;
             var field_name = def["field"].toStr();
             var model_name = def["lookup_model"].toStr();
             var dtype = def["type"].toStr();
@@ -388,6 +391,10 @@ public class FwVueController : FwDynamicController
                         rows = multi_model.listLinkedByMainId(id, def); //junction model
                 }
                 multi_rows[field_name] = multi_model.filterListOptionsForJson(rows);
+            }
+            else if (mode == "edit" && (dtype == "select" || dtype == "radio") && model_name.Length > 0)
+            {
+                lookups_by_field[field_name] = fw.model(model_name).listSelectOptions(def);
             }
             else if (dtype == "subtable" || dtype == "subtable_edit")
             {
@@ -440,6 +447,8 @@ public class FwVueController : FwDynamicController
 
         if (multi_rows.Count > 0)
             ps["multi_rows"] = multi_rows;
+        if (lookups_by_field.Count > 0)
+            ps["lookups_by_field"] = lookups_by_field;
         if (subtables.Count > 0)
             ps["subtables"] = subtables;
         if (attachments.Count > 0)

@@ -847,6 +847,7 @@ public class FwDynamicController : FwController
         foreach (FwDict def in fields)
         {
             def["i"] = item; // ref to item
+            def["record_id"] = id;
             string dtype = def["type"].toStr();
             string field = def["field"].toStr();
 
@@ -981,6 +982,7 @@ public class FwDynamicController : FwController
             //logger(def);
             def["i"] = item; // ref to item
             def["ps"] = ps; // ref to whole ps
+            def["record_id"] = id;
             string dtype = def["type"].toStr(); // type is required
             string field = def["field"].toStr();
 

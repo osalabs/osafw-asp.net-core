@@ -53,36 +53,37 @@ public class Demos : FwModel<Demos.Row>
         return isExistsByField(uniq_key, not_id, "email");
     }
 
-    public virtual FwList listSelectOptionsParent(FwDict? def = null, FwDict? where = null)
+    /// <summary>
+    /// Returns parent demo options while using the framework's active-plus-selected inactive lookup rule.
+    /// </summary>
+    /// <param name="def">Dynamic field definition or lookup parameters.</param>
+    /// <param name="where">Additional predicates to apply to the parent lookup.</param>
+    /// <param name="selected_id">Explicit selected parent id or ids to preserve on edit forms.</param>
+    /// <returns>Parent demo option rows.</returns>
+    public virtual FwList listSelectOptionsParent(FwDict? def = null, FwDict? where = null, object? selected_id = null)
     {
         where ??= [];
 
         where["parent_id"] = 0;
-        where["status"] = db.opNOT(STATUS_DELETED);
 
-        // Support filter_by/filter_field from config
-        if (def != null && def.TryGetValue("filter_by", out object? fby) && def.TryGetValue("filter_field", out object? ff))
-        {
-            var item = def["i"] as FwDict ?? [];
-            var filter_by = fby.toStr();
-            var filter_field = ff.toStr();
-            if (item.TryGetValue(filter_by, out object? value))
-                where[filter_field] = value;
-        }
-
-        return db.array(table_name, where, "iname", Utils.qw("id iname"));
+        return listSelectOptionsByWhere(def, selected_id, baseWhere: where);
     }
 
-    // override to process custom lookup_params
-    public override FwList listSelectOptions(FwDict? def = null)
+    /// <summary>
+    /// Processes demo-specific lookup parameters before returning framework-standard select options.
+    /// </summary>
+    /// <param name="def">Dynamic field definition or lookup parameters.</param>
+    /// <param name="selected_id">Explicit selected id or ids to preserve on edit forms.</param>
+    /// <returns>Demo option rows.</returns>
+    public override FwList listSelectOptions(FwDict? def = null, object? selected_id = null)
     {
         var lookup_params = (def?["lookup_params"] ?? string.Empty).toStr();
         var hparams = Utils.qh(lookup_params); // ex: parent
 
         if (hparams.ContainsKey("parent"))
-            return listSelectOptionsParent(def);
+            return listSelectOptionsParent(def, selected_id: selected_id);
 
-        return base.listSelectOptions(def);
+        return base.listSelectOptions(def, selected_id);
     }
 
     /// <summary>
