@@ -28,6 +28,7 @@ Core Subdomains
 
 Boundaries
 - DB access encapsulated by `DB` helper and models.
+- Datetime boundaries: SQL `date` is calendar-only, ordinary `datetime`/`datetime2` is DB-timezone-normalized to UTC, `_utc` fields are already UTC, and SQL Server `datetimeoffset` is offset-aware instant storage.
 - Dictionary DB single-row reads return empty `DBRow`/`FwDict` for "not found"; typed single-row reads return `null`, with `*OrFail` variants for required records.
 - UI rendered by `ParsePage` templates; no Razor.
 - ParsePage allows recursive file-template includes for tree rendering, but stops deeper includes at a fixed crash-protection recursion-depth limit and logs `WARN`.

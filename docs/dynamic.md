@@ -1140,6 +1140,7 @@ Developer-generated and virtual controllers build a two-column `show_fields` / `
 - Template: `/common/form/showform/datetime_popup.html`.
 - Options: `default_time` (preselects time part), `class_control`, `attrs_control`, plus layout keys.
 - Save behavior: keeps datetime semantics and converts between `fw.userTimezone` and UTC.
+- Backing DB notes: use ordinary `datetime`/`datetime2` for DB-local wall-time storage normalized by the framework, `_utc` field names for UTC instants that must not be shifted through the DB timezone, and SQL Server `datetimeoffset` when the stored value must retain an offset-aware instant.
 - Common sample:
 ```json
 {

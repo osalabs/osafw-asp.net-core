@@ -118,6 +118,7 @@ public class FW : IDisposable
         DateTime? dt = value switch
         {
             DateTime d => d,
+            DateTimeOffset dto => dto.UtcDateTime,
             _ => DateUtils.SQL2Date(value.toStr()),
         };
 

@@ -105,7 +105,12 @@ class DevCodeGen
 
             case "datetime":
                 {
-                    result = "DATETIME2";
+                    result = fw_subtype == "datetimeoffset" ? "DATETIMEOFFSET" : "DATETIME2";
+                    break;
+                }
+            case "datetimeoffset":
+                {
+                    result = "DATETIMEOFFSET";
                     break;
                 }
 
@@ -927,7 +932,7 @@ END" + Environment.NewLine;
                 sff["type"] = "date_popup";
                 sff["class_contents"] = "col-md-5";
             }
-            else if (fld["fw_type"].toStr() == "datetime")
+            else if (fld["fw_type"].toStr() == "datetime" || fld["fw_type"].toStr() == "datetimeoffset")
             {
                 sf["type"] = "datetime";
                 sff["type"] = "datetime_popup";
@@ -1902,7 +1907,8 @@ END" + Environment.NewLine;
             "int" => fwSubtype == "bit" || fwSubtype == "boolean" ? "bool" : "int",
             "float" => fwSubtype == "decimal" || fwSubtype == "currency" || fwSubtype == "numeric" ? "decimal" : "double",
             "date" => "DateTime",
-            "datetime" => "DateTime",
+            "datetime" => fwSubtype == "datetimeoffset" ? "DateTimeOffset" : "DateTime",
+            "datetimeoffset" => "DateTimeOffset",
             _ => "string",
         };
 

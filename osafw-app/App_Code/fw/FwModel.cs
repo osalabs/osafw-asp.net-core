@@ -458,7 +458,7 @@ public abstract class FwModel : IDisposable
                 //if field is exactly DATE - convert only date part without time - in YYYY-MM-DD format
                 item[fieldname] = DateUtils.Str2SQL(item[fieldname].toStr(), fw.userDateFormat);
             }
-            else if (fw_type == "datetime")
+            else if (fw_type == "datetime" || fw_type == "datetimeoffset")
             {
                 if (item[fieldname] is DateTime dt)
                 {
@@ -472,6 +472,10 @@ public abstract class FwModel : IDisposable
                         item[fieldname] = dt.ToUniversalTime();
                     else
                         item[fieldname] = dt.Kind == DateTimeKind.Utc ? dt : DateTime.SpecifyKind(dt, DateTimeKind.Utc);
+                }
+                else if (item[fieldname] is DateTimeOffset dto)
+                {
+                    item[fieldname] = dto.ToUniversalTime();
                 }
                 else if (item[fieldname] == DB.NOW)
                 {
@@ -499,7 +503,15 @@ public abstract class FwModel : IDisposable
                             parsed = DateUtils.convertTimezone((DateTime)parsed, fw.userTimezone, DateUtils.TZ_UTC);
                     }
 
-                    item[fieldname] = parsed == null ? DBNull.Value : DateTime.SpecifyKind((DateTime)parsed, DateTimeKind.Utc);
+                    if (parsed == null)
+                    {
+                        item[fieldname] = DBNull.Value;
+                    }
+                    else
+                    {
+                        var utc = DateTime.SpecifyKind((DateTime)parsed, DateTimeKind.Utc);
+                        item[fieldname] = fw_type == "datetimeoffset" ? new DateTimeOffset(utc) : utc;
+                    }
                 }
             }
 
@@ -1563,7 +1575,7 @@ ORDER BY {getOrderBy()}";
                 };
                 item[fieldname] = dt == null ? "" : DateUtils.Date2SQL((DateTime)dt);
             }
-            else if (fw_type == "datetime")
+            else if (fw_type == "datetime" || fw_type == "datetimeoffset")
             {
                 item[fieldname] = fw.formatUserDateTime(item[fieldname], true); //ISO format
             }

@@ -45,6 +45,7 @@ public class DevConfigureController : FwController
 
         DB db;
         ps["is_db_conn"] = false;
+        ps["is_db_tz"] = false;
         ps["is_db_tables"] = false;
         if (ps["is_db_config"].toBool())
         {
@@ -53,6 +54,8 @@ public class DevConfigureController : FwController
                 db = fw.getDB();
                 db.connect();
                 ps["is_db_conn"] = true;
+                ps["db_timezone_id"] = db.getTimezoneId();
+                ps["is_db_tz"] = !string.IsNullOrEmpty(ps["db_timezone_id"].toStr());
 
                 try
                 {
