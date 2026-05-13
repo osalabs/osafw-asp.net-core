@@ -65,13 +65,7 @@ public class Demos : FwModel<Demos.Row>
         var baseWhere = where != null ? new FwDict(where) : [];
         baseWhere["parent_id"] = 0;
 
-        var queryWhere = new FwDict(baseWhere);
-        if (!string.IsNullOrEmpty(field_status))
-            queryWhere[field_status] = STATUS_ACTIVE;
-        addLookupFilter(queryWhere, def);
-
-        var rows = db.array(table_name, queryWhere, getOrderBy(), listSelectOptionFields());
-        return addSelectedInactiveLookupOptions(rows, def, selected_id, baseWhere: baseWhere);
+        return listLookupOptions(def, selected_id, baseWhere: baseWhere);
     }
 
     /// <summary>

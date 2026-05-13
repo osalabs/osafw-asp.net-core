@@ -173,15 +173,23 @@ public class Users : FwModel<Users.Row>
     /// <returns>User option rows ordered by first and last name.</returns>
     public override FwList listSelectOptions(FwDict? def = null, object? selected_id = null)
     {
+        var selectedIds = listSelectedLookupIds(def, selected_id);
+        FwDict whereParams = DB.h("status_active", STATUS_ACTIVE);
+        var where = "status = @status_active";
+        if (selectedIds.Count > 0)
+        {
+            whereParams["status_deleted"] = STATUS_DELETED;
+            where = $"status <> @status_deleted AND (status = @status_active OR {lookupSelectedIdsSql("id", selectedIds, whereParams, isLookupSelectedEnumerable(def, selected_id))})";
+        }
+
         var sql = $@"
-                SELECT id,
-                    CONCAT(fname, ' ', lname) AS iname,
-                    status
-                FROM {db.qid(table_name)}
-                WHERE status = @status
-                ORDER BY fname, lname";
-        var rows = db.arrayp(sql, DB.h("status", STATUS_ACTIVE));
-        return addSelectedInactiveLookupOptions(rows, def, selected_id);
+SELECT id,
+       CONCAT(fname, ' ', lname) AS iname,
+       status
+FROM {db.qid(table_name)}
+WHERE {where}
+ORDER BY fname, lname";
+        return labelInactiveLookupOptions(db.arrayp(sql, whereParams));
     }
     #endregion
 

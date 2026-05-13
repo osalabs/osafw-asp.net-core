@@ -1,5 +1,4 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -10,14 +9,16 @@ public class FwModelLookupTests
 {
     private class FakeDb : DB
     {
-        public readonly List<FwDict> WhereCalls = [];
+        public readonly List<string> SqlCalls = [];
+        public readonly List<FwDict> ParamCalls = [];
         public readonly Queue<DBList> Results = [];
 
         public FakeDb() : base("", DB.DBTYPE_SQLSRV) { }
 
-        public override DBList array(string table, FwDict where, string order_by = "", ICollection? aselect_fields = null)
+        public override DBList arrayp(string sql, FwDict? @params = null)
         {
-            WhereCalls.Add(new FwDict(where));
+            SqlCalls.Add(sql);
+            ParamCalls.Add(@params == null ? [] : new FwDict(@params));
             return Results.Count > 0 ? Results.Dequeue() : [];
         }
     }
@@ -83,7 +84,9 @@ public class FwModelLookupTests
         var rows = model.listSelectOptions();
 
         Assert.HasCount(1, rows);
-        Assert.AreEqual(0, db.WhereCalls[0]["status"]);
+        Assert.HasCount(1, db.SqlCalls);
+        StringAssert.Contains(db.SqlCalls[0], "[status] = @status_active");
+        Assert.AreEqual(0, db.ParamCalls[0]["status_active"]);
     }
 
     [TestMethod]
@@ -93,9 +96,6 @@ public class FwModelLookupTests
         db.Results.Enqueue(new DBList
         {
             new DBRow(new FwDict { ["id"] = "1", ["iname"] = "Active", ["status"] = "0" }),
-        });
-        db.Results.Enqueue(new DBList
-        {
             new DBRow(new FwDict { ["id"] = "2", ["iname"] = "Inactive", ["status"] = "10" }),
         });
         var model = BuildModel(db);
@@ -111,10 +111,10 @@ public class FwModelLookupTests
         Assert.HasCount(2, rows);
         Assert.AreEqual("Inactive" + FwModel.LOOKUP_INACTIVE_SUFFIX, rows[1]["iname"]);
         Assert.AreEqual("text-muted", rows[1]["class"]);
-
-        var selectedWhere = db.WhereCalls[1];
-        Assert.AreEqual(DBOps.NOT, ((DBOperation)selectedWhere["status"]!).op);
-        Assert.AreEqual(DBOps.IN, ((DBOperation)selectedWhere["id"]!).op);
+        Assert.HasCount(1, db.SqlCalls);
+        StringAssert.Contains(db.SqlCalls[0], "[status] <> @status_deleted");
+        StringAssert.Contains(db.SqlCalls[0], "[id] = @selected_id");
+        Assert.AreEqual(2, db.ParamCalls[0]["selected_id"]);
     }
 
     [TestMethod]
@@ -136,16 +136,33 @@ public class FwModelLookupTests
         var rows = model.listSelectOptions(def);
 
         Assert.HasCount(1, rows);
-        Assert.HasCount(1, db.WhereCalls);
+        Assert.HasCount(1, db.SqlCalls);
+        Assert.IsFalse(db.ParamCalls[0].ContainsKey("selected_id"));
     }
 
     [TestMethod]
-    public void ListSelectedLookupIds_NormalizesCommaSeparatedAndDistinctIds()
+    public void ListSelectedLookupIds_NormalizesEnumerableAndDistinctIds()
     {
         var model = BuildModel(new FakeDb());
-        var ids = model.listSelectedLookupIds(null, "2, 3,2,0,bad");
+        var ids = model.listSelectedLookupIds(null, new object?[] { 2, "3", 2, 0, "bad" });
 
         CollectionAssert.AreEqual(new[] { 2, 3 }, ids);
+    }
+
+    [TestMethod]
+    public void ListSelectOptions_UsesInForEnumerableSelectedIds()
+    {
+        var db = new FakeDb();
+        db.Results.Enqueue(new DBList
+        {
+            new DBRow(new FwDict { ["id"] = "2", ["iname"] = "Inactive", ["status"] = "10" }),
+        });
+        var model = BuildModel(db);
+
+        model.listSelectOptions(null, new[] { 2 });
+
+        StringAssert.Contains(db.SqlCalls[0], "[id] IN (2)");
+        Assert.IsFalse(db.ParamCalls[0].ContainsKey("selected_id"));
     }
 
     [TestMethod]
@@ -155,9 +172,6 @@ public class FwModelLookupTests
         db.Results.Enqueue(new DBList
         {
             new DBRow(new FwDict { ["id"] = "Active", ["iname"] = "Active", ["status"] = "0" }),
-        });
-        db.Results.Enqueue(new DBList
-        {
             new DBRow(new FwDict { ["id"] = "Inactive Name", ["iname"] = "Inactive Name", ["status"] = "10" }),
         });
         var model = BuildModel(db);
@@ -173,8 +187,9 @@ public class FwModelLookupTests
         Assert.HasCount(2, rows);
         Assert.AreEqual("Inactive Name" + FwModel.LOOKUP_INACTIVE_SUFFIX, rows[1]["iname"]);
 
-        var selectedWhere = db.WhereCalls[1];
-        Assert.AreEqual(DBOps.IN, ((DBOperation)selectedWhere["iname"]!).op);
+        Assert.HasCount(1, db.SqlCalls);
+        StringAssert.Contains(db.SqlCalls[0], "[iname] = @selected_value");
+        Assert.AreEqual("Inactive Name", db.ParamCalls[0]["selected_value"]);
     }
 
     [TestMethod]

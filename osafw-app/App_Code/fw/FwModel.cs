@@ -707,13 +707,7 @@ public abstract class FwModel : IDisposable
     /// <returns>Option rows with `id`, `iname`, and optional CSS class for selected inactive rows.</returns>
     public virtual FwList listSelectOptions(FwDict? def = null, object? selected_id = null)
     {
-        FwDict where = [];
-        if (!string.IsNullOrEmpty(field_status))
-            where[field_status] = STATUS_ACTIVE;
-        addLookupFilter(where, def);
-
-        var rows = db.array(table_name, where, getOrderBy(), listSelectOptionFields());
-        return addSelectedInactiveLookupOptions(rows, def, selected_id);
+        return listLookupOptions(def, selected_id);
     }
 
     /// <summary>
@@ -724,13 +718,7 @@ public abstract class FwModel : IDisposable
     /// <returns>Option rows whose `id` and `iname` are both based on <see cref="field_iname"/>.</returns>
     public virtual FwList listSelectOptionsName(FwDict? def = null, object? selected_id = null)
     {
-        FwDict where = [];
-        if (!string.IsNullOrEmpty(field_status))
-            where[field_status] = STATUS_ACTIVE;
-        addLookupFilter(where, def);
-
-        var rows = db.array(table_name, where, getOrderBy(), listSelectOptionFields(valueFromIname: true));
-        return addSelectedInactiveLookupOptions(rows, def, selected_id, valueFromIname: true);
+        return listLookupOptions(def, selected_id, valueFromIname: true);
     }
 
     /// <summary>
@@ -770,7 +758,7 @@ public abstract class FwModel : IDisposable
     /// record field value. The ids are used only when the caller has edit context.
     /// </summary>
     /// <param name="def">Dynamic field definition that may contain `i`, `field`, `record_id`, or `selected_id`.</param>
-    /// <param name="selected_id">Explicit id, comma-separated ids, or id collection supplied by the caller.</param>
+    /// <param name="selected_id">Explicit id or id collection supplied by the caller.</param>
     /// <returns>Distinct positive integer ids to preserve as inactive edit-form exceptions.</returns>
     public virtual IntList listSelectedLookupIds(FwDict? def = null, object? selected_id = null)
     {
@@ -788,25 +776,14 @@ public abstract class FwModel : IDisposable
     /// Returns selected lookup values from an explicit argument, dynamic `selected_id`, or the current record field.
     /// </summary>
     /// <param name="def">Dynamic field definition that may contain `i`, `field`, `record_id`, or `selected_id`.</param>
-    /// <param name="selected_id">Explicit selected value, comma-separated values, dictionary, or enumerable.</param>
+    /// <param name="selected_id">Explicit selected value or value collection.</param>
     /// <returns>Distinct non-empty selected values.</returns>
     protected virtual StrList listSelectedLookupValues(FwDict? def = null, object? selected_id = null)
     {
         if (!isLookupEditContext(def, selected_id))
             return [];
 
-        object? source = selected_id;
-        if (source == null && def != null)
-        {
-            if (def.TryGetValue("selected_id", out object? defSelected))
-                source = defSelected;
-            else if (def["i"] is FwDict item)
-            {
-                var field = def["field"].toStr();
-                if (!string.IsNullOrEmpty(field))
-                    source = item[field];
-            }
-        }
+        object? source = lookupSelectedSource(def, selected_id);
 
         StrList result = [];
 
@@ -817,26 +794,8 @@ public abstract class FwModel : IDisposable
                 result.Add(text);
         }
 
-        void addDelimited(string text)
-        {
-            foreach (var part in text.Split([',', ';', '|'], StringSplitOptions.RemoveEmptyEntries))
-                addValue(part);
-        }
-
-        if (source is FwDict dict)
-        {
-            foreach (var key in dict.Keys)
-                if (dict[key].toBool())
-                    addValue(key);
-        }
-        else if (source is IDictionary legacyDict)
-        {
-            foreach (DictionaryEntry entry in legacyDict)
-                if (entry.Value.toBool())
-                    addValue(entry.Key);
-        }
-        else if (source is string str)
-            addDelimited(str);
+        if (source is string)
+            addValue(source);
         else if (source is IEnumerable enumerable)
         {
             foreach (var value in enumerable)
@@ -846,6 +805,42 @@ public abstract class FwModel : IDisposable
             addValue(source);
 
         return result;
+    }
+
+    /// <summary>
+    /// Resolves the selected lookup value source from explicit arguments or dynamic edit context.
+    /// </summary>
+    /// <param name="def">Dynamic field definition that may contain selected state.</param>
+    /// <param name="selected_id">Explicit selected value or values.</param>
+    /// <returns>The selected value source, or null when none is available.</returns>
+    protected virtual object? lookupSelectedSource(FwDict? def = null, object? selected_id = null)
+    {
+        if (selected_id != null || def == null)
+            return selected_id;
+
+        if (def.TryGetValue("selected_id", out object? defSelected))
+            return defSelected;
+
+        if (def["i"] is FwDict item)
+        {
+            var field = def["field"].toStr();
+            if (!string.IsNullOrEmpty(field))
+                return item[field];
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Checks whether the selected value source is a list-like value rather than a scalar.
+    /// </summary>
+    /// <param name="def">Dynamic field definition that may contain selected state.</param>
+    /// <param name="selected_id">Explicit selected value or values.</param>
+    /// <returns>True when selected values came from an enumerable collection.</returns>
+    protected virtual bool isLookupSelectedEnumerable(FwDict? def = null, object? selected_id = null)
+    {
+        var source = lookupSelectedSource(def, selected_id);
+        return source is IEnumerable && source is not string;
     }
 
     /// <summary>
@@ -866,20 +861,50 @@ public abstract class FwModel : IDisposable
     }
 
     /// <summary>
-    /// Builds select-list field definitions for DB array helpers.
+    /// Builds lookup option rows using one query. With selected values, inactive selected rows are included by OR condition.
     /// </summary>
-    /// <param name="valueFromIname">When true, uses the display name as option value.</param>
-    /// <returns>Field/alias definitions including status metadata when available.</returns>
-    protected virtual FwList listSelectOptionFields(bool valueFromIname = false)
+    /// <param name="def">Dynamic field definition or lookup parameters.</param>
+    /// <param name="selected_id">Explicit selected value or values.</param>
+    /// <param name="valueFromIname">When true, option values and selected values use <see cref="field_iname"/>.</param>
+    /// <param name="baseWhere">Required equality predicates for specialized lookups.</param>
+    /// <returns>Option rows with selected inactive rows labeled.</returns>
+    protected virtual FwList listLookupOptions(FwDict? def = null, object? selected_id = null, bool valueFromIname = false, FwDict? baseWhere = null)
     {
-        FwList selectFields =
-        [
-            new FwDict() { { "field", valueFromIname ? field_iname : field_id }, { "alias", "id" } },
-            new FwDict() { { "field", field_iname }, { "alias", "iname" } }
-        ];
-        if (!string.IsNullOrEmpty(field_status))
-            selectFields.Add(new FwDict() { { "field", field_status }, { "alias", field_status } });
-        return selectFields;
+        FwDict filters = baseWhere != null ? new FwDict(baseWhere) : [];
+        addLookupFilter(filters, def);
+
+        FwDict whereParams = [];
+        StrList where = [];
+        addLookupFiltersSql(where, whereParams, filters);
+
+        var hasStatus = !string.IsNullOrEmpty(field_status);
+        IntList selectedIds = valueFromIname ? [] : listSelectedLookupIds(def, selected_id);
+        StrList selectedValues = valueFromIname ? listSelectedLookupValues(def, selected_id) : [];
+        var selectedIsEnumerable = isLookupSelectedEnumerable(def, selected_id);
+
+        if (hasStatus)
+        {
+            whereParams["status_active"] = STATUS_ACTIVE;
+            if (selectedIds.Count > 0 || selectedValues.Count > 0)
+            {
+                whereParams["status_deleted"] = STATUS_DELETED;
+                var selectedSql = valueFromIname
+                    ? lookupSelectedValuesSql(field_iname, selectedValues, whereParams, selectedIsEnumerable)
+                    : lookupSelectedIdsSql(field_id, selectedIds, whereParams, selectedIsEnumerable);
+                where.Add($"{db.qid(field_status)} <> @status_deleted");
+                where.Add($"({db.qid(field_status)} = @status_active OR {selectedSql})");
+            }
+            else
+                where.Add($"{db.qid(field_status)} = @status_active");
+        }
+
+        var sql = $@"
+SELECT {db.qid(valueFromIname ? field_iname : field_id)} AS id,
+       {db.qid(field_iname)} AS iname{lookupStatusSelectSql()}
+FROM {db.qid(table_name)}
+WHERE {(where.Count > 0 ? string.Join(" AND ", where) : "1=1")}
+ORDER BY {getOrderBy()}";
+        return labelInactiveLookupOptions(db.arrayp(sql, whereParams));
     }
 
     /// <summary>
@@ -902,40 +927,66 @@ public abstract class FwModel : IDisposable
     }
 
     /// <summary>
-    /// Appends selected inactive option rows to an active option list.
+    /// Adds equality filters to a hand-built lookup SQL query.
     /// </summary>
-    /// <param name="rows">Active option rows already loaded by the caller.</param>
-    /// <param name="def">Dynamic field definition or lookup parameters.</param>
-    /// <param name="selected_id">Explicit selected value or values.</param>
-    /// <param name="valueFromIname">When true, selected values are matched against <see cref="field_iname"/>.</param>
-    /// <param name="baseWhere">Required predicates to reuse when loading selected exception rows.</param>
-    /// <returns>The merged option list.</returns>
-    protected virtual FwList addSelectedInactiveLookupOptions(FwList rows, FwDict? def, object? selected_id, bool valueFromIname = false, FwDict? baseWhere = null)
+    /// <param name="whereSql">SQL predicates being built.</param>
+    /// <param name="whereParams">Parameters for the SQL query.</param>
+    /// <param name="filters">Equality filters to add.</param>
+    protected virtual void addLookupFiltersSql(StrList whereSql, FwDict whereParams, FwDict filters)
     {
-        if (string.IsNullOrEmpty(field_status))
-            return rows;
-
-        FwDict selectedWhere = baseWhere != null ? new FwDict(baseWhere) : [];
-        selectedWhere[field_status] = db.opNOT(STATUS_DELETED);
-
-        if (valueFromIname)
+        var index = 0;
+        foreach (var filter in filters)
         {
-            var selectedValues = listSelectedLookupValues(def, selected_id);
-            if (selectedValues.Count == 0)
-                return rows;
-            selectedWhere[field_iname] = db.opIN(selectedValues);
+            var paramName = "lookup_filter_" + index;
+            whereSql.Add($"{db.qid(filter.Key)} = @{paramName}");
+            whereParams[paramName] = filter.Value;
+            index++;
         }
-        else
-        {
-            var selectedIds = listSelectedLookupIds(def, selected_id);
-            if (selectedIds.Count == 0)
-                return rows;
-            selectedWhere[field_id] = db.opIN(selectedIds);
-        }
+    }
 
-        addLookupFilter(selectedWhere, def);
-        var selectedRows = db.array(table_name, selectedWhere, getOrderBy(), listSelectOptionFields(valueFromIname));
-        return mergeLookupOptions(rows, labelInactiveLookupOptions(selectedRows));
+    /// <summary>
+    /// Builds the select-list status column when the model has status support.
+    /// </summary>
+    /// <returns>SQL fragment for selecting the status column, or an empty string.</returns>
+    protected virtual string lookupStatusSelectSql()
+    {
+        return string.IsNullOrEmpty(field_status) ? "" : $",\n       {db.qid(field_status)} AS {db.qid(field_status)}";
+    }
+
+    /// <summary>
+    /// Builds an id selected-value predicate for a lookup query.
+    /// </summary>
+    /// <param name="fieldName">Id field name.</param>
+    /// <param name="selectedIds">Selected ids.</param>
+    /// <param name="whereParams">Parameter bag for scalar selected id.</param>
+    /// <param name="forceIn">When true, use an `IN` predicate even for one selected id.</param>
+    /// <returns>SQL predicate matching selected ids.</returns>
+    protected virtual string lookupSelectedIdsSql(string fieldName, IntList selectedIds, FwDict whereParams, bool forceIn = false)
+    {
+        if (selectedIds.Count == 1 && !forceIn)
+        {
+            whereParams["selected_id"] = selectedIds[0];
+            return $"{db.qid(fieldName)} = @selected_id";
+        }
+        return $"{db.qid(fieldName)}{db.insqli(selectedIds)}";
+    }
+
+    /// <summary>
+    /// Builds a name selected-value predicate for a lookup query.
+    /// </summary>
+    /// <param name="fieldName">Name field name.</param>
+    /// <param name="selectedValues">Selected display values.</param>
+    /// <param name="whereParams">Parameter bag for scalar selected value.</param>
+    /// <param name="forceIn">When true, use an `IN` predicate even for one selected value.</param>
+    /// <returns>SQL predicate matching selected values.</returns>
+    protected virtual string lookupSelectedValuesSql(string fieldName, StrList selectedValues, FwDict whereParams, bool forceIn = false)
+    {
+        if (selectedValues.Count == 1 && !forceIn)
+        {
+            whereParams["selected_value"] = selectedValues[0];
+            return $"{db.qid(fieldName)} = @selected_value";
+        }
+        return $"{db.qid(fieldName)}{db.insql(selectedValues)}";
     }
 
     /// <summary>
@@ -961,24 +1012,6 @@ public abstract class FwModel : IDisposable
         }
         return rows;
     }
-
-    /// <summary>
-    /// Merges selected exception rows into active option rows without duplicating option values.
-    /// </summary>
-    /// <param name="rows">Active option rows.</param>
-    /// <param name="selectedRows">Selected non-deleted option rows.</param>
-    /// <returns>The merged option list.</returns>
-    protected virtual FwList mergeLookupOptions(FwList rows, FwList selectedRows)
-    {
-        foreach (FwDict selectedRow in selectedRows)
-        {
-            var selectedValue = selectedRow["id"].toStr();
-            if (!rows.Any(row => row["id"].toStr() == selectedValue))
-                rows.Add(selectedRow);
-        }
-        return rows;
-    }
-
 
     [ObsoleteAttribute("This method is deprecated. Use listSelectOptions instead.", true)]
     public virtual string getSelectOptions(string sel_id)

@@ -5,6 +5,8 @@
 - Restored `Users.listSelectOptions` as a real override that builds display names from first and last name while using the selected inactive exception rule.
 - Simplified the framework implementation by removing `lookup_include_inactive`, `show_all`, and `lookup_statuses` support from the shared inactive lookup path.
 - Added `FwModel.LOOKUP_INACTIVE_SUFFIX` for the inactive option label.
+- Simplified selected inactive lookup loading to one query: active rows, or active rows plus selected ids/name values through a single `OR` predicate.
+- Reviewed framework selected-id callers; current framework usage needs scalar values and enumerable values, while comma-separated multi values are split before calling `listSelectOptions`.
 - Documented the active-row default and selected inactive exception in `docs/dynamic.md`.
 ## Scope reviewed
 - Reviewed downstream BIG-1370 inactive member design note.
@@ -18,6 +20,7 @@
 - `dotnet test osafw-tests\osafw-tests.csproj -p:OutDir=C:\DOCS_PROJ\github\osafw-asp.net-core\artifacts\assistant_test_build\ --filter "FullyQualifiedName~FwModelLookupTests"` passed after simplification: 6 tests.
 - After the second simplification feedback, the same build passed, the focused lookup tests passed again after one retry for the transient `obj` lock, and `git diff --check` passed.
 - After preserving spaces in name-valued selected lookups, focused lookup tests passed again and the app build passed after one transient `obj` lock retry.
+- After the single-query lookup rewrite, `dotnet build osafw-app\osafw-app.csproj -p:OutDir=C:\DOCS_PROJ\github\osafw-asp.net-core\artifacts\assistant_build\` passed, focused `FwModelLookupTests` passed: 7 tests, and `git diff --check` passed.
 - `git diff --check` passed.
 - Full suite with isolated output ran after first pass and had unrelated existing failures in `FormUtilsTests.AutocompleteParsingExtractsLeadingId`, `FwDynamicControllerTests.NextAction_*`, and `ParsePageTests.parse_string_dateTest`.
 ## Decisions - why
@@ -33,8 +36,10 @@
 - Final review flagged ambiguous object/string handling in junction selected ids; converted junction ids to strings before storing and comparing them.
 - User feedback identified the validation path as unnecessary complexity; removed dynamic validation helpers, tests, and template/store error strings.
 - User feedback identified the status option plumbing and long `Users.listSelectOptions` override as unnecessary complexity; simplified the base model helpers and the users override.
-- Name-valued lookup selections must not split on spaces; delimiter parsing now uses comma, semicolon, or pipe only.
+- Name-valued lookup selections must not split on spaces; selected-id parsing now treats strings as scalar values and collections as lists.
 - Second simplification review pass found no remaining issues.
+- User feedback identified the second query in selected inactive handling as avoidable; changed base lookup loading and `Users.listSelectOptions` to use a single query when selected values exist.
+- One-query review pass found no remaining issues.
 - Final review pass found no remaining issues.
 ## Risks / follow-ups
 - Vue lookups are currently cached by lookup model, so edit-specific selected inactive options need field-specific lookup payloads.
