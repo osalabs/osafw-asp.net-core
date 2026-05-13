@@ -59,13 +59,15 @@ public class Demos : FwModel<Demos.Row>
     /// <param name="def">Dynamic field definition or lookup parameters.</param>
     /// <param name="where">Additional predicates to apply to the parent lookup.</param>
     /// <param name="selected_id">Explicit selected parent id or ids to preserve on edit forms.</param>
+    /// <param name="valueFromIname">When true, use names as option values.</param>
+    /// <param name="inameSql">Optional label SQL expression to pass through to the framework lookup implementation.</param>
     /// <returns>Parent demo option rows.</returns>
-    public virtual FwList listSelectOptionsParent(FwDict? def = null, FwDict? where = null, object? selected_id = null)
+    public virtual FwList listSelectOptionsParent(FwDict? def = null, FwDict? where = null, object? selected_id = null, bool valueFromIname = false, string? inameSql = null)
     {
         var baseWhere = where != null ? new FwDict(where) : [];
         baseWhere["parent_id"] = 0;
 
-        return listLookupOptions(def, selected_id, baseWhere: baseWhere);
+        return base.listSelectOptions(def, selected_id, valueFromIname, baseWhere, inameSql);
     }
 
     /// <summary>
@@ -73,16 +75,19 @@ public class Demos : FwModel<Demos.Row>
     /// </summary>
     /// <param name="def">Dynamic field definition or lookup parameters.</param>
     /// <param name="selected_id">Explicit selected id or ids to preserve on edit forms.</param>
+    /// <param name="valueFromIname">When true, use names as option values.</param>
+    /// <param name="baseWhere">Optional base predicates to pass through to the framework lookup implementation.</param>
+    /// <param name="inameSql">Optional label SQL expression to pass through to the framework lookup implementation.</param>
     /// <returns>Demo option rows.</returns>
-    public override FwList listSelectOptions(FwDict? def = null, object? selected_id = null)
+    public override FwList listSelectOptions(FwDict? def = null, object? selected_id = null, bool valueFromIname = false, FwDict? baseWhere = null, string? inameSql = null)
     {
         var lookup_params = (def?["lookup_params"] ?? string.Empty).toStr();
         var hparams = Utils.qh(lookup_params); // ex: parent
 
         if (hparams.ContainsKey("parent"))
-            return listSelectOptionsParent(def, selected_id: selected_id);
+            return listSelectOptionsParent(def, baseWhere, selected_id, valueFromIname, inameSql);
 
-        return base.listSelectOptions(def, selected_id);
+        return base.listSelectOptions(def, selected_id, valueFromIname, baseWhere, inameSql);
     }
 
     /// <summary>

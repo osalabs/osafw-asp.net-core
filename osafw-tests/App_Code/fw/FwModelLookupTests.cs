@@ -32,6 +32,16 @@ public class FwModelLookupTests
         }
     }
 
+    private class NoStatusLookupModel : FwModel
+    {
+        public NoStatusLookupModel(FW fw)
+            : base(fw)
+        {
+            table_name = "lookup_rows";
+            field_status = "";
+        }
+    }
+
     private class CustomIdLookupModel : FwModel
     {
         private readonly FwList rows;
@@ -44,7 +54,7 @@ public class FwModelLookupTests
             this.rows = rows;
         }
 
-        public override FwList listSelectOptions(FwDict? def = null, object? selected_id = null) => rows;
+        public override FwList listSelectOptions(FwDict? def = null, object? selected_id = null, bool valueFromIname = false, FwDict? baseWhere = null, string? inameSql = null) => rows;
     }
 
     private class JunctionModel : FwModel
@@ -86,7 +96,29 @@ public class FwModelLookupTests
         Assert.HasCount(1, rows);
         Assert.HasCount(1, db.SqlCalls);
         StringAssert.Contains(db.SqlCalls[0], "[status] = @status_active");
+        StringAssert.Contains(db.SqlCalls[0], "[status] AS status");
         Assert.AreEqual(0, db.ParamCalls[0]["status_active"]);
+    }
+
+    [TestMethod]
+    public void ListSelectOptions_ReturnsActiveStatusAliasWhenModelHasNoStatusField()
+    {
+        var db = new FakeDb();
+        db.Results.Enqueue(new DBList
+        {
+            new DBRow(new FwDict { ["id"] = "1", ["iname"] = "Active" }),
+        });
+        var fw = TestHelpers.CreateFw();
+        fw.db = db;
+        var model = new NoStatusLookupModel(fw);
+
+        var rows = model.listSelectOptions();
+
+        Assert.HasCount(1, rows);
+        Assert.HasCount(1, db.SqlCalls);
+        StringAssert.Contains(db.SqlCalls[0], "0 AS status");
+        Assert.IsFalse(db.SqlCalls[0].Contains("[status] = @status_active"));
+        Assert.IsFalse(db.ParamCalls[0].ContainsKey("status_active"));
     }
 
     [TestMethod]
@@ -190,6 +222,66 @@ public class FwModelLookupTests
         Assert.HasCount(1, db.SqlCalls);
         StringAssert.Contains(db.SqlCalls[0], "[iname] = @selected_value");
         Assert.AreEqual("Inactive Name", db.ParamCalls[0]["selected_value"]);
+    }
+
+    [TestMethod]
+    public void UsersListSelectOptions_UsesFullNameExpressionWithBaseInactiveRule()
+    {
+        var db = new FakeDb();
+        db.Results.Enqueue(new DBList
+        {
+            new DBRow(new FwDict { ["id"] = "2", ["iname"] = "Inactive User", ["status"] = "10" }),
+        });
+        var fw = TestHelpers.CreateFw();
+        fw.db = db;
+        var users = new Users();
+        users.init(fw);
+        var def = new FwDict
+        {
+            ["record_id"] = 10,
+            ["field"] = "users_id",
+            ["i"] = new FwDict { ["id"] = 10, ["users_id"] = 2 },
+        };
+
+        users.listSelectOptions(def);
+
+        Assert.HasCount(1, db.SqlCalls);
+        StringAssert.Contains(db.SqlCalls[0], "CONCAT(fname, ' ', lname) AS iname");
+        StringAssert.Contains(db.SqlCalls[0], "[status] <> @status_deleted");
+        StringAssert.Contains(db.SqlCalls[0], "[id] = @selected_id");
+        Assert.AreEqual(2, db.ParamCalls[0]["selected_id"]);
+    }
+
+    [TestMethod]
+    public void DemosParentListSelectOptions_ForwardsOptionalArguments()
+    {
+        var db = new FakeDb();
+        db.Results.Enqueue(new DBList
+        {
+            new DBRow(new FwDict { ["id"] = "Inactive Demo", ["iname"] = "Inactive Demo", ["status"] = "10" }),
+        });
+        var fw = TestHelpers.CreateFw();
+        fw.db = db;
+        var demos = new Demos();
+        demos.init(fw);
+        var def = new FwDict
+        {
+            ["lookup_params"] = "parent",
+            ["record_id"] = 10,
+            ["field"] = "demo_name",
+            ["i"] = new FwDict { ["id"] = 10, ["demo_name"] = "Inactive Demo" },
+        };
+
+        demos.listSelectOptions(def, "Inactive Demo", valueFromIname: true, baseWhere: DB.h("demo_dicts_id", 7), inameSql: "UPPER(iname)");
+
+        Assert.HasCount(1, db.SqlCalls);
+        StringAssert.Contains(db.SqlCalls[0], "UPPER(iname) AS iname");
+        StringAssert.Contains(db.SqlCalls[0], "[demo_dicts_id] = @lookup_filter_0");
+        StringAssert.Contains(db.SqlCalls[0], "[parent_id] = @lookup_filter_1");
+        StringAssert.Contains(db.SqlCalls[0], "[iname] = @selected_value");
+        Assert.AreEqual(7, db.ParamCalls[0]["lookup_filter_0"]);
+        Assert.AreEqual(0, db.ParamCalls[0]["lookup_filter_1"]);
+        Assert.AreEqual("Inactive Demo", db.ParamCalls[0]["selected_value"]);
     }
 
     [TestMethod]

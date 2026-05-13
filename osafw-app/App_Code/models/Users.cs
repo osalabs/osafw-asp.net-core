@@ -170,26 +170,15 @@ public class Users : FwModel<Users.Row>
     /// </summary>
     /// <param name="def">Dynamic field definition or lookup parameters.</param>
     /// <param name="selected_id">Explicit selected user id or ids for hand-written forms.</param>
+    /// <param name="valueFromIname">When true, use the base name-valued lookup behavior.</param>
+    /// <param name="baseWhere">Optional base predicates; delegated to the framework lookup implementation.</param>
+    /// <param name="inameSql">Optional label SQL expression; defaults to first-name plus last-name for users.</param>
     /// <returns>User option rows ordered by first and last name.</returns>
-    public override FwList listSelectOptions(FwDict? def = null, object? selected_id = null)
+    public override FwList listSelectOptions(FwDict? def = null, object? selected_id = null, bool valueFromIname = false, FwDict? baseWhere = null, string? inameSql = null)
     {
-        var selectedIds = listSelectedLookupIds(def, selected_id);
-        FwDict whereParams = DB.h("status_active", STATUS_ACTIVE);
-        var where = "status = @status_active";
-        if (selectedIds.Count > 0)
-        {
-            whereParams["status_deleted"] = STATUS_DELETED;
-            where = $"status <> @status_deleted AND (status = @status_active OR {lookupSelectedIdsSql("id", selectedIds, whereParams, isLookupSelectedEnumerable(def, selected_id))})";
-        }
-
-        var sql = $@"
-SELECT id,
-       CONCAT(fname, ' ', lname) AS iname,
-       status
-FROM {db.qid(table_name)}
-WHERE {where}
-ORDER BY fname, lname";
-        return labelInactiveLookupOptions(db.arrayp(sql, whereParams));
+        if (string.IsNullOrEmpty(inameSql) && !valueFromIname)
+            inameSql = "CONCAT(fname, ' ', lname)";
+        return base.listSelectOptions(def, selected_id, valueFromIname, baseWhere, inameSql);
     }
     #endregion
 
