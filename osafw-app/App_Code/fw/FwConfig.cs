@@ -70,7 +70,7 @@ public static class FwConfig
         var tmp = new FwDict();
         initDefaults(null, "", ref tmp);
         if (configuration != null)
-            readSettings(configuration, ref tmp);                                     // appsettings:appSettings
+            applyAppSettings(configuration, tmp);
         return tmp;
     }, LazyThreadSafetyMode.ExecutionAndPublication);
 
@@ -135,7 +135,23 @@ public static class FwConfig
         st["timezone"] ??= DateUtils.TZ_UTC;
     }
 
-    public static void readSettingsSection(IConfigurationSection section, ref FwDict st)
+    /// <summary>
+    /// Copies direct appSettings children into an existing framework settings dictionary.
+    /// </summary>
+    /// <param name="cfg">Application configuration provider containing the appSettings section.</param>
+    /// <param name="st">Flat settings dictionary that receives keys from inside appSettings.</param>
+    private static void applyAppSettings(IConfiguration cfg, FwDict st)
+    {
+        foreach (IConfigurationSection section in cfg.GetSection("appSettings").GetChildren())
+            applySettingsSection(section, st);
+    }
+
+    /// <summary>
+    /// Copies one configuration section into the supplied dictionary while preserving nested child shape.
+    /// </summary>
+    /// <param name="section">Configuration section to copy.</param>
+    /// <param name="st">Dictionary that receives this section's key at the current level.</param>
+    private static void applySettingsSection(IConfigurationSection section, FwDict st)
     {
         if (section.Value != null)
         {
@@ -147,18 +163,8 @@ public static class FwConfig
             foreach (IConfigurationSection sub_section in section.GetChildren())
             {
                 FwDict s = (FwDict)st[section.Key]!;
-                readSettingsSection(sub_section, ref s);
+                applySettingsSection(sub_section, s);
             }
-        }
-    }
-
-    // read setting into appSettings
-    private static void readSettings(IConfiguration cfg, ref FwDict st)
-    {
-        var valuesSection = cfg.GetSection("appSettings");
-        foreach (IConfigurationSection section in valuesSection.GetChildren())
-        {
-            readSettingsSection(section, ref st);
         }
     }
 
@@ -223,18 +229,16 @@ public static class FwConfig
     }
 
     /// <summary>
-    /// Get settings for the current environment with proper overrides
+    /// Builds startup settings for the current ASP.NET Core environment with environment overrides applied.
     /// </summary>
-    /// <returns></returns>
+    /// <param name="cfg">Application configuration provider containing the appSettings section.</param>
+    /// <returns>A flat settings dictionary whose keys are direct children of appSettings.</returns>
     public static FwDict settingsForEnvironment(IConfiguration cfg)
     {
         var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "";
-        var appSettings = new FwDict();
-        readSettingsSection(cfg.GetSection("appSettings"), ref appSettings);
+        FwDict st = [];
+        applyAppSettings(cfg, st);
 
-        // The “appSettings” itself might be nested inside the hash
-        var st = (FwDict?)appSettings["appSettings"] ?? [];
-        appSettings["appSettings"] = st;
         // Override by name if environment-based overrides are used
         overrideSettingsByName(environment, st);
 

@@ -1,6 +1,6 @@
 # Domain / Bounded Context
 
-Updated: 2026-05-11
+Updated: 2026-05-12
 
 Purpose
 - Provide a reusable admin/back-office web framework for CRUD-heavy business apps on ASP.NET Core.
@@ -13,6 +13,7 @@ Core Subdomains
   - Static pages (`spages`) with optional templates, metadata, and publish dates.
 - Settings
   - Key-value site settings (`settings`) with categories and UI metadata; user-editable flags.
+  - Runtime `FwConfig` settings are the flat contents of JSON `appSettings`; callers read `db`, `SITE_NAME`, etc. directly, not through an `appSettings` child key.
 - Files / Attachments
   - `att`, `att_links`, `att_categories` for uploads; supports S3 and inline images. Linked to entities via `fwentities`.
 - Activity Logging
