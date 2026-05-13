@@ -38,6 +38,8 @@
 - `dotnet test --artifacts-path artifacts\assistant_test_full_fix` - failed with 4 unrelated existing failures: `AutocompleteParsingExtractsLeadingId`, `NextAction_ReturnsNextId`, `NextAction_WrapsAroundAndKeepsMode`, and culture-sensitive `parse_string_dateTest`.
 - `dotnet build osafw-app\osafw-app.csproj -p:OutDir=artifacts/assistant_build_mysql/ -p:DefineConstants=isMySQL` - blocked before branch verification because MySQL package references are currently commented out.
 - `git -c safe.directory=C:/DOCS_PROJ/github/osafw-asp.net-core diff --check` - no whitespace errors.
+- User feedback pass: inlined the one-use schema field-type lookup in `prepareParams` and removed `fieldTypeFromLoadedSchema`.
+- User feedback pass: inlined the private `sqlNow*` helper cluster into the single `DB.NOW` branch and kept public `sqlNOW()` unchanged.
 
 ## Decisions - why
 
@@ -54,6 +56,8 @@
 - Reviewer found `DB.NOW` would store DB-local current time into `_utc` fields; fixed with field-aware SQL and SQL Server regression coverage.
 - Reviewer found raw `DateTimeOffset` parameters were still converted through DB timezone; fixed with raw pass-through and regression coverage.
 - Reviewer found entity-builder `datetimeoffset` subtype generated `DateTime`; fixed codegen type selection and added a regression test.
+- User feedback: removed the one-use `fieldTypeFromLoadedSchema` helper and kept the schema lookup local to `prepareParams`.
+- User feedback: removed one-use private `sqlNowForField`/`sqlNowUtc`/`sqlNowUtcOffset`/`sqlNowOffset` helpers and kept the field-aware current-time decision at the only call site.
 - Normal `dotnet build`/`dotnet test` wrote to locked `bin\Debug` output because IIS Express had `osafw-app.dll` open; used `OutDir`/`--artifacts-path` instead.
 
 ## Risks / follow-ups

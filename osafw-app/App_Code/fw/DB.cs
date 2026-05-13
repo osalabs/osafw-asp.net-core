@@ -1884,54 +1884,6 @@ public class DB : IDisposable
     }
 
     /// <summary>
-    /// Returns a current-time SQL expression that matches the target field's time contract.
-    /// </summary>
-    /// <param name="fieldName">Database field receiving or comparing the current timestamp.</param>
-    /// <param name="fieldType">Framework field type resolved from schema metadata.</param>
-    /// <returns>A provider SQL expression for current DB-local, UTC, or offset-aware time.</returns>
-    private string sqlNowForField(string fieldName, string fieldType)
-    {
-        if (isDateTimeOffsetType(fieldType))
-            return isUtcFieldName(fieldName) ? sqlNowUtcOffset() : sqlNowOffset();
-
-        return isUtcFieldName(fieldName) ? sqlNowUtc() : sqlNOW();
-    }
-
-    /// <summary>
-    /// Returns a current UTC SQL expression for fields that store UTC wall time.
-    /// </summary>
-    /// <returns>A provider SQL expression producing the current UTC timestamp.</returns>
-    private string sqlNowUtc()
-    {
-        return dbtype switch
-        {
-            DBTYPE_SQLSRV => "SYSUTCDATETIME()",
-#if isMySQL
-            DBTYPE_MYSQL => "UTC_TIMESTAMP()",
-#endif
-            _ => sqlNOW()
-        };
-    }
-
-    /// <summary>
-    /// Returns a current UTC SQL expression with an explicit zero offset.
-    /// </summary>
-    /// <returns>A provider SQL expression producing the current UTC offset-bearing timestamp.</returns>
-    private string sqlNowUtcOffset()
-    {
-        return dbtype == DBTYPE_SQLSRV ? "TODATETIMEOFFSET(SYSUTCDATETIME(), '+00:00')" : sqlNowUtc();
-    }
-
-    /// <summary>
-    /// Returns a current offset-bearing SQL expression when the provider supports one.
-    /// </summary>
-    /// <returns>A provider SQL expression producing the current datetimeoffset value.</returns>
-    private string sqlNowOffset()
-    {
-        return dbtype == DBTYPE_SQLSRV ? "SYSDATETIMEOFFSET()" : sqlNOW();
-    }
-
-    /// <summary>
     /// fetch current database time
     /// </summary>
     /// <returns></returns>
@@ -1981,7 +1933,11 @@ public class DB : IDisposable
         {
             var fieldValue = fields[fname] ?? DBNull.Value;
             var dbop = field2Op(table, fname, fieldValue, is_for_where);
-            var fieldType = fieldTypeFromLoadedSchema(table, fname);
+            // Keep original field metadata with generated params for _utc/datetimeoffset decisions.
+            var fieldType = "";
+            var fieldNameLc = fname.ToLowerInvariant();
+            if (schema.TryGetValue(table, out var schemaTable) && schemaTable.TryGetValue(fieldNameLc, out object? schemaValue))
+                fieldType = schemaValue.toStr();
 
             var delim = $" {dbop.opstr} ";
             var param_name = reW.Replace(fname, "_") + suffix; // replace any non-alphanum in param names and add suffix
@@ -2029,8 +1985,18 @@ public class DB : IDisposable
                 {
                     if (dbop.value == DB.NOW)
                     {
-                        // if value is NOW object - don't add it to params, just use NOW()/GETDATE() in sql
-                        sql += sqlNowForField(fname, fieldType);
+                        // DB.NOW uses field semantics: DB-local by default, UTC for _utc, offset-aware for SQL Server datetimeoffset.
+                        var isUtcField = isUtcFieldName(fname);
+                        if (isDateTimeOffsetType(fieldType) && dbtype == DBTYPE_SQLSRV)
+                            sql += isUtcField ? "TODATETIMEOFFSET(SYSUTCDATETIME(), '+00:00')" : "SYSDATETIMEOFFSET()";
+#if isMySQL
+                        else if (isUtcField && dbtype == DBTYPE_MYSQL)
+                            sql += "UTC_TIMESTAMP()";
+#endif
+                        else if (isUtcField && dbtype == DBTYPE_SQLSRV)
+                            sql += "SYSUTCDATETIME()";
+                        else
+                            sql += sqlNOW();
                     }
                     else
                     {
@@ -2060,21 +2026,6 @@ public class DB : IDisposable
     public DBQueryAndParams prepareParams(string table, FwDict fields, string join_type = "where", string suffix = "")
     {
         return prepareParams(table, (IDictionary)fields, join_type, suffix);
-    }
-
-    /// <summary>
-    /// Reads the framework field type from schema already loaded by <see cref="prepareParams"/>.
-    /// </summary>
-    /// <param name="table">Database table name.</param>
-    /// <param name="fieldName">Database field name.</param>
-    /// <returns>The framework field type used for parameter normalization.</returns>
-    private string fieldTypeFromLoadedSchema(string table, string fieldName)
-    {
-        var fieldNameLc = fieldName.ToLowerInvariant();
-        if (schema.TryGetValue(table, out var schemaTable) && schemaTable.TryGetValue(fieldNameLc, out object? value))
-            return value.toStr();
-
-        return "";
     }
 
     public DBOperation field2Op(string table, string field_name, object field_value_or_op, bool is_for_where = false)
