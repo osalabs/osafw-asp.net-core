@@ -109,7 +109,7 @@ public class FwModelLookupTests
         var rows = model.listSelectOptions(def);
 
         Assert.HasCount(2, rows);
-        Assert.AreEqual("Inactive (inactive)", rows[1]["iname"]);
+        Assert.AreEqual("Inactive" + FwModel.LOOKUP_INACTIVE_SUFFIX, rows[1]["iname"]);
         Assert.AreEqual("text-muted", rows[1]["class"]);
 
         var selectedWhere = db.WhereCalls[1];
@@ -158,20 +158,20 @@ public class FwModelLookupTests
         });
         db.Results.Enqueue(new DBList
         {
-            new DBRow(new FwDict { ["id"] = "Inactive", ["iname"] = "Inactive", ["status"] = "10" }),
+            new DBRow(new FwDict { ["id"] = "Inactive Name", ["iname"] = "Inactive Name", ["status"] = "10" }),
         });
         var model = BuildModel(db);
         var def = new FwDict
         {
             ["record_id"] = 10,
             ["field"] = "lookup_name",
-            ["i"] = new FwDict { ["id"] = 10, ["lookup_name"] = "Inactive" },
+            ["i"] = new FwDict { ["id"] = 10, ["lookup_name"] = "Inactive Name" },
         };
 
         var rows = model.listSelectOptionsName(def);
 
         Assert.HasCount(2, rows);
-        Assert.AreEqual("Inactive (inactive)", rows[1]["iname"]);
+        Assert.AreEqual("Inactive Name" + FwModel.LOOKUP_INACTIVE_SUFFIX, rows[1]["iname"]);
 
         var selectedWhere = db.WhereCalls[1];
         Assert.AreEqual(DBOps.IN, ((DBOperation)selectedWhere["iname"]!).op);

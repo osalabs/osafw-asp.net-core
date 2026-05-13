@@ -173,36 +173,15 @@ public class Users : FwModel<Users.Row>
     /// <returns>User option rows ordered by first and last name.</returns>
     public override FwList listSelectOptions(FwDict? def = null, object? selected_id = null)
     {
-        FwDict whereParams = [];
-        StrList where = [];
-        var statusSql = lookupStatusSql(def, selected_id, whereParams);
-        if (!string.IsNullOrEmpty(statusSql))
-            where.Add(statusSql);
-
-        if (def != null && def.TryGetValue("filter_by", out object? filterByObj) && def.TryGetValue("filter_field", out object? filterFieldObj))
-        {
-            var item = def["i"] as FwDict ?? [];
-            var filterBy = filterByObj.toStr();
-            var filterField = filterFieldObj.toStr();
-            if (!string.IsNullOrEmpty(filterBy) && !string.IsNullOrEmpty(filterField) && item.TryGetValue(filterBy, out object? value))
-            {
-                whereParams["lookup_filter"] = value;
-                where.Add($"{db.qid(filterField)} = @lookup_filter");
-            }
-        }
-
-        var whereSql = where.Count > 0 ? " WHERE " + string.Join(" AND ", where) : "";
         var sql = $@"
-SELECT {db.qid(field_id)} AS id,
-       CONCAT({db.qid("fname")}, ' ', {db.qid("lname")}) AS iname,
-       {db.qid(field_status)} AS {db.qid(field_status)}
-FROM {db.qid(table_name)}
-{whereSql}
-ORDER BY {db.qid("fname")}, {db.qid("lname")}";
-        var rows = db.arrayp(sql, whereParams);
-        if (!isLookupIncludeInactive(def) && listLookupStatuses(def).Count == 0)
-            markInactiveLookupExceptions(rows, listSelectedLookupIds(def, selected_id));
-        return rows;
+                SELECT id,
+                    CONCAT(fname, ' ', lname) AS iname,
+                    status
+                FROM {db.qid(table_name)}
+                WHERE status = @status
+                ORDER BY fname, lname";
+        var rows = db.arrayp(sql, DB.h("status", STATUS_ACTIVE));
+        return addSelectedInactiveLookupOptions(rows, def, selected_id);
     }
     #endregion
 

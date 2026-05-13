@@ -684,7 +684,7 @@ Developer-generated and virtual controllers build a two-column `show_fields` / `
   - Data sources: `lookup_model` (+ `lookup_params`), `lookup_tpl`, or inline `options` dictionary.
   - Blank options: `is_option0` (value `0`), `is_option_empty` (empty value), `option0_title`.
   - Filtering chains: `filter_for`/`filter_field` on the parent select; `filter_by`/`filter_field` on the child select.
-  - Status handling: model lookups return active rows by default. On edit forms, the currently saved inactive lookup row is included only for that same field and labeled ` (inactive)`. Use `lookup_include_inactive: true` or `lookup_statuses` only for screens that intentionally need broader status coverage.
+  - Status handling: model lookups return active rows by default. On edit forms, the currently saved inactive lookup row is included only for that same field and labeled ` (inactive)`. Override the lookup model method when a project needs broader status coverage.
   - Behaviour: `multiple`, `class_control`, `attrs_control`, `err_exists_msg`, `prepend`/`append` input-group buttons.
   - Dropdown buttons: `prepend`/`append` can include dropdown definitions with:
     - `is_dropdown` (true to render Bootstrap 5 dropdown)

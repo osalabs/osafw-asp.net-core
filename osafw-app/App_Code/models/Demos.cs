@@ -62,11 +62,16 @@ public class Demos : FwModel<Demos.Row>
     /// <returns>Parent demo option rows.</returns>
     public virtual FwList listSelectOptionsParent(FwDict? def = null, FwDict? where = null, object? selected_id = null)
     {
-        where ??= [];
+        var baseWhere = where != null ? new FwDict(where) : [];
+        baseWhere["parent_id"] = 0;
 
-        where["parent_id"] = 0;
+        var queryWhere = new FwDict(baseWhere);
+        if (!string.IsNullOrEmpty(field_status))
+            queryWhere[field_status] = STATUS_ACTIVE;
+        addLookupFilter(queryWhere, def);
 
-        return listSelectOptionsByWhere(def, selected_id, baseWhere: where);
+        var rows = db.array(table_name, queryWhere, getOrderBy(), listSelectOptionFields());
+        return addSelectedInactiveLookupOptions(rows, def, selected_id, baseWhere: baseWhere);
     }
 
     /// <summary>
