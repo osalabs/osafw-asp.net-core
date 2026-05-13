@@ -1,6 +1,6 @@
 # Domain / Bounded Context
 
-Updated: 2026-05-12
+Updated: 2026-05-13
 
 Purpose
 - Provide a reusable admin/back-office web framework for CRUD-heavy business apps on ASP.NET Core.
@@ -20,6 +20,7 @@ Core Subdomains
   - `activity_logs` capture actions with types, entity, item_id, payload of changed fields.
 - Dynamic CRUD
   - Controllers with JSON configs for fields, lists, lookups, subtables, attachments, and Vue inline editing.
+  - Model-backed dynamic lookup controls default to active rows; edit forms can include the same-field saved inactive row as an ` (inactive)` exception.
 - Scheduling
   - `fwcron` for cron-like background jobs; optional `FwCronService` hosted service.
 - Virtual Controllers

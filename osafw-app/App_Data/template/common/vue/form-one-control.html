@@ -200,6 +200,7 @@
             <option v-if="def.is_option_empty" value="">{{def.option0_title ?? '- select -'}}</option>
             <option v-for="lrow in lookupOptions"
                     :key="def.field_name+'#'+lrow.id"
+                    :class="lrow.class || ''"
                     :value="lrow.id">
                 {{lrow.iname}}
             </option>
@@ -494,6 +495,8 @@
                 return this.def.placeholder ?? '';
             },
             lookupOptions: function () {
+                const fieldRows = this.form.lookups_by_field?.[this.def.field];
+                if (fieldRows) return fieldRows;
                 var lookup_model = this.def.lookup_model;
                 if (lookup_model) {
                     return this.lookups[lookup_model] ?? [];

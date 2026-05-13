@@ -684,6 +684,7 @@ Developer-generated and virtual controllers build a two-column `show_fields` / `
   - Data sources: `lookup_model` (+ `lookup_params`), `lookup_tpl`, or inline `options` dictionary.
   - Blank options: `is_option0` (value `0`), `is_option_empty` (empty value), `option0_title`.
   - Filtering chains: `filter_for`/`filter_field` on the parent select; `filter_by`/`filter_field` on the child select.
+  - Status handling: model lookups return active rows by default. On edit forms, the currently saved inactive lookup row is included only for that same field and labeled ` (inactive)`. Override the lookup model method when a project needs broader status coverage.
   - Behaviour: `multiple`, `class_control`, `attrs_control`, `err_exists_msg`, `prepend`/`append` input-group buttons.
   - Dropdown buttons: `prepend`/`append` can include dropdown definitions with:
     - `is_dropdown` (true to render Bootstrap 5 dropdown)
@@ -971,6 +972,7 @@ Developer-generated and virtual controllers build a two-column `show_fields` / `
 #### type: multicb
 - Template: `/common/form/showform/multi.html`.
 - Options: EITHER `lookup_model` (stores comma-separated ids in the same table field) OR `model` (uses a junction model). Add `is_by_linked` for junctions where the main id is stored on the linked side; `lookup_params` can tune lookup queries.
+- Lookup-model multicheckboxes use the same active-row rule as selects: active choices are shown, and inactive rows are shown only when they are already checked for the edited field.
 - Common sample storing ids in the same table field:
 ```json
 {
