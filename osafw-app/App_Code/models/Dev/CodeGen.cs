@@ -368,13 +368,10 @@ class DevCodeGen
             database_sql += sql.TrimEnd(';') + ";" + Environment.NewLine + Environment.NewLine;
         }
 
-        var sql_root = fw.config("site_root") + "/App_Data/sql";
-        var provider_subdir = db.sqlScriptSubdir();
-        if (!string.IsNullOrEmpty(provider_subdir))
-            sql_root += "/" + provider_subdir;
+        var sql_root = fw.model<FwUpdates>().sqlScriptRoot();
         Directory.CreateDirectory(sql_root);
 
-        var sql_file = sql_root + "/database.sql";
+        var sql_file = Path.Combine(sql_root, "database.sql");
         Utils.setFileContent(sql_file, ref database_sql);
     }
 
@@ -549,8 +546,10 @@ class DevCodeGen
             { "is_lookup", 1 }
         };
 
-        //make/append to sql update file  in App_Date/sql/updates/updYYYY-MM-DD.sql with insert
-        var upd_file = fw.config("site_root") + "/App_Data/sql/updates/upd" + DateTime.Now.ToString("yyyy-MM-dd") + ".sql";
+        //make/append to provider update file in App_Data/sql[/provider]/updates/updYYYY-MM-DD.sql with insert
+        var updates_root = Path.Combine(fw.model<FwUpdates>().sqlScriptRoot(), "updates");
+        Directory.CreateDirectory(updates_root);
+        var upd_file = Path.Combine(updates_root, "upd" + DateTime.Now.ToString("yyyy-MM-dd") + ".sql");
         var upd_sql = "";
 
         var lookup = fw.model<FwControllers>().oneByIcode(icode);

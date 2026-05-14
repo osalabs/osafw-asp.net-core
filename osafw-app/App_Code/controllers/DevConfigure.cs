@@ -120,14 +120,11 @@ public class DevConfigureController : FwController
         FwDict ps = [];
         int sql_ctr = 0;
         string[] files = ["fwdatabase.sql", "database.sql", "lookups.sql", "views.sql"];
-        var sql_root = fw.config("site_root") + @"\App_Data\sql";
-        var provider_subdir = db.sqlScriptSubdir();
-        if (!string.IsNullOrEmpty(provider_subdir))
-            sql_root += @"\" + provider_subdir;
+        var sql_root = fw.model<FwUpdates>().sqlScriptRoot();
 
         foreach (string file in files)
         {
-            var sql_file = sql_root + @"\" + file;
+            var sql_file = Path.Combine(sql_root, file);
             logger("Checking sql file:", sql_file);
             if (File.Exists(sql_file))
             {

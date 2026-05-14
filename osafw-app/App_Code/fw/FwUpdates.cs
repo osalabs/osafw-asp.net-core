@@ -31,15 +31,31 @@ public class FwUpdates : FwModel
     }
 
     /// <summary>
+    /// Resolves the provider-specific SQL script root used by database initialization, update loading, and view refreshes.
+    /// </summary>
+    /// <returns>
+    /// Absolute path to the active provider SQL folder, such as <c>App_Data/sql</c>, <c>App_Data/sql/mysql</c>,
+    /// or <c>App_Data/sql/sqlite</c>.
+    /// </returns>
+    public virtual string sqlScriptRoot()
+    {
+        var result = System.IO.Path.Combine(fw.config("site_root").toStr(), "App_Data", "sql");
+        var provider_subdir = db.dbtype switch
+        {
+            DB.DBTYPE_SQLITE => "sqlite",
+            DB.DBTYPE_MYSQL => "mysql",
+            _ => "",
+        };
+
+        return string.IsNullOrEmpty(provider_subdir) ? result : System.IO.Path.Combine(result, provider_subdir);
+    }
+
+    /// <summary>
     /// Load new updates from the updates directory and add them to the database.
     /// </summary>
     public virtual void loadUpdates()
     {
-        string updates_root = fw.config("site_root") + @"\App_Data\sql";
-        var provider_subdir = db.sqlScriptSubdir();
-        if (!string.IsNullOrEmpty(provider_subdir))
-            updates_root += @"\" + provider_subdir;
-        updates_root += @"\updates";
+        string updates_root = System.IO.Path.Combine(sqlScriptRoot(), "updates");
         logger("checking " + updates_root);
         if (!System.IO.Directory.Exists(updates_root))
             return;
@@ -167,11 +183,7 @@ public class FwUpdates : FwModel
 
     public void refreshViews(bool is_echo = false)
     {
-        var views_root = fw.config("site_root") + @"\App_Data\sql";
-        var provider_subdir = db.sqlScriptSubdir();
-        if (!string.IsNullOrEmpty(provider_subdir))
-            views_root += @"\" + provider_subdir;
-        var views_file = views_root + @"\views.sql";
+        var views_file = System.IO.Path.Combine(sqlScriptRoot(), "views.sql");
         if (is_echo)
             fw.rw("Applying views file: " + views_file);
 

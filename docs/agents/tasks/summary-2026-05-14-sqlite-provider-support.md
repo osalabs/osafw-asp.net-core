@@ -3,6 +3,7 @@
 - Added `FwSqliteDistributedCache` for SQLite-backed sessions and startup registration gated by `isSQLite` plus `appSettings.db.main.type = "SQLite"`.
 - Replaced SQL Server-only runtime SQL in dashboard, advanced search, login/date aggregation, attachment cleanup, static page publishing, activity counts, users display-name SQL, and key cleanup.
 - Added SQLite schema/init scripts under `osafw-app/App_Data/sql/sqlite`, provider-specific update/view resolution, Dev Configure init routing, and Dev codegen SQLite DDL mapping.
+- Moved provider SQL script root resolution from `DB` to `FwUpdates.sqlScriptRoot()` so script layout belongs to the framework update/init flow.
 - Updated SQLite setup docs, datetime/provider notes, feature module update paths, README, agent domain facts, and heuristics.
 - Added provider-neutral unit coverage and SQLite temp-database integration tests for CRUD, identity, parameter expansion, schema/FKs, full schema scripts, `fwkeys`, `fwsessions`, and numeric expression behavior.
 
@@ -23,6 +24,7 @@
 - Browser smoke against the VS-hosted app at `https://localhost:44315/` after restart: root/login page loaded, `/Dev/Configure` reported DB configured/connected/timezone/tables OK, local dev login reached `/Main`, `/Admin/Users` loaded, Users search for `demo` filtered to one row, `/Admin/Att` loaded, and browser console warnings/errors were empty.
 - Code review sub-agent found issues; fixes applied for SQLite cache enablement docs/compile behavior, generated-column schema introspection, SQLite numeric search parity including malformed numeric text, task summary state, and diff hygiene.
 - Final code review pass reported no issues found.
+- Focused follow-up review after moving script-root resolution to `FwUpdates.sqlScriptRoot()` found one codegen update-path issue; fixed generated update scripts to write under the provider-specific `updates` folder. Follow-up default and SQLite app builds passed; `git diff --check` passed.
 
 ## Decisions - why
 - SQLite production target is durable single-node production with app DB, sessions, and data-protection keys in SQLite.

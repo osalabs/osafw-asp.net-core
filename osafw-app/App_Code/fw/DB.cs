@@ -2162,20 +2162,6 @@ public class DB : IDisposable
     }
 
     /// <summary>
-    /// Returns the provider-specific SQL script folder below <c>App_Data/sql</c>.
-    /// </summary>
-    /// <returns>Provider subfolder name, or an empty string when the provider uses the root SQL Server scripts.</returns>
-    public string sqlScriptSubdir()
-    {
-        return dbtype switch
-        {
-            DBTYPE_SQLITE => "sqlite",
-            DBTYPE_MYSQL => "mysql",
-            _ => "",
-        };
-    }
-
-    /// <summary>
     /// fetch current database time
     /// </summary>
     /// <returns></returns>
