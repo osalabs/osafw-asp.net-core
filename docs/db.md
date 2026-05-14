@@ -36,7 +36,7 @@ You rarely call `connect()`/`disconnect()` yourself – the first query opens th
 ### Parameterised helpers
 - `value(table, where[, field[, order]])`
 - `row(table, where[, order])`
-- `array(table, where[, order[, fields]])`
+- `array(table, where[, order[, fields[, offset[, limit]]]])`
 - `col(table, where, field[, order])`
 - `insert(table, data)`
 - `update(table, data, where)`
@@ -91,6 +91,7 @@ if (u == null)
     return;
 
 List<User> list = db.array<User>("users", DB.h());
+List<User> page = db.array<User>("users", DB.h("status", 0), "id", offset: 10, limit: 10);
 ```
 
 `insert`, `update` and `updateOrInsert` also accept typed objects:
@@ -123,6 +124,10 @@ DBRow row = db.row("users", DB.h("id", 5));
 // list of rows
 DBList rows = db.array("users", DB.h("status", 0), "iname desc");
 
+// first and second pages
+DBList firstPage = db.array("users", DB.h("status", 0), "id", null, 0, 10);
+DBList secondPage = db.array("users", DB.h("status", 0), "id", null, 10, 10);
+
 // column values
 List<string> names = db.col("users", DB.h("status", 0), "iname");
 
@@ -138,6 +143,8 @@ db.updateOrInsert("users", DB.h("id", id, "iname", "Jack"), DB.h("id", id));
 // delete
 db.del("users", DB.h("id", id));
 ```
+
+`array()` and `array<T>()` accept optional `offset, limit` paging arguments after the select-fields argument. `limit = -1` means no limit, and `offset = 0` is the default. When `offset` is greater than zero, pass both a non-negative `limit` and an explicit `order` value so the page is deterministic and portable across SQL Server, MySQL, and OLE providers.
 
 ### Using raw SQL
 ```csharp

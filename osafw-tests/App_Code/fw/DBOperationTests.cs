@@ -1,10 +1,33 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 
 namespace osafw.Tests
 {
     [TestClass]
     public class DBOperationTests
     {
+        private sealed class PagingDb : DB
+        {
+            public DBList Rows { get; set; } = [];
+            public string LastSql { get; private set; } = "";
+
+            public PagingDb(string dbtype, string connstr = "")
+                : base(connstr, dbtype)
+            {
+            }
+
+            public string BuildSelectSql(string orderBy = "", int offset = 0, int limit = -1)
+            {
+                return buildSelect("table", DB.h(), orderBy, limit, "*", offset).sql;
+            }
+
+            public override DBList arrayp(string sql, FwDict? @params = null)
+            {
+                LastSql = sql;
+                return Rows;
+            }
+        }
+
         [TestMethod]
         public void DBOperation_SetsOperatorStringsAndValueFlags()
         {
@@ -86,6 +109,53 @@ namespace osafw.Tests
 
             Assert.AreEqual("SELECT TOP 5 * FROM table", sqlServerDb.limit("SELECT * FROM table", 5));
             Assert.AreEqual("SELECT * FROM table LIMIT 5", mysqlDb.limit("SELECT * FROM table", 5));
+        }
+
+        [TestMethod]
+        public void BuildSelect_AppliesProviderPagingSyntax()
+        {
+            var sqlServerDb = new PagingDb(DB.DBTYPE_SQLSRV);
+            var mysqlDb = new PagingDb(DB.DBTYPE_MYSQL);
+            var oleDb = new PagingDb(DB.DBTYPE_OLE);
+
+            Assert.AreEqual("SELECT TOP 5 * FROM [table]", sqlServerDb.BuildSelectSql(limit: 5));
+            Assert.AreEqual("SELECT * FROM [table] ORDER BY id OFFSET 10 ROWS FETCH NEXT 5 ROWS ONLY", sqlServerDb.BuildSelectSql("id", 10, 5));
+
+            Assert.AreEqual("SELECT * FROM `table` LIMIT 5", mysqlDb.BuildSelectSql(limit: 5));
+            Assert.AreEqual("SELECT * FROM `table` ORDER BY id LIMIT 10, 5", mysqlDb.BuildSelectSql("id", 10, 5));
+
+            Assert.AreEqual("SELECT TOP 15 * FROM [table] ORDER BY id", oleDb.BuildSelectSql("id", 10, 5));
+        }
+
+        [TestMethod]
+        public void BuildSelect_RejectsInvalidPaging()
+        {
+            var db = new PagingDb(DB.DBTYPE_SQLSRV);
+
+            Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => db.BuildSelectSql("id", -1, 5));
+            Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => db.BuildSelectSql("id", 0, -2));
+            Assert.ThrowsExactly<ArgumentException>(() => db.BuildSelectSql("id", 1, -1));
+            Assert.ThrowsExactly<ArgumentException>(() => db.BuildSelectSql("", 1, 5));
+        }
+
+        [TestMethod]
+        public void SelectRaw_TopProviderTrimsClientOffset()
+        {
+            var db = new PagingDb(DB.DBTYPE_OLE)
+            {
+                Rows =
+                [
+                    new DBRow(new FwDict { ["id"] = "1", ["iname"] = "first" }),
+                    new DBRow(new FwDict { ["id"] = "2", ["iname"] = "second" }),
+                    new DBRow(new FwDict { ["id"] = "3", ["iname"] = "third" }),
+                ],
+            };
+
+            var rows = db.selectRaw("*", "items", "1=1", [], "id", 1, 1);
+
+            Assert.AreEqual("SELECT TOP 2 * FROM items WHERE 1=1 ORDER BY id", db.LastSql);
+            Assert.HasCount(1, rows);
+            Assert.AreEqual("second", rows[0]["iname"]);
         }
 
         [TestMethod]

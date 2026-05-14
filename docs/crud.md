@@ -40,8 +40,11 @@ DBList filtered = users.listByWhere(new FwDict // custom where expression
     ["status"] = 0,
     ["access_level"] = DB.opGT(0),
 });
+DBList page = users.listByWhere(new FwDict { ["status"] = 0 }, offset: 20, limit: 10, orderby: "id");
 DBRow required = users.oneOrFail(5);          // throws if not found
 ```
+
+`listByWhere()` accepts `offset, limit` paging arguments and passes them through to `DB.array()`. Use an explicit `orderby` when paging so the returned slice is stable.
 
 ### Writing data
 ```csharp
@@ -115,6 +118,7 @@ var users = fw.model<Users>();
 Users.Row? row = users.oneT(5);                   // null if missing
 Users.Row? byCode = users.oneTByIcode("demo");   // null if missing
 List<Users.Row> active = users.listT();           // list with typed rows
+List<Users.Row> page = users.listTByWhere(offset: 20, limit: 10, orderby: "id");
 Users.Row required = users.oneTOrFail(5);         // throws if missing
 ```
 

@@ -571,6 +571,7 @@ public class DB : IDisposable
         {
             quotes = "``";
             limit_method = "LIMIT";
+            offset_method = "LIMIT";
             sql_now = "NOW()";
         }
         else if (dbtype == DBTYPE_OLE)
@@ -580,6 +581,7 @@ public class DB : IDisposable
                 quotes = "\""; // for DB2
                 sql_ole_identity = "SELECT IDENTITY_VAL_LOCAL() FROM SYSIBM.SYSDUMMY1";
                 limit_method = "LIMIT";
+                offset_method = "LIMIT";
                 sql_now = "CURRENT TIMESTAMP";
             }
             else
@@ -1456,6 +1458,107 @@ public class DB : IDisposable
     }
 
     /// <summary>
+    /// Validates paging arguments before SQL is generated so provider-specific failures do not leak to callers.
+    /// </summary>
+    /// <param name="order_by">ORDER BY clause body supplied by the caller, without the `ORDER BY` keyword.</param>
+    /// <param name="offset">Number of rows to skip before returning results.</param>
+    /// <param name="limit">Maximum number of rows to return, or -1 for no limit.</param>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="offset"/> or <paramref name="limit"/> is outside the supported range.</exception>
+    /// <exception cref="ArgumentException">Thrown when offset paging lacks a portable limit or deterministic order.</exception>
+    private static void validatePaging(string order_by, int offset, int limit)
+    {
+        if (offset < 0)
+            throw new ArgumentOutOfRangeException(nameof(offset), "Offset must be greater than or equal to 0.");
+
+        if (limit < -1)
+            throw new ArgumentOutOfRangeException(nameof(limit), "Limit must be -1 or greater.");
+
+        if (offset > 0 && limit < 0)
+            throw new ArgumentException("Offset paging requires a limit.", nameof(limit));
+
+        if (offset > 0 && string.IsNullOrWhiteSpace(order_by))
+            throw new ArgumentException("Offset paging requires an order_by value.", nameof(order_by));
+    }
+
+    /// <summary>
+    /// Returns whether the provider needs an over-fetch plus in-memory trim to emulate offset paging.
+    /// </summary>
+    /// <param name="offset">Number of rows to skip before returning results.</param>
+    /// <param name="limit">Maximum number of rows to return.</param>
+    /// <returns><c>true</c> when the SQL should fetch <c>offset + limit</c> rows and trim locally.</returns>
+    private bool isClientOffsetPaging(int offset, int limit)
+    {
+        return offset > 0 && limit > -1 && offset_method == "TOP";
+    }
+
+    /// <summary>
+    /// Builds a provider-specific paged SQL statement while keeping limit-only reads on their existing syntax.
+    /// </summary>
+    /// <param name="sql">Base SELECT statement, including ORDER BY when offset paging is requested.</param>
+    /// <param name="offset">Number of rows to skip before returning results.</param>
+    /// <param name="limit">Maximum number of rows to return, or -1 for no limit.</param>
+    /// <returns>SQL with provider-specific paging syntax applied.</returns>
+    /// <exception cref="ApplicationException">Thrown when the current provider has no known paging syntax.</exception>
+    private string applyPaging(string sql, int offset, int limit)
+    {
+        if (limit < 0)
+            return sql;
+
+        if (offset > 0)
+        {
+            if (offset_method == "FETCH NEXT")
+                return sql + " OFFSET " + offset + " ROWS FETCH NEXT " + limit + " ROWS ONLY";
+
+            if (offset_method == "LIMIT")
+                return sql + " LIMIT " + offset + ", " + limit;
+
+            if (offset_method == "TOP")
+                return this.limit(sql, checked(offset + limit));
+
+            throw new ApplicationException("Unsupported db type");
+        }
+
+        return this.limit(sql, limit);
+    }
+
+    /// <summary>
+    /// Trims rows for providers that emulate offset paging by over-fetching with TOP.
+    /// </summary>
+    /// <param name="rows">Rows fetched from the provider.</param>
+    /// <param name="offset">Number of rows to skip before returning results.</param>
+    /// <param name="limit">Maximum number of rows to return.</param>
+    /// <returns>A DBList containing the requested page.</returns>
+    private DBList trimClientOffset(DBList rows, int offset, int limit)
+    {
+        if (!isClientOffsetPaging(offset, limit))
+            return rows;
+
+        if (offset >= rows.Count)
+            return [];
+
+        return new DBList(rows.GetRange(offset, Math.Min(limit, rows.Count - offset)));
+    }
+
+    /// <summary>
+    /// Trims typed rows for providers that emulate offset paging by over-fetching with TOP.
+    /// </summary>
+    /// <typeparam name="T">Typed DTO row returned by the DB reader.</typeparam>
+    /// <param name="rows">Rows fetched from the provider.</param>
+    /// <param name="offset">Number of rows to skip before returning results.</param>
+    /// <param name="limit">Maximum number of rows to return.</param>
+    /// <returns>A typed list containing the requested page.</returns>
+    private List<T> trimClientOffset<T>(List<T> rows, int offset, int limit)
+    {
+        if (!isClientOffsetPaging(offset, limit))
+            return rows;
+
+        if (offset >= rows.Count)
+            return [];
+
+        return rows.GetRange(offset, Math.Min(limit, rows.Count - offset));
+    }
+
+    /// <summary>
     /// return all rows with all fields from the table based on coditions/order
     /// array("table", where, "id asc", Utils.qh("field1|id field2|iname"))
     /// </summary>
@@ -1463,17 +1566,38 @@ public class DB : IDisposable
     /// <param name="where">where conditions</param>
     /// <param name="order_by">optional order by, MUST BE QUOTED</param>
     /// <param name="aselect_fields">optional select fields array or hashtable("field"=>"alias") or arraylist of hashtable("field"=>1,"alias"=>1) for cases if there could be several same fields with diff aliases), if not set * returned</param>
+    /// <param name="offset">optional number of ordered rows to skip before returning results</param>
+    /// <param name="limit">optional maximum number of rows to return, or -1 for no limit</param>
     /// <returns></returns>
-    public virtual DBList array(string table, FwDict where, string order_by = "", ICollection? aselect_fields = null)
+    public virtual DBList array(string table, FwDict where, string order_by = "", ICollection? aselect_fields = null, int offset = 0, int limit = -1)
     {
-        var qp = buildSelect(table, where, order_by, select_fields: buildSelectFields(aselect_fields));
-        return arrayp(qp.sql, qp.@params);
+        validatePaging(order_by, offset, limit);
+        if (limit == 0)
+            return [];
+
+        var qp = buildSelect(table, where, order_by, limit, buildSelectFields(aselect_fields), offset);
+        return trimClientOffset(arrayp(qp.sql, qp.@params), offset, limit);
     }
 
-    public List<T> array<T>(string table, FwDict where, string order_by = "", ICollection? aselect_fields = null) where T : new()
+    /// <summary>
+    /// Returns typed rows from a helper-built table query with optional provider-aware paging.
+    /// </summary>
+    /// <typeparam name="T">DTO type with writable properties matching selected column names or <see cref="DBNameAttribute"/> aliases.</typeparam>
+    /// <param name="table">table name</param>
+    /// <param name="where">where conditions</param>
+    /// <param name="order_by">optional order by, MUST BE QUOTED</param>
+    /// <param name="aselect_fields">optional select fields array or alias map; when omitted, all fields are returned</param>
+    /// <param name="offset">optional number of ordered rows to skip before returning results</param>
+    /// <param name="limit">optional maximum number of rows to return, or -1 for no limit</param>
+    /// <returns>Typed DTO rows matching the query and paging constraints.</returns>
+    public List<T> array<T>(string table, FwDict where, string order_by = "", ICollection? aselect_fields = null, int offset = 0, int limit = -1) where T : new()
     {
-        var qp = buildSelect(table, where, order_by, select_fields: buildSelectFields(aselect_fields));
-        return arrayp<T>(qp.sql, qp.@params);
+        validatePaging(order_by, offset, limit);
+        if (limit == 0)
+            return [];
+
+        var qp = buildSelect(table, where, order_by, limit, buildSelectFields(aselect_fields), offset);
+        return trimClientOffset(arrayp<T>(qp.sql, qp.@params), offset, limit);
     }
 
     /// <summary>
@@ -1491,33 +1615,16 @@ public class DB : IDisposable
     /// <exception cref="ApplicationException"></exception>
     public DBList selectRaw(string fields, string from, string where, FwDict where_params, string orderby, int offset = 0, int limit = -1)
     {
-        DBList result;
-        //TODO rework with limit() method
-        if (offset_method == "FETCH NEXT") // for SQL Server 2012+
-        {
-            var sql = "SELECT " + fields + " FROM " + from + " WHERE " + where + " ORDER BY " + orderby + " OFFSET " + offset + " ROWS " + " FETCH NEXT " + limit + " ROWS ONLY";
-            result = this.arrayp(sql, where_params);
-        }
-        else if (limit_method == "LIMIT") // MySQL, DB2
-        {
-            var sql = "SELECT " + fields + " FROM " + from + " WHERE " + where + " ORDER BY " + orderby + " LIMIT " + offset + ", " + limit;
-            result = this.arrayp(sql, where_params);
-        }
-        else if (limit_method == "TOP")
-        {
-            // OLE - for Access - emulate using TOP and return just a limit portion (bad perfomance, but no way)
-            var sql = "SELECT TOP " + (offset + limit) + " " + fields + " FROM " + from + " WHERE " + where + " ORDER BY " + orderby;
-            var rows = this.arrayp(sql, where_params);
-            if (offset >= rows.Count)
-                // offset too far
-                result = [];
-            else
-                result = new DBList(rows.GetRange(offset, Math.Min(limit, rows.Count - offset)));
-        }
-        else
-            throw new ApplicationException("Unsupported db type");
+        validatePaging(orderby, offset, limit);
+        if (limit == 0)
+            return [];
 
-        return result;
+        var sql = "SELECT " + fields + " FROM " + from + " WHERE " + where;
+        if (orderby.Length > 0)
+            sql += " ORDER BY " + orderby;
+
+        sql = applyPaging(sql, offset, limit);
+        return trimClientOffset(this.arrayp(sql, where_params), offset, limit);
     }
 
     /// <summary>
@@ -2499,9 +2606,12 @@ public class DB : IDisposable
     /// <param name="order_by">optional order by string, MUST BE QUOTED</param>
     /// <param name="limit">optional limit number of results</param>
     /// <param name="select_fields">optional (default "*") fields to select, MUST already be quoted!</param>
+    /// <param name="offset">optional number of ordered rows to skip before returning results</param>
     /// <returns></returns>
-    protected DBQueryAndParams buildSelect(string table, IDictionary where, string order_by = "", int limit = -1, string select_fields = "*")
+    protected DBQueryAndParams buildSelect(string table, IDictionary where, string order_by = "", int limit = -1, string select_fields = "*", int offset = 0)
     {
+        validatePaging(order_by, offset, limit);
+
         DBQueryAndParams result = new()
         {
             sql = "SELECT"
@@ -2518,7 +2628,7 @@ public class DB : IDisposable
             result.sql += " ORDER BY " + order_by;
 
         if (limit > -1)
-            result.sql = this.limit(result.sql, limit);
+            result.sql = applyPaging(result.sql, offset, limit);
 
         return result;
     }
