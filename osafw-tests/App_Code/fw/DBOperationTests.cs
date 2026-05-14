@@ -18,7 +18,7 @@ namespace osafw.Tests
 
             public string BuildSelectSql(string orderBy = "", int offset = 0, int limit = -1)
             {
-                return buildSelect("table", DB.h(), orderBy, limit, "*", offset).sql;
+                return buildSelect("table", DB.h(), orderBy, offset, limit).sql;
             }
 
             public override DBList arrayp(string sql, FwDict? @params = null)
@@ -106,9 +106,14 @@ namespace osafw.Tests
         {
             var sqlServerDb = new DB("", DB.DBTYPE_SQLSRV);
             var mysqlDb = new DB("", DB.DBTYPE_MYSQL);
+            var oleDb = new DB("", DB.DBTYPE_OLE);
 
             Assert.AreEqual("SELECT TOP 5 * FROM table", sqlServerDb.limit("SELECT * FROM table", 5));
             Assert.AreEqual("SELECT * FROM table LIMIT 5", mysqlDb.limit("SELECT * FROM table", 5));
+            Assert.AreEqual("SELECT * FROM table ORDER BY id OFFSET 10 ROWS FETCH NEXT 5 ROWS ONLY", sqlServerDb.limit("SELECT * FROM table ORDER BY id", 5, 10));
+            Assert.AreEqual("SELECT * FROM table ORDER BY id LIMIT 10, 5", mysqlDb.limit("SELECT * FROM table ORDER BY id", 5, 10));
+            Assert.ThrowsExactly<ArgumentException>(() => sqlServerDb.limit("SELECT * FROM table", 5, 10));
+            Assert.ThrowsExactly<NotSupportedException>(() => oleDb.limit("SELECT * FROM table ORDER BY id", 5, 10));
         }
 
         [TestMethod]

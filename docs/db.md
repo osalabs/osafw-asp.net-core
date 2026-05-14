@@ -55,7 +55,7 @@ You rarely call `connect()`/`disconnect()` yourself – the first query opens th
 - `qid(str)` / `q(str[, len])` / `qq(str)`
 - `qi(obj)` / `qf(obj)` / `qdec(obj)` / `qd(obj)`
 - `insql(list)` / `insqli(list)`
-- `limit(sql, n)`
+- `limit(sql, n[, offset])`
 - `sqlNOW()` / `Now()` and constant `DB.NOW`
 - `left(str, len)`
 
@@ -194,10 +194,16 @@ int intVal = db.qi("123");               // 123
 string inClause = db.insql(new[] { "a", "b" });     // IN ('a', 'b')
 string inIds = db.insqli(new[] { 1, 2, 3 });        // IN (1, 2, 3)
 
+// limit helpers
+string firstTen = db.limit("SELECT * FROM users ORDER BY id", 10);
+string nextTen = db.limit("SELECT * FROM users ORDER BY id", 10, 10);
+
 // current DB time
 DateTime now = db.Now();
 db.insert("log", DB.h("add_time", DB.NOW));         // uses NOW() or GETDATE()
 ```
+
+When passing an offset to `limit()`, include an `ORDER BY` in the SQL. SQL Server requires it syntactically, and all providers need it for stable paging. Direct `limit()` offset paging is not supported for TOP-only providers such as Access/OLE; use `array()` or `selectRaw()` there so the framework can over-fetch and trim the requested page.
 
 ### Date, UTC, and datetimeoffset values
 `DB` applies the framework datetime contract automatically for helper-built reads and writes:
