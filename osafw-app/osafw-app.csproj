@@ -6,6 +6,12 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <!-- uncomment if using SQLite
+  <PropertyGroup>
+    <DefineConstants>$(DefineConstants);isSQLite</DefineConstants>
+  </PropertyGroup>
+  -->
+
   <ItemGroup>
     <PackageReference Include="AWSSDK.Core" Version="4.0.3.15" />
     <PackageReference Include="AWSSDK.S3" Version="4.0.18.7" />
@@ -14,6 +20,8 @@
     <PackageReference Include="Markdig" Version="1.0.0" />
     <PackageReference Include="Microsoft.Agents.AI" Version="1.0.0-rc1" />
     <PackageReference Include="Microsoft.Agents.AI.OpenAI" Version="1.0.0-rc1" />
+    <!-- required for SQLite provider support and FwSqliteDistributedCache -->
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.3" />
     <PackageReference Include="Microsoft.Playwright" Version="1.58.0" />
     <PackageReference Include="Microsoft.Extensions.Caching.SqlServer" Version="10.0.3" />
     <PackageReference Include="Microsoft.SemanticKernel" Version="1.72.0" />
@@ -25,16 +33,16 @@
     <PackageReference Include="System.Data.OleDb" Version="10.0.3" />
     <PackageReference Include="System.Drawing.Common" Version="10.0.3" />
     <PackageReference Include="Cronos" Version="0.11.1" />
-    
+
     <!-- uncomment if use Windows authentication -->
     <!--PackageReference Include="Microsoft.AspNetCore.Authentication.Negotiate" Version="7.0.10" /-->
-    
+
     <!-- uncomment if use Sentry logging -->
     <!--PackageReference Include="Sentry.AspNetCore" Version="5.0.1" /-->
-    
+
     <!-- uncomment if use Utils.ImportSpreadsheet -->
     <!--PackageReference Include="ExcelDataReader" Version="3.7.0" /-->
-    
+
     <!-- uncomment if use MySQL -->
     <!--PackageReference Include="MySqlConnector" Version="2.3.7" />
     <PackageReference Include="Pomelo.Extensions.Caching.MySql" Version="2.2.0" /-->

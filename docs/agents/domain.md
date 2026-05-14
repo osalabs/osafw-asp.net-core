@@ -1,6 +1,6 @@
 # Domain / Bounded Context
 
-Updated: 2026-05-13
+Updated: 2026-05-14
 
 Purpose
 - Provide a reusable admin/back-office web framework for CRUD-heavy business apps on ASP.NET Core.
@@ -28,6 +28,7 @@ Core Subdomains
 
 Boundaries
 - DB access encapsulated by `DB` helper and models.
+- Database providers are a bounded runtime concern: SQL Server is the default, SQLite is optional for durable single-node deployments, and provider-specific scripts live under `App_Data/sql/<provider>/` when the provider needs divergent SQL.
 - Datetime boundaries: SQL `date` is calendar-only, ordinary `datetime`/`datetime2` is DB-timezone-normalized to UTC, `_utc` fields are already UTC, and SQL Server `datetimeoffset` is offset-aware instant storage.
 - Dynamic/Vue `datetime_local` fields submit browser-native `YYYY-MM-DDTHH:mm` values that the backend parses as user-local datetimes before UTC save conversion.
 - Dictionary DB single-row reads return empty `DBRow`/`FwDict` for "not found"; typed single-row reads return `null`, with `*OrFail` variants for required records.

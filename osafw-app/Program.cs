@@ -1,5 +1,8 @@
 //#define isMySQL // uncomment if using MySQL, see fw/DB.cs for full instructions
+//#define isSQLite // uncomment if using SQLite, see fw/DB.cs for full instructions
 #if isMySQL
+#endif
+#if isSQLite
 #endif
 
 using Microsoft.AspNetCore.Builder;
@@ -9,6 +12,7 @@ using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -77,28 +81,44 @@ public static class Program
                 options.XmlRepository = repository; // i.e. "PersistKeysToCustomXmlRepository"
             });
 
-#if isMySQL
-        // If using MySQL for distributed cache (and sessions)
-        builder.Services.AddDistributedMySqlCache(options =>
+        if (dbType == DB.DBTYPE_SQLITE)
         {
-            var csb = new MySqlConnector.MySqlConnectionStringBuilder(connStr);
-            if (string.IsNullOrEmpty(csb.Database))
-                throw new ApplicationException("No database name defined in connection_string");
-
-            // Setup session store
-            options.ConnectionString = csb.ConnectionString;
-            options.SchemaName = csb.Database; // database name
-            options.TableName = "fwsessions";
-        });
+#if isSQLite
+            // If using SQLite for distributed cache (and sessions)
+            builder.Services.AddSingleton<IDistributedCache>(_ => new FwSqliteDistributedCache(connStr));
 #else
-        // If using SQL Server for distributed cache (and sessions)
-        builder.Services.AddDistributedSqlServerCache(options =>
-        {
-            options.ConnectionString = connStr;
-            options.SchemaName = "dbo";
-            options.TableName = "fwsessions";
-        });
+            throw new ApplicationException("SQLite support requires defining isSQLite project-wide or uncommenting #define isSQLite in Program.cs and DB.cs.");
 #endif
+        }
+        else if (dbType == DB.DBTYPE_MYSQL)
+        {
+#if isMySQL
+            // If using MySQL for distributed cache (and sessions)
+            builder.Services.AddDistributedMySqlCache(options =>
+            {
+                var csb = new MySqlConnector.MySqlConnectionStringBuilder(connStr);
+                if (string.IsNullOrEmpty(csb.Database))
+                    throw new ApplicationException("No database name defined in connection_string");
+
+                // Setup session store
+                options.ConnectionString = csb.ConnectionString;
+                options.SchemaName = csb.Database; // database name
+                options.TableName = "fwsessions";
+            });
+#else
+            throw new ApplicationException("MySQL support requires uncommenting #define isMySQL in Program.cs and DB.cs.");
+#endif
+        }
+        else
+        {
+            // If using SQL Server for distributed cache (and sessions)
+            builder.Services.AddDistributedSqlServerCache(options =>
+            {
+                options.ConnectionString = connStr;
+                options.SchemaName = "dbo";
+                options.TableName = "fwsessions";
+            });
+        }
 
         // Form upload/limits
         builder.Services.Configure<FormOptions>(options =>
@@ -107,7 +127,7 @@ public static class Program
             // options.MultipartBodyLengthLimit = 1073741824; // 1GB
         });
 
-        // IIS 
+        // IIS
         builder.Services.Configure<IISServerOptions>(options =>
         {
             options.AllowSynchronousIO = false;
@@ -130,7 +150,7 @@ public static class Program
         // Windows Active Directory authentication support (optional)
         // builder.Services.AddAuthentication(NegotiateDefaults.AuthenticationScheme).AddNegotiate();
 
-        // Memory cache 
+        // Memory cache
         builder.Services.AddMemoryCache();
 
         // Uncomment to enable scheduled tasks

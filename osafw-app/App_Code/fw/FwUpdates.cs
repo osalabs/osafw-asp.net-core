@@ -35,7 +35,11 @@ public class FwUpdates : FwModel
     /// </summary>
     public virtual void loadUpdates()
     {
-        string updates_root = fw.config("site_root") + @"\App_Data\sql\updates";
+        string updates_root = fw.config("site_root") + @"\App_Data\sql";
+        var provider_subdir = db.sqlScriptSubdir();
+        if (!string.IsNullOrEmpty(provider_subdir))
+            updates_root += @"\" + provider_subdir;
+        updates_root += @"\updates";
         logger("checking " + updates_root);
         if (!System.IO.Directory.Exists(updates_root))
             return;
@@ -163,7 +167,11 @@ public class FwUpdates : FwModel
 
     public void refreshViews(bool is_echo = false)
     {
-        var views_file = fw.config("site_root") + @"\App_Data\sql\views.sql";
+        var views_root = fw.config("site_root") + @"\App_Data\sql";
+        var provider_subdir = db.sqlScriptSubdir();
+        if (!string.IsNullOrEmpty(provider_subdir))
+            views_root += @"\" + provider_subdir;
+        var views_file = views_root + @"\views.sql";
         if (is_echo)
             fw.rw("Applying views file: " + views_file);
 

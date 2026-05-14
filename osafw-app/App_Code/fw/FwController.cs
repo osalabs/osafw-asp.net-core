@@ -691,9 +691,9 @@ public abstract class FwController
 
 
             var qfieldname = db.qid(fieldname);
-            var fieldname_sql = $"ISNULL(CAST({qfieldname} as NVARCHAR(255)), '')"; //255 need as SQL Server by default makes only 30
-            var fieldname_sql_num = $"TRY_CONVERT(DECIMAL(18,1),CAST({qfieldname} as NVARCHAR))"; // SQL Server 2012+ only
-            var fieldname_sql_date = $"TRY_CONVERT(DATE, {qfieldname})"; //for date search
+            var fieldname_sql = db.sqlTextExpr(qfieldname);
+            var fieldname_sql_num = db.sqlNumberExpr(qfieldname);
+            var fieldname_sql_date = db.sqlDateExpr(qfieldname); //for date search
 
             string op = value[..1];
             string op2 = value.Length >= 2 ? value[..2] : string.Empty;
@@ -1397,8 +1397,8 @@ public abstract class FwController
     }
 
     /// <summary>
-    /// set list_headers (and add search_value from list_filter_search) 
-    /// and 
+    /// set list_headers (and add search_value from list_filter_search)
+    /// and
     /// </summary>
     /// <param name="is_cols">if true - update list_rows with cols, use false for json responses</param>
     public virtual void setViewList(bool is_cols = true)

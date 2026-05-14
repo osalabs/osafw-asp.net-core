@@ -66,11 +66,24 @@ class DevCodeGen
             replaceInFiles(foldername, strings);
     }
 
-    private static string entityFieldToSQLType(FwDict entity)
+    private string entityFieldToSQLType(FwDict entity)
     {
         string result;
 
         var fw_subtype = entity["fw_subtype"].toStr();
+        if (db.dbtype == DB.DBTYPE_SQLITE)
+        {
+            return entity["fw_type"].toStr() switch
+            {
+                "int" => "INTEGER",
+                "float" => fw_subtype == "decimal" || fw_subtype == "currency" ? "NUMERIC" : "REAL",
+                "date" => "DATE",
+                "datetime" => fw_subtype == "datetimeoffset" ? "DATETIMEOFFSET" : "DATETIME",
+                "datetimeoffset" => "DATETIMEOFFSET",
+                _ => "TEXT",
+            };
+        }
+
         switch (entity["fw_type"])
         {
             case "int":
@@ -145,8 +158,8 @@ class DevCodeGen
             // only digits
             result += def;
         else if (def.ToLower().StartsWith("getdate") || Regex.IsMatch(def, @"^\=?now\(?\)?$", RegexOptions.IgnoreCase))
-            // access now() => getdate()
-            result += "GETDATE()";
+            // access now() => provider current timestamp
+            result += db.dbtype == DB.DBTYPE_SQLITE ? "CURRENT_TIMESTAMP" : "GETDATE()";
         else
         {
             // any other text - quote
@@ -179,7 +192,10 @@ class DevCodeGen
                 //build FK name as FK_TABLE_FIELDWITHOUTID
                 var fk_name = fk["column"].toStr();
                 fk_name = Regex.Replace(fk_name, "_id$", "", RegexOptions.IgnoreCase);
-                result = " CONSTRAINT FK_" + entity["fw_name"].toStr() + "_" + Utils.name2fw(fk_name) + " FOREIGN KEY REFERENCES " + db.qid(fk["pk_table"].toStr(), false) + "(" + db.qid(fk["pk_column"].toStr(), false) + ")";
+                if (db.dbtype == DB.DBTYPE_SQLITE)
+                    result = " REFERENCES " + db.qid(fk["pk_table"].toStr(), false) + "(" + db.qid(fk["pk_column"].toStr(), false) + ")";
+                else
+                    result = " CONSTRAINT FK_" + entity["fw_name"].toStr() + "_" + Utils.name2fw(fk_name) + " FOREIGN KEY REFERENCES " + db.qid(fk["pk_table"].toStr(), false) + "(" + db.qid(fk["pk_column"].toStr(), false) + ")";
                 break;
             }
         }
@@ -192,11 +208,13 @@ class DevCodeGen
     private string entity2SQL(FwDict entity)
     {
         var table_name = entity["table"].toStr();
+        var is_sqlite = db.dbtype == DB.DBTYPE_SQLITE;
         var result = "CREATE TABLE " + db.qid(table_name, false) + " (" + Environment.NewLine;
 
         var indexes = entity["indexes"] as FwDict;
         var i = 1;
         var fields = entity["fields"] as FwList ?? [];
+        var has_sqlite_inline_pk = is_sqlite && fields.Any(field => (field as FwDict)?["is_identity"].toBool() == true);
         foreach (FwDict field in fields)
         {
             var fsql = "";
@@ -207,14 +225,24 @@ class DevCodeGen
             fsql += "  " + db.qid(field_name, false).PadRight(21, ' ') + " " + entityFieldToSQLType(field);
             if (field["is_identity"].toBool())
             {
-                fsql += " IDENTITY(1, 1)";
-                if (indexes == null || !indexes.ContainsKey("PK"))
-                    fsql += " PRIMARY KEY CLUSTERED";
+                if (is_sqlite)
+                {
+                    fsql += " PRIMARY KEY AUTOINCREMENT";
+                }
+                else
+                {
+                    fsql += " IDENTITY(1, 1)";
+                    if (indexes == null || !indexes.ContainsKey("PK"))
+                        fsql += " PRIMARY KEY CLUSTERED";
+                }
             }
 
-            fsql += field["is_nullable"].toBool() ? "" : " NOT NULL";
-            fsql += entityFieldToSQLDefault(field);
-            fsql += entityFieldToSQLForeignKey(field, entity);
+            if (!field["is_identity"].toBool() || !is_sqlite)
+            {
+                fsql += field["is_nullable"].toBool() ? "" : " NOT NULL";
+                fsql += entityFieldToSQLDefault(field);
+                fsql += entityFieldToSQLForeignKey(field, entity);
+            }
             fsql += (i < fields.Count ? "," : "");
             if (field.TryGetValue("comments", out object? value))
                 fsql = fsql.PadRight(64, ' ') + "-- " + value.toStr();
@@ -223,6 +251,7 @@ class DevCodeGen
             i += 1;
         }
 
+        StrList sqlite_indexes = [];
         if (indexes != null)
         {
             //sort indexes keys this way: PK (always first), then by number in suffix - UX1, IX2, UX3, IX4, IX5, IX6, ...
@@ -244,11 +273,21 @@ class DevCodeGen
                 var prefix2 = index_prefix.Substring(0, 2);
                 if (prefix2 == "PK")
                 {
+                    if (has_sqlite_inline_pk)
+                        continue;
+
                     //PRIMARY KEY CLUSTERED (field, field,...)
-                    isql += "PRIMARY KEY CLUSTERED ";
+                    isql += is_sqlite ? "PRIMARY KEY " : "PRIMARY KEY CLUSTERED ";
                 }
                 else
                 {
+                    if (is_sqlite)
+                    {
+                        var unique = prefix2 == "UX" ? "UNIQUE " : "";
+                        sqlite_indexes.Add("CREATE " + unique + "INDEX " + db.qid(index_prefix + "_" + table_name, false) + " ON " + db.qid(table_name, false) + " (" + indexes[index_prefix] + ")");
+                        continue;
+                    }
+
                     //INDEX [UI]X123_tablename [UNIQUE] (field, field,...)
                     isql += "INDEX " + index_prefix + "_" + table_name;
                     isql += (prefix2 == "UX" ? " UNIQUE " : " ");
@@ -260,6 +299,8 @@ class DevCodeGen
         }
 
         result += ")";
+        if (sqlite_indexes.Count > 0)
+            result += ";" + Environment.NewLine + string.Join(";" + Environment.NewLine, sqlite_indexes);
 
         return result;
     }
@@ -269,13 +310,18 @@ class DevCodeGen
         var config_file = fw.config("template") + DB_JSON_PATH;
         var entities = DevEntityBuilder.loadJson<FwList>(config_file);
 
-        // drop all FKs we created before, so we'll be able to drop tables later
-        DBList fks = db.arrayp(@"SELECT fk.name, o.name as table_name 
-                        FROM sys.foreign_keys fk, sys.objects o 
-                        where fk.is_system_named=0 
+        if (db.dbtype == DB.DBTYPE_SQLITE)
+            db.exec("PRAGMA foreign_keys=OFF");
+        else
+        {
+            // drop all FKs we created before, so we'll be able to drop tables later
+            DBList fks = db.arrayp(@"SELECT fk.name, o.name as table_name
+                        FROM sys.foreign_keys fk, sys.objects o
+                        where fk.is_system_named=0
                           and o.object_id=fk.parent_object_id", DB.h());
-        foreach (var fk in fks)
-            db.exec("ALTER TABLE " + db.qid(fk["table_name"], false) + " DROP CONSTRAINT " + db.qid(fk["name"], false));
+            foreach (var fk in fks)
+                db.exec("ALTER TABLE " + db.qid(fk["table_name"], false) + " DROP CONSTRAINT " + db.qid(fk["name"], false));
+        }
 
         foreach (FwDict entity in entities)
         {
@@ -291,8 +337,11 @@ class DevCodeGen
                 fw.logger(ex.Message);
             }
 
-            db.exec(sql);
+            db.execMultipleSQL(sql);
         }
+
+        if (db.dbtype == DB.DBTYPE_SQLITE)
+            db.exec("PRAGMA foreign_keys=ON");
     }
 
     public void createDBSQLFromDBJson()
@@ -316,10 +365,16 @@ class DevCodeGen
             }
 
             database_sql += "DROP TABLE IF EXISTS " + db.qid(entity["table"].toStr(), false) + ";" + Environment.NewLine;
-            database_sql += sql + ";" + Environment.NewLine + Environment.NewLine;
+            database_sql += sql.TrimEnd(';') + ";" + Environment.NewLine + Environment.NewLine;
         }
 
-        var sql_file = fw.config("site_root") + DevCodeGen.DB_SQL_PATH;
+        var sql_root = fw.config("site_root") + "/App_Data/sql";
+        var provider_subdir = db.sqlScriptSubdir();
+        if (!string.IsNullOrEmpty(provider_subdir))
+            sql_root += "/" + provider_subdir;
+        Directory.CreateDirectory(sql_root);
+
+        var sql_file = sql_root + "/database.sql";
         Utils.setFileContent(sql_file, ref database_sql);
     }
 
@@ -502,11 +557,11 @@ class DevCodeGen
         if (lookup.Count > 0)
         {
             fw.model<FwControllers>().update(lookup["id"].toInt(), item);
-            upd_sql = Environment.NewLine + $@"UPDATE fwcontrollers SET 
-                            igroup={db.q(item["igroup"])}, 
-                            url={db.q(item["url"])}, 
-                            iname={db.q(item["iname"])}, 
-                            model={db.q(item["model"])}, 
+            upd_sql = Environment.NewLine + $@"UPDATE fwcontrollers SET
+                            igroup={db.q(item["igroup"])},
+                            url={db.q(item["url"])},
+                            iname={db.q(item["iname"])},
+                            model={db.q(item["model"])},
                             access_level={db.qi(item["access_level"])},
                             is_lookup=1
                         WHERE icode={db.q(item["icode"])}" + Environment.NewLine;

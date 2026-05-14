@@ -10,7 +10,7 @@ Created as simplified and lightweight alternative to other ASP.NET frameworks li
   - code, data, templates are split
   - code consists of: controllers, models, framework core and optional 3rd party libs
 - uses [ParsePage template engine](https://github.com/osalabs/parsepage) ([detailed docs](docs/templates.md))
-  - data stored by default in SQL Server database [using db.net](https://github.com/osalabs/db.net) ([detailed docs](docs/db.md))
+  - data stored by default in SQL Server, with optional SQLite/MySQL providers [using db.net](https://github.com/osalabs/db.net) ([detailed docs](docs/db.md))
 - RESTful with some practical enhancements
 - flexible CRUD flows with `FwDict`/`FwList` or typed DTOs ([guide](docs/crud.md))
 - integrated auth - simple flat access levels auth
@@ -40,6 +40,7 @@ http://demo.engineeredit.com/ - this is how it looks in action right after insta
 3. press Ctrl+F5 to run (or F5 if you really need debugger)
 4. open in browser https://localhost:PORT/Dev/Configure and check configuration. If database not configured:
   - create `demo` database (or other name you have in appsettings.json)
+  - or enable SQLite with project-wide `isSQLite`, set `appSettings.db.main.type` to `SQLite`, and use `Data Source=App_Data/db/osafw.sqlite;Mode=ReadWriteCreate;Foreign Keys=True;Default Timeout=30;Pooling=True;`
   - click "Initialize DB"
 5. review debug log in `/osafw-app/App_Data/logs/main.log`
 6. edit or create new controllers and models in `/osafw-app/App_Code/controllers` and `/osafw-app/App_Code/models`
@@ -63,6 +64,7 @@ Short summary how to deploy without VS publish (from clone git repo):
   - views.sql - (re-)create views
   - roles.sql (optional, only if RBAC used)
   - demo.sql (optional, demo tables)
+  - for SQLite, use the same file names from `osafw-app/App_Data/sql/sqlite/`
 
 ### Directory structure
 ```
@@ -181,10 +183,12 @@ The following controller fields used above can be defined in controller's `init(
 - **FwApiController** â€“ base class for building authenticated REST APIs
 - **Entity Builder** â€“ text based definition to generate SQL and CRUD scaffolding
 
+SQLite `FwUpdates` scripts are loaded from `/osafw-app/App_Data/sql/sqlite/updates`; SQL Server scripts stay in `/osafw-app/App_Data/sql/updates`.
+
 ### Per-user Date/Time and Timezones
 
 The framework supports per-user formatting and timezone conversion:
-- Defaults come from `appsettings.json` (`appSettings.date_format`, `time_format`, `timezone`) 
+- Defaults come from `appsettings.json` (`appSettings.date_format`, `time_format`, `timezone`)
 - For each user can be overridden - see `users` table fields `date_format`, `time_format`, `timezone` (e.g. on login/profile save).
 - Rendering in templates uses these values automatically via ParsePage. Inputs are interpreted using the userâ€™s format; output can be converted from database timezone to the userâ€™s timezone.
 
@@ -224,6 +228,7 @@ Another debug function that might be helpful is `fw.rw()` - but it output it's p
 - db updates:
   - first, make changes in `/osafw-app/App_Data/sql/database.sql` - this file is used to create db from scratch
   - then create a file `/osafw-app/App_Data/sql/updates/updYYYY-MM-DD[-123].sql` with all the CREATE, ALTER, UPDATE... - this will allow to apply just this update to existing database instances
+  - for SQLite, mirror the schema change under `/osafw-app/App_Data/sql/sqlite/database.sql` and put SQLite-specific updates under `/osafw-app/App_Data/sql/sqlite/updates/`
 - use `fw.routeRedirect()` if you got request to one Controller.Action, but need to continue processing in another Controller.Action
   - for example, if for a logged user you need to show detailed data and always skip list view - in the `IndexAction()` just use `fw.routeRedirect("ShowForm")`
 - uploads

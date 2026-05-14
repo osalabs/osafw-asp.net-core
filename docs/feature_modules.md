@@ -3,7 +3,7 @@
 Feature modules bundle a database table, its model, controller, and templates. You can scaffold them automatically from **Developer Tools** or build them manually by copying demo assets.
 
 ## Quick path: Developer Tools at `/Dev/Manage`
-1. **Add the table** to your schema: mirror the demo tables in `osafw-app/App_Data/sql/demo.sql`, then append the `CREATE TABLE` to `osafw-app/App_Data/sql/database.sql` and create a dated script under `osafw-app/App_Data/sql/updates/` for deployments.
+1. **Add the table** to your schema: mirror the demo tables in `osafw-app/App_Data/sql/demo.sql`, then append the `CREATE TABLE` to `osafw-app/App_Data/sql/database.sql` and create a dated script under `osafw-app/App_Data/sql/updates/` for deployments. For SQLite projects, use the matching files under `osafw-app/App_Data/sql/sqlite/` and put SQLite updates under `osafw-app/App_Data/sql/sqlite/updates/`.
 2. **Open Developer Tools** at `/Dev/Manage` and use the *Create Model* form. Pick your table and optional model name; the action reads the schema and generates the model file for you.
 3. **Create the controller** from the same screen. Select the model, provide a target URL/title, and choose controller type (dynamic, Vue, lookup, or API). The generator copies demo templates, rewrites URLs/titles, configures `config.json`, writes the controller class, and adds a menu item.
 4. **Restart the project or apply hot reload**, then navigate to the new controller URL.
@@ -20,7 +20,7 @@ In local development, Home can automatically redirect into the FwUpdates apply f
 If you need full control, replicate what the generators do:
 
 1. **Database table**
-   - Define the table in `osafw-app/App_Data/sql/database.sql` and add a migration under `osafw-app/App_Data/sql/updates/` for environments that need incremental updates.
+   - Define the table in `osafw-app/App_Data/sql/database.sql` and add a migration under `osafw-app/App_Data/sql/updates/` for environments that need incremental updates. SQLite deployments use `osafw-app/App_Data/sql/sqlite/database.sql` and `osafw-app/App_Data/sql/sqlite/updates/`.
    - Keep naming consistent: snake_case plural table names (e.g., `orders`), include system columns (`status`, `add_time`, `add_users_id`, `upd_time`, `upd_users_id`) for built-in behaviors.
 
 2. **Model class**

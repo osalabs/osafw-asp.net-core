@@ -51,6 +51,19 @@ public class Att : FwModel<Att.Row>
         table_name = "att";
     }
 
+    /// <summary>
+    /// Adds a file row with an application-generated public code so providers without expression defaults stay portable.
+    /// </summary>
+    /// <param name="item">Attachment fields to insert.</param>
+    /// <returns>The new attachment id.</returns>
+    public override int add(FwDict item)
+    {
+        if (string.IsNullOrEmpty(item["icode"].toStr()))
+            item["icode"] = Guid.NewGuid().ToString("N");
+
+        return base.add(item);
+    }
+
     // overload by file index
     public FwDict? uploadOne(int id, int file_index, bool is_new = false)
     {
@@ -182,9 +195,10 @@ public class Att : FwModel<Att.Row>
     /// <returns>number of uploads deleted</returns>
     public int cleanupTmpUploads()
     {
+        var cutoff = DateTime.UtcNow.AddHours(-48);
         var rows = db.arrayp("select * from " + db.qid(table_name) +
-            @$" where add_time<DATEADD(hour, -48, getdate())
-                 and (status={db.qi(STATUS_UNDER_UPDATE)} or status={db.qi(STATUS_DELETED)} and iname like 'TMP#%')", DB.h());
+            @$" where add_time<@cutoff
+                 and (status={db.qi(STATUS_UNDER_UPDATE)} or status={db.qi(STATUS_DELETED)} and iname like 'TMP#%')", DB.h("@cutoff", cutoff));
         foreach (var row in rows)
             this.delete(row["id"].toInt(), true);
         return rows.Count;
@@ -405,7 +419,7 @@ public class Att : FwModel<Att.Row>
         return db.arrayp("select a.* " + " from " + db.qid(fw.model<AttLinks>().table_name) + " al, " + db.qid(table_name) + " a " +
             $@" where al.fwentities_id=@fwentities_id
                   and al.item_id=@item_id
-                  and a.id=al.att_id 
+                  and a.id=al.att_id
                   {where}
                 order by a.id", @params);
     }

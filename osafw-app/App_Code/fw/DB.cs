@@ -12,10 +12,20 @@
  *   - db/main/connection_string to "Server=127.0.0.1;User ID=XXX;Password=YYY;Database=ZZZ;Allow User Variables=true;"
  *   - db/main/type to "MySQL"
  * - use App_Data/sql/mysql database initialization files
+ *
+ * to use with SQLite:
+ * - define isSQLite project-wide in osafw-app.csproj or uncomment #define isSQLite in Program.cs and DB.cs
+ * - keep the Microsoft.Data.Sqlite package in osafw-app.csproj
+ * - set db/main/type to "SQLite"
+ * - use App_Data/sql/sqlite database initialization files
  */
 //#define isMySQL //uncomment if using MySQL
+//#define isSQLite //uncomment if using SQLite
 #if isMySQL
 using MySqlConnector;
+#endif
+#if isSQLite
+using Microsoft.Data.Sqlite;
 #endif
 
 using Microsoft.AspNetCore.Http;
@@ -92,7 +102,7 @@ public class DBRow : Dictionary<string, string>
     {
         return this;
     }
- 
+
 }
 public class DBList : List<DBRow>
 {
@@ -227,6 +237,7 @@ public class DB : IDisposable
     public const string DBTYPE_OLE = "OLE";
     public const string DBTYPE_ODBC = "ODBC";
     public const string DBTYPE_MYSQL = "MySQL";
+    public const string DBTYPE_SQLITE = "SQLite";
 
     //special value for current db time in queries (GETDATE() or NOW()) can be used as a value like this:
     // db.insert("table", DB.h("idatetime", DB.NOW)); - insert a row with current datetime
@@ -253,7 +264,7 @@ public class DB : IDisposable
     protected HttpContext? context;
 
     public string db_name = "";
-    public string dbtype = DBTYPE_SQLSRV; // SQL=SQL Server, OLE=OleDB, MySQL=MySQL
+    public string dbtype = DBTYPE_SQLSRV; // SQL=SQL Server, OLE=OleDB, MySQL=MySQL, SQLite=SQLite
     public int sql_command_timeout = 30; // default command timeout, override in model for long queries (in reports or export, for example)
     protected readonly FwDict conf = [];  // config contains: connection_string, type
     protected readonly string connstr = "";
@@ -329,7 +340,12 @@ public class DB : IDisposable
 
                 var ftype = dbread.GetFieldType(i);
                 isStr[i] = (ftype == typeof(string));
-                isDt[i] = (ftype == typeof(DateTime));
+                var isSqliteDateType = dbtype == DBTYPE_SQLITE
+                    && (dtypeName.Equals("date", StringComparison.OrdinalIgnoreCase)
+                        || dtypeName.Equals("datetime", StringComparison.OrdinalIgnoreCase)
+                        || dtypeName.Equals("datetime2", StringComparison.OrdinalIgnoreCase)
+                        || dtypeName.Equals("timestamp", StringComparison.OrdinalIgnoreCase));
+                isDt[i] = (ftype == typeof(DateTime)) || isSqliteDateType;
                 isDto[i] = (ftype == typeof(DateTimeOffset)) || isDateTimeOffsetType(dtypeName);
                 if (isDt[i])
                     isDateOnly[i] = dtypeName.Equals("date", StringComparison.OrdinalIgnoreCase);
@@ -574,6 +590,13 @@ public class DB : IDisposable
             offset_method = "LIMIT";
             sql_now = "NOW()";
         }
+        else if (dbtype == DBTYPE_SQLITE)
+        {
+            quotes = "\"";
+            limit_method = "LIMIT";
+            offset_method = "LIMIT";
+            sql_now = "CURRENT_TIMESTAMP";
+        }
         else if (dbtype == DBTYPE_OLE)
         {
             if (connstr.Contains("Provider=DB2OLEDB"))
@@ -756,6 +779,13 @@ public class DB : IDisposable
             result = new MySqlConnection(connstr);
         }
 #endif
+#if isSQLite
+        else if (dbtype == DBTYPE_SQLITE)
+        {
+            ensureSqliteDirectory(connstr);
+            result = new SqliteConnection(connstr);
+        }
+#endif
         else if (dbtype == DBTYPE_OLE && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             result = new OleDbConnection(connstr);
@@ -772,8 +802,33 @@ public class DB : IDisposable
         }
 
         result.Open();
+#if isSQLite
+        if (dbtype == DBTYPE_SQLITE)
+        {
+            using var pragma = result.CreateCommand();
+            pragma.CommandText = "PRAGMA foreign_keys = ON";
+            pragma.ExecuteNonQuery();
+        }
+#endif
         return result;
     }
+
+#if isSQLite
+    private static void ensureSqliteDirectory(string connstr)
+    {
+        if (string.IsNullOrWhiteSpace(connstr))
+            return;
+
+        var builder = new SqliteConnectionStringBuilder(connstr);
+        var dataSource = builder.DataSource;
+        if (string.IsNullOrWhiteSpace(dataSource) || dataSource == ":memory:")
+            return;
+
+        var dir = Path.GetDirectoryName(Path.GetFullPath(dataSource));
+        if (!string.IsNullOrEmpty(dir))
+            Directory.CreateDirectory(dir);
+    }
+#endif
 
     private string detectTimezoneFromDb()
     {
@@ -979,6 +1034,22 @@ public class DB : IDisposable
             dbcomm = mySqlCommand;
         }
 #endif
+#if isSQLite
+        else if (dbtype == DBTYPE_SQLITE)
+        {
+            var sqliteCommand = new SqliteCommand(sql, (SqliteConnection)conn!)
+            {
+                CommandTimeout = sql_command_timeout
+            };
+            foreach (string p in @params.Keys)
+                sqliteCommand.Parameters.AddWithValue(namedParam(p), normalizeParamValue(p, @params[p]) ?? DBNull.Value);
+
+            if (tran != null)
+                sqliteCommand.Transaction = (SqliteTransaction)tran;
+
+            dbcomm = sqliteCommand;
+        }
+#endif
         else
             throw new ApplicationException("Unsupported DB Type");
 
@@ -1009,17 +1080,23 @@ public class DB : IDisposable
             if (@params[p] is IList arr)
             {
                 var arrstr = new StringBuilder();
+                var paramBase = p.TrimStart('@', '$', ':');
                 for (var i = 0; i <= arr.Count - 1; i++)
                 {
-                    var pnew = p + "_" + i.ToString();
+                    var pnew = paramBase + "_" + i.ToString();
                     @params[pnew] = arr[i];
                     if (i > 0) arrstr.Append(',');
                     arrstr.Append("@" + pnew);
                 }
-                sql = sql.Replace("@" + p, arrstr.ToString());
+                sql = sql.Replace(namedParam(p), arrstr.ToString());
                 @params.Remove(p);
             }
         }
+    }
+
+    private static string namedParam(string name)
+    {
+        return name.StartsWith('@') || name.StartsWith('$') || name.StartsWith(':') ? name : "@" + name;
     }
 
     private void logQueryAndParams(string sql, FwDict @params)
@@ -1166,6 +1243,29 @@ public class DB : IDisposable
 
             if (is_get_identity)
                 result = (int)dbcomm.LastInsertedId; //TODO change result type to long
+        }
+#endif
+#if isSQLite
+        else if (dbtype == DBTYPE_SQLITE)
+        {
+            using var dbcomm = new SqliteCommand(sql, (SqliteConnection)conn!)
+            {
+                CommandTimeout = sql_command_timeout
+            };
+            foreach (string p in @params.Keys)
+                dbcomm.Parameters.AddWithValue(namedParam(p), normalizeParamValue(p, @params[p]) ?? DBNull.Value);
+
+            if (tran != null)
+                dbcomm.Transaction = (SqliteTransaction)tran;
+
+            result = dbcomm.ExecuteNonQuery();
+
+            if (is_get_identity)
+            {
+                dbcomm.Parameters.Clear();
+                dbcomm.CommandText = "SELECT last_insert_rowid()";
+                result = dbcomm.ExecuteScalar().toInt();
+            }
         }
 #endif
         else
@@ -1846,8 +1946,80 @@ public class DB : IDisposable
             parts[i] = $"{startQuote}{part}{endQuote}";
         }
 
-        // Join the parts back together with '.' 
+        // Join the parts back together with '.'
         return string.Join(".", parts);
+    }
+
+    /// <summary>
+    /// Builds a provider-specific SQL expression that converts a value to nullable-safe text.
+    /// </summary>
+    /// <param name="expr">SQL expression or column reference to convert.</param>
+    /// <returns>A SQL expression returning text, with database nulls converted to an empty string.</returns>
+    public string sqlTextExpr(string expr)
+    {
+        return dbtype switch
+        {
+            DBTYPE_SQLITE => $"COALESCE(CAST({expr} AS TEXT), '')",
+            DBTYPE_MYSQL => $"IFNULL(CAST({expr} AS CHAR), '')",
+            DBTYPE_OLE => $"IIF(ISNULL({expr}), '', CSTR({expr}))",
+            _ => $"ISNULL(CAST({expr} as NVARCHAR(255)), '')",
+        };
+    }
+
+    /// <summary>
+    /// Builds a provider-specific SQL expression that converts a value for numeric comparison.
+    /// </summary>
+    /// <param name="expr">SQL expression or column reference to convert.</param>
+    /// <returns>A SQL expression suitable for numeric filtering in list searches.</returns>
+    public string sqlNumberExpr(string expr)
+    {
+        var sqliteText = $"TRIM(CAST({expr} AS TEXT))";
+        var sqliteDotCount = $"(LENGTH({sqliteText})-LENGTH(REPLACE({sqliteText}, '.', '')))";
+        return dbtype switch
+        {
+            DBTYPE_SQLITE => $"CASE WHEN {sqliteText}<>'' AND {sqliteText} GLOB '*[0-9]*' AND {sqliteText} NOT GLOB '*[^0-9.+-]*' AND INSTR(SUBSTR({sqliteText}, 2), '+')=0 AND INSTR(SUBSTR({sqliteText}, 2), '-')=0 AND {sqliteDotCount}<=1 THEN CAST({expr} AS REAL) ELSE NULL END",
+            DBTYPE_MYSQL => $"CAST({expr} AS DECIMAL(18,1))",
+            DBTYPE_OLE => $"CDbl({expr})",
+            _ => $"TRY_CONVERT(DECIMAL(18,1),CAST({expr} as NVARCHAR))",
+        };
+    }
+
+    /// <summary>
+    /// Builds a provider-specific SQL expression that extracts the date portion of a value.
+    /// </summary>
+    /// <param name="expr">SQL expression or column reference containing a date or datetime value.</param>
+    /// <returns>A SQL expression that can be used for provider-neutral date filtering or grouping.</returns>
+    public string sqlDateExpr(string expr)
+    {
+        return dbtype switch
+        {
+            DBTYPE_SQLITE => $"date({expr})",
+            DBTYPE_MYSQL => $"DATE({expr})",
+            DBTYPE_OLE => $"DateValue({expr})",
+            _ => $"TRY_CONVERT(DATE, {expr})",
+        };
+    }
+
+    /// <summary>
+    /// Builds a provider-specific SQL expression that concatenates text expressions.
+    /// </summary>
+    /// <param name="expressions">SQL expressions or quoted literals to concatenate in order.</param>
+    /// <returns>A SQL expression that concatenates all parts while treating nulls as empty text.</returns>
+    public string sqlConcat(params string[] expressions)
+    {
+        if (expressions.Length == 0)
+            return "''";
+
+        if (dbtype == DBTYPE_SQLITE)
+            return string.Join(" || ", expressions.Select(sqlTextExpr));
+
+        if (dbtype == DBTYPE_OLE)
+            return string.Join(" & ", expressions.Select(sqlTextExpr));
+
+        if (dbtype == DBTYPE_MYSQL)
+            return "CONCAT(" + string.Join(", ", expressions.Select(sqlTextExpr)) + ")";
+
+        return "CONCAT(" + string.Join(", ", expressions) + ")";
     }
 
 
@@ -1987,6 +2159,20 @@ public class DB : IDisposable
     public string sqlNOW()
     {
         return sql_now;
+    }
+
+    /// <summary>
+    /// Returns the provider-specific SQL script folder below <c>App_Data/sql</c>.
+    /// </summary>
+    /// <returns>Provider subfolder name, or an empty string when the provider uses the root SQL Server scripts.</returns>
+    public string sqlScriptSubdir()
+    {
+        return dbtype switch
+        {
+            DBTYPE_SQLITE => "sqlite",
+            DBTYPE_MYSQL => "mysql",
+            _ => "",
+        };
     }
 
     /// <summary>
@@ -2481,6 +2667,12 @@ public class DB : IDisposable
         {
             insert_id = exec(qp.sql, qp.@params, true);
         }
+#if isSQLite
+        else if (dbtype == DBTYPE_SQLITE)
+        {
+            insert_id = exec(qp.sql, qp.@params, true);
+        }
+#endif
         else
             throw new ApplicationException("Get last insert ID for DB type [" + dbtype + "] not implemented");
 
@@ -2693,6 +2885,9 @@ public class DB : IDisposable
     // return array of table names in current db
     public StrList tables()
     {
+        if (dbtype == DBTYPE_SQLITE)
+            return new StrList(colp("SELECT name FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name"));
+
         DbConnection conn = this.connect();
         DataTable dataTable = conn.GetSchema("Tables");
         StrList result = new(dataTable.Rows.Count);
@@ -2705,9 +2900,13 @@ public class DB : IDisposable
 
             // skip any system tables or views (VIEW, ACCESS TABLE, SYSTEM TABLE)
             var tableType = row["TABLE_TYPE"].toStr();
-            if (tableType != "TABLE" && tableType != "BASE TABLE" && tableType != "PASS-THROUGH")
+            if (!tableType.Equals("TABLE", StringComparison.OrdinalIgnoreCase)
+                && !tableType.Equals("BASE TABLE", StringComparison.OrdinalIgnoreCase)
+                && !tableType.Equals("PASS-THROUGH", StringComparison.OrdinalIgnoreCase))
                 continue;
             string tblname = row["TABLE_NAME"].toStr();
+            if (tblname.StartsWith("sqlite_", StringComparison.OrdinalIgnoreCase))
+                continue;
             if (tblname.Length > 0)
                 result.Add(tblname);
         }
@@ -2718,13 +2917,16 @@ public class DB : IDisposable
     // return array of view names in current db
     public StrList views()
     {
+        if (dbtype == DBTYPE_SQLITE)
+            return new StrList(colp("SELECT name FROM sqlite_schema WHERE type='view' ORDER BY name"));
+
         DbConnection conn = this.connect();
         DataTable dataTable = conn.GetSchema("Tables");
         StrList result = new(dataTable.Rows.Count);
         foreach (DataRow row in dataTable.Rows)
         {
             // skip non-views
-            if (row["TABLE_TYPE"].toStr() != "VIEW") continue;
+            if (!row["TABLE_TYPE"].toStr().Equals("VIEW", StringComparison.OrdinalIgnoreCase)) continue;
 
             string tblname = row["TABLE_NAME"].toStr();
             if (tblname.Length > 0)
@@ -2873,6 +3075,34 @@ public class DB : IDisposable
                 row["fw_subtype"] = subtype.ToLowerInvariant();
             }
         }
+#if isSQLite
+        else if (dbtype == DBTYPE_SQLITE)
+        {
+            var tableName = table.Contains('.') ? table.Split('.').Last() : table;
+            var rows = arrayp($"PRAGMA table_xinfo({qid(tableName)})");
+            foreach (FwDict row in rows)
+            {
+                if (row["hidden"].toInt() == 1)
+                    continue;
+
+                var subtype = row["type"].toStr();
+                var maxlenMatch = Regex.Match(subtype, @"\((\d+)(?:,\d+)?\)");
+                var precisionScaleMatch = Regex.Match(subtype, @"\((\d+),(\d+)\)");
+                row["fw_type"] = mapTypeSQLite2Fw(subtype);
+                row["fw_subtype"] = subtype.ToLowerInvariant();
+                row["is_nullable"] = row["notnull"].toBool() || row["pk"].toBool() ? 0 : 1;
+                row["default"] = row["dflt_value"];
+                row["maxlen"] = maxlenMatch.Success ? maxlenMatch.Groups[1].Value.toInt() : (row["fw_type"].toStr() == "varchar" ? -1 : 0);
+                row["numeric_precision"] = precisionScaleMatch.Success ? precisionScaleMatch.Groups[1].Value.toInt() : 0;
+                row["numeric_scale"] = precisionScaleMatch.Success ? precisionScaleMatch.Groups[2].Value.toInt() : 0;
+                row["charset"] = "";
+                row["collation"] = "";
+                row["pos"] = row["cid"].toInt() + 1;
+                row["is_identity"] = row["pk"].toBool() && subtype.Equals("INTEGER", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+                result.Add(row);
+            }
+        }
+#endif
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             // OLE DB (Access or other providers)
@@ -2950,7 +3180,7 @@ public class DB : IDisposable
                 where_params["@table_name"] = table;
             }
 
-            result = this.arrayp(@"SELECT 
+            result = this.arrayp(@"SELECT
                       col1.CONSTRAINT_NAME as [name]
                      , col1.TABLE_NAME As [table]
                      , col1.COLUMN_NAME as [column]
@@ -2958,15 +3188,15 @@ public class DB : IDisposable
                      , col2.COLUMN_NAME as [pk_column]
                      , rc.UPDATE_RULE as [on_update]
                      , rc.DELETE_RULE as [on_delete]
-                      FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS rc 
-                      INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE col1 
-                        ON (col1.CONSTRAINT_CATALOG = rc.CONSTRAINT_CATALOG  
-                            AND col1.CONSTRAINT_SCHEMA = rc.CONSTRAINT_SCHEMA 
+                      FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS rc
+                      INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE col1
+                        ON (col1.CONSTRAINT_CATALOG = rc.CONSTRAINT_CATALOG
+                            AND col1.CONSTRAINT_SCHEMA = rc.CONSTRAINT_SCHEMA
                             AND col1.CONSTRAINT_NAME = rc.CONSTRAINT_NAME)
-                      INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE col2 
-                        ON (col2.CONSTRAINT_CATALOG = rc.UNIQUE_CONSTRAINT_CATALOG  
-                            AND col2.CONSTRAINT_SCHEMA = rc.UNIQUE_CONSTRAINT_SCHEMA 
-                            AND col2.CONSTRAINT_NAME = rc.UNIQUE_CONSTRAINT_NAME 
+                      INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE col2
+                        ON (col2.CONSTRAINT_CATALOG = rc.UNIQUE_CONSTRAINT_CATALOG
+                            AND col2.CONSTRAINT_SCHEMA = rc.UNIQUE_CONSTRAINT_SCHEMA
+                            AND col2.CONSTRAINT_NAME = rc.UNIQUE_CONSTRAINT_NAME
                             AND col2.ORDINAL_POSITION = col1.ORDINAL_POSITION)" +
                 where, where_params);
         }
@@ -2980,7 +3210,7 @@ public class DB : IDisposable
                 where_params["@table_name"] = table;
             }
 
-            result = this.arrayp(@"SELECT 
+            result = this.arrayp(@"SELECT
                       col1.CONSTRAINT_NAME as `name`
                      , col1.TABLE_NAME As `table`
                      , col1.COLUMN_NAME as `column`
@@ -2988,18 +3218,38 @@ public class DB : IDisposable
                      , col2.COLUMN_NAME as `pk_column`
                      , rc.UPDATE_RULE as `on_update`
                      , rc.DELETE_RULE as `on_delete`
-                      FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS rc 
-                      INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE col1 
-                        ON (col1.CONSTRAINT_CATALOG = rc.CONSTRAINT_CATALOG  
-                            AND col1.CONSTRAINT_SCHEMA = rc.CONSTRAINT_SCHEMA 
+                      FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS rc
+                      INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE col1
+                        ON (col1.CONSTRAINT_CATALOG = rc.CONSTRAINT_CATALOG
+                            AND col1.CONSTRAINT_SCHEMA = rc.CONSTRAINT_SCHEMA
                             AND col1.CONSTRAINT_NAME = rc.CONSTRAINT_NAME)
-                      INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE col2 
-                        ON (col2.CONSTRAINT_CATALOG = rc.UNIQUE_CONSTRAINT_CATALOG  
-                            AND col2.CONSTRAINT_SCHEMA = rc.UNIQUE_CONSTRAINT_SCHEMA 
-                            AND col2.CONSTRAINT_NAME = rc.UNIQUE_CONSTRAINT_NAME 
+                      INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE col2
+                        ON (col2.CONSTRAINT_CATALOG = rc.UNIQUE_CONSTRAINT_CATALOG
+                            AND col2.CONSTRAINT_SCHEMA = rc.UNIQUE_CONSTRAINT_SCHEMA
+                            AND col2.CONSTRAINT_NAME = rc.UNIQUE_CONSTRAINT_NAME
                             AND col2.ORDINAL_POSITION = col1.ORDINAL_POSITION)" +
                 where, where_params);
         }
+#if isSQLite
+        else if (dbtype == DBTYPE_SQLITE)
+        {
+            var tableName = table.Contains('.') ? table.Split('.').Last() : table;
+            var rows = this.arrayp($"PRAGMA foreign_key_list({qid(tableName)})");
+            foreach (FwDict row in rows)
+            {
+                result.Add(new DBRow()
+                {
+                    {"table", tableName},
+                    {"column", row["from"].toStr()},
+                    {"name", "FK_" + tableName + "_" + row["from"].toStr() + "_" + row["id"].toStr()},
+                    {"pk_table", row["table"].toStr()},
+                    {"pk_column", row["to"].toStr()},
+                    {"on_update", row["on_update"].toStr()},
+                    {"on_delete", row["on_delete"].toStr()}
+                });
+            }
+        }
+#endif
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             // OLE DB (Access or other providers)
@@ -3036,7 +3286,7 @@ public class DB : IDisposable
     {
         //logger(LogLevel.DEBUG, "loadTableSchema:" + table);
         // for unsupported schemas - use config schema
-        if (dbtype != DBTYPE_SQLSRV && dbtype != DBTYPE_OLE && dbtype != DBTYPE_MYSQL)
+        if (dbtype != DBTYPE_SQLSRV && dbtype != DBTYPE_OLE && dbtype != DBTYPE_MYSQL && dbtype != DBTYPE_SQLITE)
         {
             if (schema.Count == 0)
                 schema = (Dictionary<string, FwDict>?)conf["schema"] ?? [];
@@ -3143,6 +3393,26 @@ public class DB : IDisposable
         }
 
         return result;
+    }
+
+    // map SQLite declared type to FW's
+    protected static string mapTypeSQLite2Fw(string dbtype)
+    {
+        var subtype = dbtype.toStr().ToLowerInvariant();
+        if (subtype.Contains("datetimeoffset"))
+            return "datetimeoffset";
+        if (subtype.Contains("datetime") || subtype.Contains("timestamp"))
+            return "datetime";
+        if (subtype.Contains("date"))
+            return "date";
+        if (subtype.Contains("int") || subtype.Contains("bool"))
+            return "int";
+        if (subtype.Contains("real") || subtype.Contains("floa") || subtype.Contains("doub"))
+            return "float";
+        if (subtype.Contains("numeric") || subtype.Contains("decimal") || subtype.Contains("money"))
+            return "decimal";
+
+        return "varchar";
     }
 
     [SupportedOSPlatform("windows")]
