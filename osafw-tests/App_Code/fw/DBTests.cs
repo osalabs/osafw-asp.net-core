@@ -644,6 +644,55 @@ namespace osafw.Tests
         }
 
         [TestMethod()]
+        public void DemoTimezoneFieldsRoundTripAgainstDemoTable()
+        {
+            if (db.valuep("SELECT OBJECT_ID('dbo.demos')").toStr() == "")
+                Assert.Inconclusive("dbo.demos is not available in the local demo database.");
+
+            using var tzDb = dbWithTimezone("Pacific Standard Time");
+            var email = "tz-demo-" + Guid.NewGuid().ToString("N") + "@example.test";
+            var utc = new DateTime(2024, 6, 1, 12, 0, 0, DateTimeKind.Utc);
+            var offset = new DateTimeOffset(2024, 6, 1, 15, 0, 0, TimeSpan.FromHours(3));
+
+            try
+            {
+                tzDb.insert("demos", DB.h(
+                    "iname", "Timezone demo test",
+                    "email", email,
+                    "fdatetime", utc,
+                    "fdatetime_utc", utc,
+                    "fdatetime_offset", offset,
+                    "fdatetime_local", utc));
+
+                var row = tzDb.row("demos", DB.h("email", email));
+                Assert.AreEqual("2024-06-01 12:00:00", row["fdatetime"]);
+                Assert.AreEqual("2024-06-01 12:00:00", row["fdatetime_utc"]);
+                Assert.AreEqual("2024-06-01 12:00:00", row["fdatetime_offset"]);
+                Assert.AreEqual("2024-06-01 12:00:00", row["fdatetime_local"]);
+
+                var stored = tzDb.rowp(@"
+                    SELECT
+                        CONVERT(varchar(19), fdatetime, 120) AS fdatetime,
+                        CONVERT(varchar(19), fdatetime_utc, 120) AS fdatetime_utc,
+                        CONVERT(varchar(19), CAST(fdatetime_offset AS datetime2), 120) AS fdatetime_offset,
+                        DATEPART(TZOFFSET, fdatetime_offset) AS offset_minutes,
+                        CONVERT(varchar(19), fdatetime_local, 120) AS fdatetime_local
+                    FROM demos
+                    WHERE email=@email", DB.h("@email", email));
+
+                Assert.AreEqual("2024-06-01 05:00:00", stored["fdatetime"]);
+                Assert.AreEqual("2024-06-01 12:00:00", stored["fdatetime_utc"]);
+                Assert.AreEqual("2024-06-01 15:00:00", stored["fdatetime_offset"]);
+                Assert.AreEqual("180", stored["offset_minutes"].toStr());
+                Assert.AreEqual("2024-06-01 05:00:00", stored["fdatetime_local"]);
+            }
+            finally
+            {
+                tzDb.del("demos", DB.h("email", email));
+            }
+        }
+
+        [TestMethod()]
         public void updateOrInsertTest()
         {
             db.updateOrInsert(table_name, DB.h("iname", "test5", "id", 5), DB.h("id", 5));

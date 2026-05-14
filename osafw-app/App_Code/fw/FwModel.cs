@@ -434,8 +434,10 @@ public abstract class FwModel : IDisposable
         return isExistsByField(uniq_key, not_id, field_iname);
     }
 
-    // convert user input fields to proper database format before add/update
-    // including timezone conversion of datetime values to internal UTC
+    /// <summary>
+    /// Converts user-facing form values to database-ready values before add/update.
+    /// </summary>
+    /// <param name="item">Mutable field dictionary keyed by database field name.</param>
     public virtual void convertUserInput(FwDict item)
     {
         var tschema = getTableSchema();
@@ -491,7 +493,17 @@ public abstract class FwModel : IDisposable
                     // parse strings and convert from user's timezone to UTC
                     var str = item[fieldname].toStr();
                     DateTime? parsed = null;
-                    if (DateUtils.isDateSQL(str))
+                    if (DateUtils.isDateTimeLocalStr(str))
+                    {
+                        parsed = DateUtils.DateTimeLocal2Date(str);
+                        if (parsed != null)
+                            parsed = DateUtils.convertTimezone((DateTime)parsed, fw.userTimezone, DateUtils.TZ_UTC);
+                    }
+                    else if (DateUtils.isDateTimeOffsetStr(str) && DateTimeOffset.TryParse(str, out var parsedOffset))
+                    {
+                        parsed = parsedOffset.UtcDateTime;
+                    }
+                    else if (DateUtils.isDateSQL(str))
                     {
                         parsed = DateUtils.SQL2Date(str);
                     }
@@ -510,7 +522,10 @@ public abstract class FwModel : IDisposable
                     else
                     {
                         var utc = DateTime.SpecifyKind((DateTime)parsed, DateTimeKind.Utc);
-                        item[fieldname] = fw_type == "datetimeoffset" ? new DateTimeOffset(utc) : utc;
+                        if (fw_type == "datetimeoffset")
+                            item[fieldname] = new DateTimeOffset(utc);
+                        else
+                            item[fieldname] = utc;
                     }
                 }
             }

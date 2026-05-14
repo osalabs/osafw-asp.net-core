@@ -33,6 +33,9 @@ public class Demos : FwModel<Demos.Row>
         public DateTime? fdate_combo { get; set; }
         public DateTime? fdate_pop { get; set; }
         public DateTime? fdatetime { get; set; }
+        public DateTime? fdatetime_utc { get; set; }
+        public DateTimeOffset? fdatetime_offset { get; set; }
+        public DateTime? fdatetime_local { get; set; }
         public int ftime { get; set; }
         public int? att_id { get; set; }
         public int status { get; set; }

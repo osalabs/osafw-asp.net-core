@@ -75,12 +75,14 @@ Use `FwController.modelAddOrUpdate` plus `FwModel.convertUserInput(item)` before
 - `date` fields -> `YYYY-MM-DD` via `DateUtils.Str2SQL(str, fw.userDateFormat)`
 - `datetime` fields -> parsed with the user's formats, converted from `fw.userTimezone` to UTC, and passed to DB as UTC `DateTime` values.
 - `datetimeoffset` fields -> parsed like `datetime`, then passed as UTC `DateTimeOffset` values.
+- `datetime_local` Dynamic/Vue controls submit browser-native `YYYY-MM-DDTHH:mm`; the backend treats that as a user-local datetime and uses the same UTC save pipeline.
 - Dynamic form fields with type `date`, `date_popup`, or `date_combo` are normalized to SQL `YYYY-MM-DD` on save even if the backing DB column is `datetime`, so semantically date-only fields do not pick up per-user timezone shifts later.
 
 Notes:
 - If a value is already a `DateTime` (UTC) or `DB.NOW`, form conversion leaves it alone; DB helpers resolve `DB.NOW` with field metadata so `_utc` fields use current UTC time.
 - If a value is already a `DateTimeOffset`, offset-aware fields accept it directly; `_utc` fields normalize it to a UTC offset.
 - If the string is already in SQL datetime format, it is parsed as UTC and passed through.
+- If the string is browser `datetime-local` format, it is parsed as a user-local wall time.
 - Raw SQL cannot infer target field names. For raw `query`/`exec` calls, name UTC datetime parameters with an `_utc` suffix or pass `DateTimeOffset` when no DB timezone conversion should be applied.
 
 ## Timezone conversion utilities

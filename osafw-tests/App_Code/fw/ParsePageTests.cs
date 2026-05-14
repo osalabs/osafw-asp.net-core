@@ -656,6 +656,20 @@ namespace osafw.Tests
         }
 
         [TestMethod()]
+        public void parse_string_date_formats_datetime_local()
+        {
+            var parser = new ParsePage(new ParsePageOptions { OutputTimezone = "Eastern Standard Time" });
+            var ps = new FwDict
+            {
+                ["AAA"] = new DateTime(2024, 6, 1, 12, 30, 0, DateTimeKind.Utc),
+            };
+
+            var r = parser.parse_string("<~AAA date=\"datetime-local\">", ps);
+
+            Assert.AreEqual("2024-06-01T08:30", r);
+        }
+
+        [TestMethod()]
         public void parse_string_date_uses_explicit_user_formats_only()
         {
             var parser = new ParsePage(new ParsePageOptions
