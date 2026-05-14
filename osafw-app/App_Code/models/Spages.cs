@@ -323,12 +323,13 @@ public class Spages : FwModel<Spages.Row>
 
     public DBList listChildrenPublished(int parent_id)
     {
-        return db.arrayp(@$"select * 
+        var now = DateTime.UtcNow;
+        return db.arrayp(@$"select *
               from {db.qid(table_name)}
-             where status=0 
-               and (pub_time IS NULL OR pub_time<=GETDATE()) 
+             where status=0
+               and (pub_time IS NULL OR pub_time<=@now)
                and parent_id=@parent_id
-          order by prio desc, iname", DB.h("parent_id", parent_id));
+          order by prio desc, iname", DB.h("parent_id", parent_id, "@now", now));
     }
 
 

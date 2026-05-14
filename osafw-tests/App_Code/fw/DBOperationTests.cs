@@ -1,10 +1,33 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 
 namespace osafw.Tests
 {
     [TestClass]
     public class DBOperationTests
     {
+        private sealed class PagingDb : DB
+        {
+            public DBList Rows { get; set; } = [];
+            public string LastSql { get; private set; } = "";
+
+            public PagingDb(string dbtype, string connstr = "")
+                : base(connstr, dbtype)
+            {
+            }
+
+            public string BuildSelectSql(string orderBy = "", int offset = 0, int limit = -1)
+            {
+                return buildSelect("table", DB.h(), orderBy, offset, limit).sql;
+            }
+
+            public override DBList arrayp(string sql, FwDict? @params = null)
+            {
+                LastSql = sql;
+                return Rows;
+            }
+        }
+
         [TestMethod]
         public void DBOperation_SetsOperatorStringsAndValueFlags()
         {
@@ -72,9 +95,11 @@ namespace osafw.Tests
         {
             var sqlServerDb = new DB("", DB.DBTYPE_SQLSRV);
             var mysqlDb = new DB("", DB.DBTYPE_MYSQL);
+            var sqliteDb = new DB("", DB.DBTYPE_SQLITE);
 
             Assert.AreEqual("[dbo].[users]", sqlServerDb.qid("dbo.users"));
             Assert.AreEqual("`dbo`.`users`", mysqlDb.qid("dbo.users"));
+            Assert.AreEqual("\"main\".\"users\"", sqliteDb.qid("main.users"));
             Assert.AreEqual("plain", sqlServerDb.qid("plain", is_force: false));
         }
 
@@ -83,9 +108,93 @@ namespace osafw.Tests
         {
             var sqlServerDb = new DB("", DB.DBTYPE_SQLSRV);
             var mysqlDb = new DB("", DB.DBTYPE_MYSQL);
+            var sqliteDb = new DB("", DB.DBTYPE_SQLITE);
+            var oleDb = new DB("", DB.DBTYPE_OLE);
 
             Assert.AreEqual("SELECT TOP 5 * FROM table", sqlServerDb.limit("SELECT * FROM table", 5));
             Assert.AreEqual("SELECT * FROM table LIMIT 5", mysqlDb.limit("SELECT * FROM table", 5));
+            Assert.AreEqual("SELECT * FROM table LIMIT 5", sqliteDb.limit("SELECT * FROM table", 5));
+            Assert.AreEqual("SELECT * FROM table ORDER BY id OFFSET 10 ROWS FETCH NEXT 5 ROWS ONLY", sqlServerDb.limit("SELECT * FROM table ORDER BY id", 5, 10));
+            Assert.AreEqual("SELECT * FROM table ORDER BY id LIMIT 10, 5", mysqlDb.limit("SELECT * FROM table ORDER BY id", 5, 10));
+            Assert.AreEqual("SELECT * FROM table ORDER BY id LIMIT 10, 5", sqliteDb.limit("SELECT * FROM table ORDER BY id", 5, 10));
+            Assert.ThrowsExactly<ArgumentException>(() => sqlServerDb.limit("SELECT * FROM table", 5, 10));
+            Assert.ThrowsExactly<NotSupportedException>(() => oleDb.limit("SELECT * FROM table ORDER BY id", 5, 10));
+        }
+
+        [TestMethod]
+        public void BuildSelect_AppliesProviderPagingSyntax()
+        {
+            var sqlServerDb = new PagingDb(DB.DBTYPE_SQLSRV);
+            var mysqlDb = new PagingDb(DB.DBTYPE_MYSQL);
+            var sqliteDb = new PagingDb(DB.DBTYPE_SQLITE);
+            var oleDb = new PagingDb(DB.DBTYPE_OLE);
+
+            Assert.AreEqual("SELECT TOP 5 * FROM [table]", sqlServerDb.BuildSelectSql(limit: 5));
+            Assert.AreEqual("SELECT * FROM [table] ORDER BY id OFFSET 10 ROWS FETCH NEXT 5 ROWS ONLY", sqlServerDb.BuildSelectSql("id", 10, 5));
+
+            Assert.AreEqual("SELECT * FROM `table` LIMIT 5", mysqlDb.BuildSelectSql(limit: 5));
+            Assert.AreEqual("SELECT * FROM `table` ORDER BY id LIMIT 10, 5", mysqlDb.BuildSelectSql("id", 10, 5));
+
+            Assert.AreEqual("SELECT * FROM \"table\" LIMIT 5", sqliteDb.BuildSelectSql(limit: 5));
+            Assert.AreEqual("SELECT * FROM \"table\" ORDER BY id LIMIT 10, 5", sqliteDb.BuildSelectSql("id", 10, 5));
+
+            Assert.AreEqual("SELECT TOP 15 * FROM [table] ORDER BY id", oleDb.BuildSelectSql("id", 10, 5));
+        }
+
+        [TestMethod]
+        public void SqlExpressionHelpers_UseProviderSpecificSql()
+        {
+            var sqlServerDb = new DB("", DB.DBTYPE_SQLSRV);
+            var mysqlDb = new DB("", DB.DBTYPE_MYSQL);
+            var sqliteDb = new DB("", DB.DBTYPE_SQLITE);
+
+            Assert.AreEqual("ISNULL(CAST(name as NVARCHAR(255)), '')", sqlServerDb.sqlTextExpr("name"));
+            Assert.AreEqual("IFNULL(CAST(name AS CHAR), '')", mysqlDb.sqlTextExpr("name"));
+            Assert.AreEqual("COALESCE(CAST(name AS TEXT), '')", sqliteDb.sqlTextExpr("name"));
+
+            Assert.AreEqual("TRY_CONVERT(DECIMAL(18,1),CAST(amount as NVARCHAR))", sqlServerDb.sqlNumberExpr("amount"));
+            var sqliteNumberExpr = sqliteDb.sqlNumberExpr("amount");
+            StringAssert.Contains(sqliteNumberExpr, "THEN CAST(amount AS REAL) ELSE NULL END");
+            StringAssert.Contains(sqliteNumberExpr, "INSTR(SUBSTR(TRIM(CAST(amount AS TEXT)), 2), '-')=0");
+            StringAssert.Contains(sqliteNumberExpr, "LENGTH(REPLACE(TRIM(CAST(amount AS TEXT)), '.', ''))");
+
+            Assert.AreEqual("TRY_CONVERT(DATE, idate)", sqlServerDb.sqlDateExpr("idate"));
+            Assert.AreEqual("date(idate)", sqliteDb.sqlDateExpr("idate"));
+
+            Assert.AreEqual("CONCAT(fname, ' ', lname)", sqlServerDb.sqlConcat("fname", sqlServerDb.q(" "), "lname"));
+            Assert.AreEqual("COALESCE(CAST(fname AS TEXT), '') || COALESCE(CAST(' ' AS TEXT), '') || COALESCE(CAST(lname AS TEXT), '')", sqliteDb.sqlConcat("fname", sqliteDb.q(" "), "lname"));
+            Assert.AreEqual("sqlite", sqliteDb.sqlScriptSubdir());
+        }
+
+        [TestMethod]
+        public void BuildSelect_RejectsInvalidPaging()
+        {
+            var db = new PagingDb(DB.DBTYPE_SQLSRV);
+
+            Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => db.BuildSelectSql("id", -1, 5));
+            Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => db.BuildSelectSql("id", 0, -2));
+            Assert.ThrowsExactly<ArgumentException>(() => db.BuildSelectSql("id", 1, -1));
+            Assert.ThrowsExactly<ArgumentException>(() => db.BuildSelectSql("", 1, 5));
+        }
+
+        [TestMethod]
+        public void SelectRaw_TopProviderTrimsClientOffset()
+        {
+            var db = new PagingDb(DB.DBTYPE_OLE)
+            {
+                Rows =
+                [
+                    new DBRow(new FwDict { ["id"] = "1", ["iname"] = "first" }),
+                    new DBRow(new FwDict { ["id"] = "2", ["iname"] = "second" }),
+                    new DBRow(new FwDict { ["id"] = "3", ["iname"] = "third" }),
+                ],
+            };
+
+            var rows = db.selectRaw("*", "items", "1=1", [], "id", 1, 1);
+
+            Assert.AreEqual("SELECT TOP 2 * FROM items WHERE 1=1 ORDER BY id", db.LastSql);
+            Assert.HasCount(1, rows);
+            Assert.AreEqual("second", rows[0]["iname"]);
         }
 
         [TestMethod]

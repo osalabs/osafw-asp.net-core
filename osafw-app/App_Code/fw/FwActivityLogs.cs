@@ -220,8 +220,8 @@ public class FwActivityLogs : FwModel
 
     public long getCountByLogIType(int log_itype, IList? statuses = null, int? since_days = null)
     {
-        var sql = $@"SELECT count(*) 
-                    from {db.qid(table_name)} al 
+        var sql = $@"SELECT count(*)
+                    from {db.qid(table_name)} al
                         INNER JOIN {fw.model<FwLogTypes>().table_name} lt on (lt.id=al.log_types_id)
                     where lt.itype=@itype
                      and al.status IN (@statuses)
@@ -233,8 +233,8 @@ public class FwActivityLogs : FwModel
         };
         if (since_days != null)
         {
-            sql += " and al.add_time > DATEADD(day, @since_days, GETDATE())";
-            p["since_days"] = since_days;
+            sql += " and al.add_time > @since_cutoff";
+            p["since_cutoff"] = DateTime.UtcNow.AddDays(since_days.Value);
         }
 
         return db.valuep(sql, p).toLong();

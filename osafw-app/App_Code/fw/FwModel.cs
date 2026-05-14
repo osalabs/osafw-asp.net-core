@@ -334,14 +334,14 @@ public abstract class FwModel : IDisposable
     /// list records by where condition optionally limited and ordered
     /// </summary>
     /// <param name="where"></param>
-    /// <param name="limit">TODO</param>
-    /// <param name="offset">TODO</param>
+    /// <param name="offset">number of ordered rows to skip before returning results</param>
+    /// <param name="limit">maximum number of rows to return, or -1 for no limit</param>
     /// <param name="orderby"></param>
     /// <returns></returns>
-    public virtual DBList listByWhere(FwDict? where = null, int limit = -1, int offset = 0, string orderby = "")
+    public virtual DBList listByWhere(FwDict? where = null, int offset = 0, int limit = -1, string orderby = "")
     {
         where ??= [];
-        return db.array(table_name, where, orderby != "" ? orderby : getOrderBy());
+        return db.array(table_name, where, orderby != "" ? orderby : getOrderBy(), offset: offset, limit: limit);
     }
 
     // return count of all non-deleted or with specified statuses

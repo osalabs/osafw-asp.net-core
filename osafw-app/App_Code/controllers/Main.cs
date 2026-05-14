@@ -25,6 +25,38 @@ public class MainController : FwController
         base.checkAccess();
     }
 
+    /// <summary>
+    /// Returns recent daily activity counts with provider-neutral date bucketing and C# label formatting.
+    /// </summary>
+    /// <param name="logTypeCode">Optional log type code filter, such as <c>login</c>.</param>
+    /// <returns>Rows with <c>idate</c>, <c>ivalue</c>, and chart label fields.</returns>
+    private FwList listDailyActivityCounts(string logTypeCode = "")
+    {
+        var dateExpr = db.sqlDateExpr("al.idate");
+        var sql = "select " + dateExpr + " as idate, count(*) as ivalue "
+            + " from activity_logs al, log_types lt "
+            + " where al.log_types_id=lt.id";
+        var p = new FwDict();
+        if (!string.IsNullOrEmpty(logTypeCode))
+        {
+            sql += " and lt.icode=@log_type_code";
+            p["@log_type_code"] = logTypeCode;
+        }
+
+        sql += " group by " + dateExpr + " order by " + dateExpr + " desc";
+        var rows = db.arrayp(db.limit(sql, 14), p);
+        rows.Sort((a, b) => string.CompareOrdinal(a["idate"], b["idate"]));
+
+        FwList result = rows;
+        foreach (FwDict row in result)
+        {
+            var dt = row["idate"].toDate();
+            row["ilabel"] = dt.Month + "/" + dt.Day;
+        }
+
+        return result;
+    }
+
     public FwDict IndexAction()
     {
 
@@ -87,13 +119,7 @@ public class MainController : FwController
         one["title"] = "Logins per day";
         one["id"] = "logins_per_day";
         // one["url") ] "/Admin/Reports/sample"
-        one["rows"] = db.arrayp("with zzz as ("
-            + db.limit("select CAST(al.idate as date) as idate, count(*) as ivalue "
-            + " from activity_logs al, log_types lt "
-            + " where lt.icode='login' and al.log_types_id=lt.id"
-            + " group by CAST(al.idate as date) order by CAST(al.idate as date) desc", 14)
-            + ")"
-            + " select CONCAT(MONTH(idate),'/',DAY(idate)) as ilabel, ivalue from zzz order by idate", DB.h());
+        one["rows"] = listDailyActivityCounts("login");
         panes["barchart"] = one;
 
         one = [];
@@ -111,7 +137,7 @@ public class MainController : FwController
         one["type"] = "table";
         one["title"] = "Last Events";
         // one["url") ] "/Admin/Reports/sample"
-        rows = db.arrayp(db.limit("select al.idate as " + db.qid("On") + ", CONCAT(fe.iname, ' ', lt.iname, ' ', al.idesc) as Event " +
+        rows = db.arrayp(db.limit("select al.idate as " + db.qid("On") + ", " + db.sqlConcat("fe.iname", db.q(" "), "lt.iname", db.q(" "), "al.idesc") + " as Event " +
             " from activity_logs al, log_types lt, fwentities fe " +
             " where al.log_types_id=lt.id" +
             "   and fe.id=al.fwentities_id" +
@@ -165,13 +191,7 @@ public class MainController : FwController
         one["title"] = "Events per day";
         one["id"] = "eventsctr";
         // one["url") ] "/Admin/Reports/sample"
-        one["rows"] = db.arrayp("with zzz as ("
-            + db.limit("select CAST(al.idate as date) as idate, count(*) as ivalue "
-            + " from activity_logs al, log_types lt "
-            + "where al.log_types_id=lt.id"
-            + " group by CAST(al.idate as date) order by CAST(al.idate as date) desc", 14)
-            + ")"
-            + " select CONCAT(MONTH(idate),'/',DAY(idate)) as ilabel, ivalue from zzz order by idate", DB.h());
+        one["rows"] = listDailyActivityCounts();
         panes["linechart"] = one;
 
         // Example for area chart

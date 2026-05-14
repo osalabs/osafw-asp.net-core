@@ -12,10 +12,20 @@
  *   - db/main/connection_string to "Server=127.0.0.1;User ID=XXX;Password=YYY;Database=ZZZ;Allow User Variables=true;"
  *   - db/main/type to "MySQL"
  * - use App_Data/sql/mysql database initialization files
+ *
+ * to use with SQLite:
+ * - define isSQLite project-wide in osafw-app.csproj or uncomment #define isSQLite in Program.cs and DB.cs
+ * - keep the Microsoft.Data.Sqlite package in osafw-app.csproj
+ * - set db/main/type to "SQLite"
+ * - use App_Data/sql/sqlite database initialization files
  */
 //#define isMySQL //uncomment if using MySQL
+//#define isSQLite //uncomment if using SQLite
 #if isMySQL
 using MySqlConnector;
+#endif
+#if isSQLite
+using Microsoft.Data.Sqlite;
 #endif
 
 using Microsoft.AspNetCore.Http;
@@ -92,7 +102,7 @@ public class DBRow : Dictionary<string, string>
     {
         return this;
     }
- 
+
 }
 public class DBList : List<DBRow>
 {
@@ -227,6 +237,7 @@ public class DB : IDisposable
     public const string DBTYPE_OLE = "OLE";
     public const string DBTYPE_ODBC = "ODBC";
     public const string DBTYPE_MYSQL = "MySQL";
+    public const string DBTYPE_SQLITE = "SQLite";
 
     //special value for current db time in queries (GETDATE() or NOW()) can be used as a value like this:
     // db.insert("table", DB.h("idatetime", DB.NOW)); - insert a row with current datetime
@@ -253,7 +264,7 @@ public class DB : IDisposable
     protected HttpContext? context;
 
     public string db_name = "";
-    public string dbtype = DBTYPE_SQLSRV; // SQL=SQL Server, OLE=OleDB, MySQL=MySQL
+    public string dbtype = DBTYPE_SQLSRV; // SQL=SQL Server, OLE=OleDB, MySQL=MySQL, SQLite=SQLite
     public int sql_command_timeout = 30; // default command timeout, override in model for long queries (in reports or export, for example)
     protected readonly FwDict conf = [];  // config contains: connection_string, type
     protected readonly string connstr = "";
@@ -329,7 +340,12 @@ public class DB : IDisposable
 
                 var ftype = dbread.GetFieldType(i);
                 isStr[i] = (ftype == typeof(string));
-                isDt[i] = (ftype == typeof(DateTime));
+                var isSqliteDateType = dbtype == DBTYPE_SQLITE
+                    && (dtypeName.Equals("date", StringComparison.OrdinalIgnoreCase)
+                        || dtypeName.Equals("datetime", StringComparison.OrdinalIgnoreCase)
+                        || dtypeName.Equals("datetime2", StringComparison.OrdinalIgnoreCase)
+                        || dtypeName.Equals("timestamp", StringComparison.OrdinalIgnoreCase));
+                isDt[i] = (ftype == typeof(DateTime)) || isSqliteDateType;
                 isDto[i] = (ftype == typeof(DateTimeOffset)) || isDateTimeOffsetType(dtypeName);
                 if (isDt[i])
                     isDateOnly[i] = dtypeName.Equals("date", StringComparison.OrdinalIgnoreCase);
@@ -571,7 +587,15 @@ public class DB : IDisposable
         {
             quotes = "``";
             limit_method = "LIMIT";
+            offset_method = "LIMIT";
             sql_now = "NOW()";
+        }
+        else if (dbtype == DBTYPE_SQLITE)
+        {
+            quotes = "\"";
+            limit_method = "LIMIT";
+            offset_method = "LIMIT";
+            sql_now = "CURRENT_TIMESTAMP";
         }
         else if (dbtype == DBTYPE_OLE)
         {
@@ -580,6 +604,7 @@ public class DB : IDisposable
                 quotes = "\""; // for DB2
                 sql_ole_identity = "SELECT IDENTITY_VAL_LOCAL() FROM SYSIBM.SYSDUMMY1";
                 limit_method = "LIMIT";
+                offset_method = "LIMIT";
                 sql_now = "CURRENT TIMESTAMP";
             }
             else
@@ -754,6 +779,13 @@ public class DB : IDisposable
             result = new MySqlConnection(connstr);
         }
 #endif
+#if isSQLite
+        else if (dbtype == DBTYPE_SQLITE)
+        {
+            ensureSqliteDirectory(connstr);
+            result = new SqliteConnection(connstr);
+        }
+#endif
         else if (dbtype == DBTYPE_OLE && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             result = new OleDbConnection(connstr);
@@ -770,8 +802,33 @@ public class DB : IDisposable
         }
 
         result.Open();
+#if isSQLite
+        if (dbtype == DBTYPE_SQLITE)
+        {
+            using var pragma = result.CreateCommand();
+            pragma.CommandText = "PRAGMA foreign_keys = ON";
+            pragma.ExecuteNonQuery();
+        }
+#endif
         return result;
     }
+
+#if isSQLite
+    private static void ensureSqliteDirectory(string connstr)
+    {
+        if (string.IsNullOrWhiteSpace(connstr))
+            return;
+
+        var builder = new SqliteConnectionStringBuilder(connstr);
+        var dataSource = builder.DataSource;
+        if (string.IsNullOrWhiteSpace(dataSource) || dataSource == ":memory:")
+            return;
+
+        var dir = Path.GetDirectoryName(Path.GetFullPath(dataSource));
+        if (!string.IsNullOrEmpty(dir))
+            Directory.CreateDirectory(dir);
+    }
+#endif
 
     private string detectTimezoneFromDb()
     {
@@ -977,6 +1034,22 @@ public class DB : IDisposable
             dbcomm = mySqlCommand;
         }
 #endif
+#if isSQLite
+        else if (dbtype == DBTYPE_SQLITE)
+        {
+            var sqliteCommand = new SqliteCommand(sql, (SqliteConnection)conn!)
+            {
+                CommandTimeout = sql_command_timeout
+            };
+            foreach (string p in @params.Keys)
+                sqliteCommand.Parameters.AddWithValue(namedParam(p), normalizeParamValue(p, @params[p]) ?? DBNull.Value);
+
+            if (tran != null)
+                sqliteCommand.Transaction = (SqliteTransaction)tran;
+
+            dbcomm = sqliteCommand;
+        }
+#endif
         else
             throw new ApplicationException("Unsupported DB Type");
 
@@ -1007,17 +1080,23 @@ public class DB : IDisposable
             if (@params[p] is IList arr)
             {
                 var arrstr = new StringBuilder();
+                var paramBase = p.TrimStart('@', '$', ':');
                 for (var i = 0; i <= arr.Count - 1; i++)
                 {
-                    var pnew = p + "_" + i.ToString();
+                    var pnew = paramBase + "_" + i.ToString();
                     @params[pnew] = arr[i];
                     if (i > 0) arrstr.Append(',');
                     arrstr.Append("@" + pnew);
                 }
-                sql = sql.Replace("@" + p, arrstr.ToString());
+                sql = sql.Replace(namedParam(p), arrstr.ToString());
                 @params.Remove(p);
             }
         }
+    }
+
+    private static string namedParam(string name)
+    {
+        return name.StartsWith('@') || name.StartsWith('$') || name.StartsWith(':') ? name : "@" + name;
     }
 
     private void logQueryAndParams(string sql, FwDict @params)
@@ -1166,6 +1245,29 @@ public class DB : IDisposable
                 result = (int)dbcomm.LastInsertedId; //TODO change result type to long
         }
 #endif
+#if isSQLite
+        else if (dbtype == DBTYPE_SQLITE)
+        {
+            using var dbcomm = new SqliteCommand(sql, (SqliteConnection)conn!)
+            {
+                CommandTimeout = sql_command_timeout
+            };
+            foreach (string p in @params.Keys)
+                dbcomm.Parameters.AddWithValue(namedParam(p), normalizeParamValue(p, @params[p]) ?? DBNull.Value);
+
+            if (tran != null)
+                dbcomm.Transaction = (SqliteTransaction)tran;
+
+            result = dbcomm.ExecuteNonQuery();
+
+            if (is_get_identity)
+            {
+                dbcomm.Parameters.Clear();
+                dbcomm.CommandText = "SELECT last_insert_rowid()";
+                result = dbcomm.ExecuteScalar().toInt();
+            }
+        }
+#endif
         else
             throw new ApplicationException("Unsupported DB Type");
 
@@ -1307,7 +1409,7 @@ public class DB : IDisposable
     /// <returns></returns>
     public DBRow row(string table, FwDict where, string order_by = "")
     {
-        var qp = buildSelect(table, where, order_by, 1);
+        var qp = buildSelect(table, where, order_by, limit: 1);
         return rowp(qp.sql, qp.@params);
     }
 
@@ -1321,7 +1423,7 @@ public class DB : IDisposable
     /// <returns>A populated DTO when a record exists; otherwise, <see langword="null"/>.</returns>
     public T? row<T>(string table, FwDict where, string order_by = "") where T : class, new()
     {
-        var qp = buildSelect(table, where, order_by, 1);
+        var qp = buildSelect(table, where, order_by, limit: 1);
         return rowp<T>(qp.sql, qp.@params);
     }
 
@@ -1456,6 +1558,77 @@ public class DB : IDisposable
     }
 
     /// <summary>
+    /// Validates paging arguments before SQL is generated so provider-specific failures do not leak to callers.
+    /// </summary>
+    /// <param name="order_by">ORDER BY clause body supplied by the caller, without the `ORDER BY` keyword.</param>
+    /// <param name="offset">Number of rows to skip before returning results.</param>
+    /// <param name="limit">Maximum number of rows to return, or -1 for no limit.</param>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="offset"/> or <paramref name="limit"/> is outside the supported range.</exception>
+    /// <exception cref="ArgumentException">Thrown when offset paging lacks a portable limit or deterministic order.</exception>
+    private static void validatePaging(string order_by, int offset, int limit)
+    {
+        if (offset < 0)
+            throw new ArgumentOutOfRangeException(nameof(offset), "Offset must be greater than or equal to 0.");
+
+        if (limit < -1)
+            throw new ArgumentOutOfRangeException(nameof(limit), "Limit must be -1 or greater.");
+
+        if (offset > 0 && limit < 0)
+            throw new ArgumentException("Offset paging requires a limit.", nameof(limit));
+
+        if (offset > 0 && string.IsNullOrWhiteSpace(order_by))
+            throw new ArgumentException("Offset paging requires an order_by value.", nameof(order_by));
+    }
+
+    /// <summary>
+    /// Returns whether the provider needs an over-fetch plus in-memory trim to emulate offset paging.
+    /// </summary>
+    /// <param name="offset">Number of rows to skip before returning results.</param>
+    /// <param name="limit">Maximum number of rows to return.</param>
+    /// <returns><c>true</c> when the SQL should fetch <c>offset + limit</c> rows and trim locally.</returns>
+    private bool isClientOffsetPaging(int offset, int limit)
+    {
+        return offset > 0 && limit > -1 && offset_method == "TOP";
+    }
+
+    /// <summary>
+    /// Trims rows for providers that emulate offset paging by over-fetching with TOP.
+    /// </summary>
+    /// <param name="rows">Rows fetched from the provider.</param>
+    /// <param name="offset">Number of rows to skip before returning results.</param>
+    /// <param name="limit">Maximum number of rows to return.</param>
+    /// <returns>A DBList containing the requested page.</returns>
+    private DBList trimClientOffset(DBList rows, int offset, int limit)
+    {
+        if (!isClientOffsetPaging(offset, limit))
+            return rows;
+
+        if (offset >= rows.Count)
+            return [];
+
+        return new DBList(rows.GetRange(offset, Math.Min(limit, rows.Count - offset)));
+    }
+
+    /// <summary>
+    /// Trims typed rows for providers that emulate offset paging by over-fetching with TOP.
+    /// </summary>
+    /// <typeparam name="T">Typed DTO row returned by the DB reader.</typeparam>
+    /// <param name="rows">Rows fetched from the provider.</param>
+    /// <param name="offset">Number of rows to skip before returning results.</param>
+    /// <param name="limit">Maximum number of rows to return.</param>
+    /// <returns>A typed list containing the requested page.</returns>
+    private List<T> trimClientOffset<T>(List<T> rows, int offset, int limit)
+    {
+        if (!isClientOffsetPaging(offset, limit))
+            return rows;
+
+        if (offset >= rows.Count)
+            return [];
+
+        return rows.GetRange(offset, Math.Min(limit, rows.Count - offset));
+    }
+
+    /// <summary>
     /// return all rows with all fields from the table based on coditions/order
     /// array("table", where, "id asc", Utils.qh("field1|id field2|iname"))
     /// </summary>
@@ -1463,17 +1636,38 @@ public class DB : IDisposable
     /// <param name="where">where conditions</param>
     /// <param name="order_by">optional order by, MUST BE QUOTED</param>
     /// <param name="aselect_fields">optional select fields array or hashtable("field"=>"alias") or arraylist of hashtable("field"=>1,"alias"=>1) for cases if there could be several same fields with diff aliases), if not set * returned</param>
+    /// <param name="offset">optional number of ordered rows to skip before returning results</param>
+    /// <param name="limit">optional maximum number of rows to return, or -1 for no limit</param>
     /// <returns></returns>
-    public virtual DBList array(string table, FwDict where, string order_by = "", ICollection? aselect_fields = null)
+    public virtual DBList array(string table, FwDict where, string order_by = "", ICollection? aselect_fields = null, int offset = 0, int limit = -1)
     {
-        var qp = buildSelect(table, where, order_by, select_fields: buildSelectFields(aselect_fields));
-        return arrayp(qp.sql, qp.@params);
+        validatePaging(order_by, offset, limit);
+        if (limit == 0)
+            return [];
+
+        var qp = buildSelect(table, where, order_by, offset, limit, buildSelectFields(aselect_fields));
+        return trimClientOffset(arrayp(qp.sql, qp.@params), offset, limit);
     }
 
-    public List<T> array<T>(string table, FwDict where, string order_by = "", ICollection? aselect_fields = null) where T : new()
+    /// <summary>
+    /// Returns typed rows from a helper-built table query with optional provider-aware paging.
+    /// </summary>
+    /// <typeparam name="T">DTO type with writable properties matching selected column names or <see cref="DBNameAttribute"/> aliases.</typeparam>
+    /// <param name="table">table name</param>
+    /// <param name="where">where conditions</param>
+    /// <param name="order_by">optional order by, MUST BE QUOTED</param>
+    /// <param name="aselect_fields">optional select fields array or alias map; when omitted, all fields are returned</param>
+    /// <param name="offset">optional number of ordered rows to skip before returning results</param>
+    /// <param name="limit">optional maximum number of rows to return, or -1 for no limit</param>
+    /// <returns>Typed DTO rows matching the query and paging constraints.</returns>
+    public List<T> array<T>(string table, FwDict where, string order_by = "", ICollection? aselect_fields = null, int offset = 0, int limit = -1) where T : new()
     {
-        var qp = buildSelect(table, where, order_by, select_fields: buildSelectFields(aselect_fields));
-        return arrayp<T>(qp.sql, qp.@params);
+        validatePaging(order_by, offset, limit);
+        if (limit == 0)
+            return [];
+
+        var qp = buildSelect(table, where, order_by, offset, limit, buildSelectFields(aselect_fields));
+        return trimClientOffset(arrayp<T>(qp.sql, qp.@params), offset, limit);
     }
 
     /// <summary>
@@ -1491,33 +1685,22 @@ public class DB : IDisposable
     /// <exception cref="ApplicationException"></exception>
     public DBList selectRaw(string fields, string from, string where, FwDict where_params, string orderby, int offset = 0, int limit = -1)
     {
-        DBList result;
-        //TODO rework with limit() method
-        if (offset_method == "FETCH NEXT") // for SQL Server 2012+
-        {
-            var sql = "SELECT " + fields + " FROM " + from + " WHERE " + where + " ORDER BY " + orderby + " OFFSET " + offset + " ROWS " + " FETCH NEXT " + limit + " ROWS ONLY";
-            result = this.arrayp(sql, where_params);
-        }
-        else if (limit_method == "LIMIT") // MySQL, DB2
-        {
-            var sql = "SELECT " + fields + " FROM " + from + " WHERE " + where + " ORDER BY " + orderby + " LIMIT " + offset + ", " + limit;
-            result = this.arrayp(sql, where_params);
-        }
-        else if (limit_method == "TOP")
-        {
-            // OLE - for Access - emulate using TOP and return just a limit portion (bad perfomance, but no way)
-            var sql = "SELECT TOP " + (offset + limit) + " " + fields + " FROM " + from + " WHERE " + where + " ORDER BY " + orderby;
-            var rows = this.arrayp(sql, where_params);
-            if (offset >= rows.Count)
-                // offset too far
-                result = [];
-            else
-                result = new DBList(rows.GetRange(offset, Math.Min(limit, rows.Count - offset)));
-        }
-        else
-            throw new ApplicationException("Unsupported db type");
+        validatePaging(orderby, offset, limit);
+        if (limit == 0)
+            return [];
 
-        return result;
+        var sql = "SELECT " + fields + " FROM " + from + " WHERE " + where;
+        if (orderby.Length > 0)
+            sql += " ORDER BY " + orderby;
+
+        if (limit > -1)
+        {
+            if (isClientOffsetPaging(offset, limit))
+                sql = this.limit(sql, checked(offset + limit));
+            else
+                sql = this.limit(sql, limit, offset);
+        }
+        return trimClientOffset(this.arrayp(sql, where_params), offset, limit);
     }
 
     /// <summary>
@@ -1564,7 +1747,7 @@ public class DB : IDisposable
             field_name = "*";
         else
             field_name = qid(field_name);
-        var qp = buildSelect(table, where, order_by, limit, field_name);
+        var qp = buildSelect(table, where, order_by, limit: limit, select_fields: field_name);
         return colp(qp.sql, qp.@params);
     }
 
@@ -1763,8 +1946,80 @@ public class DB : IDisposable
             parts[i] = $"{startQuote}{part}{endQuote}";
         }
 
-        // Join the parts back together with '.' 
+        // Join the parts back together with '.'
         return string.Join(".", parts);
+    }
+
+    /// <summary>
+    /// Builds a provider-specific SQL expression that converts a value to nullable-safe text.
+    /// </summary>
+    /// <param name="expr">SQL expression or column reference to convert.</param>
+    /// <returns>A SQL expression returning text, with database nulls converted to an empty string.</returns>
+    public string sqlTextExpr(string expr)
+    {
+        return dbtype switch
+        {
+            DBTYPE_SQLITE => $"COALESCE(CAST({expr} AS TEXT), '')",
+            DBTYPE_MYSQL => $"IFNULL(CAST({expr} AS CHAR), '')",
+            DBTYPE_OLE => $"IIF(ISNULL({expr}), '', CSTR({expr}))",
+            _ => $"ISNULL(CAST({expr} as NVARCHAR(255)), '')",
+        };
+    }
+
+    /// <summary>
+    /// Builds a provider-specific SQL expression that converts a value for numeric comparison.
+    /// </summary>
+    /// <param name="expr">SQL expression or column reference to convert.</param>
+    /// <returns>A SQL expression suitable for numeric filtering in list searches.</returns>
+    public string sqlNumberExpr(string expr)
+    {
+        var sqliteText = $"TRIM(CAST({expr} AS TEXT))";
+        var sqliteDotCount = $"(LENGTH({sqliteText})-LENGTH(REPLACE({sqliteText}, '.', '')))";
+        return dbtype switch
+        {
+            DBTYPE_SQLITE => $"CASE WHEN {sqliteText}<>'' AND {sqliteText} GLOB '*[0-9]*' AND {sqliteText} NOT GLOB '*[^0-9.+-]*' AND INSTR(SUBSTR({sqliteText}, 2), '+')=0 AND INSTR(SUBSTR({sqliteText}, 2), '-')=0 AND {sqliteDotCount}<=1 THEN CAST({expr} AS REAL) ELSE NULL END",
+            DBTYPE_MYSQL => $"CAST({expr} AS DECIMAL(18,1))",
+            DBTYPE_OLE => $"CDbl({expr})",
+            _ => $"TRY_CONVERT(DECIMAL(18,1),CAST({expr} as NVARCHAR))",
+        };
+    }
+
+    /// <summary>
+    /// Builds a provider-specific SQL expression that extracts the date portion of a value.
+    /// </summary>
+    /// <param name="expr">SQL expression or column reference containing a date or datetime value.</param>
+    /// <returns>A SQL expression that can be used for provider-neutral date filtering or grouping.</returns>
+    public string sqlDateExpr(string expr)
+    {
+        return dbtype switch
+        {
+            DBTYPE_SQLITE => $"date({expr})",
+            DBTYPE_MYSQL => $"DATE({expr})",
+            DBTYPE_OLE => $"DateValue({expr})",
+            _ => $"TRY_CONVERT(DATE, {expr})",
+        };
+    }
+
+    /// <summary>
+    /// Builds a provider-specific SQL expression that concatenates text expressions.
+    /// </summary>
+    /// <param name="expressions">SQL expressions or quoted literals to concatenate in order.</param>
+    /// <returns>A SQL expression that concatenates all parts while treating nulls as empty text.</returns>
+    public string sqlConcat(params string[] expressions)
+    {
+        if (expressions.Length == 0)
+            return "''";
+
+        if (dbtype == DBTYPE_SQLITE)
+            return string.Join(" || ", expressions.Select(sqlTextExpr));
+
+        if (dbtype == DBTYPE_OLE)
+            return string.Join(" & ", expressions.Select(sqlTextExpr));
+
+        if (dbtype == DBTYPE_MYSQL)
+            return "CONCAT(" + string.Join(", ", expressions.Select(sqlTextExpr)) + ")";
+
+        return "CONCAT(" + string.Join(", ", expressions) + ")";
     }
 
 
@@ -1857,14 +2112,37 @@ public class DB : IDisposable
     /// <summary>
     /// returns sql with TOP or LIMIT or FETCH accoring to server's method
     /// </summary>
-    /// <param name="sql">simple statement starting with SELECT</param>
-    /// <param name="limit"></param>
+    /// <param name="sql">simple statement starting with SELECT; SQL Server offset paging requires an ORDER BY clause</param>
+    /// <param name="limit">maximum number of rows to return</param>
+    /// <param name="offset">optional number of rows to skip before returning results</param>
     /// <returns></returns>
-    /// TODO add support for offset
-    public string limit(string sql, int limit)
+    public string limit(string sql, int limit, int offset = 0)
     {
         string result;
-        if (limit_method == "FETCH")
+
+        if (limit < 0)
+            throw new ArgumentOutOfRangeException(nameof(limit), "Limit must be greater than or equal to 0.");
+
+        if (offset < 0)
+            throw new ArgumentOutOfRangeException(nameof(offset), "Offset must be greater than or equal to 0.");
+
+        if (offset > 0)
+        {
+            if (offset_method == "FETCH NEXT")
+            {
+                if (!Regex.IsMatch(sql, @"\border\s+by\b", RegexOptions.IgnoreCase))
+                    throw new ArgumentException("SQL Server offset paging requires SQL with ORDER BY.", nameof(sql));
+
+                result = sql + " OFFSET " + offset + " ROWS FETCH NEXT " + limit + " ROWS ONLY";
+            }
+            else if (offset_method == "LIMIT")
+                result = sql + " LIMIT " + offset + ", " + limit;
+            else if (offset_method == "TOP")
+                throw new NotSupportedException("Offset paging is not supported by limit() for TOP-based providers. Use array() or selectRaw() so the over-fetched rows can be trimmed.");
+            else
+                throw new ApplicationException("Unsupported db type");
+        }
+        else if (limit_method == "FETCH")
             result = sql + " FETCH FIRST " + limit + " ROWS ONLY";
         else if (limit_method == "LIMIT")
             result = sql + " LIMIT " + limit;
@@ -2375,6 +2653,12 @@ public class DB : IDisposable
         {
             insert_id = exec(qp.sql, qp.@params, true);
         }
+#if isSQLite
+        else if (dbtype == DBTYPE_SQLITE)
+        {
+            insert_id = exec(qp.sql, qp.@params, true);
+        }
+#endif
         else
             throw new ApplicationException("Get last insert ID for DB type [" + dbtype + "] not implemented");
 
@@ -2497,11 +2781,14 @@ public class DB : IDisposable
     /// <param name="table">table name</param>
     /// <param name="where">where conditions</param>
     /// <param name="order_by">optional order by string, MUST BE QUOTED</param>
+    /// <param name="offset">optional number of ordered rows to skip before returning results</param>
     /// <param name="limit">optional limit number of results</param>
     /// <param name="select_fields">optional (default "*") fields to select, MUST already be quoted!</param>
     /// <returns></returns>
-    protected DBQueryAndParams buildSelect(string table, IDictionary where, string order_by = "", int limit = -1, string select_fields = "*")
+    protected DBQueryAndParams buildSelect(string table, IDictionary where, string order_by = "", int offset = 0, int limit = -1, string select_fields = "*")
     {
+        validatePaging(order_by, offset, limit);
+
         DBQueryAndParams result = new()
         {
             sql = "SELECT"
@@ -2518,7 +2805,12 @@ public class DB : IDisposable
             result.sql += " ORDER BY " + order_by;
 
         if (limit > -1)
-            result.sql = this.limit(result.sql, limit);
+        {
+            if (isClientOffsetPaging(offset, limit))
+                result.sql = this.limit(result.sql, checked(offset + limit));
+            else
+                result.sql = this.limit(result.sql, limit, offset);
+        }
 
         return result;
     }
@@ -2579,6 +2871,9 @@ public class DB : IDisposable
     // return array of table names in current db
     public StrList tables()
     {
+        if (dbtype == DBTYPE_SQLITE)
+            return new StrList(colp("SELECT name FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name"));
+
         DbConnection conn = this.connect();
         DataTable dataTable = conn.GetSchema("Tables");
         StrList result = new(dataTable.Rows.Count);
@@ -2591,9 +2886,13 @@ public class DB : IDisposable
 
             // skip any system tables or views (VIEW, ACCESS TABLE, SYSTEM TABLE)
             var tableType = row["TABLE_TYPE"].toStr();
-            if (tableType != "TABLE" && tableType != "BASE TABLE" && tableType != "PASS-THROUGH")
+            if (!tableType.Equals("TABLE", StringComparison.OrdinalIgnoreCase)
+                && !tableType.Equals("BASE TABLE", StringComparison.OrdinalIgnoreCase)
+                && !tableType.Equals("PASS-THROUGH", StringComparison.OrdinalIgnoreCase))
                 continue;
             string tblname = row["TABLE_NAME"].toStr();
+            if (tblname.StartsWith("sqlite_", StringComparison.OrdinalIgnoreCase))
+                continue;
             if (tblname.Length > 0)
                 result.Add(tblname);
         }
@@ -2604,13 +2903,16 @@ public class DB : IDisposable
     // return array of view names in current db
     public StrList views()
     {
+        if (dbtype == DBTYPE_SQLITE)
+            return new StrList(colp("SELECT name FROM sqlite_schema WHERE type='view' ORDER BY name"));
+
         DbConnection conn = this.connect();
         DataTable dataTable = conn.GetSchema("Tables");
         StrList result = new(dataTable.Rows.Count);
         foreach (DataRow row in dataTable.Rows)
         {
             // skip non-views
-            if (row["TABLE_TYPE"].toStr() != "VIEW") continue;
+            if (!row["TABLE_TYPE"].toStr().Equals("VIEW", StringComparison.OrdinalIgnoreCase)) continue;
 
             string tblname = row["TABLE_NAME"].toStr();
             if (tblname.Length > 0)
@@ -2759,6 +3061,34 @@ public class DB : IDisposable
                 row["fw_subtype"] = subtype.ToLowerInvariant();
             }
         }
+#if isSQLite
+        else if (dbtype == DBTYPE_SQLITE)
+        {
+            var tableName = table.Contains('.') ? table.Split('.').Last() : table;
+            var rows = arrayp($"PRAGMA table_xinfo({qid(tableName)})");
+            foreach (FwDict row in rows)
+            {
+                if (row["hidden"].toInt() == 1)
+                    continue;
+
+                var subtype = row["type"].toStr();
+                var maxlenMatch = Regex.Match(subtype, @"\((\d+)(?:,\d+)?\)");
+                var precisionScaleMatch = Regex.Match(subtype, @"\((\d+),(\d+)\)");
+                row["fw_type"] = mapTypeSQLite2Fw(subtype);
+                row["fw_subtype"] = subtype.ToLowerInvariant();
+                row["is_nullable"] = row["notnull"].toBool() || row["pk"].toBool() ? 0 : 1;
+                row["default"] = row["dflt_value"];
+                row["maxlen"] = maxlenMatch.Success ? maxlenMatch.Groups[1].Value.toInt() : (row["fw_type"].toStr() == "varchar" ? -1 : 0);
+                row["numeric_precision"] = precisionScaleMatch.Success ? precisionScaleMatch.Groups[1].Value.toInt() : 0;
+                row["numeric_scale"] = precisionScaleMatch.Success ? precisionScaleMatch.Groups[2].Value.toInt() : 0;
+                row["charset"] = "";
+                row["collation"] = "";
+                row["pos"] = row["cid"].toInt() + 1;
+                row["is_identity"] = row["pk"].toBool() && subtype.Equals("INTEGER", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+                result.Add(row);
+            }
+        }
+#endif
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             // OLE DB (Access or other providers)
@@ -2836,7 +3166,7 @@ public class DB : IDisposable
                 where_params["@table_name"] = table;
             }
 
-            result = this.arrayp(@"SELECT 
+            result = this.arrayp(@"SELECT
                       col1.CONSTRAINT_NAME as [name]
                      , col1.TABLE_NAME As [table]
                      , col1.COLUMN_NAME as [column]
@@ -2844,15 +3174,15 @@ public class DB : IDisposable
                      , col2.COLUMN_NAME as [pk_column]
                      , rc.UPDATE_RULE as [on_update]
                      , rc.DELETE_RULE as [on_delete]
-                      FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS rc 
-                      INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE col1 
-                        ON (col1.CONSTRAINT_CATALOG = rc.CONSTRAINT_CATALOG  
-                            AND col1.CONSTRAINT_SCHEMA = rc.CONSTRAINT_SCHEMA 
+                      FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS rc
+                      INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE col1
+                        ON (col1.CONSTRAINT_CATALOG = rc.CONSTRAINT_CATALOG
+                            AND col1.CONSTRAINT_SCHEMA = rc.CONSTRAINT_SCHEMA
                             AND col1.CONSTRAINT_NAME = rc.CONSTRAINT_NAME)
-                      INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE col2 
-                        ON (col2.CONSTRAINT_CATALOG = rc.UNIQUE_CONSTRAINT_CATALOG  
-                            AND col2.CONSTRAINT_SCHEMA = rc.UNIQUE_CONSTRAINT_SCHEMA 
-                            AND col2.CONSTRAINT_NAME = rc.UNIQUE_CONSTRAINT_NAME 
+                      INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE col2
+                        ON (col2.CONSTRAINT_CATALOG = rc.UNIQUE_CONSTRAINT_CATALOG
+                            AND col2.CONSTRAINT_SCHEMA = rc.UNIQUE_CONSTRAINT_SCHEMA
+                            AND col2.CONSTRAINT_NAME = rc.UNIQUE_CONSTRAINT_NAME
                             AND col2.ORDINAL_POSITION = col1.ORDINAL_POSITION)" +
                 where, where_params);
         }
@@ -2866,7 +3196,7 @@ public class DB : IDisposable
                 where_params["@table_name"] = table;
             }
 
-            result = this.arrayp(@"SELECT 
+            result = this.arrayp(@"SELECT
                       col1.CONSTRAINT_NAME as `name`
                      , col1.TABLE_NAME As `table`
                      , col1.COLUMN_NAME as `column`
@@ -2874,18 +3204,38 @@ public class DB : IDisposable
                      , col2.COLUMN_NAME as `pk_column`
                      , rc.UPDATE_RULE as `on_update`
                      , rc.DELETE_RULE as `on_delete`
-                      FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS rc 
-                      INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE col1 
-                        ON (col1.CONSTRAINT_CATALOG = rc.CONSTRAINT_CATALOG  
-                            AND col1.CONSTRAINT_SCHEMA = rc.CONSTRAINT_SCHEMA 
+                      FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS rc
+                      INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE col1
+                        ON (col1.CONSTRAINT_CATALOG = rc.CONSTRAINT_CATALOG
+                            AND col1.CONSTRAINT_SCHEMA = rc.CONSTRAINT_SCHEMA
                             AND col1.CONSTRAINT_NAME = rc.CONSTRAINT_NAME)
-                      INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE col2 
-                        ON (col2.CONSTRAINT_CATALOG = rc.UNIQUE_CONSTRAINT_CATALOG  
-                            AND col2.CONSTRAINT_SCHEMA = rc.UNIQUE_CONSTRAINT_SCHEMA 
-                            AND col2.CONSTRAINT_NAME = rc.UNIQUE_CONSTRAINT_NAME 
+                      INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE col2
+                        ON (col2.CONSTRAINT_CATALOG = rc.UNIQUE_CONSTRAINT_CATALOG
+                            AND col2.CONSTRAINT_SCHEMA = rc.UNIQUE_CONSTRAINT_SCHEMA
+                            AND col2.CONSTRAINT_NAME = rc.UNIQUE_CONSTRAINT_NAME
                             AND col2.ORDINAL_POSITION = col1.ORDINAL_POSITION)" +
                 where, where_params);
         }
+#if isSQLite
+        else if (dbtype == DBTYPE_SQLITE)
+        {
+            var tableName = table.Contains('.') ? table.Split('.').Last() : table;
+            var rows = this.arrayp($"PRAGMA foreign_key_list({qid(tableName)})");
+            foreach (FwDict row in rows)
+            {
+                result.Add(new DBRow()
+                {
+                    {"table", tableName},
+                    {"column", row["from"].toStr()},
+                    {"name", "FK_" + tableName + "_" + row["from"].toStr() + "_" + row["id"].toStr()},
+                    {"pk_table", row["table"].toStr()},
+                    {"pk_column", row["to"].toStr()},
+                    {"on_update", row["on_update"].toStr()},
+                    {"on_delete", row["on_delete"].toStr()}
+                });
+            }
+        }
+#endif
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             // OLE DB (Access or other providers)
@@ -2922,7 +3272,7 @@ public class DB : IDisposable
     {
         //logger(LogLevel.DEBUG, "loadTableSchema:" + table);
         // for unsupported schemas - use config schema
-        if (dbtype != DBTYPE_SQLSRV && dbtype != DBTYPE_OLE && dbtype != DBTYPE_MYSQL)
+        if (dbtype != DBTYPE_SQLSRV && dbtype != DBTYPE_OLE && dbtype != DBTYPE_MYSQL && dbtype != DBTYPE_SQLITE)
         {
             if (schema.Count == 0)
                 schema = (Dictionary<string, FwDict>?)conf["schema"] ?? [];
@@ -3029,6 +3379,26 @@ public class DB : IDisposable
         }
 
         return result;
+    }
+
+    // map SQLite declared type to FW's
+    protected static string mapTypeSQLite2Fw(string dbtype)
+    {
+        var subtype = dbtype.toStr().ToLowerInvariant();
+        if (subtype.Contains("datetimeoffset"))
+            return "datetimeoffset";
+        if (subtype.Contains("datetime") || subtype.Contains("timestamp"))
+            return "datetime";
+        if (subtype.Contains("date"))
+            return "date";
+        if (subtype.Contains("int") || subtype.Contains("bool"))
+            return "int";
+        if (subtype.Contains("real") || subtype.Contains("floa") || subtype.Contains("doub"))
+            return "float";
+        if (subtype.Contains("numeric") || subtype.Contains("decimal") || subtype.Contains("money"))
+            return "decimal";
+
+        return "varchar";
     }
 
     [SupportedOSPlatform("windows")]

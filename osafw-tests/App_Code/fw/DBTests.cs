@@ -209,6 +209,47 @@ namespace osafw.Tests
         }
 
         [TestMethod()]
+        public void arrayLimitOffsetTest()
+        {
+            DBList firstPage = db.array(table_name, DB.h(), "id", offset: 0, limit: 2);
+            Assert.HasCount(2, firstPage);
+            Assert.AreEqual("test1", firstPage[0]["iname"]);
+            Assert.AreEqual("test2", firstPage[1]["iname"]);
+
+            DBList secondRow = db.array(table_name, DB.h(), "id", offset: 1, limit: 1);
+            Assert.HasCount(1, secondRow);
+            Assert.AreEqual("test2", secondRow[0]["iname"]);
+
+            DBList empty = db.array(table_name, DB.h(), "id", offset: 0, limit: 0);
+            Assert.HasCount(0, empty);
+        }
+
+        [TestMethod()]
+        public void arrayTypedLimitOffsetTest()
+        {
+            List<Demos.Row> rows = db.array<Demos.Row>(table_name, DB.h(), "id", offset: 1, limit: 1);
+
+            Assert.HasCount(1, rows);
+            Assert.AreEqual("test2", rows[0].iname);
+        }
+
+        [TestMethod()]
+        public void modelListByWhereUsesOffsetLimitTest()
+        {
+            var fw = TestHelpers.CreateFw();
+            fw.db = db;
+            var model = new PagingModel(fw, table_name);
+
+            DBList rows = model.listByWhere(offset: 1, limit: 1, orderby: "id");
+            Assert.HasCount(1, rows);
+            Assert.AreEqual("test2", rows[0]["iname"]);
+
+            List<PagingRow> typedRows = model.listTByWhere(offset: 2, limit: 1, orderby: "id");
+            Assert.HasCount(1, typedRows);
+            Assert.AreEqual("test3", typedRows[0].iname);
+        }
+
+        [TestMethod()]
         public void colTest()
         {
             StrList col = db.colp("SELECT iname FROM " + table_name);
@@ -720,6 +761,22 @@ namespace osafw.Tests
         {
             public DateTime idatetime_utc { get; set; }
             public DateTimeOffset ioffset_utc { get; set; }
+        }
+
+        private sealed class PagingRow
+        {
+            public int id { get; set; }
+            public string iname { get; set; } = string.Empty;
+        }
+
+        private sealed class PagingModel : FwModel<PagingRow>
+        {
+            public PagingModel(FW fw, string tableName)
+                : base(fw)
+            {
+                table_name = tableName;
+                field_status = "";
+            }
         }
 
         [TestMethod()]

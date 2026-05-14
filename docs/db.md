@@ -1,6 +1,6 @@
 # DB.cs
 
-Simplified database helper for SQL Server, MySQL or MS Access. Part of the [OSA Framework](https://github.com/osalabs/osafw-asp.net-core).
+Simplified database helper for SQL Server, SQLite, MySQL or MS Access. Part of the [OSA Framework](https://github.com/osalabs/osafw-asp.net-core).
 
 `DB` wraps ADO.NET and hides repetitive plumbing. It automatically opens connections, builds parametrised queries and converts results to handy collections or custom types.
 
@@ -26,6 +26,29 @@ var db = new DB("Server=(local);Database=demo;Trusted_Connection=True;", DB.DBTY
 
 You rarely call `connect()`/`disconnect()` yourself – the first query opens the connection automatically.
 
+### SQLite provider
+SQLite is optional and intended for durable single-node deployments. SQL Server remains the default provider.
+
+To enable SQLite:
+
+1. Define `isSQLite` project-wide in `osafw-app/osafw-app.csproj` (preferred) or pass `-p:DefineConstants=isSQLite` when building. If you use file-local defines instead, uncomment `#define isSQLite` in `Program.cs` and `App_Code/fw/DB.cs`.
+2. Keep the `Microsoft.Data.Sqlite` package reference in `osafw-app/osafw-app.csproj`.
+3. Configure the main database:
+
+```json
+"db": {
+  "main": {
+    "connection_string": "Data Source=App_Data/db/osafw.sqlite;Mode=ReadWriteCreate;Foreign Keys=True;Default Timeout=30;Pooling=True;",
+    "type": "SQLite",
+    "timezone": "UTC"
+  }
+}
+```
+
+4. Initialize with the scripts from `osafw-app/App_Data/sql/sqlite/` in this order: `fwdatabase.sql`, `database.sql`, `lookups.sql`, `views.sql`, then optional `roles.sql` and `demo.sql`.
+
+When the app is compiled with `isSQLite` and `type` is `SQLite`, sessions use `FwSqliteDistributedCache` over the `fwsessions` table and data-protection keys use `fwkeys` through the normal `FwKeysXmlRepository`. For multi-node deployments, use SQL Server/MySQL or an external distributed cache instead of SQLite.
+
 ## API summary
 
 ### Optional
@@ -36,7 +59,7 @@ You rarely call `connect()`/`disconnect()` yourself – the first query opens th
 ### Parameterised helpers
 - `value(table, where[, field[, order]])`
 - `row(table, where[, order])`
-- `array(table, where[, order[, fields]])`
+- `array(table, where[, order[, fields[, offset[, limit]]]])`
 - `col(table, where, field[, order])`
 - `insert(table, data)`
 - `update(table, data, where)`
@@ -55,8 +78,9 @@ You rarely call `connect()`/`disconnect()` yourself – the first query opens th
 - `qid(str)` / `q(str[, len])` / `qq(str)`
 - `qi(obj)` / `qf(obj)` / `qdec(obj)` / `qd(obj)`
 - `insql(list)` / `insqli(list)`
-- `limit(sql, n)`
+- `limit(sql, n[, offset])`
 - `sqlNOW()` / `Now()` and constant `DB.NOW`
+- `sqlTextExpr(expr)` / `sqlNumberExpr(expr)` / `sqlDateExpr(expr)` / `sqlConcat(...)`
 - `left(str, len)`
 
 ### Where helpers
@@ -91,6 +115,7 @@ if (u == null)
     return;
 
 List<User> list = db.array<User>("users", DB.h());
+List<User> page = db.array<User>("users", DB.h("status", 0), "id", offset: 10, limit: 10);
 ```
 
 `insert`, `update` and `updateOrInsert` also accept typed objects:
@@ -123,6 +148,10 @@ DBRow row = db.row("users", DB.h("id", 5));
 // list of rows
 DBList rows = db.array("users", DB.h("status", 0), "iname desc");
 
+// first and second pages
+DBList firstPage = db.array("users", DB.h("status", 0), "id", null, 0, 10);
+DBList secondPage = db.array("users", DB.h("status", 0), "id", null, 10, 10);
+
 // column values
 List<string> names = db.col("users", DB.h("status", 0), "iname");
 
@@ -138,6 +167,8 @@ db.updateOrInsert("users", DB.h("id", id, "iname", "Jack"), DB.h("id", id));
 // delete
 db.del("users", DB.h("id", id));
 ```
+
+`array()` and `array<T>()` accept optional `offset, limit` paging arguments after the select-fields argument. `limit = -1` means no limit, and `offset = 0` is the default. When `offset` is greater than zero, pass both a non-negative `limit` and an explicit `order` value so the page is deterministic and portable across SQL Server, SQLite, MySQL, and OLE providers.
 
 ### Using raw SQL
 ```csharp
@@ -187,10 +218,20 @@ int intVal = db.qi("123");               // 123
 string inClause = db.insql(new[] { "a", "b" });     // IN ('a', 'b')
 string inIds = db.insqli(new[] { 1, 2, 3 });        // IN (1, 2, 3)
 
+// limit helpers
+string firstTen = db.limit("SELECT * FROM users ORDER BY id", 10);
+string nextTen = db.limit("SELECT * FROM users ORDER BY id", 10, 10);
+
 // current DB time
 DateTime now = db.Now();
 db.insert("log", DB.h("add_time", DB.NOW));         // uses NOW() or GETDATE()
+
+// portable SQL expressions for raw/list SQL
+string labelSql = db.sqlConcat("fname", db.q(" "), "lname");
+string daySql = db.sqlDateExpr("add_time");
 ```
+
+When passing an offset to `limit()`, include an `ORDER BY` in the SQL. SQL Server requires it syntactically, and all providers need it for stable paging. Direct `limit()` offset paging is not supported for TOP-only providers such as Access/OLE; use `array()` or `selectRaw()` there so the framework can over-fetch and trim the requested page.
 
 ### Date, UTC, and datetimeoffset values
 `DB` applies the framework datetime contract automatically for helper-built reads and writes:
@@ -198,7 +239,7 @@ db.insert("log", DB.h("add_time", DB.NOW));         // uses NOW() or GETDATE()
 - SQL `date` stays date-only.
 - SQL `datetime`/`datetime2` is converted between the configured DB timezone and internal UTC.
 - Fields ending in `_utc` skip DB timezone conversion and are treated as UTC instants.
-- SQL Server `datetimeoffset` is treated as an instant. Dictionary rows/scalars normalize output to UTC-compatible values; typed DTO properties can be `DateTimeOffset`.
+- SQL Server `datetimeoffset` and SQLite fields declared as `DATETIMEOFFSET` are treated as instants. Dictionary rows/scalars normalize output to UTC-compatible values; typed DTO properties can be `DateTimeOffset`.
 - `DB.NOW` is field-aware in helper-built SQL: normal datetime fields use DB-local current time, `_utc` fields use current UTC time, and SQL Server `datetimeoffset` fields use an offset-aware current time.
 
 ```csharp
