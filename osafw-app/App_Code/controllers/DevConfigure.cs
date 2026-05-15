@@ -55,7 +55,7 @@ public class DevConfigureController : FwController
                 db.connect();
                 ps["is_db_conn"] = true;
                 ps["db_timezone_id"] = db.getTimezoneId();
-                ps["is_db_tz"] = !string.IsNullOrEmpty(ps["db_timezone_id"].toStr());
+                ps["is_db_tz"] = db.isTimezoneDetectionOk();
 
                 try
                 {

@@ -6,6 +6,7 @@
 using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -499,7 +500,7 @@ public abstract class FwModel : IDisposable
                         if (parsed != null)
                             parsed = DateUtils.convertTimezone((DateTime)parsed, fw.userTimezone, DateUtils.TZ_UTC);
                     }
-                    else if (DateUtils.isDateTimeOffsetStr(str) && DateTimeOffset.TryParse(str, out var parsedOffset))
+                    else if (DateUtils.isDateTimeOffsetStr(str) && DateTimeOffset.TryParse(str, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind | DateTimeStyles.AssumeUniversal, out var parsedOffset))
                     {
                         parsed = parsedOffset.UtcDateTime;
                     }

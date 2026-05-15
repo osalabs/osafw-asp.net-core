@@ -644,6 +644,36 @@ namespace osafw.Tests
         }
 
         [TestMethod()]
+        public void RawExpandedUtcParameterKeepsUtcSuffix()
+        {
+            using var tzDb = dbWithTimezone("Pacific Standard Time");
+            var utc = new DateTime(2024, 6, 1, 12, 0, 0, DateTimeKind.Utc);
+
+            var row = tzDb.rowp(
+                "SELECT CONVERT(varchar(19), @sent_at_utc, 120) AS sent_at",
+                DB.h("sent_at_utc", new[] { utc }));
+
+            Assert.AreEqual("2024-06-01 12:00:00", row["sent_at"]);
+        }
+
+        [TestMethod()]
+        public void InvalidConfiguredTimezoneFallsBackButIsNotDetected()
+        {
+            var conf = new FwDict
+            {
+                ["type"] = DB.DBTYPE_SQLSRV,
+                ["connection_string"] = connstr,
+                ["timezone"] = "Invalid/Timezone",
+            };
+            using var tzDb = new DB(conf, "main");
+
+            tzDb.connect();
+
+            Assert.AreEqual(DateUtils.TZ_UTC, tzDb.getTimezoneId());
+            Assert.IsFalse(tzDb.isTimezoneDetectionOk());
+        }
+
+        [TestMethod()]
         public void DemoTimezoneFieldsRoundTripAgainstDemoTable()
         {
             if (db.valuep("SELECT OBJECT_ID('dbo.demos')").toStr() == "")

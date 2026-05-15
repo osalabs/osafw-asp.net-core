@@ -238,6 +238,7 @@ public class DB : IDisposable
     protected static ConcurrentDictionary<string, ConcurrentDictionary<string, FwDict>> schema_cache = new(); // schema, connstr => table => [field => type]
     protected static ConcurrentDictionary<string, ConcurrentDictionary<string, FwDict>> schema_fk_cache = new(); // foreign keys, connstr => table => [field => referenced table]
     protected static ConcurrentDictionary<string, string> timezone_cache = new(); // resolved db timezones per connection string
+    protected static ConcurrentDictionary<string, bool> timezone_detection_cache = new(); // whether timezone was configured or detected, not fallback
 
     public static string last_sql = ""; // last executed sql
     public static int SQL_QUERY_CTR = 0; // counter for SQL queries during request
@@ -260,6 +261,7 @@ public class DB : IDisposable
     private TimeZoneInfo? timezoneInfo;
     private bool isTimezoneInited;
     private bool isTimezoneResolving;
+    private bool isTimezoneDetected;
 
     private string quotes = "[]"; // for SQL Server - [], for MySQL - `, for OLE - depends on provider
     private string sql_ole_identity = "SELECT @@identity"; // default OLE identity query
@@ -364,6 +366,7 @@ public class DB : IDisposable
         var normalized = fieldName.TrimStart('@');
         if (normalized.EndsWith(UPDATE_SET_PARAM_SUFFIX, StringComparison.OrdinalIgnoreCase))
             normalized = normalized[..^UPDATE_SET_PARAM_SUFFIX.Length];
+        normalized = Regex.Replace(normalized, @"_\d+$", "");
 
         return normalized.EndsWith(UTC_FIELD_SUFFIX, StringComparison.OrdinalIgnoreCase);
     }
@@ -629,6 +632,16 @@ public class DB : IDisposable
         return DbTimezoneInfo.Id;
     }
 
+    /// <summary>
+    /// Reports whether the DB timezone came from configuration or from a successful database probe.
+    /// </summary>
+    /// <returns><c>true</c> when the timezone was explicitly configured or detected without falling back to UTC.</returns>
+    public bool isTimezoneDetectionOk()
+    {
+        initTimezoneInfo(isAllowQuery: false);
+        return isTimezoneDetected;
+    }
+
     private bool isDbTimezoneUTC => DbTimezoneInfo.Id == TimeZoneInfo.Utc.Id;
 
     private void initTimezoneInfo(bool isAllowQuery = true)
@@ -643,6 +656,7 @@ public class DB : IDisposable
         {
 
             var tzId = conf["timezone"].toStr();
+            var isDetected = !string.IsNullOrEmpty(tzId);
             var cache_key = $"{dbtype}:{connstr}";
 
             if (string.IsNullOrEmpty(tzId))
@@ -651,9 +665,24 @@ public class DB : IDisposable
                 {
                     if (isAllowQuery)
                     {
-                        tzId = detectTimezoneFromDb();
-                        timezone_cache[cache_key] = tzId;
+                        var detection = detectTimezoneFromDb();
+                        tzId = detection.timezoneId;
+                        isDetected = detection.isDetected;
+                        if (isDetected)
+                        {
+                            timezone_cache[cache_key] = tzId;
+                            timezone_detection_cache[cache_key] = true;
+                        }
+                        else
+                        {
+                            timezone_cache.TryRemove(cache_key, out _);
+                            timezone_detection_cache.TryRemove(cache_key, out _);
+                        }
                     }
+                }
+                else
+                {
+                    isDetected = timezone_detection_cache.TryGetValue(cache_key, out var cachedDetected) && cachedDetected;
                 }
             }
 
@@ -662,11 +691,13 @@ public class DB : IDisposable
                 try
                 {
                     timezoneInfo = TimeZoneInfo.FindSystemTimeZoneById(tzId);
+                    isTimezoneDetected = isDetected;
                 }
                 catch (Exception ex)
                 {
                     logger(LogLevel.WARN, "DB timezone resolve failed for ", db_name, " tz=", tzId, " error=", ex.Message);
                     timezoneInfo = TimeZoneInfo.Utc;
+                    isTimezoneDetected = false;
                 }
                 isTimezoneInited = true;
             }
@@ -773,7 +804,7 @@ public class DB : IDisposable
         return result;
     }
 
-    private string detectTimezoneFromDb()
+    private (string timezoneId, bool isDetected) detectTimezoneFromDb()
     {
         if (dbtype == DBTYPE_SQLSRV)
         {
@@ -781,7 +812,7 @@ public class DB : IDisposable
             {
                 var tzId = valuep("SELECT CURRENT_TIMEZONE_ID()").toStr();
                 if (!string.IsNullOrEmpty(tzId))
-                    return tzId;
+                    return (tzId, true);
             }
             catch (Exception ex)
             {
@@ -817,7 +848,7 @@ public class DB : IDisposable
                     {
                         var preferred = candidates.FirstOrDefault(tzinfo => tzinfo.Id.EndsWith("Standard Time", StringComparison.OrdinalIgnoreCase));
                         var found = preferred ?? candidates[0];
-                        return found.Id;
+                        return (found.Id, true);
                     }
                 }
             }
@@ -827,7 +858,7 @@ public class DB : IDisposable
             logger(LogLevel.WARN, "DB timezone autodetect failed for ", db_name, ": ", ex.Message);
         }
 
-        return DateUtils.TZ_UTC;
+        return (DateUtils.TZ_UTC, false);
     }
 
     /// <summary>
