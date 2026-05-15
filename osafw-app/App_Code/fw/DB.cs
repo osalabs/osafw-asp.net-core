@@ -238,6 +238,7 @@ public class DB : IDisposable
     protected static ConcurrentDictionary<string, ConcurrentDictionary<string, FwDict>> schema_cache = new(); // schema, connstr => table => [field => type]
     protected static ConcurrentDictionary<string, ConcurrentDictionary<string, FwDict>> schema_fk_cache = new(); // foreign keys, connstr => table => [field => referenced table]
     protected static ConcurrentDictionary<string, string> timezone_cache = new(); // resolved db timezones per connection string
+    protected static ConcurrentDictionary<string, bool> timezone_detection_cache = new(); // whether timezone was configured or detected, not fallback
 
     public static string last_sql = ""; // last executed sql
     public static int SQL_QUERY_CTR = 0; // counter for SQL queries during request
@@ -260,12 +261,15 @@ public class DB : IDisposable
     private TimeZoneInfo? timezoneInfo;
     private bool isTimezoneInited;
     private bool isTimezoneResolving;
+    private bool isTimezoneDetected;
 
     private string quotes = "[]"; // for SQL Server - [], for MySQL - `, for OLE - depends on provider
     private string sql_ole_identity = "SELECT @@identity"; // default OLE identity query
     private string sql_now = "GETDATE()"; // default query for current datetime
     private string limit_method = "TOP"; // for SQL Server 2005+, for MySQL - LIMIT, for OLE - depends on provider
     private string offset_method = "FETCH NEXT"; // for SQL Server 2012+, for MySQL - LIMIT, for OLE - depends on provider
+    private const string UTC_FIELD_SUFFIX = "_utc";
+    private const string UPDATE_SET_PARAM_SUFFIX = "_SET";
     protected Dictionary<string, FwDict> schema = []; // schema for currently connected db
 
     private DbConnection? conn; // actual db connection - SqlConnection or OleDbConnection
@@ -281,9 +285,23 @@ public class DB : IDisposable
         public required string[] Names;
         public required bool[] IsSkip;
         public required bool[] IsDateTime;
+        public required bool[] IsDateTimeOffset;
         public required bool[] IsDateOnly;
+        public required bool[] IsUtcField;
         public required bool[] IsString;
         public required int FieldCount;
+    }
+
+    private sealed class DBParamValue(string fieldName, string fieldType, object? value)
+    {
+        public string FieldName { get; } = fieldName;
+        public string FieldType { get; } = fieldType;
+        public object? Value { get; } = value;
+
+        public override string ToString()
+        {
+            return Value?.ToString() ?? "";
+        }
     }
 
     private ReaderMeta getReaderMeta(DbDataReader dbread)
@@ -294,12 +312,15 @@ public class DB : IDisposable
             string[] names = new string[fieldCount];
             bool[] skip = new bool[fieldCount];
             bool[] isDt = new bool[fieldCount];
+            bool[] isDto = new bool[fieldCount];
             bool[] isDateOnly = new bool[fieldCount];
+            bool[] isUtcField = new bool[fieldCount];
             bool[] isStr = new bool[fieldCount];
 
             for (int i = 0; i < fieldCount; i++)
             {
                 names[i] = dbread.GetName(i);
+                isUtcField[i] = isUtcFieldName(names[i]);
 
                 var dtypeName = dbread.GetDataTypeName(i);
                 if (is_check_ole_types && UNSUPPORTED_OLE_TYPES.ContainsKey(dtypeName))
@@ -311,6 +332,7 @@ public class DB : IDisposable
                 var ftype = dbread.GetFieldType(i);
                 isStr[i] = (ftype == typeof(string));
                 isDt[i] = (ftype == typeof(DateTime));
+                isDto[i] = (ftype == typeof(DateTimeOffset)) || isDateTimeOffsetType(dtypeName);
                 if (isDt[i])
                     isDateOnly[i] = dtypeName.Equals("date", StringComparison.OrdinalIgnoreCase);
             }
@@ -320,13 +342,161 @@ public class DB : IDisposable
                 Names = names,
                 IsSkip = skip,
                 IsDateTime = isDt,
+                IsDateTimeOffset = isDto,
                 IsDateOnly = isDateOnly,
+                IsUtcField = isUtcField,
                 IsString = isStr,
                 FieldCount = fieldCount
             };
             readerMetaCache.Add(dbread, meta);
         }
         return meta;
+    }
+
+    /// <summary>
+    /// Determines whether a database field name explicitly declares UTC storage.
+    /// </summary>
+    /// <param name="fieldName">Column or parameter-derived field name.</param>
+    /// <returns><c>true</c> when the name ends in the framework UTC suffix.</returns>
+    private static bool isUtcFieldName(string fieldName)
+    {
+        if (string.IsNullOrWhiteSpace(fieldName))
+            return false;
+
+        var normalized = fieldName.TrimStart('@');
+        if (normalized.EndsWith(UPDATE_SET_PARAM_SUFFIX, StringComparison.OrdinalIgnoreCase))
+            normalized = normalized[..^UPDATE_SET_PARAM_SUFFIX.Length];
+        normalized = Regex.Replace(normalized, @"_\d+$", "");
+
+        return normalized.EndsWith(UTC_FIELD_SUFFIX, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Determines whether a provider type name is SQL Server's offset-aware timestamp type.
+    /// </summary>
+    /// <param name="typeName">Provider data type name returned by the reader or schema metadata.</param>
+    /// <returns><c>true</c> for SQL Server <c>datetimeoffset</c>.</returns>
+    private static bool isDateTimeOffsetType(string typeName)
+    {
+        return typeName.Equals("datetimeoffset", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Converts a database datetime value into the framework's internal UTC/date-only representation.
+    /// </summary>
+    /// <param name="dt">Datetime value read from the provider.</param>
+    /// <param name="isDateOnly">Whether the database column is a SQL <c>date</c>.</param>
+    /// <param name="isUtcField">Whether the field name explicitly marks the value as already UTC.</param>
+    /// <returns>A date-only unspecified value or a UTC instant.</returns>
+    private DateTime normalizeReadDateTime(DateTime dt, bool isDateOnly, bool isUtcField)
+    {
+        if (isDateOnly)
+            return DateTime.SpecifyKind(dt, DateTimeKind.Unspecified);
+
+        if (isUtcField)
+            return asUtcDateTime(dt);
+
+        return convertDbDateTimeToUtc(dt);
+    }
+
+    /// <summary>
+    /// Reads a provider datetimeoffset value without losing its original offset.
+    /// </summary>
+    /// <param name="dbread">Reader positioned on the current row.</param>
+    /// <param name="ordinal">Column ordinal to read.</param>
+    /// <returns>The provider value as a <see cref="DateTimeOffset"/>.</returns>
+    private static DateTimeOffset readDateTimeOffset(DbDataReader dbread, int ordinal)
+    {
+        var value = dbread.GetValue(ordinal);
+        if (value is DateTimeOffset dto)
+            return dto;
+
+        if (value is DateTime dt)
+            return new DateTimeOffset(asUtcDateTime(dt));
+
+        return DateTimeOffset.Parse(value.toStr(), System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>
+    /// Normalizes an instant-like <see cref="DateTime"/> to UTC without applying database timezone rules.
+    /// </summary>
+    /// <param name="dt">Input date/time whose kind may be local, UTC, or unspecified.</param>
+    /// <returns>A UTC <see cref="DateTime"/> value.</returns>
+    private static DateTime asUtcDateTime(DateTime dt)
+    {
+        return dt.Kind switch
+        {
+            DateTimeKind.Utc => dt,
+            DateTimeKind.Local => dt.ToUniversalTime(),
+            _ => DateTime.SpecifyKind(dt, DateTimeKind.Utc),
+        };
+    }
+
+    /// <summary>
+    /// Converts a framework parameter wrapper or raw value into the actual ADO.NET parameter value.
+    /// </summary>
+    /// <param name="paramName">SQL parameter name.</param>
+    /// <param name="value">Raw parameter value or framework parameter wrapper.</param>
+    /// <returns>The value to pass to the provider.</returns>
+    private object? normalizeParamValue(string paramName, object? value)
+    {
+        var fieldName = paramName;
+        var fieldType = "";
+        var hasFieldMetadata = false;
+        if (value is DBParamValue dbParam)
+        {
+            fieldName = dbParam.FieldName;
+            fieldType = dbParam.FieldType;
+            value = dbParam.Value;
+            hasFieldMetadata = true;
+        }
+
+        if (value == NOW)
+            return value;
+
+        var isUtcField = isUtcFieldName(fieldName);
+        var isOffsetField = isDateTimeOffsetType(fieldType);
+
+        if (value is DateTimeOffset dto)
+        {
+            if (isOffsetField)
+                return isUtcField ? dto.ToUniversalTime() : dto;
+
+            if (!hasFieldMetadata)
+                return isUtcField ? dto.ToUniversalTime() : dto;
+
+            var utc = dto.UtcDateTime;
+            return isUtcField ? utc : convertUtcToDb(utc);
+        }
+
+        if (value is DateTime dt)
+        {
+            if (isOffsetField)
+                return new DateTimeOffset(asUtcDateTime(dt));
+
+            if (isUtcField)
+                return asUtcDateTime(dt);
+
+            if (dt.Kind == DateTimeKind.Unspecified)
+                return dt; // treat as date-only/no timezone
+
+            var utc = asUtcDateTime(dt);
+            return convertUtcToDb(utc);
+        }
+
+        return value;
+    }
+
+    /// <summary>
+    /// Wraps helper-built parameters with the source field metadata needed for UTC and type decisions.
+    /// </summary>
+    /// <param name="fieldName">Database field name that produced the parameter.</param>
+    /// <param name="fieldType">Framework field type from loaded schema.</param>
+    /// <param name="value">Parameter value after DB operation normalization.</param>
+    /// <returns>A lightweight metadata wrapper consumed when provider parameters are created.</returns>
+    private static DBParamValue paramValue(string fieldName, string fieldType, object? value)
+    {
+        return new DBParamValue(fieldName, fieldType, value);
     }
 
     /// <summary>
@@ -462,6 +632,16 @@ public class DB : IDisposable
         return DbTimezoneInfo.Id;
     }
 
+    /// <summary>
+    /// Reports whether the DB timezone came from configuration or from a successful database probe.
+    /// </summary>
+    /// <returns><c>true</c> when the timezone was explicitly configured or detected without falling back to UTC.</returns>
+    public bool isTimezoneDetectionOk()
+    {
+        initTimezoneInfo(isAllowQuery: false);
+        return isTimezoneDetected;
+    }
+
     private bool isDbTimezoneUTC => DbTimezoneInfo.Id == TimeZoneInfo.Utc.Id;
 
     private void initTimezoneInfo(bool isAllowQuery = true)
@@ -476,6 +656,7 @@ public class DB : IDisposable
         {
 
             var tzId = conf["timezone"].toStr();
+            var isDetected = !string.IsNullOrEmpty(tzId);
             var cache_key = $"{dbtype}:{connstr}";
 
             if (string.IsNullOrEmpty(tzId))
@@ -484,9 +665,24 @@ public class DB : IDisposable
                 {
                     if (isAllowQuery)
                     {
-                        tzId = detectTimezoneFromDb();
-                        timezone_cache[cache_key] = tzId;
+                        var detection = detectTimezoneFromDb();
+                        tzId = detection.timezoneId;
+                        isDetected = detection.isDetected;
+                        if (isDetected)
+                        {
+                            timezone_cache[cache_key] = tzId;
+                            timezone_detection_cache[cache_key] = true;
+                        }
+                        else
+                        {
+                            timezone_cache.TryRemove(cache_key, out _);
+                            timezone_detection_cache.TryRemove(cache_key, out _);
+                        }
                     }
+                }
+                else
+                {
+                    isDetected = timezone_detection_cache.TryGetValue(cache_key, out var cachedDetected) && cachedDetected;
                 }
             }
 
@@ -495,11 +691,13 @@ public class DB : IDisposable
                 try
                 {
                     timezoneInfo = TimeZoneInfo.FindSystemTimeZoneById(tzId);
+                    isTimezoneDetected = isDetected;
                 }
                 catch (Exception ex)
                 {
                     logger(LogLevel.WARN, "DB timezone resolve failed for ", db_name, " tz=", tzId, " error=", ex.Message);
                     timezoneInfo = TimeZoneInfo.Utc;
+                    isTimezoneDetected = false;
                 }
                 isTimezoneInited = true;
             }
@@ -606,39 +804,51 @@ public class DB : IDisposable
         return result;
     }
 
-    private string detectTimezoneFromDb()
+    private (string timezoneId, bool isDetected) detectTimezoneFromDb()
     {
+        if (dbtype == DBTYPE_SQLSRV)
+        {
+            try
+            {
+                var tzId = valuep("SELECT CURRENT_TIMEZONE_ID()").toStr();
+                if (!string.IsNullOrEmpty(tzId))
+                    return (tzId, true);
+            }
+            catch (Exception ex)
+            {
+                logger(LogLevel.TRACE, "DB timezone SQL Server id probe failed for ", db_name, ": ", ex.Message);
+            }
+        }
+
         try
         {
-            // get server offset in hours and minutes
+            // Offset fallback is ambiguous when several zones share the same current offset.
             var offset_sql = dbtype switch
             {
-                DBTYPE_SQLSRV => "SELECT DATENAME(TZOFFSET, SYSDATETIMEOFFSET())",
+                DBTYPE_SQLSRV => "SELECT DATEPART(TZOFFSET, SYSDATETIMEOFFSET())",
 #if isMySQL
-                DBTYPE_MYSQL => "SELECT TIME_FORMAT(TIMEDIFF(NOW(), UTC_TIMESTAMP), '%H:%i')", 
+                DBTYPE_MYSQL => "SELECT TIMESTAMPDIFF(MINUTE, UTC_TIMESTAMP(), NOW())",
 #endif
                 _ => "",
             };
 
             if (!string.IsNullOrEmpty(offset_sql))
             {
-                var hm_offset = valuep(offset_sql).toStr();
-                if (!string.IsNullOrEmpty(hm_offset))
+                var offset_minutes = valuep(offset_sql).toStr();
+                if (int.TryParse(offset_minutes, out var minutes))
                 {
-                    if (TimeSpan.TryParse(hm_offset, out var offset))
-                    {
-                        // match by current offset (includes DST) instead of BaseUtcOffset to avoid off-by-one-hour errors
-                        var nowUtc = DateTime.UtcNow;
-                        var candidates = TimeZoneInfo.GetSystemTimeZones()
-                            .Where(tzinfo => tzinfo.GetUtcOffset(nowUtc) == offset)
-                            .ToList();
+                    // match by current offset (includes DST) instead of BaseUtcOffset to avoid off-by-one-hour errors
+                    var offset = TimeSpan.FromMinutes(minutes);
+                    var nowUtc = DateTime.UtcNow;
+                    var candidates = TimeZoneInfo.GetSystemTimeZones()
+                        .Where(tzinfo => tzinfo.GetUtcOffset(nowUtc) == offset)
+                        .ToList();
 
-                        if (candidates.Count > 0)
-                        {
-                            var preferred = candidates.FirstOrDefault(tzinfo => tzinfo.Id.EndsWith("Standard Time", StringComparison.OrdinalIgnoreCase));
-                            var found = preferred ?? candidates[0];
-                            return found.Id;
-                        }
+                    if (candidates.Count > 0)
+                    {
+                        var preferred = candidates.FirstOrDefault(tzinfo => tzinfo.Id.EndsWith("Standard Time", StringComparison.OrdinalIgnoreCase));
+                        var found = preferred ?? candidates[0];
+                        return (found.Id, true);
                     }
                 }
             }
@@ -648,7 +858,7 @@ public class DB : IDisposable
             logger(LogLevel.WARN, "DB timezone autodetect failed for ", db_name, ": ", ex.Message);
         }
 
-        return DateUtils.TZ_UTC;
+        return (DateUtils.TZ_UTC, false);
     }
 
     /// <summary>
@@ -675,31 +885,6 @@ public class DB : IDisposable
             return dtUtc;
 
         return TimeZoneInfo.ConvertTimeFromUtc(dtUtc, DbTimezoneInfo);
-    }
-
-    /// <summary>
-    /// Normalize parameter values before sending to DB, converting UTC DateTime to DB timezone and preserving date-only values.
-    /// </summary>
-    private object? convertParamValue(object? value)
-    {
-        if (value == NOW)
-            return value;
-
-        if (value is DateTime dt)
-        {
-            if (dt.Kind == DateTimeKind.Unspecified)
-                return dt; // treat as date-only/no timezone
-
-            DateTime utc = dt.Kind switch
-            {
-                DateTimeKind.Utc => dt,
-                DateTimeKind.Local => dt.ToUniversalTime(),
-                _ => DateTime.SpecifyKind(dt, DateTimeKind.Utc),
-            };
-            return convertUtcToDb(utc);
-        }
-
-        return value;
     }
 
     // transactions support
@@ -782,7 +967,7 @@ public class DB : IDisposable
                 CommandTimeout = sql_command_timeout
             };
             foreach (string p in @params.Keys)
-                sqlCommand.Parameters.AddWithValue(p, convertParamValue(@params[p]));
+                sqlCommand.Parameters.AddWithValue(p, normalizeParamValue(p, @params[p]));
 
             if (tran != null)
                 sqlCommand.Transaction = (SqlTransaction)tran;
@@ -799,7 +984,7 @@ public class DB : IDisposable
                 // p name is without "@", but @params may or may not contain "@" prefix
                 var pvalue = @params.TryGetValue(p, out object? value) ? value : @params["@" + p];
                 //logger(LogLevel.INFO, "DB:", db_name, " ", "param: ", p, " = ", pvalue);
-                oleDbCommand.Parameters.AddWithValue("?", convertParamValue(pvalue));
+                oleDbCommand.Parameters.AddWithValue("?", normalizeParamValue(p, pvalue));
             }
 
             if (tran != null)
@@ -815,7 +1000,7 @@ public class DB : IDisposable
                 CommandTimeout = sql_command_timeout
             };
             foreach (string p in @params.Keys)
-                mySqlCommand.Parameters.AddWithValue(p, convertParamValue(@params[p]));
+                mySqlCommand.Parameters.AddWithValue(p, normalizeParamValue(p, @params[p]));
 
             if (tran != null)
                 mySqlCommand.Transaction = (MySqlTransaction)tran;
@@ -962,7 +1147,7 @@ public class DB : IDisposable
                 CommandTimeout = sql_command_timeout
             };
             foreach (string p in @params.Keys)
-                dbcomm.Parameters.AddWithValue(p, convertParamValue(@params[p]));
+                dbcomm.Parameters.AddWithValue(p, normalizeParamValue(p, @params[p]));
 
             if (tran != null)
                 dbcomm.Transaction = (SqlTransaction)tran;
@@ -985,7 +1170,7 @@ public class DB : IDisposable
                 // p name is without "@", but @params may or may not contain "@" prefix
                 var pvalue = @params.TryGetValue(p, out object? value) ? value : @params["@" + p];
                 //logger(LogLevel.INFO, "DB:", db_name, " ", "param: ", p, " = ", pvalue);
-                dbcomm.Parameters.AddWithValue("?", convertParamValue(pvalue));
+                dbcomm.Parameters.AddWithValue("?", normalizeParamValue(p, pvalue));
             }
 
             if (tran != null)
@@ -1001,7 +1186,7 @@ public class DB : IDisposable
                 CommandTimeout = sql_command_timeout
             };
             foreach (string p in @params.Keys)
-                dbcomm.Parameters.AddWithValue(p, convertParamValue(@params[p]));
+                dbcomm.Parameters.AddWithValue(p, normalizeParamValue(p, @params[p]));
 
             if (tran != null)
                 dbcomm.Transaction = (MySqlTransaction)tran;
@@ -1084,9 +1269,14 @@ public class DB : IDisposable
                 }
                 else
                 {
-                    dt = convertDbDateTimeToUtc(dt);
+                    dt = normalizeReadDateTime(dt, meta.IsDateOnly[i], meta.IsUtcField[i]);
                     value = dt.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.DateTimeFormatInfo.InvariantInfo);
                 }
+            }
+            else if (meta.IsDateTimeOffset[i])
+            {
+                var dt = readDateTimeOffset(dbread, i).UtcDateTime;
+                value = dt.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.DateTimeFormatInfo.InvariantInfo);
             }
             else if (meta.IsString[i])
                 value = dbread.GetString(i) ?? "";
@@ -1123,7 +1313,11 @@ public class DB : IDisposable
             else if (meta.IsDateTime[i])
             {
                 // keep DateTime value type to avoid boxing to string
-                value = convertDbDateTimeToUtc(dbread.GetDateTime(i), meta.IsDateOnly[i]);
+                value = normalizeReadDateTime(dbread.GetDateTime(i), meta.IsDateOnly[i], meta.IsUtcField[i]);
+            }
+            else if (meta.IsDateTimeOffset[i])
+            {
+                value = readDateTimeOffset(dbread, i);
             }
             else if (meta.IsString[i])
                 value = dbread.GetString(i);
@@ -1418,17 +1612,23 @@ public class DB : IDisposable
         if (result is DateTime dt)
         {
             var isDateOnly = false;
+            var isUtcField = false;
             try
             {
                 var typeName = dbread.GetDataTypeName(0);
                 isDateOnly = string.Equals(typeName, "date", StringComparison.OrdinalIgnoreCase);
+                isUtcField = isUtcFieldName(dbread.GetName(0));
             }
             catch
             {
                 // ignore metadata errors and fall back to datetime conversion
             }
 
-            result = convertDbDateTimeToUtc(dt, isDateOnly);
+            result = normalizeReadDateTime(dt, isDateOnly, isUtcField);
+        }
+        else if (result is DateTimeOffset dto)
+        {
+            result = dto.UtcDateTime;
         }
 
         closeQuery(dbread);
@@ -1657,11 +1857,32 @@ public class DB : IDisposable
         if (value != null)
             if (value is DateTime dt)
                 result = dt;
+            else if (value is DateTimeOffset dto)
+                result = dto.UtcDateTime;
             else
                 if (DateTime.TryParse(value.ToString(), out DateTime tmpdate))
                     result = tmpdate;
 
         return result;
+    }
+
+    /// <summary>
+    /// Converts a value to <see cref="DateTimeOffset"/> for offset-aware database fields.
+    /// </summary>
+    /// <param name="value">Date/time value, string, or offset-aware value.</param>
+    /// <returns>A parsed offset-aware value, or <c>null</c> when conversion fails.</returns>
+    public DateTimeOffset? qdto(object value)
+    {
+        if (value is DateTimeOffset dto)
+            return dto;
+
+        if (value is DateTime dt)
+            return new DateTimeOffset(asUtcDateTime(dt));
+
+        if (DateTimeOffset.TryParse(value?.ToString(), System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AssumeUniversal, out var parsed))
+            return parsed;
+
+        return null;
     }
 
     /// <summary>
@@ -1743,6 +1964,11 @@ public class DB : IDisposable
         {
             var fieldValue = fields[fname] ?? DBNull.Value;
             var dbop = field2Op(table, fname, fieldValue, is_for_where);
+            // Keep original field metadata with generated params for _utc/datetimeoffset decisions.
+            var fieldType = "";
+            var fieldNameLc = fname.ToLowerInvariant();
+            if (schema.TryGetValue(table, out var schemaTable) && schemaTable.TryGetValue(fieldNameLc, out object? schemaValue))
+                fieldType = schemaValue.toStr();
 
             var delim = $" {dbop.opstr} ";
             var param_name = reW.Replace(fname, "_") + suffix; // replace any non-alphanum in param names and add suffix
@@ -1759,13 +1985,13 @@ public class DB : IDisposable
                     // special case for between
                     if (dbop.value is IList list && list.Count >= 2)
                     {
-                        @params[param_name + "_1"] = list[0];
-                        @params[param_name + "_2"] = list[1];
+                        @params[param_name + "_1"] = paramValue(fname, fieldType, list[0]);
+                        @params[param_name + "_2"] = paramValue(fname, fieldType, list[1]);
                     }
                     else
                     {
-                        @params[param_name + "_1"] = DBNull.Value;
-                        @params[param_name + "_2"] = DBNull.Value;
+                        @params[param_name + "_1"] = paramValue(fname, fieldType, DBNull.Value);
+                        @params[param_name + "_2"] = paramValue(fname, fieldType, DBNull.Value);
                     }
                     // BETWEEN @p1 AND @p2
                     sql += $"@{param_name}_1 AND @{param_name}_2";
@@ -1778,7 +2004,7 @@ public class DB : IDisposable
                         var i = 1;
                         foreach (var pvalue in list)
                         {
-                            @params[param_name + "_" + i] = pvalue;
+                            @params[param_name + "_" + i] = paramValue(fname, fieldType, pvalue);
                             sql_params.Add("@" + param_name + "_" + i);
                             i += 1;
                         }
@@ -1790,12 +2016,22 @@ public class DB : IDisposable
                 {
                     if (dbop.value == DB.NOW)
                     {
-                        // if value is NOW object - don't add it to params, just use NOW()/GETDATE() in sql
-                        sql += sqlNOW();
+                        // DB.NOW uses field semantics: DB-local by default, UTC for _utc, offset-aware for SQL Server datetimeoffset.
+                        var isUtcField = isUtcFieldName(fname);
+                        if (isDateTimeOffsetType(fieldType) && dbtype == DBTYPE_SQLSRV)
+                            sql += isUtcField ? "TODATETIMEOFFSET(SYSUTCDATETIME(), '+00:00')" : "SYSDATETIMEOFFSET()";
+#if isMySQL
+                        else if (isUtcField && dbtype == DBTYPE_MYSQL)
+                            sql += "UTC_TIMESTAMP()";
+#endif
+                        else if (isUtcField && dbtype == DBTYPE_SQLSRV)
+                            sql += "SYSUTCDATETIME()";
+                        else
+                            sql += sqlNOW();
                     }
                     else
                     {
-                        @params[param_name] = dbop.value;
+                        @params[param_name] = paramValue(fname, fieldType, dbop.value);
                         sql += "@" + param_name;
                     }
                 }
@@ -1947,6 +2183,11 @@ public class DB : IDisposable
             else if (field_type == "datetime")
             {
                 var dt = this.qd(field_value);
+                result = dt ?? (object)DBNull.Value;
+            }
+            else if (field_type == "datetimeoffset")
+            {
+                var dt = this.qdto(field_value);
                 result = dt ?? (object)DBNull.Value;
             }
             else if (field_type == "float")
@@ -2322,7 +2563,7 @@ public class DB : IDisposable
 
         //logger(LogLevel.DEBUG, "buildUpdate:", table, fields);
 
-        var set_params = prepareParams(table, fields, "update", "_SET");
+        var set_params = prepareParams(table, fields, "update", UPDATE_SET_PARAM_SUFFIX);
         result.sql += set_params.sql;
         result.@params = set_params.@params;
 
@@ -2427,6 +2668,8 @@ public class DB : IDisposable
         else if (field_type == "date")
             result = field_type;
         else if (field_type == "datetime")
+            result = field_type;
+        else if (field_type == "datetimeoffset")
             result = field_type;
         else if (field_type == "float")
             result = field_type;
@@ -2795,6 +3038,12 @@ public class DB : IDisposable
             case "smalldatetime":
                 {
                     result = "datetime";
+                    break;
+                }
+
+            case "datetimeoffset":
+                {
+                    result = "datetimeoffset";
                     break;
                 }
 

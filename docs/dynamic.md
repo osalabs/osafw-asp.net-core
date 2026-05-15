@@ -105,7 +105,7 @@ Developer-generated and virtual controllers build a two-column `show_fields` / `
 
 **Show & ShowForm display**: [plaintext](#type-plaintext) · [plaintext_link](#type-plaintext_link) · [plaintext_autocomplete](#type-plaintext_autocomplete) · [plaintext_yesno](#type-plaintext_yesno) · [plaintext_currency](#type-plaintext_currency) · [markdown](#type-markdown) · [noescape](#type-noescape) · [float](#type-float) · [checkbox](#type-checkbox) · [date](#type-date) · [date_long](#type-date_long) · [multi](#type-multi) · [multi_prio](#type-multi_prio) · [att](#type-att) · [att_links](#type-att_links) · [att_files](#type-att_files) · [subtable](#type-subtable) · [added](#type-added) · [updated](#type-updated)
 
-**ShowForm inputs only**: [group_id](#type-group_id) · [group_id_addnew](#type-group_id_addnew) · [select](#type-select) · [input](#type-input) · [textarea](#type-textarea) · [email](#type-email) · [number](#type-number) · [password](#type-password) · [currency](#type-currency) · [autocomplete](#type-autocomplete) · [multicb](#type-multicb) · [multicb_prio](#type-multicb_prio) · [radio](#type-radio) · [yesno](#type-yesno) · [cb](#type-cb) · [date_popup](#type-date_popup) · [date_combo](#type-date_combo) · [datetime_popup](#type-datetime_popup) · [time](#type-time) · [att_edit](#type-att_edit) · [att_links_edit](#type-att_links_edit) · [att_files_edit](#type-att_files_edit) · [subtable_edit](#type-subtable_edit)
+**ShowForm inputs only**: [group_id](#type-group_id) · [group_id_addnew](#type-group_id_addnew) · [select](#type-select) · [input](#type-input) · [textarea](#type-textarea) · [email](#type-email) · [number](#type-number) · [password](#type-password) · [currency](#type-currency) · [autocomplete](#type-autocomplete) · [multicb](#type-multicb) · [multicb_prio](#type-multicb_prio) · [radio](#type-radio) · [yesno](#type-yesno) · [cb](#type-cb) · [date_popup](#type-date_popup) · [date_combo](#type-date_combo) · [datetime_popup](#type-datetime_popup) · [datetime_local](#type-datetime_local) · [time](#type-time) · [att_edit](#type-att_edit) · [att_links_edit](#type-att_links_edit) · [att_files_edit](#type-att_files_edit) · [subtable_edit](#type-subtable_edit)
 
 ### Type details
 
@@ -1140,6 +1140,7 @@ Developer-generated and virtual controllers build a two-column `show_fields` / `
 - Template: `/common/form/showform/datetime_popup.html`.
 - Options: `default_time` (preselects time part), `class_control`, `attrs_control`, plus layout keys.
 - Save behavior: keeps datetime semantics and converts between `fw.userTimezone` and UTC.
+- Backing DB notes: use ordinary `datetime`/`datetime2` for DB-local wall-time storage normalized by the framework, `_utc` field names for UTC instants that must not be shifted through the DB timezone, and SQL Server `datetimeoffset` when the stored value must retain an offset-aware instant.
 - Common sample:
 ```json
 {
@@ -1159,6 +1160,20 @@ Developer-generated and virtual controllers build a two-column `show_fields` / `
   "class_control": "on-refresh",
   "attrs_control": "data-noautosave=\"true\"",
   "help_text": "Stores combined date and time"
+}
+```
+
+#### type: datetime_local
+- Template: `/common/form/showform/datetime_local.html`.
+- Options: `class_control`, `attrs_control`, plus layout keys.
+- Save behavior: uses browser-native `yyyy-MM-ddTHH:mm` input and converts that user-local wall time between `fw.userTimezone` and UTC.
+- Backing DB notes: same as `datetime_popup`; `_utc` suffix and SQL Server `datetimeoffset` rules still come from the field name/type.
+- Common sample:
+```json
+{
+  "type": "datetime_local",
+  "field": "starts_at",
+  "label": "Starts At"
 }
 ```
 

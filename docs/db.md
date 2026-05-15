@@ -192,6 +192,29 @@ DateTime now = db.Now();
 db.insert("log", DB.h("add_time", DB.NOW));         // uses NOW() or GETDATE()
 ```
 
+### Date, UTC, and datetimeoffset values
+`DB` applies the framework datetime contract automatically for helper-built reads and writes:
+
+- SQL `date` stays date-only.
+- SQL `datetime`/`datetime2` is converted between the configured DB timezone and internal UTC.
+- Fields ending in `_utc` skip DB timezone conversion and are treated as UTC instants.
+- SQL Server `datetimeoffset` is treated as an instant. Dictionary rows/scalars normalize output to UTC-compatible values; typed DTO properties can be `DateTimeOffset`.
+- `DB.NOW` is field-aware in helper-built SQL: normal datetime fields use DB-local current time, `_utc` fields use current UTC time, and SQL Server `datetimeoffset` fields use an offset-aware current time.
+
+```csharp
+db.insert("events", DB.h(
+    "starts_at", DateTime.UtcNow,        // UTC -> DB timezone for datetime/datetime2
+    "sent_at_utc", DateTime.UtcNow,      // stored as UTC
+    "source_at_utc", DateTimeOffset.UtcNow)); // stored as datetimeoffset UTC
+```
+
+For raw SQL, `DB` cannot reliably infer the target column name. Use `_utc` in the parameter name, or pass `DateTimeOffset`, when the value should not be converted through the DB timezone:
+
+```csharp
+db.exec("UPDATE events SET sent_at_utc=@sent_at_utc WHERE id=@id",
+    DB.h("@sent_at_utc", DateTime.UtcNow, "@id", id));
+```
+
 ### Where helper operations - `db.opXXX()`
 ```csharp
 // id IN (1,2)

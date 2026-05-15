@@ -37,7 +37,7 @@
                 :class="(fwStore.cells_saving[id+'-'+header.field_name]?'cell-success-fade':'')+(fwStore.cells_errors[id+'-'+header.field_name]?' cell-invalid':'')">
                 <list-cell-ro v-if="header.is_ro || row._meta?.is_ro || row._meta?.ro_fields?.includes(header.field_name)" :row="row" :col="header" :uioptions="uioptions"></list-cell-ro>
 
-                <list-cell-input v-else-if="['input','email','number','date_popup','time','textarea'].includes(header.input_type)"
+                <list-cell-input v-else-if="['input','email','number','date_popup','datetime_popup','datetime_local','time','textarea'].includes(header.input_type)"
                                  :rowId="id" :row="row" :col="header"
                                  :error="fwStore.cells_errors[id+'-'+header.field_name]"
                                  @change="onCellChange($event, row, header)"

@@ -6,6 +6,7 @@
 using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -434,8 +435,10 @@ public abstract class FwModel : IDisposable
         return isExistsByField(uniq_key, not_id, field_iname);
     }
 
-    // convert user input fields to proper database format before add/update
-    // including timezone conversion of datetime values to internal UTC
+    /// <summary>
+    /// Converts user-facing form values to database-ready values before add/update.
+    /// </summary>
+    /// <param name="item">Mutable field dictionary keyed by database field name.</param>
     public virtual void convertUserInput(FwDict item)
     {
         var tschema = getTableSchema();
@@ -458,7 +461,7 @@ public abstract class FwModel : IDisposable
                 //if field is exactly DATE - convert only date part without time - in YYYY-MM-DD format
                 item[fieldname] = DateUtils.Str2SQL(item[fieldname].toStr(), fw.userDateFormat);
             }
-            else if (fw_type == "datetime")
+            else if (fw_type == "datetime" || fw_type == "datetimeoffset")
             {
                 if (item[fieldname] is DateTime dt)
                 {
@@ -472,6 +475,10 @@ public abstract class FwModel : IDisposable
                         item[fieldname] = dt.ToUniversalTime();
                     else
                         item[fieldname] = dt.Kind == DateTimeKind.Utc ? dt : DateTime.SpecifyKind(dt, DateTimeKind.Utc);
+                }
+                else if (item[fieldname] is DateTimeOffset dto)
+                {
+                    item[fieldname] = dto.ToUniversalTime();
                 }
                 else if (item[fieldname] == DB.NOW)
                 {
@@ -487,7 +494,17 @@ public abstract class FwModel : IDisposable
                     // parse strings and convert from user's timezone to UTC
                     var str = item[fieldname].toStr();
                     DateTime? parsed = null;
-                    if (DateUtils.isDateSQL(str))
+                    if (DateUtils.isDateTimeLocalStr(str))
+                    {
+                        parsed = DateUtils.DateTimeLocal2Date(str);
+                        if (parsed != null)
+                            parsed = DateUtils.convertTimezone((DateTime)parsed, fw.userTimezone, DateUtils.TZ_UTC);
+                    }
+                    else if (DateUtils.isDateTimeOffsetStr(str) && DateTimeOffset.TryParse(str, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind | DateTimeStyles.AssumeUniversal, out var parsedOffset))
+                    {
+                        parsed = parsedOffset.UtcDateTime;
+                    }
+                    else if (DateUtils.isDateSQL(str))
                     {
                         parsed = DateUtils.SQL2Date(str);
                     }
@@ -499,7 +516,18 @@ public abstract class FwModel : IDisposable
                             parsed = DateUtils.convertTimezone((DateTime)parsed, fw.userTimezone, DateUtils.TZ_UTC);
                     }
 
-                    item[fieldname] = parsed == null ? DBNull.Value : DateTime.SpecifyKind((DateTime)parsed, DateTimeKind.Utc);
+                    if (parsed == null)
+                    {
+                        item[fieldname] = DBNull.Value;
+                    }
+                    else
+                    {
+                        var utc = DateTime.SpecifyKind((DateTime)parsed, DateTimeKind.Utc);
+                        if (fw_type == "datetimeoffset")
+                            item[fieldname] = new DateTimeOffset(utc);
+                        else
+                            item[fieldname] = utc;
+                    }
                 }
             }
 
@@ -1563,7 +1591,7 @@ ORDER BY {getOrderBy()}";
                 };
                 item[fieldname] = dt == null ? "" : DateUtils.Date2SQL((DateTime)dt);
             }
-            else if (fw_type == "datetime")
+            else if (fw_type == "datetime" || fw_type == "datetimeoffset")
             {
                 item[fieldname] = fw.formatUserDateTime(item[fieldname], true); //ISO format
             }

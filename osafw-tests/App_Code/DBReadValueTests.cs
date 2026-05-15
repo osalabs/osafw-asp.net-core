@@ -52,6 +52,102 @@ public class DBReadValueTests
         Assert.AreEqual(dateOnly, preserved);
     }
 
+    [TestMethod]
+    public void ReadValue_DoesNotShiftUtcSuffixColumn()
+    {
+        var conf = new FwDict
+        {
+            { "type", DB.DBTYPE_SQLSRV },
+            { "connection_string", "fake" },
+            { "timezone", "Pacific Standard Time" },
+        };
+        var db = new DB(conf, "test");
+        var dbValue = new DateTime(2024, 6, 1, 12, 0, 0);
+        var reader = new FakeSingleValueReader(dbValue, "datetime", typeof(DateTime), "sent_at_utc");
+
+        var result = db.readValue(reader);
+
+        Assert.IsInstanceOfType(result, typeof(DateTime));
+        var utc = (DateTime)result;
+        Assert.AreEqual(DateTimeKind.Utc, utc.Kind);
+        Assert.AreEqual(new DateTime(2024, 6, 1, 12, 0, 0, DateTimeKind.Utc), utc);
+    }
+
+    [TestMethod]
+    public void ReadValue_ConvertsDateTimeOffsetToUtcDateTime()
+    {
+        var conf = new FwDict
+        {
+            { "type", DB.DBTYPE_SQLSRV },
+            { "connection_string", "fake" },
+            { "timezone", "Pacific Standard Time" },
+        };
+        var db = new DB(conf, "test");
+        var dto = new DateTimeOffset(2024, 6, 1, 15, 0, 0, TimeSpan.FromHours(3));
+        var reader = new FakeSingleValueReader(dto, "datetimeoffset", typeof(DateTimeOffset), "sent_at_utc");
+
+        var result = db.readValue(reader);
+
+        Assert.IsInstanceOfType(result, typeof(DateTime));
+        var utc = (DateTime)result;
+        Assert.AreEqual(DateTimeKind.Utc, utc.Kind);
+        Assert.AreEqual(dto.UtcDateTime, utc);
+    }
+
+    [TestMethod]
+    public void ReadRow_DoesNotShiftUtcSuffixColumn()
+    {
+        var db = new ExposedDB(testConf(), "test");
+        var dbValue = new DateTime(2024, 6, 1, 12, 0, 0);
+        var reader = new FakeSingleValueReader(dbValue, "datetime", typeof(DateTime), "event_time_utc");
+        Assert.IsTrue(reader.Read());
+
+        var row = db.ReadRowForTest(reader);
+
+        Assert.AreEqual("2024-06-01 12:00:00", row["event_time_utc"]);
+    }
+
+    [TestMethod]
+    public void ReadTypedRow_PreservesDateTimeOffset()
+    {
+        var db = new ExposedDB(testConf(), "test");
+        var dto = new DateTimeOffset(2024, 6, 1, 15, 0, 0, TimeSpan.FromHours(3));
+        var reader = new FakeSingleValueReader(dto, "datetimeoffset", typeof(DateTimeOffset), "event_time_utc");
+        Assert.IsTrue(reader.Read());
+
+        var row = db.ReadTypedRowForTest<OffsetRow>(reader);
+
+        Assert.AreEqual(dto, row.event_time_utc);
+    }
+
+    private static FwDict testConf()
+    {
+        return new FwDict
+        {
+            { "type", DB.DBTYPE_SQLSRV },
+            { "connection_string", "fake" },
+            { "timezone", "Pacific Standard Time" },
+        };
+    }
+
+    private sealed class ExposedDB(FwDict conf, string dbName) : DB(conf, dbName)
+    {
+        public DBRow ReadRowForTest(DbDataReader reader)
+        {
+            return readRow(reader);
+        }
+
+        public T ReadTypedRowForTest<T>(DbDataReader reader) where T : new()
+        {
+            return readRow<T>(reader);
+        }
+    }
+
+    private sealed class OffsetRow
+    {
+        public DateTimeOffset event_time_utc { get; set; }
+    }
+
     private sealed class FakeSingleValueReader : DbDataReader
     {
         private readonly object _value;
@@ -59,11 +155,14 @@ public class DBReadValueTests
         private readonly Type _fieldType;
         private bool _read;
 
-        public FakeSingleValueReader(object value, string dataTypeName, Type fieldType)
+        private readonly string _name;
+
+        public FakeSingleValueReader(object value, string dataTypeName, Type fieldType, string name = "col")
         {
             _value = value;
             _dataTypeName = dataTypeName;
             _fieldType = fieldType;
+            _name = name;
         }
 
         public override int FieldCount => 1;
@@ -75,7 +174,7 @@ public class DBReadValueTests
         public override object this[int i] => _value;
         public override object this[string name] => _value;
 
-        public override string GetName(int i) => "col";
+        public override string GetName(int i) => _name;
         public override string GetDataTypeName(int i) => _dataTypeName;
         public override Type GetFieldType(int i) => _fieldType;
         public override int GetOrdinal(string name) => 0;
@@ -100,6 +199,7 @@ public class DBReadValueTests
         }
 
         public override object GetValue(int i) => _value;
+        public override T GetFieldValue<T>(int ordinal) => (T)_value;
         public override bool IsDBNull(int i) => _value is null || _value == DBNull.Value;
 
         public override bool GetBoolean(int i) => (bool)_value!;

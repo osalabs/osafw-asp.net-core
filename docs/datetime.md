@@ -2,6 +2,8 @@
 
 - Each database connection resolves its own timezone. Configure it under `appSettings.db.<name>.timezone` or omit it and let `DB` autodetect (cached per connection string, falls back to `UTC`).
 - `DB` converts SQL `datetime` values from the database timezone to UTC on read and from UTC to the database timezone on write.
+- Field names ending in `_utc` are treated as already-UTC instants. `DB` does not apply database timezone conversion to those fields on read or helper-built writes.
+- SQL Server `datetimeoffset` values are treated as instants. Untyped rows and scalar reads expose them as UTC-compatible `DateTime`/SQL strings; typed DTO reads may use `DateTimeOffset` to keep the stored offset.
 - SQL `date` values stay date-only. They are kept as calendar values and are not shifted through timezone conversion.
 - Database values are read in SQL formats:
   - Date: `YYYY-MM-DD`
@@ -64,15 +66,24 @@ Real datetimes still follow the normal timezone pipeline:
 - Display: UTC -> `fw.userTimezone`
 - Save from UI: `fw.userTimezone` -> UTC
 
+UTC and offset-bearing instants use the explicit instant pipeline:
+- `_utc` `datetime`/`datetime2`: stored and read as UTC with no database timezone shift.
+- `datetimeoffset`: stored as an offset-aware instant; untyped framework output normalizes to UTC, while typed DTOs can preserve `DateTimeOffset`.
+
 ## Converting user input for saving
 Use `FwController.modelAddOrUpdate` plus `FwModel.convertUserInput(item)` before `add`/`update`. It converts human-entered strings while keeping internals in UTC:
 - `date` fields -> `YYYY-MM-DD` via `DateUtils.Str2SQL(str, fw.userDateFormat)`
 - `datetime` fields -> parsed with the user's formats, converted from `fw.userTimezone` to UTC, and passed to DB as UTC `DateTime` values.
+- `datetimeoffset` fields -> parsed like `datetime`, then passed as UTC `DateTimeOffset` values.
+- `datetime_local` Dynamic/Vue controls submit browser-native `YYYY-MM-DDTHH:mm`; the backend treats that as a user-local datetime and uses the same UTC save pipeline.
 - Dynamic form fields with type `date`, `date_popup`, or `date_combo` are normalized to SQL `YYYY-MM-DD` on save even if the backing DB column is `datetime`, so semantically date-only fields do not pick up per-user timezone shifts later.
 
 Notes:
-- If a value is already a `DateTime` (UTC) or `DB.NOW`, it is left unchanged.
+- If a value is already a `DateTime` (UTC) or `DB.NOW`, form conversion leaves it alone; DB helpers resolve `DB.NOW` with field metadata so `_utc` fields use current UTC time.
+- If a value is already a `DateTimeOffset`, offset-aware fields accept it directly; `_utc` fields normalize it to a UTC offset.
 - If the string is already in SQL datetime format, it is parsed as UTC and passed through.
+- If the string is browser `datetime-local` format, it is parsed as a user-local wall time.
+- Raw SQL cannot infer target field names. For raw `query`/`exec` calls, name UTC datetime parameters with an `_utc` suffix or pass `DateTimeOffset` when no DB timezone conversion should be applied.
 
 ## Timezone conversion utilities
 - Resolved DB timezone is cached per connection (configured or autodetected).

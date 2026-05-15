@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Globalization;
 using Microsoft.Data.SqlClient;
 
 namespace osafw.Tests
@@ -29,6 +30,9 @@ namespace osafw.Tests
                             id              INT,
                             iname           NVARCHAR(64) NOT NULL default '',
                             idatetime       DATETIME2,
+                            idatetime_utc   DATETIME2,
+                            ioffset         DATETIMEOFFSET,
+                            ioffset_utc     DATETIMEOFFSET,
                             fdate           DATE
                         )");
                 db.exec($"INSERT INTO {table_name} (id, iname) VALUES (1,'test1'),(2,'test2'),(3,'test3')");
@@ -532,6 +536,193 @@ namespace osafw.Tests
         }
 
         [TestMethod()]
+        public void UtcSuffixAndDateTimeOffsetRoundTripWithConfiguredDbTimezone()
+        {
+            using var tzDb = dbWithTimezone("Pacific Standard Time");
+            var utc = new DateTime(2024, 6, 1, 12, 0, 0, DateTimeKind.Utc);
+
+            tzDb.insert(table_name, DB.h(
+                "id", 8,
+                "iname", "test_utc_suffix",
+                "idatetime", utc,
+                "idatetime_utc", utc,
+                "ioffset_utc", utc));
+
+            var row = tzDb.row(table_name, DB.h("id", 8));
+            Assert.AreEqual("2024-06-01 12:00:00", row["idatetime"]);
+            Assert.AreEqual("2024-06-01 12:00:00", row["idatetime_utc"]);
+            Assert.AreEqual("2024-06-01 12:00:00", row["ioffset_utc"]);
+
+            var stored = tzDb.rowp($@"
+                SELECT
+                    CONVERT(varchar(19), idatetime, 120) AS idatetime,
+                    CONVERT(varchar(19), idatetime_utc, 120) AS idatetime_utc,
+                    CONVERT(varchar(19), CAST(ioffset_utc AS datetime2), 120) AS ioffset_utc,
+                    DATEPART(TZOFFSET, ioffset_utc) AS ioffset_offset
+                FROM {tzDb.qid(table_name)}
+                WHERE id = @id", DB.h("@id", 8));
+
+            Assert.AreEqual("2024-06-01 05:00:00", stored["idatetime"]);
+            Assert.AreEqual("2024-06-01 12:00:00", stored["idatetime_utc"]);
+            Assert.AreEqual("2024-06-01 12:00:00", stored["ioffset_utc"]);
+            Assert.AreEqual("0", stored["ioffset_offset"]);
+        }
+
+        [TestMethod()]
+        public void TypedReadPreservesDateTimeOffset()
+        {
+            using var tzDb = dbWithTimezone("Pacific Standard Time");
+            var utc = new DateTime(2024, 6, 1, 12, 0, 0, DateTimeKind.Utc);
+            var offset = new DateTimeOffset(2024, 6, 1, 15, 0, 0, TimeSpan.FromHours(3));
+
+            tzDb.insert(table_name, DB.h(
+                "id", 9,
+                "iname", "test_datetimeoffset",
+                "idatetime_utc", utc,
+                "ioffset_utc", offset));
+
+            var row = tzDb.row<TimezoneRow>(table_name, DB.h("id", 9));
+
+            Assert.IsNotNull(row);
+            Assert.AreEqual(utc, row!.idatetime_utc);
+            Assert.AreEqual(offset.ToUniversalTime(), row.ioffset_utc);
+        }
+
+        [TestMethod()]
+        public void UtcSuffixDbNowUsesUtcCurrentTime()
+        {
+            using var tzDb = dbWithTimezone("Pacific Standard Time");
+            var before = DateTime.UtcNow.AddSeconds(-10);
+
+            tzDb.insert(table_name, DB.h(
+                "id", 10,
+                "iname", "test_now_utc",
+                "idatetime_utc", DB.NOW,
+                "ioffset_utc", DB.NOW));
+
+            var after = DateTime.UtcNow.AddSeconds(10);
+            var stored = tzDb.rowp($@"
+                SELECT
+                    CONVERT(varchar(19), idatetime_utc, 120) AS idatetime_utc,
+                    CONVERT(varchar(19), CAST(SWITCHOFFSET(ioffset_utc, '+00:00') AS datetime2), 120) AS ioffset_utc,
+                    DATEPART(TZOFFSET, ioffset_utc) AS ioffset_offset
+                FROM {tzDb.qid(table_name)}
+                WHERE id = @id", DB.h("@id", 10));
+
+            var storedDateTime = DateTime.Parse(stored["idatetime_utc"].toStr(), CultureInfo.InvariantCulture);
+            var storedOffsetUtc = DateTime.Parse(stored["ioffset_utc"].toStr(), CultureInfo.InvariantCulture);
+
+            Assert.IsTrue(storedDateTime >= before && storedDateTime <= after);
+            Assert.IsTrue(storedOffsetUtc >= before && storedOffsetUtc <= after);
+            Assert.AreEqual("0", stored["ioffset_offset"].toStr());
+        }
+
+        [TestMethod()]
+        public void RawDateTimeOffsetParameterPreservesOffset()
+        {
+            using var tzDb = dbWithTimezone("Pacific Standard Time");
+            var offset = new DateTimeOffset(2024, 6, 1, 15, 0, 0, TimeSpan.FromHours(3));
+
+            tzDb.exec($@"
+                INSERT INTO {tzDb.qid(table_name)} (id, iname, ioffset)
+                VALUES (@id, @iname, @value)", DB.h(
+                "@id", 11,
+                "@iname", "test_raw_offset",
+                "@value", offset));
+
+            var stored = tzDb.rowp($@"
+                SELECT
+                    CONVERT(varchar(19), CAST(ioffset AS datetime2), 120) AS wall_time,
+                    CONVERT(varchar(19), CAST(SWITCHOFFSET(ioffset, '+00:00') AS datetime2), 120) AS utc_time,
+                    DATEPART(TZOFFSET, ioffset) AS offset_minutes
+                FROM {tzDb.qid(table_name)}
+                WHERE id = @id", DB.h("@id", 11));
+
+            Assert.AreEqual("2024-06-01 15:00:00", stored["wall_time"]);
+            Assert.AreEqual("2024-06-01 12:00:00", stored["utc_time"]);
+            Assert.AreEqual("180", stored["offset_minutes"].toStr());
+        }
+
+        [TestMethod()]
+        public void RawExpandedUtcParameterKeepsUtcSuffix()
+        {
+            using var tzDb = dbWithTimezone("Pacific Standard Time");
+            var utc = new DateTime(2024, 6, 1, 12, 0, 0, DateTimeKind.Utc);
+
+            var row = tzDb.rowp(
+                "SELECT CONVERT(varchar(19), @sent_at_utc, 120) AS sent_at",
+                DB.h("sent_at_utc", new[] { utc }));
+
+            Assert.AreEqual("2024-06-01 12:00:00", row["sent_at"]);
+        }
+
+        [TestMethod()]
+        public void InvalidConfiguredTimezoneFallsBackButIsNotDetected()
+        {
+            var conf = new FwDict
+            {
+                ["type"] = DB.DBTYPE_SQLSRV,
+                ["connection_string"] = connstr,
+                ["timezone"] = "Invalid/Timezone",
+            };
+            using var tzDb = new DB(conf, "main");
+
+            tzDb.connect();
+
+            Assert.AreEqual(DateUtils.TZ_UTC, tzDb.getTimezoneId());
+            Assert.IsFalse(tzDb.isTimezoneDetectionOk());
+        }
+
+        [TestMethod()]
+        public void DemoTimezoneFieldsRoundTripAgainstDemoTable()
+        {
+            if (db.valuep("SELECT OBJECT_ID('dbo.demos')").toStr() == "")
+                Assert.Inconclusive("dbo.demos is not available in the local demo database.");
+
+            using var tzDb = dbWithTimezone("Pacific Standard Time");
+            var email = "tz-demo-" + Guid.NewGuid().ToString("N") + "@example.test";
+            var utc = new DateTime(2024, 6, 1, 12, 0, 0, DateTimeKind.Utc);
+            var offset = new DateTimeOffset(2024, 6, 1, 15, 0, 0, TimeSpan.FromHours(3));
+
+            try
+            {
+                tzDb.insert("demos", DB.h(
+                    "iname", "Timezone demo test",
+                    "email", email,
+                    "fdatetime", utc,
+                    "fdatetime_utc", utc,
+                    "fdatetime_offset", offset,
+                    "fdatetime_local", utc));
+
+                var row = tzDb.row("demos", DB.h("email", email));
+                Assert.AreEqual("2024-06-01 12:00:00", row["fdatetime"]);
+                Assert.AreEqual("2024-06-01 12:00:00", row["fdatetime_utc"]);
+                Assert.AreEqual("2024-06-01 12:00:00", row["fdatetime_offset"]);
+                Assert.AreEqual("2024-06-01 12:00:00", row["fdatetime_local"]);
+
+                var stored = tzDb.rowp(@"
+                    SELECT
+                        CONVERT(varchar(19), fdatetime, 120) AS fdatetime,
+                        CONVERT(varchar(19), fdatetime_utc, 120) AS fdatetime_utc,
+                        CONVERT(varchar(19), CAST(fdatetime_offset AS datetime2), 120) AS fdatetime_offset,
+                        DATEPART(TZOFFSET, fdatetime_offset) AS offset_minutes,
+                        CONVERT(varchar(19), fdatetime_local, 120) AS fdatetime_local
+                    FROM demos
+                    WHERE email=@email", DB.h("@email", email));
+
+                Assert.AreEqual("2024-06-01 05:00:00", stored["fdatetime"]);
+                Assert.AreEqual("2024-06-01 12:00:00", stored["fdatetime_utc"]);
+                Assert.AreEqual("2024-06-01 15:00:00", stored["fdatetime_offset"]);
+                Assert.AreEqual("180", stored["offset_minutes"].toStr());
+                Assert.AreEqual("2024-06-01 05:00:00", stored["fdatetime_local"]);
+            }
+            finally
+            {
+                tzDb.del("demos", DB.h("email", email));
+            }
+        }
+
+        [TestMethod()]
         public void updateOrInsertTest()
         {
             db.updateOrInsert(table_name, DB.h("iname", "test5", "id", 5), DB.h("id", 5));
@@ -541,6 +732,24 @@ namespace osafw.Tests
             db.updateOrInsert(table_name, DB.h("iname", "test5", "id", 3), DB.h("id", 3));
             r = db.row(table_name, DB.h("id", 3));
             Assert.AreEqual("test5", r["iname"]);
+        }
+
+        private DB dbWithTimezone(string timezone)
+        {
+            var conf = new FwDict
+            {
+                ["type"] = DB.DBTYPE_SQLSRV,
+                ["connection_string"] = connstr,
+                ["timezone"] = timezone,
+            };
+
+            return new DB(conf, "main");
+        }
+
+        private sealed class TimezoneRow
+        {
+            public DateTime idatetime_utc { get; set; }
+            public DateTimeOffset ioffset_utc { get; set; }
         }
 
         [TestMethod()]

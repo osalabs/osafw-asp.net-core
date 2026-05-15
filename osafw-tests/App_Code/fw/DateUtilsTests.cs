@@ -99,7 +99,29 @@ namespace osafw.Tests
         }
 
         [TestMethod]
-        public void Str2DateOnlyTest()
+        public void DateTimeLocal2Date_ParsesBrowserInput()
+        {
+            Assert.IsTrue(DateUtils.isDateTimeLocalStr("2024-06-01T08:30"));
+            Assert.IsTrue(DateUtils.isDateTimeLocalStr("2024-06-01T08:30:45"));
+            Assert.IsFalse(DateUtils.isDateTimeLocalStr("2024-06-01 08:30:45"));
+
+            var parsed = DateUtils.DateTimeLocal2Date("2024-06-01T08:30");
+
+            Assert.IsNotNull(parsed);
+        Assert.AreEqual(DateTimeKind.Unspecified, parsed!.Value.Kind);
+        Assert.AreEqual(new DateTime(2024, 6, 1, 8, 30, 0), parsed.Value);
+    }
+
+    [TestMethod]
+    public void IsDateTimeOffsetStr_DetectsExplicitIsoOffset()
+    {
+        Assert.IsTrue(DateUtils.isDateTimeOffsetStr("2024-06-01T08:30:00-05:00"));
+        Assert.IsTrue(DateUtils.isDateTimeOffsetStr("2024-06-01T13:30:00Z"));
+        Assert.IsFalse(DateUtils.isDateTimeOffsetStr("2024-06-01T08:30"));
+    }
+
+    [TestMethod]
+    public void Str2DateOnlyTest()
         {
             // Case 1: Test with empty input
             string input1 = "";
