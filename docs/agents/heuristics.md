@@ -1,6 +1,6 @@
 # Heuristics for osafw-asp.net-core
 
-Updated: 2026-05-12
+Updated: 2026-05-15
 
 - Prefer adding features via controllers/models over modifying core `fw` unless it’s a cross-cutting concern.
 - For CRUD screens, first try `FwDynamicController` or `FwVueController` with `config.json` before writing bespoke UI.
@@ -30,3 +30,4 @@ Updated: 2026-05-12
 - 2026-05-11: Keep dictionary single-row reads empty-row based, but use `null` for typed single-row reads so missing records cannot masquerade as default DTOs.
 - 2026-05-11: For ParsePage recursion protection, prefer a file-include depth limit over cycle detection so legitimate recursive tree templates can render.
 - 2026-05-12: When reading `appSettings`, load its direct children into `FwConfig` settings; do not introduce an `appSettings` key inside the runtime settings dictionary.
+- 2026-05-15: Do not lowercase or otherwise normalize complete encoded URLs; preserve case-sensitive path/query data and add mixed-case URL/token regression tests for URL helpers.
