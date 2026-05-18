@@ -237,10 +237,13 @@ public class FW : IDisposable
 
         parseForm();
 
-        // save flash to current var and update session as flash is used only for nearest request
+        // Flash is single-use; avoid writing to session on every request so parallel requests cannot overwrite login state.
         FwDict? _flash = SessionDict("_flash");
-        if (_flash != null) G["_flash"] = _flash;
-        SessionDict("_flash", []);
+        if (_flash != null)
+        {
+            G["_flash"] = _flash;
+            SessionRemove("_flash");
+        }
     }
 
     public void initRequest()
@@ -287,6 +290,15 @@ public class FW : IDisposable
     public void Session(string name, string value)
     {
         session?.SetString(name, value);
+    }
+
+    /// <summary>
+    /// Remove a single session key without rewriting unrelated session data.
+    /// </summary>
+    /// <param name="name">Session key to remove.</param>
+    public void SessionRemove(string name)
+    {
+        session?.Remove(name);
     }
 
     public int? SessionInt(string name)
