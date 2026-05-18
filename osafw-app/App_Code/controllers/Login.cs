@@ -103,6 +103,7 @@ public class LoginController : FwController
                     fw.Session("mfa_login_time", DateUtils.UnixTimestamp().ToString());
                     fw.Session("mfa_login_remember", item["remember"].toStr());
                     fw.Session("mfa_login_gourl", gourl);
+                    fw.Session("mfa_login_timezone", item["timezone"].toStr());
                     fw.redirect(base_url + "/(MFA)");
                 }
 
@@ -110,6 +111,7 @@ public class LoginController : FwController
                 if (fw.config("is_mfa_enforced").toBool())
                 {
                     fw.Session("mfa_login_users_id", user["id"]);
+                    fw.Session("mfa_login_timezone", item["timezone"].toStr());
                     fw.redirect("/My/MFA");
                 }
             }
@@ -191,7 +193,7 @@ public class LoginController : FwController
         }
 
         // mfa ok - login
-        performLogin(users_id, fw.Session("mfa_login_remember"), fw.Session("mfa_login_gourl"));
+        performLogin(users_id, fw.Session("mfa_login_remember"), fw.Session("mfa_login_gourl"), fw.Session("mfa_login_timezone"));
     }
 
     private void performLogin(int users_id, string remember, string gourl, string timezone = "")

@@ -83,6 +83,14 @@ public static class FwExtensions
                     : Guid.Empty;
             }
         }
+        else if (targetType == typeof(DateTime) && value is DateTimeOffset dto)
+        {
+            convertedValue = dto.UtcDateTime;
+        }
+        else if (targetType == typeof(DateTimeOffset) && value is DateTime dt)
+        {
+            convertedValue = new DateTimeOffset(dt.Kind == DateTimeKind.Unspecified ? DateTime.SpecifyKind(dt, DateTimeKind.Utc) : dt.ToUniversalTime());
+        }
         else
         {
             convertedValue = Convert.ChangeType(value, targetType);

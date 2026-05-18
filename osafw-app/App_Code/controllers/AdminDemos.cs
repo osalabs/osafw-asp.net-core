@@ -22,12 +22,12 @@ public class AdminDemosController : FwAdminController
 
         base_url = "/Admin/Demos";
         required_fields = "iname";
-        save_fields = "parent_id demo_dicts_id iname idesc email fint ffloat fcombo fradio fyesno fdate_pop fdatetime att_id status";
+        save_fields = "parent_id demo_dicts_id iname idesc email fint ffloat fcombo fradio fyesno fdate_pop fdatetime fdatetime_utc fdatetime_offset fdatetime_local att_id status";
         save_fields_checkboxes = "is_checkbox|0";
 
         search_fields = "iname idesc";
         list_sortdef = "iname asc";
-        list_sortmap = Utils.qh("id|id iname|iname add_time|add_time demo_dicts_id|demo_dicts_id email|email status|status");
+        list_sortmap = Utils.qh("id|id iname|iname add_time|add_time demo_dicts_id|demo_dicts_id email|email fdatetime_utc|fdatetime_utc fdatetime_offset|fdatetime_offset fdatetime_local|fdatetime_local status|status");
 
         related_field_name = "demo_dicts_id";
         model_related = fw.model<DemoDicts>();

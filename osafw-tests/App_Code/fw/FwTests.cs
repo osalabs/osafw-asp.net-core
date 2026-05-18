@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -50,6 +51,23 @@ namespace osafw.Tests
         }
 
         [TestMethod]
+        public void FormatUserDateTime_AcceptsDateTimeOffset()
+        {
+            var context = new DefaultHttpContext
+            {
+                Session = new FakeSession(),
+            };
+            var configuration = new ConfigurationBuilder().Build();
+
+            var fw = new FW(context, configuration);
+            var dto = new System.DateTimeOffset(2024, 1, 1, 15, 0, 0, System.TimeSpan.FromHours(3));
+
+            var formatted = fw.formatUserDateTime(dto, true);
+
+            Assert.AreEqual("2024-01-01T12:00:00+00:00", formatted);
+        }
+
+        [TestMethod]
         public void FormatUserDateTime_HonorsUserFormatsAndSqlInput()
         {
             var context = new DefaultHttpContext
@@ -82,6 +100,36 @@ namespace osafw.Tests
 
             Assert.IsTrue(fw.isLogged);
             Assert.AreEqual(9, fw.userId);
+        }
+
+        [TestMethod]
+        public void Constructor_DoesNotCreateFlashSessionKeyWhenFlashIsMissing()
+        {
+            var context = new DefaultHttpContext
+            {
+                Session = new FakeSession(),
+            };
+            var configuration = new ConfigurationBuilder().Build();
+
+            _ = new FW(context, configuration);
+
+            Assert.IsFalse(context.Session.Keys.Contains("_flash"));
+        }
+
+        [TestMethod]
+        public void Constructor_ConsumesExistingFlashSessionKeyOnce()
+        {
+            var context = new DefaultHttpContext
+            {
+                Session = new FakeSession(),
+            };
+            var configuration = new ConfigurationBuilder().Build();
+            context.Session.SetString("_flash", Utils.serialize(new FwDict { ["notice"] = "saved" }));
+
+            var fw = new FW(context, configuration);
+
+            Assert.AreEqual("saved", (fw.G["_flash"] as FwDict)?["notice"]);
+            Assert.IsFalse(context.Session.Keys.Contains("_flash"));
         }
 
         [TestMethod]

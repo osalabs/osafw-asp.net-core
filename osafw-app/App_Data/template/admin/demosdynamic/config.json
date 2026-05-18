@@ -1,7 +1,7 @@
 {
     "model": "Demos",
     "required_fields": "",
-    "###save_fields": "parent_id demo_dicts_id iname idesc email fint ffloat fcombo fradio fyesno fdate_pop fdatetime ftime att_id status dict_link_auto_id dict_link_multi fdate_combo",
+    "###save_fields": "parent_id demo_dicts_id iname idesc email fint ffloat fcombo fradio fyesno fdate_pop fdatetime fdatetime_utc fdatetime_offset fdatetime_local ftime att_id status dict_link_auto_id dict_link_multi fdate_combo",
     "###save_fields_checkboxes": "is_checkbox|0",
 
     "save_fields": [
@@ -17,6 +17,9 @@
         "fyesno",
         "fdate_pop",
         "fdatetime",
+        "fdatetime_utc",
+        "fdatetime_offset",
+        "fdatetime_local",
         "ftime",
         "att_id",
         "status",
@@ -40,7 +43,7 @@
 
     "is_dynamic_index": true,
     "list_view": "(select d.*, dd.iname as demo_dicts_iname, FORMAT(d.fdate_pop, 'MM/dd/yyyy') as fdate_pop_str from demos d LEFT OUTER JOIN demo_dicts dd ON dd.id=d.demo_dicts_id) t",
-    "view_list_defaults": "demo_dicts_iname iname email add_time status",
+    "view_list_defaults": "demo_dicts_iname iname email fdatetime_utc fdatetime_local add_time status",
     "###view_list_map": "demo_dicts_iname|DemoDicts iname|Title email|Email add_time|Added&nbsp;on status|Status id|id",
     "view_list_map": {
         "demo_dicts_iname": "DemoDicts",
@@ -52,6 +55,9 @@
         "fdate_pop_str": "Date popup Formatted",
         "fdate_pop": "Date popup",
         "fdatetime": "Date and time",
+        "fdatetime_utc": "UTC datetime",
+        "fdatetime_offset": "Offset datetime",
+        "fdatetime_local": "Browser local",
         "id": "id"
     },
     "view_list_custom": "iname status demo_dicts_iname",
@@ -229,6 +235,21 @@
         {
             "field": "fdatetime",
             "label": "Date and Time",
+            "type": "date_long"
+        },
+        {
+            "field": "fdatetime_utc",
+            "label": "UTC datetime",
+            "type": "date_long"
+        },
+        {
+            "field": "fdatetime_offset",
+            "label": "Offset datetime",
+            "type": "date_long"
+        },
+        {
+            "field": "fdatetime_local",
+            "label": "Browser datetime-local",
             "type": "date_long"
         },
         {
@@ -566,6 +587,26 @@
             "label": "Date and Time",
             "type": "datetime_popup",
             "default_time": "now",
+            "class_contents": "col-md-5"
+        },
+        {
+            "field": "fdatetime_utc",
+            "label": "UTC datetime",
+            "type": "datetime_popup",
+            "default_time": "now",
+            "class_contents": "col-md-5"
+        },
+        {
+            "field": "fdatetime_offset",
+            "label": "Offset datetime",
+            "type": "datetime_popup",
+            "default_time": "now",
+            "class_contents": "col-md-5"
+        },
+        {
+            "field": "fdatetime_local",
+            "label": "Browser datetime-local",
+            "type": "datetime_local",
             "class_contents": "col-md-5"
         },
         {

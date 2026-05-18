@@ -89,6 +89,17 @@ public class DevCodeGenTests
     }
 
     [TestMethod]
+    public void BuildRowPropertyType_UsesDateTimeOffsetSubtype()
+    {
+        var field = Field("event_time", "datetime", 0, isNullable: true);
+        field["fw_subtype"] = "datetimeoffset";
+
+        var result = InvokeBuildRowPropertyType(field);
+
+        Assert.AreEqual("DateTimeOffset?", result);
+    }
+
+    [TestMethod]
     public void AddToFormColumns_PlacesWideTextInPrimaryColumn()
     {
         var showFieldsTabs = new Dictionary<string, List<List<FwDict>>>();
@@ -347,6 +358,14 @@ public class DevCodeGenTests
             modifiers: null)
             ?? throw new InvalidOperationException("DevCodeGen constructor was not found.");
         return ctor.Invoke(new object?[] { fw, fw.db });
+    }
+
+    private static string InvokeBuildRowPropertyType(IDictionary field)
+    {
+        var method = CodeGenType.GetMethod("buildRowPropertyType", BindingFlags.Static | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("DevCodeGen.buildRowPropertyType was not found.");
+
+        return method.Invoke(null, new object?[] { field }).toStr();
     }
 
     private static FwList TenGeneratedFields()

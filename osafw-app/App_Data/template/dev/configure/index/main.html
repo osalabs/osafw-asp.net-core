@@ -42,6 +42,16 @@
             </td>
         </tr>
         <tr>
+            <td>DB timezone</td>
+            <td><~ok if="is_db_tz"><~fail unless="is_db_tz"></td>
+            <td>
+                Resolved DB timezone: <b><~db_timezone_id default="-"></b><br>
+                <~failmsg_db_tz unless="is_db_tz" inline>
+                    Set <code>appSettings.db.main.timezone</code> in <code>appsettings.json</code> when autodetection cannot resolve the intended Windows timezone id.
+                </~failmsg_db_tz>
+            </td>
+        </tr>
+        <tr>
             <td>DB tables exists</td>
             <td><~ok if="is_db_tables"><~fail unless="is_db_tables"></td>
             <td>

@@ -19,6 +19,8 @@ Status: Accepted
   - For display: `fw.formatUserDateTime(value)` converts internal UTC values to the user's timezone/format, but leaves date-only values on the same calendar day.
   - For saving user input: models convert `datetime` fields to UTC inside `FwModel.convertUserInput(item)`, parsing strings with the user's formats/timezone and normalizing `date` strings.
   - Dynamic `date`/`date_popup`/`date_combo` inputs are normalized to SQL `YYYY-MM-DD` so date-only fields stay calendar-stable even when backed by a `datetime` column.
+- Field names ending in `_utc` explicitly declare UTC instant storage. The DB helper does not apply database timezone conversion to those fields.
+- SQL Server `datetimeoffset` is supported as an offset-aware instant. Untyped framework rows/scalars normalize it into the existing UTC display pipeline, while typed DTOs may use `DateTimeOffset`.
 
 ## Rationale
 - Removes ambiguity in date parsing.
@@ -29,10 +31,11 @@ Status: Accepted
 - DB values are normalized to UTC by `DB`; all UI/API output should convert to the user's timezone where appropriate.
 - SQL `date` values and other explicit date-only inputs are treated as calendar values rather than instants in time.
 - Models convert user `datetime` input to UTC before saving, and controllers should use `fw.formatUserDateTime` for presentation.
+- Use `_utc` field names or `datetimeoffset` for fields that are already instants and should not be interpreted as database-local wall time.
 - Timezone IDs must be valid Windows time zone IDs; invalid IDs are logged and fallback preserves the original `DateTime`.
 
 ## Alternatives Considered
-- Storing `DateTimeOffset` in DB: increases complexity of schema/driver support and does not address user formatting preferences directly.
+- Making `DateTimeOffset` the default timestamp type: still rejected because most existing schemas and UI flows use `datetime2` plus user formatting preferences. Targeted `datetimeoffset` support is accepted for fields that need offset-aware instants.
 - Using server-local time: brittle and environment-dependent; complicates multi-region scenarios.
 
 ## References

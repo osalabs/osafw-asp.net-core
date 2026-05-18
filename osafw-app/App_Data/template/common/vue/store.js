@@ -116,7 +116,7 @@ let state = {
     pager: [], // array of { pagenum:N, pagenum_show:N, is_cur_page:0|1, is_show_first:0|1, is_show_prev:0|1, is_show_next:0|1, pagenum_next:N}
 
     // edit form fields configuration
-    list_editable_def_types: ['input', 'email', 'number', 'textarea', 'date_combo', 'date_popup', 'datetime_popup', 'time', 'autocomplete', 'select', 'cb', 'radio', 'yesno'],
+    list_editable_def_types: ['input', 'email', 'number', 'textarea', 'date_combo', 'date_popup', 'datetime_popup', 'datetime_local', 'time', 'autocomplete', 'select', 'cb', 'radio', 'yesno'],
     form_tabs: [],
     show_fields: [],
     show_fields_tabs: {},

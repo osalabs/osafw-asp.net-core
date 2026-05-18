@@ -1071,6 +1071,12 @@ public class ParsePage
                                 dformat = DATE_FORMAT_SQL;
                                 break;
                             }
+
+                        case "datetime-local":
+                            {
+                                dformat = "yyyy-MM-ddTHH:mm";
+                                break;
+                            }
                     }
                     DateTime? parsedDate = originalValue as DateTime?;
                     parsedDate ??= DateUtils.SQL2Date(value);

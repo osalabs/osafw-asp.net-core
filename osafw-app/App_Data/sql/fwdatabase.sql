@@ -229,7 +229,7 @@ CREATE TABLE users (
 
   date_format           TINYINT NOT NULL DEFAULT 0, -- 0-MM/DD/YYYY, 10-DD/MM/YYYY
   time_format           TINYINT NOT NULL DEFAULT 0, -- 0-12h, 10-24h
-  timezone              NVARCHAR(64) NOT NULL DEFAULT 'UTC', -- see /common/sel/timezone.sel
+  timezone              NVARCHAR(64) NOT NULL DEFAULT '', -- empty means auto; see /common/sel/timezone.sel
 
   idesc                 NVARCHAR(MAX),
   att_id                INT NULL FOREIGN KEY REFERENCES att(id),                -- avatar

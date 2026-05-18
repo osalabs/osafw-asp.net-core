@@ -479,7 +479,7 @@ class DevEntityBuilder
         if (token.Contains('('))
             token = token[..token.IndexOf('(')];
 
-        return Utils.qh("varchar int smallint tinyint decimal date datetime datetime2 bit text currency").ContainsKey(token.ToLower());
+        return Utils.qh("varchar int smallint tinyint decimal date datetime datetime2 datetimeoffset bit text currency").ContainsKey(token.ToLower());
     }
 
     // parse data type and length:
@@ -572,6 +572,7 @@ class DevEntityBuilder
                 break;
             case "datetime":
             case "datetime2":
+            case "datetimeoffset":
                 field["fw_type"] = "datetime";
                 field["fw_subtype"] = token.ToLower();
                 // Dates are nullable by default if not specified

@@ -42,7 +42,7 @@
                 if (type === 'date_combo') {
                     return AppUtils.formatDate(v, this.fwStore.global);
                 }
-                if (type === 'datetime' || type === 'datetime_popup' || type === 'added' || type === 'updated') {
+                if (type === 'datetime' || type === 'datetime_popup' || type === 'datetime_local' || type === 'added' || type === 'updated') {
                     return AppUtils.formatDateTime(v, this.fwStore.global);
                 }
                 if (type === 'time') {

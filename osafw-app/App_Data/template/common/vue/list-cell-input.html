@@ -95,6 +95,8 @@
                     number: 'number',
                     date: 'date',
                     date_popup: 'date',
+                    datetime_popup: 'text',
+                    datetime_local: 'datetime-local',
                     password: 'password',
                     textarea: 'text',
                     time: 'time',
@@ -108,6 +110,9 @@
                     const value = this.row[this.col.field_name];
                     if (this.inputType === 'time') {
                         return AppUtils.formatTime(value);
+                    }
+                    if (this.inputType === 'datetime-local') {
+                        return AppUtils.formatDateTimeLocalInput(value);
                     }
                     return value;
                 },

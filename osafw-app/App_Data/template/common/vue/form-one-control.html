@@ -256,10 +256,10 @@
         <form-control-help-block :text="def.help_text" />
     </template>
 
-    <template v-else-if="['input','email','number','date_popup'].includes(def.type)">
+    <template v-else-if="['input','email','number','date_popup','datetime_popup','datetime_local'].includes(def.type)">
         <input class="form-control"
                :type="inputType"
-               v-model="value"
+               v-model="inputValue"
                :class="class_control+(is_invalid?' is-invalid':'')"
                :maxlength="def.maxlength"
                :required="def.required"
@@ -404,6 +404,14 @@
                     this.$emit('update-form-field', { field: this.def.field, value: new_value });
                 }
             },
+            inputValue: {
+                get() {
+                    return this.def.type === 'datetime_local' ? AppUtils.formatDateTimeLocalInput(this.value) : this.value;
+                },
+                set(new_value) {
+                    this.value = new_value;
+                }
+            },
             value_autocomplete: {
                 get() {
                     if (this.def.lookup_by_value) {
@@ -472,6 +480,8 @@
                     number: 'number',
                     date: 'date',
                     date_popup: 'date',
+                    datetime_popup: 'text',
+                    datetime_local: 'datetime-local',
                     password: 'password',
                     textarea: 'text'
                 };
@@ -488,6 +498,9 @@
                     const date = AppUtils.userLocale(this.fwStore.global) === 'en-GB' ? 'dd/mm/yyyy' : 'mm/dd/yyyy';
                     const time = AppUtils.is24h(this.fwStore.global) ? 'HH:mm:ss' : 'h:mm:ss AM/PM';
                     return date + ' ' + time;
+                }
+                if (this.def.type === 'datetime_local') {
+                    return 'yyyy-mm-dd hh:mm';
                 }
                 if (this.def.type === 'time') {
                     return AppUtils.is24h(this.fwStore.global) ? 'HH:mm' : 'h:mm AM/PM';

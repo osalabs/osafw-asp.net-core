@@ -591,6 +591,7 @@ Cherry
     - `<~tag date="short">` - output as "m/d/yyyy hh:mm" - date and time short (to minutes)
     - `<~tag date="long">` - output as "m/d/yyyy hh:mm:ss" - date and time long
     - `<~tag date="sql">` - output as "yyyy-mm-dd hh:mm:ss" - sql standard date and time
+    - `<~tag date="datetime-local">` - output as "yyyy-MM-ddTHH:mm" for native browser datetime-local inputs
   - When ParsePage is created from `FW`, date formatting uses the current user's date/time formats and `OutputTimezone = fw.userTimezone`.
   - Date-only inputs keep their original calendar day. This applies to SQL `YYYY-MM-DD` values, explicit user-format dates, and date-only `DateTime` values.
   - Real datetimes are still timezone-converted before formatting, so midnight `datetime` values can legitimately move to the previous or next day for another user timezone.

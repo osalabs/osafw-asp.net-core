@@ -1353,7 +1353,7 @@ public abstract class FwController
                 //if field is exactly DATE - show only date part without time and format per user settings
                 result[fieldname] = "date";
             }
-            else if (fw_type == "datetime")
+            else if (fw_type == "datetime" || fw_type == "datetimeoffset")
             {
                 // if fields is date and time - we'll format it as date and time per user settings
                 result[fieldname] = "datetime";

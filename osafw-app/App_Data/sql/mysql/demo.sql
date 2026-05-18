@@ -51,6 +51,9 @@ CREATE TABLE demos (
   fdate_combo           DATE,                             /*date field with 3 combos editing*/
   fdate_pop             DATE,                             /*date field with popup editing*/
   fdatetime             DATETIME,                         /*date+time field*/
+  fdatetime_utc         DATETIME,                         /*UTC instant marked by _utc suffix*/
+  fdatetime_offset      DATETIME,                         /*SQL Server datetimeoffset compatibility field*/
+  fdatetime_local       DATETIME,                         /*browser datetime-local input demo*/
   ftime                 INT NOT NULL DEFAULT 0,  /*time field - we always store time as seconds from start of the day [0-86400]*/
 
   att_id                INT NULL,                /*optional attached image*/

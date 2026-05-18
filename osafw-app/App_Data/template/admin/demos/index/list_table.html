@@ -10,6 +10,8 @@
             <th data-sort="demo_dicts_id">`DemoDicts`</th>
             <th data-sort="iname">`Title`</th>
             <th data-sort="email">`Email`</th>
+            <th data-sort="fdatetime_utc">`UTC datetime`</th>
+            <th data-sort="fdatetime_local">`Browser local`</th>
             <th data-sort="add_time">`Added on`</th>
             <th data-sort="status">`Status`</th>
             <th></th>
@@ -22,6 +24,8 @@
             <td><~demo_dicts[iname]></td>
             <td><a href="<~../url>/<~id><~/common/list/relidq>"><~iname></a></td>
             <td><~email></td>
+            <td><~fdatetime_utc date="short"></td>
+            <td><~fdatetime_local date="short"></td>
             <td><~add_time date="long"></td>
             <td><~/common/list/col_status_badge></td>
             <td class="text-nowrap d-print-none text-end">
