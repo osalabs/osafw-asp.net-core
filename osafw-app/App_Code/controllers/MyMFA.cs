@@ -87,8 +87,10 @@ public class MyMFAController : FwController
         //if we here from initial login - also log user in
         if (fw.userId == 0)
         {
+            var timezone = fw.Session("mfa_login_timezone");
             fw.Session("mfa_login_users_id", "");
-            model.doLogin(user_id);
+            fw.Session("mfa_login_timezone", "");
+            model.doLogin(user_id, timezone);
         }
 
         return new FwDict()

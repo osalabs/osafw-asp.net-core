@@ -57,10 +57,17 @@ public class MySettingsController : FwController
 
         var item = reqh("item");
         var id = fw.userId;
+        var selectedTimezone = item["timezone"].toStr().Trim();
+        var detectedTimezone = item["timezone_auto"].toStr().Trim();
+        item["timezone"] = selectedTimezone;
+        // Empty timezone means "auto"; use the browser-detected zone for the active session only.
+        var effectiveTimezone = !string.IsNullOrEmpty(selectedTimezone)
+            ? selectedTimezone
+            : !string.IsNullOrEmpty(detectedTimezone) ? detectedTimezone : fw.userTimezone;
         var isDateTimePrefsChanged =
             item["date_format"].toInt(fw.userDateFormat) != fw.userDateFormat
             || item["time_format"].toInt(fw.userTimeFormat) != fw.userTimeFormat
-            || item["timezone"].toStr(fw.userTimezone) != fw.userTimezone;
+            || effectiveTimezone != fw.userTimezone;
 
         Validate(id, item);
         // load old record if necessary
@@ -71,6 +78,8 @@ public class MySettingsController : FwController
         model.update(id, itemdb);
 
         model.reloadSession(is_clear: isDateTimePrefsChanged);
+        if (string.IsNullOrEmpty(selectedTimezone))
+            fw.Session("timezone", effectiveTimezone);
         fw.flash("record_updated", 1);
 
         afterSave(true, id);

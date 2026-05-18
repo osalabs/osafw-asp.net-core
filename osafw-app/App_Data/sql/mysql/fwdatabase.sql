@@ -105,7 +105,7 @@ CREATE TABLE users (
 
   date_format           TINYINT NOT NULL DEFAULT 0, -- 0-MM/DD/YYYY, 10-DD/MM/YYYY
   time_format           TINYINT NOT NULL DEFAULT 0, -- 0-12h, 10-24h
-  timezone              VARCHAR(64) NOT NULL DEFAULT 'UTC', -- see /common/sel/timezone.sel
+  timezone              VARCHAR(64) NOT NULL DEFAULT '', -- empty means auto; see /common/sel/timezone.sel
 
   idesc                 TEXT,
   att_id                INT NULL,                -- avatar
