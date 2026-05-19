@@ -671,14 +671,19 @@ These help keep your templates DRY and consistent. Below are the most important 
 #### JavaScript Components and CSS Includes
 - **ajaxform.html**: Includes jQuery Form plugin. Usage: `<~/common/ajaxform>`
 - **att.html**: Includes attachment selection modal. Usage: `<~/common/att>`
-- **autocomplete.html**: Includes Bootstrap Simple Autocomplete JS. Usage: `<~/common/autocomplete>`
-- **modal.html**: Adds `.on-fw-modal` remote modal triggers and `.on-fw-modal-link` same-modal link loading. Usage: `<~/common/modal>`
+- **autocomplete.html**: Includes Bootstrap Simple Autocomplete JS through `fw.initComponent` so repeated includes share one loaded asset. Usage: `<~/common/autocomplete>`
+- **bootstrap_select.html**: Includes bootstrap-select JS/CSS through `fw.initComponent`, initializes `select.selectpicker`, and preserves autosave/list-filter behavior. Usage: `<~/common/bootstrap_select>`
+- **modal.html**: Adds `.on-fw-modal` remote modal triggers, `.on-fw-modal-link` same-modal link loading, and lookup add/edit helpers. Usage: `<~/common/modal>`
 - **select2.html**: Includes Select2 JS/CSS and related helpers for styled selects. Initializes on all `.select2` elements. Usage: `<~/common/select2>`
 - **calendar.html**: Includes Bootstrap Datepicker JS/CSS and datepicker initialization on all `.date` elements. Usage: `<~/common/calendar>`
 - **html_editor.html**: Includes HTML editor (TinyMCE) JS/CSS and initialize it on all `.fw-html-editor` elements. Usage: `<~/common/html_editor>`
-- **markdown_editor.html**: Includes Markdown editor JS/CSS and initializes it on all `textarea.markdown` elements. Usage: `<~/common/markdown_editor>`
+- **markdown_editor.html**: Includes Markdown editor JS/CSS and initializes it on all `textarea.markdown` elements. Markdown edits use the same autosave timing as plain textareas: 30 seconds after typing stops or on blur. Usage: `<~/common/markdown_editor>`
 - **sortable.html**: Includes jQuery UI Sortable JS and initializes on `.fw-sortable` elements. Usage: `<~/common/sortable>`
 - **uploader.html**: Includes File Upload JS/CSS. Usage: `<~/common/uploader>`
+
+`modal.html` lookup saves update the target select/input, dispatch a bubbling `fw-lookup-saved` event from the target, then dispatch the usual bubbling `change` event for compatibility. `event.detail` contains `mode`, `id`, `value`, `label`, `data`, `option`, `target`, `trigger`, `modal`, and `form`.
+
+Remote modal content can namespace duplicate DOM IDs. Generic modal triggers opt in with `data-fw-modal-namespace-ids="1"`; lookup add/edit modals namespace IDs by default and can opt out with `data-fw-modal-namespace-ids="0"`. Namespaced elements keep `data-fw-original-id`; add `data-fw-keep-id="1"` to preserve an ID. Modal scripts that run with namespacing should use scoped selectors such as `$(fw.scopeFromScript()).find(...)`.
 
 #### Select/Option List Templates (`/common/sel`)
 - **sel/access_level.sel**: List of access levels for user roles. Usage: `<select><~/common/sel/access_level.sel select="access_level"></select>`.

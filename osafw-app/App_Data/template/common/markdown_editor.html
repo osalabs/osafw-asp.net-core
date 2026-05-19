@@ -1,4 +1,5 @@
- <!--
+<!-- component usage: include common/markdown_editor and add class="markdown" to textarea controls. -->
+<!--
   Documentation is here:
   https://www.jqueryscript.net/text/Easy-WYSIWYG-Markdown-Rditor-For-Bootstrap-Bootstrap-Markdown.html
 -->
@@ -266,8 +267,8 @@
                         e.setSelection(cursor, cursor + chunk.length);
                       }, 100);
 
-                      //handle autosave
-                      if (!e.$element.is('[data-noautosave]')) e.$element.closest('form[data-autosave]').trigger('change');
+                      //handle autosave through the same input path as a plain textarea
+                      if (!e.$element.is('[data-noautosave]')) e.$element.trigger('input');
                     });
                   }//end callback
                 }, {
@@ -303,8 +304,13 @@
 
                 if (e.$element.data('md-save-content') !== e.getContent()) {
                   e.$element.data('md-save-content', e.getContent());
-                  e.$element.closest('form[data-autosave]').trigger('change');
+                  e.$element.trigger('input');
                 }
+              }
+            },
+            onBlur: function (e) {
+              if (!e.$element.is('[data-noautosave]')) {
+                e.$element.trigger('blur');
               }
             }
             // ,onPreview: function(e) {

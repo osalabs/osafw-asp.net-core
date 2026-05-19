@@ -772,6 +772,17 @@ Developer-generated and virtual controllers build a two-column `show_fields` / `
 }
 ```
 
+Lookup modal saves update the source control, select the saved value, emit a bubbling `fw-lookup-saved` event from the target control, and then emit the normal `change` event for compatibility. Use the custom event when screen-specific JavaScript needs the saved lookup details:
+
+```js
+document.addEventListener('fw-lookup-saved', function (e) {
+  if (e.target.name !== 'item[demo_dicts_id]') return;
+  console.log(e.detail.id, e.detail.label, e.detail.mode);
+});
+```
+
+Lookup add/edit modals namespace loaded content IDs by default to avoid duplicate DOM IDs when a modal form has fields with the same IDs as the parent page. Set `data-fw-modal-namespace-ids="0"` on the modal trigger only for legacy modal content that still depends on global `#id` selectors. New modal scripts should use scoped selectors such as `$(fw.scopeFromScript()).find('[name="item[iname]"]')`.
+
 #### type: input
 - Template: `/common/form/showform/input.html`.
 - Options: `maxlength`, `placeholder`, `required`, `validate` (`exists`, `isemail`, `isphone`, `isdate`, `isfloat`), `class_control`, `attrs_control`, `prepend`/`append` input-group buttons.
