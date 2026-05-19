@@ -613,6 +613,24 @@
                     </select>
                   </div>
                 </div>
+                <div class="row form-row">
+                  <label class="col-form-label col-md-3" for="sampleRange">Priority</label>
+                  <div class="col">
+                    <div class="d-flex align-items-center gap-3">
+                      <input id="sampleRange" class="form-range flex-grow-1" type="range" min="0" max="100" step="5" value="65" oninput="this.parentElement.querySelector('output').value=this.value">
+                      <output class="badge text-bg-secondary" for="sampleRange">65</output>
+                    </div>
+                  </div>
+                </div>
+                <div class="row form-row">
+                  <label class="col-form-label col-md-3" for="sampleSwitch">Enabled</label>
+                  <div class="col">
+                    <div class="form-check form-switch fw-switch-control mb-1">
+                      <input id="sampleSwitch" class="form-check-input" type="checkbox" role="switch" checked>
+                      <label class="form-check-label" for="sampleSwitch">On</label>
+                    </div>
+                  </div>
+                </div>
                 <div class="fw-fieldset">
                   <div class="fw-fieldset-legend" role="button" tabindex="0">Advanced</div>
                   <div class="row form-row">

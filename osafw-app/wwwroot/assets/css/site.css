@@ -1025,10 +1025,29 @@ table.list-edit.table-dense tbody td > div.ro {
 }
 
 .cell-success-fade,
-.cell-success-fade input,
+.cell-success-fade input:not([role="switch"]),
 .cell-success-fade select,
 .cell-success-fade textarea {
   animation: fadeOutBackground 2s forwards;
+}
+
+.fw-switch-control {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: calc(1.5em + 0.75rem + 2px);
+  padding-left: 0;
+}
+
+.fw-switch-control .form-check-input {
+  flex: 0 0 auto;
+  float: none;
+  margin-top: 0;
+  margin-left: 0;
+}
+
+.fw-switch-control .form-check-label {
+  line-height: 1.5;
 }
 
 @keyframes fadeOutBackground {

@@ -851,6 +851,9 @@ public class FwDynamicController : FwController
             string dtype = def["type"].toStr();
             string field = def["field"].toStr();
 
+            if (dtype == "range" || dtype == "switch")
+                def["disabled"] = true;
+
             if (DEF_TYPES_STRUCTURE.Contains(dtype))
                 // structural tags
                 def["is_structure"] = true;

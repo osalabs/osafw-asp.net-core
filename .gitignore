@@ -2,6 +2,10 @@
 /osafw-app/obj
 /osafw-app/bin
 *.log
+*.code-workspace
+*.csproj.user
+*.sublime-project
+*.sublime-workspace
 /osafw-app/upload/*
 !/osafw-app/upload/.gitkeep
 /osafw-tests/obj

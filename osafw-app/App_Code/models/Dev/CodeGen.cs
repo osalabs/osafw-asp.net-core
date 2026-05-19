@@ -1763,6 +1763,13 @@ END" + Environment.NewLine;
                         break;
                     }
 
+                case "switch":
+                    {
+                        def["value"] = tag + ">";
+                        def["checked_attr"] = "<~/common/attr/checked if=\"i[" + def["field"].toStr() + "]\">";
+                        break;
+                    }
+
                 default:
                     {
                         def["value"] = tag + ">";

@@ -57,6 +57,15 @@
     <p class="form-control-plaintext"><~i[ffloat] number_format="2"></p>
   </div>
 </div>
+<div class="row form-row">
+  <label class="col-form-label col-md-3">Range</label>
+  <div class="col">
+    <div class="d-flex align-items-center gap-3">
+      <input type="range" value="<~i[frange]>" class="form-range flex-grow-1" min="0" max="100" step="5" <~/common/attr/disabled>>
+      <output class="badge text-bg-secondary"><~i[frange]></output>
+    </div>
+  </div>
+</div>
 
 <div class="row form-row">
   <label class="col-form-label col-md-3">DemoDicts Autocomplete</label>
@@ -118,6 +127,15 @@
     <div class="form-check form-check-inline">
       <input type="checkbox" class="form-check-input" <~/common/attr/checked if="i[is_checkbox]"> <~/common/attr/disabled>>
       <label class="form-check-label">Yes</label>
+    </div>
+  </div>
+</div>
+<div class="row form-row">
+  <label class="col-form-label col-md-3">Switch</label>
+  <div class="col d-flex align-items-center">
+    <div class="form-check form-switch fw-switch-control">
+      <input type="checkbox" class="form-check-input" role="switch" <~/common/attr/checked if="i[is_switch]"> <~/common/attr/disabled>>
+      <label class="form-check-label">On</label>
     </div>
   </div>
 </div>

@@ -103,9 +103,9 @@ Developer-generated and virtual controllers build a two-column `show_fields` / `
 
 **Layout helpers**: [row](#type-row) · [col](#type-col) · [col_end](#type-col_end) · [row_end](#type-row_end) · [header](#type-header)
 
-**Show & ShowForm display**: [plaintext](#type-plaintext) · [plaintext_link](#type-plaintext_link) · [plaintext_autocomplete](#type-plaintext_autocomplete) · [plaintext_yesno](#type-plaintext_yesno) · [plaintext_currency](#type-plaintext_currency) · [markdown](#type-markdown) · [noescape](#type-noescape) · [float](#type-float) · [checkbox](#type-checkbox) · [date](#type-date) · [date_long](#type-date_long) · [multi](#type-multi) · [multi_prio](#type-multi_prio) · [att](#type-att) · [att_links](#type-att_links) · [att_files](#type-att_files) · [subtable](#type-subtable) · [added](#type-added) · [updated](#type-updated)
+**Show & ShowForm display**: [plaintext](#type-plaintext) · [plaintext_link](#type-plaintext_link) · [plaintext_autocomplete](#type-plaintext_autocomplete) · [plaintext_yesno](#type-plaintext_yesno) · [plaintext_currency](#type-plaintext_currency) · [markdown](#type-markdown) · [noescape](#type-noescape) · [float](#type-float) · [range](#type-range) · [checkbox](#type-checkbox) · [switch](#type-switch) · [date](#type-date) · [date_long](#type-date_long) · [multi](#type-multi) · [multi_prio](#type-multi_prio) · [att](#type-att) · [att_links](#type-att_links) · [att_files](#type-att_files) · [subtable](#type-subtable) · [added](#type-added) · [updated](#type-updated)
 
-**ShowForm inputs only**: [group_id](#type-group_id) · [group_id_addnew](#type-group_id_addnew) · [select](#type-select) · [input](#type-input) · [textarea](#type-textarea) · [email](#type-email) · [number](#type-number) · [password](#type-password) · [currency](#type-currency) · [autocomplete](#type-autocomplete) · [multicb](#type-multicb) · [multicb_prio](#type-multicb_prio) · [radio](#type-radio) · [yesno](#type-yesno) · [cb](#type-cb) · [date_popup](#type-date_popup) · [date_combo](#type-date_combo) · [datetime_popup](#type-datetime_popup) · [datetime_local](#type-datetime_local) · [time](#type-time) · [att_edit](#type-att_edit) · [att_links_edit](#type-att_links_edit) · [att_files_edit](#type-att_files_edit) · [subtable_edit](#type-subtable_edit)
+**ShowForm inputs only**: [group_id](#type-group_id) · [group_id_addnew](#type-group_id_addnew) · [select](#type-select) · [input](#type-input) · [textarea](#type-textarea) · [email](#type-email) · [number](#type-number) · [range](#type-range) · [password](#type-password) · [currency](#type-currency) · [autocomplete](#type-autocomplete) · [multicb](#type-multicb) · [multicb_prio](#type-multicb_prio) · [radio](#type-radio) · [yesno](#type-yesno) · [cb](#type-cb) · [switch](#type-switch) · [date_popup](#type-date_popup) · [date_combo](#type-date_combo) · [datetime_popup](#type-datetime_popup) · [datetime_local](#type-datetime_local) · [time](#type-time) · [att_edit](#type-att_edit) · [att_links_edit](#type-att_links_edit) · [att_files_edit](#type-att_files_edit) · [subtable_edit](#type-subtable_edit)
 
 ### Type details
 
@@ -895,6 +895,35 @@ Lookup add/edit modals namespace loaded content IDs by default to avoid duplicat
 }
 ```
 
+#### type: range
+- Template: `/common/form/showform/range.html`; show/view dispatch uses the same template and disables the control in view contexts.
+- Options: `min`, `max`, `step`, `required`, `class_control`, `attrs_control`, `help_text`.
+- Range uses the standard form content width by default. Leave `class_contents` unset or use `"col"` when the slider should fill the available row.
+- Use for approximate bounded numeric values such as scores, percentages, priorities, and thresholds. Use `number` when the user must type an exact quantity, money amount, id, or precise measurement.
+- Common sample:
+```json
+{
+  "type": "range",
+  "field": "priority_score",
+  "label": "Priority",
+  "min": 0,
+  "max": 100,
+  "step": 5
+}
+```
+- Full sample with helper text:
+```json
+{
+  "type": "range",
+  "field": "confidence",
+  "label": "Confidence",
+  "min": 0,
+  "max": 10,
+  "step": 1,
+  "help_text": "Approximate score; visible value is shown beside the slider"
+}
+```
+
 #### type: password
 - Template: `/common/form/showform/password.html`.
 - Options: `maxlength`, `placeholder`, `required`, `class_control`, `attrs_control`.
@@ -1097,6 +1126,36 @@ Lookup add/edit modals namespace loaded content IDs by default to avoid duplicat
   "label": "Email Opt-in",
   "attrs_control": "data-noautosave=\"true\"",
   "help_text": "Posted as 1 when checked"
+}
+```
+
+#### type: switch
+- Template: `/common/form/showform/switch.html`; show/view dispatch uses the same template and disables the control in view contexts.
+- Options: layout keys, `required`, `class_control`, `attrs_control`, and `help_text`.
+- Save behavior: same as checkbox fields. Add the field to `save_fields_checkboxes` so unchecked switches save the configured default, usually `0`.
+- Use for reversible binary settings. Keep `cb` for list membership or acknowledgement checkboxes, and use `yesno` when the user must make an explicit yes/no choice.
+- Common sample:
+```json
+{
+  "type": "switch",
+  "field": "is_enabled",
+  "label": "Enabled"
+}
+```
+- Full sample with checkbox save default:
+```json
+{
+  "save_fields_checkboxes": {
+    "is_enabled": "0"
+  },
+  "showform_fields": [
+    {
+      "type": "switch",
+      "field": "is_enabled",
+      "label": "Enabled",
+      "help_text": "Posted as 1 when switched on"
+    }
+  ]
 }
 ```
 

@@ -1,8 +1,8 @@
 {
     "model": "Demos",
     "required_fields": "",
-    "###save_fields": "parent_id demo_dicts_id iname idesc email fint ffloat fcombo fradio fyesno fdate_pop fdatetime fdatetime_utc fdatetime_offset fdatetime_local ftime att_id status dict_link_auto_id dict_link_multi fdate_combo",
-    "###save_fields_checkboxes": "is_checkbox|0",
+    "###save_fields": "parent_id demo_dicts_id iname idesc email fint ffloat frange fcombo fradio fyesno fdate_pop fdatetime fdatetime_utc fdatetime_offset fdatetime_local ftime att_id status dict_link_auto_id dict_link_multi fdate_combo",
+    "###save_fields_checkboxes": "is_checkbox|0 is_switch|0",
 
     "save_fields": [
         "parent_id",
@@ -12,6 +12,7 @@
         "email",
         "fint",
         "ffloat",
+        "frange",
         "fcombo",
         "fradio",
         "fyesno",
@@ -28,11 +29,13 @@
         "fdate_combo"
     ],
     "save_fields_checkboxes": {
-        "is_checkbox": "0"
+        "is_checkbox": "0",
+        "is_switch": "0"
     },
 
     "form_new_defaults": {
-        "iname": ""
+        "iname": "",
+        "frange": 50
     },
 
     "search_fields": "!id iname idesc",
@@ -195,6 +198,15 @@
             "type": "row_end"
         },
         {
+            "field": "frange",
+            "label": "Range",
+            "type": "range",
+            "min": 0,
+            "max": 100,
+            "step": 5,
+            "readonly": true
+        },
+        {
             "field": "fcombo",
             "label": "Combo",
             "type": "plaintext",
@@ -216,6 +228,12 @@
             "field": "is_checkbox",
             "label": "Checkbox",
             "type": "checkbox"
+        },
+        {
+            "field": "is_switch",
+            "label": "Switch",
+            "type": "switch",
+            "readonly": true
         },
         {
             "type": "fieldset",
@@ -539,6 +557,16 @@
             "type": "row_end"
         },
         {
+            "field": "frange",
+            "label": "Range",
+            "type": "range",
+            "min": 0,
+            "max": 100,
+            "step": 5,
+            "class_contents": "col",
+            "help_text": "Use for approximate bounded values such as scores or thresholds."
+        },
+        {
             "field": "fcombo",
             "label": "Combo",
             "type": "select",
@@ -565,6 +593,13 @@
             "label": "Checkbox",
             "type": "cb",
             "class_contents": "col d-flex align-items-center"
+        },
+        {
+            "field": "is_switch",
+            "label": "Switch",
+            "type": "switch",
+            "class_contents": "col",
+            "help_text": "Use for reversible binary settings."
         },
         {
             "type": "fieldset",
