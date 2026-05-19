@@ -116,26 +116,6 @@
       };
     }
 
-    function attrValueIsEnabled(value) {
-      if (value == null) return false;
-      value = String(value).toLowerCase();
-      return value === '1' || value === 'true' || value === 'yes';
-    }
-
-    function attrValueIsDisabled(value) {
-      if (value == null) return false;
-      value = String(value).toLowerCase();
-      return value === '0' || value === 'false' || value === 'no';
-    }
-
-    function shouldNamespaceModalIds(trigger, lookup) {
-      var attrValue = trigger.getAttribute('data-fw-modal-namespace-ids');
-      if (attrValueIsEnabled(attrValue)) return true;
-      if (attrValueIsDisabled(attrValue)) return false;
-
-      return !!lookup;
-    }
-
     function buildLookupUrl(trigger, lookup) {
       var url = trigger.getAttribute('data-url') || trigger.getAttribute('href');
       if (!url) return url;
@@ -221,34 +201,11 @@
       });
     }
 
-    function collectRootAndChildren(root, selector) {
-      var nodes = [];
-      if (root.matches && root.matches(selector)) {
-        nodes.push(root);
-      }
-      return nodes.concat(Array.from(root.querySelectorAll(selector)));
-    }
-
-    function namespaceIdReferenceValue(value, idMap) {
-      return value
-        .split(/\s+/)
-        .map(function (id) {
-          return idMap[id] || id;
-        })
-        .join(' ');
-    }
-
-    function namespaceHashReference(value, idMap) {
-      if (!value || value.charAt(0) !== '#') return value;
-      var id = value.slice(1);
-      return idMap[id] ? '#' + idMap[id] : value;
-    }
-
     function namespaceModalContentIds(modal, container) {
       if (!modal || !container || modal.dataset.fwModalNamespaceIds !== '1') return;
 
       var idMap = {};
-      collectRootAndChildren(container, '[id]').forEach(function (el) {
+      Array.from(container.querySelectorAll('[id]')).forEach(function (el) {
         if (el.getAttribute('data-fw-keep-id') === '1') return;
 
         var originalId = el.getAttribute('id');
@@ -263,7 +220,7 @@
       if (!Object.keys(idMap).length) return;
 
       ['for', 'form', 'list'].forEach(function (attrName) {
-        collectRootAndChildren(container, '[' + attrName + ']').forEach(function (el) {
+        Array.from(container.querySelectorAll('[' + attrName + ']')).forEach(function (el) {
           var value = el.getAttribute(attrName);
           if (idMap[value]) {
             el.setAttribute(attrName, idMap[value]);
@@ -272,28 +229,27 @@
       });
 
       ['aria-controls', 'aria-describedby', 'aria-labelledby', 'aria-owns', 'aria-activedescendant'].forEach(function (attrName) {
-        collectRootAndChildren(container, '[' + attrName + ']').forEach(function (el) {
-          el.setAttribute(attrName, namespaceIdReferenceValue(el.getAttribute(attrName) || '', idMap));
+        Array.from(container.querySelectorAll('[' + attrName + ']')).forEach(function (el) {
+          el.setAttribute(attrName, (el.getAttribute(attrName) || '').split(/\s+/).map(function (id) {
+            return idMap[id] || id;
+          }).join(' '));
         });
       });
 
       ['data-bs-target', 'data-target'].forEach(function (attrName) {
-        collectRootAndChildren(container, '[' + attrName + ']').forEach(function (el) {
-          el.setAttribute(attrName, namespaceHashReference(el.getAttribute(attrName), idMap));
+        Array.from(container.querySelectorAll('[' + attrName + ']')).forEach(function (el) {
+          var value = el.getAttribute(attrName);
+          if (value && value.charAt(0) === '#' && idMap[value.slice(1)]) {
+            el.setAttribute(attrName, '#' + idMap[value.slice(1)]);
+          }
         });
       });
 
-      collectRootAndChildren(container, 'a[href^="#"], area[href^="#"]').forEach(function (el) {
-        el.setAttribute('href', namespaceHashReference(el.getAttribute('href'), idMap));
-      });
-    }
-
-    function normalizeModalSubmitButtons(container) {
-      if (!container) return;
-
-      collectRootAndChildren(container, '.on-submit[data-target="modal"]').forEach(function (el) {
-        el.classList.add('on-fw-modal-submit');
-        el.classList.remove('on-submit');
+      Array.from(container.querySelectorAll('a[href^="#"], area[href^="#"]')).forEach(function (el) {
+        var value = el.getAttribute('href');
+        if (value && idMap[value.slice(1)]) {
+          el.setAttribute('href', '#' + idMap[value.slice(1)]);
+        }
       });
     }
 
@@ -302,7 +258,6 @@
       if (!content) return;
       content.innerHTML = html;
       namespaceModalContentIds(modal, content);
-      normalizeModalSubmitButtons(content);
       executeModalScripts(content);
     }
 
@@ -383,40 +338,6 @@
     function getSubmitterOverride(submitter, attrName) {
       if (!submitter || typeof submitter.getAttribute !== 'function') return '';
       return submitter.getAttribute(attrName) || '';
-    }
-
-    function findFormControlByName(form, name) {
-      if (!form || !name) return null;
-      return Array.from(form.elements).find(function (el) {
-        return el.name === name;
-      }) || null;
-    }
-
-    function ensureHiddenFormControl(form, name) {
-      var input = findFormControlByName(form, name);
-      if (input) return input;
-
-      input = document.createElement('input');
-      input.type = 'hidden';
-      input.name = name;
-      form.appendChild(input);
-      return input;
-    }
-
-    function applyOnSubmitButtonState(form, submitter) {
-      if (!form || !submitter) return;
-
-      if (submitter.hasAttribute('data-refresh')) {
-        var refreshInput = findFormControlByName(form, 'refresh');
-        if (refreshInput) {
-          refreshInput.value = '1';
-        }
-      }
-
-      var buttonName = submitter.getAttribute('name');
-      if (buttonName) {
-        ensureHiddenFormControl(form, buttonName).value = submitter.getAttribute('value') || '';
-      }
     }
 
     function resolveModalSubmitForm(modal, submitter) {
@@ -566,39 +487,6 @@
       };
     }
 
-    function refreshEnhancedLookupTarget(target) {
-      if (!window.jQuery || !target) return;
-
-      var $target = jQuery(target);
-      if ($target.hasClass('selectpicker') && jQuery.fn.selectpicker) {
-        $target.selectpicker('refresh');
-      }
-
-      if ($target.data('select2') && jQuery.fn.select2) {
-        $target.trigger('change.select2');
-      }
-    }
-
-    function dispatchLookupSavedEvent(lookup, data, form, modal, option, idValue, label) {
-      if (!lookup || !lookup.target) return;
-
-      lookup.target.dispatchEvent(new CustomEvent('fw-lookup-saved', {
-        bubbles: true,
-        detail: {
-          mode: lookup.mode,
-          id: idValue,
-          value: idValue,
-          label: label,
-          data: data,
-          option: option || null,
-          target: lookup.target,
-          trigger: lookup.trigger || null,
-          modal: modal,
-          form: form
-        }
-      }));
-    }
-
     function updateLookupTarget(lookup, data, form, modal) {
       if (!lookup || !lookup.target || !data || data.id == null || data.id === '') return;
 
@@ -631,8 +519,31 @@
         lookup.target.value = idValue;
       }
 
-      refreshEnhancedLookupTarget(lookup.target);
-      dispatchLookupSavedEvent(lookup, data, form, modal, option, idValue, label);
+      if (window.jQuery) {
+        var $target = jQuery(lookup.target);
+        if ($target.hasClass('selectpicker') && jQuery.fn.selectpicker) {
+          $target.selectpicker('refresh');
+        }
+        if ($target.data('select2') && jQuery.fn.select2) {
+          $target.trigger('change.select2');
+        }
+      }
+
+      lookup.target.dispatchEvent(new CustomEvent('fw-lookup-saved', {
+        bubbles: true,
+        detail: {
+          mode: lookup.mode,
+          id: idValue,
+          value: idValue,
+          label: label,
+          data: data,
+          option: option || null,
+          target: lookup.target,
+          trigger: lookup.trigger || null,
+          modal: modal,
+          form: form
+        }
+      }));
       lookup.target.dispatchEvent(new Event('change', { bubbles: true }));
     }
 
@@ -759,7 +670,29 @@
 
       e.preventDefault();
       e.stopImmediatePropagation();
-      applyOnSubmitButtonState(form, submitter);
+
+      if (submitter.hasAttribute('data-refresh')) {
+        var refreshInput = Array.from(form.elements).find(function (el) {
+          return el.name === 'refresh';
+        });
+        if (refreshInput) {
+          refreshInput.value = '1';
+        }
+      }
+
+      var buttonName = submitter.getAttribute('name');
+      if (buttonName) {
+        var buttonInput = Array.from(form.elements).find(function (el) {
+          return el.name === buttonName;
+        });
+        if (!buttonInput) {
+          buttonInput = document.createElement('input');
+          buttonInput.type = 'hidden';
+          buttonInput.name = buttonName;
+          form.appendChild(buttonInput);
+        }
+        buttonInput.value = submitter.getAttribute('value') || '';
+      }
 
       var lookup = modal._fwLookup || null;
       if (lookup) {
@@ -784,7 +717,10 @@
       if (!url) return;
 
       var modal = buildModal(trigger);
-      modal.dataset.fwModalNamespaceIds = shouldNamespaceModalIds(trigger, lookup) ? '1' : '0';
+      var namespaceAttr = String(trigger.getAttribute('data-fw-modal-namespace-ids') || '').toLowerCase();
+      modal.dataset.fwModalNamespaceIds = namespaceAttr
+        ? (['1', 'true', 'yes'].indexOf(namespaceAttr) >= 0 ? '1' : '0')
+        : (lookup ? '1' : '0');
       if (lookup) {
         modal._fwLookup = lookup;
       }

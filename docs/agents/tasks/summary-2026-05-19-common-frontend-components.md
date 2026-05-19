@@ -3,6 +3,7 @@
 - Updated `common/modal.html` lookup saves to select saved values, refresh enhanced selects, and emit `fw-lookup-saved` before compatibility `change`.
 - Added modal-local `.on-submit` handling so modal footer save buttons use the AJAX lookup/HTML submit path instead of the global full-page submit helper.
 - Added modal ID namespacing support with lookup modals defaulting on and generic modals opt-in.
+- Refactored `common/modal.html` after feedback to inline one-off helpers and remove modal submit normalization that the capture-phase handler made redundant.
 - Changed markdown editor autosave signaling to use textarea `input`/`blur` paths instead of immediate form `change`.
 - Converted `common/autocomplete.html` to `fw.initComponent` asset loading after browser smoke exposed duplicate script loads on dynamic forms.
 - Added `component usage` comments to top-level common frontend includes and updated related docs.
@@ -15,6 +16,7 @@
 ## Commands used / verification
 - `git diff --check` - passed.
 - Inline script syntax extraction with `new Function(...)` for changed common frontend includes - passed.
+- Follow-up modal inline script syntax check after simplification - passed.
 - CRLF byte check for all edited/created files - passed.
 - `dotnet build osafw-app\osafw-app.csproj` - normal output build was blocked by a locked IIS Express debug DLL.
 - `dotnet build osafw-app\osafw-app.csproj -p:OutDir=..\artifacts\assistant_build\` - passed with 0 warnings and 0 errors.
@@ -35,6 +37,7 @@
 - Markdown editor plugin changes previously triggered form `change`, which bypassed the 30-second idle autosave path; it now triggers textarea `input`.
 - Dynamic forms can include autocomplete many times; using `fw.initComponent` keeps the asset load idempotent.
 - Modal save buttons use `.on-submit data-target="modal"`; handling them in capture phase prevents the older global helper from bypassing the modal AJAX submit flow.
+- The first modal implementation had too many shallow one-use helpers; follow-up refactor inlined namespace policy, lookup event dispatch, enhanced select refresh, and button state handling.
 - Lookup custom events fire before compatibility `change` so custom handlers still run when legacy `change` handlers submit or refresh the parent form.
 
 ## Risks / follow-ups
