@@ -2,6 +2,8 @@
 
 The main dashboard renders a collection of *panes*. Each pane is described by a hashtable in the controller and rendered via templates under `osafw-app/App_Data/template/main/index`.
 
+For dashboard card visual rules, theme behavior, icon treatment, and spacing examples, see [design_system.html](design_system.html#components).
+
 ## Built-in Panel Templates
 
 The framework ships with several panel types:

@@ -8,7 +8,8 @@ Feature modules bundle a database table, its model, controller, and templates. Y
 3. **Create the controller** from the same screen. Select the model, provide a target URL/title, and choose controller type (dynamic, Vue, lookup, or API). The generator copies demo templates, rewrites URLs/titles, configures `config.json`, writes the controller class, and adds a menu item.
 4. **Restart the project or apply hot reload**, then navigate to the new controller URL.
 5. **Review and tweak `config.json`** in the generated template folder (see [dynamic controller config](dynamic.md)).
-6. **Prune unused partials/includes** in the generated template folder so only the needed pages and widgets remain.
+6. **Review UI fit** against the [design system](design_system.html) before adding custom CSS; generated screens should usually rely on shared fragments and theme tokens.
+7. **Prune unused partials/includes** in the generated template folder so only the needed pages and widgets remain.
 
 In local development, Home can automatically redirect into the FwUpdates apply flow when pending update scripts exist. Set `appSettings.is_fwupdates_auto_apply` to `false` when you want to review and apply `/Admin/FwUpdates` manually.
 
@@ -37,6 +38,7 @@ If you need full control, replicate what the generators do:
    - Duplicate the matching folder under `osafw-app/App_Data/template/admin/` (for example, `demos` or `demosdynamic`) to a folder named after your controller URL.
    - Replace hardcoded titles/URLs inside `url.html`, `title.html`, and other snippets. Update `config.json` so `save_fields`, list columns, and lookup dropdowns mirror your schema and foreign keys (see [dynamic controller config](dynamic.md)).
    - Prune unused partials or fields in `index/`, `show/`, and `showform/` templates and keep layout hooks (return URLs, list filters, buttons) aligned with your controller logic.
+   - Check [design_system.html](design_system.html) before adding custom styles; prefer shared page headers, `.fw-card`, `.fw-list-card`, list filters, and theme tokens.
 
 5. **Navigation and permissions**
    - Either add a static link to the admin sidebar template or insert/update a `menu_items` row that points to the controller URL and display name so the sidebar shows your module.

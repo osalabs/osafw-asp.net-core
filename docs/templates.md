@@ -166,6 +166,7 @@ Prefer `load_script.html` over large inline `<script>` blocks in `main.html`.
 
 ## Related Docs
 
+- [design_system.html](design_system.html) for visual design tokens, theme behavior, and shared UI component examples.
 - [layout.md](layout.md) for page-shell composition.
 - [dashboard.md](dashboard.md) for dashboard/admin screen structure.
 - [dynamic.md](dynamic.md) for `config.json`-driven screens.

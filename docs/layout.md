@@ -1,117 +1,86 @@
-# Screen layout
+# Screen Layout
 
-This document describes the overall screen layout used by major dashboard, list, view, and edit screens, along with theming guidance and the standard CRUD page header conventions.
+This document describes the structural layout used by dashboard, list, view, and edit screens. For visual rules, theme tokens, colors, spacing, and component examples, use [design_system.html](design_system.html).
 
-## Layout primitives
+## Layout Primitives
 
-The framework organizes pages using a small set of reusable layout primitives. These primitives appear across the major screen types (dashboard, list, view, edit) to keep information density consistent and predictable.
+The framework organizes pages with a small set of reusable primitives so dashboard, CRUD, and generated screens stay predictable.
 
 - **App shell**
-  - Global container that wraps the main navigation, page header, and content area.
-  - Used by all primary screens to ensure navigation and theming are consistent.
-  - Page-level content is typically produced by ParsePage templates under `osafw-app/App_Data/template/<area>/<controller>/` or shared includes under `osafw-app/App_Data/template/common/`.
+  - `layout.html`, `layout_public.html`, and `layout_vue.html` set the document shell, `data-fw-theme`, `data-bs-theme`, sidebar, and main content region.
+  - Shared shell fragments live under `osafw-app/App_Data/template/layout/`.
 - **Page header**
-  - Standardized area for the title, context actions, and breadcrumbs.
-  - CRUD headers are built from the shared partials in:
-    - `osafw-app/App_Data/template/common/form/page_header.html`
-    - `osafw-app/App_Data/template/common/form/page_header_edit.html`
-    - `osafw-app/App_Data/template/common/form/page_header_custom.html`
-    - `osafw-app/App_Data/template/common/list/page_header.html`
-    - `osafw-app/App_Data/template/common/list/page_header_compact.html`
-  - The breadcrumb slot is rendered via `<~/common/form/breadcrumbs>` and `page_header_breadcrumbs` includes.
-  - Vue screens mirror this via `osafw-app/App_Data/template/common/vue/*-header.html`.
+  - Standard area for breadcrumbs, title, record navigation, metadata, and actions.
+  - CRUD headers are built from shared partials under `osafw-app/App_Data/template/common/form/` and `osafw-app/App_Data/template/common/list/`.
+  - Vue screens mirror the same structure through `osafw-app/App_Data/template/common/vue/*-header.html`.
 - **Content region**
-  - Main scrollable area for each screen.
-  - Dashboard screens typically divide this region into panels/cards (example: dashboard cards in `osafw-app/App_Data/template/main/index/std_pane.html`).
-  - List screens emphasize data tables and filters (example: list tables wrap in `.fw-list-card` via `osafw-app/App_Data/template/common/list/form_list.html`).
-  - View/edit screens emphasize details, form fields, and secondary panels (example: `.fw-card` forms in `osafw-app/App_Data/template/**/showform/form.html`).
-- **Panels / cards**
-  - Optional blocks that group related data or controls.
-  - Use `.fw-card` for form and detail panels; list tables use `.fw-list-card`.
-  - Dashboard cards frequently use Bootstrap `.card` styling (see `osafw-app/App_Data/template/main/index/std_pane.html`).
-- **Utility rails**
-  - Optional sidebars for filters, inline help, or related actions.
-  - Keep secondary tasks available without breaking primary reading flow.
-  - List filters are typically rendered via `osafw-app/App_Data/template/common/list/filter_std.html` or `filter_compact.html` and use `.fw-card`.
+  - Dashboard screens use panes/cards from `osafw-app/App_Data/template/main/index/`.
+  - List screens use filters plus `.fw-list-card` table wrappers, especially `common/list/filter_compact.html` and `common/list/form_list.html`.
+  - View/edit screens use `.fw-card`, form rows, fieldsets, tabs, and shared form fragments under `common/form/show/` and `common/form/showform/`.
+- **Panels and cards**
+  - Use `.fw-card` for forms, filters, and detail panels.
+  - Use `.fw-list-card` for list-table wrappers.
+  - Dashboard cards use Bootstrap `.card` plus `.dashboard-card`.
 
-**Major screen layout guidance**
+## Screen Guidance
 
 - **Dashboard screens**
-  - Use cards or panels to display KPIs, charts, and quick actions.
-  - Place overview metrics above supporting detail panels for fast scanning.
+  - Put overview metrics above supporting detail.
+  - Use the dashboard pane templates and visual rules in [design_system.html](design_system.html#components).
 - **List screens**
-  - Lead with filters, search, and bulk actions.
-  - Table or list content should stay within the primary content region to keep headers sticky.
+  - Lead with filters, search, and bulk/list actions.
+  - Keep tables inside the primary content region so sticky headers and horizontal scrolling helpers work.
 - **View screens**
-  - Present key identity fields (title, status, ownership) at the top.
-  - Use panels for related records or recent activity.
+  - Put identity fields, status, and ownership near the top.
+  - Use panels for related records, attachments, or activity.
 - **Edit screens**
-  - Keep the header and primary form fields immediately visible.
-  - Secondary or advanced fields can move into collapsed panels or tabs.
+  - Keep save/cancel actions in shared header/action slots.
+  - Put advanced or secondary fields in fieldsets or tabs instead of adding local spacing one-offs.
 
-## CRUD page header
+## CRUD Page Header
 
-CRUD screens share a standard header structure to make actions and navigation consistent. The shared header templates live under `osafw-app/App_Data/template/common/form/` and `osafw-app/App_Data/template/common/list/`, with Vue equivalents under `osafw-app/App_Data/template/common/vue/`.
-
-**Recommended structure**
+CRUD screens share a standard header structure to make actions and navigation consistent.
 
 1. **Breadcrumbs**
-   - Show the navigation path for list → view/edit transitions.
-   - Uses `<nav class=\"page-header-breadcrumbs\">` markup in `common/form/page_header*.html` and `common/list/page_header*.html`.
-2. **Page title + record context**
-   - Primary title for the entity.
-   - Optional subtitle for identifiers or status.
+   - Show the navigation path for list to view/edit transitions.
+   - Use `common/form/breadcrumbs` and the `page_header_breadcrumbs` slot.
+2. **Page title and record context**
+   - Use one primary page title.
+   - Put counts, record status, or other compact metadata beside the title or in the metadata slot.
 3. **Primary actions**
-   - Save, Create, or Update actions aligned to the right.
-   - Common buttons are injected by shared header includes; additional buttons go into the header action slots.
+   - Keep Save, Add New, Edit, and similar primary actions in the shared action row.
 4. **Secondary actions**
-   - Delete, Archive, or custom workflow actions grouped separately.
-   - Use the custom header slots in `page_header_custom.html` when needed.
+   - Put Delete, Archive, export, or custom workflow actions in the secondary/right action area or in menus.
 
-**Behavior guidelines**
+When adding custom actions, keep them inside shared header slots such as `page_header_actions`, `page_header_actions_right`, or `page_header_custom.html` so screens remain aligned.
 
-- Keep primary actions visually dominant.
-- Use a consistent placement so users can predict where to save or edit.
-- Avoid overcrowding the header; move rarely used actions into menus.
-- When adding custom actions, keep them inside the shared header templates so list/view/edit screens stay aligned.
+## CSS And Theming
 
-## CSS tokens and theming
+Active global styles and theme files live under:
 
-Theming uses CSS tokens to keep layout and color consistent across screens. Use these tokens to avoid hard-coded values and ensure dark/light mode readiness.
+- `osafw-app/wwwroot/assets/css/site.css`
+- `osafw-app/wwwroot/assets/css/theme10.css`
+- `osafw-app/wwwroot/assets/css/theme20.css`
+- `osafw-app/wwwroot/assets/css/theme30.css`
 
-**Where tokens live**
+The load order is Bootstrap CSS, Bootstrap Icons, `site.css`, and then the optional `themeXX.css`. Layout templates include the optional theme through `layout/theme_link.html` when `GLOBAL[ui_theme]` is set.
 
-- Global styles and tokens are defined in `osafw-app/App_Data/template/common/head.css` and theme-specific CSS under `osafw-app/App_Data/template/common/theme*/`.
-- UI primitives such as `.fw-card`, `.fw-list-card`, and `.page-header-breadcrumbs` are styled in these shared stylesheets and reused across templates.
+Use [design_system.html](design_system.html#tokens) for token categories and [design_system.html](design_system.html#customizing) for customization rules. In short:
 
-**Common token categories**
+- Prefer Bootstrap utilities for local layout adjustments.
+- Prefer framework CSS variables for shared color, spacing, sizing, and component behavior.
+- Prefer theme files for branded visual changes.
+- Add selector-specific CSS only when the token layer cannot express the needed behavior.
 
-- **Spacing**: consistent padding, margins, and gaps for layout primitives.
-- **Typography**: font families, sizes, weights for headers vs. body.
-- **Color**: primary accents, neutral backgrounds, borders, and status colors.
-- **Elevation**: shadows or borders for panels and cards.
-
-**Theming guidance**
-
-- Prefer tokens for colors and spacing when styling components.
-- Ensure sufficient contrast for headers, buttons, and data tables.
-- Keep dashboard and CRUD screens visually aligned through shared spacing and typography tokens.
-
-## Extension points
-
-Use these extension points to adapt the layout to new modules or custom features.
+## Extension Points
 
 - **Custom header actions**
-  - Add module-specific actions to the CRUD header secondary actions area.
-  - Use the shared slot templates (`common/form/page_header_custom.html`) so the base header remains consistent.
+  - Add module actions through shared header slots rather than local header markup.
 - **Dashboard widgets**
-  - Insert new panels/cards into the dashboard content region.
-  - Follow the `.card` markup in `osafw-app/App_Data/template/main/index/std_pane.html` for consistent visuals.
+  - Add `type_NAME.html` under `osafw-app/App_Data/template/main/index/` and register it in `std_pane.html`.
 - **List/table enhancements**
-  - Add filters, bulk actions, or column toggles in the list screen utility rail.
-  - Use `common/list/filter_std.html`, `common/list/filter_compact.html`, and `common/list/form_list.html` as the starting point.
+  - Start from `common/list/filter_compact.html`, `common/list/filter_std.html`, and `common/list/form_list.html`.
 - **Detail view panels**
-  - Expand view/edit screens with related-record panels or activity feeds.
-  - Use `.fw-card` panels and the shared view/edit form templates (`**/showform/form.html`) to keep spacing consistent.
+  - Use `.fw-card`, shared form fragments, fieldsets, and tabs before creating local layout structures.
 - **Theme overrides**
-  - Swap token values for branded themes while keeping layout primitives intact.
+  - Override Bootstrap and framework custom properties in a theme file while keeping shared markup intact.
