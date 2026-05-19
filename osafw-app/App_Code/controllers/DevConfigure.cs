@@ -112,6 +112,36 @@ public class DevConfigureController : FwController
         return result;
     }
 
+    /// <summary>
+    /// Drops existing SQL Server foreign-key constraints before replaying full development schema scripts.
+    /// </summary>
+    private void dropExistingForeignKeys()
+    {
+        if (db.dbtype != DB.DBTYPE_SQLSRV)
+            return;
+
+        db.exec($@"
+DECLARE @sql NVARCHAR(MAX) = N'';
+
+SELECT @sql += N'ALTER TABLE '
+    + QUOTENAME(OBJECT_SCHEMA_NAME(parent_object_id))
+    + N'.'
+    + QUOTENAME(OBJECT_NAME(parent_object_id))
+    + N' DROP CONSTRAINT '
+    + QUOTENAME(name)
+    + N';'
+FROM sys.foreign_keys;
+
+IF LEN(@sql) > 0
+    EXEC sp_executesql @sql");
+    }
+
+    /// <summary>
+    /// Initializes a development database from the bundled SQL scripts so a fresh clone can run the demo app.
+    /// </summary>
+    /// <returns>
+    /// Template data containing the generated admin password when one or more SQL statements executed.
+    /// </returns>
     public FwDict InitDBAction()
     {
         if (!fw.config("IS_DEV").toBool())
@@ -119,7 +149,8 @@ public class DevConfigureController : FwController
 
         FwDict ps = [];
         int sql_ctr = 0;
-        string[] files = ["fwdatabase.sql", "database.sql", "lookups.sql", "views.sql"];
+        dropExistingForeignKeys();
+        string[] files = ["fwdatabase.sql", "database.sql", "demo.sql", "lookups.sql", "views.sql"];
         foreach (string file in files)
         {
             var sql_file = fw.config("site_root") + @"\App_Data\sql\" + file;
