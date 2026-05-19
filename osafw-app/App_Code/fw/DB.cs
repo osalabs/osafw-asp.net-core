@@ -521,14 +521,176 @@ public class DB : IDisposable
         return result;
     }
 
-    //split multiple sql statements by:
-    //;+newline
-    //;+newline+GO
-    //newline+GO
+    /// <summary>
+    /// Splits trusted SQL script text into executable statements for interactive/simple script use.
+    /// </summary>
+    /// <param name="sql">
+    /// Trusted SQL script text with simple semicolon terminators or line-only GO separators.
+    /// </param>
+    /// <returns>
+    /// SQL statements in execution order, with empty statements removed.
+    /// </returns>
     public static string[] splitMultiSQL(string sql)
     {
-        sql = Regex.Replace(sql, @"^--\s.*[\r\n]*", "", RegexOptions.Multiline); //first, remove lines starting with '-- ' sql comment
-        return Regex.Split(sql, @";[\n\r]+(?:GO[\n\r]*)?|[\n\r]+GO[\n\r]+");
+        if (string.IsNullOrWhiteSpace(sql))
+            return [];
+
+        sql = Regex.Replace(sql, @"^--\s.*[\r\n]*", "", RegexOptions.Multiline);
+        return Regex.Split(sql, @";[\n\r]+(?:GO[\n\r]*)?|[\n\r]+GO[\n\r]+")
+            .Select(item => item.Trim())
+            .Where(item => item.Length > 0)
+            .ToArray();
+    }
+
+    /// <summary>
+    /// Splits trusted SQL Server script text into executable batches while preserving statement scope.
+    /// </summary>
+    /// <param name="sql">
+    /// Trusted SQL Server script text that may contain variables, control-flow statements, semicolon
+    /// terminators, comments, string literals, and line-only GO batch separators.
+    /// </param>
+    /// <returns>SQL Server batches in execution order, split only at line-only GO separators.</returns>
+    public static string[] splitMultiSQLBatches(string sql)
+    {
+        if (string.IsNullOrWhiteSpace(sql))
+            return [];
+
+        List<string> result = [];
+        StringBuilder current = new();
+        bool inString = false;
+        bool inBracketIdentifier = false;
+        bool inQuotedIdentifier = false;
+        bool inBlockComment = false;
+
+        string[] lines = sql.Split(["\r\n", "\n", "\r"], StringSplitOptions.None);
+        for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
+        {
+            var line = lines[lineIndex];
+            if (!inString
+                && !inBracketIdentifier
+                && !inQuotedIdentifier
+                && !inBlockComment
+                && Regex.IsMatch(line, @"^\s*GO(?:\s*(?:--.*)?)?$", RegexOptions.IgnoreCase))
+            {
+                var batch = current.ToString().Trim();
+                if (batch.Length > 0)
+                    result.Add(batch);
+                current.Clear();
+                continue;
+            }
+
+            current.AppendLine(line);
+            updateSqlBatchState(line, ref inString, ref inBracketIdentifier, ref inQuotedIdentifier, ref inBlockComment);
+        }
+
+        var lastBatch = current.ToString().Trim();
+        if (lastBatch.Length > 0)
+            result.Add(lastBatch);
+        return result.ToArray();
+    }
+
+    /// <summary>
+    /// Splits trusted SQL Server script text for execution while preserving scoped T-SQL batches.
+    /// </summary>
+    /// <param name="sql">
+    /// Trusted SQL Server script text. Line-only <c>GO</c> is the explicit batch separator; simple
+    /// non-scoped batches may also use semicolon-newline separators for legacy compatibility.
+    /// </param>
+    /// <returns>SQL Server commands in execution order.</returns>
+    public static string[] splitMultiSQLForSqlServer(string sql)
+    {
+        if (string.IsNullOrWhiteSpace(sql))
+            return [];
+
+        List<string> result = [];
+        const string moduleDdlPattern =
+            @"\A(?:CREATE\s+(?:OR\s+ALTER\s+)?|ALTER\s+)(?:VIEW|PROC(?:EDURE)?|FUNCTION|TRIGGER)\b";
+        const string scopedBatchPattern =
+            @"(?im)^\s*(DECLARE\s+@|IF\b|ELSE\b|BEGIN\b|WHILE\b|BEGIN\s+TRY\b|BEGIN\s+CATCH\b)";
+
+        foreach (var batch in splitMultiSQLBatches(sql))
+        {
+            var firstStatement = Regex.Replace(
+                batch,
+                @"\A(?:\s|--[^\r\n]*(?:\r?\n|\r)|/\*.*?\*/)*",
+                "",
+                RegexOptions.Singleline);
+
+            var preserveBatch =
+                Regex.IsMatch(firstStatement, moduleDdlPattern, RegexOptions.IgnoreCase)
+                || Regex.IsMatch(batch, scopedBatchPattern);
+
+            if (preserveBatch)
+                result.Add(batch);
+            else
+                result.AddRange(splitMultiSQL(batch));
+        }
+
+        return result.ToArray();
+    }
+
+    /// <summary>
+    /// Updates scanner state for SQL Server batch splitting without treating semicolons as batch boundaries.
+    /// </summary>
+    /// <param name="line">Current script line.</param>
+    /// <param name="inString">Whether scanning is currently inside a single-quoted string literal.</param>
+    /// <param name="inBracketIdentifier">Whether scanning is currently inside a bracket-quoted identifier.</param>
+    /// <param name="inQuotedIdentifier">Whether scanning is currently inside a double-quoted identifier.</param>
+    /// <param name="inBlockComment">Whether scanning is currently inside a block comment.</param>
+    private static void updateSqlBatchState(
+        string line,
+        ref bool inString,
+        ref bool inBracketIdentifier,
+        ref bool inQuotedIdentifier,
+        ref bool inBlockComment)
+    {
+        for (int i = 0; i < line.Length; i++)
+        {
+            char c = line[i];
+            char next = i + 1 < line.Length ? line[i + 1] : '\0';
+
+            if (inBlockComment)
+            {
+                if (c == '*' && next == '/')
+                {
+                    inBlockComment = false;
+                    i++;
+                }
+                continue;
+            }
+
+            char closeChar = inString ? '\'' : inBracketIdentifier ? ']' : inQuotedIdentifier ? '"' : '\0';
+            if (closeChar != '\0')
+            {
+                if (c == closeChar)
+                {
+                    if (next == closeChar)
+                        i++;
+                    else
+                        inString = inBracketIdentifier = inQuotedIdentifier = false;
+                }
+                continue;
+            }
+
+            switch (c)
+            {
+                case '-' when next == '-':
+                    return;
+                case '/' when next == '*':
+                    inBlockComment = true;
+                    i++;
+                    break;
+                case '\'':
+                    inString = true;
+                    break;
+                case '[':
+                    inBracketIdentifier = true;
+                    break;
+                case '"':
+                    inQuotedIdentifier = true;
+                    break;
+            }
+        }
     }
 
     /// <summary>
@@ -1215,7 +1377,7 @@ public class DB : IDisposable
         var result = 0;
 
         //extract separate each sql statement
-        string[] asql = DB.splitMultiSQL(sql);
+        string[] asql = dbtype == DBTYPE_SQLSRV ? DB.splitMultiSQLForSqlServer(sql) : DB.splitMultiSQL(sql);
         foreach (string sqlone1 in asql)
         {
             var sqlone = sqlone1.Trim();

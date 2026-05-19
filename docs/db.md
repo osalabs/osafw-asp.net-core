@@ -157,6 +157,11 @@ DBList list = db.arrayp("SELECT * FROM users WHERE status=@s", DB.h("@s", 0));
 List<string> cols = db.colp("SELECT iname FROM users WHERE status=@s", DB.h("@s", 0));
 ```
 
+### Executing SQL scripts
+`execMultipleSQL(sql)` runs trusted framework scripts such as files under `App_Data/sql/updates`. For SQL Server, line-only `GO` is the explicit batch separator. SQL Server batches containing variables or control-flow statements are kept intact so `DECLARE`, `IF`, `BEGIN`/`END`, and related statements keep their scope. Simple SQL Server batches without scoped T-SQL can still use semicolon-newline separators for compatibility. For other database types, scripts are split on simple semicolon or `GO` boundaries, so keep those scripts straightforward.
+
+Use `GO` on its own line when SQL Server requires a separate batch, such as for `CREATE VIEW`, stored procedures, triggers, or other statements that must be first in a batch. `GO`-delimited view, procedure, function, and trigger bodies are preserved as one command. Keep update scripts straightforward; this helper is a practical script splitter, not a full SQL parser.
+
 ### Transactions
 ```csharp
 db.begin();

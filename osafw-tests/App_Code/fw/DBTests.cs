@@ -812,6 +812,131 @@ namespace osafw.Tests
         }
 
         [TestMethod()]
+        public void splitMultiSQLForSqlServerKeepsBeginEndBlockTogetherTest()
+        {
+            string sql = @"--- user timezone auto preference
+
+IF COL_LENGTH('dbo.users', 'timezone') IS NOT NULL
+BEGIN
+    UPDATE dbo.users
+    SET timezone = ''
+    WHERE timezone = 'UTC';
+
+    DECLARE @timezoneDefaultConstraint sysname;
+
+    SELECT @timezoneDefaultConstraint = dc.name
+    FROM sys.default_constraints dc
+    INNER JOIN sys.columns c ON c.default_object_id = dc.object_id
+    WHERE dc.parent_object_id = OBJECT_ID(N'dbo.users')
+      AND c.name = N'timezone';
+
+    IF @timezoneDefaultConstraint IS NOT NULL
+    BEGIN
+        DECLARE @sql NVARCHAR(MAX);
+        SET @sql = N'ALTER TABLE dbo.users DROP CONSTRAINT ' + QUOTENAME(@timezoneDefaultConstraint);
+        EXEC sp_executesql @sql;
+    END
+
+    ALTER TABLE dbo.users ADD CONSTRAINT DF_users_timezone DEFAULT '' FOR timezone;
+END";
+
+            string[] queries = DB.splitMultiSQLForSqlServer(sql);
+
+            Assert.AreEqual(1, queries.Length);
+            Assert.Contains("UPDATE dbo.users", queries[0]);
+            Assert.Contains("EXEC sp_executesql @sql", queries[0]);
+            Assert.Contains("ALTER TABLE dbo.users ADD CONSTRAINT", queries[0]);
+        }
+
+        [TestMethod()]
+        public void splitMultiSQLForSqlServerSplitsSimpleSemicolonBatchesTest()
+        {
+            string sql = @"DROP VIEW IF EXISTS dbo.AdminControllerList;
+CREATE VIEW dbo.AdminControllerList AS SELECT 1 AS id;
+";
+
+            string[] queries = DB.splitMultiSQLForSqlServer(sql);
+
+            Assert.AreEqual(2, queries.Length);
+            Assert.AreEqual("DROP VIEW IF EXISTS dbo.AdminControllerList", queries[0]);
+            Assert.AreEqual("CREATE VIEW dbo.AdminControllerList AS SELECT 1 AS id;", queries[1]);
+        }
+
+        [TestMethod()]
+        public void splitMultiSQLForSqlServerKeepsModuleDdlBatchTogetherTest()
+        {
+            string sql = @"CREATE PROCEDURE dbo.TestProcedure AS
+SELECT 1 AS first_value;
+SELECT 2 AS second_value;
+GO
+SELECT 3;";
+
+            string[] queries = DB.splitMultiSQLForSqlServer(sql);
+
+            Assert.AreEqual(2, queries.Length);
+            Assert.Contains("CREATE PROCEDURE dbo.TestProcedure", queries[0]);
+            Assert.Contains("SELECT 1 AS first_value;", queries[0]);
+            Assert.Contains("SELECT 2 AS second_value;", queries[0]);
+            Assert.AreEqual("SELECT 3;", queries[1]);
+        }
+
+        [TestMethod()]
+        public void splitMultiSQLBatchesIgnoresGoInsideCommentsAndStringsTest()
+        {
+            string sql = @"SELECT 'GO';
+-- GO
+/*
+GO
+*/
+GO -- batch separator
+SELECT 2;";
+
+            string[] queries = DB.splitMultiSQLBatches(sql);
+
+            Assert.AreEqual(2, queries.Length);
+            Assert.Contains("SELECT 'GO';", queries[0]);
+            Assert.Contains("-- GO", queries[0]);
+            Assert.Contains("/*", queries[0]);
+            Assert.AreEqual("SELECT 2;", queries[1]);
+        }
+
+        [TestMethod()]
+        public void splitMultiSQLForSqlServerKeepsIfElseBranchesTogetherTest()
+        {
+            string sql = @"IF 1 = 1
+    UPDATE dbo.users SET timezone = '';
+ELSE
+    UPDATE dbo.users SET timezone = 'UTC';
+SELECT 2;";
+
+            string[] queries = DB.splitMultiSQLForSqlServer(sql);
+
+            Assert.AreEqual(1, queries.Length);
+            Assert.Contains("ELSE", queries[0]);
+            Assert.Contains("timezone = 'UTC'", queries[0]);
+            Assert.Contains("SELECT 2;", queries[0]);
+        }
+
+        [TestMethod()]
+        public void splitMultiSQLForSqlServerKeepsSqlServerVariablesInOneBatchTest()
+        {
+            string sql = @"DECLARE @ConstraintName nvarchar(256);
+SELECT @ConstraintName = 'DF_users_timezone';
+IF @ConstraintName IS NOT NULL
+    EXEC('ALTER TABLE users DROP CONSTRAINT ' + @ConstraintName);
+GO
+SELECT 2;";
+
+            string[] queries = DB.splitMultiSQLForSqlServer(sql);
+
+            Assert.AreEqual(2, queries.Length);
+            Assert.Contains("DECLARE @ConstraintName", queries[0]);
+            Assert.Contains("SELECT @ConstraintName", queries[0]);
+            Assert.Contains("EXEC('ALTER TABLE users DROP CONSTRAINT ' + @ConstraintName)", queries[0]);
+            Assert.AreEqual("SELECT 2;", queries[1]);
+        }
+
+        [TestMethod()]
         public void prepareParams()
         {
             // 1. Test Insert
