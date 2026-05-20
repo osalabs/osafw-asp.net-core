@@ -14,7 +14,7 @@ Use this file to find the right document quickly instead of searching the whole 
 - [templates.md](templates.md): ParsePage templates, shared partials, dynamic-controller template conventions, and parser rules that matter during implementation.
 - [dynamic.md](dynamic.md): `config.json` reference for dynamic and Vue controllers.
 - [crud.md](crud.md): `FwModel` CRUD workflows using `FwDict`/`FwList` or typed DTOs.
-- [db.md](db.md): low-level `DB` helper usage and raw SQL helpers.
+- [db.md](db.md): low-level `DB` helper usage, raw SQL helpers, and SQL Server/SQLite/MySQL provider setup.
 - [naming.md](naming.md): standard framework naming conventions for methods, casing, result-shape prefixes, and side-effect prefixes.
 - [design_system.html](design_system.html): visual design system for the Bootstrap-based framework UI, active themes, tokens, and component examples.
 - [layout.md](layout.md): shared layout structure, CRUD headers, and theming extension points.

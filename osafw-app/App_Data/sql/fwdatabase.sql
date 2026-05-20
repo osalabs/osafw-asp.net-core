@@ -471,7 +471,7 @@ CREATE TABLE user_filters (
   upd_users_id          INT DEFAULT 0
 );
 
--- run roles.sql if roles support required and also uncomment #define isRoles in Users model
+-- run roles.sql if roles support is enabled with isRoles in osafw-app.csproj
 
 -- after this file - run lookups.sql
 

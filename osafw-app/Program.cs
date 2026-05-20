@@ -1,7 +1,3 @@
-//#define isMySQL // uncomment if using MySQL, see fw/DB.cs for full instructions
-#if isMySQL
-#endif
-
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.CookiePolicy;
 using Microsoft.AspNetCore.DataProtection;
@@ -15,6 +11,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Net.Http.Headers;
 using Microsoft.AspNetCore.Authentication;
+#if isWindowsAuth
+using Microsoft.AspNetCore.Authentication.Negotiate;
+#endif
 using System;
 
 namespace osafw;
@@ -26,8 +25,9 @@ public static class Program
         // In .NET 6+ the recommended pattern is the "WebApplication.CreateBuilder" approach
         var builder = WebApplication.CreateBuilder(args);
 
-        // If you use Sentry, enable it here:
-        // builder.WebHost.UseSentry();
+#if isSentry
+        builder.WebHost.UseSentry();
+#endif
 
         // read the environment settings
         var settings = FwConfig.settingsForEnvironment(builder.Configuration);
@@ -77,28 +77,8 @@ public static class Program
                 options.XmlRepository = repository; // i.e. "PersistKeysToCustomXmlRepository"
             });
 
-#if isMySQL
-        // If using MySQL for distributed cache (and sessions)
-        builder.Services.AddDistributedMySqlCache(options =>
-        {
-            var csb = new MySqlConnector.MySqlConnectionStringBuilder(connStr);
-            if (string.IsNullOrEmpty(csb.Database))
-                throw new ApplicationException("No database name defined in connection_string");
-
-            // Setup session store
-            options.ConnectionString = csb.ConnectionString;
-            options.SchemaName = csb.Database; // database name
-            options.TableName = "fwsessions";
-        });
-#else
-        // If using SQL Server for distributed cache (and sessions)
-        builder.Services.AddDistributedSqlServerCache(options =>
-        {
-            options.ConnectionString = connStr;
-            options.SchemaName = "dbo";
-            options.TableName = "fwsessions";
-        });
-#endif
+        // Session rows use the provider-specific cache backing store for the main DB.
+        builder.Services.AddFwSessionCache(connStr, dbType);
 
         // Form upload/limits
         builder.Services.Configure<FormOptions>(options =>
@@ -107,7 +87,7 @@ public static class Program
             // options.MultipartBodyLengthLimit = 1073741824; // 1GB
         });
 
-        // IIS 
+        // IIS
         builder.Services.Configure<IISServerOptions>(options =>
         {
             options.AllowSynchronousIO = false;
@@ -127,14 +107,16 @@ public static class Program
                 options.Cookie.HttpOnly = cookieHttpOnlySetting.Value;
         });
 
-        // Windows Active Directory authentication support (optional)
-        // builder.Services.AddAuthentication(NegotiateDefaults.AuthenticationScheme).AddNegotiate();
+#if isWindowsAuth
+        builder.Services.AddAuthentication(NegotiateDefaults.AuthenticationScheme).AddNegotiate();
+#endif
 
-        // Memory cache 
+        // Memory cache
         builder.Services.AddMemoryCache();
 
-        // Uncomment to enable scheduled tasks
-        // builder.Services.AddHostedService<FwCronService>();
+#if isFwCronService
+        builder.Services.AddHostedService<FwCronService>();
+#endif
 
         // Build the WebApplication
         var app = builder.Build();
@@ -196,6 +178,10 @@ public static class Program
             }
         });
 
+#if isWindowsAuth
+        app.UseAuthentication();
+#endif
+
         // Security headers
         app.Use(async (context, next) =>
         {
@@ -232,16 +218,18 @@ public static class Program
                 return;
             }
 
+#if isWindowsAuth
             // Windows Authentication Support
             if (!context.User.Identity?.IsAuthenticated ?? true)
             {
                 var path = request.Path.ToString();
                 if (path.StartsWith("/winlogin", StringComparison.CurrentCultureIgnoreCase))
                 {
-                    await context.ChallengeAsync(Microsoft.AspNetCore.Server.IISIntegration.IISDefaults.AuthenticationScheme);
+                    await context.ChallengeAsync(NegotiateDefaults.AuthenticationScheme);
                     return;
                 }
             }
+#endif
 
             // Call the FW "core" pipeline
             FW.run(context, app.Configuration);

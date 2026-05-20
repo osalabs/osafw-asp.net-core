@@ -4,6 +4,7 @@
 - `DB` converts SQL `datetime` values from the database timezone to UTC on read and from UTC to the database timezone on write.
 - Field names ending in `_utc` are treated as already-UTC instants. `DB` does not apply database timezone conversion to those fields on read or helper-built writes.
 - SQL Server `datetimeoffset` values are treated as instants. Untyped rows and scalar reads expose them as UTC-compatible `DateTime`/SQL strings; typed DTO reads may use `DateTimeOffset` to keep the stored offset.
+- SQLite stores date/time values through `Microsoft.Data.Sqlite` as SQLite-compatible values. Use declared column types (`DATE`, `DATETIME`, `DATETIMEOFFSET`) so `DB` can apply the same date-only, datetime, and offset-aware rules. Configure SQLite databases with `timezone = "UTC"` unless you have a deliberate single-node DB timezone policy.
 - SQL `date` values stay date-only. They are kept as calendar values and are not shifted through timezone conversion.
 - Database values are read in SQL formats:
   - Date: `YYYY-MM-DD`
@@ -68,7 +69,7 @@ Real datetimes still follow the normal timezone pipeline:
 
 UTC and offset-bearing instants use the explicit instant pipeline:
 - `_utc` `datetime`/`datetime2`: stored and read as UTC with no database timezone shift.
-- `datetimeoffset`: stored as an offset-aware instant; untyped framework output normalizes to UTC, while typed DTOs can preserve `DateTimeOffset`.
+- `datetimeoffset`: stored as an offset-aware instant; untyped framework output normalizes to UTC, while typed DTOs can preserve `DateTimeOffset`. SQLite uses declared `DATETIMEOFFSET` columns for the same framework contract.
 
 ## Converting user input for saving
 Use `FwController.modelAddOrUpdate` plus `FwModel.convertUserInput(item)` before `add`/`update`. It converts human-entered strings while keeping internals in UTC:

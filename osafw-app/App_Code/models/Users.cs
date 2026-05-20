@@ -3,9 +3,6 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
-//if you use Roles - uncomment define isRoles here
-//#define isRoles
-
 using OtpNet;
 using QRCoder;
 using System;
@@ -182,7 +179,7 @@ public class Users : FwModel<Users.Row>
     public override FwList listSelectOptions(FwDict? def = null, object? selected_id = null, bool valueFromIname = false, FwDict? baseWhere = null, string? inameSql = null)
     {
         if (string.IsNullOrEmpty(inameSql) && !valueFromIname)
-            inameSql = "CONCAT(fname, ' ', lname)";
+            inameSql = db.sqlConcat("fname", db.q(" "), "lname");
         return base.listSelectOptions(def, selected_id, valueFromIname, baseWhere, inameSql);
     }
     #endregion
@@ -829,13 +826,13 @@ public class Users : FwModel<Users.Row>
         }
 
         result = db.colp($@"with rids as (
-                        select resources_id 
+                        select resources_id
                         from {fw.model<RolesResourcesPermissions>().table_name}
                         where permissions_id in (select id from {fw.model<Permissions>().table_name} where icode=@icode)
                           and roles_id in ({roles_sql})
                         )
 
-                        select icode from {fw.model<Resources>().table_name} r, rids 
+                        select icode from {fw.model<Resources>().table_name} r, rids
                          where r.id=rids.resources_id", p);
 #endif
 

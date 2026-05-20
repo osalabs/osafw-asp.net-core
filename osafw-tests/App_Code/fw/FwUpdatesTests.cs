@@ -1,6 +1,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Reflection;
 
 namespace osafw.Tests;
@@ -8,6 +9,50 @@ namespace osafw.Tests;
 [TestClass]
 public class FwUpdatesTests
 {
+    [TestMethod]
+    public void SqlScriptRoot_UsesProviderSpecificSqlFolders()
+    {
+        var fw = TestHelpers.CreateFw();
+        var settings = FwConfig.GetCurrentSettings();
+        var oldSiteRoot = settings["site_root"];
+
+        try
+        {
+            settings["site_root"] = @"C:\site";
+            var updates = new FwUpdates();
+
+            fw.db = new DB("", DB.DBTYPE_SQLSRV);
+            updates.init(fw);
+            Assert.AreEqual(Path.Combine(@"C:\site", "App_Data", "sql"), updates.sqlScriptRoot());
+            CollectionAssert.AreEqual(
+                new[] { Path.Combine(@"C:\site", "App_Data", "sql", "updates") },
+                updates.sqlUpdateRoots());
+
+            fw.db = new DB("", DB.DBTYPE_MYSQL);
+            updates.init(fw);
+            Assert.AreEqual(Path.Combine(@"C:\site", "App_Data", "sql", "mysql"), updates.sqlScriptRoot());
+            Assert.AreEqual(Path.Combine(@"C:\site", "App_Data", "sql", "mysql", "updates"), updates.sqlUpdatesRoot());
+            CollectionAssert.AreEqual(
+                new[]
+                {
+                    Path.Combine(@"C:\site", "App_Data", "sql", "updates"),
+                    Path.Combine(@"C:\site", "App_Data", "sql", "mysql", "updates")
+                },
+                updates.sqlUpdateRoots());
+
+            fw.db = new DB("", DB.DBTYPE_SQLITE);
+            updates.init(fw);
+            Assert.AreEqual(Path.Combine(@"C:\site", "App_Data", "sql", "sqlite"), updates.sqlScriptRoot());
+            CollectionAssert.AreEqual(
+                new[] { Path.Combine(@"C:\site", "App_Data", "sql", "sqlite", "updates") },
+                updates.sqlUpdateRoots());
+        }
+        finally
+        {
+            settings["site_root"] = oldSiteRoot;
+        }
+    }
+
     [TestMethod]
     public void FileNameWithoutExtComparer_SortsByDatePart()
     {

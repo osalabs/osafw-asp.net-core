@@ -327,7 +327,7 @@ namespace osafw.Tests
         [TestMethod()]
         public void ImportSpreadsheetNotSupportedWithoutPackage()
         {
-#if ExcelDataReader
+#if isExcelDataReader
             Assert.Inconclusive("ExcelDataReader should not be available in this test environment");
 #else
             var thrown = false;

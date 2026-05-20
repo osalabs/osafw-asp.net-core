@@ -13,6 +13,7 @@
    - Create or update `docs/agents/tasks/summary-<YYYY-MM-DD>-<TASK-ID>.md` unless the user explicitly asked for no file changes or a read-only review. Use one short kebab-case task id per task session, and keep updating the same summary for iterative feedback in that session.
    - If no task summary is created because the request is read-only, include the useful summary in the final response instead.
    - For non-trivial tasks, identify the critical path, safe parallel side work, and tightly coupled work that should stay local.
+   - For files over 1 MB or known large drafts/logs/generated outputs, do not run whole-file reads such as `Get-Content <file>`. Start with `rg` for headings/section IDs or read only targeted ranges, and record the sections used in the task summary.
 
 2. Implement the requested change first.
    - Do not start test-only refactors or broad QA edits before the implementation pass is complete.
@@ -35,6 +36,8 @@
 
 6. Close out knowledge capture.
    - Review the task summary and make it complete.
+   - Fill `Reflection` with process improvements for future runs, not a recap of the task. Include what slowed the work, what could be skipped with better conventions, whether delegation/MCP/tooling choices helped, and any concrete instruction change to consider.
+   - If a workflow improvement is high-confidence, recurring, and low-risk, update `docs/agents/heuristics.md` or `AGENTS.md` in the same task and note it in `Reflection`. If it is uncertain or task-specific, leave it as a recommendation in `Reflection` for user review.
    - Record whether stable facts, heuristics, or ADRs were added or intentionally not added.
    - Add stable framework facts to `docs/agents/domain.md` or `docs/agents/glossary.md`.
    - Add reusable working heuristics to `docs/agents/heuristics.md`; timestamp new heuristics and expire or revise touched heuristics older than 90 days.
@@ -54,6 +57,7 @@
 ## Heuristics (keep terse)
 ## Testing instructions
 ## Reflection
+What slowed this task? What should future agents do differently? Were sub-agents, MCP, or file-reading choices effective? What agent instructions should be added, changed, or left for user review?
 ```
 
 ## Project Overview
@@ -67,7 +71,7 @@
   - Built-in logging, caching, file uploads, settings, activity logs, self-test, virtual controllers, reports, and scheduled tasks.
 - Runtime:
   - `Program.cs` uses minimal hosting, config via `FwConfig`, sessions via distributed SQL cache (`fwsessions`), and data protection keys in `fwkeys`.
-  - Optional MySQL support uses `#define isMySQL` and matching SQL scripts.
+- Optional MySQL support uses the `isMySQL` project constant and matching SQL scripts.
 - Database:
   - SQL Server by default. Schema scripts live under `osafw-app/App_Data/sql`.
   - Key tables include `users`, `settings`, `spages`, `att*`, `activity_logs`, and framework `fw*` tables.
@@ -105,8 +109,10 @@
 
 - The main agent owns the task outcome, user communication, integration, and final verification.
 - Delegate only bounded work with clear expected output, owned files/modules, and constraints.
-- Good delegation targets include targeted codebase research, independent docs/spec review, focused implementation in disjoint files, post-implementation test execution, and code review.
+- Good delegation targets include targeted codebase research, independent docs/spec review, schema/config parity checks, test failure triage, focused implementation in disjoint files, post-implementation test execution, and code review.
 - Do not delegate vague repo sweeps, broad ownership, or blockers where the main agent cannot progress until the answer returns.
+- Use fast models, such as GPT-5.3-Codex-Spark when available, for read-only scans, first-pass triage, and rough prototypes. Use the main/inherited model for final integration, risky edits, and review that depends on broad context.
+- For tasks touching independent file groups such as schema scripts, docs, templates, and tests, consider one worker for a disjoint group early. Keep shared core contracts, merge conflict integration, and final verification with the main agent unless the split is clearly safe.
 - For code-editing workers, state that they are not alone in the codebase, must not revert others' changes, and must list changed paths in their final response.
 - Prefer a small number of useful parallel sub-agents over many shallow ones. Inspect their evidence and changes before relying on them, then record material findings and commands in the task summary.
 
@@ -146,6 +152,7 @@
 - If no automated coverage exists or is practical, record concise manual verification steps and prerequisites in the task summary.
 - Build app: `dotnet build osafw-app/osafw-app.csproj`.
 - Build app to isolated output when normal `bin/Debug` is locked: `dotnet build osafw-app/osafw-app.csproj -p:OutDir=artifacts/assistant_build/`.
+- Do not set `BaseIntermediateOutputPath` for `osafw-app`; generated intermediate files can be picked up by the project compile glob and cause duplicate assembly attributes.
 - Build solution: `dotnet build osafw-asp.net-core.sln`.
 - Test: `dotnet test`.
 
@@ -156,15 +163,16 @@
 - Watch app: `dotnet watch run --project osafw-app`.
 - Database setup for SQL Server: run `osafw-app/App_Data/sql/fwdatabase.sql`, then `lookups.sql`; add `roles.sql` and `demo.sql` when needed.
 - Configure connection strings in `appsettings*.json` under `appSettings.db.main` (`type`, `connection_string`).
-- Switch to MySQL: define `isMySQL` in `Program.cs`, set `db.main.type` to MySQL, and use scripts from `osafw-app/App_Data/sql/mysql/`.
-- Scheduled tasks: uncomment `builder.Services.AddHostedService<FwCronService>();` in `Program.cs`.
-- Windows auth: enable Negotiate and use `/winlogin`.
+- Switch to MySQL: enable `isMySQL` in `osafw-app/osafw-app.csproj`, set `db.main.type` to MySQL, and use scripts from `osafw-app/App_Data/sql/mysql/`.
+- Scheduled tasks: enable `isFwCronService` in `osafw-app/osafw-app.csproj`.
+- Windows auth: enable `isWindowsAuth` in `osafw-app/osafw-app.csproj`, configure host authentication, and use `/winlogin`.
 - Sessions/Data Protection: ensure `fwsessions` and `fwkeys` tables exist.
 
 ## MCP Tooling
 
-- Prefer Visual Studio MCP for solution-aware .NET work when available; validate it independently before relying on it.
+- Prefer Visual Studio MCP for solution-aware .NET work, rebuild/restart flows, and local VS-hosted app checks when available; this applies from the task shape even when the user does not explicitly name VS MCP. Validate it independently before relying on it.
 - Prefer Playwright MCP for browser repros and UI verification; rerun snapshots after navigation or meaningful DOM changes.
-- If a required MCP is missing or blocked, do one quick validation and at most one lightweight retry. Then ask the user whether to fix MCP or use a non-MCP fallback.
+- If the user requested a specific MCP or the task depends on VS/browser state, do one quick validation and at most one lightweight retry. If it is still missing or blocked, pause and ask whether to fix/restart MCP or use a fallback.
+- For pure compile/test verification where MCP is not required, standalone `dotnet build/test` is acceptable and does not need a pause.
 - Keep machine-specific URLs, credentials, and browser notes in `docs/agents/local_instructions.md`.
 - See `docs/agents/mcp.md` for detailed MCP troubleshooting guidance.

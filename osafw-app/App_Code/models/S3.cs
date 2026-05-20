@@ -28,10 +28,7 @@
 //    ]
 //}
 
-// uncomment line below to enable S3 storage
-//#define is_S3
-
-#if is_S3
+#if isS3
 using Amazon.S3;
 using Amazon.S3.Model;
 using System;
@@ -48,9 +45,9 @@ public class S3 : FwModel
     public string root = "";
 
     // const for simple check from other code if S3 is enabled
-#if is_S3
+#if isS3
     public const bool IS_ENABLED = true;
-    public AmazonS3Client client;
+    public AmazonS3Client client = null!;
     // params defined in web.config:
     // fw.config("AWSAccessKey") - access key
     // fw.config("AWSSecretKey") - secret key
@@ -69,7 +66,7 @@ public class S3 : FwModel
         initClient(); // automatically init client on start
     }
 
-#if !is_S3
+#if !isS3
     //S3 disabled - just use a stub methods
     public object? initClient(string access_key = "", string secret_key = "", string region = "", string bucket = "", string root = "")
     {

@@ -149,11 +149,12 @@ IF LEN(@sql) > 0
 
         FwDict ps = [];
         int sql_ctr = 0;
+        var sql_root = fw.model<FwUpdates>().sqlScriptRoot();
         dropExistingForeignKeys();
         string[] files = ["fwdatabase.sql", "database.sql", "demo.sql", "lookups.sql", "views.sql"];
         foreach (string file in files)
         {
-            var sql_file = fw.config("site_root") + @"\App_Data\sql\" + file;
+            var sql_file = Path.Combine(sql_root, file);
             logger("Checking sql file:", sql_file);
             if (File.Exists(sql_file))
             {

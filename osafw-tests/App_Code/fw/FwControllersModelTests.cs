@@ -10,13 +10,17 @@ public class FwControllersModelTests
     {
         public FwDict? LastWhere;
         public string? LastOrderBy;
+        public int LastOffset;
+        public int LastLimit;
 
         public FakeDb() : base("", DB.DBTYPE_SQLSRV) { }
 
-        public override DBList array(string table, FwDict where, string order_by = "", ICollection? aselect_fields = null)
+        public override DBList array(string table, FwDict where, string order_by = "", ICollection? aselect_fields = null, int offset = 0, int limit = -1)
         {
             LastWhere = where;
             LastOrderBy = order_by;
+            LastOffset = offset;
+            LastLimit = limit;
             return new DBList { new DBRow(new FwDict { ["id"] = "1" }) };
         }
     }
