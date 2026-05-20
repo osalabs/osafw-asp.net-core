@@ -101,6 +101,8 @@ Notes:
 ## Choosing the user's timezone
 Timezones must match Windows time zone IDs (used by `TimeZoneInfo.FindSystemTimeZoneById`). Examples: `"UTC"`, `"Pacific Standard Time"`, `"Europe/Berlin"`.
 
+In `/My/Settings`, `auto` stores an empty `users.timezone` preference and uses the browser-detected timezone for the active session. New users default to this empty auto preference. `UTC` is a separate explicit option for users who want the UI to stay in UTC regardless of browser auto-detect results.
+
 If an invalid timezone is supplied, `DateUtils.convertTimezone` logs the issue and returns the original `DateTime`.
 
 - Ensure `appsettings.json` has sensible defaults for `date_format`, `time_format`, `timezone`, and optional per-DB `timezone` overrides.

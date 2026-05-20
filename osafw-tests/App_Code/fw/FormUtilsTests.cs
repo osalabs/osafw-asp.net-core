@@ -550,7 +550,7 @@ namespace osafw.Tests
         [TestMethod]
         public void AutocompleteParsingExtractsLeadingId()
         {
-            Assert.AreEqual(123, FormUtils.idFromAutocomplete("123 - Test Value"));
+            Assert.AreEqual(123, FormUtils.idFromAutocomplete(FormUtils.formatAutocomplete("Test Value", "123")));
             Assert.AreEqual(0, FormUtils.idFromAutocomplete("invalid"));
         }
 

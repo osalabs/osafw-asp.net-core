@@ -1,15 +1,18 @@
 <!--
-  fw_modal component usage:
+  component usage: include common/modal to enable remote Bootstrap modals and lookup add/edit helpers.
 
   1) Add /common/modal include to a load_script.html
   2) Trigger with:
      <button class="on-fw-modal" data-url="/admin/controller/(action)">Open Modal</button>
      - Optional: data-modal-dialog-class / data-modal-content-class to tweak Bootstrap classes.
+     - Optional: data-fw-modal-namespace-ids="1" to namespace loaded content IDs.
   3) Lookup modal helpers:
      - data-fw-lookup="add" or "edit" to enable lookup mode.
      - data-fw-lookup-target="#selector" to specify which control to update (defaults to first input/select in input-group).
      - URLs can include {id} placeholder for edit actions (current select value).
      - On save, controller returns JSON with lookup_label; select option is added/updated.
+     - On save, target receives change and fw-lookup-saved events.
+     - Lookup modals namespace loaded IDs by default; use data-fw-modal-namespace-ids="0" to opt out.
   4) Modal component appends `_layout=modal` to loaded URLs and form submits.
   5) Forms inside modal are submitted via ajax/fetch and HTML response replaces modal content.
   6) Links inside loaded modal content with class `on-fw-modal-link` are fetched into the same modal.
@@ -108,7 +111,8 @@
 
       return {
         mode: lookupMode,
-        target: resolveLookupTarget(trigger)
+        target: resolveLookupTarget(trigger),
+        trigger: trigger
       };
     }
 
@@ -197,10 +201,63 @@
       });
     }
 
+    function namespaceModalContentIds(modal, container) {
+      if (!modal || !container || modal.dataset.fwModalNamespaceIds !== '1') return;
+
+      var idMap = {};
+      Array.from(container.querySelectorAll('[id]')).forEach(function (el) {
+        if (el.getAttribute('data-fw-keep-id') === '1') return;
+
+        var originalId = el.getAttribute('id');
+        if (!originalId) return;
+
+        var namespacedId = modal.id + '-' + originalId;
+        idMap[originalId] = namespacedId;
+        el.setAttribute('data-fw-original-id', originalId);
+        el.setAttribute('id', namespacedId);
+      });
+
+      if (!Object.keys(idMap).length) return;
+
+      ['for', 'form', 'list'].forEach(function (attrName) {
+        Array.from(container.querySelectorAll('[' + attrName + ']')).forEach(function (el) {
+          var value = el.getAttribute(attrName);
+          if (idMap[value]) {
+            el.setAttribute(attrName, idMap[value]);
+          }
+        });
+      });
+
+      ['aria-controls', 'aria-describedby', 'aria-labelledby', 'aria-owns', 'aria-activedescendant'].forEach(function (attrName) {
+        Array.from(container.querySelectorAll('[' + attrName + ']')).forEach(function (el) {
+          el.setAttribute(attrName, (el.getAttribute(attrName) || '').split(/\s+/).map(function (id) {
+            return idMap[id] || id;
+          }).join(' '));
+        });
+      });
+
+      ['data-bs-target', 'data-target'].forEach(function (attrName) {
+        Array.from(container.querySelectorAll('[' + attrName + ']')).forEach(function (el) {
+          var value = el.getAttribute(attrName);
+          if (value && value.charAt(0) === '#' && idMap[value.slice(1)]) {
+            el.setAttribute(attrName, '#' + idMap[value.slice(1)]);
+          }
+        });
+      });
+
+      Array.from(container.querySelectorAll('a[href^="#"], area[href^="#"]')).forEach(function (el) {
+        var value = el.getAttribute('href');
+        if (value && idMap[value.slice(1)]) {
+          el.setAttribute('href', '#' + idMap[value.slice(1)]);
+        }
+      });
+    }
+
     function setModalContent(modal, html) {
       var content = modal.querySelector('.modal-content');
       if (!content) return;
       content.innerHTML = html;
+      namespaceModalContentIds(modal, content);
       executeModalScripts(content);
     }
 
@@ -281,6 +338,27 @@
     function getSubmitterOverride(submitter, attrName) {
       if (!submitter || typeof submitter.getAttribute !== 'function') return '';
       return submitter.getAttribute(attrName) || '';
+    }
+
+    function resolveModalSubmitForm(modal, submitter) {
+      if (!modal || !submitter) return null;
+
+      var target = submitter.getAttribute('data-target');
+      if (target === 'modal') {
+        return modal.querySelector('form');
+      }
+
+      if (target) {
+        try {
+          var scopedTarget = modal.querySelector(target);
+          if (scopedTarget instanceof HTMLFormElement) return scopedTarget;
+        } catch (err) {
+          return null;
+        }
+      }
+
+      if (submitter.form instanceof HTMLFormElement) return submitter.form;
+      return submitter.closest('form');
     }
 
     function isHtmlResponse(result) {
@@ -409,8 +487,8 @@
       };
     }
 
-    function updateLookupTarget(lookup, data, form) {
-      if (!lookup || !lookup.target || !data || !data.id) return;
+    function updateLookupTarget(lookup, data, form, modal) {
+      if (!lookup || !lookup.target || !data || data.id == null || data.id === '') return;
 
       var idValue = String(data.id);
       var label = data.lookup_label || '';
@@ -435,11 +513,37 @@
           option.textContent = label;
         }
 
+        option.selected = true;
         lookup.target.value = idValue;
       } else {
         lookup.target.value = idValue;
       }
 
+      if (window.jQuery) {
+        var $target = jQuery(lookup.target);
+        if ($target.hasClass('selectpicker') && jQuery.fn.selectpicker) {
+          $target.selectpicker('refresh');
+        }
+        if ($target.data('select2') && jQuery.fn.select2) {
+          $target.trigger('change.select2');
+        }
+      }
+
+      lookup.target.dispatchEvent(new CustomEvent('fw-lookup-saved', {
+        bubbles: true,
+        detail: {
+          mode: lookup.mode,
+          id: idValue,
+          value: idValue,
+          label: label,
+          data: data,
+          option: option || null,
+          target: lookup.target,
+          trigger: lookup.trigger || null,
+          modal: modal,
+          form: form
+        }
+      }));
       lookup.target.dispatchEvent(new Event('change', { bubbles: true }));
     }
 
@@ -492,7 +596,7 @@
           return;
         }
 
-        updateLookupTarget(lookup, data, form);
+        updateLookupTarget(lookup, data, form, modal);
         hideModal(modal);
       } catch (err) {
         var fallbackMessage = err && err.message ? err.message : 'Failed to submit form.';
@@ -557,6 +661,49 @@
     });
 
     document.addEventListener('click', function (e) {
+      var submitter = e.target.closest('.fw-modal .on-fw-modal-submit, .fw-modal .on-submit[data-target="modal"]');
+      if (!submitter) return;
+
+      var modal = submitter.closest('.fw-modal');
+      var form = resolveModalSubmitForm(modal, submitter);
+      if (!modal || !form || !modal.contains(form)) return;
+
+      e.preventDefault();
+      e.stopImmediatePropagation();
+
+      if (submitter.hasAttribute('data-refresh')) {
+        var refreshInput = Array.from(form.elements).find(function (el) {
+          return el.name === 'refresh';
+        });
+        if (refreshInput) {
+          refreshInput.value = '1';
+        }
+      }
+
+      var buttonName = submitter.getAttribute('name');
+      if (buttonName) {
+        var buttonInput = Array.from(form.elements).find(function (el) {
+          return el.name === buttonName;
+        });
+        if (!buttonInput) {
+          buttonInput = document.createElement('input');
+          buttonInput.type = 'hidden';
+          buttonInput.name = buttonName;
+          form.appendChild(buttonInput);
+        }
+        buttonInput.value = submitter.getAttribute('value') || '';
+      }
+
+      var lookup = modal._fwLookup || null;
+      if (lookup) {
+        submitLookupForm(modal, form, submitter, lookup);
+        return;
+      }
+
+      submitHtmlForm(modal, form, submitter);
+    }, true);
+
+    document.addEventListener('click', function (e) {
       var trigger = e.target.closest('.on-fw-modal');
       if (!trigger) return;
 
@@ -570,6 +717,10 @@
       if (!url) return;
 
       var modal = buildModal(trigger);
+      var namespaceAttr = String(trigger.getAttribute('data-fw-modal-namespace-ids') || '').toLowerCase();
+      modal.dataset.fwModalNamespaceIds = namespaceAttr
+        ? (['1', 'true', 'yes'].indexOf(namespaceAttr) >= 0 ? '1' : '0')
+        : (lookup ? '1' : '0');
       if (lookup) {
         modal._fwLookup = lookup;
       }

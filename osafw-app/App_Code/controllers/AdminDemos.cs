@@ -22,8 +22,9 @@ public class AdminDemosController : FwAdminController
 
         base_url = "/Admin/Demos";
         required_fields = "iname";
-        save_fields = "parent_id demo_dicts_id iname idesc email fint ffloat fcombo fradio fyesno fdate_pop fdatetime fdatetime_utc fdatetime_offset fdatetime_local att_id status";
-        save_fields_checkboxes = "is_checkbox|0";
+        save_fields = "parent_id demo_dicts_id iname idesc email fint ffloat frange fcombo fradio fyesno fdate_pop fdatetime fdatetime_utc fdatetime_offset fdatetime_local att_id status";
+        save_fields_checkboxes = "is_checkbox|0 is_switch|0";
+        form_new_defaults = new FwDict { { "frange", 50 } };
 
         search_fields = "iname idesc";
         list_sortdef = "iname asc";

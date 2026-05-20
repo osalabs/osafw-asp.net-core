@@ -71,6 +71,16 @@
     <input id="ffloat" name="item[ffloat]" maxlength="13" value="<~i[ffloat]>" type="number" class="form-control" step="0.1">
   </div>
 </div>
+<div class="row form-row">
+  <label class="col-form-label col-md-3" for="frange">Range</label>
+  <div class="col">
+    <div class="d-flex align-items-center gap-3">
+      <input id="frange" name="item[frange]" value="<~i[frange]>" type="range" class="form-range flex-grow-1" min="0" max="100" step="5" oninput="this.parentElement.querySelector('output').value=this.value">
+      <output class="badge text-bg-secondary" for="frange"><~i[frange]></output>
+    </div>
+    <small class="form-text">Use for approximate bounded values such as scores or thresholds.</small>
+  </div>
+</div>
 
 <div class="row form-row">
   <label class="col-form-label col-md-3" for="dict_link_auto_id">DemoDicts Autocomplete</label>
@@ -138,6 +148,15 @@
     <div class="form-check form-check-inline">
       <input class="form-check-input" type="checkbox" id="is_checkbox" name="item[is_checkbox]" value="1" <~/common/attr/checked if="i[is_checkbox]">>
       <label class="form-check-label" for="is_checkbox">Yes</label>
+    </div>
+  </div>
+</div>
+<div class="row form-row">
+  <label class="col-form-label col-md-3" for="is_switch">Switch</label>
+  <div class="col d-flex align-items-center">
+    <div class="form-check form-switch fw-switch-control">
+      <input class="form-check-input" type="checkbox" role="switch" id="is_switch" name="item[is_switch]" value="1" <~/common/attr/checked if="i[is_switch]">>
+      <label class="form-check-label" for="is_switch">On</label>
     </div>
   </div>
 </div>

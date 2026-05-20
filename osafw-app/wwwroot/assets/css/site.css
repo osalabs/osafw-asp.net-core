@@ -142,6 +142,7 @@
   --fw-sidebar-dropdown-color: var(--fw-sidebar-color);
 
   /* bootstrap .card hooks (themes override these tokens) */
+  --fw-bs-card-bg: var(--fw-pane-bg);
   --fw-bs-card-shadow: none;
   --fw-bs-card-border: var(--bs-card-border-width, 1px) solid var(--bs-card-border-color, var(--bs-border-color));
   --fw-bs-card-radius: var(--bs-card-border-radius, var(--bs-border-radius));
@@ -240,7 +241,7 @@ body {
   --bs-card-spacer-x: var(--fw-bs-card-spacer-x);
   --bs-card-spacer-y: var(--fw-bs-card-spacer-y);
   --bs-card-border-radius: var(--fw-bs-card-radius);
-  --bs-card-bg: var(--fw-pane-bg);
+  --bs-card-bg: var(--fw-bs-card-bg);
 
   border: var(--fw-bs-card-border);
   border-radius: var(--fw-bs-card-radius);
@@ -1024,10 +1025,29 @@ table.list-edit.table-dense tbody td > div.ro {
 }
 
 .cell-success-fade,
-.cell-success-fade input,
+.cell-success-fade input:not([role="switch"]),
 .cell-success-fade select,
 .cell-success-fade textarea {
   animation: fadeOutBackground 2s forwards;
+}
+
+.fw-switch-control {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: calc(1.5em + 0.75rem + 2px);
+  padding-left: 0;
+}
+
+.fw-switch-control .form-check-input {
+  flex: 0 0 auto;
+  float: none;
+  margin-top: 0;
+  margin-left: 0;
+}
+
+.fw-switch-control .form-check-label {
+  line-height: 1.5;
 }
 
 @keyframes fadeOutBackground {

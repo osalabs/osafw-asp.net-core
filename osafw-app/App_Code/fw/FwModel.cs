@@ -6,6 +6,7 @@
 using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -331,17 +332,18 @@ public abstract class FwModel : IDisposable
     }
 
     /// <summary>
-    /// list records by where condition optionally limited and ordered
+    /// Returns records for a where condition with optional provider-aware paging.
     /// </summary>
-    /// <param name="where"></param>
-    /// <param name="offset">number of ordered rows to skip before returning results</param>
-    /// <param name="limit">maximum number of rows to return, or -1 for no limit</param>
-    /// <param name="orderby"></param>
-    /// <returns></returns>
+    /// <param name="where">Where conditions for the helper-built query.</param>
+    /// <param name="offset">Number of ordered rows to skip before returning results.</param>
+    /// <param name="limit">Maximum number of rows to return, or -1 for no limit.</param>
+    /// <param name="orderby">Optional ORDER BY clause body; defaults to the model order when empty.</param>
+    /// <returns>Rows matching the where conditions and paging constraints.</returns>
     public virtual DBList listByWhere(FwDict? where = null, int offset = 0, int limit = -1, string orderby = "")
     {
         where ??= [];
-        return db.array(table_name, where, orderby != "" ? orderby : getOrderBy(), offset: offset, limit: limit);
+        var order = orderby != "" ? orderby : getOrderBy();
+        return db.array(table_name, where, order, offset: offset, limit: limit);
     }
 
     // return count of all non-deleted or with specified statuses
@@ -499,7 +501,7 @@ public abstract class FwModel : IDisposable
                         if (parsed != null)
                             parsed = DateUtils.convertTimezone((DateTime)parsed, fw.userTimezone, DateUtils.TZ_UTC);
                     }
-                    else if (DateUtils.isDateTimeOffsetStr(str) && DateTimeOffset.TryParse(str, out var parsedOffset))
+                    else if (DateUtils.isDateTimeOffsetStr(str) && DateTimeOffset.TryParse(str, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind | DateTimeStyles.AssumeUniversal, out var parsedOffset))
                     {
                         parsed = parsedOffset.UtcDateTime;
                     }

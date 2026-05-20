@@ -19,6 +19,7 @@ public class Demos : FwModel<Demos.Row>
         public string email { get; set; } = string.Empty;
         public int fint { get; set; }
         public double ffloat { get; set; }
+        public int frange { get; set; }
         public int dict_link_auto_id { get; set; }
         public string dict_link_multi { get; set; } = string.Empty;
         public int fcombo { get; set; }
@@ -30,6 +31,7 @@ public class Demos : FwModel<Demos.Row>
             set { _fyesno = value ? 1 : 0; }
         }
         public int is_checkbox { get; set; }
+        public int is_switch { get; set; }
         public DateTime? fdate_combo { get; set; }
         public DateTime? fdate_pop { get; set; }
         public DateTime? fdatetime { get; set; }

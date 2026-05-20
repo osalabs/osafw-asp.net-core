@@ -40,6 +40,7 @@ CREATE TABLE demos (
 
   fint                  INTEGER NOT NULL DEFAULT 0,
   ffloat                REAL NOT NULL DEFAULT 0,
+  frange                INTEGER NOT NULL DEFAULT 50,
 
   dict_link_auto_id     INTEGER NOT NULL DEFAULT 0,
   dict_link_multi       TEXT NOT NULL DEFAULT '',
@@ -48,6 +49,7 @@ CREATE TABLE demos (
   fradio                INTEGER NOT NULL DEFAULT 0,
   fyesno                INTEGER NOT NULL DEFAULT 0,
   is_checkbox           INTEGER NOT NULL DEFAULT 0,
+  is_switch             INTEGER NOT NULL DEFAULT 0,
 
   fdate_combo           DATE,
   fdate_pop             DATE,
@@ -115,7 +117,7 @@ WITH RECURSIVE nums(n) AS (
 )
 INSERT INTO demos (
   parent_id, demo_dicts_id, iname, idesc, email, fint, ffloat,
-  dict_link_auto_id, dict_link_multi, fcombo, fradio, fyesno, is_checkbox,
+  frange, dict_link_auto_id, dict_link_multi, fcombo, fradio, fyesno, is_checkbox, is_switch,
   fdate_combo, fdate_pop, fdatetime, fdatetime_utc, fdatetime_offset,
   fdatetime_local, ftime, att_id, status, add_time, add_users_id
 )
@@ -127,10 +129,12 @@ SELECT
   'email' || n,
   abs(random()) % 1000,
   (abs(random()) % 1000) + (abs(random()) % 1000) / 1000.0,
+  abs(random()) % 101,
   abs(random()) % 3 + 1,
   'LinkMulti' || n,
   abs(random()) % 3 + 1,
   abs(random()) % 3 + 1,
+  abs(random()) % 2,
   abs(random()) % 2,
   abs(random()) % 2,
   date('2023-01-01', '+' || (abs(random()) % 365) || ' days'),

@@ -1,6 +1,6 @@
 # Heuristics for osafw-asp.net-core
 
-Updated: 2026-05-14
+Updated: 2026-05-19
 
 - Prefer adding features via controllers/models over modifying core `fw` unless it’s a cross-cutting concern.
 - For CRUD screens, first try `FwDynamicController` or `FwVueController` with `config.json` before writing bespoke UI.
@@ -11,6 +11,8 @@ Updated: 2026-05-14
 - When returning files, use `fw.fileResponse` to set headers correctly.
 - Use `fw.routeRedirect` to chain actions to avoid duplicate logic and keep responses consistent.
 - For templates, place overrides under `/osafw-app/App_Data/template/<controller>/<action>`; keep common bits in `/common`.
+- 2026-05-19: Before adding custom UI CSS, check `docs/design_system.html` and prefer Bootstrap utilities, shared fragments, and framework/theme tokens.
+- 2026-05-19: Modal content that enables ID namespacing should use scoped selectors via `fw.scopeFromScript()` instead of global `#id` selectors.
 - Respect access control: set controller `access_level` and add route rules in `FwConfig.access_levels` when needed.
 - For DB code, always parameterize via `DB` helper; avoid string concatenation.
 - Use `FwCache` for expensive lookups; cache keys should be namespaced and include input parameters.
@@ -31,3 +33,5 @@ Updated: 2026-05-14
 - 2026-05-11: For ParsePage recursion protection, prefer a file-include depth limit over cycle detection so legitimate recursive tree templates can render.
 - 2026-05-12: When reading `appSettings`, load its direct children into `FwConfig` settings; do not introduce an `appSettings` key inside the runtime settings dictionary.
 - 2026-05-14: For runtime SQL shared by providers, prefer `DB` expression helpers over raw provider functions like `GETDATE`, `DATEADD`, `CONCAT`, or `CAST(... AS date)`.
+- 2026-05-18: With SQL-backed ASP.NET Core session, avoid writing session on every request; unnecessary writes can race and overwrite newer login state.
+- 2026-05-15: Do not lowercase or otherwise normalize complete encoded URLs; preserve case-sensitive path/query data and add mixed-case URL/token regression tests for URL helpers.

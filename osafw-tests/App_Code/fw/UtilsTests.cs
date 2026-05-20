@@ -913,6 +913,21 @@ namespace osafw.Tests
         }
 
         [TestMethod()]
+        public void urlescapePreservesCaseSensitiveUrlCharacters()
+        {
+            string mixedCaseUrl = "/Admin/Users/AbC123?token=XyZ9&returnUrl=/Reports/Q2";
+
+            string result = Utils.urlescape(mixedCaseUrl);
+
+            Assert.AreEqual(mixedCaseUrl, Utils.urlunescape(result), "URL escaping should not lowercase case-sensitive URL data");
+            StringAssert.Contains(result, "Admin");
+            StringAssert.Contains(result, "AbC123");
+            StringAssert.Contains(result, "XyZ9");
+            StringAssert.Contains(result, "returnUrl");
+            StringAssert.Contains(result, "Reports");
+        }
+
+        [TestMethod()]
         public void generateUniqueTmpDirPerPrefix()
         {
             string prefixA = "prefixA";

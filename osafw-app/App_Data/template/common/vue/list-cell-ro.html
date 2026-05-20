@@ -48,6 +48,9 @@
                 if (type === 'time') {
                     return AppUtils.formatTime(v);
                 }
+                if (type === 'switch') {
+                    return v === true || v === 1 || v === '1' || v === 'true' ? 'On' : 'Off';
+                }
 
                 // Fallback: detect SQL date/time strings automatically
                 //if (typeof v === 'string') {

@@ -55,7 +55,7 @@ public class DevConfigureController : FwController
                 db.connect();
                 ps["is_db_conn"] = true;
                 ps["db_timezone_id"] = db.getTimezoneId();
-                ps["is_db_tz"] = !string.IsNullOrEmpty(ps["db_timezone_id"].toStr());
+                ps["is_db_tz"] = db.isTimezoneDetectionOk();
 
                 try
                 {
@@ -112,6 +112,36 @@ public class DevConfigureController : FwController
         return result;
     }
 
+    /// <summary>
+    /// Drops existing SQL Server foreign-key constraints before replaying full development schema scripts.
+    /// </summary>
+    private void dropExistingForeignKeys()
+    {
+        if (db.dbtype != DB.DBTYPE_SQLSRV)
+            return;
+
+        db.exec($@"
+DECLARE @sql NVARCHAR(MAX) = N'';
+
+SELECT @sql += N'ALTER TABLE '
+    + QUOTENAME(OBJECT_SCHEMA_NAME(parent_object_id))
+    + N'.'
+    + QUOTENAME(OBJECT_NAME(parent_object_id))
+    + N' DROP CONSTRAINT '
+    + QUOTENAME(name)
+    + N';'
+FROM sys.foreign_keys;
+
+IF LEN(@sql) > 0
+    EXEC sp_executesql @sql");
+    }
+
+    /// <summary>
+    /// Initializes a development database from the bundled SQL scripts so a fresh clone can run the demo app.
+    /// </summary>
+    /// <returns>
+    /// Template data containing the generated admin password when one or more SQL statements executed.
+    /// </returns>
     public FwDict InitDBAction()
     {
         if (!fw.config("IS_DEV").toBool())
@@ -119,9 +149,9 @@ public class DevConfigureController : FwController
 
         FwDict ps = [];
         int sql_ctr = 0;
-        string[] files = ["fwdatabase.sql", "database.sql", "lookups.sql", "views.sql"];
         var sql_root = fw.model<FwUpdates>().sqlScriptRoot();
-
+        dropExistingForeignKeys();
+        string[] files = ["fwdatabase.sql", "database.sql", "demo.sql", "lookups.sql", "views.sql"];
         foreach (string file in files)
         {
             var sql_file = Path.Combine(sql_root, file);

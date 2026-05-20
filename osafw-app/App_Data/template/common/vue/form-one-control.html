@@ -256,6 +256,23 @@
         <form-control-help-block :text="def.help_text" />
     </template>
 
+    <template v-else-if="def.type=='range'">
+        <div class="d-flex align-items-center gap-3">
+            <input class="form-range flex-grow-1"
+                   type="range"
+                   v-model="value"
+                   :class="class_control"
+                   :required="def.required"
+                   :min="def.min"
+                   :max="def.max"
+                   :step="def.step"
+                   :disabled="isReadonlyControl">
+            <output class="badge text-bg-secondary">{{value}}</output>
+        </div>
+        <p class="err-WRONG">`Invalid`</p>
+        <form-control-help-block :text="def.help_text" />
+    </template>
+
     <template v-else-if="['input','email','number','date_popup','datetime_popup','datetime_local'].includes(def.type)">
         <input class="form-control"
                :type="inputType"
@@ -295,6 +312,21 @@
                    false-value="0">
             <label class="form-check-label" :for="'list-edit-pane-cb-'+def.field">Yes</label>
         </div>
+    </template>
+
+    <template v-else-if="def.type=='switch'">
+        <div class="form-check form-switch fw-switch-control mb-1">
+            <input class="form-check-input"
+                   :id="'list-edit-pane-switch-'+def.field"
+                   type="checkbox"
+                   role="switch"
+                   v-model="value"
+                   true-value="1"
+                   false-value="0"
+                   :disabled="isReadonlyControl">
+            <label class="form-check-label" :for="'list-edit-pane-switch-'+def.field">On</label>
+        </div>
+        <form-control-help-block :text="def.help_text" />
     </template>
 
     <template v-else-if="def.type=='radio'">
@@ -470,6 +502,9 @@
             is_invalid_true() {
                 return this.error === true;
             },
+            isReadonlyControl() {
+                return this.def.readonly || this.def.disabled || this.fwStore.current_screen === 'view';
+            },
             class_control() {
                 return (this.def.class_control ?? '') + (this.is_invalid ? ' is-invalid' : '');
             },
@@ -482,6 +517,7 @@
                     date_popup: 'date',
                     datetime_popup: 'text',
                     datetime_local: 'datetime-local',
+                    range: 'range',
                     password: 'password',
                     textarea: 'text'
                 };

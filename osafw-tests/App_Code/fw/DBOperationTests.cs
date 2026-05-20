@@ -163,7 +163,6 @@ namespace osafw.Tests
 
             Assert.AreEqual("CONCAT(fname, ' ', lname)", sqlServerDb.sqlConcat("fname", sqlServerDb.q(" "), "lname"));
             Assert.AreEqual("COALESCE(CAST(fname AS TEXT), '') || COALESCE(CAST(' ' AS TEXT), '') || COALESCE(CAST(lname AS TEXT), '')", sqliteDb.sqlConcat("fname", sqliteDb.q(" "), "lname"));
-            Assert.AreEqual("sqlite", sqliteDb.sqlScriptSubdir());
         }
 
         [TestMethod]

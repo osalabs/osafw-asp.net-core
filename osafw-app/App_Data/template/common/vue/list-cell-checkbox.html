@@ -1,5 +1,5 @@
 <script type="text/x-template" id="list-cell-checkbox-template">
-    <div :class="$slots.prepend || $slots.append || col.append || col.prepend ? 'input-group' : ''">
+    <div :class="containerClass">
         <template v-if="col.prepend" v-for="(el,index) in col.prepend" :key="index">
             <button type="button"
                     :class="el.class ? el.class : 'btn btn-default btn-sm'"
@@ -11,6 +11,7 @@
         <slot name="prepend"></slot>
         <input type="checkbox"
                class="form-check-input"
+               :role="col.input_type=='switch' ? 'switch' : null"
                :id="'cell-'+rowId+'-'+col.field_name"
                v-model="row[col.field_name]"
                true-value="1"
@@ -56,6 +57,14 @@
         data: () => ({
             initial_value: '', //value before change
         }),
+        computed: {
+            containerClass() {
+                const classes = [];
+                if (this.$slots.prepend || this.$slots.append || this.col.append || this.col.prepend) classes.push('input-group');
+                if (this.col.input_type === 'switch') classes.push('form-check', 'form-switch');
+                return classes.join(' ');
+            }
+        },
         methods: {
             onFocus(e) {
                 this.initial_value = this.row[this.col.field_name];

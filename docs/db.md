@@ -188,6 +188,11 @@ DBList list = db.arrayp("SELECT * FROM users WHERE status=@s", DB.h("@s", 0));
 List<string> cols = db.colp("SELECT iname FROM users WHERE status=@s", DB.h("@s", 0));
 ```
 
+### Executing SQL scripts
+`execMultipleSQL(sql)` runs trusted framework scripts such as files under `App_Data/sql/updates`. For SQL Server, line-only `GO` is the explicit batch separator. SQL Server batches containing variables or control-flow statements are kept intact so `DECLARE`, `IF`, `BEGIN`/`END`, and related statements keep their scope. Simple SQL Server batches without scoped T-SQL can still use semicolon-newline separators for compatibility. For other database types, scripts are split on simple semicolon or `GO` boundaries, so keep those scripts straightforward.
+
+Use `GO` on its own line when SQL Server requires a separate batch, such as for `CREATE VIEW`, stored procedures, triggers, or other statements that must be first in a batch. `GO`-delimited view, procedure, function, and trigger bodies are preserved as one command. Keep update scripts straightforward; this helper is a practical script splitter, not a full SQL parser.
+
 ### Transactions
 ```csharp
 db.begin();
@@ -240,6 +245,29 @@ When passing an offset to `limit()`, include an `ORDER BY` in the SQL. SQL Serve
 - SQL `datetime`/`datetime2` is converted between the configured DB timezone and internal UTC.
 - Fields ending in `_utc` skip DB timezone conversion and are treated as UTC instants.
 - SQL Server `datetimeoffset` and SQLite fields declared as `DATETIMEOFFSET` are treated as instants. Dictionary rows/scalars normalize output to UTC-compatible values; typed DTO properties can be `DateTimeOffset`.
+- `DB.NOW` is field-aware in helper-built SQL: normal datetime fields use DB-local current time, `_utc` fields use current UTC time, and SQL Server `datetimeoffset` fields use an offset-aware current time.
+
+```csharp
+db.insert("events", DB.h(
+    "starts_at", DateTime.UtcNow,        // UTC -> DB timezone for datetime/datetime2
+    "sent_at_utc", DateTime.UtcNow,      // stored as UTC
+    "source_at_utc", DateTimeOffset.UtcNow)); // stored as datetimeoffset UTC
+```
+
+For raw SQL, `DB` cannot reliably infer the target column name. Use `_utc` in the parameter name, or pass `DateTimeOffset`, when the value should not be converted through the DB timezone:
+
+```csharp
+db.exec("UPDATE events SET sent_at_utc=@sent_at_utc WHERE id=@id",
+    DB.h("@sent_at_utc", DateTime.UtcNow, "@id", id));
+```
+
+### Date, UTC, and datetimeoffset values
+`DB` applies the framework datetime contract automatically for helper-built reads and writes:
+
+- SQL `date` stays date-only.
+- SQL `datetime`/`datetime2` is converted between the configured DB timezone and internal UTC.
+- Fields ending in `_utc` skip DB timezone conversion and are treated as UTC instants.
+- SQL Server `datetimeoffset` is treated as an instant. Dictionary rows/scalars normalize output to UTC-compatible values; typed DTO properties can be `DateTimeOffset`.
 - `DB.NOW` is field-aware in helper-built SQL: normal datetime fields use DB-local current time, `_utc` fields use current UTC time, and SQL Server `datetimeoffset` fields use an offset-aware current time.
 
 ```csharp
