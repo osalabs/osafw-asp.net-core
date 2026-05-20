@@ -13,6 +13,7 @@
    - Create or update `docs/agents/tasks/summary-<YYYY-MM-DD>-<TASK-ID>.md` unless the user explicitly asked for no file changes or a read-only review. Use one short kebab-case task id per task session, and keep updating the same summary for iterative feedback in that session.
    - If no task summary is created because the request is read-only, include the useful summary in the final response instead.
    - For non-trivial tasks, identify the critical path, safe parallel side work, and tightly coupled work that should stay local.
+   - For large specs, logs, generated files, or config dumps, read an index/TOC or targeted `rg` matches first, then small ranges. Do not load the full file unless explicitly necessary; record the sections used in the task summary.
 
 2. Implement the requested change first.
    - Do not start test-only refactors or broad QA edits before the implementation pass is complete.
@@ -105,8 +106,10 @@
 
 - The main agent owns the task outcome, user communication, integration, and final verification.
 - Delegate only bounded work with clear expected output, owned files/modules, and constraints.
-- Good delegation targets include targeted codebase research, independent docs/spec review, focused implementation in disjoint files, post-implementation test execution, and code review.
+- Good delegation targets include targeted codebase research, independent docs/spec review, schema/config parity checks, test failure triage, focused implementation in disjoint files, post-implementation test execution, and code review.
 - Do not delegate vague repo sweeps, broad ownership, or blockers where the main agent cannot progress until the answer returns.
+- Use fast models, such as GPT-5.3-Codex-Spark when available, for read-only scans, first-pass triage, and rough prototypes. Use the main/inherited model for final integration, risky edits, and review that depends on broad context.
+- Use worker sub-agents for implementation when ownership can be split cleanly by files/modules. Keep shared core edits, merge conflict integration, and final verification with the main agent unless the split is clearly safe.
 - For code-editing workers, state that they are not alone in the codebase, must not revert others' changes, and must list changed paths in their final response.
 - Prefer a small number of useful parallel sub-agents over many shallow ones. Inspect their evidence and changes before relying on them, then record material findings and commands in the task summary.
 
@@ -146,6 +149,7 @@
 - If no automated coverage exists or is practical, record concise manual verification steps and prerequisites in the task summary.
 - Build app: `dotnet build osafw-app/osafw-app.csproj`.
 - Build app to isolated output when normal `bin/Debug` is locked: `dotnet build osafw-app/osafw-app.csproj -p:OutDir=artifacts/assistant_build/`.
+- Do not set `BaseIntermediateOutputPath` for `osafw-app`; generated intermediate files can be picked up by the project compile glob and cause duplicate assembly attributes.
 - Build solution: `dotnet build osafw-asp.net-core.sln`.
 - Test: `dotnet test`.
 
@@ -163,8 +167,9 @@
 
 ## MCP Tooling
 
-- Prefer Visual Studio MCP for solution-aware .NET work when available; validate it independently before relying on it.
+- Prefer Visual Studio MCP for solution-aware .NET work, rebuild/restart flows, and local VS-hosted app checks when available; validate it independently before relying on it.
 - Prefer Playwright MCP for browser repros and UI verification; rerun snapshots after navigation or meaningful DOM changes.
-- If a required MCP is missing or blocked, do one quick validation and at most one lightweight retry. Then ask the user whether to fix MCP or use a non-MCP fallback.
+- If the user requested a specific MCP or the task depends on VS/browser state, do one quick validation and at most one lightweight retry. If it is still missing or blocked, pause and ask whether to fix/restart MCP or use a fallback.
+- For pure compile/test verification where MCP is not required, standalone `dotnet build/test` is acceptable and does not need a pause.
 - Keep machine-specific URLs, credentials, and browser notes in `docs/agents/local_instructions.md`.
 - See `docs/agents/mcp.md` for detailed MCP troubleshooting guidance.
