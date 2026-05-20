@@ -1,13 +1,10 @@
-// Windows Authenticaiton Login controller
+// Windows Authentication Login controller
 //
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2025 Oleg Savchuk www.osalabs.com
 
-// To enable Windows Authenticaiton support:
-// install Microsoft.AspNetCore.Authentication.Negotiate (uncomment in csproj)
-// uncomment in Startup.cs
-// check HttpMiddleware.cs
-// uncomment windows login button in template/index/form.html
+// To enable Windows Authentication support, enable isWindowsAuth in osafw-app.csproj,
+// configure host authentication, and show the Windows login button in template/index/form.html.
 
 using System;
 using System.Text.RegularExpressions;

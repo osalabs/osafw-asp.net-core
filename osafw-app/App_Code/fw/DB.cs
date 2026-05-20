@@ -5,7 +5,7 @@
 
 /*
  * to use with MySQL:
- * - enable isMySQL and MySQL package references in osafw-app.csproj
+ * - enable isMySQL in osafw-app.csproj
  * - in appsettings.json set :
  *   - db/main/connection_string to "Server=127.0.0.1;User ID=XXX;Password=YYY;Database=ZZZ;Allow User Variables=true;"
  *   - db/main/type to "MySQL"
@@ -13,7 +13,6 @@
  *
  * to use with SQLite:
  * - enable isSQLite in osafw-app.csproj
- * - keep the Microsoft.Data.Sqlite package in osafw-app.csproj
  * - set db/main/type to "SQLite"
  * - use App_Data/sql/sqlite database initialization files
  */

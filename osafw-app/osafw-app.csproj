@@ -14,7 +14,7 @@
   </PropertyGroup>
   -->
 
-  <!-- MySQL provider and MySQL-backed sessions. Requires MySQL package references below.
+  <!-- MySQL provider and MySQL-backed sessions. Package references are included automatically when enabled.
   <PropertyGroup>
     <DefineConstants>$(DefineConstants);isMySQL</DefineConstants>
   </PropertyGroup>
@@ -32,13 +32,25 @@
   </PropertyGroup>
   -->
 
-  <!-- Sentry logger integration. Requires Sentry package reference below.
+  <!-- Windows Authentication / Negotiate login. Package reference is included automatically when enabled.
+  <PropertyGroup>
+    <DefineConstants>$(DefineConstants);isWindowsAuth</DefineConstants>
+  </PropertyGroup>
+  -->
+
+  <!-- Hosted scheduled task runner for fwcron.
+  <PropertyGroup>
+    <DefineConstants>$(DefineConstants);isFwCronService</DefineConstants>
+  </PropertyGroup>
+  -->
+
+  <!-- Sentry logger integration. Package reference is included automatically when enabled.
   <PropertyGroup>
     <DefineConstants>$(DefineConstants);isSentry</DefineConstants>
   </PropertyGroup>
   -->
 
-  <!-- Utils.ImportSpreadsheet support. Requires ExcelDataReader package reference below.
+  <!-- Utils.ImportSpreadsheet support. Package reference is included automatically when enabled.
   <PropertyGroup>
     <DefineConstants>$(DefineConstants);isExcelDataReader</DefineConstants>
   </PropertyGroup>
@@ -52,10 +64,10 @@
     <PackageReference Include="Markdig" Version="1.0.0" />
     <PackageReference Include="Microsoft.Agents.AI" Version="1.0.0-rc1" />
     <PackageReference Include="Microsoft.Agents.AI.OpenAI" Version="1.0.0-rc1" />
-    <!-- required for SQLite provider support and FwSqliteDistributedCache -->
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.3" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.3" Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(DefineConstants)', '(^|;)isSQLite($|;)'))" />
     <PackageReference Include="Microsoft.Playwright" Version="1.58.0" />
     <PackageReference Include="Microsoft.Extensions.Caching.SqlServer" Version="10.0.3" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Negotiate" Version="10.0.3" Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(DefineConstants)', '(^|;)isWindowsAuth($|;)'))" />
     <PackageReference Include="Microsoft.SemanticKernel" Version="1.72.0" />
     <PackageReference Include="Microsoft.Web.LibraryManager.Build" Version="3.0.71" />
     <PackageReference Include="OpenAI" Version="2.8.0" />
@@ -66,18 +78,10 @@
     <PackageReference Include="System.Drawing.Common" Version="10.0.3" />
     <PackageReference Include="Cronos" Version="0.11.1" />
 
-    <!-- uncomment if use Windows authentication -->
-    <!--PackageReference Include="Microsoft.AspNetCore.Authentication.Negotiate" Version="7.0.10" /-->
-
-    <!-- Sentry logging package. Also enable isSentry above. -->
-    <!--PackageReference Include="Sentry.AspNetCore" Version="5.0.1" /-->
-
-    <!-- Spreadsheet import package. Also enable isExcelDataReader above. -->
-    <!--PackageReference Include="ExcelDataReader" Version="3.7.0" /-->
-
-    <!-- MySQL provider packages. Also enable isMySQL above. -->
-    <!--PackageReference Include="MySqlConnector" Version="2.3.7" />
-    <PackageReference Include="Pomelo.Extensions.Caching.MySql" Version="2.2.0" /-->
+    <PackageReference Include="Sentry.AspNetCore" Version="5.0.1" Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(DefineConstants)', '(^|;)isSentry($|;)'))" />
+    <PackageReference Include="ExcelDataReader" Version="3.7.0" Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(DefineConstants)', '(^|;)isExcelDataReader($|;)'))" />
+    <PackageReference Include="MySqlConnector" Version="2.3.7" Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(DefineConstants)', '(^|;)isMySQL($|;)'))" />
+    <PackageReference Include="Pomelo.Extensions.Caching.MySql" Version="2.2.0" Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(DefineConstants)', '(^|;)isMySQL($|;)'))" />
   </ItemGroup>
 
   <!-- no need to publish App_Data -->

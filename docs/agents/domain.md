@@ -29,7 +29,7 @@ Core Subdomains
 Boundaries
 - DB access encapsulated by `DB` helper and models.
 - Database providers are a bounded runtime concern: SQL Server is the default, SQLite is optional for durable single-node deployments, and provider-specific scripts live under `App_Data/sql/<provider>/` when the provider needs divergent SQL.
-- Optional compile-time framework features are enabled from `osafw-app/osafw-app.csproj` with project constants: `isSQLite`, `isMySQL`, `isS3`, `isRoles`, `isSentry`, and `isExcelDataReader`.
+- Optional compile-time framework features are enabled from `osafw-app/osafw-app.csproj` with project constants: `isSQLite`, `isMySQL`, `isS3`, `isRoles`, `isWindowsAuth`, `isFwCronService`, `isSentry`, and `isExcelDataReader`.
 - Datetime boundaries: SQL `date` is calendar-only, ordinary `datetime`/`datetime2` is DB-timezone-normalized to UTC, `_utc` fields are already UTC, and SQL Server `datetimeoffset` is offset-aware instant storage.
 - Dynamic/Vue `datetime_local` fields submit browser-native `YYYY-MM-DDTHH:mm` values that the backend parses as user-local datetimes before UTC save conversion.
 - User timezone `auto` is stored as an empty `users.timezone` value and is the new-user default; login/settings screens resolve it from the browser timezone into the active session. `UTC` is an explicit stored preference.

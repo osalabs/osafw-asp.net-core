@@ -32,7 +32,7 @@ SQLite is optional and intended for durable single-node deployments. SQL Server 
 To enable SQLite:
 
 1. Define `isSQLite` in `osafw-app/osafw-app.csproj` or pass `-p:DefineConstants=isSQLite` when building.
-2. Keep the `Microsoft.Data.Sqlite` package reference in `osafw-app/osafw-app.csproj`.
+2. The project file includes the `Microsoft.Data.Sqlite` package automatically when `isSQLite` is defined.
 3. Configure the main database:
 
 ```json

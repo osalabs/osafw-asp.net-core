@@ -164,8 +164,8 @@ What slowed this task? What should future agents do differently? Were sub-agents
 - Database setup for SQL Server: run `osafw-app/App_Data/sql/fwdatabase.sql`, then `lookups.sql`; add `roles.sql` and `demo.sql` when needed.
 - Configure connection strings in `appsettings*.json` under `appSettings.db.main` (`type`, `connection_string`).
 - Switch to MySQL: enable `isMySQL` in `osafw-app/osafw-app.csproj`, set `db.main.type` to MySQL, and use scripts from `osafw-app/App_Data/sql/mysql/`.
-- Scheduled tasks: uncomment `builder.Services.AddHostedService<FwCronService>();` in `Program.cs`.
-- Windows auth: enable Negotiate and use `/winlogin`.
+- Scheduled tasks: enable `isFwCronService` in `osafw-app/osafw-app.csproj`.
+- Windows auth: enable `isWindowsAuth` in `osafw-app/osafw-app.csproj`, configure host authentication, and use `/winlogin`.
 - Sessions/Data Protection: ensure `fwsessions` and `fwkeys` tables exist.
 
 ## MCP Tooling

@@ -12,6 +12,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Net.Http.Headers;
 using Microsoft.AspNetCore.Authentication;
+#if isWindowsAuth
+using Microsoft.AspNetCore.Authentication.Negotiate;
+#endif
 using System;
 
 namespace osafw;
@@ -141,14 +144,16 @@ public static class Program
                 options.Cookie.HttpOnly = cookieHttpOnlySetting.Value;
         });
 
-        // Windows Active Directory authentication support (optional)
-        // builder.Services.AddAuthentication(NegotiateDefaults.AuthenticationScheme).AddNegotiate();
+#if isWindowsAuth
+        builder.Services.AddAuthentication(NegotiateDefaults.AuthenticationScheme).AddNegotiate();
+#endif
 
         // Memory cache
         builder.Services.AddMemoryCache();
 
-        // Uncomment to enable scheduled tasks
-        // builder.Services.AddHostedService<FwCronService>();
+#if isFwCronService
+        builder.Services.AddHostedService<FwCronService>();
+#endif
 
         // Build the WebApplication
         var app = builder.Build();
@@ -210,6 +215,10 @@ public static class Program
             }
         });
 
+#if isWindowsAuth
+        app.UseAuthentication();
+#endif
+
         // Security headers
         app.Use(async (context, next) =>
         {
@@ -246,16 +255,18 @@ public static class Program
                 return;
             }
 
+#if isWindowsAuth
             // Windows Authentication Support
             if (!context.User.Identity?.IsAuthenticated ?? true)
             {
                 var path = request.Path.ToString();
                 if (path.StartsWith("/winlogin", StringComparison.CurrentCultureIgnoreCase))
                 {
-                    await context.ChallengeAsync(Microsoft.AspNetCore.Server.IISIntegration.IISDefaults.AuthenticationScheme);
+                    await context.ChallengeAsync(NegotiateDefaults.AuthenticationScheme);
                     return;
                 }
             }
+#endif
 
             // Call the FW "core" pipeline
             FW.run(context, app.Configuration);

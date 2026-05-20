@@ -459,7 +459,7 @@ public class Utils
         do
         {
             string sheetName = reader.Name ?? "Sheet1";
-            StrList headers = null;      // lazily initialised so no per‑row realloc
+            StrList? headers = null;      // lazily initialised so no per‑row realloc
 
             while (reader.Read())
             {
@@ -472,7 +472,7 @@ public class Utils
                     continue;                  // move to first data row
                 }
 
-                var row = new FwRow(reader.FieldCount);
+                var row = new FwDict(reader.FieldCount);
                 for (int i = 0; i < reader.FieldCount; i++)
                 {
                     string colName = headers != null && i < headers.Count ? headers[i] : $"F{i}";
@@ -486,7 +486,7 @@ public class Utils
         }
         while (reader.NextResult());           // advance to next worksheet
 #else
-        throw new NotSupportedException("ExcelDataReader is not available. Enable isExcelDataReader and the ExcelDataReader package in osafw-app.csproj.");
+        throw new NotSupportedException("ExcelDataReader is not available. Enable isExcelDataReader in osafw-app.csproj.");
 #endif
     }
 

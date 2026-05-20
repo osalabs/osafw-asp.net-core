@@ -1,3 +1,4 @@
+#if isSQLite
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Caching.Distributed;
 using System;
@@ -219,3 +220,4 @@ CREATE INDEX IF NOT EXISTS IX_fwsessions_ExpiresAtTime ON {TABLE_NAME} (ExpiresA
         return value.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture);
     }
 }
+#endif
