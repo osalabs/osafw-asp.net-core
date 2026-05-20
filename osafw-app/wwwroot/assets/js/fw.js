@@ -877,6 +877,8 @@ window.fw={
   setup_file_drop_area: function (){
     document.querySelectorAll('.fw-file-drop-area').forEach(dropArea => {
         const fileInput = dropArea.querySelector('input[type="file"]');
+        if (fileInput === null) return;
+        
         const fakeBtn = dropArea.querySelector('.fake-btn');
 
         fakeBtn.onclick = () => fileInput.click();
