@@ -35,8 +35,9 @@ Updated: 2026-05-20
 - 2026-05-14: For runtime SQL shared by providers, prefer `DB` expression helpers over raw provider functions like `GETDATE`, `DATEADD`, `CONCAT`, or `CAST(... AS date)`.
 - 2026-05-18: With SQL-backed ASP.NET Core session, avoid writing session on every request; unnecessary writes can race and overwrite newer login state.
 - 2026-05-15: Do not lowercase or otherwise normalize complete encoded URLs; preserve case-sensitive path/query data and add mixed-case URL/token regression tests for URL helpers.
-- 2026-05-20: For large specs, logs, generated files, or config dumps, read an index/TOC or `rg` matches first, then targeted ranges; do not load the whole file unless explicitly needed.
+- 2026-05-20: For files over 1 MB or known large drafts/logs/generated outputs, do not run whole-file reads; use `rg` for headings/section IDs or read targeted ranges.
 - 2026-05-20: Use bounded sub-agents early for independent research, schema parity checks, test triage, and review; ask for concise findings with paths, not broad summaries.
-- 2026-05-20: Delegate implementation only when file ownership is disjoint and the contract is clear; keep shared core integration and final verification in the main workspace.
+- 2026-05-20: For tasks touching independent file groups, consider one worker for a disjoint group early; keep shared contracts and final integration in the main workspace.
 - 2026-05-20: For MCP-dependent workflows, validate the requested MCP once and retry once; if still blocked, ask whether to fix MCP or use a fallback instead of spending time on tooling recovery.
 - 2026-05-20: For isolated app builds, use repo-root `OutDir` only; do not set `BaseIntermediateOutputPath` for `osafw-app`.
+- 2026-05-20: Use task-summary `Reflection` for reusable process lessons and candidate instruction updates; avoid task recaps there.

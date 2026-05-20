@@ -40,7 +40,7 @@ http://demo.engineeredit.com/ - this is how it looks in action right after insta
 3. press Ctrl+F5 to run (or F5 if you really need debugger)
 4. open in browser https://localhost:PORT/Dev/Configure and check configuration. If database not configured:
   - create `demo` database (or other name you have in appsettings.json)
-  - or enable SQLite with project-wide `isSQLite`, set `appSettings.db.main.type` to `SQLite`, and use `Data Source=App_Data/db/osafw.sqlite;Mode=ReadWriteCreate;Foreign Keys=True;Default Timeout=30;Pooling=True;`
+  - or enable `isSQLite` in `osafw-app/osafw-app.csproj`, set `appSettings.db.main.type` to `SQLite`, and use `Data Source=App_Data/db/osafw.sqlite;Mode=ReadWriteCreate;Foreign Keys=True;Default Timeout=30;Pooling=True;`
   - click "Initialize DB"
 5. review debug log in `/osafw-app/App_Data/logs/main.log`
 6. edit or create new controllers and models in `/osafw-app/App_Code/controllers` and `/osafw-app/App_Code/models`
