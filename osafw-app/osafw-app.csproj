@@ -6,9 +6,41 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
-  <!-- uncomment if using SQLite
+  <!-- Optional compile-time features. Uncomment the blocks you need. -->
+
+  <!-- SQLite provider and SQLite-backed sessions.
   <PropertyGroup>
     <DefineConstants>$(DefineConstants);isSQLite</DefineConstants>
+  </PropertyGroup>
+  -->
+
+  <!-- MySQL provider and MySQL-backed sessions. Requires MySQL package references below.
+  <PropertyGroup>
+    <DefineConstants>$(DefineConstants);isMySQL</DefineConstants>
+  </PropertyGroup>
+  -->
+
+  <!-- AWS S3 attachment storage. AWSSDK packages are referenced by default.
+  <PropertyGroup>
+    <DefineConstants>$(DefineConstants);isS3</DefineConstants>
+  </PropertyGroup>
+  -->
+
+  <!-- Role/resource permission checks. Initialize roles.sql when enabling this.
+  <PropertyGroup>
+    <DefineConstants>$(DefineConstants);isRoles</DefineConstants>
+  </PropertyGroup>
+  -->
+
+  <!-- Sentry logger integration. Requires Sentry package reference below.
+  <PropertyGroup>
+    <DefineConstants>$(DefineConstants);isSentry</DefineConstants>
+  </PropertyGroup>
+  -->
+
+  <!-- Utils.ImportSpreadsheet support. Requires ExcelDataReader package reference below.
+  <PropertyGroup>
+    <DefineConstants>$(DefineConstants);isExcelDataReader</DefineConstants>
   </PropertyGroup>
   -->
 
@@ -37,13 +69,13 @@
     <!-- uncomment if use Windows authentication -->
     <!--PackageReference Include="Microsoft.AspNetCore.Authentication.Negotiate" Version="7.0.10" /-->
 
-    <!-- uncomment if use Sentry logging -->
+    <!-- Sentry logging package. Also enable isSentry above. -->
     <!--PackageReference Include="Sentry.AspNetCore" Version="5.0.1" /-->
 
-    <!-- uncomment if use Utils.ImportSpreadsheet -->
+    <!-- Spreadsheet import package. Also enable isExcelDataReader above. -->
     <!--PackageReference Include="ExcelDataReader" Version="3.7.0" /-->
 
-    <!-- uncomment if use MySQL -->
+    <!-- MySQL provider packages. Also enable isMySQL above. -->
     <!--PackageReference Include="MySqlConnector" Version="2.3.7" />
     <PackageReference Include="Pomelo.Extensions.Caching.MySql" Version="2.2.0" /-->
   </ItemGroup>

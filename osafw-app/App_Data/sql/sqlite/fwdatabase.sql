@@ -436,5 +436,5 @@ CREATE TABLE user_filters (
 
 PRAGMA foreign_keys = ON;
 
--- run roles.sql if roles support required and also uncomment #define isRoles in Users model
+-- run roles.sql if roles support is enabled with isRoles in osafw-app.csproj
 -- after this file - run lookups.sql

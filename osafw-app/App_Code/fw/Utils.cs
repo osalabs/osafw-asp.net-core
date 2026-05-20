@@ -1,6 +1,4 @@
-//uncomment to enable ExcelDataReader - install ExcelDataReader NuGet package and ExcelDataReader.DataSet (for CSV)
-//#define ExcelDataReader
-#if ExcelDataReader
+#if isExcelDataReader
 using ExcelDataReader;
 #endif
 
@@ -449,7 +447,7 @@ public class Utils
     /// </param>  
     public static void ImportSpreadsheet(string filePath, Func<string, FwDict, bool> rowCallback, bool isHeaderRow = true)
     {
-#if ExcelDataReader
+#if isExcelDataReader
         // ExcelDataReader needs this once per process for legacy encodings
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
@@ -488,7 +486,7 @@ public class Utils
         }
         while (reader.NextResult());           // advance to next worksheet
 #else
-        throw new NotSupportedException("ExcelDataReader is not available. Please install the NuGet package and enable in Utils");
+        throw new NotSupportedException("ExcelDataReader is not available. Enable isExcelDataReader and the ExcelDataReader package in osafw-app.csproj.");
 #endif
     }
 

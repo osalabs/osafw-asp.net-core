@@ -3,9 +3,6 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
-//if you use Roles - uncomment define isRoles here
-//#define isRoles
-
 using OtpNet;
 using QRCoder;
 using System;

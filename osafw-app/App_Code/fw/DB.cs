@@ -4,23 +4,19 @@
 // (c) 2009-2023 Oleg Savchuk www.osalabs.com
 
 /*
- * to use with Mysql:
- * - uncomment #define isMySQL here
- * - uncomment #define isMySQL in Startup.cs
- * - uncomment or add "MySqlConnector" and "Pomelo.Extensions.Caching.MySql" packages in osafw-app.csproj
+ * to use with MySQL:
+ * - enable isMySQL and MySQL package references in osafw-app.csproj
  * - in appsettings.json set :
  *   - db/main/connection_string to "Server=127.0.0.1;User ID=XXX;Password=YYY;Database=ZZZ;Allow User Variables=true;"
  *   - db/main/type to "MySQL"
  * - use App_Data/sql/mysql database initialization files
  *
  * to use with SQLite:
- * - define isSQLite project-wide in osafw-app.csproj or uncomment #define isSQLite in Program.cs and DB.cs
+ * - enable isSQLite in osafw-app.csproj
  * - keep the Microsoft.Data.Sqlite package in osafw-app.csproj
  * - set db/main/type to "SQLite"
  * - use App_Data/sql/sqlite database initialization files
  */
-//#define isMySQL //uncomment if using MySQL
-//#define isSQLite //uncomment if using SQLite
 #if isMySQL
 using MySqlConnector;
 #endif

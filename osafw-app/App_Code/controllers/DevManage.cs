@@ -113,7 +113,7 @@ public class DevManageController : FwController
         ps["is_rbac"] = fw.model<Users>().isRoles();
         ps["access_levels"] = FormUtils.selectTplOptions("/common/sel/access_level.sel");
 
-        ps["is_S3"] = S3.IS_ENABLED;
+        ps["isS3"] = S3.IS_ENABLED;
         ps["db_type"] = fw.getDB().dbtype;
 
         if (!Utils.isEmpty(is_export))

@@ -1,10 +1,3 @@
-//#define isMySQL // uncomment if using MySQL, see fw/DB.cs for full instructions
-//#define isSQLite // uncomment if using SQLite, see fw/DB.cs for full instructions
-#if isMySQL
-#endif
-#if isSQLite
-#endif
-
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.CookiePolicy;
 using Microsoft.AspNetCore.DataProtection;
@@ -30,8 +23,9 @@ public static class Program
         // In .NET 6+ the recommended pattern is the "WebApplication.CreateBuilder" approach
         var builder = WebApplication.CreateBuilder(args);
 
-        // If you use Sentry, enable it here:
-        // builder.WebHost.UseSentry();
+#if isSentry
+        builder.WebHost.UseSentry();
+#endif
 
         // read the environment settings
         var settings = FwConfig.settingsForEnvironment(builder.Configuration);
@@ -87,7 +81,7 @@ public static class Program
             // If using SQLite for distributed cache (and sessions)
             builder.Services.AddSingleton<IDistributedCache>(_ => new FwSqliteDistributedCache(connStr));
 #else
-            throw new ApplicationException("SQLite support requires defining isSQLite project-wide or uncommenting #define isSQLite in Program.cs and DB.cs.");
+            throw new ApplicationException("SQLite support requires defining isSQLite in osafw-app.csproj.");
 #endif
         }
         else if (dbType == DB.DBTYPE_MYSQL)
@@ -106,7 +100,7 @@ public static class Program
                 options.TableName = "fwsessions";
             });
 #else
-            throw new ApplicationException("MySQL support requires uncommenting #define isMySQL in Program.cs and DB.cs.");
+            throw new ApplicationException("MySQL support requires defining isMySQL in osafw-app.csproj.");
 #endif
         }
         else
