@@ -619,15 +619,26 @@ window.fw={
         $input.val(bvalue);
       }
 
+      var submit_form = function() {
+        var form = $form[0];
+        if (!form) return;
+        if (typeof form.reportValidity === 'function') {
+          if (!form.reportValidity()) return;
+        } else if (typeof form.checkValidity === 'function' && !form.checkValidity()) {
+          return;
+        }
+        $form.submit();
+      };
+
       //if button has data-delay - submit with delay (in milliseconds)
       var delay = $this.data('delay');
       if (delay) {
          setTimeout(function () {
-             $form[0].reportValidity() && $form.submit();
+             submit_form();
          }, delay);
         }
       else {
-        $form[0].reportValidity() && $form.submit();
+        submit_form();
       }
     });
 
