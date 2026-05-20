@@ -547,7 +547,7 @@ class DevCodeGen
         };
 
         //make/append to provider update file in App_Data/sql[/provider]/updates/updYYYY-MM-DD.sql with insert
-        var updates_root = Path.Combine(fw.model<FwUpdates>().sqlScriptRoot(), "updates");
+        var updates_root = fw.model<FwUpdates>().sqlUpdatesRoot();
         Directory.CreateDirectory(updates_root);
         var upd_file = Path.Combine(updates_root, "upd" + DateTime.Now.ToString("yyyy-MM-dd") + ".sql");
         var upd_sql = "";

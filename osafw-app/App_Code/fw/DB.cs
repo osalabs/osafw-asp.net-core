@@ -3259,6 +3259,8 @@ public class DB : IDisposable
         {
             var tableName = table.Contains('.') ? table.Split('.').Last() : table;
             var rows = arrayp($"PRAGMA table_xinfo({qid(tableName)})");
+            var pkRows = rows.Where(row => row["hidden"].toInt() != 1 && row["pk"].toInt() > 0).ToList();
+            var identityColumn = pkRows.Count == 1 ? pkRows[0]["name"].toStr() : "";
             foreach (FwDict row in rows)
             {
                 if (row["hidden"].toInt() == 1)
@@ -3277,7 +3279,7 @@ public class DB : IDisposable
                 row["charset"] = "";
                 row["collation"] = "";
                 row["pos"] = row["cid"].toInt() + 1;
-                row["is_identity"] = row["pk"].toBool() && subtype.Equals("INTEGER", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+                row["is_identity"] = row["name"].toStr() == identityColumn && subtype.Equals("INTEGER", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
                 result.Add(row);
             }
         }

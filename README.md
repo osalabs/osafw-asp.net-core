@@ -183,7 +183,7 @@ The following controller fields used above can be defined in controller's `init(
 - **FwApiController** â€“ base class for building authenticated REST APIs
 - **Entity Builder** â€“ text based definition to generate SQL and CRUD scaffolding
 
-SQLite `FwUpdates` scripts are loaded from `/osafw-app/App_Data/sql/sqlite/updates`; SQL Server scripts stay in `/osafw-app/App_Data/sql/updates`.
+SQLite `FwUpdates` scripts are loaded from `/osafw-app/App_Data/sql/sqlite/updates`; SQL Server scripts stay in `/osafw-app/App_Data/sql/updates`. MySQL scans the root updates folder plus `/osafw-app/App_Data/sql/mysql/updates`, where same-named MySQL scripts override the root script.
 
 ### Per-user Date/Time and Timezones
 
@@ -228,6 +228,7 @@ Another debug function that might be helpful is `fw.rw()` - but it output it's p
 - db updates:
   - first, make changes in `/osafw-app/App_Data/sql/database.sql` - this file is used to create db from scratch
   - then create a file `/osafw-app/App_Data/sql/updates/updYYYY-MM-DD[-123].sql` with all the CREATE, ALTER, UPDATE... - this will allow to apply just this update to existing database instances
+  - for MySQL, put provider-specific update overrides under `/osafw-app/App_Data/sql/mysql/updates/`
   - for SQLite, mirror the schema change under `/osafw-app/App_Data/sql/sqlite/database.sql` and put SQLite-specific updates under `/osafw-app/App_Data/sql/sqlite/updates/`
 - use `fw.routeRedirect()` if you got request to one Controller.Action, but need to continue processing in another Controller.Action
   - for example, if for a logged user you need to show detailed data and always skip list view - in the `IndexAction()` just use `fw.routeRedirect("ShowForm")`

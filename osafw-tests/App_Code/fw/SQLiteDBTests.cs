@@ -88,6 +88,15 @@ public class SQLiteDBTests
         Assert.AreEqual(1, idSchema["is_identity"].toInt());
         Assert.AreEqual("datetime", addTimeSchema["fw_type"]);
 
+        db.exec(@"CREATE TABLE composite_keys (
+  users_id INTEGER NOT NULL,
+  roles_id INTEGER NOT NULL,
+  PRIMARY KEY (users_id, roles_id)
+)");
+        var compositeSchema = db.tableSchemaFull("composite_keys");
+        Assert.AreEqual(0, ((FwDict)compositeSchema["users_id"]!)["is_identity"].toInt());
+        Assert.AreEqual(0, ((FwDict)compositeSchema["roles_id"]!)["is_identity"].toInt());
+
         var fks = db.listForeignKeys("children");
         Assert.HasCount(1, fks);
         Assert.AreEqual("parents", fks[0]["pk_table"]);
@@ -154,6 +163,31 @@ public class SQLiteDBTests
 
         cache.Remove("session-1");
         Assert.IsNull(cache.Get("session-1"));
+    }
+
+    [TestMethod]
+    public void SQLite_DistributedCache_ReturnsNullAndCleansExpiredSessions()
+    {
+        var cache = new FwSqliteDistributedCache(connstr);
+        var payload = new byte[] { 4, 5, 6 };
+
+        cache.Set("expired-absolute", payload, new DistributedCacheEntryOptions
+        {
+            AbsoluteExpiration = DateTimeOffset.UtcNow.AddMinutes(-5)
+        });
+
+        Assert.IsNull(cache.Get("expired-absolute"));
+        Assert.AreEqual(0, db.value("fwsessions", DB.h("Id", "expired-absolute"), "count(*)").toInt());
+
+        db.exec(
+            "INSERT INTO fwsessions (Id, Value, ExpiresAtTime, SlidingExpirationInSeconds) VALUES (@id, X'09', @expires, @sliding)",
+            DB.h(
+                "id", "expired-sliding",
+                "expires", DateTimeOffset.UtcNow.AddMinutes(-5).ToString("O"),
+                "sliding", 300));
+
+        Assert.IsNull(cache.Get("expired-sliding"));
+        Assert.AreEqual(0, db.value("fwsessions", DB.h("Id", "expired-sliding"), "count(*)").toInt());
     }
 
     private static string repoRoot()

@@ -24,14 +24,28 @@ public class FwUpdatesTests
             fw.db = new DB("", DB.DBTYPE_SQLSRV);
             updates.init(fw);
             Assert.AreEqual(Path.Combine(@"C:\site", "App_Data", "sql"), updates.sqlScriptRoot());
+            CollectionAssert.AreEqual(
+                new[] { Path.Combine(@"C:\site", "App_Data", "sql", "updates") },
+                updates.sqlUpdateRoots());
 
             fw.db = new DB("", DB.DBTYPE_MYSQL);
             updates.init(fw);
             Assert.AreEqual(Path.Combine(@"C:\site", "App_Data", "sql", "mysql"), updates.sqlScriptRoot());
+            Assert.AreEqual(Path.Combine(@"C:\site", "App_Data", "sql", "mysql", "updates"), updates.sqlUpdatesRoot());
+            CollectionAssert.AreEqual(
+                new[]
+                {
+                    Path.Combine(@"C:\site", "App_Data", "sql", "updates"),
+                    Path.Combine(@"C:\site", "App_Data", "sql", "mysql", "updates")
+                },
+                updates.sqlUpdateRoots());
 
             fw.db = new DB("", DB.DBTYPE_SQLITE);
             updates.init(fw);
             Assert.AreEqual(Path.Combine(@"C:\site", "App_Data", "sql", "sqlite"), updates.sqlScriptRoot());
+            CollectionAssert.AreEqual(
+                new[] { Path.Combine(@"C:\site", "App_Data", "sql", "sqlite", "updates") },
+                updates.sqlUpdateRoots());
         }
         finally
         {
