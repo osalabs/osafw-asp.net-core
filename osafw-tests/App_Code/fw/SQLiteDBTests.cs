@@ -1,5 +1,6 @@
 #if isSQLite
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.IO;
@@ -147,9 +148,12 @@ public class SQLiteDBTests
     }
 
     [TestMethod]
-    public void SQLite_DistributedCache_PersistsAndExpiresSessions()
+    public void SQLite_FwSessionCache_RegistersAndPersistsSessions()
     {
-        var cache = new FwSqliteDistributedCache(connstr);
+        using var provider = new ServiceCollection()
+            .AddFwSessionCache(connstr, DB.DBTYPE_SQLITE)
+            .BuildServiceProvider();
+        var cache = provider.GetRequiredService<IDistributedCache>();
         var payload = new byte[] { 1, 2, 3 };
 
         cache.Set("session-1", payload, new DistributedCacheEntryOptions
@@ -166,9 +170,12 @@ public class SQLiteDBTests
     }
 
     [TestMethod]
-    public void SQLite_DistributedCache_ReturnsNullAndCleansExpiredSessions()
+    public void SQLite_FwSessionCache_ReturnsNullAndCleansExpiredSessions()
     {
-        var cache = new FwSqliteDistributedCache(connstr);
+        using var provider = new ServiceCollection()
+            .AddFwSessionCache(connstr, DB.DBTYPE_SQLITE)
+            .BuildServiceProvider();
+        var cache = provider.GetRequiredService<IDistributedCache>();
         var payload = new byte[] { 4, 5, 6 };
 
         cache.Set("expired-absolute", payload, new DistributedCacheEntryOptions

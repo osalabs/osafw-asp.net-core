@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
-using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -78,44 +77,8 @@ public static class Program
                 options.XmlRepository = repository; // i.e. "PersistKeysToCustomXmlRepository"
             });
 
-        if (dbType == DB.DBTYPE_SQLITE)
-        {
-#if isSQLite
-            // If using SQLite for distributed cache (and sessions)
-            builder.Services.AddSingleton<IDistributedCache>(_ => new FwSqliteDistributedCache(connStr));
-#else
-            throw new ApplicationException("SQLite support requires defining isSQLite in osafw-app.csproj.");
-#endif
-        }
-        else if (dbType == DB.DBTYPE_MYSQL)
-        {
-#if isMySQL
-            // If using MySQL for distributed cache (and sessions)
-            builder.Services.AddDistributedMySqlCache(options =>
-            {
-                var csb = new MySqlConnector.MySqlConnectionStringBuilder(connStr);
-                if (string.IsNullOrEmpty(csb.Database))
-                    throw new ApplicationException("No database name defined in connection_string");
-
-                // Setup session store
-                options.ConnectionString = csb.ConnectionString;
-                options.SchemaName = csb.Database; // database name
-                options.TableName = "fwsessions";
-            });
-#else
-            throw new ApplicationException("MySQL support requires defining isMySQL in osafw-app.csproj.");
-#endif
-        }
-        else
-        {
-            // If using SQL Server for distributed cache (and sessions)
-            builder.Services.AddDistributedSqlServerCache(options =>
-            {
-                options.ConnectionString = connStr;
-                options.SchemaName = "dbo";
-                options.TableName = "fwsessions";
-            });
-        }
+        // Session rows use the provider-specific cache backing store for the main DB.
+        builder.Services.AddFwSessionCache(connStr, dbType);
 
         // Form upload/limits
         builder.Services.Configure<FormOptions>(options =>
