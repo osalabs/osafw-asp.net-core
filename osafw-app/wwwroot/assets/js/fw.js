@@ -623,11 +623,11 @@ window.fw={
       var delay = $this.data('delay');
       if (delay) {
          setTimeout(function () {
-             $form.submit();
+             $form[0].reportValidity() && $form.submit();
          }, delay);
         }
       else {
-        $form.submit();
+        $form[0].reportValidity() && $form.submit();
       }
     });
 
