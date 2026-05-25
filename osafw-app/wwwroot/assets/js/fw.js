@@ -113,6 +113,13 @@ window.fw={
     var scripts = typeof component.scripts === 'function' ? component.scripts(params) : (component.scripts || []);
     var styles = typeof component.styles === 'function' ? component.styles(params) : (component.styles || []);
 
+    if (fw._componentRegistry[name] === undefined)
+      fw.registerComponent(name, options);
+    else if (init) {
+      init(scope, params);
+      return;
+    }
+      
     var scriptChain = Promise.resolve();
     var stylePromises = [];
 
