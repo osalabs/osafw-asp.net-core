@@ -154,6 +154,14 @@ window.fw={
     var root = scope || document;
     if (!root) return;
 
+    function safely(fn) {
+      try {
+        fn();
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
     if (typeof root.dispatchEvent === 'function' && typeof CustomEvent === 'function') {
       root.dispatchEvent(new CustomEvent('fw-dispose', {
         bubbles: true,
@@ -167,27 +175,22 @@ window.fw={
       var component = fw._componentRegistry[name];
       if (!component || typeof component.dispose !== 'function') return;
 
-      try {
+      safely(function () {
         component.dispose(root);
-      } catch (err) {
-        console.error(err);
-      }
+      });
     });
 
     if (!window.jQuery) return;
 
-    var $root = $(root);
-    var $all = $root.find('*').addBack();
+    var $all = $(root).find('*').addBack();
 
     $all.each(function () {
       var $el = $(this);
       var datepicker = $el.data('datepicker');
       if (!datepicker) return;
 
-      try {
-        if (typeof datepicker.hide === 'function') {
-          datepicker.hide();
-        }
+      safely(function () {
+        if (typeof datepicker.hide === 'function') datepicker.hide();
         if (datepicker.hide_mousedown) {
           $(document).off('mousedown', datepicker.hide_mousedown);
         }
@@ -198,52 +201,26 @@ window.fw={
           datepicker.picker.off();
           datepicker.picker.remove();
         }
-      } catch (err) {
-        console.error(err);
-      }
+      });
 
-      $el.removeData('datepicker');
-      $el.removeData('fw-calendar-inited');
+      $el.removeData('datepicker fw-calendar-inited');
     });
 
-    if ($.fn.select2) {
-      $all.filter('select').each(function () {
-        var $select = $(this);
-        if (!$select.data('select2')) return;
+    [
+      ['select', 'select2', function ($el) { return $el.data('select2'); }],
+      ['select.selectpicker', 'selectpicker', function ($el) { return $el.data('selectpicker') || $el.parent('.bootstrap-select').length; }],
+      ['.ui-sortable', 'sortable', function ($el) { return $el.data('ui-sortable') || $el.data('sortable'); }]
+    ].forEach(function (item) {
+      if (!$.fn[item[1]]) return;
 
-        try {
-          $select.select2('destroy');
-        } catch (err) {
-          console.error(err);
-        }
+      $all.filter(item[0]).each(function () {
+        var $el = $(this);
+        if (!item[2]($el)) return;
+        safely(function () {
+          $el[item[1]]('destroy');
+        });
       });
-    }
-
-    if ($.fn.selectpicker) {
-      $all.filter('select.selectpicker').each(function () {
-        var $select = $(this);
-        if (!$select.data('selectpicker') && !$select.parent('.bootstrap-select').length) return;
-
-        try {
-          $select.selectpicker('destroy');
-        } catch (err) {
-          console.error(err);
-        }
-      });
-    }
-
-    if ($.fn.sortable) {
-      $all.filter('.ui-sortable').each(function () {
-        var $sortable = $(this);
-        if (!$sortable.data('ui-sortable') && !$sortable.data('sortable')) return;
-
-        try {
-          $sortable.sortable('destroy');
-        } catch (err) {
-          console.error(err);
-        }
-      });
-    }
+    });
   },
 
   // Unified helper: updates saved/unsaved status and optional progress spinner
