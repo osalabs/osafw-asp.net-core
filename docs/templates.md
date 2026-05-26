@@ -681,6 +681,57 @@ These help keep your templates DRY and consistent. Below are the most important 
 - **sortable.html**: Includes jQuery UI Sortable JS and initializes on `.fw-sortable` elements. Usage: `<~/common/sortable>`
 - **uploader.html**: Includes File Upload JS/CSS. Usage: `<~/common/uploader>`
 
+#### Creating JavaScript Component Includes
+
+Prefer a small `/common/*.html` include that calls `fw.initComponent()` with a scoped init. Include that template wherever the controls appear, including remote modal content.
+
+```html
+<script>
+  fw.initComponent('component_name', {
+    scope: fw.scopeFromScript(),
+    assetsUrls: [
+      '<~GLOBAL[ASSETS_URL]>/lib/vendor/vendor.css?v<~GLOBAL[SITE_VERSION]>',
+      '<~GLOBAL[ASSETS_URL]>/lib/vendor/vendor.js?v<~GLOBAL[SITE_VERSION]>'
+    ],
+    params: {
+      optionName: '<~value>'
+    },
+    init: function (scope, params) {
+      var $scope = $(scope || document);
+      $scope.find('.component-selector').each(function () {
+        var $el = $(this);
+        if ($el.data('fw-component-name-inited')) return;
+        $el.data('fw-component-name-inited', true);
+
+        // Initialize the vendor plugin or framework behavior here.
+      });
+    }
+  });
+</script>
+```
+
+`fw.initComponent()` deduplicates CSS and JS loads by component name and asset index, waits for those assets, and then runs `init(scope, params)` for the current include. This is the normal pattern for reusable form controls and modal content. Use a distinct component name when the asset list changes.
+
+Keep component init idempotent. Mark initialized elements with jQuery `data(...)`, and guard document-level event bindings with a document data flag so repeated includes do not bind duplicate handlers.
+
+Use `fw.registerComponent(name, config)` only when the config must be reused later by name without repeating the full asset and init block:
+
+```js
+fw.registerComponent('component_name', {
+  assetsUrls: ['...'],
+  init: function (scope, params) {
+    // shared init
+  }
+});
+
+fw.initComponent('component_name', {
+  scope: fw.scopeFromScript(),
+  params: {}
+});
+```
+
+Do not call registered component `init` directly. The registry stores reusable config only; asset load state is tracked separately by `fw.loadScript()` and `fw.loadStyle()`, so all usage should still go through `fw.initComponent()`.
+
 `modal.html` lookup saves update the target select/input, dispatch a bubbling `fw-lookup-saved` event from the target, then dispatch the usual bubbling `change` event for compatibility. `event.detail` contains `mode`, `id`, `value`, `label`, `data`, `option`, `target`, `trigger`, `modal`, and `form`.
 
 Remote modal content can namespace duplicate DOM IDs. Generic modal triggers opt in with `data-fw-modal-namespace-ids="1"`; lookup add/edit modals namespace IDs by default and can opt out with `data-fw-modal-namespace-ids="0"`. Namespaced elements keep `data-fw-original-id`; add `data-fw-keep-id="1"` to preserve an ID. Modal scripts that run with namespacing should use scoped selectors such as `$(fw.scopeFromScript()).find(...)`.
