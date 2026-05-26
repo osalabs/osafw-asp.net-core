@@ -149,6 +149,103 @@ window.fw={
       });
   },
 
+  // Dispose scoped component instances and plugin DOM before replacing/removing a scope.
+  disposeComponents: function (scope) {
+    var root = scope || document;
+    if (!root) return;
+
+    if (typeof root.dispatchEvent === 'function' && typeof CustomEvent === 'function') {
+      root.dispatchEvent(new CustomEvent('fw-dispose', {
+        bubbles: true,
+        detail: {
+          scope: root
+        }
+      }));
+    }
+
+    Object.keys(fw._componentRegistry || {}).forEach(function (name) {
+      var component = fw._componentRegistry[name];
+      if (!component || typeof component.dispose !== 'function') return;
+
+      try {
+        component.dispose(root);
+      } catch (err) {
+        console.error(err);
+      }
+    });
+
+    if (!window.jQuery) return;
+
+    var $root = $(root);
+    var $all = $root.find('*').addBack();
+
+    $all.each(function () {
+      var $el = $(this);
+      var datepicker = $el.data('datepicker');
+      if (!datepicker) return;
+
+      try {
+        if (typeof datepicker.hide === 'function') {
+          datepicker.hide();
+        }
+        if (datepicker.hide_mousedown) {
+          $(document).off('mousedown', datepicker.hide_mousedown);
+        }
+        if (datepicker.place) {
+          $(window).off('resize', datepicker.place);
+        }
+        if (datepicker.picker && typeof datepicker.picker.remove === 'function') {
+          datepicker.picker.off();
+          datepicker.picker.remove();
+        }
+      } catch (err) {
+        console.error(err);
+      }
+
+      $el.removeData('datepicker');
+      $el.removeData('fw-calendar-inited');
+    });
+
+    if ($.fn.select2) {
+      $all.filter('select').each(function () {
+        var $select = $(this);
+        if (!$select.data('select2')) return;
+
+        try {
+          $select.select2('destroy');
+        } catch (err) {
+          console.error(err);
+        }
+      });
+    }
+
+    if ($.fn.selectpicker) {
+      $all.filter('select.selectpicker').each(function () {
+        var $select = $(this);
+        if (!$select.data('selectpicker') && !$select.parent('.bootstrap-select').length) return;
+
+        try {
+          $select.selectpicker('destroy');
+        } catch (err) {
+          console.error(err);
+        }
+      });
+    }
+
+    if ($.fn.sortable) {
+      $all.filter('.ui-sortable').each(function () {
+        var $sortable = $(this);
+        if (!$sortable.data('ui-sortable') && !$sortable.data('sortable')) return;
+
+        try {
+          $sortable.sortable('destroy');
+        } catch (err) {
+          console.error(err);
+        }
+      });
+    }
+  },
+
   // Unified helper: updates saved/unsaved status and optional progress spinner
   // is_changed: true/false updates internal changed flag, pass undefined to keep previous value
   // is_progress: true - show spinner, false - hide spinner, undefined - keep previous spinner state

@@ -673,7 +673,7 @@ These help keep your templates DRY and consistent. Below are the most important 
 - **att.html**: Includes attachment selection modal. Usage: `<~/common/att>`
 - **autocomplete.html**: Includes Bootstrap Simple Autocomplete JS through `fw.initComponent` so repeated includes share one loaded asset. Usage: `<~/common/autocomplete>`
 - **bootstrap_select.html**: Includes bootstrap-select JS/CSS through `fw.initComponent`, initializes `select.selectpicker`, and preserves autosave/list-filter behavior. Usage: `<~/common/bootstrap_select>`
-- **modal.html**: Adds `.on-fw-modal` remote modal triggers, `.on-fw-modal-link` same-modal link loading, and lookup add/edit helpers. Usage: `<~/common/modal>`
+- **modal.html**: Loads `fw-modal.js`, adds `.on-fw-modal` remote modal triggers, `.on-fw-modal-link` same-modal link loading, and lookup add/edit helpers. Usage: `<~/common/modal>`
 - **select2.html**: Includes Select2 JS/CSS and related helpers for styled selects. Initializes on all `.select2` elements. Usage: `<~/common/select2>`
 - **calendar.html**: Includes Bootstrap Datepicker JS/CSS and datepicker initialization on all `.date` elements. Usage: `<~/common/calendar>`
 - **html_editor.html**: Includes HTML editor (TinyMCE) JS/CSS and initialize it on all `.fw-html-editor` elements. Usage: `<~/common/html_editor>`
@@ -714,6 +714,8 @@ Prefer a small `/common/*.html` include that calls `fw.initComponent()` with a s
 
 Keep component init idempotent. Mark initialized elements with jQuery `data(...)`, and guard document-level event bindings with a document data flag so repeated includes do not bind duplicate handlers.
 
+If a component creates plugin state or DOM outside the current scope, make cleanup idempotent too. `fw.disposeComponents(scope)` dispatches `fw-dispose`, calls registered component `dispose(scope)` callbacks, and runs framework cleanup for common plugins before modal content is replaced or removed.
+
 Use `fw.registerComponent(name, config)` only when the config must be reused later by name without repeating the full asset and init block:
 
 ```js
@@ -735,6 +737,10 @@ Do not call registered component `init` directly. The registry stores reusable c
 `modal.html` lookup saves update the target select/input, dispatch a bubbling `fw-lookup-saved` event from the target, then dispatch the usual bubbling `change` event for compatibility. `event.detail` contains `mode`, `id`, `value`, `label`, `data`, `option`, `target`, `trigger`, `modal`, and `form`.
 
 Remote modal content can namespace duplicate DOM IDs. Generic modal triggers opt in with `data-fw-modal-namespace-ids="1"`; lookup add/edit modals namespace IDs by default and can opt out with `data-fw-modal-namespace-ids="0"`. Namespaced elements keep `data-fw-original-id`; add `data-fw-keep-id="1"` to preserve an ID. Modal scripts that run with namespacing should use scoped selectors such as `$(fw.scopeFromScript()).find(...)`.
+
+Remote modal triggers copy Bootstrap `data-bs-*` modal options to the generated modal, except trigger/dismiss attributes (`data-bs-toggle`, `data-bs-target`, `data-bs-dismiss`). For a static backdrop, use `data-bs-backdrop="static" data-bs-keyboard="false"`. Use `data-modal-class` to add classes to the generated root `.modal`; keep using `data-modal-dialog-class` or `data-modal-content-class` for dialog/content class overrides.
+
+Before replacing modal content or removing a modal, `fw-modal.js` calls `fw.disposeComponents(scope)`. Custom components that attach DOM outside their own scope or need explicit cleanup should either register a component `dispose(scope)` callback or listen for the bubbling `fw-dispose` event.
 
 #### Select/Option List Templates (`/common/sel`)
 - **sel/access_level.sel**: List of access levels for user roles. Usage: `<select><~/common/sel/access_level.sel select="access_level"></select>`.
