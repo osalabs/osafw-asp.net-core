@@ -12,6 +12,9 @@
 - Renamed `Utils.isReturnUrlApp()` to `Utils.isAppUrl()` and `FwController.setReturnContext()` to `FwController.setPSReturnContext()`.
 - Removed `FwController.setListRowUrls()`; standard row URLs are defined by templates again.
 - Removed trailing newlines from URL-fragment templates used inside `href`/`data-href` values: `common/form/cancel_url.html`, `common/form/ret_url.html`, and `common/form/showdelete/cancel_url.html`.
+- Changed shared return buttons to show `Return to <return_title>` when a return title exists, with `Return Back` kept as the fallback.
+- Kept Vue view/edit screens' `Back to List` button visible even when an origin return URL exists; origin return remains available as a separate button.
+- Added stable spacing between the return icon and dynamic return label in Vue headers, using icon-side `me-1` for consistency with reusable icon+text button styling.
 - Kept return URL validation server-side: only root-relative app paths or absolute URLs under configured `ROOT_DOMAIN` are accepted.
 - Removed the JS return-context propagation approach from the implementation; shared `fw.js` is not part of the final behavior change.
 - Documented the shared return breadcrumb/input convention in `docs/templates.md`.
@@ -38,12 +41,21 @@
   - Lookup Manager Log Types link encoded `return_title=Lookup+Manager` without a trailing newline.
   - `https://localhost:44315/Admin/Roles?return_url=%2fAdmin%2fLookups&return_title=Lookup%20Manager` showed the Lookup Manager breadcrumb, did not show `/Admin/Lookups` in filter text, kept hidden `return_url` and `return_title`, and standard Edit/View row links kept both return params.
   - Unsafe absolute external `return_url` did not render a Lookup Manager breadcrumb.
+- Playwright smoke after return-label update:
+  - Vue list `https://localhost:44315/Admin/LogTypes?return_url=%2fAdmin%2fLookups&return_title=Lookup%20Manager` showed `Return to Lookup Manager`.
+  - Vue view/edit screens showed both `Back to List` and `Return to Lookup Manager`.
+  - Direct Vue view screen without return metadata showed `Back to List` and no origin return button.
+  - Classic `https://localhost:44315/Admin/Roles/1/edit?return_url=%2fAdmin%2fLookups&return_title=Lookup%20Manager` showed `Return to Lookup Manager`.
+  - Follow-up Vue view/edit smoke confirmed the return icon has `me-1` and a visible gap between icon and text.
 - Temporary app-run/browser logs created for this task were removed after browser verification; pre-existing agent artifact logs were left untouched.
 - Review loop:
   - Reviewer found double-encoding risk in two templates, fragment handling in `Utils.addUrlQueryParam`, and stale task summary notes.
   - Fixed those findings and reran verification/review after the fix.
   - Second reviewer found custom `row_view_url` could be overwritten; fixed it and reran verification.
   - Final focused reviewer found no issues and said the review loop can stop.
+  - Final return-label reviewer found no issues and said the review loop can stop.
+  - Final icon-spacing reviewer found no issues and said the review loop can stop.
+  - Final icon-side spacing reviewer found no issues and said the review loop can stop.
 
 ## Decisions - why
 - Used shared Vue history changes because the duplicate Back behavior came from shared runtime state handling, not Lookup Manager itself.
@@ -53,6 +65,7 @@
 - Preserved standard classic row URLs through templates so normal templates do not need JavaScript click rewriting.
 - Kept `admin/lookups/title.html` without a trailing newline because the partial is also used inside URL-encoded query parameters.
 - Kept URL-fragment templates single-line without trailing newline because ParsePage includes their bytes directly inside URL attributes.
+- Kept the local list action and origin return action separate because they send the user to different places.
 - Added only a short templates doc note because the new convention is shared UI behavior, not a schema or architecture decision.
 
 ## Pitfalls - fixes
@@ -66,6 +79,8 @@
 - Reviewer found `return_title` template query values could be encoded after HTML escaping; affected templates now use `noescape urlencode`.
 - Follow-up smoke found standard list Add New and classic form View/Edit buttons could drop return metadata; those shared buttons now preserve `return_url`/`return_title`.
 - Follow-up reviewer found `setListRowUrls()` overwrote custom `row_view_url`; the method was later removed and row URL assembly moved back to templates.
+- Follow-up navigation review found `Return Back` was too generic now that return titles are available; return buttons now use the title when present.
+- Follow-up browser feedback found Vue return button icon/text spacing collapsed; the return icons now use `me-1`.
 - Final review pass found no remaining issues.
 
 ## Risks / follow-ups
@@ -83,6 +98,7 @@
 - Browser: direct `https://localhost:44315/Admin/LogTypes` should not show a Lookup Manager breadcrumb.
 - Browser: classic direct `https://localhost:44315/Admin/Roles?return_url=%2FAdmin%2FLookups&return_title=Lookup%20Manager` should show the breadcrumb on list and standard record edit/view links should preserve both return params.
 - Browser: unsafe external `return_url` should not render the return breadcrumb.
+- Browser: return buttons should display `Return to Lookup Manager` when `return_title=Lookup Manager`; Vue view/edit screens should also keep `Back to List`.
 
 ## Reflection
 - The first implementation leaned too much on client-side propagation. Future runs should prefer explicit server/template propagation when request metadata is already present and only add JS when the browser has state the server cannot know.

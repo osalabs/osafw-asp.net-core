@@ -40,13 +40,15 @@
                 <slot name="beforeButtons"></slot>
 
                 <div class="btn-group">
-                    <a v-if="fwStore.return_url"
-                       class="btn btn-default"
-                       :href="fwStore.return_url"><i class="bi bi-arrow-left-circle"></i> `Return Back`</a>
-                    <a v-else
-                       class="btn btn-default"
+                    <a class="btn btn-default"
                        href="#"
                        @click.prevent="onBack"><i class="bi bi-arrow-left-circle"></i> `Back to List`</a>
+                    <a v-if="fwStore.return_url"
+                       class="btn btn-default"
+                       :href="fwStore.return_url"><i class="bi bi-arrow-left-circle me-1"></i>
+                        <span v-if="fwStore.return_title">`Return to` {{fwStore.return_title}}</span>
+                        <span v-else>`Return Back`</span>
+                    </a>
 
                     <button v-if="uioptions.btnAddNew"
                             type="button"
