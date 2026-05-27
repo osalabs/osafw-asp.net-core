@@ -5,7 +5,7 @@
      </~no_return_url>
      <~yes_return_url if="return_url" inline>
        <a class="btn btn-default" href="<~return_url>"><i class="bi bi-arrow-left-circle"></i> <span class="btn-label">`Return Back`</span></a>
-       <a class="btn btn-default" href="<~../url>/new?<~addret if="return_url" inline>return_url=<~return_url></~addret><~/common/list/relid>" <~/common/attr/disabled if="is_readonly"> title="`Add New`"><i class="bi bi-plus-lg"></i> <span class="btn-label">`Add New`</span></a>
+       <a class="btn btn-default" href="<~../url>/new?return_url=<~return_url noescape urlencode><~return_title_param if="return_title" inline>&return_title=<~return_title noescape urlencode></~return_title_param><~/common/list/relid>" <~/common/attr/disabled if="is_readonly"> title="`Add New`"><i class="bi bi-plus-lg"></i> <span class="btn-label">`Add New`</span></a>
      </~yes_return_url>
  </div>
  <~/common/form/btn_userlists if="is_userlists">

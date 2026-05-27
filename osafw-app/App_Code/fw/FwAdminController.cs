@@ -66,7 +66,7 @@ public class FwAdminController : FwController
 
         ps["id"] = id;
         ps["i"] = item;
-        ps["return_url"] = return_url;
+        setReturnContext(ps);
         ps["related_id"] = related_id;
         ps["base_url"] = base_url;
         ps["is_userlists"] = is_userlists;
@@ -119,7 +119,7 @@ public class FwAdminController : FwController
 
         ps["id"] = id;
         ps["i"] = item;
-        ps["return_url"] = return_url;
+        setReturnContext(ps);
         ps["related_id"] = related_id;
         ps["is_readonly"] = is_readonly;
         ps["is_showform"] = true; // flag for template that we are in show form
@@ -188,9 +188,9 @@ public class FwAdminController : FwController
         {
             {"i", modelOneOrFail(id)},
             {"related_id", this.related_id},
-            {"return_url", this.return_url},
             {"base_url", this.base_url},
         };
+        setReturnContext(ps);
 
         fw.parser("/common/form/showdelete", ps);
     }
@@ -276,19 +276,17 @@ public class FwAdminController : FwController
             if (item.Count > 0)
             {
                 var url = base_url + "/" + id + (is_edit ? "/edit" : "");
-                if (related_id.Length > 0 || return_url.Length > 0)
-                    url += "/?";
                 if (related_id.Length > 0)
-                    url += "related_id=" + Utils.urlescape(related_id);
-                if (return_url.Length > 0)
-                    url += "&return_url=" + Utils.urlescape(return_url);
+                    url = Utils.addUrlQueryParam(url, "related_id", related_id);
+                url = Utils.addReturnUrlQuery(url, return_url, return_title);
                 return new FwDict { { "_redirect", url }, { "id", id } };
             }
         }
 
         var list_url = base_url + "/?dofilter=1&f[s]=" + Utils.urlescape(s);
         if (related_id.Length > 0)
-            list_url += "&related_id=" + Utils.urlescape(related_id);
+            list_url = Utils.addUrlQueryParam(list_url, "related_id", related_id);
+        list_url = Utils.addReturnUrlQuery(list_url, return_url, return_title);
         return new FwDict { { "_redirect", list_url } };
     }
 

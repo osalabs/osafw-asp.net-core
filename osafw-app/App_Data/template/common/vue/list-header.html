@@ -2,6 +2,9 @@
     <div class="page-header">
         <div class="page-header-row page-header-row-nav d-flex flex-wrap align-items-center gap-2">
             <div class="page-header-breadcrumbs">
+                <template v-if="fwStore.return_url && fwStore.return_title">
+                    <a :href="fwStore.return_url">{{fwStore.return_title}}</a> <span class="text-muted">/</span>
+                </template>
                 <slot name="breadcrumbs"></slot>
             </div>
             <div class="page-header-record-nav ms-auto d-flex align-items-center gap-2 d-print-none">

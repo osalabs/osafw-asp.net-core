@@ -107,6 +107,7 @@ let state = {
 
     related_id: 0, // related model id
     return_url: '', // return url if controller called from other place expecting user's return
+    return_title: '', // label for return_url breadcrumb
     field_id: 'id', // model's id field name
     view_list_custom: [], // used for cellFormatter
     list_headers: [], // list headers, array of {field_name:"", field_name_visible:"", is_sortable:bool, is_checked:bool, search_value:null|"", is_ro:bool, input_type:"input|select|date"}
@@ -371,8 +372,19 @@ let actions = {
         } else if (screen == 'edit') {
             suffix = '/' + (id ? id + '/edit' : 'new');
         }
+        const params = new URLSearchParams();
         if (tab && (screen === 'view' || screen === 'edit')) {
-            suffix += '?tab=' + encodeURIComponent(tab);
+            params.set('tab', tab);
+        }
+        if (this.return_url) {
+            params.set('return_url', this.return_url);
+            if (this.return_title) {
+                params.set('return_title', this.return_title);
+            }
+        }
+        const query = params.toString();
+        if (query) {
+            suffix += '?' + query;
         }
         return this.base_url + suffix;
     },
@@ -387,12 +399,12 @@ let actions = {
         this.updateTabUrl(tab);
     },
     // screen navigation
-    async setCurrentScreen(screen, id) {
+    async setCurrentScreen(screen, id, options = {}) {
         // console.log("setCurrentScreen:", screen, id);
         const previous_screen = this.current_screen;
         const is_same_mode = (previous_screen === screen) && (screen === 'view' || screen === 'edit');
         this.current_screen = screen;
-        this.current_id = id;
+        this.current_id = id ?? 0;
         let suffix = '';
         if (screen == 'view') {
             suffix = '/' + id;
@@ -409,7 +421,14 @@ let actions = {
         }
         const nextTab = this.form_tabs?.length ? (this.current_form_tab || this.form_tabs[0]?.tab) : '';
         const nextUrl = this.buildScreenUrl(screen, id, nextTab);
-        window.history.pushState({ screen: screen, id: id }, '', nextUrl);
+        const historyState = { screen: screen, id: this.current_id };
+        if (!options.skipHistory) {
+            if (options.replace) {
+                window.history.replaceState(historyState, '', nextUrl);
+            } else {
+                window.history.pushState(historyState, '', nextUrl);
+            }
+        }
         window.setTimeout(() => document.dispatchEvent(new CustomEvent('fw-page-change')), 0);
         this.is_list_edit_pane = false;
         if (id && (screen == 'view' || screen == 'edit')) {

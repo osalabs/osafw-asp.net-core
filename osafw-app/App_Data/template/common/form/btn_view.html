@@ -1,1 +1,2 @@
-<a class="btn btn-default" href="<~../url>/<~id><~/common/list/relidq>"><i class="bi bi-eye"></i> `View`</a>
+<~no_return_url unless="return_url" inline><a class="btn btn-default" href="<~../url>/<~id><~/common/list/relidq>"><i class="bi bi-eye"></i> `View`</a></~no_return_url>
+<~yes_return_url if="return_url" inline><a class="btn btn-default" href="<~../url>/<~id>?return_url=<~return_url noescape urlencode><~return_title_param if="return_title" inline>&return_title=<~return_title noescape urlencode></~return_title_param><~/common/list/relid>"><i class="bi bi-eye"></i> `View`</a></~yes_return_url>

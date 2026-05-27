@@ -147,6 +147,7 @@ public class FwVueController : FwDynamicController
         // other static params
         ps["related_id"] = this.related_id;
         ps["base_url"] = this.base_url;
+        setReturnContext(ps);
         ps["is_userlists"] = this.is_userlists;
         ps["is_activity_logs"] = this.is_activity_logs;
         ps["is_readonly"] = is_readonly;

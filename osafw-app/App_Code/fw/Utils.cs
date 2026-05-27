@@ -185,6 +185,80 @@ public class Utils
         return str;
     }
 
+    /// <summary>
+    /// Checks whether a return URL points back into this application.
+    /// </summary>
+    /// <param name="url">Return URL supplied by the request.</param>
+    /// <param name="rootDomain">Application root domain from configuration, for example <c>https://localhost:44315</c>.</param>
+    /// <returns><c>true</c> for root-relative app paths or absolute URLs under <paramref name="rootDomain"/>; otherwise <c>false</c>.</returns>
+    public static bool isReturnUrlApp(string url, string rootDomain)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+            return false;
+
+        var raw = url.Trim();
+        var localPath = @"/(?!/)[^\\\r\n]*";
+        if (string.IsNullOrWhiteSpace(rootDomain))
+            return Regex.IsMatch(raw, $"^{localPath}$", RegexOptions.IgnoreCase);
+
+        var appRoot = Regex.Escape(rootDomain.TrimEnd('/'));
+        return Regex.IsMatch(raw, $"^(?:{localPath}|{appRoot}(?:[/?#].*)?)$", RegexOptions.IgnoreCase);
+    }
+
+    /// <summary>
+    /// Adds one URL-encoded query parameter to a URL while preserving existing query strings.
+    /// </summary>
+    /// <param name="url">Base URL that may already contain query parameters.</param>
+    /// <param name="name">Query parameter name.</param>
+    /// <param name="value">Query parameter value. Empty values are ignored.</param>
+    /// <returns>The URL with the parameter appended, or the original URL when the value is empty or the parameter already exists.</returns>
+    public static string addUrlQueryParam(string url, string name, string value)
+    {
+        if (string.IsNullOrEmpty(value) || string.IsNullOrEmpty(name))
+            return url;
+
+        var hashIndex = url.IndexOf('#');
+        var fragment = hashIndex >= 0 ? url[hashIndex..] : string.Empty;
+        var baseUrl = hashIndex >= 0 ? url[..hashIndex] : url;
+
+        if (Regex.IsMatch(baseUrl, $@"(?:\?|&){Regex.Escape(name)}=", RegexOptions.IgnoreCase))
+            return url;
+
+        var sep = baseUrl.Contains('?') ? (baseUrl.EndsWith('?') || baseUrl.EndsWith('&') ? "" : "&") : "?";
+        return baseUrl + sep + name + "=" + urlescape(value) + fragment;
+    }
+
+    /// <summary>
+    /// Adds return navigation query parameters to a URL.
+    /// </summary>
+    /// <param name="url">Destination URL that should preserve return metadata.</param>
+    /// <param name="returnUrl">Return destination URL.</param>
+    /// <param name="returnTitle">Human-readable title for the return destination.</param>
+    /// <returns>The destination URL with `return_url` and optional `return_title` query parameters.</returns>
+    public static string addReturnUrlQuery(string url, string returnUrl, string returnTitle)
+    {
+        url = addUrlQueryParam(url, "return_url", returnUrl);
+        return addUrlQueryParam(url, "return_title", returnTitle);
+    }
+
+    /// <summary>
+    /// Builds URL-encoded return navigation query parameters for callers that are assembling a query string separately.
+    /// </summary>
+    /// <param name="returnUrl">Return destination URL.</param>
+    /// <param name="returnTitle">Human-readable title for the return destination.</param>
+    /// <param name="prefix">Prefix to place before the first parameter, usually <c>&amp;</c> or <c>?</c>.</param>
+    /// <returns>An encoded query fragment, or an empty string when no return URL is present.</returns>
+    public static string buildReturnUrlQuery(string returnUrl, string returnTitle, string prefix = "&")
+    {
+        if (string.IsNullOrEmpty(returnUrl))
+            return string.Empty;
+
+        var result = prefix + "return_url=" + urlescape(returnUrl);
+        if (!string.IsNullOrEmpty(returnTitle))
+            result += "&return_title=" + urlescape(returnTitle);
+        return result;
+    }
+
     public static string getIP(HttpContext? context)
     {
         return context?.Connection?.RemoteIpAddress?.ToString() ?? string.Empty;

@@ -34,7 +34,7 @@
         props: {
             screen: {
                 type: String,
-                default: 'list'
+                default: ''
             },
             id: {
                 type: [String, Number],
@@ -43,11 +43,6 @@
         },
         computed: {
             ...mapStores(fwStore) //accessible via this.fwStore
-        },
-        mounted() {
-            if (this.screen) {
-                this.fwStore.setCurrentScreen(this.screen, this.id);
-            }
         }
     });
 </script>

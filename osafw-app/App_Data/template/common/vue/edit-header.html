@@ -2,6 +2,9 @@
     <div class="page-header">
         <div class="page-header-row page-header-row-nav d-flex flex-wrap align-items-center gap-2">
             <nav class="page-header-breadcrumbs d-print-none">
+                <template v-if="fwStore.return_url && fwStore.return_title">
+                    <a :href="fwStore.return_url">{{fwStore.return_title}}</a> <span class="text-muted">/</span>
+                </template>
                 <a href="#" @click.prevent="fwStore.openListScreen">{{fwStore.list_title}}</a> <span class="text-muted">/</span>
             </nav>
             <div class="page-header-record-nav ms-auto d-flex align-items-center gap-2 d-print-none">
