@@ -65,6 +65,8 @@ Active global styles and theme files live under:
 
 The load order is Bootstrap CSS, Bootstrap Icons, `site.css`, and then the optional `themeXX.css`. Layout templates include the optional theme through `layout/theme_link.html` when `GLOBAL[ui_theme]` is set.
 
+Static template icons should be rendered through `common/icons/*` partials. Each icon partial includes its own `me-1` spacing, so layout and screen templates should place labels immediately after the include instead of adding manual whitespace.
+
 Use [design_system.html](design_system.html#tokens) for token categories and [design_system.html](design_system.html#customizing) for customization rules. In short:
 
 - Prefer Bootstrap utilities for local layout adjustments.

@@ -12,8 +12,7 @@
                     <div>
                         <span>{{header.field_name_visible}}</span>
                         <span class="ms-1" v-if="header.is_sortable && fwStore.f.sortby==header.field_name">
-                            <i v-if="fwStore.f.sortdir=='desc'" class="bi bi-arrow-up"></i>
-                            <i v-else class="bi bi-arrow-down"></i>
+                            <span v-if="fwStore.f.sortdir=='desc'"><~/common/icons/arrow-up></span><span v-else><~/common/icons/arrow-down></span>
                         </span>
                     </div>
                 </th>

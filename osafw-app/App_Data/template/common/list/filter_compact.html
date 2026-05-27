@@ -11,12 +11,10 @@
       <div class="input-group">
         <input type="text" id="fs" name="f[s]" value="<~f[s]>" maxlength="255" class="form-control" placeholder="<~list_filter_search_placeholder>">
         <button class="btn btn-outline-secondary" title="`Search`">
-          <i class="bi bi-search"></i>
-          <span class="btn-label d-none d-xl-inline ms-1">`Search`</span>
+          <~/common/icons/search><span class="btn-label d-none d-xl-inline">`Search`</span>
         </button>
         <a href="<~/common/list/reset_filter_relid>" class="btn btn-outline-secondary on-filter-reset" title="`Reset`">
-          <i class="bi bi-x-lg"></i>
-          <span class="btn-label d-none d-xl-inline ms-1">`Reset`</span>
+          <~/common/icons/x-lg><span class="btn-label d-none d-xl-inline">`Reset`</span>
         </a>
       </div>
       <~list_filter_search_more>
@@ -46,30 +44,28 @@
     <div class="list-filter-compact-actions d-flex flex-wrap align-items-center gap-2 ms-auto">
       <div class="btn-group">
         <button type="submit" name="export" value="csv" class="btn btn-outline-secondary" title="`Export`">
-          <i class="bi bi-cloud-download"></i>
-          <span class="btn-label d-none d-xl-inline ms-1">`Export`</span>
+          <~/common/icons/cloud-download><span class="btn-label d-none d-xl-inline">`Export`</span>
         </button>
         <button type="button" class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" title="`More export options`">
           <span class="visually-hidden">`Toggle Dropdown`</span>
         </button>
         <div class="dropdown-menu dropdown-menu-end">
           <button type="submit" name="export" value="xls" class="dropdown-item" title="Export to Excel">
-            <i class="bi bi-cloud-download-fill"></i> `Export as .xls`
+            <~/common/icons/cloud-download-fill>`Export as .xls`
           </button>
         </div>
       </div>
 
       <div class="btn-group">
         <button type="button" class="btn btn-outline-secondary on-print" title="`Print`">
-          <i class="bi bi-printer"></i>
-          <span class="btn-label d-none d-xl-inline ms-1">`Print`</span>
+          <~/common/icons/printer><span class="btn-label d-none d-xl-inline">`Print`</span>
         </button>
       </div>
 
       <div class="btn-group">
-        <button type="button" class="btn btn-outline-secondary on-toggle-search" title="`Filter Columns`"><i class="bi bi-funnel"></i></button>
-        <~ccols if="SESSION[user_id]" inline><button type="button" class="btn btn-outline-secondary on-custom-cols" title="`Customize Columns`"><i class="bi bi-table"></i></button></~ccols>
-        <button type="button" class="btn btn-outline-secondary on-toggle-density" title="`Density`"><i class="bi bi-grid-3x2-gap"></i></button>
+        <button type="button" class="btn btn-outline-secondary on-toggle-search" title="`Filter Columns`"><~/common/icons/funnel></button>
+        <~ccols if="SESSION[user_id]" inline><button type="button" class="btn btn-outline-secondary on-custom-cols" title="`Customize Columns`"><~/common/icons/table></button></~ccols>
+        <button type="button" class="btn btn-outline-secondary on-toggle-density" title="`Density`"><~/common/icons/grid-3x2-gap></button>
       </div>
     </div>
   </div>

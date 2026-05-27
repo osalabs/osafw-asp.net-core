@@ -5,7 +5,7 @@
 
             <div :class="'table-list-wrapper ' + fwStore.list_user_view.density">
                 <div class="table-list-hscroll-hint">
-                    <i class="bi bi-info-circle-fill"></i> use <kbd>Shift+Mouse Wheel</kbd> for an easy horizontal scrolling
+                    <~/common/icons/info-circle-fill>use <kbd>Shift+Mouse Wheel</kbd> for an easy horizontal scrolling
                 </div>
 
                 <table :class="'table table-stripedX table-hover list ' + (fwStore.is_list_edit?'list-edit ':'') + fwStore.list_user_view.density">
@@ -39,9 +39,8 @@
                     <span class="spinner-border" role="status" aria-hidden="true"></span>
                 </template>
                 <template v-else>
-                    <div class="d-flex justify-content-center align-items-center gap-2 mb-1">
-                        <i class="bi bi-0-square text-muted"></i>
-                        <span class="fw-semibold">`No results`</span>
+                    <div class="d-flex justify-content-center align-items-center mb-1">
+                        <span class="text-muted"><~/common/icons/0-square></span><span class="fw-semibold">`No results`</span>
                     </div>
                     <div class="text-muted small">
                         `Try to`

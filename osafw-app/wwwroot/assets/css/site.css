@@ -128,7 +128,6 @@
   --fw-sidebar-link-font-weight: 400;
   --fw-sidebar-link-active-font-weight: var(--fw-sidebar-link-font-weight);
 
-  --fw-sidebar-icon-gap: 0.5rem;
   --fw-sidebar-icon-weight: inherit;
 
   --fw-sidebar-header-bg: var(--bs-secondary-bg-subtle);
@@ -675,10 +674,6 @@ h1 .badge {
 /* Icons in sidebar */
 .sidebar .bi {
   color: inherit;
-}
-
-.sidebar .nav-link > .bi:first-child {
-  margin-right: var(--fw-sidebar-icon-gap);
 }
 
 .sidebar .bi::before {

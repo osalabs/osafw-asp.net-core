@@ -1,5 +1,5 @@
 <div class="fw-att-block">
-  <p><button id="att_links" type="button" class="btn btn-default on-select-att" data-att-category="<~att_category default="general">"><i class="bi bi-file-earmark-image"></i> `Select/Upload`</button></p>
+  <p><button id="att_links" type="button" class="btn btn-default on-select-att" data-att-category="<~att_category default="general">"><~/common/icons/file-earmark-image>`Select/Upload`</button></p>
   <div class="fw-empty-state text-center mx-auto" <~/common/attr/display_none if="att_links">>`No attachments selected`</div>
 
   <div class="att-list">
@@ -9,8 +9,8 @@
       <img class="card-img-top" src="<~/att/url>/<~icode>?preview=1&size=s" alt="">
       <div class="card-body text-truncate">
         <p class="card-text att-iname"><~iname></p>
-        <a href="<~/att/url>/<~icode>" target="_blank" class="btn btn-default" title="`Download`"><i class="bi bi-cloud-download-fill"></i></a>
-        <button type="button" class="btn btn-default on-remove-att" title="`Remove`"><i class="bi bi-x-circle-fill"></i></button>
+        <a href="<~/att/url>/<~icode>" target="_blank" class="btn btn-default" title="`Download`"><~/common/icons/cloud-download-fill></a>
+        <button type="button" class="btn btn-default on-remove-att" title="`Remove`"><~/common/icons/x-circle-fill></button>
       </div>
     </div>
   </~att_links>
@@ -19,8 +19,8 @@
       <img class="card-img-top" src="" alt="">
       <div class="card-body text-truncate">
         <p class="card-text att-iname"></p>
-        <a href="" target="_blank" class="btn btn-default" title="`Download`"><i class="bi bi-cloud-download-fill"></i></a>
-        <button type="button" class="btn btn-default on-remove-att" title="`Remove`"><i class="bi bi-x-circle-fill"></i></button>
+        <a href="" target="_blank" class="btn btn-default" title="`Download`"><~/common/icons/cloud-download-fill></a>
+        <button type="button" class="btn btn-default on-remove-att" title="`Remove`"><~/common/icons/x-circle-fill></button>
       </div>
     </div>
   </div>
