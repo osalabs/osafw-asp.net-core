@@ -11,6 +11,7 @@
 - Moved standard link suffix assembly back into cached ParsePage fragments: `common/list/urlq.html` for links that need `?` and `common/list/urlqa.html` for links that already have query parameters.
 - Renamed `Utils.isReturnUrlApp()` to `Utils.isAppUrl()` and `FwController.setReturnContext()` to `FwController.setPSReturnContext()`.
 - Removed `FwController.setListRowUrls()`; standard row URLs are defined by templates again.
+- Removed trailing newlines from URL-fragment templates used inside `href`/`data-href` values: `common/form/cancel_url.html`, `common/form/ret_url.html`, and `common/form/showdelete/cancel_url.html`.
 - Kept return URL validation server-side: only root-relative app paths or absolute URLs under configured `ROOT_DOMAIN` are accepted.
 - Removed the JS return-context propagation approach from the implementation; shared `fw.js` is not part of the final behavior change.
 - Documented the shared return breadcrumb/input convention in `docs/templates.md`.
@@ -51,6 +52,7 @@
 - Centralized return URL validation and URL-query assembly in `Utils` to avoid repeated ad hoc string concatenation.
 - Preserved standard classic row URLs through templates so normal templates do not need JavaScript click rewriting.
 - Kept `admin/lookups/title.html` without a trailing newline because the partial is also used inside URL-encoded query parameters.
+- Kept URL-fragment templates single-line without trailing newline because ParsePage includes their bytes directly inside URL attributes.
 - Added only a short templates doc note because the new convention is shared UI behavior, not a schema or architecture decision.
 
 ## Pitfalls - fixes
@@ -59,6 +61,7 @@
 - Feedback found visible `/Admin/Lookups` text in standard filters because inline ParsePage block tags reused data names; wrappers now use neutral block names in `return_inputs`.
 - Feedback found the first implementation overcomplicated return propagation with JS; final implementation removes that path and keeps propagation in server/template URLs.
 - The new Lookup Manager title partial initially had a trailing newline that encoded as `%0A`; the partial is now no-newline text.
+- Follow-up check found three common form URL fragments had trailing newlines; those files are now no-newline single-line fragments.
 - Reviewer found URL query appending after `#fragment`; `Utils.addUrlQueryParam` now inserts query params before the fragment.
 - Reviewer found `return_title` template query values could be encoded after HTML escaping; affected templates now use `noescape urlencode`.
 - Follow-up smoke found standard list Add New and classic form View/Edit buttons could drop return metadata; those shared buttons now preserve `return_url`/`return_title`.
