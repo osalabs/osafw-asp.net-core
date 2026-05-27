@@ -1,2 +1,1 @@
-<~no_return_url unless="return_url" inline><a class="btn btn-primary" href="<~../url>/<~id>/edit<~/common/list/relidq>" <~/common/attr/disabled if="is_readonly">><i class="bi bi-pencil-fill"></i> `Edit`</a></~no_return_url>
-<~yes_return_url if="return_url" inline><a class="btn btn-primary" href="<~../url>/<~id>/edit?return_url=<~return_url noescape urlencode><~return_title_param if="return_title" inline>&return_title=<~return_title noescape urlencode></~return_title_param><~/common/list/relid>" <~/common/attr/disabled if="is_readonly">><i class="bi bi-pencil-fill"></i> `Edit`</a></~yes_return_url>
+<a class="btn btn-primary" href="<~../url>/<~id>/edit<~/common/list/urlq>" <~/common/attr/disabled if="is_readonly">><i class="bi bi-pencil-fill"></i> `Edit`</a>

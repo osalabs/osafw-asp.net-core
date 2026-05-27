@@ -66,7 +66,7 @@ public class FwAdminController : FwController
 
         ps["id"] = id;
         ps["i"] = item;
-        setReturnContext(ps);
+        setPSReturnContext(ps);
         ps["related_id"] = related_id;
         ps["base_url"] = base_url;
         ps["is_userlists"] = is_userlists;
@@ -119,7 +119,7 @@ public class FwAdminController : FwController
 
         ps["id"] = id;
         ps["i"] = item;
-        setReturnContext(ps);
+        setPSReturnContext(ps);
         ps["related_id"] = related_id;
         ps["is_readonly"] = is_readonly;
         ps["is_showform"] = true; // flag for template that we are in show form
@@ -190,7 +190,7 @@ public class FwAdminController : FwController
             {"related_id", this.related_id},
             {"base_url", this.base_url},
         };
-        setReturnContext(ps);
+        setPSReturnContext(ps);
 
         fw.parser("/common/form/showdelete", ps);
     }

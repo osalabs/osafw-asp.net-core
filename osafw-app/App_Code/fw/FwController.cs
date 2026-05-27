@@ -101,7 +101,7 @@ public abstract class FwController
         is_readonly = fw.model<Users>().isReadOnly();
 
         var requested_return_url = reqs("return_url");
-        return_url = Utils.isReturnUrlApp(requested_return_url, fw.config("ROOT_DOMAIN").toStr()) ? requested_return_url : string.Empty;
+        return_url = Utils.isAppUrl(requested_return_url, fw.config("ROOT_DOMAIN").toStr()) ? requested_return_url : string.Empty;
         return_title = return_url.Length > 0 ? reqs("return_title") : string.Empty;
         related_id = reqs("related_id");
         form_tab = reqs("tab");
@@ -1205,43 +1205,9 @@ public abstract class FwController
             ps["count_to"] = pagenum * pagesize + this.list_rows.Count;
         }
 
-        setReturnContext(ps);
-        setListRowUrls();
+        setPSReturnContext(ps);
 
         return ps;
-    }
-
-    /// <summary>
-    /// Adds standard view/edit URLs to list rows so templates can preserve related and return navigation without client-side URL rewriting.
-    /// </summary>
-    protected virtual void setListRowUrls()
-    {
-        if (this.list_rows == null || this.list_rows.Count == 0 || this.model0 == null || string.IsNullOrEmpty(this.model0.field_id))
-            return;
-
-        foreach (var rowObj in this.list_rows)
-        {
-            if (rowObj is not FwDict row)
-                continue;
-
-            var id = row[model0.field_id].toStr();
-            if (string.IsNullOrEmpty(id))
-                continue;
-
-            var rowClickUrl = row["row_click_url"].toStr();
-            if (string.IsNullOrEmpty(rowClickUrl))
-                rowClickUrl = this.base_url + "/" + id + "/edit";
-            if (!string.IsNullOrEmpty(this.related_id))
-                rowClickUrl = Utils.addUrlQueryParam(rowClickUrl, "related_id", this.related_id);
-            row["row_click_url"] = Utils.addReturnUrlQuery(rowClickUrl, this.return_url, this.return_title);
-
-            var rowViewUrl = row["row_view_url"].toStr();
-            if (string.IsNullOrEmpty(rowViewUrl))
-                rowViewUrl = this.base_url + "/" + id;
-            if (!string.IsNullOrEmpty(this.related_id))
-                rowViewUrl = Utils.addUrlQueryParam(rowViewUrl, "related_id", this.related_id);
-            row["row_view_url"] = Utils.addReturnUrlQuery(rowViewUrl, this.return_url, this.return_title);
-        }
     }
 
     /// <summary>
@@ -1249,7 +1215,7 @@ public abstract class FwController
     /// </summary>
     /// <param name="ps">Parse-string dictionary populated for the current controller action.</param>
     /// <returns>The same parse-string dictionary after adding `return_url` and optional `return_title`.</returns>
-    protected virtual FwDict setReturnContext(FwDict ps)
+    protected virtual FwDict setPSReturnContext(FwDict ps)
     {
         if (!string.IsNullOrEmpty(this.return_url))
             ps["return_url"] = this.return_url; // if not passed - don't override return_url.html

@@ -191,7 +191,7 @@ public class Utils
     /// <param name="url">Return URL supplied by the request.</param>
     /// <param name="rootDomain">Application root domain from configuration, for example <c>https://localhost:44315</c>.</param>
     /// <returns><c>true</c> for root-relative app paths or absolute URLs under <paramref name="rootDomain"/>; otherwise <c>false</c>.</returns>
-    public static bool isReturnUrlApp(string url, string rootDomain)
+    public static bool isAppUrl(string url, string rootDomain)
     {
         if (string.IsNullOrWhiteSpace(url))
             return false;

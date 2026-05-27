@@ -1,11 +1,6 @@
 <div class="btn-std d-print-none mb-0">
  <div class="btn-group">
-     <~no_return_url unless="return_url" inline>
-       <a class="btn btn-primary" href="<~../url>/new<~/common/list/relidq>" <~/common/attr/disabled if="is_readonly"> title="`Add New`"><i class="bi bi-plus-lg"></i> <span class="btn-label">`Add New`</span></a>
-     </~no_return_url>
-     <~yes_return_url if="return_url" inline>
-       <a class="btn btn-primary" href="<~../url>/new?return_url=<~return_url noescape urlencode><~return_title_param if="return_title" inline>&return_title=<~return_title noescape urlencode></~return_title_param><~/common/list/relid>" <~/common/attr/disabled if="is_readonly"> title="`Add New`"><i class="bi bi-plus-lg"></i> <span class="btn-label">`Add New`</span></a>
-     </~yes_return_url>
+     <a class="btn btn-primary" href="<~../url>/new<~/common/list/urlq>" <~/common/attr/disabled if="is_readonly"> title="`Add New`"><i class="bi bi-plus-lg"></i> <span class="btn-label">`Add New`</span></a>
  </div>
  <~btn_std_more>
 </div>

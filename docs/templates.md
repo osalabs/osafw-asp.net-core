@@ -762,6 +762,7 @@ Before replacing modal content or removing a modal, `fw-modal.js` calls `fw.disp
 - **icons/** - Directory for custom svg icons.
 - **list/return_breadcrumbs.html** - Shared origin breadcrumb. Controllers can pass app-local `return_url` plus `return_title`; shared list/form headers render the origin link only when that metadata is present.
 - **list/return_inputs.html** - Shared hidden `return_url`/`return_title` inputs for forms that need to preserve return navigation.
+- **list/urlq.html, list/urlqa.html** - Shared cached URL suffix fragments for preserving `related_id`, `return_url`, and `return_title` in links that need a new query string (`urlq`) or append to an existing query string (`urlqa`).
 
 ---
 

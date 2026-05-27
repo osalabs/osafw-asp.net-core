@@ -144,7 +144,7 @@ public class FwDynamicController : FwController
 
         ps["id"] = id;
         ps["i"] = item;
-        setReturnContext(ps);
+        setPSReturnContext(ps);
         ps["related_id"] = related_id;
         ps["base_url"] = base_url;
         ps["is_userlists"] = is_userlists;
@@ -212,7 +212,7 @@ public class FwDynamicController : FwController
 
         ps["id"] = id;
         ps["i"] = item;
-        setReturnContext(ps);
+        setPSReturnContext(ps);
         ps["related_id"] = related_id;
         ps["is_readonly"] = is_readonly;
         ps["tab"] = form_tab;
@@ -497,7 +497,7 @@ public class FwDynamicController : FwController
             {"related_id", this.related_id},
             {"base_url", this.base_url},
         };
-        setReturnContext(ps);
+        setPSReturnContext(ps);
 
         fw.parser("/common/form/showdelete", ps);
     }

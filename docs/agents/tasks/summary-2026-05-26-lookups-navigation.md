@@ -6,8 +6,11 @@
 - Moved the shared breadcrumb to `common/list/return_breadcrumbs.html` and added `common/list/return_inputs.html` for hidden `return_url`/`return_title` fields.
 - Added `admin/lookups/title.html` and reused it from Lookup Manager title/sidebar/link templates.
 - Updated Lookup Manager links to pass `return_url=/Admin/Lookups` and `return_title=<~/admin/lookups/title>`.
-- Added server-side URL helpers in `Utils`: `isReturnUrlApp`, `addUrlQueryParam`, `addReturnUrlQuery`, and `buildReturnUrlQuery`.
+- Added server-side URL helpers in `Utils`: `isAppUrl`, `addUrlQueryParam`, `addReturnUrlQuery`, and `buildReturnUrlQuery`.
 - Preserved return metadata through standard classic list row Edit/View links, list Add New, form View/Edit header buttons, classic filter/search forms, form posts, Go/quick-search redirects, prev/next, save redirects, and Vue screen URLs.
+- Moved standard link suffix assembly back into cached ParsePage fragments: `common/list/urlq.html` for links that need `?` and `common/list/urlqa.html` for links that already have query parameters.
+- Renamed `Utils.isReturnUrlApp()` to `Utils.isAppUrl()` and `FwController.setReturnContext()` to `FwController.setPSReturnContext()`.
+- Removed `FwController.setListRowUrls()`; standard row URLs are defined by templates again.
 - Kept return URL validation server-side: only root-relative app paths or absolute URLs under configured `ROOT_DOMAIN` are accepted.
 - Removed the JS return-context propagation approach from the implementation; shared `fw.js` is not part of the final behavior change.
 - Documented the shared return breadcrumb/input convention in `docs/templates.md`.
@@ -24,8 +27,9 @@
 - `git diff --check`
 - `git diff --stat`
 - Targeted `rg` and `Get-Content` reads for Lookup Manager, virtual controllers, Vue history, breadcrumbs, list row links, and return-url handling.
-- Visual Studio MCP: `solution_info` confirmed `osafw-asp.net-core.sln` open.
-- Visual Studio MCP: `build_project` for `osafw-app\osafw-app.csproj`; `build_status` returned `Done` with `FailedProjects=0`.
+- Visual Studio MCP was reachable, but final `solution_info` showed a different open solution (`frycomm.sln`), so it was not used for the final repo build.
+- `dotnet build osafw-app\osafw-app.csproj` was blocked by the running VS/IIS Express process locking `bin\Debug\net10.0\osafw-app.dll`.
+- `dotnet build osafw-app\osafw-app.csproj -p:OutDir=artifacts\assistant_build\` succeeded with 0 warnings and 0 errors; the resulting `osafw-app\artifacts\assistant_build\` output directory was removed afterward.
 - Browser plugin Node connection failed twice with local Windows sandbox startup errors, so Playwright MCP was used as fallback.
 - Playwright smoke after simplification:
   - `https://localhost:44315/Admin/Lookups` -> `Log Types` -> first `View`; Back once returned to Log Types list, Back again returned to Lookup Manager.
@@ -33,7 +37,7 @@
   - Lookup Manager Log Types link encoded `return_title=Lookup+Manager` without a trailing newline.
   - `https://localhost:44315/Admin/Roles?return_url=%2fAdmin%2fLookups&return_title=Lookup%20Manager` showed the Lookup Manager breadcrumb, did not show `/Admin/Lookups` in filter text, kept hidden `return_url` and `return_title`, and standard Edit/View row links kept both return params.
   - Unsafe absolute external `return_url` did not render a Lookup Manager breadcrumb.
-- Temporary Playwright MCP logs were removed after browser verification.
+- Temporary app-run/browser logs created for this task were removed after browser verification; pre-existing agent artifact logs were left untouched.
 - Review loop:
   - Reviewer found double-encoding risk in two templates, fragment handling in `Utils.addUrlQueryParam`, and stale task summary notes.
   - Fixed those findings and reran verification/review after the fix.
@@ -45,7 +49,7 @@
 - Kept breadcrumbs generic and origin-aware by rendering them only when return metadata is supplied.
 - Kept return metadata propagation server/template-owned instead of JS-owned to match the explicit `return_url`/`return_title` contract and reduce client-side complexity.
 - Centralized return URL validation and URL-query assembly in `Utils` to avoid repeated ad hoc string concatenation.
-- Preserved standard classic row URLs in `setListRowUrls()` so normal templates do not need JavaScript click rewriting.
+- Preserved standard classic row URLs through templates so normal templates do not need JavaScript click rewriting.
 - Kept `admin/lookups/title.html` without a trailing newline because the partial is also used inside URL-encoded query parameters.
 - Added only a short templates doc note because the new convention is shared UI behavior, not a schema or architecture decision.
 
@@ -58,7 +62,7 @@
 - Reviewer found URL query appending after `#fragment`; `Utils.addUrlQueryParam` now inserts query params before the fragment.
 - Reviewer found `return_title` template query values could be encoded after HTML escaping; affected templates now use `noescape urlencode`.
 - Follow-up smoke found standard list Add New and classic form View/Edit buttons could drop return metadata; those shared buttons now preserve `return_url`/`return_title`.
-- Follow-up reviewer found `setListRowUrls()` overwrote custom `row_view_url`; it now preserves existing row view URLs and only defaults when absent.
+- Follow-up reviewer found `setListRowUrls()` overwrote custom `row_view_url`; the method was later removed and row URL assembly moved back to templates.
 - Final review pass found no remaining issues.
 
 ## Risks / follow-ups
@@ -79,6 +83,6 @@
 
 ## Reflection
 - The first implementation leaned too much on client-side propagation. Future runs should prefer explicit server/template propagation when request metadata is already present and only add JS when the browser has state the server cannot know.
-- VS MCP became available after a retry and was useful for build verification. Browser plugin setup failed locally, but Playwright MCP gave reliable smoke coverage.
+- VS MCP was reachable, but the final check showed it attached to another solution; standalone `dotnet build` was the reliable build verification for this repo. Browser plugin setup failed locally, but Playwright MCP gave reliable smoke coverage.
 - The review loop was useful: it caught fragment handling, encoding, and stale summary problems after simplification.
 - No agent instruction changes are recommended from this task. The existing workflow already covers task summaries, docs sync, reviewer loops, and artifact cleanup.
