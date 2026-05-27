@@ -2,7 +2,7 @@
   <input type="hidden" name="_method" value="DELETE">
   <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
   <input type="hidden" name="related_id" value="<~related_id>">
-  <input type="hidden" name="return_url" value="<~return_url>">
+  <~/common/list/return_inputs if="return_url">
 
   <fieldset>
     <legend>`Confirm delete for record id`=<~i[id]> <~i[iname]></legend>

@@ -1,12 +1,7 @@
 <div class="btn-std mb-0">
  <div class="btn-group">
-     <~no_return_url unless="return_url" inline>
-       <a class="btn btn-default" href="<~../url>/new<~/common/list/relidq>" <~/common/attr/disabled if="is_readonly"> title="`Add New`"><i class="bi bi-plus-lg"></i> <span class="btn-label">`Add New`</span></a>
-     </~no_return_url>
-     <~yes_return_url if="return_url" inline>
-       <a class="btn btn-default" href="<~return_url>"><i class="bi bi-arrow-left-circle"></i> <span class="btn-label">`Return Back`</span></a>
-       <a class="btn btn-default" href="<~../url>/new?<~addret if="return_url" inline>return_url=<~return_url></~addret><~/common/list/relid>" <~/common/attr/disabled if="is_readonly"> title="`Add New`"><i class="bi bi-plus-lg"></i> <span class="btn-label">`Add New`</span></a>
-     </~yes_return_url>
+     <~/common/form/btn_return if="return_url">
+     <a class="btn btn-default" href="<~../url>/new<~/common/list/urlq>" <~/common/attr/disabled if="is_readonly"> title="`Add New`"><i class="bi bi-plus-lg"></i> <span class="btn-label">`Add New`</span></a>
  </div>
  <~/common/form/btn_userlists if="is_userlists">
  <~btn_std_more>

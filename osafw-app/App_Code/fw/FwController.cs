@@ -76,6 +76,7 @@ public abstract class FwController
 
     protected string route_return = FW.ACTION_SHOW_FORM; // FW.ACTION_SHOW or _INDEX to return (usually after SaveAction, default ACTION_SHOW_FORM)
     protected string return_url = string.Empty;          // url to return after SaveAction successfully completed, passed via request
+    protected string return_title = string.Empty;        // title for the return_url origin, passed via request
     protected string related_id = string.Empty;          // related id, passed via request. Controller should limit view to items related to this id
     protected string related_field_name = string.Empty;  // if set (in Controller) and $related_id passed - list will be filtered on this field
 
@@ -99,7 +100,9 @@ public abstract class FwController
 
         is_readonly = fw.model<Users>().isReadOnly();
 
-        return_url = reqs("return_url");
+        var requested_return_url = reqs("return_url");
+        return_url = Utils.isAppUrl(requested_return_url, fw.config("ROOT_DOMAIN").toStr()) ? requested_return_url : string.Empty;
+        return_title = return_url.Length > 0 ? reqs("return_title") : string.Empty;
         related_id = reqs("related_id");
         form_tab = reqs("tab");
         export_format = reqs("export");
@@ -801,14 +804,10 @@ public abstract class FwController
         var url = base_url + "/" + id;
         if (is_edit)
             url += "/edit";
-        if (related_id.Length > 0 || return_url.Length > 0)
-            url += "/?";
         if (related_id.Length > 0)
-            url += "related_id=" + Utils.urlescape(related_id);
-        if (return_url.Length > 0)
-            url += "&return_url=" + Utils.urlescape(return_url);
+            url = Utils.addUrlQueryParam(url, "related_id", related_id);
 
-        return url;
+        return Utils.addReturnUrlQuery(url, return_url, return_title);
     }
 
     protected virtual FwDict buildPrevNextRedirect(string form_id)
@@ -1030,8 +1029,7 @@ public abstract class FwController
             url = this.base_url;
 
         //preserve return url if present
-        if (!string.IsNullOrEmpty(return_url))
-            url_q += "&return_url=" + Utils.urlescape(return_url);
+        url_q += Utils.buildReturnUrlQuery(return_url, return_title);
 
         //add base_url_suffix if any
         if (!string.IsNullOrEmpty(base_url_suffix))
@@ -1042,10 +1040,8 @@ public abstract class FwController
             url_q += "&tab=" + form_tab;
 
         //add query
-        var is_url_q = false;
         if (!string.IsNullOrEmpty(url_q))
         {
-            is_url_q = true;
             url_q = Regex.Replace(url_q, @"^\&", ""); // make url clean
             url_q = "?" + url_q;
         }
@@ -1061,7 +1057,7 @@ public abstract class FwController
             //if has return url - go to it
             if (fw.isJsonExpected())
                 // if json - it's usually autosave - don't redirect back to return url yet
-                result = url + url_q + (is_url_q ? "&" : "?") + "return_url=" + Utils.urlescape(return_url);
+                result = Utils.addReturnUrlQuery(url + url_q, return_url, return_title);
             else
                 result = return_url;
         }
@@ -1209,9 +1205,22 @@ public abstract class FwController
             ps["count_to"] = pagenum * pagesize + this.list_rows.Count;
         }
 
+        setPSReturnContext(ps);
+
+        return ps;
+    }
+
+    /// <summary>
+    /// Adds optional origin navigation metadata to page state so shared templates can show a return breadcrumb only when the caller supplied one.
+    /// </summary>
+    /// <param name="ps">Parse-string dictionary populated for the current controller action.</param>
+    /// <returns>The same parse-string dictionary after adding `return_url` and optional `return_title`.</returns>
+    protected virtual FwDict setPSReturnContext(FwDict ps)
+    {
         if (!string.IsNullOrEmpty(this.return_url))
             ps["return_url"] = this.return_url; // if not passed - don't override return_url.html
-
+        if (!string.IsNullOrEmpty(this.return_title))
+            ps["return_title"] = this.return_title;
         return ps;
     }
 

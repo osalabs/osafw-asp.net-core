@@ -19,6 +19,10 @@ public class AdminLookupsController : FwController
         model = fw.model<FwControllers>();
     }
 
+    /// <summary>
+    /// Builds the Lookup Manager screen.
+    /// </summary>
+    /// <returns>Parse-string data containing grouped lookup destination columns.</returns>
     public FwDict IndexAction()
     {
         FwDict ps = [];
