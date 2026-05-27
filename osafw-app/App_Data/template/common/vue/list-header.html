@@ -30,9 +30,7 @@
 
                 <a v-if="fwStore.return_url"
                    class="btn btn-default"
-                   :href="fwStore.return_url"><i class="bi bi-arrow-left-circle me-1"></i>
-                    <span v-if="fwStore.return_title">`Return to` {{fwStore.return_title}}</span>
-                    <span v-else>`Return Back`</span>
+                   :href="fwStore.return_url"><~/common/icons/arrow-left-circle><span v-if="fwStore.return_title">`Return to` {{fwStore.return_title}}</span><span v-else>`Return Back`</span>
                 </a>
 
                 <div class="btn-group" v-if="uioptions.btnAddNew || $slots.group || $slots['group-prepend']">
@@ -42,7 +40,7 @@
                             type="button"
                             class="btn btn-primary"
                             @click="onAddNew"
-                            :disabled="fwStore.is_readonly"><i class="bi bi-plus-lg"></i> `Add New`</button>
+                            :disabled="fwStore.is_readonly"><~/common/icons/plus-lg>`Add New`</button>
                     <slot name="group"></slot>
                 </div>
 

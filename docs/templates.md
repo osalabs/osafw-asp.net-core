@@ -87,6 +87,16 @@ Use ParsePage attributes such as `if`, `unless`, and `repeat` on `<~...>` tags.
 <~/layout/sidebar>
 ```
 
+### Shared icon partials
+
+Use `osafw-app/App_Data/template/common/icons/` for static icons instead of writing icon-library markup directly in templates.
+
+```html
+<a class="btn btn-primary" href="<~../url>/new"><~/common/icons/plus-lg>`Add New`</a>
+```
+
+Icon partial filenames use the current Bootstrap icon name without the `bi-` prefix, such as `plus-lg.html` or `cloud-download.html`. The partial owns icon spacing with `me-1`, so do not add a literal space between the icon include and following label. Dynamic config-driven icons still use class strings documented in `dynamic.md`.
+
 ### Inline conditional block
 
 ```html

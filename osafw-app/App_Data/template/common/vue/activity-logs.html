@@ -7,7 +7,7 @@
                     class="btn btn-default btn-sm"
                     @click="toggleCommentForm"
                     :disabled="fwStore.is_readonly">
-                <i class="bi bi-plus"></i> `Add Comment`
+                <~/common/icons/plus>`Add Comment`
             </button>
         </div>
 
@@ -46,7 +46,7 @@
         </ul>
 
         <div v-if="!activityRows.length" class="py-4">
-            <span><i class="bi bi-0-circle"></i> `No Activity Records`</span>
+            <span><~/common/icons/0-circle>`No Activity Records`</span>
         </div>
 
         <div v-else>

@@ -203,10 +203,6 @@ h3,
   font-size: 0.875rem;
 }
 
-.dropdown-item > .bi:first-child {
-  margin-right: 0.125rem;
-}
-
 .dropdown-item.active > .bi {
   color: #fff;
 }

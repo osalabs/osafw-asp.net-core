@@ -1,11 +1,11 @@
-<a href="<~/admin/sendemail/url>/new?item[to]=<~i[email]>" class="btn btn-default"><i class="bi bi-envelope"></i> `Send Email`</a>
+<a href="<~/admin/sendemail/url>/new?item[to]=<~i[email]>" class="btn btn-default"><~/common/icons/envelope>`Send Email`</a>
 
 <~btn_roles ifeq="SESSION[access_level]" value="100" inline>
 <~btn_roles2 if="is_roles" inline>
 <div class="btn-group">
-  <a href="<~/admin/roles/url>" class="btn btn-default"><i class="bi bi-people"></i> `Roles`</a>
-  <a href="<~ROOT_URL>/Admin/Permissions" class="btn btn-default"><i class="bi bi-key"></i> `Permissions`</a>
-  <a href="<~ROOT_URL>/Admin/Resources" class="btn btn-default"><i class="bi bi-gear"></i> `Resources`</a>
+  <a href="<~/admin/roles/url>" class="btn btn-default"><~/common/icons/people>`Roles`</a>
+  <a href="<~ROOT_URL>/Admin/Permissions" class="btn btn-default"><~/common/icons/key>`Permissions`</a>
+  <a href="<~ROOT_URL>/Admin/Resources" class="btn btn-default"><~/common/icons/gear>`Resources`</a>
 </div>
 </~btn_roles2>
 </~btn_roles>

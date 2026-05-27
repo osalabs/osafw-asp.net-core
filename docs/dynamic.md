@@ -99,6 +99,8 @@ Developer-generated and virtual controllers build a two-column `show_fields` / `
   ]
   ```
 
+Dynamic and Vue button configs still use icon CSS class strings such as `"bi bi-plus"`. Static ParsePage templates should use `common/icons/*` partials, but generated/config-driven buttons are not fully icon-library-agnostic until their icon contract is migrated in a separate pass.
+
 ### Type reference (TOC)
 
 **Layout helpers**: [row](#type-row) · [col](#type-col) · [col_end](#type-col_end) · [row_end](#type-row_end) · [header](#type-header)
