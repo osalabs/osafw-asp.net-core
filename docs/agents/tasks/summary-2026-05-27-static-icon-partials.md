@@ -3,6 +3,7 @@
 - Created Bootstrap-name icon partials under `osafw-app/App_Data/template/common/icons/`, each with `me-1` spacing.
 - Updated `common/icon.html` for server-rendered dynamic button helpers to add `me-1` and remove the trailing literal space.
 - Removed duplicate sidebar/dropdown CSS icon gap rules that would stack with partial-level spacing.
+- Removed now-unused `--fw-sidebar-icon-gap` token definitions after Copilot review confirmed the token no longer had a consumer.
 - Updated template/layout/dynamic docs for the static icon convention and remaining dynamic-icon limitation.
 
 ## Scope reviewed
@@ -24,18 +25,21 @@
 - `dotnet build osafw-app\osafw-app.csproj -p:OutDir=artifacts\assistant_build\`: passed with 0 warnings and 0 errors.
 - Browser smoke was attempted but blocked: Browser/node runtime failed with `windows sandbox failed: spawn setup refresh`; curl/Invoke-WebRequest to local HTTPS also failed due local TLS/connection handling.
 - Code reviewer sub-agent loop: first pass found a stray `</i>` in `datetime_popup.html`; fixed. Second pass reported no issues.
+- Copilot feedback on unused `--fw-sidebar-icon-gap`: confirmed actual; removed the dead token definitions from base and theme CSS.
 
 ## Decisions - why
 - Use Bootstrap icon names without the `bi-` prefix for partial filenames, per user-approved plan.
 - Leave JSON/Vue/controller-driven class-string icon APIs in place for this pass to avoid changing dynamic config contracts.
 - Keep contextual classes such as `text-danger`, `text-muted`, and sidebar toggler state classes on wrappers around icon includes.
 - Remove sidebar/dropdown icon-gap CSS rules because partials now own default `me-1` spacing.
+- Remove sidebar icon-gap token definitions as well, because keeping dead theme tokens after removing the consuming rule would make them misleading.
 
 ## Pitfalls - fixes
 - Vue conditional sort icons cannot carry `v-if`/`v-else` on a ParsePage include, so the Vue directives were moved to wrapper spans.
 - Existing JS that toggles error-page caret icons still targets `bi-caret-*`; the partials preserve those icon classes.
 - The original `datetime_popup.html` had a doubled `</i></i>` pattern; migration left one stray closing tag, caught by review and removed.
 - Applying a one-line patch converted one file to LF; CRLF was restored before final checks.
+- Copilot correctly flagged the leftover sidebar icon-gap token definitions; the fix was to remove the definitions rather than reintroduce a second spacing source.
 
 ## Risks / follow-ups
 - Full icon-library replacement still requires a later migration for dynamic icon config values and Vue/client-rendered dynamic icon helpers.
